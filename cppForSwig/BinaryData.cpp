@@ -8,6 +8,7 @@
 
 #include "BinaryData.h"
 #include "BtcUtils.h"
+#include "EncryptionUtils.h"
 
 BinaryData BinaryData::EmptyBinData_(0);
 
@@ -223,5 +224,15 @@ bool BinaryData::operator==(BinaryDataRef const & bd2) const
    return (memcmp(getPtr(), bd2.getPtr(), getSize()) == 0);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+SecureBinaryData BinaryRefReader::get_SecureBinaryData(uint32_t nBytes)
+{
+   if (getSizeRemaining() < nBytes)
+      throw runtime_error("buffer overflow");
 
+   SecureBinaryData out(nBytes);
+   bdRef_.copyTo(out.getPtr(), pos_, nBytes);
+   pos_ += nBytes;
+   return out;
+}
 

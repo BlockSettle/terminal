@@ -582,7 +582,7 @@ public:
 public:
    static BinaryData EmptyBinData_;
 
-private:
+protected:
    vector<uint8_t> data_;
 
 private:
@@ -1172,6 +1172,7 @@ private:
 
 };
 
+class SecureBinaryData;
 
 class BinaryRefReader
 {
@@ -1344,6 +1345,9 @@ public:
       get_BinaryData(out, nBytes);
       return out;
    }
+
+   /////////////////////////////////////////////////////////////////////////////
+   SecureBinaryData get_SecureBinaryData(uint32_t nBytes);
 
    /////////////////////////////////////////////////////////////////////////////
    void get_BinaryData(uint8_t* targPtr, uint32_t nBytes)
