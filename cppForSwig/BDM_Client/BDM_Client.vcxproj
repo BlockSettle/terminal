@@ -185,6 +185,7 @@
     <ClInclude Include="..\TransactionBatch.h" />
     <ClInclude Include="..\TxClasses.h" />
     <ClInclude Include="..\WalletManager.h" />
+    <ClInclude Include="..\Wallets.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\BDM_seder.cpp" />
