@@ -27,17 +27,6 @@
 
 using namespace std;
 
-#ifdef _WIN32
-#include <Windows.h>
-#include <io.h>
-#include <fcntl.h>
-#else
-#include <errno.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#endif
-
 #include "BlockObj.h"
 #include "BinaryData.h"
 

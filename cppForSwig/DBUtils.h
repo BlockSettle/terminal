@@ -40,6 +40,14 @@ enum DB_PREFIX
    DB_PREFIX_MISSING_HASHES
 };
 
+struct FileMap
+{
+   size_t size_;
+   uint8_t* filePtr_ = nullptr;
+
+   void unmap(void);
+};
+
 class DBUtils
 {
 public:
@@ -137,5 +145,7 @@ public:
    static BinaryData getMissingHashesKey(uint32_t id);
 
    static bool fileExists(const string& path, int mode);
+
+   static FileMap getMmapOfFile(const string&);
 };
 #endif

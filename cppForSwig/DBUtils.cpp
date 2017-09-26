@@ -12,6 +12,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DBUtils.h"
+#ifdef _WIN32
+#include <Windows.h>
+#include <io.h>
+#include <fcntl.h>
+#else
+#include <errno.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
+
 
 ////////////////////////////////////////////////////////////////////////////////
 const BinaryData DBUtils::ZeroConfHeader_ = BinaryData::CreateFromHex("FFFF");
@@ -297,4 +308,131 @@ bool DBUtils::fileExists(const string& path, int mode)
          nixmode |= W_OK;
       return access(path.c_str(), nixmode) == 0;
 #endif
+}
+
+/////////////////////////////////////////////////////////////////////////////
+void FileMap::unmap()
+{
+   if (filePtr_ != nullptr)
+   {
+#ifdef WIN32
+      if (!UnmapViewOfFile(filePtr_))
+         throw std::runtime_error("failed to unmap file");
+#else
+      if (munmap(filePtr_, size_))
+         throw std::runtime_error("failed to unmap file");
+#endif
+
+      filePtr_ = nullptr;
+   }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+FileMap DBUtils::getMmapOfFile(const string& path)
+{
+   int fd = 0;
+   if (!DBUtils::fileExists(path, 2))
+      throw runtime_error("file does not exist");
+
+   FileMap fMap;
+
+   try
+   {
+#ifdef _WIN32
+      fd = _open(path.c_str(), _O_RDONLY | _O_BINARY);
+      if (fd == -1)
+         throw runtime_error("failed to open file");
+
+      auto size = _lseek(fd, 0, SEEK_END);
+
+      if (size == 0)
+      {
+         stringstream ss;
+         ss << "empty block file under path: " << path;
+         throw ss.str();
+      }
+
+      _lseek(fd, 0, SEEK_SET);
+#else
+      fd = open(path.c_str(), O_RDONLY);
+      if (fd == -1)
+         throw runtime_error("failed to open file");
+
+      size = lseek(fd, 0, SEEK_END);
+
+      if (size == 0)
+      {
+         stringstream ss;
+         ss << "empty block file under path: " << path;
+         throw ss.str();
+      }
+
+      lseek(fd, 0, SEEK_SET);
+#endif
+      fMap.size_ = size;
+
+#ifdef _WIN32
+      //create mmap
+      auto fileHandle = (HANDLE)_get_osfhandle(fd);
+      HANDLE mh;
+
+      uint32_t sizelo = size & 0xffffffff;
+      uint32_t sizehi = size >> 16 >> 16;
+
+
+      mh = CreateFileMapping(fileHandle, NULL, PAGE_READONLY,
+         sizehi, sizelo, NULL);
+      if (!mh)
+      {
+         auto errorCode = GetLastError();
+         stringstream errStr;
+         errStr << "Failed to create map of file. Error Code: " <<
+            errorCode << " (" << strerror(errorCode) << ")";
+         throw runtime_error(errStr.str());
+      }
+
+      fMap.filePtr_ = (uint8_t*)MapViewOfFileEx(mh, FILE_MAP_READ, 0, 0, size, NULL);
+      if (fMap.filePtr_ == nullptr)
+      {
+         auto errorCode = GetLastError();
+         stringstream errStr;
+         errStr << "Failed to create map of file. Error Code: " <<
+            errorCode << " (" << strerror(errorCode) << ")";
+         throw runtime_error(errStr.str());
+      }
+
+      CloseHandle(mh);
+      _close(fd);
+#else
+      fMap.filePtr_ = (uint8_t*)mmap(0, size_, PROT_READ, MAP_SHARED,
+         fd, 0);
+      if (fMap.filePtr_ == MAP_FAILED) {
+         fMap.filePtr_ = NULL;
+         stringstream errStr;
+         errStr << "Failed to create map of file. Error Code: " <<
+            errno << " (" << strerror(errno) << ")";
+         cout << errStr.str() << endl;
+         throw runtime_error(errStr.str());
+      }
+
+      close(fd);
+#endif
+      fd = 0;
+   }
+   catch (runtime_error &e)
+   {
+      if (fd != 0)
+      {
+#ifdef _WIN32
+         _close(fd);
+#else
+         close(fd);
+#endif
+         fd = 0;
+      }
+
+      throw e;
+   }
+
+   return fMap;
 }
