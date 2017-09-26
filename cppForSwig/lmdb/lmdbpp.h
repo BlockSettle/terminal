@@ -196,6 +196,9 @@ public:
    // if such a key does not exist
    void erase(const CharacterArrayRef& key);
 
+   //erases entry and wipes data field
+   void wipe(const CharacterArrayRef& key);
+
    // read the value having the given key
    MDB_val value(const CharacterArrayRef& key) const;
    
@@ -256,6 +259,7 @@ private:
    MDB_env *dbenv=nullptr;
    unsigned dbCount_ = 1;
 
+   std::string filename_;
    std::mutex threadTxMutex_;
    std::unordered_map<std::thread::id, LMDBThreadTxInfo> txForThreads_;
    
@@ -308,6 +312,8 @@ public:
 
    // close a database, doing nothing if one is presently not open
    void close();
+
+   const std::string& getFilename(void) const { return filename_; }
    
 private:
    LMDBEnv(const LMDBEnv&); // disallow copy

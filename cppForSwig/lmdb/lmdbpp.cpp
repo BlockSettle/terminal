@@ -345,9 +345,11 @@ void LMDBEnv::open(const char *filename)
    if (rc != MDB_SUCCESS)
       throw LMDBException("Failed to set max dbs (" + errorString(rc) + ")");
    
-   rc = mdb_env_open(dbenv, filename, MDB_NOSYNC|MDB_NOSUBDIR, 0600);
+   rc = mdb_env_open(dbenv, filename, MDB_NOSYNC | MDB_NOSUBDIR | MDB_WRITEMAP, 0600);
    if (rc != MDB_SUCCESS)
       throw LMDBException("Failed to open db " + std::string(filename) + " (" + errorString(rc) + ")");
+
+   filename_ = std::string(filename);
 }
 
 void LMDBEnv::close()
@@ -573,12 +575,36 @@ void LMDB::erase(const CharacterArrayRef& key)
    lock.unlock();
       
    MDB_val mkey = { key.len, const_cast<char*>(key.data) };
-   int rc = mdb_del(txnIter->second.txn_, dbi, &mkey, 0);
+   int rc = mdb_del(txnIter->second.txn_, dbi, &mkey, 0, 0);
    if (rc != MDB_SUCCESS && rc != MDB_NOTFOUND)
    {
       std::cout << "failed to erase data, returned following error string: " << errorString(rc) << std::endl;
       throw LMDBException("Failed to erase (" + errorString(rc) + ")");
    }
+}
+
+void LMDB::wipe(const CharacterArrayRef& key)
+{
+   auto tID = std::this_thread::get_id();
+   std::unique_lock<std::mutex> lock(env->threadTxMutex_);
+   auto txnIter = env->txForThreads_.find(tID);
+
+   if (txnIter == env->txForThreads_.end())
+      throw LMDBException("Failed to insert: need transaction");
+   lock.unlock();
+
+
+   MDB_val mdb_data_obj = value(key);
+   MDB_val mkey = { key.len, const_cast<char*>(key.data) };
+   int rc = mdb_del(txnIter->second.txn_, dbi, &mkey, 0, MDB_WIPE_DATA);
+   if (rc != MDB_SUCCESS && rc != MDB_NOTFOUND)
+   {
+      std::cout << "failed to erase data, returned following error string: " << errorString(rc) << std::endl;
+      throw LMDBException("Failed to erase (" + errorString(rc) + ")");
+   }
+
+    if (mdb_data_obj.mv_data != nullptr)
+      memset(mdb_data_obj.mv_data, 0, mdb_data_obj.mv_size); 
 }
 
 MDB_val LMDB::value(const CharacterArrayRef& key) const

@@ -307,6 +307,8 @@ typedef void (MDB_rel_func)(MDB_val *item, void *oldptr, void *newptr, void *rel
 #define MDB_REVERSEDUP	0x40
 	/** create DB if not already existing */
 #define MDB_CREATE		0x40000
+   /** delete data from disk on erase  */
+#define MDB_WIPE_DATA   0x800000
 /** @} */
 
 /**	@defgroup mdb_put	Write Flags
@@ -777,6 +779,12 @@ int  mdb_env_get_path(MDB_env *env, const char **path);
 	 * </ul>
 	 */
 int  mdb_env_get_fd(MDB_env *env, mdb_filehandle_t *fd);
+
+   /** @brief Return current file map
+   *
+   * @param[in] tx a transaction
+   */
+char* mdb_env_get_current_map(MDB_txn* tx);
 
 	/** @brief Set the size of the memory map to use for this environment.
 	 *
@@ -1305,6 +1313,7 @@ int  mdb_put(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data,
 	 * @param[in] dbi A database handle returned by #mdb_dbi_open()
 	 * @param[in] key The key to delete from the database
 	 * @param[in] data The data to delete
+    * @param[in] flags to pass to the delete operation (use 0 for default behavior)
 	 * @return A non-zero error value on failure and 0 on success. Some possible
 	 * errors are:
 	 * <ul>
@@ -1312,7 +1321,8 @@ int  mdb_put(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data,
 	 *	<li>EINVAL - an invalid parameter was specified.
 	 * </ul>
 	 */
-int  mdb_del(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data);
+int  mdb_del(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, 
+   unsigned flags);
 
 	/** @brief Create a cursor handle.
 	 *

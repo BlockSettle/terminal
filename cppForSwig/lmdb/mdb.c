@@ -6668,6 +6668,8 @@ mdb_cursor_del(MDB_cursor *mc, unsigned int flags)
 {
 	MDB_node	*leaf;
 	MDB_page	*mp;
+   char *node_data_to_delete;
+   unsigned int node_data_size;
 	int rc;
 
 	if (mc->mc_txn->mt_flags & (MDB_TXN_RDONLY|MDB_TXN_ERROR))
@@ -6690,6 +6692,14 @@ mdb_cursor_del(MDB_cursor *mc, unsigned int flags)
 	if (IS_LEAF2(mp))
 		goto del_key;
 	leaf = NODEPTR(mp, mc->mc_ki[mc->mc_top]);
+
+   if (flags & MDB_WIPE_DATA)
+   {
+      node_data_to_delete = NODEDATA(leaf);
+      node_data_size = NODEDSZ(leaf);
+
+      memset(node_data_to_delete, 0, node_data_size);
+   }
 
 	if (F_ISSET(leaf->mn_flags, F_DUPDATA)) {
 		if (flags & MDB_NODUPDATA) {
@@ -7957,7 +7967,7 @@ mdb_cursor_del0(MDB_cursor *mc)
 
 int
 mdb_del(MDB_txn *txn, MDB_dbi dbi,
-    MDB_val *key, MDB_val *data)
+    MDB_val *key, MDB_val *data, unsigned flags)
 {
    int rt;
 
@@ -7974,7 +7984,7 @@ mdb_del(MDB_txn *txn, MDB_dbi dbi,
 
    while (1)
    {
-      rt = mdb_del0(txn, dbi, key, data, 0);
+      rt = mdb_del0(txn, dbi, key, data, flags);
       if (rt != MDB_MAP_FULL)
          break;
 
@@ -9728,6 +9738,11 @@ int mdb_dbi_open_safe(MDB_txn *txn, const char *name, unsigned int flags, MDB_db
    }
 
    return rt;
+}
+
+char* mdb_env_get_current_map(MDB_txn *txn)
+{
+   return txn->mt_env->me_maps[txn->mt_env->me_currentmap].me_map;
 }
 
 /** @} */
