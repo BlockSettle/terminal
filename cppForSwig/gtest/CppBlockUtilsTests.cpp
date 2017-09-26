@@ -186,6 +186,41 @@ static BinaryData getTx(unsigned height, unsigned id)
    return stx.dataCopy_;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+bool searchFile(const string& filename, BinaryData& data)
+{
+   //create mmap of file
+   auto filemap = DBUtils::getMmapOfFile(filename);
+
+   if (data.getSize() < 8)
+      throw runtime_error("only for buffers 8 bytes and larger");
+
+   //search it
+   uint64_t* sample;
+   uint64_t* data_head = (uint64_t*)data.getPtr();
+
+   bool result = false;
+   for (unsigned i = 0; i < filemap.size_ - data.getSize(); i++)
+   {
+      sample = (uint64_t*)(filemap.filePtr_ + i);
+      if (*sample == *data_head)
+      {
+         BinaryDataRef bdr(filemap.filePtr_ + i, data.getSize());
+         if (bdr == data)
+         {
+            result = true;
+            break;
+         }
+      }
+   }
+
+   //clean up
+   filemap.unmap();
+
+   //return
+   return result;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -5525,6 +5560,132 @@ TEST_F(LMDBTest, PutGetStoredScriptHistory)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+TEST_F(LMDBTest, WipeEntry)
+{
+   //create db
+
+   LMDBEnv dbEnv;
+   dbEnv.open("wipe_test_db");
+   auto filename = dbEnv.getFilename();
+   LMDB db;
+
+   {
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
+      db.open(&dbEnv, "test_db");
+   }
+
+   BinaryData key1("key1");
+   BinaryData val1("val1_test");
+   CharacterArrayRef test_key_1(key1.getSize(), key1.getCharPtr());
+   CharacterArrayRef test_val_1(val1.getSize(), val1.getCharPtr());
+
+   {
+      //write test entry
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
+      db.insert(test_key_1, test_val_1);
+   }
+
+   //check test entry is on disk
+   EXPECT_TRUE(searchFile(filename, val1));
+
+   {
+      //delete test entry
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
+      db.erase(test_key_1);
+   }
+
+   //check data is still on disk
+   EXPECT_TRUE(searchFile(filename, val1));
+
+   //second test entry
+   BinaryData key2("key2");
+   BinaryData val2("val2_test_larger_packet");
+   CharacterArrayRef test_key_2(key2.getSize(), key2.getCharPtr());
+   CharacterArrayRef test_val_2(val2.getSize(), val2.getCharPtr());
+
+   {
+      //write second test entry
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
+      db.insert(test_key_2, test_val_2);
+   }
+
+   //check it's on disk
+   EXPECT_TRUE(searchFile(filename, val1));
+   EXPECT_TRUE(searchFile(filename, val2));
+
+   {
+      //wipe second test entry
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
+      db.wipe(test_key_2);
+   }
+
+   //check it's not on disk
+   EXPECT_TRUE(searchFile(filename, val1));
+   EXPECT_FALSE(searchFile(filename, val2));
+
+   {
+      //check keys are deleted
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadOnly);
+      
+      auto getdata1 = db.get_NoCopy(test_key_1);
+      EXPECT_EQ(getdata1.len, 0);
+
+      auto getdata2 = db.get_NoCopy(test_key_2);
+      EXPECT_EQ(getdata2.len, 0);
+   }
+
+   //add data, wipe, rewrite
+   BinaryData key3("key3");
+   BinaryData val3("val3_test_larger_packet");
+   BinaryData val4("val4-test");
+
+   CharacterArrayRef test_key_3(key3.getSize(), key3.getCharPtr());
+   CharacterArrayRef test_val_3(val3.getSize(), val3.getCharPtr());
+   CharacterArrayRef test_val_4(val4.getSize(), val4.getCharPtr());
+
+
+   {
+      //write second test entry
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
+      db.insert(test_key_3, test_val_3);
+   }
+
+   //check it's on disk
+   EXPECT_TRUE(searchFile(filename, val3));
+
+   {
+      //wipe third test entry
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
+      db.wipe(test_key_3);
+
+      //rewrite third test key with different data
+      db.insert(test_key_3, test_val_4);
+   }
+
+   //check key is valid, data behind it is valid
+   {
+      //check keys are deleted
+      LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadOnly);
+
+      auto getdata = db.get_NoCopy(test_key_3);
+      string str1(getdata.data, getdata.len);
+      string str2(test_val_4.data, test_val_4.len);
+      EXPECT_EQ(str1, str2);
+   }
+
+   //check on disk
+   EXPECT_FALSE(searchFile(filename, val3));
+   EXPECT_TRUE(searchFile(filename, val4));
+
+   db.close();
+   dbEnv.close();
+
+   remove(filename.c_str());
+   filename.append("-lock");
+   remove(filename.c_str());
+}
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 class TxRefTest : public ::testing::Test
 {
@@ -5600,7 +5761,8 @@ TEST_F(WalletsTest, CreateCloseOpen_Test)
          homedir_,
          AddressEntryType_P2PKH, //legacy P2PKH addresses
          move(wltRoot), //root as a r value
-         4); //set lookup computation to 5 entries
+         SecureBinaryData(), //empty passphrase, will use default key
+         4); //set lookup computation to 4 entries
 
       //get AddrVec
       auto&& hashSet = assetWlt->getAddrHashSet();
@@ -5651,7 +5813,8 @@ TEST_F(WalletsTest, CreateWOCopy_Test)
       homedir_,
       AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
-      4); //set lookup computation to 5 entries
+      SecureBinaryData(),
+      4); //set lookup computation to 4 entries
 
    //get AddrVec
    auto&& hashSet = assetWlt->getAddrHashSet();
@@ -5674,6 +5837,505 @@ TEST_F(WalletsTest, CreateWOCopy_Test)
    auto&& hashSetWO = woWallet->getAddrHashSet();
 
    ASSERT_EQ(hashSet, hashSetWO);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(WalletsTest, Encryption_Test)
+{
+   /* #1: check deriving from an encrypted root yield correct chain */
+   //create 1 wallet from priv key
+   auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
+   auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
+      homedir_,
+      AddressEntryType_P2PKH, //legacy P2PKH addresses
+      wltRoot, //root as a r value
+      SecureBinaryData(),
+      4); //set lookup computation to 4 entries
+
+   //derive private chain from root
+   auto&& chaincode = BtcUtils::computeChainCode_Armory135(wltRoot);
+
+   vector<SecureBinaryData> privateKeys;
+   auto currentPrivKey = &wltRoot;
+
+   for (int i = 0; i < 4; i++)
+   {
+      privateKeys.push_back(move(CryptoECDSA().ComputeChainedPrivateKey(
+         *currentPrivKey, chaincode)));
+
+      currentPrivKey = &privateKeys.back();
+   }
+
+   //compute public keys
+   vector<SecureBinaryData> publicKeys;
+   for (auto& privkey : privateKeys)
+   {
+      publicKeys.push_back(move(CryptoECDSA().ComputePublicKey(privkey)));
+   }
+
+   //compare with wallet's own
+   for (int i = 0; i < 4; i++)
+   {
+      //grab indexes from 0 to 3
+      auto assetptr = assetWlt->getAssetForIndex(i);
+      ASSERT_EQ(assetptr->getType(), AssetEntryType_Single);
+      
+      auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(assetptr);
+      if (asset_single == nullptr)
+         throw runtime_error("unexpected assetptr type");
+
+      auto pubkey_ptr = asset_single->getPubKey();
+      ASSERT_EQ(pubkey_ptr->getUncompressedKey(), publicKeys[i]);
+   }
+
+   /* #2: check no unencrypted private keys are on disk. Incidentally, 
+      check public keys are, for sanity */
+
+   //close wallet object
+   auto filename = assetWlt->getFilename();
+   assetWlt.reset();
+
+   //parse file for the presence of pubkeys and absence of priv keys
+   for (auto& privkey : privateKeys)
+   {
+      ASSERT_FALSE(searchFile(filename, privkey));
+   }
+
+   for (auto& pubkey : publicKeys)
+   {
+      ASSERT_TRUE(searchFile(filename, pubkey));
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(WalletsTest, LockAndExtend_Test)
+{
+   //create wallet from priv key
+   auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
+   auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
+      homedir_,
+      AddressEntryType_P2PKH, //legacy P2PKH addresses
+      wltRoot, //root as a r value
+      SecureBinaryData(), //set passphrase to "test"
+      4); //set lookup computation to 4 entries
+
+
+   //derive private chain from root
+   auto&& chaincode = BtcUtils::computeChainCode_Armory135(wltRoot);
+
+   vector<SecureBinaryData> privateKeys;
+   auto currentPrivKey = &wltRoot;
+
+   for (int i = 0; i < 10; i++)
+   {
+      privateKeys.push_back(move(CryptoECDSA().ComputeChainedPrivateKey(
+         *currentPrivKey, chaincode)));
+
+      currentPrivKey = &privateKeys.back();
+   }
+
+   auto secondthread = [assetWlt, &privateKeys](void)->void
+   {
+      //lock wallet
+      auto secondlock = assetWlt->lockDecryptedContainer();
+
+      //wallet should have 10 assets, last half with only pub keys
+      ASSERT_TRUE(assetWlt->getAssetCount() == 10);
+
+      //none of the new assets should have private keys
+      for (unsigned i = 4; i < 10; i++)
+      {
+         auto asseti = assetWlt->getAssetForIndex(i);
+         ASSERT_FALSE(asseti->hasPrivateKey());
+      }
+
+      //grab last asset with a priv key
+      auto asset3 = assetWlt->getAssetForIndex(3);
+      auto asset3_single = dynamic_pointer_cast<AssetEntry_Single>(asset3);
+      if (asset3_single == nullptr)
+         throw runtime_error("unexpected asset entry type");
+      auto& privkey3 = assetWlt->getDecryptedValue(asset3_single->getPrivKey());
+
+      //check privkey
+      ASSERT_EQ(privkey3, privateKeys[3]);
+
+      //extend private chain to 10 entries
+      assetWlt->extendPrivateChainToIndex(9);
+
+      //there should still be 10 assets
+      ASSERT_EQ(assetWlt->getAssetCount(), 10);
+
+      //try to grab 10th private key
+      auto asset9 = assetWlt->getAssetForIndex(9);
+      auto asset9_single = dynamic_pointer_cast<AssetEntry_Single>(asset9);
+      if (asset9_single == nullptr)
+         throw runtime_error("unexpected asset entry type");
+
+      auto& privkey9 = assetWlt->getDecryptedValue(asset9_single->getPrivKey());
+
+      //check priv key
+      ASSERT_EQ(privkey9, privateKeys[9]);
+   };
+
+   thread t2;
+
+   {
+      //grab lock
+      auto firstlock = assetWlt->lockDecryptedContainer();
+
+      //start second thread
+      t2 = thread(secondthread);
+
+      //sleep for a second
+      this_thread::sleep_for(chrono::seconds(1));
+
+      //make sure there are only 4 entries
+      ASSERT_EQ(assetWlt->getAssetCount(), 4);
+
+      //grab 4th privkey 
+      auto asset3 = assetWlt->getAssetForIndex(3);
+      auto asset3_single = dynamic_pointer_cast<AssetEntry_Single>(asset3);
+      if (asset3_single == nullptr)
+         throw runtime_error("unexpected asset entry type");
+      auto& privkey3 = assetWlt->getDecryptedValue(asset3_single->getPrivKey());
+
+      //check privkey
+      ASSERT_EQ(privkey3, privateKeys[3]);
+
+      //extend address chain to 10 entries
+      assetWlt->extendPublicChainToIndex(9);
+
+      ASSERT_EQ(assetWlt->getAssetCount(), 10);
+
+      //none of the new assets should have private keys
+      for (unsigned i = 4; i < 10; i++)
+      {
+         auto asseti = assetWlt->getAssetForIndex(i);
+         ASSERT_FALSE(asseti->hasPrivateKey());
+      }
+   }
+
+   if (t2.joinable())
+      t2.join();
+
+   //wallet should be unlocked now
+   ASSERT_FALSE(assetWlt->isDecryptedContainerLocked());
+
+   //delete wallet, reload and check private keys are on disk and valid
+   auto wltID = assetWlt->getID();
+   assetWlt.reset();
+
+   WalletManager wltMgr(homedir_);
+
+   class WalletContainerEx : public WalletContainer
+   {
+   public:
+      shared_ptr<AssetWallet> getWalletPtr(void) const
+      {
+         return WalletContainer::getWalletPtr();
+      }
+   };
+
+   auto wltCtr = (WalletContainerEx*)&wltMgr.getCppWallet(wltID);
+   auto wltSingle =
+      dynamic_pointer_cast<AssetWallet_Single>(wltCtr->getWalletPtr());
+   ASSERT_NE(wltSingle, nullptr);
+   ASSERT_FALSE(wltSingle->isDecryptedContainerLocked());
+ 
+   auto lastlock = wltSingle->lockDecryptedContainer();
+   for (unsigned i = 0; i < 10; i++)
+   {
+      auto asseti = wltSingle->getAssetForIndex(i);
+      auto asseti_single = dynamic_pointer_cast<AssetEntry_Single>(asseti);
+      ASSERT_NE(asseti_single, nullptr);
+
+      auto& asseti_privkey = wltSingle->getDecryptedValue(
+         asseti_single->getPrivKey());
+
+      ASSERT_EQ(asseti_privkey, privateKeys[i]);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(WalletsTest, WrongPassphrase_Test)
+{
+   //create wallet from priv key
+   auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
+   auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
+      homedir_,
+      AddressEntryType_P2PKH, //legacy P2PKH addresses
+      wltRoot, //root as a r value
+      SecureBinaryData("test"), //set passphrase to "test"
+      4); //set lookup computation to 4 entries
+
+   unsigned passphraseCount = 0;
+   auto badPassphrase = [&passphraseCount](const BinaryData&)->SecureBinaryData
+   {
+      //pass wrong passphrase once then give up
+      if (passphraseCount++ > 1)
+         return SecureBinaryData();
+      return SecureBinaryData("bad pass");
+   };
+
+   //set passphrase lambd
+   assetWlt->setPassphrasePromptLambda(badPassphrase);
+
+   //try to decrypt with wrong passphrase
+   try
+   {
+      auto containerLock = assetWlt->lockDecryptedContainer();
+      auto asset = assetWlt->getAssetForIndex(0);
+      auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(asset);
+      if (asset_single == nullptr)
+         throw runtime_error("unexpected asset entry type");
+
+      assetWlt->getDecryptedValue(asset_single->getPrivKey());
+
+      ASSERT_TRUE(false);
+   }
+   catch (DecryptedDataContainerException&)
+   {}
+
+   passphraseCount = 0;
+   auto goodPassphrase = [&passphraseCount](const BinaryData&)->SecureBinaryData
+   {
+      //pass wrong passphrase once then the right one
+      if (passphraseCount++ > 1)
+         return SecureBinaryData("test");
+      return SecureBinaryData("another bad pass");
+   };
+
+   assetWlt->setPassphrasePromptLambda(goodPassphrase);
+
+   //try to decrypt with wrong passphrase
+   try
+   {
+      auto&& containerLock = assetWlt->lockDecryptedContainer();
+      auto asset = assetWlt->getAssetForIndex(0);
+      auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(asset);
+      if (asset_single == nullptr)
+         throw runtime_error("unexpected asset entry type");
+
+      auto& privkey = assetWlt->getDecryptedValue(asset_single->getPrivKey());
+
+      //make sure decrypted privkey is valid
+      auto&& chaincode = BtcUtils::computeChainCode_Armory135(wltRoot);
+      auto&& privkey_ex = 
+         CryptoECDSA().ComputeChainedPrivateKey(wltRoot, chaincode);
+
+      ASSERT_EQ(privkey, privkey_ex);
+   }
+   catch (DecryptedDataContainerException&)
+   {
+      ASSERT_TRUE(false);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(WalletsTest, ChangePassphrase_Test)
+{
+   //create wallet from priv key
+   auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
+   auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
+      homedir_,
+      AddressEntryType_P2PKH, //legacy P2PKH addresses
+      wltRoot, //root as a r value
+      SecureBinaryData("test"), //set passphrase to "test"
+      4); //set lookup computation to 4 entries
+
+   auto&& chaincode = BtcUtils::computeChainCode_Armory135(wltRoot);
+   auto&& privkey_ex =
+      CryptoECDSA().ComputeChainedPrivateKey(wltRoot, chaincode);
+   auto filename = assetWlt->getFilename();
+
+
+   //grab all IVs and encrypted private keys
+   vector<SecureBinaryData> ivVec;
+   vector<SecureBinaryData> privateKeys;
+   struct DecryptedDataContainerEx : public DecryptedDataContainer
+   {
+      const SecureBinaryData& getMasterKeyIV(void) const
+      {
+         auto keyIter = encryptionKeyMap_.begin();
+         return keyIter->second->getIV();
+      }
+
+      const SecureBinaryData& getMasterEncryptionKey(void) const
+      {
+         auto keyIter = encryptionKeyMap_.begin();
+         return keyIter->second->getEncryptedData();
+      }
+   };
+
+   struct AssetWalletEx : public AssetWallet_Single
+   {
+      shared_ptr<DecryptedDataContainer> getDecryptedDataContainer(void) const
+      {
+         return decryptedData_;
+      }
+   };
+
+   {
+      auto assetWltEx = (AssetWalletEx*)assetWlt.get();
+      auto decryptedDataEx =
+         (DecryptedDataContainerEx*)assetWltEx->getDecryptedDataContainer().get();
+      ivVec.push_back(decryptedDataEx->getMasterKeyIV());
+      privateKeys.push_back(decryptedDataEx->getMasterEncryptionKey());
+   }
+
+   for (unsigned i = 0; i < 4; i++)
+   {
+      auto asseti = assetWlt->getAssetForIndex(i);
+      auto asseti_single = dynamic_pointer_cast<AssetEntry_Single>(asseti);
+      ASSERT_NE(asseti_single, nullptr);
+
+      ivVec.push_back(asseti_single->getPrivKey()->getIV());
+      privateKeys.push_back(asseti_single->getPrivKey()->getEncryptedData());
+   }
+
+   //make sure the IVs are unique
+   auto ivVecCopy = ivVec;
+   
+   while (ivVecCopy.size() > 0)
+   {
+      auto compare_iv = ivVecCopy.back();
+      ivVecCopy.pop_back();
+
+      for (auto& iv : ivVecCopy)
+         ASSERT_NE(iv, compare_iv);
+   }
+
+   //change passphrase
+   SecureBinaryData newPassphrase("new pass");
+
+   unsigned counter = 0;
+   auto passphrasePrompt = [&counter](const BinaryData&)->SecureBinaryData
+   {
+      if (counter++ == 0)
+         return SecureBinaryData("test");
+      else
+         return SecureBinaryData();
+   };
+
+   {
+      //set passphrase prompt lambda
+      assetWlt->setPassphrasePromptLambda(passphrasePrompt);
+
+      //change passphrase
+      assetWlt->changeMasterPassphrase(newPassphrase);
+   }
+
+   //try to decrypt with new passphrase
+   auto newPassphrasePrompt = [&newPassphrase](const BinaryData&)->SecureBinaryData
+   {
+      return newPassphrase;
+   };
+
+   {
+      assetWlt->setPassphrasePromptLambda(newPassphrasePrompt);
+      auto lock = assetWlt->lockDecryptedContainer();
+
+      auto asset0 = assetWlt->getAssetForIndex(0);
+      auto asset0_single = dynamic_pointer_cast<AssetEntry_Single>(asset0);
+      ASSERT_NE(asset0_single, nullptr);
+
+      auto& decryptedKey = 
+         assetWlt->getDecryptedValue(asset0_single->getPrivKey());
+
+      ASSERT_EQ(decryptedKey, privkey_ex);
+   }
+
+   //close wallet, reload
+   auto walletID = assetWlt->getID();
+   assetWlt.reset();
+
+   WalletManager wltMgr(homedir_);
+
+   class WalletContainerEx : public WalletContainer
+   {
+   public:
+      shared_ptr<AssetWallet> getWalletPtr(void) const
+      {
+         return WalletContainer::getWalletPtr();
+      }
+   };
+
+   auto wltCtr = (WalletContainerEx*)&wltMgr.getCppWallet(walletID);
+   auto wltSingle =
+      dynamic_pointer_cast<AssetWallet_Single>(wltCtr->getWalletPtr());
+   ASSERT_NE(wltSingle, nullptr);
+   ASSERT_FALSE(wltSingle->isDecryptedContainerLocked());
+
+   //grab all IVs and private keys again
+   vector<SecureBinaryData> newIVs;
+   vector<SecureBinaryData> newPrivKeys;
+   
+   {
+      auto wltSingleEx = (AssetWalletEx*)wltSingle.get();
+      auto decryptedDataEx =
+         (DecryptedDataContainerEx*)wltSingleEx->getDecryptedDataContainer().get();
+      newIVs.push_back(decryptedDataEx->getMasterKeyIV());
+      newPrivKeys.push_back(decryptedDataEx->getMasterEncryptionKey());
+   }
+
+   for (unsigned i = 0; i < 4; i++)
+   {
+      auto asseti = wltSingle->getAssetForIndex(i);
+      auto asseti_single = dynamic_pointer_cast<AssetEntry_Single>(asseti);
+      ASSERT_NE(asseti_single, nullptr);
+
+      newIVs.push_back(asseti_single->getPrivKey()->getIV());
+      newPrivKeys.push_back(asseti_single->getPrivKey()->getEncryptedData());
+   }
+
+   //check only the master key and iv have changed, and that the new iv does 
+   //not match existing ones
+   ASSERT_NE(newIVs[0], ivVec[0]);
+   ASSERT_NE(newPrivKeys[0], privateKeys[0]);
+
+   for (unsigned i = 1; i < 4; i++)
+   {
+      ASSERT_EQ(newIVs[i], ivVec[i]);
+      ASSERT_EQ(newPrivKeys[i], privateKeys[i]);
+
+      ASSERT_NE(newIVs[0], ivVec[i]);
+   }
+
+
+   {
+      //try to decrypt with old passphrase, should fail
+      auto lock = wltSingle->lockDecryptedContainer();
+
+      counter = 0;
+      wltSingle->setPassphrasePromptLambda(passphrasePrompt);
+
+      auto asset0 = wltSingle->getAssetForIndex(0);
+      auto asset0_single = dynamic_pointer_cast<AssetEntry_Single>(asset0);
+      ASSERT_NE(asset0_single, nullptr);
+
+      try
+      {
+         auto& decryptedKey =
+            wltSingle->getDecryptedValue(asset0_single->getPrivKey());
+         ASSERT_FALSE(true);
+      }
+      catch (...)
+      {}
+      
+      //try to decrypt with new passphrase instead
+      wltSingle->setPassphrasePromptLambda(newPassphrasePrompt);
+      auto& decryptedKey =
+         wltSingle->getDecryptedValue(asset0_single->getPrivKey());
+
+      ASSERT_EQ(decryptedKey, privkey_ex);
+   }
+
+   //check old iv and key are not on disk anymore
+   ASSERT_FALSE(searchFile(filename, ivVec[0]));
+   ASSERT_FALSE(searchFile(filename, privateKeys[0]));
+
+   ASSERT_TRUE(searchFile(filename, newIVs[0]));
+   ASSERT_TRUE(searchFile(filename, newPrivKeys[0]));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -5955,6 +6617,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_P2PKH)
       homedir_,
       AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
+      SecureBinaryData(),
       5); //set lookup computation to 5 entries
 
    //register with db
@@ -6128,7 +6791,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_P2PKH)
       }
 
       //sign, verify & broadcast
-      signer2.sign();
+      {
+         auto&& lock = assetWlt->lockDecryptedContainer();
+         signer2.sign();
+      }
+
       EXPECT_TRUE(signer2.verify());
 
       ZcVector zcVec2;
@@ -6197,6 +6864,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WPKH)
       homedir_,
       AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //register with db
@@ -6441,6 +7109,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_Multisig)
       AddressEntryType_Nested_Multisig,
       2, 3, //2-of-3
       move(wltRoot), //root as a r value
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //register with db
@@ -6615,7 +7284,10 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_Multisig)
       }
 
       //sign, verify & broadcast
-      signer2.sign();
+      {
+         auto lock = assetWlt->lockDecryptedContainer();
+         signer2.sign();
+      }
       EXPECT_TRUE(signer2.verify());
 
       ZcVector zcVec2;
@@ -6684,6 +7356,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_Multisig)
       homedir_,
       AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
@@ -6691,6 +7364,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_Multisig)
       homedir_,
       AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
@@ -6698,6 +7372,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_Multisig)
       homedir_,
       AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //create 1-of-3 multisig asset entry from 3 different wallets
@@ -6913,7 +7588,10 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_Multisig)
       }
 
       //sign, verify & return signed tx
-      signer2.sign();
+      {
+         auto lock = wltPtr->lockDecryptedContainer();
+         signer2.sign();
+      }
       EXPECT_TRUE(signer2.verify());
 
       return signer2.serialize();
@@ -6988,6 +7666,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WSH)
       AddressEntryType_Nested_P2WSH,
       2, 3, //2-of-3
       move(wltRoot), //root as a r value
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //register with db
@@ -7163,7 +7842,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WSH)
       }
 
       //sign, verify & broadcast
-      signer2.sign();
+      {
+         auto lock = assetWlt->lockDecryptedContainer();
+         signer2.sign();
+      }
+
       EXPECT_TRUE(signer2.verify());
 
       ZcVector zcVec2;
@@ -7523,6 +8206,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WPKH)
       homedir_,
       AddressEntryType_Nested_P2WPKH, 
       move(wltRoot), //root as a r value
+      SecureBinaryData(),
       3); //lookup computation
 
    //register with db
@@ -7698,7 +8382,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WPKH)
       }
 
       //sign, verify & broadcast
-      signer2.sign();
+      {
+         auto lock = assetWlt->lockDecryptedContainer();
+         signer2.sign();
+      }
+
       EXPECT_TRUE(signer2.verify());
 
       ZcVector zcVec2;
@@ -7767,6 +8455,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2PK)
       homedir_,
       AddressEntryType_Nested_P2PK,
       move(wltRoot), //root as a r value
+      SecureBinaryData(),
       3); //lookup computation
 
    //register with db
@@ -7942,7 +8631,10 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2PK)
       }
 
       //sign, verify & broadcast
-      signer2.sign();
+      {
+         auto lock = assetWlt->lockDecryptedContainer();
+         signer2.sign();
+      }
       EXPECT_TRUE(signer2.verify());
 
       ZcVector zcVec2;
@@ -10863,6 +11555,7 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
       homedir_,
       AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
+      SecureBinaryData(),
       10); //set lookup computation to 5 entries
       
    //register with db
@@ -11175,7 +11868,10 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
       }
 
       //sign, verify then broadcast
-      signer3.sign();
+      {
+         auto lock = assetWlt->lockDecryptedContainer();
+         signer3.sign();
+      }
       EXPECT_TRUE(signer3.verify());
 
       auto rawTx = signer3.serialize();
@@ -11409,6 +12105,7 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
       homedir_,
       AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
+      SecureBinaryData(),
       3); //set lookup computation to 5 entries
 
    //register with db
@@ -11569,7 +12266,7 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
    EXPECT_TRUE(zcledger.isOptInRBF());
 
    //register new address
-   assetWlt->extendChain(1);
+   assetWlt->extendPublicChain(1);
    hashSet = assetWlt->getAddrHashSet();
    hashVec.clear();
    hashVec.insert(hashVec.begin(), hashSet.begin(), hashSet.end());
