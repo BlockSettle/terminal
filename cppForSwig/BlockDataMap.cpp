@@ -218,13 +218,6 @@ BlockDataFileMap::BlockDataFileMap(const string& filename)
       auto filemap = DBUtils::getMmapOfFile(filename);
       fileMap_ = filemap.filePtr_;
       size_ = filemap.size_;
-
-      if (preload)
-      {
-         char* dataptr = new char[size_];
-         memcpy(dataptr, fileMap_, size_);
-         delete[] dataptr;
-      }
    }
    catch (exception &e)
    {

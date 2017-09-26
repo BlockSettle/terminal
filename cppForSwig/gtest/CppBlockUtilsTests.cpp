@@ -7756,6 +7756,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
       homedir_,
       AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
@@ -7763,6 +7764,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
       homedir_,
       AddressEntryType_Nested_P2PK,
       move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
@@ -7770,6 +7772,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
       homedir_,
       AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //create 2-of-3 multisig asset entry from 3 different wallets
@@ -8016,8 +8019,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
       EXPECT_EQ(pubkeyMap_2.size(), 0);
    }
 
+   {
+      auto lock = assetWlt_1->lockDecryptedContainer();
+      signer2.sign();
+   }
 
-   signer2.sign();
    try
    {
       signer2.verify();
@@ -8061,7 +8067,12 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
    }
 
    signer3.setFeed(assetFeed3);
-   signer3.sign();
+
+   {
+      auto lock = assetWlt_2->lockDecryptedContainer();
+      signer3.sign();
+   }
+   
    ASSERT_TRUE(signer3.isValid());
    try
    {
@@ -8155,12 +8166,14 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_DifferentInputs)
       homedir_,
       AddressEntryType_Nested_P2WPKH,
       SecureBinaryData().GenerateRandom(32), //root as rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
       AddressEntryType_P2PKH,
       move(SecureBinaryData().GenerateRandom(32)), //root as rvalue
+      SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //register with db
@@ -8378,7 +8391,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_DifferentInputs)
    Signer signer4;
    signer4.deserializeState(serializedSignerState);
    signer4.setFeed(assetFeed2);
-   signer4.sign();
+
+   {
+      auto lock = assetWlt_1->lockDecryptedContainer();
+      signer4.sign();
+   }
 
    try
    {
@@ -8395,7 +8412,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_DifferentInputs)
    signer5.deserializeState(signer4.serializeState());
    signer5.setFeed(assetFeed3);
 
-   signer5.sign();
+   {
+      auto lock = assetWlt_2->lockDecryptedContainer();
+      signer5.sign();
+   }
+
    ASSERT_TRUE(signer5.isValid());
    try
    {
@@ -8476,12 +8497,14 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_ParallelSigning)
       homedir_,
       AddressEntryType_Nested_P2WPKH,
       SecureBinaryData().GenerateRandom(32), //root as rvalue
+      SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
 
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
       AddressEntryType_P2PKH,
       move(SecureBinaryData().GenerateRandom(32)), //root as rvalue
+      SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
 
    //register with db
@@ -8708,7 +8731,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_ParallelSigning)
    }
 
    signer4.deserializeState(serializedSignerState);
-   signer4.sign();
+
+   {
+      auto lock = assetWlt_1->lockDecryptedContainer();
+      signer4.sign();
+   }
 
    try
    {
@@ -8738,7 +8765,11 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_ParallelSigning)
    //finally set the feed
    signer5.setFeed(assetFeed3);
 
-   signer5.sign();
+   {
+      auto lock = assetWlt_2->lockDecryptedContainer();
+      signer5.sign();
+   }
+
    try
    {
       signer5.verify();
@@ -8847,12 +8878,14 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
       homedir_,
       AddressEntryType_P2PKH,
       SecureBinaryData().GenerateRandom(32), //root as rvalue
+      SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
 
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
       AddressEntryType_Nested_P2WPKH,
       move(SecureBinaryData().GenerateRandom(32)), //root as rvalue
+      SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
 
    //register with db
@@ -9086,7 +9119,11 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
    }
 
    signer4.deserializeState(serializedSignerState);
-   signer4.sign();
+
+   {
+      auto lock = assetWlt_1->lockDecryptedContainer();
+      signer4.sign();
+   }
 
    try
    {
@@ -9167,7 +9204,11 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
    {
    }
 
-   signer5.sign();
+   {
+      auto lock = assetWlt_2->lockDecryptedContainer();
+      signer5.sign();
+   }
+
    try
    {
       signer5.verify();
@@ -13852,6 +13893,7 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
       homedir_,
       AddressEntryType_Nested_P2PK, 
       move(wltRoot),
+      SecureBinaryData(), //empty passphrase
       5);
 
    //register with db
