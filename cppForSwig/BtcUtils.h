@@ -2003,6 +2003,9 @@ public:
    static SecureBinaryData computeChainCode_Armory135(
       const SecureBinaryData& privateRoot);
 
+   static BinaryData computeDataId(const SecureBinaryData& data,
+      const string& message);
+
    static BinaryData getP2WPKHScript(const BinaryData& scriptHash)
    {
       if (scriptHash.getSize() != 20)

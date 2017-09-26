@@ -114,6 +114,27 @@ SecureBinaryData BtcUtils::computeChainCode_Armory135(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+BinaryData BtcUtils::computeDataId(const SecureBinaryData& data,
+   const string& message)
+{
+   if (data.getSize() == 0)
+      throw runtime_error("cannot compute id for empty data");
+
+   if (message.size() == 0)
+      throw runtime_error("cannot compute id for empty message");
+
+   //hmac the hash256 of the data with message
+   auto&& hmacKey = BtcUtils::hash256(data);
+   BinaryData id(32);
+
+   getHMAC256(hmacKey.getPtr(), hmacKey.getSize(),
+      message.c_str(), message.size(), id.getPtr());
+
+   //return last 16 bytes
+   return id.getSliceCopy(16, 16);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 BinaryData BtcUtils::rsToDerSig(BinaryDataRef bdr)
 {
    if (bdr.getSize() != 64)
