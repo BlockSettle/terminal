@@ -436,8 +436,8 @@ class PyBtcAddress(object):
       else:
          a160hex = binary_to_hex(pubKey.getHash160())
 
-      newPriv1 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, pubKey, logMult1)
-      newPriv2 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, pubKey, logMult2)
+      newPriv1 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, logMult1)
+      newPriv2 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, logMult2)
 
       if newPriv1==newPriv2:
          newPriv2.destroy()
@@ -451,9 +451,9 @@ class PyBtcAddress(object):
          newPriv1.destroy()
          newPriv2.destroy()
          logMult3 = SecureBinaryData()
-         newPriv1 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, pubKey, logMult1)
-         newPriv2 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, pubKey, logMult2)
-         newPriv3 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, pubKey, logMult3)
+         newPriv1 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, logMult1)
+         newPriv2 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, logMult2)
+         newPriv3 = CryptoECDSA().ComputeChainedPrivateKey(privKey, chn, logMult3)
          LOGCRIT('   Multiplier1: ' + logMult1.toHexStr())
          LOGCRIT('   Multiplier2: ' + logMult2.toHexStr())
          LOGCRIT('   Multiplier3: ' + logMult3.toHexStr())
@@ -792,22 +792,9 @@ class PyBtcAddress(object):
          if not newIV:
             newIV = SecureBinaryData().GenerateRandom(16)
 
-         if self.hasPubKey():
-            #newPriv = CryptoECDSA().ComputeChainedPrivateKey( \
-                                    #self.binPrivKey32_Plain, \
-                                    #self.chaincode, \
-                                    #self.binPublicKey65)
-            newPriv = self.safeExtendPrivateKey( \
-                                    self.binPrivKey32_Plain, \
-                                    self.chaincode, \
-                                    self.binPublicKey65)
-         else:
-            #newPriv = CryptoECDSA().ComputeChainedPrivateKey( \
-                                    #self.binPrivKey32_Plain, \
-                                    #self.chaincode)
-            newPriv = self.safeExtendPrivateKey( \
-                                    self.binPrivKey32_Plain, \
-                                    self.chaincode)
+         newPriv = self.safeExtendPrivateKey( \
+                                 self.binPrivKey32_Plain, \
+                                 self.chaincode)
 
          newPub  = CryptoECDSA().ComputePublicKey(newPriv)
          newAddr160 = newPub.getHash160()

@@ -154,6 +154,11 @@ public:
 
    ~SecureBinaryData(void) { destroy(); }
 
+   SecureBinaryData(SecureBinaryData&& mv) : BinaryData()
+   {
+      data_ = move(mv.data_);
+   }
+
    // These methods are definitely inherited, but SWIG needs them here if they
    // are to be used from python
    uint8_t const *   getPtr(void)  const { return BinaryData::getPtr();  }
@@ -292,14 +297,14 @@ public:
                                SecureBinaryData   iv);
 
    /////////////////////////////////////////////////////////////////////////////
-   SecureBinaryData EncryptCBC(SecureBinaryData & data, 
-                               SecureBinaryData & key,
-                               SecureBinaryData & iv);
+   SecureBinaryData EncryptCBC(const SecureBinaryData & data, 
+                               const SecureBinaryData & key,
+                               SecureBinaryData & iv) const;
 
    /////////////////////////////////////////////////////////////////////////////
-   SecureBinaryData DecryptCBC(SecureBinaryData & data, 
-                               SecureBinaryData & key,
-                               SecureBinaryData   iv);
+   SecureBinaryData DecryptCBC(const SecureBinaryData & data, 
+                               const SecureBinaryData & key,
+                               const SecureBinaryData & iv) const;
 };
 
 
@@ -413,7 +418,6 @@ public:
    SecureBinaryData ComputeChainedPrivateKey(
                            SecureBinaryData const & binPrivKey,
                            SecureBinaryData const & chainCode,
-                           SecureBinaryData binPubKey=SecureBinaryData(),
                            SecureBinaryData* computedMultiplier=NULL);
                                
    /////////////////////////////////////////////////////////////////////////////

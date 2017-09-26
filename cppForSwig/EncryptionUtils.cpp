@@ -365,9 +365,9 @@ SecureBinaryData CryptoAES::DecryptCFB(SecureBinaryData & data,
 
 /////////////////////////////////////////////////////////////////////////////
 // Same as above, but only changing the AES mode of operation (CBC, not CFB)
-SecureBinaryData CryptoAES::EncryptCBC(SecureBinaryData & data, 
-                                       SecureBinaryData & key,
-                                       SecureBinaryData & iv)
+SecureBinaryData CryptoAES::EncryptCBC(const SecureBinaryData & data, 
+                                       const SecureBinaryData & key,
+                                       SecureBinaryData & iv) const
 {
    if(CRYPTO_DEBUG)
    {
@@ -401,9 +401,9 @@ SecureBinaryData CryptoAES::EncryptCBC(SecureBinaryData & data,
 
 /////////////////////////////////////////////////////////////////////////////
 // Same as above, but only changing the AES mode of operation (CBC, not CFB)
-SecureBinaryData CryptoAES::DecryptCBC(SecureBinaryData & data, 
-                                       SecureBinaryData & key,
-                                       SecureBinaryData   iv  )
+SecureBinaryData CryptoAES::DecryptCBC(const SecureBinaryData & data, 
+                                       const SecureBinaryData & key,
+                                       const SecureBinaryData & iv  ) const
 {
    if(CRYPTO_DEBUG)
    {
@@ -749,27 +749,15 @@ bool CryptoECDSA::VerifyData(SecureBinaryData const & binMessage,
 SecureBinaryData CryptoECDSA::ComputeChainedPrivateKey(
                                  SecureBinaryData const & binPrivKey,
                                  SecureBinaryData const & chainCode,
-                                 SecureBinaryData binPubKey,
                                  SecureBinaryData* multiplierOut)
 {
-   if(CRYPTO_DEBUG)
-   {
-      cout << "ComputeChainedPrivateKey:" << endl;
-      cout << "   BinPrv: " << binPrivKey.toHexStr() << endl;
-      cout << "   BinChn: " << chainCode.toHexStr() << endl;
-      cout << "   BinPub: " << binPubKey.toHexStr() << endl;
-   }
-
-
-   if( binPubKey.getSize()==0 )
-      binPubKey = ComputePublicKey(binPrivKey);
+   auto&& binPubKey = ComputePublicKey(binPrivKey);
 
    if( binPrivKey.getSize() != 32 || chainCode.getSize() != 32)
    {
       LOGERR << "***ERROR:  Invalid private key or chaincode (both must be 32B)";
       LOGERR << "BinPrivKey: " << binPrivKey.getSize();
       LOGERR << "BinPrivKey: (not logged for security)";
-      //LOGERR << "BinPrivKey: " << binPrivKey.toHexStr();
       LOGERR << "BinChain  : " << chainCode.getSize();
       LOGERR << "BinChain  : " << chainCode.toHexStr();
    }
@@ -810,12 +798,6 @@ SecureBinaryData CryptoECDSA::ComputeChainedPrivateKey(
 
    if(multiplierOut != NULL)
       (*multiplierOut) = SecureBinaryData(chainXor);
-
-   //LOGINFO << "Computed new chained private key using:";
-   //LOGINFO << "   Public key: " << binPubKey.toHexStr().c_str();
-   //LOGINFO << "   PubKeyHash: " << chainMod.toHexStr().c_str();
-   //LOGINFO << "   Chaincode:  " << chainOrig.toHexStr().c_str();
-   //LOGINFO << "   Multiplier: " << chainXor.toHexStr().c_str();
 
    return newPrivData;
 }
