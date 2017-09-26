@@ -40,6 +40,9 @@ private:
    string getAuthString(void);
    string getDatadir(void);
 
+   void initAfterLock(void) {}
+   void cleanUpBeforeUnlock(void) {}
+
 public:
    NodeRPC(BlockDataManagerConfig&);
    
