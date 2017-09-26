@@ -27,8 +27,10 @@
 using namespace std;
 
 #define PUBKEY_UNCOMPRESSED_BYTE 0x80
-#define PUBKEY_COMPRESSED_BYTE 0x81
-#define PRIVKEY_BYTE 0x82
+#define PUBKEY_COMPRESSED_BYTE   0x81
+#define PRIVKEY_BYTE             0x82
+#define ENCRYPTIONKEY_BYTE       0x83
+
 
 #define WALLETTYPE_KEY        0x00000001
 #define PARENTID_KEY          0x00000002
@@ -49,9 +51,22 @@ using namespace std;
 #define DERIVATIONSCHEME_MULTISIG   0xA2
 #define DERIVATION_LOOKUP           100
 
-#define CYPHER_BYTE  0x90
+#define ENCRYPTIONKEY_PREFIX        0xC0
+#define ENCRYPTIONKEY_PREFIX_TEMP   0xCC
+
+#define KDF_PREFIX                  0xC1
+#define KDF_ROMIX_PREFIX            0xC100
+
+#define CYPHER_BYTE                 0xB2
+
 
 #define WALLETMETA_DBNAME "WalletHeader"
+#define HMAC_KEY_ENCRYPTIONKEYS "EncyrptionKey"
+#define HMAC_KEY_PRIVATEKEYS "PrivateKey"
+
+#define VERSION_MAJOR      2
+#define VERSION_MINOR      0
+#define VERSION_REVISION   0
  
 class WalletException : public runtime_error
 {
@@ -87,6 +102,21 @@ public:
    {}
 };
 
+class DecryptedDataContainerException : public runtime_error
+{
+public:
+   DecryptedDataContainerException(const string& msg) : runtime_error(msg)
+   {}
+};
+
+class EncryptedDataMissing : public runtime_error
+{
+public:
+   EncryptedDataMissing() : runtime_error("")
+   {}
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////
 enum WalletMetaType
 {
@@ -104,10 +134,21 @@ struct WalletMeta
    BinaryData walletID_;
    string dbName_;
 
+   uint8_t versionMajor_ = 0;
+   uint16_t versionMinor_ = 0;
+   uint16_t revision_ = 0;
+
+   SecureBinaryData defaultEncryptionKey_;
+   SecureBinaryData defaultEncryptionKeyId_;
+
    //tors
    WalletMeta(shared_ptr<LMDBEnv> env, WalletMetaType type) :
       dbEnv_(env), type_(type)
-   {}
+   {
+      versionMajor_ = VERSION_MAJOR;
+      versionMinor_ = VERSION_MINOR;
+      revision_ = VERSION_REVISION;
+   }
 
    virtual ~WalletMeta(void) = 0;
    
@@ -122,6 +163,17 @@ struct WalletMeta
       string idStr(walletID_.getCharPtr(), walletID_.getSize());
       return idStr;
    }
+
+   BinaryData serializeVersion(void) const;
+   void unseralizeVersion(BinaryRefReader&);
+
+   BinaryData serializeEncryptionKey(void) const;
+   void unserializeEncryptionKey(BinaryRefReader&);
+   
+   const SecureBinaryData& getDefaultEncryptionKey(void) const 
+   { return defaultEncryptionKey_; }
+   const BinaryData& getDefaultEncryptionKeyId(void) const
+   { return defaultEncryptionKeyId_; }
 
    //virtual
    virtual BinaryData serialize(void) const = 0;
@@ -175,6 +227,7 @@ struct WalletMeta_Subwallet : public WalletMeta
 ////////////////////////////////////////////////////////////////////////////////
 enum AssetType
 {
+   AssetType_EncryptedData,
    AssetType_PublicKey,
    AssetType_PrivateKey,
    AssetType_MetaData
@@ -207,30 +260,104 @@ enum CypherType
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+struct KeyDerivationFunction
+{
+private:
+
+public:
+   KeyDerivationFunction(void) 
+   {}
+
+   virtual ~KeyDerivationFunction(void) = 0;
+   virtual SecureBinaryData deriveKey(
+      const SecureBinaryData& rawKey) const = 0;
+   virtual bool isSame(KeyDerivationFunction* const) const = 0;
+
+   bool operator<(const KeyDerivationFunction& rhs)
+   {
+      return getId() < rhs.getId();
+   }
+
+   virtual const BinaryData& getId(void) const = 0;
+   virtual BinaryData serialize(void) const = 0;
+   static shared_ptr<KeyDerivationFunction>
+      deserialize(const BinaryDataRef&);
+};
+
+////
+struct KeyDerivationFunction_Romix : public KeyDerivationFunction
+{
+private:
+   mutable BinaryData id_;
+   unsigned iterations_;
+   unsigned memTarget_;
+   const BinaryData salt_;
+
+private:
+   BinaryData computeID(void) const;
+   BinaryData initialize(void);
+
+public:
+   KeyDerivationFunction_Romix() :
+      KeyDerivationFunction(),
+      salt_(move(initialize()))
+   {}
+
+   KeyDerivationFunction_Romix(unsigned iterations, unsigned memTarget,
+      SecureBinaryData& salt) :
+      KeyDerivationFunction(),
+      iterations_(iterations), memTarget_(memTarget), salt_(salt)
+   {}
+
+   SecureBinaryData deriveKey(const SecureBinaryData& rawKey) const;
+   bool isSame(KeyDerivationFunction* const) const;
+   BinaryData serialize(void) const;
+   const BinaryData& getId(void) const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct DecryptedEncryptionKey;
+
 class Cypher
 {
 private:
    const CypherType type_;
 
 protected:
-   SecureBinaryData iv_;
-   //TODO: add kdf
+   const BinaryData kdfId_;
+   const BinaryData encryptionKeyId_;
+   mutable SecureBinaryData iv_;
 
 public:
 
    //tors
-   Cypher(CypherType type) :
-      type_(type)
+   Cypher(CypherType type, const BinaryData& kdfId, 
+      const BinaryData encryptionKeyId) :
+      type_(type), kdfId_(kdfId), encryptionKeyId_(encryptionKeyId)
    {}
 
    virtual ~Cypher(void) = 0;
 
    //locals
    CypherType getType(void) const { return type_; }
+   const BinaryData& getKdfId(void) const { return kdfId_; }
+   const BinaryData& getEncryptionKeyId(void) const { return encryptionKeyId_; }
+   const SecureBinaryData& getIV(void) const { return iv_; }
 
    //virtuals
    virtual BinaryData serialize(void) const = 0;
    virtual unique_ptr<Cypher> getCopy(void) const = 0;
+   virtual unique_ptr<Cypher> getCopy(const BinaryData& keyId) const = 0;
+
+   virtual SecureBinaryData encrypt(const SecureBinaryData& key, 
+      const SecureBinaryData& data) const = 0;
+   virtual SecureBinaryData encrypt(DecryptedEncryptionKey* const key,
+      const BinaryData& kdfId, const SecureBinaryData& data) const = 0;
+
+   virtual SecureBinaryData decrypt(const SecureBinaryData& key, 
+      const SecureBinaryData& data) const = 0;
+
+   virtual bool isSame(Cypher* const) const = 0;
 
    //statics
    static unique_ptr<Cypher> deserialize(BinaryRefReader& brr);
@@ -241,15 +368,16 @@ class Cypher_AES : public Cypher
 {
 public:
    //tors
-   Cypher_AES() :
-      Cypher(CypherType_AES)
+   Cypher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId) :
+      Cypher(CypherType_AES, kdfId, encryptionKeyId)
    {
       //init IV
       iv_ = move(SecureBinaryData().GenerateRandom(BTC_AES::BLOCKSIZE));
    }
 
-   Cypher_AES(SecureBinaryData&& iv) :
-      Cypher(CypherType_AES)
+   Cypher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId, 
+      SecureBinaryData& iv) :
+      Cypher(CypherType_AES, kdfId, encryptionKeyId)
    {
       if (iv.getSize() != BTC_AES::BLOCKSIZE)
          throw CypherException("invalid iv length");
@@ -260,6 +388,18 @@ public:
    //virtuals
    BinaryData serialize(void) const;
    unique_ptr<Cypher> getCopy(void) const;
+   unique_ptr<Cypher> getCopy(const BinaryData& keyId) const;
+
+   SecureBinaryData encrypt(const SecureBinaryData& key,
+      const SecureBinaryData& data) const;
+   SecureBinaryData encrypt(DecryptedEncryptionKey* const key,
+      const BinaryData& kdfId, const SecureBinaryData& data) const;
+
+
+   SecureBinaryData decrypt(const SecureBinaryData& key, 
+      const SecureBinaryData& data) const;
+
+   bool isSame(Cypher* const) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -285,7 +425,7 @@ public:
    SecureBinaryData compressed_;
 
 public:
-   Asset_PublicKey(SecureBinaryData&& pubkey) :
+   Asset_PublicKey(SecureBinaryData& pubkey) :
       Asset(AssetType_PublicKey)
    {
       switch (pubkey.getSize())
@@ -309,8 +449,8 @@ public:
       }
    }
 
-   Asset_PublicKey(SecureBinaryData&& uncompressedKey, 
-      SecureBinaryData&& compressedKey) :
+   Asset_PublicKey(SecureBinaryData& uncompressedKey, 
+      SecureBinaryData& compressedKey) :
       Asset(AssetType_PublicKey), 
       uncompressed_(move(uncompressedKey)),
       compressed_(move(compressedKey))
@@ -327,35 +467,156 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-struct Asset_PrivateKey : public Asset
+struct Asset_EncryptedData : public Asset
 {
-public:
-   SecureBinaryData data_;
+   friend class DecryptedDataContainer;
+
+protected:
+   const SecureBinaryData data_;
    unique_ptr<Cypher> cypher_;
 
 public:
-   Asset_PrivateKey(SecureBinaryData&& data, unique_ptr<Cypher> cypher) :
-      Asset(AssetType_PrivateKey), data_(move(data))
+   Asset_EncryptedData(SecureBinaryData& data, unique_ptr<Cypher> cypher)
+      : Asset(AssetType_EncryptedData), data_(move(data))
    {
       if (data_.getSize() == 0)
          return;
-      
-      if(cypher == nullptr)
+
+      if (cypher == nullptr)
          throw WalletException("null cypher for privkey");
 
       cypher_ = move(cypher);
    }
-   
-   const SecureBinaryData& getKey(void) const 
-   { 
-      if (!hasKey())
-         throw AssetUnavailableException();
 
-      return data_; 
+   //virtual
+   virtual ~Asset_EncryptedData(void) = 0;
+   virtual bool isSame(Asset_EncryptedData* const) const = 0;
+   
+   //local
+   bool hasData(void) const 
+   { return (data_.getSize() != 0); }
+   
+   unique_ptr<Cypher> copyCypher(void) const
+   {
+      if (cypher_ == nullptr)
+         return nullptr;
+
+      return cypher_->getCopy();
    }
 
+   const SecureBinaryData& getIV(void) const
+   {
+      return cypher_->getIV();
+   }
+
+   const SecureBinaryData& getEncryptedData(void) const
+   {
+      return data_;
+   }
+
+   const BinaryData& getEncryptionKeyID(void) const
+   {
+      return cypher_->getEncryptionKeyId();
+   }
+
+   //static
+   static shared_ptr<Asset_EncryptedData> deserialize(const BinaryDataRef&);
+   static shared_ptr<Asset_EncryptedData> deserialize(
+      size_t len, const BinaryDataRef&);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct DecryptedEncryptionKey
+{
+   friend class DecryptedDataContainer;
+   friend class Cypher_AES;
+   friend class AssetWallet_Single;
+
+private:
+   const SecureBinaryData rawKey_;
+   map<BinaryData, SecureBinaryData> derivedKeys_;
+
+private:
+   BinaryData computeId(const SecureBinaryData& key) const;
+   const SecureBinaryData& getData(void) const { return rawKey_; }
+   const SecureBinaryData& getDerivedKey(const BinaryData& id) const;
+
+public:
+   DecryptedEncryptionKey(SecureBinaryData& key) :
+      rawKey_(move(key))
+   {}
+   
+   void deriveKey(shared_ptr<KeyDerivationFunction> kdf);
+   BinaryData getId(const BinaryData& kdfid) const;
+
+   unique_ptr<DecryptedEncryptionKey> copy(void) const;
+   bool hasData(void) const { return rawKey_.getSize() != 0; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct DecryptedPrivateKey
+{
+private:
+   const unsigned id_;
+   const SecureBinaryData privateKey_;
+
+private:
+   const SecureBinaryData& getData(void) const { return privateKey_; }
+
+public:
+   DecryptedPrivateKey(unsigned id, SecureBinaryData& key) :
+      id_(id), privateKey_(move(key))
+   {}
+
+   bool hasData(void) const { return privateKey_.getSize() != 0; }
+   const unsigned& getId(void) const { return id_; }
+   const SecureBinaryData& getDataRef(void) const { return privateKey_; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct Asset_EncryptionKey : public Asset_EncryptedData
+{
+public:
+   const BinaryData id_;
+
+private:
+   unique_ptr<DecryptedEncryptionKey> decrypt(
+      const SecureBinaryData& key) const;
+
+public:
+   Asset_EncryptionKey(BinaryData& id, SecureBinaryData& data, 
+      unique_ptr<Cypher> cypher) :
+      Asset_EncryptedData(move(data), move(cypher)), id_(move(id))
+   {}
+
    BinaryData serialize(void) const;
-   bool hasKey(void) const { return (data_.getSize() == 32); }
+   const BinaryData& getId(void) const { return id_; }
+
+   bool isSame(Asset_EncryptedData* const) const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct Asset_PrivateKey : public Asset_EncryptedData
+{
+   friend class DecryptedDataContainer;
+
+public:
+   const int id_;
+
+private:
+   unique_ptr<DecryptedPrivateKey> decrypt(
+      const SecureBinaryData& key) const;
+
+public:
+   Asset_PrivateKey(int id, 
+      SecureBinaryData& data, unique_ptr<Cypher> cypher) :
+      Asset_EncryptedData(move(data), move(cypher)), id_(id)
+   {}
+   
+   BinaryData serialize(void) const;
+   const unsigned& getId(void) const { return id_; }
+
+   bool isSame(Asset_EncryptedData* const) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -388,6 +649,9 @@ public:
    //virtual
    virtual BinaryData serialize(void) const = 0;
    virtual AddressEntryType getAddressTypeForHash(BinaryDataRef) const = 0;
+   virtual bool hasPrivateKey(void) const = 0;
+   virtual const BinaryData& getPrivateEncryptionKeyId(void) const = 0;
+
 
    //static
    static shared_ptr<AssetEntry> deserialize(
@@ -415,24 +679,21 @@ private:
 public:
    //tors
    AssetEntry_Single(int id,
-      SecureBinaryData&& pubkey, SecureBinaryData&& privkey,
-      unique_ptr<Cypher> cypher) :
-      AssetEntry(AssetEntryType_Single, id)
+      SecureBinaryData& pubkey, 
+      shared_ptr<Asset_PrivateKey> privkey) :
+      AssetEntry(AssetEntryType_Single, id), privkey_(privkey)
    {
       pubkey_ = make_shared<Asset_PublicKey>(move(pubkey));
-      privkey_ = make_shared<Asset_PrivateKey>(move(privkey), move(cypher));
    }
 
    AssetEntry_Single(int id,
-      SecureBinaryData&& pubkeyUncompressed,
-      SecureBinaryData&& pubkeyCompressed, 
-      SecureBinaryData&& privkey,
-      unique_ptr<Cypher> cypher) :
-      AssetEntry(AssetEntryType_Single, id)
+      SecureBinaryData& pubkeyUncompressed,
+      SecureBinaryData& pubkeyCompressed, 
+      shared_ptr<Asset_PrivateKey> privkey) :
+      AssetEntry(AssetEntryType_Single, id), privkey_(privkey)
    {
       pubkey_ = make_shared<Asset_PublicKey>(
          move(pubkeyUncompressed), move(pubkeyCompressed));
-      privkey_ = make_shared<Asset_PrivateKey>(move(privkey), move(cypher));
    }
 
    AssetEntry_Single(int id,
@@ -458,6 +719,8 @@ public:
    //virtual
    BinaryData serialize(void) const;
    AddressEntryType getAddressTypeForHash(BinaryDataRef) const;
+   bool hasPrivateKey(void) const;
+   const BinaryData& getPrivateEncryptionKeyId(void) const;
 };
 
 ////
@@ -511,6 +774,8 @@ public:
    }
 
    AddressEntryType getAddressTypeForHash(BinaryDataRef) const;
+   bool hasPrivateKey(void) const;
+   const BinaryData& getPrivateEncryptionKeyId(void) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -521,7 +786,9 @@ public:
    virtual ~DerivationScheme(void) = 0;
 
    //virtual
-   virtual vector<shared_ptr<AssetEntry>> extendChain(
+   virtual vector<shared_ptr<AssetEntry>> extendPublicChain(
+      shared_ptr<AssetEntry>, unsigned) = 0;
+   virtual vector<shared_ptr<AssetEntry>> extendPrivateChain(
       shared_ptr<AssetEntry>, unsigned) = 0;
    virtual BinaryData serialize(void) const = 0;
 
@@ -532,18 +799,31 @@ public:
 ////
 struct DerivationScheme_ArmoryLegacy : public DerivationScheme
 {
+   friend class AssetWallet_Single;
+
 private:
    SecureBinaryData chainCode_;
+   shared_ptr<DecryptedDataContainer> decryptedDataContainer_;
+
+private:
+   void setDecryptedDataContainerPtr(shared_ptr<DecryptedDataContainer> ddc)
+   {
+      decryptedDataContainer_ = ddc;
+   }
 
 public:
    //tors
-   DerivationScheme_ArmoryLegacy(SecureBinaryData&& chainCode) :
-      chainCode_(move(chainCode))
+   DerivationScheme_ArmoryLegacy(SecureBinaryData& chainCode,
+      shared_ptr<DecryptedDataContainer> ddc) :
+      chainCode_(move(chainCode)), decryptedDataContainer_(ddc)
    {}
 
    //virtuals
-   vector<shared_ptr<AssetEntry>> extendChain(
+   vector<shared_ptr<AssetEntry>> extendPublicChain(
       shared_ptr<AssetEntry>, unsigned);
+   vector<shared_ptr<AssetEntry>> extendPrivateChain(
+      shared_ptr<AssetEntry>, unsigned);
+
    BinaryData serialize(void) const;
 
    const SecureBinaryData& getChainCode(void) const { return chainCode_; }
@@ -586,9 +866,13 @@ public:
    void setSubwalletPointers(
       map<BinaryData, shared_ptr<AssetWallet_Single>> ptrMap);
 
+   shared_ptr<AssetWallet_Single> getSubWalletPtr(const BinaryData& id) const;
+
    //virtual
    BinaryData serialize(void) const;
-   vector<shared_ptr<AssetEntry>> extendChain(
+   vector<shared_ptr<AssetEntry>> extendPublicChain(
+      shared_ptr<AssetEntry>, unsigned);
+   vector<shared_ptr<AssetEntry>> extendPrivateChain(
       shared_ptr<AssetEntry>, unsigned);
 };
 
@@ -783,10 +1067,132 @@ struct HashMaps
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+class DecryptedDataContainer : public Lockable
+{
+   struct DecryptedData
+   {
+      map<BinaryData, unique_ptr<DecryptedEncryptionKey>> encryptionKeys_;
+      map<unsigned, unique_ptr<DecryptedPrivateKey>> privateKeys_;
+   };
+
+private:
+   map<BinaryData, shared_ptr<KeyDerivationFunction>> kdfMap_;
+   unique_ptr<DecryptedData> lockedDecryptedData_ = nullptr;
+
+   struct OtherLockedContainer
+   {
+      shared_ptr<DecryptedDataContainer> container_;
+      shared_ptr<ReentrantLock> lock_;
+
+      OtherLockedContainer(shared_ptr<DecryptedDataContainer> obj)
+      {
+         if (obj == nullptr)
+            throw runtime_error("emtpy DecryptedDataContainer ptr");
+
+         lock_ = make_unique<ReentrantLock>(obj.get());
+      }
+   };
+
+   vector<OtherLockedContainer> otherLocks_;
+   
+   LMDBEnv* dbEnv_;
+   LMDB* dbPtr_;
+
+   /*
+   The default encryption key is used to encrypt the master encryption in 
+   case no passphrase was provided at wallet creation. This is to prevent
+   for the master key being written in plain text on disk. It is encryption 
+   but does not effectively result in the wallet being protected by encryption,
+   since the default encryption is written on disk in plain text.
+
+   This is mostly to allow for the entire container to be encrypted head to toe
+   without implementing large caveats to handle unencrypted use cases.
+   */
+   const SecureBinaryData defaultEncryptionKey_;
+   const SecureBinaryData defaultEncryptionKeyId_;
+
+protected:
+   map<BinaryData, shared_ptr<Asset_EncryptedData>> encryptionKeyMap_;
+
+private:
+   function<SecureBinaryData(
+      const BinaryData&)> getPassphraseLambda_;
+   
+private:
+   unique_ptr<DecryptedEncryptionKey> deriveEncryptionKey(
+      unique_ptr<DecryptedEncryptionKey>, const BinaryData& kdfid) const;
+
+   unique_ptr<DecryptedEncryptionKey> promptPassphrase(
+      const BinaryData&, const BinaryData&) const;
+
+   void initAfterLock(void);
+   void cleanUpBeforeUnlock(void);
+
+public:
+   DecryptedDataContainer(LMDBEnv* dbEnv, LMDB* dbPtr,
+      const SecureBinaryData& defaultEncryptionKey,
+      const BinaryData& defaultEncryptionKeyId) :
+         dbEnv_(dbEnv), dbPtr_(dbPtr),
+         defaultEncryptionKey_(defaultEncryptionKey),
+         defaultEncryptionKeyId_(defaultEncryptionKeyId)
+   {
+      auto emptyPassphraseLambda = [](const BinaryData&)->
+         SecureBinaryData
+      {
+         return SecureBinaryData();
+      };
+
+      getPassphraseLambda_ = emptyPassphraseLambda;
+   }
+
+   const SecureBinaryData& getDecryptedPrivateKey(
+      shared_ptr<Asset_PrivateKey> data);
+   SecureBinaryData encryptData(
+      Cypher* const cypher, const SecureBinaryData& data);
+
+
+   void populateEncryptionKey(
+      const BinaryData& keyid, const BinaryData& kdfid);
+
+   void addKdf(shared_ptr<KeyDerivationFunction> kdfPtr)
+   {
+      kdfMap_.insert(make_pair(kdfPtr->getId(), kdfPtr));
+   }
+
+   void addEncryptionKey(shared_ptr<Asset_EncryptionKey> keyPtr)
+   {
+      encryptionKeyMap_.insert(make_pair(keyPtr->getId(), keyPtr));
+   }
+
+   void updateOnDisk(void);
+   void readFromDisk(void);
+
+   void updateKeyOnDiskNoPrefix(
+      const BinaryData&, shared_ptr<Asset_EncryptedData>);
+   void updateKeyOnDisk(
+      const BinaryData&, shared_ptr<Asset_EncryptedData>);
+
+   void deleteKeyFromDisk(const BinaryData& key);
+
+   void setPassphrasePromptLambda(
+      function<SecureBinaryData(const BinaryData&)> lambda)
+   {
+      getPassphraseLambda_ = lambda;
+   }
+
+   void encryptEncryptionKey(const BinaryData&, const SecureBinaryData&);
+   void lockOther(shared_ptr<DecryptedDataContainer> other);
+};
+
+////////////////////////////////////////////////////////////////////////////////
 class AssetWallet : protected Lockable
 {
    friend class ResolvedFeed_AssetWalletSingle;
    friend class ResolvedFeed_AssetWalletMS;
+
+private:
+   virtual void initAfterLock(void) {}
+   virtual void cleanUpBeforeUnlock(void) {}
 
 protected:
    shared_ptr<LMDBEnv> dbEnv_ = nullptr;
@@ -802,6 +1208,7 @@ protected:
    mutable int lastKnownIndex_ = -1;
    mutable int lastAssetMapSize_ = 0;
 
+   shared_ptr<DecryptedDataContainer> decryptedData_;
    shared_ptr<DerivationScheme> derScheme_;
    AddressEntryType default_aet_;
 
@@ -815,9 +1222,14 @@ protected:
       dbEnv_(metaPtr->dbEnv_), dbName_(metaPtr->dbName_)
    {
       db_ = new LMDB(dbEnv_.get(), dbName_);
+      decryptedData_ = make_shared<DecryptedDataContainer>(
+         dbEnv_.get(), db_,
+         metaPtr->getDefaultEncryptionKey(),
+         metaPtr->getDefaultEncryptionKeyId());
    }
 
-   static shared_ptr<LMDBEnv> getEnvFromFile(const string& path, unsigned dbCount = 3)
+   static shared_ptr<LMDBEnv> getEnvFromFile(
+      const string& path, unsigned dbCount = 3)
    {
       auto env = make_shared<LMDBEnv>(dbCount);
       env->open(path);
@@ -833,6 +1245,7 @@ protected:
    void putData(const BinaryData& key, const BinaryData& data);
    void putData(BinaryWriter& key, BinaryWriter& data);
 
+   void extendPrivateChain(shared_ptr<AssetEntry>, unsigned);
    unsigned getAndBumpHighestUsedIndex(void);
 
    //virtual
@@ -862,47 +1275,54 @@ protected:
 
 public:
    //tors
-   ~AssetWallet()
-   {
-      derScheme_.reset();
-
-      if (db_ != nullptr)
-      {
-         db_->close();
-         delete db_;
-         db_ = nullptr;
-      }
-
-      addresses_.clear();
-      assets_.clear();
-   }
+   virtual ~AssetWallet() = 0;
 
    //local
    shared_ptr<AddressEntry> getNewAddress();
-   string getID(void) const;   
+   string getID(void) const; 
+   virtual ReentrantLock lockDecryptedContainer(void);
+   bool isDecryptedContainerLocked(void) const;
    
    shared_ptr<AssetEntry> getAssetForIndex(unsigned) const;
    const BinaryData& getNestedSWAddrForIndex(unsigned chainIndex);
    const BinaryData& getNestedP2PKAddrForIndex(unsigned chainIndex);
    const BinaryData& getP2PKHAddrForIndex(unsigned chainIndex);
-   unsigned getAssetCount(void) const { return assets_.size(); }
+   size_t getAssetCount(void) const { return assets_.size(); }
    int getLastComputedIndex(void) const;
-   void extendChain(unsigned);
-   bool extendChainTo(unsigned);
-   void extendChain(shared_ptr<AssetEntry>, unsigned);
+   
+   void extendPublicChain(unsigned);
+   void extendPublicChain(shared_ptr<AssetEntry>, unsigned);
+   bool extendPublicChainToIndex(unsigned);
+   
+   void extendPrivateChain(unsigned);
+   void extendPrivateChainToIndex(unsigned);
+
    bool hasScrAddr(const BinaryData& scrAddr);
    int getAssetIndexForAddr(const BinaryData& scrAddr);
    AddressEntryType getAddrTypeForIndex(int index);
    shared_ptr<AddressEntry> getAddressEntryForIndex(int);
    AddressEntryType getDefaultAddressType(void) const { return default_aet_; }
-   void update(void);
+   void updateOnDiskAssets(void);
    void deleteImports(const vector<BinaryData>&);
+   const string& getFilename(void) const;
+
+   void setPassphrasePromptLambda(
+      function<SecureBinaryData(const BinaryData&)> lambda)
+   {
+      decryptedData_->setPassphrasePromptLambda(lambda);
+   }
+
+   void changeMasterPassphrase(const SecureBinaryData&);
 
    //virtual
    virtual set<BinaryData> getAddrHashSet() = 0;
    virtual bool setImport(int importID, const SecureBinaryData& pubkey) = 0;
+   shared_ptr<AssetEntry> getLastAssetWithPrivateKey(void) const;
 
    const BinaryData& getP2SHScriptForHash(const BinaryData&);
+
+   virtual const SecureBinaryData& getDecryptedValue(
+      shared_ptr<Asset_PrivateKey>) = 0;
 
    //static
    static shared_ptr<AssetWallet> loadMainWalletFromFile(const string& path);
@@ -935,16 +1355,19 @@ protected:
    //static
    static shared_ptr<AssetWallet_Single> initWalletDb(
       shared_ptr<WalletMeta>,
+      shared_ptr<KeyDerivationFunction> masterKdf,
+      DecryptedEncryptionKey& masterEncryptionKey,
       unique_ptr<Cypher>,
+      const SecureBinaryData& passphrase,
       AddressEntryType, 
-      SecureBinaryData&& privateRoot,
+      const SecureBinaryData& privateRoot,
       unsigned lookup);
 
    static shared_ptr<AssetWallet_Single> initWalletDbFromPubRoot(
       shared_ptr<WalletMeta>,
       AddressEntryType,
-      SecureBinaryData&& pubRoot,
-      SecureBinaryData&& chainCode,
+      SecureBinaryData& pubRoot,
+      SecureBinaryData& chainCode,
       unsigned lookup);
 
    static BinaryData computeWalletID(
@@ -960,20 +1383,23 @@ public:
    //virtual
    set<BinaryData> getAddrHashSet();
    bool setImport(int importID, const SecureBinaryData& pubkey);
+   const SecureBinaryData& getDecryptedValue(
+      shared_ptr<Asset_PrivateKey>);
 
    //static
    static shared_ptr<AssetWallet_Single> createFromPrivateRoot_Armory135(
       const string& folder,
       AddressEntryType,
-      SecureBinaryData&& privateRoot,
-      unsigned lookup = UINT32_MAX);
+      const SecureBinaryData& privateRoot,
+      const SecureBinaryData& passphrase,
+      unsigned lookup);
 
    static shared_ptr<AssetWallet_Single> createFromPublicRoot_Armory135(
       const string& folder,
       AddressEntryType,
-      SecureBinaryData&& privateRoot,
-      SecureBinaryData&& chainCode,
-      unsigned lookup = UINT32_MAX);
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& chainCode,
+      unsigned lookup);
 
    //local
    const SecureBinaryData& getPublicRoot(void) const;
@@ -994,6 +1420,8 @@ protected:
 
    //virtual
    void fillHashIndexMap(void);
+   const SecureBinaryData& getDecryptedValue(
+      shared_ptr<Asset_PrivateKey>);
 
 public:
    //tors
@@ -1004,6 +1432,7 @@ public:
    //virtual
    set<BinaryData> getAddrHashSet();
    bool setImport(int importID, const SecureBinaryData& pubkey);
+   virtual ReentrantLock lockDecryptedContainer(void);
 
    shared_ptr<AddressEntry> getAddressEntryForAsset(
       shared_ptr<AssetEntry>,
@@ -1014,7 +1443,8 @@ public:
       const string& folder,
       AddressEntryType aet,
       unsigned M, unsigned N,
-      SecureBinaryData&& privateRoot,
+      SecureBinaryData& privateRoot,
+      const SecureBinaryData& passphrase,
       unsigned lookup = UINT32_MAX
       );
 
@@ -1099,7 +1529,7 @@ public:
          throw runtime_error("invalid value");
 
       const auto& privkeyAsset = iter->second->getPrivKey();
-      return privkeyAsset->getKey();
+      return wltPtr_->getDecryptedValue(privkeyAsset);
    }
 };
 
@@ -1168,7 +1598,7 @@ public:
          throw runtime_error("invalid value");
 
       const auto& privkeyAsset = iter->second->getPrivKey();
-      return privkeyAsset->getKey();
+      return wltPtr_->getDecryptedValue(privkeyAsset);
    }
 };
 

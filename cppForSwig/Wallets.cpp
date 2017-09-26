@@ -30,13 +30,59 @@ BinaryData WalletMeta::getDbKey()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+BinaryData WalletMeta::serializeVersion() const
+{
+   BinaryWriter bw;
+   bw.put_uint8_t(versionMajor_);
+   bw.put_uint16_t(versionMinor_);
+   bw.put_uint16_t(revision_);
+
+   return bw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void WalletMeta::unseralizeVersion(BinaryRefReader& brr)
+{
+   versionMajor_ = brr.get_uint8_t();
+   versionMinor_ = brr.get_uint16_t();
+   revision_ = brr.get_uint16_t();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData WalletMeta::serializeEncryptionKey() const
+{
+   BinaryWriter bw;
+   bw.put_var_int(defaultEncryptionKeyId_.getSize());
+   bw.put_BinaryData(defaultEncryptionKeyId_);
+   bw.put_var_int(defaultEncryptionKey_.getSize());
+   bw.put_BinaryData(defaultEncryptionKey_);
+
+   return bw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void WalletMeta::unserializeEncryptionKey(BinaryRefReader& brr)
+{
+   auto len = brr.get_var_int();
+   defaultEncryptionKeyId_ = move(brr.get_BinaryData(len));
+   
+   len = brr.get_var_int();
+   defaultEncryptionKey_ = move(brr.get_BinaryData(len));
+}
+
+////////////////////////////////////////////////////////////////////////////////
 BinaryData WalletMeta_Single::serialize() const
 {
    BinaryWriter bw;
-   bw.put_var_int(4);
    bw.put_uint32_t(type_);
+   bw.put_BinaryData(serializeVersion());
+   bw.put_BinaryData(serializeEncryptionKey());
 
-   return bw.getData();
+   BinaryWriter final_bw;
+   final_bw.put_var_int(bw.getSize());
+   final_bw.put_BinaryDataRef(bw.getDataRef());
+
+   return final_bw.getData();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,10 +95,15 @@ bool WalletMeta_Single::shouldLoad() const
 BinaryData WalletMeta_Multisig::serialize() const
 {
    BinaryWriter bw;
-   bw.put_var_int(4);
    bw.put_uint32_t(type_);
+   bw.put_BinaryData(serializeVersion());
+   bw.put_BinaryData(serializeEncryptionKey());
 
-   return bw.getData();
+   BinaryWriter final_bw;
+   final_bw.put_var_int(bw.getSize());
+   final_bw.put_BinaryDataRef(bw.getDataRef());
+
+   return final_bw.getData();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,6 +152,8 @@ shared_ptr<WalletMeta> WalletMeta::deserialize(
    case WalletMetaType_Single:
    {
       wltMetaPtr = make_shared<WalletMeta_Single>(env);
+      wltMetaPtr->unseralizeVersion(brrVal);
+      wltMetaPtr->unserializeEncryptionKey(brrVal);
       break;
    }
 
@@ -113,6 +166,8 @@ shared_ptr<WalletMeta> WalletMeta::deserialize(
    case WalletMetaType_Multisig:
    {
       wltMetaPtr = make_shared<WalletMeta_Multisig>(env);
+      wltMetaPtr->unseralizeVersion(brrVal);
+      wltMetaPtr->unserializeEncryptionKey(brrVal);
       break;
    }
 
@@ -125,17 +180,793 @@ shared_ptr<WalletMeta> WalletMeta::deserialize(
    return wltMetaPtr;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// KeyDerivationFunction
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+KeyDerivationFunction::~KeyDerivationFunction()
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData KeyDerivationFunction_Romix::computeID() const
+{
+   BinaryWriter bw;
+   bw.put_BinaryData(salt_);
+   bw.put_uint32_t(iterations_);
+   bw.put_uint32_t(memTarget_);
+
+   return BtcUtils::getHash256(bw.getData());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData KeyDerivationFunction_Romix::initialize()
+{
+   KdfRomix kdf;
+   kdf.computeKdfParams(0);
+   iterations_ = kdf.getNumIterations();
+   memTarget_ = kdf.getMemoryReqtBytes();
+   return kdf.getSalt();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData KeyDerivationFunction_Romix::deriveKey(
+   const SecureBinaryData& rawKey) const
+{
+   KdfRomix kdfObj(memTarget_, iterations_, salt_);
+   return move(kdfObj.DeriveKey(rawKey));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<KeyDerivationFunction> KeyDerivationFunction::deserialize(
+   const BinaryDataRef& data)
+{
+   BinaryRefReader brr(data);
+
+   //check size
+   auto totalLen = brr.get_var_int();
+   if (totalLen != brr.getSizeRemaining())
+      throw runtime_error("invalid serialized kdf size");
+
+   //return ptr
+   shared_ptr<KeyDerivationFunction> kdfPtr = nullptr;
+
+   //check prefix
+   auto prefix = brr.get_uint16_t();
+
+   switch (prefix)
+   {
+   case KDF_ROMIX_PREFIX:
+   {
+      //iterations
+      auto iterations = brr.get_uint32_t();
+
+      //memTarget
+      auto memTarget = brr.get_uint32_t();
+
+      //salt
+      auto len = brr.get_var_int();
+      SecureBinaryData salt(move(brr.get_BinaryData(len)));
+
+      kdfPtr = make_shared<KeyDerivationFunction_Romix>(
+         iterations, memTarget, salt);
+      break;
+   }
+
+   default:
+      throw runtime_error("unexpected kdf prefix");
+   }
+
+   return kdfPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData KeyDerivationFunction_Romix::serialize() const
+{
+   BinaryWriter bw;
+   bw.put_uint16_t(KDF_ROMIX_PREFIX);
+   bw.put_uint32_t(iterations_);
+   bw.put_uint32_t(memTarget_);
+   bw.put_var_int(salt_.getSize());
+   bw.put_BinaryData(salt_);
+
+   BinaryWriter finalBw;
+   finalBw.put_var_int(bw.getSize());
+   finalBw.put_BinaryDataRef(bw.getDataRef());
+
+   return finalBw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const BinaryData& KeyDerivationFunction_Romix::getId(void) const
+{
+   if (id_.getSize() == 0)
+      id_ = move(computeID());
+   return id_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool KeyDerivationFunction_Romix::isSame(KeyDerivationFunction* const kdf) const
+{
+   auto kdfromix = dynamic_cast<KeyDerivationFunction_Romix*>(kdf);
+   if (kdfromix == nullptr)
+      return false;
+
+   return iterations_ == kdfromix->iterations_ && 
+          memTarget_ == kdfromix->memTarget_ &&
+          salt_ == kdfromix->salt_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// DecryptedData
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedEncryptionKey::deriveKey(
+   shared_ptr<KeyDerivationFunction> kdf)
+{
+   if (derivedKeys_.find(kdf->getId()) != derivedKeys_.end())
+      return;
+
+   auto&& derivedkey = kdf->deriveKey(rawKey_);
+   auto&& keypair = make_pair(kdf->getId(), move(derivedkey));
+   derivedKeys_.insert(move(keypair));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<DecryptedEncryptionKey> 
+   DecryptedEncryptionKey::copy() const
+{
+   auto key_copy = rawKey_;
+   auto copy_ptr = make_unique<DecryptedEncryptionKey>(move(key_copy));
+
+   copy_ptr->derivedKeys_ = derivedKeys_;
+
+   return move(copy_ptr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData DecryptedEncryptionKey::getId(
+   const BinaryData& kdfId) const
+{
+   const auto keyIter = derivedKeys_.find(kdfId);
+   if (keyIter == derivedKeys_.end())
+      throw runtime_error("couldn't find derivation for kdfid");
+
+   return move(computeId(keyIter->second));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData DecryptedEncryptionKey::computeId(
+   const SecureBinaryData& key) const
+{
+   //treat value as scalar, get pubkey for it
+   auto&& hashedKey = BtcUtils::hash256(key);
+   auto&& pubkey = CryptoECDSA().ComputePublicKey(hashedKey);
+   
+   //HMAC the pubkey, get last 16 bytes as ID
+   return BtcUtils::computeDataId(pubkey, HMAC_KEY_ENCRYPTIONKEYS);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const SecureBinaryData& DecryptedEncryptionKey::getDerivedKey(
+   const BinaryData& id) const
+{
+   auto iter = derivedKeys_.find(id);
+   if (iter == derivedKeys_.end())
+      throw runtime_error("invalid key");
+
+   return iter->second;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// EncryptedDataContainer
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::initAfterLock()
+{
+   auto&& decryptedDataInstance = make_unique<DecryptedData>();
+
+   //copy default encryption key
+   auto&& defaultEncryptionKeyCopy = defaultEncryptionKey_.copy();
+
+   auto defaultKey = 
+      make_unique<DecryptedEncryptionKey>(defaultEncryptionKeyCopy);
+   decryptedDataInstance->encryptionKeys_.insert(make_pair(
+      defaultEncryptionKeyId_, move(defaultKey)));
+
+   lockedDecryptedData_ = move(decryptedDataInstance);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::cleanUpBeforeUnlock()
+{
+   otherLocks_.clear();
+   lockedDecryptedData_.reset();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::lockOther(
+   shared_ptr<DecryptedDataContainer> other)
+{
+   if (!ownsLock())
+      throw DecryptedDataContainerException("unlocked/does not own lock");
+
+   if (lockedDecryptedData_ == nullptr)
+      throw DecryptedDataContainerException(
+      "nullptr lock! how did we get this far?");
+
+   otherLocks_.push_back(OtherLockedContainer(other));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<DecryptedEncryptionKey> 
+   DecryptedDataContainer::deriveEncryptionKey(
+   unique_ptr<DecryptedEncryptionKey> decrKey, const BinaryData& kdfid) const
+{
+   //sanity check
+   if (!ownsLock())
+      throw DecryptedDataContainerException("unlocked/does not own lock");
+
+   if (lockedDecryptedData_ == nullptr)
+      throw DecryptedDataContainerException(
+      "nullptr lock! how did we get this far?");
+
+   //does the decryption key have this derivation?
+   auto derivationIter = decrKey->derivedKeys_.find(kdfid);
+   if (derivationIter == decrKey->derivedKeys_.end())
+   {
+      //look for the kdf
+      auto& kdfIter = kdfMap_.find(kdfid);
+      if (kdfIter == kdfMap_.end() || kdfIter->second == nullptr)
+         throw DecryptedDataContainerException("can't find kdf params for id");
+      
+      //derive the key, this will insert it into the container too
+      decrKey->deriveKey(kdfIter->second);
+   }
+
+   return move(decrKey);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const SecureBinaryData& DecryptedDataContainer::getDecryptedPrivateKey(
+   shared_ptr<Asset_PrivateKey> dataPtr)
+{
+   //sanity check
+   if (!ownsLock())
+      throw DecryptedDataContainerException("unlocked/does not own lock");
+
+   if (lockedDecryptedData_ == nullptr)
+      throw DecryptedDataContainerException(
+         "nullptr lock! how did we get this far?");
+
+   auto insertDecryptedData = [this](unique_ptr<DecryptedPrivateKey> decrKey)->
+      const SecureBinaryData&
+   {
+      //if decrKey is empty, all casts failed, throw
+      if (decrKey == nullptr)
+         throw DecryptedDataContainerException("unexpected dataPtr type");
+
+      //make sure insertion succeeds
+      lockedDecryptedData_->privateKeys_.erase(decrKey->getId());
+      auto&& keypair = make_pair(decrKey->getId(), move(decrKey));
+      auto&& insertionPair =
+         lockedDecryptedData_->privateKeys_.insert(move(keypair));
+
+      return insertionPair.first->second->getDataRef();
+   };
+
+   //look for already decrypted data
+   auto dataIter = lockedDecryptedData_->privateKeys_.find(dataPtr->getId());
+   if (dataIter != lockedDecryptedData_->privateKeys_.end())
+      return dataIter->second->getDataRef();
+
+   //no decrypted val entry, let's try to decrypt the data instead
+   
+   if (!dataPtr->hasData())
+   {
+      //missing encrypted data in container (most likely uncomputed private key)
+      //throw back to caller, this object only deals with decryption
+      throw EncryptedDataMissing();
+   }
+
+   //check cypher
+   if (dataPtr->cypher_ == nullptr)
+   {
+      //null cypher, data is not encrypted, create entry and return it
+      auto dataCopy = dataPtr->data_;
+      auto&& decrKey = make_unique<DecryptedPrivateKey>(
+         dataPtr->getId(), move(dataCopy));
+      return insertDecryptedData(move(decrKey));
+   }
+
+   //we have a valid cypher, grab the encryption key
+   unique_ptr<DecryptedEncryptionKey> decrKey;
+   auto& encryptionKeyId = dataPtr->cypher_->getEncryptionKeyId();
+   auto& kdfId = dataPtr->cypher_->getKdfId();
+   
+   populateEncryptionKey(encryptionKeyId, kdfId);
+
+   auto decrKeyIter = 
+      lockedDecryptedData_->encryptionKeys_.find(encryptionKeyId);
+   if (decrKeyIter == lockedDecryptedData_->encryptionKeys_.end())
+      throw DecryptedDataContainerException("could not get encryption key");
+
+   auto derivationKeyIter = decrKeyIter->second->derivedKeys_.find(kdfId);
+   if(derivationKeyIter == decrKeyIter->second->derivedKeys_.end())
+      throw DecryptedDataContainerException("could not get derived encryption key");
+
+   //decrypt data
+   auto decryptedDataPtr = move(dataPtr->decrypt(derivationKeyIter->second));
+
+   //sanity check
+   if (decryptedDataPtr == nullptr)
+      throw DecryptedDataContainerException("failed to decrypt data");
+
+   //insert the newly decrypted data in the container and return
+   return insertDecryptedData(move(decryptedDataPtr));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::populateEncryptionKey(
+   const BinaryData& keyid, const BinaryData& kdfid)
+{
+   //sanity check
+   if (!ownsLock())
+      throw DecryptedDataContainerException("unlocked/does not own lock");
+
+   if (lockedDecryptedData_ == nullptr)
+      throw DecryptedDataContainerException(
+      "nullptr lock! how did we get this far?");
+
+   //lambda to insert keys back into the container
+   auto insertDecryptedData = [&keyid, this](
+      unique_ptr<DecryptedEncryptionKey> decrKey)->void
+   {
+      //if decrKey is empty, all casts failed, throw
+      if (decrKey == nullptr)
+         throw DecryptedDataContainerException(
+            "tried to insert empty decryption key");
+
+      //make sure insertion succeeds
+      lockedDecryptedData_->encryptionKeys_.erase(keyid);
+      auto&& keypair = make_pair(keyid, move(decrKey));
+      auto&& insertionPair =
+         lockedDecryptedData_->encryptionKeys_.insert(move(keypair));
+   };
+
+   //look for already decrypted data
+   unique_ptr<DecryptedEncryptionKey> decryptedKey = nullptr;
+   auto dataIter = lockedDecryptedData_->encryptionKeys_.find(keyid);
+   if (dataIter != lockedDecryptedData_->encryptionKeys_.end())
+      decryptedKey = move(dataIter->second);
+
+   if (decryptedKey == nullptr)
+   {
+      //we don't have a decrypted key, let's look for it in the encrypted map
+      auto encrKeyIter = encryptionKeyMap_.find(keyid);
+      if (encrKeyIter != encryptionKeyMap_.end())
+      {
+         //sanity check
+         auto encryptedKeyPtr = dynamic_pointer_cast<Asset_EncryptionKey>(
+            encrKeyIter->second);
+         if (encryptedKeyPtr == nullptr)
+            throw DecryptedDataContainerException(
+               "unexpected object for encryption key id");
+
+         //found the encrypted key, need to decrypt it first
+         populateEncryptionKey(
+            encryptedKeyPtr->cypher_->getEncryptionKeyId(),
+            encryptedKeyPtr->cypher_->getKdfId());
+
+         //grab encryption key from map
+         auto decrKeyIter =
+            lockedDecryptedData_->encryptionKeys_.find(
+               encryptedKeyPtr->cypher_->getEncryptionKeyId());
+         if (decrKeyIter == lockedDecryptedData_->encryptionKeys_.end())
+            throw DecryptedDataContainerException("failed to decrypt key");
+         auto&& decryptionKey = move(decrKeyIter->second);
+
+         //derive encryption key
+         decryptionKey = move(
+            deriveEncryptionKey(move(decryptionKey),
+            encryptedKeyPtr->cypher_->getKdfId()));
+
+         //decrypt encrypted key
+         auto&& rawDecryptedKey = encryptedKeyPtr->cypher_->decrypt(
+            decryptionKey->getDerivedKey(encryptedKeyPtr->cypher_->getKdfId()),
+            encryptedKeyPtr->data_);
+
+         decryptedKey = move(make_unique<DecryptedEncryptionKey>(
+            rawDecryptedKey));
+
+         //move decryption key back to container
+         insertDecryptedData(move(decryptionKey));
+      }
+   }
+
+   if (decryptedKey == nullptr)
+   {
+      //still no key, prompt the user
+      decryptedKey = move(promptPassphrase(keyid, kdfid));
+   }
+
+   //apply kdf
+   decryptedKey = move(deriveEncryptionKey(move(decryptedKey), kdfid));
+
+   //insert into map
+   insertDecryptedData(move(decryptedKey));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData DecryptedDataContainer::encryptData(
+   Cypher* const cypher, const SecureBinaryData& data)
+{
+   //sanity check
+   if (cypher == nullptr)
+      throw DecryptedDataContainerException("null cypher");
+
+   if (!ownsLock())
+      throw DecryptedDataContainerException("unlocked/does not own lock");
+
+   if (lockedDecryptedData_ == nullptr)
+      throw DecryptedDataContainerException(
+      "nullptr lock! how did we get this far?");
+
+   populateEncryptionKey(cypher->getEncryptionKeyId(), cypher->getKdfId());
+   auto keyIter = lockedDecryptedData_->encryptionKeys_.find(
+      cypher->getEncryptionKeyId());
+   auto& derivedKey = keyIter->second->getDerivedKey(cypher->getKdfId());
+
+   return move(cypher->encrypt(derivedKey, data));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<DecryptedEncryptionKey> DecryptedDataContainer::promptPassphrase(
+   const BinaryData& keyId, const BinaryData& kdfId) const
+{
+   while (1)
+   {
+      auto&& passphrase = getPassphraseLambda_(keyId);
+
+      if (passphrase.getSize() == 0)
+         throw DecryptedDataContainerException("empty passphrase");
+
+      auto keyPtr = make_unique<DecryptedEncryptionKey>(passphrase);
+      keyPtr = move(deriveEncryptionKey(move(keyPtr), kdfId));
+
+      if (keyId == keyPtr->getId(kdfId))
+         return move(keyPtr);
+   }
+
+   return nullptr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::updateKeyOnDisk(
+   const BinaryData& key, shared_ptr<Asset_EncryptedData> dataPtr)
+{
+   //serialize db key
+   auto&& dbKey = WRITE_UINT8_BE(ENCRYPTIONKEY_PREFIX);
+   dbKey.append(key);
+
+   updateKeyOnDiskNoPrefix(dbKey, dataPtr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::updateKeyOnDiskNoPrefix(
+   const BinaryData& dbKey, shared_ptr<Asset_EncryptedData> dataPtr)
+{
+   /*caller needs to manage db tx*/
+
+   //check if data is on disk already
+   CharacterArrayRef keyRef(dbKey.getSize(), dbKey.getPtr());
+   auto&& dataRef = dbPtr_->get_NoCopy(keyRef);
+
+   if (dataRef.len != 0)
+   {
+      BinaryDataRef bdr((uint8_t*)dataRef.data, dataRef.len);
+      //already have this key, is it the same data?
+      auto onDiskData = Asset_EncryptedData::deserialize(bdr);
+
+      //data has not changed, no need to commit
+      if (onDiskData->isSame(dataPtr.get()))
+         return;
+
+      //data has changed, wipe the existing data
+      deleteKeyFromDisk(dbKey);
+   }
+
+   auto&& serializedData = dataPtr->serialize();
+   CharacterArrayRef dataRef_Put(
+      serializedData.getSize(), serializedData.getPtr());
+   dbPtr_->insert(keyRef, dataRef_Put);
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::updateOnDisk()
+{
+   //wallet needs to create the db read/write tx
+
+   //encryption keys
+   for (auto& key : encryptionKeyMap_)
+      updateKeyOnDisk(key.first, key.second);
+
+   //kdf
+   for (auto& key : kdfMap_)
+   {
+      //get db key
+      auto&& dbKey = WRITE_UINT8_BE(KDF_PREFIX);
+      dbKey.append(key.first);
+
+      //fetch from db
+      CharacterArrayRef keyRef(dbKey.getSize(), dbKey.getPtr());
+      auto&& dataRef = dbPtr_->get_NoCopy(keyRef);
+
+      if (dataRef.len != 0)
+      {
+         BinaryDataRef bdr((uint8_t*)dataRef.data, dataRef.len);
+         //already have this key, is it the same data?
+         auto onDiskData = KeyDerivationFunction::deserialize(bdr);
+
+         //data has not changed, not commiting to disk
+         if (onDiskData->isSame(key.second.get()))
+            continue;
+
+         //data has changed, wipe the existing data
+         deleteKeyFromDisk(dbKey);
+      }
+
+      auto&& serializedData = key.second->serialize();
+      CharacterArrayRef dataRef_Put(
+         serializedData.getSize(), serializedData.getPtr());
+      dbPtr_->insert(keyRef, dataRef_Put);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::deleteKeyFromDisk(const BinaryData& key)
+{
+   /***
+   This operation abuses the no copy read feature in lmdb. Since all data is
+   mmap'd, a no copy read is a pointer to the data on disk. Therefor modifying 
+   that data will result in a modification on disk.
+
+   This is done under 3 conditions: 
+   1) The decrypted data container is locked.
+   2) The calling threads owns a ReadWrite transaction on the lmdb object
+   3) There are no active ReadOnly transactions on the lmdb object
+
+   1. is a no brainer, 2. guarantees the changes are flushed to disk once the 
+   tx is released. RW tx are locked, therefor only one is active at any given 
+   time, by LMDB design.
+   
+   3. is to guarantee there are no readers when the change takes place. Needs
+   some LMDB C++ wrapper modifications to be able to check from the db object. 
+   The condition should be enforced by the caller regardless.
+   ***/
+
+   //sanity checks
+   if (!ownsLock())
+      throw DecryptedDataContainerException("unlocked/does not own lock");
+
+   //check db only has one RW tx
+   /*if (!dbEnv_->isRWLockExclusive())
+   {
+   throw DecryptedDataContainerException(
+   "need exclusive RW lock to delete entries");
+   }
+
+   //check we own the RW tx
+   if (dbEnv_->ownsLock() != LMDB_RWLOCK)
+   {
+   throw DecryptedDataContainerException(
+   "need exclusive RW lock to delete entries");
+   }*/
+
+   CharacterArrayRef keyRef(key.getSize(), key.getCharPtr());
+   
+   //check data exist son disk to begin with
+   {
+      auto dataRef = dbPtr_->get_NoCopy(keyRef);
+
+      //data is empty, nothing to wipe
+      if (dataRef.len == 0)
+      {
+         throw DecryptedDataContainerException(
+            "tried to wipe non existent entry");
+      }
+   }
+
+   //wipe it
+   dbPtr_->wipe(keyRef);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::readFromDisk()
+{
+   {
+      //encryption key and kdf entries
+      auto dbIter = dbPtr_->begin();
+
+      BinaryWriter bwEncrKey;
+      bwEncrKey.put_uint8_t(ENCRYPTIONKEY_PREFIX);
+      
+      CharacterArrayRef keyRef(bwEncrKey.getSize(), bwEncrKey.getData().getPtr());
+
+      dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
+
+      while (dbIter.isValid())
+      {
+         auto iterkey = dbIter.key();
+         auto itervalue = dbIter.value();
+
+         if (iterkey.mv_size < 2)
+            throw runtime_error("empty db key");
+
+         if (itervalue.mv_size < 1)
+            throw runtime_error("empty value");
+
+         BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data +1, iterkey.mv_size -1);
+         BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
+
+         auto prefix = (uint8_t*)iterkey.mv_data;
+         switch (*prefix)
+         {
+         case ENCRYPTIONKEY_PREFIX:
+         {
+            auto keyPtr = Asset_EncryptedData::deserialize(valueBDR);
+            auto encrKeyPtr = dynamic_pointer_cast<Asset_EncryptionKey>(keyPtr);
+            if (encrKeyPtr == nullptr)
+               throw runtime_error("empty keyptr");
+
+            addEncryptionKey(encrKeyPtr);
+
+            break;
+         }
+
+         case KDF_PREFIX:
+         {
+            auto kdfPtr = KeyDerivationFunction::deserialize(valueBDR);
+            if (keyBDR != kdfPtr->getId())
+               throw runtime_error("kdf id mismatch");
+
+            addKdf(kdfPtr);
+            break;
+         }
+         }
+
+         dbIter.advance();
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DecryptedDataContainer::encryptEncryptionKey(
+   const BinaryData& keyID,
+   const SecureBinaryData& newPassphrase)
+{
+   /***
+   Encrypts an encryption key with "newPassphrase". If the key is already
+   encrypted, it will be changed.
+   ***/
+
+   //sanity check
+   if (!ownsLock())
+      throw DecryptedDataContainerException("unlocked/does not own lock");
+
+   if (lockedDecryptedData_ == nullptr)
+      throw DecryptedDataContainerException(
+      "nullptr lock! how did we get this far?");
+
+   auto keyIter = encryptionKeyMap_.find(keyID);
+   if (keyIter == encryptionKeyMap_.end())
+      throw DecryptedDataContainerException(
+         "cannot change passphrase for unknown key");
+
+   //decrypt master encryption key
+   auto& kdfId = keyIter->second->cypher_->getKdfId();
+   populateEncryptionKey(keyID, kdfId);
+
+   //grab decrypted key
+   auto decryptedKeyIter = lockedDecryptedData_->encryptionKeys_.find(keyID);
+   if (decryptedKeyIter == lockedDecryptedData_->encryptionKeys_.end())
+      throw DecryptedDataContainerException(
+         "failed to decrypt key");
+
+   auto& decryptedKey = decryptedKeyIter->second->getData();
+
+   //grab kdf for key id computation
+   auto masterKeyKdfId = keyIter->second->cypher_->getKdfId();
+   auto kdfIter = kdfMap_.find(masterKeyKdfId);
+   if (kdfIter == kdfMap_.end())
+      throw DecryptedDataContainerException("failed to grab kdf");
+
+   //copy passphrase cause the ctor will move the data in
+   auto newPassphraseCopy = newPassphrase;
+
+   //kdf the key to get its id
+   auto newEncryptionKey = make_unique<DecryptedEncryptionKey>(newPassphraseCopy);
+   newEncryptionKey->deriveKey(kdfIter->second);
+   auto newKeyId = newEncryptionKey->getId(masterKeyKdfId);
+
+   //create new cypher, pointing to the new key id
+   auto newCypher = keyIter->second->cypher_->getCopy(newKeyId);
+
+   //add new encryption key object to container
+   lockedDecryptedData_->encryptionKeys_.insert(
+      move(make_pair(newKeyId, move(newEncryptionKey))));
+
+   //encrypt master key
+   auto&& newEncryptedKey = encryptData(newCypher.get(), decryptedKey);
+
+   //create new encrypted container
+   auto keyIdCopy = keyID;
+   auto newEncryptedKeyPtr = 
+      make_shared<Asset_EncryptionKey>(keyIdCopy, newEncryptedKey, move(newCypher));
+
+   //update
+   keyIter->second = newEncryptedKeyPtr;
+
+   auto&& temp_key = WRITE_UINT8_BE(ENCRYPTIONKEY_PREFIX_TEMP);
+   temp_key.append(keyID);
+   auto&& perm_key = WRITE_UINT8_BE(ENCRYPTIONKEY_PREFIX);
+   perm_key.append(keyID);
+
+   {
+      //write new encrypted key as temp key within it's own transaction
+      LMDBEnv::Transaction tempTx(dbEnv_, LMDB::ReadWrite);
+      updateKeyOnDiskNoPrefix(temp_key, newEncryptedKeyPtr);
+   }
+
+   {
+      LMDBEnv::Transaction permTx(dbEnv_, LMDB::ReadWrite);
+
+      //wipe old key from disk
+      deleteKeyFromDisk(perm_key);
+
+      //write new key to disk
+      updateKeyOnDiskNoPrefix(perm_key, newEncryptedKeyPtr);
+   }
+      
+   {
+      LMDBEnv::Transaction permTx(dbEnv_, LMDB::ReadWrite);
+
+      //wipe temp entry
+      deleteKeyFromDisk(temp_key);    
+   }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //// AssetWallet
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+AssetWallet::~AssetWallet()
+{
+   derScheme_.reset();
+
+   if (db_ != nullptr)
+   {
+      db_->close();
+      delete db_;
+      db_ = nullptr;
+   }
+
+   addresses_.clear();
+   assets_.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 shared_ptr<AssetWallet_Single> AssetWallet_Single::
 createFromPrivateRoot_Armory135(
    const string& folder,
    AddressEntryType defaultAddressType,
-   SecureBinaryData&& privateRoot,
+   const SecureBinaryData& privateRoot,
+   const SecureBinaryData& passphrase,
    unsigned lookup)
 {
    //compute wallet ID
@@ -158,11 +989,22 @@ createFromPrivateRoot_Armory135(
    auto wltMetaPtr = make_shared<WalletMeta_Single>(dbenv);
    wltMetaPtr->parentID_ = masterID;
    
-   auto cypher = make_unique<Cypher_AES>();
+   //create kdf and master encryption key
+   auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
+   auto&& masterKeySBD = SecureBinaryData().GenerateRandom(32);
+   DecryptedEncryptionKey masterEncryptionKey(masterKeySBD);
+   masterEncryptionKey.deriveKey(kdfPtr);
+   auto&& masterEncryptionKeyId = masterEncryptionKey.getId(kdfPtr->getId());
 
+   auto cypher = make_unique<Cypher_AES>(kdfPtr->getId(), 
+      masterEncryptionKeyId);
+   
    auto walletPtr = initWalletDb(
       wltMetaPtr,
+      kdfPtr,
+      move(masterEncryptionKey),
       move(cypher),
+      passphrase, 
       defaultAddressType, 
       move(privateRoot), lookup);
 
@@ -188,8 +1030,8 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::
 createFromPublicRoot_Armory135(
    const string& folder,
    AddressEntryType defaultAddressType,
-   SecureBinaryData&& pubRoot,
-   SecureBinaryData&& chainCode,
+   SecureBinaryData& pubRoot,
+   SecureBinaryData& chainCode,
    unsigned lookup)
 {
    //compute master ID as hmac256(root pubkey, "MetaEntry")
@@ -247,8 +1089,6 @@ shared_ptr<AssetWallet> AssetWallet::loadMainWalletFromFile(const string& path)
          //db count and names
          count = getDbCountAndNames(
             dbenv, metaMap, masterID, mainWalletID);
-
-         //TODO: global kdf
       }
    }
 
@@ -270,8 +1110,7 @@ shared_ptr<AssetWallet> AssetWallet::loadMainWalletFromFile(const string& path)
    {
    case WalletMetaType_Single:
    {
-      auto wltSingle = make_shared<AssetWallet_Single>(
-         mainWltMeta);
+      auto wltSingle = make_shared<AssetWallet_Single>(mainWltMeta);
       wltSingle->readFromFile();
 
       wltPtr = wltSingle;
@@ -280,8 +1119,7 @@ shared_ptr<AssetWallet> AssetWallet::loadMainWalletFromFile(const string& path)
 
    case WalletMetaType_Multisig:
    {
-      auto wltMS = make_shared<AssetWallet_Multisig>(
-         mainWltMeta);
+      auto wltMS = make_shared<AssetWallet_Multisig>(mainWltMeta);
       wltMS->readFromFile();
 
       wltPtr = wltMS;
@@ -442,7 +1280,7 @@ BinaryData AssetWallet_Single::computeWalletID(
    shared_ptr<DerivationScheme> derScheme,
    shared_ptr<AssetEntry> rootEntry)
 {
-   auto&& addrVec = derScheme->extendChain(rootEntry, 1);
+   auto&& addrVec = derScheme->extendPublicChain(rootEntry, 1);
    if (addrVec.size() != 1)
       throw WalletException("unexpected chain derivation output");
 
@@ -456,19 +1294,35 @@ BinaryData AssetWallet_Single::computeWalletID(
 ////////////////////////////////////////////////////////////////////////////////
 shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
    shared_ptr<WalletMeta> metaPtr,
+   shared_ptr<KeyDerivationFunction> masterKdf,
+   DecryptedEncryptionKey& masterEncryptionKey,
    unique_ptr<Cypher> cypher,
+   const SecureBinaryData& passphrase,
    AddressEntryType addressType,
-   SecureBinaryData&& privateRoot,
+   const SecureBinaryData& privateRoot,
    unsigned lookup)
 {
    //chaincode
    auto&& chaincode = BtcUtils::computeChainCode_Armory135(privateRoot);
-   auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(move(chaincode));
+   auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
+      move(chaincode), nullptr);
 
    //create root AssetEntry
    auto&& pubkey = CryptoECDSA().ComputePublicKey(privateRoot);
+
+   //copy cypher to cycle the IV then encrypt the private root
+   masterEncryptionKey.deriveKey(masterKdf);
+   auto&& masterEncryptionKeyId = masterEncryptionKey.getId(masterKdf->getId());
+   auto&& rootCypher = cypher->getCopy(masterEncryptionKeyId);
+   auto&& encryptedRoot = rootCypher->encrypt(
+      &masterEncryptionKey, masterKdf->getId(), privateRoot);
+   
+   //create encrypted object
+   auto rootAsset = make_shared<Asset_PrivateKey>(
+      -1, encryptedRoot, move(rootCypher));
+
    auto rootAssetEntry = make_shared<AssetEntry_Single>(-1,
-      move(pubkey), move(privateRoot), move(cypher));
+      move(pubkey), rootAsset);
 
    //compute wallet ID if it is missing
    if (metaPtr->walletID_.getSize() == 0)
@@ -479,8 +1333,44 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
       string walletIDStr(metaPtr->getWalletIDStr());
       metaPtr->dbName_ = walletIDStr;
    }
+   
+   //encrypt master key, create object and set it
+   metaPtr->defaultEncryptionKey_ = move(SecureBinaryData().GenerateRandom(32));
+   auto defaultKey = metaPtr->getDefaultEncryptionKey();
+   auto defaultEncryptionKeyPtr = make_unique<DecryptedEncryptionKey>(defaultKey);
+   defaultEncryptionKeyPtr->deriveKey(masterKdf);
+   metaPtr->defaultEncryptionKeyId_ = 
+      defaultEncryptionKeyPtr->getId(masterKdf->getId());
+
+   //encrypt master encryption key with passphrase if present, otherwise use default
+   unique_ptr<DecryptedEncryptionKey> topEncryptionKey;
+   if (passphrase.getSize() > 0)
+   {
+      //copy passphrase
+      auto&& passphraseCopy = passphrase.copy();
+      topEncryptionKey = make_unique<DecryptedEncryptionKey>(passphraseCopy);
+   }
+   else
+   {
+      topEncryptionKey = move(defaultEncryptionKeyPtr);
+   }
+   
+   topEncryptionKey->deriveKey(masterKdf);
+   auto&& topEncryptionKeyId = topEncryptionKey->getId(masterKdf->getId());
+   auto&& masterKeyCypher = cypher->getCopy(topEncryptionKeyId);
+   auto&& encrMasterKey = masterKeyCypher->encrypt(
+      topEncryptionKey.get(),
+      masterKdf->getId(),
+      masterEncryptionKey.getData());
+
+   auto masterKeyPtr = make_shared<Asset_EncryptionKey>(masterEncryptionKeyId,
+      encrMasterKey, move(masterKeyCypher));
 
    auto walletPtr = make_shared<AssetWallet_Single>(metaPtr);
+   
+   //add kdf & master key
+   walletPtr->decryptedData_->addKdf(masterKdf);
+   walletPtr->decryptedData_->addEncryptionKey(masterKeyPtr);
 
    {
       LMDB metadb;
@@ -502,6 +1392,11 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
       metaPtr->parentID_, metaPtr->walletID_, derScheme, addressType, 0);
 
    {
+      //decrypted data container
+      walletPtr->decryptedData_->updateOnDisk();
+   }
+
+   {
       //root asset
       BinaryWriter bwKey;
       bwKey.put_uint32_t(ROOTASSET_KEY);
@@ -516,12 +1411,30 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
 
    {
       //asset lookup
-      auto topEntryPtr = rootAssetEntry;
-
       if (lookup == UINT32_MAX)
          lookup = DERIVATION_LOOKUP;
 
-      walletPtr->extendChain(rootAssetEntry, lookup);
+      if (passphrase.getSize() > 0)
+      {
+         //custom passphrase, set prompt lambda for the chain extention
+         auto passphraseLambda = 
+            [&passphrase](const BinaryData&)->SecureBinaryData
+         {
+            return passphrase;
+         };
+
+         walletPtr->decryptedData_->setPassphrasePromptLambda(passphraseLambda);
+      }
+
+      walletPtr->extendPrivateChain(rootAssetEntry, lookup);
+      
+      //set empty passphrase lambda for the good measure
+      auto emptyLambda = [](const BinaryData&)->SecureBinaryData
+      {
+         return SecureBinaryData();
+      };
+
+      walletPtr->decryptedData_->setPassphrasePromptLambda(emptyLambda);
    }
 
    return walletPtr;
@@ -531,16 +1444,17 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
 shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDbFromPubRoot(
    shared_ptr<WalletMeta> metaPtr,
    AddressEntryType addressType,
-   SecureBinaryData&& pubRoot,
-   SecureBinaryData&& chainCode,
+   SecureBinaryData& pubRoot,
+   SecureBinaryData& chainCode,
    unsigned lookup)
 {
    //derScheme
-   auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(move(chainCode));
+   auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
+      move(chainCode), nullptr);
 
    //create root AssetEntry
    auto rootAssetEntry = make_shared<AssetEntry_Single>(-1,
-      move(pubRoot), move(SecureBinaryData()), nullptr);
+      move(pubRoot), nullptr);
 
    //compute wallet ID
    if (metaPtr->walletID_.getSize() == 0)
@@ -573,6 +1487,11 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDbFromPubRoot(
       metaPtr->parentID_, metaPtr->walletID_, derScheme, addressType, 0);
 
    {
+      //DecryptedDataContainer
+      walletPtr->decryptedData_->updateOnDisk();
+   }
+
+   {
       //root asset
       BinaryWriter bwKey;
       bwKey.put_uint32_t(ROOTASSET_KEY);
@@ -592,7 +1511,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDbFromPubRoot(
       if (lookup == UINT32_MAX)
          lookup = DERIVATION_LOOKUP;
 
-      walletPtr->extendChain(rootAssetEntry, lookup);
+      walletPtr->extendPublicChain(rootAssetEntry, lookup);
    }
 
    return walletPtr;
@@ -626,7 +1545,8 @@ shared_ptr<AssetWallet_Multisig> AssetWallet_Multisig::createFromPrivateRoot(
    const string& folder,
    AddressEntryType aet,
    unsigned M, unsigned N,
-   SecureBinaryData&& privateRoot,
+   SecureBinaryData& privateRoot,
+   const SecureBinaryData& passphrase,
    unsigned lookup)
 {
    if (aet != AddressEntryType_Nested_Multisig && 
@@ -677,6 +1597,10 @@ shared_ptr<AssetWallet_Multisig> AssetWallet_Multisig::createFromPrivateRoot(
       setMainWallet(&dbMeta, mainWltMetaPtr);
    }
 
+   auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
+   DecryptedEncryptionKey masterEncryptionKey(
+      move(SecureBinaryData().GenerateRandom(32)));
+
    //create N sub wallets
    map<BinaryData, shared_ptr<AssetWallet_Single>> subWallets;
 
@@ -694,10 +1618,19 @@ shared_ptr<AssetWallet_Multisig> AssetWallet_Multisig::createFromPrivateRoot(
       subWalletMeta->parentID_ = walletID;
       subWalletMeta->dbName_ = hmacMsg.str();
 
-      auto cypher = make_unique<Cypher_AES>();
+      masterEncryptionKey.deriveKey(kdfPtr);
+      auto&& masterEncryptionKeyId = masterEncryptionKey.getId(kdfPtr->getId());
+      auto cypher = make_unique<Cypher_AES>(kdfPtr->getId(),
+         masterEncryptionKeyId);
+
       auto subWalletPtr = AssetWallet_Single::initWalletDb(
-         subWalletMeta, move(cypher),
-         AddressEntryType_P2PKH, move(subRoot), lookup);
+         subWalletMeta, 
+         kdfPtr,
+         masterEncryptionKey,
+         move(cypher),
+         passphrase,
+         AddressEntryType_P2PKH, 
+         move(subRoot), lookup);
 
       subWallets[subWalletPtr->getID()] = subWalletPtr;
    }
@@ -874,6 +1807,9 @@ void AssetWallet_Single::readFromFile()
       auto derSchemeRef = getDataRefForKey(bwKey.getData());
 
       derScheme_ = DerivationScheme::deserialize(derSchemeRef);
+      auto derSchemeArmoryLegacy = 
+         dynamic_pointer_cast<DerivationScheme_ArmoryLegacy>(derScheme_);
+      derSchemeArmoryLegacy->setDecryptedDataContainerPtr(decryptedData_);
    }
 
    {
@@ -910,6 +1846,9 @@ void AssetWallet_Single::readFromFile()
       root_ = AssetEntry::deserDBValue(-1, rootAssetRef);
    }
 
+   //encryption keys and kdfs
+   decryptedData_->readFromDisk();
+
    {
       //asset entries
       auto dbIter = db_->begin();
@@ -926,6 +1865,12 @@ void AssetWallet_Single::readFromFile()
          auto itervalue = dbIter.value();
 
          BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
+         if (!keyBDR.startsWith(bwKey.getDataRef()))
+         {
+            dbIter.advance();
+            continue;
+         }
+
          BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
 
          //check value's advertized size is packet size and strip it
@@ -1126,7 +2071,7 @@ shared_ptr<AddressEntry> AssetWallet::getNewAddress()
    {
       if (assets_.size() == 0)
          throw WalletException("uninitialized wallet");
-      extendChain(DERIVATION_LOOKUP);
+      extendPublicChain(DERIVATION_LOOKUP);
 
       entryIter = assets_.find(index);
       if (entryIter == assets_.end())
@@ -1404,7 +2349,7 @@ void AssetWallet::deleteAssetEntry(shared_ptr<AssetEntry> entryPtr)
 
 
 ////////////////////////////////////////////////////////////////////////////////
-void AssetWallet::update()
+void AssetWallet::updateOnDiskAssets()
 {
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
@@ -1446,6 +2391,15 @@ void AssetWallet::deleteImports(const vector<BinaryData>& addrVec)
       //erase from file
       deleteAssetEntry(assetPtr);
    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const string& AssetWallet::getFilename() const
+{
+   if (dbEnv_ == nullptr)
+      throw runtime_error("null dbenv");
+
+   return dbEnv_->getFilename();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1533,6 +2487,9 @@ const SecureBinaryData& AssetWallet_Single::getChainCode() const
 {
    auto derSchemeA135 =
       dynamic_pointer_cast<DerivationScheme_ArmoryLegacy>(derScheme_);
+
+   if (derSchemeA135 == nullptr)
+      throw runtime_error("unexpected derivation scheme for AssetWallet_Single");
 
    return derSchemeA135->getChainCode();
 }
@@ -1780,7 +2737,7 @@ string AssetWallet::getID(void) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void AssetWallet::extendChain(unsigned count)
+void AssetWallet::extendPublicChain(unsigned count)
 {
    ReentrantLock lock(this);
 
@@ -1791,11 +2748,11 @@ void AssetWallet::extendChain(unsigned count)
    if (count == 0)
       return;
 
-   extendChain(assets_.rbegin()->second, count);
+   extendPublicChain(assets_.rbegin()->second, count);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool AssetWallet::extendChainTo(unsigned count)
+bool AssetWallet::extendPublicChainToIndex(unsigned count)
 {
    ReentrantLock lock(this);
 
@@ -1806,19 +2763,20 @@ bool AssetWallet::extendChainTo(unsigned count)
 
    auto toCompute = count - lastComputedIndex;
 
-   extendChain(toCompute);
+   extendPublicChain(toCompute);
    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void AssetWallet::extendChain(shared_ptr<AssetEntry> assetPtr, unsigned count)
+void AssetWallet::extendPublicChain(
+   shared_ptr<AssetEntry> assetPtr, unsigned count)
 {
    if (count == 0)
       return;
 
    ReentrantLock lock(this);
 
-   auto&& assetVec = derScheme_->extendChain(assetPtr, count);
+   auto&& assetVec = derScheme_->extendPublicChain(assetPtr, count);
 
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
@@ -1830,11 +2788,128 @@ void AssetWallet::extendChain(shared_ptr<AssetEntry> assetPtr, unsigned count)
          if (iter != assets_.end())
             continue;
 
-         writeAssetEntry(asset);
          assets_.insert(make_pair(
             id, asset));
       }
    }
+
+   updateOnDiskAssets();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet::extendPrivateChain(unsigned count)
+{
+   ReentrantLock lock(this);
+   auto topAsset = getLastAssetWithPrivateKey();
+
+   extendPrivateChain(topAsset, count);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet::extendPrivateChainToIndex(unsigned id)
+{
+   ReentrantLock lock(this);
+
+   auto topAsset = getLastAssetWithPrivateKey();
+   auto count = id - topAsset->getId();
+
+   extendPrivateChain(topAsset, count);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet::extendPrivateChain(shared_ptr<AssetEntry> asset, unsigned count)
+{
+   if (count == 0)
+      return;
+
+   ReentrantLock lock(this);
+   auto&& assetVec = derScheme_->extendPrivateChain(asset, count);
+
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+
+   {
+      for (auto& asset : assetVec)
+      {
+         auto id = asset->getId();
+         auto iter = assets_.find(id);
+         if (iter != assets_.end())
+         {
+            //do not overwrite an existing asset that already has a privkey
+            if (iter->second->hasPrivateKey())
+            {
+               continue;
+            }
+            else
+            {
+               iter->second = asset;
+               continue;
+            }
+         }
+
+         assets_.insert(make_pair(
+            id, asset));
+      }
+   }
+
+   updateOnDiskAssets();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetEntry> AssetWallet::getLastAssetWithPrivateKey() const
+{
+   ReentrantLock lock(this);
+
+   auto assetIter = assets_.rbegin();
+   while (assetIter != assets_.rend())
+   {
+      if (assetIter->second->hasPrivateKey())
+         return assetIter->second;
+
+      ++assetIter;
+   }
+
+   throw runtime_error("no asset with private keys");
+   return nullptr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+ReentrantLock AssetWallet::lockDecryptedContainer(void)
+{
+   return move(ReentrantLock(decryptedData_.get()));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+ReentrantLock AssetWallet_Multisig::lockDecryptedContainer(void)
+{
+   auto lock = AssetWallet::lockDecryptedContainer();
+
+   auto derSchemeMS = 
+      dynamic_pointer_cast<DerivationScheme_Multisig>(derScheme_);
+   if (derSchemeMS == nullptr)
+      throw runtime_error("unexpected der scheme type");
+
+   auto&& walletIDs = derSchemeMS->getWalletIDs();
+   for (auto& id : walletIDs)
+   {
+      auto wallet = derSchemeMS->getSubWalletPtr(id);
+      decryptedData_->lockOther(wallet->decryptedData_);
+   }
+
+   return lock;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool AssetWallet::isDecryptedContainerLocked() const
+{
+   try
+   {
+      auto lock = SingleLock(decryptedData_.get());
+      return false;
+   }
+   catch (AlreadyLocked&)
+   {}
+
+   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1874,6 +2949,33 @@ int AssetWallet::convertToImportIndex(int importID)
    return INT32_MIN + importID;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+const SecureBinaryData& AssetWallet_Single::getDecryptedValue(
+   shared_ptr<Asset_PrivateKey> assetPtr)
+{
+   //have to lock the decryptedData object before calling this method or it 
+   //will throw
+   return decryptedData_->getDecryptedPrivateKey(assetPtr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const SecureBinaryData& AssetWallet_Multisig::getDecryptedValue(
+   shared_ptr<Asset_PrivateKey> assetPtr)
+{
+   return decryptedData_->getDecryptedPrivateKey(assetPtr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet::changeMasterPassphrase(const SecureBinaryData& newPassphrase)
+{
+   /***changes encryption of the wallet's master key***/
+   if (assets_.size() == 0)
+      throw runtime_error("no assets in wallet");
+   
+   auto lock = lockDecryptedContainer();
+   auto&& masterKeyId = assets_[0]->getPrivateEncryptionKeyId();
+   decryptedData_->encryptEncryptionKey(masterKeyId, newPassphrase);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -1900,7 +3002,8 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(BinaryDataRef data)
       //get chaincode;
       auto len = brr.get_var_int();
       auto&& chainCode = SecureBinaryData(brr.get_BinaryDataRef(len));
-      derScheme = make_shared<DerivationScheme_ArmoryLegacy>(move(chainCode));
+      derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
+         move(chainCode), nullptr);
 
       break;
    }
@@ -1935,7 +3038,7 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(BinaryDataRef data)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-vector<shared_ptr<AssetEntry>> DerivationScheme_ArmoryLegacy::extendChain(
+vector<shared_ptr<AssetEntry>> DerivationScheme_ArmoryLegacy::extendPublicChain(
    shared_ptr<AssetEntry> firstAsset, unsigned count)
 {
    auto nextAsset = [this](
@@ -1951,33 +3054,9 @@ vector<shared_ptr<AssetEntry>> DerivationScheme_ArmoryLegacy::extendChain(
       auto&& nextPubkey = CryptoECDSA().ComputeChainedPublicKey(
          pubkeyData, chainCode_, nullptr);
 
-      //try to get priv key
-      auto privkey = assetSingle->getPrivKey();
-      SecureBinaryData nextPrivkey;
-      try
-      {
-         auto& privkeyData = privkey->getKey();
-
-         nextPrivkey = move(CryptoECDSA().ComputeChainedPrivateKey(
-            privkeyData, chainCode_, pubkeyData, nullptr));
-      }
-      catch (AssetUnavailableException&)
-      {
-         //no priv key, ignore
-      }
-      catch (CypherException&)
-      {
-         //ignore, not going to prompt user for password with priv key derivation
-      }
-
-      //no need to encrypt the new data, asset ctor will deal with it
-      unique_ptr<Cypher> cypher;
-      if (privkey->cypher_ != nullptr)
-         cypher = move(privkey->cypher_->getCopy());
-
       return make_shared<AssetEntry_Single>(
          assetSingle->getId() + 1,
-         move(nextPubkey), move(nextPrivkey), move(cypher));
+         move(nextPubkey), nullptr);
    };
    
    vector<shared_ptr<AssetEntry>> assetVec;
@@ -1993,7 +3072,70 @@ vector<shared_ptr<AssetEntry>> DerivationScheme_ArmoryLegacy::extendChain(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-vector<shared_ptr<AssetEntry>> DerivationScheme_Multisig::extendChain(
+vector<shared_ptr<AssetEntry>> 
+DerivationScheme_ArmoryLegacy::extendPrivateChain(
+shared_ptr<AssetEntry> firstAsset, unsigned count)
+{
+   //throws is the wallet is locked or the asset is missing its private key
+
+   auto nextAsset = [this](
+      shared_ptr<AssetEntry> assetPtr)->shared_ptr<AssetEntry>
+   {
+      //sanity checks
+      auto assetSingle =
+         dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
+
+      auto privkey = assetSingle->getPrivKey();
+      if (privkey == nullptr)
+         throw AssetUnavailableException();
+      auto& privkeyData = 
+         decryptedDataContainer_->getDecryptedPrivateKey(privkey);
+
+      //chain the private key
+      auto&& nextPrivkeySBD = move(CryptoECDSA().ComputeChainedPrivateKey(
+         privkeyData, chainCode_));
+      
+      //compute its pubkey
+      auto&& nextPubkey = CryptoECDSA().ComputePublicKey(nextPrivkeySBD);
+
+      //encrypt the new privkey
+      auto&& newCypher = privkey->copyCypher();
+      auto&& encryptedNextPrivKey = decryptedDataContainer_->encryptData(
+         newCypher.get(), nextPrivkeySBD);
+
+      //clear the unencrypted privkey object
+      nextPrivkeySBD.clear();
+
+      //instantiate new encrypted key object
+      auto id_int = assetSingle->getId() + 1;
+      auto nextPrivKey = make_shared<Asset_PrivateKey>(id_int,
+         move(encryptedNextPrivKey), move(newCypher));
+
+      //instantiate and return new asset entry
+      return make_shared<AssetEntry_Single>(
+         assetSingle->getId() + 1,
+         move(nextPubkey), nextPrivKey);
+   };
+   
+   if (decryptedDataContainer_ == nullptr)
+      throw AssetUnavailableException();
+
+   ReentrantLock lock(decryptedDataContainer_.get());
+
+   vector<shared_ptr<AssetEntry>> assetVec;
+   auto currentAsset = firstAsset;
+
+   for (unsigned i = 0; i < count; i++)
+   {
+      currentAsset = nextAsset(currentAsset);
+      assetVec.push_back(currentAsset);
+   }
+
+   return assetVec;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<shared_ptr<AssetEntry>> DerivationScheme_Multisig::extendPublicChain(
    shared_ptr<AssetEntry> firstAsset, unsigned count)
 {
    //synchronize wallet chains length
@@ -2002,13 +3144,35 @@ vector<shared_ptr<AssetEntry>> DerivationScheme_Multisig::extendChain(
  
    for (auto& wltPtr : wallets_)
    {
-      wltPtr.second->extendChain(
+      wltPtr.second->extendPublicChain(
          total - wltPtr.second->getAssetCount());
    }
 
    vector<shared_ptr<AssetEntry>> assetVec;
    for (unsigned i = firstAsset->getId() + 1; i < total; i++)
       assetVec.push_back(getAssetForIndex(i));
+
+   return assetVec;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<shared_ptr<AssetEntry>> DerivationScheme_Multisig::extendPrivateChain(
+   shared_ptr<AssetEntry> firstAsset, unsigned count)
+{
+   //synchronize wallet chains length
+   unsigned bottom = UINT32_MAX;
+   auto total = firstAsset->getId() + 1 + count;
+
+   for (auto& wltPtr : wallets_)
+      wltPtr.second->extendPrivateChain(count);
+
+   vector<shared_ptr<AssetEntry>> assetVec;
+   for (unsigned i = firstAsset->getId() + 1; i < total; i++)
+   {
+      auto assetptr = getAssetForIndex(i);
+      assetptr->doNotCommit(); //ms assets aren't commited to the disk as is
+      assetVec.push_back(getAssetForIndex(i));
+   }
 
    return assetVec;
 }
@@ -2064,6 +3228,17 @@ void DerivationScheme_Multisig::setSubwalletPointers(
       throw DerivationSchemeDeserException("ids set mismatch");
 
    wallets_ = ptrMap;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetWallet_Single> DerivationScheme_Multisig::getSubWalletPtr(
+   const BinaryData& id) const
+{
+   auto iter = wallets_.find(id);
+   if (iter == wallets_.end())
+      throw DerivationSchemeDeserException("unknown id");
+
+   return iter->second;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2580,6 +3755,27 @@ shared_ptr<ScriptRecipient> AddressEntry_Nested_P2PK::getRecipient(
 Asset::~Asset()
 {}
 
+Asset_EncryptedData::~Asset_EncryptedData()
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<DecryptedEncryptionKey> Asset_EncryptionKey::decrypt(
+   const SecureBinaryData& key) const
+{
+   auto decryptedData = cypher_->decrypt(key, data_);
+   auto decrPtr = make_unique<DecryptedEncryptionKey>(move(decryptedData));
+   return move(decrPtr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<DecryptedPrivateKey> Asset_PrivateKey::decrypt(
+   const SecureBinaryData& key) const
+{
+   auto&& decryptedData = cypher_->decrypt(key, data_);
+   auto decrPtr = make_unique<DecryptedPrivateKey>(id_, move(decryptedData));
+   return move(decrPtr);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 BinaryData Asset_PublicKey::serialize() const
 {
@@ -2600,17 +3796,142 @@ BinaryData Asset_PublicKey::serialize() const
 BinaryData Asset_PrivateKey::serialize() const
 {
    BinaryWriter bw;
-
-   bw.put_var_int(data_.getSize() + 1);
    bw.put_uint8_t(PRIVKEY_BYTE);
+   bw.put_int32_t(id_);
+   bw.put_var_int(data_.getSize());
    bw.put_BinaryData(data_);
 
    auto&& cypherData = cypher_->serialize();
    bw.put_var_int(cypherData.getSize());
    bw.put_BinaryData(cypherData);
 
-   return bw.getData();
+   BinaryWriter finalBw;
+   finalBw.put_var_int(bw.getSize());
+   finalBw.put_BinaryDataRef(bw.getDataRef());
+   return finalBw.getData();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData Asset_EncryptionKey::serialize() const
+{
+   BinaryWriter bw;
+   bw.put_uint8_t(ENCRYPTIONKEY_BYTE);
+   bw.put_var_int(id_.getSize());
+   bw.put_BinaryData(id_);
+   bw.put_var_int(data_.getSize());
+   bw.put_BinaryData(data_);
+
+   auto&& cypherData = cypher_->serialize();
+   bw.put_var_int(cypherData.getSize());
+   bw.put_BinaryData(cypherData);
+
+   BinaryWriter finalBw;
+   finalBw.put_var_int(bw.getSize());
+   finalBw.put_BinaryDataRef(bw.getDataRef());
+   return finalBw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Asset_PrivateKey::isSame(Asset_EncryptedData* const asset) const
+{
+   auto asset_ed = dynamic_cast<Asset_PrivateKey*>(asset);
+   if (asset_ed == nullptr)
+      return false;
+
+   return id_ == asset_ed->id_ && data_ == asset_ed->data_ &&
+      cypher_->isSame(asset_ed->cypher_.get());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Asset_EncryptionKey::isSame(Asset_EncryptedData* const asset) const
+{
+   auto asset_ed = dynamic_cast<Asset_EncryptionKey*>(asset);
+   if (asset_ed == nullptr)
+      return false;
+
+   return id_ == asset_ed->id_ && data_ == asset_ed->data_ &&
+      cypher_->isSame(asset_ed->cypher_.get());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<Asset_EncryptedData> Asset_EncryptedData::deserialize(
+   const BinaryDataRef& data)
+{
+   BinaryRefReader brr(data);
+
+   //grab size
+   auto totalLen = brr.get_var_int();
+   return deserialize(totalLen, brr.get_BinaryDataRef(brr.getSizeRemaining()));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<Asset_EncryptedData> Asset_EncryptedData::deserialize(
+   size_t totalLen, const BinaryDataRef& data)
+{
+   BinaryRefReader brr(data);
+
+   //check size
+   if (totalLen != brr.getSizeRemaining())
+      throw runtime_error("invalid serialized encrypted data len");
+
+   //return ptr
+   shared_ptr<Asset_EncryptedData> assetPtr = nullptr;
+
+   //prefix
+   auto prefix = brr.get_uint8_t();
+
+   switch (prefix)
+   {
+   case PRIVKEY_BYTE:
+   {
+      //id
+      auto&& id = brr.get_int32_t();
+
+      //data
+      auto len = brr.get_var_int();
+      auto&& data = brr.get_SecureBinaryData(len);
+
+      //cypher
+      len = brr.get_var_int();
+      if (len > brr.getSizeRemaining())
+         throw runtime_error("invalid serialized encrypted data len");
+      auto&& cypher = Cypher::deserialize(brr);
+
+      //ptr
+      assetPtr = make_shared<Asset_PrivateKey>(id, data, move(cypher));
+
+      break;
+   }
+
+   case ENCRYPTIONKEY_BYTE:
+   {
+      //id
+      auto len = brr.get_var_int();
+      auto&& id = brr.get_BinaryData(len);
+
+      //data
+      len = brr.get_var_int();
+      auto&& data = brr.get_SecureBinaryData(len);
+
+      //cypher
+      len = brr.get_var_int();
+      if (len > brr.getSizeRemaining())
+         throw runtime_error("invalid serialized encrypted data len");
+      auto&& cypher = Cypher::deserialize(brr);
+
+      //ptr
+      assetPtr = make_shared<Asset_EncryptionKey>(id, data, move(cypher));
+
+      break;
+   }
+
+   default:
+      throw runtime_error("unexpected encrypted data prefix");
+   }
+
+   return assetPtr;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -2857,11 +4178,13 @@ shared_ptr<AssetEntry> AssetEntry::deserialize(
 
    auto prefix = brrKey.get_uint8_t();
    if (prefix != ASSETENTRY_PREFIX)
-      throw AssetDeserException("invalid prefix");
+      throw AssetDeserException("unexpected asset entry prefix");
 
    auto index = brrKey.get_int32_t();
 
-   return deserDBValue(index, value);
+   auto assetPtr = deserDBValue(index, value);
+   assetPtr->doNotCommit();
+   return assetPtr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2877,30 +4200,33 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(int index, BinaryDataRef value)
    {
    case AssetEntryType_Single:
    {
-      SecureBinaryData privKey;
+      shared_ptr<Asset_PrivateKey> privKeyPtr = nullptr;
+
       SecureBinaryData pubKeyCompressed;
       SecureBinaryData pubKeyUncompressed;
-      unique_ptr<Cypher> cypher;
 
-      vector<BinaryDataRef> dataVec;
+      vector<pair<size_t, BinaryDataRef>> dataVec;
 
       while (brrVal.getSizeRemaining() > 0)
       {
          auto len = brrVal.get_var_int();
          auto valref = brrVal.get_BinaryDataRef(len);
 
-         dataVec.push_back(valref);
+         dataVec.push_back(make_pair(len, valref));
       }
 
-      for (auto& dataRef : dataVec)
+      for (auto& datapair : dataVec)
       {
-         BinaryRefReader brrData(dataRef);
+         BinaryRefReader brrData(datapair.second);
          auto keybyte = brrData.get_uint8_t();
 
          switch (keybyte)
          {
          case PUBKEY_UNCOMPRESSED_BYTE:
          {
+            if (datapair.first != 66)
+               throw AssetDeserException("invalid size for uncompressed pub key");
+
             if (pubKeyUncompressed.getSize() != 0)
                throw AssetDeserException("multiple pub keys for entry");
 
@@ -2913,6 +4239,9 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(int index, BinaryDataRef value)
 
          case PUBKEY_COMPRESSED_BYTE:
          {
+            if (datapair.first != 34)
+               throw AssetDeserException("invalid size for compressed pub key");
+
             if (pubKeyCompressed.getSize() != 0)
                throw AssetDeserException("multiple pub keys for entry");
 
@@ -2925,23 +4254,14 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(int index, BinaryDataRef value)
 
          case PRIVKEY_BYTE:
          {
-            if (privKey.getSize() != 0)
-               throw AssetDeserException("multiple pub keys for entry");
+            if (privKeyPtr != nullptr)
+               throw AssetDeserException("multiple priv keys for entry");
 
-            privKey = move(SecureBinaryData(
-               brrData.get_BinaryDataRef(
-               brrData.getSizeRemaining())));
+            privKeyPtr = dynamic_pointer_cast<Asset_PrivateKey>(
+               Asset_EncryptedData::deserialize(datapair.first, datapair.second));
 
-            break;
-         }
-
-         case CYPHER_BYTE:
-         {
-            if (cypher != nullptr)
-               throw AssetDeserException("multiple cyphers for entry");
-
-            cypher = move(Cypher::deserialize(brrData));
-
+            if (privKeyPtr == nullptr)
+               throw AssetDeserException("deserialized to unexpected type");
             break;
          }
 
@@ -2950,9 +4270,8 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(int index, BinaryDataRef value)
          }
       }
 
-      //TODO: add IVs as args for encrypted entries
       auto addrEntry = make_shared<AssetEntry_Single>(index, 
-         move(pubKeyUncompressed), move(pubKeyCompressed), move(privKey), move(cypher));
+         move(pubKeyUncompressed), move(pubKeyCompressed), privKeyPtr);
       
       addrEntry->setAddressEntryType(addressType);
       addrEntry->doNotCommit();
@@ -2974,7 +4293,7 @@ BinaryData AssetEntry_Single::serialize() const
    bw.put_uint8_t(addressType | entryType);
 
    bw.put_BinaryData(pubkey_->serialize());
-   if (privkey_->hasKey())
+   if (privkey_ != nullptr && privkey_->hasData())
       bw.put_BinaryData(privkey_->serialize());
    
    BinaryWriter finalBw;
@@ -2983,6 +4302,78 @@ BinaryData AssetEntry_Single::serialize() const
    finalBw.put_BinaryData(bw.getData());
 
    return finalBw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool AssetEntry_Single::hasPrivateKey() const
+{
+   if (privkey_ != nullptr)
+      return privkey_->hasData();
+
+   return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const BinaryData& AssetEntry_Single::getPrivateEncryptionKeyId(void) const
+{
+   if (!hasPrivateKey())
+      throw runtime_error("no private key in this asset");
+
+   return privkey_->getEncryptionKeyID();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool AssetEntry_Multisig::hasPrivateKey() const
+{  
+   for (auto& asset_pair : assetMap_)
+   {
+      auto asset_single = 
+         dynamic_pointer_cast<AssetEntry_Single>(asset_pair.second);
+      if (asset_single == nullptr)
+         throw runtime_error("unexpected asset entry type");
+
+      if (!asset_single->hasPrivateKey())
+         return false;
+   }
+
+   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const BinaryData& AssetEntry_Multisig::getPrivateEncryptionKeyId(void) const
+{
+   if (assetMap_.size() != n_)
+      throw runtime_error("missing asset entries");
+
+   if (!hasPrivateKey())
+      throw runtime_error("no private key in this asset");
+
+   map<BinaryData, const BinaryData&> idMap;
+
+   for (auto& asset_pair : assetMap_)
+   {
+      auto asset_single =
+         dynamic_pointer_cast<AssetEntry_Single>(asset_pair.second);
+      if (asset_single == nullptr)
+         throw runtime_error("unexpected asset entry type");
+
+      idMap.insert(make_pair(
+         asset_pair.first, asset_pair.second->getPrivateEncryptionKeyId()));
+   }
+
+   auto iditer = idMap.begin();
+   auto& idref = iditer->second;
+   ++iditer;
+
+   while (iditer != idMap.end())
+   {
+      if (idref != iditer->second)
+         throw runtime_error("wallets use different encryption keys");
+
+      ++iditer;
+   }
+
+   return idref;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2997,16 +4388,27 @@ Cypher::~Cypher()
 unique_ptr<Cypher> Cypher::deserialize(BinaryRefReader& brr)
 {
    unique_ptr<Cypher> cypher;
+   auto prefix = brr.get_uint8_t();
+   if (prefix != CYPHER_BYTE)
+      throw runtime_error("invalid serialized cypher prefix");
+
    auto type = brr.get_uint8_t();
+
+   auto len = brr.get_var_int();
+   auto&& kdfId = brr.get_BinaryData(len);
+
+   len = brr.get_var_int();
+   auto&& encryptionKeyId = brr.get_BinaryData(len);
+
+   len = brr.get_var_int();
+   auto&& iv = SecureBinaryData(brr.get_BinaryDataRef(len));
 
    switch (type)
    {
    case CypherType_AES:
    {
-      auto len = brr.get_var_int();
-      auto&& iv = SecureBinaryData(brr.get_BinaryDataRef(len));
-
-      cypher = move(make_unique<Cypher_AES>(move(iv)));
+      cypher = move(make_unique<Cypher_AES>(
+         kdfId, encryptionKeyId, move(iv)));
 
       break;
    }
@@ -3024,6 +4426,13 @@ BinaryData Cypher_AES::serialize() const
    BinaryWriter bw;
    bw.put_uint8_t(CYPHER_BYTE);
    bw.put_uint8_t(getType());
+
+   bw.put_var_int(kdfId_.getSize());
+   bw.put_BinaryData(kdfId_);
+
+   bw.put_var_int(encryptionKeyId_.getSize());
+   bw.put_BinaryData(encryptionKeyId_);
+
    bw.put_var_int(iv_.getSize());
    bw.put_BinaryData(iv_);
 
@@ -3033,5 +4442,52 @@ BinaryData Cypher_AES::serialize() const
 ////////////////////////////////////////////////////////////////////////////////
 unique_ptr<Cypher> Cypher_AES::getCopy() const
 {
-   return make_unique<Cypher_AES>();
+   return make_unique<Cypher_AES>(kdfId_, encryptionKeyId_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<Cypher> Cypher_AES::getCopy(const BinaryData& keyId) const
+{
+   return make_unique<Cypher_AES>(kdfId_, keyId);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData Cypher_AES::encrypt(const SecureBinaryData& key, 
+   const SecureBinaryData& data) const
+{
+   CryptoAES aes_cypher;
+   return aes_cypher.EncryptCBC(data, key, iv_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData Cypher_AES::encrypt(DecryptedEncryptionKey* const key,
+   const BinaryData& kdfId, const SecureBinaryData& data) const
+{
+   if (key == nullptr)
+      throw runtime_error("empty ptr");
+
+   auto& encryptionKey = key->getDerivedKey(kdfId);
+
+   CryptoAES aes_cypher;
+   return aes_cypher.EncryptCBC(data, encryptionKey, iv_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData Cypher_AES::decrypt(const SecureBinaryData& key,
+   const SecureBinaryData& data) const
+{
+   CryptoAES aes_cypher;
+   return aes_cypher.DecryptCBC(data, key, iv_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Cypher_AES::isSame(Cypher* const cypher) const
+{
+   auto cypher_aes = dynamic_cast<Cypher_AES*>(cypher);
+   if (cypher_aes == nullptr)
+      return false;
+
+   return kdfId_ == cypher_aes->kdfId_ &&
+      encryptionKeyId_ == cypher_aes->encryptionKeyId_ &&
+      iv_ == cypher_aes->iv_;
 }
