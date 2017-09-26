@@ -313,11 +313,12 @@ namespace SwigClient
 
       //save all tx we fetch by hash to reduce resource cost on redundant fetches
       shared_ptr<map<BinaryData, Tx> > txMap_;
+      shared_ptr<map<BinaryData, BinaryData> > rawHeaderMap_;
 
       mutable unsigned topBlock_ = 0;
 
    private:
-      BlockDataViewer(void) { txMap_ = make_shared<map<BinaryData, Tx>>(); }
+      BlockDataViewer(void);
       BlockDataViewer(const shared_ptr<BinarySocket> sock);
       bool isValid(void) const { return sock_ != nullptr; }
 
@@ -361,6 +362,7 @@ namespace SwigClient
 
       void broadcastZC(const BinaryData& rawTx);
       Tx getTxByHash(const BinaryData& txHash);
+      BinaryData getRawHeaderForTxHash(const BinaryData& txHash);
 
       void updateWalletsLedgerFilter(const vector<BinaryData>& wltIdVec);
       bool hasRemoteDB(void);
@@ -373,6 +375,11 @@ namespace SwigClient
          const vector<string>& wldIDs, const string& orderingStr);
 
       uint64_t getValueForTxOut(const BinaryData& txHash, unsigned inputId);
+      string broadcastThroughRPC(const BinaryData& rawTx);
+
+      vector<UTXO> getUtxosForAddrVec(const vector<BinaryData>&);
+
+      void registerAddrList(const BinaryData&, const vector<BinaryData>&);
    };
 
    ///////////////////////////////////////////////////////////////////////////////
@@ -385,7 +392,7 @@ namespace SwigClient
 
    private:
 
-      void hold();
+      void hodl();
 
    public:
       ProcessMutex(const string& addr, const string& port) :

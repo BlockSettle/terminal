@@ -1,10 +1,14 @@
-################################################################################
-#                                                                              #
-# Copyright (C) 2011-2015, Armory Technologies, Inc.                           #
-# Distributed under the GNU Affero General Public License (AGPL v3)            #
-# See LICENSE or http://www.gnu.org/licenses/agpl.html                         #
-#                                                                              #
-################################################################################
+##############################################################################
+#                                                                            #
+# Copyright (C) 2011-2015, Armory Technologies, Inc.                         #
+# Distributed under the GNU Affero General Public License (AGPL v3)          #
+# See LICENSE or http://www.gnu.org/licenses/agpl.html                       #
+#                                                                            #
+# Copyright (C) 2016-17, goatpig                                             #
+#  Distributed under the MIT license                                         #
+#  See LICENSE-MIT or https://opensource.org/licenses/MIT                    #                                   
+#                                                                            #
+##############################################################################
 import struct
 from tempfile import mkstemp
 
@@ -16,6 +20,7 @@ from armorycolors import Colors, htmlColor
 from armoryengine.ArmoryUtils import *
 from armoryengine.BinaryUnpacker import *
 from armoryengine.MultiSigUtils import *
+from ui.QrCodeMatrix import CreateQRMatrix
 
 import gettext
 
@@ -202,7 +207,8 @@ def initialColResize(tblViewObj, sizeList):
    totalWidth = tblViewObj.width()
    fixedCols, pctCols = [],[]
 
-   nCols = tblViewObj.model().columnCount()
+   if tblViewObj.model() is None:
+      return
    
    for col,colVal in enumerate(sizeList):
       if colVal > 1:
@@ -656,6 +662,9 @@ def restoreTableView(qtbl, hexBytes):
 
 
 def saveTableView(qtbl):
+   if qtbl.model() is None:
+      return
+   
    nCol = qtbl.model().columnCount()
    sz = [None]*nCol
    for i in range(nCol):
@@ -703,6 +712,8 @@ class ArmoryDialog(QDialog):
       self.closeSignal = str(random.random())       
       self.parent = parent
       self.main   = main
+      if self.main != None:
+         self.signalExecution = self.main.signalExecution
       
       #connect this dialog to the parent's close signal
       if self.parent is not None and hasattr(self.parent, 'closeSignal'):
@@ -728,6 +739,12 @@ class ArmoryDialog(QDialog):
    def reject(self):
       self.emit(SIGNAL(self.closeSignal))
       super(ArmoryDialog, self).reject()
+      
+   def executeMethod(self, _callable, *args):
+      self.signalExecution.executeMethod(_callable, *args)
+      
+   def callLater(self, delay, _callable, *args):
+      self.signalExecution.callLater(delay, _callable, *args)
       
 
 ################################################################################

@@ -187,7 +187,7 @@ struct BCTX
 class BlockData
 {
 private:
-   const BlockHeader* headerPtr_ = nullptr;
+   shared_ptr<BlockHeader> headerPtr_;
    const uint8_t* data_ = nullptr;
    size_t size_ = SIZE_MAX;
 
@@ -209,8 +209,8 @@ public:
    {}
 
    void deserialize(const uint8_t* data, size_t size,
-      const BlockHeader*, 
-      function<unsigned int(void)> getID, bool checkMerkle,
+      const shared_ptr<BlockHeader>, 
+      function<unsigned int(const BinaryData&)> getID, bool checkMerkle,
       bool keepHashes);
 
    bool isInitialized(void) const
@@ -223,7 +223,7 @@ public:
       return txns_;
    }
 
-   const BlockHeader* header(void) const
+   const shared_ptr<BlockHeader> header(void) const
    {
       return headerPtr_;
    }
@@ -236,12 +236,13 @@ public:
    void setFileID(unsigned fileid) { fileID_ = fileid; }
    void setOffset(size_t offset) { offset_ = offset; }
 
-   BlockHeader createBlockHeader(void) const;
+   shared_ptr<BlockHeader> createBlockHeader(void) const;
    const BinaryData& getHash(void) const { return blockHash_; }
    
    TxFilter<TxFilterType> computeTxFilter(const vector<BinaryData>&) const;
    const TxFilter<TxFilterType>& getTxFilter(void) const { return txFilter_; }
    uint32_t uniqueID(void) const { return uniqueID_; }
+   shared_ptr<BlockHeader> getHeaderPtr(void) const { return headerPtr_; }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -305,7 +306,7 @@ private:
    atomic<int> useCounter_;
 
 public:
-   BlockDataFileMap(const string& filename, bool preload);
+   BlockDataFileMap(const string& filename);
 
    ~BlockDataFileMap(void)
    {
@@ -325,115 +326,35 @@ public:
    {
       return fileMap_;
    }
-};
 
-/////////////////////////////////////////////////////////////////////////////
-class BlockFileMapPointer
-{
-private:
-   BlockFileMapPointer(const BlockFileMapPointer&) = delete; //no copies
-
-   shared_ptr<BlockDataFileMap> ptr_ = nullptr;
-   function<void(void)> gcLambda_;
-
-public:
-   BlockFileMapPointer(
-      shared_ptr<BlockDataFileMap> ptr, function<void(void)> gcLambda)
-      : ptr_(ptr), gcLambda_(gcLambda)
-   {
-      //update ptr counter
-      ptr_->useCounter_.fetch_add(1, memory_order_relaxed);
-   }
-
-   BlockFileMapPointer(BlockFileMapPointer&& mv)
-   {
-      this->ptr_ = mv.ptr_;
-      this->gcLambda_ = move(mv.gcLambda_);
-
-	  mv.ptr_ = nullptr;
-   }
-   
-   ~BlockFileMapPointer(void)
-   {
-      if (ptr_ == nullptr)
-         return;
-
-      //decrement counter
-      ptr_->useCounter_.fetch_sub(1, memory_order_relaxed);
-
-      //notify gcLambda
-      gcLambda_();
-   }
-
-   shared_ptr<BlockDataFileMap> get(void)
-   {
-      return ptr_;
-   }
-
-   size_t size(void) const
-   {
-      return ptr_->size_;
-   }
+   size_t size(void) const { return size_; }
 };
 
 /////////////////////////////////////////////////////////////////////////////
 class BlockDataLoader
 {
-private:
-   map<uint32_t, shared_ptr<BlockDataFileMap>> fileMaps_;
-   
-   mutex gcMu_, mu_;
-   thread gcThread_;
-   condition_variable gcCondVar_;
-   bool run_ = true;
-   
-   //preload file in RAM to leverage cache hits on upcoming reads
-   const bool preloadFile_  = false; 
-
-   //prefetch next file, expecting the code to read it soon. Will preload 
-   //it if the flag is set
-   const bool prefetchNext_ = false;
-
-   const bool enableGC_ = true;
-
+private:     
    const string path_;
    const string prefix_;
-
-   function<void(void)> gcLambda_;
 
 private:   
 
    BlockDataLoader(const BlockDataLoader&) = delete; //no copies
 
-   void garbageCollectorThread(void);
    uint32_t nameToIntID(const string& filename);
    string intIDToName(uint32_t fileid);
 
-   shared_future<shared_ptr<BlockDataFileMap>> 
+   shared_ptr<BlockDataFileMap>
       getNewBlockDataMap(uint32_t fileid);
 
 public:
-   BlockDataLoader(const string& path,
-      bool preloadFile, bool prefetchNext, bool enableGC);
+   BlockDataLoader(const string& path);
 
    ~BlockDataLoader(void)
-   {
-      //shutdown GC thread
-      {
-         unique_lock<mutex> lock(gcMu_);
-         fileMaps_.clear();
-         run_ = false;
-         gcCondVar_.notify_all();
-      }
-      
-      if (gcThread_.joinable())
-         gcThread_.join();
-   }
+   {}
 
-   BlockFileMapPointer get(const string& filename);
-   BlockFileMapPointer get(uint32_t fileid, bool prefetch);
-
-   void reset(void);
+   shared_ptr<BlockDataFileMap> get(const string& filename);
+   shared_ptr<BlockDataFileMap> get(uint32_t fileid);
 };
 
 #endif

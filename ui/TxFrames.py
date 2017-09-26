@@ -21,8 +21,8 @@ from armoryengine.MultiSigUtils import \
    isP2SHLockbox
 from armoryengine.ArmoryUtils import MAX_COMMENT_LENGTH, getAddrByte
 from FeeSelectUI import FeeSelectionDialog
-from CppBlockUtils import TXOUT_SCRIPT_P2SH, TransactionBatch
-
+from CppBlockUtils import TXOUT_SCRIPT_P2SH, TransactionBatch, SecureBinaryData
+from armoryengine.SignerWrapper import SIGNER_DEFAULT
 
 class SendBitcoinsFrame(ArmoryFrame):
    def __init__(self, parent, main, initLabel='',
@@ -46,6 +46,7 @@ class SendBitcoinsFrame(ArmoryFrame):
       self.widgetTable = []
       self.isMax = False
       self.scrollRecipArea = QScrollArea()
+      self.signerType = SIGNER_DEFAULT
 
       lblRecip = QRichLabel('<b>Enter Recipients:</b>')
       lblRecip.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
@@ -120,6 +121,7 @@ class SendBitcoinsFrame(ArmoryFrame):
       self.unsignedCheckbox = QCheckBox(self.tr('Create Unsigned'))
       
       self.RBFcheckbox = QCheckBox(self.tr('enable RBF'))
+      self.RBFcheckbox.setChecked(True)
       self.ttipRBF = self.main.createToolTipWidget(\
          self.tr('RBF flagged inputs allow to respend the underlying outpoint for a '
                  'higher fee as long as the original spending transaction remains '
@@ -436,21 +438,51 @@ class SendBitcoinsFrame(ArmoryFrame):
          self.resetCoinSelectionText()
    
    #############################################################################   
-   def updateCoinSelectionRecipient(self, id_):
+   def updateCoinSelectionRecipient(self, uid):
 
       try:
+         id_ = -1
+         for i in range(len(self.widgetTable)):
+            if self.widgetTable[i]['UID'] == uid:
+               id_ = i
+               
+         if id_ == -1:
+            raise Exception()
+         
          coinSelRow = self.widgetTable[id_]
-      
-         prefix, h160 = addrStr_to_hash160(str(coinSelRow['QLE_ADDR'].text()).strip())
-         scrAddr = prefix + h160
-         valueStr = str(coinSelRow['QLE_AMT'].text()).strip()
-         try:
-            value = str2coin(valueStr, negAllowed=False)
-         except:
-            value = 0
+         
+         if 'OP_RETURN' not in coinSelRow:
+            addrStr = str(coinSelRow['QLE_ADDR'].text()).strip()
             
-         self.coinSelection.updateRecipient(id_, scrAddr, value)
+            try:
+               prefix, h160 = addrStr_to_hash160(addrStr)
+            except:
+               #recipient input is not an address, is it a locator instead?
+               scriptDict = getScriptForUserString(\
+                  addrStr, self.main.walletMap, self.main.allLockboxes)
+               
+               if scriptDict['Script'] == None:
+                  raise Exception("invalid addrStr in recipient")
+               
+               scraddr = script_to_scrAddr(scriptDict['Script']) 
+               prefix = scraddr[0]
+               h160 = scraddr[1:]   
+               abc=0
+               
+            scrAddr = prefix + h160
+            valueStr = str(coinSelRow['QLE_AMT'].text()).strip()
+            try:
+               value = str2coin(valueStr, negAllowed=False)
+            except:
+               value = 0
+               
+            self.coinSelection.updateRecipient(id_, scrAddr, value)
+         else:
+            opreturn_message = str(coinSelRow['QLE_ADDR'].text())
+            self.coinSelection.updateOpReturnRecipient(id_, opreturn_message)
+            
          self.resolveCoinSelection()
+            
       except:
          self.resetCoinSelectionText()
 
@@ -472,7 +504,11 @@ class SendBitcoinsFrame(ArmoryFrame):
       return serializedUtxoList
    
    #############################################################################   
-   def resolveCoinSelection(self):          
+   def resolveCoinSelection(self):   
+      maxRecipientID = self.getMaxRecipientID()
+      if maxRecipientID != None:
+         self.setMaximum(maxRecipientID)
+             
       try:
          fee, feePerByte, adjust_fee = self.feeDialog.getFeeData()
          processFlag = 0
@@ -542,12 +578,16 @@ class SendBitcoinsFrame(ArmoryFrame):
 
       for row in range(len(self.widgetTable)):
          # Verify validity of address strings
-         addrStr = str(self.widgetTable[row]['QLE_ADDR'].text()).strip()
+         widget_obj = self.widgetTable[row]
+         if 'OP_RETURN' in widget_obj:
+            continue
+         
+         addrStr = str(widget_obj['QLE_ADDR'].text()).strip()
          self.widgetTable[row]['QLE_ADDR'].setText(addrStr) # overwrite w/ stripped
          addrIsValid = True
          addrList.append(addrStr)
          try:
-            enteredScript = self.widgetTable[row]['FUNC_GETSCRIPT']()['Script']
+            enteredScript = widget_obj['FUNC_GETSCRIPT']()['Script']
             if not enteredScript:
                addrIsValid = False
             else:
@@ -585,8 +625,22 @@ class SendBitcoinsFrame(ArmoryFrame):
 
       # Construct recipValuePairs and check that all metrics check out
       scriptValPairs = []
+      opreturn_list = []
       totalSend = 0
       for row in range(len(self.widgetTable)):
+         widget_obj = self.widgetTable[row]
+         if 'OP_RETURN' in widget_obj:
+            opreturn_msg = str(widget_obj['QLE_ADDR'].text())
+            if len(opreturn_msg) > 80:
+               self.updateAddrColor(row, Colors.SlightRed)
+               QMessageBox.critical(self, self.tr('Negative Value'), \
+                  self.tr('You have specified a OP_RETURN message over 80 bytes long in recipient %1!'
+                          ).arg(row + 1), QMessageBox.Ok)
+               return False
+            
+            opreturn_list.append(opreturn_msg)
+            continue
+         
          try:
             valueStr = str(self.widgetTable[row]['QLE_AMT'].text()).strip()
             value = str2coin(valueStr, negAllowed=False)
@@ -642,7 +696,7 @@ class SendBitcoinsFrame(ArmoryFrame):
             reply = QMessageBox.warning(self, self.tr('Excessive Fee'), self.tr(
                'Your transaction comes with a fee rate of <b>%1 satoshis per byte</b>. '
                '</br></br> '
-               'This is much higher than the median fee rate of <b>%2 satoshi/Byte</b>. '
+               'This is at least an order of magnitude higher than the minimum suggested fee rate of <b>%2 satoshi/Byte</b>. '
                '<br><br>'
                'Are you <i>absolutely sure</i> that you want to send with this '
                'fee? If you do not want to proceed with this fee rate, click "No".').arg(\
@@ -651,11 +705,11 @@ class SendBitcoinsFrame(ArmoryFrame):
             if not reply==QMessageBox.Yes:
                return False
             
-         elif fee_byte < MIN_FEE_BYTE / 10:
+         elif fee_byte < MIN_FEE_BYTE:
             reply = QMessageBox.warning(self, self.tr('Insufficient Fee'), self.tr(
                'Your transaction comes with a fee rate of <b>%1 satoshi/Byte</b>. '
                '</br><br> '
-               'This is much lower than the median fee rate of <b>%2 satoshi/Byte</b>. '
+               'This is lower than the suggested minimum fee rate of <b>%2 satoshi/Byte</b>. '
                '<br><br>'
                'Are you <i>absolutely sure</i> that you want to send with this '
                'fee? If you do not want to proceed with this fee rate, click "No".').arg(\
@@ -700,14 +754,19 @@ class SendBitcoinsFrame(ArmoryFrame):
       p2shMap = {}
       pubKeyMap = {}
       
-      # In order to create the USTXI objects, need to make we supply a
+      if self.getRBFFlag():
+         for utxo in utxoSelect:
+            if utxo.sequence == 2**32 - 1:
+               utxo.sequence = 2**32 - 3             
+      
+      # In order to create the USTXI objects, need to make sure we supply a
       # map of public keys that can be included
       if self.lbox:
-         p2shMap = {binary_to_hex(script_to_scrAddr(script_to_p2sh_script(
-                        self.lbox.binScript))) : self.lbox.binScript}
+         p2shMap = self.lbox.getScriptDict()
          ustx = UnsignedTransaction().createFromTxOutSelection( \
-                                       utxoSelect, scriptValPairs,
-                                       p2shMap = p2shMap)
+                                       utxoSelect, scriptValPairs, \
+                                       p2shMap = p2shMap, \
+                                       lockTime=TheBDM.getTopBlockHeight())
 
          for i in range(len(ustx.ustxInputs)):
             ustx.ustxInputs[i].contribID = self.lbox.uniqueIDB58
@@ -752,16 +811,14 @@ class SendBitcoinsFrame(ArmoryFrame):
          and outputs to the new signer for processing instead of creating the
          unsigned tx in Python.
          '''
-            
-         if self.getRBFFlag():
-            for utxo in utxoSelect:
-               if utxo.sequence == 2**32 - 1:
-                  utxo.sequence = 2**32 - 3 
-         
+                     
          # Now create the unsigned USTX
          ustx = UnsignedTransaction().createFromTxOutSelection(\
             utxoSelect, scriptValPairs, pubKeyMap, p2shMap=p2shMap, \
             lockTime=TheBDM.getTopBlockHeight())
+         
+         for msg in opreturn_list:
+            ustx.addOpReturnOutput(str(msg))
 
       #ustx.pprint()
 
@@ -773,6 +830,8 @@ class SendBitcoinsFrame(ArmoryFrame):
       
             if not dlg.exec_():
                return False
+            
+            self.signerType = dlg.getSignerType()
          else:
             self.main.warnNewUSTXFormat()
       
@@ -824,8 +883,8 @@ class SendBitcoinsFrame(ArmoryFrame):
                         commentStr += '%s (%s);  ' % (self.comments[i][0], coin2str_approx(amt).strip())
       
       
-               ustxSigned = self.wlt.signUnsignedTx(ustx)
-               finalTx = ustxSigned.getSignedPyTx()
+               ustxSigned = self.wlt.signUnsignedTx(ustx, signer=self.signerType)
+               finalTx = ustxSigned.getSignedPyTx(signer=ustxSigned.signerType)
                if len(commentStr) > 0:
                   self.wlt.setComment(finalTx.getHash(), commentStr)
                self.main.broadcastTransaction(finalTx)
@@ -953,7 +1012,7 @@ class SendBitcoinsFrame(ArmoryFrame):
             changeScript  = scrAddr_to_script(addrStr_to_scrAddr(changeAddrStr))
             self.wlt.setComment(changeAddr160, CHANGE_ADDR_DESCR_STRING)
          else:
-            changeScript  = script_to_p2sh_script(self.lbox.binScript)
+            changeScript  = self.lbox.getChangeScript(utxoList)
 
       if self.main.usermode == USERMODE.Expert:
          if not self.chkDefaultChangeAddr.isChecked():
@@ -986,7 +1045,39 @@ class SendBitcoinsFrame(ArmoryFrame):
       return changeScript,selectedBehavior
 
    #####################################################################
-   def setMaximum(self, targWidget):
+   def getMaxRecipientID(self):
+      for widget_obj in self.widgetTable:
+         if 'OP_RETURN' in widget_obj:
+            continue
+         
+         if widget_obj['BTN_MAX'].isChecked():
+            return widget_obj['UID']
+      return None
+      
+   #####################################################################
+   def setMaximum(self, targWidgetID):
+      #is the box checked?
+      targetWidget = None
+      for widget_obj in self.widgetTable:
+         if widget_obj['UID'] == targWidgetID:
+            targetWidget = widget_obj
+      
+      if targetWidget != None and targetWidget['BTN_MAX'].isChecked():
+         #disable all check boxes but this one
+         for widget_obj in self.widgetTable:
+            if 'BTN_MAX' in widget_obj:
+               widget_obj['BTN_MAX'].setEnabled(False)
+            
+         targetWidget['BTN_MAX'].setEnabled(True)
+         targetWidget['QLE_AMT'].setEnabled(False)
+      else:
+         #enable all checkboxes and return
+         for widget_obj in self.widgetTable:
+            if 'BTN_MAX' in widget_obj:
+               widget_obj['BTN_MAX'].setEnabled(True)
+               widget_obj['QLE_AMT'].setEnabled(True)               
+         return
+         
       nRecip = len(self.widgetTable)
       totalOther = 0
       r = 0
@@ -995,7 +1086,11 @@ class SendBitcoinsFrame(ArmoryFrame):
          txFee, fee_byte, adjust = self.feeDialog.getFeeData()
          while r < nRecip:
             # Use while loop so 'r' is still in scope in the except-clause
-            if targWidget == self.widgetTable[r]['QLE_AMT']:
+            if targWidgetID == self.widgetTable[r]['UID']:
+               r += 1
+               continue
+            
+            if 'OP_RETURN' in self.widgetTable[r]:
                r += 1
                continue
          
@@ -1018,8 +1113,6 @@ class SendBitcoinsFrame(ArmoryFrame):
                'for recipient %1.').arg(r + 1,), QMessageBox.Ok)
          return
 
-
-
       maxStr = coin2str((bal - (txFee + totalOther)), maxZeros=0)
       if bal < txFee + totalOther:
          QMessageBox.warning(self, self.tr('Insufficient funds'), \
@@ -1029,24 +1122,25 @@ class SendBitcoinsFrame(ArmoryFrame):
                QMessageBox.Ok)
          return
 
-      targWidget.setText(maxStr.strip())
+      targetWidget['QLE_AMT'].setText(maxStr.strip())
       self.isMax = True
 
 
    #####################################################################
-   def createSetMaxButton(self, targWidget):
-      newBtn = QPushButton('MAX')
-      newBtn.setMaximumWidth(relaxedSizeStr(self, 'MAX')[0])
+   def createSetMaxButton(self, targWidgetID):
+      newBtn = QCheckBox('MAX')
+      #newBtn.setMaximumWidth(relaxedSizeStr(self, 'MAX')[0])
       newBtn.setToolTip(self.tr('Fills in the maximum spendable amount minus '
                          'the amounts specified for other recipients '
                          'and the transaction fee '))
-      funcSetMax = lambda:  self.setMaximum(targWidget)
+      funcSetMax = lambda:  self.setMaximum(targWidgetID)
       self.connect(newBtn, SIGNAL(CLICKED), funcSetMax)
       return newBtn
 
 
    #####################################################################
-   def makeRecipFrame(self, nRecip):
+   def makeRecipFrame(self, nRecip, is_opreturn=False):
+      '''
       prevNRecip = len(self.widgetTable)
       nRecip = max(nRecip, 1)
       inputs = []
@@ -1055,88 +1149,122 @@ class SendBitcoinsFrame(ArmoryFrame):
             inputs.append([])
             for widg in ['QLE_ADDR', 'QLE_AMT', 'QLE_COMM']: 
                inputs[-1].append(str(self.widgetTable[i][widg].text()))
-
+      '''
 
       frmRecip = QFrame()
       frmRecip.setFrameStyle(QFrame.NoFrame)
       frmRecipLayout = QVBoxLayout()
 
 
-      def recipientAddrChanged(row):
+      def recipientAddrChanged(widget_obj):
          def callbk():
-            self.updateAddrColor(row, Colors.Background)
-            self.updateCoinSelectionRecipient(row)
+            self.updateWidgetAddrColor(widget_obj, Colors.Background)
+            self.updateCoinSelectionRecipient(widget_obj['UID'])
          return callbk
       
-      def recipientValueChanged(row):
+      def recipientValueChanged(uid):
          def callbk():
-            self.updateCoinSelectionRecipient(row)
+            self.updateCoinSelectionRecipient(uid)
          return callbk
-         
-
-      self.widgetTable = []
-      for r in range(nRecip):
-         self.widgetTable.append({})
-
-         self.widgetTable[r]['LBL_ADDR'] = QLabel('Address %d:' % (r+1))
-
+      
+      def createAddrWidget(widget_obj, r):
+         widget_obj['LBL_ADDR'] = QLabel('Address %d:' % (r+1))
+   
          addrEntryWidgets = self.main.createAddressEntryWidgets(self, maxDetectLen=45, boldDetectParts=1)
-         self.widgetTable[r]['FUNC_GETSCRIPT'] = addrEntryWidgets['CALLBACK_GETSCRIPT']
-         self.widgetTable[r]['QLE_ADDR'] = addrEntryWidgets['QLE_ADDR']
-         self.widgetTable[r]['QLE_ADDR'].setMinimumWidth(relaxedSizeNChar(GETFONT('var'), 20)[0])
-         self.widgetTable[r]['QLE_ADDR'].setMaximumHeight(self.maxHeight)
-         self.widgetTable[r]['QLE_ADDR'].setFont(GETFONT('var', 9))
+         widget_obj['FUNC_GETSCRIPT'] = addrEntryWidgets['CALLBACK_GETSCRIPT']
+         widget_obj['QLE_ADDR'] = addrEntryWidgets['QLE_ADDR']
+         widget_obj['QLE_ADDR'].setMinimumWidth(relaxedSizeNChar(GETFONT('var'), 20)[0])
+         widget_obj['QLE_ADDR'].setMaximumHeight(self.maxHeight)
+         widget_obj['QLE_ADDR'].setFont(GETFONT('var', 9))
+   
+         self.connect(widget_obj['QLE_ADDR'], SIGNAL('textChanged(QString)'), 
+                                                           recipientAddrChanged(widget_obj))
+   
+         widget_obj['BTN_BOOK'] = addrEntryWidgets['BTN_BOOK']
+         widget_obj['LBL_DETECT'] = addrEntryWidgets['LBL_DETECT']
+   
+         widget_obj['LBL_AMT'] = QLabel('Amount:')
+         widget_obj['QLE_AMT'] = QLineEdit()
+         widget_obj['QLE_AMT'].setFont(GETFONT('Fixed'))
+         widget_obj['QLE_AMT'].setMinimumWidth(tightSizeNChar(GETFONT('Fixed'), 14)[0])
+         widget_obj['QLE_AMT'].setMaximumHeight(self.maxHeight)
+         widget_obj['QLE_AMT'].setAlignment(Qt.AlignLeft)
+   
+         self.connect(widget_obj['QLE_AMT'], SIGNAL('textChanged(QString)'),
+                                       recipientValueChanged(widget_obj['UID']))
+   
+         widget_obj['LBL_BTC'] = QLabel('BTC')
+         widget_obj['LBL_BTC'].setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+   
+         widget_obj['BTN_MAX'] = \
+                           self.createSetMaxButton(widget_obj['UID'])
+   
+         widget_obj['LBL_COMM'] = QLabel('Comment:')
+         widget_obj['QLE_COMM'] = QLineEdit()
+         widget_obj['QLE_COMM'].setFont(GETFONT('var', 9))
+         widget_obj['QLE_COMM'].setMaximumHeight(self.maxHeight)
+         widget_obj['QLE_COMM'].setMaxLength(MAX_COMMENT_LENGTH)    
+      
+      
+      def opReturnMessageChanged(widget_obj):
+         def callbk():
+            self.updateCoinSelectionRecipient(widget_obj['UID'])
+         return callbk
+        
+      def createOpReturnWidget(widget_obj):     
+         widget_obj['LBL_ADDR'] = QLabel('OP_RETURN Message:')
+         widget_obj['QLE_ADDR'] = QLineEdit()
+         widget_obj['OP_RETURN'] = ""
+         
+         self.connect(widget_obj['QLE_ADDR'], SIGNAL('textChanged(QString)'),
+                        recipientAddrChanged(widget_obj))
+      
+      recip_diff = nRecip - len(self.widgetTable)
+      if recip_diff > 0:
+         for i in range(recip_diff):
+            r = len(self.widgetTable) 
+            self.widgetTable.append({})
+            
+            self.widgetTable[r]['UID'] = SecureBinaryData().GenerateRandom(8).toHexStr()
+            
+            if not is_opreturn:
+               createAddrWidget(self.widgetTable[r], r)
+            else:
+               createOpReturnWidget(self.widgetTable[r])
+               
+      else:
+         self.widgetTable = self.widgetTable[0:len(self.widgetTable) + recip_diff]
 
-         self.connect(self.widgetTable[r]['QLE_ADDR'], SIGNAL('textChanged(QString)'), 
-                                                        recipientAddrChanged(r))
+      for widget_obj in self.widgetTable:
 
-         self.widgetTable[r]['BTN_BOOK'] = addrEntryWidgets['BTN_BOOK']
-         self.widgetTable[r]['LBL_DETECT'] = addrEntryWidgets['LBL_DETECT']
-
-         self.widgetTable[r]['LBL_AMT'] = QLabel('Amount:')
-         self.widgetTable[r]['QLE_AMT'] = QLineEdit()
-         self.widgetTable[r]['QLE_AMT'].setFont(GETFONT('Fixed'))
-         self.widgetTable[r]['QLE_AMT'].setMinimumWidth(tightSizeNChar(GETFONT('Fixed'), 14)[0])
-         self.widgetTable[r]['QLE_AMT'].setMaximumHeight(self.maxHeight)
-         self.widgetTable[r]['QLE_AMT'].setAlignment(Qt.AlignLeft)
-
-         self.connect(self.widgetTable[r]['QLE_AMT'], SIGNAL('textChanged(QString)'),
-                                                      recipientValueChanged(r))
-
-         self.widgetTable[r]['LBL_BTC'] = QLabel('BTC')
-         self.widgetTable[r]['LBL_BTC'].setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-
-         self.widgetTable[r]['BTN_MAX'] = \
-                           self.createSetMaxButton(self.widgetTable[r]['QLE_AMT'])
-
-         self.widgetTable[r]['LBL_COMM'] = QLabel('Comment:')
-         self.widgetTable[r]['QLE_COMM'] = QLineEdit()
-         self.widgetTable[r]['QLE_COMM'].setFont(GETFONT('var', 9))
-         self.widgetTable[r]['QLE_COMM'].setMaximumHeight(self.maxHeight)
-         self.widgetTable[r]['QLE_COMM'].setMaxLength(MAX_COMMENT_LENGTH)
-
+         '''
          if r < nRecip and r < prevNRecip:
             self.widgetTable[r]['QLE_ADDR'].setText(inputs[r][0])
             self.widgetTable[r]['QLE_AMT'].setText(inputs[r][1])
             self.widgetTable[r]['QLE_COMM'].setText(inputs[r][2])
+         '''
 
          subfrm = QFrame()
          subfrm.setFrameStyle(STYLE_RAISED)
          subLayout = QGridLayout()
-         subLayout.addWidget(self.widgetTable[r]['LBL_ADDR'],  0,0, 1,1)
-         subLayout.addWidget(self.widgetTable[r]['QLE_ADDR'],  0,1, 1,5)
-         subLayout.addWidget(self.widgetTable[r]['BTN_BOOK'],  0,6, 1,1)
-
-         subLayout.addWidget(self.widgetTable[r]['LBL_DETECT'], 1,1, 1,6)
-
-         subLayout.addWidget(self.widgetTable[r]['LBL_AMT'],   2,0, 1,1)
-         subLayout.addWidget(self.widgetTable[r]['QLE_AMT'],   2,1, 1,2)
-         subLayout.addWidget(self.widgetTable[r]['LBL_BTC'],   2,3, 1,1)
-         subLayout.addWidget(self.widgetTable[r]['BTN_MAX'],   2,4, 1,1)
-         subLayout.addWidget(QLabel(''), 2, 5, 1, 2)
-
-         subLayout.addWidget(self.widgetTable[r]['LBL_COMM'],  3,0, 1,1)
-         subLayout.addWidget(self.widgetTable[r]['QLE_COMM'],  3,1, 1,6)
+         subLayout.addWidget(widget_obj['LBL_ADDR'],  0,0, 1,1)
+         subLayout.addWidget(widget_obj['QLE_ADDR'],  0,1, 1,5)
+         try:
+            subLayout.addWidget(widget_obj['BTN_BOOK'],  0,6, 1,1)
+   
+            subLayout.addWidget(widget_obj['LBL_DETECT'], 1,1, 1,6)
+   
+            subLayout.addWidget(widget_obj['LBL_AMT'],   2,0, 1,1)
+            subLayout.addWidget(widget_obj['QLE_AMT'],   2,1, 1,2)
+            subLayout.addWidget(widget_obj['LBL_BTC'],   2,3, 1,1)
+            subLayout.addWidget(widget_obj['BTN_MAX'],   2,4, 1,1)
+            subLayout.addWidget(QLabel(''), 2, 5, 1, 2)
+   
+            subLayout.addWidget(widget_obj['LBL_COMM'],  3,0, 1,1)
+            subLayout.addWidget(widget_obj['QLE_COMM'],  3,1, 1,6)
+         except:
+            pass
+         
          subLayout.setContentsMargins(5, 5, 5, 5)
          subLayout.setSpacing(3)
          subfrm.setLayout(subLayout)
@@ -1148,13 +1276,21 @@ class SendBitcoinsFrame(ArmoryFrame):
       btnFrm.setFrameStyle(QFrame.NoFrame)
       btnLayout = QHBoxLayout()
       lbtnAddRecip = QLabelButton(self.tr('+ Recipient'))
-      lbtnAddRecip.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+      lbtnAddRecip.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)  
       lbtnRmRecip = QLabelButton(self.tr('- Recipient'))
       lbtnRmRecip.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
       self.connect(lbtnAddRecip, SIGNAL(CLICKED), lambda: self.makeRecipFrame(nRecip + 1))
       self.connect(lbtnRmRecip, SIGNAL(CLICKED), lambda: self.makeRecipFrame(nRecip - 1))
+      
+      if self.main.usermode == USERMODE.Expert:
+         lbtnAddOpReturn = QLabelButton('+ OP_RETURN')
+         lbtnAddOpReturn.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)   
+         self.connect(lbtnAddOpReturn, SIGNAL(CLICKED), lambda: self.makeRecipFrame(nRecip + 1, True))
+                      
       btnLayout.addStretch()
       btnLayout.addWidget(lbtnAddRecip)
+      if self.main.usermode == USERMODE.Expert:
+         btnLayout.addWidget(lbtnAddOpReturn)
       btnLayout.addWidget(lbtnRmRecip)
       btnFrm.setLayout(btnLayout)
 
@@ -1164,6 +1300,9 @@ class SendBitcoinsFrame(ArmoryFrame):
       # return frmRecip
       self.scrollRecipArea.setWidget(frmRecip)
       self.scrollRecipArea.setWidgetResizable(True)
+      
+      if recip_diff < 0:
+         self.resetCoinSelectionRecipients()
 
    #############################################################################
    def clickEnterURI(self):
@@ -1219,13 +1358,16 @@ class SendBitcoinsFrame(ArmoryFrame):
          self.radioFeedback.setChecked(True)
       self.toggleSpecify(b and self.radioSpecify.isChecked())
 
+   #############################################################################
+   def updateWidgetAddrColor(self, widget, color):
+      palette = QPalette()
+      palette.setColor(QPalette.Base, color)
+      widget['QLE_ADDR'].setPalette(palette);
+      widget['QLE_ADDR'].setAutoFillBackground(True);
 
    #############################################################################
    def updateAddrColor(self, idx, color):
-      palette = QPalette()
-      palette.setColor(QPalette.Base, color)
-      self.widgetTable[idx]['QLE_ADDR'].setPalette(palette);
-      self.widgetTable[idx]['QLE_ADDR'].setAutoFillBackground(True);
+      self.updateWidgetAddrColor(self.widgetTable[idx], color)
     
    #############################################################################   
    def previewTx(self):
@@ -1339,10 +1481,13 @@ class SendBitcoinsFrame(ArmoryFrame):
       self.shuffleEntries = False
       
       #change
-      changeAddr = prefill['change']
-      self.chkDefaultChangeAddr.setChecked(True)
-      self.radioSpecify.setChecked(True)
-      self.edtChangeAddr.setText(changeAddr)
+      try:
+         changeAddr = prefill['change']
+         self.chkDefaultChangeAddr.setChecked(True)
+         self.radioSpecify.setChecked(True)
+         self.edtChangeAddr.setText(changeAddr)
+      except:
+         pass
       
       #fee
          
@@ -1697,7 +1842,7 @@ class SignBroadcastOfflineTxFrame(ArmoryFrame):
             self.ustxObj = UnsignedTransaction().unserializeAscii(ustxStr)
             self.signStat = self.ustxObj.evaluateSigningStatus()
             self.enoughSigs = self.signStat.canBroadcast
-            self.sigsValid = self.ustxObj.verifySigsAllInputs()
+            self.sigsValid = self.ustxObj.verifySigsAllInputs(self.ustxObj.signerType)
             self.ustxReadable = True
          except BadAddressError:
             QMessageBox.critical(self, self.tr('Inconsistent Data!'), \
@@ -1955,8 +2100,8 @@ class SignBroadcastOfflineTxFrame(ArmoryFrame):
             self.wlt.kdfKey = self.wlt.kdf.DeriveKey(Passphrase)
             Passphrase.destroy()                                              
 
-      newUstx = self.wlt.signUnsignedTx(self.ustxObj)
-      self.wlt.advanceHighestIndex()
+      newUstx = self.wlt.signUnsignedTx(self.ustxObj, signer=dlg.getSignerType())
+      self.wlt.advanceHighestIndex(isNew=True)
       self.txtUSTX.setText(newUstx.serializeAscii())
       self.ustxObj = newUstx
 
@@ -1982,7 +2127,7 @@ class SignBroadcastOfflineTxFrame(ArmoryFrame):
 
 
       try:
-         finalTx = self.ustxObj.getSignedPyTx()
+         finalTx = self.ustxObj.getSignedPyTx(signer=self.ustxObj.signerType)
       except SignatureError:
          QMessageBox.warning(self, self.tr('Signature Error'), self.tr(
             'Not all signatures are valid.  This transaction '
@@ -2103,7 +2248,8 @@ class SignBroadcastOfflineTxFrame(ArmoryFrame):
    def copyTxHex(self):
       clipb = QApplication.clipboard()
       clipb.clear()
-      clipb.setText(binary_to_hex(self.ustxObj.getSignedPyTx().serialize()))
+      clipb.setText(binary_to_hex(\
+         self.ustxObj.getSignedPyTx(signer=self.ustxObj.signerType).serialize()))
       self.lblCopied.setText(self.tr('<i>Copied!</i>'))
          
 

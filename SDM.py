@@ -363,11 +363,11 @@ class SatoshiDaemonManager(object):
       if USE_REGTEST:
          pargs.append('--regtest');
 
+      haveSatoshiDir = False
       blocksdir = os.path.join(self.satoshiHome, 'blocks')
-      if not os.path.exists(blocksdir):
-         raise self.BadPath, "Invalid blockdata path"
-
-      pargs.append('--satoshi-datadir="' + blocksdir + '"')
+      if os.path.exists(blocksdir):   
+         pargs.append('--satoshi-datadir="' + blocksdir + '"')
+         
       pargs.append('--datadir="' + dataDir + '"')
       pargs.append('--dbdir="' + dbDir + '"')
 
@@ -388,12 +388,12 @@ class SatoshiDaemonManager(object):
 
       kargs = {}
       if OS_WINDOWS:
-         #import win32process
+         import win32process
          kargs['shell'] = True
-         #kargs['creationflags'] = win32process.CREATE_NO_WINDOW
+         kargs['creationflags'] = win32process.CREATE_NO_WINDOW
 
       argStr = " ".join(astr for astr in pargs)
-      LOGWARN('Spawning DB with command:' + argStr)
+      LOGWARN('Spawning DB with command: ' + argStr)
 
       launchProcess(pargs, **kargs)
 
@@ -407,7 +407,7 @@ class SatoshiDaemonManager(object):
       elif USE_REGTEST:
          pargs.append('-regtest')
 
-      pargs.append('-datadir=%s' % self.satoshiRoot)
+      pargs.append('-datadir=%s' % self.satoshiHome)
 
       try:
          # Don't want some strange error in this size-check to abort loading
@@ -435,6 +435,8 @@ class SatoshiDaemonManager(object):
          kargs['creationflags'] = win32process.CREATE_NO_WINDOW
 
       # Startup bitcoind and get its process ID (along with our own)
+      argStr = " ".join(astr for astr in pargs)
+      LOGWARN('Spawning bitcoind with command: ' + argStr)      
       self.bitcoind = launchProcess(pargs, **kargs)
 
       self.btcdpid  = self.bitcoind.pid

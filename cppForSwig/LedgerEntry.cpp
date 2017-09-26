@@ -50,26 +50,13 @@ void LedgerEntry::setWalletID(BinaryData const & bd)
 
 ////////////////////////////////////////////////////////////////////////////////
 bool LedgerEntry::operator<(LedgerEntry const & le2) const
-{
-   // TODO: I wanted to update this with txTime_, but I didn't want to c
-   //       complicate the mess of changes going in, yet.  Do this later
-   //       once everything is stable again.
-   //if(       blockNum_ != le2.blockNum_)
-      //return blockNum_  < le2.blockNum_;
-   //else if(  index_    != le2.index_)
-      //return index_     < le2.index_;
-   //else if(  txTime_   != le2.txTime_)
-      //return txTime_    < le2.txTime_;
-   //else
-      //return false;
-   
+{  
    if( blockNum_ != le2.blockNum_)
       return blockNum_ < le2.blockNum_;
    else if( index_ != le2.index_)
       return index_ < le2.index_;
    else
       return false;
-   
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -219,7 +206,7 @@ void LedgerEntry::computeLedgerMap(map<BinaryData, LedgerEntry> &leMap,
       {
          blockNum = DBUtils::hgtxToHeight(txioVec.first.getSliceRef(0, 4));
          txIndex = READ_UINT16_BE(txioVec.first.getSliceRef(4, 2));
-         txTime = bc->getHeaderByHeight(blockNum).getTimestamp();
+         txTime = bc->getHeaderByHeight(blockNum)->getTimestamp();
 
          txHash = db->getTxHashForLdbKey(txioVec.first);
       }

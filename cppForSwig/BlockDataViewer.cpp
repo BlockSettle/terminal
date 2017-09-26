@@ -80,7 +80,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
    case BDV_Init:
    {
       startBlock = 0;
-      endBlock = blockchain().top().getBlockHeight();
+      endBlock = blockchain().top()->getBlockHeight();
       refresh = true;
       break;
    }
@@ -91,21 +91,21 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
          dynamic_pointer_cast<BDV_Notification_NewBlock>(action);
       auto& reorgState = reorgNotif->reorgState_;
          
-      if (!reorgState.hasNewTop)
+      if (!reorgState.hasNewTop_)
          return;
     
-      if (!reorgState.prevTopStillValid)
+      if (!reorgState.prevTopStillValid_)
       {
          //reorg
          reorg = true;
-         startBlock = reorgState.reorgBranchPoint->getBlockHeight();
+         startBlock = reorgState.reorgBranchPoint_->getBlockHeight();
       }
       else
       {
-         startBlock = reorgState.prevTop->getBlockHeight();
+         startBlock = reorgState.prevTop_->getBlockHeight();
       }
          
-      endBlock = reorgState.newTop->getBlockHeight();
+      endBlock = reorgState.newTop_->getBlockHeight();
 
       //feed current valid zc map to scanwallet as well
       auto&& actionStruct = createZcStruct();
@@ -122,7 +122,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       zcMap = move(zcAction->scrAddrZcMap_);
       leMapPtr = &zcAction->leMap_;
 
-      startBlock = endBlock = blockchain().top().getBlockHeight();
+      startBlock = endBlock = blockchain().top()->getBlockHeight();
 
       break;
    }
@@ -220,38 +220,30 @@ bool BlockDataViewer::registerAddresses(const vector<BinaryData>& saVec,
    return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-void BlockDataViewer::registerAddressBatch(
-   const map < BinaryData, vector<BinaryData>>& wltNAddrMap, 
-   bool areNew)
+///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::registerArbitraryAddressVec(
+   const vector<BinaryData>& saVec,
+   const string& walletID)
 {
-   //if called from python, feed it a dict such as:
-   //{wltID1:[addrList1], wltID2:[addrList2]}
+   auto callback = [this, walletID](bool refresh)->void
+   {
+      if (!refresh)
+         return;
 
-   auto& group = groups_[group_wallet];
+      flagRefresh(BDV_refreshAndRescan, walletID);
+   };
+
+   shared_ptr<ScrAddrFilter::WalletInfo> wltInfo =
+      make_shared<ScrAddrFilter::WalletInfo>();
+   wltInfo->callback_ = callback;
+   wltInfo->ID_ = walletID;
+
+   for (auto& sa : saVec)
+      wltInfo->scrAddrSet_.insert(sa);
 
    vector<shared_ptr<ScrAddrFilter::WalletInfo>> wltInfoVec;
-   for (auto& wltpair : wltNAddrMap)
-   {
-      auto wlt = group.getWalletByID(wltpair.first);
-      if (wlt == nullptr)
-         continue;
-
-      auto callback = [wlt](bool refresh)->void
-      { wlt->needsRefresh(refresh); };
-
-      shared_ptr<ScrAddrFilter::WalletInfo> wltInfo = 
-         make_shared<ScrAddrFilter::WalletInfo>();
-      wltInfo->callback_ = callback;
-      wltInfo->ID_ = string(wltpair.first.getCharPtr());
-
-      for (auto& sa : wltpair.second)
-         wltInfo->scrAddrSet_.insert(sa);
-
-      wltInfoVec.push_back(move(wltInfo));
-   }
-
-   saf_->registerAddressBatch(move(wltInfoVec), areNew);
+   wltInfoVec.push_back(move(wltInfo));
+   saf_->registerAddressBatch(move(wltInfoVec), false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -342,7 +334,7 @@ LMDBBlockDatabase* BlockDataViewer::getDB(void) const
 ////////////////////////////////////////////////////////////////////////////////
 uint32_t BlockDataViewer::getTopBlockHeight(void) const
 {
-   return bc_->top().getBlockHeight();
+   return bc_->top()->getBlockHeight();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -364,11 +356,13 @@ void BlockDataViewer::scanScrAddrVector(
    shared_ptr<ScrAddrFilter> saf(saf_->copy());
 
    //register scrAddr with it
+   vector<pair<BinaryData, unsigned>> saVec;
    for (auto& scrAddrPair : scrAddrMap)
-      saf->regScrAddrForScan(scrAddrPair.first, startBlock);
+      saVec.push_back(make_pair(scrAddrPair.first, startBlock));
+   saf->regScrAddrVecForScan(saVec);
 
    //scan addresses
-   saf->applyBlockRangeToDB(startBlock, endBlock, vector<string>());
+   saf->applyBlockRangeToDB(startBlock, endBlock, vector<string>(), true);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -443,17 +437,18 @@ StoredHeader BlockDataViewer::getBlockFromDB(
 ////////////////////////////////////////////////////////////////////////////////
 bool BlockDataViewer::scrAddressIsRegistered(const BinaryData& scrAddr) const
 {
-   auto scrAddrSet = saf_->getScrAddrSet();
-   auto saIter = scrAddrSet->find(scrAddr);
+   auto scrAddrMap = saf_->getScrAddrMap();
+   auto saIter = scrAddrMap->find(scrAddr);
 
-   if (saIter == scrAddrSet->end())
+   if (saIter == scrAddrMap->end())
       return false;
 
    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-BlockHeader BlockDataViewer::getHeaderByHash(const BinaryData& blockHash) const
+shared_ptr<BlockHeader> BlockDataViewer::getHeaderByHash(
+   const BinaryData& blockHash) const
 {
    return bc_->getHeaderByHash(blockHash);
 }
@@ -464,14 +459,14 @@ vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
 {
    ScrAddrFilter* saf = bdmPtr_->getScrAddrFilter().get();
 
-   auto scrAddrSet = saf_->getScrAddrSet();
+   auto scrAddrMap = saf_->getScrAddrMap();
 
    if (bdmPtr_->config().armoryDbType_ != ARMORY_DB_SUPER)
    {
       for (const auto& scrAddr : scrAddrVec)
       {
-         auto saIter = scrAddrSet->find(scrAddr);
-         if (saIter == scrAddrSet->end())
+         auto saIter = scrAddrMap->find(scrAddr);
+         if (saIter == scrAddrMap->end())
             throw std::range_error("Don't have this scrAddr tracked");
       }
    }
@@ -557,7 +552,7 @@ uint32_t BlockDataViewer::getBlockTimeByHeight(uint32_t height) const
 {
    auto bh = blockchain().getHeaderByHeight(height);
 
-   return bh.getTimestamp();
+   return bh->getTimestamp();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -629,21 +624,21 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForScrAddr(
 uint32_t BlockDataViewer::getClosestBlockHeightForTime(uint32_t timestamp)
 {
    //get timestamp of genesis block
-   auto& genBlock = blockchain().getGenesisBlock();
+   auto genBlock = blockchain().getGenesisBlock();
    
    //sanity check
-   if (timestamp < genBlock.getTimestamp())
+   if (timestamp < genBlock->getTimestamp())
       return 0;
 
    //get time diff and divide by average time per block (600 sec for Bitcoin)
-   uint32_t diff = timestamp - genBlock.getTimestamp();
+   uint32_t diff = timestamp - genBlock->getTimestamp();
    int32_t blockHint = diff/600;
 
    //look for a block in the hint vicinity with a timestamp lower than ours
    while (blockHint > 0)
    {
-      auto& block = blockchain().getHeaderByHeight(blockHint);
-      if (block.getTimestamp() < timestamp)
+      auto block = blockchain().getHeaderByHeight(blockHint);
+      if (block->getTimestamp() < timestamp)
          break;
 
       blockHint -= 1000;
@@ -653,16 +648,16 @@ uint32_t BlockDataViewer::getClosestBlockHeightForTime(uint32_t timestamp)
    if (blockHint < 0)
       return 0;
 
-   for (uint32_t id = blockHint; id < blockchain().top().getBlockHeight() - 1; id++)
+   for (uint32_t id = blockHint; id < blockchain().top()->getBlockHeight() - 1; id++)
    {
       //not looking for a really precise block, 
       //anything within the an hour of the timestamp is enough
-      auto& block = blockchain().getHeaderByHeight(id);
-      if (block.getTimestamp() + 3600 > timestamp)
-         return block.getBlockHeight();
+      auto block = blockchain().getHeaderByHeight(id);
+      if (block->getTimestamp() + 3600 > timestamp)
+         return block->getBlockHeight();
    }
 
-   return blockchain().top().getBlockHeight() - 1;
+   return blockchain().top()->getBlockHeight() - 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -770,21 +770,7 @@ def estimateFee(nblocksToConfirm):
 ################################################################################
 # Call bitcoin core to get the priority estimate
 def estimatePriority():
-   result = DEFAULT_PRIORITY
-   try:
-      # See https://bitcoin.org/en/developer-reference#estimatepriority for
-      # documentation about this RPC call
-      priority = BDM.TheSDM.callJSON('estimatepriority', NBLOCKS_TO_CONFIRM)
-      # -1 is returned if BitcoinD does not have enough data to estimate
-      # the priority
-      if priority == -1:
-         result = priority
-   except:
-      # if the BitcoinD version does not support priority estimation
-      # return default
-      # if the BitcoinD was never started return default
-      pass
-   return int(result)
+   return DEFAULT_PRIORITY
 
 ################################################################################
 def calcMinSuggestedFeesHackMS(selectCoinsResult, targetOutVal, preSelectedFee, 
@@ -850,27 +836,12 @@ def calcMinSuggestedFees(selectCoinsResult, targetOutVal, preSelectedFee,
    if numBytes == -1:
       return -1
    
-   numKb = int(numBytes / 1000)
-
-   suggestedFee = (1+numKb)*estimateFee()
-   if numKb>10:
-      return suggestedFee
-   # Compute raw priority of tx
-   prioritySum = 0
-   # pprintUnspentTxOutList(selectCoinsResult)
-   for utxo in selectCoinsResult:
-      prioritySum += utxo.getValue() * utxo.getNumConfirm()
-   prioritySum = prioritySum / numBytes
-
-   # Do not assume free if estimatePriority is -1
-   estimatedPriority = estimatePriority()
-   if estimatedPriority > -1 and prioritySum >= estimatedPriority and numBytes < 10000:
-      return 0
-
+   try:
+      suggestedFee = numBytes*estimateFee(2)
+   except:
+      suggestedFee = numBytes*MIN_RELAY_TX_FEE
+      
    return suggestedFee
-
-
-
 
 ################################################################################
 def approxTxInSizeForTxOut(utxoScript, lboxList=None):
@@ -895,7 +866,7 @@ def approxTxInSizeForTxOut(utxoScript, lboxList=None):
    elif scrType == CPP_TXOUT_P2SH and not lboxList is None:
       scrAddr = script_to_scrAddr(utxoScript)
       for lbox in lboxList:
-         if scrAddr == lbox.p2shScrAddr:
+         if scrAddr == lbox.getAddr():
             M,N,a160s,pubs = getMultisigScriptInfo(lbox.binScript)
             return M*70 + 40
 

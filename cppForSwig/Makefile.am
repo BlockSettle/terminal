@@ -1,10 +1,19 @@
-SUBDIRS = lmdb fcgi cryptopp gtest
+MAYBE_BUILD =
+if BUILD_TESTS
+MAYBE_BUILD += gtest
+endif
+
+DIST_SUBDIRS = lmdb fcgi cryptopp
+SUBDIRS = lmdb fcgi cryptopp $(MAYBE_BUILD)
 
 SWIG_FLAGS = -c++ -python -threads
 AM_CXXFLAGS = $(CXXFLAGS) -std=c++11
 
 if HAVE_GCC
 SWIG_FLAGS += -D__GNUC__
+if HAVE_64BIT
+SWIG_FLAGS += -D__LP64__
+endif
 endif
 
 if HAVE_CLANG
@@ -22,7 +31,7 @@ INCLUDE_FILES = UniversalTimer.h BinaryData.h lmdb_wrapper.h \
 	FcgiMessage.h BlockDataManagerConfig.h \
 	Transactions.h Script.h Signer.h nodeRPC.h JSON_codec.h \
 	ReentrantLock.h StringSockets.h log.h OS_TranslatePath.h \
-	TransactionBatch.h
+	TransactionBatch.h BlockchainScanner_Super.h SigHashEnum.h TxEvalState.h
 
 DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	BtcUtils.cpp DBUtils.cpp BlockObj.cpp BlockUtils.cpp EncryptionUtils.cpp \
@@ -30,11 +39,11 @@ DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	BDM_mainthread.cpp BDM_supportClasses.cpp \
 	BlockDataViewer.cpp HistoryPager.cpp Progress.cpp \
 	txio.cpp TxClasses.cpp StoredBlockObj.cpp \
-	DatabaseBuilder.cpp BlockchainScanner.cpp BlockDataMap.cpp \
+	DatabaseBuilder.cpp BlockchainScanner.cpp BlockchainScanner_Super.cpp BlockDataMap.cpp \
 	DataObject.cpp BitcoinP2P.cpp BDM_Server.cpp BDM_seder.cpp SocketObject.cpp \
 	FcgiMessage.cpp BlockDataManagerConfig.cpp \
 	Transactions.cpp Script.cpp Signer.cpp nodeRPC.cpp JSON_codec.cpp \
-	StringSockets.cpp main.cpp ReentrantLock.cpp 
+	StringSockets.cpp main.cpp ReentrantLock.cpp log.cpp TxEvalState.cpp
 
 CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	BtcUtils.cpp DBUtils.cpp EncryptionUtils.cpp \
@@ -43,13 +52,13 @@ CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	BlockDataManagerConfig.cpp TxClasses.cpp \
 	WalletManager.cpp Wallets.cpp Script.cpp Signer.cpp \
 	Transactions.cpp \
-        CoinSelection.cpp ReentrantLock.cpp JSON_codec.cpp \
-	TransactionBatch.cpp
+	CoinSelection.cpp ReentrantLock.cpp JSON_codec.cpp \
+	TransactionBatch.cpp log.cpp TxEvalState.cpp
 
-noinst_PROGRAMS = ArmoryDB
-lib_LTLIBRARIES = libCppBlockUtils.la
 
 #ArmoryDB
+noinst_PROGRAMS = ArmoryDB
+
 ArmoryDB_SOURCES = $(INCLUDE_FILES) \
 		   $(DB_SOURCE_FILES)
 
@@ -66,6 +75,9 @@ ArmoryDB_LDADD = -Llmdb -llmdb \
 ArmoryDB_LDFLAGS = -static $(LDFLAGS)
 
 #libCppBlockUtils
+if HAVE_GUI
+lib_LTLIBRARIES = libCppBlockUtils.la
+
 libCppBlockUtils_la_SOURCES = $(INCLUDE_FILES) \
 				$(CPPBLOCKUTILS_SOURCE_FILES) \
 				CppBlockUtils_wrap.cxx
@@ -95,3 +107,4 @@ clean-local:
 	rm -f CppBlockUtils.py
 	rm -f CppBlockUtils_wrap.cxx
 	rm -f CppBlockUtils_wrap.h
+endif

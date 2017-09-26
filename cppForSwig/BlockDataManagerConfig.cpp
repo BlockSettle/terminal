@@ -12,6 +12,7 @@
 #include "DbHeader.h"
 #include "EncryptionUtils.h"
 #include "JSON_codec.h"
+#include "SocketObject.h"
 
 #ifndef _WIN32
 #include "sys/stat.h"
@@ -98,10 +99,12 @@ void BlockDataManagerConfig::selectNetwork(const string &netname)
       genesisTxHash_ = READHEX(MAINNET_GENESIS_TX_HASH_HEX);
       magicBytes_ = READHEX(MAINNET_MAGIC_BYTES);
       btcPort_ = portToString(NODE_PORT_MAINNET);
-      fcgiPort_ = portToString(FCGI_PORT_MAINNET);
       rpcPort_ = portToString(RPC_PORT_MAINNET);
       pubkeyHashPrefix_ = SCRIPT_PREFIX_HASH160;
       scriptHashPrefix_ = SCRIPT_PREFIX_P2SH;
+      
+      if (!customFcgiPort_)
+         fcgiPort_ = portToString(FCGI_PORT_MAINNET);
    }
    else if (netname == "Test")
    {
@@ -109,12 +112,14 @@ void BlockDataManagerConfig::selectNetwork(const string &netname)
       genesisTxHash_ = READHEX(TESTNET_GENESIS_TX_HASH_HEX);
       magicBytes_ = READHEX(TESTNET_MAGIC_BYTES);
       btcPort_ = portToString(NODE_PORT_TESTNET);
-      fcgiPort_ = portToString(FCGI_PORT_TESTNET);
       rpcPort_ = portToString(RPC_PORT_TESTNET);
       pubkeyHashPrefix_ = SCRIPT_PREFIX_HASH160_TESTNET;
       scriptHashPrefix_ = SCRIPT_PREFIX_P2SH_TESTNET;
 
       testnet_ = true;
+      
+      if (!customFcgiPort_)
+         fcgiPort_ = portToString(FCGI_PORT_TESTNET);
    }
    else if (netname == "Regtest")
    {
@@ -122,12 +127,14 @@ void BlockDataManagerConfig::selectNetwork(const string &netname)
       genesisTxHash_ = READHEX(REGTEST_GENESIS_TX_HASH_HEX);
       magicBytes_ = READHEX(REGTEST_MAGIC_BYTES);
       btcPort_ = portToString(NODE_PORT_REGTEST);
-      fcgiPort_ = portToString(FCGI_PORT_REGTEST);
       rpcPort_ = portToString(RPC_PORT_TESTNET);
       pubkeyHashPrefix_ = SCRIPT_PREFIX_HASH160_TESTNET;
       scriptHashPrefix_ = SCRIPT_PREFIX_P2SH_TESTNET;
 
       regtest_ = true;
+      
+      if (!customFcgiPort_)
+         fcgiPort_ = portToString(FCGI_PORT_REGTEST);
    }
 }
 
@@ -190,6 +197,9 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
    builds and scans. Defaults to maximum available CPU threads. Can't be
    lower than 1. Can be changed in between processes
 
+   --zcthread-count: defines the maximum number on threads the zc parser can
+   create for processing incoming transcations from the network node
+
    --db-type: sets the db type:
    DB_BARE: tracks wallet history only. Smallest DB.
    DB_FULL: tracks wallet history and resolves all relevant tx hashes.
@@ -203,6 +213,12 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 
    --cookie: create a cookie file holding a random authentication key to allow
    local clients to make use of elevated commands, like shutdown.
+
+   --fcgi-port: sets the DB listening port.
+
+   --clear-mempool: delete all zero confirmation transactions from the DB.
+
+   --satoshirpc-port: set node rpc port
 
    ***/
 
@@ -331,14 +347,25 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 
       testPath(blkFileLocation_, 2);
 
-      //cookie file
-      if (!useCookie_)
-         return;
+      //fcgi port
+      if (useCookie_ && !customFcgiPort_)
+      {
+         //no custom fcgi port was provided and the db was spawned with a 
+         //cookie file, fcgi port will be randomized
+         srand(time(0));
+         while (1)
+         {
+            auto port = rand() % 15000 + 49150;
+            stringstream portss;
+            portss << port;
 
-      auto cookiePath = dataDir_;
-      appendPath(cookiePath, ".cookie_");
-      fstream fs(cookiePath, ios_base::out | ios_base::trunc);
-      fs << cookie_;
+            if (!testConnection("127.0.0.1", portss.str()))
+            {
+               fcgiPort_ = portss.str();
+               break;
+            }
+         }
+      }
    }
    catch (...)
    {
@@ -350,14 +377,63 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 void BlockDataManagerConfig::processArgs(const map<string, string>& args, 
    bool onlyDetectNetwork)
 {
-   //network type
-   auto iter = args.find("testnet");
+   //server port
+   auto iter = args.find("fcgi-port");
    if (iter != args.end())
-      selectNetwork("Test");
+   {
+      fcgiPort_ = stripQuotes(iter->second);
+      int portInt = 0;
+      stringstream portSS(fcgiPort_);
+      portSS >> portInt;
 
-   iter = args.find("regtest");
+      if (portInt < 1 || portInt > 65535)
+      {
+         cout << "Invalid fcgi port, falling back to default" << endl;
+         fcgiPort_ = "";
+      }
+      else
+      {
+         customFcgiPort_ = true;
+      }
+   }
+
+   //network type
+   iter = args.find("testnet");
    if (iter != args.end())
-      selectNetwork("Regtest");
+   {
+      selectNetwork("Test");
+   }
+   else
+   {
+      iter = args.find("regtest");
+      if (iter != args.end())
+      {
+         selectNetwork("Regtest");
+      }
+      else
+      {
+         selectNetwork("Main");
+      }
+   }
+
+   //rpc port
+   iter = args.find("satoshirpc-port");
+   if (iter != args.end())
+   {
+      auto value = stripQuotes(iter->second);
+      int portInt = 0;
+      stringstream portSS(value);
+      portSS >> portInt;
+
+      if (portInt < 1 || portInt > 65535)
+      {
+         cout << "Invalid satoshi rpc port, falling back to default" << endl;
+      }
+      else
+      {
+         rpcPort_ = value;
+      }
+   }
 
    if (onlyDetectNetwork)
       return;
@@ -446,6 +522,22 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
          ramUsage_ = val;
    }
 
+   iter = args.find("zcthread-count");
+   if (iter != args.end())
+   {
+      int val = 0;
+      try
+      {
+         val = stoi(iter->second);
+      }
+      catch (...)
+      {
+      }
+
+      if (val > 0)
+         zcThreadCount_ = val;
+   }
+
    //cookie
    iter = args.find("cookie");
    if (iter != args.end())
@@ -497,6 +589,7 @@ void BlockDataManagerConfig::expandPath(string& path)
       throw runtime_error("failed to resolve home path");
 
    string userPath(wexp.we_wordv[0]);
+   wordfree(&wexp);
 #endif
 
    appendPath(userPath, path.substr(1));
@@ -548,6 +641,98 @@ pair<string, string> BlockDataManagerConfig::getKeyValFromLine(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+vector<string> BlockDataManagerConfig::keyValToArgv(
+   const map<string, string>& keyValMap)
+{
+   vector<string> argv;
+
+   for (auto& keyval : keyValMap)
+   {
+      stringstream ss;
+      if (keyval.first.compare(0, 2, "--") != 0)
+         ss << "--";
+      ss << keyval.first;
+
+      if (keyval.second.size() != 0)
+         ss << "=" << keyval.second;
+
+      argv.push_back(ss.str());
+   }
+
+   return argv;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BlockDataManagerConfig::createCookie() const
+{
+   //cookie file
+   if (!useCookie_)
+      return;
+
+   auto cookiePath = dataDir_;
+   appendPath(cookiePath, ".cookie_");
+   fstream fs(cookiePath, ios_base::out | ios_base::trunc);
+   fs << cookie_ << endl;
+   fs << fcgiPort_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool BlockDataManagerConfig::testConnection(
+   const string& ip, const string& port)
+{
+   BinarySocket testSock(ip, port);
+   return testSock.testConnection();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+string BlockDataManagerConfig::hasLocalDB(
+   const string& datadir, const string& port)
+{
+   //check db on provided port
+   if (testConnection("127.0.0.1", port))
+      return port;
+
+   //check db on default port
+   if (testConnection("127.0.0.1", portToString(FCGI_PORT_MAINNET)))
+      return portToString(FCGI_PORT_MAINNET);
+
+   //check for cookie file
+   auto&& cookie_port = getPortFromCookie(datadir);
+   if (cookie_port.size() == 0)
+      return string();
+
+   if (testConnection("127.0.0.1", cookie_port))
+      return cookie_port;
+
+   return string();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+string BlockDataManagerConfig::getPortFromCookie(const string& datadir)
+{
+   //check for cookie file
+   string cookie_path = datadir;
+   appendPath(cookie_path, ".cookie_");
+   auto&& lines = getLines(cookie_path);
+   if (lines.size() != 2)
+      return string();
+
+   return lines[1];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+string BlockDataManagerConfig::getCookie(const string& datadir)
+{
+   string cookie_path = datadir;
+   appendPath(cookie_path, ".cookie_");
+   auto&& lines = getLines(cookie_path);
+   if (lines.size() != 2)
+      return string();
+
+   return lines[0];
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //
 // ConfigFile
 //
@@ -559,9 +744,86 @@ ConfigFile::ConfigFile(const string& path)
    for (auto& line : lines)
    {
       auto&& keyval = BlockDataManagerConfig::getKeyValFromLine(line, '=');
+
+      if (keyval.first.size() == 0)
+         continue;
+
+      if (keyval.first.compare(0, 1, "#") == 0)
+         continue;
+
       keyvalMap_.insert(make_pair(
          keyval.first, BlockDataManagerConfig::stripQuotes(keyval.second)));
    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<BinaryData> ConfigFile::fleshOutArgs(
+   const string& path, const vector<BinaryData>& argv)
+{
+   //sanity check
+   if (path.size() == 0)
+      throw runtime_error("invalid config file path");
+
+   //remove first arg
+   auto binaryPath = argv.front();
+   vector<string> arg_minus_1;
+
+   auto argvIter = argv.begin() + 1;
+   while (argvIter != argv.end())
+   {
+      string argStr((*argvIter).getCharPtr(), (*argvIter).getSize());
+      arg_minus_1.push_back(move(argStr));
+      ++argvIter;
+   }
+
+   //break down string vector
+   auto&& keyValMap = BlockDataManagerConfig::getKeyValsFromLines(arg_minus_1, '=');
+
+   //complete config file path
+   string configFile_path = BlockDataManagerConfig::defaultDataDir_;
+   auto datadir_iter = keyValMap.find("--datadir");
+   if (datadir_iter != keyValMap.end() && datadir_iter->second.size() > 0)
+      configFile_path = datadir_iter->second;
+
+   BlockDataManagerConfig::appendPath(configFile_path, path);
+   BlockDataManagerConfig::expandPath(configFile_path);
+
+   //process config file
+   ConfigFile cfile(configFile_path);
+   if (cfile.keyvalMap_.size() == 0)
+      return argv;
+
+   //merge with argv
+   for (auto& keyval : cfile.keyvalMap_)
+   {
+      //skip if argv already has this key
+      stringstream argss;
+      if (keyval.first.compare(0, 2, "--") != 0)
+         argss << "--";
+      argss << keyval.first;
+
+      auto keyiter = keyValMap.find(argss.str());
+      if (keyiter != keyValMap.end())
+         continue;
+
+      keyValMap.insert(keyval);
+   }
+
+   //convert back to string list format
+   auto&& newArgs = BlockDataManagerConfig::keyValToArgv(keyValMap);
+
+   //prepend the binary path and return
+   vector<BinaryData> fleshedOutArgs;
+   fleshedOutArgs.push_back(binaryPath);
+   auto newArgsIter = newArgs.begin();
+   while (newArgsIter != newArgs.end())
+   {
+      BinaryData bdStr(*newArgsIter);
+      fleshedOutArgs.push_back(move(bdStr));
+      ++newArgsIter;
+   }
+
+   return fleshedOutArgs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

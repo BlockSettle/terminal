@@ -84,10 +84,19 @@ void BlockDataViewer::goOnline()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+BlockDataViewer::BlockDataViewer(void)
+{
+   txMap_ = make_shared<map<BinaryData, Tx>>();
+   rawHeaderMap_ = make_shared<map<BinaryData, BinaryData>>();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
 BlockDataViewer::BlockDataViewer(const shared_ptr<BinarySocket> sock) :
    sock_(sock)
 {
    txMap_ = make_shared<map<BinaryData, Tx>>();
+   rawHeaderMap_ = make_shared<map<BinaryData, BinaryData>>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -275,6 +284,42 @@ Tx BlockDataViewer::getTxByHash(const BinaryData& txHash)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+BinaryData BlockDataViewer::getRawHeaderForTxHash(const BinaryData& txHash)
+{
+   BinaryDataRef bdRef(txHash);
+   BinaryData hash;
+
+   if (txHash.getSize() != 32)
+   {
+      if (txHash.getSize() == 64)
+      {
+         string hashstr(txHash.toCharPtr(), txHash.getSize());
+         hash = READHEX(hashstr);
+         bdRef.setRef(hash);
+      }
+   }
+
+   auto iter = rawHeaderMap_->find(bdRef);
+   if (iter != rawHeaderMap_->end())
+      return iter->second;
+
+   Command cmd;
+
+   cmd.method_ = "getRawHeaderForTxHash";
+   cmd.ids_.push_back(bdvID_);
+   cmd.args_.push_back(BinaryDataObject(bdRef));
+   cmd.serialize();
+
+   auto&& result = sock_->writeAndRead(cmd.command_);
+
+   Arguments retval(result);
+   auto&& rawheader = retval.get<BinaryDataObject>();
+
+   rawHeaderMap_->insert(make_pair(bdRef, rawheader.get()));
+   return rawheader.get();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 LedgerDelegate BlockDataViewer::getLedgerDelegateForScrAddr(
    const string& walletID, const BinaryData& scrAddr)
 {
@@ -407,6 +452,83 @@ uint64_t BlockDataViewer::getValueForTxOut(
 
    auto value = args.get<IntType>();
    return value.getVal();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+string BlockDataViewer::broadcastThroughRPC(const BinaryData& rawTx)
+{
+   Command cmd;
+   cmd.method_ = "broadcastThroughRPC";
+   cmd.ids_.push_back(bdvID_);
+
+   BinaryDataObject bdo(rawTx);
+
+   cmd.args_.push_back(move(bdo));
+   cmd.serialize();
+
+   auto&& result = sock_->writeAndRead(cmd.command_);
+   Arguments args(result);
+
+   auto result_bdo = args.get<BinaryDataObject>();
+   auto& result_bd = result_bdo.get();
+   string result_str(result_bd.getCharPtr(), result_bd.getSize());
+
+   return result_str;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::registerAddrList(
+   const BinaryData& id,
+   const vector<BinaryData>& addrVec)
+{
+   Command cmd;
+
+   cmd.method_ = "registerAddrList";
+   cmd.ids_.push_back(bdvID_);
+
+   BinaryDataObject bdo(id);
+   BinaryDataVector bdVec;
+   for (auto addr : addrVec)
+      bdVec.push_back(move(addr));
+
+   cmd.args_.push_back(move(bdo));
+   cmd.args_.push_back(move(bdVec));
+   cmd.serialize();
+
+   auto&& result = sock_->writeAndRead(cmd.command_);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+vector<UTXO> BlockDataViewer::getUtxosForAddrVec(
+   const vector<BinaryData>& addrVec)
+{
+   Command cmd;
+
+   cmd.method_ = "getUTXOsForAddrList";
+   cmd.ids_.push_back(bdvID_);
+
+   BinaryDataVector bdVec;
+   for (auto addr : addrVec)
+      bdVec.push_back(move(addr));
+
+   cmd.args_.push_back(move(bdVec));
+   cmd.serialize();
+
+   auto&& result = sock_->writeAndRead(cmd.command_);
+   Arguments arg(move(result));
+   auto count = arg.get<IntType>().getVal();
+
+   vector<UTXO> utxovec;
+   for (unsigned i = 0; i < count; i++)
+   {
+      auto&& bdo = arg.get<BinaryDataObject>();
+      UTXO utxo;
+      utxo.unserialize(bdo.get());
+
+      utxovec.push_back(move(utxo));
+   }
+
+   return utxovec;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1054,7 +1176,7 @@ bool ProcessMutex::acquire()
 
    auto holdldb = [this]()
    {
-      this->hold();
+      this->hodl();
    };
 
    holdThr_ = thread(holdldb);
@@ -1091,7 +1213,7 @@ bool ProcessMutex::test(const string& uriLink)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ProcessMutex::hold()
+void ProcessMutex::hodl()
 {
    auto server = make_unique<ListenServer>(addr_, port_);
    

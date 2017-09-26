@@ -11,8 +11,9 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 void BlockData::deserialize(const uint8_t* data, size_t size,
-   const BlockHeader* blockHeader,
-   function<unsigned int(void)> getID, bool checkMerkle, bool keepHashes)
+   const shared_ptr<BlockHeader> blockHeader,
+   function<unsigned int(const BinaryData&)> getID, 
+   bool checkMerkle, bool keepHashes)
 {
    headerPtr_ = blockHeader;
 
@@ -82,7 +83,7 @@ void BlockData::deserialize(const uint8_t* data, size_t size,
       throw BlockDeserializingException("invalid merkle root");
    }
 
-   uniqueID_ = getID();
+   uniqueID_ = getID(bh.getThisHash());
 
    txFilter_ = move(computeTxFilter(allhashes));
 }
@@ -98,12 +99,13 @@ BlockData::computeTxFilter(const vector<BinaryData>& allHashes) const
 }
 
 /////////////////////////////////////////////////////////////////////////////
-BlockHeader BlockData::createBlockHeader(void) const
+shared_ptr<BlockHeader> BlockData::createBlockHeader(void) const
 {
    if (headerPtr_ != nullptr)
-      return *headerPtr_;
+      return headerPtr_;
 
-   BlockHeader bh;
+   auto bhPtr = make_shared<BlockHeader>();
+   auto& bh = *bhPtr;
 
    bh.dataCopy_ = move(BinaryData(data_, HEADER_SIZE));
 
@@ -125,7 +127,7 @@ BlockHeader BlockData::createBlockHeader(void) const
    bh.thisHash_ = blockHash_;
    bh.uniqueID_ = uniqueID_;
 
-   return bh;
+   return bhPtr;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -151,111 +153,25 @@ void BlockFiles::detectAllBlockFiles()
 }
 
 /////////////////////////////////////////////////////////////////////////////
-BlockDataLoader::BlockDataLoader(const string& path,
-   bool preloadFile, bool prefetchNext, bool enableGC) :
-   path_(path), 
-   preloadFile_(preloadFile), prefetchNext_(prefetchNext), 
-   prefix_("blk"), enableGC_(enableGC)
-{
-   //set gcLambda
-   gcLambda_ = [this](void)->void
-   { 
-      if (!enableGC_)
-         return;
-
-	   this->gcCondVar_.notify_all(); 
-   };
-   
-   if (!enableGC_)
-      return;
-
-   //start up GC thread
-   auto gcthread = [this](void)->void
-   { this->garbageCollectorThread(); };
-
-   gcThread_ = thread(gcthread);
-}
+BlockDataLoader::BlockDataLoader(const string& path) :
+   path_(path), prefix_("blk")
+{}
 
 /////////////////////////////////////////////////////////////////////////////
-void BlockDataLoader::garbageCollectorThread()
-{
-   unique_lock<mutex> lock(gcMu_);
-
-   while (run_)
-   {
-      gcCondVar_.wait(lock);
-
-      //lock the map
-      unique_lock<mutex> mapLock(mu_);
-
-      auto mapIter = fileMaps_.begin();
-      while (mapIter != fileMaps_.end())
-      {
-         //TODO: make sure the gc doesn't go after prefetched files right away
-
-         //check the BlockDataMap counter
-         auto ptr = mapIter->second;
-         
-         int counter = ptr->useCounter_.load(memory_order_relaxed);
-         if (counter <= 0)
-         {
-            counter--;
-            ptr->useCounter_.store(counter, memory_order_relaxed);
-         }
-
-         if (counter <= -2)
-            fileMaps_.erase(mapIter++);
-         else
-            ++mapIter;
-      }
-   }
-}
-
-/////////////////////////////////////////////////////////////////////////////
-BlockFileMapPointer BlockDataLoader::get(const string& filename)
+shared_ptr<BlockDataFileMap> BlockDataLoader::get(const string& filename)
 {
    //convert to int ID
    auto intID = nameToIntID(filename);
 
    //get with int ID
-   return get(intID, prefetchNext_);
+   return get(intID);
 }
 
 /////////////////////////////////////////////////////////////////////////////
-BlockFileMapPointer BlockDataLoader::get(uint32_t fileid, bool prefetch)
+shared_ptr<BlockDataFileMap> BlockDataLoader::get(uint32_t fileid)
 {
-	prefetch = false;
-   //have some fun with promise/future
-   shared_ptr<BlockDataFileMap> fMap;
-   
-   //if the prefetch flag is set, get the next file
-
-
-   //lock map, look for fileid entry
-   {
-      unique_lock<mutex> lock(mu_);
-
-      if (prefetch)
-      {
-         auto prefetchLambda = [this](unsigned fileID)
-            ->BlockFileMapPointer
-         { return get(fileID, false); };
-
-         thread tid(prefetchLambda, fileid + 1);
-         tid.detach();
-      }
-
-      auto mapIter = fileMaps_.find(fileid);
-      if (mapIter == fileMaps_.end())
-      {
-         //don't have this fileid yet, create it
-         fMap = getNewBlockDataMap(fileid).get();
-         fileMaps_[fileid] = fMap;
-      }
-      else fMap = mapIter->second;
-   }
-
-   return BlockFileMapPointer(fMap, gcLambda_);
+   //don't have this fileid yet, create it
+   return getNewBlockDataMap(fileid);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -282,32 +198,16 @@ string BlockDataLoader::intIDToName(uint32_t fileid)
 }
 
 /////////////////////////////////////////////////////////////////////////////
-shared_future<shared_ptr<BlockDataFileMap>> 
+shared_ptr<BlockDataFileMap>
    BlockDataLoader::getNewBlockDataMap(uint32_t fileid)
 {
    string filename = move(intIDToName(fileid));
 
-   auto blockdataasync = [](string _filename, bool preload)->
-      shared_ptr<BlockDataFileMap>
-   {
-      shared_ptr<BlockDataFileMap> blockptr = make_shared<BlockDataFileMap>(
-         _filename, preload);
-
-      return blockptr;
-   };
-
-   return async(launch::async, blockdataasync, move(filename), preloadFile_);
+   return make_shared<BlockDataFileMap>(filename);
 }
 
 /////////////////////////////////////////////////////////////////////////////
-void BlockDataLoader::reset()
-{
-   unique_lock<mutex> lock(mu_);
-   fileMaps_.clear();
-}
-
-/////////////////////////////////////////////////////////////////////////////
-BlockDataFileMap::BlockDataFileMap(const string& filename, bool preload)
+BlockDataFileMap::BlockDataFileMap(const string& filename)
 {
    //relaxed memory order for loads and stores, we only care about 
    //atomicity in these operations

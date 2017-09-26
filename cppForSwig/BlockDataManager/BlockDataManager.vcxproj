@@ -144,6 +144,7 @@
     <ClCompile Include="..\BitcoinP2P.cpp" />
     <ClCompile Include="..\Blockchain.cpp" />
     <ClCompile Include="..\BlockchainScanner.cpp" />
+    <ClCompile Include="..\BlockchainScanner_Super.cpp" />
     <ClCompile Include="..\BlockDataManagerConfig.cpp" />
     <ClCompile Include="..\BlockDataMap.cpp" />
     <ClCompile Include="..\BlockDataViewer.cpp" />
@@ -165,6 +166,7 @@
     <ClCompile Include="..\leveldb_windows_port\win32_posix\mman.cpp" />
     <ClCompile Include="..\leveldb_windows_port\win32_posix\Win_TranslatePath.cpp" />
     <ClCompile Include="..\lmdb_wrapper.cpp" />
+    <ClCompile Include="..\log.cpp" />
     <ClCompile Include="..\main.cpp" />
     <ClCompile Include="..\nodeRPC.cpp" />
     <ClCompile Include="..\Progress.cpp" />
@@ -177,6 +179,7 @@
     <ClCompile Include="..\StringSockets.cpp" />
     <ClCompile Include="..\Transactions.cpp" />
     <ClCompile Include="..\TxClasses.cpp" />
+    <ClCompile Include="..\TxEvalState.cpp" />
     <ClCompile Include="..\txio.cpp" />
     <ClCompile Include="..\UniversalTimer.cpp" />
   </ItemGroup>
@@ -184,6 +187,7 @@
     <ClInclude Include="..\bdmenums.h" />
     <ClInclude Include="..\BinaryData.h" />
     <ClInclude Include="..\BitcoinP2p.h" />
+    <ClInclude Include="..\BlockchainScanner_Super.h" />
     <ClInclude Include="..\BlockDataManagerConfig.h" />
     <ClInclude Include="..\BlockObj.h" />
     <ClInclude Include="..\BtcUtils.h" />
@@ -203,6 +207,7 @@
     <ClInclude Include="..\StoredBlockObj.h" />
     <ClInclude Include="..\ThreadSafeClasses.h" />
     <ClInclude Include="..\Transactions.h" />
+    <ClInclude Include="..\TxEvalState.h" />
     <ClInclude Include="..\TxOutScrRef.h" />
     <ClInclude Include="..\util.h" />
     <ClInclude Include="..\TxClasses.h" />

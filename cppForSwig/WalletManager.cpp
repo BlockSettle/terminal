@@ -232,6 +232,12 @@ int WalletContainer::convertToImportIndex(int index)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+int WalletContainer::convertFromImportIndex(int index)
+{
+   return AssetWallet::convertFromImportIndex(index);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void WalletContainer::removeAddressBulk(const vector<BinaryData>& addrVec)
 {
    //delete from AssetWallet
@@ -239,6 +245,23 @@ void WalletContainer::removeAddressBulk(const vector<BinaryData>& addrVec)
 
    //caller should register the wallet again to update the address list on
    //the db side
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<BinaryData> WalletContainer::getScriptHashVectorForIndex(int index) const
+{
+   vector<BinaryData> hashVec;
+
+   auto assetPtr = wallet_->getAssetForIndex(index);
+   auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
+   if (asset_single == nullptr)
+      return hashVec;
+
+   auto&& hashMap = asset_single->getScriptHashMap();
+   for (auto hashRef : hashMap)
+      hashVec.push_back(BinaryData(hashRef.second));
+
+   return hashVec;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -440,6 +463,17 @@ void CoinSelectionInstance::updateRecipient(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void CoinSelectionInstance::updateOpReturnRecipient(
+   unsigned id, const BinaryData& message)
+{
+   recipients_.erase(id);
+
+   auto recipient = make_shared<Recipient_OPRETURN>(message);
+   recipients_.insert(make_pair(id, recipient));
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
 void CoinSelectionInstance::removeRecipient(unsigned id)
 {
    recipients_.erase(id);
@@ -517,3 +551,27 @@ uint64_t CoinSelectionInstance::getFeeForMaxVal(float fee_byte)
    vector<BinaryData> utxos;
    return getFeeForMaxValUtxoVector(utxos, fee_byte);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////
+//// UniversalSigner
+////
+////////////////////////////////////////////////////////////////////////////////
+UniversalSigner::UniversalSigner(const string& signerType)
+{
+   if (signerType != "Bcash")
+      signer_ = make_unique<Signer>();
+   else
+      signer_ = make_unique<Signer_BCH>();
+
+   signer_->setFlags(SCRIPT_VERIFY_SEGWIT);
+
+   auto feed = make_shared<ResolverFeed_Universal>(this);
+   signer_->setFeed(feed);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+UniversalSigner::~UniversalSigner()
+{}
+
+

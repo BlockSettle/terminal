@@ -104,7 +104,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\leveldb_windows_port\win32_posix;../;../cryptopp;../BlockDataManager/fcgi/include;C:\Python27_64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINSOCKAPI_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINSOCKAPI_;SIGNER_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -178,7 +178,9 @@
     <ClInclude Include="..\LedgerEntry.h" />
     <ClInclude Include="..\LedgerEntryData.h" />
     <ClInclude Include="..\ReentrantLock.h" />
+    <ClInclude Include="..\Script.h" />
     <ClInclude Include="..\ScriptRecipient.h" />
+    <ClInclude Include="..\SigHashEnum.h" />
     <ClInclude Include="..\SocketObject.h" />
     <ClInclude Include="..\StringSockets.h" />
     <ClInclude Include="..\SwigClient.h" />
@@ -204,6 +206,7 @@
     <ClCompile Include="..\JSON_codec.cpp" />
     <ClCompile Include="..\leveldb_windows_port\win32_posix\dirent_win32.cpp" />
     <ClCompile Include="..\leveldb_windows_port\win32_posix\mman.cpp" />
+    <ClCompile Include="..\log.cpp" />
     <ClCompile Include="..\ReentrantLock.cpp" />
     <ClCompile Include="..\Script.cpp" />
     <ClCompile Include="..\Signer.cpp" />
@@ -213,6 +216,7 @@
     <ClCompile Include="..\TransactionBatch.cpp" />
     <ClCompile Include="..\Transactions.cpp" />
     <ClCompile Include="..\TxClasses.cpp" />
+    <ClCompile Include="..\TxEvalState.cpp" />
     <ClCompile Include="..\UniversalTimer.cpp" />
     <ClCompile Include="..\WalletManager.cpp" />
     <ClCompile Include="..\Wallets.cpp" />

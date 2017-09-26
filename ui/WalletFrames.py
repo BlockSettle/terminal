@@ -14,6 +14,8 @@ from PyQt4.QtGui import * #@UnusedWildImport
 from armoryengine.BDM import TheBDM, BDM_BLOCKCHAIN_READY
 from qtdefines import * #@UnusedWildImport
 
+import qrc_img_resources
+
 WALLET_DATA_ENTRY_FIELD_WIDTH = 60
 
 
@@ -563,7 +565,7 @@ class CardDeckFrame(ArmoryFrame):
 
       for row, suit in enumerate('shdc'):
          for col, rank in enumerate('A23456789TJQK'):
-            card = QPixmapButton("img/%s%s.png" %(rank,suit))
+            card = QPixmapButton(':%s%s.png' %(rank,suit))
             card.nameText = rank + suit
             self.connect(card, SIGNAL(CLICKED), self.cardClicked)
 
@@ -590,7 +592,7 @@ class CardDeckFrame(ArmoryFrame):
       button.setDisabled(True)
       bits = int(math.log(
          math.factorial(52) / math.factorial(52-self.cardCount),2))
-      self.currentNum.setText(self.tr("Entropy: %1 bits") % bits)
+      self.currentNum.setText(self.tr("Entropy: %1 bits").arg(bits))
 
    def getEntropy(self):
       cards = filter(lambda x: x != '', str(self.currentDeck.text()).split(' '))

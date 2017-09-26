@@ -188,15 +188,26 @@ void ScrAddrFilter::putMissingHashes(const set<BinaryData>& hashSet)
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::getScrAddrCurrentSyncState()
 {
-   LMDBEnv::Transaction tx;
-   lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadOnly);
+   map<AddrAndHash, int> newSaMap;
 
-   for (auto scrAddr : *scrAddrSet_)
-      getScrAddrCurrentSyncState(scrAddr.scrAddr_);
+   {
+      LMDBEnv::Transaction tx;
+      auto scraddrmap = scrAddrMap_->get();
+      lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadOnly);
+
+      for (auto& scrAddr : *scraddrmap)
+      {
+         auto aah = scrAddr.first;
+         int height = getScrAddrCurrentSyncState(scrAddr.first.scrAddr_);
+         newSaMap.insert(move(make_pair(move(aah), height)));
+      }
+   }
+
+   scrAddrMap_->update(newSaMap);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::getScrAddrCurrentSyncState(
+int ScrAddrFilter::getScrAddrCurrentSyncState(
    BinaryData const & scrAddr)
 {
    //grab ssh for scrAddr
@@ -204,21 +215,23 @@ void ScrAddrFilter::getScrAddrCurrentSyncState(
    lmdb_->getStoredScriptHistorySummary(ssh, scrAddr);
 
    //update scrAddrData lowest scanned block
-   setScrAddrLastScanned(scrAddr, ssh.scanHeight_);
+   return ssh.scanHeight_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::setSSHLastScanned(uint32_t height)
 {
    LOGWARN << "Updating ssh last scanned";
+   
+   auto scraddrmap = scrAddrMap_->get();
    LMDBEnv::Transaction tx;
    lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadWrite);
-   for (const auto scrAddr : *scrAddrSet_)
+   for (const auto scrAddr : *scraddrmap)
    {
       StoredScriptHistory ssh;
-      lmdb_->getStoredScriptHistorySummary(ssh, scrAddr.scrAddr_);
+      lmdb_->getStoredScriptHistorySummary(ssh, scrAddr.first.scrAddr_);
       if (!ssh.isInitialized())
-         ssh.uniqueKey_ = scrAddr.scrAddr_;
+         ssh.uniqueKey_ = scrAddr.first.scrAddr_;
 
       ssh.scanHeight_ = height;
 
@@ -249,6 +262,29 @@ bool ScrAddrFilter::registerAddressBatch(
    /***
    return true if addresses were registered without the need for scanning
    ***/
+
+   if (armoryDbType_ == ARMORY_DB_SUPER)
+   {
+      unique_lock<mutex> lock(mergeLock_);
+
+      map<AddrAndHash, int> updateMap;
+
+      for (auto& batch : wltInfoVec)
+      {
+         for (auto& sa : batch->scrAddrSet_)
+         {
+            AddrAndHash aah(sa);
+
+            updateMap.insert(make_pair(move(aah), 0));
+         }
+
+         batch->callback_(true);
+      }
+
+      scrAddrMap_->update(updateMap);
+
+      return true;
+   }
 
    {
       unique_lock<mutex> lock(mergeLock_);
@@ -309,16 +345,16 @@ bool ScrAddrFilter::registerAddressBatch(
       scanningAddresses_.insert(wltInfoVec.begin(), wltInfoVec.end());
    }
 
-   auto scraddrsetptr = scrAddrSet_;
+   auto scraddrmapptr = scrAddrMap_->get();
 
    struct pred
    {
-      shared_ptr<set<AddrSyncState>> saSet_;
+      shared_ptr<map<AddrAndHash, int>> saMap_;
       function<void(shared_ptr<WalletInfo>)> eraseLambda_;
 
-      pred(shared_ptr<set<AddrSyncState>> saSet,
+      pred(shared_ptr<map<AddrAndHash, int>> saMap,
          function<void(shared_ptr<WalletInfo>)> eraselambda)
-         : saSet_(saSet), eraseLambda_(eraselambda)
+         : saMap_(saMap), eraseLambda_(eraselambda)
       {}
 
       bool operator()(shared_ptr<WalletInfo> wltInfo) const
@@ -326,8 +362,7 @@ bool ScrAddrFilter::registerAddressBatch(
          auto saIter = wltInfo->scrAddrSet_.begin();
          while (saIter != wltInfo->scrAddrSet_.end())
          {
-            if (saSet_->find(*saIter) ==
-               saSet_->end())
+            if (saMap_->find(*saIter) == saMap_->end())
             {
                ++saIter;
                continue;
@@ -338,7 +373,7 @@ bool ScrAddrFilter::registerAddressBatch(
 
          if (wltInfo->scrAddrSet_.size() == 0)
          {
-            wltInfo->callback_(false);
+            wltInfo->callback_(true);
 
             //clean up from scanning addresses container            
             eraseLambda_(wltInfo);
@@ -357,7 +392,7 @@ bool ScrAddrFilter::registerAddressBatch(
    };
    
    auto removeIter = remove_if(wltInfoVec.begin(), wltInfoVec.end(), 
-      pred(scraddrsetptr, eraseAddrSetLambda));
+      pred(scraddrmapptr, eraseAddrSetLambda));
    wltInfoVec.erase(wltInfoVec.begin(), removeIter);
    
    if (wltInfoVec.size() == 0)
@@ -365,53 +400,28 @@ bool ScrAddrFilter::registerAddressBatch(
 
    LOGINFO << "Starting address registration process";
 
-   //check if the BDM is initialized. There ought to be a better way than
-   //checking the top block
    if (bdmIsRunning())
    {
       //BDM is initialized and maintenance thread is running, check mode
-      if (armoryDbType_ == ARMORY_DB_SUPER)
-      {
-         //supernode: nothing to do, signal the wallet that its scrAddr bulk 
-         //is ready by passing isNew as true. Pass a blank BinaryData for the 
-         //top scanned block hash in this case, it will be ignored anyways      
-         
-         throw runtime_error("needs reimplemented");
-
-         for (auto& batch : wltInfoVec)
-         {
-            for (auto& sa : batch->scrAddrSet_)
-            {
-               AddrSyncState asc(sa);
-
-               scraddrsetptr->insert(move(asc));
-            }
-
-            batch->callback_(false);
-
-         }
-
-         scrAddrSet_ = scraddrsetptr;
-
-         return true;
-      }
 
       //create ScrAddrFilter for side scan         
       shared_ptr<ScrAddrFilter> sca = copy();
       sca->setParent(this);
       bool hasNewSA = false;
 
+      vector<pair<BinaryData, unsigned>> saVec;
       for (auto& batch : wltInfoVec)
       {
          if (batch->scrAddrSet_.size() == 0)
             continue;
 
          for (const auto& scrAddr : batch->scrAddrSet_)
-            sca->regScrAddrForScan(scrAddr, 0);
+            saVec.push_back(make_pair(scrAddr, 0));
 
          hasNewSA = true;
       }
 
+      sca->regScrAddrVecForScan(saVec);
       sca->buildSideScanData(wltInfoVec, areNew);
       scanFilterInNewThread(sca);
 
@@ -424,17 +434,19 @@ bool ScrAddrFilter::registerAddressBatch(
    {
       //BDM isnt initialized yet, the maintenance thread isnt running, 
       //just register the scrAddr and return true.
+      map<AddrAndHash, int> newSaMap;
       for (auto& batch : wltInfoVec)
       {
          for (const auto& scrAddr : batch->scrAddrSet_)
          {
-            AddrSyncState asc(scrAddr);
-            scrAddrSet_->insert(move(asc));
+            AddrAndHash aah(scrAddr);
+            newSaMap.insert(move(make_pair(move(aah), -1)));
          }
 
          batch->callback_(true);
       }
 
+      scrAddrMap_->update(newSaMap);
       return true;
    }
 }
@@ -463,15 +475,16 @@ void ScrAddrFilter::scanScrAddrThread()
    else
    {
       //wipe ssh
+      auto scraddrmap = scrAddrMap_->get();
       vector<BinaryData> saVec;
-      for (const auto& scrAddrPair : *scrAddrSet_)
-         saVec.push_back(scrAddrPair.scrAddr_);
+      for (const auto& scrAddrPair : *scraddrmap)
+         saVec.push_back(scrAddrPair.first.scrAddr_);
       wipeScrAddrsSSH(saVec);
       saVec.clear();
 
       //scan from 0
       topScannedBlockHash =
-         applyBlockRangeToDB(0, endBlock, wltIDs);
+         applyBlockRangeToDB(0, endBlock, wltIDs, true);
    }
       
    addToMergePile(topScannedBlockHash);
@@ -512,7 +525,7 @@ void ScrAddrFilter::mergeSideScanPile()
    ***/
 
    vector<ScrAddrSideScanData> scanDataVec;
-   set<AddrSyncState> newScrAddrSet;
+   map<AddrAndHash, int> newScrAddrMap;
 
    unique_lock<mutex> lock(mergeLock_);
 
@@ -533,17 +546,23 @@ void ScrAddrFilter::mergeSideScanPile()
    vector<string> walletIDs;
 
    auto bcptr = blockchain();
-   uint32_t startHeight = bcptr->top().getBlockHeight();
+   bool reportProgress = false;
+
+   uint32_t startHeight = bcptr->top()->getBlockHeight();
    for (auto& scanData : scanDataVec)
    {
       auto& topHash = scanData.lastScannedBlkHash_;
       auto&& idStrings = scanData.getWalletIDString();
-      walletIDs.insert(walletIDs.end(), idStrings.begin(), idStrings.end());
+      if (scanData.doScan_)
+      {
+         walletIDs.insert(walletIDs.end(), idStrings.begin(), idStrings.end());
+         reportProgress = true;
+      }
 
       try
       {
-         auto& header = bcptr->getHeaderByHash(topHash);
-         auto&& headerHeight = header.getBlockHeight();
+         auto header = bcptr->getHeaderByHash(topHash);
+         auto headerHeight = header->getBlockHeight();
          if (startHeight > headerHeight)
             startHeight = headerHeight;
 
@@ -551,9 +570,8 @@ void ScrAddrFilter::mergeSideScanPile()
          {
             for (auto& scannedAddr : wltInfo->scrAddrSet_)
             {
-               AddrSyncState asc(scannedAddr);
-               asc.syncHeight_ = headerHeight;
-               newScrAddrSet.insert(move(asc));
+               AddrAndHash aah(scannedAddr);
+               newScrAddrMap.insert(move(make_pair(move(aah), headerHeight)));
             }
          }
       }
@@ -564,14 +582,13 @@ void ScrAddrFilter::mergeSideScanPile()
    }
 
    //add addresses to main filter map
-   scrAddrSet_->insert(
-      newScrAddrSet.begin(), newScrAddrSet.end());
+   scrAddrMap_->update(newScrAddrMap);
 
    //scan it all to sync all subssh and ssh to the same height
    applyBlockRangeToDB(
       startHeight, 
-      bcptr->top().getBlockHeight(),
-      walletIDs);
+      bcptr->top()->getBlockHeight(),
+      walletIDs, reportProgress);
    updateAddressMerkleInDB();
 
    //clean up SDBI entries
@@ -620,13 +637,14 @@ int32_t ScrAddrFilter::scanFrom() const
 {
    int32_t lowestBlock = -1;
 
-   if (scrAddrSet_->size() > 0)
+   if (scrAddrMap_->size() > 0)
    {
-      lowestBlock = scrAddrSet_->begin()->syncHeight_;
+      auto scraddrmap = scrAddrMap_->get();
+      lowestBlock = scraddrmap->begin()->second;
 
-      for (auto scrAddr : *scrAddrSet_)
+      for (auto scrAddr : *scraddrmap)
       {
-         if (lowestBlock != scrAddr.syncHeight_)
+         if (lowestBlock != scrAddr.second)
          {
             lowestBlock = -1;
             break;
@@ -643,12 +661,20 @@ int32_t ScrAddrFilter::scanFrom() const
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::clear()
 {
-   scanDataPile_.clear();
-   for (auto& regScrAddr : *scrAddrSet_)
+   map<AddrAndHash, int> newSaMap;
+
    {
-      auto& acsRef = (AddrSyncState&)regScrAddr;
-      acsRef.syncHeight_ = 0;
+      scanDataPile_.clear();
+      auto scraddrmap = scrAddrMap_->get();
+
+      for (const auto& regScrAddr : *scraddrmap)
+      {
+         auto aah = regScrAddr.first;
+         newSaMap.insert(move(make_pair(move(aah), 0)));
+      }
    }
+
+   scrAddrMap_->update(newSaMap);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -657,9 +683,10 @@ void ScrAddrFilter::buildSideScanData(
    bool areNew)
 {
    scrAddrDataForSideScan_.startScanFrom_ = INT32_MAX;
-   for (const auto& scrAddr : *scrAddrSet_)
+   auto scraddrmap = scrAddrMap_->get();
+   for (const auto& scrAddr : *scraddrmap)
       scrAddrDataForSideScan_.startScanFrom_ = 
-      min(scrAddrDataForSideScan_.startScanFrom_, scrAddr.syncHeight_);
+      min(scrAddrDataForSideScan_.startScanFrom_, scrAddr.second);
 
    scrAddrDataForSideScan_.wltInfoVec_ = wltInfoVec;
    scrAddrDataForSideScan_.doScan_ = !areNew;
@@ -672,6 +699,8 @@ void ScrAddrFilter::getAllScrAddrInDB()
    lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadOnly);
    auto dbIter = lmdb_->getIterator(SSH);   
 
+   map<AddrAndHash, int> scrAddrMap;
+
    //iterate over ssh DB
    while(dbIter.advanceAndRead(DB_PREFIX_SCRIPT))
    {
@@ -679,17 +708,16 @@ void ScrAddrFilter::getAllScrAddrInDB()
       StoredScriptHistory ssh;
       ssh.unserializeDBKey(dbIter.getKeyRef());
 
-      AddrSyncState asc(ssh.uniqueKey_);
-      auto insertResult = scrAddrSet_->insert(move(asc));
+      AddrAndHash aah(ssh.uniqueKey_);
+      auto insertResult = scrAddrMap.insert(move(make_pair(move(aah), 0)));
       if (!insertResult.second)
       {
-         auto& ascRef = (AddrSyncState&)*insertResult.first;
-         ascRef.syncHeight_ = 0;
+         insertResult.second = 0;
       }
    } 
 
-   for (auto scrAddrPair : *scrAddrSet_)
-      getScrAddrCurrentSyncState(scrAddrPair.scrAddr_);
+   scrAddrMap_->update(scrAddrMap);
+   getScrAddrCurrentSyncState();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -698,10 +726,11 @@ void ScrAddrFilter::putAddrMapInDB()
    LMDBEnv::Transaction tx;
    lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadWrite);
 
-   for (auto& scrAddrObj : *scrAddrSet_)
+   auto scraddrmap = scrAddrMap_->get();
+   for (const auto& scrAddrObj : *scraddrmap)
    {
       StoredScriptHistory ssh;
-      ssh.uniqueKey_ = scrAddrObj.scrAddr_;
+      ssh.uniqueKey_ = scrAddrObj.first.scrAddr_;
 
       auto&& sshKey = ssh.getDBKey();
 
@@ -716,9 +745,11 @@ void ScrAddrFilter::putAddrMapInDB()
 BinaryData ScrAddrFilter::getAddressMapMerkle(void) const
 {
    vector<BinaryData> addrVec;
-   addrVec.reserve(scrAddrSet_->size());
-   for (auto& addr : *scrAddrSet_)
-      addrVec.push_back(addr.getHash());
+   addrVec.reserve(scrAddrMap_->size());
+
+   auto scraddrmap = scrAddrMap_->get();
+   for (const auto& addr : *scraddrmap)
+      addrVec.push_back(addr.first.getHash());
 
    if (addrVec.size() > 0)
       return BtcUtils::calculateMerkleRoot(addrVec);
@@ -729,7 +760,7 @@ BinaryData ScrAddrFilter::getAddressMapMerkle(void) const
 ///////////////////////////////////////////////////////////////////////////////
 bool ScrAddrFilter::hasNewAddresses(void) const
 {
-   if (scrAddrSet_->size() == 0)
+   if (scrAddrMap_->size() == 0)
       return false;
 
    //do not run before getAllScrAddrInDB
@@ -749,10 +780,11 @@ bool ScrAddrFilter::hasNewAddresses(void) const
       return false;
 
    //merkles don't match, check height in each address
-   auto scanfrom = scrAddrSet_->begin()->syncHeight_;
-   for (auto& scrAddr : *scrAddrSet_)
+   auto scraddrmap = scrAddrMap_->get();
+   auto scanfrom = scraddrmap->begin()->second;
+   for (const auto& scrAddr : *scraddrmap)
    {
-      if (scanfrom != scrAddr.syncHeight_)
+      if (scanfrom != scrAddr.second)
          return true;
    }
 
@@ -818,19 +850,19 @@ set<BinaryData> ZeroConfContainer::purge()
    auto bcPtr = db_->blockchain();
    try
    {
-      const BlockHeader* lastKnownHeader =
-         &bcPtr->getHeaderByHash(lastParsedBlockHash_);
+      auto lastKnownHeader =
+         bcPtr->getHeaderByHash(lastParsedBlockHash_);
 
       while (!lastKnownHeader->isMainBranch())
       {
          //trace back to the branch point
          auto&& bhash = lastKnownHeader->getPrevHash();
-         lastKnownHeader = &bcPtr->getHeaderByHash(bhash);
+         lastKnownHeader = bcPtr->getHeaderByHash(bhash);
       }
 
       //get the next header
       auto height = lastKnownHeader->getBlockHeight() + 1;
-      lastKnownHeader = &bcPtr->getHeaderByHeight(height);
+      lastKnownHeader = bcPtr->getHeaderByHeight(height);
 
       while (lastKnownHeader != nullptr)
       {
@@ -847,7 +879,7 @@ set<BinaryData> ZeroConfContainer::purge()
 
          //next block
          auto& bhash = lastKnownHeader->getNextHash();
-         lastKnownHeader = &bcPtr->getHeaderByHash(bhash);
+         lastKnownHeader = bcPtr->getHeaderByHash(bhash);
       }
    }
    catch (...)
@@ -1079,6 +1111,7 @@ void ZeroConfContainer::parseNewZC(void)
                ++keyIter;
          }
 
+         flaggedBDVs_.clear();
          notify = false;
       }
 
@@ -1104,6 +1137,10 @@ void ZeroConfContainer::parseNewZC(void)
 void ZeroConfContainer::parseNewZC(map<BinaryData, Tx> zcMap, 
    bool updateDB, bool notify)
 {
+   //no point processing the zc if there are no addresses registered
+   if (scrAddrMap_->size() == 0)
+      return;
+
    unique_lock<mutex> lock(parserMutex_);
 
    set<BinaryData> newZcByHash;
@@ -1121,7 +1158,7 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, Tx> zcMap,
    map<BinaryData, BinaryData> txhashmap_update;
    map<BinaryData, Tx> txmap_update;
 
-   map<string, set<BinaryData>> flaggedBDVs;
+   bool hasChanges = false;
 
    {
       auto txhashmap_ptr = txHashToDBKey_.get();
@@ -1270,12 +1307,17 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, Tx> zcMap,
 
                //drop the replacedKeys if any
                if (replacedHashes.size() > 0)
+               {
                   dropZC(replacedHashes);
+                  hasChanges = true;
+               }
             }
 
             //add ZC if its relevant
             if (!bulkData.isEmpty())
             {
+               hasChanges = true;
+
                //merge spent outpoints
                txOutsSpentByZC_.insert(bulkData.txOutsSpentByZC_);
 
@@ -1306,9 +1348,9 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, Tx> zcMap,
 
                for (const auto& saTxio : bulkData.scrAddrTxioMap_)
                {
-                  auto& currentTxioMap = (*txiomapPtr)[saTxio.first];
-                  if (currentTxioMap != nullptr)
-                     saTxio.second->insert(currentTxioMap->begin(), currentTxioMap->end());
+                  auto saIter = txiomapPtr->find(saTxio.first);
+                  if (saIter != txiomapPtr->end())
+                     saTxio.second->insert(saIter->second->begin(), saIter->second->end());
 
                   newtxiomap.insert(move(make_pair(saTxio.first, saTxio.second)));
                }
@@ -1317,13 +1359,11 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, Tx> zcMap,
                newZcByHash.insert(txHash);
 
                //notify BDVs
-               if (!notify)
-                  continue;
-
                for (auto& bdvMap : bulkData.flaggedBDVs_)
                {
-                  auto& addrSet = flaggedBDVs[bdvMap.first];
-                  addrSet.insert(bdvMap.second.begin(), bdvMap.second.end());
+                  auto& addrSet = flaggedBDVs_[bdvMap.first];
+                  addrSet.second.insert(bdvMap.second.begin(), bdvMap.second.end());
+                  addrSet.first = true;
                }
             }
          }
@@ -1347,14 +1387,23 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, Tx> zcMap,
    lastParsedBlockHash_ = db_->getTopBlockHash();
 
    //notify bdvs
+   if (!hasChanges)
+      return;
+
+   if (!notify)
+      return;
+
    auto txiomapPtr = txioMap_.get();
    auto bdvcallbacks = bdvCallbacks_.get();
 
-   for (auto& bdvMap : flaggedBDVs)
+   for (auto& bdvMap : flaggedBDVs_)
    {
+      if (!bdvMap.second.first)
+         continue;
+
       map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>>
          notificationMap;
-      for (auto& sa : bdvMap.second)
+      for (auto& sa : bdvMap.second.second)
       {
          auto saIter = txiomapPtr->find(sa);
          if (saIter == txiomapPtr->end())
@@ -1362,6 +1411,8 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, Tx> zcMap,
 
          notificationMap.insert(*saIter);
       }
+
+      bdvMap.second.first = false;
 
       auto callbackIter = bdvcallbacks->find(bdvMap.first);
       if (callbackIter == bdvcallbacks->end())
@@ -1378,7 +1429,7 @@ ZeroConfContainer::ZCisMineBulkFilter(const Tx & tx,
    function<bool(const BinaryData&, BinaryData&)> getzckeyfortxhash,
    function<const Tx&(const BinaryData&)> getzctxforkey)
 {
-   auto mainAddressSet = getMainAddressSet_();
+   auto mainAddressSet = scrAddrMap_->get();
 
    auto bdvcallbacks = bdvCallbacks_.get();
    auto filter = [&mainAddressSet, &bdvcallbacks]
@@ -1517,8 +1568,9 @@ ZeroConfContainer::ZCisMineBulkFilter(const Tx & tx,
             auto&& flaggedBDVs = filter(sa);
             if (flaggedBDVs.first)
             {
+               auto&& txkey = stxOut.getDBKey(false).getSliceCopy(0, 6);
                TxIOPair txio(
-                  TxRef(opKey.getSliceRef(0, 6)), op.getTxOutIndex(),
+                  TxRef(txkey), op.getTxOutIndex(),
                   TxRef(ZCkey), iin);
 
                txio.setTxHashOfOutput(op.getTxHash());
@@ -1834,11 +1886,11 @@ void ZeroConfContainer::loadZeroConfMempool(bool clearMempool)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ZeroConfContainer::init(
-   function<shared_ptr<set<ScrAddrFilter::AddrSyncState>>(void)> getAddrFilter,
-   bool clearMempool)
+void ZeroConfContainer::init(shared_ptr<ScrAddrFilter> saf, bool clearMempool)
 {
-   getMainAddressSet_ = getAddrFilter;
+   LOGINFO << "Enabling zero-conf tracking";
+
+   scrAddrMap_ = saf->getScrAddrTransactionalMap();
    loadZeroConfMempool(clearMempool);
 
    //start Zc parser thread
@@ -1849,21 +1901,19 @@ void ZeroConfContainer::init(
 
    parserThreads_.push_back(thread(processZcThread));
 
-   //start invTx threads
-   auto txthread = [this](void)->void
-   {
-      processInvTxThread();
-   };
-
-   for (int i = 0; i < GETZC_THREADCOUNT; i++)
-   {
-      parserThreads_.push_back(thread(txthread));
-   }
+   zcEnabled_.store(true, memory_order_relaxed);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void ZeroConfContainer::processInvTxVec(vector<InvEntry> invVec, bool extend)
 {
+   if (!isEnabled())
+      return;
+
+   //skip this entirely if there are no addresses to scan the ZCs against
+   if (scrAddrMap_->size() == 0 && extend)
+      return;
+
    for (unsigned i = 0; i < invVec.size(); i++)
    {
       auto& entry = invVec[i];
@@ -1875,6 +1925,9 @@ void ZeroConfContainer::processInvTxVec(vector<InvEntry> invVec, bool extend)
       catch (IsEmpty&)
       {
          if (!extend)
+            continue;
+
+         if (parserThreads_.count() > maxZcThreadCount_)
             continue;
 
          //zc parser thread queue is depleted, let's add a thread and try again
@@ -1907,7 +1960,7 @@ void ZeroConfContainer::processInvTxThread(void)
          auto&& entry = newtxfuture.get();
          
          //thread exit condition: prcessInvTxThread returns false
-         if (!processInvTxThread(move(entry)))
+         if (!processInvTxThread(move(entry), TXGETDATA_TIMEOUT_MS))
             return;
       }
       catch (BitcoinP2P_Exception&)
@@ -1923,12 +1976,12 @@ void ZeroConfContainer::processInvTxThread(void)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-bool ZeroConfContainer::processInvTxThread(InvEntry entry)
+bool ZeroConfContainer::processInvTxThread(InvEntry entry, unsigned timeout_ms)
 {
    if (entry.invtype_ == Inv_Terminate)
       return false;
 
-   auto payload = networkNode_->getTx(entry);
+   auto payload = networkNode_->getTx(entry, timeout_ms);
 
    auto payloadtx = dynamic_pointer_cast<Payload_Tx>(payload);
    if (payloadtx == nullptr)
@@ -1950,6 +2003,20 @@ bool ZeroConfContainer::processInvTxThread(InvEntry entry)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void ZeroConfContainer::pushZcToParser(const BinaryData& rawTx)
+{
+   pair<BinaryData, Tx> zcpair;
+   zcpair.first = getNewZCkey();
+   zcpair.second.unserialize(rawTx.getPtr(), rawTx.getSize());
+   zcpair.second.setTxTime(time(0));
+
+   ZcActionStruct actionstruct;
+   actionstruct.zcMap_.insert(move(zcpair));
+   actionstruct.action_ = Zc_NewTx;
+   newZcStack_.push_back(move(actionstruct));
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void ZeroConfContainer::insertBDVcallback(string id, BDV_Callbacks callback)
 {
    bdvCallbacks_.insert(move(make_pair(move(id), move(callback))));
@@ -1962,8 +2029,8 @@ void ZeroConfContainer::eraseBDVcallback(string id)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ZeroConfContainer::broadcastZC(const BinaryData& rawzc, 
-   const string& bdvId, uint32_t timeout_sec)
+void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
+   const string& bdvId, uint32_t timeout_ms)
 {
    BDV_Callbacks bdv_cb;
    {
@@ -1980,6 +2047,14 @@ void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
    //get tx hash
    auto&& txHash = zcTx.getThisHash();
    auto&& txHashStr = txHash.toHexStr();
+   
+   if (!networkNode_->connected())
+   {
+      string errorMsg("node is offline, cannot broadcast");
+      LOGWARN << errorMsg;
+      bdv_cb.zcErrorCallback_(errorMsg, txHashStr);
+      return;
+   }
 
    //create inv payload
    InvEntry entry;
@@ -2020,23 +2095,28 @@ void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
 
    //send inv packet
    networkNode_->sendMessage(move(payload_inv));
+   LOGINFO << "sent inv packet";
 
    //wait on getData future
    bool sent = false;
-   if (timeout_sec == 0)
+   if (timeout_ms == 0)
    {
       getDataFut.wait();
    }
    else
    {
-      auto getDataFutStatus = getDataFut.wait_for(chrono::seconds(timeout_sec));
+      auto getDataFutStatus = getDataFut.wait_for(chrono::milliseconds(timeout_ms));
       if (getDataFutStatus != future_status::ready)
       {
          gds->setStatus(false);
+         LOGERR << "tx broadcast timed out (send)";
          gds->setMessage("tx broadcast timed out (send)");
       }
       else
+      {
+         LOGINFO << "got getData packet";
          sent = true;
+      }
    }
 
    networkNode_->getDataPayloadMap_.erase(txHash);
@@ -2055,26 +2135,28 @@ void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
    if(PEER_USES_WITNESS)
       entry.invtype_ = Inv_Msg_Witness_Tx;
 
-   auto grabtxlambda = [this](InvEntry inventry)->void
+   auto grabtxlambda = [this, timeout_ms](InvEntry inventry)->void
    {
-      processInvTxThread(move(inventry));
+      processInvTxThread(move(inventry), timeout_ms);
    };
 
    thread grabtxthread(grabtxlambda, move(entry));
    if (grabtxthread.joinable())
       grabtxthread.detach();
 
+   LOGINFO << "grabbing tx from node";
 
-   if (timeout_sec == 0)
+   if (timeout_ms == 0)
    {
       watchTxFuture.wait();
    }
    else
    {
-      auto status = watchTxFuture.wait_for(chrono::seconds(timeout_sec));
+      auto status = watchTxFuture.wait_for(chrono::milliseconds(timeout_ms));
       if (status != future_status::ready)
       {
          gds->setStatus(false);
+         LOGERR << "tx broadcast timed out (get)";
          gds->setMessage("tx broadcast timed out (get)");
       }
    }
@@ -2085,6 +2167,10 @@ void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
    {
       auto&& errorMsg = gds->getMessage();
       bdv_cb.zcErrorCallback_(errorMsg, txHashStr);
+   }
+   else
+   {
+      LOGINFO << "tx broadcast successfully";
    }
 }
 
@@ -2103,6 +2189,7 @@ void ZeroConfContainer::shutdown()
       vecIE.push_back(terminateEntry);
 
    processInvTxVec(vecIE, false);
+   zcEnabled_.store(false, memory_order_relaxed);
 
    while (parserThreads_.count() > 0)
    {

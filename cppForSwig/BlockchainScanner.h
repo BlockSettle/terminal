@@ -1,10 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2016, goatpig.                                              //
+//  Copyright (C) 2016-17, goatpig.                                           //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //                                      
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
+
+#ifndef _BLOCKCHAINSCANNER_H
+#define _BLOCKCHAINSCANNER_H
 
 #include "Blockchain.h"
 #include "lmdb_wrapper.h"
@@ -16,11 +19,9 @@
 
 #include <future>
 #include <atomic>
-#include <condition_variable>
 #include <exception>
 
-#ifndef _BLOCKCHAINSCANNER_H
-#define _BLOCKCHAINSCANNER_H
+#define BATCH_SIZE  1024 * 1024 * 512ULL
 
 class ScanningException : public runtime_error
 {
@@ -33,59 +34,43 @@ public:
    { }
 };
 
-
 ////////////////////////////////////////////////////////////////////////////////
-struct BlockDataBatch
+struct ParserBatch
 {
+public:
+   map<unsigned, shared_ptr<BlockDataFileMap>> fileMaps_;
+
+   atomic<unsigned> blockCounter_;
+   mutex mergeMutex_;
+
+   const unsigned start_;
    const unsigned end_;
 
-   promise<bool> scanUtxosPromise;
-   shared_future<bool> doneScanningUtxos_;
+   const unsigned startBlockFileID_;
+   const unsigned targetBlockFileID_;
 
-   mutex parseTxinMutex_;
-   exception_ptr exceptionPtr_;
+   map<unsigned, shared_ptr<BlockData>> blockMap_;
+   map<BinaryData, map<unsigned, StoredTxOut>> outputMap_;
+   map<BinaryData, map<BinaryData, StoredSubHistory>> sshMap_;
+   vector<StoredTxOut> spentOutputs_;
 
-   unsigned highestProcessedHeight_;
-   
-   //keep a reference to the file mmaps used by this object since we don't copy 
-   //the data, just point at it.
-   map<unsigned, BlockFileMapPointer> fileMaps_;
+   const shared_ptr<map<TxOutScriptRef, int>> scriptRefMap_;
+   promise<bool> completedPromise_;
+   unsigned count_;
 
-   //only for addresses and utxos we track
-   map<BinaryData, map<unsigned, StoredTxOut>> utxos_;
-   map<BinaryData, StoredScriptHistory> ssh_;
-   vector<StoredTxOut> spentTxOuts_;
-
-   map<unsigned, BlockData> blocks_;
-
-   //to synchronize pulling block data
-   atomic<unsigned> *blockCounter_;
-
-   ////
-   BlockDataBatch(unsigned end, atomic<unsigned>* counter) :
-      end_(end), blockCounter_(counter)
+public:
+   ParserBatch(unsigned start, unsigned end, 
+      unsigned startID, unsigned endID,
+      shared_ptr<map<TxOutScriptRef, int>> scriptRefMap) :
+      start_(start), end_(end), 
+      startBlockFileID_(startID), targetBlockFileID_(endID),
+      scriptRefMap_(scriptRefMap)
    {
-      highestProcessedHeight_ = 0;
-      doneScanningUtxos_ = scanUtxosPromise.get_future();
+      if (end < start)
+         throw runtime_error("end > start");
+
+      blockCounter_.store(start_, memory_order_relaxed);
    }
-
-   void flagUtxoScanDone(void) 
-   { 
-      scanUtxosPromise.set_value(true); 
-   }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-struct BatchLink
-{
-   vector<shared_ptr<BlockDataBatch>> batchVec_;
-   shared_ptr<BatchLink> next_;
-
-   mutex readyToWrite_;
-   BinaryData topScannedBlockHash_;
-
-   unsigned start_;
-   unsigned end_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -111,9 +96,8 @@ private:
    ScrAddrFilter* scrAddrFilter_;
    BlockDataLoader blockDataLoader_;
 
-   const unsigned nBlockFilesPerBatch_;
-   const unsigned nBlocksLookAhead_ = 10;
    const unsigned totalThreadCount_;
+   const unsigned writeQueueDepth_;
    const unsigned totalBlockFileCount_;
 
    BinaryData topScannedBlockHash_;
@@ -129,14 +113,13 @@ private:
 
    mutex resolverMutex_;
 
+   BlockingStack<unique_ptr<ParserBatch>> outputQueue_;
+   BlockingStack<unique_ptr<ParserBatch>> inputQueue_;
+   BlockingStack<unique_ptr<ParserBatch>> commitQueue_;
+
 private:
-   void scanBlockData(shared_ptr<BlockDataBatch>,
-      const map<TxOutScriptRef, int>&);
-   
-   void accumulateDataBeforeBatchWrite(vector<shared_ptr<BlockDataBatch>>&);
-   void writeBlockData(shared_ptr<BatchLink>);
-   void processAndCommitTxHints(
-      const vector<shared_ptr<BlockDataBatch>>& batchVec);
+   void writeBlockData(void);
+   void processAndCommitTxHints(ParserBatch*);
    void preloadUtxos(void);
 
    int32_t check_merkle(int32_t startHeight);
@@ -153,19 +136,27 @@ private:
       atomic<int>& counter, map<BinaryData, BinaryData>& results,
       function<void(size_t)> prog);
 
+   shared_ptr<BlockData> getBlockData(
+      ParserBatch*, unsigned);
+
+   void processOutputs(void);
+   void processOutputsThread(ParserBatch*);
+
+   void processInputs(void);
+   void processInputsThread(ParserBatch*);
+
 
 public:
    BlockchainScanner(shared_ptr<Blockchain> bc, LMDBBlockDatabase* db,
       ScrAddrFilter* saf,
       BlockFiles& bf,
-      unsigned threadcount, unsigned batchSize, 
+      unsigned threadcount, unsigned queue_depth, 
       ProgressCallback prg, bool reportProgress) :
       blockchain_(bc), db_(db), scrAddrFilter_(saf),
-      totalThreadCount_(threadcount),
-      blockDataLoader_(bf.folderPath(), true, true, true),
+      totalThreadCount_(threadcount), writeQueueDepth_(queue_depth),
+      blockDataLoader_(bf.folderPath()),
       progress_(prg), reportProgress_(reportProgress),
-      totalBlockFileCount_(bf.fileCount()),
-      nBlockFilesPerBatch_(batchSize)
+      totalBlockFileCount_(bf.fileCount())
    {}
 
    void scan(int32_t startHeight);
@@ -173,7 +164,7 @@ public:
 
    void undo(Blockchain::ReorganizationState& reorgState);
    void updateSSH(bool);
-   void resolveTxHashes();
+   bool resolveTxHashes();
 
    const BinaryData& getTopScannedBlockHash(void) const
    {

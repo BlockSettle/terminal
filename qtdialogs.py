@@ -32,6 +32,8 @@ from armoryengine.PyBtcWalletRecovery import RECOVERMODE
 from armoryengine.ArmoryUtils import BTC_HOME_DIR
 
 from ui.TreeViewGUI import AddressTreeModel
+from ui.QrCodeMatrix import CreateQRMatrix
+from ui.SignerSelectDialog import SignerLabelFrame
 
 NO_CHANGE = 'NoChange'
 MIN_PASSWD_WIDTH = lambda obj: tightSizeStr(obj, '*' * 16)[0]
@@ -41,9 +43,9 @@ BACKUP_TYPE_135A = '1.35a'
 BACKUP_TYPE_135C = '1.35c'
 BACKUP_TYPE_0_TEXT = 'Version 0  (from script, 9 lines)'
 BACKUP_TYPE_135a_TEXT = 'Version 1.35a (5 lines Unencrypted)'
-BACKUP_TYPE_135a_SP_TEXT = 'Version 1.35a (5 lines + SecurePrint™)'
+BACKUP_TYPE_135a_SP_TEXT = u'Version 1.35a (5 lines + SecurePrint\u200b\u2122)'
 BACKUP_TYPE_135c_TEXT = 'Version 1.35c (3 lines Unencrypted)'
-BACKUP_TYPE_135c_SP_TEXT = 'Version 1.35c (3 lines + SecurePrint™)'
+BACKUP_TYPE_135c_SP_TEXT = u'Version 1.35c (3 lines + SecurePrint\u200b\u2122)'
 MAX_QR_SIZE = 198
 MAX_SATOSHIS = 2100000000000000
 
@@ -1311,8 +1313,7 @@ class DlgWalletDetails(ArmoryDialog):
       chkDNAA = not self.main.getWltSetting(wlt.uniqueIDB58, 'DNAA_RemindBackup')
       chkDont = not self.main.getSettingOrSetDefault('DNAA_AllBackupWarn', False)
       if chkLoad and chkType and chkDNAA and chkDont:
-         from twisted.internet import reactor
-         reactor.callLater(1, remindBackup)
+         self.callLater(1, remindBackup)
          lbtnBackups.setText(self.tr('<font color="%1"><b>Backup This Wallet</b></font>').arg(htmlColor('TextWarn')))
 
    #############################################################################
@@ -1541,8 +1542,8 @@ class DlgWalletDetails(ArmoryDialog):
       if showRecvCoinsWarningIfNecessary(self.wlt, self, self.main):
          loading = LoadingDisp(self, self.main)
          loading.show()
-         if DlgNewAddressDisp(self.wlt, self, self.main, loading).exec_():
-            self.wltAddrView.reset()
+         DlgNewAddressDisp(self.wlt, self, self.main, loading).exec_()
+         self.resetTreeView()
 
 
    def execSendBtc(self):
@@ -1568,9 +1569,11 @@ class DlgWalletDetails(ArmoryDialog):
 
       self.accept()
       DlgSendBitcoins(self.wlt, self, self.main, onlyOfflineWallets=False).exec_()
-      self.wltAddrModel.reset()
+      self.resetTreeView()
 
-
+   def resetTreeView(self):
+      self.wltAddrTreeModel.refresh()
+      self.wltAddrView.reset()
 
    def changeKdf(self):
       """
@@ -2045,7 +2048,7 @@ def showRecvCoinsWarningIfNecessary(wlt, parent, main):
    dnaaPropName = 'Wallet_%s_%s' % (wlt.uniqueIDB58, 'DNAA_RecvOther')
    dnaaThisWallet = main.getSettingOrSetDefault(dnaaPropName, False)
    if notMyWallet and not dnaaThisWallet:
-      result = MsgBoxWithDNAA(parent, main, parent.Warning, parent.tr('This is not your wallet!'), parent.tr(
+      result = MsgBoxWithDNAA(parent, main, MSGBOX.Warning, parent.tr('This is not your wallet!'), parent.tr(
             'You are getting an address for a wallet that '
             'does not appear to belong to you.  Any money sent to this '
             'address will not appear in your total balance, and cannot '
@@ -2059,7 +2062,7 @@ def showRecvCoinsWarningIfNecessary(wlt, parent, main):
       return result[0]
 
    if offlineWallet and not dnaaThisWallet:
-      result = MsgBoxWithDNAA(parent, main, parent.Warning, parent.tr('This is not your wallet!'), parent.tr(
+      result = MsgBoxWithDNAA(parent, main, MSGBOX.Warning, parent.tr('This is not your wallet!'), parent.tr(
             'You are getting an address for a wallet that '
             'you have specified belongs to you, but you cannot actually '
             'spend the funds from this computer.  This is usually the case when '
@@ -2196,9 +2199,6 @@ class DlgKeypoolSettings(ArmoryDialog):
          self.addressesWereGenerated = True
          self.main.forceNeedRescan = False
 
-      # We use callLater so that we can let the screen redraw with "Calculating..."
-      #from twisted.internet import reactor
-      #reactor.callLater(0.1, doit)
       doit()
 
 
@@ -2233,16 +2233,14 @@ class DlgNewAddressDisp(ArmoryDialog):
       self.addr = wlt.getNextUnusedAddress()
       if loading is not None:
          loading.setValue(80)
-      cppaddr = self.wlt.cppWallet.getAddrObjByIndex(self.addr.chainIndex)
-      self.addrStr = cppaddr.getScrAddr()
 
+      self.addrStr = ""
       wlttype = determineWalletType(self.wlt, self.main)[0]
       notMyWallet = (wlttype == WLTTYPES.WatchOnly)
 
       lblDescr = QLabel(self.tr('The following address can be used to receive bitcoins:'))
       self.edtNewAddr = QLineEdit()
       self.edtNewAddr.setReadOnly(True)
-      self.edtNewAddr.setText(self.addrStr)
       self.edtNewAddr.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
       btnClipboard = QPushButton(self.tr('Copy to Clipboard'))
       # lbtnClipboard.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
@@ -2330,7 +2328,7 @@ class DlgNewAddressDisp(ArmoryDialog):
 
       buttonBox = QDialogButtonBox()
       self.btnDone = QPushButton(self.tr("Done"))
-      self.connect(self.btnDone, SIGNAL(CLICKED), self.acceptNewAddr)
+      self.connect(self.btnDone, SIGNAL(CLICKED), self.accept)
       buttonBox.addButton(self.btnDone, QDialogButtonBox.AcceptRole)
 
       frmWlt = QFrame()
@@ -2353,6 +2351,7 @@ class DlgNewAddressDisp(ArmoryDialog):
 
 
       def setAddressType(typeStr):
+         self.addrType = typeStr
          if typeStr == 'P2PKH':
             self.addrStr = self.wlt.getP2PKHAddrForIndex(self.addr.chainIndex)
          elif typeStr == 'P2SH-P2WPKH':
@@ -2368,9 +2367,10 @@ class DlgNewAddressDisp(ArmoryDialog):
       #addr type selection frame
       from ui.AddressTypeSelectDialog import AddressLabelFrame
       self.addrTypeFrame = AddressLabelFrame(main, setAddressType)
-      addrType = self.main.getSettingOrSetDefault('Default_ReceiveType', DEFAULT_RECEIVE_TYPE)
-      self.addrTypeFrame.setType(addrType)
-      setAddressType(addrType)
+      self.addrType = \
+         self.main.getSettingOrSetDefault('Default_ReceiveType', DEFAULT_RECEIVE_TYPE)
+      self.addrTypeFrame.setType(self.addrType)
+      setAddressType(self.addrType)
 
       layout = QGridLayout()
       layout.addWidget(frmNewAddr, 0, 0, 1, 1)
@@ -2396,15 +2396,14 @@ class DlgNewAddressDisp(ArmoryDialog):
       comm = str(self.edtComm.toPlainText())
       if len(comm) > 0:
          self.wlt.setComment(self.addr.getAddr160(), comm)
-      self.accept()
+      
+   def accept(self):
+      self.acceptNewAddr()
+      super(DlgNewAddressDisp, self).accept()
 
-   def rejectNewAddr(self):
-      # self.wlt.rewindHighestIndex(1)
-      try:
-         self.parent.reject()
-      except AttributeError:
-         pass
-      self.reject()
+   def reject(self):
+      self.acceptNewAddr()
+      super(DlgNewAddressDisp, self).reject()
 
    def setClipboard(self):
       clipb = QApplication.clipboard()
@@ -3029,7 +3028,7 @@ class DlgConfirmBulkImport(ArmoryDialog):
          walletDescr = self.tr('wallet, <b>%1</b> (%2)').arg(wltID, wlt.labelName)
       lblDescr = QRichLabel(self.tr(
          'You are about to import <b>%1</b> addresses into %2.<br><br> '
-         'The following is a list of addresses to be imported:').arg(len(addrList), walletDescr))
+         'The following is a list of addresses to be imported:').arg(len(addrList)).arg(walletDescr))
 
       fnt = GETFONT('Fixed', 10)
       w, h = tightSizeNChar(fnt, 100)
@@ -3255,9 +3254,12 @@ class DlgAddressInfo(ArmoryDialog):
 
       # ## Set up the address ledger
       self.ledgerModel = LedgerDispModelSimple(self.ledgerTable, self, self.main)
-      self.ledgerModel.setLedgerDelegate(\
-         TheBDM.bdv().getLedgerDelegateForScrAddr(self.wlt.uniqueIDB58, \
-                                                  self.cppAddr.getAddrHash()))
+      try:
+         self.ledgerModel.setLedgerDelegate(\
+            TheBDM.bdv().getLedgerDelegateForScrAddr(self.wlt.uniqueIDB58, \
+                                                     self.cppAddr.getAddrHash()))
+      except:
+         pass
 
       def ledgerToTableScrAddr(ledger):
          return self.main.convertLedgerToTable(ledger, \
@@ -3585,9 +3587,9 @@ class DlgIntroMessage(ArmoryDialog):
       lblSlogan.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
       lblDescr = QRichLabel(self.tr(
-         '<b>You are about to use the most secure and feature-rich Bitcoin client'
-         'software available!</b>  But please remember, this software'
-         'is still <i>Beta</i> - Armory developers will not be held responsible'
+         '<b>You are about to use the most secure and feature-rich Bitcoin client '
+         'software available!</b>  But please remember, this software '
+         'is still <i>Beta</i> - Armory developers will not be held responsible '
          'for loss of bitcoins resulting from the use of this software!'
          '<br><br>'))
       lblDescr.setOpenExternalLinks(True)
@@ -4530,7 +4532,26 @@ class DlgConfirmSend(ArmoryDialog):
       buttonBox = QDialogButtonBox()
       buttonBox.addButton(self.btnAccept, QDialogButtonBox.AcceptRole)
       buttonBox.addButton(self.btnCancel, QDialogButtonBox.RejectRole)
-
+      
+      self.signerType = SIGNER_DEFAULT
+      def setSignerType(_type):
+         self.signerType = _type
+      
+      isSigned = False
+      if isinstance(pytxOrUstx, PyTx):
+         ustx = UnsignedTransaction()
+         ustx.createFromPyTx(pytxOrUstx)
+         isSigned = pytxOrUstx.verifySigsAllInputs()
+      else:
+         isSigned = pytxOrUstx.verifySigsAllInputs(pytxOrUstx.signerType)
+         
+      if self.main.usermode == USERMODE.Expert and isSigned == False:
+         self.signerSelect = SignerLabelFrame(self.main, pytxOrUstx, setSignerType)
+         self.signerSelectFrame = self.signerSelect.getFrame()
+      
+         frmBtnSelect = makeHorizFrame([STRETCH, self.signerSelectFrame, buttonBox])
+      else:
+         frmBtnSelect = buttonBox
 
       frmTable = makeLayoutFrame(VERTICAL, recipLbls, STYLE_RAISED)
       frmRight = makeVertFrame([ lblMsg, \
@@ -4540,7 +4561,7 @@ class DlgConfirmSend(ArmoryDialog):
                                   'Space(10)', \
                                   lblLastConfirm, \
                                   'Space(10)', \
-                                  buttonBox ])
+                                  frmBtnSelect ])
 
       frmAll = makeHorizFrame([ lblInfoImg, frmRight ])
 
@@ -4549,6 +4570,10 @@ class DlgConfirmSend(ArmoryDialog):
       self.setLayout(layout)
       self.setMinimumWidth(350)
       self.setWindowTitle(self.tr('Confirm Transaction'))
+   
+   #############################################################################   
+   def getSignerType(self):
+      return self.signerType
 
 
 ################################################################################
@@ -5003,7 +5028,12 @@ class DlgShowKeyList(ArmoryDialog):
       extraLbl = ''
 
       for addr in self.addrCopies:
-         cppAddrObj = self.wlt.cppWallet.getAddrObjByIndex(addr.chainIndex)
+         try:
+            cppAddrObj = self.wlt.cppWallet.getAddrObjByIndex(addr.chainIndex)
+         except:
+            addrIndex = self.wlt.cppWallet.getAssetIndexForAddr(addr.getAddr160())
+            cppAddrObj = self.wlt.cppWallet.getAddrObjByIndex(addrIndex)
+            
          # Address pool
          if self.chkWithAddrPool.isChecked():
             if addr.chainIndex > topChain:
@@ -5228,7 +5258,7 @@ class DlgDispTxInfo(ArmoryDialog):
       ustx = None
       if isinstance(pytx, UnsignedTransaction):
          ustx = pytx
-         pytx = ustx.getPyTxSignedIfPossible()
+         pytx = ustx.getPyTxSignedIfPossible(signer=ustx.signerType)
 
 
       self.pytx = pytx.copyWithoutWitness()
@@ -5483,7 +5513,7 @@ class DlgDispTxInfo(ArmoryDialog):
 
       if not self.data[FIELDS.TxSize] == None:
          txsize = unicode(self.data[FIELDS.TxSize])
-         txsize_str = self.tr("%1 Bytes").arg(txsize)
+         txsize_str = self.tr("%1 bytes").arg(txsize)
          lbls.append([])
          lbls[-1].append(self.main.createToolTipWidget(
             self.tr('Size of the transaction in bytes')))
@@ -5997,8 +6027,15 @@ class DlgDisplayTxIn(ArmoryDialog):
          for op in opStrings:
             dispLines.append('      %s' % op)
 
-
-      edtBrowse.setHtml(('<br>'.join(dispLines)).replace(' ', '&nbsp;'))
+      u_string = u""
+      for dline in dispLines:
+         if isinstance(dline, QString):
+            line_to_str = unicode(dline.toUtf8())
+         else:
+            line_to_str = unicode(dline)
+         u_string = u_string + u"<br>" + line_to_str.replace(u' ', u'&nbsp;')
+         
+      edtBrowse.setHtml(u_string)
       btnDone = QPushButton(self.tr("Ok"))
       self.connect(btnDone, SIGNAL('clicked()'), self.accept)
 
@@ -6065,8 +6102,15 @@ class DlgDisplayTxOut(ArmoryDialog):
       for op in opStrings:
          dispLines.append('      %s' % op)
 
-
-      edtBrowse.setHtml(('<br>'.join(dispLines)).replace(' ', '&nbsp;'))
+      u_string = u""
+      for dline in dispLines:
+         if isinstance(dline, QString):
+            line_to_str = unicode(dline.toUtf8())
+         else:
+            line_to_str = unicode(dline)
+         u_string = u_string + u"<br>" + line_to_str.replace(u' ', u'&nbsp;')
+         
+      edtBrowse.setHtml(u_string)
       btnDone = QPushButton(self.tr("Ok"))
       self.connect(btnDone, SIGNAL('clicked()'), self.accept)
 
@@ -6565,12 +6609,7 @@ class DlgPrintBackup(ArmoryDialog):
       def scrollTop():
          vbar = self.view.verticalScrollBar()
          vbar.setValue(vbar.minimum())
-      from twisted.internet import reactor
-      reactor.callLater(0.01, scrollTop)
-
-      # if len(self.bin
-         # reactor.callLater(0.5, warnImportedKeys)
-
+      self.callLater(0.01, scrollTop)
 
    def redrawBackup(self):
       cmbPage = 1
@@ -6754,7 +6793,9 @@ class DlgPrintBackup(ArmoryDialog):
       elif printType == 'SingleSheetImported':
          bType = self.tr('Imported Keys %1').arg(ssType)
       elif printType.lower().startswith('frag'):
-         bstr = self.tr('Fragmented Backup (%1-of-%2)').arg(self.fragData['M'], self.fragData['N'])
+         m_count = str(self.fragData['M'])
+         n_count = str(self.fragData['N'])
+         bstr = self.tr('Fragmented Backup (%1-of-%2)').arg(m_count, n_count)
          bType = bstr + ' ' + ssType
 
       if printType.startswith('SingleSheet'):
@@ -6771,7 +6812,7 @@ class DlgPrintBackup(ArmoryDialog):
                                                    'Fragment:'])
          baseID = self.fragData['FragIDStr']
          fragNum = printData + 1
-         fragID = self.tr('<b>%1-<font color="%2">#%2</font></b>').arg(baseID, htmlColor('TextBlue'), fragNum)
+         fragID = '<b>%s-<font color="%s">#%d</font></b>' % (baseID, htmlColor('TextBlue'), fragNum)
          self.scene.moveCursor(15, 0)
          suf = 'c' if self.noNeedChaincode else 'a'
          colRect, rowHgt = self.scene.drawColumn(['1.35' + suf, self.wlt.uniqueIDB58, \
@@ -6787,8 +6828,8 @@ class DlgPrintBackup(ArmoryDialog):
             'Any subset of <font color="%1"><b>%2</b></font> fragments with this '
             'ID (<font color="%3"><b>%4</b></font>) are sufficient to recover all the '
             'coins contained in this wallet.  To optimize the physical security of '
-            'your wallet, please store the fragments in different locations.').arg(htmlColor('TextBlue'), self.fragData['M'], \
-                                       htmlColor('TextBlue'), self.fragData['FragIDStr'])
+            'your wallet, please store the fragments in different locations.').arg(htmlColor('TextBlue'), \
+                           str(self.fragData['M']), htmlColor('TextBlue'), self.fragData['FragIDStr'])
       else:
          container = 'this wallet' if printType == 'SingleSheetFirstPage' else 'these addresses'
          warnMsg = self.tr(
@@ -6832,7 +6873,7 @@ class DlgPrintBackup(ArmoryDialog):
          fragNum = printData + 1
          descrMsg = self.tr(
             'The following is fragment <font color="%1"><b>#%2</b></font> for this '
-            'wallet.').arg(htmlColor('TextBlue'), printData + 1)
+            'wallet.').arg(htmlColor('TextBlue'), str(printData + 1))
 
 
       self.scene.drawText(descrMsg, GETFONT('var', 8), wrapWidth=wrap)
@@ -6905,7 +6946,7 @@ class DlgPrintBackup(ArmoryDialog):
 
          try:
             yBin = fmtrx[printData][1].toBinStr()
-            binID = self.wlt.uniqueIDBin
+            binID = base58_to_binary(self.fragData['fragSetID'])
             IDLine = ComputeFragIDLineHex(M, printData, binID, doMask, addSpaces=True)
             if len(yBin) == 32:
                Prefix.append('ID:');  Lines.append(IDLine)
@@ -7286,8 +7327,7 @@ class DlgExecLongProcess(ArmoryDialog):
          self.func()
          self.accept()
 
-      from twisted.internet import reactor
-      reactor.callLater(0.1, execAndClose)
+      self.callLater(0.1, execAndClose)
       QDialog.exec_(self)
 
 
@@ -8225,9 +8265,11 @@ class DlgHelpAbout(ArmoryDialog):
       imgLogo.setPixmap(QPixmap(':/armory_logo_h56.png'))
       imgLogo.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
-      lblHead = QRichLabel(self.tr('Armory Bitcoin Wallet : Version %1-beta-%2').arg(getVersionString(BTCARMORY_VERSION), BTCARMORY_BUILD), doWrap=False)
-      #lblWebpage = QRichLabel('<a href="https://www.bitcoinarmory.com">https://www.bitcoinarmory.com</a>')
-      #lblWebpage.setOpenExternalLinks(True)
+      if BTCARMORY_BUILD != None:
+         lblHead = QRichLabel(self.tr('Armory Bitcoin Wallet : Version %1-beta-%2').arg(getVersionString(BTCARMORY_VERSION), BTCARMORY_BUILD), doWrap=False)
+      else:
+         lblHead = QRichLabel(self.tr('Armory Bitcoin Wallet : Version %1-beta').arg(getVersionString(BTCARMORY_VERSION)), doWrap=False)
+
       lblOldCopyright = QRichLabel(self.tr( u'Copyright &copy; 2011-2015 Armory Technologies, Inc.'))
       lblCopyright = QRichLabel(self.tr( u'Copyright &copy; 2016 Goatpig'))
       lblOldLicense = QRichLabel(self.tr( u'Licensed to Armory Technologies, Inc. under the '
@@ -8240,7 +8282,6 @@ class DlgHelpAbout(ArmoryDialog):
       lblLicense.setOpenExternalLinks(True)
 
       lblHead.setAlignment(Qt.AlignHCenter)
-      #lblWebpage.setAlignment(Qt.AlignHCenter)
       lblCopyright.setAlignment(Qt.AlignHCenter)
       lblOldCopyright.setAlignment(Qt.AlignHCenter)
       lblLicense.setAlignment(Qt.AlignHCenter)
@@ -8325,34 +8366,6 @@ class DlgSettings(ArmoryDialog):
       frmMgmt.setLayout(layoutMgmt)
 
       self.clickChkManage()
-      # bitcoind-management settings
-      ##########################################################################
-
-      # We check for internet connection on each startup.
-      self.chkSkipOnlineCheck = QCheckBox(self.tr(
-         'Skip online check on startup (assume internet is available, do '
-         'not check)'))
-      skipOnlineChk = self.main.getSettingOrSetDefault('SkipOnlineCheck', False)
-      self.chkSkipOnlineCheck.setChecked(skipOnlineChk)
-
-      ##########################################################################
-      #  Privacy Settings
-      # privacyStats = self.main.getSettingOrSetDefault('SkipStatsReport', False)
-      privacyTor   = self.main.getSettingOrSetDefault('UseTorSettings', False)
-      lblPrivacyTitle = QRichLabel(self.tr("<b>Privacy Settings</b>"))
-      lblPrivTorDescr = QRichLabel(self.tr(
-         'If you are going to use Armory and Bitcoin Core with a proxy (such '
-         'as Tor), you should disable all Armory communications that might operate '
-         'outside the proxy.'))
-
-      self.chkPrivacyTor = QCheckBox(self.tr('Enable settings for proxies/Tor'))
-
-      # self.connect(self.chkPrivacyTor, SIGNAL('toggled(bool)'))
-      #             self.chkPrivacyStats.setDisabled)
-
-      #self.chkPrivacyStats.setChecked(privacyStats)
-      self.chkPrivacyTor.setChecked(privacyTor)
-      #  Privacy Settings
       ##########################################################################
 
 
@@ -8377,27 +8390,6 @@ class DlgSettings(ArmoryDialog):
             'links, but this does not work on all operating systems.'), QMessageBox.Ok)
 
       self.connect(btnDefaultURI, SIGNAL(CLICKED), clickRegURI)
-
-      txFee = self.main.getSettingOrSetDefault('Default_Fee', MIN_TX_FEE)
-      lblDefaultFee = QRichLabel(self.tr(
-         '<b>Default fee to include with transactions:</b><br>'))
-      lblDefaultDescr = QRichLabel(self.tr(
-         'Fees go to users that contribute computing power to keep the '
-         'Bitcoin network secure.  It also increases the priority of your '
-         'transactions so they confirm faster (%1 BTC is standard).').arg(coin2strNZS(MIN_TX_FEE)))
-
-      ttipDefaultFee = self.main.createToolTipWidget(self.tr(
-         'NOTE: Some transactions will require a certain fee '
-         'regardless of your settings -- in such cases '
-         'you will be prompted to include the correct '
-         'value or cancel the transaction'))
-
-      self.edtDefaultFee = QLineEdit()
-      self.edtDefaultFee.setText(coin2str(txFee, maxZeros=1).strip())
-      lblDefaultFee.setMinimumWidth(400)
-
-      self.connect(self.edtDefaultFee, SIGNAL('returnPressed()'), self.accept)
-
 
       ###############################################################
       # Minimize on Close
@@ -8556,19 +8548,6 @@ class DlgSettings(ArmoryDialog):
 
       i += 1
       frmLayout.addWidget(frmMgmt, i, 0, 1, 3)
-      i += 1
-      frmLayout.addWidget(self.chkSkipOnlineCheck, i, 0, 1, 3)
-
-      i += 1
-      frmLayout.addWidget(HLINE(), i, 0, 1, 3)
-
-      i += 1
-      frmLayout.addWidget(lblPrivacyTitle, i, 0, 1, 3)
-
-      i += 1
-      frmLayout.addWidget(lblPrivTorDescr, i, 0, 1, 3)
-      i += 1
-      frmLayout.addWidget(self.chkPrivacyTor, i, 0, 1, 3)
 
       i += 1
       frmLayout.addWidget(HLINE(), i, 0, 1, 3)
@@ -8909,22 +8888,10 @@ class DlgSettings(ArmoryDialog):
             self.main.settings.delete('SatoshiDatadir')
 
       self.main.writeSetting('ManageSatoshi', self.chkManageSatoshi.isChecked())
-      self.main.writeSetting('SkipOnlineCheck', self.chkSkipOnlineCheck.isChecked())
 
       # Reset the DNAA flag as needed
       askuriDNAA = self.chkAskURIAtStartup.isChecked()
       self.main.writeSetting('DNAA_DefaultApp', not askuriDNAA)
-
-
-      try:
-         defaultFee = str2coin(str(self.edtDefaultFee.text()).replace(' ', ''))
-         self.main.writeSetting('Default_Fee', defaultFee)
-      except:
-         QMessageBox.warning(self, self.tr('Invalid Amount'),self.tr(
-            'The default fee specified could not be understood.  Please '
-            'specify in BTC with no more than 8 decimal places.'), \
-            QMessageBox.Ok)
-         return
 
       if not self.main.setPreferredDateFormat(str(self.edtDateFormat.text())):
          return
@@ -8962,6 +8929,7 @@ class DlgSettings(ArmoryDialog):
 
       #addr type
       self.main.writeSetting('Default_ReceiveType', self.addrType)
+      armoryengine.ArmoryUtils.DEFAULT_ADDR_TYPE = self.addrType
 
       try:
          self.main.createCombinedLedger()
@@ -9551,8 +9519,7 @@ class DlgRequestPayment(ArmoryDialog):
       self.setLayout(dlgLayout)
       self.setWindowTitle(self.tr('Create Payment Request Link'))
 
-      from twisted.internet import reactor
-      reactor.callLater(1, self.periodicUpdate)
+      self.callLater(1, self.periodicUpdate)
 
       hexgeom = str(self.main.settings.get('PayReqestGeometry'))
       if len(hexgeom) > 0:
@@ -9694,9 +9661,8 @@ class DlgRequestPayment(ArmoryDialog):
 
    def periodicUpdate(self, nsec=1):
       if not self.closed:
-         from twisted.internet import reactor
          self.updateQRCode()
-         reactor.callLater(nsec, self.periodicUpdate)
+         self.callLater(nsec, self.periodicUpdate)
 
    def updateQRCode(self, e=None):
       if not self.prevURI == self.rawURI:
@@ -10162,8 +10128,7 @@ class DlgExpWOWltData(ArmoryDialog):
       # TODO:  Dear god this is terrible, but for my life I cannot figure
       #        out how to move the vbar, because you can't do it until
       #        the dialog is drawn which doesn't happen til after __init__.
-      from twisted.internet import reactor
-      reactor.callLater(0.05, self.resizeEvent)
+      self.callLater(0.05, self.resizeEvent)
 
       self.setWindowTitle(titleStr)
 
@@ -10264,8 +10229,7 @@ class DlgWODataPrintBackup(ArmoryDialog):
       def scrollTop():
          vbar = self.view.verticalScrollBar()
          vbar.setValue(vbar.minimum())
-      from twisted.internet import reactor
-      reactor.callLater(0.01, scrollTop)
+      self.callLater(0.01, scrollTop)
 
 
    # Class called to redraw the print "canvas" when the data changes.
@@ -10590,7 +10554,8 @@ class DlgFragBackup(ArmoryDialog):
       M = int(str(self.comboM.currentText()))
       N = int(str(self.comboN.currentText()))
 
-      lblFragID = QRichLabel(self.tr('<b>Fragment ID:<br>%1-%2</b>').arg(self.fragPrefixStr, idx + 1))
+      lblFragID = QRichLabel(self.tr('<b>Fragment ID:<br>%1-%2</b>').arg(\
+                                    str(self.fragPrefixStr), str(idx + 1)))
       # lblWltID = QRichLabel('(%s)' % self.wlt.uniqueIDB58)
       lblFragPix = QImageLabel(self.fragPixmapFn, size=(72, 72))
       if doMask:
@@ -10601,7 +10566,7 @@ class DlgFragBackup(ArmoryDialog):
       easyYs1 = makeSixteenBytesEasy(ys[:16   ])
       easyYs2 = makeSixteenBytesEasy(ys[ 16:32])
 
-      binID = self.wlt.uniqueIDBin
+      binID = base58_to_binary(self.uniqueFragSetID)
       ID = ComputeFragIDLineHex(M, idx, binID, doMask, addSpaces=True)
 
       fragPreview = 'ID: %s...<br>' % ID[:12]
@@ -10657,7 +10622,8 @@ class DlgFragBackup(ArmoryDialog):
       fragData['FragPixmap'] = self.fragPixmapFn
       fragData['Range'] = zindex
       fragData['Secure'] = self.chkSecurePrint.isChecked()
-      dlg = DlgPrintBackup(self, self.main, self.wlt, self.tr('Fragments'), \
+      fragData['fragSetID'] = self.uniqueFragSetID
+      dlg = DlgPrintBackup(self, self.main, self.wlt, 'Fragments', \
                               self.secureMtrx, self.secureMtrxCrypt, fragData, \
                               self.secureRoot, self.secureChain)
       dlg.exec_()
@@ -10672,7 +10638,7 @@ class DlgFragBackup(ArmoryDialog):
             'backups, which can also be applied to fragments saved to file. '
             u'Doing so will require you store the SecurePrint\u200b\u2122 '
             'code with the backup, but it will prevent unencrypted key data from '
-            'touching any disks.  <br><br> Do you want to encrpt the fragment '
+            'touching any disks.  <br><br> Do you want to encrypt the fragment '
             u'file with the same SecurePrint\u200b\u2122 code?'), \
             QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
 
@@ -10692,8 +10658,8 @@ class DlgFragBackup(ArmoryDialog):
       sec = 'secure.' if doMask else ''
       defaultFn = 'wallet_%s_%s_num%d_need%d.%sfrag' % (wid, pref, fnum, M, sec)
       #print 'FragFN:', defaultFn
-      savepath = self.main.getFileSave(self.tr('Save Fragment'), \
-                                       [self.tr('Wallet Fragments (*.frag)')], \
+      savepath = self.main.getFileSave('Save Fragment', \
+                                       ['Wallet Fragments (*.frag)'], \
                                        defaultFn)
 
       if len(toUnicode(savepath)) == 0:
@@ -10708,7 +10674,7 @@ class DlgFragBackup(ArmoryDialog):
 
       try:
          yBin = saveMtrx[zindex][1].toBinStr()
-         binID = self.wlt.uniqueIDBin
+         binID = base58_to_binary(self.uniqueFragSetID)
          IDLine = ComputeFragIDLineHex(M, zindex, binID, doMask, addSpaces=True)
          if len(yBin) == 32:
             fout.write('ID: ' + IDLine + '\n')
@@ -10785,6 +10751,8 @@ class DlgFragBackup(ArmoryDialog):
       N = int(str(self.comboN.currentText()))
       # Make sure only local variables contain non-SBD data
       self.destroyFrags()
+      self.uniqueFragSetID = \
+         binary_to_base58(SecureBinaryData().GenerateRandom(7).toBinStr())
       insecureData = SplitSecret(self.securePrint, M, self.maxmaxN)
       for x, y in insecureData:
          self.secureMtrx.append([SecureBinaryData(x), SecureBinaryData(y)])
@@ -10803,7 +10771,7 @@ class DlgFragBackup(ArmoryDialog):
       #####
 
       self.M, self.N = M, N
-      self.fragPrefixStr = ComputeFragIDBase58(self.M, self.wlt.uniqueIDBin)
+      self.fragPrefixStr = ComputeFragIDBase58(self.M, self.uniqueFragSetID)
       self.fragPixmapFn = ':/frag%df.png' % M
 
 
@@ -11722,8 +11690,8 @@ class DlgRestoreFragged(ArmoryDialog):
    #############################################################################
    def dataLoad(self, fnum):
       LOGINFO('Loading data for entry, %d', fnum)
-      toLoad = unicode(self.main.getFileLoad(self.tr('Load Fragment File'), \
-                                    [self.tr('Wallet Fragments (*.frag)')]))
+      toLoad = unicode(self.main.getFileLoad('Load Fragment File', \
+                                    ['Wallet Fragments (*.frag)']))
 
       if len(toLoad) == 0:
          return
@@ -11796,11 +11764,10 @@ class DlgRestoreFragged(ArmoryDialog):
          '<b>Start entering fragments into the table to left...</b>'))
       for row, data in self.fragDataMap.iteritems():
          showRightFrm = True
-         M, fnum, wltIDBin, doMask, idBase58 = ReadFragIDLineBin(data[0])
+         M, fnum, setIDBin, doMask, idBase58 = ReadFragIDLineBin(data[0])
          self.lblRightFrm.setText(self.tr('<b><u>Wallet Being Restored:</u></b>'))
          self.imgPie.setPixmap(QPixmap(':/frag%df.png' % M).scaled(96,96))
          self.lblReqd.setText(self.tr('<b>Frags Needed:</b> %1').arg(M))
-         self.lblWltID.setText(self.tr('<b>Wallet:</b> %1').ags(binary_to_base58(wltIDBin)))
          self.lblFragID.setText(self.tr('<b>Fragments:</b> %1').arg(idBase58.split('-')[0]))
          self.btnRestore.setEnabled(len(self.fragDataMap) >= M)
          break
@@ -11985,11 +11952,11 @@ class DlgRestoreFragged(ArmoryDialog):
             return
 
       reply = QMessageBox.question(self, self.tr('Verify Wallet ID'), self.tr(
-         'The data you entered corresponds to a wallet with a wallet '
-         'ID:<blockquote><b>{}</b></blockquote>Does this ID '
+         'The data you entered corresponds to a wallet with the '
+         'ID:<blockquote><b>{%1}</b></blockquote>Does this ID '
          'match the "Wallet Unique ID" printed on your paper backup? '
          'If not, click "No" and reenter key and chain-code data '
-         'again.').format(newWltID), QMessageBox.Yes | QMessageBox.No)
+         'again.').arg(newWltID), QMessageBox.Yes | QMessageBox.No)
       if reply == QMessageBox.No:
          return
 
@@ -12233,9 +12200,9 @@ class DlgEnterOneFrag(ArmoryDialog):
 
       self.version0Button = QRadioButton(self.tr( BACKUP_TYPE_0_TEXT), self)
       self.version135aButton = QRadioButton(self.tr( BACKUP_TYPE_135a_TEXT), self)
-      self.version135aSPButton = QRadioButton(self.tr( BACKUP_TYPE_135a_SP_TEXT), self)
+      self.version135aSPButton = QRadioButton(self.trUtf8( BACKUP_TYPE_135a_SP_TEXT), self)
       self.version135cButton = QRadioButton(self.tr( BACKUP_TYPE_135c_TEXT), self)
-      self.version135cSPButton = QRadioButton(self.tr( BACKUP_TYPE_135c_SP_TEXT), self)
+      self.version135cSPButton = QRadioButton(self.trUtf8( BACKUP_TYPE_135c_SP_TEXT), self)
       self.backupTypeButtonGroup = QButtonGroup(self)
       self.backupTypeButtonGroup.addButton(self.version0Button)
       self.backupTypeButtonGroup.addButton(self.version135aButton)
@@ -12442,7 +12409,7 @@ class DlgEnterOneFrag(ArmoryDialog):
 
       reply = QMessageBox.question(self, self.tr('Verify Fragment ID'), self.tr(
          'The data you entered is for fragment: '
-         '<br><br> <font color="%1 size=3><b>%2</b></font>  <br><br> '
+         '<br><br> <font color="%1" size=3><b>%2</b></font>  <br><br> '
          'Does this ID match the "Fragment:" field displayed on your backup? '
          'If not, click "No" and re-enter the fragment data.').arg(htmlColor('TextBlue'), fid), QMessageBox.Yes | QMessageBox.No)
 

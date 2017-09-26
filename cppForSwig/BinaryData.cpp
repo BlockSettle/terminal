@@ -225,11 +225,24 @@ bool BinaryData::operator==(BinaryDataRef const & bd2) const
 }
 
 /////////////////////////////////////////////////////////////////////////////
+bool BinaryData::operator<(BinaryDataRef const & bd2) const
+{
+   size_t minLen = min(getSize(), bd2.getSize());
+   auto ref_ptr = bd2.getPtr();
+   for (size_t i = 0; i<minLen; i++)
+   {
+      if (data_[i] == ref_ptr[i])
+         continue;
+      return data_[i] < ref_ptr[i];
+   }
+   return (getSize() < bd2.getSize());
+}
+
+/////////////////////////////////////////////////////////////////////////////
 SecureBinaryData BinaryRefReader::get_SecureBinaryData(uint32_t nBytes)
 {
    if (getSizeRemaining() < nBytes)
       throw runtime_error("buffer overflow");
-
    SecureBinaryData out(nBytes);
    bdRef_.copyTo(out.getPtr(), pos_, nBytes);
    pos_ += nBytes;

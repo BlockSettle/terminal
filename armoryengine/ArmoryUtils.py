@@ -46,9 +46,7 @@ import subprocess
 #from psutil import Popen
 import psutil
 
-from CppBlockUtils import KdfRomix, CryptoAES
-from qrcodenative import QRCode, QRErrorCorrectLevel
-from twisted.internet.protocol import Protocol, ClientFactory
+from CppBlockUtils import KdfRomix, CryptoAES, ConfigFile_fleshOutArgs, AddressType_P2SH_P2WPKH
 
 try:
    if os.path.exists('update_version.py') and os.path.exists('.git'):
@@ -60,13 +58,17 @@ try:
    from ArmoryBuild import BTCARMORY_BUILD
 except:
    BTCARMORY_BUILD = None
+   
+#pass sys.argv to the cpp config file parser, get the fleshed out verison 
+#in return
+sys.argv = ConfigFile_fleshOutArgs("armoryqt.conf", sys.argv)
 
 DEFAULT = 'DEFAULT'
 LEVELDB_BLKDATA = 'leveldb_blkdata'
 LEVELDB_HEADERS = 'leveldb_headers'
 
 # Version Numbers
-BTCARMORY_VERSION    = (0, 95,  99, 3)  # (Major, Minor, Bugfix, AutoIncrement)
+BTCARMORY_VERSION    = (0, 96,  3, 0)  # (Major, Minor, Bugfix, AutoIncrement)
 PYBTCWALLET_VERSION  = (1, 35,  0, 0)  # (Major, Minor, Bugfix, AutoIncrement)
 
 # ARMORY_DONATION_ADDR = '1ArmoryXcfq7TnCSuZa9fQjRYwJ4bkRKfv'
@@ -158,7 +160,7 @@ UNINITIALIZED = None
 UNKNOWN       = -2
 MIN_TX_FEE    = 20000
 MIN_RELAY_TX_FEE = 20000
-MIN_FEE_BYTE = 50
+MIN_FEE_BYTE = 200
 MT_WAIT_TIMEOUT_SEC = 20;
 DEFAULT_FEE_TYPE = "Auto" 
 DEFAULT_CHANGE_TYPE = 'P2PKH'
@@ -245,6 +247,7 @@ class UstxError(Exception): pass
 class P2SHNotSupportedError(Exception): pass
 class NonBase58CharacterError(Exception): pass
 class isMSWallet(Exception): pass
+class SignerException(Exception): pass
 
 # Witness variables and constants
 WITNESS = False
@@ -311,11 +314,17 @@ ENABLE_DETSIGN = CLI_OPTIONS.enableDetSign
 # Figure out the default directories for Satoshi client, and BicoinArmory
 OS_NAME          = ''
 OS_VARIANT       = ''
-USER_HOME_DIR    = ''
+USER_HOME_DIR    = ''   
 BTC_HOME_DIR     = ''
 ARMORY_HOME_DIR  = ''
-ARMORY_DB_DIR      = ''
+ARMORY_DB_DIR    = ''
 SUBDIR = 'testnet3' if USE_TESTNET else '' + 'regtest' if USE_REGTEST else ''
+
+if not CLI_OPTIONS.satoshiHome==DEFAULT:
+   BTC_HOME_DIR = CLI_OPTIONS.satoshiHome
+   if BTC_HOME_DIR.endswith('blocks'):
+      BTC_HOME_DIR, blocks_suffix = os.path.split(BTC_HOME_DIR)
+
 if OS_WINDOWS:
    OS_NAME         = 'Windows'
    OS_VARIANT      = platform.win32_ver()
@@ -325,7 +334,11 @@ if OS_WINDOWS:
    rt = ctypes.windll.shell32.SHGetFolderPathW(0, 26, 0, 0, ctypes.byref(buffer))
    USER_HOME_DIR = unicode(buffer.value)
 
-   BTC_HOME_DIR    = os.path.join(USER_HOME_DIR, 'Bitcoin', SUBDIR)
+   if BTC_HOME_DIR == '':
+      BTC_HOME_DIR = os.path.join(USER_HOME_DIR, 'Bitcoin')
+   if SUBDIR != '':
+      BTC_HOME_DIR = os.path.join(BTC_HOME_DIR, SUBDIR)
+   
    ARMORY_HOME_DIR = os.path.join(USER_HOME_DIR, 'Armory', SUBDIR)
    BLKFILE_DIR     = os.path.join(BTC_HOME_DIR, 'blocks')
    BLKFILE_1stFILE = os.path.join(BLKFILE_DIR, 'blk00000.dat')
@@ -333,7 +346,12 @@ elif OS_LINUX:
    OS_NAME         = 'Linux'
    OS_VARIANT      = platform.linux_distribution()
    USER_HOME_DIR   = os.getenv('HOME')
-   BTC_HOME_DIR    = os.path.join(USER_HOME_DIR, '.bitcoin', SUBDIR)
+   
+   if BTC_HOME_DIR == '':
+      BTC_HOME_DIR = os.path.join(USER_HOME_DIR, '.bitcoin')
+   if SUBDIR != '':
+      BTC_HOME_DIR = os.path.join(BTC_HOME_DIR, SUBDIR)
+   
    ARMORY_HOME_DIR = os.path.join(USER_HOME_DIR, '.armory', SUBDIR)
    BLKFILE_DIR     = os.path.join(BTC_HOME_DIR, 'blocks')
    BLKFILE_1stFILE = os.path.join(BLKFILE_DIR, 'blk00000.dat')
@@ -342,7 +360,12 @@ elif OS_MACOSX:
    OS_NAME         = 'MacOSX'
    OS_VARIANT      = platform.mac_ver()
    USER_HOME_DIR   = os.path.expanduser('~/Library/Application Support')
-   BTC_HOME_DIR    = os.path.join(USER_HOME_DIR, 'Bitcoin', SUBDIR)
+    
+   if BTC_HOME_DIR == '':
+      BTC_HOME_DIR = os.path.join(USER_HOME_DIR, 'Bitcoin')
+   if SUBDIR != '':
+      BTC_HOME_DIR = os.path.join(BTC_HOME_DIR, SUBDIR)   
+   
    ARMORY_HOME_DIR = os.path.join(USER_HOME_DIR, 'Armory', SUBDIR)
    BLKFILE_DIR     = os.path.join(BTC_HOME_DIR, 'blocks')
    BLKFILE_1stFILE = os.path.join(BLKFILE_DIR, 'blk00000.dat')
@@ -400,24 +423,6 @@ def readVersionInt(verInt):
    verList.append( int(verStr[ -7:-5    ]) )
    verList.append( int(verStr[:-7       ]) )
    return tuple(verList[::-1])
-
-# Allow user to override default bitcoin-core/bitcoind home directory
-if not CLI_OPTIONS.satoshiHome==DEFAULT:
-   success = True
-   if USE_TESTNET:
-      testnetTry = os.path.join(CLI_OPTIONS.satoshiHome, 'testnet3')
-      if os.path.exists(testnetTry):
-         CLI_OPTIONS.satoshiHome = testnetTry
-   if USE_REGTEST:
-      regtestTry = os.path.join(CLI_OPTIONS.satoshiHome, 'regtest')
-      if os.path.exists(regtestTry):
-         CLI_OPTIONS.satoshiHome = regtestTry
-
-   if not os.path.exists(CLI_OPTIONS.satoshiHome):
-      print 'Directory "%s" does not exist!  Using default!' % \
-                                                CLI_OPTIONS.satoshiHome
-   else:
-      BTC_HOME_DIR = CLI_OPTIONS.satoshiHome
 
 # Allow user to override default Armory home directory
 if not CLI_OPTIONS.datadir==DEFAULT:
@@ -572,6 +577,8 @@ CPP_TXOUT_P2SH         = 4
 CPP_TXOUT_NONSTANDARD  = 5
 CPP_TXOUT_P2WPKH       = 6
 CPP_TXOUT_P2WSH        = 7
+CPP_TXOUT_OPRETURN     = 8
+
 CPP_TXOUT_HAS_ADDRSTR  = [CPP_TXOUT_STDHASH160, \
                           CPP_TXOUT_STDPUBKEY65,
                           CPP_TXOUT_STDPUBKEY33,
@@ -583,8 +590,9 @@ CPP_TXOUT_STDSINGLESIG = [CPP_TXOUT_STDHASH160, \
                           CPP_TXOUT_STDPUBKEY33]
 CPP_TXOUT_NESTED_SINGLESIG = [CPP_TXOUT_STDPUBKEY33,
                           CPP_TXOUT_P2WPKH]
+CPP_TXOUT_SEGWIT = [AddressType_P2SH_P2WPKH]
 
-CPP_TXOUT_SCRIPT_NAMES = ['']*8
+CPP_TXOUT_SCRIPT_NAMES = ['']*9
 CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_STDHASH160]  = 'Standard (PKH)'
 CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_STDPUBKEY65] = 'Standard (PK65)'
 CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_STDPUBKEY33] = 'Standard (PK33)'
@@ -593,6 +601,7 @@ CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_P2SH]        = 'Standard (P2SH)'
 CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_NONSTANDARD] = 'Non-Standard'
 CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_P2WPKH]      = 'Standard (P2WPKH)'
 CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_P2WSH]       = 'Standard (P2WSH)'
+CPP_TXOUT_SCRIPT_NAMES[CPP_TXOUT_OPRETURN]    = 'Meta Data (OP_RETURN)'
 
 # Copied from cppForSwig/BtcUtils.h::getTxInScriptTypeInt(script)
 CPP_TXIN_STDUNCOMPR    = 0
@@ -614,6 +623,9 @@ CPP_TXIN_SCRIPT_NAMES[CPP_TXIN_SPENDPUBKEY] = 'Plain Signature'
 CPP_TXIN_SCRIPT_NAMES[CPP_TXIN_SPENDMULTI]  = 'Spend Multisig'
 CPP_TXIN_SCRIPT_NAMES[CPP_TXIN_SPENDP2SH]   = 'Spend P2SH'
 CPP_TXIN_SCRIPT_NAMES[CPP_TXIN_NONSTANDARD] = 'Non-Standard'
+
+#default address type
+DEFAULT_ADDR_TYPE = 'P2PKH'
 
 ################################################################################
 if not CLI_OPTIONS.satoshiPort == DEFAULT:
@@ -896,7 +908,7 @@ if CLI_OPTIONS.logDisable:
    DEFAULT_FILE_LOGTHRESH     += 100
 
 
-DateFormat = '%Y-%m-%d %H:%M'
+DateFormat = '%Y-%m-%d %H:%M:%S'
 logging.getLogger('').setLevel(logging.DEBUG)
 fileFormatter  = logging.Formatter('%(asctime)s (%(levelname)s) -- %(message)s', \
                                      datefmt=DateFormat)
@@ -961,13 +973,15 @@ if CLI_OPTIONS.logDisable:
 
 
 
-def logexcept_override(type, value, tback):
-   import traceback
-   import logging
-   strList = traceback.format_exception(type,value,tback)
-   logging.error(''.join([s for s in strList]))
+def logexcept_override(_type, value, tback):
+   try:
+      strList = traceback.format_exception(_type,value,tback)
+      logging.error(''.join([s for s in strList]))
+   except:
+      pass
+   
    # then call the default handler
-   sys.__excepthook__(type, value, tback)
+   sys.__excepthook__(_type, value, tback)
 
 sys.excepthook = logexcept_override
 
@@ -2448,43 +2462,6 @@ def binaryBits_to_difficulty(b):
 def difficulty_to_binaryBits(i):
    pass
 
-################################################################################
-def CreateQRMatrix(dataToEncode, errLevel=QRErrorCorrectLevel.L):
-   dataLen = len(dataToEncode)
-   baseSz = 4 if errLevel == QRErrorCorrectLevel.L else \
-            5 if errLevel == QRErrorCorrectLevel.M else \
-            6 if errLevel == QRErrorCorrectLevel.Q else \
-            7 # errLevel = QRErrorCorrectLevel.H
-   sz = baseSz if dataLen < 70 else  5 +  (dataLen - 70) / 30
-   qrmtrx = [[]]
-   while sz<20:
-      try:
-         errCorrectEnum = getattr(QRErrorCorrectLevel, errLevel.upper())
-         qr = QRCode(sz, errCorrectEnum)
-         qr.addData(dataToEncode)
-         qr.make()
-         success=True
-         break
-      except TypeError:
-         sz += 1
-
-   if not success:
-      LOGERROR('Unsuccessful attempt to create QR code')
-      LOGERROR('Data to encode: (Length: %s, isAscii: %s)', \
-                     len(dataToEncode), isASCII(dataToEncode))
-      return [[0]], 1
-
-   qrmtrx = []
-   modCt = qr.getModuleCount()
-   for r in range(modCt):
-      tempList = [0]*modCt
-      for c in range(modCt):
-         # The matrix is transposed by default, from what we normally expect
-         tempList[c] = 1 if qr.isDark(c,r) else 0
-      qrmtrx.append(tempList)
-
-   return [qrmtrx, modCt]
-
 
 # The following params are for the Bitcoin elliptic curves (secp256k1)
 SECP256K1_MOD   = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2FL
@@ -2617,7 +2594,7 @@ class FiniteField(object):
 
 
 ################################################################################
-def SplitSecret(secret, needed, pieces, nbytes=None, use_random_x=False):
+def SplitSecret(secret, needed, pieces, nbytes=None):
    if not isinstance(secret, basestring):
       secret = secret.toBinStr()
 
@@ -2644,13 +2621,10 @@ def SplitSecret(secret, needed, pieces, nbytes=None, use_random_x=False):
       raise FiniteFieldError
 
 
-   # We deterministically produce the coefficients so that we always use the
-   # same polynomial for a given secret
-   lasthmac = secret[:]
+   # We use randomized coefficients so as to respect SSS security parameters
    othernum = []
    for i in range(pieces+needed-1):
-      lasthmac = HMAC512(lasthmac, 'splitsecrets')[:nbytes]
-      othernum.append(binary_to_int(lasthmac))
+      othernum.append(binary_to_int(SecureBinaryData().GenerateRandom(nbytes).toBinStr()))
 
    def poly(x):
       polyout = ff.mult(a, ff.power(x,needed-1))
@@ -2660,7 +2634,7 @@ def SplitSecret(secret, needed, pieces, nbytes=None, use_random_x=False):
       return polyout
 
    for i in range(pieces):
-      x = othernum[i+2] if use_random_x else i+1
+      x = i+1
       fragments.append( [x, poly(x)] )
 
    secret,a = None,None
@@ -3755,34 +3729,3 @@ def touchFile(fname):
       os.fsync(f.fileno())
       f.close()
 
-############################################
-class ArmoryInstanceListener(Protocol):
-   def connectionMade(self):
-      LOGINFO('Another Armory instance just tried to open.')
-      self.factory.func_conn_made()
-
-   def dataReceived(self, data):
-      LOGINFO('Received data from alternate Armory instance')
-      self.factory.func_recv_data(data)
-      self.transport.loseConnection()
-
-############################################
-class ArmoryListenerFactory(ClientFactory):
-   protocol = ArmoryInstanceListener
-   def __init__(self, fn_conn_made, fn_recv_data):
-      self.func_conn_made = fn_conn_made
-      self.func_recv_data = fn_recv_data
-
-# Check general internet connection
-# Do not Check when ForceOnline is true
-def isInternetAvailable(forceOnline = False):
-   internetStatus = INTERNET_STATUS.DidNotCheck
-   return internetStatus
-
-
-# Returns true if Online Mode is possible
-def onlineModeIsPossible(btcdir=BTC_HOME_DIR):
-   return isInternetAvailable(forceOnline=CLI_OPTIONS.forceOnline) != \
-                INTERNET_STATUS.Unavailable and \
-      (CLI_OPTIONS.offline or satoshiIsAvailable()) and \
-      os.path.exists(os.path.join(btcdir, 'blocks'))

@@ -18,6 +18,7 @@
 #include <chrono>
 #include <thread>
 #include <exception>
+#include <iostream>
 
 #include "make_unique.h"
 
@@ -305,14 +306,18 @@ public:
             valptr = bottom_.load(memory_order_acquire);
 
          if (valptr == nullptr)
+         {
+            /*if (this->count() != 0)
+               cout << "~~~ count != 0" << endl;*/
             throw IsEmpty();
+         }
       } 
       while (!bottom_.compare_exchange_weak(valptr, maxptr_,
-      memory_order_release, memory_order_relaxed));
+      memory_order_acq_rel, memory_order_acquire));
 
       auto valptrcopy = valptr;
       if (!top_.compare_exchange_strong(valptrcopy, maxptr_,
-         memory_order_release, memory_order_relaxed))
+         memory_order_acq_rel, memory_order_acquire))
       {
          AtomicEntry<T>* nextptr;
          do
@@ -320,16 +325,15 @@ public:
             nextptr = valptr->next_.load(memory_order_acquire);
          } while (nextptr == maxptr_);
       
+         count_.fetch_sub(1, memory_order_acq_rel);
          bottom_.store(nextptr, memory_order_release);
       }
       else
       {
+         count_.fetch_sub(1, memory_order_acq_rel);
          bottom_.store(nullptr, memory_order_release);
          top_.store(nullptr, memory_order_release);
       }
-
-      //update count
-      count_.fetch_sub(1, memory_order_relaxed);
 
       //delete ptr and return value
       auto&& retval = valptr->get();
@@ -357,18 +361,16 @@ public:
             topentry = top_.load(memory_order_acquire);
       } 
       while (!top_.compare_exchange_weak(topentry, maxptr_,
-         memory_order_release, memory_order_relaxed));
+      memory_order_acq_rel, memory_order_acquire));
 
       if (topentry != nullptr)
          topentry->next_.store(newentry, memory_order_release);
 
       bottom_.compare_exchange_strong(nullentry, newentry,
-         memory_order_release, memory_order_relaxed);
+         memory_order_acq_rel, memory_order_acquire);
 
+      count_.fetch_add(1, memory_order_acq_rel);
       top_.store(newentry, memory_order_release);
-
-      //update count
-      count_.fetch_add(1, memory_order_relaxed);
    }
 
    virtual void clear()
@@ -388,7 +390,7 @@ public:
 
    size_t count(void) const
    {
-      return count_.load(memory_order_relaxed);
+      return count_.load(memory_order_acquire);
    }
 };
 
@@ -399,11 +401,13 @@ template<typename T, typename U> class TransactionalMap
 private:
    mutable mutex mu_;
    shared_ptr<map<T, U>> map_;
+   atomic<size_t> count_;
 
 public:
 
    TransactionalMap(void)
    {
+      count_.store(0, memory_order_relaxed);
       map_ = make_shared<map<T, U>>();
    }
 
@@ -416,6 +420,7 @@ public:
 
       newMap->insert(move(mv));
       map_ = newMap;
+      count_.store(map_->size(), memory_order_relaxed);
    }
 
    void insert(const pair<T, U>& obj)
@@ -427,19 +432,21 @@ public:
 
       newMap->insert(obj);
       map_ = newMap;
+      count_.store(map_->size(), memory_order_relaxed);
    }
 
    void update(map<T, U> updatemap)
    {
-      auto newMap = make_shared<map<T, U>>();
+      if (updatemap.size() == 0)
+         return;
+
+      auto newMap = make_shared<map<T, U>>( move(updatemap));
 
       unique_lock<mutex> lock(mu_);
-      *newMap = *map_;
-
-      for (auto& updatepair : updatemap)
-         (*newMap)[updatepair.first] = move(updatepair.second);
+      newMap->insert(map_->begin(), map_->end());
 
       map_ = newMap;
+      count_.store(map_->size(), memory_order_relaxed);
    }
 
    void erase(const T& id)
@@ -455,6 +462,7 @@ public:
 
       newMap->erase(id);
       map_ = newMap;
+      count_.store(map_->size(), memory_order_relaxed);
    }
 
    void erase(const vector<T>& idVec)
@@ -476,6 +484,8 @@ public:
 
       if (erased)
          map_ = newMap;
+
+      count_.store(map_->size(), memory_order_relaxed);
    }
 
    shared_ptr<map<T, U>> pop_all(void)
@@ -485,6 +495,7 @@ public:
       
       auto retMap = map_;
       map_ = newMap;
+      count_.store(map_->size(), memory_order_relaxed);
 
       return retMap;
    }
@@ -501,6 +512,12 @@ public:
       unique_lock<mutex> lock(mu_);
 
       map_ = newMap;
+      count_.store(map_->size(), memory_order_relaxed);
+   }
+
+   size_t size(void) const
+   {
+      return count_.load(memory_order_relaxed);
    }
 };
 
@@ -511,11 +528,13 @@ template<typename T> class TransactionalSet
 private:
    mutable mutex mu_;
    shared_ptr<set<T>> set_;
+   atomic<size_t> count_;
 
 public:
 
    TransactionalSet(void)
    {
+      count_.store(0, memory_order_relaxed);
       set_ = make_shared<set<T>>();
    }
 
@@ -528,6 +547,7 @@ public:
 
       newSet->insert(move(mv));
       set_ = newSet;
+      count_.store(set_->size(), memory_order_relaxed);
    }
 
    void insert(const T& obj)
@@ -539,10 +559,14 @@ public:
 
       newSet->insert(obj);
       set_ = newSet;
+      count_.store(set_->size(), memory_order_relaxed);
    }
 
    void insert(const set<T>& dataSet)
    {
+      if (dataSet.size() == 0)
+         return;
+
       auto newSet = make_shared<set<T>>();
 
       unique_lock<mutex> lock(mu_);
@@ -550,7 +574,7 @@ public:
 
       newSet->insert(dataSet.begin(), dataSet.end());
       set_ = newSet;
-
+      count_.store(set_->size(), memory_order_relaxed);
    }
 
    void erase(const T& id)
@@ -566,6 +590,7 @@ public:
 
       newSet->erase(id);
       set_ = newSet;
+      count_.store(set_->size(), memory_order_relaxed);
    }
 
    void erase(const vector<T>& idVec)
@@ -587,6 +612,7 @@ public:
 
       if (erased)
          set_ = newSet;
+      count_.store(set_->size(), memory_order_relaxed);
    }
 
    shared_ptr<set<T>> pop_all(void)
@@ -596,6 +622,7 @@ public:
 
       auto retSet = set_;
       set_ = newSet;
+      count_.store(set_->size(), memory_order_relaxed);
 
       return retSet;
    }
@@ -612,12 +639,12 @@ public:
       unique_lock<mutex> lock(mu_);
 
       set_ = newSet;
+      count_.store(set_->size(), memory_order_relaxed);
    }
 
    size_t size(void) const
    {
-      unique_lock<mutex> lock(mu_);
-      return set_->size();
+      return count_.load(memory_order_relaxed);
    }
 };
 
@@ -853,7 +880,7 @@ public:
             {
                if(completed_.load(memory_order_acquire) || 
                   terminated_.load(memory_order_acquire))
-	          throw StopBlockingLoop();
+	            throw StopBlockingLoop();
             }
 
             try

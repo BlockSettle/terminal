@@ -336,7 +336,7 @@ shared_ptr<Payload::DeserializedPayloads> Payload::deserialize(
 
             bytesConsumed += localBytesConsumed;
          }
-         catch (PayloadDeserError& excpt)
+         catch (PayloadDeserError&)
          {
             continue;
          }
@@ -520,7 +520,7 @@ void Payload_Version::deserialize(uint8_t* data, size_t len)
    vheader_.nonce_ = *(uint64_t*)dataptr;
    dataptr += 8;
 
-   size_t remaining = len - MESSAGE_HEADER_LEN - USERAGENT_OFFSET;
+   size_t remaining = len - USERAGENT_OFFSET;
    uint64_t uaLen;
    auto varintlen = get_varint(uaLen, dataptr, remaining);
    dataptr += varintlen;
@@ -936,7 +936,7 @@ void BitcoinP2P::connectLoop(void)
          version.setVersionHeaderIPv4(70012, services, timestamp,
             node_addr_, clientsocketaddr);
 
-         version.userAgent_ = "Armory:0.95.99.3";
+         version.userAgent_ = "Armory:0.96.3";
          version.startHeight_ = -1;
 
          sendMessage(move(version));
@@ -1105,8 +1105,7 @@ void BitcoinP2P::checkServices(unique_ptr<Payload> payload)
    auto mwInt = (uint32_t*)mainnetMW.getPtr();
 
    //Hardcode disabling SW for mainnet until BIP9 rule detection is implemented
-   if(pver->vheader_.services_ & NODE_WITNESS && 
-      magic_word_ != *mwInt)
+   if(pver->vheader_.services_ & NODE_WITNESS)
       PEER_USES_WITNESS = true;
    else
       PEER_USES_WITNESS = false;
@@ -1168,12 +1167,13 @@ void BitcoinP2P::processInv(unique_ptr<Payload> payload)
       switch (entryVec.first)
       {
       case Inv_Msg_Witness_Block:
-         processInvBlock(move(entryVec.second));
-         break;
-
       case Inv_Msg_Block:
+      {
+         //1 sec delay to make sure data is written on disk
+         this_thread::sleep_for(chrono::seconds(1));
          processInvBlock(move(entryVec.second));
          break;
+      }
 
       case Inv_Msg_Witness_Tx:
          processInvTx(move(entryVec.second));
@@ -1329,7 +1329,7 @@ int64_t BitcoinP2P::getTimeStamp() const
 
 ////////////////////////////////////////////////////////////////////////////////
 shared_ptr<Payload> BitcoinP2P::getTx(
-   const InvEntry& entry, uint32_t timeout)
+   const InvEntry& entry, uint32_t timeout_ms)
 {
    //blocks until data is received or timeout expires
    if (entry.invtype_ != Inv_Msg_Tx && entry.invtype_ != Inv_Msg_Witness_Tx)
@@ -1371,10 +1371,7 @@ shared_ptr<Payload> BitcoinP2P::getTx(
    shared_ptr<Payload> payloadPtr = nullptr;
    auto fut = gdsPtr->getFuture();
 
-   //timeout is in sec, let's make it ms
-   auto timeoutMS = timeout * 1000;
-   unsigned timeIncrement = 200; //poll node every 200ms
-   chrono::milliseconds chronoIncrement(timeIncrement);
+   unsigned timeIncrement = 100; //polling interval
    unsigned timeTally = 0;
 
    while (1)
@@ -1384,6 +1381,11 @@ shared_ptr<Payload> BitcoinP2P::getTx(
       sendMessage(move(payload));
 
       //wait on promise
+      auto increment = timeIncrement;
+      if (increment + timeTally > timeout_ms)
+         increment = timeout_ms - timeTally;
+      chrono::milliseconds chronoIncrement(increment);
+
       auto&& status = fut.wait_for(chronoIncrement);
       if (status == future_status::ready)
       {
@@ -1392,9 +1394,11 @@ shared_ptr<Payload> BitcoinP2P::getTx(
       }
 
       timeTally += timeIncrement;
-      if (timeout > 0)
+      timeIncrement *= 2;
+
+      if (timeout_ms > 0)
       {
-         if (timeTally > timeoutMS)
+         if (timeTally >= timeout_ms)
          {
             gdsPtr->setStatus(false);
             break;
@@ -1445,5 +1449,5 @@ void BitcoinP2P::shutdown()
 void BitcoinP2P::updateNodeStatus(bool connected)
 {
    nodeConnected_.store(connected, memory_order_release);
-   nodeStatusLambda_();
+   callback();
 }

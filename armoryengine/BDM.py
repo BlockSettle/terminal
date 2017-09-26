@@ -12,7 +12,6 @@ import threading
 import traceback
 
 from armoryengine.ArmoryUtils import *
-from SDM import SatoshiDaemonManager
 from armoryengine.Timer import TimeThisFunction
 import CppBlockUtils as Cpp
 from armoryengine.BinaryPacker import UINT64
@@ -112,7 +111,7 @@ class PySide_CallBack(Cpp.PythonCallback):
          else:
             progInfo = [walletVec, prog]
             for cppNotificationListener in TheBDM.getListenerList():
-               cppNotificationListener('progress', progInfo)
+               cppNotificationListener(SCAN_ACTION, progInfo)
                
       except:
          LOGEXCEPT('Error in running progress callback')
@@ -144,6 +143,7 @@ class BlockDataManager(object):
 
       #register callbacks
       self.armoryDBDir = ""
+      self.bdv_ = None
 
       # Flags
       self.aboutToRescan = False
@@ -169,23 +169,23 @@ class BlockDataManager(object):
       self.progressNumeric=0
             
       self.remoteDB = False
-      self.instantiateBDV()
-      
+      if ARMORYDB_IP != ARMORYDB_DEFAULT_IP:
+         self.remoteDB = True
+               
       self.exception = ""
-      
       self.cookie = None
    
    #############################################################################  
-   def instantiateBDV(self):
+   def instantiateBDV(self, port):
       if self.bdmState == BDM_OFFLINE:
          return
       
       socketType = Cpp.SocketFcgi
-      if ARMORYDB_IP != ARMORYDB_DEFAULT_IP or ARMORYDB_PORT != ARMORYDB_DEFAULT_PORT:
+      if self.remoteDB:
          socketType = Cpp.SocketHttp 
-         self.remoteDB = True
 
-      self.bdv_ = Cpp.BlockDataViewer_getNewBDV(ARMORYDB_IP, ARMORYDB_PORT, socketType)   
+      self.bdv_ = Cpp.BlockDataViewer_getNewBDV(\
+                     str(ARMORYDB_IP), str(port), socketType)   
 
    #############################################################################
    def registerBDV(self):   
@@ -228,11 +228,6 @@ class BlockDataManager(object):
    @ActLikeASingletonBDM
    def getTopBlockHeight(self):
       return self.topBlockHeight
-   
-   #############################################################################
-   @ActLikeASingletonBDM
-   def getTopBlockDifficulty(self):
-      return self.bdv().getTopBlockHeader().getDifficulty()
    
    #############################################################################
    @ActLikeASingletonBDM
@@ -324,11 +319,7 @@ class BlockDataManager(object):
    #############################################################################
    def getCookie(self):
       if self.cookie == None:
-         
-         #get cookie from file
-         cookiePath = os.path.join(self.datadir, ".cookie_")
-         cookieFile = open(cookiePath, "r")
-         self.cookie = cookieFile.read()
+         self.cookie = Cpp.BlockDataManagerConfig_getCookie(str(self.datadir))
       return self.cookie
 
    #############################################################################
@@ -349,14 +340,10 @@ class BlockDataManager(object):
 # Make TheBDM reference the asyncrhonous BlockDataManager wrapper if we are 
 # running 
 TheBDM = None
-TheSDM = None
 if CLI_OPTIONS.offline:
    LOGINFO('Armory loaded in offline-mode.  Will not attempt to load ')
    LOGINFO('blockchain without explicit command to do so.')
    TheBDM = BlockDataManager(isOffline=True)
-
-   # Also create the might-be-needed SatoshiDaemonManager
-   TheSDM = SatoshiDaemonManager()
 
 else:
    # NOTE:  "TheBDM" is sometimes used in the C++ code to reference the
@@ -378,12 +365,6 @@ else:
       cpplf = cppLogFile.encode('utf8')
    Cpp.StartCppLogging(cpplf, 4)
    Cpp.EnableCppLogStdOut()    
-
-   #LOGINFO('LevelDB max-open-files is %d', TheBDM.getMaxOpenFiles())
-
-   # Also load the might-be-needed SatoshiDaemonManager
-   TheSDM = SatoshiDaemonManager()
-
 
 # Put the import at the end to avoid circular reference problem
 from armoryengine.MultiSigUtils import MultiSigLockbox

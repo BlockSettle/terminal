@@ -25,10 +25,20 @@ bool TransactionVerifier::verify(bool noCatch) const
       return false;
 
    //check signatures
-   if (noCatch)
-      return checkSigs();
+   if (!noCatch)
+      checkSigs();
+   else
+      checkSigs_NoCatch();
 
-   return checkSigs_NoCatch();
+   return txEvalState_.isValid();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TxEvalState TransactionVerifier::evaluateState() const
+{
+   verify(false);
+
+   return txEvalState_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -41,52 +51,61 @@ uint64_t TransactionVerifier::checkOutputs() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool TransactionVerifier::checkSigs() const
+void TransactionVerifier::checkSigs() const
 {
+   txEvalState_.reset();
+
    for (unsigned i = 0; i < theTx_.txins_.size(); i++)
    {
+      auto stack_ptr = getStackInterpreter(i);
       try
       {
-         if (checkSig(i))
-            continue;
+         checkSig(i, stack_ptr.get());
       }
-      catch (ScriptException &e)
-      {
-         LOGERR << "tx verification failed with error: ";
-         LOGERR << e.what();
-
-      }
-      catch (exception &e)
-      {
-         LOGERR << "tx verification failed with error: ";
-         LOGERR << e.what();
-      }
-      catch (...)
-      {
-         LOGERR << "tx verification failed with unkown error";
-      }
+      catch (exception&)
+      {}
          
-      return false;
+      txEvalState_.updateState(i, stack_ptr->getTxInEvalState());
    }
-
-   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool TransactionVerifier::checkSigs_NoCatch() const
+void TransactionVerifier::checkSigs_NoCatch() const
 {
+   txEvalState_.reset();
+
    for (unsigned i = 0; i < theTx_.txins_.size(); i++)
    {
-      if (!checkSig(i))
-         return false;
+      auto&& state = checkSig(i);
+      txEvalState_.updateState(i, state);
    }
-
-   return true;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<StackInterpreter> TransactionVerifier::getStackInterpreter(
+   unsigned inputid) const
+{
+   auto sstack = make_unique<StackInterpreter>(this, inputid);
+   auto flags = sstack->getFlags();
+   flags |= flags_;
+   sstack->setFlags(flags);
+   return move(sstack);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
-bool TransactionVerifier::checkSig(unsigned inputId) const
+unique_ptr<StackInterpreter> TransactionVerifier_BCH::getStackInterpreter(
+   unsigned inputid) const
+{
+   auto sstack = make_unique<StackInterpreter_BCH>(this, inputid);
+   auto flags = sstack->getFlags();
+   flags |= flags_;
+   sstack->setFlags(flags);
+   return move(sstack);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TxInEvalState TransactionVerifier::checkSig(
+   unsigned inputId, StackInterpreter* sstack_ptr) const
 {
    //grab the uxto
    auto&& input = theTx_.getTxInRef(inputId);
@@ -102,22 +121,25 @@ bool TransactionVerifier::checkSig(unsigned inputId) const
 
    auto utxoIter = utxos_.find(txHashRef);
    if (utxoIter == utxos_.end())
-      return false;
+      return TxInEvalState();
 
    auto& idMap = utxoIter->second;
    auto idIter = idMap.find(outputId);
    if (idIter == idMap.end())
-      return false;
+      return TxInEvalState();
 
    //grab output script
    auto& utxo = idIter->second;
    auto& outputScript = utxo.getScript();
 
    //init stack
-   StackInterpreter sstack(this, inputId);
-   auto flags = sstack.getFlags();
-   flags |= flags_;
-   sstack.setFlags(flags);
+   unique_ptr<StackInterpreter> sstack;
+   auto stackPtr = sstack_ptr;
+   if (stackPtr == nullptr)
+   {
+      sstack = move(getStackInterpreter(inputId));
+      stackPtr = sstack.get();
+   }
 
    if (theTx_.usesWitness_)
    {
@@ -125,25 +147,23 @@ bool TransactionVerifier::checkSig(unsigned inputId) const
       if (sigHashDataObject_ == nullptr)
          sigHashDataObject_ = make_shared<SigHashDataSegWit>();
 
-      sstack.setSegWitSigHashDataObject(sigHashDataObject_);
+      stackPtr->setSegWitSigHashDataObject(sigHashDataObject_);
    }
 
    if ((flags_ & SCRIPT_VERIFY_SEGWIT) &&
       inputScript.getSize() == 0)
    {
-      sstack.processSW(outputScript);
+      stackPtr->processSW(outputScript);
    }
    else
    {
-      sstack.processScript(inputScript, false);
-      BinaryData inputScriptBD(inputScript);
-
-      //process script
-      sstack.processScript(outputScript, true);
+      stackPtr->processScript(inputScript, false);
+      stackPtr->processScript(outputScript, true);
    }
 
-   sstack.checkState();
-   return true;
+   stackPtr->checkState();
+
+   return stackPtr->getTxInEvalState();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -452,7 +472,7 @@ BinaryData SigHashDataSegWit::getDataForSigHashAll(const TransactionStub& stub,
    hashdata.put_uint32_t(stub.getLockTime());
 
    //sighash type
-   hashdata.put_uint32_t(1);
+   hashdata.put_uint32_t(getSigHashAll_4Bytes());
 
    return hashdata.getData();
 }

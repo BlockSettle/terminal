@@ -28,6 +28,7 @@
 #include "FcgiMessage.h"
 
 #define MAX_CONTENT_LENGTH 1024*1024*1024
+#define CALLBACK_EXPIRE_COUNT 5
 
 enum WalletType
 {
@@ -40,14 +41,16 @@ class SocketCallback : public Callback
 {
 private:
    mutex mu_;
-   unsigned int count_ = 0;
+   atomic<unsigned> count_;
 
    function<unsigned(void)> isReady_;
 
 public:
    SocketCallback(function<unsigned(void)> isReady) :
       Callback(), isReady_(isReady)
-   {}
+   {
+      count_.store(0, memory_order_relaxed);
+   }
 
    void emit(void);
    Arguments respond(const string&);
@@ -58,8 +61,8 @@ public:
 
       if (lock.try_lock())
       {
-         ++count_;
-         if (count_ >= 2)
+         auto count = count_.fetch_add(1, memory_order_relaxed) + 1;
+         if (count >= CALLBACK_EXPIRE_COUNT)
             return false;
       }
 
@@ -73,6 +76,11 @@ public:
       //after signaling shutdown, grab the mutex to make sure 
       //all responders threads have terminated
       unique_lock<mutex> lock(mu_);
+   }
+
+   void resetCounter(void)
+   {
+      count_.store(0, memory_order_relaxed);
    }
 };
 
@@ -123,10 +131,17 @@ private:
       vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew);
    bool registerLockbox(
       vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew);
+   void registerAddrVec(const string&, vector<BinaryData> const& scrAddrVec);
 
    void pushNotification(unique_ptr<BDV_Notification> notifPtr)
    {
       notificationStack_.push_back(move(notifPtr));
+   }
+
+   void resetCounter(void) const
+   {
+      if (cb_ != nullptr)
+         cb_->resetCounter();
    }
 
 public:
@@ -245,6 +260,7 @@ public:
       clients_(bdmT, getShutdownCallback()),
       ip_("127.0.0.1"), port_(port)
    {
+      LOGINFO << "Listening on port " << port;
       liveThreads_.store(0, memory_order_relaxed);
    }
 

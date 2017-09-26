@@ -168,6 +168,12 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
    if (haveIter == scanInfo.zcMap_.end())
       return;
 
+   if (haveIter->second == nullptr)
+   {
+      LOGWARN << "empty zc notification txio map";
+      return;
+   }
+
    auto& zcTxIOMap = *haveIter->second;
 
    //look for new keys
@@ -563,7 +569,7 @@ vector<UnspentTxOut> ScrAddrObj::getAllUTXOs(
    db_->beginDBTransaction(&tx, STXO, LMDB::ReadOnly);
 
    vector<UnspentTxOut> utxoList;
-   uint32_t blk = bc_->top().getBlockHeight();
+   uint32_t blk = bc_->top()->getBlockHeight();
 
    for (const auto& txioPair : utxos.utxoList_)
    {

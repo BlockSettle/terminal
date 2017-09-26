@@ -83,10 +83,8 @@ public:
 
    bool registerAddresses(const vector<BinaryData>& saVec, 
                            const string& walletID, bool areNew);
-
-   void registerAddressBatch(
-      const map <BinaryData, vector<BinaryData> >& wltNAddrMap,
-      bool areNew);
+   void registerArbitraryAddressVec(const vector<BinaryData>& saVec,
+      const string& walletID);
 
    const shared_ptr<map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>>>
       getFullZeroConfTxIOMap() const
@@ -113,9 +111,9 @@ public:
    const Blockchain& blockchain() const  { return *bc_; }
    Blockchain& blockchain() { return *bc_; }
    uint32_t getTopBlockHeight(void) const;
-   const BlockHeader& getTopBlockHeader(void) const
+   const shared_ptr<BlockHeader> getTopBlockHeader(void) const
    { return bc_->top(); }
-   BlockHeader getHeaderByHash(const BinaryData& blockHash) const;
+   shared_ptr<BlockHeader> getHeaderByHash(const BinaryData& blockHash) const;
 
    void reset();
 
@@ -138,8 +136,8 @@ public:
    StoredHeader getBlockFromDB(uint32_t height, uint8_t dupID) const;
    bool scrAddressIsRegistered(const BinaryData& scrAddr) const;
    
-   const BlockHeader* getHeaderPtrForTx(Tx& theTx) const
-      { return &bc_->getHeaderPtrForTx(theTx); }
+   const shared_ptr<BlockHeader> getHeaderPtrForTx(Tx& theTx) const
+      { return bc_->getHeaderPtrForTx(theTx); }
 
    vector<UnspentTxOut> 
       getUnspentTxoutsForAddr160List(
@@ -220,7 +218,7 @@ public:
 protected:
    atomic<bool> rescanZC_;
 
-   BlockDataManager* bdmPtr_;
+   BlockDataManager* bdmPtr_ = nullptr;
    LMDBBlockDatabase*        db_;
    shared_ptr<Blockchain>    bc_;
    ScrAddrFilter*            saf_;
@@ -314,7 +312,7 @@ private:
    HistoryPager hist_;
    HistoryOrdering order_ = order_descending;
 
-   BlockDataViewer* bdvPtr_;
+   BlockDataViewer* bdvPtr_ = nullptr;
    ScrAddrFilter*   saf_;
 
    //the global ledger may be modified concurently by the maintenance thread

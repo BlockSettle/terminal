@@ -35,6 +35,9 @@ private:
    bool goodNode_ = false; 
 
    NodeChainState nodeChainState_;
+   function<void(void)> nodeStatusLambda_;
+
+   RpcStatus previousState_ = RpcStatus_Disabled;
 
 private:
    string getAuthString(void);
@@ -42,11 +45,16 @@ private:
 
    void initAfterLock(void) {}
    void cleanUpBeforeUnlock(void) {}
+   void callback(void)
+   {
+      if (nodeStatusLambda_)
+         nodeStatusLambda_();
+   }
 
 public:
    NodeRPC(BlockDataManagerConfig&);
    
-   RpcStatus testConnection(void);
+   RpcStatus testConnection();
    RpcStatus setupConnection(void);
    float getFeeByte(unsigned);
    void shutdown(void);
@@ -54,6 +62,23 @@ public:
    bool updateChainStatus(void);
    const NodeChainState& getChainStatus(void) const;   
    void waitOnChainSync(function<void(void)>);
+   string broadcastTx(const BinaryData&) const;
+
+   void registerNodeStatusLambda(function<void(void)> lbd) { nodeStatusLambda_ = lbd; }
+
+   virtual bool canPool(void) const { return true; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class NodeRPC_UnitTest : public NodeRPC
+{
+public:
+
+   NodeRPC_UnitTest(BlockDataManagerConfig& bdmc) :
+      NodeRPC(bdmc)
+   {}
+
+   bool canPool(void) const { return false; }
 };
 
 #endif

@@ -44,8 +44,7 @@ private:
       function<bool(const uint8_t* data, size_t size, size_t offset)>);
 
    Blockchain::ReorganizationState updateBlocksInDB(
-      const ProgressCallback &progress, bool verbose, bool initialLoad, 
-      bool fullHints);
+      const ProgressCallback &progress, bool verbose, bool fullHints);
    BinaryData updateTransactionHistory(int32_t startHeight);
    BinaryData scanHistory(int32_t startHeight, bool reportprogress);
    void undoHistory(Blockchain::ReorganizationState& reorgState);
@@ -54,11 +53,19 @@ private:
    void resetSSHdb(void);
 
    bool reparseBlkFiles(unsigned fromID);
-   map<BinaryData, BlockHeader> assessBlkFile(BlockDataLoader& bdl,
+   map<BinaryData, shared_ptr<BlockHeader>> assessBlkFile(BlockDataLoader& bdl,
       unsigned fileID);
 
    void verifyTransactions(void);
-   void commitAllTxHints(const map<uint32_t, BlockData>& bdMap);
+   void commitAllTxHints(
+      const map<uint32_t, BlockData>&, const set<unsigned>&);
+   void commitAllStxos(shared_ptr<BlockDataFileMap>, 
+      const map<uint32_t, BlockData>&, const set<unsigned>&);
+
+   void repairTxFilters(const set<unsigned>&);
+   void reprocessTxFilter(shared_ptr<BlockDataFileMap>, unsigned);
+
+   void cycleDatabases(void);
 
 public:
    DatabaseBuilder(BlockFiles&, BlockDataManager&,
@@ -69,4 +76,6 @@ public:
 
    void verifyChain(void);
    unsigned getCheckedTxCount(void) const { return checkedTransactions_; }
+
+   void verifyTxFilters(void);
 };

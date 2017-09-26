@@ -1,4 +1,100 @@
-v0.96
+v0.96.3 released September 21st 2017
+== Vulnerability Fix ==
+   - Fragmented backups were using a faulty implementation of Shamir's Secret Sharing (SSS).
+     One of the requirement of SSS security parameters is that the coefficients of the curve are chozen randomly. The implementation
+     up to this point was deriving these coefficients deterministically.
+
+   - While it is hard to determine how far the deterministic coefficient generation erodes the security of SSS, and how exploitable
+     the vulnerability is, the recommendation for users of fragmented backups is to treat the wallets backed up in this fashion as 
+     compromised and to migrate all funds to a new wallet. 
+
+   - The fragmented backup code now properly randomizes the SSS coefficients. Fragmented backups created with version 0.96.3 and later
+     are safe to use.
+
+   - The result of this change is that fragmented backups will no longer be deterministic. The previous behavior guaranteed a given 
+     wallet will always return the same set of fragments for a given M-of-N scheme. Since it deteriorates SSS security properties, 
+     the behavior has to be rolled back.
+   - Fragment sets are now generated randomly, therefor an unique ID has been added to each set to identify them. You cannot mix 
+     and match sets.
+   - While Armory can no longer generate deterministic fragments, it can still restore wallets from deterministic fragments.
+
+   - Many thanks to Gregory Maxwell (greg@xiph.org) for identifying and reporting the vulnerability as well as reviewing the fix.
+
+== Fixed ==
+   - Fixed faulty version packet deserialization revealed by Core 0.15.0.1
+ 
+
+v0.96.2, released August 27th 2017
+== Added ==
+   - Enabled SegWit on the mainnet. Running against a node with WITNESS service bit flagged will allow you to create SegWit addresses.
+   - Improved DB scan speed (~80% faster) and stability.
+   - Reduced DB memory usage (~20% less).
+   - Supernode DB mode. This isn't optimized for consumer grade computers, use at your own risk.
+   - The MAX button in the Send dialog has been changed to a checkbox, effect is now binding. 
+     Maximum value will be calculated on any change.
+   - You can now create OP_RETURN outputs from the Send dialog. This feature is only available in Expert mode.
+   - You can now pick the signer of your choosing in Expert mode.
+   - Added BCH on top of the legacy and 0.96 C++ signer.
+   - Improved verbose on ZC broadcast failure.
+
+== Fixed ==
+   - Fixed benchmark timers on POSIX systems.
+   - Fixed several Linux build configure bugs.
+   - Properly update RPC state in GUI on connect/disconnect events.
+   - Various zero conf bugs.
+   - Scan progress notification.
+   - Properly display comments for non legacy addresses.
+   - Digital exports will be saved under the proper file extention in Windows.
+
+== Removed ==
+   - Removed armoryd from the repository. armoryd was moved to its own repository (https://github.com/goatpig/armoryd)
+
+v0.96.1, released July 26th 2017
+
+== Added ==
+   - Raised default fee to 200 satoshi/Bytes. This fee will apply when using defaults and the node RPC is down.
+     Any applied fee lower than that rate will trigger a warning message box. Users have to actively choose to 
+     bypass the warning.
+   - Split unit tests building from default autotools setup. To build tests, use:
+      ./configure --enable-tests.
+   - You can now disable GUI in the autotools build system. Use: 
+      ./configure --without-gui
+   - When spawned with a cookie file, the DB now randomizes its listen port to (49150 + [0-15000]) and reports it in the cookie file.
+   - Added --fcgi-port command line argument to the DB
+   - Address comments are now visible again in the Coin Control GUI
+   - DB messages now have checksums; this improves error and version mismatch detection
+   - Transactions that failed to broadcast throug the P2P layer will now be pushed to the RPC afterwards, if it's enabled
+   - Refresh address view in Wallet Properties dialog on several user interactions.
+   - RPC status is now signaled in the bottom right corner status bar. Disabled RPC will result in bold purple text.
+   - Highly improved DB corruption self diagnosis and automated fixing.
+   - Zero confirmation parser pool now is now capped at 100 threads. 
+     You can modify this value with the --zcthread-pool command line argument.
+
+== Fixed ==
+   - ZC parsing will no longer occur while the BDM is initializing
+   - Wait on cookie file creation before connecting to auto managed DB
+   - Fixed registration/callback premature garbage collection
+   - Translation patch issues
+   - Fixed "Fund from wallet" lockbox GUI
+   - Fixed TxIn/Out pretty printing
+   - Tied init phase spinning icon rotation to progress notifications. The icon will not spin when no progress data is received, correctly 
+     indicating the DB is hanging.   
+   - Fixed cryptopp build against older CPUs (no AES or PCLMUL archs).
+   - Fixed RBF bumping with no change.
+   - Improved timestamps granularity in logs.
+   - Improved transaction broadcast consistency.
+   - Improved error message verbose of timed out transaction broadcasts.
+   - ./configure --prefix now propagates correctly to Makefiles.
+   - Fixed several memleaks in the database code.
+   - Fixed false positive throws over bad packet detection in socketing layer.
+   - Fixed coin selection edge cases.
+   - Fixed the displaying of address comments in the lobby ledger.
+
+== Removed ==
+   - Python-twisted dependency. This should remove the underlying openSSL dependency as well.
+   - Database command prompt will no longer appear when auto managing the DB on Windows
+
+v0.96, released April 30th 2017
 
 == Added ==
    - 2 new script types have been introduced on top of legacy P2PKH:
@@ -108,6 +204,10 @@ v0.96
 
    - Migrated build system from raw Makefiles to autotools. This will eventually lead to deterministic builds through Gitian.
 
+   - Added config files for ArmoryQt (armoryqt.conf) and ArmoryDB (armorydb.conf). The config files can take any valid command
+     line arguments for their respective binaries (one arg per line). Config file arguments do not override command line 
+     arguments
+
 == Fixed ==
    - Fixed transaction count display in wallet properties dialog
    - Fixed wallet group selector in online lobby
@@ -120,7 +220,7 @@ v0.96
      color coding
    - Fixed interfacing between DB running on a Linux server and clients running on Windows.
 
-v0.95.1
+v0.95.1, released November 2nd 2016
 
 == Added ==
    - Pass client datadir to auto spawned DB

@@ -91,7 +91,6 @@
 using namespace std;
 
 inline string NowTime();
-inline unsigned long long int NowTimeInt();
 
 typedef enum 
 {
@@ -126,26 +125,9 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 class DualStream : public LogStream
 {
-protected:
-   mutex mu_;
-   unique_ptr<unique_lock<mutex>> thisLock_ = nullptr;
-
 public:
-   DualStream(void) : noStdout_(false) {
-      thisLock_ = make_unique<unique_lock<mutex>>(mu_);
-   }
-
-   ~DualStream(void)
-   {
-      thisLock_.reset();
-      thisLock_ = nullptr;
-   }
-
-   void unlock(void)
-   {
-      thisLock_.reset();
-      thisLock_ = nullptr;
-   }
+   DualStream(void) : noStdout_(false) 
+   {}
 
    void enableStdOut(bool newbool) { noStdout_ = !newbool; }
 
@@ -154,7 +136,7 @@ public:
       fname_ = logfile;
       truncateFile(fname_, maxSz);
       fout_.open(OS_TranslatePath(fname_.c_str()), ios::app); 
-      fout_ << "\n\nLog file opened at " << NowTimeInt() << ": " << fname_.c_str() << endl;
+      fout_ << "\n\nLog file opened at " << NowTime() << ": " << fname_.c_str() << endl;
    }
 
    
@@ -270,7 +252,6 @@ public:
          if (filename != nullptr)
          {
             theOneLog->ds_.setLogFile(string(filename));
-            theOneLog->ds_.unlock();
             theOneLog->isInitialized_ = true;
          }
       }
@@ -335,14 +316,21 @@ private:
 // instead I create this little wrapper that does it for me.
 class LoggerObj
 {
+private:
+   static mutex mu_;
+   unique_ptr<unique_lock<mutex>> lockPtr_ = nullptr;
+
 public:
-   LoggerObj(LogLevel lvl) : logLevel_(lvl) {}
+   LoggerObj(LogLevel lvl) : logLevel_(lvl) 
+   {
+      lockPtr_ = move(make_unique<unique_lock<mutex>>(mu_));
+   }
 
    LogStream & getLogStream(void) 
    { 
       LogStream & lg = Log::GetInstance().Get(logLevel_);
       lg << "-" << Log::ToString(logLevel_);
-      lg << "- " << NowTimeInt() << ": ";
+      lg << "- " << NowTime() << ": ";
       return lg;
    }
 
@@ -350,6 +338,7 @@ public:
    { 
       Log::GetInstance().Get(logLevel_) << "\n";
       Log::GetInstance().FlushStreams();
+      lockPtr_.reset();
    }
 
 private:
@@ -395,13 +384,6 @@ inline string NowTime()
     return result;
 }
 
-inline unsigned long long int NowTimeInt(void)
-{
-   time_t t;
-   time(&t);
-   return (unsigned long long int)t;
-}
-
 #else
 
 #include <sys/time.h>
@@ -418,13 +400,6 @@ inline string NowTime()
     char result[100] = {0};
     sprintf(result, "%s", buffer);
     return result;
-}
-
-inline unsigned long long int NowTimeInt(void)
-{
-   time_t t;
-   time(&t);
-   return (unsigned long long int)t;
 }
 
 #endif //WIN32

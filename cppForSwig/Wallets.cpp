@@ -2170,7 +2170,7 @@ int AssetWallet::getAssetIndexForAddr(const BinaryData& scrAddr)
 
       auto iter6 = hashMaps_.hashNestedP2WSH_.find(scriptHash);
       if (iter6 != hashMaps_.hashNestedP2WSH_.end())
-         return iter3->second;
+         return iter6->second;
 
       return INT32_MAX;
    };
@@ -2195,11 +2195,7 @@ int AssetWallet::getAssetIndexForAddr(const BinaryData& scrAddr)
    }
 
    auto&& scriptHash = BtcUtils::base58toScriptAddr(scrAddr);
-   if (scriptHash.getSize() < 4)
-      throw WalletException("invalid scrAddr");
-
-   auto hashRef = scrAddr.getSliceRef(0, scriptHash.getSize() - 4);
-   return getIndexForAddr(hashRef);
+   return getIndexForAddr(scriptHash);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2264,7 +2260,7 @@ shared_ptr<AddressEntry> AssetWallet_Single::getAddressEntryForAsset(
       throw WalletException("unsupported address entry type");
    }
 
-   if (ae_type == default_aet_ || ae_type == prev_aet)
+   if (ae_type == prev_aet)
       assetPtr->doNotCommit();
    else
       writeAssetEntry(assetPtr);
@@ -2415,18 +2411,19 @@ void AssetWallet_Single::fillHashIndexMap()
       for (auto& entry : assets_)
       {
          auto assetSingle = dynamic_pointer_cast<AssetEntry_Single>(entry.second);
+         auto&& hashMap = assetSingle->getScriptHashMap();
          
          hashMaps_.hashUncompressed_.insert(make_pair(
-            assetSingle->getHash160Uncompressed().getRef(), assetSingle->getId()));
+            hashMap[ScriptHash_P2PKH_Uncompressed], assetSingle->getId()));
          
          hashMaps_.hashCompressed_.insert(make_pair(
-            assetSingle->getHash160Compressed().getRef(), assetSingle->getId()));
+            hashMap[ScriptHash_P2PKH_Compressed], assetSingle->getId()));
          
          hashMaps_.hashNestedP2WPKH_.insert(make_pair(
-            assetSingle->getWitnessScriptH160().getRef(), assetSingle->getId()));
+            hashMap[ScriptHash_P2WPKH], assetSingle->getId()));
 
          hashMaps_.hashNestedP2PK_.insert(make_pair(
-            assetSingle->getP2PKScriptH160().getRef(), assetSingle->getId()));
+            hashMap[ScriptHash_Nested_P2PK], assetSingle->getId()));
       }
 
       lastKnownIndex_ = assets_.rbegin()->first;
@@ -2949,6 +2946,11 @@ int AssetWallet::convertToImportIndex(int importID)
    return INT32_MIN + importID;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+int AssetWallet::convertFromImportIndex(int importID)
+{
+   return INT32_MAX + 1 + importID;
+}
 ////////////////////////////////////////////////////////////////////////////////
 const SecureBinaryData& AssetWallet_Single::getDecryptedValue(
    shared_ptr<Asset_PrivateKey> assetPtr)
@@ -4028,6 +4030,26 @@ AddressEntryType AssetEntry_Single::getAddressTypeForHash(
 
 
    return AddressEntryType_Default;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+map<ScriptHashType, BinaryDataRef> AssetEntry_Single::getScriptHashMap() const
+{
+   map<ScriptHashType, BinaryDataRef> result;
+
+   result.insert(make_pair(
+      ScriptHash_P2PKH_Uncompressed, getHash160Uncompressed().getRef()));
+
+   result.insert(make_pair(
+      ScriptHash_P2PKH_Compressed, getHash160Compressed().getRef()));
+
+   result.insert(make_pair(
+      ScriptHash_P2WPKH, getWitnessScriptH160().getRef()));
+
+   result.insert(make_pair(
+      ScriptHash_Nested_P2PK, getP2PKScriptH160().getRef()));
+
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

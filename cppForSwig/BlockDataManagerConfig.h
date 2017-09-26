@@ -27,6 +27,8 @@
 #include <wordexp.h>
 #endif
 
+#define DEFAULT_ZCTHREAD_COUNT 100
+
 ////////////////////////////////////////////////////////////////////////////////
 struct BlockDataManagerConfig
 {
@@ -59,9 +61,12 @@ struct BlockDataManagerConfig
    string fcgiPort_;
    string rpcPort_;
 
+   bool customFcgiPort_ = false;
+
 
    unsigned ramUsage_ = 4;
    unsigned threadCount_ = thread::hardware_concurrency();
+   unsigned zcThreadCount_ = DEFAULT_ZCTHREAD_COUNT;
 
    exception_ptr exceptionPtr_ = nullptr;
 
@@ -100,6 +105,7 @@ struct BlockDataManagerConfig
 
    void processArgs(const map<string, string>&, bool);
    void parseArgs(int argc, char* argv[]);
+   void createCookie(void) const;
    void printHelp(void);
    static string portToString(unsigned);
 
@@ -111,6 +117,12 @@ struct BlockDataManagerConfig
       const vector<string>&, char delim);
    static pair<string, string> getKeyValFromLine(const string&, char delim);
    static string stripQuotes(const string& input);
+   static vector<string> keyValToArgv(const map<string, string>&);
+   
+   static bool testConnection(const string& ip, const string& port);
+   static string hasLocalDB(const string& datadir, const string& port);
+   static string getPortFromCookie(const string& datadir);
+   static string getCookie(const string& datadir);
 };
 
 ////
@@ -193,6 +205,9 @@ struct ConfigFile
    map<string, string> keyvalMap_;
 
    ConfigFile(const string& path);
+
+   static vector<BinaryData> fleshOutArgs(
+      const string& path, const vector<BinaryData>& argv);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

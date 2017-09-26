@@ -259,6 +259,14 @@ enum CypherType
    CypherType_Serpent
 };
 
+enum ScriptHashType
+{
+   ScriptHash_P2PKH_Uncompressed,
+   ScriptHash_P2PKH_Compressed,
+   ScriptHash_P2WPKH,
+   ScriptHash_Nested_P2PK
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 struct KeyDerivationFunction
 {
@@ -715,6 +723,8 @@ public:
 
    const BinaryData& getP2PKScript(void) const;
    const BinaryData& getP2PKScriptH160(void) const;
+
+   map<ScriptHashType, BinaryDataRef> getScriptHashMap(void) const;
 
    //virtual
    BinaryData serialize(void) const;
@@ -1327,6 +1337,7 @@ public:
    //static
    static shared_ptr<AssetWallet> loadMainWalletFromFile(const string& path);
    static int convertToImportIndex(int importID);
+   static int convertFromImportIndex(int importID);
 };
 
 ////

@@ -185,6 +185,8 @@ class LedgerDispModelSimple(QAbstractTableModel):
       self.getPageLedger = None
       self.convertLedger = None
       
+      self.ledgerDelegate = None
+      
    def rowCount(self, index=QModelIndex()):
       return len(self.ledger)
 
@@ -750,7 +752,8 @@ class ArmoryTableView(QTableView):
    def setModel(self, model):
       QTableView.setModel(self, model)
       self.ledgerModel = model
-      self.BlockAndDateSelector.ledgerDelegate = self.ledgerModel.ledgerDelegate
+      if model is not None:
+         self.BlockAndDateSelector.ledgerDelegate = self.ledgerModel.ledgerDelegate
       
    def scrollBarRangeChanged(self, rangeMin, rangeMax):
       pos = int(self.vBarRatio * rangeMax) 
@@ -997,10 +1000,7 @@ class WalletAddrDispModel(QAbstractTableModel):
          if col==COL.Address: 
             return QVariant( addrB58 )
          if col==COL.Comment: 
-            if addr160 in self.wlt.commentsMap:
-               return QVariant( self.wlt.commentsMap[addr160] )
-            else:
-               return QVariant('')
+            return QVariant(self.wlt.getComment(addr160[1:]))
          if col==COL.NumTx: 
             if not TheBDM.getState()==BDM_BLOCKCHAIN_READY:
                return QVariant('n/a')
@@ -1136,7 +1136,7 @@ class TxInDispModel(QAbstractTableModel):
       ustx = None
       if isinstance(pytx, UnsignedTransaction):
          ustx = pytx
-         pytx = ustx.getPyTxSignedIfPossible()
+         pytx = ustx.pytxObj
       self.tx = pytx.copy()
       
       for i,txin in enumerate(self.tx.inputs):
@@ -1166,7 +1166,7 @@ class TxInDispModel(QAbstractTableModel):
             elif ustx is None:
                self.dispTable[-1].append(CPP_TXIN_SCRIPT_NAMES[scrType])
             else:
-               isSigned = ustx.ustxInputs[i].evaluateSigningStatus().allSigned
+               isSigned = ustx.ustxInputs[i].evaluateSigningStatus(pytx=pytx).allSigned
                self.dispTable[-1].append('Signed' if isSigned else 'Unsigned')
                
             self.dispTable[-1].append(int_to_hex(txin.intSeq, widthBytes=4))

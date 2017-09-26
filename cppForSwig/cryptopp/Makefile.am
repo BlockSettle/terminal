@@ -13,7 +13,26 @@ endif
 if IS_X86
 if CRYPTOPP_HAVE_GCC
 if ! BUILD_DARWIN
-AM_CXXFLAGS += -march=native -mtune=generic -mpclmul -maes $(X86_FEATURE_CFLAGS)
+
+if ! GAS210_OR_LATER	# .intel_syntax wasn't supported until GNU assembler 2.10
+AM_CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+else
+if ! GAS217_OR_LATER
+AM_CXXFLAGS += -DCRYPTOPP_DISABLE_SSSE3
+else
+AM_CXXFLAGS += -march=native -mtune=generic $(X86_FEATURE_CFLAGS)
+
+if HAVE_AES
+AM_CXXFLAGS += -maes -DCRYPTOPP_ENABLE_AESNI
+endif
+
+if HAVE_PCLMUL
+AM_CXXFLAGS += -mpclmul
+endif
+
+endif
+endif
+
 endif	# ! BUILD_DARWIN
 endif	# CRYPTOPP_HAVE_GCC
 endif	# IS_X86

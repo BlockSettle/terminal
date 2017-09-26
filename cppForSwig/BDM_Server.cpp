@@ -74,7 +74,8 @@ void BDV_Server_Object::buildMethodMap()
                le.getValue(), le.getBlockNum(), le.getTxHash(),
                le.getIndex(), le.getTxTime(), le.isCoinbase(),
                le.isSentToSelf(), le.isChangeBack(), 
-               le.isOptInRBF(), le.isChainedZC(), le.usesWitness());
+               le.isOptInRBF(), le.isChainedZC(), le.usesWitness(),
+               le.getScrAddrList());
             lev.push_back(move(led));
          }
 
@@ -143,10 +144,11 @@ void BDV_Server_Object::buildMethodMap()
                      auto& le = lePair.second;
 
                      LedgerEntryData led(le.getWalletID(),
-                     le.getValue(), le.getBlockNum(), le.getTxHash(),
-                     le.getIndex(), le.getTxTime(), le.isCoinbase(),
-                     le.isSentToSelf(), le.isChangeBack(), 
-                     le.isOptInRBF(), le.isChainedZC(), le.usesWitness());
+                        le.getValue(), le.getBlockNum(), le.getTxHash(),
+                        le.getIndex(), le.getTxTime(), le.isCoinbase(),
+                        le.isSentToSelf(), le.isChangeBack(),
+                        le.isOptInRBF(), le.isChainedZC(), le.usesWitness(),
+                        le.getScrAddrList());
 
                      LedgerEntryVector lev;
                      lev.push_back(move(led));
@@ -211,6 +213,29 @@ void BDV_Server_Object::buildMethodMap()
    };
 
    methodMap_["registerLockbox"] = registerLockbox;
+
+   //registerAddrList
+   auto registerAddrList = [this]
+      (const vector<string>& ids, Arguments& args)->Arguments
+   {
+      if (ids.size() != 1)
+         throw runtime_error("unexpected id count");
+
+      auto&& id_bdo = args.get<BinaryDataObject>();
+      auto& id_bd = id_bdo.get();
+      string id_str(id_bd.toCharPtr(), id_bd.getSize());
+
+      auto&& scrAddrVec = args.get<BinaryDataVector>();
+
+      this->registerAddrVec(id_str, scrAddrVec.get());
+      auto retVal = IntType(1);
+
+      Arguments retarg;
+      retarg.push_back(move(retVal));
+      return retarg;
+   };
+
+   methodMap_["registerAddrList"] = registerAddrList;
 
    //getLedgerDelegateForWallets
    auto getLedgerDelegateForWallets = [this]
@@ -512,7 +537,8 @@ void BDV_Server_Object::buildMethodMap()
 
       auto broadcastLBD = [this](BinaryDataObject bdo)->void
       {
-         this->zeroConfCont_->broadcastZC(bdo.get(), this->getID());
+         this->zeroConfCont_->broadcastZC(
+            bdo.get(), this->getID(), TXGETDATA_TIMEOUT_MS);
       };
       
       auto&& rawTx = args.get<BinaryDataObject>();
@@ -666,9 +692,9 @@ void BDV_Server_Object::buildMethodMap()
          throw runtime_error("unexpected id count");
 
       auto height = args.get<IntType>().getVal();
-      auto& header = blockchain().getHeaderByHeight(height);
+      auto header = blockchain().getHeaderByHeight(height);
 
-      BinaryDataObject bdo(header.serialize());
+      BinaryDataObject bdo(header->serialize());
 
       Arguments retarg;
       retarg.push_back(move(bdo));
@@ -740,7 +766,6 @@ void BDV_Server_Object::buildMethodMap()
    auto estimateFee = [this]
       (const vector<string>& ids, Arguments& args)->Arguments
    {
-
       auto blocksToConfirm = args.get<IntType>().getVal();
       auto feeByte = 
          this->bdmPtr_->nodeRPC_->getFeeByte(blocksToConfirm);
@@ -783,8 +808,9 @@ void BDV_Server_Object::buildMethodMap()
             LedgerEntryData led(le.getWalletID(),
                le.getValue(), le.getBlockNum(), le.getTxHash(),
                le.getIndex(), le.getTxTime(), le.isCoinbase(),
-               le.isSentToSelf(), le.isChangeBack(), 
-               le.isOptInRBF(), le.isChainedZC(), le.usesWitness());
+               le.isSentToSelf(), le.isChangeBack(),
+               le.isOptInRBF(), le.isChainedZC(), le.usesWitness(),
+               le.getScrAddrList());
             lev.push_back(move(led));
          }
       }
@@ -816,6 +842,92 @@ void BDV_Server_Object::buildMethodMap()
    };
 
    methodMap_["getValueForTxOut"] = getValueForTxOut;
+
+   //broadcastThroughRPC
+   auto broadcastThroughRPC = [this]
+      (const vector<string>& ids, Arguments& args)->Arguments
+   {
+      auto&& rawTx = args.get<BinaryDataObject>();
+      auto& rawTxBd = rawTx.get();
+
+      auto&& response =
+         this->bdmPtr_->nodeRPC_->broadcastTx(rawTxBd);
+
+      if (response == "success")
+      {
+         this->bdmPtr_->zeroConfCont_->pushZcToParser(rawTxBd);
+      }
+
+      BinaryData response_bdr(response);
+
+      Arguments retarg;
+      retarg.push_back(move(BinaryDataObject(move(response_bdr))));
+      return move(retarg);
+   };
+
+   methodMap_["broadcastThroughRPC"] = broadcastThroughRPC;
+
+   //getUTXOsForAddrList
+   auto getUTXOsForAddrList = [this]
+      (const vector<string>& ids, Arguments& args)->Arguments
+   {
+      auto&& addrBdVec = args.get<BinaryDataVector>();
+      auto& addrVec = addrBdVec.get();
+
+      auto&& utxoVec = this->getUnspentTxoutsForAddr160List(addrVec, false);
+
+      Arguments retarg;
+      auto count = IntType(utxoVec.size());
+      retarg.push_back(move(count));
+
+      for (auto& utxo : utxoVec)
+      {
+         UTXO entry(utxo.value_, utxo.txHeight_, utxo.txIndex_, utxo.txOutIndex_,
+            move(utxo.txHash_), move(utxo.script_));
+
+         auto&& bdser = entry.serialize();
+         BinaryDataObject bdo(move(bdser));
+         retarg.push_back(move(bdo));
+      }
+
+      return retarg;
+   };
+
+   methodMap_["getUTXOsForAddrList"] = getUTXOsForAddrList;
+
+   //getRawHeaderForTxHash
+   auto getRawHeaderForTxHash = [this]
+      (const vector<string>& ids, Arguments& args)->Arguments
+   {
+      auto&& hash = args.get<BinaryDataObject>();
+      auto&& dbKey = this->db_->getDBKeyForHash(hash.get());
+      
+      Arguments retarg;
+      if (dbKey.getSize() == 0)
+         return retarg;
+
+      unsigned height; uint8_t dup;
+      BinaryRefReader key_brr(dbKey.getRef());
+      DBUtils::readBlkDataKeyNoPrefix(key_brr, height, dup);
+
+      BinaryData rawHeader;
+      try
+      {
+         auto block = this->blockchain().getHeaderByHeight(height);
+         rawHeader = block->serialize();
+      }
+      catch (exception&)
+      {
+         return retarg;
+      }
+
+      BinaryDataObject headerBDO(move(rawHeader));
+      retarg.push_back(move(headerBDO));
+      return retarg;
+   };
+
+   methodMap_["getRawHeaderForTxHash"] = getRawHeaderForTxHash;
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -824,7 +936,10 @@ const shared_ptr<BDV_Server_Object>& Clients::get(const string& id) const
    auto bdvmap = BDVs_.get();
    auto iter = bdvmap->find(id);
    if (iter == bdvmap->end())
+   {
+      LOGERR << "unknown BDVid";
       throw runtime_error("unknown BDVid");
+   }
 
    return iter->second;
 }
@@ -909,7 +1024,10 @@ Arguments Clients::runCommand(const string& cmdStr)
    auto bdv = get(cmdObj.ids_[0]);
 
    //execute command
-   return bdv->executeCommand(cmdObj.method_, cmdObj.ids_, cmdObj.args_);
+   auto&& result = bdv->executeCommand(cmdObj.method_, cmdObj.ids_, cmdObj.args_);
+   bdv->resetCounter();
+
+   return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1040,7 +1158,7 @@ void Clients::maintenanceThread(void) const
       try
       {
          notifPtr = move(bdmT_->bdm()->notificationStack_.pop_front(
-            chrono::seconds(120)));
+            chrono::seconds(60)));
          if (notifPtr == nullptr)
             continue;
          timedout = false;
@@ -1285,6 +1403,7 @@ void FCGI_Server::processRequest(FCGX_Request* req)
    }
    else
    {
+      LOGERR << "empty content_length";
       FCGX_Finish_r(req);
       delete req;
 
@@ -1347,7 +1466,7 @@ BDV_Server_Object::BDV_Server_Object(
    {
       if (lbdFut.wait_for(chrono::seconds(0)) == future_status::ready)
       {
-         return bc->top().getBlockHeight();
+         return bc->top()->getBlockHeight();
       }
 
       return UINT32_MAX;
@@ -1454,7 +1573,7 @@ void BDV_Server_Object::init()
    Arguments args;
    BinaryDataObject bdo("BDM_Ready");
    args.push_back(move(bdo));
-   unsigned int topblock = blockchain().top().getBlockHeight();
+   unsigned int topblock = blockchain().top()->getBlockHeight();
    args.push_back(move(IntType(topblock)));
    cb_->callback(move(args));
 
@@ -1494,7 +1613,7 @@ void BDV_Server_Object::maintenanceThread(void)
             auto&& payload =
                dynamic_pointer_cast<BDV_Notification_NewBlock>(notifPtr);
             uint32_t blocknum =
-               payload->reorgState_.newTop->getBlockHeight();
+               payload->reorgState_.newTop_->getBlockHeight();
 
             BinaryDataObject bdo("NewBlock");
             args2.push_back(move(bdo));
@@ -1540,7 +1659,8 @@ void BDV_Server_Object::maintenanceThread(void)
                   le.getValue(), le.getBlockNum(), move(le.getTxHash()),
                   le.getIndex(), le.getTxTime(), le.isCoinbase(),
                   le.isSentToSelf(), le.isChangeBack(), 
-                  le.isOptInRBF(), le.isChainedZC(), le.usesWitness());
+                  le.isOptInRBF(), le.isChainedZC(), le.usesWitness(),
+                  le.getScrAddrList());
 
                lev.push_back(move(led));
             }
@@ -1630,7 +1750,6 @@ bool BDV_Server_Object::registerWallet(
    if (isReadyFuture_.wait_for(chrono::seconds(0)) != future_status::ready)
    {
       //only run this code if the bdv maintenance thread hasn't started yet
-
       unique_lock<mutex> lock(registerWalletMutex_);
 
       //save data
@@ -1647,6 +1766,31 @@ bool BDV_Server_Object::registerWallet(
    //register wallet with BDV
    auto bdvPtr = (BlockDataViewer*)this;
    return bdvPtr->registerWallet(scrAddrVec, IDstr, wltIsNew) != nullptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void BDV_Server_Object::registerAddrVec(
+   const string& idStr,
+   vector<BinaryData> const& scrAddrVec)
+{
+   if (isReadyFuture_.wait_for(chrono::seconds(0)) != future_status::ready)
+   {
+      //only run this code if the bdv maintenance thread hasn't started yet
+      unique_lock<mutex> lock(registerWalletMutex_);
+
+      //save data
+      auto& wltregstruct = wltRegMap_[idStr];
+
+      wltregstruct.scrAddrVec = scrAddrVec;
+      wltregstruct.IDstr = idStr;
+      wltregstruct.isNew = false;
+      wltregstruct.type_ = TypeWallet;
+
+      return;
+   }
+
+   //register wallet with BDV
+   registerArbitraryAddressVec(scrAddrVec, idStr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1731,6 +1875,8 @@ Arguments SocketCallback::respond(const string& command)
    }
    catch (StopBlockingLoop&)
    {
+      count_ = 5;
+
       //return terminate packet
       Callback::OrderStruct terminateOrder;
       BinaryDataObject bdo("terminate");
@@ -1770,6 +1916,8 @@ Arguments SocketCallback::respond(const string& command)
 
          case OrderTerminate:
          {
+            count_ = 5;
+
             Arguments terminateArg;
             BinaryDataObject bdo("terminate");
             terminateArg.push_back(move(bdo));
