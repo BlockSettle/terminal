@@ -137,7 +137,7 @@ void WalletManager::synchronizeWallet(const string& id, unsigned chainLength)
    if (wltSingle == nullptr)
       throw runtime_error("invalid wallet ptr");
 
-   wltSingle->extendChainTo(chainLength);
+   wltSingle->extendPublicChainToIndex(chainLength);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

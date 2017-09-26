@@ -219,7 +219,7 @@ public:
       }
 
       if (updateWallet)
-         wallet_->update();
+         wallet_->updateOnDiskAssets();
 
       return countMap_;
    }
@@ -281,12 +281,12 @@ public:
 
    void extendAddressChain(unsigned count)
    {
-      wallet_->extendChain(count);
+      wallet_->extendPublicChain(count);
    }
 
-   bool extendAddressChainTo(unsigned count)
+   bool extendAddressChainToIndex(unsigned count)
    {
-      return wallet_->extendChainTo(count);
+      return wallet_->extendPublicChainToIndex(count);
    }
 
    int getLastComputedIndex(void) const
