@@ -2081,7 +2081,8 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
       AddressEntryType_Nested_P2PK,
-      move(wltRoot),
+      wltRoot,
+      SecureBinaryData(),
       5);
 
    //register with db
