@@ -9,6 +9,10 @@
 #include "BlockDataMap.h"
 #include "BtcUtils.h"
 
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 void BlockData::deserialize(const uint8_t* data, size_t size,
    const shared_ptr<BlockHeader> blockHeader,
@@ -222,5 +226,20 @@ BlockDataFileMap::BlockDataFileMap(const string& filename)
    catch (exception &e)
    {
       LOGERR << "Failed to create BlockDataMap with error: " << e.what();
+   }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+BlockDataFileMap::~BlockDataFileMap()
+{
+   //close file mmap
+   if (fileMap_ != nullptr)
+   {
+#ifdef _WIN32
+      UnmapViewOfFile(fileMap_);
+#else
+      munmap(fileMap_, size_);
+#endif
+      fileMap_ = nullptr;
    }
 }

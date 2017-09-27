@@ -90,7 +90,7 @@ void WalletManager::duplicateWOWallet(
    auto cc = chainCode;
 
    auto newWO = AssetWallet_Single::createFromPublicRoot_Armory135(
-      path_, AddressEntryType_P2PKH, move(root), move(cc), chainLength);
+      path_, AddressEntryType_P2PKH, root, cc, chainLength);
 
    auto getBDVLambda = [this](void)->SwigClient::BlockDataViewer&
    {

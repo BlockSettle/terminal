@@ -358,7 +358,7 @@ FileMap DBUtils::getMmapOfFile(const string& path)
       if (fd == -1)
          throw runtime_error("failed to open file");
 
-      size = lseek(fd, 0, SEEK_END);
+      auto size = lseek(fd, 0, SEEK_END);
 
       if (size == 0)
       {
@@ -404,7 +404,7 @@ FileMap DBUtils::getMmapOfFile(const string& path)
       CloseHandle(mh);
       _close(fd);
 #else
-      fMap.filePtr_ = (uint8_t*)mmap(0, size_, PROT_READ, MAP_SHARED,
+      fMap.filePtr_ = (uint8_t*)mmap(0, size, PROT_READ, MAP_SHARED,
          fd, 0);
       if (fMap.filePtr_ == MAP_FAILED) {
          fMap.filePtr_ = NULL;

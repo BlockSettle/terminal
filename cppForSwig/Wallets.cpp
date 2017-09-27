@@ -318,7 +318,7 @@ unique_ptr<DecryptedEncryptionKey>
    DecryptedEncryptionKey::copy() const
 {
    auto key_copy = rawKey_;
-   auto copy_ptr = make_unique<DecryptedEncryptionKey>(move(key_copy));
+   auto copy_ptr = make_unique<DecryptedEncryptionKey>(key_copy);
 
    copy_ptr->derivedKeys_ = derivedKeys_;
 
@@ -419,7 +419,7 @@ unique_ptr<DecryptedEncryptionKey>
    if (derivationIter == decrKey->derivedKeys_.end())
    {
       //look for the kdf
-      auto& kdfIter = kdfMap_.find(kdfid);
+      auto kdfIter = kdfMap_.find(kdfid);
       if (kdfIter == kdfMap_.end() || kdfIter->second == nullptr)
          throw DecryptedDataContainerException("can't find kdf params for id");
       
@@ -478,7 +478,7 @@ const SecureBinaryData& DecryptedDataContainer::getDecryptedPrivateKey(
       //null cypher, data is not encrypted, create entry and return it
       auto dataCopy = dataPtr->data_;
       auto&& decrKey = make_unique<DecryptedPrivateKey>(
-         dataPtr->getId(), move(dataCopy));
+         dataPtr->getId(), dataCopy);
       return insertDecryptedData(move(decrKey));
    }
 
@@ -1002,11 +1002,11 @@ createFromPrivateRoot_Armory135(
    auto walletPtr = initWalletDb(
       wltMetaPtr,
       kdfPtr,
-      move(masterEncryptionKey),
+      masterEncryptionKey,
       move(cypher),
       passphrase, 
       defaultAddressType, 
-      move(privateRoot), lookup);
+      privateRoot, lookup);
 
    //set as main
    {
@@ -1054,7 +1054,7 @@ createFromPublicRoot_Armory135(
    auto walletPtr = initWalletDbFromPubRoot(
       wltMetaPtr,
       defaultAddressType,
-      move(pubRoot), move(chainCode), 
+      pubRoot, chainCode, 
       lookup);
 
    //set as main
@@ -1305,7 +1305,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
    //chaincode
    auto&& chaincode = BtcUtils::computeChainCode_Armory135(privateRoot);
    auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
-      move(chaincode), nullptr);
+      chaincode, nullptr);
 
    //create root AssetEntry
    auto&& pubkey = CryptoECDSA().ComputePublicKey(privateRoot);
@@ -1322,7 +1322,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
       -1, encryptedRoot, move(rootCypher));
 
    auto rootAssetEntry = make_shared<AssetEntry_Single>(-1,
-      move(pubkey), rootAsset);
+      pubkey, rootAsset);
 
    //compute wallet ID if it is missing
    if (metaPtr->walletID_.getSize() == 0)
@@ -1450,11 +1450,11 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDbFromPubRoot(
 {
    //derScheme
    auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
-      move(chainCode), nullptr);
+      chainCode, nullptr);
 
    //create root AssetEntry
    auto rootAssetEntry = make_shared<AssetEntry_Single>(-1,
-      move(pubRoot), nullptr);
+      pubRoot, nullptr);
 
    //compute wallet ID
    if (metaPtr->walletID_.getSize() == 0)
@@ -1598,8 +1598,8 @@ shared_ptr<AssetWallet_Multisig> AssetWallet_Multisig::createFromPrivateRoot(
    }
 
    auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
-   DecryptedEncryptionKey masterEncryptionKey(
-      move(SecureBinaryData().GenerateRandom(32)));
+   auto&& masterKey_randomized = SecureBinaryData().GenerateRandom(32);
+   DecryptedEncryptionKey masterEncryptionKey(masterKey_randomized);
 
    //create N sub wallets
    map<BinaryData, shared_ptr<AssetWallet_Single>> subWallets;
@@ -2922,9 +2922,9 @@ bool AssetWallet_Single::setImport(
       return false;
 
    auto pubkey_copy = pubkey;
-   auto empty_privkey = SecureBinaryData();
+   SecureBinaryData empty_privkey;
    auto newAsset = make_shared<AssetEntry_Single>(
-      importIndex, move(pubkey_copy), move(empty_privkey), nullptr);
+      importIndex, pubkey_copy, empty_privkey, nullptr);
 
    assets_.insert(make_pair(importIndex, newAsset));
    writeAssetEntry(newAsset);
@@ -3005,7 +3005,7 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(BinaryDataRef data)
       auto len = brr.get_var_int();
       auto&& chainCode = SecureBinaryData(brr.get_BinaryDataRef(len));
       derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
-         move(chainCode), nullptr);
+         chainCode, nullptr);
 
       break;
    }
@@ -3058,7 +3058,7 @@ vector<shared_ptr<AssetEntry>> DerivationScheme_ArmoryLegacy::extendPublicChain(
 
       return make_shared<AssetEntry_Single>(
          assetSingle->getId() + 1,
-         move(nextPubkey), nullptr);
+         nextPubkey, nullptr);
    };
    
    vector<shared_ptr<AssetEntry>> assetVec;
@@ -3111,12 +3111,12 @@ shared_ptr<AssetEntry> firstAsset, unsigned count)
       //instantiate new encrypted key object
       auto id_int = assetSingle->getId() + 1;
       auto nextPrivKey = make_shared<Asset_PrivateKey>(id_int,
-         move(encryptedNextPrivKey), move(newCypher));
+         encryptedNextPrivKey, move(newCypher));
 
       //instantiate and return new asset entry
       return make_shared<AssetEntry_Single>(
          assetSingle->getId() + 1,
-         move(nextPubkey), nextPrivKey);
+         nextPubkey, nextPrivKey);
    };
    
    if (decryptedDataContainer_ == nullptr)
@@ -3765,7 +3765,7 @@ unique_ptr<DecryptedEncryptionKey> Asset_EncryptionKey::decrypt(
    const SecureBinaryData& key) const
 {
    auto decryptedData = cypher_->decrypt(key, data_);
-   auto decrPtr = make_unique<DecryptedEncryptionKey>(move(decryptedData));
+   auto decrPtr = make_unique<DecryptedEncryptionKey>(decryptedData);
    return move(decrPtr);
 }
 
@@ -3774,7 +3774,7 @@ unique_ptr<DecryptedPrivateKey> Asset_PrivateKey::decrypt(
    const SecureBinaryData& key) const
 {
    auto&& decryptedData = cypher_->decrypt(key, data_);
-   auto decrPtr = make_unique<DecryptedPrivateKey>(id_, move(decryptedData));
+   auto decrPtr = make_unique<DecryptedPrivateKey>(id_, decryptedData);
    return move(decrPtr);
 }
 
@@ -4293,7 +4293,7 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(int index, BinaryDataRef value)
       }
 
       auto addrEntry = make_shared<AssetEntry_Single>(index, 
-         move(pubKeyUncompressed), move(pubKeyCompressed), privKeyPtr);
+         pubKeyUncompressed, pubKeyCompressed, privKeyPtr);
       
       addrEntry->setAddressEntryType(addressType);
       addrEntry->doNotCommit();
@@ -4430,7 +4430,7 @@ unique_ptr<Cypher> Cypher::deserialize(BinaryRefReader& brr)
    case CypherType_AES:
    {
       cypher = move(make_unique<Cypher_AES>(
-         kdfId, encryptionKeyId, move(iv)));
+         kdfId, encryptionKeyId, iv));
 
       break;
    }

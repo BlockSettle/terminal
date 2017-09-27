@@ -594,7 +594,7 @@ private:
 public:
    Asset_EncryptionKey(BinaryData& id, SecureBinaryData& data, 
       unique_ptr<Cypher> cypher) :
-      Asset_EncryptedData(move(data), move(cypher)), id_(move(id))
+      Asset_EncryptedData(data, move(cypher)), id_(move(id))
    {}
 
    BinaryData serialize(void) const;
@@ -618,11 +618,11 @@ private:
 public:
    Asset_PrivateKey(int id, 
       SecureBinaryData& data, unique_ptr<Cypher> cypher) :
-      Asset_EncryptedData(move(data), move(cypher)), id_(id)
+      Asset_EncryptedData(data, move(cypher)), id_(id)
    {}
    
    BinaryData serialize(void) const;
-   const unsigned& getId(void) const { return id_; }
+   unsigned getId(void) const { return id_; }
 
    bool isSame(Asset_EncryptedData* const) const;
 };
@@ -691,7 +691,7 @@ public:
       shared_ptr<Asset_PrivateKey> privkey) :
       AssetEntry(AssetEntryType_Single, id), privkey_(privkey)
    {
-      pubkey_ = make_shared<Asset_PublicKey>(move(pubkey));
+      pubkey_ = make_shared<Asset_PublicKey>(pubkey);
    }
 
    AssetEntry_Single(int id,
@@ -701,7 +701,7 @@ public:
       AssetEntry(AssetEntryType_Single, id), privkey_(privkey)
    {
       pubkey_ = make_shared<Asset_PublicKey>(
-         move(pubkeyUncompressed), move(pubkeyCompressed));
+         pubkeyUncompressed, pubkeyCompressed);
    }
 
    AssetEntry_Single(int id,
@@ -787,6 +787,8 @@ public:
    bool hasPrivateKey(void) const;
    const BinaryData& getPrivateEncryptionKeyId(void) const;
 };
+
+class DecryptedDataContainer;
 
 ////////////////////////////////////////////////////////////////////////////////
 struct DerivationScheme

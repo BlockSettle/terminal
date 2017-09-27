@@ -307,20 +307,7 @@ private:
 
 public:
    BlockDataFileMap(const string& filename);
-
-   ~BlockDataFileMap(void)
-   {
-      //close file mmap
-      if (fileMap_ != nullptr)
-      {
-#ifdef _WIN32
-         UnmapViewOfFile(fileMap_);
-#else
-         munmap(fileMap_, size_);
-#endif
-         fileMap_ = nullptr;
-      }
-   }
+   ~BlockDataFileMap(void);
 
    const uint8_t* getPtr() const
    {
