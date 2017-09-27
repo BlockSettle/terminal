@@ -5866,8 +5866,8 @@ TEST_F(WalletsTest, CreateWOCopy_Test)
    auto woWallet = AssetWallet_Single::createFromPublicRoot_Armory135(
       homedir_,
       AddressEntryType_P2PKH,
-      move(pubRoot),
-      move(chainCode),
+      pubRoot,
+      chainCode,
       4);
 
    //get AddrVec
@@ -7189,7 +7189,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_Multisig)
       homedir_,
       AddressEntryType_Nested_Multisig,
       2, 3, //2-of-3
-      move(wltRoot), //root as a r value
+      wltRoot, //root as a r value
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
@@ -9260,7 +9260,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WSH)
       homedir_,
       AddressEntryType_Nested_P2WSH,
       2, 3, //2-of-3
-      move(wltRoot), //root as a r value
+      wltRoot, //root as a r value
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
@@ -9557,7 +9557,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WSH)
       homedir_,
       AddressEntryType_P2WSH,
       2, 3, //2-of-3
-      move(wltRoot), //root as a r value
+      wltRoot, //root as a r value
       3); //set lookup computation to 3 entries
 
    //register with db
