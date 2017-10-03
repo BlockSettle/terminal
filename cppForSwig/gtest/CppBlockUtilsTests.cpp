@@ -7152,7 +7152,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WPKH)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(TransactionsTest, Wallet_SpendTest_Nested_Multisig)
+TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_Multisig)
 {
    //create spender lamba
    auto getSpenderPtr = [](
@@ -9223,7 +9223,7 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WSH)
+TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_P2WSH)
 {
    //create spender lamba
    auto getSpenderPtr = [](
