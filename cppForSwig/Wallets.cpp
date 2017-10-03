@@ -3094,8 +3094,8 @@ shared_ptr<AssetEntry> firstAsset, unsigned count)
          decryptedDataContainer_->getDecryptedPrivateKey(privkey);
 
       //chain the private key
-      auto&& nextPrivkeySBD = move(CryptoECDSA().ComputeChainedPrivateKey(
-         privkeyData, chainCode_));
+      auto&& nextPrivkeySBD = CryptoECDSA().ComputeChainedPrivateKey(
+         privkeyData, chainCode_);
       
       //compute its pubkey
       auto&& nextPubkey = CryptoECDSA().ComputePublicKey(nextPrivkeySBD);
