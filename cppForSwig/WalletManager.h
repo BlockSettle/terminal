@@ -172,8 +172,6 @@ public:
    
    const map<BinaryData, uint32_t>& getAddrTxnCountsFromDB(void)
    {
-      bool updateWallet = false;
-
       auto&& countmap = swigWallet_->getAddrTxnCountsFromDB();
 
       for (auto count : countmap)
@@ -185,17 +183,11 @@ public:
          countMap_[count.first] = count.second;
 
          //fetch the asset in wallet
-         auto assetIndex = wallet_->getAssetIndexForAddr(count.first);
-         auto asset = wallet_->getAssetForIndex(assetIndex);
+         auto& assetID = wallet_->getAssetIDForAddr(count.first);
+         auto addrType = wallet_->getAddrTypeForID(assetID);
 
-         auto hashType = asset->getAddressTypeForHash(
-            count.first.getSliceRef(1, count.first.getSize() - 1));
-
-         updateWallet = asset->setAddressEntryType(hashType);
+         wallet_->getAddressEntryForID(assetID, addrType);
       }
-
-      if (updateWallet)
-         wallet_->updateOnDiskAssets();
 
       return countMap_;
    }
@@ -243,19 +235,29 @@ public:
       return swigWallet_->createAddressBook();
    }
 
-   BinaryData getNestedSWAddrForIndex(unsigned chainIndex)
+   BinaryData getNestedSWAddrForID(const BinaryData& ID)
    {
-      return wallet_->getNestedSWAddrForIndex(chainIndex);
+      auto addrPtr = wallet_->getAddressEntryForID(ID,
+         AddressEntryType(AddressEntryType_P2WPKH | AddressEntryType_P2SH));
+      return addrPtr->getAddress();
    }
 
-   BinaryData getNestedP2PKAddrForIndex(unsigned chainIndex)
+   BinaryData getNestedP2PKAddrForIndex(const BinaryData& ID)
    {
-      return wallet_->getNestedP2PKAddrForIndex(chainIndex);
+      auto addrPtr = wallet_->getAddressEntryForID(ID,
+         AddressEntryType(
+            AddressEntryType_P2PK | 
+            AddressEntryType_Compressed | 
+            AddressEntryType_P2SH
+            ));
+      return addrPtr->getAddress();
    }
 
-   BinaryData getP2PKHAddrForIndex(unsigned chainIndex)
+   BinaryData getP2PKHAddrForIndex(const BinaryData& ID)
    {
-      return wallet_->getP2PKHAddrForIndex(chainIndex);
+      auto addrPtr = wallet_->getAddressEntryForID(ID,
+         AddressEntryType(AddressEntryType_P2PKH));
+      return addrPtr->getAddress();
    }
 
    void extendAddressChain(unsigned count)
@@ -263,14 +265,9 @@ public:
       wallet_->extendPublicChain(count);
    }
 
-   bool extendAddressChainToIndex(unsigned count)
+   void extendAddressChainToIndex(const BinaryData& id, unsigned count)
    {
-      return wallet_->extendPublicChainToIndex(count);
-   }
-
-   int getLastComputedIndex(void) const
-   {
-      return wallet_->getLastComputedIndex();
+      wallet_->extendPublicChainToIndex(id, count);
    }
 
    bool hasScrAddr(const BinaryData& scrAddr)
@@ -278,50 +275,26 @@ public:
       return wallet_->hasScrAddr(scrAddr);
    }
 
-   int getAssetIndexForAddr(const BinaryData& scrAddr)
+   const BinaryData& getAssetIDForAddr(const BinaryData& scrAddr)
    {
-      return wallet_->getAssetIndexForAddr(scrAddr);
+      return wallet_->getAssetIDForAddr(scrAddr);
    }
 
-   const BinaryData& getP2SHScriptForHash(const BinaryData& script)
+   const BinaryData& getScriptHashPreimage(const BinaryData& hash)
    {
-      return wallet_->getP2SHScriptForHash(script);
+      auto& assetID = wallet_->getAssetIDForAddr(hash);
+      auto addrPtr = wallet_->getAddressEntryForID(assetID);
+      return addrPtr->getPreimage();
    }
 
-   AddressType getAddrTypeForIndex(int index)
+   AddressEntryType getAddrTypeForID(const BinaryData& ID)
    {
-      auto addrType = wallet_->getAddrTypeForIndex(index);
-
-      AddressType type;
-      switch (addrType)
-      {
-      case AddressEntryType_P2PKH:
-         type = AddressType_P2PKH;
-         break;
-
-      case AddressEntryType_Nested_Multisig:
-      case AddressEntryType_Nested_P2WSH:
-         type = AddressType_Multisig;
-         break;
-
-      case AddressEntryType_Nested_P2WPKH:
-         type = AddressType_P2SH_P2WPKH;
-         break;
-
-      case AddressEntryType_Nested_P2PK:
-         type = AddressType_P2SH_P2PK;
-         break;
-
-      default:
-         throw WalletException("invalid address type");
-      }
-
-      return type;
+      return wallet_->getAddrTypeForID(ID);
    }
 
-   SwigClient::ScrAddrObj getAddrObjByIndex(int index)
+   SwigClient::ScrAddrObj getAddrObjByID(const BinaryData& ID)
    {
-      auto addrPtr = wallet_->getAddressEntryForIndex(index);
+      auto addrPtr = wallet_->getAddressEntryForID(ID);
 
       uint64_t full = 0, spend = 0, unconf = 0;
       auto balanceIter = balanceMap_.find(addrPtr->getPrefixedHash());
@@ -337,6 +310,9 @@ public:
       if (countIter != countMap_.end())
          count = countIter->second;
 
+      BinaryRefReader brr(ID.getRef());
+      brr.advance(ID.getSize() - 4);
+      auto index = brr.get_uint32_t();
 
       if (swigWallet_ != nullptr)
       {
@@ -356,12 +332,6 @@ public:
       }
    }
 
-   SwigClient::ScrAddrObj getImportAddrObjByIndex(int index)
-   {
-      auto importIndex = AssetWallet::convertToImportIndex(index);
-      return getAddrObjByIndex(importIndex);
-   }
-
    int detectHighestUsedIndex(void);
 
    CoinSelectionInstance getCoinSelectionInstance(void)
@@ -370,13 +340,6 @@ public:
    }
 
    unsigned getTopBlock(void);
-
-   bool setImport(int importID, const SecureBinaryData& pubkey);
-   int convertToImportIndex(int);
-   int convertFromImportIndex(int);
-   void removeAddressBulk(const vector<BinaryData>&);
-
-   vector<BinaryData> getScriptHashVectorForIndex(int) const;
 };
 
 class ResolverFeed_PythonWalletSingle;
@@ -659,7 +622,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ResolverFeed_PythonWalletSingle : public ResolvedFeed_AssetWalletSingle
+class ResolverFeed_PythonWalletSingle : public ResolverFeed_AssetWalletSingle
 {
 private:
    PythonSigner* signerPtr_ = nullptr;
@@ -668,7 +631,7 @@ public:
    ResolverFeed_PythonWalletSingle(
       shared_ptr<AssetWallet_Single> walletPtr,
       PythonSigner* signerptr) :
-      ResolvedFeed_AssetWalletSingle(walletPtr),
+      ResolverFeed_AssetWalletSingle(walletPtr),
       signerPtr_(signerptr)
    {
       if (signerPtr_ == nullptr)
@@ -682,12 +645,8 @@ public:
       if (iter == pubkey_to_asset_.end())
          throw runtime_error("invalid value");
 
-      auto id = iter->second->getId();
-      if (id >= 0)
-         return signerPtr_->getPrivateKeyForIndex(id);
-
-      id = AssetWallet::convertToImportIndex(id);
-      return signerPtr_->getPrivateKeyForImportIndex(id);
+      auto id = iter->second->getIndex();
+      return signerPtr_->getPrivateKeyForIndex(id);
    }
 };
 
@@ -759,7 +718,6 @@ public:
       bdv_ = bdv;
    }
 
-   int getLastComputedIndex(const string& id) const;
    void synchronizeWallet(const string& id, unsigned chainLength);
 
    void duplicateWOWallet(
@@ -768,9 +726,6 @@ public:
       unsigned chainLength);
 
    WalletContainer& getCppWallet(const string& id);
-
-   bool setImport(
-      string wltID, int importID, const SecureBinaryData& pubkey);
 };
 
 #endif

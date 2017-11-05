@@ -17,11 +17,10 @@
 enum SpendScriptType
 {
    SST_P2PKH,
+   SST_P2PK,
    SST_P2SH,
    SST_P2WPKH,
-   SST_NESTED_P2WPKH,
    SST_P2WSH,
-   SST_NESTED_P2WSH,
    SST_OPRETURN,
    SST_UNIVERSAL
 };
@@ -89,19 +88,47 @@ public:
    {
       BinaryWriter bw;
       bw.put_uint64_t(value_);
-      bw.put_uint8_t(25);
-      bw.put_uint8_t(OP_DUP);
-      bw.put_uint8_t(OP_HASH160);
-      bw.put_uint8_t(20);
-      bw.put_BinaryData(h160_);
-      bw.put_uint8_t(OP_EQUALVERIFY);
-      bw.put_uint8_t(OP_CHECKSIG);
+
+      auto&& rawScript = BtcUtils::getP2PKHScript(h160_);
+      bw.put_var_int(rawScript.getSize());
+      bw.put_BinaryData(rawScript);
 
       script_ = move(bw.getData());
    }
 
    //return size is static
    size_t getSize(void) const { return 34; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class Recipient_P2PK : public ScriptRecipient
+{
+private:
+   const BinaryData pubkey_;
+
+public:
+   Recipient_P2PK(const BinaryData& pubkey, uint64_t val) :
+      ScriptRecipient(SST_P2PK, val), pubkey_(pubkey)
+   {
+      if (pubkey.getSize() != 33 && pubkey.getSize() != 65)
+         throw ScriptRecipientException("a160 is not 20 bytes long!");
+   }
+
+   void serialize(void)
+   {
+      BinaryWriter bw;
+      bw.put_uint64_t(value_);
+
+      auto&& rawScript = BtcUtils::getP2PKScript(pubkey_);
+
+      bw.put_var_int(rawScript.getSize());
+      bw.put_BinaryData(rawScript);
+
+      script_ = move(bw.getData());
+   }
+
+   //return size is static
+   size_t getSize(void) const { return 10 + pubkey_.getSize(); }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -122,10 +149,11 @@ public:
    {
       BinaryWriter bw;
       bw.put_uint64_t(value_);
-      bw.put_uint8_t(22);
-      bw.put_uint8_t(0);
-      bw.put_uint8_t(20);
-      bw.put_BinaryData(h160_);
+
+      auto&& rawScript = BtcUtils::getP2WPKHOutputScript(h160_);
+
+      bw.put_var_int(rawScript.getSize());
+      bw.put_BinaryData(rawScript);
 
       script_ = move(bw.getData());
    }
@@ -151,11 +179,11 @@ public:
    {
       BinaryWriter bw;
       bw.put_uint64_t(value_);
-      bw.put_uint8_t(23);
-      bw.put_uint8_t(OP_HASH160);
-      bw.put_uint8_t(20);
-      bw.put_BinaryData(h160_);
-      bw.put_uint8_t(OP_EQUAL);
+      
+      auto&& rawScript = BtcUtils::getP2SHScript(h160_);
+
+      bw.put_var_int(rawScript.getSize());
+      bw.put_BinaryData(rawScript);
 
       script_ = move(bw.getData());
    }
@@ -181,10 +209,11 @@ public:
    {
       BinaryWriter bw;
       bw.put_uint64_t(value_);
-      bw.put_uint8_t(34);
-      bw.put_uint8_t(0);
-      bw.put_uint8_t(32);
-      bw.put_BinaryData(h256_);
+      
+      auto&& rawScript = BtcUtils::getP2WSHOutputScript(h256_);
+
+      bw.put_var_int(rawScript.getSize());
+      bw.put_BinaryData(rawScript);
 
       script_ = move(bw.getData());
    }

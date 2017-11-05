@@ -436,3 +436,16 @@ FileMap DBUtils::getMmapOfFile(const string& path)
 
    return fMap;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryDataRef DBUtils::getDataRefForPacket(
+   const BinaryDataRef& packet)
+{
+   BinaryRefReader brr(packet);
+   auto len = brr.get_var_int();
+   if (len != brr.getSizeRemaining())
+      throw runtime_error("on disk data length mismatch");
+
+   return brr.get_BinaryDataRef(brr.getSizeRemaining());
+}
+

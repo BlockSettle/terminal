@@ -120,6 +120,9 @@
     <ClInclude Include="..\TxEvalState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Addresses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\BinaryData.cpp">
@@ -279,6 +282,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\TxEvalState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DecryptedDataContainer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Accounts.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Addresses.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\AssetEncryption.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Assets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DerivationScheme.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

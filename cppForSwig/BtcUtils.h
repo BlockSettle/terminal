@@ -2013,7 +2013,7 @@ public:
    static BinaryData computeDataId(const SecureBinaryData& data,
       const string& message);
 
-   static BinaryData getP2WPKHScript(const BinaryData& scriptHash)
+   static BinaryData getP2PKHScript(const BinaryData& scriptHash)
    {
       if (scriptHash.getSize() != 20)
          throw runtime_error("invalid P2WPKH hash size");
@@ -2029,7 +2029,76 @@ public:
       return bw.getData();
    }
 
-   static BinaryData getP2WSHScript(const BinaryData& scriptHash)
+   static BinaryData getP2PKScript(const BinaryData& pubkey)
+   {
+      if (pubkey.getSize() != 33 && pubkey.getSize() != 65)
+         throw runtime_error("invalid pubkey size");
+
+      BinaryWriter bw;
+      bw.put_var_int(pubkey.getSize());
+      bw.put_BinaryData(pubkey);
+      bw.put_uint8_t(OP_CHECKSIG);
+
+      return bw.getData();
+   }
+
+   static BinaryData getP2SHScript(const BinaryData& scriptHash)
+   {
+      if (scriptHash.getSize() != 20)
+         throw runtime_error("invalid P2WPKH hash size");
+
+      BinaryWriter bw;
+      bw.put_uint8_t(OP_HASH160);
+      bw.put_uint8_t(20);
+      bw.put_BinaryData(scriptHash);
+      bw.put_uint8_t(OP_EQUAL);
+
+      return bw.getData();
+   }
+
+   static BinaryData getP2WPKHOutputScript(const BinaryData& scriptHash)
+   {
+      if (scriptHash.getSize() != 20)
+         throw runtime_error("invalid P2WPKH hash size");
+
+      BinaryWriter bw;
+      bw.put_uint8_t(0);
+      bw.put_uint8_t(20);
+      bw.put_BinaryData(scriptHash);
+
+      return bw.getData();
+   }
+
+   static BinaryData getP2WPKHWitnessScript(const BinaryData& scriptHash)
+   {
+      if (scriptHash.getSize() != 20)
+         throw runtime_error("invalid P2WPKH hash size");
+
+      BinaryWriter bw;
+      bw.put_uint8_t(OP_DUP);
+      bw.put_uint8_t(OP_HASH160);
+      bw.put_uint8_t(20);
+      bw.put_BinaryData(scriptHash);
+      bw.put_uint8_t(OP_EQUALVERIFY);
+      bw.put_uint8_t(OP_CHECKSIG);
+
+      return bw.getData();
+   }
+
+   static BinaryData getP2WSHOutputScript(const BinaryData& scriptHash)
+   {
+      if (scriptHash.getSize() != 32)
+         throw runtime_error("invalid P2WPKH hash size");
+
+      BinaryWriter bw;
+      bw.put_uint8_t(0);
+      bw.put_uint8_t(32);
+      bw.put_BinaryData(scriptHash);
+
+      return bw.getData();
+   }
+
+   static BinaryData getP2WSHWitnessScript(const BinaryData& scriptHash)
    {
       if (scriptHash.getSize() != 32)
          throw runtime_error("invalid P2WPKH hash size");

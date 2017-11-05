@@ -5796,7 +5796,6 @@ TEST_F(WalletsTest, CreateCloseOpen_Test)
       auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
       auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
          homedir_,
-         AddressEntryType_P2PKH, //legacy P2PKH addresses
          move(wltRoot), //root as a r value
          SecureBinaryData(), //empty passphrase, will use default key
          4); //set lookup computation to 4 entries
@@ -5848,7 +5847,6 @@ TEST_F(WalletsTest, CreateWOCopy_Test)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
       SecureBinaryData(),
       4); //set lookup computation to 4 entries
@@ -5858,7 +5856,7 @@ TEST_F(WalletsTest, CreateWOCopy_Test)
 
    //get pub root and chaincode
    auto pubRoot = assetWlt->getPublicRoot();
-   auto chainCode = assetWlt->getChainCode();
+   auto chainCode = assetWlt->getArmory135Chaincode();
 
    //close wallet 
    assetWlt.reset();
@@ -5884,7 +5882,6 @@ TEST_F(WalletsTest, Encryption_Test)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       wltRoot, //root as a r value
       SecureBinaryData(),
       4); //set lookup computation to 4 entries
@@ -5914,7 +5911,7 @@ TEST_F(WalletsTest, Encryption_Test)
    for (int i = 0; i < 4; i++)
    {
       //grab indexes from 0 to 3
-      auto assetptr = assetWlt->getAssetForIndex(i);
+      auto assetptr = assetWlt->getMainAccountAssetForIndex(i);
       ASSERT_EQ(assetptr->getType(), AssetEntryType_Single);
       
       auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(assetptr);
@@ -5951,7 +5948,6 @@ TEST_F(WalletsTest, LockAndExtend_Test)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       wltRoot, //root as a r value
       SecureBinaryData(), //set passphrase to "test"
       4); //set lookup computation to 4 entries
@@ -5977,17 +5973,17 @@ TEST_F(WalletsTest, LockAndExtend_Test)
       auto secondlock = assetWlt->lockDecryptedContainer();
 
       //wallet should have 10 assets, last half with only pub keys
-      ASSERT_TRUE(assetWlt->getAssetCount() == 10);
+      ASSERT_TRUE(assetWlt->getMainAccountAssetCount() == 10);
 
       //none of the new assets should have private keys
       for (unsigned i = 4; i < 10; i++)
       {
-         auto asseti = assetWlt->getAssetForIndex(i);
+         auto asseti = assetWlt->getMainAccountAssetForIndex(i);
          ASSERT_FALSE(asseti->hasPrivateKey());
       }
 
       //grab last asset with a priv key
-      auto asset3 = assetWlt->getAssetForIndex(3);
+      auto asset3 = assetWlt->getMainAccountAssetForIndex(3);
       auto asset3_single = dynamic_pointer_cast<AssetEntry_Single>(asset3);
       if (asset3_single == nullptr)
          throw runtime_error("unexpected asset entry type");
@@ -5997,13 +5993,13 @@ TEST_F(WalletsTest, LockAndExtend_Test)
       ASSERT_EQ(privkey3, privateKeys[3]);
 
       //extend private chain to 10 entries
-      assetWlt->extendPrivateChainToIndex(9);
+      assetWlt->extendPrivateChainToIndex(assetWlt->getMainAccountID(), 9);
 
       //there should still be 10 assets
-      ASSERT_EQ(assetWlt->getAssetCount(), 10);
+      ASSERT_EQ(assetWlt->getMainAccountAssetCount(), 10);
 
       //try to grab 10th private key
-      auto asset9 = assetWlt->getAssetForIndex(9);
+      auto asset9 = assetWlt->getMainAccountAssetForIndex(9);
       auto asset9_single = dynamic_pointer_cast<AssetEntry_Single>(asset9);
       if (asset9_single == nullptr)
          throw runtime_error("unexpected asset entry type");
@@ -6027,10 +6023,10 @@ TEST_F(WalletsTest, LockAndExtend_Test)
       this_thread::sleep_for(chrono::seconds(1));
 
       //make sure there are only 4 entries
-      ASSERT_EQ(assetWlt->getAssetCount(), 4);
+      ASSERT_EQ(assetWlt->getMainAccountAssetCount(), 4);
 
       //grab 4th privkey 
-      auto asset3 = assetWlt->getAssetForIndex(3);
+      auto asset3 = assetWlt->getMainAccountAssetForIndex(3);
       auto asset3_single = dynamic_pointer_cast<AssetEntry_Single>(asset3);
       if (asset3_single == nullptr)
          throw runtime_error("unexpected asset entry type");
@@ -6040,14 +6036,15 @@ TEST_F(WalletsTest, LockAndExtend_Test)
       ASSERT_EQ(privkey3, privateKeys[3]);
 
       //extend address chain to 10 entries
-      assetWlt->extendPublicChainToIndex(9);
+      assetWlt->extendPublicChainToIndex(
+         assetWlt->getMainAccountID(), 9);
 
-      ASSERT_EQ(assetWlt->getAssetCount(), 10);
+      ASSERT_EQ(assetWlt->getMainAccountAssetCount(), 10);
 
       //none of the new assets should have private keys
       for (unsigned i = 4; i < 10; i++)
       {
-         auto asseti = assetWlt->getAssetForIndex(i);
+         auto asseti = assetWlt->getMainAccountAssetForIndex(i);
          ASSERT_FALSE(asseti->hasPrivateKey());
       }
    }
@@ -6082,7 +6079,7 @@ TEST_F(WalletsTest, LockAndExtend_Test)
    auto lastlock = wltSingle->lockDecryptedContainer();
    for (unsigned i = 0; i < 10; i++)
    {
-      auto asseti = wltSingle->getAssetForIndex(i);
+      auto asseti = wltSingle->getMainAccountAssetForIndex(i);
       auto asseti_single = dynamic_pointer_cast<AssetEntry_Single>(asseti);
       ASSERT_NE(asseti_single, nullptr);
 
@@ -6100,7 +6097,6 @@ TEST_F(WalletsTest, WrongPassphrase_Test)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       wltRoot, //root as a r value
       SecureBinaryData("test"), //set passphrase to "test"
       4); //set lookup computation to 4 entries
@@ -6121,7 +6117,7 @@ TEST_F(WalletsTest, WrongPassphrase_Test)
    try
    {
       auto containerLock = assetWlt->lockDecryptedContainer();
-      auto asset = assetWlt->getAssetForIndex(0);
+      auto asset = assetWlt->getMainAccountAssetForIndex(0);
       auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(asset);
       if (asset_single == nullptr)
          throw runtime_error("unexpected asset entry type");
@@ -6148,7 +6144,7 @@ TEST_F(WalletsTest, WrongPassphrase_Test)
    try
    {
       auto&& containerLock = assetWlt->lockDecryptedContainer();
-      auto asset = assetWlt->getAssetForIndex(0);
+      auto asset = assetWlt->getMainAccountAssetForIndex(0);
       auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(asset);
       if (asset_single == nullptr)
          throw runtime_error("unexpected asset entry type");
@@ -6175,7 +6171,6 @@ TEST_F(WalletsTest, ChangePassphrase_Test)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       wltRoot, //root as a r value
       SecureBinaryData("test"), //set passphrase to "test"
       4); //set lookup computation to 4 entries
@@ -6222,7 +6217,7 @@ TEST_F(WalletsTest, ChangePassphrase_Test)
 
    for (unsigned i = 0; i < 4; i++)
    {
-      auto asseti = assetWlt->getAssetForIndex(i);
+      auto asseti = assetWlt->getMainAccountAssetForIndex(i);
       auto asseti_single = dynamic_pointer_cast<AssetEntry_Single>(asseti);
       ASSERT_NE(asseti_single, nullptr);
 
@@ -6272,7 +6267,7 @@ TEST_F(WalletsTest, ChangePassphrase_Test)
       assetWlt->setPassphrasePromptLambda(newPassphrasePrompt);
       auto lock = assetWlt->lockDecryptedContainer();
 
-      auto asset0 = assetWlt->getAssetForIndex(0);
+      auto asset0 = assetWlt->getMainAccountAssetForIndex(0);
       auto asset0_single = dynamic_pointer_cast<AssetEntry_Single>(asset0);
       ASSERT_NE(asset0_single, nullptr);
 
@@ -6317,7 +6312,7 @@ TEST_F(WalletsTest, ChangePassphrase_Test)
 
    for (unsigned i = 0; i < 4; i++)
    {
-      auto asseti = wltSingle->getAssetForIndex(i);
+      auto asseti = wltSingle->getMainAccountAssetForIndex(i);
       auto asseti_single = dynamic_pointer_cast<AssetEntry_Single>(asseti);
       ASSERT_NE(asseti_single, nullptr);
 
@@ -6346,7 +6341,7 @@ TEST_F(WalletsTest, ChangePassphrase_Test)
       counter = 0;
       wltSingle->setPassphrasePromptLambda(passphrasePrompt);
 
-      auto asset0 = wltSingle->getAssetForIndex(0);
+      auto asset0 = wltSingle->getMainAccountAssetForIndex(0);
       auto asset0_single = dynamic_pointer_cast<AssetEntry_Single>(asset0);
       ASSERT_NE(asset0_single, nullptr);
 
@@ -6512,7 +6507,7 @@ struct TestResolverFeed : public ResolverFeed
 class HybridFeed : public ResolverFeed
 {
 private:
-   shared_ptr<ResolvedFeed_AssetWalletSingle> feedPtr_;
+   shared_ptr<ResolverFeed_AssetWalletSingle> feedPtr_;
 
 public:
    TestResolverFeed testFeed_;
@@ -6520,7 +6515,7 @@ public:
 public:
    HybridFeed(shared_ptr<AssetWallet_Single> wltPtr)
    {
-      feedPtr_ = make_shared<ResolvedFeed_AssetWalletSingle>(wltPtr);
+      feedPtr_ = make_shared<ResolverFeed_AssetWalletSingle>(wltPtr);
    }
 
    BinaryData getByVal(const BinaryData& val)
@@ -6547,6 +6542,63 @@ public:
       return feedPtr_->getPrivKeyForPubkey(pubkey);
    }
 };
+
+////////////////////////////////////////////////////////////////////////////////
+struct CustomFeed : public ResolverFeed
+{
+   map<BinaryDataRef, BinaryDataRef> hash_to_preimage_;
+   shared_ptr<ResolverFeed> wltFeed_;
+
+private:
+   void addAddressEntry(shared_ptr<AddressEntry> addrPtr)
+   {
+      try
+      {
+         BinaryDataRef hash(addrPtr->getHash());
+         BinaryDataRef preimage(addrPtr->getPreimage());
+         hash_to_preimage_.insert(make_pair(hash, preimage));
+      }
+      catch (exception)
+      {
+         return;
+      }
+
+      auto addr_nested = dynamic_pointer_cast<AddressEntry_Nested>(addrPtr);
+      if (addr_nested != nullptr)
+         addAddressEntry(addr_nested->getPredecessor());
+   }
+
+public:
+   CustomFeed(shared_ptr<AddressEntry> addrPtr,
+      shared_ptr<AssetWallet_Single> wlt) :
+      wltFeed_(make_shared<ResolverFeed_AssetWalletSingle>(wlt))
+   {
+      addAddressEntry(addrPtr);
+   }
+
+   CustomFeed(shared_ptr<AddressEntry> addrPtr,
+      shared_ptr<ResolverFeed> feed) :
+      wltFeed_(feed)
+   {
+      addAddressEntry(addrPtr);
+   }
+
+   BinaryData getByVal(const BinaryData& key)
+   {
+      auto keyRef = BinaryDataRef(key);
+      auto iter = hash_to_preimage_.find(keyRef);
+      if (iter == hash_to_preimage_.end())
+         throw runtime_error("invalid value");
+
+      return iter->second;
+   }
+
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
+   {
+      return wltFeed_->getPrivKeyForPubkey(pubkey);
+   }
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////
 TEST_F(TransactionsTest, CheckChain_Test)
@@ -6692,7 +6744,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_P2PKH)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
       SecureBinaryData(),
       5); //set lookup computation to 5 entries
@@ -6846,7 +6897,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_P2PKH)
       auto&& unspentVec = dbAssetWlt->getSpendableTxOutListZC();
 
       //create feed from asset wallet
-      auto assetFeed = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt);
+      auto assetFeed = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt);
 
       //create spenders
       uint64_t total = 0;
@@ -6943,16 +6994,15 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WPKH)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //register with db
    vector<shared_ptr<AddressEntry>> addrVec;
-   addrVec.push_back(assetWlt->getNewAddress());
-   addrVec.push_back(assetWlt->getNewAddress());
-   addrVec.push_back(assetWlt->getNewAddress());
+   addrVec.push_back(assetWlt->getNewAddress(AddressEntryType_P2WPKH));
+   addrVec.push_back(assetWlt->getNewAddress(AddressEntryType_P2WPKH));
+   addrVec.push_back(assetWlt->getNewAddress(AddressEntryType_P2WPKH));
 
    vector<BinaryData> hashVec;
    for (auto addrPtr : addrVec)
@@ -7095,7 +7145,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WPKH)
       auto&& unspentVec = dbAssetWlt->getSpendableTxOutListForValue(spendVal);
 
       //create feed from asset wallet
-      auto assetFeed = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt);
+      auto assetFeed = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt);
 
       //create spenders
       uint64_t total = 0;
@@ -7115,7 +7165,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WPKH)
       {
          //change to addr2, use P2WPKH
          auto changeVal = total - spendVal;
-         auto addr2 = assetWlt->getNewAddress();
+         auto addr2 = assetWlt->getNewAddress(AddressEntryType_P2WPKH);
          signer2.addRecipient(addrVec[2]->getRecipient(changeVal));
       }
 
@@ -7152,7 +7202,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WPKH)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_Multisig)
+/*TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_Multisig)
 {
    //create spender lamba
    auto getSpenderPtr = [](
@@ -7187,7 +7237,6 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_Multisig)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Multisig::createFromPrivateRoot(
       homedir_,
-      AddressEntryType_Nested_Multisig,
       2, 3, //2-of-3
       wltRoot, //root as a r value
       SecureBinaryData(),
@@ -7400,7 +7449,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_Multisig)
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
    EXPECT_EQ(scrObj->getFullBalance(), 9 * COIN);
-}
+}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
@@ -7438,7 +7487,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt_1 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
@@ -7446,7 +7494,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
@@ -7454,31 +7501,33 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
    auto assetWlt_3 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //create 1-of-3 multisig asset entry from 3 different wallets
    map<BinaryData, shared_ptr<AssetEntry>> asset_single_map;
-   auto asset1 = assetWlt_1->getAssetForIndex(0);
+   auto asset1 = assetWlt_1->getMainAccountAssetForIndex(0);
    BinaryData wltid1_bd(assetWlt_1->getID());
    asset_single_map.insert(make_pair(wltid1_bd, asset1));
 
-   auto asset2 = assetWlt_2->getAssetForIndex(0);
+   auto asset2 = assetWlt_2->getMainAccountAssetForIndex(0);
    BinaryData wltid2_bd(assetWlt_2->getID());
    asset_single_map.insert(make_pair(wltid2_bd, asset2));
 
-   auto asset3 = assetWlt_3->getAssetForIndex(0);
+   auto asset3 = assetWlt_3->getMainAccountAssetForIndex(0);
    BinaryData wltid3_bd(assetWlt_3->getID());
    asset_single_map.insert(make_pair(wltid3_bd, asset3));
 
-   auto ae_ms = make_shared<AssetEntry_Multisig>(0, asset_single_map, 1, 3);
-   AddressEntry_Nested_P2WSH addr_ms(ae_ms);
+   auto ae_ms = make_shared<AssetEntry_Multisig>(0, BinaryData("test"),
+      asset_single_map, 1, 3);
+   auto addr_ms_raw = make_shared<AddressEntry_Multisig>(ae_ms, true);
+   auto addr_p2wsh = make_shared<AddressEntry_P2WSH>(addr_ms_raw);
+   auto addr_ms = make_shared<AddressEntry_P2SH>(addr_p2wsh);
 
    //register with db
    vector<BinaryData> addrVec;
-   addrVec.push_back(addr_ms.getPrefixedHash());
+   addrVec.push_back(addr_ms->getPrefixedHash());
 
    regWallet(clients_, bdvID, addrVec, "ms_entry");
    regWallet(clients_, bdvID, scrAddrVec, "wallet1");
@@ -7558,7 +7607,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
       }
 
       //spend 27 nested p2wsh script hash
-      signer.addRecipient(addr_ms.getRecipient(27 * COIN));
+      signer.addRecipient(addr_ms->getRecipient(27 * COIN));
 
       if (total > spendVal)
       {
@@ -7600,44 +7649,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
    scrObj = ms_wlt->getScrAddrObjByKey(addrVec[0]);
    EXPECT_EQ(scrObj->getFullBalance(), 27 * COIN);
 
-   //custom feed: grab hash preimages from ms entry, 
-   //get private keys from a single wallet at a time
-   struct CustomFeed : public ResolverFeed
-   {
-      map<BinaryDataRef, BinaryDataRef> hash_to_preimage_;
-      shared_ptr<ResolverFeed> wltFeed_;
-
-      CustomFeed(shared_ptr<AssetEntry_Multisig> ae_ms,
-         shared_ptr<AssetWallet_Single> wlt) :
-         wltFeed_(make_shared<ResolvedFeed_AssetWalletSingle>(wlt))
-      {
-         auto script = ae_ms->getScript().getRef();
-         hash_to_preimage_.insert(make_pair(
-            ae_ms->getHash160().getRef(), script));
-         hash_to_preimage_.insert(make_pair(
-            ae_ms->getHash256().getRef(), script));
-
-         auto nested_p2wshScript = ae_ms->getP2WSHScript().getRef();
-         hash_to_preimage_.insert(make_pair(
-            ae_ms->getP2WSHScriptH160().getRef(), nested_p2wshScript));
-      }
-
-      BinaryData getByVal(const BinaryData& key)
-      {
-         auto keyRef = BinaryDataRef(key);
-         auto iter = hash_to_preimage_.find(keyRef);
-         if (iter == hash_to_preimage_.end())
-            throw runtime_error("invalid value");
-
-         return iter->second;
-      }
-
-      const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
-      {
-         return wltFeed_->getPrivKeyForPubkey(pubkey);
-      }
-   };
-
    //lambda to sign with each wallet
    auto signPerWallet = [&](shared_ptr<AssetWallet_Single> wltPtr)->BinaryData
    {
@@ -7652,7 +7663,8 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
          ms_wlt->getSpendableTxOutListZC();
 
       //create feed from asset wallet
-      auto assetFeed = make_shared<CustomFeed>(ae_ms, wltPtr);
+      auto feed = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(wltPtr);
+      auto assetFeed = make_shared<CustomFeed>(addr_ms, feed);
 
       //create spenders
       uint64_t total = 0;
@@ -7672,7 +7684,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_1of3)
       {
          //deal with change, no fee
          auto changeVal = total - spendVal;
-         signer2.addRecipient(addr_ms.getRecipient(changeVal));
+         signer2.addRecipient(addr_ms->getRecipient(changeVal));
       }
 
       //add op_return output for coverage
@@ -7754,7 +7766,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt_1 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
@@ -7762,7 +7773,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2PK,
       move(wltRoot), //root as a rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
@@ -7770,33 +7780,36 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
    wltRoot = move(SecureBinaryData().GenerateRandom(32));
    auto assetWlt_3 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2WPKH,
       move(wltRoot), //root as a rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    //create 2-of-3 multisig asset entry from 3 different wallets
    map<BinaryData, shared_ptr<AssetEntry>> asset_single_map;
-   auto asset1 = assetWlt_1->getAssetForIndex(0);
+   auto asset1 = assetWlt_1->getMainAccountAssetForIndex(0);
    BinaryData wltid1_bd(assetWlt_1->getID());
    asset_single_map.insert(make_pair(wltid1_bd, asset1));
 
-   auto asset2 = assetWlt_2->getAssetForIndex(0);
+   auto asset2 = assetWlt_2->getMainAccountAssetForIndex(0);
    BinaryData wltid2_bd(assetWlt_2->getID());
    asset_single_map.insert(make_pair(wltid2_bd, asset2));
 
    auto asset4_singlesig = assetWlt_2->getNewAddress();
 
-   auto asset3 = assetWlt_3->getAssetForIndex(0);
+   auto asset3 = assetWlt_3->getMainAccountAssetForIndex(0);
    BinaryData wltid3_bd(assetWlt_3->getID());
    asset_single_map.insert(make_pair(wltid3_bd, asset3));
 
-   auto ae_ms = make_shared<AssetEntry_Multisig>(0, asset_single_map, 2, 3);
-   AddressEntry_Nested_P2WSH addr_ms(ae_ms);
+   auto ae_ms = make_shared<AssetEntry_Multisig>(0, BinaryData("test"),
+      asset_single_map, 2, 3);
+   auto addr_ms_raw = make_shared<AddressEntry_Multisig>(ae_ms, true);
+   auto addr_p2wsh = make_shared<AddressEntry_P2WSH>(addr_ms_raw);
+   auto addr_ms = make_shared<AddressEntry_P2SH>(addr_p2wsh);
+
 
    //register with db
    vector<BinaryData> addrVec;
-   addrVec.push_back(addr_ms.getPrefixedHash());
+   addrVec.push_back(addr_ms->getPrefixedHash());
 
    vector<BinaryData> addrVec_singleSig;
    auto&& addrSet = assetWlt_2->getAddrHashSet();
@@ -7883,7 +7896,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
       }
 
       //spend 20 to nested p2wsh script hash
-      signer.addRecipient(addr_ms.getRecipient(20 * COIN));
+      signer.addRecipient(addr_ms->getRecipient(20 * COIN));
 
       //spend 7 to assetWlt_2
       signer.addRecipient(asset4_singlesig->getRecipient(7 * COIN));
@@ -7926,45 +7939,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
    scrObj = wlt_singleSig->getScrAddrObjByKey(asset4_singlesig->getPrefixedHash());
    EXPECT_EQ(scrObj->getFullBalance(), 7 * COIN);
 
-
-   //custom feed: grab hash preimages from ms entry, 
-   //get private keys from a single wallet at a time
-   struct CustomFeed : public ResolverFeed
-   {
-      map<BinaryDataRef, BinaryDataRef> hash_to_preimage_;
-      shared_ptr<ResolverFeed> wltFeed_;
-
-      CustomFeed(shared_ptr<AssetEntry_Multisig> ae_ms,
-         shared_ptr<AssetWallet_Single> wlt) :
-         wltFeed_(make_shared<ResolvedFeed_AssetWalletSingle>(wlt))
-      {
-         auto script = ae_ms->getScript().getRef();
-         hash_to_preimage_.insert(make_pair(
-            ae_ms->getHash160().getRef(), script));
-         hash_to_preimage_.insert(make_pair(
-            ae_ms->getHash256().getRef(), script));
-
-         auto nested_p2wshScript = ae_ms->getP2WSHScript().getRef();
-         hash_to_preimage_.insert(make_pair(
-            ae_ms->getP2WSHScriptH160().getRef(), nested_p2wshScript));
-      }
-
-      BinaryData getByVal(const BinaryData& key)
-      {
-         auto keyRef = BinaryDataRef(key);
-         auto iter = hash_to_preimage_.find(keyRef);
-         if (iter == hash_to_preimage_.end())
-            return wltFeed_->getByVal(key);
-
-         return iter->second;
-      }
-
-      const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
-      {
-         return wltFeed_->getPrivKeyForPubkey(pubkey);
-      }
-   };
-
    auto spendVal = 18 * COIN;
    Signer signer2;
    signer2.setFlags(SCRIPT_VERIFY_SEGWIT);
@@ -7979,7 +7953,8 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
       unspentVec_singleSig.begin(), unspentVec_singleSig.end());
 
    //create feed from asset wallet 1
-   auto assetFeed = make_shared<CustomFeed>(ae_ms, assetWlt_1);
+   auto feed_ms = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(assetWlt_1);
+   auto assetFeed = make_shared<CustomFeed>(addr_ms, feed_ms);
 
    //create spenders
    uint64_t total = 0;
@@ -7999,7 +7974,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
    {
       //deal with change, no fee
       auto changeVal = total - spendVal;
-      signer2.addRecipient(addr_ms.getRecipient(changeVal));
+      signer2.addRecipient(addr_ms->getRecipient(changeVal));
    }
 
    //sign, verify & return signed tx
@@ -8049,7 +8024,8 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
 
    Signer signer3;
    //create feed from asset wallet 2
-   auto assetFeed3 = make_shared<CustomFeed>(ae_ms, assetWlt_2);
+   auto feed_ms3 = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(assetWlt_2);
+   auto assetFeed3 = make_shared<CustomFeed>(addr_ms, feed_ms3);
    signer3.deserializeState(signer2.serializeState());
 
    {
@@ -8072,6 +8048,15 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_2of3)
       auto lock = assetWlt_2->lockDecryptedContainer();
       signer3.sign();
    }
+
+   {
+      auto assetFeed4 = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt_2);
+      signer3.resetFeeds();
+      signer3.setFeed(assetFeed4);
+      auto lock = assetWlt_2->lockDecryptedContainer();
+      signer3.sign();
+   }
+
    
    ASSERT_TRUE(signer3.isValid());
    try
@@ -8164,14 +8149,12 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_DifferentInputs)
    //create a root private key
    auto assetWlt_1 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2WPKH,
       SecureBinaryData().GenerateRandom(32), //root as rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
 
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH,
       move(SecureBinaryData().GenerateRandom(32)), //root as rvalue
       SecureBinaryData(),
       3); //set lookup computation to 3 entries
@@ -8329,8 +8312,8 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_DifferentInputs)
 
    BinaryData serializedSignerState;
    
-   auto assetFeed2 = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt_1);
-   auto assetFeed3 = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt_2);
+   auto assetFeed2 = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt_1);
+   auto assetFeed3 = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt_2);
 
    {
       auto spendVal = 8 * COIN;
@@ -8495,14 +8478,12 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_ParallelSigning)
    //create a root private key
    auto assetWlt_1 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2WPKH,
       SecureBinaryData().GenerateRandom(32), //root as rvalue
       SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
 
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH,
       move(SecureBinaryData().GenerateRandom(32)), //root as rvalue
       SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
@@ -8720,8 +8701,8 @@ TEST_F(TransactionsTest, Wallet_SpendTest_MultipleSigners_ParallelSigning)
       serializedSignerState = move(signer3.serializeState());
    }
 
-   auto assetFeed2 = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt_1);
-   auto assetFeed3 = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt_2);
+   auto assetFeed2 = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt_1);
+   auto assetFeed3 = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt_2);
 
    //deser to new signer, this time populate with feed and utxo from wlt_1
    Signer signer4;
@@ -8876,14 +8857,12 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
    //create a root private key
    auto assetWlt_1 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH,
       SecureBinaryData().GenerateRandom(32), //root as rvalue
       SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
 
    auto assetWlt_2 = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2WPKH,
       move(SecureBinaryData().GenerateRandom(32)), //root as rvalue
       SecureBinaryData(), //empty passphrase
       3); //set lookup computation to 3 entries
@@ -8899,9 +8878,10 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
       hashVec_1.push_back(addrPtr->getPrefixedHash());
 
    vector<shared_ptr<AddressEntry>> addrVec_2;
-   addrVec_2.push_back(assetWlt_2->getNewAddress());
-   addrVec_2.push_back(assetWlt_2->getNewAddress());
-   addrVec_2.push_back(assetWlt_2->getNewAddress());
+   auto addr_type_nested_p2wsh = AddressEntryType(AddressEntryType_P2WPKH | AddressEntryType_P2SH);
+   addrVec_2.push_back(assetWlt_2->getNewAddress(addr_type_nested_p2wsh));
+   addrVec_2.push_back(assetWlt_2->getNewAddress(addr_type_nested_p2wsh));
+   addrVec_2.push_back(assetWlt_2->getNewAddress(addr_type_nested_p2wsh));
 
    vector<BinaryData> hashVec_2;
    for (auto addrPtr : addrVec_2)
@@ -9108,8 +9088,8 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
       serializedSignerState = move(signer3.serializeState());
    }
 
-   auto assetFeed2 = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt_1);
-   auto assetFeed3 = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt_2);
+   auto assetFeed2 = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt_1);
+   auto assetFeed3 = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt_2);
 
    //deser to new signer, this time populate with feed and utxo from wlt_1
    Signer signer4;
@@ -9223,7 +9203,7 @@ TEST_F(TransactionsTest, GetUnsignedTxId)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_P2WSH)
+/*TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_P2WSH)
 {
    //create spender lamba
    auto getSpenderPtr = [](
@@ -9258,7 +9238,6 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_Nested_P2WSH)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Multisig::createFromPrivateRoot(
       homedir_,
-      AddressEntryType_Nested_P2WSH,
       2, 3, //2-of-3
       wltRoot, //root as a r value
       SecureBinaryData(),
@@ -9555,7 +9534,6 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WSH)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Multisig::createFromPrivateRoot(
       homedir_,
-      AddressEntryType_P2WSH,
       2, 3, //2-of-3
       wltRoot, //root as a r value
       3); //set lookup computation to 3 entries
@@ -9761,7 +9739,7 @@ TEST_F(TransactionsTest, DISABLED_Wallet_SpendTest_P2WSH)
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
    EXPECT_EQ(scrObj->getFullBalance(), 9 * COIN);
-}
+}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WPKH)
@@ -9799,7 +9777,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WPKH)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2WPKH, 
       move(wltRoot), //root as a r value
       SecureBinaryData(),
       3); //lookup computation
@@ -9892,12 +9869,14 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WPKH)
       }
 
       //spend 12 to addr0, nested P2WPKH
-      auto addr0 = assetWlt->getNewAddress();
+      auto addr0 = assetWlt->getNewAddress(
+         AddressEntryType(AddressEntryType_P2WPKH | AddressEntryType_P2SH));
       signer.addRecipient(addr0->getRecipient(12 * COIN));
       addrVec.push_back(addr0->getPrefixedHash());
 
       //spend 15 to addr1, nested P2WPKH
-      auto addr1 = assetWlt->getNewAddress();
+      auto addr1 = assetWlt->getNewAddress(
+         AddressEntryType(AddressEntryType_P2WPKH | AddressEntryType_P2SH));
       signer.addRecipient(addr1->getRecipient(15 * COIN));
       addrVec.push_back(addr1->getPrefixedHash());
 
@@ -9951,7 +9930,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WPKH)
          dbAssetWlt->getSpendableTxOutListZC();
 
       //create feed from asset wallet
-      auto assetFeed = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt);
+      auto assetFeed = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt);
 
       //create spenders
       uint64_t total = 0;
@@ -9971,7 +9950,8 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2WPKH)
       {
          //deal with change, no fee
          auto changeVal = total - spendVal;
-         auto addr2 = assetWlt->getNewAddress();
+         auto addr2 = assetWlt->getNewAddress(
+            AddressEntryType(AddressEntryType_P2WPKH | AddressEntryType_P2SH));
          signer2.addRecipient(addr2->getRecipient(changeVal));
          addrVec.push_back(addr2->getPrefixedHash());
       }
@@ -10048,7 +10028,6 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2PK)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2PK,
       move(wltRoot), //root as a r value
       SecureBinaryData(),
       3); //lookup computation
@@ -10141,12 +10120,16 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2PK)
       }
 
       //spend 12 to addr0, nested P2WPKH
-      auto addr0 = assetWlt->getNewAddress();
+      auto addr0 = assetWlt->getNewAddress(
+         AddressEntryType(
+         AddressEntryType_P2PK | AddressEntryType_P2SH | AddressEntryType_Compressed));
       signer.addRecipient(addr0->getRecipient(12 * COIN));
       addrVec.push_back(addr0->getPrefixedHash());
 
       //spend 15 to addr1, nested P2WPKH
-      auto addr1 = assetWlt->getNewAddress();
+      auto addr1 = assetWlt->getNewAddress(
+         AddressEntryType(
+         AddressEntryType_P2PK | AddressEntryType_P2SH | AddressEntryType_Compressed));
       signer.addRecipient(addr1->getRecipient(15 * COIN));
       addrVec.push_back(addr1->getPrefixedHash());
 
@@ -10200,7 +10183,7 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2PK)
          dbAssetWlt->getSpendableTxOutListZC();
 
       //create feed from asset wallet
-      auto assetFeed = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt);
+      auto assetFeed = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt);
 
       //create spenders
       uint64_t total = 0;
@@ -10220,7 +10203,9 @@ TEST_F(TransactionsTest, Wallet_SpendTest_Nested_P2PK)
       {
          //deal with change, no fee
          auto changeVal = total - spendVal;
-         auto addr2 = assetWlt->getNewAddress();
+         auto addr2 = assetWlt->getNewAddress(
+            AddressEntryType(
+            AddressEntryType_P2PK | AddressEntryType_P2SH | AddressEntryType_Compressed));
          signer2.addRecipient(addr2->getRecipient(changeVal));
          addrVec.push_back(addr2->getPrefixedHash());
       }
@@ -13097,7 +13082,6 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
       SecureBinaryData(),
       10); //set lookup computation to 5 entries
@@ -13365,7 +13349,7 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
       Signer signer3;
 
       //instantiate resolver feed overloaded object
-      auto assetFeed = make_shared<ResolvedFeed_AssetWalletSingle>(assetWlt);
+      auto assetFeed = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt);
 
       //get utxo list for spend value
       auto&& unspentVec = dbAssetWlt->getSpendableTxOutListZC();
@@ -13647,7 +13631,6 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_P2PKH, //legacy P2PKH addresses
       move(wltRoot), //root as a r value
       SecureBinaryData(),
       3); //set lookup computation to 5 entries
@@ -13891,7 +13874,6 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2PK, 
       move(wltRoot),
       SecureBinaryData(), //empty passphrase
       5);
@@ -13937,7 +13919,8 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
    }
 
    {
-      auto assetWlt_addr = assetWlt->getNewAddress();
+      auto assetWlt_addr = assetWlt->getNewAddress(
+         AddressEntryType(AddressEntryType_P2WPKH | AddressEntryType_P2SH));
       addrVec.push_back(assetWlt_addr->getPrefixedHash());
       auto&& assetWlt_recipient = assetWlt_addr->getRecipient(10 * COIN);
       auto serialized_recipient = assetWlt_recipient->getSerializedScript();
@@ -14041,7 +14024,8 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
          signer2.addSpender(getSpenderPtr(utxo, feed));
       }
 
-      auto addr2 = assetWlt->getNewAddress();
+      auto addr2 = assetWlt->getNewAddress(
+         AddressEntryType(AddressEntryType_P2WPKH | AddressEntryType_P2SH));
       signer2.addRecipient(addr2->getRecipient(spendVal));
       addrVec.push_back(addr2->getPrefixedHash());
 

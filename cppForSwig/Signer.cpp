@@ -1502,6 +1502,13 @@ bool Signer::isValid() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void Signer::resetFeeds(void)
+{
+   for (auto& spender : spenders_)
+      spender->setFeed(nullptr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void Signer::populateUtxo(const UTXO& utxo)
 {
    for (auto& spender : spenders_)

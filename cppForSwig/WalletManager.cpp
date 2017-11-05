@@ -105,20 +105,6 @@ void WalletManager::duplicateWOWallet(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int WalletManager::getLastComputedIndex(const string& id) const
-{
-   {
-      unique_lock<mutex> lock(mu_);
-
-      auto wltIter = wallets_.find(id);
-      if (wltIter == wallets_.end())
-         throw runtime_error("invalid id");
-
-      return wltIter->second.getLastComputedIndex();
-   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 void WalletManager::synchronizeWallet(const string& id, unsigned chainLength)
 {
    WalletContainer* wltCtr;
@@ -137,7 +123,8 @@ void WalletManager::synchronizeWallet(const string& id, unsigned chainLength)
    if (wltSingle == nullptr)
       throw runtime_error("invalid wallet ptr");
 
-   wltSingle->extendPublicChainToIndex(chainLength);
+   wltSingle->extendPublicChainToIndex(
+      wltSingle->getMainAccountID(), chainLength);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -159,17 +146,6 @@ WalletContainer& WalletManager::getCppWallet(const string& id)
       throw runtime_error("invalid id");
 
    return wltIter->second;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool WalletManager::setImport(
-   string wltID, int importID, const SecureBinaryData& pubkey)
-{
-   auto wltIter = wallets_.find(wltID);
-   if (wltIter == wallets_.end())
-      throw WalletException("invalid wlt id");
-
-   return wltIter->second.setImport(importID, pubkey);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -204,9 +180,10 @@ int WalletContainer::detectHighestUsedIndex()
    for (auto addrCountPair : countMap_)
    {
       auto& addr = addrCountPair.first;
-      auto index = getAssetIndexForAddr(addr);
-      if (index > topIndex)
-         topIndex = index;
+      auto& ID = wallet_->getAssetIDForAddr(addr);
+      auto asset = wallet_->getAssetForID(ID);
+      if (asset->getIndex() > topIndex)
+         topIndex = asset->getIndex();
    }
 
    return topIndex;
@@ -217,51 +194,6 @@ unsigned WalletContainer::getTopBlock(void)
 {
    auto& bdv = getBDVlambda_();
    return bdv.getTopBlock();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool WalletContainer::setImport(int importID, const SecureBinaryData& pubkey)
-{
-   return wallet_->setImport(importID, pubkey);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-int WalletContainer::convertToImportIndex(int index)
-{
-   return AssetWallet::convertToImportIndex(index);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-int WalletContainer::convertFromImportIndex(int index)
-{
-   return AssetWallet::convertFromImportIndex(index);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void WalletContainer::removeAddressBulk(const vector<BinaryData>& addrVec)
-{
-   //delete from AssetWallet
-   wallet_->deleteImports(addrVec);
-
-   //caller should register the wallet again to update the address list on
-   //the db side
-}
-
-////////////////////////////////////////////////////////////////////////////////
-vector<BinaryData> WalletContainer::getScriptHashVectorForIndex(int index) const
-{
-   vector<BinaryData> hashVec;
-
-   auto assetPtr = wallet_->getAssetForIndex(index);
-   auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
-   if (asset_single == nullptr)
-      return hashVec;
-
-   auto&& hashMap = asset_single->getScriptHashMap();
-   for (auto hashRef : hashMap)
-      hashVec.push_back(BinaryData(hashRef.second));
-
-   return hashVec;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -348,8 +280,8 @@ void CoinSelectionInstance::decorateUTXOs(
    for (auto& utxo : vecUtxo)
    {
       auto&& scrAddr = utxo.getRecipientScrAddr();
-      auto index = walletPtr->getAssetIndexForAddr(scrAddr);
-      auto addrPtr = walletPtr->getAddressEntryForIndex(index);
+      auto& ID = walletPtr->getAssetIDForAddr(scrAddr);
+      auto addrPtr = walletPtr->getAddressEntryForID(ID);
 
       utxo.txinRedeemSizeBytes_ = addrPtr->getInputSize();
 

@@ -167,6 +167,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Addresses.h" />
     <ClInclude Include="..\bdmenums.h" />
     <ClInclude Include="..\BDM_supportClasses.h" />
     <ClInclude Include="..\BinaryData.h" />
@@ -204,6 +205,10 @@
     <ClInclude Include="..\Wallets.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Accounts.cpp" />
+    <ClCompile Include="..\Addresses.cpp" />
+    <ClCompile Include="..\AssetEncryption.cpp" />
+    <ClCompile Include="..\Assets.cpp" />
     <ClCompile Include="..\BDM_mainthread.cpp" />
     <ClCompile Include="..\BDM_seder.cpp" />
     <ClCompile Include="..\BDM_Server.cpp" />
@@ -224,6 +229,8 @@
     <ClCompile Include="..\DatabaseBuilder.cpp" />
     <ClCompile Include="..\DataObject.cpp" />
     <ClCompile Include="..\DBUtils.cpp" />
+    <ClCompile Include="..\DecryptedDataContainer.cpp" />
+    <ClCompile Include="..\DerivationScheme.cpp" />
     <ClCompile Include="..\EncryptionUtils.cpp" />
     <ClCompile Include="..\FcgiMessage.cpp" />
     <ClCompile Include="..\fcgi\libfcgi\fcgiapp.c" />

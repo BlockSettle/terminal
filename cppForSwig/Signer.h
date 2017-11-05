@@ -309,6 +309,7 @@ public:
    bool isValid(void) const;
    
    void setFeed(shared_ptr<ResolverFeed> feedPtr) { resolverPtr_ = feedPtr; }
+   void resetFeeds(void);
    void populateUtxo(const UTXO& utxo);
 
    static Signer createFromState(const BinaryData&);

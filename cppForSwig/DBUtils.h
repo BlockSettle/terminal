@@ -147,5 +147,7 @@ public:
    static bool fileExists(const string& path, int mode);
 
    static FileMap getMmapOfFile(const string&);
+
+   static BinaryDataRef getDataRefForPacket(const BinaryDataRef& packet);
 };
 #endif

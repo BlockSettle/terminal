@@ -981,7 +981,7 @@ void StackInterpreter::process_p2wpkh(const BinaryData& scriptHash)
       throw ScriptException("witness size mismatch");
 
    //construct output script
-   auto&& swScript = BtcUtils::getP2WPKHScript(scriptHash);
+   auto&& swScript = BtcUtils::getP2WPKHWitnessScript(scriptHash);
    processScript(swScript, true);
 }
 
@@ -1008,7 +1008,7 @@ void StackInterpreter::process_p2wsh(const BinaryData& scriptHash)
    flags_ |= SCRIPT_VERIFY_P2SH_SHA256;
 
    //construct output script
-   auto&& swScript = BtcUtils::getP2WSHScript(scriptHash);
+   auto&& swScript = BtcUtils::getP2WSHWitnessScript(scriptHash);
    processScript(swScript, true);
 }
 
@@ -1438,13 +1438,13 @@ void StackResolver::resolveStack()
             {
                //resolve P2WPKH script
                swScript =
-                  BtcUtils::getP2WPKHScript(secondStackItem->staticData_);
+                  BtcUtils::getP2WPKHWitnessScript(secondStackItem->staticData_);
             }
             else if (secondStackItem->staticData_.getSize() == 32)
             {
                //resolve P2WSH script
                swScript =
-                  BtcUtils::getP2WSHScript(secondStackItem->staticData_);
+                  BtcUtils::getP2WSHWitnessScript(secondStackItem->staticData_);
                isP2SH_ = true;
             }
             else
