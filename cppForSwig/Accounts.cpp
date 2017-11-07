@@ -580,7 +580,7 @@ void AddressAccount::make_new(
          chaincode);
 
       //first derived asset
-      auto& full_account_id = ID_ + asset_account_id;
+      auto&& full_account_id = ID_ + asset_account_id;
       shared_ptr<AssetEntry_Single> firstAsset;
       {
          ReentrantLock lock(decrData.get());
@@ -636,7 +636,7 @@ void AddressAccount::make_new(
          chaincode);
 
       //first derived asset
-      auto& full_account_id = ID_ + asset_account_id;
+      auto&& full_account_id = ID_ + asset_account_id;
       shared_ptr<AssetEntry_Single> firstAsset;
       {
          firstAsset = derScheme->computeNextPublicEntry(

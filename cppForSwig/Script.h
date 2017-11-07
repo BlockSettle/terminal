@@ -991,7 +991,6 @@ public:
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& key)
    {
       throw runtime_error("invalid value");
-      return SecureBinaryData();
    }
 };
 

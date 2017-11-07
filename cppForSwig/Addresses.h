@@ -6,6 +6,9 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef _H_ADDRESSES
+#define _H_ADDRESSES
+
 #include <memory>
 
 #include "BinaryData.h"
@@ -301,3 +304,5 @@ public:
    size_t getInputSize(void) const { return 41; }
    size_t getWitnessDataSize(void) const;
 };
+
+#endif
