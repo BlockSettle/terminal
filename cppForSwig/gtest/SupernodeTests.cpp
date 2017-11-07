@@ -680,7 +680,7 @@ struct TestResolverFeed : public ResolverFeed
 class HybridFeed : public ResolverFeed
 {
 private:
-   shared_ptr<ResolvedFeed_AssetWalletSingle> feedPtr_;
+   shared_ptr<ResolverFeed_AssetWalletSingle> feedPtr_;
 
 public:
    TestResolverFeed testFeed_;
@@ -688,7 +688,7 @@ public:
 public:
    HybridFeed(shared_ptr<AssetWallet_Single> wltPtr)
    {
-      feedPtr_ = make_shared<ResolvedFeed_AssetWalletSingle>(wltPtr);
+      feedPtr_ = make_shared<ResolverFeed_AssetWalletSingle>(wltPtr);
    }
 
    BinaryData getByVal(const BinaryData& val)
@@ -2080,7 +2080,6 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
    auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
    auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
       homedir_,
-      AddressEntryType_Nested_P2PK,
       wltRoot,
       SecureBinaryData(),
       5);
