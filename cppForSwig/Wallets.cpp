@@ -1167,7 +1167,7 @@ const BinaryData& AssetWallet::getAssetIDForAddr(const BinaryData& scrAddr)
 
    try
    {
-      scrHash = move(BtcUtils::base58toScriptAddr(scrAddr));
+      scrHash = move(BtcUtils::base58toScrAddr(scrAddr));
    }
    catch(runtime_error&)
    {

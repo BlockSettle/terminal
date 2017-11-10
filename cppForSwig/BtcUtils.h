@@ -48,6 +48,8 @@ class LedgerEntryData;
 #define TX_NOT_EXIST       -1
 #define TX_OFF_MAIN_BRANCH -2
 
+#define SEGWIT_ADDRESS_MAINNET_HEADER "bc"
+#define SEGWIT_ADDRESS_TESTNET_HEADER "tb"
 
 #define HashString     BinaryData
 #define HashStringRef  BinaryDataRef
@@ -131,6 +133,8 @@ typedef enum
   SCRIPT_PREFIX_P2SH=0x05,
   SCRIPT_PREFIX_HASH160_TESTNET=0x6f,
   SCRIPT_PREFIX_P2SH_TESTNET=0xc4,
+  SCRIPT_PREFIX_P2WPKH=0x90,
+  SCRIPT_PREFIX_P2WSH=0x95,
   SCRIPT_PREFIX_MULTISIG=0xfe,
   SCRIPT_PREFIX_NONSTD=0xff,
   SCRIPT_PREFIX_OPRETURN=0x6a
@@ -1790,7 +1794,7 @@ public:
       return base58_encode(scriptNhash);
    }
 
-   static BinaryData base58toScriptAddr(const BinaryData& b58Addr)
+   static BinaryData base58toScrAddr(const BinaryData& b58Addr)
    {
       //decode
       auto&& scriptNhash = base58_decode(b58Addr);
@@ -2114,6 +2118,9 @@ public:
 
    static string base64_encode(const string&);
    static string base64_decode(const string&);
+
+   static BinaryData scrAddrToSegWitAddress(const BinaryData& scrAddr);
+   static BinaryData segWitAddressToScrAddr(const BinaryData& swAddr);
 };
    
 static inline void suppressUnusedFunctionWarning()

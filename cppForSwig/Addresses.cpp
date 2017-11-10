@@ -225,14 +225,26 @@ const BinaryData& AddressEntry_P2WPKH::getHash() const
 ////////////////////////////////////////////////////////////////////////////////
 const BinaryData& AddressEntry_P2WPKH::getPrefixedHash() const
 {
-   throw AddressException("no address format for native SW");
+   if (prefixedHash_.getSize() == 0)
+   {
+      auto& hash = getHash();
+
+      //get and prepend network byte
+      auto networkByte = uint8_t(SCRIPT_PREFIX_P2WPKH);
+
+      prefixedHash_.append(networkByte);
+      prefixedHash_.append(hash);
+   }
+
    return prefixedHash_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 const BinaryData& AddressEntry_P2WPKH::getAddress() const
 {
-   throw AddressException("no address format for native SW");
+   //prefixed has for SW is only for the db, using plain hash for SW
+   if (address_.getSize() == 0)
+      address_ = move(BtcUtils::scrAddrToSegWitAddress(getHash()));
    return address_;
 }
 
@@ -507,14 +519,26 @@ const BinaryData& AddressEntry_P2WSH::getHash() const
 ////////////////////////////////////////////////////////////////////////////////
 const BinaryData& AddressEntry_P2WSH::getPrefixedHash() const
 {
-   throw AddressException("no adderss format for SW");
-   return hash_;
+   if (prefixedHash_.getSize() == 0)
+   {
+      auto& hash = getHash();
+
+      //get and prepend network byte
+      auto networkByte = uint8_t(SCRIPT_PREFIX_P2WSH);
+
+      prefixedHash_.append(networkByte);
+      prefixedHash_.append(hash);
+   }
+
+   return prefixedHash_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 const BinaryData& AddressEntry_P2WSH::getAddress() const
 {
-   throw AddressException("no adderss format for SW");
+   //prefixed has for SW is only for the db, using plain hash for SW
+   if (address_.getSize() == 0)
+      address_ = move(BtcUtils::scrAddrToSegWitAddress(getHash()));
    return address_;
 }
 

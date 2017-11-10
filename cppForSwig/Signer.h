@@ -23,7 +23,8 @@ enum SpenderStatus
 {
    SpenderStatus_Unkonwn,
    SpenderStatus_Partial,
-   SpenderStatus_Resolved
+   SpenderStatus_Resolved,
+   SpenderStatus_Empty
 };
 
 #define SERIALIZED_SCRIPT_PREFIX 0x01
@@ -165,8 +166,15 @@ public:
       if (legacyStatus_ == SpenderStatus_Resolved)
          return;
 
-      updateStack(partialStack_, stack);
-      legacyStatus_ = SpenderStatus_Partial;
+      if (stack.size() != 0)
+      {
+         updateStack(partialStack_, stack);
+         legacyStatus_ = SpenderStatus_Partial;
+      }
+      else
+      {
+         legacyStatus_ = SpenderStatus_Empty;
+      }
    }
 
    void updatePartialWitnessStack(const vector<shared_ptr<StackItem>>& stack)

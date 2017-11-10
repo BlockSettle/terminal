@@ -382,6 +382,14 @@ BinaryData ScriptSpender::serializeWitnessData(
 ////////////////////////////////////////////////////////////////////////////////
 bool ScriptSpender::resolved() const
 {
+   //native segwit has no legacy stack, needs special case handling
+   if (legacyStatus_ == SpenderStatus_Empty &&
+      segwitStatus_ == SpenderStatus_Resolved)
+   {
+      return true;
+   }
+
+   //back to regular stack evaluation
    if (legacyStatus_ != SpenderStatus_Resolved)
       return false;
 
@@ -413,7 +421,8 @@ BinaryData ScriptSpender::getSerializedOutpoint() const
 ////////////////////////////////////////////////////////////////////////////////
 BinaryDataRef ScriptSpender::getSerializedInput() const
 {
-   if (legacyStatus_ != SpenderStatus_Resolved)
+   if (legacyStatus_ != SpenderStatus_Resolved && 
+      legacyStatus_ != SpenderStatus_Empty)
       throw ScriptException("unresolved spender");
    
    BinaryWriter bw;
@@ -1130,6 +1139,8 @@ BinaryDataRef Signer::serialize(void) const
    }
 
    //txin count
+   if (spenders_.size() == 0)
+      throw runtime_error("no spenders");
    bw.put_var_int(spenders_.size());
 
    //txins
@@ -1137,6 +1148,8 @@ BinaryDataRef Signer::serialize(void) const
       bw.put_BinaryDataRef(spender->getSerializedInput());
 
    //txout count
+   if (recipients_.size() == 0)
+      throw runtime_error("no recipients");
    bw.put_var_int(recipients_.size());
 
    //txouts

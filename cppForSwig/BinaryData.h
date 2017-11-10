@@ -182,6 +182,12 @@ public:
          return reinterpret_cast<char*>(&data_[0]);
    }  
 
+   /////////////////////////////////////////////////////////////////////////////
+   const vector<uint8_t>& getDataVector(void) const
+   {
+      return data_;
+   }
+
    BinaryDataRef getRef(void) const;
    //uint8_t const * getConstPtr(void) const  { return &(data_[0]); }
    

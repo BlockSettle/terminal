@@ -609,9 +609,13 @@ void AddressAccount::make_new(
          addressTypes_.insert(AddressEntryType(
             AddressEntryType_P2PK | AddressEntryType_Compressed | AddressEntryType_P2SH));
 
-         //nested p2wsh
+         //nested p2wpkh
          addressTypes_.insert(AddressEntryType(
             AddressEntryType_P2WPKH | AddressEntryType_P2SH));
+
+         //native p2wpkh
+         addressTypes_.insert(AddressEntryType(
+            AddressEntryType_P2WPKH));
       }
 
       //set default address type
@@ -663,9 +667,13 @@ void AddressAccount::make_new(
          addressTypes_.insert(AddressEntryType(
             AddressEntryType_P2PK | AddressEntryType_Compressed | AddressEntryType_P2SH));
 
-         //nested p2wsh
+         //nested p2wpkh
          addressTypes_.insert(AddressEntryType(
             AddressEntryType_P2WPKH | AddressEntryType_P2SH));
+
+         //native p2wpkh
+         addressTypes_.insert(AddressEntryType(
+            AddressEntryType_P2WPKH));
       }
 
       //set default address type
