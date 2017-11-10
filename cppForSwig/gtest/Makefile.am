@@ -22,6 +22,7 @@ INCLUDE_FILES = ../UniversalTimer.h ../BinaryData.h ../lmdb_wrapper.h \
 	../CoinSelection.h ../SigHashEnum.h ../TxEvalState.h \
 	../Accounts.h ../Addresses.h ../AssetEncryption.h ../Assets.h \
 	../DecryptedDataContainer.h ../DerivationScheme.h \
+	../bech32/ref/c++/bech32.h ../bech32/ref/c++/segwit_addr.h \
 	gtest.h
 
 SOURCE_FILES = ../UniversalTimer.cpp ../BinaryData.cpp ../lmdb_wrapper.cpp \
@@ -39,6 +40,7 @@ SOURCE_FILES = ../UniversalTimer.cpp ../BinaryData.cpp ../lmdb_wrapper.cpp \
 	../CoinSelection.cpp ../log.cpp ../TxEvalState.cpp \
 	../Accounts.cpp ../Addresses.cpp ../AssetEncryption.cpp ../Assets.cpp \
 	../DecryptedDataContainer.cpp ../DerivationScheme.cpp \
+	../bech32/ref/c++/bech32.cpp ../bech32/ref/c++/segwit_addr.cpp \
 	gtest-all.cc
 
 AM_CXXFLAGS += -I../lmdb \

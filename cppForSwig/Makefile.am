@@ -33,7 +33,8 @@ INCLUDE_FILES = UniversalTimer.h BinaryData.h lmdb_wrapper.h \
 	ReentrantLock.h StringSockets.h log.h OS_TranslatePath.h \
 	TransactionBatch.h BlockchainScanner_Super.h SigHashEnum.h TxEvalState.h \
 	Accounts.h Addresses.h AssetEncryption.h Assets.h \
-	DecryptedDataContainer.h DerviationScheme.h
+	DecryptedDataContainer.h DerviationScheme.h \
+	bech32/ref/c++/bech32.h bech32/ref/c++/segwit_addr.h
 
 DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	BtcUtils.cpp DBUtils.cpp BlockObj.cpp BlockUtils.cpp EncryptionUtils.cpp \
@@ -45,7 +46,8 @@ DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	DataObject.cpp BitcoinP2P.cpp BDM_Server.cpp BDM_seder.cpp SocketObject.cpp \
 	FcgiMessage.cpp BlockDataManagerConfig.cpp \
 	Transactions.cpp Script.cpp Signer.cpp nodeRPC.cpp JSON_codec.cpp \
-	StringSockets.cpp main.cpp ReentrantLock.cpp log.cpp TxEvalState.cpp
+	StringSockets.cpp main.cpp ReentrantLock.cpp log.cpp TxEvalState.cpp \
+	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp
 
 CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	BtcUtils.cpp DBUtils.cpp EncryptionUtils.cpp \
@@ -57,7 +59,8 @@ CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	CoinSelection.cpp ReentrantLock.cpp JSON_codec.cpp \
 	TransactionBatch.cpp log.cpp TxEvalState.cpp
 	Accounts.cpp Addresses.cpp AssetEncryption.cpp Assets.cpp \
-	DecryptedDataContainer.cpp DerivationScheme.cpp
+	DecryptedDataContainer.cpp DerivationScheme.cpp \
+	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp
 
 #ArmoryDB
 noinst_PROGRAMS = ArmoryDB
