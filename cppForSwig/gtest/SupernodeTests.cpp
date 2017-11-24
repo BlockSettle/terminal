@@ -10,180 +10,8 @@
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //                                   
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
-#include <limits.h>
-#include <iostream>
-#include <stdlib.h>
-#include <stdint.h>
-#include <thread>
-#include "gtest.h"
 
-#include "../log.h"
-#include "../BinaryData.h"
-#include "../BtcUtils.h"
-#include "../BlockObj.h"
-#include "../StoredBlockObj.h"
-#include "../PartialMerkle.h"
-#include "../EncryptionUtils.h"
-#include "../lmdb_wrapper.h"
-#include "../BlockUtils.h"
-#include "../ScrAddrObj.h"
-#include "../BtcWallet.h"
-#include "../BlockDataViewer.h"
-#include "../cryptopp/DetSign.h"
-#include "../cryptopp/integer.h"
-#include "../Progress.h"
-#include "../reorgTest/blkdata.h"
-#include "../BDM_seder.h"
-#include "../BDM_Server.h"
-#include "../TxClasses.h"
-#include "../txio.h"
-#include "../Signer.h"
-#include "../Wallets.h"
-#include "../Script.h"
-#include "../Signer.h"
-
-
-
-
-#ifdef _MSC_VER
-#ifdef mlock
-#undef mlock
-#undef munlock
-#endif
-#include "win32_posix.h"
-#undef close
-
-#ifdef _DEBUG
-//#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
-
-#ifndef DBG_NEW
-#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-#define new DBG_NEW
-#endif
-#endif
-#endif
-
-#define READHEX BinaryData::CreateFromHex
-
-static uint32_t getTopBlockHeightInDB(BlockDataManager &bdm, DB_SELECT db)
-{
-   StoredDBInfo sdbi;
-   bdm.getIFace()->getStoredDBInfo(db, 0);
-   return sdbi.topBlkHgt_;
-}
-
-static uint64_t getDBBalanceForHash160(
-   BlockDataManager &bdm,
-   BinaryDataRef addr160
-   )
-{
-   StoredScriptHistory ssh;
-
-   bdm.getIFace()->getStoredScriptHistory(ssh, HASH160PREFIX + addr160);
-   if (!ssh.isInitialized())
-      return 0;
-
-   return ssh.getScriptBalance();
-}
-
-// Utility function - Clean up comments later
-static int char2int(char input)
-{
-   if (input >= '0' && input <= '9')
-      return input - '0';
-   if (input >= 'A' && input <= 'F')
-      return input - 'A' + 10;
-   if (input >= 'a' && input <= 'f')
-      return input - 'a' + 10;
-   return 0;
-}
-
-// This function assumes src to be a zero terminated sanitized string with
-// an even number of [0-9a-f] characters, and target to be sufficiently large
-static void hex2bin(const char* src, unsigned char* target)
-{
-   while (*src && src[1])
-   {
-      *(target++) = char2int(*src) * 16 + char2int(src[1]);
-      src += 2;
-   }
-}
-
-#if ! defined(_MSC_VER) && ! defined(__MINGW32__)
-/////////////////////////////////////////////////////////////////////////////
-static void rmdir(string src)
-{
-   char* syscmd = new char[4096];
-   sprintf(syscmd, "rm -rf %s", src.c_str());
-   system(syscmd);
-   delete[] syscmd;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-static void mkdir(string newdir)
-{
-   char* syscmd = new char[4096];
-   sprintf(syscmd, "mkdir -p %s", newdir.c_str());
-   system(syscmd);
-   delete[] syscmd;
-}
-#endif
-
-static void concatFile(const string &from, const string &to)
-{
-   std::ifstream i(from, ios::binary);
-   std::ofstream o(to, ios::app | ios::binary);
-
-   o << i.rdbuf();
-}
-
-static void appendBlocks(const std::vector<std::string> &files, const std::string &to)
-{
-   for (const std::string &f : files)
-      concatFile("../reorgTest/blk_" + f + ".dat", to);
-}
-
-static void setBlocks(const std::vector<std::string> &files, const std::string &to)
-{
-   std::ofstream o(to, ios::trunc | ios::binary);
-   o.close();
-
-   for (const std::string &f : files)
-      concatFile("../reorgTest/blk_" + f + ".dat", to);
-}
-
-static void nullProgress(unsigned, double, unsigned, unsigned)
-{
-
-}
-
-static BinaryData getTx(unsigned height, unsigned id)
-{
-   stringstream ss;
-   ss << "../reorgTest/blk_" << height << ".dat";
-
-   ifstream blkfile(ss.str(), ios::binary);
-   blkfile.seekg(0, ios::end);
-   auto size = blkfile.tellg();
-   blkfile.seekg(0, ios::beg);
-
-   vector<char> vec;
-   vec.resize(size);
-   blkfile.read(&vec[0], size);
-   blkfile.close();
-
-   BinaryRefReader brr((uint8_t*)&vec[0], size);
-   StoredHeader sbh;
-   sbh.unserializeFullBlock(brr, false, true);
-
-   if (sbh.stxMap_.size() - 1 < id)
-      throw range_error("invalid tx id");
-
-   auto& stx = sbh.stxMap_[id];
-   return stx.dataCopy_;
-}
+#include "TestUtils.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -387,339 +215,6 @@ TEST_F(DISABLED_PartialMerkleTest, EmptyTree)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-string registerBDV(Clients* clients, const BinaryData& magic_word)
-{
-   Command cmd;
-   cmd.method_ = "registerBDV";
-   BinaryDataObject bdo(magic_word);
-   cmd.args_.push_back(move(bdo));
-   cmd.serialize();
-
-   auto&& result = clients->runCommand(cmd.command_);
-
-   auto& argVec = result.getArgVector();
-   auto bdvId = dynamic_pointer_cast<DataObject<BinaryDataObject>>(argVec[0]);
-   return bdvId->getObj().toStr();
-}
-
-void goOnline(Clients* clients, const string& id)
-{
-   Command cmd;
-   cmd.method_ = "goOnline";
-   cmd.ids_.push_back(id);
-   cmd.serialize();
-   clients->runCommand(cmd.command_);
-}
-
-const shared_ptr<BDV_Server_Object> getBDV(Clients* clients, const string& id)
-{
-   return clients->get(id);
-}
-
-void regWallet(Clients* clients, const string& bdvId,
-   const vector<BinaryData>& scrAddrs, const string& wltName)
-{
-   Command cmd;
-
-   BinaryDataObject bdo(wltName);
-   cmd.args_.push_back(move(bdo));
-   cmd.args_.push_back(move(BinaryDataVector(scrAddrs)));
-   cmd.args_.push_back(move(IntType(false)));
-
-   cmd.method_ = "registerWallet";
-   cmd.ids_.push_back(bdvId);
-   cmd.serialize();
-
-   auto&& result = clients->runCommand(cmd.command_);
-
-   //check result
-   auto& argVec = result.getArgVector();
-   auto retint = dynamic_pointer_cast<DataObject<IntType>>(argVec[0]);
-   if (retint->getObj().getVal() == 0)
-      throw runtime_error("server returned false to registerWallet query");
-}
-
-BinaryData getTxByHash(Clients* clients, const string bdvId,
-   const BinaryData& txHash)
-{
-   Command cmd;
-
-   BinaryDataObject bdo(txHash);
-   cmd.args_.push_back(move(bdo));
-
-   cmd.method_ = "getTxByHash";
-   cmd.ids_.push_back(bdvId);
-   cmd.serialize();
-
-   auto&& result = clients->runCommand(cmd.command_);
-
-   //check result
-   auto& argVec = result.getArgVector();
-   auto tx = dynamic_pointer_cast<DataObject<BinaryDataObject>>(argVec[0]);
-
-   return tx->getObj().get();
-}
-
-vector<uint64_t> getBalanceAndCount(Clients* clients,
-   const string& bdvId, const string& walletId, unsigned blockheight)
-{
-   Command cmd;
-   cmd.method_ = "getBalancesAndCount";
-   cmd.ids_.push_back(bdvId);
-   cmd.ids_.push_back(walletId);
-
-   cmd.args_.push_back(move(IntType(blockheight)));
-
-   cmd.serialize();
-
-   auto&& result = clients->runCommand(cmd.command_);
-   auto& argVec = result.getArgVector();
-
-   auto&& balance_full =
-      dynamic_pointer_cast<DataObject<IntType>>(argVec[0])->getObj().getVal();
-   auto&& balance_spen =
-      dynamic_pointer_cast<DataObject<IntType>>(argVec[1])->getObj().getVal();
-   auto&& balance_unco =
-      dynamic_pointer_cast<DataObject<IntType>>(argVec[2])->getObj().getVal();
-   auto&& count =
-      dynamic_pointer_cast<DataObject<IntType>>(argVec[3])->getObj().getVal();
-
-   vector<uint64_t> balanceVec;
-   balanceVec.push_back(balance_full);
-   balanceVec.push_back(balance_spen);
-   balanceVec.push_back(balance_unco);
-   balanceVec.push_back(count);
-
-   return balanceVec;
-}
-
-void regLockbox(Clients* clients, const string& bdvId,
-   const vector<BinaryData>& scrAddrs, const string& wltName)
-{
-   Command cmd;
-
-   BinaryDataObject bdo(wltName);
-   cmd.args_.push_back(move(bdo));
-   cmd.args_.push_back(move(BinaryDataVector(scrAddrs)));
-   cmd.args_.push_back(move(IntType(false)));
-
-   cmd.method_ = "registerLockbox";
-   cmd.ids_.push_back(bdvId);
-   cmd.serialize();
-
-   auto&& result = clients->runCommand(cmd.command_);
-
-   //check result
-   auto& argVec = result.getArgVector();
-   auto retint = dynamic_pointer_cast<DataObject<IntType>>(argVec[0]);
-   if (retint->getObj().getVal() == 0)
-      throw runtime_error("server returned false to registerWallet query");
-}
-
-void waitOnSignal(Clients* clients, const string& bdvId,
-   string command, const string& signal)
-{
-   Command cmd;
-   cmd.method_ = "registerCallback";
-   cmd.ids_.push_back(bdvId);
-
-   BinaryDataObject bdo(command);
-   cmd.args_.push_back(move(bdo));
-   cmd.serialize();
-
-   auto processCallback = [&](Arguments args)->bool
-   {
-      auto& argVec = args.getArgVector();
-
-      for (auto arg : argVec)
-      {
-         auto argstr = dynamic_pointer_cast<DataObject<BinaryDataObject>>(arg);
-         if (argstr == nullptr)
-            continue;
-
-         auto&& cb = argstr->getObj().toStr();
-         if (cb == signal)
-            return true;
-      }
-
-      return false;
-   };
-
-   while (1)
-   {
-      auto&& result = clients->runCommand(cmd.command_);
-
-      if (processCallback(move(result)))
-         return;
-   }
-}
-
-void waitOnBDMReady(Clients* clients, const string& bdvId)
-{
-   waitOnSignal(clients, bdvId, "waitOnBDV", "BDM_Ready");
-}
-
-void waitOnNewBlockSignal(Clients* clients, const string& bdvId)
-{
-   waitOnSignal(clients, bdvId, "getStatus", "NewBlock");
-}
-
-void waitOnNewZcSignal(Clients* clients, const string& bdvId)
-{
-   waitOnSignal(clients, bdvId, "getStatus", "BDV_ZC");
-}
-
-void waitOnWalletRefresh(Clients* clients, const string& bdvId)
-{
-   waitOnSignal(clients, bdvId, "getStatus", "BDV_Refresh");
-}
-
-void triggerNewBlockNotification(BlockDataManagerThread* bdmt)
-{
-   auto nodePtr = bdmt->bdm()->networkNode_;
-   auto nodeUnitTest = (NodeUnitTest*)nodePtr.get();
-
-   nodeUnitTest->mockNewBlock();
-}
-
-struct ZcVector
-{
-   vector<Tx> zcVec_;
-
-   void push_back(BinaryData rawZc, unsigned zcTime)
-   {
-      Tx zctx(rawZc);
-      zctx.setTxTime(zcTime);
-
-      zcVec_.push_back(move(zctx));
-   }
-};
-
-void pushNewZc(BlockDataManagerThread* bdmt, const ZcVector& zcVec)
-{
-   auto zcCont = bdmt->bdm()->zeroConfCont_;
-
-   ZeroConfContainer::ZcActionStruct newzcstruct;
-   newzcstruct.action_ = Zc_NewTx;
-
-   map<BinaryData, Tx> newzcmap;
-
-   for (auto& newzc : zcVec.zcVec_)
-   {
-      auto&& zckey = zcCont->getNewZCkey();
-      newzcmap[zckey] = newzc;
-   }
-
-   newzcstruct.setData(move(newzcmap));
-   zcCont->newZcStack_.push_back(move(newzcstruct));
-}
-
-string getLedgerDelegate(Clients* clients, const string& bdvId)
-{
-   Command cmd;
-
-   cmd.method_ = "getLedgerDelegateForWallets";
-   cmd.ids_.push_back(bdvId);
-   cmd.serialize();
-
-   auto&& result = clients->runCommand(cmd.command_);
-
-   //check result
-   auto& argVec = result.getArgVector();
-   auto delegateid = dynamic_pointer_cast<DataObject<BinaryDataObject>>(argVec[0]);
-   return delegateid->getObj().toStr();
-}
-
-vector<LedgerEntryData> getHistoryPage(Clients* clients, const string& bdvId,
-   const string& delegateId, uint32_t pageId)
-{
-   Command cmd;
-   cmd.method_ = "getHistoryPage";
-   cmd.ids_.push_back(bdvId);
-   cmd.ids_.push_back(delegateId);
-
-   cmd.args_.push_back(move(IntType(pageId)));
-
-   cmd.serialize();
-
-   auto&& result = clients->runCommand(cmd.command_);
-   auto& argVec = result.getArgVector();
-
-   auto lev = dynamic_pointer_cast<DataObject<LedgerEntryVector>>(argVec[0]);
-
-   auto levData = lev->getObj().toVector();
-   return levData;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-struct TestResolverFeed : public ResolverFeed
-{
-   map<BinaryData, BinaryData> h160ToPubKey_;
-   map<BinaryData, SecureBinaryData> pubKeyToPrivKey_;
-
-   BinaryData getByVal(const BinaryData& val)
-   {
-      auto iter = h160ToPubKey_.find(val);
-      if (iter == h160ToPubKey_.end())
-         throw runtime_error("invalid value");
-
-      return iter->second;
-   }
-
-   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
-   {
-      auto iter = pubKeyToPrivKey_.find(pubkey);
-      if (iter == pubKeyToPrivKey_.end())
-         throw runtime_error("invalid pubkey");
-
-      return iter->second;
-   }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-class HybridFeed : public ResolverFeed
-{
-private:
-   shared_ptr<ResolverFeed_AssetWalletSingle> feedPtr_;
-
-public:
-   TestResolverFeed testFeed_;
-
-public:
-   HybridFeed(shared_ptr<AssetWallet_Single> wltPtr)
-   {
-      feedPtr_ = make_shared<ResolverFeed_AssetWalletSingle>(wltPtr);
-   }
-
-   BinaryData getByVal(const BinaryData& val)
-   {
-      try
-      {
-         return testFeed_.getByVal(val);
-      }
-      catch (runtime_error&)
-      {
-      }
-
-      return feedPtr_->getByVal(val);
-   }
-
-   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
-   {
-      try
-      {
-         return testFeed_.getPrivKeyForPubkey(pubkey);
-      }
-      catch (runtime_error&)
-      {
-      }
-
-      return feedPtr_->getPrivKeyForPubkey(pubkey);
-   }
-};
-
-
-////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 class BlockUtilsSuper : public ::testing::Test
@@ -761,7 +256,7 @@ protected:
 
       // Put the first 5 blocks into the blkdir
       blk0dat_ = BtcUtils::getBlkFilename(blkdir_, 0);
-      setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
+      TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
 
       config.armoryDbType_ = ARMORY_DB_SUPER;
       config.blkFileLocation_ = blkdir_;
@@ -828,9 +323,9 @@ protected:
 TEST_F(BlockUtilsSuper, Load5Blocks)
 {
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    StoredScriptHistory ssh;
 
@@ -891,9 +386,9 @@ TEST_F(BlockUtilsSuper, Load5Blocks)
 TEST_F(BlockUtilsSuper, Load5Blocks_ReloadBDM)
 {
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    StoredScriptHistory ssh;
 
@@ -963,9 +458,9 @@ TEST_F(BlockUtilsSuper, Load5Blocks_ReloadBDM)
    EXPECT_EQ(ssh_sdbi.topBlkHgt_, 5);
 
    theBDMt_->start(config.initMode_);
-   bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    iface_->getStoredScriptHistory(ssh, TestChain::scrAddrA);
    EXPECT_EQ(ssh.getScriptBalance(), 50 * COIN);
@@ -1022,9 +517,9 @@ TEST_F(BlockUtilsSuper, Load5Blocks_ReloadBDM)
 TEST_F(BlockUtilsSuper, Load5Blocks_Reload_Rescan)
 {
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    StoredScriptHistory ssh;
 
@@ -1094,9 +589,9 @@ TEST_F(BlockUtilsSuper, Load5Blocks_Reload_Rescan)
    EXPECT_EQ(ssh_sdbi.topBlkHgt_, 5);
 
    theBDMt_->start(INIT_RESCAN);
-   bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    iface_->getStoredScriptHistory(ssh, TestChain::scrAddrA);
    EXPECT_EQ(ssh.getScriptBalance(), 50 * COIN);
@@ -1154,23 +649,23 @@ TEST_F(BlockUtilsSuper, Load3BlocksPlus3)
 {
    // Copy only the first four blocks.  Will copy the full file next to test
    // readBlkFileUpdate method on non-reorg blocks.
-   setBlocks({ "0", "1", "2" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2" }, blk0dat_);
 
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    EXPECT_EQ(iface_->getTopBlockHeight(HEADERS), 2);
    EXPECT_EQ(iface_->getTopBlockHash(HEADERS), TestChain::blkHash2);
    EXPECT_TRUE(theBDMt_->bdm()->blockchain()->
       getHeaderByHash(TestChain::blkHash2)->isMainBranch());
 
-   appendBlocks({ "3" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::appendBlocks({ "3" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
-   appendBlocks({ "5" }, blk0dat_);
+   TestUtils::appendBlocks({ "5" }, blk0dat_);
 
    //restart bdm
    clients_->exitRequestLoop();
@@ -1182,14 +677,14 @@ TEST_F(BlockUtilsSuper, Load3BlocksPlus3)
    initBDM();
 
    theBDMt_->start(config.initMode_);
-   bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
-   appendBlocks({ "4" }, blk0dat_);
+   TestUtils::appendBlocks({ "4" }, blk0dat_);
 
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    EXPECT_EQ(iface_->getTopBlockHeight(HEADERS), 5);
    EXPECT_EQ(iface_->getTopBlockHash(HEADERS), TestChain::blkHash5);
@@ -1253,7 +748,7 @@ TEST_F(BlockUtilsSuper, Load3BlocksPlus3)
    auto& txio = txioHeightMap.txioMap_.rbegin()->second;
    auto&& txhash = txio.getTxHashOfOutput(iface_);
 
-   auto&& tx_raw = getTxByHash(clients_, bdvID, txhash);
+   auto&& tx_raw = DBTestUtils::getTxByHash(clients_, bdvID, txhash);
    Tx tx_obj;
    tx_obj.unserializeWithMetaData(tx_raw);
    EXPECT_EQ(tx_obj.getThisHash(), txhash);
@@ -1264,21 +759,21 @@ TEST_F(BlockUtilsSuper, DISABLED_RepaidMissingTxio)
 {
    // Copy only the first four blocks.  Will copy the full file next to test
    // readBlkFileUpdate method on non-reorg blocks.
-   setBlocks({ "0", "1", "2" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2" }, blk0dat_);
    
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    EXPECT_EQ(iface_->getTopBlockHeight(HEADERS), 2);
    EXPECT_EQ(iface_->getTopBlockHash(HEADERS), TestChain::blkHash2);
    EXPECT_TRUE(theBDMt_->bdm()->blockchain()->
       getHeaderByHash(TestChain::blkHash2)->isMainBranch());
 
-   appendBlocks({ "3" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::appendBlocks({ "3" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    //grab a ssh and delete some utxos
    StoredScriptHistory ssh;
@@ -1313,13 +808,13 @@ TEST_F(BlockUtilsSuper, DISABLED_RepaidMissingTxio)
    thread delKeysTID(delKeysThread);
    delKeysTID.join();
 
-   appendBlocks({ "5" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::appendBlocks({ "5" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
-   appendBlocks({ "4" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::appendBlocks({ "4" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    EXPECT_EQ(iface_->getTopBlockHeight(HEADERS), 5);
    EXPECT_EQ(iface_->getTopBlockHash(HEADERS), TestChain::blkHash5);
@@ -1384,23 +879,23 @@ TEST_F(BlockUtilsSuper, DISABLED_RepaidMissingTxio)
 TEST_F(BlockUtilsSuper, DISABLED_Load5Blocks_Plus2NoReorg)
 {
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
-   setBlocks({ "0", "1", "2", "3", "4", "5", "4A" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5", "4A" }, blk0dat_);
    BtcUtils::copyFile("../reorgTest/blk_4A.dat", blk0dat_);
 
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    EXPECT_EQ(
       theBDMt_->bdm()->blockchain()->top()->getThisHash(), TestChain::blkHash5);
    EXPECT_EQ(theBDMt_->bdm()->blockchain()->top()->getBlockHeight(), 5);
 
-   appendBlocks({ "5A" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::appendBlocks({ "5A" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    EXPECT_EQ(
       theBDMt_->bdm()->blockchain()->top()->getThisHash(), TestChain::blkHash5);
@@ -1411,13 +906,13 @@ TEST_F(BlockUtilsSuper, DISABLED_Load5Blocks_Plus2NoReorg)
 TEST_F(BlockUtilsSuper, Load5Blocks_FullReorg)
 {
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
-   setBlocks({ "0", "1", "2", "3", "4", "5", "4A", "5A" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5", "4A", "5A" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    StoredScriptHistory ssh;
 
@@ -1476,9 +971,9 @@ TEST_F(BlockUtilsSuper, Load5Blocks_FullReorg)
 TEST_F(BlockUtilsSuper, Load5Blocks_ReloadBDM_Reorg)
 {
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    //reload BDM
    clients_->exitRequestLoop();
@@ -1489,12 +984,12 @@ TEST_F(BlockUtilsSuper, Load5Blocks_ReloadBDM_Reorg)
 
    initBDM();
 
-   setBlocks({ "0", "1", "2", "3", "4", "5", "4A", "5A" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5", "4A", "5A" }, blk0dat_);
 
    theBDMt_->start(config.initMode_);
-   bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    EXPECT_EQ(theBDMt_->bdm()->blockchain()->top()->getBlockHeight(), 5);
 
@@ -1556,17 +1051,17 @@ TEST_F(BlockUtilsSuper, Load5Blocks_DoubleReorg)
 {
    StoredScriptHistory ssh;
 
-   setBlocks({ "0", "1", "2", "3", "4A" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4A" }, blk0dat_);
 
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
 
    //first reorg: up to 5
-   setBlocks({ "0", "1", "2", "3", "4A", "4", "5" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4A", "4", "5" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    iface_->getStoredScriptHistory(ssh, TestChain::scrAddrA);
    EXPECT_EQ(ssh.getScriptBalance(), 50 * COIN);
@@ -1619,9 +1114,9 @@ TEST_F(BlockUtilsSuper, Load5Blocks_DoubleReorg)
    EXPECT_EQ(ssh.totalTxioCount_, 2);
 
    //second reorg: up to 5A
-   setBlocks({ "0", "1", "2", "3", "4A", "4", "5", "5A" }, blk0dat_);
-   triggerNewBlockNotification(theBDMt_);
-   waitOnNewBlockSignal(clients_, bdvID);
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4A", "4", "5", "5A" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
    iface_->getStoredScriptHistory(ssh, TestChain::scrAddrA);
    EXPECT_EQ(ssh.getScriptBalance(), 50 * COIN);
@@ -1729,7 +1224,7 @@ protected:
 
       // Put the first 5 blocks into the blkdir
       blk0dat_ = BtcUtils::getBlkFilename(blkdir_, 0);
-      setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
+      TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
 
       config.armoryDbType_ = ARMORY_DB_SUPER;
       config.blkFileLocation_ = blkdir_;
@@ -1805,15 +1300,15 @@ TEST_F(BlockUtilsWithWalletTest, Test_WithWallet)
    scrAddrVec.push_back(TestChain::scrAddrC);
 
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
 
-   regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
 
-   auto bdvPtr = getBDV(clients_, bdvID);
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
 
    //wait on signals
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
    auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
 
 
@@ -1854,15 +1349,15 @@ TEST_F(BlockUtilsWithWalletTest, RegisterAddrAfterWallet)
    scrAddrVec.push_back(TestChain::scrAddrC);
 
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
 
-   regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
 
-   auto bdvPtr = getBDV(clients_, bdvID);
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
 
    //wait on signals
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
    auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
 
    uint64_t balanceWlt;
@@ -1871,7 +1366,7 @@ TEST_F(BlockUtilsWithWalletTest, RegisterAddrAfterWallet)
    //post initial load address registration
    wlt->addScrAddress(TestChain::scrAddrD);
    //wait on the address scan
-   waitOnWalletRefresh(clients_, bdvID);
+   DBTestUtils::waitOnWalletRefresh(clients_, bdvID);
 
 
    balanceWlt = wlt->getScrAddrObjByKey(TestChain::scrAddrA)->getFullBalance();
@@ -1919,7 +1414,7 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
    };
 
    // Copy only the first two blocks
-   setBlocks({ "0", "1", "2", "3" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
 
    vector<BinaryData> scrAddrVec;
    scrAddrVec.push_back(TestChain::scrAddrA);
@@ -1928,15 +1423,15 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
    scrAddrVec.push_back(TestChain::scrAddrE);
 
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
 
-   regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
 
-   auto bdvPtr = getBDV(clients_, bdvID);
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
 
    //wait on signals
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
    auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
 
    BinaryData ZChash;
@@ -1950,7 +1445,7 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
       signer.setLockTime(3);
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<TestResolverFeed>();
+      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -2011,11 +1506,11 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
       Tx zctx(signer.serialize());
       ZChash = zctx.getThisHash();
 
-      ZcVector zcVec;
+      DBTestUtils::ZcVector zcVec;
       zcVec.push_back(signer.serialize(), 1300000000);
 
-      pushNewZc(theBDMt_, zcVec);
-      waitOnNewZcSignal(clients_, bdvID);
+      DBTestUtils::pushNewZc(theBDMt_, zcVec);
+      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
    }
 
    EXPECT_EQ(wlt->getScrAddrObjByKey(TestChain::scrAddrA)->getFullBalance(), 50 * COIN);
@@ -2036,7 +1531,7 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
    EXPECT_EQ(iface_->getTxHashForLdbKey(zcKey), ZChash);
 
    //grab ZC by hash
-   auto&& zctx_fromdb = getTxByHash(clients_, bdvID, ZChash);
+   auto&& zctx_fromdb = DBTestUtils::getTxByHash(clients_, bdvID, ZChash);
    Tx zctx_obj;
    zctx_obj.unserializeWithMetaData(zctx_fromdb);
    EXPECT_EQ(zctx_obj.getThisHash(), ZChash);
@@ -2063,10 +1558,10 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
    BinaryData ZCHash1, ZCHash2, ZCHash3, ZCHash4;
 
    //
-   setBlocks({ "0", "1", "2", "3" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
 
    theBDMt_->start(config.initMode_);
-   auto&& bdvID = registerBDV(clients_, magic_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
 
    vector<BinaryData> scrAddrVec;
    scrAddrVec.push_back(TestChain::scrAddrA);
@@ -2094,17 +1589,17 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
    //add existing address to asset wlt for zc test purposes
    hashVec.push_back(TestChain::scrAddrD);
 
-   regWallet(clients_, bdvID, hashVec, assetWlt->getID());
-   regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+   DBTestUtils::regWallet(clients_, bdvID, hashVec, assetWlt->getID());
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
 
-   auto bdvPtr = getBDV(clients_, bdvID);
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
 
    //wait on signals
-   goOnline(clients_, bdvID);
-   waitOnBDMReady(clients_, bdvID);
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
    auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
    auto dbAssetWlt = bdvPtr->getWalletOrLockbox(assetWlt->getID());
-   auto delegateID = getLedgerDelegate(clients_, bdvID);
+   auto delegateID = DBTestUtils::getLedgerDelegate(clients_, bdvID);
 
    //check balances
    const ScrAddrObj* scrObj;
@@ -2145,13 +1640,13 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
       //locktime
       bogusTx.append(READHEX("00000000"));
 
-      ZcVector zcVec;
+      DBTestUtils::ZcVector zcVec;
       zcVec.push_back(bogusTx, 14000000);
 
 
       ZCHash1 = move(BtcUtils::getHash256(bogusTx));
-      pushNewZc(theBDMt_, zcVec);
-      waitOnNewZcSignal(clients_, bdvID);
+      DBTestUtils::pushNewZc(theBDMt_, zcVec);
+      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
    }
 
    //check balances
@@ -2177,7 +1672,7 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
    EXPECT_FALSE(zcledger.isOptInRBF());
 
    //grab delegate ledger
-   auto&& delegateLedger = getHistoryPage(clients_, bdvID, delegateID, 0);
+   auto&& delegateLedger = DBTestUtils::getHistoryPage(clients_, bdvID, delegateID, 0);
 
    unsigned zc1_count = 0;
    for (auto& ld : delegateLedger)
@@ -2193,7 +1688,7 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
       auto spendVal = 5 * COIN;
       Signer signer2;
 
-      auto feed = make_shared<HybridFeed>(assetWlt);
+      auto feed = make_shared<ResovlerUtils::HybridFeed>(assetWlt);
       auto addToFeed = [feed](const BinaryData& key)->void
       {
          auto&& datapair = getAddrAndPubKeyFromPrivKey(key);
@@ -2238,12 +1733,12 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
       EXPECT_TRUE(signer2.verify());
 
       auto rawTx = signer2.serialize();
-      ZcVector zcVec2;
+      DBTestUtils::ZcVector zcVec2;
       zcVec2.push_back(rawTx, 15000000);
 
       ZCHash2 = move(BtcUtils::getHash256(rawTx));
-      pushNewZc(theBDMt_, zcVec2);
-      waitOnNewZcSignal(clients_, bdvID);
+      DBTestUtils::pushNewZc(theBDMt_, zcVec2);
+      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
    }
 
    //check balances
@@ -2272,7 +1767,7 @@ TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
    EXPECT_EQ(zcledger3.getTxTime(), 15000000);
 
    //grab delegate ledger
-   auto&& delegateLedger2 = getHistoryPage(clients_, bdvID, delegateID, 0);
+   auto&& delegateLedger2 = DBTestUtils::getHistoryPage(clients_, bdvID, delegateID, 0);
 
    unsigned zc2_count = 0;
    unsigned zc3_count = 0;

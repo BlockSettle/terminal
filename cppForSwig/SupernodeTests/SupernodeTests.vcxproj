@@ -82,7 +82,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRTDBG_MAP_ALLOC;_WINSOCK_DEPRECATED_NO_WARNINGS;_WINSOCKAPI_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\goat\Code\ArmoryOpenSource\cppForSwig\fcgi\include;C:\Users\goat\Code\ArmoryOpenSource\cppForSwig\lmdb;C:\Users\goat\Code\ArmoryOpenSource\cppForSwig\leveldb_windows_port\win32_posix;C:\Users\goat\Code\ArmoryOpenSource\cppForSwig\cryptopp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\leveldb_windows_port\win32_posix;..\cryptopp;..\lmdb;..\fcgi;C:\Python27_64\include;..\fcgi\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
