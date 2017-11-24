@@ -41,8 +41,7 @@ void ScrAddrFilter::cleanUpPreviousChildren(LMDBBlockDatabase* lmdb)
 
    //clean up SUBSSH SDBIs
    {
-      LMDBEnv::Transaction tx;
-      lmdb->beginDBTransaction(&tx, SSH, LMDB::ReadWrite);
+      auto&& tx = lmdb->beginTransaction(SSH, LMDB::ReadWrite);
       auto dbIter = lmdb->getIterator(SSH);
 
       while (dbIter.advanceAndRead(DB_PREFIX_DBINFO))
@@ -65,8 +64,7 @@ void ScrAddrFilter::cleanUpPreviousChildren(LMDBBlockDatabase* lmdb)
    //clean up SSH SDBIs
    sdbiKeys.clear();
    {
-      LMDBEnv::Transaction tx;
-      lmdb->beginDBTransaction(&tx, SUBSSH, LMDB::ReadWrite);
+      auto&& tx = lmdb->beginTransaction(SUBSSH, LMDB::ReadWrite);
       auto dbIter = lmdb->getIterator(SUBSSH);
 
       while (dbIter.advanceAndRead(DB_PREFIX_DBINFO))
@@ -89,8 +87,7 @@ void ScrAddrFilter::cleanUpPreviousChildren(LMDBBlockDatabase* lmdb)
    //clean up missing hashes entries in TXFILTERS
    set<BinaryData> missingHashKeys;
    {
-      LMDBEnv::Transaction tx;
-      lmdb->beginDBTransaction(&tx, TXFILTERS, LMDB::ReadWrite);
+      auto&& tx = lmdb->beginTransaction(TXFILTERS, LMDB::ReadWrite);
       auto dbIter = lmdb->getIterator(TXFILTERS);
 
       while (dbIter.advanceAndRead(DB_PREFIX_MISSING_HASHES))
@@ -117,8 +114,7 @@ void ScrAddrFilter::updateAddressMerkleInDB()
    auto&& addrMerkle = getAddressMapMerkle();
 
    StoredDBInfo sshSdbi;
-   LMDBEnv::Transaction historytx;
-   lmdb_->beginDBTransaction(&historytx, SSH, LMDB::ReadWrite);
+   auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
 
    try
    {
@@ -140,8 +136,7 @@ void ScrAddrFilter::updateAddressMerkleInDB()
 StoredDBInfo ScrAddrFilter::getSubSshSDBI(void) const
 {
    StoredDBInfo sdbi;
-   LMDBEnv::Transaction historytx;
-   lmdb_->beginDBTransaction(&historytx, SUBSSH, LMDB::ReadOnly);
+   auto&& tx = lmdb_->beginTransaction(SUBSSH, LMDB::ReadOnly);
 
    sdbi = move(lmdb_->getStoredDBInfo(SUBSSH, uniqueKey_));
    return sdbi;
@@ -150,24 +145,21 @@ StoredDBInfo ScrAddrFilter::getSubSshSDBI(void) const
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::putSubSshSDBI(const StoredDBInfo& sdbi)
 {
-   LMDBEnv::Transaction historytx;
-   lmdb_->beginDBTransaction(&historytx, SUBSSH, LMDB::ReadWrite);
+   auto&& tx = lmdb_->beginTransaction(SUBSSH, LMDB::ReadWrite);
    lmdb_->putStoredDBInfo(SUBSSH, sdbi, uniqueKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 StoredDBInfo ScrAddrFilter::getSshSDBI(void) const
 {
-   LMDBEnv::Transaction historytx;
-   lmdb_->beginDBTransaction(&historytx, SSH, LMDB::ReadOnly);
+   auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
    return lmdb_->getStoredDBInfo(SSH, uniqueKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::putSshSDBI(const StoredDBInfo& sdbi)
 {
-   LMDBEnv::Transaction historytx;
-   lmdb_->beginDBTransaction(&historytx, SSH, LMDB::ReadWrite);
+   auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
    lmdb_->putStoredDBInfo(SSH, sdbi, uniqueKey_);
 }
 
@@ -180,8 +172,7 @@ set<BinaryData> ScrAddrFilter::getMissingHashes(void) const
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::putMissingHashes(const set<BinaryData>& hashSet)
 {
-   LMDBEnv::Transaction tx;
-   lmdb_->beginDBTransaction(&tx, TXFILTERS, LMDB::ReadWrite);
+   auto&& tx = lmdb_->beginTransaction(TXFILTERS, LMDB::ReadWrite);
    lmdb_->putMissingHashes(hashSet, uniqueKey_);
 }
 
@@ -191,9 +182,8 @@ void ScrAddrFilter::getScrAddrCurrentSyncState()
    map<AddrAndHash, int> newSaMap;
 
    {
-      LMDBEnv::Transaction tx;
       auto scraddrmap = scrAddrMap_->get();
-      lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadOnly);
+      auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
 
       for (auto& scrAddr : *scraddrmap)
       {
@@ -224,8 +214,7 @@ void ScrAddrFilter::setSSHLastScanned(uint32_t height)
    LOGWARN << "Updating ssh last scanned";
    
    auto scraddrmap = scrAddrMap_->get();
-   LMDBEnv::Transaction tx;
-   lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadWrite);
+   auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
    for (const auto scrAddr : *scraddrmap)
    {
       StoredScriptHistory ssh;
@@ -460,8 +449,7 @@ void ScrAddrFilter::scanScrAddrThread()
 
    BinaryData topScannedBlockHash;
    {
-      LMDBEnv::Transaction tx;
-      lmdb_->beginDBTransaction(&tx, HEADERS, LMDB::ReadOnly);
+      auto&& tx = lmdb_->beginTransaction(HEADERS, LMDB::ReadOnly);
       StoredHeader sbh;
       lmdb_->getBareHeader(sbh, endBlock);
       topScannedBlockHash = sbh.thisHash_;
@@ -595,8 +583,7 @@ void ScrAddrFilter::mergeSideScanPile()
    {
       //SSH
       {
-         LMDBEnv::Transaction tx;
-         lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadWrite);
+         auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
          for (auto& scanData : scanDataVec)
             lmdb_->deleteValue(SSH, 
                StoredDBInfo::getDBKey(scanData.uniqueID_));
@@ -604,8 +591,7 @@ void ScrAddrFilter::mergeSideScanPile()
 
       //SUBSSH
       {
-         LMDBEnv::Transaction tx;
-         lmdb_->beginDBTransaction(&tx, SUBSSH, LMDB::ReadWrite);
+         auto&& tx = lmdb_->beginTransaction(SUBSSH, LMDB::ReadWrite);
          for (auto& scanData : scanDataVec)
             lmdb_->deleteValue(SUBSSH,
                StoredDBInfo::getDBKey(scanData.uniqueID_));
@@ -613,8 +599,7 @@ void ScrAddrFilter::mergeSideScanPile()
 
       //TXFILTERS
       {
-         LMDBEnv::Transaction tx;
-         lmdb_->beginDBTransaction(&tx, TXFILTERS, LMDB::ReadWrite);
+         auto&& tx = lmdb_->beginTransaction(TXFILTERS, LMDB::ReadWrite);
          for (auto& scanData : scanDataVec)
             lmdb_->deleteValue(TXFILTERS,
                DBUtils::getMissingHashesKey(scanData.uniqueID_));
@@ -695,8 +680,7 @@ void ScrAddrFilter::buildSideScanData(
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::getAllScrAddrInDB()
 {
-   LMDBEnv::Transaction tx;
-   lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadOnly);
+   auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
    auto dbIter = lmdb_->getIterator(SSH);   
 
    map<AddrAndHash, int> scrAddrMap;
@@ -723,8 +707,7 @@ void ScrAddrFilter::getAllScrAddrInDB()
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::putAddrMapInDB()
 {
-   LMDBEnv::Transaction tx;
-   lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadWrite);
+   auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
 
    auto scraddrmap = scrAddrMap_->get();
    for (const auto& scrAddrObj : *scraddrmap)
@@ -768,8 +751,7 @@ bool ScrAddrFilter::hasNewAddresses(void) const
    BinaryData dbMerkle;
 
    {
-      LMDBEnv::Transaction tx;
-      lmdb_->beginDBTransaction(&tx, SSH, LMDB::ReadOnly);
+      auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
       
       auto&& sdbi = getSshSDBI();
 
@@ -842,8 +824,7 @@ set<BinaryData> ZeroConfContainer::purge()
    For ZC chains to be parsed properly, it is important ZC transactions are
    parsed in the order they appeared.
    ***/
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, ZERO_CONF, LMDB::ReadOnly);
+   auto&& tx = db_->beginTransaction(ZERO_CONF, LMDB::ReadOnly);
 
    //get all txhashes for the new blocks
    set<BinaryData> minedHashes;
@@ -1752,8 +1733,7 @@ void ZeroConfContainer::updateZCinDB(const vector<BinaryData>& keysToWrite,
 
    auto txmap = txMap_.get();
 
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, dbs, LMDB::ReadWrite);
+   auto&& tx = db_->beginTransaction(dbs, LMDB::ReadWrite);
 
    for (auto& key : keysToWrite)
    {
@@ -1814,8 +1794,7 @@ void ZeroConfContainer::loadZeroConfMempool(bool clearMempool)
    {
       auto dbs = ZERO_CONF;
 
-      LMDBEnv::Transaction tx;
-      db_->beginDBTransaction(&tx, dbs, LMDB::ReadOnly);
+      auto&& tx = db_->beginTransaction(dbs, LMDB::ReadOnly);
       LDBIter dbIter(db_->getIterator(dbs));
 
       if (!dbIter.seekToStartsWith(DB_PREFIX_ZCDATA))

@@ -565,8 +565,7 @@ vector<UnspentTxOut> ScrAddrObj::getAllUTXOs(
    while (getMoreUTXOs(utxos, hasTxOutInZC));
 
    //start a RO txn to grab the txouts from DB
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, STXO, LMDB::ReadOnly);
+   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
 
    vector<UnspentTxOut> utxoList;
    uint32_t blk = bc_->top()->getBlockHeight();
@@ -642,8 +641,7 @@ vector<UnspentTxOut> ScrAddrObj::getSpendableTxOutList(
    if (ignoreZc)
       return utxoVec;
 
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, STXO, LMDB::ReadOnly);
+   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
 
    for (auto& txio : relevantTxIO_)
    {

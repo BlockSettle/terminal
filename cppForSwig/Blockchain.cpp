@@ -464,8 +464,7 @@ void Blockchain::putNewBareHeaders(LMDBBlockDatabase *db)
       return;
 
    //create transaction here to batch the write
-   LMDBEnv::Transaction tx;
-   db->beginDBTransaction(&tx, HEADERS, LMDB::ReadWrite);
+   auto&& tx = db->beginTransaction(HEADERS, LMDB::ReadWrite);
 
    vector<shared_ptr<BlockHeader>> unputHeaders;
    for (auto& block : newlyParsedBlocks_)

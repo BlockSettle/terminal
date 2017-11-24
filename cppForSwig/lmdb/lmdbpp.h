@@ -282,6 +282,15 @@ public:
       // commit a transaction if it exists
       ~Transaction();
 
+      Transaction(Transaction&& tx)
+      {
+         env = tx.env;
+         began = tx.began;
+         mode_ = tx.mode_;
+
+         tx.began = false;
+      }
+
       Transaction& operator=(Transaction&& mv);
       
       // commit the current transaction, create a new one, and begin it

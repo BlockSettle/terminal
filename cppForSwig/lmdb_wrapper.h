@@ -60,6 +60,9 @@ class StoredScriptHistory;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+//
+// this is probably obsolete by now
+//
 // NOTE:  VERY IMPORTANT NOTE ABOUT THE DATABASE STRUCTURE
 //
 //    Almost everywhere you see integers serialized throughout Bitcoin, is uses
@@ -354,8 +357,90 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+class DatabaseContainer
+{
+protected:
+   const DB_SELECT dbSelect_;
+
+public:
+   static string baseDir_;
+   static BinaryData magicBytes_;
+
+public:
+   //tor
+   DatabaseContainer(DB_SELECT dbSelect) :
+      dbSelect_(dbSelect)
+   {}
+
+   virtual ~DatabaseContainer(void) = 0;
+
+   //static
+   static string getDbPath(DB_SELECT);
+   static string getDbPath(const string&);
+   static string getDbName(DB_SELECT);
+
+   //virtual
+   virtual StoredDBInfo open(void) = 0;
+   virtual void close(void) = 0;
+   virtual void eraseOnDisk(void) = 0;
+
+   virtual LMDBEnv::Transaction beginTransaction(LMDB::Mode) const = 0;
+   virtual LDBIter getIterator() = 0;
+   
+   virtual BinaryDataRef getValue(BinaryDataRef keyWithPrefix) const = 0;
+   virtual void putValue(BinaryDataRef key, BinaryDataRef value) = 0;
+   virtual void deleteValue(BinaryDataRef key) = 0;
+
+   virtual StoredDBInfo getStoredDBInfo(uint32_t id) = 0;
+   virtual void putStoredDBInfo(StoredDBInfo const & sdbi, uint32_t id) = 0;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class DatabaseContainer_Single : public DatabaseContainer
+{
+private:
+   mutable LMDBEnv dbEnv_;
+   LMDB db_;
+
+public:
+   DatabaseContainer_Single(DB_SELECT dbSelect) :
+      DatabaseContainer(dbSelect)
+   {}
+
+   ~DatabaseContainer_Single(void)
+   {
+      close();
+   }
+
+   //virtuals
+   StoredDBInfo open(void);
+   void close(void);
+   void eraseOnDisk(void);
+
+   LMDBEnv::Transaction beginTransaction(LMDB::Mode) const;
+   LDBIter getIterator();
+
+   BinaryDataRef getValue(BinaryDataRef keyWithPrefix) const;
+   void putValue(BinaryDataRef key, BinaryDataRef value);
+   void deleteValue(BinaryDataRef key);
+
+   StoredDBInfo getStoredDBInfo(uint32_t id);
+   void putStoredDBInfo(StoredDBInfo const & sdbi, uint32_t id);
+};
+
+////////////////////////////////////////////////////////////////////////////////
 class LMDBBlockDatabase
 {
+private:
+   shared_ptr<DatabaseContainer> getDbPtr(DB_SELECT db) const
+   {
+      auto iter = dbMap_.find(db);
+      if (iter == dbMap_.end())
+         throw LMDBException("unexpected DB_SELECT");
+
+      return iter->second;
+   }
+
 public:
 
    /////////////////////////////////////////////////////////////////////////////
@@ -369,17 +454,14 @@ public:
       BinaryData const & magic);
 
    /////////////////////////////////////////////////////////////////////////////
-   void nukeHeadersDB(void);
-
-   /////////////////////////////////////////////////////////////////////////////
    void closeDatabases();
    void swapDatabases(DB_SELECT, const string&);
 
    /////////////////////////////////////////////////////////////////////////////
-   void beginDBTransaction(LMDBEnv::Transaction* tx,
-      DB_SELECT db, LMDB::Mode mode) const
+   LMDBEnv::Transaction beginTransaction(DB_SELECT db, LMDB::Mode mode) const
    {
-      *tx = move(LMDBEnv::Transaction(dbEnv_[db].get(), mode));
+      auto dbObj = getDbPtr(db);
+      return dbObj->beginTransaction(mode);
    }
 
    ARMORY_DB_TYPE getDbType(void) const { return armoryDbType_; }
@@ -399,17 +481,15 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // Get latest block info
-   BinaryData getTopBlockHash(DB_SELECT db);
-   uint32_t   getTopBlockHeight(DB_SELECT db);
    BinaryData getTopBlockHash() const;
 
 
    /////////////////////////////////////////////////////////////////////////////
    LDBIter getIterator(DB_SELECT db) const
    {
-      return dbs_[db].begin();
+      auto dbObj = getDbPtr(db);
+      return dbObj->getIterator();
    }
-
 
    /////////////////////////////////////////////////////////////////////////////
    // Get value using BinaryData object.  If you have a string, you can use
@@ -420,7 +500,6 @@ public:
    // Get value using BinaryDataRef object.  The data from the get* call is 
    // actually stored in a member variable, and thus the refs are valid only 
    // until the next get* call.
-   BinaryDataRef getValueRef(DB_SELECT db, BinaryDataRef keyWithPrefix) const;
    BinaryDataRef getValueRef(DB_SELECT db, DB_PREFIX prefix, BinaryDataRef key) const;
 
    /////////////////////////////////////////////////////////////////////////////
@@ -448,52 +527,10 @@ public:
    void deleteValue(DB_SELECT db, BinaryDataRef key);
    void deleteValue(DB_SELECT db, DB_PREFIX pref, BinaryDataRef key);
 
-   // Move the iterator in DB to the lowest entry with key >= inputKey
-   bool seekTo(DB_SELECT db,
-      BinaryDataRef key);
-   bool seekTo(DB_SELECT db,
-      DB_PREFIX pref,
-      BinaryDataRef key);
-
-   // Move the iterator to the first entry >= txHash
-   bool seekToTxByHash(LDBIter & ldbIter, BinaryDataRef txHash) const;
-
-
-   /////////////////////////////////////////////////////////////////////////////
-   // "Skip" refers to the behavior that the previous operation may have left
-   // the iterator already on the next desired block.  So our "advance" op may
-   // have finished before it started.  Alternatively, we may be on this block 
-   // because we checked it and decide we don't care, so we want to skip it.
-   bool advanceToNextBlock(LDBIter & iter, bool skip = false) const;
-   bool advanceIterAndRead(DB_SELECT, DB_PREFIX);
-
-   bool dbIterIsValid(DB_SELECT db, DB_PREFIX prefix = DB_PREFIX_COUNT);
-
    /////////////////////////////////////////////////////////////////////////////
    void readAllHeaders(
       const function<void(shared_ptr<BlockHeader>, uint32_t, uint8_t)> &callback
       );
-
-   /////////////////////////////////////////////////////////////////////////////
-   bool startBlkDataIteration(LDBIter & iter, DB_PREFIX prefix);
-
-
-   /////////////////////////////////////////////////////////////////////////////
-   void getNextBlock(void);
-
-   /////////////////////////////////////////////////////////////////////////////
-   void getBlock(BlockHeader & bh,
-      vector<Tx> & txList,
-      LMDB::Iterator* iter = NULL,
-      bool ignoreMerkle = true);
-
-
-   /////////////////////////////////////////////////////////////////////////////
-   void loadAllStoredHistory(void);
-
-   map<HashString, BlockHeader> getHeaderMap(void);
-   BinaryData getRawHeader(BinaryData const & headerHash);
-   //bool addHeader(BinaryData const & headerHash, BinaryData const & headerRaw);
 
    map<uint32_t, uint32_t> getSSHSummary(BinaryDataRef scrAddrStr,
       uint32_t endBlock);
@@ -509,9 +546,6 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    uint8_t getValidDupIDForHeight_fromDB(uint32_t blockHgt);
-
-   ////////////////////////////////////////////////////////////////////////////
-   uint8_t getDupForBlockHash(BinaryDataRef blockHash);
 
 
 
@@ -674,20 +708,8 @@ public:
    bool markBlockHeaderValid(uint32_t height, uint8_t dup);
    bool markTxEntryValid(uint32_t height, uint8_t dupID, uint16_t txIndex);
 
-
-   /////////////////////////////////////////////////////////////////////////////
-   void computeUndoDataFromRawBlock(StoredHeader const & sbh,
-      StoredUndoData & sud);
-   void computeUndoDataFromRawBlock(BinaryDataRef    rawBlock,
-      StoredUndoData & sud);
-   bool computeUndoDataForBlock(uint32_t height,
-      uint8_t dupID,
-      StoredUndoData & sud);
-
-
    KVLIST getAllDatabaseEntries(DB_SELECT db);
    void   printAllDatabaseEntries(DB_SELECT db);
-   void   pprintBlkDataDB(uint32_t indent = 3);
 
    BinaryData getGenesisBlockHash(void) { return genesisBlkHash_; }
    BinaryData getGenesisTxHash(void)    { return genesisTxHash_; }
@@ -695,12 +717,8 @@ public:
 
    ARMORY_DB_TYPE armoryDbType(void) { return armoryDbType_; }
 
-   const string& baseDir(void) const { return baseDir_; }
+   const string& baseDir(void) const { DatabaseContainer::baseDir_; }
    void setBlkFolder(const string& path) { blkFolder_ = path; }
-
-   string getDbName(DB_SELECT) const;
-   string getDbPath(DB_SELECT) const;
-   string getDbPath(const string&) const;
 
    void closeDB(DB_SELECT db);
    StoredDBInfo openDB(DB_SELECT);
@@ -715,8 +733,7 @@ public:
       auto&& key = DBUtils::getFilterPoolKey(fileNum);
 
       auto db = TXFILTERS;
-      LMDBEnv::Transaction tx;
-      beginDBTransaction(&tx, db, LMDB::ReadOnly);
+      auto&& tx = beginTransaction(db, LMDB::ReadOnly);
 
       auto val = getValueNoCopy(TXFILTERS, key);
 
@@ -738,8 +755,7 @@ public:
       auto&& key = DBUtils::getFilterPoolKey(fileNum);
 
       auto db = TXFILTERS;
-      LMDBEnv::Transaction tx;
-      beginDBTransaction(&tx, db, LMDB::ReadOnly);
+      auto&& tx = beginTransaction(db, LMDB::ReadOnly);
 
       auto val = getValueNoCopy(TXFILTERS, key);
       if (val.getSize() == 0)
@@ -747,7 +763,6 @@ public:
 
       return TxFilterPool<T>(val.getPtr(), val.getSize());
    }
-
 
    /////////////////////////////////////////////////////////////////////////////
    template <typename T> void putFilterPoolForFileNum(
@@ -758,30 +773,23 @@ public:
 
       //update on disk
       auto db = TXFILTERS;
-      LMDBEnv::Transaction tx;
-      beginDBTransaction(&tx, db, LMDB::ReadWrite);
+      auto&& tx = beginTransaction(db, LMDB::ReadWrite);
 
       auto&& key = DBUtils::getFilterPoolKey(fileNum);
       BinaryWriter bw;
       pool.serialize(bw);
 
-      auto dataref = bw.getDataRef();
-      dbs_[db].insert(
-         CharacterArrayRef(key.getSize(), key.getPtr()),
-         CharacterArrayRef(dataref.getSize(), dataref.getPtr()));
+      auto data = bw.getData();
+      putValue(TXFILTERS, key, data);
    }
 
    void putMissingHashes(const set<BinaryData>&, uint32_t);
    set<BinaryData> getMissingHashes(uint32_t) const;
 
 public:
-
-   mutable map<DB_SELECT, shared_ptr<LMDBEnv> > dbEnv_;
-   mutable LMDB dbs_[COUNT];
+   map<DB_SELECT, shared_ptr<DatabaseContainer>> dbMap_;
 
 private:
-
-   string               baseDir_;
    BinaryData           genesisBlkHash_;
    BinaryData           genesisTxHash_;
    BinaryData           magicBytes_;

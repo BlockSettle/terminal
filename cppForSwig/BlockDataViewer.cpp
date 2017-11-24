@@ -664,8 +664,7 @@ uint32_t BlockDataViewer::getClosestBlockHeightForTime(uint32_t timestamp)
 TxOut BlockDataViewer::getTxOutCopy(
    const BinaryData& txHash, uint16_t index) const
 {
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, STXO, LMDB::ReadOnly);
+   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
       
 
    BinaryData bdkey = db_->getDBKeyForHash(txHash);
@@ -682,8 +681,7 @@ TxOut BlockDataViewer::getTxOutCopy(const BinaryData& dbKey) const
    if (dbKey.getSize() != 8)
       throw runtime_error("invalid txout key length");
 
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, STXO, LMDB::ReadOnly);
+   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
 
    auto&& bdkey = dbKey.getSliceRef(0, 6);
    auto index = READ_UINT16_BE(dbKey.getSliceRef(6, 2));

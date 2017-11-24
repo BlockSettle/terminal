@@ -811,8 +811,7 @@ void BlockchainScanner::writeBlockData()
       //write data
       {
          //txouts
-         LMDBEnv::Transaction tx;
-         db_->beginDBTransaction(&tx, STXO, LMDB::ReadWrite);
+         auto&& tx = db_->beginTransaction(STXO, LMDB::ReadWrite);
 
          for (auto& stxo : serializedStxo)
          { 
@@ -825,8 +824,7 @@ void BlockchainScanner::writeBlockData()
 
       {
          //subssh
-         LMDBEnv::Transaction tx;
-         db_->beginDBTransaction(&tx, SUBSSH, LMDB::ReadWrite);
+         auto&& tx = db_->beginTransaction(SUBSSH, LMDB::ReadWrite);
 
          for (auto& subssh : serializedSubSSH)
          {
@@ -921,8 +919,7 @@ void BlockchainScanner::processAndCommitTxHints(ParserBatch* batch)
    };
 
    {
-      LMDBEnv::Transaction hintdbtx;
-      db_->beginDBTransaction(&hintdbtx, TXHINTS, LMDB::ReadOnly);
+      auto&& hintdbtx = db_->beginTransaction(TXHINTS, LMDB::ReadOnly);
 
       for (auto& utxomap : batch->outputMap_)
       {
@@ -966,8 +963,7 @@ void BlockchainScanner::processAndCommitTxHints(ParserBatch* batch)
 
    //write
    {
-      LMDBEnv::Transaction hintdbtx;
-      db_->beginDBTransaction(&hintdbtx, TXHINTS, LMDB::ReadWrite);
+      auto&& hintdbtx = db_->beginTransaction(TXHINTS, LMDB::ReadWrite);
 
       for (auto& txhint : serializedHints)
       {
@@ -1041,10 +1037,9 @@ void BlockchainScanner::updateSSH(bool force)
 
    {
       StoredScriptHistory* sshPtr = nullptr;
-
-      LMDBEnv::Transaction historyTx, sshTx;
-      db_->beginDBTransaction(&historyTx, SSH, LMDB::ReadOnly);
-      db_->beginDBTransaction(&sshTx, SUBSSH, LMDB::ReadOnly);
+      
+      auto&& historyTx = db_->beginTransaction(SSH, LMDB::ReadOnly);
+      auto&& sshTx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
 
       auto sshIter = db_->getIterator(SUBSSH);
       sshIter.seekToStartsWith(DB_PREFIX_SCRIPT);
@@ -1231,9 +1226,7 @@ void BlockchainScanner::updateSSH(bool force)
    }
 
    auto topheight = topheader->getBlockHeight();
-
-   LMDBEnv::Transaction putsshtx;
-   db_->beginDBTransaction(&putsshtx, SSH, LMDB::ReadWrite);
+   auto&& putsshtx = db_->beginTransaction(SSH, LMDB::ReadWrite);
 
    for (auto& scrAddr : *scrAddrMap)
    {
@@ -1265,8 +1258,7 @@ void BlockchainScanner::updateSSH(bool force)
 void BlockchainScanner::preloadUtxos()
 {
    //TODO: check utxos pulled vs scraddrfilter (to reduce dataset for side scans)
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, STXO, LMDB::ReadOnly);
+   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
    auto dbIter = db_->getIterator(STXO);
    dbIter.seekToFirst();
 
@@ -1311,8 +1303,7 @@ void BlockchainScanner::undo(Blockchain::ReorganizationState& reorgState)
       auto currentDupId  = blockPtr->getDuplicateID();
 
       //create tx to pull subssh data
-      LMDBEnv::Transaction sshTx;
-      db_->beginDBTransaction(&sshTx, SUBSSH, LMDB::ReadOnly);
+      auto&& sshTx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
 
       //grab blocks from previous top until branch point
       if (blockPtr == nullptr)
@@ -1443,8 +1434,7 @@ void BlockchainScanner::undo(Blockchain::ReorganizationState& reorgState)
 
    //stxo
    {
-      LMDBEnv::Transaction tx;
-      db_->beginDBTransaction(&tx, STXO, LMDB::ReadWrite);
+      auto&& tx = db_->beginTransaction(STXO, LMDB::ReadWrite);
 
       //grab stxos and revert spentness
       map<BinaryData, StoredTxOut> stxos;
@@ -1476,8 +1466,7 @@ void BlockchainScanner::undo(Blockchain::ReorganizationState& reorgState)
 
    //ssh
    {
-      LMDBEnv::Transaction tx;
-      db_->beginDBTransaction(&tx, SSH, LMDB::ReadWrite);
+      auto&& tx = db_->beginTransaction(SSH, LMDB::ReadWrite);
 
       //go thourgh all ssh in scrAddrFilter
       for (auto& scrAddr : *scrAddrMap)
@@ -1537,8 +1526,7 @@ void BlockchainScanner::getFilterHitsThread(
    map<uint32_t, set<TxFilterResults>> localResults;
 
    {
-      LMDBEnv::Transaction tx;
-      db_->beginDBTransaction(&tx, TXFILTERS, LMDB::ReadOnly);
+      auto&& tx = db_->beginTransaction(TXFILTERS, LMDB::ReadOnly);
 
       while (1)
       {
@@ -1903,8 +1891,7 @@ bool BlockchainScanner::resolveTxHashes()
       map<BinaryData, BinaryWriter> countAndHash;
 
       {
-         LMDBEnv::Transaction hintTx;
-         db_->beginDBTransaction(&hintTx, TXHINTS, LMDB::ReadOnly);
+         auto&& hintTx = db_->beginTransaction(TXHINTS, LMDB::ReadOnly);
 
          for (auto& result : resolverResults)
          {
@@ -1945,8 +1932,7 @@ bool BlockchainScanner::resolveTxHashes()
 
       //write it
       {
-         LMDBEnv::Transaction hintTx;
-         db_->beginDBTransaction(&hintTx, TXHINTS, LMDB::ReadWrite);
+         auto&& hintTx = db_->beginTransaction(TXHINTS, LMDB::ReadWrite);
 
          for (auto& toWrite : serializedHints)
          {

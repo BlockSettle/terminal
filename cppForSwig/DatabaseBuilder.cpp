@@ -832,8 +832,7 @@ void DatabaseBuilder::commitAllTxHints(
    //txhints at a time. This is relevant, as hints are first pulled from
    //disk then updated. In case 2 different blocks commit the to the same 
    //hint, one will likely overwrite the other.
-   LMDBEnv::Transaction hintdbtx;
-   db_->beginDBTransaction(&hintdbtx, TXHINTS, LMDB::ReadWrite);
+   auto&& hintdbtx = db_->beginTransaction(TXHINTS, LMDB::ReadWrite);
 
    {
       auto addTxHintMap =
@@ -952,8 +951,7 @@ void DatabaseBuilder::commitAllStxos(
       }
    }
 
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, STXO, LMDB::ReadWrite);
+   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadWrite);
 
    for (auto& bwPair : serializedStxos)
       db_->putValue(
@@ -1101,8 +1099,7 @@ void DatabaseBuilder::verifyTransactions()
       unsigned thisHeight = 0;
       unsigned failedVerifications = 0;
 
-      LMDBEnv::Transaction hintdbtx;
-      db_->beginDBTransaction(&hintdbtx, TXHINTS, LMDB::ReadOnly);
+      auto&& hintdbtx = db_->beginTransaction(TXHINTS, LMDB::ReadOnly);
 
       while (thisHeight < blockchain_->top()->getBlockHeight())
       {
@@ -1239,8 +1236,7 @@ void DatabaseBuilder::verifyTxFilters()
 
    auto checkThr = [&](void)->void
    {
-      LMDBEnv::Transaction tx;
-      db_->beginDBTransaction(&tx, TXFILTERS, LMDB::ReadOnly);
+      auto&& tx = db_->beginTransaction(TXFILTERS, LMDB::ReadOnly);
 
       set<unsigned> mismatchedFilters;
 
@@ -1325,8 +1321,7 @@ void DatabaseBuilder::repairTxFilters(const set<unsigned>& badFilters)
    {
       LOGINFO << "clearing damaged filters";
 
-      LMDBEnv::Transaction tx;
-      db_->beginDBTransaction(&tx, TXFILTERS, LMDB::ReadWrite);
+      auto&& tx = db_->beginTransaction(TXFILTERS, LMDB::ReadWrite);
 
       for (auto& filter : badFilters)
       {
@@ -1437,8 +1432,7 @@ void DatabaseBuilder::reprocessTxFilter(
 
    {
       //delete existing txfilter
-      LMDBEnv::Transaction tx;
-      db_->beginDBTransaction(&tx, TXFILTERS, LMDB::ReadWrite);
+      auto&& tx = db_->beginTransaction(TXFILTERS, LMDB::ReadWrite);
       auto&& dbkey = DBUtils::getFilterPoolKey(fileID);
       db_->deleteValue(TXFILTERS, dbkey);
 

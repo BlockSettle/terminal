@@ -599,10 +599,8 @@ void BlockchainScanner_Super::processInputsThread(ParserBatch_Super* batch)
 
    map<unsigned, shared_ptr<BlockDataFileMap>> temp_filemap;
 
-   LMDBEnv::Transaction stxo_tx;
-   db_->beginDBTransaction(&stxo_tx, STXO, LMDB::ReadOnly);
-   LMDBEnv::Transaction hints_tx;
-   db_->beginDBTransaction(&hints_tx, TXHINTS, LMDB::ReadOnly);
+   auto&& stxo_tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
+   auto&& hints_tx = db_->beginTransaction(TXHINTS, LMDB::ReadOnly);
 
    while (1)
    {
@@ -754,8 +752,7 @@ void BlockchainScanner_Super::writeBlockData()
 
       {
          //subssh
-         LMDBEnv::Transaction tx;
-         db_->beginDBTransaction(&tx, SUBSSH, LMDB::ReadWrite);
+         auto&& tx = db_->beginTransaction(SUBSSH, LMDB::ReadWrite);
 
          for (auto& bw_pair : batch->serializedSubSsh_)
          {
@@ -800,8 +797,7 @@ void BlockchainScanner_Super::writeBlockData()
 ////////////////////////////////////////////////////////////////////////////////
 void BlockchainScanner_Super::putSpentness(ParserBatch_Super* batch)
 {
-   LMDBEnv::Transaction tx;
-   db_->beginDBTransaction(&tx, SPENTNESS, LMDB::ReadWrite);
+   auto&& tx = db_->beginTransaction(SPENTNESS, LMDB::ReadWrite);
 
    for (auto& spent_pair : batch->spentness_)
       db_->putValue(SPENTNESS, spent_pair.first, spent_pair.second);
@@ -943,6 +939,7 @@ void BlockchainScanner_Super::updateSSH(bool force)
    if (writeThr.joinable())
       writeThr.join();
 
+   /*
    //merge in temp db dataset
    if (sshSdbi.topBlkHgt_ <= 0)
    {
@@ -1021,6 +1018,7 @@ void BlockchainScanner_Super::updateSSH(bool force)
    auto timeSpent = TIMER_READ_SEC("updateSSH");
    if (timeSpent >= 5)
       LOGINFO << "updated SSH in " << timeSpent << "s";
+      */
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1029,7 +1027,7 @@ void BlockchainScanner_Super::putSSH(const string& dbname)
    //create temp ssh db
    LMDBEnv dbEnv;
    LMDB db;
-   dbEnv.open(db_->getDbPath(dbname));
+  /* dbEnv.open(db_->getDbPath(dbname));
 
    {
       LMDBEnv::Transaction tx(&dbEnv, LMDB::ReadWrite);
@@ -1068,7 +1066,7 @@ void BlockchainScanner_Super::putSSH(const string& dbname)
 
    //close db
    db.close();
-   dbEnv.close();
+   dbEnv.close();*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1112,9 +1110,8 @@ void BlockchainScanner_Super::updateSSHThread(int scanFrom)
       size_t tally = 0;
       SshContainer local_ssh;
 
-      LMDBEnv::Transaction historyTx, sshTx;
-      db_->beginDBTransaction(&historyTx, SSH, LMDB::ReadOnly);
-      db_->beginDBTransaction(&sshTx, SUBSSH, LMDB::ReadOnly);
+      auto&& historyTx = db_->beginTransaction(SSH, LMDB::ReadOnly);
+      auto&& sshTx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
 
       auto sshIter = SshIterator(db_, bounds);
       if (!sshIter.isValid())
@@ -1273,11 +1270,8 @@ void BlockchainScanner_Super::undo(Blockchain::ReorganizationState& reorgState)
       auto currentDupId = blockPtr->getDuplicateID();
 
       //create tx to pull subssh data
-      LMDBEnv::Transaction sshTx;
-      db_->beginDBTransaction(&sshTx, SUBSSH, LMDB::ReadOnly);
-
-      LMDBEnv::Transaction hintsTx;
-      db_->beginDBTransaction(&hintsTx, TXHINTS, LMDB::ReadOnly);
+      auto&& sshTx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
+      auto&& hintsTx = db_->beginTransaction(TXHINTS, LMDB::ReadOnly);
 
       //grab blocks from previous top until branch point
       if (blockPtr == nullptr)
@@ -1391,9 +1385,7 @@ void BlockchainScanner_Super::undo(Blockchain::ReorganizationState& reorgState)
 
    //spentness
    {
-      LMDBEnv::Transaction spentness_tx;
-      db_->beginDBTransaction(&spentness_tx, SPENTNESS, LMDB::ReadWrite);
-
+      auto&& spentness_tx = db_->beginTransaction(SPENTNESS, LMDB::ReadWrite);
       for (auto& spentness_key : undoSpentness)
          db_->deleteValue(SPENTNESS, spentness_key);
    }
@@ -1417,8 +1409,7 @@ void BlockchainScanner_Super::undo(Blockchain::ReorganizationState& reorgState)
          }
       }
 
-      LMDBEnv::Transaction ssh_tx;
-      db_->beginDBTransaction(&ssh_tx, SSH, LMDB::ReadWrite);
+      auto&& ssh_tx = db_->beginTransaction(SSH, LMDB::ReadWrite);
 
       //write it all up
       for (auto& ssh : sshMap)
