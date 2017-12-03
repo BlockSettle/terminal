@@ -140,6 +140,8 @@ namespace DBTestUtils
 
    BinaryData getTxByHash(Clients* clients, const string bdvId,
       const BinaryData& txHash);
+   Tx getTxObjByHash(
+      Clients* clients, const string& bdvId, const BinaryData& txHash);
 }
 
 namespace ResovlerUtils

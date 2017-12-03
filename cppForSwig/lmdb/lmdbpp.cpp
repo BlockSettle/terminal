@@ -364,13 +364,31 @@ void LMDBEnv::close()
 LMDBEnv::Transaction::Transaction(LMDBEnv *_env, LMDB::Mode mode)
    : env(_env), mode_(mode)
 {
+   tid_ = std::this_thread::get_id();
    begin();
+}
+
+LMDBEnv::Transaction::Transaction(Transaction&& mv)
+{
+   tid_ = std::this_thread::get_id();
+   if (tid_ != mv.tid_)
+      throw LMDBException("cannot move tx accross threads");
+
+   env = mv.env;
+   began = mv.began;
+   mode_ = mv.mode_;
+
+   mv.began = false;
 }
 
 LMDBEnv::Transaction& LMDBEnv::Transaction::operator=(Transaction&& mv)
 {
    if (this == &mv)
       return *this;
+
+   tid_ = std::this_thread::get_id();
+   if (tid_ != mv.tid_)
+      throw LMDBException("cannot move tx accross threads");
 
    this->env = mv.env;
    this->mode_ = mv.mode_;

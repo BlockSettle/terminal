@@ -6334,8 +6334,8 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
 
    //pull ZC from DB, verify it's carrying the proper data
-   LMDBEnv::Transaction *dbtx = 
-      new LMDBEnv::Transaction(move(iface_->beginTransaction(ZERO_CONF, LMDB::ReadOnly)));
+   auto&& dbtx = 
+      iface_->beginTransaction(ZERO_CONF, LMDB::ReadOnly);
    StoredTx zcStx;
    BinaryData zcKey = WRITE_UINT16_BE(0xFFFF);
    zcKey.append(WRITE_UINT32_LE(0));
@@ -6350,7 +6350,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    //check ZChash in DB
    EXPECT_EQ(iface_->getTxHashForLdbKey(zcKey), ZChash);
 
-   delete dbtx;
+   dbtx.reset();
 
    //restart bdm
    bdvPtr.reset();
@@ -6413,8 +6413,8 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
 
    //The BDM was recycled, but the ZC is still live, and the mempool should 
    //have reloaded it. Pull from DB and verify
-   dbtx = new LMDBEnv::Transaction(move(
-      iface_->beginTransaction(ZERO_CONF, LMDB::ReadOnly)));
+   dbtx = move(
+      iface_->beginTransaction(ZERO_CONF, LMDB::ReadOnly));
    StoredTx zcStx2;
 
    EXPECT_EQ(iface_->getStoredZcTx(zcStx2, zcKey), true);
@@ -6424,7 +6424,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(zcStx2.numTxOut_, 2);
    EXPECT_EQ(zcStx2.stxoMap_.begin()->second.getValue(), 10 * COIN);
 
-   delete dbtx;
+   dbtx.reset();
 
    //add 5th block
    TestUtils::setBlocks({ "0", "1", "2", "3", "4" }, blk0dat_);
@@ -6449,8 +6449,8 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(spendableBalance, 10 * COIN);
    EXPECT_EQ(unconfirmedBalance, 90 * COIN);
 
-   dbtx = new LMDBEnv::Transaction(move(
-      iface_->beginTransaction(ZERO_CONF, LMDB::ReadOnly)));
+   dbtx = move(
+      iface_->beginTransaction(ZERO_CONF, LMDB::ReadOnly));
    StoredTx zcStx3;
 
    EXPECT_EQ(iface_->getStoredZcTx(zcStx3, zcKey), true);
@@ -6460,7 +6460,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(zcStx3.numTxOut_, 2);
    EXPECT_EQ(zcStx3.stxoMap_.begin()->second.getValue(), 10 * COIN);
 
-   delete dbtx;
+   dbtx.reset();
 
    //add 6th block
    TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
@@ -6491,13 +6491,13 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(le.getBlockNum(), 5);
 
    //Tx is now in a block, ZC should be gone from DB
-   dbtx = new LMDBEnv::Transaction(move(
-      iface_->beginTransaction(ZERO_CONF, LMDB::ReadWrite)));
+   dbtx = move(
+      iface_->beginTransaction(ZERO_CONF, LMDB::ReadWrite));
    StoredTx zcStx4;
 
    EXPECT_EQ(iface_->getStoredZcTx(zcStx4, zcKey), false);
 
-   delete dbtx;
+   dbtx.reset();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

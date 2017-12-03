@@ -465,4 +465,29 @@ namespace DBTestUtils
 
       return tx->getObj().get();
    }
+
+   /////////////////////////////////////////////////////////////////////////////
+   Tx getTxObjByHash(
+      Clients* clients, const string& bdvId, const BinaryData& txHash)
+   {
+      Command cmd;
+      cmd.method_ = "getTxByHash";
+      cmd.ids_.push_back(bdvId);
+
+
+      BinaryDataObject hash(txHash);
+      cmd.args_.push_back(move(hash));
+
+      cmd.serialize();
+
+      auto&& result = clients->runCommand(cmd.command_);
+      auto& argVec = result.getArgVector();
+
+      Tx tx;
+      auto tx_bdo =
+         dynamic_pointer_cast<DataObject<BinaryDataObject>>(argVec[0]);
+      tx.unserializeWithMetaData(tx_bdo->getObj().get());
+
+      return tx;
+   }
 }

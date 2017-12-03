@@ -24,96 +24,40 @@
 #include "lmdb_wrapper.h"
 #include "txio.h"
 #include "BlockDataMap.h"
-
 #include "Blockchain.h"
 
-////////////////////////////////////////////////////////////////////////////////
-LDBIter::LDBIter(LMDB::Iterator&& mv)
-   : iter_(std::move(mv))
-{ 
-   isDirty_ = true;
-}
+#ifdef _WIN32
+#include "win32_posix.h"
+#endif
+
+thread_local TLS_SHARDTX tls_shardtx;
 
 ////////////////////////////////////////////////////////////////////////////////
-LDBIter::LDBIter(LDBIter&& mv)
-: iter_(std::move(mv.iter_))
-{
-   isDirty_ = true;
-}
-
-LDBIter::LDBIter(const LDBIter& cp)
-: iter_(cp.iter_)
-{
-   isDirty_ = true;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
-LDBIter& LDBIter::operator=(LMDB::Iterator&& mv)
-{ 
-   iter_ = std::move(mv);
-   return *this;
-}
-
+////LDBIter
 ////////////////////////////////////////////////////////////////////////////////
-LDBIter& LDBIter::operator=(LDBIter&& mv)
-{ 
-   iter_ = std::move(mv.iter_);
-   return *this;
-}
+////////////////////////////////////////////////////////////////////////////////
+LDBIter::~LDBIter()
+{}
 
 ////////////////////////////////////////////////////////////////////////////////
 bool LDBIter::isValid(DB_PREFIX dbpref)
 {
-   if(!isValid() || iter_.key().mv_size == 0)
+   if(!isValid())
       return false;
-   return (*(uint8_t*)iter_.key().mv_data) == (uint8_t)dbpref;
-}
 
+   readIterData();
+   if (currKey_.getSize() == 0)
+      return false;
 
-////////////////////////////////////////////////////////////////////////////////
-bool LDBIter::advance(void)
-{
-   ++iter_;
-   isDirty_ = true;
-   return isValid();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool LDBIter::retreat(void)
-{
-   --iter_;
-   isDirty_ = true;
-   return isValid();
+   return currKey_.getPtr()[0] == (uint8_t)dbpref;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool LDBIter::advance(DB_PREFIX prefix)
 {
-   ++iter_;
-   isDirty_ = true;
+   advance();
    return isValid(prefix);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool LDBIter::readIterData(void)
-{
-   if(!isValid())
-   {
-      isDirty_ = true;
-      return false;
-   }
-
-   currKey_ = BinaryDataRef(
-      (uint8_t*)iter_.key().mv_data, 
-      iter_.key().mv_size);
-   currValue_ = BinaryDataRef(
-      (uint8_t*)iter_.value().mv_data, 
-      iter_.value().mv_size);
-
-   currKeyReader_.setNewData( currKey_ );
-   currValueReader_.setNewData( currValue_ );
-   isDirty_ = false;
-   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -196,13 +140,6 @@ BinaryRefReader& LDBIter::getValueReader(void) const
 
 
 ////////////////////////////////////////////////////////////////////////////////
-bool LDBIter::seekTo(BinaryDataRef key)
-{
-   iter_.seek(CharacterArrayRef(key.getSize(), key.getPtr()), LMDB::Iterator::Seek_GE);
-   return readIterData();
-}
-
-////////////////////////////////////////////////////////////////////////////////
 bool LDBIter::seekTo(DB_PREFIX pref, BinaryDataRef key)
 {
    BinaryWriter bw(key.getSize() + 1);
@@ -240,7 +177,6 @@ bool LDBIter::seekToStartsWith(BinaryDataRef key)
 
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 bool LDBIter::seekToStartsWith(DB_PREFIX prefix)
 {
@@ -262,13 +198,6 @@ bool LDBIter::seekToStartsWith(DB_PREFIX pref, BinaryDataRef key)
    return checkKeyStartsWith(pref, key);
 }
 
-
-bool LDBIter::seekToBefore(BinaryDataRef key)
-{
-   iter_.seek(CharacterArrayRef(key.getSize(), key.getPtr()), LMDB::Iterator::Seek_LE);
-   return readIterData();
-}
-
 bool LDBIter::seekToBefore(DB_PREFIX prefix)
 {
    BinaryWriter bw(1);
@@ -282,15 +211,6 @@ bool LDBIter::seekToBefore(DB_PREFIX pref, BinaryDataRef key)
    bw.put_uint8_t((uint8_t)pref);
    bw.put_BinaryData(key);
    return seekToBefore(bw.getDataRef());
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-bool LDBIter::seekToFirst(void)
-{
-   iter_.toFirst();
-   readIterData();
-   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -346,8 +266,179 @@ bool LDBIter::checkKeyStartsWith(DB_PREFIX prefix, BinaryDataRef key)
    bw.put_BinaryData(key);
    return checkKeyStartsWith(bw.getDataRef());
 }
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+/////LDBIter_Single
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Single::seekTo(BinaryDataRef key)
+{
+   iter_.seek(CharacterArrayRef(
+      key.getSize(), key.getPtr()), LMDB::Iterator::Seek_GE);
+   return readIterData();
+}
 
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Single::seekToBefore(BinaryDataRef key)
+{
+   iter_.seek(CharacterArrayRef(key.getSize(), key.getPtr()), LMDB::Iterator::Seek_LE);
+   return readIterData();
+}
 
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Single::advance(void)
+{
+   ++iter_;
+   isDirty_ = true;
+   return isValid();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Single::retreat(void)
+{
+   --iter_;
+   isDirty_ = true;
+   return isValid();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Single::readIterData(void)
+{
+   if (!isValid())
+   {
+      isDirty_ = true;
+      return false;
+   }
+
+   currKey_ = BinaryDataRef(
+      (uint8_t*)iter_.key().mv_data,
+      iter_.key().mv_size);
+   currValue_ = BinaryDataRef(
+      (uint8_t*)iter_.value().mv_data,
+      iter_.value().mv_size);
+
+   currKeyReader_.setNewData(currKey_);
+   currValueReader_.setNewData(currValue_);
+   isDirty_ = false;
+   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Single::seekToFirst(void)
+{
+   iter_.toFirst();
+   return readIterData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+/////LDBIter_Sharded
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::seekToFirst(void)
+{
+   auto iter = dbMap_->begin();
+   if (iter == dbMap_->end() || iter->first == META_SHARD_ID)
+      return false;
+
+   currentShard_ = iter->first;
+   iter_ = iter->second->getIterator();
+   iter_->seekToFirst();
+   return readIterData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::isNull(void) const
+{
+   if (iter_ == nullptr)
+      return false;
+
+   return !iter_->isValid();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::isValid(void) const
+{
+   if (iter_ == nullptr)
+      return false;
+
+   return iter_->isValid();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::readIterData(void)
+{
+   if (!isValid())
+   {
+      isDirty_ = true;
+      return false;
+   }
+
+   iter_->readIterData();
+
+   currKey_ = iter_->getKeyRef();
+   currValue_ = iter_->getValueRef();
+
+   currKeyReader_.setNewData(currKey_);
+   currValueReader_.setNewData(currValue_);
+   isDirty_ = false;
+   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::advance(void)
+{
+   if (iter_ == nullptr)
+      return seekToFirst();
+
+   isDirty_ = true;
+   while (1)
+   {
+      iter_->advance();
+      if (!iter_->isValid())
+         break;
+
+      auto iter = dbMap_->find(currentShard_);
+      if (iter == dbMap_->end())
+         throw runtime_error("cannot find current shard id");
+
+      ++iter;
+      if (iter == dbMap_->end() || iter->first == META_SHARD_ID)
+      {
+         iter_.reset();
+         break;
+      }
+
+      iter_ = move(iter->second->getIterator());
+      if(iter_->seekToFirst())
+         return true;
+   }
+
+   return isValid();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::seekTo(BinaryDataRef key)
+{
+   throw runtime_error("not supported for shared db iterator");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::seekToBefore(BinaryDataRef key)
+{
+   throw runtime_error("not supported for shared db iterator");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool LDBIter_Sharded::retreat(void)
+{
+   throw runtime_error("not supported for shared db iterator");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+/////LMDBBlockDatabase
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 LMDBBlockDatabase::LMDBBlockDatabase(
    shared_ptr<Blockchain> bcPtr, const string& blkFolder,
@@ -360,16 +451,11 @@ LMDBBlockDatabase::LMDBBlockDatabase(
    memset(ptr, 0xFF, 2);
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 LMDBBlockDatabase::~LMDBBlockDatabase(void)
 {
    closeDatabases();
 }
-
-
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 // The dbType and pruneType inputs are left blank if you are just going to 
@@ -775,25 +861,24 @@ void LMDBBlockDatabase::deleteValue(DB_SELECT db,
 }
 
 /////////////////////////////////////////////////////////////////////////////
-bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(LDBIter & ldbIter,
-                                                   StoredScriptHistory & ssh,
-                                                   uint32_t startBlock,
-                                                   uint32_t endBlock) const
+bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(
+   unique_ptr<LDBIter> ldbIter, StoredScriptHistory & ssh,
+   uint32_t startBlock, uint32_t endBlock) const
 {
    SCOPED_TIMER("readStoredScriptHistoryAtIter");
 
-   ldbIter.resetReaders();
-   ldbIter.verifyPrefix(DB_PREFIX_SCRIPT, false);
+   ldbIter->resetReaders();
+   ldbIter->verifyPrefix(DB_PREFIX_SCRIPT, false);
 
-   BinaryDataRef sshKey = ldbIter.getKeyRef();
+   BinaryDataRef sshKey = ldbIter->getKeyRef();
    ssh.unserializeDBKey(sshKey, true);
-   ssh.unserializeDBValue(ldbIter.getValueReader());
+   ssh.unserializeDBValue(ldbIter->getValueReader());
       
    size_t sz = sshKey.getSize();
    BinaryData scrAddr(sshKey.getSliceRef(1, sz - 1));
 
    auto&& subsshtx = beginTransaction(SUBSSH, LMDB::ReadOnly);
-   auto subsshIter = getIterator(SUBSSH);
+   auto&& subsshIter = getIterator(SUBSSH);
 
    BinaryData dbkey_withHgtX(sshKey);
 
@@ -802,7 +887,7 @@ bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(LDBIter & ldbIter,
       dbkey_withHgtX.append(DBUtils::heightAndDupToHgtx(startBlock, 0));
    }
     
-   if (!subsshIter.seekTo(dbkey_withHgtX))
+   if (!subsshIter->seekTo(dbkey_withHgtX))
       return false;
    
    // Now start iterating over the sub histories
@@ -810,14 +895,14 @@ bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(LDBIter & ldbIter,
    size_t numTxioRead = 0;
    do
    {
-      size_t _sz = subsshIter.getKeyRef().getSize();
-      BinaryDataRef keyNoPrefix= subsshIter.getKeyRef().getSliceRef(1,_sz-1);
+      size_t _sz = subsshIter->getKeyRef().getSize();
+      BinaryDataRef keyNoPrefix= subsshIter->getKeyRef().getSliceRef(1,_sz-1);
       if(!keyNoPrefix.startsWith(ssh.uniqueKey_))
          break;
 
       pair<BinaryData, StoredSubHistory> keyValPair;
       keyValPair.first = keyNoPrefix.getSliceCopy(_sz-5, 4);
-      keyValPair.second.unserializeDBKey(subsshIter.getKeyRef());
+      keyValPair.second.unserializeDBKey(subsshIter->getKeyRef());
 
       //iter is at the right ssh, make sure hgtX <= endBlock
       if (keyValPair.second.height_ > endBlock)
@@ -828,10 +913,10 @@ bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(LDBIter & ldbIter,
          getValidDupIDForHeight(keyValPair.second.height_))
          continue;
 
-      keyValPair.second.unserializeDBValue(subsshIter.getValueReader());
+      keyValPair.second.unserializeDBValue(subsshIter->getValueReader());
       iter = ssh.subHistMap_.insert(keyValPair).first;
       numTxioRead += iter->second.txioMap_.size(); 
-   } while(subsshIter.advanceAndRead(DB_PREFIX_SCRIPT) );
+   } while(subsshIter->advanceAndRead(DB_PREFIX_SCRIPT) );
 
    return true;
 }
@@ -898,17 +983,17 @@ void LMDBBlockDatabase::getStoredScriptHistorySummary( StoredScriptHistory & ssh
 
    DB_SELECT db = SSH;
 
-   LDBIter ldbIter = getIterator(db);
-   ldbIter.seekTo(DB_PREFIX_SCRIPT, scrAddrStr);
+   auto ldbIter = getIterator(db);
+   ldbIter->seekTo(DB_PREFIX_SCRIPT, scrAddrStr);
 
-   if(!ldbIter.seekToExact(DB_PREFIX_SCRIPT, scrAddrStr))
+   if(!ldbIter->seekToExact(DB_PREFIX_SCRIPT, scrAddrStr))
    {
       ssh.clear();
       return;
    }
 
-   ssh.unserializeDBKey(ldbIter.getKeyRef());
-   ssh.unserializeDBValue(ldbIter.getValueRef());
+   ssh.unserializeDBKey(ldbIter->getKeyRef());
+   ssh.unserializeDBValue(ldbIter->getValueRef());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -918,16 +1003,15 @@ bool LMDBBlockDatabase::getStoredScriptHistory( StoredScriptHistory & ssh,
                                                uint32_t endBlock) const
 {
    auto&& tx = beginTransaction(SSH, LMDB::ReadOnly);
-   LDBIter ldbIter = getIterator(getDbSelect(SSH));
-
-   if (!ldbIter.seekToExact(DB_PREFIX_SCRIPT, scrAddrStr))
+   auto&& ldbIter = getIterator(getDbSelect(SSH));
+   if (!ldbIter->seekToExact(DB_PREFIX_SCRIPT, scrAddrStr))
    {
       ssh.uniqueKey_.resize(0);
       return false;
    }
 
    bool status = 
-      readStoredScriptHistoryAtIter(ldbIter, ssh, startBlock, endBlock);
+      readStoredScriptHistoryAtIter(move(ldbIter), ssh, startBlock, endBlock);
 
    if (!status)
       return false;
@@ -954,13 +1038,13 @@ bool LMDBBlockDatabase::getStoredSubHistoryAtHgtX(StoredSubHistory& subssh,
    const BinaryData& dbkey) const
 {
    auto&& tx = beginTransaction(SUBSSH, LMDB::ReadOnly);
-   LDBIter ldbIter = getIterator(getDbSelect(SUBSSH));
+   auto ldbIter = getIterator(getDbSelect(SUBSSH));
 
-   if (!ldbIter.seekToExact(DB_PREFIX_SCRIPT, dbkey))
+   if (!ldbIter->seekToExact(DB_PREFIX_SCRIPT, dbkey))
       return false;
 
    subssh.hgtX_ = dbkey.getSliceRef(-4, 4);
-   subssh.unserializeDBValue(ldbIter.getValueReader());
+   subssh.unserializeDBValue(ldbIter->getValueReader());
    return true;
 }
 
@@ -1091,9 +1175,9 @@ void LMDBBlockDatabase::readAllHeaders(
 )
 {
    auto&& tx = beginTransaction(HEADERS, LMDB::ReadOnly);
-   LDBIter ldbIter = getIterator(HEADERS);
+   auto ldbIter = getIterator(HEADERS);
 
-   if(!ldbIter.seekToStartsWith(DB_PREFIX_HEADHASH))
+   if(!ldbIter->seekToStartsWith(DB_PREFIX_HEADHASH))
    {
       LOGWARN << "No headers in DB yet!";
       return;
@@ -1101,19 +1185,19 @@ void LMDBBlockDatabase::readAllHeaders(
    
    do
    {
-      ldbIter.resetReaders();
-      ldbIter.verifyPrefix(DB_PREFIX_HEADHASH);
+      ldbIter->resetReaders();
+      ldbIter->verifyPrefix(DB_PREFIX_HEADHASH);
    
-      if(ldbIter.getKeyReader().getSizeRemaining() != 32)
+      if(ldbIter->getKeyReader().getSizeRemaining() != 32)
       {
          LOGERR << "How did we get header hash not 32 bytes?";
          continue;
       }
 
       StoredHeader sbh;
-      ldbIter.getKeyReader().get_BinaryData(sbh.thisHash_, 32);
+      ldbIter->getKeyReader().get_BinaryData(sbh.thisHash_, 32);
 
-      sbh.unserializeDBValue(HEADERS, ldbIter.getValueRef());
+      sbh.unserializeDBValue(HEADERS, ldbIter->getValueRef());
 
       auto regHead = make_shared<BlockHeader>();
 
@@ -1133,7 +1217,7 @@ void LMDBBlockDatabase::readAllHeaders(
       }
       callback(regHead, sbh.blockHeight_, sbh.duplicateID_);
 
-   } while(ldbIter.advanceAndRead(DB_PREFIX_HEADHASH));
+   } while(ldbIter->advanceAndRead(DB_PREFIX_HEADHASH));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1905,8 +1989,8 @@ bool LMDBBlockDatabase::getStoredZcTx(StoredTx & stx,
    else
       zcDbKey = zcKey;
 
-   LDBIter ldbIter = getIterator(dbs);
-   if (!ldbIter.seekToExact(zcDbKey))
+   auto ldbIter = getIterator(dbs);
+   if (!ldbIter->seekToExact(zcDbKey))
    {
       LOGERR << "BLKDATA DB does not have the requested ZC tx";
       LOGERR << "(" << zcKey.toHexStr() << ")";
@@ -1917,26 +2001,26 @@ bool LMDBBlockDatabase::getStoredZcTx(StoredTx & stx,
    do
    {
       // Stop if key doesn't start with [PREFIX | ZCkey | TXIDX]
-      if(!ldbIter.checkKeyStartsWith(zcDbKey))
+      if(!ldbIter->checkKeyStartsWith(zcDbKey))
          break;
 
 
       // Read the prefix, height and dup 
       uint16_t txOutIdx;
-      BinaryRefReader txKey = ldbIter.getKeyReader();
+      BinaryRefReader txKey = ldbIter->getKeyReader();
 
       // Now actually process the iter value
       if(txKey.getSize()==7)
       {
          // Get everything else from the iter value
-         stx.unserializeDBValue(ldbIter.getValueRef());
+         stx.unserializeDBValue(ldbIter->getValueRef());
          nbytes += stx.dataCopy_.getSize();
       }
       else if(txKey.getSize() == 9)
       {
-         txOutIdx = READ_UINT16_BE(ldbIter.getKeyRef().getSliceRef(7, 2));
+         txOutIdx = READ_UINT16_BE(ldbIter->getKeyRef().getSliceRef(7, 2));
          StoredTxOut & stxo = stx.stxoMap_[txOutIdx];
-         stxo.unserializeDBValue(ldbIter.getValueRef());
+         stxo.unserializeDBValue(ldbIter->getValueRef());
          stxo.parentHash_ = stx.thisHash_;
          stxo.txVersion_  = stx.version_;
          stxo.txOutIndex_ = txOutIdx;
@@ -1948,7 +2032,7 @@ bool LMDBBlockDatabase::getStoredZcTx(StoredTx & stx,
          return false;
       }
 
-   } while(ldbIter.advanceAndRead(DB_PREFIX_ZCDATA));
+   } while(ldbIter->advanceAndRead(DB_PREFIX_ZCDATA));
 
 
    stx.numBytes_ = stx.haveAllTxOut() ? nbytes : UINT32_MAX;
@@ -2190,7 +2274,7 @@ bool LMDBBlockDatabase::getStoredTxOut(
 void LMDBBlockDatabase::getUTXOflags(map<BinaryData, StoredSubHistory>&
    subSshMap) const
 {
-   LMDBEnv::Transaction tx;
+   unique_ptr<DbTransaction> tx;
    if (armoryDbType_ != ARMORY_DB_SUPER)
       tx = move(beginTransaction(STXO, LMDB::ReadOnly));
    else
@@ -2407,14 +2491,14 @@ KVLIST LMDBBlockDatabase::getAllDatabaseEntries(DB_SELECT db)
    KVLIST outList;
    outList.reserve(100);
 
-   LDBIter ldbIter = getIterator(db);
-   ldbIter.seekToFirst();
-   for(ldbIter.seekToFirst(); ldbIter.isValid(); ldbIter.advanceAndRead())
+   auto ldbIter = getIterator(db);
+   ldbIter->seekToFirst();
+   for(ldbIter->seekToFirst(); ldbIter->isValid(); ldbIter->advanceAndRead())
    {
       size_t last = outList.size();
       outList.push_back( pair<BinaryData, BinaryData>() );
-      outList[last].first  = ldbIter.getKey();
-      outList[last].second = ldbIter.getValue();
+      outList[last].first  = ldbIter->getKey();
+      outList[last].second = ldbIter->getValue();
    }
 
    return outList;
@@ -2448,15 +2532,15 @@ map<uint32_t, uint32_t> LMDBBlockDatabase::getSSHSummary(BinaryDataRef scrAddrSt
 
    map<uint32_t, uint32_t> SSHsummary;
 
-   LDBIter ldbIter = getIterator(SSH);
+   auto ldbIter = getIterator(SSH);
 
-   if (!ldbIter.seekToExact(DB_PREFIX_SCRIPT, scrAddrStr))
+   if (!ldbIter->seekToExact(DB_PREFIX_SCRIPT, scrAddrStr))
       return SSHsummary;
 
    StoredScriptHistory ssh;
-   BinaryDataRef sshKey = ldbIter.getKeyRef();
+   BinaryDataRef sshKey = ldbIter->getKeyRef();
    ssh.unserializeDBKey(sshKey, true);
-   ssh.unserializeDBValue(ldbIter.getValueReader());
+   ssh.unserializeDBValue(ldbIter->getValueReader());
 
    return ssh.subsshSummary_;
 }
@@ -2561,12 +2645,12 @@ void LMDBBlockDatabase::resetSSHdb()
 
       auto dbIter = getIterator(SSH);
 
-      while (dbIter.advanceAndRead(DB_PREFIX_SCRIPT))
+      while (dbIter->advanceAndRead(DB_PREFIX_SCRIPT))
       {
          StoredScriptHistory ssh;
-         ssh.unserializeDBValue(dbIter.getValueRef());
+         ssh.unserializeDBValue(dbIter->getValueRef());
 
-         sshKeys[dbIter.getKeyRef()] = ssh.scanHeight_;
+         sshKeys[dbIter->getKeyRef()] = ssh.scanHeight_;
       }
    }
 
@@ -2729,13 +2813,71 @@ string DatabaseContainer::getDbName(DB_SELECT db)
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+//// DBPair
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+LMDBEnv::Transaction DBPair::beginTransaction(LMDB::Mode mode)
+{
+   return LMDBEnv::Transaction(&env_, mode);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DBPair::open(const string& path, const string& dbName)
+{
+   env_.open(path);
+   auto&& tx = beginTransaction(LMDB::ReadWrite);
+   db_.open(&env_, dbName);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DBPair::close()
+{
+   db_.close();
+   env_.close();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryDataRef DBPair::getValue(BinaryDataRef key) const
+{
+   CharacterArrayRef carKey(key.getSize(), key.getPtr());
+   auto carData = db_.get_NoCopy(carKey);
+
+   if (carData.len == 0)
+      return BinaryDataRef();
+
+   BinaryDataRef data((uint8_t*)carData.data, carData.len);
+   return data;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DBPair::putValue(BinaryDataRef key,BinaryDataRef value)
+{
+   db_.insert(
+      CharacterArrayRef(key.getSize(), key.getPtr()),
+      CharacterArrayRef(value.getSize(), value.getPtr()));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DBPair::deleteValue(BinaryDataRef key)
+{
+   db_.erase(CharacterArrayRef(key.getSize(), key.getPtr()));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<LDBIter_Single> DBPair::getIterator()
+{
+   return make_unique<LDBIter_Single>(move(db_.begin()));
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //// DatabaseContainer_Single
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 void DatabaseContainer_Single::close()
 {
    db_.close();
-   dbEnv_.close();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2748,10 +2890,7 @@ void DatabaseContainer_Single::eraseOnDisk()
 ////////////////////////////////////////////////////////////////////////////////
 StoredDBInfo DatabaseContainer_Single::open()
 {
-   dbEnv_.open(getDbPath(dbSelect_));
-
-   LMDBEnv::Transaction tx(&dbEnv_, LMDB::ReadWrite);
-   db_.open(&dbEnv_, getDbName(dbSelect_));
+   db_.open(getDbPath(dbSelect_), getDbName(dbSelect_));
 
    StoredDBInfo sdbi;
    try
@@ -2761,6 +2900,8 @@ StoredDBInfo DatabaseContainer_Single::open()
    catch (runtime_error&)
    {
       // If DB didn't exist yet (dbinfo key is empty), seed it
+      auto&& tx = db_.beginTransaction(LMDB::ReadWrite);
+
       sdbi.magic_ = magicBytes_;
       sdbi.metaHash_ = BtcUtils::EmptyHash_;
       sdbi.topBlkHgt_ = 0;
@@ -2786,7 +2927,7 @@ void DatabaseContainer_Single::putStoredDBInfo(
 StoredDBInfo DatabaseContainer_Single::getStoredDBInfo(uint32_t id)
 {
    SCOPED_TIMER("getStoredDBInfo");
-   LMDBEnv::Transaction tx(&dbEnv_, LMDB::ReadOnly);
+   auto&& tx = db_.beginTransaction(LMDB::ReadOnly);
 
    auto&& key = StoredDBInfo::getDBKey(id);
    BinaryRefReader brr(getValue(key.getRef()));
@@ -2802,14 +2943,7 @@ StoredDBInfo DatabaseContainer_Single::getStoredDBInfo(uint32_t id)
 ////////////////////////////////////////////////////////////////////////////////
 BinaryDataRef DatabaseContainer_Single::getValue(BinaryDataRef key) const
 {
-   CharacterArrayRef carKey(key.getSize(), key.getPtr());
-   auto carData = db_.get_NoCopy(carKey);
-
-   if (carData.len == 0)
-      return BinaryDataRef();
-
-   BinaryDataRef data((uint8_t*)carData.data, carData.len);
-   return data;
+   return db_.getValue(key);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2817,27 +2951,355 @@ void DatabaseContainer_Single::putValue(
    BinaryDataRef key,
    BinaryDataRef value)
 {
-   db_.insert(
-      CharacterArrayRef(key.getSize(), key.getPtr()),
-      CharacterArrayRef(value.getSize(), value.getPtr())
-      );
+   db_.putValue(key, value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void DatabaseContainer_Single::deleteValue(BinaryDataRef key)
 {
-   db_.erase(CharacterArrayRef(key.getSize(), key.getPtr()));
+   db_.deleteValue(key);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-LMDBEnv::Transaction DatabaseContainer_Single::beginTransaction(
+unique_ptr<DbTransaction> DatabaseContainer_Single::beginTransaction(
    LMDB::Mode mode) const
 {
-   return LMDBEnv::Transaction(&dbEnv_, mode);
+   return make_unique<DbTransaction_Single>(db_.beginTransaction(mode));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-LDBIter DatabaseContainer_Single::getIterator()
+unique_ptr<LDBIter> DatabaseContainer_Single::getIterator()
 {
-   return LDBIter(move(db_.begin()));
+   return db_.getIterator();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// DatabaseContainer_Sharded
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<DBPair> DatabaseContainer_Sharded::getShard(unsigned id) const
+{
+   auto mapPtr = dbMap_.get();
+   auto iter = mapPtr->find(id);
+   if (iter == mapPtr->end())
+      throw InvalidShardException();
+
+   return iter->second;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<DBPair> DatabaseContainer_Sharded::addShard(unsigned id)
+{
+   auto mapPtr = dbMap_.get();
+   if (mapPtr->find(id) != mapPtr->end())
+      throw runtime_error("cannot override existing shard id");
+
+   auto dbpair = make_shared<DBPair>(id);
+   dbMap_.insert(make_pair(id, dbpair));
+
+   return dbpair;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+string DatabaseContainer_Sharded::getShardPath(unsigned id)
+{
+   auto&& dbFolder = getDbPath(dbSelect_);
+
+   stringstream ss;
+   ss << dbFolder << "/shard-" << id;
+   return ss.str();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DatabaseContainer_Sharded::close()
+{
+   auto mapPtr = dbMap_.get();
+   for (auto& dbPair : *mapPtr)
+      dbPair.second->close();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+StoredDBInfo DatabaseContainer_Sharded::open()
+{
+   auto&& dbFolder = getDbPath(dbSelect_);
+   if (!DBUtils::fileExists(dbFolder, 6))
+      mkdir(dbFolder);
+
+   shared_ptr<DBPair> db0;
+   try
+   {
+      db0 = getShard(META_SHARD_ID);
+   }
+   catch (InvalidShardException&)
+   {
+      db0 = addShard(META_SHARD_ID);
+   }
+
+   db0->open(getShardPath(META_SHARD_ID), getDbName(dbSelect_));
+   
+   StoredDBInfo sdbi;
+   try
+   {
+      sdbi = move(getStoredDBInfo(0));
+   }
+   catch (runtime_error&)
+   {
+      // If DB didn't exist yet (dbinfo key is empty), seed it
+      auto&& tx = db0->beginTransaction(LMDB::ReadWrite);
+
+      sdbi.magic_ = magicBytes_;
+      sdbi.metaHash_ = BtcUtils::EmptyHash_;
+      sdbi.topBlkHgt_ = 0;
+      sdbi.armoryType_ = ARMORY_DB_FULL;
+      putStoredDBInfo(sdbi, 0);
+   }
+
+   loadFilter();
+
+   return sdbi;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DatabaseContainer_Sharded::eraseOnDisk()
+{
+   close();
+
+   auto&& dbFolder = getDbPath(dbSelect_);
+   rmdir(dbFolder);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DatabaseContainer_Sharded::putStoredDBInfo(
+   StoredDBInfo const & sdbi, uint32_t id)
+{
+   SCOPED_TIMER("putStoredDBInfo");
+   if (!sdbi.isInitialized())
+      throw runtime_error("tried to write uninitiliazed sdbi");
+
+   auto shardPtr = getShard(META_SHARD_ID);
+   shardPtr->putValue(StoredDBInfo::getDBKey(id), serializeDBValue(sdbi));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+StoredDBInfo DatabaseContainer_Sharded::getStoredDBInfo(uint32_t id)
+{
+   SCOPED_TIMER("getStoredDBInfo");
+   auto shardPtr = getShard(META_SHARD_ID);
+   auto&& tx = shardPtr->beginTransaction(LMDB::ReadOnly);
+
+   auto&& key = StoredDBInfo::getDBKey(id);
+   BinaryRefReader brr(shardPtr->getValue(key.getRef()));
+
+   if (brr.getSize() == 0)
+      throw runtime_error("no sdbi at this key");
+
+   StoredDBInfo sdbi;
+   sdbi.unserializeDBValue(brr);
+   return sdbi;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DatabaseContainer_Sharded::lockShard(unsigned shardId) const
+{
+   if (tls_shardtx.level_ == 0)
+      throw runtime_error("no tx started in this thread");
+
+   auto dbMapPtr = dbMap_.get();
+   auto dbIter = dbMapPtr->find(shardId);
+   if (dbIter == dbMapPtr->end())
+      throw runtime_error("no shard for id");
+
+   tls_shardtx.beginShardTx(dbIter->second);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DatabaseContainer_Sharded::putValue(BinaryDataRef key, BinaryDataRef value)
+{
+   //filter the key to get the shard id
+   auto shardId = getShardIdForKey(key);
+
+   shared_ptr<DBPair> shardPtr;
+   try
+   {
+      //get shard and put
+      shardPtr = getShard(shardId);
+   }
+   catch (InvalidShardException&)
+   {
+      shardPtr = addShard(shardId);
+   }
+
+   lockShard(shardId);
+   shardPtr->putValue(key, value);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryDataRef DatabaseContainer_Sharded::getValue(BinaryDataRef key) const
+{
+   //filter the key to get the shard id
+   unsigned shardId;
+
+   try
+   {
+      shardId = getShardIdForKey(key);
+   }
+   catch (InvalidShardException&)
+   {
+      return BinaryDataRef();
+   }
+
+   //get shard and put
+   lockShard(shardId);
+   auto shardPtr = getShard(shardId);
+   return shardPtr->getValue(key);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DatabaseContainer_Sharded::deleteValue(BinaryDataRef key)
+{
+   //filter the key to get the shard id
+   auto shardId = getShardIdForKey(key);
+   lockShard(shardId);
+
+   //get shard and put
+   auto shardPtr = getShard(shardId);
+   shardPtr->deleteValue(key);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unsigned DatabaseContainer_Sharded::getShardIdForKey(BinaryDataRef key) const
+{
+   return filterPtr_->keyToId(key);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DatabaseContainer_Sharded::loadFilter()
+{
+   auto shardPtr = getShard(META_SHARD_ID);
+   auto dataRef = shardPtr->getValue(ShardFilter::getDbKey());
+
+   if (dataRef.getSize() == 0)
+   {
+      //no filter data yet, check local filter ptr
+      if (filterPtr_ == nullptr)
+         throw runtime_error("null filter ptr");
+
+      shardPtr->putValue(ShardFilter::getDbKey(), filterPtr_->serialize());
+   }
+   else
+   {
+      filterPtr_ = move(ShardFilter::deserialize(dataRef));
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<DbTransaction> DatabaseContainer_Sharded::beginTransaction(
+   LMDB::Mode mode) const
+{
+   tls_shardtx.begin(mode);
+   return make_unique<DbTransaction_Sharded>();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<LDBIter> DatabaseContainer_Sharded::getIterator()
+{
+   auto mapPtr = dbMap_.get();
+   return make_unique<LDBIter_Sharded>(mapPtr);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// ShardFilter
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+ShardFilter::~ShardFilter()
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData ShardFilter::getDbKey()
+{
+   return WRITE_UINT32_BE(SHARD_FILTER_DBKEY);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<ShardFilter> ShardFilter::deserialize(BinaryDataRef dataRef)
+{
+   BinaryRefReader brr(dataRef);
+   
+   auto type = brr.get_uint8_t();
+   switch (type)
+   {
+   case ShardFilterType_ScrAddr:
+   {
+      return ShardFilter_ScrAddr::deserialize(dataRef);
+   }
+
+   default:
+      throw runtime_error("unexpected shard filter type");
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// ShardFilter_ScrAddr
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+BinaryData ShardFilter_ScrAddr::serialize() const
+{
+   BinaryWriter bw;
+   bw.put_uint8_t(ShardFilterType_ScrAddr);
+   bw.put_uint32_t(step_);
+
+   return bw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unique_ptr<ShardFilter> ShardFilter_ScrAddr::deserialize(BinaryDataRef dataRef)
+{
+   BinaryRefReader brr(dataRef);
+   
+   auto type = brr.get_uint8_t();
+   if (type != (uint8_t)ShardFilterType_ScrAddr)
+      throw runtime_error("shard filter type mismatch");
+
+   auto step = brr.get_uint32_t();
+   return make_unique<ShardFilter_ScrAddr>(step);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unsigned ShardFilter_ScrAddr::keyToId(BinaryDataRef keyRef) const
+{
+   auto size = keyRef.getSize();
+   if (size < 4)
+      throw runtime_error("key is too short for scrAddr shard filter");
+
+   BinaryRefReader brr(keyRef);
+   brr.advance(size - 4);
+   auto height = DBUtils::hgtxToHeight(brr.get_BinaryDataRef(4));
+
+   return height % step_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// DbTransaction
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+DbTransaction::~DbTransaction()
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+DbTransaction_Sharded::DbTransaction_Sharded() :
+   threadId_(this_thread::get_id())
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+DbTransaction_Sharded::~DbTransaction_Sharded()
+{
+   if (threadId_ != this_thread::get_id())
+      throw runtime_error("dbtx are bound to their parent thread");
+
+   tls_shardtx.end();
 }

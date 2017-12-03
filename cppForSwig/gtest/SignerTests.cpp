@@ -1182,12 +1182,21 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_2of3_NativeP2WSH)
       //sign, verify then broadcast
       signer.sign();
       EXPECT_TRUE(signer.verify());
+      auto&& zcHash = signer.getTxId();
 
       DBTestUtils::ZcVector zcVec;
       zcVec.push_back(signer.serialize(), 14000000);
 
       DBTestUtils::pushNewZc(theBDMt_, zcVec);
       DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+
+	   //grab ZC from DB and verify it again
+      auto&& zc_from_db = DBTestUtils::getTxObjByHash(clients_, bdvID, zcHash);
+      auto&& raw_tx = zc_from_db.serialize();
+      auto bctx = BCTX::parse(raw_tx);
+      TransactionVerifier tx_verifier(*bctx, utxoVec);
+
+      ASSERT_TRUE(tx_verifier.evaluateState().isValid());
    }
 
    //check balances
@@ -1357,6 +1366,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_2of3_NativeP2WSH)
    }
 
    auto&& tx1 = signer3.serialize();
+   auto&& zcHash = signer3.getTxId();
 
    //broadcast the last one
    DBTestUtils::ZcVector zcVec;
@@ -1364,6 +1374,15 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_2of3_NativeP2WSH)
 
    DBTestUtils::pushNewZc(theBDMt_, zcVec);
    DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+
+   //grab ZC from DB and verify it again
+   auto&& zc_from_db = DBTestUtils::getTxObjByHash(clients_, bdvID, zcHash);
+   auto&& raw_tx = zc_from_db.serialize();
+   auto bctx = BCTX::parse(raw_tx);
+   TransactionVerifier tx_verifier(*bctx, unspentVec);
+
+   ASSERT_TRUE(tx_verifier.evaluateState().isValid());
+
 
    //check balances
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);

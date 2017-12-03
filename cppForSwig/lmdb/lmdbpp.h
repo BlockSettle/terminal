@@ -274,6 +274,8 @@ public:
       bool began=false;
       LMDB::Mode mode_;
       
+      std::thread::id tid_;
+
    public:
       
       Transaction() { }
@@ -282,16 +284,8 @@ public:
       // commit a transaction if it exists
       ~Transaction();
 
-      Transaction(Transaction&& tx)
-      {
-         env = tx.env;
-         began = tx.began;
-         mode_ = tx.mode_;
-
-         tx.began = false;
-      }
-
-      Transaction& operator=(Transaction&& mv);
+      Transaction(Transaction&&);
+      Transaction& operator=(Transaction&&);
       
       // commit the current transaction, create a new one, and begin it
       void open(LMDBEnv *env, LMDB::Mode mode = LMDB::ReadWrite);

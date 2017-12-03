@@ -44,9 +44,9 @@ void ScrAddrFilter::cleanUpPreviousChildren(LMDBBlockDatabase* lmdb)
       auto&& tx = lmdb->beginTransaction(SSH, LMDB::ReadWrite);
       auto dbIter = lmdb->getIterator(SSH);
 
-      while (dbIter.advanceAndRead(DB_PREFIX_DBINFO))
+      while (dbIter->advanceAndRead(DB_PREFIX_DBINFO))
       {
-         auto&& keyRef = dbIter.getKeyRef();
+         auto&& keyRef = dbIter->getKeyRef();
          if (keyRef.getSize() != 3)
             throw runtime_error("invalid sdbi key in SSH db");
 
@@ -67,9 +67,9 @@ void ScrAddrFilter::cleanUpPreviousChildren(LMDBBlockDatabase* lmdb)
       auto&& tx = lmdb->beginTransaction(SUBSSH, LMDB::ReadWrite);
       auto dbIter = lmdb->getIterator(SUBSSH);
 
-      while (dbIter.advanceAndRead(DB_PREFIX_DBINFO))
+      while (dbIter->advanceAndRead(DB_PREFIX_DBINFO))
       {
-         auto&& keyRef = dbIter.getKeyRef();
+         auto&& keyRef = dbIter->getKeyRef();
          if (keyRef.getSize() != 3)
             throw runtime_error("invalid sdbi key in SSH db");
 
@@ -90,9 +90,9 @@ void ScrAddrFilter::cleanUpPreviousChildren(LMDBBlockDatabase* lmdb)
       auto&& tx = lmdb->beginTransaction(TXFILTERS, LMDB::ReadWrite);
       auto dbIter = lmdb->getIterator(TXFILTERS);
 
-      while (dbIter.advanceAndRead(DB_PREFIX_MISSING_HASHES))
+      while (dbIter->advanceAndRead(DB_PREFIX_MISSING_HASHES))
       {
-         auto&& keyRef = dbIter.getKeyRef();
+         auto&& keyRef = dbIter->getKeyRef();
          if (keyRef.getSize() != 4)
             throw runtime_error("invalid missing hashes key");
 
@@ -686,11 +686,11 @@ void ScrAddrFilter::getAllScrAddrInDB()
    map<AddrAndHash, int> scrAddrMap;
 
    //iterate over ssh DB
-   while(dbIter.advanceAndRead(DB_PREFIX_SCRIPT))
+   while(dbIter->advanceAndRead(DB_PREFIX_SCRIPT))
    {
-      auto keyRef = dbIter.getKeyRef();
+      auto keyRef = dbIter->getKeyRef();
       StoredScriptHistory ssh;
-      ssh.unserializeDBKey(dbIter.getKeyRef());
+      ssh.unserializeDBKey(dbIter->getKeyRef());
 
       AddrAndHash aah(ssh.uniqueKey_);
       auto insertResult = scrAddrMap.insert(move(make_pair(move(aah), 0)));
@@ -1764,22 +1764,22 @@ void ZeroConfContainer::updateZCinDB(const vector<BinaryData>& keysToWrite,
       else
          keyWithPrefix = key;
 
-      LDBIter dbIter(db_->getIterator(dbs));
+      auto dbIter = db_->getIterator(dbs);
 
-      if (!dbIter.seekTo(keyWithPrefix))
+      if (!dbIter->seekTo(keyWithPrefix))
          continue;
 
       vector<BinaryData> ktd;
 
       do
       {
-         BinaryDataRef thisKey = dbIter.getKeyRef();
+         BinaryDataRef thisKey = dbIter->getKeyRef();
          if (!thisKey.startsWith(keyWithPrefix))
             break;
 
          ktd.push_back(thisKey);
       } 
-      while (dbIter.advanceAndRead(DB_PREFIX_ZCDATA));
+      while (dbIter->advanceAndRead(DB_PREFIX_ZCDATA));
 
       for (auto Key : ktd)
          db_->deleteValue(dbs, Key);
@@ -1795,9 +1795,9 @@ void ZeroConfContainer::loadZeroConfMempool(bool clearMempool)
       auto dbs = ZERO_CONF;
 
       auto&& tx = db_->beginTransaction(dbs, LMDB::ReadOnly);
-      LDBIter dbIter(db_->getIterator(dbs));
+      auto dbIter = db_->getIterator(dbs);
 
-      if (!dbIter.seekToStartsWith(DB_PREFIX_ZCDATA))
+      if (!dbIter->seekToStartsWith(DB_PREFIX_ZCDATA))
       {
          enabled_ = true;
          return;
@@ -1805,7 +1805,7 @@ void ZeroConfContainer::loadZeroConfMempool(bool clearMempool)
 
       do
       {
-         BinaryDataRef zcKey = dbIter.getKeyRef();
+         BinaryDataRef zcKey = dbIter->getKeyRef();
 
          if (zcKey.getSize() == 7)
          {
@@ -1837,7 +1837,7 @@ void ZeroConfContainer::loadZeroConfMempool(bool clearMempool)
             LOGERR << "Unknown key found in ZC mempool";
             break;
          }
-      } while (dbIter.advanceAndRead(DB_PREFIX_ZCDATA));
+      } while (dbIter->advanceAndRead(DB_PREFIX_ZCDATA));
    }
 
    if (clearMempool == true)

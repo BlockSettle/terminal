@@ -24,6 +24,10 @@
 #include "StoredBlockObj.h"
 
 #include "lmdb/lmdbpp.h"
+#include "ThreadSafeClasses.h"
+
+#define META_SHARD_ID      0xFFFFFFFF
+#define SHARD_FILTER_DBKEY 0xAC28337D
 
 class Blockchain;
 
@@ -57,84 +61,34 @@ class StoredTx;
 class StoredTxOut;
 class StoredScriptHistory;
 
+struct InvalidShardException
+{};
+
+enum ShardFilterType
+{
+   ShardFilterType_ScrAddr = 0
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-//
-// this is probably obsolete by now
-//
-// NOTE:  VERY IMPORTANT NOTE ABOUT THE DATABASE STRUCTURE
-//
-//    Almost everywhere you see integers serialized throughout Bitcoin, is uses
-//    little-endian.  This is critical to follow because you are always handling
-//    hashes of these serializations, so the byte-ordering matters.
-//
-// *HOWEVER*:  
-//     
-//    This database design relies on the natural ordering of database
-//    keys which are frequently concatenations of integers.  For instance, each 
-//    block is indexed by height, and we expect an iteration over all keys will
-//    traverse the blocks in height-order.  BUT THIS DOESN'T WORK IF THE KEYS
-//    ARE WRITTEN IN LITTLE-ENDIAN.  Therefore, all serialized integers in 
-//    database KEYS are BIG-ENDIAN.  All other serializations in database VALUES
-//    are LITTLE-ENDIAN (including var_ints, and all put/get_uintX_t() calls).
-//
-// *HOWEVER-2*:
-//
-//    This gets exceptionally confusing because some of the DB VALUES include 
-//    references to DB KEYS, thus requiring those specific serializations to be 
-//    BE, even though the rest of the data uses LE.
-//
-// REPEATED:
-//
-//    Database Keys:    BIG-ENDIAN integers
-//    Database Values:  LITTLE-ENDIAN integers
-//
-//
-// How to avoid getting yourself in a mess with this:
-//
-//    Always use hgtx methods:
-//       hgtxToHeight( BinaryData(4) )
-//       hgtxToDupID( BinaryData(4) )
-//       heightAndDupToHgtx( uint32_t, uint8_t)
-//
-//    Always use BIGENDIAN for txIndex_ or txOutIndex_ serializations:
-//       BinaryWriter.put_uint16_t(txIndex,    BIGENDIAN);
-//       BinaryWriter.put_uint16_t(txOutIndex, BIGENDIAN);
-//       BinaryReader.get_uint16_t(BIGENDIAN);
-//       BinaryReader.get_uint16_t(BIGENDIAN);
-//
-//
-// *OR*  
-//
-//    Don't mess with the internals of the DB!  The public methods that are
-//    used to access the data in the DB externally do not require an 
-//    understanding of how the data is actually serialized under the hood.
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
 class LDBIter
 {
 public: 
 
+   virtual ~LDBIter(void) = 0;
+
    // fill_cache argument should be false for large bulk scans
    LDBIter(void) { isDirty_=true;}
-   LDBIter(LMDB::Iterator&& move);
-   LDBIter(LDBIter&& move);
-   LDBIter(const LDBIter& cp);
-   LDBIter& operator=(LMDB::Iterator&& move);
-   LDBIter& operator=(LDBIter&& move);
 
-   bool isNull(void) const { return !iter_.isValid(); }
-   bool isValid(void) const { return iter_.isValid(); }
+   virtual bool isNull(void) const = 0;
+   virtual bool isValid(void) const = 0;
    bool isValid(DB_PREFIX dbpref);
 
-   bool readIterData(void);
+   virtual bool readIterData(void) = 0;
    
-   bool retreat();
-   bool advance(void);
+   virtual bool retreat(void) = 0;
+   virtual bool advance(void) = 0;
+
    bool advance(DB_PREFIX prefix);
    bool advanceAndRead(void);
    bool advanceAndRead(DB_PREFIX prefix);
@@ -148,17 +102,17 @@ public:
 
    // All the seekTo* methods do the exact same thing, the variant simply 
    // determines the meaning of the return true/false value.
-   bool seekTo(BinaryDataRef key);
+   virtual bool seekTo(BinaryDataRef key) = 0;
    bool seekTo(DB_PREFIX pref, BinaryDataRef key);
    bool seekToExact(BinaryDataRef key);
    bool seekToExact(DB_PREFIX pref, BinaryDataRef key);
    bool seekToStartsWith(BinaryDataRef key);
    bool seekToStartsWith(DB_PREFIX prefix);
    bool seekToStartsWith(DB_PREFIX pref, BinaryDataRef key);
-   bool seekToBefore(BinaryDataRef key);
+   virtual bool seekToBefore(BinaryDataRef key) = 0;
    bool seekToBefore(DB_PREFIX prefix);
    bool seekToBefore(DB_PREFIX pref, BinaryDataRef key);
-   bool seekToFirst(void);
+   virtual bool seekToFirst(void) = 0;
 
    // Return true if the iterator is currently on valid data, with key match
    bool checkKeyExact(BinaryDataRef key);
@@ -170,17 +124,128 @@ public:
 
    void resetReaders(void){currKeyReader_.resetPosition();currValueReader_.resetPosition();}
 
-private:
-
-   LMDB::Iterator iter_;
-
+protected:
    mutable BinaryDataRef    currKey_;
    mutable BinaryDataRef    currValue_;
    mutable BinaryRefReader  currKeyReader_;
    mutable BinaryRefReader  currValueReader_;
+
    bool isDirty_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class LDBIter_Single : public LDBIter
+{
+private:
+   LMDB::Iterator iter_;
+
+public:
+   LDBIter_Single(const LMDB::Iterator& iter) :
+      iter_(iter)
+   {}
+
+   LDBIter_Single(LMDB::Iterator&& iter) :
+      iter_(iter)
+   {}
+
+   //virutals
+   bool isNull(void) const { return !iter_.isValid(); }
+   bool isValid(void) const { return iter_.isValid(); }
+
+   bool seekTo(BinaryDataRef key);
+   bool seekToBefore(BinaryDataRef key);
+   bool seekToFirst(void);
+
+   bool advance(void);
+   bool retreat(void);
+   bool readIterData(void);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class DBPair;
+class LDBIter_Sharded : public LDBIter
+{
+private:
+   unique_ptr<LDBIter> iter_;
+   const shared_ptr<map<unsigned, shared_ptr<DBPair>>> dbMap_;
+   unsigned currentShard_;
+
+public:
+   LDBIter_Sharded(shared_ptr<map<unsigned, shared_ptr<DBPair>>> dbmap) :
+      dbMap_(dbmap)
+   {}
+
+   //virutals
+   bool isNull(void) const;
+   bool isValid(void) const;
+
+   bool seekTo(BinaryDataRef key);
+   bool seekToBefore(BinaryDataRef key);
+   bool seekToFirst(void);
+
+   bool advance(void);
+   bool retreat(void);
+   bool readIterData(void);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+class DBPair
+{
+private:
+   LMDBEnv env_;
+   LMDB db_;
+   const unsigned id_;
+
+public:
+   DBPair(unsigned id) :
+      id_(id)
+   {}
+
+   LMDBEnv::Transaction beginTransaction(LMDB::Mode mode);
+   void open(const string& path, const string& dbName);
+   void close(void);
+
+   BinaryDataRef getValue(BinaryDataRef keyWithPrefix) const;
+   void putValue(BinaryDataRef key, BinaryDataRef value);
+   void deleteValue(BinaryDataRef key);
    
-   
+   unique_ptr<LDBIter_Single> getIterator(void);
+   unsigned getId(void) const { return id_; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+class DbTransaction
+{
+public:
+   DbTransaction(void)
+   {}
+
+   virtual ~DbTransaction(void) = 0;
+};
+
+////////
+class DbTransaction_Single : public DbTransaction
+{
+private:
+   LMDBEnv::Transaction dbtx_;
+
+public:
+   DbTransaction_Single(LMDBEnv::Transaction& dbtx) :
+      dbtx_(move(dbtx))
+   {}
+};
+
+////////
+class DbTransaction_Sharded : public DbTransaction
+{
+private:
+   const thread::id threadId_;
+
+public:
+   DbTransaction_Sharded(void);
+   ~DbTransaction_Sharded(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -357,6 +422,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 class DatabaseContainer
 {
 protected:
@@ -384,8 +450,8 @@ public:
    virtual void close(void) = 0;
    virtual void eraseOnDisk(void) = 0;
 
-   virtual LMDBEnv::Transaction beginTransaction(LMDB::Mode) const = 0;
-   virtual LDBIter getIterator() = 0;
+   virtual unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const = 0;
+   virtual unique_ptr<LDBIter> getIterator(void) = 0;
    
    virtual BinaryDataRef getValue(BinaryDataRef keyWithPrefix) const = 0;
    virtual void putValue(BinaryDataRef key, BinaryDataRef value) = 0;
@@ -399,12 +465,11 @@ public:
 class DatabaseContainer_Single : public DatabaseContainer
 {
 private:
-   mutable LMDBEnv dbEnv_;
-   LMDB db_;
+   mutable DBPair db_;
 
 public:
    DatabaseContainer_Single(DB_SELECT dbSelect) :
-      DatabaseContainer(dbSelect)
+      DatabaseContainer(dbSelect), db_(0)
    {}
 
    ~DatabaseContainer_Single(void)
@@ -417,15 +482,139 @@ public:
    void close(void);
    void eraseOnDisk(void);
 
-   LMDBEnv::Transaction beginTransaction(LMDB::Mode) const;
-   LDBIter getIterator();
+   unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const;
+   unique_ptr<LDBIter> getIterator(void);
 
-   BinaryDataRef getValue(BinaryDataRef keyWithPrefix) const;
+   BinaryDataRef getValue(BinaryDataRef key) const;
    void putValue(BinaryDataRef key, BinaryDataRef value);
    void deleteValue(BinaryDataRef key);
 
    StoredDBInfo getStoredDBInfo(uint32_t id);
    void putStoredDBInfo(StoredDBInfo const & sdbi, uint32_t id);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+struct ShardFilter
+{
+   virtual ~ShardFilter(void) = 0;
+   virtual unsigned keyToId(BinaryDataRef) const = 0;
+   virtual BinaryData serialize(void) const = 0;
+
+   static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
+   static BinaryData getDbKey(void);
+};
+
+////////
+struct ShardFilter_ScrAddr : public ShardFilter
+{
+   const unsigned step_;
+
+   ShardFilter_ScrAddr(unsigned step) : 
+      step_(step)
+   {}
+
+   unsigned keyToId(BinaryDataRef) const;
+   BinaryData serialize(void) const;
+
+   static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+struct TLS_SHARDTX
+{
+   LMDB::Mode mode_;
+   unique_ptr<map<unsigned, LMDBEnv::Transaction>> txMap_;
+   unsigned level_ = 0;
+
+   TLS_SHARDTX(void)
+   {
+      txMap_ = make_unique<map<unsigned, LMDBEnv::Transaction>>();
+   }
+
+   ~TLS_SHARDTX(void)
+   {
+      txMap_.reset();
+   }
+
+   void beginShardTx(shared_ptr<DBPair> dbPtr)
+   {
+      if (txMap_->find(dbPtr->getId()) == txMap_->end())
+         txMap_->insert(make_pair(
+            dbPtr->getId(), move(dbPtr->beginTransaction(mode_))));
+   }
+
+   void begin(LMDB::Mode mode)
+   {
+      if (level_ == 0)
+      {
+         mode_ = mode;
+      }
+      else
+      {
+         if (mode_ != mode && mode_ == LMDB::ReadOnly)
+            throw runtime_error("cannot open RW tx with active RO tx");
+      }
+
+      ++level_;
+   }
+
+   void end(void)
+   {
+      if (level_ == 1)
+         txMap_->clear();
+      --level_;
+   }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+class DatabaseContainer_Sharded : public DatabaseContainer
+{
+private:
+   TransactionalMap<unsigned, shared_ptr<DBPair>> dbMap_;   
+   unique_ptr<ShardFilter> filterPtr_;
+
+private:
+   shared_ptr<DBPair> getShard(unsigned) const;
+   shared_ptr<DBPair> addShard(unsigned);
+   unsigned getShardIdForKey(BinaryDataRef key) const;
+   void loadFilter(void);
+
+   string getShardPath(unsigned);
+   void lockShard(unsigned) const;
+   
+public:
+   DatabaseContainer_Sharded(DB_SELECT dbSelect) :
+      DatabaseContainer(dbSelect)
+   {}
+
+   DatabaseContainer_Sharded(DB_SELECT dbSelect, 
+      unique_ptr<ShardFilter> filter) :
+      DatabaseContainer(dbSelect), filterPtr_(move(filter))
+   {}
+
+
+   ~DatabaseContainer_Sharded(void)
+   {
+      close();
+   }
+
+   //virtuals
+   StoredDBInfo open(void);
+   void close(void);
+   virtual void eraseOnDisk(void) = 0;
+
+   StoredDBInfo getStoredDBInfo(uint32_t id);
+   void putStoredDBInfo(StoredDBInfo const & sdbi, uint32_t id);
+
+   unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const;
+   unique_ptr<LDBIter> getIterator();
+
+   BinaryDataRef getValue(BinaryDataRef key) const;
+   void putValue(BinaryDataRef key, BinaryDataRef value);
+   void deleteValue(BinaryDataRef key);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -458,7 +647,7 @@ public:
    void swapDatabases(DB_SELECT, const string&);
 
    /////////////////////////////////////////////////////////////////////////////
-   LMDBEnv::Transaction beginTransaction(DB_SELECT db, LMDB::Mode mode) const
+   unique_ptr<DbTransaction> beginTransaction(DB_SELECT db, LMDB::Mode mode) const
    {
       auto dbObj = getDbPtr(db);
       return dbObj->beginTransaction(mode);
@@ -485,7 +674,7 @@ public:
 
 
    /////////////////////////////////////////////////////////////////////////////
-   LDBIter getIterator(DB_SELECT db) const
+   unique_ptr<LDBIter> getIterator(DB_SELECT db) const
    {
       auto dbObj = getDbPtr(db);
       return dbObj->getIterator();
@@ -673,7 +862,7 @@ public:
    // Some methods to grab data at the current iterator location.  Return
    // false if reading fails (maybe because we were expecting to find the
    // specified DB entry type, but the prefix byte indicated something else
-   bool readStoredScriptHistoryAtIter(LDBIter & iter,
+   bool readStoredScriptHistoryAtIter(unique_ptr<LDBIter> iter,
       StoredScriptHistory & ssh,
       uint32_t startBlock,
       uint32_t endBlock) const;
@@ -706,7 +895,6 @@ public:
    ////////////////////////////////////////////////////////////////////////////
    bool markBlockHeaderValid(BinaryDataRef headHash);
    bool markBlockHeaderValid(uint32_t height, uint8_t dup);
-   bool markTxEntryValid(uint32_t height, uint8_t dupID, uint16_t txIndex);
 
    KVLIST getAllDatabaseEntries(DB_SELECT db);
    void   printAllDatabaseEntries(DB_SELECT db);

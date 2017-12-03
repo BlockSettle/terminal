@@ -66,7 +66,7 @@ public:
 class SshIterator
 {
 private:
-   LDBIter iter_;
+   shared_ptr<LDBIter> iter_;
    const pair<BinaryData, BinaryData>& bounds_;
 
 public:
@@ -75,12 +75,12 @@ public:
       bounds_(move(bounds))
    {
       iter_ = db->getIterator(SUBSSH);
-      iter_.seekTo(bounds.first);
+      iter_->seekTo(bounds.first);
    }
 
    bool isValid(void) const
    {
-      if (!iter_.isValid())
+      if (!iter_->isValid())
          return false;
 
       return withinUpperBound();
@@ -88,28 +88,28 @@ public:
 
    bool withinUpperBound(void) const
    {
-      return !(iter_.getKeyRef().getSliceRef(0, bounds_.second.getSize()) >
+      return !(iter_->getKeyRef().getSliceRef(0, bounds_.second.getSize()) >
          bounds_.second);
    }
 
    bool advanceAndRead(void)
    {
-      return iter_.advanceAndRead(DB_PREFIX_SCRIPT);
+      return iter_->advanceAndRead(DB_PREFIX_SCRIPT);
    }
 
    BinaryDataRef getKeyRef(void) const
    {
-      return iter_.getKeyRef();
+      return iter_->getKeyRef();
    }
 
    BinaryDataRef getValueRef(void) const
    {
-      return iter_.getValueRef();
+      return iter_->getValueRef();
    }
 
    bool seekTo(const BinaryData& key)
    {
-      return iter_.seekTo(key);
+      return iter_->seekTo(key);
    }
 };
 

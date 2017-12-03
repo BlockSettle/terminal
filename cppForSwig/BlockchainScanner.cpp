@@ -1007,8 +1007,8 @@ void BlockchainScanner::updateSSH(bool force)
 
       if (sdbiblock->isMainBranch())
       {
-         if (sdbi.topBlkHgt_ != 0 && 
-             sdbi.topBlkHgt_ >= blockchain_->top()->getBlockHeight())
+         if (sdbi.topBlkHgt_ != 0 &&
+            sdbi.topBlkHgt_ >= blockchain_->top()->getBlockHeight())
          {
             if (!force)
             {
@@ -1032,64 +1032,64 @@ void BlockchainScanner::updateSSH(bool force)
    set<BinaryData> txnsToResolve;
 
    //process ssh, list missing hashes for hash resolver
-   map<BinaryData, StoredScriptHistory> sshMap_;
+   map<BinaryData, StoredScriptHistory> sshMap;
    auto scrAddrMap = scrAddrFilter_->getScrAddrMap();
 
    {
       StoredScriptHistory* sshPtr = nullptr;
-      
+
       auto&& historyTx = db_->beginTransaction(SSH, LMDB::ReadOnly);
       auto&& sshTx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
 
-      auto sshIter = db_->getIterator(SUBSSH);
-      sshIter.seekToStartsWith(DB_PREFIX_SCRIPT);
+      auto&& sshIter = db_->getIterator(SUBSSH);
+      sshIter->seekToStartsWith(DB_PREFIX_SCRIPT);
 
       do
       {
-         while (sshIter.isValid())
+         while (sshIter->isValid())
          {
             if (sshPtr != nullptr &&
-               sshIter.getKeyRef().contains(sshPtr->uniqueKey_))
+               sshIter->getKeyRef().contains(sshPtr->uniqueKey_))
                break;
 
             //new address
-            auto&& subsshkey = sshIter.getKey();
+            auto&& subsshkey = sshIter->getKey();
             if (subsshkey.getSize() < 5)
-            { 
+            {
                LOGWARN << "invalid scrAddr in SUBSSH db";
-               sshIter.advanceAndRead();
+               sshIter->advanceAndRead();
                continue;
             }
 
-            auto sshKey = subsshkey.getSliceRef(1, subsshkey.getSize() - 5);
+            auto&& sshKey = subsshkey.getSliceCopy(1, subsshkey.getSize() - 5);
 
             auto saIter = scrAddrMap->find(sshKey);
             if (saIter == scrAddrMap->end())
             {
                sshPtr = nullptr;
-               sshIter.advanceAndRead();
+               sshIter->advanceAndRead();
                continue;
             }
 
             //get what's already in the db
-            sshPtr = &sshMap_[sshKey];
+            sshPtr = &sshMap[sshKey];
             db_->getStoredScriptHistorySummary(*sshPtr, sshKey);
 
             if (sshPtr->isInitialized())
             {
                //set iterator at unscanned height
-               auto hgtx = sshIter.getKeyRef().getSliceRef(-4, 4);
+               auto hgtx = sshIter->getKeyRef().getSliceRef(-4, 4);
                int height = DBUtils::hgtxToHeight(hgtx);
                if (sshPtr->tallyHeight_ >= height)
                {
                   //this ssh has already been scanned beyond the height sshIter is at,
                   //let's set the iterator to the correct height (or the next key)
-                  auto&& newKey = sshIter.getKey().getSliceCopy(0, subsshkey.getSize() - 4);
+                  auto&& newKey = sshIter->getKey().getSliceCopy(0, subsshkey.getSize() - 4);
                   auto&& newHgtx = DBUtils::heightAndDupToHgtx(
                      sshPtr->tallyHeight_ + 1, 0);
 
                   newKey.append(newHgtx);
-                  sshIter.seekTo(newKey);
+                  sshIter->seekTo(newKey);
                   continue;
                }
             }
@@ -1101,24 +1101,24 @@ void BlockchainScanner::updateSSH(bool force)
          }
 
          //sanity checks
-         if (!sshIter.isValid())
+         if (!sshIter->isValid())
             break;
 
          //deser subssh
          StoredSubHistory subssh;
-         subssh.unserializeDBKey(sshIter.getKeyRef());
+         subssh.unserializeDBKey(sshIter->getKeyRef());
 
          //check dupID
          if (db_->getValidDupIDForHeight(subssh.height_) != subssh.dupID_)
             continue;
 
-         subssh.unserializeDBValue(sshIter.getValueRef());
+         subssh.unserializeDBValue(sshIter->getValueRef());
 
          set<BinaryData> txSet;
          for (auto& txioPair : subssh.txioMap_)
          {
             auto&& keyOfOutput = txioPair.second.getDBKeyOfOutput();
-            
+
             if (resolveHashes)
             {
                auto&& txKey = keyOfOutput.getSliceRef(0, 6);
@@ -1161,10 +1161,8 @@ void BlockchainScanner::updateSSH(bool force)
 
          //build subssh summary
          sshPtr->subsshSummary_[subssh.height_] = subssh.txioCount_;
-      }
-      while (sshIter.advanceAndRead(DB_PREFIX_SCRIPT));
+      } while (sshIter->advanceAndRead(DB_PREFIX_SCRIPT));
    }
-
 
    //build txHash refs from listed txins
    if (resolveHashes && txnsToResolve.size() > 0)
@@ -1212,7 +1210,7 @@ void BlockchainScanner::updateSSH(bool force)
 
       scrAddrFilter_->putMissingHashes(allMissingTxHashes);
    }
-   
+
    //write ssh data
    shared_ptr<BlockHeader> topheader;
    try
@@ -1230,7 +1228,7 @@ void BlockchainScanner::updateSSH(bool force)
 
    for (auto& scrAddr : *scrAddrMap)
    {
-      auto& ssh = sshMap_[scrAddr.first.scrAddr_];
+      auto& ssh = sshMap[scrAddr.first.scrAddr_];
 
       if (!ssh.isInitialized())
       {
@@ -1243,7 +1241,7 @@ void BlockchainScanner::updateSSH(bool force)
 
       BinaryWriter bw;
       ssh.serializeDBValue(bw, ARMORY_DB_BARE);
-      
+
       db_->putValue(SSH, sshKey.getRef(), bw.getDataRef());
    }
 
@@ -1260,13 +1258,13 @@ void BlockchainScanner::preloadUtxos()
    //TODO: check utxos pulled vs scraddrfilter (to reduce dataset for side scans)
    auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
    auto dbIter = db_->getIterator(STXO);
-   dbIter.seekToFirst();
+   dbIter->seekToFirst();
 
-   while (dbIter.advanceAndRead())
+   while (dbIter->advanceAndRead())
    {
       StoredTxOut stxo;
-      stxo.unserializeDBKey(dbIter.getKeyRef());
-      stxo.unserializeDBValue(dbIter.getValueRef());
+      stxo.unserializeDBKey(dbIter->getKeyRef());
+      stxo.unserializeDBValue(dbIter->getValueRef());
 
       if (stxo.spentness_ == TXOUT_SPENT)
          continue;
