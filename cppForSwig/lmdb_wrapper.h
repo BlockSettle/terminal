@@ -140,12 +140,8 @@ private:
    LMDB::Iterator iter_;
 
 public:
-   LDBIter_Single(const LMDB::Iterator& iter) :
-      iter_(iter)
-   {}
-
    LDBIter_Single(LMDB::Iterator&& iter) :
-      iter_(iter)
+      iter_(move(iter))
    {}
 
    //virutals
@@ -232,7 +228,7 @@ private:
    LMDBEnv::Transaction dbtx_;
 
 public:
-   DbTransaction_Single(LMDBEnv::Transaction& dbtx) :
+   DbTransaction_Single(LMDBEnv::Transaction&& dbtx) :
       dbtx_(move(dbtx))
    {}
 };

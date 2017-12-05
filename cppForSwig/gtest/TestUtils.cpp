@@ -8,6 +8,26 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "TestUtils.h"
 
+#if ! defined(_MSC_VER) && ! defined(__MINGW32__)
+   /////////////////////////////////////////////////////////////////////////////
+   void rmdir(string src)
+   {
+      char* syscmd = new char[4096];
+      sprintf(syscmd, "rm -rf %s", src.c_str());
+      system(syscmd);
+      delete[] syscmd;
+   }
+
+   /////////////////////////////////////////////////////////////////////////////
+   void mkdir(string newdir)
+   {
+      char* syscmd = new char[4096];
+      sprintf(syscmd, "mkdir -p %s", newdir.c_str());
+      system(syscmd);
+      delete[] syscmd;
+   }
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 namespace TestUtils
 {
@@ -90,26 +110,6 @@ namespace TestUtils
          src += 2;
       }
    }
-
-#if ! defined(_MSC_VER) && ! defined(__MINGW32__)
-   /////////////////////////////////////////////////////////////////////////////
-   void rmdir(string src)
-   {
-      char* syscmd = new char[4096];
-      sprintf(syscmd, "rm -rf %s", src.c_str());
-      system(syscmd);
-      delete[] syscmd;
-   }
-
-   /////////////////////////////////////////////////////////////////////////////
-   void mkdir(string newdir)
-   {
-      char* syscmd = new char[4096];
-      sprintf(syscmd, "mkdir -p %s", newdir.c_str());
-      system(syscmd);
-      delete[] syscmd;
-   }
-#endif
 
    /////////////////////////////////////////////////////////////////////////////
    void concatFile(const string &from, const string &to)

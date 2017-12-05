@@ -68,6 +68,11 @@
 
 #define READHEX BinaryData::CreateFromHex
 
+#if ! defined(_MSC_VER) && ! defined(__MINGW32__)
+   void rmdir(string src);
+   void mkdir(string newdir);
+#endif
+
 namespace TestUtils
 {
    // This function assumes src to be a zero terminated sanitized string with
@@ -80,11 +85,6 @@ namespace TestUtils
    uint32_t getTopBlockHeightInDB(BlockDataManager &bdm, DB_SELECT db);
    uint64_t getDBBalanceForHash160(
       BlockDataManager &bdm, BinaryDataRef addr160);
-
-#if ! defined(_MSC_VER) && ! defined(__MINGW32__)
-   void rmdir(string src);
-   void mkdir(string newdir);
-#endif
 
    void concatFile(const string &from, const string &to);
    void appendBlocks(const std::vector<std::string> &files, const std::string &to);

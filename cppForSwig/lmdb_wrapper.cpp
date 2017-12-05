@@ -28,6 +28,9 @@
 
 #ifdef _WIN32
 #include "win32_posix.h"
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 thread_local TLS_SHARDTX tls_shardtx;
@@ -877,8 +880,8 @@ bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(
    size_t sz = sshKey.getSize();
    BinaryData scrAddr(sshKey.getSliceRef(1, sz - 1));
 
-   auto&& subsshtx = beginTransaction(SUBSSH, LMDB::ReadOnly);
-   auto&& subsshIter = getIterator(SUBSSH);
+   auto subsshtx = beginTransaction(SUBSSH, LMDB::ReadOnly);
+   auto subsshIter = getIterator(SUBSSH);
 
    BinaryData dbkey_withHgtX(sshKey);
 
@@ -889,7 +892,6 @@ bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(
     
    if (!subsshIter->seekTo(dbkey_withHgtX))
       return false;
-   
    // Now start iterating over the sub histories
    map<BinaryData, StoredSubHistory>::iterator iter;
    size_t numTxioRead = 0;
@@ -917,7 +919,7 @@ bool LMDBBlockDatabase::readStoredScriptHistoryAtIter(
       iter = ssh.subHistMap_.insert(keyValPair).first;
       numTxioRead += iter->second.txioMap_.size(); 
    } while(subsshIter->advanceAndRead(DB_PREFIX_SCRIPT) );
-
+	
    return true;
 }
 
@@ -1002,8 +1004,8 @@ bool LMDBBlockDatabase::getStoredScriptHistory( StoredScriptHistory & ssh,
                                                uint32_t startBlock,
                                                uint32_t endBlock) const
 {
-   auto&& tx = beginTransaction(SSH, LMDB::ReadOnly);
-   auto&& ldbIter = getIterator(getDbSelect(SSH));
+   auto tx = beginTransaction(SSH, LMDB::ReadOnly);
+   auto ldbIter = getIterator(getDbSelect(SSH));
    if (!ldbIter->seekToExact(DB_PREFIX_SCRIPT, scrAddrStr))
    {
       ssh.uniqueKey_.resize(0);
@@ -2964,7 +2966,7 @@ void DatabaseContainer_Single::deleteValue(BinaryDataRef key)
 unique_ptr<DbTransaction> DatabaseContainer_Single::beginTransaction(
    LMDB::Mode mode) const
 {
-   return make_unique<DbTransaction_Single>(db_.beginTransaction(mode));
+   return make_unique<DbTransaction_Single>(move(db_.beginTransaction(mode)));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3024,7 +3026,13 @@ StoredDBInfo DatabaseContainer_Sharded::open()
 {
    auto&& dbFolder = getDbPath(dbSelect_);
    if (!DBUtils::fileExists(dbFolder, 6))
+   {
+#ifdef _WIN32
       mkdir(dbFolder);
+#else
+      mkdir(dbFolder.c_str(), 0644);
+#endif
+   }
 
    shared_ptr<DBPair> db0;
    try
@@ -3066,7 +3074,7 @@ void DatabaseContainer_Sharded::eraseOnDisk()
    close();
 
    auto&& dbFolder = getDbPath(dbSelect_);
-   rmdir(dbFolder);
+   rmdir(dbFolder.c_str());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

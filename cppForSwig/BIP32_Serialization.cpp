@@ -112,7 +112,7 @@ void BIP32_Serialization::encode()
    auto&& hash = BtcUtils::getSha256(bw.getData()).getSliceCopy(0, 4);
    bw.put_BinaryData(hash);
 
-   auto& b58_data = BtcUtils::base58_encode(bw.getData());
+   auto&& b58_data = BtcUtils::base58_encode(bw.getData());
    b58_string_ = b58_data.toBinStr();
 }
 
