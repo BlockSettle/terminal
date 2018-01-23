@@ -4120,7 +4120,7 @@ mdb_env_reader_dest(void *ptr)
  *	in a single process, for now. They can override this if needed.
  */
 #ifndef MAX_TLS_KEYS
-#define MAX_TLS_KEYS	64
+#define MAX_TLS_KEYS	400
 #endif
 static pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
 static int mdb_tls_nkeys;

@@ -328,9 +328,14 @@ LMDBEnv::~LMDBEnv()
    close();
 }
 
-void LMDBEnv::open(const char *filename)
+bool LMDBEnv::isOpen() const
 {
-   if (dbenv)
+   return dbenv != nullptr;
+}
+
+void LMDBEnv::open(const char *filename, unsigned flags)
+{
+   if (isOpen())
       throw std::logic_error("Database environment already open (close it first)");
 
    txForThreads_.clear();
@@ -345,7 +350,7 @@ void LMDBEnv::open(const char *filename)
    if (rc != MDB_SUCCESS)
       throw LMDBException("Failed to set max dbs (" + errorString(rc) + ")");
    
-   rc = mdb_env_open(dbenv, filename, MDB_NOSYNC | MDB_NOSUBDIR | MDB_WRITEMAP, 0600);
+   rc = mdb_env_open(dbenv, filename, MDB_NOSYNC | MDB_NOSUBDIR | flags, 0600);
    if (rc != MDB_SUCCESS)
       throw LMDBException("Failed to open db " + std::string(filename) + " (" + errorString(rc) + ")");
 
@@ -531,9 +536,14 @@ void LMDB::close()
    }
 }
 
+bool LMDB::isOpen() const
+{
+   return this->env != nullptr;
+}
+
 void LMDB::open(LMDBEnv *_env, const std::string &name)
 {
-   if (this->env)
+   if (isOpen())
    {
       throw std::runtime_error("LMDB already open");
    }

@@ -180,6 +180,7 @@ public:
    ~LMDB();
    
    void open(LMDBEnv *env, const std::string &name=std::string());
+   bool isOpen(void) const;
    
    void close();
    
@@ -309,9 +310,11 @@ public:
    ~LMDBEnv();
    
    // open a database by filename
-   void open(const char *filename);
-   void open(const std::string &filename)
-      { open(filename.c_str()); }
+   void open(const char *filename, unsigned flags);
+   void open(const std::string &filename, unsigned flags = 0)
+      { open(filename.c_str(), flags); }
+
+   bool isOpen(void) const;
 
    // close a database, doing nothing if one is presently not open
    void close();
