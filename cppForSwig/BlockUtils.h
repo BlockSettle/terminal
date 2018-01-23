@@ -182,10 +182,7 @@ public:
    exception_ptr getException(void) const { return exceptPtr_; }
 
 private:
-   void loadDiskState(
-      const ProgressCallback &progress,
-      bool doRescan=false
-   );
+   void loadDiskState(const ProgressCallback &progress, bool forceRescanSSH = false);
 
    void pollNodeStatus() const;
    
@@ -221,11 +218,6 @@ public:
    void shutdownNotifications(void) { notificationStack_.terminate(); }
 
 public:
-
-   bool startSideScan(
-      const function<void(const vector<string>&, double prog,unsigned time)> &cb
-   );
-
    bool isRunning(void) const { return BDMstate_ != BDM_offline; }
    void blockUntilReady(void) const { isReadyFuture_.wait(); }
    bool isReady(void) const
@@ -234,8 +226,6 @@ public:
          isReadyFuture_.wait_for(chrono::seconds(0)) == 
          std::future_status::ready;
    }
-
-   vector<string> getNextWalletIDToScan(void);
    
    void resetDatabases(ResetDBMode mode);
    
@@ -246,8 +236,6 @@ public:
 
    unsigned getCheckedTxCount(void) const { return checkTransactionCount_; }
    NodeStatusStruct getNodeStatus(void) const;
-
-   float getFeeByte(void) const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

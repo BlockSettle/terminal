@@ -693,7 +693,7 @@ class BlockDataManager::BDM_ScrAddrFilter : public ScrAddrFilter
    
 public:
    BDM_ScrAddrFilter(BlockDataManager *bdm)
-      : ScrAddrFilter(bdm->getIFace(), bdm->config().armoryDbType_)
+      : ScrAddrFilter(bdm->getIFace(), BlockDataManagerConfig::getDbType())
       , bdm_(bdm)
    {
    
@@ -727,7 +727,7 @@ protected:
          sdbi.magic_ = config().magicBytes_;
          sdbi.metaHash_ = BtcUtils::EmptyHash_;
          sdbi.topBlkHgt_ = 0;
-         sdbi.armoryType_ = config().armoryDbType_;
+         sdbi.armoryType_ = BlockDataManagerConfig::getDbType();
 
          //write sdbi
          putSshSDBI(sdbi);
@@ -743,7 +743,7 @@ protected:
          sdbi.magic_ = config().magicBytes_;
          sdbi.metaHash_ = BtcUtils::EmptyHash_;
          sdbi.topBlkHgt_ = 0;
-         sdbi.armoryType_ = config().armoryDbType_;
+         sdbi.armoryType_ = BlockDataManagerConfig::getDbType();
 
          //write sdbi
          putSubSshSDBI(sdbi);
@@ -805,8 +805,9 @@ BlockDataManager::BlockDataManager(
    
    blockchain_ = make_shared<Blockchain>(config_.genesisBlockHash_);
 
-   iface_ = new LMDBBlockDatabase(blockchain_, 
-      config_.blkFileLocation_, config_.armoryDbType_);
+   iface_ = new LMDBBlockDatabase(
+      blockchain_, 
+      config_.blkFileLocation_);
 
    readBlockHeaders_ = make_shared<BitcoinQtBlockFiles>(
       config_.blkFileLocation_,
@@ -835,8 +836,6 @@ BlockDataManager::BlockDataManager(
       {
          throw DbErrorMsg("invalid node type in bdmConfig");
       }
-
-      config_.armoryDbType_ = iface_->armoryDbType();
 
       zeroConfCont_ = make_shared<ZeroConfContainer>(
          iface_, networkNode_, config_.zcThreadCount_);
@@ -892,11 +891,6 @@ BlockDataManager::~BlockDataManager()
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// This used to be "rescanBlocks", but now "scanning" has been replaced by
-// "reapplying" the blockdata to the databases.  Basically assumes that only
-// raw blockdata is stored in the DB with no ssh objects.  This goes through
-// and processes every Tx, creating new SSHs if not there, and creating and
-// marking-spent new TxOuts.  
 BinaryData BlockDataManager::applyBlockRangeToDB(
    ProgressCallback prog, 
    uint32_t blk0, uint32_t blk1, 
@@ -908,99 +902,11 @@ BinaryData BlockDataManager::applyBlockRangeToDB(
       *blockFiles_.get(), config_.threadCount_, config_.ramUsage_,
       prog, config_.reportProgress_);
    bcs.scan_nocheck(blk0);
-   bcs.updateSSH(true);
+   bcs.updateSSH(false, blk0);
    bcs.resolveTxHashes();
 
    return bcs.getTopScannedBlockHash();
 }
-
-/////////////////////////////////////////////////////////////////////////////
-/*  This is not currently being used, and is actually likely to change 
- *  a bit before it is needed, so I have just disabled it.
-vector<TxRef*> BlockDataManager::findAllNonStdTx(void)
-{
-   PDEBUG("Finding all non-std tx");
-   vector<TxRef*> txVectOut(0);
-   uint32_t nHeaders = headersByHeight_.size();
-
-   ///// LOOP OVER ALL HEADERS ////
-   for(uint32_t h=0; h<nHeaders; h++)
-   {
-      BlockHeader & bhr = *(headersByHeight_[h]);
-      vector<TxRef*> const & txlist = bhr.getTxRefPtrList();
-
-      ///// LOOP OVER ALL TX /////
-      for(uint32_t itx=0; itx<txlist.size(); itx++)
-      {
-         TxRef & tx = *(txlist[itx]);
-
-         ///// LOOP OVER ALL TXIN IN BLOCK /////
-         for(uint32_t iin=0; iin<tx.getNumTxIn(); iin++)
-         {
-            TxIn txin = tx.getTxInCopy(iin);
-            if(txin.getScriptType() == TXIN_SCRIPT_UNKNOWN)
-            {
-               txVectOut.push_back(&tx);
-               cout << "Attempting to interpret TXIN script:" << endl;
-               cout << "Block: " << h << " Tx: " << itx << endl;
-               cout << "PrevOut: " << txin.getOutPoint().getTxHash().toHexStr()
-                    << ", "        << txin.getOutPoint().getTxOutIndex() << endl;
-               cout << "Raw Script: " << txin.getScript().toHexStr() << endl;
-               cout << "Raw Tx: " << txin.getParentTxPtr()->serialize().toHexStr() << endl;
-               cout << "pprint: " << endl;
-               BtcUtils::pprintScript(txin.getScript());
-               cout << endl;
-            }
-         }
-
-         ///// LOOP OVER ALL TXOUT IN BLOCK /////
-         for(uint32_t iout=0; iout<tx.getNumTxOut(); iout++)
-         {
-            
-            TxOut txout = tx.getTxOutCopy(iout);
-            if(txout.getScriptType() == TXOUT_SCRIPT_UNKNOWN)
-            {
-               txVectOut.push_back(&tx);               
-               cout << "Attempting to interpret TXOUT script:" << endl;
-               cout << "Block: " << h << " Tx: " << itx << endl;
-               cout << "ThisOut: " << txout.getParentTxPtr()->getThisHash().toHexStr() 
-                    << ", "        << txout.getIndex() << endl;
-               cout << "Raw Script: " << txout.getScript().toHexStr() << endl;
-               cout << "Raw Tx: " << txout.getParentTxPtr()->serialize().toHexStr() << endl;
-               cout << "pprint: " << endl;
-               BtcUtils::pprintScript(txout.getScript());
-               cout << endl;
-            }
-
-         }
-      }
-   }
-
-   PDEBUG("Done finding all non-std tx");
-   return txVectOut;
-}
-*/
-
-
-
-////////////////////////////////////////////////////////////////////////////////
-// We assume that all the addresses we care about have been registered with
-// the BDM.  Before, the BDM we would rescan the blockchain and use the method
-// isMineBulkFilter() to extract all "RegisteredTx" which are all tx relevant
-// to the list of "RegisteredScrAddr" objects.  Now, the DB defaults to super-
-// node mode and tracks all that for us on disk.  So when we start up, rather
-// than having to search the blockchain, we just look the StoredScriptHistory
-// list for each of our "RegisteredScrAddr" objects, and then pull all the 
-// relevant tx from the database.  After that, the BDM operates 99% identically
-// to before.  We just didn't have to do a full scan to fill the RegTx list
-//
-// In the future, we will use the StoredScriptHistory objects to directly fill
-// the TxIOPair map -- all the data is tracked by the DB and we could pull it
-// directly.  But that would require reorganizing a ton of BDM code, and may
-// be difficult to guarantee that all the previous functionality was there and
-// working.  This way, all of our previously-tested code remains mostly 
-// untouched
-
 
 /////////////////////////////////////////////////////////////////////////////
 void BlockDataManager::resetDatabases(ResetDBMode mode)
@@ -1011,7 +917,7 @@ void BlockDataManager::resetDatabases(ResetDBMode mode)
       return;
    }
 
-   if (config_.armoryDbType_ != ARMORY_DB_SUPER)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
       //we keep all scrAddr data in between db reset/clear
       scrAddrData_->getAllScrAddrInDB();
@@ -1030,7 +936,7 @@ void BlockDataManager::resetDatabases(ResetDBMode mode)
    }
 
 
-   if (config_.armoryDbType_ != ARMORY_DB_SUPER)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
       //reapply scrAddrData_'s content to the db
       scrAddrData_->putAddrMapInDB();
@@ -1055,7 +961,7 @@ void BlockDataManager::doInitialSyncOnLoad_Rescan(
 {
    LOGINFO << "Executing: doInitialSyncOnLoad_Rescan";
    resetDatabases(Reset_Rescan);
-   loadDiskState(progress, true);
+   loadDiskState(progress);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1065,7 +971,7 @@ void BlockDataManager::doInitialSyncOnLoad_Rebuild(
 {
    LOGINFO << "Executing: doInitialSyncOnLoad_Rebuild";
    resetDatabases(Reset_Rebuild);
-   loadDiskState(progress, true);
+   loadDiskState(progress);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1075,19 +981,18 @@ void BlockDataManager::doInitialSyncOnLoad_RescanBalance(
 {
    LOGINFO << "Executing: doInitialSyncOnLoad_RescanBalance";
    resetDatabases(Reset_SSH);
-   loadDiskState(progress, false);
+   loadDiskState(progress, true);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BlockDataManager::loadDiskState(
-   const ProgressCallback &progress,
-   bool forceRescan
-)
+void BlockDataManager::loadDiskState(const ProgressCallback &progress,
+   bool forceRescanSSH)
 {  
    BDMstate_ = BDM_initializing;
          
    blockFiles_ = make_shared<BlockFiles>(config_.blkFileLocation_);
-   dbBuilder_ = make_shared<DatabaseBuilder>(*blockFiles_, *this, progress);
+   dbBuilder_ = make_shared<DatabaseBuilder>(
+      *blockFiles_, *this, progress, forceRescanSSH);
    dbBuilder_->init();
 
    if (config_.checkChain_)

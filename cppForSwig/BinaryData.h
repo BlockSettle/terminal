@@ -1687,7 +1687,7 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   BinaryDataRef getDataRef(void)
+   BinaryDataRef getDataRef(void) const
    {
       return theString_.getRef();
    }

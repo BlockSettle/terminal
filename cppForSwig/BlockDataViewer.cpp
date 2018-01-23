@@ -461,7 +461,7 @@ vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
 
    auto scrAddrMap = saf_->getScrAddrMap();
 
-   if (bdmPtr_->config().armoryDbType_ != ARMORY_DB_SUPER)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
       for (const auto& scrAddr : scrAddrVec)
       {

@@ -32,7 +32,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 struct BlockDataManagerConfig
 {
-   ARMORY_DB_TYPE armoryDbType_ = ARMORY_DB_FULL;
+private:
+   static ARMORY_DB_TYPE armoryDbType_;
+
+public:
    BDM_INIT_MODE initMode_ = INIT_RESUME;
 
    static const string dbDirExtention_;
@@ -51,7 +54,7 @@ struct BlockDataManagerConfig
    bool regtest_ = false;
 
    string logFilePath_;
-   
+
    BinaryData genesisBlockHash_;
    BinaryData genesisTxHash_;
    BinaryData magicBytes_;
@@ -118,11 +121,21 @@ struct BlockDataManagerConfig
    static pair<string, string> getKeyValFromLine(const string&, char delim);
    static string stripQuotes(const string& input);
    static vector<string> keyValToArgv(const map<string, string>&);
-   
+
    static bool testConnection(const string& ip, const string& port);
    static string hasLocalDB(const string& datadir, const string& port);
    static string getPortFromCookie(const string& datadir);
    static string getCookie(const string& datadir);
+
+   static void setDbType(ARMORY_DB_TYPE dbType)
+   {
+      armoryDbType_ = dbType;
+   }
+
+   static ARMORY_DB_TYPE getDbType(void)
+   {
+      return armoryDbType_;
+   }
 };
 
 ////
