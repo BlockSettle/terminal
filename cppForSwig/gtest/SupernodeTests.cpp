@@ -258,7 +258,7 @@ protected:
       blk0dat_ = BtcUtils::getBlkFilename(blkdir_, 0);
       TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
 
-      config.armoryDbType_ = ARMORY_DB_SUPER;
+      BlockDataManagerConfig::setDbType(ARMORY_DB_SUPER);
       config.blkFileLocation_ = blkdir_;
       config.dbDir_ = ldbdir_;
       config.threadCount_ = 3;
@@ -798,7 +798,7 @@ TEST_F(BlockUtilsSuper, DISABLED_RepaidMissingTxio)
    }
 
    //delete the keys
-   auto delKeysThread = [&ssh, this](void)->void
+   /*auto delKeysThread = [&ssh, this](void)->void
    {
       auto&& tx = iface_->beginTransaction(BLKDATA, LMDB::ReadWrite);
 
@@ -806,7 +806,7 @@ TEST_F(BlockUtilsSuper, DISABLED_RepaidMissingTxio)
    };
 
    thread delKeysTID(delKeysThread);
-   delKeysTID.join();
+   delKeysTID.join();*/
 
    TestUtils::appendBlocks({ "5" }, blk0dat_);
    DBTestUtils::triggerNewBlockNotification(theBDMt_);
@@ -1226,7 +1226,7 @@ protected:
       blk0dat_ = BtcUtils::getBlkFilename(blkdir_, 0);
       TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
 
-      config.armoryDbType_ = ARMORY_DB_SUPER;
+      BlockDataManagerConfig::setDbType(ARMORY_DB_SUPER);
       config.blkFileLocation_ = blkdir_;
       config.dbDir_ = ldbdir_;
       config.threadCount_ = 3;
@@ -1803,8 +1803,6 @@ TEST_F(BlockUtilsWithWalletTest, MultipleSigners_2of3_NativeP2WSH)
    //
    TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
 
-   initBDM();
-
    theBDMt_->start(config.initMode_);
    auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
 
@@ -2217,4 +2215,3 @@ GTEST_API_ int main(int argc, char **argv)
 
    return exitCode;
 }
-
