@@ -25,11 +25,84 @@
 
 #include "lmdb/lmdbpp.h"
 #include "ThreadSafeClasses.h"
+#include "ReentrantLock.h"
 
-#define META_SHARD_ID      0xFFFFFFFF
-#define SHARD_FILTER_DBKEY 0xAC28337D
+#define META_SHARD_ID               0xFFFFFFFF
+#define SHARD_COUNTER_KEY           0xA76B6C00
+#define SHARD_TOPHASH_ID            0xFFAAAA
+
+#define SHARD_FILTER_DBKEY          0xAC28337D
+
+#ifndef UNIT_TESTS
+#define SHARD_FILTER_SCRADDR_STEP   1500
+#define SHARD_FILTER_SPENTNESS_STEP 5000
+#else
+#define SHARD_FILTER_SCRADDR_STEP   2
+#define SHARD_FILTER_SPENTNESS_STEP 2
+#endif
 
 class Blockchain;
+
+////////////////////////////////////////////////////////////////////////////////
+struct InvalidShardException
+{};
+
+////
+struct FilterException : public runtime_error
+{
+   FilterException(const string& err) : runtime_error(err)
+   {}
+};
+
+////
+struct DBIterException : public runtime_error
+{
+   DBIterException(const string& err) : runtime_error(err)
+   {}
+};
+
+////
+struct LmdbWrapperException : public runtime_error
+{
+   LmdbWrapperException(const string& err) : runtime_error(err)
+   {}
+};
+
+////
+struct SshAccessorException : public runtime_error
+{
+   SshAccessorException(const string& err) : runtime_error(err)
+   {}
+};
+
+////
+struct SpentnessAccessorException : public runtime_error
+{
+   SpentnessAccessorException(const string& err) : runtime_error(err)
+   {}
+};
+
+////
+struct DbShardedException : public runtime_error
+{
+   DbShardedException(const string& err) : runtime_error(err)
+   {}
+};
+
+////
+struct TxFilterException : public runtime_error
+{
+   TxFilterException(const string& err) : runtime_error(err)
+   {}
+};
+
+////
+struct DbTxException : public runtime_error
+{
+   DbTxException(const string& err) : runtime_error(err)
+   {}
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -61,12 +134,10 @@ class StoredTx;
 class StoredTxOut;
 class StoredScriptHistory;
 
-struct InvalidShardException
-{};
-
 enum ShardFilterType
 {
-   ShardFilterType_ScrAddr = 0
+   ShardFilterType_ScrAddr = 0,
+   ShardFilterType_Spentness
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,7 +175,7 @@ public:
    // determines the meaning of the return true/false value.
    virtual bool seekTo(BinaryDataRef key) = 0;
    bool seekTo(DB_PREFIX pref, BinaryDataRef key);
-   bool seekToExact(BinaryDataRef key);
+   virtual bool seekToExact(BinaryDataRef key) = 0;
    bool seekToExact(DB_PREFIX pref, BinaryDataRef key);
    bool seekToStartsWith(BinaryDataRef key);
    bool seekToStartsWith(DB_PREFIX prefix);
@@ -149,6 +220,7 @@ public:
    bool isValid(void) const { return iter_.isValid(); }
 
    bool seekTo(BinaryDataRef key);
+   bool seekToExact(BinaryDataRef key);
    bool seekToBefore(BinaryDataRef key);
    bool seekToFirst(void);
 
@@ -159,16 +231,18 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////
 class DBPair;
+class DatabaseContainer_Sharded;
 class LDBIter_Sharded : public LDBIter
 {
 private:
    unique_ptr<LDBIter> iter_;
-   const shared_ptr<map<unsigned, shared_ptr<DBPair>>> dbMap_;
+   DatabaseContainer_Sharded* dbPtr_;
    unsigned currentShard_;
 
 public:
-   LDBIter_Sharded(shared_ptr<map<unsigned, shared_ptr<DBPair>>> dbmap) :
-      dbMap_(dbmap)
+   LDBIter_Sharded(
+      DatabaseContainer_Sharded* dbPtr) :
+      dbPtr_(dbPtr)
    {}
 
    //virutals
@@ -176,6 +250,7 @@ public:
    bool isValid(void) const;
 
    bool seekTo(BinaryDataRef key);
+   bool seekToExact(BinaryDataRef key);
    bool seekToBefore(BinaryDataRef key);
    bool seekToFirst(void);
 
@@ -208,6 +283,10 @@ public:
    
    unique_ptr<LDBIter_Single> getIterator(void);
    unsigned getId(void) const { return id_; }
+
+   bool isOpen(void) const;
+
+   LMDBEnv* getEnv(void) { return &env_; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -238,9 +317,10 @@ class DbTransaction_Sharded : public DbTransaction
 {
 private:
    const thread::id threadId_;
+   LMDBEnv* envPtr_ = nullptr;
 
 public:
-   DbTransaction_Sharded(void);
+   DbTransaction_Sharded(LMDBEnv*, LMDB::Mode);
    ~DbTransaction_Sharded(void);
 };
 
@@ -282,10 +362,10 @@ public:
    map<uint32_t, set<uint32_t>> compare(const BinaryData& hash) const
    {
       if (hash.getSize() != 32)
-         throw runtime_error("hash is 32 bytes long");
+         throw TxFilterException("hash is 32 bytes long");
 
       if (!isValid())
-         throw runtime_error("invalid pool");
+         throw TxFilterException("invalid pool");
 
       //get key
 
@@ -314,7 +394,7 @@ public:
          for (uint32_t i = 0; i < *size; i++)
          {
             if (pos >= len_)
-               throw runtime_error("overflow while reading pool ptr");
+               throw TxFilterException("overflow while reading pool ptr");
 
             //iterate through entries
             filterSize = (uint32_t*)(poolPtr_ + pos);
@@ -332,7 +412,7 @@ public:
          }
       }
       else
-         throw runtime_error("invalid pool");
+         throw TxFilterException("invalid pool");
 
       return returnMap;
    }
@@ -340,7 +420,7 @@ public:
    vector<TxFilter<T>> getFilterPoolPtr(void)
    {
       if (poolPtr_ == nullptr)
-         throw runtime_error("missing pool ptr");
+         throw TxFilterException("missing pool ptr");
 
       vector<TxFilter<T>> filters;
 
@@ -352,7 +432,7 @@ public:
       for (uint32_t i = 0; i < *size; i++)
       {
          if (pos >= len_)
-            throw runtime_error("overflow while reading pool ptr");
+            throw TxFilterException("overflow while reading pool ptr");
 
          //iterate through entries
          filterSize = (uint32_t*)(poolPtr_ + pos);
@@ -380,19 +460,19 @@ public:
    {
       //sanity check
       if (ptr == nullptr || len < 4)
-         throw runtime_error("invalid pointer");
+         throw TxFilterException("invalid pointer");
 
       len_ = *(uint32_t*)ptr;
 
       if (len_ == 0)
-         throw runtime_error("empty pool ptr");
+         throw TxFilterException("empty pool ptr");
 
       size_t offset = 4;
 
       for (auto i = 0; i < len_; i++)
       {
          if (offset >= len)
-            throw runtime_error("deser error");
+            throw TxFilterException("deser error");
 
          auto filtersize = (uint32_t*)(ptr + offset);
 
@@ -411,7 +491,7 @@ public:
       auto filterIter = pool_.find(filter);
 
       if (filterIter == pool_.end())
-         throw runtime_error("invalid filter id");
+         throw TxFilterException("invalid filter id");
 
       return *filterIter;
    }
@@ -495,6 +575,7 @@ struct ShardFilter
 {
    virtual ~ShardFilter(void) = 0;
    virtual unsigned keyToId(BinaryDataRef) const = 0;
+   virtual unsigned getHeightForId(unsigned) const = 0;
    virtual BinaryData serialize(void) const = 0;
 
    static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
@@ -505,12 +586,57 @@ struct ShardFilter
 struct ShardFilter_ScrAddr : public ShardFilter
 {
    const unsigned step_;
+   unsigned thresholdId_;
+   unsigned thresholdValue_;
 
    ShardFilter_ScrAddr(unsigned step) : 
       step_(step)
-   {}
+   {
+#ifndef UNIT_TESTS
+      //x < -exp(step * 1.6 / 50k) / (1 - exp(step * 1.6 / 50k))
+      auto eVal = expf(step * 1.6f / 50000.0f);
+      thresholdId_ = unsigned(-eVal / (1.0f - eVal));
+
+      //height = (ln(id) / 1.6 + 4) * 50k
+      thresholdValue_ = unsigned((logf(thresholdId_) / 1.6f + 4.0f) * 50000.0f);
+#else
+      thresholdId_ = 0;
+      thresholdValue_ = 0;
+#endif
+   }
 
    unsigned keyToId(BinaryDataRef) const;
+   unsigned getHeightForId(unsigned) const;
+   BinaryData serialize(void) const;
+
+   static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
+};
+
+////////
+struct ShardFilter_Spentness : public ShardFilter
+{
+   const unsigned step_;
+   unsigned thresholdId_;
+   unsigned thresholdValue_;
+
+   ShardFilter_Spentness(unsigned step) :
+      step_(step)
+   {      
+#ifndef UNIT_TESTS
+      //x < -exp(step / 50k) / (1 - exp(step / 50k))
+      auto eVal = expf(step / 50000.0f);
+      thresholdId_ = unsigned(-eVal / (1.0f - eVal));
+
+      //height = (ln(id) + 4) * 50k
+      thresholdValue_ = unsigned((logf(thresholdId_) + 4.0f) * 50000.0f);
+#else 
+      thresholdId_ = 0;
+      thresholdValue_ = 0;
+#endif
+   }
+
+   unsigned keyToId(BinaryDataRef) const;
+   unsigned getHeightForId(unsigned) const;
    BinaryData serialize(void) const;
 
    static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
@@ -520,13 +646,14 @@ struct ShardFilter_ScrAddr : public ShardFilter
 ////////////////////////////////////////////////////////////////////////////////
 struct TLS_SHARDTX
 {
-   LMDB::Mode mode_;
-   unique_ptr<map<unsigned, LMDBEnv::Transaction>> txMap_;
-   unsigned level_ = 0;
+   map<LMDBEnv*, LMDB::Mode> modes_;
+   unique_ptr<map<LMDBEnv*, map<unsigned, unique_ptr<LMDBEnv::Transaction>>>> txMap_;
+   map<LMDBEnv*, unsigned> levels_;
 
    TLS_SHARDTX(void)
    {
-      txMap_ = make_unique<map<unsigned, LMDBEnv::Transaction>>();
+      txMap_ = 
+         make_unique<map<LMDBEnv*, map<unsigned, unique_ptr<LMDBEnv::Transaction>>>>();
    }
 
    ~TLS_SHARDTX(void)
@@ -534,59 +661,120 @@ struct TLS_SHARDTX
       txMap_.reset();
    }
 
-   void beginShardTx(shared_ptr<DBPair> dbPtr)
+   void beginShardTx(LMDBEnv* env, shared_ptr<DBPair> dbPtr)
    {
-      if (txMap_->find(dbPtr->getId()) == txMap_->end())
-         txMap_->insert(make_pair(
-            dbPtr->getId(), move(dbPtr->beginTransaction(mode_))));
+      auto txIter = txMap_->find(env);
+      if (txIter == txMap_->end())
+         throw DbTxException("missing tx for sharded db");
+
+      if (txIter->second.find(dbPtr->getId()) == txIter->second.end())
+      {
+         auto modeIter = modes_.find(env);
+         if(modeIter == modes_.end())
+            throw DbTxException("missing mode for sharded db");
+
+         auto tx = 
+            make_unique<LMDBEnv::Transaction>(dbPtr->beginTransaction(modeIter->second));
+         txIter->second.insert(make_pair(dbPtr->getId(), move(tx)));
+      }
    }
 
-   void begin(LMDB::Mode mode)
+   void begin(LMDBEnv* env, LMDB::Mode mode)
    {
-      if (level_ == 0)
+      auto levelIter = levels_.find(env);
+      if (levelIter == levels_.end())
       {
-         mode_ = mode;
+         levelIter = levels_.insert(make_pair(env, 0)).first;
+      }
+
+      auto modeIter = modes_.find(env);
+      if (levelIter->second == 0)
+      {
+         if (modeIter == modes_.end())
+            modes_.insert(make_pair(env, mode));
+         else
+            modeIter->second = mode;
       }
       else
       {
-         if (mode_ != mode && mode_ == LMDB::ReadOnly)
-            throw runtime_error("cannot open RW tx with active RO tx");
+         if (modeIter == modes_.end())
+            throw DbTxException("missing mode entry for tx");
+         if (modeIter->second != mode && modeIter->second == LMDB::ReadOnly)
+            throw DbTxException("cannot open RW tx with active RO tx");
       }
 
-      ++level_;
+      auto txIter = txMap_->find(env);
+      if (txIter == txMap_->end())
+      {
+         txMap_->insert(
+            make_pair(env, map<unsigned, unique_ptr<LMDBEnv::Transaction>>()));
+      }
+
+      ++levelIter->second;
    }
 
-   void end(void)
+   void end(LMDBEnv* env)
    {
-      if (level_ == 1)
-         txMap_->clear();
-      --level_;
+      auto levelIter = levels_.find(env);
+      if (levelIter != levels_.end())
+      {
+         if (levelIter->second == 1)
+         {
+            auto txIter = txMap_->find(env);
+            if (txIter != txMap_->end())
+               txMap_->erase(txIter);
+
+            auto modeIter = modes_.find(env);
+            if (modeIter != modes_.end())
+               modes_.erase(modeIter);
+
+            levels_.erase(levelIter);
+            return;
+         }
+
+         --levelIter->second;
+      }
    }
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-class DatabaseContainer_Sharded : public DatabaseContainer
+class DatabaseContainer_Sharded : public DatabaseContainer, public Lockable
 {
+   friend class ShardedSshParser;
+   friend class LMDBBlockDatabase;
+   friend class LDBIter_Sharded;
+   friend class BlockchainScanner_Super;
+
 private:
-   TransactionalMap<unsigned, shared_ptr<DBPair>> dbMap_;   
+   TransactionalMap<unsigned, shared_ptr<DBPair>> dbMap_;
    unique_ptr<ShardFilter> filterPtr_;
+   mutex addMapMutex_;
 
 private:
    shared_ptr<DBPair> getShard(unsigned) const;
+   shared_ptr<DBPair> getShard(unsigned, bool);
    shared_ptr<DBPair> addShard(unsigned);
-   unsigned getShardIdForKey(BinaryDataRef key) const;
+   void openShard(unsigned id);
+
+   void updateShardCounter(unsigned);
+
    void loadFilter(void);
+   void putFilter(void);
 
    string getShardPath(unsigned);
    void lockShard(unsigned) const;
-   
+
+   void initAfterLock(void) {}
+   void cleanUpBeforeUnlock(void) {}
+
 public:
    DatabaseContainer_Sharded(DB_SELECT dbSelect) :
       DatabaseContainer(dbSelect)
    {}
 
-   DatabaseContainer_Sharded(DB_SELECT dbSelect, 
+   DatabaseContainer_Sharded(DB_SELECT dbSelect,
       unique_ptr<ShardFilter> filter) :
       DatabaseContainer(dbSelect), filterPtr_(move(filter))
    {}
@@ -600,7 +788,7 @@ public:
    //virtuals
    StoredDBInfo open(void);
    void close(void);
-   virtual void eraseOnDisk(void) = 0;
+   void eraseOnDisk(void);
 
    StoredDBInfo getStoredDBInfo(uint32_t id);
    void putStoredDBInfo(StoredDBInfo const & sdbi, uint32_t id);
@@ -611,11 +799,22 @@ public:
    BinaryDataRef getValue(BinaryDataRef key) const;
    void putValue(BinaryDataRef key, BinaryDataRef value);
    void deleteValue(BinaryDataRef key);
+
+   //locals
+   pair<unsigned, unsigned> getShardBounds(unsigned) const;
+   unsigned getShardIdForHeight(unsigned) const;
+   unsigned getShardIdForKey(BinaryDataRef key) const;
+   unsigned getTopShardId(void) const;
+   void closeUnusedShards(unsigned);
+   void closeUnusedShardsById(unsigned);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 class LMDBBlockDatabase
 {
+   friend class ShardedSshParser;
+   friend class BlockchainScanner_Super;
+
 private:
    shared_ptr<DatabaseContainer> getDbPtr(DB_SELECT db) const
    {
@@ -625,11 +824,9 @@ private:
 
       return iter->second;
    }
-
+   
 public:
-
-   /////////////////////////////////////////////////////////////////////////////
-   LMDBBlockDatabase(shared_ptr<Blockchain>, const string&, ARMORY_DB_TYPE);
+   LMDBBlockDatabase(shared_ptr<Blockchain>, const string&);
    ~LMDBBlockDatabase(void);
 
    /////////////////////////////////////////////////////////////////////////////
@@ -639,8 +836,12 @@ public:
       BinaryData const & magic);
 
    /////////////////////////////////////////////////////////////////////////////
+   void openSupernodeDBs(void);
+
+   /////////////////////////////////////////////////////////////////////////////
    void closeDatabases();
-   void swapDatabases(DB_SELECT, const string&);
+   void replaceDatabases(DB_SELECT, const string&);
+   void cycleDatabase(DB_SELECT);
 
    /////////////////////////////////////////////////////////////////////////////
    unique_ptr<DbTransaction> beginTransaction(DB_SELECT db, LMDB::Mode mode) const
@@ -649,12 +850,7 @@ public:
       return dbObj->beginTransaction(mode);
    }
 
-   ARMORY_DB_TYPE getDbType(void) const { return armoryDbType_; }
-
-   DB_SELECT getDbSelect(DB_SELECT dbs) const
-   {
-      return dbs;
-   }
+   ARMORY_DB_TYPE getDbType(void) const { return BlockDataManagerConfig::getDbType(); }
 
    /////////////////////////////////////////////////////////////////////////////
    // Sometimes, we just need to nuke everything and start over
@@ -807,10 +1003,11 @@ public:
 
    void getUTXOflags(map<BinaryData, StoredSubHistory>&) const;
    void getUTXOflags(StoredSubHistory&) const;
+   void getUTXOflags_Super(StoredSubHistory&) const;
 
-   void putStoredScriptHistory(StoredScriptHistory & ssh);
+   /////////////////////////////////////////////////////////////////////////////
+   // StoredScriptHistory Accessors
    void putStoredScriptHistorySummary(StoredScriptHistory & ssh);
-   void putStoredSubHistory(StoredSubHistory & subssh);
 
    bool getStoredScriptHistory(StoredScriptHistory & ssh,
       BinaryDataRef scrAddrStr,
@@ -823,12 +1020,15 @@ public:
    bool getStoredSubHistoryAtHgtX(StoredSubHistory& subssh,
       const BinaryData& dbkey) const;
 
-   void getStoredScriptHistorySummary(StoredScriptHistory & ssh,
+   bool getStoredScriptHistorySummary(StoredScriptHistory & ssh,
       BinaryDataRef scrAddrStr) const;
 
    void getStoredScriptHistoryByRawScript(
       StoredScriptHistory & ssh,
       BinaryDataRef rawScript) const;
+   
+   bool fillStoredSubHistory(StoredScriptHistory&, unsigned, unsigned) const;
+   bool fillStoredSubHistory_Super(StoredScriptHistory&, unsigned, unsigned) const;
 
    // This method breaks from the convention I've used for getting/putting 
    // stored objects, because we never really handle Sub-ssh objects directly,
@@ -853,15 +1053,6 @@ public:
 
    bool putStoredHeadHgtList(StoredHeadHgtList const & hhl);
    bool getStoredHeadHgtList(StoredHeadHgtList & hhl, uint32_t height) const;
-
-   ////////////////////////////////////////////////////////////////////////////
-   // Some methods to grab data at the current iterator location.  Return
-   // false if reading fails (maybe because we were expecting to find the
-   // specified DB entry type, but the prefix byte indicated something else
-   bool readStoredScriptHistoryAtIter(unique_ptr<LDBIter> iter,
-      StoredScriptHistory & ssh,
-      uint32_t startBlock,
-      uint32_t endBlock) const;
 
    // TxRefs are much simpler with LDB than the previous FileDataPtr construct
    TxRef getTxRef(BinaryDataRef txHash);
@@ -899,7 +1090,7 @@ public:
    BinaryData getGenesisTxHash(void)    { return genesisTxHash_; }
    BinaryData getMagicBytes(void)       { return magicBytes_; }
 
-   ARMORY_DB_TYPE armoryDbType(void) { return armoryDbType_; }
+   ARMORY_DB_TYPE armoryDbType(void) { return BlockDataManagerConfig::getDbType(); }
 
    const string& baseDir(void) const { DatabaseContainer::baseDir_; }
    void setBlkFolder(const string& path) { blkFolder_ = path; }
@@ -907,6 +1098,7 @@ public:
    void closeDB(DB_SELECT db);
    StoredDBInfo openDB(DB_SELECT);
    void resetSSHdb(void);
+   void resetSSHdb_Super(void);
 
    const shared_ptr<Blockchain> blockchain(void) const { return blockchainPtr_; }
 
@@ -943,7 +1135,7 @@ public:
 
       auto val = getValueNoCopy(TXFILTERS, key);
       if (val.getSize() == 0)
-         throw runtime_error("invalid txfilter key");
+         throw TxFilterException("invalid txfilter key");
 
       return TxFilterPool<T>(val.getPtr(), val.getSize());
    }
@@ -978,8 +1170,6 @@ private:
    BinaryData           genesisTxHash_;
    BinaryData           magicBytes_;
 
-   ARMORY_DB_TYPE armoryDbType_;
-
    bool                 dbIsOpen_;
    uint32_t             ldbBlockSize_;
 
@@ -997,6 +1187,8 @@ private:
    string blkFolder_;
 
    const shared_ptr<Blockchain> blockchainPtr_;
+
+   const static set<DB_SELECT> supernodeDBs_;
 };
 
 #endif
