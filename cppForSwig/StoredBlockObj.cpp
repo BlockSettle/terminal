@@ -1738,6 +1738,27 @@ void StoredScriptHistory::clear()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void StoredScriptHistory::addUpSummary(const StoredScriptHistory& ssh)
+{
+   totalTxioCount_ += ssh.totalTxioCount_;
+   totalUnspent_ += ssh.totalUnspent_;
+
+   subsshSummary_.insert(
+      ssh.subsshSummary_.begin(),
+      ssh.subsshSummary_.end());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void StoredScriptHistory::substractSummary(const StoredScriptHistory& ssh)
+{
+   totalTxioCount_ -= ssh.totalTxioCount_;
+   totalUnspent_ -= ssh.totalUnspent_;
+
+   for (auto& summary_pair : ssh.subsshSummary_)
+      subsshSummary_.erase(summary_pair.first);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SubSSH object code
 //
 // If the ssh has more than one TxIO, then we put them into SubSSH objects,
@@ -1824,15 +1845,14 @@ void StoredSubHistory::getSummary(BinaryRefReader & brr)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void StoredSubHistory::serializeDBValue(BinaryWriter & bw, 
-                                        LMDBBlockDatabase *db, 
+void StoredSubHistory::serializeDBValue(BinaryWriter & bw,
                                         ARMORY_DB_TYPE dbType) const
 {
    bw.put_var_int(txioMap_.size());
    for(const auto& txioPair : txioMap_)
    {
       TxIOPair const & txio = txioPair.second;
-      bool isSpent = txio.hasTxInInMain(db);
+      bool isSpent = txio.hasTxIn();
 
       // If spent and only maintaining a pruned DB, skip it
       if(isSpent)
@@ -1855,7 +1875,7 @@ void StoredSubHistory::serializeDBValue(BinaryWriter & bw,
       BitPacker<uint8_t> bitpack;
       bitpack.putBit(txio.isTxOutFromSelf());
       bitpack.putBit(txio.isFromCoinbase());
-      bitpack.putBit(txio.hasTxInInMain(db));
+      bitpack.putBit(txio.hasTxIn());
       bitpack.putBit(txio.isMultisig());
       bitpack.putBit(txio.isUTXO());
       bw.put_BitPacker(bitpack);

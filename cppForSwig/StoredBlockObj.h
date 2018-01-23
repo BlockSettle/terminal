@@ -49,9 +49,9 @@ enum DB_SELECT
    ZERO_CONF,
    TXFILTERS,
    SPENTNESS,
+   CHECKPOINT,
    COUNT
 };
-
 
 enum TX_SERIALIZE_TYPE
 {
@@ -226,9 +226,6 @@ public:
    bool       isNull(void) { return !isInitialized(); }
 
    BinaryData getSerializedTxFragged(void) const;
-   Tx         getTxCopy(void) const;
-   void       setKeyData(uint32_t height, uint8_t dup, uint16_t txIdx);
-
    void unserialize(BinaryData const & data, bool isFragged = false);
    void unserialize(BinaryDataRef data, bool isFragged = false);
    virtual void unserialize(BinaryRefReader & brr, bool isFragged = false);
@@ -236,7 +233,6 @@ public:
    void       unserializeDBValue(BinaryRefReader & brr);
    void       unserializeDBValue(BinaryData const & bd);
    void       unserializeDBValue(BinaryDataRef      bd);
-   BinaryData   serializeDBValue(ARMORY_DB_TYPE dbType) const;
    void       unserializeDBKey(BinaryDataRef key);
 
    BinaryData getDBKey(bool withPrefix = true) const;
@@ -324,7 +320,6 @@ public:
    bool isInitialized(void) const {return dataCopy_.getSize() > 0;}
    bool isNull(void) const {return !isInitialized(); }
    BlockHeader getBlockHeaderCopy(void) const;
-   BinaryData getSerializedBlock(void) const;
    BinaryData getSerializedBlockHeader(void) const;
    void createFromBlockHeader(const BlockHeader & bh);
 
@@ -446,8 +441,7 @@ public:
    bool isNull(void) { return !isInitialized(); }
 
    void       unserializeDBValue(BinaryRefReader & brr);
-   void       serializeDBValue(BinaryWriter    & bw, 
-               LMDBBlockDatabase *db, ARMORY_DB_TYPE dbType) const;
+   void       serializeDBValue(BinaryWriter    & bw, ARMORY_DB_TYPE dbType) const;
    void       unserializeDBValue(BinaryData const & bd);
    void       unserializeDBValue(BinaryDataRef      bd);
    void       unserializeDBKey(BinaryDataRef key, bool withPrefix=true);
@@ -455,10 +449,6 @@ public:
 
    BinaryData    getDBKey(bool withPrefix=true) const;
    SCRIPT_PREFIX getScriptType(void) const;
-   //uint64_t      getTxioCount(void) const {return (uint64_t)txioMap_.size();}
-
-   // This adds the TxOut if it doesn't exist yet
-   const TxIOPair* markTxOutSpent(const BinaryData& txOutKey8B);
 
    void markTxOutUnspent(const BinaryData& txOutKey8B,
                              uint64_t&  additionalSize,
@@ -527,6 +517,9 @@ public:
    void       unserializeDBValue(BinaryData const & bd);
    void       unserializeDBValue(BinaryDataRef      bd);
    void       unserializeDBKey(BinaryDataRef key, bool withPrefix=true);
+   
+   void       addUpSummary(const StoredScriptHistory&);
+   void       substractSummary(const StoredScriptHistory&);
 
    BinaryData    getDBKey(bool withPrefix=true) const;
    SCRIPT_PREFIX getScriptType(void) const;
