@@ -80,7 +80,7 @@ struct TxOutScriptRef
 
    BinaryData getScrAddr(void) const
    {
-      BinaryWriter bw;
+      BinaryWriter bw(1 + scriptRef_.getSize());
       bw.put_uint8_t(type_);
       bw.put_BinaryData(scriptRef_);
 

@@ -16,12 +16,14 @@
 /////////////////////////////////////////////////////////////////////////////
 DatabaseBuilder::DatabaseBuilder(BlockFiles& blockFiles, 
    BlockDataManager& bdm,
-   const ProgressCallback &progress)
+   const ProgressCallback &progress,
+   bool forceRescanSSH)
    : blockFiles_(blockFiles), db_(bdm.getIFace()),
    bdmConfig_(bdm.config()), blockchain_(bdm.blockchain()),
    scrAddrFilter_(bdm.getScrAddrFilter()),
    progress_(progress),
-   magicBytes_(db_->getMagicBytes()), topBlockOffset_(0, 0)
+   magicBytes_(db_->getMagicBytes()), topBlockOffset_(0, 0),
+   forceRescanSSH_(forceRescanSSH)
 {}
 
 /////////////////////////////////////////////////////////////////////////////
@@ -70,7 +72,8 @@ void DatabaseBuilder::init()
    TIMER_START("updateblocksindb");
    LOGINFO << "updating HEADERS db";
    auto reorgState = updateBlocksInDB(
-      progress_, bdmConfig_.reportProgress_, bdmConfig_.armoryDbType_ == ARMORY_DB_SUPER);
+      progress_, bdmConfig_.reportProgress_, 
+      BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER);
    TIMER_STOP("updateblocksindb");
    double updatetime = TIMER_READ_SEC("updateblocksindb");
    LOGINFO << "updated HEADERS db in " << updatetime << "s";
@@ -80,7 +83,7 @@ void DatabaseBuilder::init()
    int scanFrom = -1;
    bool reset = false;
 
-   if (bdmConfig_.armoryDbType_ != ARMORY_DB_SUPER)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
       verifyTxFilters();
 
@@ -409,7 +412,7 @@ bool DatabaseBuilder::addBlocksToDB(BlockDataLoader& bdl,
    if (!fullHints)
    {
       //process filters
-      if (bdmConfig_.armoryDbType_ == ARMORY_DB_FULL)
+      if (BlockDataManagerConfig::getDbType() == ARMORY_DB_FULL)
       {
         //pull existing file filter bucket from db (if any)
          auto&& pool = db_->getFilterPoolForFileNum<TxFilterType>(fileID);
@@ -446,7 +449,7 @@ bool DatabaseBuilder::addBlocksToDB(BlockDataLoader& bdl,
    else
    {
       commitAllTxHints(bdMap, insertedBlocks);
-      if (bdmConfig_.armoryDbType_ == ARMORY_DB_SUPER)
+      if (BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER)
          commitAllStxos(blockfilemappointer, bdMap, insertedBlocks);
    }
 
@@ -539,14 +542,14 @@ BinaryData DatabaseBuilder::updateTransactionHistory(int32_t startHeight)
 BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
    bool reportprogress)
 {
-   if (bdmConfig_.armoryDbType_ != ARMORY_DB_SUPER)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
       BlockchainScanner bcs(blockchain_, db_, scrAddrFilter_.get(),
          blockFiles_, bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
          progress_, reportprogress);
 
       bcs.scan(startHeight);
-      bcs.updateSSH(false);
+      bcs.updateSSH(forceRescanSSH_, startHeight);
 
       unsigned count = 0;
       while (!bcs.resolveTxHashes())
@@ -572,7 +575,7 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
          progress_, reportprogress);
 
       bcs.scan();
-      bcs.updateSSH(false);
+      bcs.updateSSH(forceRescanSSH_);
 
       return bcs.getTopScannedBlockHash();
    }
@@ -588,7 +591,7 @@ Blockchain::ReorganizationState DatabaseBuilder::update(void)
 
    //update db
    auto&& reorgState = updateBlocksInDB(progress_, false, 
-      bdmConfig_.armoryDbType_ == ARMORY_DB_SUPER);
+      BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER);
 
    if (!reorgState.hasNewTop_)
       return reorgState;
@@ -618,7 +621,7 @@ Blockchain::ReorganizationState DatabaseBuilder::update(void)
 void DatabaseBuilder::undoHistory(
    Blockchain::ReorganizationState& reorgState)
 {   
-   if (bdmConfig_.armoryDbType_ != ARMORY_DB_SUPER)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
       BlockchainScanner bcs(blockchain_, db_, scrAddrFilter_.get(),
          blockFiles_, bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
@@ -830,7 +833,7 @@ void DatabaseBuilder::commitAllTxHints(
 
    //The readwrite db transactions makes sure only one thread is batching 
    //txhints at a time. This is relevant, as hints are first pulled from
-   //disk then updated. In case 2 different blocks commit the to the same 
+   //disk then updated. In case 2 different blocks commit to the same 
    //hint, one will likely overwrite the other.
    auto&& hintdbtx = db_->beginTransaction(TXHINTS, LMDB::ReadWrite);
 
@@ -838,10 +841,10 @@ void DatabaseBuilder::commitAllTxHints(
       auto addTxHintMap =
          [&](shared_ptr<BCTX> txn, const BinaryData& txkey)->void
       {
-         auto&& txHashPrefix = txn->txHash_.getSliceCopy(0, 4);
+         auto&& txHashPrefix = txn->getHash().getSliceCopy(0, 4);
          StoredTxHints& stxh = txHints[txHashPrefix];
 
-         //pull txHint from DB first, don't want to override 
+         //pull txHint from memory first, don't want to override 
          //existing hints
          if (stxh.isNull())
             db_->getStoredTxHints(stxh, txHashPrefix);
@@ -899,7 +902,7 @@ void DatabaseBuilder::commitAllStxos(
    const map<uint32_t, BlockData>& bdMap,
    const set<unsigned>& insertedBlocks)
 {
-   if (bdmConfig_.armoryDbType_ != ARMORY_DB_SUPER)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
       throw runtime_error("invalid db mode");
 
    auto blockPtr = blockDataPtr->getPtr();
@@ -1222,7 +1225,7 @@ void DatabaseBuilder::verifyTransactions()
 /////////////////////////////////////////////////////////////////////////////
 void DatabaseBuilder::verifyTxFilters()
 {
-   if (bdmConfig_.armoryDbType_ != ARMORY_DB_FULL)
+   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_FULL)
       return;
 
    LOGINFO << "verifying txfilters integrity";

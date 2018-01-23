@@ -17,6 +17,8 @@
 #include "bdmenums.h"
 #include "ThreadSafeClasses.h"
 
+#include "SshParser.h"
+
 #include <future>
 #include <atomic>
 #include <exception>
@@ -163,7 +165,7 @@ public:
    void scan_nocheck(int32_t startHeight);
 
    void undo(Blockchain::ReorganizationState& reorgState);
-   void updateSSH(bool);
+   void updateSSH(bool, int32_t startHeight);
    bool resolveTxHashes();
 
    const BinaryData& getTopScannedBlockHash(void) const

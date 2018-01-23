@@ -16,12 +16,17 @@
 #include "bdmenums.h"
 #include "ThreadSafeClasses.h"
 
+#include "SshParser.h"
+
 #include <future>
 #include <atomic>
 #include <exception>
 
 #define COMMIT_SSH_SIZE 1024 * 1024 * 256ULL
 #define BATCH_SIZE_SUPER 1024 * 1024 * 128ULL
+
+typedef map<BinaryData, map<BinaryData, StoredSubHistory>> ThreadSubSshResult;
+typedef map<BinaryData, BinaryData> ThreadSpentnessResult;
 
 ////////////////////////////////////////////////////////////////////////////////
 struct ParserBatch_Super
@@ -30,6 +35,9 @@ public:
    map<unsigned, shared_ptr<BlockDataFileMap>> fileMaps_;
 
    atomic<unsigned> blockCounter_;
+   atomic<unsigned> sshKeyCounter_;
+   atomic<unsigned> spentnessKeyCounter_;
+   
    mutex mergeMutex_;
 
    const unsigned start_;
@@ -39,15 +47,45 @@ public:
    const unsigned targetBlockFileID_;
 
    map<unsigned, shared_ptr<BlockData>> blockMap_;
-   map<BinaryData, map<BinaryData, StoredSubHistory>> sshMap_;
-   map<BinaryData, BinaryData> spentness_;
-
    map<BinaryData, BinaryData> hashToDbKey_;
 
-   vector<pair<BinaryWriter, BinaryWriter>> serializedSubSsh_;
+   vector<BinaryDataRef> subsshKeys_;
+   map<BinaryDataRef, map<BinaryDataRef, BinaryWriter>> serializedSubSsh_;
+
+   vector<ThreadSpentnessResult> spentnessResults_;
+   vector<ThreadSubSshResult> txOutSshResults_;
+   vector<ThreadSubSshResult> txInSshResults_;
 
    promise<bool> completedPromise_;
    unsigned count_;
+   unsigned topSpentnessShard_;
+
+   map<unsigned, unsigned> spentnessDistribution_;
+
+   chrono::system_clock::time_point parseTxOutStart_;
+   chrono::system_clock::time_point parseTxOutEnd_;
+   chrono::duration<double> mergeTxoutSsh_;
+
+   chrono::duration<double> getBlock_;
+   chrono::duration<double> parseBlock_;
+
+
+   chrono::system_clock::time_point parseTxInStart_;
+   chrono::system_clock::time_point parseTxInEnd_;
+   //chrono::duration<double> mergeTxInSsh_;
+   chrono::duration<double> serializeSsh_;
+   chrono::duration<double> getHashCtr_;
+   chrono::duration<double> getScrAddr_;
+   chrono::duration<double> updateSsh_;
+   chrono::duration<double> preloadBlockFiles_;
+   chrono::duration<double> waitOnBatch_;
+   chrono::duration<double> waitOnTxInBatch_;
+
+   chrono::system_clock::time_point writeSshStart_;
+   chrono::system_clock::time_point writeSshEnd_;
+
+   chrono::system_clock::time_point writeSpentnessStart_;
+   chrono::system_clock::time_point writeSpentnessEnd_;
 
 public:
    ParserBatch_Super(unsigned start, unsigned end,
@@ -139,6 +177,7 @@ private:
 
    BlockingStack<unique_ptr<ParserBatch_Super>> outputQueue_;
    BlockingStack<unique_ptr<ParserBatch_Super>> inputQueue_;
+   BlockingStack<unique_ptr<ParserBatch_Super>> serializeQueue_;
    BlockingStack<unique_ptr<ParserBatch_Super>> commitQueue_;
    
    BlockingStack<pair<BinaryData, BinaryData>>  sshBoundsQueue_;
@@ -156,27 +195,32 @@ private:
    ProgressCallback progress_ =
       [](BDMPhase, double, unsigned, unsigned)->void{};
    bool reportProgress_ = false;
-  
+
 private:
    shared_ptr<BlockData> getBlockData(
       ParserBatch_Super*, unsigned);
    
    void writeBlockData(void);
+   void writeSubSsh(ParserBatch_Super*);
 
    void processOutputs(void);
-   void processOutputsThread(ParserBatch_Super*);
+   void processOutputsThread(ParserBatch_Super*, unsigned);
 
    void processInputs(void);
-   void processInputsThread(ParserBatch_Super*);
+   void processInputsThread(ParserBatch_Super*, unsigned);
 
-   void updateSSHThread(int);
-   void putSSH(const string& dbname);
+   void serializeSubSsh(void);
+   void serializeSubSshThread(ParserBatch_Super*);
+
    void putSpentness(ParserBatch_Super*);
+   void putSpentnessThread(ParserBatch_Super*);
 
    StoredTxOut getStxoByHash(
       BinaryDataRef&, uint16_t,
       ParserBatch_Super*,
       map<unsigned, shared_ptr<BlockDataFileMap>>&);
+
+   void closeUnusedShards(unsigned);
 
 public:
    BlockchainScanner_Super(

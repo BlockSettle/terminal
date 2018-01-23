@@ -32,9 +32,9 @@ private:
    const BlockDataManagerConfig bdmConfig_;
 
    unsigned checkedTransactions_ = 0;
+   const bool forceRescanSSH_;
 
 private:
-   void findLastKnownBlockPos();
    BlockOffset loadBlockHeadersFromDB(const ProgressCallback &progress);
    
    bool addBlocksToDB(
@@ -50,8 +50,6 @@ private:
    void undoHistory(Blockchain::ReorganizationState& reorgState);
 
    void resetHistory(void);
-   void resetSSHdb(void);
-
    bool reparseBlkFiles(unsigned fromID);
    map<BinaryData, shared_ptr<BlockHeader>> assessBlkFile(BlockDataLoader& bdl,
       unsigned fileID);
@@ -69,7 +67,7 @@ private:
 
 public:
    DatabaseBuilder(BlockFiles&, BlockDataManager&,
-      const ProgressCallback&);
+      const ProgressCallback&, bool);
 
    void init(void);
    Blockchain::ReorganizationState update(void);

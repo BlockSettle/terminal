@@ -61,6 +61,9 @@ int32_t BlockchainScanner::check_merkle(int32_t scanFrom)
 ////////////////////////////////////////////////////////////////////////////////
 void BlockchainScanner::scan_nocheck(int32_t scanFrom)
 {
+   if (scanFrom > (int32_t)db_->blockchain()->top()->getBlockHeight())
+      return;
+
    TIMER_RESTART("scan_nocheck");
 
    startAt_ = scanFrom;
@@ -781,7 +784,7 @@ void BlockchainScanner::writeBlockData()
 
                auto& bw = serializedSubSSH[subsshkey.getDataRef()];
                subssh.second.serializeDBValue(
-                  bw, db_, ARMORY_DB_BARE);
+                  bw, ARMORY_DB_BARE);
             }
          }
 
@@ -982,11 +985,17 @@ void BlockchainScanner::processAndCommitTxHints(ParserBatch* batch)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BlockchainScanner::updateSSH(bool force)
+void BlockchainScanner::updateSSH(bool force, int32_t startHeight)
 {
    //loop over all subssh entiers in SUBSSH db, 
    //compile balance, txio count and summary map for each address
    //now also resolves unhinted tx hashes
+   
+   if (force)
+      startHeight = 0;
+
+   if (startHeight > (int32_t)db_->blockchain()->top()->getBlockHeight())
+      return;
 
    if (reportProgress_)
       progress_(BDMPhase_Balance, 0, 0, 0);
@@ -1023,9 +1032,7 @@ void BlockchainScanner::updateSSH(bool force)
    {
       //check for db mode against HEADERS db since it the only one that 
       //doesn't change through rescans
-      auto headersSdbi = db_->getStoredDBInfo(HEADERS, 0);
-
-      if (headersSdbi.armoryType_ == ARMORY_DB_FULL)
+      if (BlockDataManagerConfig::getDbType() == ARMORY_DB_FULL)
          resolveHashes = true;
    }
 
@@ -1036,132 +1043,41 @@ void BlockchainScanner::updateSSH(bool force)
    auto scrAddrMap = scrAddrFilter_->getScrAddrMap();
 
    {
-      StoredScriptHistory* sshPtr = nullptr;
-
-      auto&& historyTx = db_->beginTransaction(SSH, LMDB::ReadOnly);
-      auto&& sshTx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
-
-      auto&& sshIter = db_->getIterator(SUBSSH);
+      auto sshTx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
+      auto sshIter = db_->getIterator(SUBSSH);
       sshIter->seekToStartsWith(DB_PREFIX_SCRIPT);
 
-      do
+      auto getDupForHeight = [this](unsigned height)->uint8_t
       {
-         while (sshIter->isValid())
+         return this->db_->getValidDupIDForHeight(height);
+      };
+
+      auto scrAddrMapPtr = scrAddrFilter_->getScrAddrMap();
+      auto&& subsshparser_result = parseSubSsh(
+         move(sshIter), startHeight, resolveHashes, 
+         getDupForHeight, scrAddrMapPtr, BinaryData());
+
+      //update SSH
+      auto historyTx = db_->beginTransaction(SSH, LMDB::ReadOnly);
+      for (auto& ssh : subsshparser_result.second)
+      {
+         auto& db_ssh = sshMap[ssh.first];
+         db_->getStoredScriptHistorySummary(db_ssh, ssh.first);
+         if (db_ssh.isInitialized())
          {
-            if (sshPtr != nullptr &&
-               sshIter->getKeyRef().contains(sshPtr->uniqueKey_))
-               break;
-
-            //new address
-            auto&& subsshkey = sshIter->getKey();
-            if (subsshkey.getSize() < 5)
-            {
-               LOGWARN << "invalid scrAddr in SUBSSH db";
-               sshIter->advanceAndRead();
-               continue;
-            }
-
-            auto&& sshKey = subsshkey.getSliceCopy(1, subsshkey.getSize() - 5);
-
-            auto saIter = scrAddrMap->find(sshKey);
-            if (saIter == scrAddrMap->end())
-            {
-               sshPtr = nullptr;
-               sshIter->advanceAndRead();
-               continue;
-            }
-
-            //get what's already in the db
-            sshPtr = &sshMap[sshKey];
-            db_->getStoredScriptHistorySummary(*sshPtr, sshKey);
-
-            if (sshPtr->isInitialized())
-            {
-               //set iterator at unscanned height
-               auto hgtx = sshIter->getKeyRef().getSliceRef(-4, 4);
-               int height = DBUtils::hgtxToHeight(hgtx);
-               if (sshPtr->tallyHeight_ >= height)
-               {
-                  //this ssh has already been scanned beyond the height sshIter is at,
-                  //let's set the iterator to the correct height (or the next key)
-                  auto&& newKey = sshIter->getKey().getSliceCopy(0, subsshkey.getSize() - 4);
-                  auto&& newHgtx = DBUtils::heightAndDupToHgtx(
-                     sshPtr->tallyHeight_ + 1, 0);
-
-                  newKey.append(newHgtx);
-                  sshIter->seekTo(newKey);
-                  continue;
-               }
-            }
-            else
-            {
-               sshPtr->uniqueKey_ = sshKey;
-               break;
-            }
+            db_ssh.totalUnspent_ += ssh.second.totalUnspent_;
+            db_ssh.totalTxioCount_ += ssh.second.totalTxioCount_;
+            db_ssh.subsshSummary_.insert(
+               ssh.second.subsshSummary_.begin(),
+               ssh.second.subsshSummary_.end());
          }
-
-         //sanity checks
-         if (!sshIter->isValid())
-            break;
-
-         //deser subssh
-         StoredSubHistory subssh;
-         subssh.unserializeDBKey(sshIter->getKeyRef());
-
-         //check dupID
-         if (db_->getValidDupIDForHeight(subssh.height_) != subssh.dupID_)
-            continue;
-
-         subssh.unserializeDBValue(sshIter->getValueRef());
-
-         set<BinaryData> txSet;
-         for (auto& txioPair : subssh.txioMap_)
+         else
          {
-            auto&& keyOfOutput = txioPair.second.getDBKeyOfOutput();
-
-            if (resolveHashes)
-            {
-               auto&& txKey = keyOfOutput.getSliceRef(0, 6);
-
-               txnsToResolve.insert(txKey);
-            }
-
-            if (!txioPair.second.isMultisig())
-            {
-               //add up balance
-               if (txioPair.second.hasTxIn())
-               {
-                  //check for same block fund&spend
-                  auto&& keyOfInput = txioPair.second.getDBKeyOfInput();
-
-                  if (keyOfOutput.startsWith(keyOfInput.getSliceRef(0, 4)))
-                  {
-                     //both output and input are part of the same block, skip
-                     continue;
-                  }
-
-                  if (resolveHashes)
-                  {
-                     //this is to resolve output references in transaction build from
-                     //multiple wallets (i.ei coinjoin)
-                     txnsToResolve.insert(keyOfInput.getSliceRef(0, 6));
-                  }
-
-                  sshPtr->totalUnspent_ -= txioPair.second.getValue();
-               }
-               else
-               {
-                  sshPtr->totalUnspent_ += txioPair.second.getValue();
-               }
-            }
+            db_ssh = move(ssh.second);
          }
+      }
 
-         //txio count
-         sshPtr->totalTxioCount_ += subssh.txioCount_;
-
-         //build subssh summary
-         sshPtr->subsshSummary_[subssh.height_] = subssh.txioCount_;
-      } while (sshIter->advanceAndRead(DB_PREFIX_SCRIPT));
+      txnsToResolve = move(subsshparser_result.first);
    }
 
    //build txHash refs from listed txins
