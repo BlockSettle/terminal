@@ -53,7 +53,7 @@ protected:
       blk0dat_ = BtcUtils::getBlkFilename(blkdir_, 0);
       TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
 
-      config.armoryDbType_ = ARMORY_DB_BARE;
+      BlockDataManagerConfig::setDbType(ARMORY_DB_BARE);
       config.blkFileLocation_ = blkdir_;
       config.dbDir_ = ldbdir_;
       config.threadCount_ = 3;

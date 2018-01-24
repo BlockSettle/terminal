@@ -164,6 +164,20 @@ public:
    TransactionVerifier(const BCTX& theTx, const utxoMap& utxos) :
       utxos_(utxos), theTx_(theTx)
    {}
+
+   TransactionVerifier(
+      const BCTX& theTx, const vector<UnspentTxOut>& utxoVec) :
+      theTx_(theTx)
+   {
+      for (auto& utxo : utxoVec)
+      {
+         UTXO new_obj(utxo.getValue(),
+            utxo.getTxHeight(), utxo.getTxtIndex(), utxo.getTxOutIndex(),
+            utxo.getTxHash(), utxo.getScript());
+         auto& inner_map = utxos_[utxo.getTxHash()];
+         inner_map.insert(make_pair(utxo.getTxOutIndex(), move(new_obj)));
+      }
+   }
    
    bool verify(bool noCatch = true) const;
    TxEvalState evaluateState() const;
