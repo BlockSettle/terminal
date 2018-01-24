@@ -64,17 +64,6 @@ public:
 
    bool hasScrAddress(BinaryData const & scrAddr) const;
 
-
-   // Scan a Tx for our TxIns/TxOuts.  Override default blk vals if you think
-   // you will save time by not checking addresses that are much newer than
-   // the block
-
-   void scanNonStdTx(uint32_t    blknum, 
-                     uint32_t    txidx, 
-                     Tx &        txref,
-                     uint32_t    txoutidx,
-                     ScrAddrObj& addr);
-
    // BlkNum is necessary for "unconfirmed" list, since it is dependent
    // on number of confirmations.  But for "spendable" TxOut list, it is
    // only a convenience, if you want to be able to calculate numConf from

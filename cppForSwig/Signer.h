@@ -188,7 +188,6 @@ public:
    
    void evaluatePartialStacks(void);
    bool resolved(void) const;
-   bool isPartial(void) const;
 
    BinaryData serializeState(void) const;
    static shared_ptr<ScriptSpender> deserializeState(
