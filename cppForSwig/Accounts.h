@@ -21,12 +21,17 @@
 #include "Addresses.h"
 #include "DerivationScheme.h"
 
-#define ARMORY_LEGACY_ACCOUNTID  0xF6E10000
-#define OUTER_ASSET_ACCOUNTID    0x10000000  
-#define INNER_ASSET_ACCOUNTID    0x20000000  
+#define ARMORY_LEGACY_ACCOUNTID        0xF6E10000
+#define IMPORTS_ACCOUNTID              0
+#define ARMORY_LEGACY_ASSET_ACCOUNTID  1
+
+#define BIP32_LEGACY_OUTER_ACCOUNT_DERIVATIONID 0x00000000
+#define BIP32_LEGACY_INNER_ACCOUNT_DERIVATIONID 0x00000001
+#define BIP32_SEGWIT_OUTER_ACCOUNT_DERIVATIONID 0x10000000
+#define BIP32_SEGWIT_INNER_ACCOUNT_DERIVATIONID 0x10000001
+
 
 #define ADDRESS_ACCOUNT_PREFIX   0xD0
-
 #define ASSET_ACCOUNT_PREFIX     0xE1
 #define ASSET_COUNT_PREFIX       0xE2
 #define ASSET_TOP_INDEX_PREFIX   0xE3
@@ -40,11 +45,241 @@ public:
 
 enum AccountTypeEnum
 {
+   /*
+   armory derivation scheme 
+   outer and inner account are the same
+   uncompressed P2PKH, compresed P2SH-P2PK, P2SH-P2WPKH
+   */
    AccountTypeEnum_ArmoryLegacy,
-   AccountTypeEnum_ArmoryLegacy_WatchingOnly,
-   AccountTypeEnum_BIP32,
+
+   /*
+   BIP32 derivation scheme, provided by the user
+   outer account: derPath/0
+   inner account: derPath/1
+   uncompressed and compressed P2PKH
+   */
+   AccountTypeEnum_BIP32_Legacy,
+
+   /*
+   BIP32 derivation scheme, provided by the user
+   outer account: derPath/0x10000000
+   inner account: derPath/0x10000001
+   native P2WPKH, nested P2WPKH
+   */
+   AccountTypeEnum_BIP32_SegWit,
+   
    AccountTypeEnum_BIP44,
    AccountTypeEnum_Custom
+};
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+struct AccountType
+{
+protected:
+   const AccountTypeEnum type_;
+   const SecureBinaryData privateRoot_;
+   const SecureBinaryData publicRoot_;
+   mutable SecureBinaryData chainCode_;
+
+   bool isMain_ = false;
+
+   set<AddressEntryType> addressTypes_;
+   AddressEntryType defaultAddressEntryType_;
+
+public:
+   AccountType(AccountTypeEnum val, 
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& publicRoot,
+      SecureBinaryData& chainCode) :
+      type_(val), 
+      privateRoot_(move(privateRoot)),
+      publicRoot_(move(publicRoot)),
+      chainCode_(move(chainCode))
+   {
+      if (privateRoot_.getSize() == 0 && publicRoot_.getSize() == 0)
+         throw AccountException("need at least one valid root");
+
+      if (privateRoot_.getSize() > 0 && publicRoot_.getSize() > 0)
+         throw AccountException("root types are mutualy exclusive");
+
+      if (publicRoot_.getSize() > 0 && chainCode_.getSize() == 0)
+         throw AccountException("need chaincode for public account");
+   }
+
+   //virtuals
+   virtual ~AccountType(void) = 0;
+   virtual const SecureBinaryData& getChaincode(void) const = 0;
+   virtual const SecureBinaryData& getPrivateRoot(void) const = 0;
+   virtual const SecureBinaryData& getPublicRoot(void) const = 0;
+   
+   virtual BinaryData getAccountID(void) const = 0;
+   virtual BinaryData getOuterAccountID(void) const = 0;
+   virtual BinaryData getInnerAccountID(void) const = 0;
+
+   //locals
+   void setMain(bool ismain) { isMain_ = ismain; }
+   const bool isMain(void) const { return isMain_; }
+   AccountTypeEnum type(void) const { return type_; }
+
+   const set<AddressEntryType>& getAddressTypes(void) const { return addressTypes_; }
+   AddressEntryType getDefaultAddressEntryType(void) const { return defaultAddressEntryType_; }
+
+   bool isWatchingOnly(void) const
+   {
+      return privateRoot_.getSize() == 0 &&
+         publicRoot_.getSize() > 0 &&
+         chainCode_.getSize() > 0;
+   }
+};
+
+////////////////////
+struct AccountType_ArmoryLegacy : public AccountType
+{
+public:
+   AccountType_ArmoryLegacy(
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& publicRoot,
+      SecureBinaryData& chainCode) :
+      AccountType(AccountTypeEnum_ArmoryLegacy,
+      privateRoot, publicRoot, chainCode)
+   {
+      //uncompressed p2pkh
+      addressTypes_.insert(AddressEntryType_P2PKH);
+
+      //nested compressed p2pk
+      addressTypes_.insert(AddressEntryType(
+         AddressEntryType_P2PK | AddressEntryType_Compressed | AddressEntryType_P2SH));
+
+      //nested p2wpkh
+      addressTypes_.insert(AddressEntryType(
+         AddressEntryType_P2WPKH | AddressEntryType_P2SH));
+
+      //native p2wpkh
+      addressTypes_.insert(AddressEntryType(
+         AddressEntryType_P2WPKH));
+
+      //default type
+      defaultAddressEntryType_ = AddressEntryType_P2PKH;
+   }
+
+   const SecureBinaryData& getChaincode(void) const;
+   const SecureBinaryData& getPrivateRoot(void) const { return privateRoot_; }
+   const SecureBinaryData& getPublicRoot(void) const { return publicRoot_; }
+   BinaryData getAccountID(void) const { return WRITE_UINT32_BE(ARMORY_LEGACY_ACCOUNTID); }
+   BinaryData getOuterAccountID(void) const;
+   BinaryData getInnerAccountID(void) const;
+};
+
+////////////////////
+struct AccountType_BIP32 : public AccountType
+{
+private:
+   const vector<unsigned> derivationPath_;
+   SecureBinaryData derivedRoot_;
+   SecureBinaryData derivedChaincode_;
+
+private:
+   void deriveFromRoot(void);
+
+public:
+   AccountType_BIP32(
+      AccountTypeEnum type,
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& publicRoot,
+      SecureBinaryData& chainCode,
+      const vector<unsigned>& derivationPath) :
+      AccountType(type, privateRoot, publicRoot, chainCode),
+      derivationPath_(derivationPath)
+   {
+      deriveFromRoot();
+   }
+
+   //bip32 virtuals
+   virtual ~AccountType_BIP32(void) = 0;
+   virtual set<unsigned> getNodes(void) const = 0;
+
+   //AccountType virtuals
+   const SecureBinaryData& getChaincode(void) const
+   {
+      return derivedChaincode_;
+   }
+
+   const SecureBinaryData& getPrivateRoot(void) const
+   {
+      return derivedRoot_;
+   }
+
+   const SecureBinaryData& getPublicRoot(void) const
+   {
+      return derivedRoot_;
+   }
+
+   BinaryData getAccountID(void) const;
+};
+
+
+////////////////////
+struct AccountType_BIP32_Legacy : public AccountType_BIP32
+{
+private:
+   void deriveFromRoot(void);
+
+public:
+   AccountType_BIP32_Legacy(
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& publicRoot,
+      SecureBinaryData& chainCode,
+      const vector<unsigned>& derivationPath) :
+      AccountType_BIP32(AccountTypeEnum_BIP32_Legacy,
+         privateRoot, publicRoot, chainCode, derivationPath)
+   {
+      //uncompressed p2pkh
+      addressTypes_.insert(AddressEntryType_P2PKH);
+
+      //compressed p2pkh
+      addressTypes_.insert(
+         AddressEntryType(AddressEntryType_Compressed | AddressEntryType_P2PKH));
+
+      defaultAddressEntryType_ =
+         AddressEntryType(AddressEntryType_Compressed | AddressEntryType_P2PKH);
+   }
+
+   set<unsigned> getNodes(void) const;
+   BinaryData getOuterAccountID(void) const;
+   BinaryData getInnerAccountID(void) const;
+};
+
+////////////////////
+struct AccountType_BIP32_SegWit : public AccountType_BIP32
+{
+private:
+   void deriveFromRoot(void);
+
+public:
+   AccountType_BIP32_SegWit(
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& publicRoot,
+      SecureBinaryData& chainCode,
+      const vector<unsigned>& derivationPath) :
+      AccountType_BIP32(AccountTypeEnum_BIP32_SegWit,
+      privateRoot, publicRoot, chainCode, derivationPath)
+   {
+      //p2wpkh
+      addressTypes_.insert(AddressEntryType_P2WPKH);
+
+      //nested p2wpkh
+      addressTypes_.insert(
+         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+
+      //default
+      defaultAddressEntryType_ =
+         AddressEntryType(AddressEntryType_P2WPKH);
+   }
+
+   set<unsigned> getNodes(void) const;
+   BinaryData getOuterAccountID(void) const;
+   BinaryData getInnerAccountID(void) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -80,8 +315,10 @@ private:
    void updateAssetCount(void);
 
    void extendPublicChain(unsigned);
-   void extendPublicChain(shared_ptr<AssetEntry>, unsigned);
    void extendPublicChainToIndex(unsigned);
+   void extendPublicChain(shared_ptr<AssetEntry>, unsigned);
+   vector<shared_ptr<AssetEntry>> extendPublicChain(
+      shared_ptr<AssetEntry>, unsigned, unsigned);
 
    void extendPrivateChain(
       shared_ptr<DecryptedDataContainer>,
@@ -92,6 +329,10 @@ private:
    void extendPrivateChain(
       shared_ptr<DecryptedDataContainer>,
       shared_ptr<AssetEntry>, unsigned);
+   vector<shared_ptr<AssetEntry>> extendPrivateChain(
+      shared_ptr<DecryptedDataContainer>,
+      shared_ptr<AssetEntry>,
+      unsigned, unsigned);
 
    void unserialize(const BinaryDataRef);
 
@@ -99,26 +340,26 @@ public:
    AssetAccount(
       const BinaryData& ID,
       const BinaryData& parentID,
-      shared_ptr<AssetEntry> root, 
+      shared_ptr<AssetEntry> root,
       shared_ptr<DerivationScheme> scheme,
       shared_ptr<LMDBEnv> dbEnv, LMDB* db) :
       id_(ID), parent_id_(parentID),
       root_(root), derScheme_(scheme),
       dbEnv_(dbEnv), db_(db)
    {}
-   
+
    size_t getAssetCount(void) const { return assets_.size(); }
    int getLastComputedIndex(void) const;
    shared_ptr<AssetEntry> getLastAssetWithPrivateKey(void) const;
 
    shared_ptr<AssetEntry> getNewAsset(void);
    shared_ptr<AddressEntry> getNewAddress(AddressEntryType aeType);
-   
+
    shared_ptr<AssetEntry> getAssetForID(const BinaryData&) const;
    shared_ptr<AssetEntry> getAssetForIndex(unsigned id) const;
 
    void updateAddressHashMap(const set<AddressEntryType>&);
-   const map<BinaryData, map<AddressEntryType, BinaryData>>& 
+   const map<BinaryData, map<AddressEntryType, BinaryData>>&
       getAddressHashMap(const set<AddressEntryType>&);
 
    const BinaryData& getID(void) const { return id_; }
@@ -134,62 +375,6 @@ public:
    void initAfterLock(void) {}
    void cleanUpBeforeUnlock(void) {}
 };
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-struct AccountType
-{
-protected:
-   const AccountTypeEnum type_;
-   const SecureBinaryData root_;
-   mutable SecureBinaryData chainCode_;
-
-   bool isMain_ = false;
-
-public:
-   AccountType(AccountTypeEnum val, const SecureBinaryData& root) :
-      type_(val), root_(root)
-   {}
-
-   virtual ~AccountType(void) = 0;
-   virtual const SecureBinaryData& getChaincode(void) const = 0;
-   
-   void setMain(bool ismain) { isMain_ = ismain; }
-   const bool isMain(void) const { return isMain_; }
-   const SecureBinaryData& getRoot(void) const { return root_; }
-
-   AccountTypeEnum type(void) const { return type_; }
-};
-
-////////////////////
-struct AccountType_ArmoryLegacy : public AccountType
-{
-private:
-
-public:
-   AccountType_ArmoryLegacy(const SecureBinaryData& root) :
-      AccountType(AccountTypeEnum_ArmoryLegacy, root)
-   {}
-
-   const SecureBinaryData& getChaincode(void) const;
-};
-
-////////////////////
-struct AccountType_ArmoryLegacy_WatchingOnly : public AccountType
-{
-private:
-   const SecureBinaryData chainCode_;
-
-public:
-   AccountType_ArmoryLegacy_WatchingOnly(
-      const SecureBinaryData& root , const SecureBinaryData& chainCode) :
-      AccountType(AccountTypeEnum_ArmoryLegacy_WatchingOnly, root), 
-      chainCode_(chainCode)
-   {}
-
-   const SecureBinaryData& getChaincode(void) const { return chainCode_; }
-};
-
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -214,6 +399,8 @@ private:
 private:
    void commit(void); //used for initial commit to disk
    void reset(void);
+
+   void addAccount(shared_ptr<AssetAccount>);
 
 public:
    //to search sets

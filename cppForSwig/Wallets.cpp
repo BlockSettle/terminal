@@ -252,7 +252,9 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::
    //address accounts
    set<shared_ptr<AccountType>> accountTypes;
    accountTypes.insert(
-      make_shared<AccountType_ArmoryLegacy>(privateRoot));
+      make_shared<AccountType_ArmoryLegacy>(
+      privateRoot.copy(), 
+      SecureBinaryData(), SecureBinaryData()));
    (*accountTypes.begin())->setMain(true);
    
    auto walletPtr = initWalletDb(
@@ -286,7 +288,6 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::
 shared_ptr<AssetWallet_Single> AssetWallet_Single::
 createFromPublicRoot_Armory135(
    const string& folder,
-   AddressEntryType defaultAddressType,
    SecureBinaryData& pubRoot,
    SecureBinaryData& chainCode,
    unsigned lookup)
@@ -324,7 +325,8 @@ createFromPublicRoot_Armory135(
    //address accounts
    set<shared_ptr<AccountType>> accountTypes;
    accountTypes.insert(
-      make_shared<AccountType_ArmoryLegacy_WatchingOnly>(pubRoot, chainCode));
+      make_shared<AccountType_ArmoryLegacy>(
+      SecureBinaryData(), pubRoot.copy(), chainCode.copy()));
    (*accountTypes.begin())->setMain(true);
 
    auto walletPtr = initWalletDbFromPubRoot(
@@ -349,6 +351,101 @@ createFromPublicRoot_Armory135(
 
    return walletPtr;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetWallet_Single> AssetWallet_Single::
+createFromPrivateRoot_BIP32(
+const string& folder,
+const SecureBinaryData& privateRoot,
+const vector<unsigned>& derivationPath,
+const SecureBinaryData& passphrase,
+unsigned lookup)
+{
+   //compute wallet ID
+   auto&& pubkey = CryptoECDSA().ComputePublicKey(privateRoot);
+
+   //compute master ID as hmac256(root pubkey, "MetaEntry")
+   string hmacMasterMsg("MetaEntry");
+   auto&& masterID_long = BtcUtils::getHMAC256(
+      pubkey, SecureBinaryData(hmacMasterMsg));
+   auto&& masterID = BtcUtils::computeID(masterID_long);
+   string masterIDStr(masterID.getCharPtr(), masterID.getSize());
+
+   //create wallet file and dbenv
+   stringstream pathSS;
+   pathSS << folder << "/armory_" << masterIDStr << "_wallet.lmdb";
+   auto dbenv = getEnvFromFile(pathSS.str(), 2);
+
+   initWalletMetaDB(dbenv, masterIDStr);
+
+   auto wltMetaPtr = make_shared<WalletMeta_Single>(dbenv);
+   wltMetaPtr->parentID_ = masterID;
+
+   {
+      //walletID
+      auto&& chaincode = BtcUtils::computeChainCode_Armory135(privateRoot);
+      auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
+         chaincode);
+
+      auto asset_single = make_shared<AssetEntry_Single>(
+         ROOT_ASSETENTRY_ID, BinaryData(),
+         pubkey, nullptr);
+
+      wltMetaPtr->walletID_ = move(computeWalletID(derScheme, asset_single));
+   }
+
+   //create kdf and master encryption key
+   auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
+   auto&& masterKeySBD = SecureBinaryData().GenerateRandom(32);
+   DecryptedEncryptionKey masterEncryptionKey(masterKeySBD);
+   masterEncryptionKey.deriveKey(kdfPtr);
+   auto&& masterEncryptionKeyId = masterEncryptionKey.getId(kdfPtr->getId());
+
+   auto cypher = make_unique<Cypher_AES>(kdfPtr->getId(),
+      masterEncryptionKeyId);
+
+   //address accounts
+   set<shared_ptr<AccountType>> accountTypes;
+   accountTypes.insert(
+      make_shared<AccountType_BIP32_Legacy>(
+      privateRoot.copy(), 
+      SecureBinaryData(), SecureBinaryData(), 
+      derivationPath));
+   (*accountTypes.begin())->setMain(true);
+
+   accountTypes.insert(
+      make_shared<AccountType_BIP32_SegWit>(
+      privateRoot.copy(), 
+      SecureBinaryData(), SecureBinaryData(), 
+      derivationPath));
+
+   auto walletPtr = initWalletDb(
+      wltMetaPtr,
+      kdfPtr,
+      masterEncryptionKey,
+      move(cypher),
+      passphrase,
+      privateRoot,
+      move(accountTypes),
+      lookup - 1);
+
+   //set as main
+   {
+      LMDB dbMeta;
+
+      {
+         dbMeta.open(dbenv.get(), WALLETMETA_DBNAME);
+
+         LMDBEnv::Transaction metatx(dbenv.get(), LMDB::ReadWrite);
+         setMainWallet(&dbMeta, wltMetaPtr);
+      }
+
+      dbMeta.close();
+   }
+
+   return walletPtr;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 shared_ptr<AssetWallet> AssetWallet::loadMainWalletFromFile(const string& path)
@@ -556,7 +653,7 @@ BinaryData AssetWallet_Single::computeWalletID(
    shared_ptr<DerivationScheme> derScheme,
    shared_ptr<AssetEntry> rootEntry)
 {
-   auto&& addrVec = derScheme->extendPublicChain(rootEntry, 1);
+   auto&& addrVec = derScheme->extendPublicChain(rootEntry, 1, 1);
    if (addrVec.size() != 1)
       throw WalletException("unexpected chain derivation output");
 

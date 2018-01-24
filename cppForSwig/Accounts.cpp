@@ -12,23 +12,6 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-//// AssetType
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-AccountType::~AccountType()
-{}
-
-////////////////////////////////////////////////////////////////////////////////
-const SecureBinaryData& AccountType_ArmoryLegacy::getChaincode() const
-{
-   if (chainCode_.getSize() == 0)
-      chainCode_ = move(BtcUtils::computeChainCode_Armory135(getRoot()));
-
-   return chainCode_;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 //// AssetAccount
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -315,7 +298,9 @@ void AssetAccount::extendPublicChain(
 
    ReentrantLock lock(this);
 
-   auto&& assetVec = derScheme_->extendPublicChain(assetPtr, count);
+   auto&& assetVec = extendPublicChain(assetPtr,
+      assetPtr->getIndex() + 1, 
+      assetPtr->getIndex() + 1 + count);
 
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
@@ -334,6 +319,36 @@ void AssetAccount::extendPublicChain(
 
    updateOnDiskAssets();
    updateHashMap_ = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<shared_ptr<AssetEntry>> AssetAccount::extendPublicChain(
+   shared_ptr<AssetEntry> assetPtr, 
+   unsigned start, unsigned end)
+{
+   vector<shared_ptr<AssetEntry>> result;
+
+   switch (derScheme_->getType())
+   {
+   case DerSchemeType_ArmoryLegacy:
+   {
+      //Armory legacy derivation operates from the last valid asset
+      result = move(derScheme_->extendPublicChain(assetPtr, start, end));
+      break;
+   }
+
+   case DerSchemeType_BIP32:
+   {
+      //BIP32 operates from the node's root asset
+      result = move(derScheme_->extendPublicChain(root_, start, end));
+      break;
+   }
+
+   default:
+      throw AccountException("unexpected derscheme type");
+   }
+
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -376,9 +391,8 @@ void AssetAccount::extendPrivateChain(
    auto privAsset = getLastAssetWithPrivateKey();
    auto lastIndex = getLastComputedIndex();
 
-   auto&& assetVec = derScheme_->extendPrivateChain(
-      ddc,
-      assetPtr, count);
+   auto&& assetVec = extendPrivateChain(ddc, assetPtr, 
+      assetPtr->getIndex() + 1, assetPtr->getIndex() + 1 + count);
 
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
@@ -410,6 +424,37 @@ void AssetAccount::extendPrivateChain(
 
    if (privAsset->getIndex() + count > lastIndex)
       updateHashMap_ = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<shared_ptr<AssetEntry>> AssetAccount::extendPrivateChain(
+   shared_ptr<DecryptedDataContainer> ddc,
+   shared_ptr<AssetEntry> assetPtr,
+   unsigned start, unsigned end)
+{
+   vector<shared_ptr<AssetEntry>> result;
+
+   switch (derScheme_->getType())
+   {
+   case DerSchemeType_ArmoryLegacy:
+   {
+      //Armory legacy derivation operates from the last valid asset
+      result = move(derScheme_->extendPrivateChain(ddc, assetPtr, start, end));
+      break;
+   }
+
+   case DerSchemeType_BIP32:
+   {
+      //BIP32 operates from the node's root asset
+      result = move(derScheme_->extendPrivateChain(ddc, root_, start, end));
+      break;
+   }
+
+   default:
+      throw AccountException("unexpected derscheme type");
+   }
+
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -570,20 +615,32 @@ void AddressAccount::make_new(
    {
    case AccountTypeEnum_ArmoryLegacy:
    {
-      ID_ = WRITE_UINT32_BE(ARMORY_LEGACY_ACCOUNTID);
-      auto asset_account_id = WRITE_UINT32_BE(OUTER_ASSET_ACCOUNTID);
+      ID_ = accType->getAccountID();
+      auto asset_account_id = accType->getOuterAccountID();
 
-      auto& root = accType->getRoot();
-      auto chaincode = accType->getChaincode();
-
+      //chaincode has to be a copy cause the derscheme ctor moves it in
+      auto chaincode = accType->getChaincode(); 
       auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
          chaincode);
 
       //first derived asset
       auto&& full_account_id = ID_ + asset_account_id;
       shared_ptr<AssetEntry_Single> firstAsset;
+
+      if (accType->isWatchingOnly())
       {
+         //WO
+         auto& root = accType->getPublicRoot();
+         firstAsset = derScheme->computeNextPublicEntry(
+            root,
+            full_account_id, 0);
+      }
+      else
+      {
+         //full wallet
          ReentrantLock lock(decrData.get());
+         
+         auto& root = accType->getPrivateRoot();
          firstAsset = derScheme->computeNextPrivateEntry(
             decrData,
             root, move(cypher),
@@ -598,90 +655,95 @@ void AddressAccount::make_new(
       asset_account->assets_.insert(make_pair(0, firstAsset));
 
       //add the asset account
-      assetAccounts_.insert(make_pair(asset_account_id, asset_account));
+      addAccount(asset_account);
 
-      //set the address types
-      {
-         //uncompressed p2pkh
-         addressTypes_.insert(AddressEntryType_P2PKH);
-
-         //nested compressed p2pk
-         addressTypes_.insert(AddressEntryType(
-            AddressEntryType_P2PK | AddressEntryType_Compressed | AddressEntryType_P2SH));
-
-         //nested p2wpkh
-         addressTypes_.insert(AddressEntryType(
-            AddressEntryType_P2WPKH | AddressEntryType_P2SH));
-
-         //native p2wpkh
-         addressTypes_.insert(AddressEntryType(
-            AddressEntryType_P2WPKH));
-      }
-
-      //set default address type
-      defaultAddressEntryType_ = AddressEntryType_P2PKH;
-
-      //set inner and outer accounts
-      outerAccount_ = asset_account_id;
-      innerAccount_ = asset_account_id;
-      
       break;
    }
 
-   case AccountTypeEnum_ArmoryLegacy_WatchingOnly:
+   case AccountTypeEnum_BIP32_Legacy:
+   case AccountTypeEnum_BIP32_SegWit:
    {
-      ID_ = WRITE_UINT32_BE(ARMORY_LEGACY_ACCOUNTID);
-      auto asset_account_id = WRITE_UINT32_BE(OUTER_ASSET_ACCOUNTID);
+      ID_ = accType->getAccountID();
 
-      auto& root = accType->getRoot();
-      auto chaincode = accType->getChaincode();
-
-      auto derScheme = make_shared<DerivationScheme_ArmoryLegacy>(
-         chaincode);
-
-      //first derived asset
-      auto&& full_account_id = ID_ + asset_account_id;
-      shared_ptr<AssetEntry_Single> firstAsset;
+      //asset account lambda
+      auto createNewAccount = [&accType, &decrData, this](
+         unsigned node_id,
+         unique_ptr<Cypher> cypher_copy)->shared_ptr<AssetAccount>
       {
-         firstAsset = derScheme->computeNextPublicEntry(
-            root, 
-            full_account_id, 0);
-      }
+         auto&& account_id = WRITE_UINT32_BE(node_id);
+         auto&& full_account_id = ID_ + account_id;
 
-      //instantiate account and set first entry
-      auto asset_account = make_shared<AssetAccount>(
-         asset_account_id, ID_,
-         nullptr, derScheme, //no root asset for legacy derivation scheme, using first entry instead
-         dbEnv_, db_);
-      asset_account->assets_.insert(make_pair(0, firstAsset));
+         shared_ptr<AssetEntry_Single> rootAsset;
+         SecureBinaryData chaincode; 
 
-      //add the asset account
-      assetAccounts_.insert(make_pair(asset_account_id, asset_account));
+         if (accType->isWatchingOnly())
+         {
+            //WO
+            auto& root = accType->getPublicRoot();
 
-      //set the address types
+            //derive to final node
+            auto& derived_pair = CryptoECDSA::bip32_derive_public_key(
+               root, accType->getChaincode(), node_id);
+            chaincode = move(derived_pair.second);
+
+            rootAsset = make_shared<AssetEntry_Single>(
+               -1, full_account_id,
+               derived_pair.first, nullptr);
+         }
+         else
+         {
+            //full wallet
+            auto& root = accType->getPrivateRoot();
+
+            //derive to final node
+            auto&& derived_pair =
+               CryptoECDSA::bip32_derive_private_key(
+               root, accType->getChaincode(), node_id);
+            chaincode = move(derived_pair.second);
+
+            //compute pubkey
+            auto&& pubkey = CryptoECDSA().ComputePublicKey(derived_pair.first);
+
+            //encrypt private root
+            auto&& encrypted_root =
+               decrData->encryptData(cypher_copy.get(), derived_pair.first);
+
+            //create assets
+            auto priv_asset = make_shared<Asset_PrivateKey>(
+               -1, encrypted_root, move(cypher_copy));
+            rootAsset = make_shared<AssetEntry_Single>(
+               -1, full_account_id,
+               pubkey,
+               priv_asset);
+         }
+
+         //der scheme
+         if (chaincode.getSize() == 0)
+            throw AccountException("invalid chaincode");
+         auto derScheme = make_shared<DerivationScheme_BIP32>(
+            chaincode);
+
+         //instantiate account
+         auto asset_account = make_shared<AssetAccount>(
+            account_id, ID_,
+            rootAsset, derScheme,
+            dbEnv_, db_);
+
+         return asset_account;
+      };
+
+      auto accType_bip32 = dynamic_pointer_cast<AccountType_BIP32>(accType);
+      if (accType_bip32 == nullptr)
+         throw AccountException("unexpected bip32 account type ptr");
+
+      auto&& nodes = accType_bip32->getNodes();
+      for (auto& node : nodes)
       {
-         //uncompressed p2pkh
-         addressTypes_.insert(AddressEntryType_P2PKH);
-
-         //nested compressed p2pk
-         addressTypes_.insert(AddressEntryType(
-            AddressEntryType_P2PK | AddressEntryType_Compressed | AddressEntryType_P2SH));
-
-         //nested p2wpkh
-         addressTypes_.insert(AddressEntryType(
-            AddressEntryType_P2WPKH | AddressEntryType_P2SH));
-
-         //native p2wpkh
-         addressTypes_.insert(AddressEntryType(
-            AddressEntryType_P2WPKH));
+         auto account_obj = createNewAccount(
+            node,
+            move(cypher->getCopy()));
+         addAccount(account_obj);
       }
-
-      //set default address type
-      defaultAddressEntryType_ = AddressEntryType_P2PKH;
-
-      //set inner and outer accounts
-      outerAccount_ = asset_account_id;
-      innerAccount_ = asset_account_id;
 
       break;
    }
@@ -689,6 +751,16 @@ void AddressAccount::make_new(
    default:
       throw AccountException("unknown account type");
    }
+
+   //set the address types
+   addressTypes_ = accType->getAddressTypes();
+
+   //set default address type
+   defaultAddressEntryType_ = accType->getDefaultAddressEntryType();
+
+   //set inner and outer accounts
+   outerAccount_ = accType->getOuterAccountID();
+   innerAccount_ = accType->getInnerAccountID();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -750,6 +822,16 @@ void AddressAccount::commit()
    CharacterArrayRef carData(bwData.getSize(), bwData.getData().getCharPtr());
 
    db_->insert(carKey, carData);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AddressAccount::addAccount(shared_ptr<AssetAccount> account)
+{
+   auto insertPair = assetAccounts_.insert(make_pair(
+      account->getID(), account));
+
+   if (!insertPair.second)
+      throw AccountException("already have this asset account");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -972,4 +1054,178 @@ shared_ptr<AssetEntry> AddressAccount::getOutterAssetForIndex(unsigned id) const
 {
    auto account = getOuterAccount();
    return account->getAssetForIndex(id);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// AccountType
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+AccountType::~AccountType()
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// AccountType_ArmoryLegacy
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+const SecureBinaryData& AccountType_ArmoryLegacy::getChaincode() const
+{
+   if (chainCode_.getSize() == 0)
+   {
+      auto& root = getPrivateRoot();
+      if (root.getSize() == 0)
+         throw AssetException("cannot derive chaincode from empty root");
+
+      chainCode_ = move(BtcUtils::computeChainCode_Armory135(root));
+   }
+
+   return chainCode_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AccountType_ArmoryLegacy::getOuterAccountID(void) const
+{
+   return WRITE_UINT32_BE(ARMORY_LEGACY_ASSET_ACCOUNTID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AccountType_ArmoryLegacy::getInnerAccountID(void) const
+{
+   return WRITE_UINT32_BE(ARMORY_LEGACY_ASSET_ACCOUNTID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// AccountType_BIP32
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+AccountType_BIP32::~AccountType_BIP32()
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+void AccountType_BIP32::deriveFromRoot()
+{
+   //create root and chaincode
+   if (isWatchingOnly())
+   {
+      if (publicRoot_.getSize() == 0)
+         throw AccountException("empty public root");
+
+      if (chainCode_.getSize() == 0)
+         throw AccountException("empty chaincode");
+
+      auto pubkey = publicRoot_;
+      auto chaincode = chainCode_;
+
+      for (auto& index : derivationPath_)
+      {
+         auto&& derived_pair =
+            CryptoECDSA::bip32_derive_public_key(pubkey, chaincode, index);
+
+         pubkey = move(derived_pair.first);
+         chaincode = move(derived_pair.second);
+      }
+
+      derivedRoot_ = pubkey;
+      derivedChaincode_ = chaincode;
+   }
+   else
+   {
+      if (privateRoot_.getSize() == 0)
+         throw AccountException("empty private root");
+
+      auto&& master_root = CryptoECDSA::bip32_seed_to_master_root(privateRoot_);
+      auto privkey = master_root.first;
+      auto chaincode = master_root.second;
+
+      //derive
+      for (auto& index : derivationPath_)
+      {
+         auto&& derived_pair =
+            CryptoECDSA::bip32_derive_private_key(privkey, chaincode, index);
+
+         privkey = move(derived_pair.first);
+         chaincode = move(derived_pair.second);
+      }
+
+      derivedRoot_ = privkey;
+      derivedChaincode_ = chaincode;
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AccountType_BIP32::getAccountID() const
+{
+   BinaryData accountID;
+   if (isWatchingOnly())
+   {
+      auto&& pub_hash160 = BtcUtils::getHash160(derivedRoot_);
+      accountID = move(pub_hash160.getSliceCopy(0, 4));
+   }
+   else
+   {
+      //compute ID
+      auto&& root_pub = CryptoECDSA().ComputePublicKey(derivedRoot_);
+      auto&& pub_hash160 = BtcUtils::getHash160(root_pub);
+      accountID = move(pub_hash160.getSliceCopy(0, 4));
+   }
+
+   if (accountID == WRITE_UINT32_BE(ARMORY_LEGACY_ACCOUNTID) ||
+       accountID == WRITE_UINT32_BE(IMPORTS_ACCOUNTID))
+      throw AccountException("BIP32 account ID collision");
+
+   return accountID;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// AccountType_BIP32_Legacy
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+set<unsigned> AccountType_BIP32_Legacy::getNodes(void) const
+{
+   set<unsigned> result;
+   result.insert(BIP32_LEGACY_OUTER_ACCOUNT_DERIVATIONID);
+   result.insert(BIP32_LEGACY_INNER_ACCOUNT_DERIVATIONID);
+
+   return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AccountType_BIP32_Legacy::getOuterAccountID(void) const
+{
+   return WRITE_UINT32_BE(BIP32_LEGACY_OUTER_ACCOUNT_DERIVATIONID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AccountType_BIP32_Legacy::getInnerAccountID(void) const
+{
+   return WRITE_UINT32_BE(BIP32_LEGACY_INNER_ACCOUNT_DERIVATIONID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// AccountType_BIP32_SegWit
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+set<unsigned> AccountType_BIP32_SegWit::getNodes(void) const
+{
+   set<unsigned> result;
+   result.insert(BIP32_SEGWIT_OUTER_ACCOUNT_DERIVATIONID);
+   result.insert(BIP32_SEGWIT_INNER_ACCOUNT_DERIVATIONID);
+
+   return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AccountType_BIP32_SegWit::getOuterAccountID(void) const
+{
+   return WRITE_UINT32_BE(BIP32_SEGWIT_OUTER_ACCOUNT_DERIVATIONID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AccountType_BIP32_SegWit::getInnerAccountID(void) const
+{
+   return WRITE_UINT32_BE(BIP32_SEGWIT_INNER_ACCOUNT_DERIVATIONID);
 }

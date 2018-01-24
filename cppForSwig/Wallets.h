@@ -204,7 +204,7 @@ protected:
       const string& path, unsigned dbCount = 3)
    {
       auto env = make_shared<LMDBEnv>(dbCount);
-      env->open(path);
+      env->open(path, MDB_WRITEMAP);
 
       return env;
    }
@@ -269,7 +269,6 @@ public:
    AddressEntryType getAddrTypeForID(const BinaryData& ID);
    shared_ptr<AddressEntry> getAddressEntryForID(
       const BinaryData&, AddressEntryType aeType = AddressEntryType_Default);
-   void updateOnDiskAssets(void);
    const string& getFilename(void) const;
 
    void setPassphrasePromptLambda(
@@ -353,7 +352,19 @@ public:
 
    static shared_ptr<AssetWallet_Single> createFromPublicRoot_Armory135(
       const string& folder,
-      AddressEntryType,
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& chainCode,
+      unsigned lookup);
+
+   static shared_ptr<AssetWallet_Single> createFromPrivateRoot_BIP32(
+      const string& folder,
+      const SecureBinaryData& privateRoot,
+      const vector<unsigned>& derivationPath,
+      const SecureBinaryData& passphrase,
+      unsigned lookup);
+
+   static shared_ptr<AssetWallet_Single> createFromPublicRoot_BIP32(
+      const string& folder,
       SecureBinaryData& privateRoot,
       SecureBinaryData& chainCode,
       unsigned lookup);
