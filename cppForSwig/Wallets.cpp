@@ -249,12 +249,15 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::
    auto cypher = make_unique<Cypher_AES>(kdfPtr->getId(), 
       masterEncryptionKeyId);
 
+   SecureBinaryData dummy1, dummy2;
+   auto&& privateRootCopy = privateRoot.copy();
+
    //address accounts
    set<shared_ptr<AccountType>> accountTypes;
    accountTypes.insert(
       make_shared<AccountType_ArmoryLegacy>(
-      privateRoot.copy(), 
-      SecureBinaryData(), SecureBinaryData()));
+      privateRootCopy, 
+      dummy1, dummy2));
    (*accountTypes.begin())->setMain(true);
    
    auto walletPtr = initWalletDb(
@@ -323,10 +326,14 @@ createFromPublicRoot_Armory135(
    }
 
    //address accounts
+   SecureBinaryData dummy;
+   auto&& pubRootCopy = pubRoot.copy();
+   auto&& chainCodeCopy = chainCode.copy();
+
    set<shared_ptr<AccountType>> accountTypes;
    accountTypes.insert(
       make_shared<AccountType_ArmoryLegacy>(
-      SecureBinaryData(), pubRoot.copy(), chainCode.copy()));
+      dummy, pubRootCopy, chainCodeCopy));
    (*accountTypes.begin())->setMain(true);
 
    auto walletPtr = initWalletDbFromPubRoot(
@@ -405,18 +412,22 @@ unsigned lookup)
       masterEncryptionKeyId);
 
    //address accounts
+   SecureBinaryData dummy1, dummy2, dummy3, dummy4;
+   auto&& privateRootCopy_1 = privateRoot.copy();
+   auto&& privateRootCopy_2 = privateRoot.copy();
+
    set<shared_ptr<AccountType>> accountTypes;
    accountTypes.insert(
       make_shared<AccountType_BIP32_Legacy>(
-      privateRoot.copy(), 
-      SecureBinaryData(), SecureBinaryData(), 
+      privateRootCopy_1, 
+      dummy1, dummy2, 
       derivationPath));
    (*accountTypes.begin())->setMain(true);
 
    accountTypes.insert(
       make_shared<AccountType_BIP32_SegWit>(
-      privateRoot.copy(), 
-      SecureBinaryData(), SecureBinaryData(), 
+      privateRootCopy_2, 
+      dummy3, dummy4, 
       derivationPath));
 
    auto walletPtr = initWalletDb(

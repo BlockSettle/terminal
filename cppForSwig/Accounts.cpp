@@ -682,7 +682,7 @@ void AddressAccount::make_new(
             auto& root = accType->getPublicRoot();
 
             //derive to final node
-            auto& derived_pair = CryptoECDSA::bip32_derive_public_key(
+            auto&& derived_pair = CryptoECDSA::bip32_derive_public_key(
                root, accType->getChaincode(), node_id);
             chaincode = move(derived_pair.second);
 

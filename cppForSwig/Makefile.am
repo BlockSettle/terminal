@@ -34,7 +34,8 @@ INCLUDE_FILES = UniversalTimer.h BinaryData.h lmdb_wrapper.h \
 	TransactionBatch.h BlockchainScanner_Super.h SigHashEnum.h TxEvalState.h \
 	Accounts.h Addresses.h AssetEncryption.h Assets.h \
 	DecryptedDataContainer.h DerviationScheme.h \
-	bech32/ref/c++/bech32.h bech32/ref/c++/segwit_addr.h
+	bech32/ref/c++/bech32.h bech32/ref/c++/segwit_addr.h \
+        SshParser.h
 
 DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	BtcUtils.cpp DBUtils.cpp BlockObj.cpp BlockUtils.cpp EncryptionUtils.cpp \
@@ -47,7 +48,8 @@ DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	FcgiMessage.cpp BlockDataManagerConfig.cpp \
 	Transactions.cpp Script.cpp Signer.cpp nodeRPC.cpp JSON_codec.cpp \
 	StringSockets.cpp main.cpp ReentrantLock.cpp log.cpp TxEvalState.cpp \
-	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp
+	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp \
+        SshParser.cpp
 
 CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	BtcUtils.cpp DBUtils.cpp EncryptionUtils.cpp \

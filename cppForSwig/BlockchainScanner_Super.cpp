@@ -785,7 +785,7 @@ void BlockchainScanner_Super::serializeSubSshThread(ParserBatch_Super* batch)
    {
       for (auto& txoutSubssh : vecResults)
       {
-         auto& map_iter = txoutSubssh.find(sshKey);
+         auto map_iter = txoutSubssh.find(sshKey);
          if (map_iter == txoutSubssh.end())
             continue;
 
