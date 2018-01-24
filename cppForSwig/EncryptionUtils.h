@@ -428,6 +428,21 @@ public:
                            SecureBinaryData* multiplierOut=NULL);
 
    /////////////////////////////////////////////////////////////////////////////
+   // BIP32 methods
+   static pair<SecureBinaryData, SecureBinaryData> bip32_derive_private_key(
+      const SecureBinaryData& privateKey,
+      const SecureBinaryData& chainCode,
+      unsigned index);
+
+   static pair<SecureBinaryData, SecureBinaryData> bip32_derive_public_key(
+      const SecureBinaryData& publicKey,
+      const SecureBinaryData& chainCode,
+      unsigned index);
+
+   static pair<SecureBinaryData, SecureBinaryData> bip32_seed_to_master_root(
+      const SecureBinaryData& seed);
+
+   /////////////////////////////////////////////////////////////////////////////
    // We need some direct access to Crypto++ math functions
    SecureBinaryData InvMod(const SecureBinaryData& m);
 
@@ -451,6 +466,11 @@ public:
 
    BinaryData ECInverse(BinaryData const & Ax, 
                         BinaryData const & Ay);
+
+   /////////////////////////////////////////////////////////////////////////////
+   // scalar operations
+   static SecureBinaryData a_plus_b_mod_n(
+      const SecureBinaryData& a, const SecureBinaryData& b, const SecureBinaryData& n);
 
    /////////////////////////////////////////////////////////////////////////////
    static BinaryData computeLowS(BinaryDataRef s);

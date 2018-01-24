@@ -1062,27 +1062,186 @@ BinaryData CryptoECDSA::computeLowS(BinaryDataRef s)
    return lowS;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData CryptoECDSA::a_plus_b_mod_n(
+   const SecureBinaryData& a, const SecureBinaryData& b, const SecureBinaryData& n)
+{
+   CryptoPP::Integer A, B, N;
+
+   A.Decode(a.getPtr(), a.getSize(), UNSIGNED);
+   B.Decode(b.getPtr(), b.getSize(), UNSIGNED);
+   N.Decode(n.getPtr(), n.getSize(), UNSIGNED);
+
+   auto&& result = (A + B) % N;
+
+   SecureBinaryData result_bd(n.getSize());
+   result.Encode(result_bd.getPtr(), result_bd.getSize(), UNSIGNED);
+   return result_bd;
+}
 
 
+////////////////////////////////////////////////////////////////////////////////
+pair<SecureBinaryData, SecureBinaryData> CryptoECDSA::bip32_derive_private_key(
+   const SecureBinaryData& privateKey,
+   const SecureBinaryData& chainCode,
+   unsigned index)
+{
+   SecureBinaryData hmac_result(64);
+
+   if (index > 0x80000000)
+   {
+      //hard derivation:
+      //hmac512(chaincode, 0 | privatekey | index)
+      CryptoPP::HMAC<CryptoPP::SHA512> hmac(
+         chainCode.getPtr(), chainCode.getSize());
+
+      BinaryWriter bw;
+      bw.put_uint8_t(0); //0x00
+      bw.put_BinaryData(privateKey);
+      bw.put_uint32_t(index, BE);
+
+      hmac.CalculateDigest(hmac_result.getPtr(), 
+         bw.getData().getPtr(), bw.getSize());
+   }
+   else
+   {
+      //soft derivation:
+      //hmac512(chaincode, compressed pubkey | index)
+      CryptoPP::HMAC<CryptoPP::SHA512> hmac(
+         chainCode.getPtr(), chainCode.getSize());
+
+      //pubkey
+      auto&& pubkey = CryptoECDSA().ComputePublicKey(privateKey);
+      auto&& compressed_pubkey = CryptoECDSA().CompressPoint(pubkey);
+
+      BinaryWriter bw;
+      bw.put_BinaryData(compressed_pubkey);
+      bw.put_uint32_t(index, BE);
+
+      hmac.CalculateDigest(hmac_result.getPtr(),
+         bw.getData().getPtr(), bw.getSize());
+   }
+
+   //privkey, chaincode
+   pair<SecureBinaryData, SecureBinaryData> derived_key;
+
+   //privkey
+   static SecureBinaryData SECP256K1_ORDER_BE = SecureBinaryData().CreateFromHex(
+      "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+   
+   static SecureBinaryData zero = SecureBinaryData().CreateFromHex(
+      "0000000000000000000000000000000000000000000000000000000000000000");
+
+   auto&& precursor = hmac_result.getSliceCopy(0, 32);
+   derived_key.first = move(CryptoECDSA::a_plus_b_mod_n(
+      precursor, privateKey, SECP256K1_ORDER_BE));
+
+   //chaincode
+   derived_key.second = move(hmac_result.getSliceCopy(32, 32));
 
 
+   //sanity checks
+   if (derived_key.second > SECP256K1_ORDER_BE)
+      throw runtime_error("derived chaincode > curve order");
 
-   /* OpenSSL code (untested)
-   static SecureBinaryData sigSpace(1000);
-   static uint32_t sigSize = 0;
+   if (derived_key.first == zero)
+      throw runtime_error("derived private key == 0");
 
-   // Create the key object
-   EC_KEY* pubKey = EC_KEY_new_by_curve_name(NID_secp256k1);
+   return derived_key;
+}
 
-   uint8_t* pbegin = privKey.getPtr();
-   d2i_ECPrivateKey(&pubKey, &pbegin, privKey.getSize());
+////////////////////////////////////////////////////////////////////////////////
+pair<SecureBinaryData, SecureBinaryData> CryptoECDSA::bip32_derive_public_key(
+   const SecureBinaryData& pubKey,
+   const SecureBinaryData& chainCode,
+   unsigned index)
+{
+   SecureBinaryData hmac_result(64);
 
-   ECDSA_sign(0, binToSign.getPtr(), 
-                 binToSign.getSize(), 
-                 sigSpace.getPtr(), 
-                 &sigSize, 
-                 pubKey)
+   if (index > 0x80000000)
+   {
+      //hard derivation
+      throw runtime_error("cannot hard derive from pubkey");
+   }
+   else
+   {
+      //soft derivation:
+      //hmac512(chaincode, compressed pubkey | index)
+      CryptoPP::HMAC<CryptoPP::SHA512> hmac(
+         chainCode.getPtr(), chainCode.getSize());
 
-   EC_KEY_free(pubKey);
-   return SecureBinaryData(sigSpace.getPtr(), sigSize);
-   */
+      //pubkey
+      SecureBinaryData compressedPubKey;
+      if (pubKey.getSize() == 65)
+      {
+         compressedPubKey = move(CryptoECDSA().CompressPoint(pubKey));
+      }
+      else if (pubKey.getSize() == 33)
+      {
+         compressedPubKey = pubKey;
+      }
+      else
+      {
+         throw runtime_error("pubkey has to be 65 or 33 bytes long");
+      }
+
+      BinaryWriter bw;
+      bw.put_BinaryData(compressedPubKey);
+      bw.put_uint32_t(index, BE);
+
+      hmac.CalculateDigest(hmac_result.getPtr(),
+         bw.getData().getPtr(), bw.getSize());
+   }
+
+   //pubkey, chaincode
+   pair<SecureBinaryData, SecureBinaryData> derived_key;
+
+   //pubkey
+   auto&& precursor = hmac_result.getSliceCopy(0, 32);
+   auto&& precursor_point = CryptoECDSA().ComputePublicKey(precursor);
+   SecureBinaryData decompressedPubKey;
+   if (pubKey.getSize() == 65)
+   {
+      decompressedPubKey = pubKey;
+   }
+   else if (pubKey.getSize() == 33)
+   {
+      decompressedPubKey = move(CryptoECDSA().UncompressPoint(pubKey));
+   }
+   else
+   {
+      throw runtime_error("pubkey has to be 65 or 33 bytes long");
+   }
+
+   auto&& new_point = CryptoECDSA().ECAddPoints(
+      decompressedPubKey.getSliceRef(1, 32), decompressedPubKey.getSliceRef(33, 32), 
+      precursor_point.getSliceRef(1, 32), precursor_point.getSliceRef(33, 32));
+
+   //TODO: check new point is not G
+
+   derived_key.first = move(CryptoECDSA().ComputePublicKey(new_point));
+
+   //chaincode
+   derived_key.second = move(hmac_result.getSliceCopy(32, 32));
+
+
+   //check chaincode is not superior to the curve's order
+   static SecureBinaryData SECP256K1_ORDER_BE = SecureBinaryData().CreateFromHex(
+      "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+
+   if (derived_key.second > SECP256K1_ORDER_BE)
+      throw runtime_error("derived chaincode > curve order");
+
+   return derived_key;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+pair<SecureBinaryData, SecureBinaryData> CryptoECDSA::bip32_seed_to_master_root(
+   const SecureBinaryData& seed)
+{
+   auto&& key_hmac = BtcUtils::getHMAC512("Bitcoin Seed", seed);
+   auto&& privkey = key_hmac.getSliceCopy(0, 32);
+   auto&& chaincode = key_hmac.getSliceCopy(32, 32);
+
+   return make_pair(privkey, chaincode);
+}
