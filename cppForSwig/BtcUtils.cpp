@@ -72,6 +72,20 @@ BinaryData BtcUtils::getHMAC256(const SecureBinaryData& key,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+BinaryData BtcUtils::getHMAC512(const SecureBinaryData& key,
+   const SecureBinaryData& message)
+{
+   BinaryData digest;
+   digest.resize(64);
+
+   getHMAC512(key.getPtr(), key.getSize(),
+      message.getCharPtr(), message.getSize(),
+      digest.getPtr());
+
+   return digest;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 BinaryData BtcUtils::getHMAC256(const BinaryData& key,
    const string& message)
 {
@@ -85,6 +99,34 @@ BinaryData BtcUtils::getHMAC256(const BinaryData& key,
    return digest;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+BinaryData BtcUtils::getHMAC512(const BinaryData& key,
+   const string& message)
+{
+   BinaryData digest;
+   digest.resize(64);
+
+   getHMAC512(key.getPtr(), key.getSize(),
+      message.c_str(), message.size(),
+      digest.getPtr());
+
+   return digest;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData BtcUtils::getHMAC512(const string& key,
+   const SecureBinaryData& message)
+{
+   SecureBinaryData digest;
+   digest.resize(64);
+
+   getHMAC512(key.c_str(), key.size(),
+      message.getPtr(), message.getSize(),
+      digest.getPtr());
+
+   return digest;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 void BtcUtils::getHMAC256(const uint8_t* keyptr, size_t keylen,
@@ -92,6 +134,14 @@ void BtcUtils::getHMAC256(const uint8_t* keyptr, size_t keylen,
 {
    CryptoPP::HMAC<CryptoPP::SHA256> hmac(keyptr, keylen);
    hmac.CalculateDigest(digest, (const byte*)msgptr, msglen);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BtcUtils::getHMAC512(const void* keyptr, size_t keylen,
+   const void* msgptr, size_t msglen, void* digest)
+{
+   CryptoPP::HMAC<CryptoPP::SHA512> hmac((uint8_t*)keyptr, keylen);
+   hmac.CalculateDigest((uint8_t*)digest, (const byte*)msgptr, msglen);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -415,8 +465,7 @@ BinaryData BtcUtils::segWitAddressToScrAddr(const BinaryData& swAddr)
 
    if (BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160)
       header = move(string(SEGWIT_ADDRESS_MAINNET_HEADER));
-   else if (BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET &&
-      BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET)
+   else if (BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET)
       header = move(string(SEGWIT_ADDRESS_TESTNET_HEADER));
    else
       throw runtime_error("invalid network for segwit address");

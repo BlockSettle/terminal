@@ -300,6 +300,10 @@ public:
    {}
 };
 
+#define BIP32_SER_VERSION_MAIN_PRV 0x0488ADE4
+#define BIP32_SER_VERSION_MAIN_PUB 0x0488B21E
+#define BIP32_SER_VERSION_TEST_PRV 0x043587CF
+#define BIP32_SER_VERSION_TEST_PUB 0x04358394
 
 // This class holds only static methods.  
 // NOTE:  added default ctor and a few non-static, to support SWIG
@@ -2003,13 +2007,28 @@ public:
    static BinaryData getHMAC256(
       const SecureBinaryData& key,
       const SecureBinaryData& message);
+   static BinaryData getHMAC512(
+      const SecureBinaryData& key,
+      const SecureBinaryData& message);
+
 
    static BinaryData getHMAC256(
       const BinaryData& key,
       const string& message);
+   static BinaryData getHMAC512(
+      const BinaryData& key,
+      const string& message);
+
+   static SecureBinaryData getHMAC512(
+      const string& key,
+      const SecureBinaryData& message);
+
+
 
    static void getHMAC256(const uint8_t* keyptr, size_t keylen,
       const char* msg, size_t msglen, uint8_t* digest);
+   static void getHMAC512(const void* keyptr, size_t keylen,
+      const void* msg, size_t msglen, void* digest);
 
    static SecureBinaryData computeChainCode_Armory135(
       const SecureBinaryData& privateRoot);
