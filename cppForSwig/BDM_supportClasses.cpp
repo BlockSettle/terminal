@@ -224,7 +224,7 @@ void ScrAddrFilter::setSSHLastScanned(uint32_t height)
 
       ssh.scanHeight_ = height;
 
-      lmdb_->putStoredScriptHistory(ssh);
+      lmdb_->putStoredScriptHistorySummary(ssh);
    }
 }
 
@@ -574,7 +574,7 @@ void ScrAddrFilter::mergeSideScanPile()
 
    //scan it all to sync all subssh and ssh to the same height
    applyBlockRangeToDB(
-      startHeight, 
+      startHeight + 1, 
       bcptr->top()->getBlockHeight(),
       walletIDs, reportProgress);
    updateAddressMerkleInDB();
