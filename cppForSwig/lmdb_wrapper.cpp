@@ -3316,7 +3316,7 @@ StoredDBInfo DatabaseContainer_Sharded::open()
 #ifdef _WIN32
       mkdir(dbFolder);
 #else
-      mkdir(dbFolder.c_str(), 0644);
+      mkdir(dbFolder.c_str(), 0777);
 #endif
    }
 
