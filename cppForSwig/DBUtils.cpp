@@ -16,11 +16,16 @@
 #include <Windows.h>
 #include <io.h>
 #include <fcntl.h>
+#include <dirent_win32.h>
+
+#define unlink _unlink
+#define access _access
 #else
 #include <errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
 #endif
 
 
@@ -449,3 +454,104 @@ BinaryDataRef DBUtils::getDataRefForPacket(
    return brr.get_BinaryDataRef(brr.getSizeRemaining());
 }
 
+////////////////////////////////////////////////////////////////////////////////
+struct stat DBUtils::getPathStat(const char* path, unsigned len)
+{
+   if (path == nullptr || len == 0)
+      throw runtime_error("invalid path");
+
+   if(strlen(path) != len)
+      throw runtime_error("invalid path");
+
+   if (access(path, 0) != 0)
+      throw runtime_error("invalid path");
+
+   struct stat status;
+   stat(path, &status);
+   return status;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+struct stat DBUtils::getPathStat(const string& path)
+{
+   return getPathStat(path.c_str(), path.size());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool DBUtils::isFile(const string& path)
+{
+   struct stat status;
+   try
+   {
+      status = move(getPathStat(path));
+   }
+   catch (exception&)
+   {
+      return false;
+   }
+
+   return status.st_mode != S_IFDIR;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool DBUtils::isDir(const string& path)
+{
+   return !isFile(path);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+int DBUtils::removeDirectory(const string& path)
+{
+   if (!isDir(path))
+      return -1;
+
+   DIR* current_dir = opendir(path.c_str());
+   if (current_dir == nullptr)
+      return -1;
+
+   //gather paths in dir
+   vector<dirent*> file_vec;
+   dirent* filename = nullptr;
+   while ((filename = readdir(current_dir)) != nullptr)
+      file_vec.push_back(filename);
+
+   vector<string> path_vec;
+   for (auto val : file_vec)
+   {
+      string path(val->d_name);
+      path_vec.push_back(move(path));
+   }
+
+   closedir(current_dir);
+
+   string dot(".");
+   string dotdot("..");
+
+   for (auto& path : path_vec)
+   {
+      if (path == dot || path == dotdot)
+         continue;
+
+      if (isDir(path))
+      {
+         auto result = removeDirectory(path);
+         if (result != 0)
+            return result;
+
+         continue;
+      }
+
+      auto result = unlink(path.c_str());
+      if (result != 0)
+         return result;
+   }
+
+#ifdef _WIN32
+   if (RemoveDirectory(path.c_str()) == 0)
+      return -1;
+#else
+   return rmdir(path.c_str());
+#endif
+
+   return 0;
+}

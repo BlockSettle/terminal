@@ -149,6 +149,12 @@ public:
    static bool fileExists(const string& path, int mode);
 
    static FileMap getMmapOfFile(const string&);
+   
+   static int removeDirectory(const string&);
+   static struct stat getPathStat(const string& path);
+   static struct stat getPathStat(const char* path, unsigned len);
+   static bool isFile(const string& path);
+   static bool isDir(const string& path);
 
    static BinaryDataRef getDataRefForPacket(const BinaryDataRef& packet);
 };
