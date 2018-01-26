@@ -3373,7 +3373,7 @@ void DatabaseContainer_Sharded::eraseOnDisk()
    close();
 
    auto&& dbFolder = getDbPath(dbSelect_);
-   rmdir(dbFolder.c_str());
+   DBUtils::removeDirectory(dbFolder);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -490,7 +490,7 @@ bool DBUtils::isFile(const string& path)
       return false;
    }
 
-   return status.st_mode != S_IFDIR;
+   return !S_ISDIR(status.st_mode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -518,8 +518,10 @@ int DBUtils::removeDirectory(const string& path)
    vector<string> path_vec;
    for (auto val : file_vec)
    {
-      string path(val->d_name);
-      path_vec.push_back(move(path));
+      stringstream path_ss;
+      path_ss << path << "/" << val->d_name;
+
+      path_vec.push_back(path_ss.str());
    }
 
    closedir(current_dir);
@@ -527,21 +529,21 @@ int DBUtils::removeDirectory(const string& path)
    string dot(".");
    string dotdot("..");
 
-   for (auto& path : path_vec)
+   for (auto& filepath : path_vec)
    {
-      if (path == dot || path == dotdot)
+      if (filepath == dot || filepath == dotdot)
          continue;
 
-      if (isDir(path))
+      if (isDir(filepath))
       {
-         auto result = removeDirectory(path);
+         auto result = removeDirectory(filepath);
          if (result != 0)
             return result;
 
          continue;
       }
 
-      auto result = unlink(path.c_str());
+      auto result = unlink(filepath.c_str());
       if (result != 0)
          return result;
    }
