@@ -490,13 +490,23 @@ bool DBUtils::isFile(const string& path)
       return false;
    }
 
-   return !S_ISDIR(status.st_mode);
+   return status.st_mode & S_IFREG;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool DBUtils::isDir(const string& path)
 {
-   return !isFile(path);
+   struct stat status;
+   try
+   {
+      status = move(getPathStat(path));
+   }
+   catch (exception&)
+   {
+      return false;
+   }
+
+   return status.st_mode & S_IFDIR;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
