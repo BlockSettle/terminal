@@ -196,6 +196,8 @@ private:
       [](BDMPhase, double, unsigned, unsigned)->void{};
    bool reportProgress_ = false;
 
+   atomic<unsigned> completedBatches_;
+
 private:
    shared_ptr<BlockData> getBlockData(
       ParserBatch_Super*, unsigned);
