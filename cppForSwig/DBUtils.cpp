@@ -520,30 +520,29 @@ int DBUtils::removeDirectory(const string& path)
       return -1;
 
    //gather paths in dir
-   vector<dirent*> file_vec;
+   vector<string> file_vec;
    dirent* filename = nullptr;
    while ((filename = readdir(current_dir)) != nullptr)
-      file_vec.push_back(filename);
+      file_vec.push_back(string(filename->d_name));
 
+   string dot(".");
+   string dotdot("..");
    vector<string> path_vec;
    for (auto val : file_vec)
    {
+      if (val == dot || val == dotdot)
+         continue;
+
       stringstream path_ss;
-      path_ss << path << "/" << val->d_name;
+      path_ss << path << "/" << val;
 
       path_vec.push_back(path_ss.str());
    }
 
    closedir(current_dir);
 
-   string dot(".");
-   string dotdot("..");
-
    for (auto& filepath : path_vec)
    {
-      if (filepath == dot || filepath == dotdot)
-         continue;
-
       if (isDir(filepath))
       {
          auto result = removeDirectory(filepath);
