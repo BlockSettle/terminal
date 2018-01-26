@@ -119,6 +119,8 @@ private:
    BlockingStack<unique_ptr<ParserBatch>> inputQueue_;
    BlockingStack<unique_ptr<ParserBatch>> commitQueue_;
 
+   atomic<unsigned> completedBatches_;
+
 private:
    void writeBlockData(void);
    void processAndCommitTxHints(ParserBatch*);

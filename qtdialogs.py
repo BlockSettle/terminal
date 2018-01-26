@@ -5261,7 +5261,7 @@ class DlgDispTxInfo(ArmoryDialog):
          pytx = ustx.getPyTxSignedIfPossible(signer=ustx.signerType)
 
 
-      self.pytx = pytx.copyWithoutWitness()
+      self.pytx = pytx.copy()
 
       if self.mode == None:
          self.mode = self.main.usermode
@@ -5617,7 +5617,7 @@ class DlgDispTxInfo(ArmoryDialog):
       self.txInView.verticalHeader().hide()
       w, h = tightSizeNChar(self.txInView, 1)
       self.txInView.setMinimumHeight(2 * (1.4 * h))
-      self.txInView.setMaximumHeight(5 * (1.4 * h))
+      #self.txInView.setMaximumHeight(5 * (1.4 * h))
       self.txInView.hideColumn(TXINCOLS.OutPt)
       self.txInView.hideColumn(TXINCOLS.OutIdx)
       self.txInView.hideColumn(TXINCOLS.Script)
@@ -5651,7 +5651,7 @@ class DlgDispTxInfo(ArmoryDialog):
       self.txOutView.verticalHeader().setDefaultSectionSize(20)
       self.txOutView.verticalHeader().hide()
       self.txOutView.setMinimumHeight(2 * (1.3 * h))
-      self.txOutView.setMaximumHeight(5 * (1.3 * h))
+      #self.txOutView.setMaximumHeight(5 * (1.3 * h))
       initialColResize(self.txOutView, [wWlt, 0.8 * wAddr, wAmt, 0.25, 0])
       self.txOutView.hideColumn(TXOUTCOLS.Script)
       self.txOutView.hideColumn(TXOUTCOLS.AddrStr)
@@ -5769,7 +5769,7 @@ class DlgDispTxInfo(ArmoryDialog):
       # layout.addWidget(bbox, 6,0, 1,1)
 
       self.setLayout(layout)
-      self.layout().setSizeConstraint(QLayout.SetFixedSize)
+      #self.layout().setSizeConstraint(QLayout.SetFixedSize)
       self.setWindowTitle(self.tr('Transaction Info'))
 
 
@@ -10388,6 +10388,8 @@ class DlgFragBackup(ArmoryDialog):
       frmDescr = makeVertFrame([lblDescrTitle, self.lblAboveFrags], \
                                                             STYLE_RAISED)
 
+      self.fragDisplayLastN = 0
+      self.fragDisplayLastM = 0
 
       self.maxM = 5 if not self.main.usermode == USERMODE.Expert else 8
       self.maxN = 6 if not self.main.usermode == USERMODE.Expert else 12
@@ -10501,11 +10503,16 @@ class DlgFragBackup(ArmoryDialog):
 
    #############################################################################
    def createFragDisplay(self):
-      self.recomputeFragData()
       M = int(str(self.comboM.currentText()))
       N = int(str(self.comboN.currentText()))
 
+      #only recompute fragments if M or N changed
+      if self.fragDisplayLastN != N or \
+         self.fragDisplayLastM != M:
+         self.recomputeFragData()
 
+      self.fragDisplayLastN = N
+      self.fragDisplayLastM = M
 
       lblAboveM = QRichLabel(self.tr('<u><b>Required Fragments</b></u> '), hAlign=Qt.AlignHCenter, doWrap=False)
       lblAboveN = QRichLabel(self.tr('<u><b>Total Fragments</b></u> '), hAlign=Qt.AlignHCenter)
@@ -10752,7 +10759,7 @@ class DlgFragBackup(ArmoryDialog):
       # Make sure only local variables contain non-SBD data
       self.destroyFrags()
       self.uniqueFragSetID = \
-         binary_to_base58(SecureBinaryData().GenerateRandom(7).toBinStr())
+         binary_to_base58(SecureBinaryData().GenerateRandom(6).toBinStr())
       insecureData = SplitSecret(self.securePrint, M, self.maxmaxN)
       for x, y in insecureData:
          self.secureMtrx.append([SecureBinaryData(x), SecureBinaryData(y)])
@@ -10771,7 +10778,8 @@ class DlgFragBackup(ArmoryDialog):
       #####
 
       self.M, self.N = M, N
-      self.fragPrefixStr = ComputeFragIDBase58(self.M, self.uniqueFragSetID)
+      self.fragPrefixStr = ComputeFragIDBase58(self.M, \
+                              base58_to_binary(self.uniqueFragSetID))
       self.fragPixmapFn = ':/frag%df.png' % M
 
 

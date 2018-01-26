@@ -191,7 +191,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
    --satoshi-datadir: path to blockchain data folder (blkXXXXX.dat files)
 
    --ram_usage: defines the ram use during scan operations. 1 level averages
-   128MB of ram (without accounting the base amount, ~400MB). Defaults at 4.
+   128MB of ram (without accounting the base amount, ~400MB). Defaults at 50.
    Can't be lower than 1. Can be changed in between processes
 
    --thread-count: defines how many processing threads can be used during db
@@ -220,6 +220,8 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
    --clear-mempool: delete all zero confirmation transactions from the DB.
 
    --satoshirpc-port: set node rpc port
+
+   --listen-all: listen to all incoming IPs (not just localhost)
 
    ***/
 
@@ -378,7 +380,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 void BlockDataManagerConfig::processArgs(const map<string, string>& args, 
    bool onlyDetectNetwork)
 {
-   //server port
+   //server networking
    auto iter = args.find("fcgi-port");
    if (iter != args.end())
    {
@@ -396,6 +398,12 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
       {
          customFcgiPort_ = true;
       }
+   }
+
+   iter = args.find("listen-all");
+   if (iter != args.end())
+   {
+      listen_all_ = true;
    }
 
    //network type
@@ -881,8 +889,15 @@ bool NodeChainState::processState(
       return false;
 
    pct_ = min(pct_val->val_, 1.0);
+   auto pct_int = unsigned(pct_ * 10000.0);
+   
+   if (pct_int != prev_pct_int_)
+   {
+      LOGINFO << "waiting on node sync: " << pct_ << "%";
+      prev_pct_int_ = pct_int;
+   }
 
-   if (pct_ >= 0.999)
+   if (pct_ >= 0.9995)
    {
       state_ = ChainStatus_Ready;
       return true;
@@ -893,8 +908,11 @@ bool NodeChainState::processState(
       return false;
 
    uint64_t now = time(0);
+   uint64_t diff = 0;
+
    auto blocktime = get<1>(heightTimeVec_.back());
-   auto diff = now - blocktime;
+   if (now > blocktime)
+      diff = now - blocktime;
 
    //we got this far, node is still syncing, let's compute progress and eta
    state_ = ChainStatus_Syncing;
@@ -919,6 +937,8 @@ bool NodeChainState::processState(
    auto timediff = time_end - time_begin;
    blockSpeed_ = float(blockdiff) / float(timediff);
    eta_ = uint64_t(float(blocksLeft) * blockSpeed_);
+   
+   blocksLeft_ = blocksLeft;
 
    return true;
 }
@@ -969,6 +989,7 @@ BinaryData NodeChainState::serialize() const
    bw.put_double(blockSpeed_);
    bw.put_uint64_t(eta_);
    bw.put_double(pct_);
+   bw.put_uint32_t(blocksLeft_);
 
    return bw.getData();
 }
@@ -984,6 +1005,9 @@ void NodeChainState::unserialize(const BinaryData& bd)
    blockSpeed_ = float(brr.get_double());
    eta_ = brr.get_uint64_t();
    pct_ = brr.get_double();
+
+   if (brr.getSizeRemaining() >= 4)
+      blocksLeft_ = brr.get_uint32_t();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

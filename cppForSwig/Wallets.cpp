@@ -1287,6 +1287,9 @@ const BinaryData& AssetWallet::getAssetIDForAddr(const BinaryData& scrAddr)
       try
       {
          return acc->getAssetIDForAddr(scrHash);
+
+         if (!CryptoECDSA().CheckPubPrivKeyMatch(nextPrivkey, nextPubkey))
+            throw runtime_error("failed privkey derivation");
       }
       catch (runtime_error&)
       {

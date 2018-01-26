@@ -1135,7 +1135,7 @@ class UnsignedTxInput(AsciiSerializable):
       self.value       = txout.getValue()
       self.contribID   = '' if contribID is None else contribID
       self.contribLabel= '' if contribLabel is None else contribLabel
-      self.p2shMap     = copy.deepcopy(p2shMap)
+      self.p2shMap     = p2shMap
       self.sequence    = sequence
 
       # Each of these will be a single value for single-signature UTXOs
@@ -1229,7 +1229,8 @@ class UnsignedTxInput(AsciiSerializable):
       else:
          #new nested single sig types
          scrType = self.scriptType
-         if scrType in CPP_TXOUT_NESTED_SINGLESIG and len(self.p2shMap) == 2:
+         if scrType in CPP_TXOUT_NESTED_SINGLESIG and \
+            BASE_SCRIPT in self.p2shMap:
             scrAddr = P2SHBYTE + hash160(self.p2shMap[BASE_SCRIPT])
             self.sigsNeeded  = 1
             self.keysListed  = 1
@@ -1395,7 +1396,7 @@ class UnsignedTxInput(AsciiSerializable):
       # If P2SH, the script type already identifies the subscript.  But we
       # can tell because the p2shScript var will be non-empty.  All we do
       # for these types of script is append the raw p2sh script to the end
-      if len(self.p2shMap) >= 2:
+      if BASE_SCRIPT in self.p2shMap:
          outScript += scriptPushData(self.p2shMap[BASE_SCRIPT])
 
       return outScript
@@ -1459,7 +1460,7 @@ class UnsignedTxInput(AsciiSerializable):
          cppSigner.deserializeState(pytx.signerState)
          
          #populate signer with data to resolve
-         cppSigner.updatePubDataDict(self.p2shMap)
+         cppSigner.updatePubDataDict(self.getP2shMapForSigner())
                  
          privDataDict = {}
          privDataDict[binary_to_hex(computedPub)] = sbdPrivKey
@@ -1603,7 +1604,11 @@ class UnsignedTxInput(AsciiSerializable):
       outjson['version']      = self.version
       outjson['magicbytes']   = binary_to_hex(MAGIC_BYTES)
       outjson['outpoint']     = binary_to_hex(self.outpoint.serialize())
-      outjson['p2shscript']   = binary_to_hex(self.p2shScript)
+      if BASE_SCRIPT in self.p2shMap:
+         outjson['p2shscript']   = binary_to_hex(self.p2shMap[BASE_SCRIPT])
+      else:
+         outjson['p2shscript'] = "N/A"
+
       outjson['contribid']    = self.contribID
       outjson['contriblabel'] = self.contribLabel
       outjson['sequence']     = self.sequence
@@ -1829,7 +1834,7 @@ class UnsignedTxInput(AsciiSerializable):
          #get the sig state from the c++ signer
          cppSigner = UniversalSignerDirector(self.signerType)
          cppSigner.deserializeState(pytx.signerState)
-         cppSigner.updatePubDataDict(self.p2shMap)
+         cppSigner.updatePubDataDict(self.getP2shMapForSigner())
          
          cpp_signStatus = cppSigner.getSignedState()
          input_signStatus = cpp_signStatus.getSignedStateForInput(self.inputID)
@@ -1885,6 +1890,35 @@ class UnsignedTxInput(AsciiSerializable):
             txoIdx = self.outpoint.txOutIndex,
             val=self.value,
             fullScript=self.txoScript)
+   
+   #############################################################################
+   def getP2shMapForSigner(self):
+      p2sh_map = {}
+
+      if not isinstance(self.p2shMap, dict):
+         return p2sh_map
+
+      if len(self.p2shMap) == 0:
+         return p2sh_map
+
+      txoScrAddr = binary_to_hex(script_to_scrAddr(self.txoScript)[1:])
+      for key, val in self.p2shMap.iteritems():
+         if key == BASE_SCRIPT:
+            p2sh_map[txoScrAddr] = val
+            continue
+         p2sh_map[key] = val
+
+         #special case for p2wsh
+         if len(key) == 34 and key[0] == '\x00' and key[1] == '\x20':
+            try:
+               key_hex = binary_to_hex(key[2:])
+               p2sh_map[key_hex] = val
+            except:
+               continue
+
+      return p2sh_map
+
+
 
 
 ################################################################################
@@ -2376,15 +2410,21 @@ class UnsignedTransaction(AsciiSerializable):
          txoScrAddr = script_to_scrAddr(txoScript)
          txoType = getTxOutScriptType(txoScript)
          
+         p2shMap_copy = {}
          if txoType==CPP_TXOUT_P2SH:
             p2sh = p2shMap.get(binary_to_hex(txoScrAddr))
             if not p2sh:
                raise InvalidHashError('P2SH script not supplied')
-            p2shMap[BASE_SCRIPT] = p2sh
+            p2shMap_copy[BASE_SCRIPT] = p2sh
+            script_key = p2sh
+            while script_key in p2shMap:
+               val = p2shMap[script_key]
+               p2shMap_copy[script_key] = val
+               script_key = val
             
          ustxiList.append(UnsignedTxInput(pyPrevTx.serializeWithoutWitness(),
                                           txoIdx, 
-                                          p2shMap, 
+                                          p2shMap_copy, 
                                           pubKeyMap,
                                           sequence=txin.intSeq, inputID=count))
          
@@ -2857,7 +2897,7 @@ class UnsignedTransaction(AsciiSerializable):
    #############################################################################
    def getPyTxSignedIfPossible(self, doVerifySigs=True, signer=SIGNER_DEFAULT):
       if self.evaluateSigningStatus().canBroadcast:
-         return self.getSignedPyTx(signer=signer)
+         return self.getSignedPyTx(doVerifySigs=doVerifySigs, signer=signer)
       else:
          return self.getUnsignedPyTx()
 

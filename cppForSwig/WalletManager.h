@@ -46,7 +46,7 @@ private:
    WalletContainer* const walletContainer_;
 
    vector<UTXO> state_utxoVec_;
-   const uint64_t spendableBalance_;
+   uint64_t spendableBalance_;
 
 private:
    static void decorateUTXOs(WalletContainer* const, vector<UTXO>&);
@@ -57,14 +57,15 @@ private:
       SwigClient::Lockbox* const, unsigned M, unsigned N);
 
    uint64_t getSpendVal(void) const;
-   void checkSpendVal(void) const;
+   void checkSpendVal(uint64_t) const;
    void addRecipient(unsigned, const BinaryData&, uint64_t);
 
    static shared_ptr<ScriptRecipient> createRecipient(const BinaryData&, uint64_t);
    
    void selectUTXOs(vector<UTXO>&, uint64_t fee, float fee_byte, unsigned flags);
 public:
-   CoinSelectionInstance(WalletContainer* const walletContainer);
+   CoinSelectionInstance(WalletContainer* const walletContainer,
+      const vector<AddressBookEntry>& addrBook);
    CoinSelectionInstance(SwigClient::Lockbox* const, 
       unsigned M, unsigned N,
       unsigned blockHeight, uint64_t balance);
@@ -92,6 +93,8 @@ public:
    float getFeeByte(void) const { return selection_.fee_byte_; }
 
    bool isSW(void) const { return selection_.witnessSize_ != 0; }
+
+   void rethrow(void) { cs_.rethrow(); }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -336,7 +339,8 @@ public:
 
    CoinSelectionInstance getCoinSelectionInstance(void)
    {
-      return CoinSelectionInstance(this);
+      auto&& addrBookVector = createAddressBook();
+      return CoinSelectionInstance(this, addrBookVector);
    }
 
    unsigned getTopBlock(void);
@@ -525,10 +529,7 @@ public:
    void addSpenderByOutpoint(
       const BinaryData& hash, unsigned index, unsigned sequence, uint64_t value)
    {
-      auto spender = make_shared<ScriptSpender>(hash, index, value);
-      spender->setSequence(sequence);
-
-      signer_->addSpender(spender);
+      signer_->addSpender_ByOutpoint(hash, index, sequence, value);
    }
 
    void addRecipient(uint64_t value, const BinaryData& script)

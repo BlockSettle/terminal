@@ -68,7 +68,7 @@ LEVELDB_BLKDATA = 'leveldb_blkdata'
 LEVELDB_HEADERS = 'leveldb_headers'
 
 # Version Numbers
-BTCARMORY_VERSION    = (0, 96,  3, 0)  # (Major, Minor, Bugfix, AutoIncrement)
+BTCARMORY_VERSION    = (0, 96,  3, 992)  # (Major, Minor, Bugfix, AutoIncrement)
 PYBTCWALLET_VERSION  = (1, 35,  0, 0)  # (Major, Minor, Bugfix, AutoIncrement)
 
 # ARMORY_DONATION_ADDR = '1ArmoryXcfq7TnCSuZa9fQjRYwJ4bkRKfv'
@@ -115,19 +115,23 @@ parser.add_option("--rebuild",         dest="rebuild",     default=False,     ac
 parser.add_option("--rescan",          dest="rescan",      default=False,     action="store_true", help="Rescan existing blockchain DB")
 parser.add_option("--rescanBalance",   dest="rescanBalance", default=False,     action="store_true", help="Rescan balance")
 parser.add_option("--nospendzeroconfchange",dest="ignoreAllZC",default=False, action="store_true", help="All zero-conf funds will be unspendable, including sent-to-self coins")
+parser.add_option("--ignore-new-zeroconf",dest="ignoreZC",default=False, action="store_true", help="Do not update wallet balances on zero-conf transactions")
 parser.add_option("--multisigfile",  dest="multisigFile",  default=DEFAULT, type='str',          help="File to store information about multi-signature transactions")
 parser.add_option("--force-wallet-check", dest="forceWalletCheck", default=False, action="store_true", help="Force the wallet sanity check on startup")
+parser.add_option("--disable-wallet-check", dest="disableWalletCheck", default=False, action="store_true", help="Disable the wallet sanity check on startup")
 parser.add_option("--disable-modules", dest="disableModules", default=False, action="store_true", help="Disable looking for modules in the execution directory")
 parser.add_option("--disable-conf-permis", dest="disableConfPermis", default=False, action="store_true", help="Disable forcing permissions on bitcoin.conf")
 parser.add_option("--disable-detsign", dest="enableDetSign", action="store_false", help="Disable Transaction Deterministic Signing (RFC 6979)")
 parser.add_option("--enable-detsign", dest="enableDetSign", action="store_true", help="Enable Transaction Deterministic Signing (RFC 6979) - Enabled by default")
 parser.add_option("--armorydb-ip", dest="armorydb_ip", default=ARMORYDB_DEFAULT_IP, type="str", help="Set remote DB IP (default: 127.0.0.1)")
 parser.add_option("--armorydb-port", dest="armorydb_port", default=ARMORYDB_DEFAULT_PORT, type="str", help="Set remote DB port (default: 9001)")
+parser.add_option("--force-fcgi", dest="force_fcgi", default=False, action="store_true", help="Force the use of fcgi sockets when pointing to a custom DB IP")
 parser.add_option("--ram-usage", dest="ram_usage", default=-1, type="int", help="Set maximum ram during scans, as 128MB increments. Defaults to 4")
 parser.add_option("--thread-count", dest="thread_count", default=-1, type="int", help="Set max thread count during builds and scans. Defaults to CPU total thread count")
 parser.add_option("--db-type", dest="db_type", default="DB_FULL", type="str", help="Set db mode, defaults to DB_FULL")
 parser.add_option("--language", dest="language", default="en", type="str", help="""Set the language for the client to display in. Use the ISO 639-1 language code to choose a language. 
                                                                                  Options are da, de, en, es, el, fr, he, hr, id, ru, sv. Default is en. """)
+parser.add_option("--force-enable-segwit", dest="force_segwit", default=False, action="store_true", help="Allow SegWit address generation in offline mode")
 
 parser.set_defaults(enableDetSign=True)
 
@@ -250,7 +254,6 @@ class isMSWallet(Exception): pass
 class SignerException(Exception): pass
 
 # Witness variables and constants
-WITNESS = False
 NODE_WITNESS = 1 << 3
 WITNESS_MARKER = 0
 WITNESS_FLAG = 1
@@ -292,11 +295,13 @@ if CLI_OPTIONS.interport < 0:
 # all zero-conf UTXOs as unspendable, including sent-to-self (change)
 IGNOREZC  = CLI_OPTIONS.ignoreAllZC
 
-#supernode
-#ENABLE_SUPERNODE = CLI_OPTIONS.enableSupernode
+FORCE_SEGWIT = False
+if CLI_OPTIONS.offline:
+   FORCE_SEGWIT = CLI_OPTIONS.force_segwit
 
 #db address
 ARMORYDB_IP = CLI_OPTIONS.armorydb_ip
+FORCE_FCGI = CLI_OPTIONS.force_fcgi
 
 usesDefaultDbPort = True
 ARMORYDB_PORT = CLI_OPTIONS.armorydb_port
@@ -389,7 +394,8 @@ NETWORKS['\x34'] = "Namecoin Network"
 
 # We disable wallet checks on ARM for the sake of resources (unless forced)
 DO_WALLET_CHECK = CLI_OPTIONS.forceWalletCheck or \
-                  not platform.machine().lower().startswith('arm')
+                  not platform.machine().lower().startswith('arm') and \
+                  not CLI_OPTIONS.disableWalletCheck
 
 # Version Handling Code
 def getVersionString(vquad, numPieces=4):
@@ -525,7 +531,7 @@ else:
    bdmConfig.selectNetwork("Test")
    
    BITCOIN_PORT = 18444 if USE_REGTEST else 18333
-   BITCOIN_RPC_PORT = 18332
+   BITCOIN_RPC_PORT = 18443 if USE_REGTEST else 18332
    ARMORY_RPC_PORT     = 18225
    if USE_TESTNET:
       MAGIC_BYTES  = '\x0b\x11\x09\x07'
@@ -2752,10 +2758,10 @@ def ReadFragIDLineBin(binLine):
    doMask = binary_to_int(binLine[0]) > 127
    M      = binary_to_int(binLine[0]) & 0x7f
    fnum   = binary_to_int(binLine[1])
-   wltID  = binLine[2:]
+   fragID  = binLine[2:]
 
-   idBase58 = ComputeFragIDBase58(M, wltID) + '-#' + str(fnum)
-   return (M, fnum, wltID, doMask, idBase58)
+   idBase58 = ComputeFragIDBase58(M, fragID) + '-#' + str(fnum)
+   return (M, fnum, fragID, doMask, idBase58)
 
 
 ################################################################################

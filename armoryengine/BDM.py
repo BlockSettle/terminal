@@ -79,10 +79,6 @@ class PySide_CallBack(Cpp.PythonCallback):
             act = BDV_ERROR
             argBdvError = Cpp.BDV_Error_Struct_cast_to_BDVErrorStruct(arg)
             arglist.append(argBdvError)
-         elif action == Cpp.BDMAction_StartedWalletScan:
-            act = SCAN_ACTION
-            argstr = Cpp.BtcUtils_cast_to_string_vec(arg)
-            arglist.append(argstr)
          elif action == Cpp.BDMAction_NodeStatus:
             act = NODESTATUS_UPDATE
             argNodeStatus = Cpp.NodeStatusStruct_cast_to_NodeStatusStruct(arg)
@@ -174,6 +170,8 @@ class BlockDataManager(object):
                
       self.exception = ""
       self.cookie = None
+      
+      self.witness = False
    
    #############################################################################  
    def instantiateBDV(self, port):
@@ -181,7 +179,7 @@ class BlockDataManager(object):
          return
       
       socketType = Cpp.SocketFcgi
-      if self.remoteDB:
+      if self.remoteDB and not FORCE_FCGI:
          socketType = Cpp.SocketHttp 
 
       self.bdv_ = Cpp.BlockDataViewer_getNewBDV(\
@@ -334,6 +332,14 @@ class BlockDataManager(object):
          if bdmSignal == signal:
             func(args)
       self.registerCppNotification(bdmCallback)
+   
+   #############################################################################
+   def setWitness(self, wit):
+      self.witness = wit   
+   
+   #############################################################################
+   def isSegWitEnabled(self):
+      return self.witness or FORCE_SEGWIT
       
    
 ################################################################################

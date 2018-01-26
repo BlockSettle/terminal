@@ -316,6 +316,7 @@ BinaryData SigHashData::getDataForSigHash(SIGHASH_TYPE hashType, const
       return getDataForSigHashAll(stub, subScript, inputIndex);
 
    default:
+      LOGERR << "unknown sighash type: " << (int)hashType;
       throw UnsupportedSigHashTypeException("unhandled sighash type");
    }
 }
@@ -456,7 +457,7 @@ BinaryData SigHashDataSegWit::getDataForSigHashAll(const TransactionStub& stub,
    hashdata.put_BinaryDataRef(stub.getOutpoint(inputIndex));
 
    //script code
-   hashdata.put_uint8_t(subScriptLen);
+   hashdata.put_var_int(subScriptLen);
    hashdata.put_BinaryDataRef(subscript);
 
    //value

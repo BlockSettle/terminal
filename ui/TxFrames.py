@@ -21,7 +21,7 @@ from armoryengine.MultiSigUtils import \
    isP2SHLockbox
 from armoryengine.ArmoryUtils import MAX_COMMENT_LENGTH, getAddrByte
 from FeeSelectUI import FeeSelectionDialog
-from CppBlockUtils import TXOUT_SCRIPT_P2SH, TransactionBatch, SecureBinaryData
+from CppBlockUtils import TXOUT_SCRIPT_P2SH, TransactionBatch, SecureBinaryData, RecipientReuseException
 from armoryengine.SignerWrapper import SIGNER_DEFAULT
 
 class SendBitcoinsFrame(ArmoryFrame):
@@ -343,9 +343,8 @@ class SendBitcoinsFrame(ArmoryFrame):
    def setWallet(self, wlt, isDoubleClick=False):
       self.wlt = wlt
       self.wltID = wlt.uniqueIDB58 if wlt else None
-      
       self.setupCoinSelectionInstance()
-      
+
       if not TheBDM.getState() == BDM_BLOCKCHAIN_READY:
          self.lblSummaryBal.setText('(available when online)', color='DisableFG')
       if self.main.usermode == USERMODE.Expert:
@@ -394,7 +393,11 @@ class SendBitcoinsFrame(ArmoryFrame):
          return
       
       self.coinSelection = self.wlt.cppWallet.getCoinSelectionInstance()
-      self.resetCoinSelectionRecipients()
+      
+      try:
+         self.resetCoinSelectionRecipients()
+      except:
+         pass
      
    #############################################################################   
    def setupCoinSelectionForLockbox(self, lbox):
@@ -458,7 +461,7 @@ class SendBitcoinsFrame(ArmoryFrame):
                prefix, h160 = addrStr_to_hash160(addrStr)
             except:
                #recipient input is not an address, is it a locator instead?
-               scriptDict = getScriptForUserString(\
+               scriptDict = self.main.getScriptForUserString(\
                   addrStr, self.main.walletMap, self.main.allLockboxes)
                
                if scriptDict['Script'] == None:
@@ -467,7 +470,6 @@ class SendBitcoinsFrame(ArmoryFrame):
                scraddr = script_to_scrAddr(scriptDict['Script']) 
                prefix = scraddr[0]
                h160 = scraddr[1:]   
-               abc=0
                
             scrAddr = prefix + h160
             valueStr = str(coinSelRow['QLE_AMT'].text()).strip()
@@ -561,12 +563,73 @@ class SendBitcoinsFrame(ArmoryFrame):
          pass
       
    #############################################################################
-   def RBFupdate(self, rbfList, altBalance):
+   def RBFupdate(self, rbfList, altBalance, forceVerbose=False):
       self.customUtxoList = rbfList
       self.useCustomListInFull = True
       self.altBalance = altBalance
-      
-      self.resolveCoinSelection()
+         
+      try:         
+         self.resolveCoinSelection()
+      except:
+         
+         if forceVerbose == False:
+            return
+         
+         #failed to setup rbf send dialog, maybe the setup cannot cover for 
+         #auto fee. let's force the fee to 0 and warn the user
+         self.feeDialog.setZeroFee()
+         
+         try:
+            self.resolveCoinSelection()
+            MsgBoxCustom(MSGBOX.Warning, self.tr('RBF value error'), \
+            self.tr(
+               'You are trying to bump the fee of a broadcasted unconfirmed transaction. '
+               'Unfortunately, your transaction lacks the funds to cover the default fee. '
+               'Therefore, <b><u>the default fee has currently been set to 0</b></u>.<br><br>'
+               'You will have to set the appropriate fee and arrange the transaction spend ' 
+               'value manually to successfully double spend this transaction.'
+               ), \
+            yesStr=self.tr('Ok'))
+            
+         except:
+            MsgBoxCustom(MSGBOX.Error, self.tr('RBF failure'), \
+            self.tr(
+               'You are trying to bump the fee of a broadcasted unconfirmed transaction. '
+               'The process failed unexpectedly. To double spend your transaction, pick '
+               'the relevant output from the RBF Control dialog, found in the Send dialog '
+               'in Expert User Mode.') , \
+               yesStr=self.tr('Ok'))
+
+   #############################################################################
+   def handleCppCoinSelectionExceptions(self):      
+      try:
+         self.coinSelection.rethrow()
+      except RecipientReuseException as e:
+         addrList = e.getAddresses()
+         addrParagraph = '<br>'
+         for addrEntry in addrList:
+            addrParagraph = addrParagraph + ' - ' + addrEntry + '<br>'
+         
+         result = MsgBoxCustom(MSGBOX.Warning, self.tr('Recipient reuse'), \
+            self.tr(
+               'The transaction you crafted <b>reuses</b> the following recipient address(es):<br>'
+               '%1<br>'
+               ' The sum of values for this leg of the transaction amounts to %2 BTC. There is only'
+               ' a total of %3 BTC available in UTXOs to fund this leg of the'
+               ' transaction without <b>damaging your privacy.</b>'
+               '<br><br>In order to meet the full payment, Armory has to make use of extra '
+               ' UTXOs, <u>and this will result in privacy loss on chain.</u> <br><br>'
+               'To progress beyond this warning, choose Ignore. Otherwise'
+               ' the operation will be cancelled.'
+               ).arg(addrParagraph, \
+                     coin2str(e.total(), 5, maxZeros=0), \
+                     coin2str(e.value(), 5, maxZeros=0)), \
+            wCancel=True, yesStr=self.tr('Ignore'), noStr=self.tr('Cancel'))
+         
+         if not result:
+            return False
+         
+      return True;
         
    #############################################################################
    def validateInputsGetUSTX(self, peek=False):
@@ -575,6 +638,9 @@ class SendBitcoinsFrame(ArmoryFrame):
       scripts = []
       addrList = []
       self.comments = []
+      
+      if self.handleCppCoinSelectionExceptions() == False:
+         return
 
       for row in range(len(self.widgetTable)):
          # Verify validity of address strings
@@ -988,7 +1054,7 @@ class SendBitcoinsFrame(ArmoryFrame):
          return getAddr(newAddr, 'P2PKH')
       
       #is our Tx SW?
-      if WITNESS == True and self.coinSelection.isSW():
+      if TheBDM.isSegWitEnabled() == True and self.coinSelection.isSW():
          return getAddr(newAddr, 'P2SH-P2WPKH')
       else:
          return getAddr(newAddr, 'P2SH-P2PK')
@@ -1012,7 +1078,7 @@ class SendBitcoinsFrame(ArmoryFrame):
             changeScript  = scrAddr_to_script(addrStr_to_scrAddr(changeAddrStr))
             self.wlt.setComment(changeAddr160, CHANGE_ADDR_DESCR_STRING)
          else:
-            changeScript  = self.lbox.getChangeScript(utxoList)
+            changeScript  = self.lbox.getScript()
 
       if self.main.usermode == USERMODE.Expert:
          if not self.chkDefaultChangeAddr.isChecked():
@@ -1473,9 +1539,15 @@ class SendBitcoinsFrame(ArmoryFrame):
             comment = rpt[2]
          
          prefix, hash160 = addrStr_to_hash160(addrStr)
-         self.addOneRecipient(hash160, value, comment, plainText=addrStr)
-         
-      self.resetCoinSelectionRecipients()
+         try:
+            self.addOneRecipient(hash160, value, comment, plainText=addrStr)
+         except:
+            pass
+      
+      try:   
+         self.resetCoinSelectionRecipients()
+      except:
+         pass
       
       #do not shuffle outputs on batches
       self.shuffleEntries = False
@@ -1532,7 +1604,7 @@ class SendBitcoinsFrame(ArmoryFrame):
          utxolist, balance = findUtxo(self.wlt.getRBFTxOutList())
          self.frmSelectedWlt.customUtxoList = utxolist
          self.frmSelectedWlt.altBalance = balance
-         self.frmSelectedWlt.updateOnRBF() 
+         self.frmSelectedWlt.updateOnRBF(True) 
       
          
 

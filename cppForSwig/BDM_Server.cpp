@@ -767,15 +767,22 @@ void BDV_Server_Object::buildMethodMap()
       (const vector<string>& ids, Arguments& args)->Arguments
    {
       auto blocksToConfirm = args.get<IntType>().getVal();
-      auto feeByte = 
-         this->bdmPtr_->nodeRPC_->getFeeByte(blocksToConfirm);
+      auto strat_bd = args.get<BinaryDataObject>().get();
+      string strat(strat_bd.toCharPtr(), strat_bd.getSize());
+
+      auto feeByte = this->bdmPtr_->nodeRPC_->getFeeByteSmart(
+         blocksToConfirm, strat);
 
       BinaryWriter bw;
-      bw.put_double(feeByte);
-      BinaryDataObject bdo(bw.getData());
+      bw.put_double(feeByte.feeByte_);
+      BinaryDataObject val(bw.getData());
+      IntType version(feeByte.smartFee_);
+      BinaryDataObject err(feeByte.error_);
 
       Arguments retarg;
-      retarg.push_back(move(bdo));
+      retarg.push_back(move(val));
+      retarg.push_back(move(version));
+      retarg.push_back(move(err));
       return move(retarg);
    };
 
@@ -1247,10 +1254,10 @@ void FCGI_Server::init()
 {
    stringstream ss;
 #ifdef _WIN32
-   if(ip_ == "127.0.0.1" || ip_ == "localhost")
+   if (ip_ == "127.0.0.1" || ip_ == "localhost")
       ss << "localhost:" << port_;
    else
-      throw runtime_error("will not bind on anything but localhost");
+      ss << ip_ << ":" << port_;
 #else
    ss << ip_ << ":" << port_;
 #endif
