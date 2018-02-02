@@ -737,7 +737,6 @@ struct TLS_SHARDTX
    }
 };
 
-
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 class DatabaseContainer_Sharded : public DatabaseContainer, public Lockable
@@ -748,22 +747,22 @@ class DatabaseContainer_Sharded : public DatabaseContainer, public Lockable
    friend class BlockchainScanner_Super;
 
 private:
-   TransactionalMap<unsigned, shared_ptr<DBPair>> dbMap_;
+   mutable TransactionalMap<unsigned, shared_ptr<DBPair>> dbMap_;
    unique_ptr<ShardFilter> filterPtr_;
    mutex addMapMutex_;
 
 private:
    shared_ptr<DBPair> getShard(unsigned) const;
-   shared_ptr<DBPair> getShard(unsigned, bool);
-   shared_ptr<DBPair> addShard(unsigned);
-   void openShard(unsigned id);
+   shared_ptr<DBPair> getShard(unsigned, bool) const;
+   shared_ptr<DBPair> addShard(unsigned) const;
+   void openShard(unsigned id) const;
 
-   void updateShardCounter(unsigned);
+   void updateShardCounter(unsigned) const;
 
    void loadFilter(void);
    void putFilter(void);
 
-   string getShardPath(unsigned);
+   string getShardPath(unsigned) const;
    void lockShard(unsigned) const;
 
    void initAfterLock(void) {}
@@ -946,6 +945,7 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // still using the old name even though no block data is stored anymore
+   BinaryData getRawBlock(uint32_t height, uint8_t dupId) const;
    bool getStoredHeader(StoredHeader&, uint32_t, uint8_t, bool withTx = true) const;
 
    /////////////////////////////////////////////////////////////////////////////

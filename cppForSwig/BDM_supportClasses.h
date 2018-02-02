@@ -26,7 +26,7 @@
 #include "BtcWallet.h"
 
 #define GETZC_THREADCOUNT 5
-#define TXGETDATA_TIMEOUT_MS 10000
+#define TXGETDATA_TIMEOUT_MS 3000
 
 enum ZcAction
 {
@@ -35,6 +35,16 @@ enum ZcAction
    Zc_Shutdown
 };
 
+enum ParsedTxStatus
+{
+   Tx_Uninitialized,
+   Tx_ResolveAgain,
+   Tx_Unresolved,
+   Tx_Mine,
+   Tx_NotMine,
+   Tx_Mined,
+   Tx_Invalid
+};
 
 class ZeroConfContainer;
 
@@ -361,6 +371,122 @@ private:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+class OutPointRef
+{
+private:
+   BinaryData txHash_;
+   unsigned txOutIndex_ = UINT16_MAX;
+   BinaryData dbKey_;
+   uint64_t time_ = UINT64_MAX;
+
+public:
+   void unserialize(uint8_t const * ptr, uint32_t remaining);
+   void unserialize(BinaryDataRef bdr);
+
+   void resolveDbKey(LMDBBlockDatabase* db);
+   const BinaryData& getDbKey(void) const { return dbKey_; }
+
+   bool isResolved(void) const { return dbKey_.getSize() == 8; }
+   bool isInitialized(void) const;
+
+   BinaryDataRef getTxHashRef(void) const { return txHash_.getRef(); }
+   unsigned getIndex(void) const { return txOutIndex_; }
+
+   BinaryData& getDbKey(void) { return dbKey_; }
+   BinaryDataRef getDbTxKeyRef(void) const;
+
+   void reset(void) 
+   { 
+      dbKey_.clear(); 
+      time_ = UINT64_MAX;
+   }
+
+   bool isZc(void) const;
+
+   void setTime(uint64_t t) { time_ = t; }
+   uint64_t getTime(void) const { return time_; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct ParsedTxIn
+{
+   OutPointRef opRef_;
+   BinaryData scrAddr_;
+   uint64_t value_ = UINT64_MAX;
+
+public:
+   bool isResolved(void) const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct ParsedTxOut
+{
+   BinaryData scrAddr_;
+   uint64_t value_ = UINT64_MAX;
+
+   bool isInitialized(void) const 
+   { 
+      return scrAddr_.getSize() != 0 && value_ != UINT64_MAX; \
+   }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct ParsedTx
+{
+   Tx tx_;
+   vector<ParsedTxIn> inputs_;
+   vector<ParsedTxOut> outputs_;
+   ParsedTxStatus state_ = Tx_Uninitialized;
+   bool isRBF_ = false;
+   bool isChainedZc_ = false;
+
+public:
+   ParsedTxStatus status(void) const { return state_; }
+   bool isResolved(void) const;
+   void reset(void);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct ZeroConfBatch
+{
+   map<BinaryData, ParsedTx> txMap_;
+   atomic<unsigned> counter_;
+   promise<bool> isReadyPromise_;
+   unsigned timeout_ = TXGETDATA_TIMEOUT_MS;
+
+   const shared_ptr<map<ScrAddrFilter::AddrAndHash, int>> addrMapPtr_;
+
+public:
+   ZeroConfBatch(const shared_ptr<map<ScrAddrFilter::AddrAndHash, int>> addrMap) :
+      addrMapPtr_(addrMap)
+   {
+      counter_.store(0, memory_order_relaxed);
+   }
+
+   void incrementCounter(void)
+   {
+      auto val = counter_.fetch_add(1, memory_order_relaxed);
+      if (val + 1 == txMap_.size())
+         isReadyPromise_.set_value(true);
+   }
+
+   bool filter(const BinaryData& scrAddr)
+   {
+      if (addrMapPtr_->find(scrAddr) != addrMapPtr_->end())
+         return true;
+      return false;
+   }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct ZeroConfInvPacket
+{
+   BinaryData zcKey_;
+   shared_ptr<ZeroConfBatch> batchPtr_;
+   InvEntry invEntry_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
 class ZeroConfContainer
 {
 private:
@@ -391,18 +517,14 @@ public:
    struct ZcActionStruct
    {
       ZcAction action_;
-      map<BinaryData, Tx> zcMap_;
+      shared_ptr<ZeroConfBatch> batch_;
       shared_ptr<promise<bool>> finishedPromise_ = nullptr;
-
-      void setData(map<BinaryData, Tx> zcmap)
-      {
-         zcMap_ = move(zcmap);
-      }
+      Blockchain::ReorganizationState reorgState_;
    };
 
 private:
    TransactionalMap<HashString, HashString>     txHashToDBKey_;      //<txHash, dbKey>
-   TransactionalMap<HashString, Tx>             txMap_;              //<zcKey, zcTx>
+   TransactionalMap<HashString, ParsedTx>       txMap_;              //<zcKey, zcTx>
    TransactionalSet<HashString>                 txOutsSpentByZC_;    //<txOutDbKeys>
    set<HashString>                              allZcTxHashes_;
    map<BinaryData, map<unsigned, BinaryData>>   outPointsSpentByKey_; //<txHash, map<opId, ZcKeys>>
@@ -417,7 +539,6 @@ private:
    //
    map<string, pair<bool, set<BinaryData>>> flaggedBDVs_;
    
-   BinaryData lastParsedBlockHash_;
    std::atomic<uint32_t> topId_;
    LMDBBlockDatabase* db_;
 
@@ -428,29 +549,36 @@ private:
 
    //stacks inv tx packets from node
    shared_ptr<BitcoinP2P> networkNode_;
-   Stack<promise<InvEntry>> newInvTxStack_;
+   BlockingStack<ZeroConfInvPacket> newInvTxStack_;
    
    TransactionalMap<string, BDV_Callbacks> bdvCallbacks_;
    mutex parserMutex_;
 
-   Stack<thread> parserThreads_;
+   vector<thread> parserThreads_;
    atomic<bool> zcEnabled_;
    const unsigned maxZcThreadCount_;
 
    shared_ptr<TransactionalMap<ScrAddrFilter::AddrAndHash, int>> scrAddrMap_;
+   
+   unsigned parserThreadCount_ = 0;
+   mutex parserThreadMutex_;
 
 private:
-   BulkFilterData ZCisMineBulkFilter(const Tx & tx,
-      const BinaryData& ZCkey,
-      uint32_t txtime,
+   BulkFilterData ZCisMineBulkFilter(ParsedTx & tx, const BinaryData& ZCkey,
       function<bool(const BinaryData&, BinaryData&)> getzckeyfortxhash,
-      function<const Tx&(const BinaryData&)> getzctxbykey);
+      function<const ParsedTx&(const BinaryData&)> getzctxbykey);
+
+   void preprocessTx(ParsedTx&, function<bool(const BinaryData&)>) const;
 
    void loadZeroConfMempool(bool clearMempool);
-   set<BinaryData> purge(void);
+   void purge(const Blockchain::ReorganizationState&, map<BinaryData, ParsedTx>&);
+   void reset(void);
 
    void processInvTxThread(void);
-   bool processInvTxThread(InvEntry, unsigned timeout_ms);
+   void processInvTxThread(ZeroConfInvPacket&);
+
+   void increaseParserThreadPool(unsigned);
+   void preprocessZcMap(map<BinaryData, ParsedTx>&);
 
 public:
    //stacks new zc Tx objects from node
@@ -467,7 +595,7 @@ public:
       //register ZC callback
       auto processInvTx = [this](vector<InvEntry> entryVec)->void
       {
-         this->processInvTxVec(entryVec);
+         this->processInvTxVec(entryVec, true);
       };
 
       networkNode_->registerInvTxLambda(processInvTx);
@@ -481,7 +609,7 @@ public:
 
    void dropZC(const set<BinaryData>& txHashes);
    void parseNewZC(void);
-   void parseNewZC(map<BinaryData, Tx> zcMap, bool updateDB, bool notify);
+   void parseNewZC(map<BinaryData, ParsedTx> zcMap, bool updateDB, bool notify);
    bool isTxOutSpentByZC(const BinaryData& dbKey) const;
 
    void clear(void);
@@ -497,7 +625,8 @@ public:
    void updateZCinDB(
       const vector<BinaryData>& keysToWrite, const vector<BinaryData>& keysToDel);
 
-   void processInvTxVec(vector<InvEntry>, bool extend = true);
+   void processInvTxVec(vector<InvEntry>, bool extend, 
+      unsigned timeout = TXGETDATA_TIMEOUT_MS);
 
    void init(shared_ptr<ScrAddrFilter>, bool clearMempool);
    void shutdown();

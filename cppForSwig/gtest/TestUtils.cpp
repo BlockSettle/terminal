@@ -419,15 +419,17 @@ namespace DBTestUtils
       ZeroConfContainer::ZcActionStruct newzcstruct;
       newzcstruct.action_ = Zc_NewTx;
 
-      map<BinaryData, Tx> newzcmap;
+      map<BinaryData, ParsedTx> newzcmap;
 
       for (auto& newzc : zcVec.zcVec_)
       {
          auto&& zckey = zcConf->getNewZCkey();
-         newzcmap[zckey] = newzc;
+         newzcmap[zckey].tx_ = newzc;
       }
 
-      newzcstruct.setData(move(newzcmap));
+      newzcstruct.batch_ = make_shared<ZeroConfBatch>(nullptr);
+      newzcstruct.batch_->txMap_ = move(newzcmap);
+      newzcstruct.batch_->isReadyPromise_.set_value(true);
       zcConf->newZcStack_.push_back(move(newzcstruct));
    }
 

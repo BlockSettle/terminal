@@ -1065,6 +1065,14 @@ void BlockchainScanner_Super::putSpentnessThread(ParserBatch_Super* batch)
 ////////////////////////////////////////////////////////////////////////////////
 void BlockchainScanner_Super::putSpentness(ParserBatch_Super* batch)
 {
+   /***
+   TODO: get rid of this dataset, resolve spentness on the fly as:
+   1) resolve txhash to blockid|txid
+   2) grab stxo, get scrAddr
+   3) fetch subssh for scrAddr|txoutid
+   4) check is subssh carries txin
+   ***/
+
    auto dbPtr = db_->getDbPtr(SPENTNESS);
    auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbPtr);
    if (dbSharded == nullptr)

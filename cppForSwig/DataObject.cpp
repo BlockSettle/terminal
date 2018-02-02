@@ -81,9 +81,9 @@ LedgerEntryVector LedgerEntryVector::deserialize(BinaryRefReader& brr)
       BtcUtils::throw_type_error(LEDGERENTRYVECTOR_CODE, type_code);
 
 
-   auto count = brr.get_var_int();
+   auto outer_count = brr.get_var_int();
 
-   for (unsigned i = 0; i < count; i++)
+   for (unsigned i = 0; i < outer_count; i++)
    {
       auto leSize = brr.get_var_int();
       if (leSize > brr.getSizeRemaining())
@@ -113,8 +113,8 @@ LedgerEntryVector LedgerEntryVector::deserialize(BinaryRefReader& brr)
       auto witness = bit.getBit();
 
       set<BinaryData> scrAddrSet;
-      auto count = brr.get_var_int();
-      for (unsigned y = 0; y < count; y++)
+      auto inner_count = brr.get_var_int();
+      for (unsigned y = 0; y < inner_count; y++)
       {
          auto len = brr.get_var_int();
          auto&& scrAddr = brr.get_BinaryData(len);

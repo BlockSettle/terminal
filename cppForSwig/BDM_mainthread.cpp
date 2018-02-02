@@ -230,6 +230,7 @@ try
          ZeroConfContainer::ZcActionStruct zcaction;
          zcaction.action_ = Zc_Purge;
          zcaction.finishedPromise_ = make_shared<promise<bool>>();
+         zcaction.reorgState_ = reorgState;
          auto purgeFuture = zcaction.finishedPromise_->get_future();
 
          bdm->zeroConfCont_->newZcStack_.push_back(move(zcaction));

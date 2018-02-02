@@ -872,17 +872,30 @@ BinaryData LMDBBlockDatabase::getDBKeyForHash(const BinaryData& txhash,
    }
    else
    {
-      /*if (numHints == 1)
-         return brrHints.get_BinaryData(6);*/
-
+      BinaryData forkedMatch;
       for (uint32_t i = 0; i < numHints; i++)
       {
          BinaryDataRef hint = brrHints.get_BinaryDataRef(6);
          //grab tx by key, hash and check
 
          if (txhash == getTxHashForLdbKey(hint))
+         {
+            //check this key is on the main branch
+            auto hintRef = hint.getSliceRef(0, 4);
+            auto height = DBUtils::hgtxToHeight(hintRef);
+            auto dupId = DBUtils::hgtxToDupID(hintRef);
+
+            if (getValidDupIDForHeight(height) != dupId)
+            {
+               forkedMatch = hint;
+               continue;
+            }
+
             return hint;
+         }
       }
+
+      return forkedMatch;
    }
 
    return BinaryData();
@@ -2053,6 +2066,24 @@ bool LMDBBlockDatabase::getStoredHeader(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+BinaryData LMDBBlockDatabase::getRawBlock(uint32_t height, uint8_t dupId) const
+{
+   if (blkFolder_.size() == 0)
+      throw LmdbWrapperException("invalid blkFolder");
+
+   auto bh = blockchainPtr_->getHeaderByHeight(height);
+   if (bh->getDuplicateID() != dupId)
+      throw LmdbWrapperException("invalid dupId");
+
+   //open block file
+   BlockDataLoader bdl(blkFolder_);
+
+   auto fileMapPtr = bdl.get(bh->getBlockFileNum());
+   auto dataPtr = fileMapPtr->getPtr();
+   return BinaryData(dataPtr + bh->getOffset(), bh->getBlockSize());
+}
+
+////////////////////////////////////////////////////////////////////////////////
 bool LMDBBlockDatabase::getStoredTx( StoredTx & stx,
                                   BinaryData& txHashOrDBKey) const
 {
@@ -2338,7 +2369,7 @@ bool LMDBBlockDatabase::getStoredTxOut(
          LOGWARN << "no header for id " << id;
       }
 
-      auto&& tx = beginTransaction(STXO, LMDB::ReadOnly);
+      auto&& stxo_tx = beginTransaction(STXO, LMDB::ReadOnly);
       auto data = getValueNoCopy(STXO, DBkey);
       if (data.getSize() == 0)
       {
@@ -2355,16 +2386,24 @@ bool LMDBBlockDatabase::getStoredTxOut(
          throw LmdbWrapperException("unexpected block key format");
       }
 
-      //grab header
-
       stxo.blockHeight_ = header->getBlockHeight();
       stxo.duplicateID_ = header->getDuplicateID();
       stxo.txIndex_ = txIdx;
       stxo.txOutIndex_ = txoutid;
       stxo.isCoinbase_ = (txIdx == 0);
 
-      //TODO: get spentness
-
+      //get spentness
+      auto&& spentness_tx = beginTransaction(SPENTNESS, LMDB::ReadOnly);
+      auto spentnessVal = getValueNoCopy(SPENTNESS, DBkey);
+      if (spentnessVal.getSize() != 0)
+      {
+         stxo.spentByTxInKey_ = spentnessVal;
+         stxo.spentness_ = TXOUT_SPENT;
+      }
+      else
+      {
+         stxo.spentness_ = TXOUT_UNSPENT;
+      }
 
       return true;
    }
@@ -3201,7 +3240,7 @@ unique_ptr<LDBIter> DatabaseContainer_Single::getIterator()
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 shared_ptr<DBPair> DatabaseContainer_Sharded::getShard(unsigned id,
-   bool createIfMissing)
+   bool createIfMissing) const
 {
    ReentrantLock lock(this);
 
@@ -3239,7 +3278,7 @@ shared_ptr<DBPair> DatabaseContainer_Sharded::getShard(unsigned id) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-shared_ptr<DBPair> DatabaseContainer_Sharded::addShard(unsigned id)
+shared_ptr<DBPair> DatabaseContainer_Sharded::addShard(unsigned id) const
 {
    ReentrantLock lock(this);
 
@@ -3260,7 +3299,7 @@ shared_ptr<DBPair> DatabaseContainer_Sharded::addShard(unsigned id)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void DatabaseContainer_Sharded::openShard(unsigned id)
+void DatabaseContainer_Sharded::openShard(unsigned id) const
 {
    auto mapPtr = dbMap_.get();
    auto iter = mapPtr->find(id);
@@ -3269,7 +3308,7 @@ void DatabaseContainer_Sharded::openShard(unsigned id)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void DatabaseContainer_Sharded::updateShardCounter(unsigned id)
+void DatabaseContainer_Sharded::updateShardCounter(unsigned id) const
 {
    //dont bump counter if id is of the meta shard
    if (id == META_SHARD_ID)
@@ -3290,7 +3329,7 @@ void DatabaseContainer_Sharded::updateShardCounter(unsigned id)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-string DatabaseContainer_Sharded::getShardPath(unsigned id)
+string DatabaseContainer_Sharded::getShardPath(unsigned id) const
 {
    auto&& dbFolder = getDbPath(dbSelect_);
 
@@ -3447,8 +3486,8 @@ BinaryDataRef DatabaseContainer_Sharded::getValue(BinaryDataRef key) const
    }
 
    //get shard and put
+   auto shardPtr = getShard(shardId, true);
    lockShard(shardId);
-   auto shardPtr = getShard(shardId);
    return shardPtr->getValue(key);
 }
 

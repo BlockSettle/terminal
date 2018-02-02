@@ -1538,7 +1538,7 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(BlockUtilsWithWalletTest, TwoZC_CheckLedgers)
+TEST_F(BlockUtilsWithWalletTest, DISABLED_TwoZC_CheckLedgers)
 {
    //create spender lambda
    auto getSpenderPtr = [](

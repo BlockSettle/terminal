@@ -397,7 +397,6 @@ public:
    void unserialize(BinaryData const & str) { unserialize(str.getPtr(), str.getSize()); }
    void unserialize(BinaryDataRef const & str) { unserialize(str.getPtr(), str.getSize()); }
    void unserialize(BinaryRefReader & brr);
-   //void unserialize_no_txout(BinaryRefReader & brr);
    void unserialize_swigsafe_(BinaryData const & rawTx) { unserialize(rawTx); }
 
    void unserializeWithMetaData(const BinaryData& rawTx);
