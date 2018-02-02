@@ -538,7 +538,7 @@ void BDV_Server_Object::buildMethodMap()
       auto broadcastLBD = [this](BinaryDataObject bdo)->void
       {
          this->zeroConfCont_->broadcastZC(
-            bdo.get(), this->getID(), TXGETDATA_TIMEOUT_MS);
+            bdo.get(), this->getID(), 10000);
       };
       
       auto&& rawTx = args.get<BinaryDataObject>();
