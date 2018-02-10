@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([Cryptopp], [1], [weidai@github])
-AM_INIT_AUTOMAKE([1.10 foreign -Wall -Werror])
+AC_INIT([Cryptopp],[5.62],[noloader@gmail.com])
+AM_INIT_AUTOMAKE([1.11 foreign -Wall -Werror])
 
 AM_PROG_AR
 LT_INIT
@@ -17,8 +17,7 @@ AS_IF([test "$CXXFLAGS" = "-g -O2"] ,[AC_SUBST(CXXFLAGS, [ ])])
 
 #debug flag
 AC_ARG_ENABLE([debug],
-              AC_HELP_STRING([--enable-debug],
-              [compile with debug symbols @<:@default=no@:>@]),
+              AS_HELP_STRING([--enable-debug],[compile with debug symbols @<:@default=no@:>@]),
               [want_debug="$enableval"], [want_debug=no])
 
 if test "x$want_debug" = "xyes" -a $ac_cv_c_compiler_gnu != no; then
@@ -34,9 +33,16 @@ fi
 AC_PROG_CXX
 AC_PROG_CC
 
-AC_CONFIG_MACRO_DIR([m4])
-m4_include([m4/ax_check_x86_features.m4])
-m4_include([m4/ax_gcc_x86_cpu_supports.m4])
+AC_CONFIG_MACRO_DIR([build-aux/m4])
+m4_include([build-aux/m4/ax_check_x86_features.m4])
+m4_include([build-aux/m4/ax_gcc_x86_cpu_supports.m4])
+m4_include([build-aux/m4/ax_cxx_compile_stdcxx.m4])
+
+#check for c++11
+AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory], [nodefault])
+
+# Make the compilation flags quiet unless V=1 is used.
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h malloc.h netdb.h netinet/in.h stddef.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h])
@@ -114,14 +120,14 @@ if test "x$cross_compiling" != "xyes"; then
 	 [AC_LANG_PUSH([C])
 	  AC_CACHE_CHECK([for gcc __builtin_cpu_init function],
 	    [ax_cv_gcc_check_x86_cpu_init],
-	    [AC_RUN_IFELSE(
+	    [AC_COMPILE_IFELSE(
 	      [AC_LANG_PROGRAM([#include <stdlib.h>],
 	        [__builtin_cpu_init ();])
 	      ],
 	      [ax_cv_gcc_check_x86_cpu_init=yes],
 	      [ax_cv_gcc_check_x86_cpu_init=no])])])
 
-	AS_IF([test "X$ax_cv_gcc_check_x86_cpu_init" = "Xyes"],
+	AS_IF([test "x$ax_cv_gcc_check_x86_cpu_init" = "xyes"],
 	   [AX_CHECK_X86_FEATURES([HAS_X86=true])])
 fi	
 

@@ -1,9 +1,7 @@
-AC_PREREQ(2.60)
-AC_INIT([BitcoinArmory], [0.96.3.992], [moothecowlord@gmail.com])
+AC_PREREQ([2.69])
+AC_INIT([BitcoinArmory],[0.96.3.992],[moothecowlord@gmail.com])
 
-AM_INIT_AUTOMAKE([1.10 subdir-objects foreign -Wall -Werror])
-
-AC_CONFIG_SUBDIRS([cppForSwig/fcgi cppForSwig/cryptopp])
+AM_INIT_AUTOMAKE([1.11 subdir-objects foreign -Wall -Werror])
 
 AM_PROG_AR
 LT_INIT
@@ -16,19 +14,25 @@ AS_IF([test "$CXXFLAGS" = "-g -O2"] ,[AC_SUBST(CXXFLAGS, [ ])])
 
 #build tests arg
 AC_ARG_ENABLE([tests],
-	      AC_HELP_STRING([--enable-tests],
-	      [build with test suites @<:@default=no@:>@]),
-	      [want_tests="$enableval"], [want_tests=no])
+              AS_HELP_STRING([--enable-tests],
+              [build with test suites @<:@default=no@:>@]),
+              [want_tests="$enableval"], [want_tests=no])
+
+#build benchmarks
+AC_ARG_ENABLE([benchmark],
+              AS_HELP_STRING([--enable-benchmark],
+              [build with benchmark suites @<:@default=no@:>@]),
+              [want_benchmark=$enableval], [want_benchmark=no])
 
 #build debug arg
 AC_ARG_ENABLE([debug],
-              AC_HELP_STRING([--enable-debug],
+              AS_HELP_STRING([--enable-debug],
               [compile with debug symbols @<:@default=no@:>@]),
               [want_debug="$enableval"], [want_debug=no])
 
 #build gui arg
 AC_ARG_WITH([gui],
-              AC_HELP_STRING([--without-gui],
+              AS_HELP_STRING([--without-gui],
               [do not build GUI @<:@default=no@:>@]),
               [with_gui="$withval"], [with_gui=yes])
 
@@ -50,16 +54,19 @@ AM_CONDITIONAL([HAVE_GCC], [test $CXX = g++])
 AC_CHECK_SIZEOF([long unsigned int])
 AM_CONDITIONAL([HAVE_64BIT], [test $ac_cv_sizeof_long_unsigned_int = 8])
 
-AC_CONFIG_MACRO_DIR([m4])
-m4_include([m4/ax_check_compile_flag.m4])
-m4_include([m4/ax_swig_python.m4])
-m4_include([m4/ax_pkg_swig.m4])
-m4_include([m4/ax_python_devel.m4])
-m4_include([m4/ax_python_module.m4])
-m4_include([m4/ax_cxx_compile_stdcxx.m4])
+AC_CONFIG_MACRO_DIR([build-aux/m4])
+m4_include([build-aux/m4/ax_check_compile_flag.m4])
+m4_include([build-aux/m4/ax_swig_python.m4])
+m4_include([build-aux/m4/ax_pkg_swig.m4])
+m4_include([build-aux/m4/ax_python_devel.m4])
+m4_include([build-aux/m4/ax_python_module.m4])
+m4_include([build-aux/m4/ax_cxx_compile_stdcxx.m4])
 
 #check for c++11
 AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory], [nodefault])
+
+# Make the compilation flags quiet unless V=1 is used.
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 if test "x$with_gui" = "xyes"; then
 #check for  swig
@@ -166,21 +173,25 @@ AC_CONFIG_FILES(Makefile
 		cppForSwig/Makefile
 		cppForSwig/lmdb/Makefile)
 
+AM_CONDITIONAL([BUILD_BENCH], [test x$want_benchmark = xyes])
 AM_CONDITIONAL([BUILD_TESTS], [test "x$want_tests" = "xyes"])
 if test "x$want_tests" = "xyes"; then
 AC_CONFIG_FILES(cppForSwig/gtest/Makefile)
 fi
 
+AC_CONFIG_SUBDIRS([cppForSwig/fcgi cppForSwig/cryptopp])
+
 AC_OUTPUT
 
-echo "  CC            = $CC"
-echo "  CFLAGS        = $CFLAGS"
-echo "  CPP           = $CPP"
-echo "  CPPFLAGS      = $CPPFLAGS"
-echo "  CXX           = $CXX"
-echo "  CXXFLAGS      = $CXXFLAGS"
-echo "  LDFLAGS       = $LDFLAGS"
-echo "  LD            = $LD"
-echo "  with tests    = $want_tests"
-echo "  debug symbols = $want_debug"
-echo "  with GUI      = $with_gui"
+echo "  CC              = $CC"
+echo "  CFLAGS          = $CFLAGS"
+echo "  CPP             = $CPP"
+echo "  CPPFLAGS        = $CPPFLAGS"
+echo "  CXX             = $CXX"
+echo "  CXXFLAGS        = $CXXFLAGS"
+echo "  LDFLAGS         = $LDFLAGS"
+echo "  LD              = $LD"
+echo "  with tests      = $want_tests"
+echo "  with benchmarks = $want_benchmark"
+echo "  debug symbols   = $want_debug"
+echo "  with GUI        = $with_gui"
