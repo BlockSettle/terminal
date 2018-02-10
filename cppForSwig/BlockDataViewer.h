@@ -53,9 +53,6 @@ class BlockDataViewer
 private:
    virtual void pushNotification(unique_ptr<BDV_Notification>) = 0;
 
-protected:
-   unique_ptr<BDV_Notification_ZC> createZcStruct(void);
-
 public:
    BlockDataViewer(BlockDataManager* bdm);
    ~BlockDataViewer(void);

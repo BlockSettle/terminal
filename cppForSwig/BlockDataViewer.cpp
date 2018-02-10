@@ -71,7 +71,6 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
    bool reorg = false;
    bool refresh = false;
 
-   BDV_Notification_ZC::zcMapType zcMap;
    ScanWalletStruct scanData;
    map<BinaryData, LedgerEntry>* leMapPtr = nullptr;
 
@@ -107,9 +106,15 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
          
       endBlock = reorgState.newTop_->getBlockHeight();
 
-      //feed current valid zc map to scanwallet as well
-      auto&& actionStruct = createZcStruct();
-      zcMap = move(actionStruct->scrAddrZcMap_);
+      //set invalidated keys
+      if (reorgNotif->zcPurgePacket_ != nullptr)
+      {
+         scanData.saStruct_.invalidatedZcKeys_ =
+            reorgNotif->zcPurgePacket_->invalidatedZcKeys_;
+
+         scanData.saStruct_.minedTxioKeys_ =
+            reorgNotif->zcPurgePacket_->minedTxioKeys_;
+      }
 
       break;
    }
@@ -119,9 +124,16 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       auto zcAction = 
          dynamic_pointer_cast<BDV_Notification_ZC>(action);
       
-      zcMap = move(zcAction->scrAddrZcMap_);
-      leMapPtr = &zcAction->leMap_;
+      scanData.saStruct_.zcMap_ = 
+         move(zcAction->packet_.txioMap_);
 
+      if (zcAction->packet_.purgePacket_ != nullptr)
+      {
+         scanData.saStruct_.invalidatedZcKeys_ =
+            zcAction->packet_.purgePacket_->invalidatedZcKeys_;
+      }
+
+      leMapPtr = &zcAction->leMap_;
       startBlock = endBlock = blockchain().top()->getBlockHeight();
 
       break;
@@ -129,9 +141,6 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
 
    case BDV_Refresh:
    {
-      //feed current valid zc map to scanwallet as well
-      auto&& actionStruct = createZcStruct();
-      zcMap = move(actionStruct->scrAddrZcMap_);
       refresh = true;
       break;
    }
@@ -143,27 +152,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
 
    scanData.endBlock_ = endBlock;
    scanData.action_ = action->action_type();
-   scanData.saStruct_.zcMap_ = move(zcMap);
    scanData.reorg_ = reorg;
-
-   //get set of valid zc keys
-   auto validkeymap = zeroConfCont_->getKeyToSpentScrAddrMap();
-
-   //get current set of zc keys for wallet
-   for (auto& group : groups_)
-   {
-      auto& groupZcSet = group.getValidZcSet();
-
-      //intersect with validkeymap
-      for (auto& zcKey : groupZcSet)
-      {
-         auto keyIter = validkeymap->find(zcKey);
-         if (keyIter != validkeymap->end())
-            continue;
-
-         scanData.saStruct_.invalidatedZCKeys_.insert(zcKey);
-      }
-   }
 
    vector<uint32_t> startBlocks;
    for (auto& group : groups_)
@@ -742,25 +731,6 @@ shared_ptr<BtcWallet> BlockDataViewer::getWalletOrLockbox(
       return wallet;
 
    return groups_[group_lockbox].getWalletByID(id);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-unique_ptr<BDV_Notification_ZC> BlockDataViewer::createZcStruct()
-{
-   BDV_Notification_ZC::zcMapType zcmap;
-   auto txiomap = zeroConfCont_->getFullTxioMap();
-
-   for (auto& txiopair : *txiomap)
-   {
-      if (!hasScrAddress(txiopair.first))
-         continue;
-
-      zcmap[txiopair.first] = txiopair.second;
-   }
-
-   auto notif = make_unique<BDV_Notification_ZC>(move(zcmap));
-
-   return move(notif);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

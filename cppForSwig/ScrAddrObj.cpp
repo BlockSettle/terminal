@@ -138,29 +138,33 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
 
    //look for invalidated keys, delete from validZcKeys_ as we go
    bool purge = false;
-   auto keyIter = validZCKeys_.begin();
-   while (keyIter != validZCKeys_.end())
+
+   if (scanInfo.invalidatedZcKeys_.size() != 0)
    {
-      auto zcIter = scanInfo.invalidatedZCKeys_.find(
-         keyIter->first.getSliceRef(0, 6));
-      if (zcIter != scanInfo.invalidatedZCKeys_.end())
+      auto keyIter = validZCKeys_.begin();
+      while (keyIter != validZCKeys_.end())
       {
-         purge = true;
+         auto zcIter = scanInfo.invalidatedZcKeys_.find(
+            keyIter->first.getSliceRef(0, 6));
+         if (zcIter != scanInfo.invalidatedZcKeys_.end())
+         {
+            purge = true;
 
-         for (auto& txiokey : keyIter->second)
-            invalidatedZCSet.insert(txiokey);
+            for (auto& txiokey : keyIter->second)
+               invalidatedZCSet.insert(txiokey);
 
-         validZCKeys_.erase(keyIter++);
-         continue;
+            validZCKeys_.erase(keyIter++);
+            continue;
+         }
+
+         ++keyIter;
       }
-
-      ++keyIter;
    }
 
    //purge if necessary
    if (purge)
    {
-      if (purgeZC(invalidatedZCSet))
+      if (purgeZC(invalidatedZCSet, scanInfo.minedTxioKeys_))
          updateID_ = updateID;
    }
 
@@ -185,9 +189,8 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
       auto _keyIter = relevantTxIO_.find(txiopair.first);
       if (_keyIter != relevantTxIO_.end())
       {
-         
-         //dont replace a zc that is spent with a zc that is unspent. zc revocation
-         //is handled in the purge segment         
+         //dont replace a zc that is spent with a zc that is unspent. 
+         //zc revocation is handled in the purge segment         
          auto& txio = _keyIter->second;
          if (txio.hasTxIn())
          {
@@ -223,34 +226,62 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool ScrAddrObj::purgeZC(const set<BinaryData>& invalidatedTxOutKeys)
+bool ScrAddrObj::purgeZC(
+   const set<BinaryData>& invalidatedTxOutKeys,
+   const map<BinaryData, BinaryData>& minedKeys)
 {
    bool purged = false;
    for (auto zc : invalidatedTxOutKeys)
    {
       auto txioIter = relevantTxIO_.find(zc);
 
-      if (ITER_IN_MAP(txioIter, relevantTxIO_))
+      if (txioIter == relevantTxIO_.end())
+         continue;
+
+      TxIOPair& txio = txioIter->second;
+
+      BinaryData txinKey;
+
+      if (txio.hasTxInZC())
       {
-         TxIOPair& txio = txioIter->second;
+         //since the txio has a ZC txin, there is a scrAddr ledger entry for that key
+         txinKey = move(txio.getDBKeyOfInput());
+         ledger_->erase(txinKey.getSliceRef(0, 6));
 
-         if (txio.hasTxInZC())
+         txio.setTxIn(BinaryData(0));
+         txio.setTxHashOfInput(BinaryData(0));
+         purged = true;
+      }
+
+      if (txio.hasTxOutZC())
+      {
+         //purged ZC chain, remove the TxIO
+         relevantTxIO_.erase(txioIter);
+         ledger_->erase(zc.getSliceRef(0, 6));
+         purged = true;
+
+         //was this txio carrying an input?
+         if (txinKey.getSize() == 0)
+            continue;
+
+         //is this ZC purged because it was mined?
+         auto minedKeyIter = minedKeys.find(zc);
+         if (minedKeyIter == minedKeys.end())
+            continue;
+
+         //zc txio had a spend and was mined, reciprocate the spend on the now
+         //mined txio
+         auto txioIter = relevantTxIO_.find(minedKeyIter->second);
+         if (txioIter == relevantTxIO_.end())
          {
-            //since the txio has a ZC txin, there is a scrAddr ledger entry for that key
-            ledger_->erase(txio.getTxRefOfInput().getDBKey());
-            
-            txio.setTxIn(BinaryData(0));
-            txio.setTxHashOfInput(BinaryData(0));
-            purged = true;
+            LOGWARN << "missing mined txio";
+            continue;
          }
 
-         if (txio.hasTxOutZC())
-         {
-            //purged ZC chain, remove the TxIO
-            relevantTxIO_.erase(txioIter);
-            ledger_->erase(zc.getSliceRef(0, 6));
-            purged = true;
-         }
+         if (txioIter->second.hasTxIn())
+            continue;
+
+         txioIter->second.setTxIn(txinKey);
       }
    }
 

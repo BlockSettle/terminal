@@ -28,8 +28,7 @@ void BlockDataManager::registerBDVwithZCcontainer(
       return bdvPtr->hasScrAddress(scrAddr);
    };
 
-   auto newzc = [bdvPtr](
-      map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> zcMap)->void
+   auto newzc = [bdvPtr](ZeroConfContainer::NotificationPacket& zcMap)->void
    {
       bdvPtr->zcCallback(move(zcMap));
    };
@@ -229,18 +228,20 @@ try
          //purge zc container
          ZeroConfContainer::ZcActionStruct zcaction;
          zcaction.action_ = Zc_Purge;
-         zcaction.finishedPromise_ = make_shared<promise<bool>>();
+         zcaction.resultPromise_ = 
+            make_unique<promise<shared_ptr<ZcPurgePacket>>>();
          zcaction.reorgState_ = reorgState;
-         auto purgeFuture = zcaction.finishedPromise_->get_future();
+         auto purgeFuture = zcaction.resultPromise_->get_future();
 
          bdm->zeroConfCont_->newZcStack_.push_back(move(zcaction));
 
          //wait on purge
-         purgeFuture.get();
+         auto purgePacket = purgeFuture.get();
 
          //notify bdvs
          auto&& notifPtr =
-            make_unique<BDV_Notification_NewBlock>(move(reorgState));
+            make_unique<BDV_Notification_NewBlock>(
+               move(reorgState), purgePacket);
          bdm->notificationStack_.push_back(move(notifPtr));
 
          return true;

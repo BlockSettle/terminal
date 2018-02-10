@@ -1569,14 +1569,37 @@ void BDV_Server_Object::init()
    //could a wallet registration event get lost in between the init loop 
    //and setting the promise?
 
+   //init wallets
    auto&& notifPtr = make_unique<BDV_Notification_Init>();
    scanWallets(move(notifPtr));
 
-   auto&& zcstruct = createZcStruct();
+   auto createZcNotif = [&](void)->unique_ptr<BDV_Notification_ZC>
+   {
+      ZeroConfContainer::NotificationPacket packet;
+
+      //grab zc map
+      auto txiomap = zeroConfCont_->getFullTxioMap();
+
+      for (auto& txiopair : *txiomap)
+      {
+         if (!hasScrAddress(txiopair.first))
+            continue;
+
+         packet.txioMap_.insert(txiopair);
+      }
+
+      auto notifPtr = make_unique<BDV_Notification_ZC>(packet);
+      return notifPtr;
+   };
+
+   //create zc packet and pass to wallets
+   auto zcstruct = createZcNotif();
    scanWallets(move(zcstruct));
    
+   //mark bdv object as ready
    isReadyPromise_->set_value(true);
 
+   //callback client with BDM_Ready packet
    Arguments args;
    BinaryDataObject bdo("BDM_Ready");
    args.push_back(move(bdo));
@@ -1733,10 +1756,9 @@ void BDV_Server_Object::maintenanceThread(void)
 
 ///////////////////////////////////////////////////////////////////////////////
 void BDV_Server_Object::zcCallback(
-   map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> zcMap)
+   ZeroConfContainer::NotificationPacket& packet)
 {
-   auto notificationPtr = make_unique<BDV_Notification_ZC>(
-      move(zcMap));
+   auto notificationPtr = make_unique<BDV_Notification_ZC>(packet);
 
    notificationStack_.push_back(move(notificationPtr));
 }

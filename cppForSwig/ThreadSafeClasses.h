@@ -443,7 +443,12 @@ public:
       auto newMap = make_shared<map<T, U>>( move(updatemap));
 
       unique_lock<mutex> lock(mu_);
-      newMap->insert(map_->begin(), map_->end());
+      for (auto& data_pair : *map_)
+      {
+         newMap->insert(data_pair);
+      }
+
+      //newMap->insert(map_->begin(), map_->end());
 
       map_ = newMap;
       count_.store(map_->size(), memory_order_relaxed);

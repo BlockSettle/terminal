@@ -115,7 +115,6 @@ subSshParserResult parseSubSsh(
          if (resolveHashes)
          {
             auto&& txKey = keyOfOutput.getSliceRef(0, 6);
-
             txnsToResolve.insert(txKey);
          }
 

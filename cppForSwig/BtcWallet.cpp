@@ -646,7 +646,8 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
       balance_ = getFullBalanceFromDB();
    }
   
-   if (scanInfo.saStruct_.zcMap_.size() > 0)
+   if (scanInfo.saStruct_.zcMap_.size() != 0 ||
+      scanInfo.saStruct_.invalidatedZcKeys_.size() != 0)
    {
       //top block didnt change, only have to check for new ZC
       if (bdvPtr_->isZcEnabled())

@@ -22,7 +22,6 @@
 #include "ThreadSafeClasses.h"
 #include "BitcoinP2p.h"
 #include "BinaryData.h"
-#include "ScrAddrObj.h"
 #include "BtcWallet.h"
 
 #define GETZC_THREADCOUNT 5
@@ -38,10 +37,9 @@ enum ZcAction
 enum ParsedTxStatus
 {
    Tx_Uninitialized,
+   Tx_Resolved,
    Tx_ResolveAgain,
    Tx_Unresolved,
-   Tx_Mine,
-   Tx_NotMine,
    Tx_Mined,
    Tx_Invalid
 };
@@ -454,11 +452,8 @@ struct ZeroConfBatch
    promise<bool> isReadyPromise_;
    unsigned timeout_ = TXGETDATA_TIMEOUT_MS;
 
-   const shared_ptr<map<ScrAddrFilter::AddrAndHash, int>> addrMapPtr_;
-
 public:
-   ZeroConfBatch(const shared_ptr<map<ScrAddrFilter::AddrAndHash, int>> addrMap) :
-      addrMapPtr_(addrMap)
+   ZeroConfBatch(void) 
    {
       counter_.store(0, memory_order_relaxed);
    }
@@ -469,13 +464,6 @@ public:
       if (val + 1 == txMap_.size())
          isReadyPromise_.set_value(true);
    }
-
-   bool filter(const BinaryData& scrAddr)
-   {
-      if (addrMapPtr_->find(scrAddr) != addrMapPtr_->end())
-         return true;
-      return false;
-   }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -484,6 +472,25 @@ struct ZeroConfInvPacket
    BinaryData zcKey_;
    shared_ptr<ZeroConfBatch> batchPtr_;
    InvEntry invEntry_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct ParsedZCData
+{
+   set<BinaryData> txioKeys_;
+   set<BinaryData> invalidatedKeys_;
+
+   void mergeTxios(ParsedZCData& pzd)
+   {
+      txioKeys_.insert(pzd.txioKeys_.begin(), pzd.txioKeys_.end());
+   }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct ZcPurgePacket
+{
+   set<BinaryData> invalidatedZcKeys_;
+   map<BinaryData, BinaryData> minedTxioKeys_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -498,18 +505,21 @@ private:
       map<BinaryData, set<BinaryData>> keyToSpentScrAddr_;
       map<BinaryData, set<BinaryData>> keyToFundedScrAddr_;
 
-      map<string, set<BinaryData>> flaggedBDVs_;
+      map<string, ParsedZCData> flaggedBDVs_;
 
       bool isEmpty(void) { return scrAddrTxioMap_.size() == 0; }
    };
 
 public:
+   struct NotificationPacket
+   {
+      map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> txioMap_;
+      shared_ptr<ZcPurgePacket> purgePacket_;
+   };
+
    struct BDV_Callbacks
    {
-      function<void(
-         map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>>
-         )> newZcCallback_;
-
+      function<void(NotificationPacket&)> newZcCallback_;
       function<bool(const BinaryData&)> addressFilter_;
       function<void(string&, string&)> zcErrorCallback_;
    };
@@ -518,7 +528,7 @@ public:
    {
       ZcAction action_;
       shared_ptr<ZeroConfBatch> batch_;
-      shared_ptr<promise<bool>> finishedPromise_ = nullptr;
+      unique_ptr<promise<shared_ptr<ZcPurgePacket>>> resultPromise_ = nullptr;
       Blockchain::ReorganizationState reorgState_;
    };
 
@@ -531,14 +541,11 @@ private:
 
    //<scrAddr,  <dbKeyOfOutput, TxIOPair>>
    TransactionalMap<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>>  txioMap_;
-   
+
    //<zcKey, vector<ScrAddr>>
    TransactionalMap<HashString, set<HashString>> keyToSpentScrAddr_;
    map<BinaryData, set<BinaryData>> keyToFundedScrAddr_;
 
-   //
-   map<string, pair<bool, set<BinaryData>>> flaggedBDVs_;
-   
    std::atomic<uint32_t> topId_;
    LMDBBlockDatabase* db_;
 
@@ -550,7 +557,7 @@ private:
    //stacks inv tx packets from node
    shared_ptr<BitcoinP2P> networkNode_;
    BlockingStack<ZeroConfInvPacket> newInvTxStack_;
-   
+
    TransactionalMap<string, BDV_Callbacks> bdvCallbacks_;
    mutex parserMutex_;
 
@@ -559,7 +566,7 @@ private:
    const unsigned maxZcThreadCount_;
 
    shared_ptr<TransactionalMap<ScrAddrFilter::AddrAndHash, int>> scrAddrMap_;
-   
+
    unsigned parserThreadCount_ = 0;
    mutex parserThreadMutex_;
 
@@ -568,10 +575,11 @@ private:
       function<bool(const BinaryData&, BinaryData&)> getzckeyfortxhash,
       function<const ParsedTx&(const BinaryData&)> getzctxbykey);
 
-   void preprocessTx(ParsedTx&, function<bool(const BinaryData&)>) const;
+   void preprocessTx(ParsedTx&) const;
 
    void loadZeroConfMempool(bool clearMempool);
-   void purge(const Blockchain::ReorganizationState&, map<BinaryData, ParsedTx>&);
+   map<BinaryData, BinaryData> purge(
+      const Blockchain::ReorganizationState&, map<BinaryData, ParsedTx>&);
    void reset(void);
 
    void processInvTxThread(void);
@@ -582,11 +590,11 @@ private:
 
 public:
    //stacks new zc Tx objects from node
-   BinaryData getNewZCkey(void);   
+   BinaryData getNewZCkey(void);
    BlockingStack<ZcActionStruct> newZcStack_;
 
 public:
-   ZeroConfContainer(LMDBBlockDatabase* db, 
+   ZeroConfContainer(LMDBBlockDatabase* db,
       shared_ptr<BitcoinP2P> node, unsigned maxZcThread) :
       topId_(0), db_(db), maxZcThreadCount_(maxZcThread), networkNode_(node)
    {
@@ -625,7 +633,7 @@ public:
    void updateZCinDB(
       const vector<BinaryData>& keysToWrite, const vector<BinaryData>& keysToDel);
 
-   void processInvTxVec(vector<InvEntry>, bool extend, 
+   void processInvTxVec(vector<InvEntry>, bool extend,
       unsigned timeout = TXGETDATA_TIMEOUT_MS);
 
    void init(shared_ptr<ScrAddrFilter>, bool clearMempool);
@@ -634,11 +642,13 @@ public:
    void insertBDVcallback(string, BDV_Callbacks);
    void eraseBDVcallback(string);
 
-   void broadcastZC(const BinaryData& rawzc, 
+   void broadcastZC(const BinaryData& rawzc,
       const string& bdvId, uint32_t timeout_ms);
 
    bool isEnabled(void) const { return zcEnabled_.load(memory_order_relaxed); }
    void pushZcToParser(const BinaryData& rawTx);
+
+   shared_ptr<map<BinaryData, TxIOPair>> getTxioMapForScrAddr(const BinaryData&) const;
 };
 
 //////
@@ -664,10 +674,12 @@ struct BDV_Notification_Init : public BDV_Notification
 struct BDV_Notification_NewBlock : public BDV_Notification
 {
    Blockchain::ReorganizationState reorgState_;
+   shared_ptr<ZcPurgePacket> zcPurgePacket_;
 
    BDV_Notification_NewBlock(
-      const Blockchain::ReorganizationState& ref) :
-      reorgState_(ref)
+      const Blockchain::ReorganizationState& ref, 
+      shared_ptr<ZcPurgePacket> purgePacket) :
+      reorgState_(ref), zcPurgePacket_(purgePacket)
    {}
 
    BDV_Action action_type(void)
@@ -678,12 +690,11 @@ struct BDV_Notification_NewBlock : public BDV_Notification
 
 struct BDV_Notification_ZC : public BDV_Notification
 {
-   typedef map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> zcMapType;
-   zcMapType scrAddrZcMap_;
+   const ZeroConfContainer::NotificationPacket packet_;
    map<BinaryData, LedgerEntry> leMap_;
 
-   BDV_Notification_ZC(zcMapType&& mv) :
-      scrAddrZcMap_(move(mv))
+   BDV_Notification_ZC(ZeroConfContainer::NotificationPacket& packet) :
+      packet_(move(packet))
    {}
 
    BDV_Action action_type(void)

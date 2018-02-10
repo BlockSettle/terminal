@@ -142,9 +142,11 @@ namespace DBTestUtils
       const BinaryData& txHash);
    Tx getTxObjByHash(
       Clients* clients, const string& bdvId, const BinaryData& txHash);
+
+   void addTxioToSsh(StoredScriptHistory&, const map<BinaryData, TxIOPair>&);
 }
 
-namespace ResovlerUtils
+namespace ResolverUtils
 {
    ////////////////////////////////////////////////////////////////////////////////
    struct TestResolverFeed : public ResolverFeed

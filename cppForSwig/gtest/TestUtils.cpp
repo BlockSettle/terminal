@@ -427,7 +427,7 @@ namespace DBTestUtils
          newzcmap[zckey].tx_ = newzc;
       }
 
-      newzcstruct.batch_ = make_shared<ZeroConfBatch>(nullptr);
+      newzcstruct.batch_ = make_shared<ZeroConfBatch>();
       newzcstruct.batch_->txMap_ = move(newzcmap);
       newzcstruct.batch_->isReadyPromise_.set_value(true);
       zcConf->newZcStack_.push_back(move(newzcstruct));
@@ -491,5 +491,39 @@ namespace DBTestUtils
       tx.unserializeWithMetaData(tx_bdo->getObj().get());
 
       return tx;
+   }
+
+   /////////////////////////////////////////////////////////////////////////////
+   void addTxioToSsh(
+      StoredScriptHistory& ssh, 
+      const map<BinaryData, TxIOPair>& txioMap)
+   {
+      for (auto& txio_pair : txioMap)
+      {
+         auto subssh_key = txio_pair.first.getSliceRef(0, 4);
+
+         auto& subssh = ssh.subHistMap_[subssh_key];
+         subssh.txioMap_.insert(txio_pair);
+
+         unsigned txioCount = 1;
+         if (txio_pair.second.hasTxIn())
+         {
+            ssh.totalUnspent_ -= txio_pair.second.getValue();
+
+            auto txinKey_prefix = 
+               txio_pair.second.getDBKeyOfInput().getSliceRef(0, 4);
+            if (txio_pair.second.getDBKeyOfOutput().startsWith(txinKey_prefix))
+            {
+               ssh.totalUnspent_ += txio_pair.second.getValue();
+               ++txioCount;
+            }
+         }
+         else
+         {
+            ssh.totalUnspent_ += txio_pair.second.getValue();
+         }
+
+         ssh.totalTxioCount_ += txioCount;
+      }
    }
 }

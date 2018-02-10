@@ -121,9 +121,7 @@ public:
 
 private:
    BDV_Server_Object(BDV_Server_Object&) = delete; //no copies
-   
-   void registerCallback();
-   
+      
    void buildMethodMap(void);
    void startThreads(void);
 
@@ -159,10 +157,7 @@ public:
                               const vector<string>& ids, 
                               Arguments& args);
   
-   void zcCallback(
-      map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> zcMap);
-   void progressCallback(BDMPhase phase, double progress,
-      unsigned time, unsigned numericProgress);
+   void zcCallback(ZeroConfContainer::NotificationPacket& zcMap);
    void zcErrorCallback(string&, string&);
 
    void haltThreads(void);

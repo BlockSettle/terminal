@@ -40,7 +40,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 struct ScanAddressStruct
 {
-   set<BinaryData> invalidatedZCKeys_;
+   //shared_ptr<ZcPurgePacket> zcPurgePacket_;
+
+   set<BinaryData> invalidatedZcKeys_;
+   map<BinaryData, BinaryData> minedTxioKeys_;
+
    map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> zcMap_;
    map<BinaryData, LedgerEntry> zcLedgers_;
 };
@@ -250,7 +254,9 @@ public:
 
    void scanZC(const ScanAddressStruct&, function<bool(const BinaryDataRef)>,
       int32_t);
-   bool purgeZC(const set<BinaryData>& invalidatedTxOutKeys);
+   bool purgeZC(
+      const set<BinaryData>& invalidatedTxOutKeys,
+      const map<BinaryData, BinaryData>& minedKeys);
 
    void updateAfterReorg(uint32_t lastValidBlockHeight);
 
