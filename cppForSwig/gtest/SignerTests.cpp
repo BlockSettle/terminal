@@ -172,7 +172,7 @@ TEST_F(SignerTest, Signer_Test)
    Signer signer;
 
    //instantiate resolver feed overloaded object
-   auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+   auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
    auto addToFeed = [feed](const BinaryData& key)->void
    {
@@ -312,7 +312,7 @@ TEST_F(SignerTest, SpendTest_P2PKH)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -836,7 +836,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_1of3)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -934,7 +934,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_1of3)
 
       //create feed from asset wallet
       auto feed = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(wltPtr);
-      auto assetFeed = make_shared<ResovlerUtils::CustomFeed>(addr_ms, feed);
+      auto assetFeed = make_shared<ResolverUtils::CustomFeed>(addr_ms, feed);
 
       //create spenders
       uint64_t total = 0;
@@ -1124,7 +1124,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_2of3_NativeP2WSH)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -1232,7 +1232,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_2of3_NativeP2WSH)
 
    //create feed from asset wallet 1
    auto feed_ms = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(assetWlt_1);
-   auto assetFeed = make_shared<ResovlerUtils::CustomFeed>(addr_p2wsh, feed_ms);
+   auto assetFeed = make_shared<ResolverUtils::CustomFeed>(addr_p2wsh, feed_ms);
 
    //create spenders
    uint64_t total = 0;
@@ -1304,7 +1304,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_2of3_NativeP2WSH)
    Signer signer3;
    //create feed from asset wallet 2
    auto feed_ms3 = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(assetWlt_2);
-   auto assetFeed3 = make_shared<ResovlerUtils::CustomFeed>(addr_p2wsh, feed_ms3);
+   auto assetFeed3 = make_shared<ResolverUtils::CustomFeed>(addr_p2wsh, feed_ms3);
    signer3.deserializeState(signer2.serializeState());
 
    {
@@ -1507,7 +1507,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_DifferentInputs)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -1836,7 +1836,7 @@ TEST_F(SignerTest, SpendTest_MultipleSigners_ParallelSigning)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -2218,7 +2218,7 @@ TEST_F(SignerTest, GetUnsignedTxId)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -2582,7 +2582,7 @@ TEST_F(SignerTest, Wallet_SpendTest_Nested_P2WPKH)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -2833,7 +2833,7 @@ TEST_F(SignerTest, Wallet_SpendTest_Nested_P2PK)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {

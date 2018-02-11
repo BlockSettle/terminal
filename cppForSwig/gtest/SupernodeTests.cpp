@@ -755,154 +755,6 @@ TEST_F(BlockUtilsSuper, Load3BlocksPlus3)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(BlockUtilsSuper, DISABLED_RepaidMissingTxio)
-{
-   // Copy only the first four blocks.  Will copy the full file next to test
-   // readBlkFileUpdate method on non-reorg blocks.
-   TestUtils::setBlocks({ "0", "1", "2" }, blk0dat_);
-   
-   theBDMt_->start(config.initMode_);
-   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
-   DBTestUtils::goOnline(clients_, bdvID);
-   DBTestUtils::waitOnBDMReady(clients_, bdvID);
-
-   EXPECT_EQ(DBTestUtils::getTopBlockHeight(iface_, HEADERS), 2);
-   EXPECT_EQ(DBTestUtils::getTopBlockHash(iface_, HEADERS), TestChain::blkHash2);
-   EXPECT_TRUE(theBDMt_->bdm()->blockchain()->
-      getHeaderByHash(TestChain::blkHash2)->isMainBranch());
-
-   TestUtils::appendBlocks({ "3" }, blk0dat_);
-   DBTestUtils::triggerNewBlockNotification(theBDMt_);
-   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
-
-   //grab a ssh and delete some utxos
-   StoredScriptHistory ssh;
-   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrB);
-
-   for (auto& subssh : ssh.subHistMap_)
-   {
-      auto txioIter = subssh.second.txioMap_.begin();
-
-      while (txioIter != subssh.second.txioMap_.end())
-      {
-         if (txioIter->second.isUTXO() &&
-            !txioIter->second.isMultisig())
-         {
-            ssh.totalTxioCount_--;
-            ssh.totalUnspent_ -= txioIter->second.getValue();
-            subssh.second.txioMap_.erase(txioIter++);
-         }
-         else
-            ++txioIter;
-      }
-   }
-
-   //delete the keys
-   /*auto delKeysThread = [&ssh, this](void)->void
-   {
-      auto&& tx = iface_->beginTransaction(BLKDATA, LMDB::ReadWrite);
-
-      iface_->putStoredScriptHistory(ssh);
-   };
-
-   thread delKeysTID(delKeysThread);
-   delKeysTID.join();*/
-
-   TestUtils::appendBlocks({ "5" }, blk0dat_);
-   DBTestUtils::triggerNewBlockNotification(theBDMt_);
-   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
-
-   TestUtils::appendBlocks({ "4" }, blk0dat_);
-   DBTestUtils::triggerNewBlockNotification(theBDMt_);
-   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
-
-   EXPECT_EQ(DBTestUtils::getTopBlockHeight(iface_, HEADERS), 5);
-   EXPECT_EQ(DBTestUtils::getTopBlockHash(iface_, HEADERS), TestChain::blkHash5);
-   EXPECT_TRUE(theBDMt_->bdm()->blockchain()->
-      getHeaderByHash(TestChain::blkHash5)->isMainBranch());
-
-   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrA);
-   EXPECT_EQ(ssh.getScriptBalance(), 50 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 50 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 1);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrB);
-   EXPECT_EQ(ssh.getScriptBalance(), 70 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 230 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 12);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrC);
-   EXPECT_EQ(ssh.getScriptBalance(), 20 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 75 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 6);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrD);
-   EXPECT_EQ(ssh.getScriptBalance(), 65 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 65 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 4);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrE);
-   EXPECT_EQ(ssh.getScriptBalance(), 30 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 30 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 2);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrF);
-   EXPECT_EQ(ssh.getScriptBalance(), 5 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 45 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 7);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::lb1ScrAddr);
-   EXPECT_EQ(ssh.getScriptBalance(), 5 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 15 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 3);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::lb1ScrAddrP2SH);
-   EXPECT_EQ(ssh.getScriptBalance(), 25 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 40 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 3);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::lb2ScrAddr);
-   EXPECT_EQ(ssh.getScriptBalance(), 30 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 40 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 4);
-
-   iface_->getStoredScriptHistory(ssh, TestChain::lb2ScrAddrP2SH);
-   EXPECT_EQ(ssh.getScriptBalance(), 0 * COIN);
-   EXPECT_EQ(ssh.getScriptReceived(), 5 * COIN);
-   EXPECT_EQ(ssh.totalTxioCount_, 2);
-
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//pointless test with this event driven BDM, there is no notification
-//when the chain is not extended by new blocks
-TEST_F(BlockUtilsSuper, DISABLED_Load5Blocks_Plus2NoReorg)
-{
-   theBDMt_->start(config.initMode_);
-   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
-   DBTestUtils::goOnline(clients_, bdvID);
-   DBTestUtils::waitOnBDMReady(clients_, bdvID);
-
-   TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5", "4A" }, blk0dat_);
-   BtcUtils::copyFile("../reorgTest/blk_4A.dat", blk0dat_);
-
-   DBTestUtils::triggerNewBlockNotification(theBDMt_);
-   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
-
-   EXPECT_EQ(
-      theBDMt_->bdm()->blockchain()->top()->getThisHash(), TestChain::blkHash5);
-   EXPECT_EQ(theBDMt_->bdm()->blockchain()->top()->getBlockHeight(), 5);
-
-   TestUtils::appendBlocks({ "5A" }, blk0dat_);
-   DBTestUtils::triggerNewBlockNotification(theBDMt_);
-   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
-
-   EXPECT_EQ(
-      theBDMt_->bdm()->blockchain()->top()->getThisHash(), TestChain::blkHash5);
-   EXPECT_EQ(theBDMt_->bdm()->blockchain()->top()->getBlockHeight(), 5);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 TEST_F(BlockUtilsSuper, Load5Blocks_FullReorg)
 {
    theBDMt_->start(config.initMode_);
@@ -1170,19 +1022,6 @@ TEST_F(BlockUtilsSuper, Load5Blocks_DoubleReorg)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-pair<BinaryData, BinaryData> getAddrAndPubKeyFromPrivKey(BinaryData privKey)
-{
-   auto&& pubkey = CryptoECDSA().ComputePublicKey(privKey);
-   auto&& h160 = BtcUtils::getHash160(pubkey);
-
-   pair<BinaryData, BinaryData> result;
-   result.second = pubkey;
-   result.first = h160;
-
-   return result;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // I thought I was going to do something different with this set of tests,
 // but I ended up with an exact copy of the BlockUtilsSuper fixture.  Oh well.
 class BlockUtilsWithWalletTest : public ::testing::Test
@@ -1445,11 +1284,11 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
       signer.setLockTime(3);
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
-         auto&& datapair = getAddrAndPubKeyFromPrivKey(key);
+         auto&& datapair = DBTestUtils::getAddrAndPubKeyFromPrivKey(key);
          feed->h160ToPubKey_.insert(datapair);
          feed->pubKeyToPrivKey_[datapair.second] = key;
       };
@@ -1538,27 +1377,9 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-TEST_F(BlockUtilsWithWalletTest, DISABLED_TwoZC_CheckLedgers)
+TEST_F(BlockUtilsWithWalletTest, UnrelatedZC_CheckLedgers)
 {
-   //create spender lambda
-   auto getSpenderPtr = [](
-      const UnspentTxOut& utxo,
-      shared_ptr<ResolverFeed> feed)
-      ->shared_ptr<ScriptSpender>
-   {
-      UTXO entry(utxo.value_, utxo.txHeight_, utxo.txIndex_, utxo.txOutIndex_,
-         move(utxo.txHash_), move(utxo.script_));
-
-      auto spender = make_shared<ScriptSpender>(entry, feed);
-      spender->setSequence(UINT32_MAX - 2);
-
-      return spender;
-   };
-
-   BinaryData ZCHash1, ZCHash2, ZCHash3, ZCHash4;
-
-   //
-   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4" }, blk0dat_);
 
    theBDMt_->start(config.initMode_);
    auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
@@ -1567,29 +1388,6 @@ TEST_F(BlockUtilsWithWalletTest, DISABLED_TwoZC_CheckLedgers)
    scrAddrVec.push_back(TestChain::scrAddrA);
    scrAddrVec.push_back(TestChain::scrAddrB);
    scrAddrVec.push_back(TestChain::scrAddrC);
-   scrAddrVec.push_back(TestChain::scrAddrE);
-
-   //// create assetWlt ////
-
-   //create a root private key
-   auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
-   auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
-      homedir_,
-      wltRoot,
-      SecureBinaryData(),
-      5);
-
-   //register with db
-   vector<BinaryData> addrVec;
-
-   auto hashSet = assetWlt->getAddrHashSet();
-   vector<BinaryData> hashVec;
-   hashVec.insert(hashVec.begin(), hashSet.begin(), hashSet.end());
-
-   //add existing address to asset wlt for zc test purposes
-   hashVec.push_back(TestChain::scrAddrD);
-
-   DBTestUtils::regWallet(clients_, bdvID, hashVec, assetWlt->getID());
    DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
 
    auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
@@ -1598,7 +1396,279 @@ TEST_F(BlockUtilsWithWalletTest, DISABLED_TwoZC_CheckLedgers)
    DBTestUtils::goOnline(clients_, bdvID);
    DBTestUtils::waitOnBDMReady(clients_, bdvID);
    auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
-   auto dbAssetWlt = bdvPtr->getWalletOrLockbox(assetWlt->getID());
+   auto delegateID = DBTestUtils::getLedgerDelegate(clients_, bdvID);
+
+   //check balances
+   const ScrAddrObj* scrObj;
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
+
+   StoredScriptHistory ssh;
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrD);
+   EXPECT_EQ(ssh.getScriptBalance(), 60 * COIN);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrF);
+   EXPECT_EQ(ssh.getScriptBalance(), 10 * COIN);
+
+   /***
+   Create zc that spends from addr D to F. This is supernode so the DB
+   should track this ZC even though it isn't registered. Send the ZC as
+   a batch along with a ZC that hits our wallets, in order to get the 
+   notification, which comes at the BDV level (i.e. only for registered
+   wallets).
+   ***/
+
+   auto&& ZC1 = TestUtils::getTx(5, 2); //block 5, tx 2
+   auto&& ZChash1 = BtcUtils::getHash256(ZC1);
+
+   auto&& ZC2 = TestUtils::getTx(5, 1); //block 5, tx 1
+   auto&& ZChash2 = BtcUtils::getHash256(ZC2);
+
+   DBTestUtils::ZcVector zcVec1;
+   zcVec1.push_back(ZC1, 14000000);
+   zcVec1.push_back(ZC2, 14100000);
+
+   DBTestUtils::pushNewZc(theBDMt_, zcVec1);
+   DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+
+   //check balances
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+
+   auto zcTxios = 
+      theBDMt_->bdm()->zeroConfCont()->getTxioMapForScrAddr(
+         TestChain::scrAddrD);
+   ASSERT_NE(zcTxios, nullptr);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrD);
+   DBTestUtils::addTxioToSsh(ssh, *zcTxios);
+   EXPECT_EQ(ssh.getScriptBalance(), 65 * COIN);
+
+   zcTxios = 
+      theBDMt_->bdm()->zeroConfCont()->getTxioMapForScrAddr(
+         TestChain::scrAddrF);
+   ASSERT_NE(zcTxios, nullptr);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrF);
+   DBTestUtils::addTxioToSsh(ssh, *zcTxios);
+   EXPECT_EQ(ssh.getScriptBalance(), 5 * COIN);
+
+   //grab ledger for 1st ZC, should be empty
+   auto zcledger = wlt->getLedgerEntryForTx(ZChash1);
+   EXPECT_EQ(zcledger.getTxHash(), BtcUtils::EmptyHash());
+
+   //grab ledger for 2nd ZC
+   zcledger = wlt->getLedgerEntryForTx(ZChash2);
+   EXPECT_EQ(zcledger.getValue(), 30 * COIN);
+   EXPECT_EQ(zcledger.getTxTime(), 14100000);
+   EXPECT_FALSE(zcledger.isOptInRBF());
+
+   //grab delegate ledger
+   auto&& delegateLedger = 
+      DBTestUtils::getHistoryPage(clients_, bdvID, delegateID, 0);
+
+   unsigned zc2_count = 0;
+   for (auto& ld : delegateLedger)
+   {
+      if (ld.getTxHash() == ZChash2)
+         zc2_count++;
+   }
+
+   EXPECT_EQ(zc2_count, 1);
+
+   //push last block
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
+
+   //check balances
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 70 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+
+   zcTxios = 
+      theBDMt_->bdm()->zeroConfCont()->getTxioMapForScrAddr(
+         TestChain::scrAddrD);
+   ASSERT_EQ(zcTxios, nullptr);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrD);
+   EXPECT_EQ(ssh.getScriptBalance(), 65 * COIN);
+
+   zcTxios = 
+      theBDMt_->bdm()->zeroConfCont()->getTxioMapForScrAddr(
+         TestChain::scrAddrF);
+   ASSERT_EQ(zcTxios, nullptr);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrF);
+   EXPECT_EQ(ssh.getScriptBalance(), 5 * COIN);
+
+   //try to get ledgers, ZCs should be all gone
+   zcledger = wlt->getLedgerEntryForTx(ZChash1);
+   EXPECT_EQ(zcledger.getTxHash(), BtcUtils::EmptyHash());
+   zcledger = wlt->getLedgerEntryForTx(ZChash2);
+   EXPECT_EQ(zcledger.getTxTime(), 1231009513);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(BlockUtilsWithWalletTest, RegisterAfterZC)
+{
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4" }, blk0dat_);
+
+   theBDMt_->start(config.initMode_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+
+   vector<BinaryData> scrAddrVec;
+   scrAddrVec.push_back(TestChain::scrAddrA);
+   scrAddrVec.push_back(TestChain::scrAddrB);
+   scrAddrVec.push_back(TestChain::scrAddrC);
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
+
+   //wait on signals
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
+   auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
+   auto delegateID = DBTestUtils::getLedgerDelegate(clients_, bdvID);
+
+   //check balances
+   const ScrAddrObj* scrObj;
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
+
+   StoredScriptHistory ssh;
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrD);
+   EXPECT_EQ(ssh.getScriptBalance(), 60 * COIN);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrF);
+   EXPECT_EQ(ssh.getScriptBalance(), 10 * COIN);
+
+   /***
+   Create zc that spends from addr D to F. This is supernode so the DB
+   should track this ZC even though it isn't registered. Send the ZC as
+   a batch along with a ZC that hits our wallets, in order to get the
+   notification, which comes at the BDV level (i.e. only for registered
+   wallets).
+   ***/
+
+   auto&& ZC1 = TestUtils::getTx(5, 2); //block 5, tx 2
+   auto&& ZChash1 = BtcUtils::getHash256(ZC1);
+
+   auto&& ZC2 = TestUtils::getTx(5, 1); //block 5, tx 1
+   auto&& ZChash2 = BtcUtils::getHash256(ZC2);
+
+   DBTestUtils::ZcVector zcVec1;
+   zcVec1.push_back(ZC1, 14000000);
+   zcVec1.push_back(ZC2, 14100000);
+
+   DBTestUtils::pushNewZc(theBDMt_, zcVec1);
+   DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+
+   //check balances
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+
+   auto zcTxios = 
+      theBDMt_->bdm()->zeroConfCont()->getTxioMapForScrAddr(
+         TestChain::scrAddrD);
+   ASSERT_NE(zcTxios, nullptr);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrD);
+   DBTestUtils::addTxioToSsh(ssh, *zcTxios);
+   EXPECT_EQ(ssh.getScriptBalance(), 65 * COIN);
+
+   zcTxios = 
+      theBDMt_->bdm()->zeroConfCont()->getTxioMapForScrAddr(
+         TestChain::scrAddrF);
+   ASSERT_NE(zcTxios, nullptr);
+   iface_->getStoredScriptHistory(ssh, TestChain::scrAddrF);
+   DBTestUtils::addTxioToSsh(ssh, *zcTxios);
+   EXPECT_EQ(ssh.getScriptBalance(), 5 * COIN);
+
+   //Register scrAddrD with the wallet. It should have the ZC balance
+   scrAddrVec.push_back(TestChain::scrAddrD);
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+   DBTestUtils::waitOnWalletRefresh(clients_, bdvID);
+   
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
+   EXPECT_EQ(scrObj->getFullBalance(), 65 * COIN);
+
+   //add last block
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4", "5" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
+
+   //check balances
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 70 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
+   EXPECT_EQ(scrObj->getFullBalance(), 65 * COIN);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(BlockUtilsWithWalletTest, ZC_Reorg)
+{
+   //create spender lamba
+   auto getSpenderPtr = [](
+      const UnspentTxOut& utxo,
+      shared_ptr<ResolverFeed> feed)
+      ->shared_ptr<ScriptSpender>
+   {
+      UTXO entry(utxo.value_, utxo.txHeight_, utxo.txIndex_, utxo.txOutIndex_,
+         move(utxo.txHash_), move(utxo.script_));
+
+      return make_shared<ScriptSpender>(entry, feed);
+   };
+
+   //
+   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
+   theBDMt_->start(config.initMode_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+
+   auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
+   auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
+      homedir_,
+      move(wltRoot), //root as a rvalue
+      SecureBinaryData(),
+      3); //set lookup computation to 3 entries
+   auto addr1_ptr = assetWlt->getNewAddress();
+   auto addr2_ptr = assetWlt->getNewAddress();
+
+   vector<BinaryData> scrAddrVec;
+   scrAddrVec.push_back(TestChain::scrAddrA);
+   scrAddrVec.push_back(TestChain::scrAddrB);
+   scrAddrVec.push_back(TestChain::scrAddrC);
+   
+   auto&& wltSet = assetWlt->getAddrHashSet();
+   vector<BinaryData> wltVec;
+   for (auto& addr : wltSet)
+      wltVec.push_back(addr);
+
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+   DBTestUtils::regWallet(clients_, bdvID, wltVec, assetWlt->getID());
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
+
+   //wait on signals
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
+   auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
+   auto assetWltDbObj = bdvPtr->getWalletOrLockbox(assetWlt->getID());
    auto delegateID = DBTestUtils::getLedgerDelegate(clients_, bdvID);
 
    //check balances
@@ -1609,180 +1679,89 @@ TEST_F(BlockUtilsWithWalletTest, DISABLED_TwoZC_CheckLedgers)
    EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
    EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
-   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
 
-   //check new wallet balances
-   for (auto& scripthash : hashSet)
+   for (auto& sa : wltSet)
    {
-      scrObj = dbAssetWlt->getScrAddrObjByKey(scripthash);
+      scrObj = assetWltDbObj->getScrAddrObjByKey(sa);
       EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
    }
 
    {
-      auto assetWlt_addr = assetWlt->getNewAddress();
-      addrVec.push_back(assetWlt_addr->getPrefixedHash());
-      auto&& assetWlt_recipient = assetWlt_addr->getRecipient(10 * COIN);
-      auto serialized_recipient = assetWlt_recipient->getSerializedScript();
+      Signer signer;
 
-      //create bogus tx to fund asset wallet from unknown output
-      auto&& bogusTx = READHEX("01000000" //version
-         "01" //txin count
-         "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F""00000000" //outpoint
-         "00" //empty sig
-         "ffffffff" //sequence
-         "01" //txout count
-         );
+      //instantiate resolver feed overloaded object
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
-      //txout
-      bogusTx.append(serialized_recipient);
+      auto addToFeed = [feed](const BinaryData& key)->void
+      {
+         auto&& datapair = DBTestUtils::getAddrAndPubKeyFromPrivKey(key);
+         feed->h160ToPubKey_.insert(datapair);
+         feed->pubKeyToPrivKey_[datapair.second] = key;
+      };
 
-      //locktime
-      bogusTx.append(READHEX("00000000"));
+      addToFeed(TestChain::privKeyAddrA);
+      addToFeed(TestChain::privKeyAddrB);
+      addToFeed(TestChain::privKeyAddrC);
+      addToFeed(TestChain::privKeyAddrD);
+      addToFeed(TestChain::privKeyAddrE);
+
+      //get utxo list for spend value
+      auto&& unspentVec = wlt->getSpendableTxOutListForValue(UINT64_MAX);
+
+      //consume firt utxo, send 2 to scrAddrA, 3 to new wallet
+      signer.addSpender(getSpenderPtr(unspentVec[0], feed));
+      signer.addRecipient(addr1_ptr->getRecipient(3 * COIN));
+      auto recipientChange = make_shared<Recipient_P2PKH>(
+         TestChain::scrAddrA.getSliceCopy(1, 20), 2 * COIN);
+      signer.addRecipient(recipientChange);
+      signer.sign();
+
+      //2nd tx, 2nd utxo, 20 to scrAddrB, 10 new wallet
+      Signer signer2;
+      signer2.addSpender(getSpenderPtr(unspentVec[1], feed));
+      signer2.addRecipient(addr2_ptr->getRecipient(10 * COIN));
+      auto recipientChange2 = make_shared<Recipient_P2PKH>(
+         TestChain::scrAddrB.getSliceCopy(1, 20), 20 * COIN);
+      signer2.addRecipient(recipientChange2);
+      signer2.sign();
 
       DBTestUtils::ZcVector zcVec;
-      zcVec.push_back(bogusTx, 14000000);
-
-
-      ZCHash1 = move(BtcUtils::getHash256(bogusTx));
+      zcVec.push_back(signer.serialize(), 14000000);
+      zcVec.push_back(signer2.serialize(), 14100000);
       DBTestUtils::pushNewZc(theBDMt_, zcVec);
       DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
    }
 
    //check balances
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
-   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 52 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
-   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
-   EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
-   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
 
-   //check new wallet balances
-   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
+   scrObj = assetWltDbObj->getScrAddrObjByKey(addr1_ptr->getPrefixedHash());
+   EXPECT_EQ(scrObj->getFullBalance(), 3 * COIN);
+   scrObj = assetWltDbObj->getScrAddrObjByKey(addr2_ptr->getPrefixedHash());
    EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
-   scrObj = dbAssetWlt->getScrAddrObjByKey(TestChain::scrAddrD);
-   EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
 
-   //grab wallet ledger
-   auto zcledger = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
-   EXPECT_EQ(zcledger.getValue(), 10 * COIN);
-   EXPECT_EQ(zcledger.getTxTime(), 14000000);
-   EXPECT_FALSE(zcledger.isOptInRBF());
+   //push block 4 of first chain
+   TestUtils::setBlocks({ "0", "1", "2", "3", "4" }, blk0dat_);
+   DBTestUtils::triggerNewBlockNotification(theBDMt_);
+   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
 
-   //grab delegate ledger
-   auto&& delegateLedger = DBTestUtils::getHistoryPage(clients_, bdvID, delegateID, 0);
-
-   unsigned zc1_count = 0;
-   for (auto& ld : delegateLedger)
-   {
-      if (ld.getTxHash() == ZCHash1)
-         zc1_count++;
-   }
-
-   EXPECT_EQ(zc1_count, 1);
-
-   {
-      ////assetWlt send-to-self
-      auto spendVal = 5 * COIN;
-      Signer signer2;
-
-      auto feed = make_shared<ResovlerUtils::HybridFeed>(assetWlt);
-      auto addToFeed = [feed](const BinaryData& key)->void
-      {
-         auto&& datapair = getAddrAndPubKeyFromPrivKey(key);
-         feed->testFeed_.h160ToPubKey_.insert(datapair);
-         feed->testFeed_.pubKeyToPrivKey_[datapair.second] = key;
-      };
-
-      addToFeed(TestChain::privKeyAddrD);
-
-
-      //get utxo list for spend value
-      auto&& unspentVec = dbAssetWlt->getSpendableTxOutListForValue();
-
-      vector<UnspentTxOut> utxoVec;
-      uint64_t tval = 0;
-      auto utxoIter = unspentVec.begin();
-      while (utxoIter != unspentVec.end())
-      {
-         tval += utxoIter->getValue();
-         utxoVec.push_back(*utxoIter);
-
-         if (tval >= spendVal)
-            break;
-
-         ++utxoIter;
-      }
-
-      //create script spender objects
-      uint64_t total = 0;
-      for (auto& utxo : utxoVec)
-      {
-         total += utxo.getValue();
-         signer2.addSpender(getSpenderPtr(utxo, feed));
-      }
-
-      auto addr2 = assetWlt->getNewAddress();
-      signer2.addRecipient(addr2->getRecipient(spendVal));
-      addrVec.push_back(addr2->getPrefixedHash());
-
-      //sign, verify then broadcast
-      signer2.sign();
-      EXPECT_TRUE(signer2.verify());
-
-      auto rawTx = signer2.serialize();
-      DBTestUtils::ZcVector zcVec2;
-      zcVec2.push_back(rawTx, 15000000);
-
-      ZCHash2 = move(BtcUtils::getHash256(rawTx));
-      DBTestUtils::pushNewZc(theBDMt_, zcVec2);
-      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
-   }
-
-   //check balances
+   //check balances, 1st ZC should be gone, 2nd should still be valid
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
    EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
-   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
-   EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
-   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
-
-   //check new wallet balances
-   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
    EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
-   scrObj = dbAssetWlt->getScrAddrObjByKey(TestChain::scrAddrD);
+
+   scrObj = assetWltDbObj->getScrAddrObjByKey(addr1_ptr->getPrefixedHash());
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
-
-   //grab wallet ledger
-   auto zcledger2 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
-   EXPECT_EQ(zcledger2.getValue(), 10 * COIN);
-   EXPECT_EQ(zcledger2.getTxTime(), 14000000);
-
-   auto zcledger3 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
-   EXPECT_EQ(zcledger3.getValue(), 5 * COIN);
-   EXPECT_EQ(zcledger3.getTxTime(), 15000000);
-
-   //grab delegate ledger
-   auto&& delegateLedger2 = DBTestUtils::getHistoryPage(clients_, bdvID, delegateID, 0);
-
-   unsigned zc2_count = 0;
-   unsigned zc3_count = 0;
-
-   for (auto& ld : delegateLedger2)
-   {
-      if (ld.getTxHash() == ZCHash1)
-         zc2_count++;
-
-      if (ld.getTxHash() == ZCHash2)
-         zc3_count++;
-   }
-
-   EXPECT_EQ(zc2_count, 1);
-   EXPECT_EQ(zc3_count, 1);
+   scrObj = assetWltDbObj->getScrAddrObjByKey(addr2_ptr->getPrefixedHash());
+   EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1907,7 +1886,7 @@ TEST_F(BlockUtilsWithWalletTest, MultipleSigners_2of3_NativeP2WSH)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -2015,7 +1994,7 @@ TEST_F(BlockUtilsWithWalletTest, MultipleSigners_2of3_NativeP2WSH)
 
    //create feed from asset wallet 1
    auto feed_ms = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(assetWlt_1);
-   auto assetFeed = make_shared<ResovlerUtils::CustomFeed>(addr_p2wsh, feed_ms);
+   auto assetFeed = make_shared<ResolverUtils::CustomFeed>(addr_p2wsh, feed_ms);
 
    //create spenders
    uint64_t total = 0;
@@ -2087,7 +2066,7 @@ TEST_F(BlockUtilsWithWalletTest, MultipleSigners_2of3_NativeP2WSH)
    Signer signer3;
    //create feed from asset wallet 2
    auto feed_ms3 = make_shared<ResolverFeed_AssetWalletSingle_ForMultisig>(assetWlt_2);
-   auto assetFeed3 = make_shared<ResovlerUtils::CustomFeed>(addr_p2wsh, feed_ms3);
+   auto assetFeed3 = make_shared<ResolverUtils::CustomFeed>(addr_p2wsh, feed_ms3);
    signer3.deserializeState(signer2.serializeState());
 
    {
@@ -2212,6 +2191,7 @@ GTEST_API_ int main(int argc, char **argv)
 
    FLUSHLOG();
    CLEANUPLOG();
+
 
    return exitCode;
 }

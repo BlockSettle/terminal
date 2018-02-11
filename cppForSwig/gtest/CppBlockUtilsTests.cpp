@@ -8020,7 +8020,8 @@ TEST_F(BlockUtilsBare, FCGIStack)
 
    w1AddrBalances = wallet1.getAddrBalancesFromDB();
    balanceVec = w1AddrBalances[TestChain::scrAddrA];
-   EXPECT_EQ(balanceVec[0], 50 * COIN);
+   //value didn't change, shouldnt be getting a balance vector for this address
+   EXPECT_EQ(balanceVec.size(), 0);
    balanceVec = w1AddrBalances[TestChain::scrAddrB];
    EXPECT_EQ(balanceVec[0], 70 * COIN);
    balanceVec = w1AddrBalances[TestChain::scrAddrC];
@@ -8155,7 +8156,7 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
       Signer signer;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -8258,7 +8259,7 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
       Signer signer2;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -8490,7 +8491,7 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
       Signer signer2;
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -8705,7 +8706,7 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
       signer.setLockTime(3);
 
       //instantiate resolver feed overloaded object
-      auto feed = make_shared<ResovlerUtils::TestResolverFeed>();
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
 
       auto addToFeed = [feed](const BinaryData& key)->void
       {
@@ -9011,7 +9012,7 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
       auto spendVal = 5 * COIN;
       Signer signer2;
 
-      auto feed = make_shared<ResovlerUtils::HybridFeed>(assetWlt);
+      auto feed = make_shared<ResolverUtils::HybridFeed>(assetWlt);
       auto addToFeed = [feed](const BinaryData& key)->void
       {
          auto&& datapair = DBTestUtils::getAddrAndPubKeyFromPrivKey(key);
