@@ -633,16 +633,13 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
       auto addrMap = scrAddrMap_.get();
       for (auto& scrAddrPair : *addrMap)
          scrAddrPair.second->fetchDBScrAddrData(
-            scanInfo.startBlock_, scanInfo.endBlock_, updateID);
-
-      scanWalletZeroConf(scanInfo, updateID);
+            scanInfo.prevTopBlockHeight_, scanInfo.endBlock_, updateID);
 
       map<BinaryData, TxIOPair> txioMap;
       getTxioForRange(scanInfo.startBlock_, UINT32_MAX, txioMap);
       updateWalletLedgersFromTxio(*ledgerAllAddr_, txioMap, 
          scanInfo.startBlock_, UINT32_MAX, true);
 
-   
       balance_ = getFullBalanceFromDB();
    }
   
@@ -935,11 +932,9 @@ vector<LedgerEntry> BtcWallet::getHistoryPageAsVector(uint32_t pageId)
 ////////////////////////////////////////////////////////////////////////////////
 void BtcWallet::needsRefresh(bool refresh)
 { 
-   //merge addresses in
-
    //notify BDV
    if (refresh && isRegistered_)
-      bdvPtr_->flagRefresh(BDV_refreshAndRescan, walletID_);
+      bdvPtr_->flagRefresh(BDV_refreshAndRescan, walletID_, nullptr);
 
    //call custom callback
    doneRegisteringCallback_();

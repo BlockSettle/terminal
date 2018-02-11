@@ -67,6 +67,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
 {
    uint32_t startBlock = UINT32_MAX;
    uint32_t endBlock = UINT32_MAX;
+   uint32_t prevTopBlock = UINT32_MAX;
 
    bool reorg = false;
    bool refresh = false;
@@ -78,7 +79,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
    {
    case BDV_Init:
    {
-      startBlock = 0;
+      prevTopBlock = startBlock = 0;
       endBlock = blockchain().top()->getBlockHeight();
       refresh = true;
       break;
@@ -116,6 +117,8 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
             reorgNotif->zcPurgePacket_->minedTxioKeys_;
       }
 
+      prevTopBlock = reorgState.prevTop_->getBlockHeight() + 1;
+
       break;
    }
    
@@ -134,13 +137,18 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       }
 
       leMapPtr = &zcAction->leMap_;
-      startBlock = endBlock = blockchain().top()->getBlockHeight();
+      prevTopBlock = startBlock = endBlock = blockchain().top()->getBlockHeight();
 
       break;
    }
 
    case BDV_Refresh:
    {
+      auto refreshNotif =
+         dynamic_pointer_cast<BDV_Notification_Refresh>(action);
+      scanData.saStruct_.zcMap_ =
+         move(refreshNotif->zcPacket_.txioMap_);
+
       refresh = true;
       break;
    }
@@ -149,7 +157,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       return;
    }
    
-
+   scanData.prevTopBlockHeight_ = prevTopBlock;
    scanData.endBlock_ = endBlock;
    scanData.action_ = action->action_type();
    scanData.reorg_ = reorg;
@@ -219,7 +227,7 @@ void BlockDataViewer::registerArbitraryAddressVec(
       if (!refresh)
          return;
 
-      flagRefresh(BDV_refreshAndRescan, walletID);
+      flagRefresh(BDV_refreshAndRescan, walletID, nullptr);
    };
 
    shared_ptr<ScrAddrFilter::WalletInfo> wltInfo =
@@ -397,10 +405,13 @@ void BlockDataViewer::updateLockboxesLedgerFilter(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BlockDataViewer::flagRefresh(BDV_refresh refresh, 
-   const BinaryData& refreshID)
+void BlockDataViewer::flagRefresh(
+   BDV_refresh refresh, const BinaryData& refreshID,
+   unique_ptr<BDV_Notification_ZC> zcPtr)
 { 
    auto notif = make_unique<BDV_Notification_Refresh>(refresh, refreshID);
+   if (zcPtr != nullptr)
+      notif->zcPacket_ = move(zcPtr->packet_);
 
    pushNotification(move(notif));
 }
@@ -743,6 +754,28 @@ tuple<uint64_t, uint64_t> BlockDataViewer::getAddrFullBalance(
    return move(make_tuple(ssh.totalUnspent_, ssh.totalTxioCount_));
 }
 
+///////////////////////////////////////////////////////////////////////////////
+unique_ptr<BDV_Notification_ZC> BlockDataViewer::createZcNotification(
+   function<bool(const BinaryData&)> filter)
+{
+   ZeroConfContainer::NotificationPacket packet;
+
+   //grab zc map
+   auto txiomap = zeroConfCont_->getFullTxioMap();
+
+   for (auto& txiopair : *txiomap)
+   {
+      if (!filter(txiopair.first))
+         continue;
+
+      packet.txioMap_.insert(txiopair);
+   }
+
+   auto notifPtr = make_unique<BDV_Notification_ZC>(packet);
+   return notifPtr;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 //// WalletGroup
 ////////////////////////////////////////////////////////////////////////////////
@@ -856,15 +889,24 @@ bool WalletGroup::registerAddresses(const vector<BinaryData>& saVec,
       removeAddrVec.push_back(addrPair.first);
    }
 
-   auto callback = [&, saMap, removeAddrVec, theWallet](bool refresh)->void
+   auto callback = 
+      [&, saMap, removeAddrVec, theWallet](bool refresh)->void
    {
+      auto newScrAddrFilter = [&saMap](const BinaryData& sa)->bool
+      {
+         return saMap.find(sa) != saMap.end();
+      };
+
+      auto&& zcNotifPacket = 
+         bdvPtr_->createZcNotification(newScrAddrFilter);
       theWallet->scrAddrMap_.update(saMap);
 
       if (removeAddrVec.size() > 0)
          theWallet->scrAddrMap_.erase(removeAddrVec);
 
       theWallet->setRegistered();
-      theWallet->needsRefresh(refresh);
+      bdvPtr_->flagRefresh(
+         BDV_refreshAndRescan, theWallet->walletID_, move(zcNotifPacket));
    };
 
    return saf_->registerAddresses(saSet, IDstr, areNew, callback);
@@ -1038,7 +1080,7 @@ void WalletGroup::updateLedgerFilter(const vector<BinaryData>& walletsList)
       return;
 
    pageHistory(false, true);
-   bdvPtr_->flagRefresh(BDV_filterChanged, BinaryData());
+   bdvPtr_->flagRefresh(BDV_filterChanged, BinaryData(), nullptr);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

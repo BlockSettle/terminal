@@ -127,7 +127,9 @@ public:
    void scanScrAddrVector(const map<BinaryData, ScrAddrObj>& scrAddrMap, 
                            uint32_t startBlock, uint32_t endBlock) const;
 
-   void flagRefresh(BDV_refresh refresh, const BinaryData& refreshId);
+   void flagRefresh(
+      BDV_refresh refresh, const BinaryData& refreshId,
+      unique_ptr<BDV_Notification_ZC> zcPtr);
 
    StoredHeader getMainBlockFromDB(uint32_t height) const;
    StoredHeader getBlockFromDB(uint32_t height, uint8_t dupID) const;
@@ -211,6 +213,9 @@ public:
    shared_ptr<BtcWallet> getWalletOrLockbox(const BinaryData& id) const;
 
    tuple<uint64_t, uint64_t> getAddrFullBalance(const BinaryData&);
+
+   unique_ptr<BDV_Notification_ZC> createZcNotification(
+      function<bool(const BinaryData&)>);
 
 protected:
    atomic<bool> rescanZC_;

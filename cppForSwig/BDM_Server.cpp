@@ -1573,27 +1573,13 @@ void BDV_Server_Object::init()
    auto&& notifPtr = make_unique<BDV_Notification_Init>();
    scanWallets(move(notifPtr));
 
-   auto createZcNotif = [&](void)->unique_ptr<BDV_Notification_ZC>
+   //create zc packet and pass to wallets
+   auto filterLbd = [this](const BinaryData& scrAddr)->bool
    {
-      ZeroConfContainer::NotificationPacket packet;
-
-      //grab zc map
-      auto txiomap = zeroConfCont_->getFullTxioMap();
-
-      for (auto& txiopair : *txiomap)
-      {
-         if (!hasScrAddress(txiopair.first))
-            continue;
-
-         packet.txioMap_.insert(txiopair);
-      }
-
-      auto notifPtr = make_unique<BDV_Notification_ZC>(packet);
-      return notifPtr;
+      return hasScrAddress(scrAddr);
    };
 
-   //create zc packet and pass to wallets
-   auto zcstruct = createZcNotif();
+   auto zcstruct = createZcNotification(filterLbd);
    scanWallets(move(zcstruct));
    
    //mark bdv object as ready
@@ -1606,7 +1592,6 @@ void BDV_Server_Object::init()
    unsigned int topblock = blockchain().top()->getBlockHeight();
    args.push_back(move(IntType(topblock)));
    cb_->callback(move(args));
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////

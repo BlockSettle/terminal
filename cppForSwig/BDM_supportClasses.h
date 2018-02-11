@@ -707,6 +707,7 @@ struct BDV_Notification_Refresh : public BDV_Notification
 {
    const BDV_refresh refresh_;
    const BinaryData refreshID_;
+   ZeroConfContainer::NotificationPacket zcPacket_;
 
    BDV_Notification_Refresh(
       BDV_refresh refresh, const BinaryData& refreshID) :

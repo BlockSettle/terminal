@@ -28,6 +28,7 @@ struct ScanWalletStruct
 {
    BDV_Action action_;
    
+   unsigned prevTopBlockHeight_;
    unsigned startBlock_;
    unsigned endBlock_ = UINT32_MAX;
    bool reorg_ = false;
