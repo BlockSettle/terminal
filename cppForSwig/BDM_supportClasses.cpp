@@ -1065,7 +1065,6 @@ void ZeroConfContainer::dropZC(const set<BinaryData>& txHashes)
    auto txhashmapPtr = txHashToDBKey_.get();
 
    map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> updateMap;
-   vector<BinaryData> delKeys;
 
    for (auto& hash : txHashes)
    {
@@ -1121,12 +1120,6 @@ void ZeroConfContainer::dropZC(const set<BinaryData>& txHashes)
 
          if (rkeys.size() > 0)
          {
-            if (rkeys.size() == txiomap->size())
-            {
-               delKeys.push_back(sa);
-               continue;
-            }
-
             shared_ptr<map<BinaryData, TxIOPair>> newmap;
             auto mapIter = updateMap.find(sa);
             if (mapIter == updateMap.end())
@@ -1165,6 +1158,15 @@ void ZeroConfContainer::dropZC(const set<BinaryData>& txHashes)
    //drop from containers
    txMap_.erase(keysToDelete);
    txHashToDBKey_.erase(hashesToDelete);
+
+   //gathers keys to delete
+   vector<BinaryData> delKeys;
+   for (auto& sa_pair : updateMap)
+   {
+      if (sa_pair.second->size() > 0)
+         continue;
+      delKeys.push_back(sa_pair.first);
+   }
 
    txioMap_.erase(delKeys);
    txioMap_.update(updateMap);
