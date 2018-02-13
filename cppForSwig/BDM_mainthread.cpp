@@ -30,7 +30,7 @@ void BlockDataManager::registerBDVwithZCcontainer(
 
    auto newzc = [bdvPtr](ZeroConfContainer::NotificationPacket& zcMap)->void
    {
-      bdvPtr->zcCallback(move(zcMap));
+      bdvPtr->zcCallback(zcMap);
    };
 
    auto zcerror = [bdvPtr](string& error, string& id)->void
