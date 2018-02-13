@@ -6246,7 +6246,7 @@ TEST_F(BlockUtilsBare, Load4Blocks_ReloadBDM_ZC_Plus2)
 TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
 {
    //copy the first 3 blocks
-   TestUtils::setBlocks({ "0", "1", "2" }, blk0dat_);
+   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
 
    theBDMt_->start(config.initMode_);
    auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
@@ -6281,34 +6281,31 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    auto wltLB1 = bdvPtr->getWalletOrLockbox(LB1ID);
    auto wltLB2 = bdvPtr->getWalletOrLockbox(LB2ID);
 
-   EXPECT_EQ(DBTestUtils::getTopBlockHeight(iface_, HEADERS), 2);
-   EXPECT_EQ(DBTestUtils::getTopBlockHash(iface_, HEADERS), TestChain::blkHash2);
-   EXPECT_TRUE(theBDMt_->bdm()->blockchain()->getHeaderByHash(TestChain::blkHash2)->isMainBranch());
+   EXPECT_EQ(DBTestUtils::getTopBlockHeight(iface_, HEADERS), 3);
+   EXPECT_EQ(DBTestUtils::getTopBlockHash(iface_, HEADERS), TestChain::blkHash3);
+   EXPECT_TRUE(theBDMt_->bdm()->blockchain()->getHeaderByHash(TestChain::blkHash3)->isMainBranch());
 
    const ScrAddrObj* scrObj;
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
    EXPECT_EQ(scrObj->getFullBalance(), 50*COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
-   EXPECT_EQ(scrObj->getFullBalance(), 55*COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 30*COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
-   EXPECT_EQ(scrObj->getFullBalance(),  0*COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 55*COIN);
 
    uint64_t fullBalance = wlt->getFullBalance();
    uint64_t spendableBalance = wlt->getSpendableBalance(3);
    uint64_t unconfirmedBalance = wlt->getUnconfirmedBalance(3);
-   EXPECT_EQ(fullBalance, 105 * COIN);
-   EXPECT_EQ(spendableBalance, 5 * COIN);
-   EXPECT_EQ(unconfirmedBalance, 105 * COIN);
+   EXPECT_EQ(fullBalance, 165 * COIN);
+   EXPECT_EQ(spendableBalance, 65 * COIN);
+   EXPECT_EQ(unconfirmedBalance, 165 * COIN);
 
    //add ZC
-   BinaryData rawZC(259);
-   FILE *ff = fopen("../reorgTest/ZCtx.tx", "rb");
-   fread(rawZC.getPtr(), 259, 1, ff);
-   fclose(ff);
-   DBTestUtils::ZcVector rawZcVec;
-   rawZcVec.push_back(move(rawZC), 1300000000);
+   auto&& ZC1 = TestUtils::getTx(5, 1); //block 5, tx 1
+   auto&& ZChash1 = BtcUtils::getHash256(ZC1);
 
-   BinaryData ZChash = READHEX(TestChain::zcTxHash256);
+   DBTestUtils::ZcVector rawZcVec;
+   rawZcVec.push_back(ZC1, 1300000000);
 
    DBTestUtils::pushNewZc(theBDMt_, rawZcVec);
    DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
@@ -6316,19 +6313,19 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
    EXPECT_EQ(scrObj->getFullBalance(), 50*COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
-   EXPECT_EQ(scrObj->getFullBalance(), 75*COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 20*COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
-   EXPECT_EQ(scrObj->getFullBalance(),  10*COIN);
+   EXPECT_EQ(scrObj->getFullBalance(), 65*COIN);
 
    fullBalance = wlt->getFullBalance();
    spendableBalance = wlt->getSpendableBalance(4);
    unconfirmedBalance = wlt->getUnconfirmedBalance(4);
-   EXPECT_EQ(fullBalance, 135 * COIN);
-   EXPECT_EQ(spendableBalance, 5 * COIN);
-   EXPECT_EQ(unconfirmedBalance, 135 * COIN);
+   EXPECT_EQ(fullBalance, 165 * COIN);
+   EXPECT_EQ(spendableBalance, 35 * COIN);
+   EXPECT_EQ(unconfirmedBalance, 165 * COIN);
 
    //check ledger for ZC
-   LedgerEntry le = wlt->getLedgerEntryForTx(ZChash);
+   LedgerEntry le = wlt->getLedgerEntryForTx(ZChash1);
    EXPECT_EQ(le.getTxTime(), 1300000000);
    EXPECT_EQ(le.getValue(),  3000000000);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
@@ -6341,14 +6338,14 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    zcKey.append(WRITE_UINT32_LE(0));
 
    EXPECT_EQ(iface_->getStoredZcTx(zcStx, zcKey), true);
-   EXPECT_EQ(zcStx.thisHash_, ZChash);
+   EXPECT_EQ(zcStx.thisHash_, ZChash1);
    EXPECT_EQ(zcStx.numBytes_ , TestChain::zcTxSize);
    EXPECT_EQ(zcStx.fragBytes_, 190);
    EXPECT_EQ(zcStx.numTxOut_, 2);
    EXPECT_EQ(zcStx.stxoMap_.begin()->second.getValue(), 10 * COIN);
 
    //check ZChash in DB
-   EXPECT_EQ(iface_->getTxHashForLdbKey(zcKey), ZChash);
+   EXPECT_EQ(iface_->getTxHashForLdbKey(zcKey), ZChash1);
 
    dbtx.reset();
 
@@ -6383,49 +6380,6 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    wltLB1 = bdvPtr->getWalletOrLockbox(LB1ID);
    wltLB2 = bdvPtr->getWalletOrLockbox(LB2ID);
 
-   //add 4th block
-   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
-   DBTestUtils::triggerNewBlockNotification(theBDMt_);
-   DBTestUtils::waitOnNewBlockSignal(clients_, bdvID);
-
-   EXPECT_EQ(DBTestUtils::getTopBlockHeight(iface_, HEADERS), 3);
-   EXPECT_EQ(DBTestUtils::getTopBlockHash(iface_, HEADERS), TestChain::blkHash3);
-   EXPECT_TRUE(theBDMt_->bdm()->blockchain()->getHeaderByHash(TestChain::blkHash3)->isMainBranch());
-
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
-   EXPECT_EQ(scrObj->getFullBalance(), 50*COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
-   EXPECT_EQ(scrObj->getFullBalance(), 20*COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
-   EXPECT_EQ(scrObj->getFullBalance(), 65*COIN);
-
-   fullBalance = wlt->getFullBalance();
-   spendableBalance = wlt->getSpendableBalance(5);
-   unconfirmedBalance = wlt->getUnconfirmedBalance(5);
-   EXPECT_EQ(fullBalance, 135 * COIN);
-   EXPECT_EQ(spendableBalance, 5 * COIN);
-   EXPECT_EQ(unconfirmedBalance, 135 * COIN);
-
-   le = wlt->getLedgerEntryForTx(ZChash);
-   EXPECT_EQ(le.getTxTime(), 1300000000);
-   EXPECT_EQ(le.getValue(),  3000000000);
-   EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
-
-   //The BDM was recycled, but the ZC is still live, and the mempool should 
-   //have reloaded it. Pull from DB and verify
-   dbtx = move(
-      iface_->beginTransaction(ZERO_CONF, LMDB::ReadOnly));
-   StoredTx zcStx2;
-
-   EXPECT_EQ(iface_->getStoredZcTx(zcStx2, zcKey), true);
-   EXPECT_EQ(zcStx2.thisHash_, ZChash);
-   EXPECT_EQ(zcStx2.numBytes_, TestChain::zcTxSize);
-   EXPECT_EQ(zcStx2.fragBytes_, 190);
-   EXPECT_EQ(zcStx2.numTxOut_, 2);
-   EXPECT_EQ(zcStx2.stxoMap_.begin()->second.getValue(), 10 * COIN);
-
-   dbtx.reset();
-
    //add 5th block
    TestUtils::setBlocks({ "0", "1", "2", "3", "4" }, blk0dat_);
    DBTestUtils::triggerNewBlockNotification(theBDMt_);
@@ -6454,7 +6408,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    StoredTx zcStx3;
 
    EXPECT_EQ(iface_->getStoredZcTx(zcStx3, zcKey), true);
-   EXPECT_EQ(zcStx3.thisHash_, ZChash);
+   EXPECT_EQ(zcStx3.thisHash_, ZChash1);
    EXPECT_EQ(zcStx3.numBytes_, TestChain::zcTxSize);
    EXPECT_EQ(zcStx3.fragBytes_, 190); // Not sure how Python can get this value
    EXPECT_EQ(zcStx3.numTxOut_, 2);
@@ -6485,7 +6439,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(spendableBalance, 40 * COIN);
    EXPECT_EQ(unconfirmedBalance, 140 * COIN);
 
-   le = wlt->getLedgerEntryForTx(ZChash);
+   le = wlt->getLedgerEntryForTx(ZChash1);
    EXPECT_EQ(le.getTxTime(), 1231009513);
    EXPECT_EQ(le.getValue(), 3000000000);
    EXPECT_EQ(le.getBlockNum(), 5);
@@ -8412,7 +8366,7 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
 
       if (total > spendVal)
       {
-         //deal with change, no fee fee
+         //deal with change, no fee
          auto changeVal = total - spendVal;
          auto recipientChange = make_shared<Recipient_P2PKH>(
             TestChain::scrAddrD.getSliceCopy(1, 20), changeVal);
@@ -8859,7 +8813,6 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
    EXPECT_EQ(assetWlt_balanceCount[2], 27 * COIN);
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
 {
@@ -9108,6 +9061,387 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
 
    EXPECT_EQ(zc2_count, 1);
    EXPECT_EQ(zc3_count, 1);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
+{
+   //create spender lambda
+   auto getSpenderPtr = [](
+      const UnspentTxOut& utxo,
+      shared_ptr<ResolverFeed> feed, bool flagRBF)
+      ->shared_ptr<ScriptSpender>
+   {
+      UTXO entry(utxo.value_, utxo.txHeight_, utxo.txIndex_, utxo.txOutIndex_,
+         move(utxo.txHash_), move(utxo.script_));
+
+      auto spender = make_shared<ScriptSpender>(entry, feed);
+
+      if(flagRBF)
+         spender->setSequence(UINT32_MAX - 2);
+
+      return spender;
+   };
+
+   BinaryData ZCHash1, ZCHash2, ZCHash3;
+
+   //
+   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
+
+   theBDMt_->start(config.initMode_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+
+   vector<BinaryData> scrAddrVec;
+   scrAddrVec.push_back(TestChain::scrAddrA);
+   scrAddrVec.push_back(TestChain::scrAddrB);
+   scrAddrVec.push_back(TestChain::scrAddrC);
+   scrAddrVec.push_back(TestChain::scrAddrD);
+   scrAddrVec.push_back(TestChain::scrAddrE);
+
+   //// create assetWlt ////
+
+   //create a root private key
+   auto&& wltRoot = SecureBinaryData().GenerateRandom(32);
+   auto assetWlt = AssetWallet_Single::createFromPrivateRoot_Armory135(
+      homedir_,
+      move(wltRoot), //root as a r value
+      SecureBinaryData(),
+      10); //set lookup computation to 5 entries
+
+           //register with db
+   vector<BinaryData> addrVec;
+
+   auto hashSet = assetWlt->getAddrHashSet();
+   vector<BinaryData> hashVec;
+   hashVec.insert(hashVec.begin(), hashSet.begin(), hashSet.end());
+
+   DBTestUtils::regWallet(clients_, bdvID, hashVec, assetWlt->getID());
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec, "wallet1");
+
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
+
+   //wait on signals
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
+   auto wlt = bdvPtr->getWalletOrLockbox(wallet1id);
+   auto dbAssetWlt = bdvPtr->getWalletOrLockbox(assetWlt->getID());
+
+   //check balances
+   const ScrAddrObj* scrObj;
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
+   EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+
+   //check new wallet balances
+   for (auto& scripthash : hashSet)
+   {
+      scrObj = dbAssetWlt->getScrAddrObjByKey(scripthash);
+      EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   }
+
+   {
+      ////spend 27 from wlt to assetWlt's first 2 unused addresses
+      ////send rest back to scrAddrA
+
+      auto spendVal = 27 * COIN;
+      Signer signer;
+
+      //instantiate resolver feed overloaded object
+      auto feed = make_shared<ResolverUtils::TestResolverFeed>();
+
+      auto addToFeed = [feed](const BinaryData& key)->void
+      {
+         auto&& datapair = DBTestUtils::getAddrAndPubKeyFromPrivKey(key);
+         feed->h160ToPubKey_.insert(datapair);
+         feed->pubKeyToPrivKey_[datapair.second] = key;
+      };
+
+      addToFeed(TestChain::privKeyAddrA);
+      addToFeed(TestChain::privKeyAddrB);
+      addToFeed(TestChain::privKeyAddrC);
+      addToFeed(TestChain::privKeyAddrD);
+      addToFeed(TestChain::privKeyAddrE);
+
+      //get utxo list for spend value
+      auto&& unspentVec = wlt->getSpendableTxOutListForValue(spendVal);
+
+      vector<UnspentTxOut> utxoVec;
+      uint64_t tval = 0;
+      auto utxoIter = unspentVec.begin();
+      while (utxoIter != unspentVec.end())
+      {
+         tval += utxoIter->getValue();
+         utxoVec.push_back(*utxoIter);
+
+         if (tval > spendVal)
+            break;
+
+         ++utxoIter;
+      }
+
+      //create script spender objects
+      uint64_t total = 0;
+      for (auto& utxo : utxoVec)
+      {
+         total += utxo.getValue();
+         signer.addSpender(getSpenderPtr(utxo, feed, true));
+      }
+
+      //spend 12 to first address
+      auto addr0 = assetWlt->getNewAddress();
+      signer.addRecipient(addr0->getRecipient(12 * COIN));
+      addrVec.push_back(addr0->getPrefixedHash());
+
+      //spend 15 to addr 1, use P2PKH
+      auto addr1 = assetWlt->getNewAddress();
+      signer.addRecipient(addr1->getRecipient(15 * COIN));
+      addrVec.push_back(addr1->getPrefixedHash());
+
+      if (total > spendVal)
+      {
+         //deal with change, no fee
+         auto changeVal = total - spendVal;
+         auto recipientChange = make_shared<Recipient_P2PKH>(
+            TestChain::scrAddrD.getSliceCopy(1, 20), changeVal);
+         signer.addRecipient(recipientChange);
+      }
+
+      //sign, verify then broadcast
+      signer.sign();
+      EXPECT_TRUE(signer.verify());
+
+      auto rawTx = signer.serialize();
+      DBTestUtils::ZcVector zcVec;
+      zcVec.push_back(rawTx, 14000000);
+
+      ZCHash1 = move(BtcUtils::getHash256(rawTx));
+      DBTestUtils::pushNewZc(theBDMt_, zcVec);
+      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+   }
+
+   //check balances
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
+   EXPECT_EQ(scrObj->getFullBalance(), 8 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+
+   //check new wallet balances
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
+   EXPECT_EQ(scrObj->getFullBalance(), 12 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[1]);
+   EXPECT_EQ(scrObj->getFullBalance(), 15 * COIN);
+
+   //grab ledger
+   auto zcledger = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   EXPECT_EQ(zcledger.getValue(), 27 * COIN);
+   EXPECT_EQ(zcledger.getTxTime(), 14000000);
+   EXPECT_TRUE(zcledger.isOptInRBF());
+
+   //cpfp the first zc
+   {
+      Signer signer3;
+
+      //instantiate resolver feed overloaded object
+      auto assetFeed = make_shared<ResolverFeed_AssetWalletSingle>(assetWlt);
+
+      //get utxo list for spend value
+      auto&& unspentVec = dbAssetWlt->getSpendableTxOutListZC();
+
+      //create script spender objects
+      uint64_t total = 0;
+      for (auto& utxo : unspentVec)
+      {
+         total += utxo.getValue();
+         signer3.addSpender(getSpenderPtr(utxo, assetFeed, true));
+      }
+
+      //spend 4 to new address
+      auto addr0 = assetWlt->getNewAddress();
+      signer3.addRecipient(addr0->getRecipient(4 * COIN));
+      addrVec.push_back(addr0->getPrefixedHash());
+
+      //spend 6 to new address
+      auto addr1 = assetWlt->getNewAddress();
+      signer3.addRecipient(addr1->getRecipient(6 * COIN));
+      addrVec.push_back(addr1->getPrefixedHash());
+
+      //deal with change, no fee
+      auto changeVal = total - 10 * COIN;
+      auto recipientChange = make_shared<Recipient_P2PKH>(
+         TestChain::scrAddrD.getSliceCopy(1, 20), changeVal);
+      signer3.addRecipient(recipientChange);
+
+      //sign, verify then broadcast
+      {
+         auto lock = assetWlt->lockDecryptedContainer();
+         signer3.sign();
+      }
+
+      auto rawTx = signer3.serialize();
+      DBTestUtils::ZcVector zcVec3;
+      zcVec3.push_back(rawTx, 15000000);
+
+      ZCHash2 = move(BtcUtils::getHash256(rawTx));
+      DBTestUtils::pushNewZc(theBDMt_, zcVec3);
+      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+   }
+
+   //check balances
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
+   EXPECT_EQ(scrObj->getFullBalance(), 25 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+
+   //check new wallet balances
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[1]);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
+   EXPECT_EQ(scrObj->getFullBalance(), 4 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[3]);
+   EXPECT_EQ(scrObj->getFullBalance(), 6 * COIN);
+
+
+   //grab ledgers
+
+   //first zc should be valid still
+   auto zcledger1 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   EXPECT_EQ(zcledger1.getValue(), 27 * COIN);
+   EXPECT_EQ(zcledger1.getTxTime(), 14000000);
+   EXPECT_TRUE(zcledger1.isOptInRBF());
+
+   //second zc should be valid
+   auto zcledger2 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   EXPECT_EQ(zcledger2.getValue(), -17 * COIN);
+   EXPECT_EQ(zcledger2.getTxTime(), 15000000);
+   EXPECT_TRUE(zcledger2.isOptInRBF());
+
+   //rbf the child
+   {
+      auto spendVal = 10 * COIN;
+      Signer signer2;
+
+      //instantiate resolver feed
+      auto assetFeed = 
+         make_shared<ResolverFeed_AssetWalletSingle>(assetWlt);
+
+      //get utxo list for spend value
+      auto&& unspentVec = dbAssetWlt->getRBFTxOutList();
+
+      vector<UnspentTxOut> utxoVec;
+      uint64_t tval = 0;
+      auto utxoIter = unspentVec.begin();
+      while (utxoIter != unspentVec.end())
+      {
+         tval += utxoIter->getValue();
+         utxoVec.push_back(*utxoIter);
+
+         if (tval > spendVal)
+            break;
+
+         ++utxoIter;
+      }
+
+      //create script spender objects
+      uint64_t total = 0;
+      for (auto& utxo : utxoVec)
+      {
+         total += utxo.getValue();
+         signer2.addSpender(getSpenderPtr(utxo, assetFeed, true));
+      }
+
+      //spend 5 to new address
+      auto addr0 = assetWlt->getNewAddress();
+      signer2.addRecipient(addr0->getRecipient(6 * COIN));
+      addrVec.push_back(addr0->getPrefixedHash());
+
+
+      if (total > spendVal)
+      {
+         //change addrE, 1 btc fee
+         auto changeVal = 5 * COIN;
+         auto recipientChange = make_shared<Recipient_P2PKH>(
+            TestChain::scrAddrE.getSliceCopy(1, 20), changeVal);
+         signer2.addRecipient(recipientChange);
+      }
+
+      //sign, verify then broadcast
+      {
+         auto lock = assetWlt->lockDecryptedContainer();
+         signer2.sign();
+      }
+      EXPECT_TRUE(signer2.verify());
+
+      auto rawTx = signer2.serialize();
+      DBTestUtils::ZcVector zcVec2;
+      zcVec2.push_back(rawTx, 17000000);
+
+      ZCHash3 = move(BtcUtils::getHash256(rawTx));
+      DBTestUtils::pushNewZc(theBDMt_, zcVec2);
+      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+   }
+
+   //check balances
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
+   EXPECT_EQ(scrObj->getFullBalance(), 8 * COIN);
+   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
+   EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
+
+   //check new wallet balances
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[1]);
+   EXPECT_EQ(scrObj->getFullBalance(), 15 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[3]);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[4]);
+   EXPECT_EQ(scrObj->getFullBalance(), 6 * COIN);
+
+   //grab ledgers
+
+   //first zc should be replaced, hence the ledger should be empty
+   auto zcledger3 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   EXPECT_EQ(zcledger3.getValue(), 27 * COIN);
+   EXPECT_EQ(zcledger3.getTxTime(), 14000000);
+   EXPECT_TRUE(zcledger3.isOptInRBF());
+
+   //second zc should be replaced
+   auto zcledger8 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   EXPECT_EQ(zcledger8.getTxHash(), BtcUtils::EmptyHash_);
+
+   //third zc should be valid
+   auto zcledger9 = dbAssetWlt->getLedgerEntryForTx(ZCHash3);
+   EXPECT_EQ(zcledger9.getValue(), -6 * COIN);
+   EXPECT_EQ(zcledger9.getTxTime(), 17000000);
+   EXPECT_TRUE(zcledger9.isOptInRBF());
 }
 
 // Comments need to be added....
