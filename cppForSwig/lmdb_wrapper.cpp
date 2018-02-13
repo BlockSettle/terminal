@@ -3084,6 +3084,9 @@ void DBPair::open(const string& path, const string& dbName)
 ////////////////////////////////////////////////////////////////////////////////
 void DBPair::close()
 {
+   if (!isOpen())
+      return;
+
    db_.close();
    env_.close();
 }
@@ -3604,22 +3607,7 @@ unsigned DatabaseContainer_Sharded::getTopShardId() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void DatabaseContainer_Sharded::closeUnusedShards(unsigned height)
-{
-   auto currentShardId = getShardIdForHeight(height);
-   auto dbMap = dbMap_.get();
-
-   for (auto& shard : *dbMap)
-   {
-      if (shard.first >= currentShardId)
-         break;
-
-      shard.second->close();
-   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void DatabaseContainer_Sharded::closeUnusedShardsById(unsigned id)
+void DatabaseContainer_Sharded::closeShardsById(unsigned id)
 {
    auto dbMap = dbMap_.get();
    for (auto& shard : *dbMap)

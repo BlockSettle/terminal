@@ -45,8 +45,8 @@ private:
 
    Blockchain::ReorganizationState updateBlocksInDB(
       const ProgressCallback &progress, bool verbose, bool fullHints);
-   BinaryData updateTransactionHistory(int32_t startHeight);
-   BinaryData scanHistory(int32_t startHeight, bool reportprogress);
+   BinaryData initTransactionHistory(int32_t startHeight);
+   BinaryData scanHistory(int32_t startHeight, bool reportprogress, bool init);
    void undoHistory(Blockchain::ReorganizationState& reorgState);
 
    void resetHistory(void);

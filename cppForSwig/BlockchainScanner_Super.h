@@ -170,6 +170,7 @@ class BlockchainScanner_Super
 private:
    int startAt_ = 0;
    bool withUpdateSshHints_ = false;
+   bool init_;
 
    shared_ptr<Blockchain> blockchain_;
    LMDBBlockDatabase* db_;
@@ -222,19 +223,21 @@ private:
       ParserBatch_Super*,
       map<unsigned, shared_ptr<BlockDataFileMap>>&);
 
-   void closeUnusedShards(unsigned);
+   void closeShardsByHeight(DB_SELECT, unsigned, unsigned);
+   void closeShardsById(DB_SELECT, unsigned, unsigned);
 
 public:
    BlockchainScanner_Super(
       shared_ptr<Blockchain> bc, LMDBBlockDatabase* db,
-      BlockFiles& bf,
+      BlockFiles& bf, bool init,
       unsigned threadcount, unsigned queue_depth,
       ProgressCallback prg, bool reportProgress) :
       blockchain_(bc), db_(db),
       totalThreadCount_(threadcount), writeQueueDepth_(queue_depth),
       blockDataLoader_(bf.folderPath()),
       progress_(prg), reportProgress_(reportProgress),
-      totalBlockFileCount_(bf.fileCount())
+      totalBlockFileCount_(bf.fileCount()),
+      init_(init)
    {}
 
    void scan(void);

@@ -140,7 +140,7 @@ void DatabaseBuilder::init()
    TIMER_START("scanning");
    while (1)
    {
-      auto topScannedBlockHash = updateTransactionHistory(scanFrom);
+      auto topScannedBlockHash = initTransactionHistory(scanFrom);
       cycleDatabases();
 
       if (topScannedBlockHash == blockchain_->top()->getThisHash())
@@ -528,11 +528,11 @@ void DatabaseBuilder::parseBlockFile(
 }
 
 /////////////////////////////////////////////////////////////////////////////
-BinaryData DatabaseBuilder::updateTransactionHistory(int32_t startHeight)
+BinaryData DatabaseBuilder::initTransactionHistory(int32_t startHeight)
 {
    //Scan history
    auto topScannedBlockHash = 
-      scanHistory(startHeight, bdmConfig_.reportProgress_);
+      scanHistory(startHeight, bdmConfig_.reportProgress_, true);
 
    //return the hash of the last scanned block
    return topScannedBlockHash;
@@ -540,7 +540,7 @@ BinaryData DatabaseBuilder::updateTransactionHistory(int32_t startHeight)
 
 /////////////////////////////////////////////////////////////////////////////
 BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
-   bool reportprogress)
+   bool reportprogress, bool init)
 {
    if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
@@ -571,7 +571,8 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
    {
       BlockchainScanner_Super bcs(
          blockchain_, db_,
-         blockFiles_, bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
+         blockFiles_, init,
+         bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
          progress_, reportprogress);
 
       bcs.scan();
@@ -608,7 +609,7 @@ Blockchain::ReorganizationState DatabaseBuilder::update(void)
    }
 
    //scan new blocks   
-   BinaryData&& topScannedHash = scanHistory(startHeight, false);
+   BinaryData&& topScannedHash = scanHistory(startHeight, false, false);
    if (topScannedHash != blockchain_->top()->getThisHash())
       throw runtime_error("scan failure during DatabaseBuilder::update");
 
@@ -631,7 +632,8 @@ void DatabaseBuilder::undoHistory(
    else
    {
       BlockchainScanner_Super bcs(blockchain_, db_, 
-         blockFiles_, bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
+         blockFiles_, false,
+         bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
          progress_, false);
       bcs.undo(reorgState);
    }

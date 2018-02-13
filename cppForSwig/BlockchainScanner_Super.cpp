@@ -927,7 +927,7 @@ void BlockchainScanner_Super::writeBlockData()
          writeSubSsh(batch.get());
       }
 
-      closeUnusedShards(topheader->getBlockHeight());
+      closeShardsByHeight(SUBSSH, topheader->getBlockHeight(), 0);
 
       if (spentnessThr.joinable())
          spentnessThr.join();
@@ -1118,9 +1118,7 @@ void BlockchainScanner_Super::putSpentness(ParserBatch_Super* batch)
       if (thr.joinable())
          thr.join();
 
-   if (topShardId > 5)
-      dbSharded->closeUnusedShardsById(topShardId - 5);
-
+   closeShardsById(SPENTNESS, topShardId, 5);
    batch->writeSpentnessEnd_ = chrono::system_clock::now();
 }
 
@@ -1289,12 +1287,36 @@ void BlockchainScanner_Super::undo(Blockchain::ReorganizationState& reorgState)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BlockchainScanner_Super::closeUnusedShards(unsigned height)
+void BlockchainScanner_Super::closeShardsByHeight(
+   DB_SELECT db, unsigned height, unsigned lookup)
 {
-   auto dbSubSsh = db_->dbMap_.find(SUBSSH)->second;
+   if (!init_)
+      return;
+
+   auto dbSubSsh = db_->dbMap_.find(db)->second;
    auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbSubSsh);
    if (dbSharded == nullptr)
-      throw runtime_error("unexpected type for SUBSSH db");
+      return;
 
-   dbSharded->closeUnusedShards(height);
+   auto shardId = dbSharded->getShardIdForHeight(height);
+   closeShardsById(db, shardId, lookup);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BlockchainScanner_Super::closeShardsById(
+   DB_SELECT db, unsigned shardId, unsigned lookup)
+{
+   if (!init_)
+      return;
+   
+   if (lookup > shardId)
+      return;
+   shardId -= lookup;
+
+   auto dbSubSsh = db_->dbMap_.find(db)->second;
+   auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbSubSsh);
+   if (dbSharded == nullptr)
+      return;
+
+   dbSharded->closeShardsById(shardId);
 }

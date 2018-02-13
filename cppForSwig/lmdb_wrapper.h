@@ -804,8 +804,7 @@ public:
    unsigned getShardIdForHeight(unsigned) const;
    unsigned getShardIdForKey(BinaryDataRef key) const;
    unsigned getTopShardId(void) const;
-   void closeUnusedShards(unsigned);
-   void closeUnusedShardsById(unsigned);
+   void closeShardsById(unsigned);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
