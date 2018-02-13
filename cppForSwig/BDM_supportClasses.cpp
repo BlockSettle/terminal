@@ -868,7 +868,7 @@ map<BinaryData, BinaryData> ZeroConfContainer::purge(
          zcMap.erase(zcMapIter++);
 
          //this zc is now invalid, check if it has children
-         auto&& zchash = zcMove.tx_.getThisHash();
+         auto& zchash = zcMove.getTxHash();
          auto spentIter = outPointsSpentByKey_.find(zchash);
          if (spentIter == outPointsSpentByKey_.end())
             continue;
@@ -1051,121 +1051,135 @@ void ZeroConfContainer::reset()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ZeroConfContainer::dropZC(const set<BinaryData>& txHashes)
+void ZeroConfContainer::dropZC(const set<BinaryData>& zcKeys)
 {
-   if (txHashes.size() == 0)
+   if (zcKeys.size() == 0)
       return;
 
    vector<BinaryData> keysToDelete;
+   vector<BinaryData> txoutsToDelete;
    vector<BinaryData> hashesToDelete;
-
-   auto keytospendsaPtr = keyToSpentScrAddr_.get();
-   auto txiomapPtr = txioMap_.get();
-   auto txmapPtr = txMap_.get();
-   auto txhashmapPtr = txHashToDBKey_.get();
 
    map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> updateMap;
 
-   for (auto& hash : txHashes)
    {
-      //resolve zcKey
-      auto hashIter = txhashmapPtr->find(hash);
-      if (hashIter == txhashmapPtr->end())
-         continue;
+      auto txiomapPtr = txioMap_.get();
 
-      auto zcKey = hashIter->second;
-      hashesToDelete.push_back(hash);
-      outPointsSpentByKey_.erase(hash);
-
-      //drop from keyToSpendScrAddr_
-      auto&& scrAddrSet = (*keytospendsaPtr)[zcKey];
-      keyToSpentScrAddr_.erase(zcKey);
-
-      //drop from keyToFundedScrAddr_
-      auto fundedIter = keyToFundedScrAddr_.find(zcKey);
-      if (fundedIter != keyToFundedScrAddr_.end())
+      auto dropTxios = [txiomapPtr, &updateMap](
+         const BinaryData& zcKey,
+         const BinaryData& scrAddr)->void
       {
-         auto& fundedScrAddrSet = fundedIter->second;
-         if (fundedScrAddrSet.size())
-            scrAddrSet.insert(
-               fundedScrAddrSet.begin(),
-               fundedScrAddrSet.end()
-               );
-
-         keyToFundedScrAddr_.erase(fundedIter);
-      }
-
-      set<BinaryData> rkeys;
-      //drop from txioMap_
-      for (auto& sa : scrAddrSet)
-      {
-         auto mapIter = txiomapPtr->find(sa);
-         if (mapIter == txiomapPtr->end())
-            continue;
-
-         auto& txiomap = mapIter->second;
-
-         for (auto& txioPair : *txiomap)
+         auto mapIter = updateMap.find(scrAddr);
+         if (mapIter == updateMap.end())
          {
-            if (txioPair.first.startsWith(zcKey))
+            auto mapIter2 = txiomapPtr->find(scrAddr);
+            if (mapIter2 == txiomapPtr->end())
+               return;
+
+            auto newmap = make_shared<map<BinaryData, TxIOPair>>(
+               *(mapIter2->second));
+            mapIter = updateMap.insert(make_pair(scrAddr, newmap)).first;
+         }
+
+         auto txioIter = mapIter->second->begin();
+         while (txioIter != mapIter->second->end())
+         {
+            if (txioIter->first.startsWith(zcKey))
             {
-               rkeys.insert(txioPair.first);
+               mapIter->second->erase(txioIter++);
                continue;
             }
 
-            if (txioPair.second.hasTxIn() &&
-               txioPair.second.getDBKeyOfInput().startsWith(zcKey))
-               rkeys.insert(txioPair.first);
-         }
-
-         if (rkeys.size() > 0)
-         {
-            shared_ptr<map<BinaryData, TxIOPair>> newmap;
-            auto mapIter = updateMap.find(sa);
-            if (mapIter == updateMap.end())
+            if (!txioIter->second.hasTxIn() ||
+               !txioIter->second.getDBKeyOfInput().startsWith(zcKey))
             {
-               newmap = make_shared<map<BinaryData, TxIOPair>>(
-                  *txiomap);
-               updateMap[sa] = newmap;
-            }
-            else
-            {
-               newmap = mapIter->second;
+               ++txioIter;
+               continue;
             }
 
-            for (auto& rkey : rkeys)
-               newmap->erase(rkey);
-         }
-      }
+            if (!txioIter->second.hasTxOutZC())
+            {
+               mapIter->second->erase(txioIter++);
+               continue;
+            }
 
-      //drop from txOutsSpentByZC_
+            txioIter->second.setTxIn(BinaryData());
+            ++txioIter;
+         }
+      };
+
+      auto keytospendsaPtr = keyToSpentScrAddr_.get();
+      auto txmapPtr = txMap_.get();
+      auto txhashmapPtr = txHashToDBKey_.get();
+      auto txoutset = txOutsSpentByZC_.get();
+
+
+      auto rKeyIter = zcKeys.rbegin();
+      while (rKeyIter != zcKeys.rend())
       {
-         auto txoutset = txOutsSpentByZC_.get();
-         vector<BinaryData> txoutsToDelete;
-         for (auto txoutkey : *txoutset)
+         auto& zcKey = *rKeyIter;
+         ++rKeyIter;
+
+         //resolve txHash
+         auto zcIter = txmapPtr->find(zcKey);
+         if (zcIter == txmapPtr->end())
+            continue;
+
+         auto hash = zcIter->second.getTxHash();
+         hashesToDelete.push_back(hash);
+         outPointsSpentByKey_.erase(hash);
+
+         //drop from keyToSpendScrAddr_
+         auto saSetIter = keytospendsaPtr->find(zcKey);
+         if (saSetIter != keytospendsaPtr->end())
          {
-            if (txoutkey.startsWith(zcKey))
-               txoutsToDelete.push_back(txoutkey);
+            for (auto& sa : saSetIter->second)
+               dropTxios(zcKey, sa);
          }
 
-         txOutsSpentByZC_.erase(txoutsToDelete);
-      }
+         //drop from keyToFundedScrAddr_
+         auto fundedIter = keyToFundedScrAddr_.find(zcKey);
+         if (fundedIter != keyToFundedScrAddr_.end())
+         {
+            for (auto& sa : fundedIter->second)
+               dropTxios(zcKey, sa);
 
-      //mark for deletion
-      keysToDelete.push_back(zcKey);
+            keyToFundedScrAddr_.erase(fundedIter);
+         }
+
+         //drop from txOutsSpentByZC_
+         {
+            for (auto txoutkey : *txoutset)
+            {
+               if (txoutkey.startsWith(zcKey))
+                  txoutsToDelete.push_back(txoutkey);
+            }
+         }
+
+         //mark for deletion
+         keysToDelete.push_back(zcKey);
+      }
    }
 
    //drop from containers
-   txMap_.erase(keysToDelete);
    txHashToDBKey_.erase(hashesToDelete);
+   txMap_.erase(keysToDelete);
+   keyToSpentScrAddr_.erase(keysToDelete);
+   txOutsSpentByZC_.erase(txoutsToDelete);
 
    //gathers keys to delete
    vector<BinaryData> delKeys;
-   for (auto& sa_pair : updateMap)
+   auto updateMapIter = updateMap.begin();
+   while(updateMapIter != updateMap.end())
    {
-      if (sa_pair.second->size() > 0)
+      if (updateMapIter->second->size() > 0)
+      {
+         ++updateMapIter;
          continue;
-      delKeys.push_back(sa_pair.first);
+      }
+
+      delKeys.push_back(updateMapIter->first);
+      updateMap.erase(updateMapIter++);
    }
 
    txioMap_.erase(delKeys);
@@ -1283,7 +1297,7 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
 
    for (auto& newZCPair : zcMap)
    {
-      const BinaryData&& txHash = newZCPair.second.tx_.getThisHash();
+     auto& txHash = newZCPair.second.getTxHash();
       auto insertIter = allZcTxHashes_.insert(txHash);
       if (insertIter.second)
          keysToWrite.push_back(newZCPair.first);
@@ -1291,7 +1305,6 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
 
    map<BinaryData, BinaryData> txhashmap_update;
    map<BinaryData, ParsedTx> txmap_update;
-   set<BinaryData> replacedHashes;
    set<BinaryData> invalidatedKeys;
 
    bool hasChanges = false;
@@ -1337,10 +1350,21 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
       };
 
       function<set<BinaryData>(const BinaryData&)> getTxChildren = 
-         [&](const BinaryData& txhash)->
+         [&](const BinaryData& zcKey)->
          set<BinaryData>
       {
-         set<BinaryData> childHashes;
+         set<BinaryData> childKeys;
+         BinaryDataRef txhash;
+
+         try
+         {
+            auto& parsedTx = getzctxforkey(zcKey);
+            txhash = parsedTx.getTxHash().getRef();
+         }
+         catch (exception&)
+         {
+            return childKeys;
+         }
 
          auto spentOP_iter = outPointsSpentByKey_.find(txhash);
          if (spentOP_iter != outPointsSpentByKey_.end())
@@ -1349,29 +1373,19 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
 
             for (auto& keypair : keymap)
             {
-               try
-               {
-                  auto& parsedTx = getzctxforkey(keypair.second);
-                  auto&& parsedTxHash = parsedTx.tx_.getThisHash();
-                  auto&& childrenHashes = getTxChildren(parsedTxHash);
-                  
-                  childHashes.insert(move(parsedTxHash));
-                  for (auto& c_hash : childrenHashes)
-                     childHashes.insert(move(c_hash));
-               }
-               catch (exception&)
-               {
-                  continue;
-               }
+                  auto&& childrenKeys = getTxChildren(keypair.second);
+                  childKeys.insert(move(keypair.second));
+                  for (auto& c_key : childrenKeys)
+                     childKeys.insert(move(c_key));
             }
          }
 
-         return childHashes;
+         return childKeys;
       };
 
       for (auto& newZCPair : zcMap)
       {
-         auto& txHash = newZCPair.second.tx_.getThisHash();
+         auto& txHash = newZCPair.second.getTxHash();
          if (txhashmap_ptr->find(txHash) != txhashmap_ptr->end())
             continue; //already have this ZC
 
@@ -1398,21 +1412,10 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
                         try
                         {
                            auto& txToReplace = getzctxforkey(idIter->second);
-                           auto&& txhashtoreplace = txToReplace.tx_.getThisHash();
 
                            //gather replaced tx children
-                           auto&& hashSet = getTxChildren(txhashtoreplace);
-                           replacedHashes.insert(move(txhashtoreplace));
-
-                           for (auto& childHash : hashSet)
-                           {
-                              BinaryData childKey;
-                              if (getzckeyfortxhash(childHash, childKey))
-                                 invalidatedKeys.insert(childKey);
-
-                              replacedHashes.insert(move(childHash));
-                           }
-
+                           auto&& keySet = getTxChildren(idIter->second);
+                           invalidatedKeys.insert(keySet.begin(), keySet.end());
                            invalidatedKeys.insert(idIter->second);
                            hasChanges = true;
                         }
@@ -1551,8 +1554,8 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
    }
 
    //drop the replaced zc if any
-   if (replacedHashes.size() > 0)
-      dropZC(replacedHashes);
+   if (invalidatedKeys.size() > 0)
+      dropZC(invalidatedKeys);
 
    auto txiomapPtr = txioMap_.get();
    auto bdvcallbacks = bdvCallbacks_.get();
@@ -1590,7 +1593,7 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
 ///////////////////////////////////////////////////////////////////////////////
 void ZeroConfContainer::preprocessTx(ParsedTx& tx) const
 {
-   auto&& txHash = tx.tx_.getThisHash();
+   auto& txHash = tx.getTxHash();
    auto&& txref = db_->getTxRef(txHash);
 
    if (txref.isInitialized())
@@ -1759,7 +1762,7 @@ ZeroConfContainer::BulkFilterData ZeroConfContainer::ZCisMineBulkFilter(
        parsedTx.status() == Tx_ResolveAgain)
       preprocessTx(parsedTx);
    
-   auto& txHash = parsedTx.tx_.getThisHash();
+   auto& txHash = parsedTx.getTxHash();
    bool isRBF = parsedTx.isRBF_;
    bool isChained = parsedTx.isChainedZc_;
 
@@ -2642,4 +2645,12 @@ void ParsedTx::reset()
    tx_.setChainedZC(false);
 
    state_ = Tx_Uninitialized;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const BinaryData& ParsedTx::getTxHash(void) const
+{
+   if (txHash_.getSize() == 0)
+      txHash_ = move(tx_.getThisHash());
+   return txHash_;
 }

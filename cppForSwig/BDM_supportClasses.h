@@ -431,6 +431,10 @@ struct ParsedTxOut
 ////////////////////////////////////////////////////////////////////////////////
 struct ParsedTx
 {
+private:
+   mutable BinaryData txHash_;
+
+public:
    Tx tx_;
    vector<ParsedTxIn> inputs_;
    vector<ParsedTxOut> outputs_;
@@ -438,10 +442,13 @@ struct ParsedTx
    bool isRBF_ = false;
    bool isChainedZc_ = false;
 
+
 public:
    ParsedTxStatus status(void) const { return state_; }
    bool isResolved(void) const;
    void reset(void);
+
+   const BinaryData& getTxHash(void) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

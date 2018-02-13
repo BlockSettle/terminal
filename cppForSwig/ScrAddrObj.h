@@ -255,7 +255,7 @@ public:
    void scanZC(const ScanAddressStruct&, function<bool(const BinaryDataRef)>,
       int32_t);
    bool purgeZC(
-      const set<BinaryData>& invalidatedTxOutKeys,
+      const map<BinaryData, BinaryDataRef>& invalidatedTxOutKeys,
       const map<BinaryData, BinaryData>& minedKeys);
 
    void updateAfterReorg(uint32_t lastValidBlockHeight);
