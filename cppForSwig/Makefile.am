@@ -27,7 +27,7 @@ if HAVE_CLANG
 SWIG_FLAGS += -D__CLANG__
 endif
 
-INCLUDE_FILES = -I. -Ibech32/ref/c++
+INCLUDE_FILES = -Ibech32/ref/c++
 
 DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	BtcUtils.cpp DBUtils.cpp BlockObj.cpp BlockUtils.cpp EncryptionUtils.cpp \
@@ -51,7 +51,7 @@ CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	WalletManager.cpp Wallets.cpp Script.cpp Signer.cpp \
 	Transactions.cpp \
 	CoinSelection.cpp ReentrantLock.cpp JSON_codec.cpp \
-	TransactionBatch.cpp log.cpp TxEvalState.cpp
+	TransactionBatch.cpp log.cpp TxEvalState.cpp \
 	Accounts.cpp Addresses.cpp AssetEncryption.cpp Assets.cpp \
 	DecryptedDataContainer.cpp DerivationScheme.cpp \
 	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp
@@ -73,7 +73,7 @@ ArmoryDB_LDADD = -Llmdb -llmdb \
 
 ArmoryDB_LDFLAGS = -static $(LDFLAGS)
 
-#libCppBlockUtils
+#libCppBlockUtils - "shared" LDFLAG due to SWIG requirements
 if HAVE_GUI
 lib_LTLIBRARIES += libCppBlockUtils.la
 libCppBlockUtils_la_SOURCES = $(CPPBLOCKUTILS_SOURCE_FILES) \
@@ -87,7 +87,7 @@ libCppBlockUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 libCppBlockUtils_la_LIBADD = 	-Llmdb -llmdb \
 		 	 	./cryptopp/libcryptopp.la \
 		 	 	-lpthread
-libCppBlockUtils_la_LDFLAGS = $(LDFLAGS)
+libCppBlockUtils_la_LDFLAGS = $(LDFLAGS) -shared
 
 if BUILD_DARWIN
 libCppBlockUtils_la_LDFLAGS += -Wl,-rpath,@executable_path/ -Wl,-rpath,@loader_path/

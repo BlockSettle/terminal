@@ -396,7 +396,6 @@ class SendBitcoinsFrame(ArmoryFrame):
          self.coinSelection = self.wlt.cppWallet.getCoinSelectionInstance()
       except Cpp.DbErrorMsg as dbErr:
          LOGERROR('DB error: %s', dbErr.what())
-         continue
 
       try:
          self.resetCoinSelectionRecipients()
@@ -2327,10 +2326,8 @@ class SignBroadcastOfflineTxFrame(ArmoryFrame):
       clipb.setText(binary_to_hex(\
          self.ustxObj.getSignedPyTx(signer=self.ustxObj.signerType).serialize()))
       self.lblCopied.setText(self.tr('<i>Copied!</i>'))
-         
+
 
 # Need to put circular imports at the end of the script to avoid an import deadlock
 from qtdialogs import CLICKED, DlgConfirmSend, DlgUriCopyAndPaste, \
          DlgUnlockWallet, extractTxInfo, DlgDispTxInfo, NO_CHANGE, STRETCH
-
-
