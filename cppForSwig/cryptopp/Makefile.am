@@ -4,6 +4,8 @@ libcryptopp_la_LIBADD =
 AM_LDFLAGS = $(LDFLAGS)
 AM_CXXFLAGS = $(CXXFLAGS) -std=c++11
 
+ACLOCAL_AMFLAGS = -I build-aux/m4
+
 #compilation flags
 if CRYPTOPP_HAVE_CLANG
 AM_CXXFLAGS += -DCRYPTOPP_DISABLE_ASM

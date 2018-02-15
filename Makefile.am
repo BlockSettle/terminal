@@ -1,5 +1,7 @@
-# Makefile for BitcoinArmory bitcoin wallet
+# Makefile for Bitcoin Armory - Root Makefile
 SUBDIRS = cppForSwig
+bin_PROGRAMS =
+noinst_PROGRAMS =
 
 EXTRA_DIST = *.py *.md LICENSE LICENSE-ATI LICENSE-MIT \
 	nginx_example.conf imgList.xml autogen.sh \
@@ -7,7 +9,7 @@ EXTRA_DIST = *.py *.md LICENSE LICENSE-ATI LICENSE-MIT \
 	img/* lang/* dpkgfiles/* \
 	windowsbuild/* linuxbuild/* osxbuild/*
 
-ACLOCAL_AMFLAGS = -I m4
+ACLOCAL_AMFLAGS = -I build-aux/m4
 
 lrelease:
 if HAVE_GUI

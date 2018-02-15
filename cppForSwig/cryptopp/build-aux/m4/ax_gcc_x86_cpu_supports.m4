@@ -57,7 +57,7 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 3
+#serial 4
 
 AC_DEFUN_ONCE([_AX_GCC_X86_CPU_INIT],
  [AC_LANG_PUSH([C])
@@ -80,7 +80,7 @@ AC_DEFUN([AX_GCC_X86_CPU_SUPPORTS],
    AS_VAR_PUSHDEF([gcc_x86_feature], [AS_TR_SH([ax_cv_gcc_x86_cpu_supports_$1])])
    AC_CACHE_CHECK([for x86 $1 instruction support],
      [gcc_x86_feature],
-     [AC_RUN_IFELSE(
+     [AC_COMPILE_IFELSE(
        [AC_LANG_PROGRAM( [#include <stdlib.h> ],
        [ __builtin_cpu_init ();
          if (__builtin_cpu_supports("$1"))

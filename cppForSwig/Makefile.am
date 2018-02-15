@@ -1,4 +1,11 @@
+# Makefile for Bitcoin Armory - C/C++ subdirectory Makefile
+bin_PROGRAMS =
+noinst_PROGRAMS =
+TESTS =
+BENCHMARKS =
+lib_LTLIBRARIES =
 MAYBE_BUILD =
+
 if BUILD_TESTS
 MAYBE_BUILD += gtest
 endif
@@ -7,7 +14,7 @@ DIST_SUBDIRS = lmdb fcgi cryptopp
 SUBDIRS = lmdb fcgi cryptopp $(MAYBE_BUILD)
 
 SWIG_FLAGS = -c++ -python -threads
-AM_CXXFLAGS = $(CXXFLAGS) -std=c++11
+AM_CXXFLAGS = $(CXXFLAGS)
 
 if HAVE_GCC
 SWIG_FLAGS += -D__GNUC__
@@ -20,22 +27,7 @@ if HAVE_CLANG
 SWIG_FLAGS += -D__CLANG__
 endif
 
-INCLUDE_FILES = UniversalTimer.h BinaryData.h lmdb_wrapper.h \
-	BtcUtils.h DBUtils.h BlockObj.h BlockUtils.h EncryptionUtils.h \
-	BtcWallet.h LedgerEntry.h ScrAddrObj.h Blockchain.h \
-	BDM_mainthread.h BDM_supportClasses.h \
-	BlockDataViewer.h HistoryPager.h Progress.h \
-	txio.h TxClasses.h StoredBlockObj.h \
-	DatabaseBuilder.h BlockchainScanner.h BlockDataMap.h \
-	DataObject.h BitcoinP2p.h BDM_Server.h BDM_seder.h SocketObject.h \
-	FcgiMessage.h BlockDataManagerConfig.h \
-	Transactions.h Script.h Signer.h nodeRPC.h JSON_codec.h \
-	ReentrantLock.h StringSockets.h log.h OS_TranslatePath.h \
-	TransactionBatch.h BlockchainScanner_Super.h SigHashEnum.h TxEvalState.h \
-	Accounts.h Addresses.h AssetEncryption.h Assets.h \
-	DecryptedDataContainer.h DerviationScheme.h \
-	bech32/ref/c++/bech32.h bech32/ref/c++/segwit_addr.h \
-        SshParser.h
+INCLUDE_FILES = -I. -Ibech32/ref/c++
 
 DB_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp lmdb_wrapper.cpp \
 	BtcUtils.cpp DBUtils.cpp BlockObj.cpp BlockUtils.cpp EncryptionUtils.cpp \
@@ -65,15 +57,14 @@ CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp
 
 #ArmoryDB
-noinst_PROGRAMS = ArmoryDB
-
-ArmoryDB_SOURCES = $(INCLUDE_FILES) \
-		   $(DB_SOURCE_FILES)
+bin_PROGRAMS += ArmoryDB
+ArmoryDB_SOURCES = $(DB_SOURCE_FILES)
 
 ArmoryDB_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 		    -Icryptopp \
 		    -Ifcgi -Ifcgi/include \
 		    -D__STDC_LIMIT_MACROS
+ArmoryDB_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 
 ArmoryDB_LDADD = -Llmdb -llmdb \
 		 -Lcryptopp -lcryptopp \
@@ -84,21 +75,18 @@ ArmoryDB_LDFLAGS = -static $(LDFLAGS)
 
 #libCppBlockUtils
 if HAVE_GUI
-lib_LTLIBRARIES = libCppBlockUtils.la
-
-libCppBlockUtils_la_SOURCES = $(INCLUDE_FILES) \
-				$(CPPBLOCKUTILS_SOURCE_FILES) \
-				CppBlockUtils_wrap.cxx
+lib_LTLIBRARIES += libCppBlockUtils.la
+libCppBlockUtils_la_SOURCES = $(CPPBLOCKUTILS_SOURCE_FILES) \
+			      CppBlockUtils_wrap.cxx
+libCppBlockUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 libCppBlockUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 		    		-Icryptopp \
 				$(AX_SWIG_PYTHON_CPPFLAGS) \
 				$(EXTRA_PYTHON_INCLUDES) \
 				-D__STDC_LIMIT_MACROS
-
 libCppBlockUtils_la_LIBADD = 	-Llmdb -llmdb \
 		 	 	./cryptopp/libcryptopp.la \
 		 	 	-lpthread
-
 libCppBlockUtils_la_LDFLAGS = $(LDFLAGS)
 
 if BUILD_DARWIN
