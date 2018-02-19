@@ -440,15 +440,13 @@ public:
       if (updatemap.size() == 0)
          return;
 
-      auto newMap = make_shared<map<T, U>>( move(updatemap));
+      auto newMap = make_shared<map<T, U>>(move(updatemap));
 
       unique_lock<mutex> lock(mu_);
       for (auto& data_pair : *map_)
       {
          newMap->insert(data_pair);
       }
-
-      //newMap->insert(map_->begin(), map_->end());
 
       map_ = newMap;
       count_.store(map_->size(), memory_order_relaxed);
@@ -507,7 +505,7 @@ public:
 
    shared_ptr<map<T, U>> get(void) const
    {
-      unique_lock<mutex> lock(mu_);
+      //shared_ptr control block is thread safe, no need for a lock
       return map_;
    }
 
@@ -634,7 +632,6 @@ public:
 
    shared_ptr<set<T>> get(void) const
    {
-      unique_lock<mutex> lock(mu_);
       return set_;
    }
 
