@@ -69,7 +69,8 @@ public:
    ReorganizationState forceOrganize();
    ReorganizationState findReorgPointFromBlock(const BinaryData& blkHash);
 
-   void setDuplicateIDinRAM(LMDBBlockDatabase* iface);
+   void Blockchain::updateBranchingMaps(
+      LMDBBlockDatabase*, ReorganizationState&);
 
    shared_ptr<BlockHeader> top() const;
    shared_ptr<BlockHeader> getGenesisBlock() const;

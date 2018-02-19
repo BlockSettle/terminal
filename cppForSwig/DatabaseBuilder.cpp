@@ -46,8 +46,8 @@ void DatabaseBuilder::init()
    if (bdmConfig_.reportProgress_)
       progress_(BDMPhase_OrganizingChain, 0, UINT32_MAX, 0);
 
-   blockchain_->forceOrganize();
-   blockchain_->setDuplicateIDinRAM(db_);
+   auto&& initialReorgState = blockchain_->forceOrganize();
+   blockchain_->updateBranchingMaps(db_, initialReorgState);
 
    try
    {
@@ -638,7 +638,7 @@ void DatabaseBuilder::undoHistory(
       bcs.undo(reorgState);
    }
 
-   blockchain_->setDuplicateIDinRAM(db_);
+   blockchain_->updateBranchingMaps(db_, reorgState);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -788,7 +788,8 @@ map<BinaryData, shared_ptr<BlockHeader>> DatabaseBuilder::assessBlkFile(
 void DatabaseBuilder::verifyChain()
 {
    /*
-   builds db (no scanning) with full txhints, then verifies all tx.
+   builds db (no scanning) with full txhints, then verifies all tx 
+   (consensus and sigs).
    */
 
    //list all files in block data folder
@@ -800,8 +801,8 @@ void DatabaseBuilder::verifyChain()
    if (bdmConfig_.reportProgress_)
       progress_(BDMPhase_OrganizingChain, 0, UINT32_MAX, 0);
 
-   blockchain_->forceOrganize();
-   blockchain_->setDuplicateIDinRAM(db_);
+   auto initialReorgState = blockchain_->forceOrganize();
+   blockchain_->updateBranchingMaps(db_, initialReorgState);
 
    //update db
    LOGINFO << "updating HEADERS db";

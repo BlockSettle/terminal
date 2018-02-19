@@ -4814,9 +4814,6 @@ TEST_F(LMDBTest, STxOutPutGet)
 ////////////////////////////////////////////////////////////////////////////////
 TEST_F(LMDBTest, PutGetBareHeader)
 {
-//    DBUtils::setArmoryDbType(ARMORY_DB_FULL);
-//    DBUtils::setDbPruneType(DB_PRUNE_NONE);
-
    StoredHeader sbh;
    BinaryRefReader brr(rawBlock_);
    sbh.unserializeFullBlock(brr);
@@ -4860,7 +4857,11 @@ TEST_F(LMDBTest, PutGetBareHeader)
    uint8_t anotherDup = iface_->putBareHeader(sbh3);
    EXPECT_EQ(anotherDup, 2);
    EXPECT_EQ(sbh3.duplicateID_, 2);
-   EXPECT_EQ(iface_->getValidDupIDForHeight(123000), 2);
+   EXPECT_EQ(iface_->getValidDupIDForHeight(123000), 0xFF);
+
+   map<unsigned, uint8_t> dupIDs;
+   dupIDs.insert(make_pair(sbh3.blockHeight_, sbh3.duplicateID_));
+   iface_->setValidDupIDForHeight(dupIDs);
    
    // Now test getting bare headers
    StoredHeader sbh4;

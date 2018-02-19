@@ -109,15 +109,59 @@ Blockchain::ReorganizationState Blockchain::forceOrganize()
    return st;
 }
 
-void Blockchain::setDuplicateIDinRAM(
-   LMDBBlockDatabase* iface)
+void Blockchain::updateBranchingMaps(
+   LMDBBlockDatabase* db, ReorganizationState& reorgState)
 {
-   for (const auto& block : headerMap_)
+   map<unsigned, uint8_t> dupIDs;
+   map<unsigned, bool> blockIDs;
+
+   try
    {
-      if (block.second->isMainBranch_)
-         iface->setValidDupIDForHeight(
-            block.second->blockHeight_, block.second->duplicateID_);
+      shared_ptr<BlockHeader> headerPtr;
+      if (reorgState.prevTopStillValid_)
+         headerPtr = reorgState.prevTop_;
+      else
+         headerPtr = reorgState.reorgBranchPoint_;
+
+      if (!headerPtr->isInitialized())
+         headerPtr = getGenesisBlock();
+
+      while(headerPtr->getThisHash() != reorgState.newTop_->getNextHash())
+      {
+         dupIDs.insert(make_pair(
+            headerPtr->getBlockHeight(), headerPtr->getDuplicateID()));
+         blockIDs.insert(make_pair(
+            headerPtr->getThisID(), headerPtr->isMainBranch()));
+         
+         headerPtr = getHeaderByHash(headerPtr->getNextHash());
+      }
    }
+   catch(exception&)
+   { 
+      LOGERR << "could not trace chain form prev top to new top";
+   }
+
+   if (!reorgState.prevTopStillValid_)
+   {
+      try
+      {
+         auto headerPtr = reorgState.prevTop_;
+         while (headerPtr != reorgState.reorgBranchPoint_)
+         {
+            blockIDs.insert(make_pair(
+               headerPtr->getThisID(), headerPtr->isMainBranch()));
+
+            headerPtr = getHeaderByHash(headerPtr->getPrevHash());
+         }
+      }
+      catch(exception&)
+      {
+         LOGERR << "could not trace chain form prev top to branch point";
+      }
+   }
+
+   db->setValidDupIDForHeight(dupIDs);
+   db->setBlockIDBranch(blockIDs);
 }
 
 Blockchain::ReorganizationState 
@@ -463,6 +507,9 @@ void Blockchain::putNewBareHeaders(LMDBBlockDatabase *db)
    if (newlyParsedBlocks_.size() == 0)
       return;
 
+   map<unsigned, uint8_t> dupIdMap;
+   map<unsigned, bool> blockIdMap;
+
    //create transaction here to batch the write
    auto&& tx = db->beginTransaction(HEADERS, LMDB::ReadWrite);
 
@@ -476,6 +523,12 @@ void Blockchain::putNewBareHeaders(LMDBBlockDatabase *db)
          //don't update SDBI, we'll do it here once instead
          uint8_t dup = db->putBareHeader(sbh, true, false);
          block->setDuplicateID(dup);  // make sure headerMap_ and DB agree
+         
+         if(block->isMainBranch())
+            dupIdMap.insert(make_pair(block->blockHeight_, dup));
+
+         blockIdMap.insert(
+            make_pair(block->getThisID(), block->isMainBranch()));
       }
       else
       {
@@ -503,6 +556,9 @@ void Blockchain::putNewBareHeaders(LMDBBlockDatabase *db)
    //once commited to the DB, they aren't considered new anymore, 
    //so clean up the container
    newlyParsedBlocks_ = unputHeaders;
+
+   db->setValidDupIDForHeight(dupIdMap);
+   db->setBlockIDBranch(blockIdMap);
 }
 
 /////////////////////////////////////////////////////////////////////////////
