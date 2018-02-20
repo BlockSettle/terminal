@@ -166,7 +166,7 @@ public:
       Blockchain &bc
    ) 
    {
-      auto& allHeaders = bc.allHeaders();
+      auto allHeaders = bc.allHeaders();
       
       size_t index=0;
       
@@ -174,7 +174,7 @@ public:
       {
          const BinaryData hash = getFirstHash(blkFiles_[index]);
 
-         if (allHeaders.find(hash) == allHeaders.end())
+         if (allHeaders->find(hash) == allHeaders->end())
          { // not found in this file
             if (index == 0)
                return { 0, 0 };
@@ -196,7 +196,7 @@ public:
       auto topBlockHash = bc.top()->getThisHash();
 
       const auto stopIfBlkHeaderRecognized =
-      [&allHeaders, &foundAtPosition, &foundTopBlock, &topBlockHash] (
+      [allHeaders, &foundAtPosition, &foundTopBlock, &topBlockHash] (
          const BinaryData &blockheader,
          const BlockFilePosition &pos,
          uint32_t blksize
@@ -210,9 +210,9 @@ public:
          block.unserialize(brr);
          
          const HashString blockhash = block.getThisHash();
-         auto bhIter = allHeaders.find(blockhash);
+         auto bhIter = allHeaders->find(blockhash);
          
-         if(bhIter == allHeaders.end())
+         if(bhIter == allHeaders->end())
             throw StopReading();
 
          if (bhIter->second->getThisHash() == topBlockHash)

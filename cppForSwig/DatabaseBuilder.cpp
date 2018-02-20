@@ -216,10 +216,13 @@ BlockOffset DatabaseBuilder::loadBlockHeadersFromDB(
    }();
 
    ProgressCalculator calc(howManyBlocks);
+   map<BinaryData, shared_ptr<BlockHeader>> headerMap;
 
    const auto callback = [&](shared_ptr<BlockHeader> h, uint32_t height, uint8_t dup)
    {
-      blockchain_->addBlock(h->getThisHash(), h, height, dup);
+      h->setBlockHeight(height);
+      h->setDuplicateID(dup);
+      headerMap.insert(make_pair(h->getThisHash(), h));
 
       BlockOffset currblock(h->getBlockFileNum(), h->getOffset());
       if (currblock > topBlockOffet)
@@ -237,8 +240,9 @@ BlockOffset DatabaseBuilder::loadBlockHeadersFromDB(
    };
 
    db_->readAllHeaders(callback);
+   blockchain_->addBlocksInBulk(headerMap, false);
 
-   LOGINFO << "Found " << blockchain_->allHeaders().size() << " headers in db";
+   LOGINFO << "Found " << headerMap.size() << " headers in db";
 
    return topBlockOffet;
 }
@@ -407,7 +411,7 @@ bool DatabaseBuilder::addBlocksToDB(BlockDataLoader& bdl,
    }
 
    //add in bulk
-   auto&& insertedBlocks = blockchain_->addBlocksInBulk(bhmap);
+   auto&& insertedBlocks = blockchain_->addBlocksInBulk(bhmap, true);
 
    if (!fullHints)
    {

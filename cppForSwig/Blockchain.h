@@ -14,6 +14,7 @@
 #ifndef _BLOCKCHAIN_H
 #define _BLOCKCHAIN_H
 
+#include "ThreadSafeClasses.h"
 #include "BlockObj.h"
 #include "lmdb_wrapper.h"
 
@@ -55,14 +56,8 @@ public:
    /**
     * Adds a block to the chain
     **/
-   void addBlock(const HashString &blockhash, 
-      shared_ptr<BlockHeader>, bool suppressVerbose);
-   void addBlock(const HashString &blockhash, shared_ptr<BlockHeader>,
-                         uint32_t height, uint8_t dupId);
-   void addNewBlock(const HashString &blockhash,
-      shared_ptr<BlockHeader>, bool suppressVerbose);
-
-   set<uint32_t> addBlocksInBulk(const map<HashString, shared_ptr<BlockHeader>>&);
+   set<uint32_t> addBlocksInBulk(
+      const map<HashString, shared_ptr<BlockHeader>>&, bool flag);
    void forceAddBlocksInBulk(const map<HashString, shared_ptr<BlockHeader>>&);
 
    ReorganizationState organize(bool verbose);
@@ -74,12 +69,10 @@ public:
 
    shared_ptr<BlockHeader> top() const;
    shared_ptr<BlockHeader> getGenesisBlock() const;
-   shared_ptr<BlockHeader> getHeaderByHeight(unsigned height);
    const shared_ptr<BlockHeader> getHeaderByHeight(unsigned height) const;
    bool hasHeaderByHeight(unsigned height) const;
    
    const shared_ptr<BlockHeader> getHeaderByHash(HashString const & blkHash) const;
-   shared_ptr<BlockHeader> getHeaderByHash(HashString const & blkHash);
    shared_ptr<BlockHeader> getHeaderById(uint32_t id) const;
 
    bool hasHeaderWithHash(BinaryData const & txHash) const;
@@ -94,18 +87,13 @@ public:
       return getHeaderPtrForTxRef(txObj.getTxRef());
    }
    
-   map<HashString, shared_ptr<BlockHeader>>& allHeaders()
+   shared_ptr<map<HashString, shared_ptr<BlockHeader>>> allHeaders(void) const
    {
-      return headerMap_;
-   }
-   const map<HashString, shared_ptr<BlockHeader>>& allHeaders() const
-   {
-      return headerMap_;
+      return headerMap_.get();
    }
 
    void putBareHeaders(LMDBBlockDatabase *db, bool updateDupID=true);
    void putNewBareHeaders(LMDBBlockDatabase *db);
-   const set<shared_ptr<BlockHeader>>& getBlockHeightsForFileNum(uint32_t) const;
 
    unsigned int getNewUniqueID(void) { return topID_.fetch_add(1, memory_order_relaxed); }
 
@@ -124,11 +112,12 @@ private:
 private:
    //TODO: make this whole class thread safe
 
-   const HashString genesisHash_;
-   map<HashString, shared_ptr<BlockHeader>> headerMap_;
+   const BinaryData genesisHash_;
+   TransactionalMap<BinaryData, shared_ptr<BlockHeader>> headerMap_;
+   TransactionalMap<unsigned, shared_ptr<BlockHeader>> headersById_;
+
    vector<shared_ptr<BlockHeader>> newlyParsedBlocks_;
-   deque<shared_ptr<BlockHeader>> headersByHeight_;
-   map<uint32_t, shared_ptr<BlockHeader>> headersById_;
+   TransactionalMap<unsigned, shared_ptr<BlockHeader>> headersByHeight_;
    shared_ptr<BlockHeader> topBlockPtr_;
    unsigned topBlockId_ = 0;
    Blockchain(const Blockchain&); // not defined
