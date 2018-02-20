@@ -397,7 +397,14 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 template<typename T, typename U> class TransactionalMap
 {
-   //locked writes, lockless reads
+   /*
+   - locked writes, using a mutex for sequential updating
+   - lockless reads as long as atomic_...<shared_ptr> operations are lockess
+     on the target platform
+
+   memory order is not set explicity, it defaults to seq_cst
+   */
+
 private:
    mutable mutex mu_;
    shared_ptr<map<T, U>> map_;
@@ -416,10 +423,11 @@ public:
       auto newMap = make_shared<map<T, U>>();
 
       unique_lock<mutex> lock(mu_);
-      *newMap = *map_;
-
+      newMap->insert(map_->begin(), map_->end());
       newMap->insert(move(mv));
-      map_ = newMap;
+
+      atomic_store(&map_, newMap);
+
       count_.store(map_->size(), memory_order_relaxed);
    }
 
@@ -428,10 +436,11 @@ public:
       auto newMap = make_shared<map<T, U>>();
 
       unique_lock<mutex> lock(mu_);
-      *newMap = *map_;
-
+      newMap->insert(map_->begin(), map_->end());
       newMap->insert(obj);
-      map_ = newMap;
+      
+      atomic_store(&map_, newMap);
+
       count_.store(map_->size(), memory_order_relaxed);
    }
 
@@ -444,11 +453,10 @@ public:
 
       unique_lock<mutex> lock(mu_);
       for (auto& data_pair : *map_)
-      {
          newMap->insert(data_pair);
-      }
 
-      map_ = newMap;
+      atomic_store(&map_, newMap);
+
       count_.store(map_->size(), memory_order_relaxed);
    }
 
@@ -461,10 +469,11 @@ public:
          return;
 
       auto newMap = make_shared<map<T, U>>();
-      *newMap = *map_;
-
+      newMap->insert(map_->begin(), map_->end());
       newMap->erase(id);
-      map_ = newMap;
+
+      atomic_store(&map_, newMap);
+
       count_.store(map_->size(), memory_order_relaxed);
    }
 
@@ -476,7 +485,7 @@ public:
       auto newMap = make_shared<map<T, U>>();
 
       unique_lock<mutex> lock(mu_);
-      *newMap = *map_;
+      newMap->insert(map_->begin(), map_->end());
 
       bool erased = false;
       for (auto& id : idVec)
@@ -486,7 +495,7 @@ public:
       }
 
       if (erased)
-         map_ = newMap;
+         atomic_store(&map_, newMap);
 
       count_.store(map_->size(), memory_order_relaxed);
    }
@@ -496,17 +505,17 @@ public:
       auto newMap = make_shared<map<T, U>>();
       unique_lock<mutex> lock(mu_);
       
-      auto retMap = map_;
-      map_ = newMap;
-      count_.store(map_->size(), memory_order_relaxed);
+      auto retMap = atomic_load(&map_);
+      atomic_store(&map_, newMap);
 
+      count_.store(map_->size(), memory_order_relaxed);
       return retMap;
    }
 
    shared_ptr<map<T, U>> get(void) const
    {
-      //shared_ptr control block is thread safe, no need for a lock
-      return map_;
+      auto retMap = atomic_load(&map_);
+      return retMap;
    }
 
    void clear(void)
@@ -514,8 +523,9 @@ public:
       auto newMap = make_shared<map<T, U>>();
       unique_lock<mutex> lock(mu_);
 
-      map_ = newMap;
-      count_.store(map_->size(), memory_order_relaxed);
+      atomic_store(&map_, newMap);
+
+      count_.store(0, memory_order_relaxed);
    }
 
    size_t size(void) const
@@ -527,7 +537,14 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 template<typename T> class TransactionalSet
 {
-   //locked writes, lockless reads
+   /*
+   - locked writes, using a mutex for sequential updating
+   - lockless reads as long as atomic_...<shared_ptr> operations are lockess
+   on the target platform
+
+   memory order is not set explicity, it defaults to seq_cst
+   */
+
 private:
    mutable mutex mu_;
    shared_ptr<set<T>> set_;
@@ -546,10 +563,10 @@ public:
       auto newSet = make_shared<set<T>>();
 
       unique_lock<mutex> lock(mu_);
-      *newSet = *set_;
-
+      newSet->insert(set_->begin(), set_->end());
       newSet->insert(move(mv));
-      set_ = newSet;
+
+      atomic_store(&set_, newSet);
       count_.store(set_->size(), memory_order_relaxed);
    }
 
@@ -558,10 +575,10 @@ public:
       auto newSet = make_shared<set<T>>();
 
       unique_lock<mutex> lock(mu_);
-      *newSet = *set_;
-
+      newSet->insert(set_->begin(), set_->end());
       newSet->insert(obj);
-      set_ = newSet;
+
+      atomic_store(&set_, newSet);
       count_.store(set_->size(), memory_order_relaxed);
    }
 
@@ -573,10 +590,10 @@ public:
       auto newSet = make_shared<set<T>>();
 
       unique_lock<mutex> lock(mu_);
-      *newSet = *set_;
-
+      newSet->insert(set_->begin(), set_->end());
       newSet->insert(dataSet.begin(), dataSet.end());
-      set_ = newSet;
+
+      atomic_store(&set_, newSet);
       count_.store(set_->size(), memory_order_relaxed);
    }
 
@@ -589,10 +606,10 @@ public:
          return;
 
       auto newSet = make_shared<set<T>>();
-      *newSet = *set_;
-
+      newSet->insert(set_->begin(), set_->end());
       newSet->erase(id);
-      set_ = newSet;
+
+      atomic_store(&set_, newSet);
       count_.store(set_->size(), memory_order_relaxed);
    }
 
@@ -604,7 +621,7 @@ public:
       auto newSet = make_shared<set<T>>();
 
       unique_lock<mutex> lock(mu_);
-      *newSet = *set_;
+      newSet->insert(set_->begin(), set_->end());
 
       bool erased = false;
       for (auto& id : idVec)
@@ -614,7 +631,8 @@ public:
       }
 
       if (erased)
-         set_ = newSet;
+         atomic_store(&set_, newSet);
+
       count_.store(set_->size(), memory_order_relaxed);
    }
 
@@ -623,8 +641,8 @@ public:
       auto newSet = make_shared<set<T>>();
       unique_lock<mutex> lock(mu_);
 
-      auto retSet = set_;
-      set_ = newSet;
+      auto retSet = atomic_load(&set_);
+      atomic_store(&set_, newSet);
       count_.store(set_->size(), memory_order_relaxed);
 
       return retSet;
@@ -632,7 +650,8 @@ public:
 
    shared_ptr<set<T>> get(void) const
    {
-      return set_;
+      auto retSet = atomic_load(&set_);
+      return retSet;
    }
 
    void clear(void)
@@ -640,8 +659,8 @@ public:
       auto newSet = make_shared<set<T>>();
       unique_lock<mutex> lock(mu_);
 
-      set_ = newSet;
-      count_.store(set_->size(), memory_order_relaxed);
+      atomic_store(&set_, newSet);
+      count_.store(0, memory_order_relaxed);
    }
 
    size_t size(void) const
