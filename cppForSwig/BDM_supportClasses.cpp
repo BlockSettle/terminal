@@ -1019,12 +1019,15 @@ void ZeroConfContainer::preprocessZcMap(map<BinaryData, ParsedTx>& zcMap)
 
    auto parserLdb = [this, &txVec, counter](void)->void
    {
-      auto id = counter->fetch_add(1, memory_order_relaxed);
-      if (id >= txVec.size())
-         return;
+      while (1)
+      {
+         auto id = counter->fetch_add(1, memory_order_relaxed);
+         if (id >= txVec.size())
+            return;
 
-      auto txIter = txVec.begin() + id;
-      this->preprocessTx(*(*txIter));
+         auto txIter = txVec.begin() + id;
+         this->preprocessTx(*(*txIter));
+      }
    };
 
    vector<thread> parserThreads;
@@ -1503,9 +1506,6 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
    if (!hasChanges)
       return;
 
-   if (!notify)
-      return;
-
    //find BDVs affected by invalidated keys
    if(invalidatedKeys.size() > 0)
    {
@@ -1557,6 +1557,9 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
    if (invalidatedKeys.size() > 0)
       dropZC(invalidatedKeys);
 
+   if (!notify)
+      return;
+
    auto txiomapPtr = txioMap_.get();
    auto bdvcallbacks = bdvCallbacks_.get();
 
@@ -1605,21 +1608,24 @@ void ZeroConfContainer::preprocessTx(ParsedTx& tx) const
    uint8_t const * txStartPtr = tx.tx_.getPtr();
    unsigned len = tx.tx_.getSize();
 
+   auto nTxIn = tx.tx_.getNumTxIn();
+   auto nTxOut = tx.tx_.getNumTxOut();
+
    //try to resolve as many outpoints as we can. unresolved outpoints are 
    //either invalid or (most likely) children of unconfirmed transactions
-   if (tx.tx_.getNumTxIn() != tx.inputs_.size())
+   if (nTxIn != tx.inputs_.size())
    {
       tx.inputs_.clear();
-      tx.inputs_.resize(tx.tx_.getNumTxIn());
+      tx.inputs_.resize(nTxIn);
    }
 
-   if (tx.tx_.getNumTxOut() != tx.outputs_.size())
+   if (nTxOut != tx.outputs_.size())
    {
       tx.outputs_.clear();
-      tx.outputs_.resize(tx.tx_.getNumTxOut());
+      tx.outputs_.resize(nTxOut);
    }
 
-   for (uint32_t iin = 0; iin < tx.tx_.getNumTxIn(); iin++)
+   for (uint32_t iin = 0; iin < nTxIn; iin++)
    {
 
       auto& txIn = tx.inputs_[iin];
@@ -1664,7 +1670,7 @@ void ZeroConfContainer::preprocessTx(ParsedTx& tx) const
       txIn.value_ = stxOut.getValue();
    }
    
-   for (uint32_t iout = 0; iout < tx.tx_.getNumTxOut(); iout++)
+   for (uint32_t iout = 0; iout < nTxOut; iout++)
    {
       auto& txOut = tx.outputs_[iout];
       if (txOut.isInitialized())
@@ -2235,6 +2241,7 @@ void ZeroConfContainer::processInvTxVec(
       packet.invEntry_ = move(entry);
 
       newInvTxStack_.push_back(move(packet));
+      ++mapIter;
    }
 
    //register batch with main zc processing thread
@@ -2263,10 +2270,15 @@ void ZeroConfContainer::processInvTxThread(void)
          packet.batchPtr_->incrementCounter();
          continue;
       }
+      catch (runtime_error &e)
+      {
+         LOGERR << "zc parser error: " << e.what();
+         packet.batchPtr_->incrementCounter();
+      }
       catch (exception&)
       {
          LOGERR << "unhandled exception in ZcParser thread!";
-         return;
+         packet.batchPtr_->incrementCounter();
       }
    }
 }
@@ -2290,7 +2302,6 @@ void ZeroConfContainer::processInvTxThread(ZeroConfInvPacket& packet)
       packet.batchPtr_->incrementCounter();
       return;
    }
-
 
    //push raw tx with current time
    auto& rawTx = payloadtx->getRawTx();
@@ -2507,7 +2518,7 @@ void ZeroConfContainer::increaseParserThreadPool(unsigned count)
    //start Zc parser thread
    auto processZcThread = [this](void)->void
    {
-      parseNewZC();
+      processInvTxThread();
    };
 
    for (unsigned i = parserThreadCount_; i < count; i++)
