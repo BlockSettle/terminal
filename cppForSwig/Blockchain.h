@@ -64,8 +64,7 @@ public:
    ReorganizationState forceOrganize();
    ReorganizationState findReorgPointFromBlock(const BinaryData& blkHash);
 
-   void Blockchain::updateBranchingMaps(
-      LMDBBlockDatabase*, ReorganizationState&);
+   void updateBranchingMaps(LMDBBlockDatabase*, ReorganizationState&);
 
    shared_ptr<BlockHeader> top() const;
    shared_ptr<BlockHeader> getGenesisBlock() const;

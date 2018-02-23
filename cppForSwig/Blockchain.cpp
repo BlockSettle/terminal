@@ -351,7 +351,7 @@ shared_ptr<BlockHeader> Blockchain::organizeChain(bool forceRebuild, bool verbos
       if (thisHeaderPtr->uniqueID_ > topID)
          topID = thisHeaderPtr->uniqueID_;
 
-      auto& prevHash = thisHeaderPtr->getPrevHash();
+      auto prevHash = thisHeaderPtr->getPrevHashRef();
       auto childIter = headermap->find(prevHash);
       if (childIter == headermap->end())
       {
