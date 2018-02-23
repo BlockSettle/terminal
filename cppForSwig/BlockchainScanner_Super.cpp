@@ -941,6 +941,7 @@ void BlockchainScanner_Super::writeBlockData()
          LOGINFO << "scanned block #" << batch->start_;
       }
 
+      if(init_)
       {
          chrono::duration<double> total =
             batch->parseTxOutEnd_ - batch->parseTxOutStart_;
@@ -1156,7 +1157,7 @@ void BlockchainScanner_Super::updateSSH(bool force)
    if (scanFrom > topBlock->getBlockHeight())
       return;
    
-   TIMER_START("updateSSH");
+   TIMER_RESTART("updateSSH");
 
    ShardedSshParser sshParser(
       db_, startAt_, topBlock->getBlockHeight(), totalThreadCount_, init_);
