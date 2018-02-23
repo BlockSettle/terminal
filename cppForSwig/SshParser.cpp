@@ -248,7 +248,7 @@ void ShardedSshParser::parseShardsThread(
    {
       //grab a shard id
       auto countId = counter_.fetch_add(1, memory_order_relaxed);
-      auto shardId = countId / total;
+      unsigned shardId = countId / total;
       if (shardId > topShardId)
          break;
 
@@ -458,6 +458,9 @@ void ShardedSshParser::putCheckpoint(unsigned boundsCount)
       {
          //close the shard, we won't need it again
          auto shardPtr = dbSharded->getShard(shardId);
+         if (!shardPtr->isOpen())
+            return;
+
          shardPtr->close();
          LOGINFO << "closed shard #" << shardId;
       }
@@ -502,9 +505,8 @@ void ShardedSshParser::putCheckpoint(unsigned boundsCount)
 
    LOGINFO << "closing left over shards";
    {
-      auto tx = db_->beginTransaction(CHECKPOINT, LMDB::ReadWrite);
+      auto tx = metaShardPtr->beginTransaction(LMDB::ReadWrite);
       unsigned missed = 0;
-      unsigned closed = 0;
 
       for (auto& sema : shardSemaphores_)
       {
@@ -521,26 +523,20 @@ void ShardedSshParser::putCheckpoint(unsigned boundsCount)
 
          auto bounds = dbSharded->getShardBounds(sema.first);
          auto topHeight = min(bounds.second, topBlockHeight);
-
-         auto tophash = db_->getValueNoCopy(CHECKPOINT, topHashKey.getDataRef());
+         auto tophash = metaShardPtr->getValue(topHashKey.getDataRef());
 
          try
          {
             auto headerPtr = db_->blockchain()->getHeaderByHash(tophash);
-            if (headerPtr->getBlockHeight() < topHeight)
-            {
-               closeShard(sema.first);
-               ++closed;
-            }
+            if (headerPtr->getBlockHeight() >= topHeight)
+               continue;
          }
-         catch(...)
+         catch (...)
          {
-            closeShard(sema.first);
-            ++closed;
          }
+            
+         closeShard(sema.first);
       }
-
-      LOGINFO << "closed " << closed << " shards";
       
       if (missed > 0)
       {
