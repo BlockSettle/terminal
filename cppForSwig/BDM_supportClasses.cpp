@@ -825,9 +825,57 @@ map<BinaryData, BinaryData> ZeroConfContainer::purge(
 
    vector<BinaryData> ktdVec;
    map<BinaryData, BinaryData> minedKeys;
+
+   auto updateChildren = [&zcMap, &minedKeys, this](
+      const BinaryData& txHash, const BinaryData& blockKey,
+      map<BinaryData, unsigned> minedHashes)->void
+   {
+      auto spentIter = outPointsSpentByKey_.find(txHash);
+      if (spentIter == outPointsSpentByKey_.end())
+         return;
+
+      //is this zc mined or just invalidated?
+      auto minedIter = minedHashes.find(txHash);
+      if (minedIter == minedHashes.end())
+         return;
+      auto txid = minedIter->second;
+
+      //list children by key
+      set<BinaryDataRef> keysToClear;
+      for (auto& op_pair : spentIter->second)
+         keysToClear.insert(op_pair.second.getRef());
+
+      //run through children, replace key
+      for (auto& zckey : keysToClear)
+      {
+         auto zcIter = zcMap.find(zckey);
+         if (zcIter == zcMap.end())
+            continue;
+
+         for (auto& input : zcIter->second.inputs_)
+         {
+            if (input.opRef_.getTxHashRef() != txHash)
+               continue;
+
+            auto prevKey = input.opRef_.getDbKey();
+            input.opRef_.reset();
+
+            BinaryWriter bw_key;
+            bw_key.put_BinaryData(blockKey);
+            bw_key.put_uint16_t(txid, BE);
+            bw_key.put_uint16_t(input.opRef_.getIndex(), BE);
+
+            minedKeys.insert(make_pair(prevKey, bw_key.getData()));
+            input.opRef_.getDbKey() = bw_key.getData();
+
+            zcIter->second.isChainedZc_ = false;
+         }
+      }
+   };
    
    //lambda to purge zc map per block
-   auto purgeZcMap = [&zcMap, &ktdVec, &reorgState, &minedKeys, this](
+   auto purgeZcMap = 
+      [&zcMap, &ktdVec, &reorgState, &minedKeys, this, updateChildren](
       map<BinaryDataRef, set<unsigned>>& spentOutpoints,
       map<BinaryData, unsigned> minedHashes,
       const BinaryData& blockKey)->void
@@ -869,47 +917,7 @@ map<BinaryData, BinaryData> ZeroConfContainer::purge(
 
          //this zc is now invalid, check if it has children
          auto& zchash = zcMove.getTxHash();
-         auto spentIter = outPointsSpentByKey_.find(zchash);
-         if (spentIter == outPointsSpentByKey_.end())
-            continue;
-
-         //is this zc mined or just invalidated?
-         auto minedIter = minedHashes.find(zchash);
-         if (minedIter == minedHashes.end())
-            continue;
-         auto txid = minedIter->second;
-
-         //list children by key
-         set<BinaryDataRef> keysToClear;
-         for (auto& op_pair : spentIter->second)
-            keysToClear.insert(op_pair.second.getRef());
-
-         //run through children, replace key
-         for (auto& zckey : keysToClear)
-         {
-            auto zcIter = zcMap.find(zckey);
-            if (zcIter == zcMap.end())
-               continue;
-
-            for (auto& input : zcIter->second.inputs_)
-            {
-               if (input.opRef_.getTxHashRef() != zchash)
-                  continue;
-
-               auto prevKey = input.opRef_.getDbKey();
-               input.opRef_.reset();
-
-               BinaryWriter bw_key;
-               bw_key.put_BinaryData(blockKey);
-               bw_key.put_uint16_t(txid, BE);
-               bw_key.put_uint16_t(input.opRef_.getIndex(), BE);
-
-               minedKeys.insert(make_pair(prevKey, bw_key.getData()));
-               input.opRef_.getDbKey() = bw_key.getData();
-
-               zcIter->second.isChainedZc_ = false;
-            }
-         }
+         updateChildren(zchash, blockKey, minedHashes);
       }
    };
 
@@ -974,6 +982,16 @@ map<BinaryData, BinaryData> ZeroConfContainer::purge(
          purgeZcMap(spentOutpoints, minedHashes, 
             currentHeader->getBlockDataKey());
 
+         if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
+         {
+            //purge mined hashes
+            for (auto& minedHash : minedHashes)
+            {
+               allZcTxHashes_.erase(minedHash.first);
+               ktdVec.push_back(minedHash.first);
+            }
+         }
+
          //next block
          if (currentHeader->getThisHash() == reorgState.newTop_->getThisHash())
             break;
@@ -986,22 +1004,28 @@ map<BinaryData, BinaryData> ZeroConfContainer::purge(
    {
    }
 
-   //reset containers
-   reset();
-
-   //gotta resolve outpoints again after a reorg
-   if (!reorgState.prevTopStillValid_)
-      preprocessZcMap(zcMap);
-
-   //delete keys from DB
-   auto deleteKeys = [&](void)->void
+   if (reorgState.prevTopStillValid_)
    {
-      this->updateZCinDB(vector<BinaryData>(), ktdVec);
-   };
+      set<BinaryData> ktdSet;
+      for (auto& key : ktdVec)
+         ktdSet.insert(key);
+      dropZC(ktdSet);
+   }
+   else
+   {
+      //reset containers and resolve outpoints anew after a reorg
+      reset();
+      //delete keys from DB
+      auto deleteKeys = [&](void)->void
+      {
+         this->updateZCinDB(vector<BinaryData>(), ktdVec);
+      };
 
-   thread deleteKeyThread(deleteKeys);
-   if (deleteKeyThread.joinable())
-      deleteKeyThread.join();
+      preprocessZcMap(zcMap);
+      thread deleteKeyThread(deleteKeys);
+      if (deleteKeyThread.joinable())
+         deleteKeyThread.join();
+   }
 
    return minedKeys;
 }
@@ -1051,6 +1075,7 @@ void ZeroConfContainer::reset()
    keyToSpentScrAddr_.clear();
    txOutsSpentByZC_.clear();
    outPointsSpentByKey_.clear();
+   keyToFundedScrAddr_.clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1128,7 +1153,7 @@ void ZeroConfContainer::dropZC(const set<BinaryData>& zcKeys)
          if (zcIter == txmapPtr->end())
             continue;
 
-         auto hash = zcIter->second.getTxHash();
+         auto& hash = zcIter->second.getTxHash();
          hashesToDelete.push_back(hash);
          outPointsSpentByKey_.erase(hash);
 
@@ -1151,12 +1176,11 @@ void ZeroConfContainer::dropZC(const set<BinaryData>& zcKeys)
          }
 
          //drop from txOutsSpentByZC_
+         for (auto& input : zcIter->second.inputs_)
          {
-            for (auto txoutkey : *txoutset)
-            {
-               if (txoutkey.startsWith(zcKey))
-                  txoutsToDelete.push_back(txoutkey);
-            }
+            if (!input.isResolved())
+               continue;
+            txoutsToDelete.push_back(input.opRef_.getDbKey());
          }
 
          //mark for deletion
@@ -1300,10 +1324,21 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
 
    for (auto& newZCPair : zcMap)
    {
-     auto& txHash = newZCPair.second.getTxHash();
-      auto insertIter = allZcTxHashes_.insert(txHash);
-      if (insertIter.second)
-         keysToWrite.push_back(newZCPair.first);
+      auto txmap_ptr = txMap_.get();
+      if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
+      {
+         auto& txHash = newZCPair.second.getTxHash();
+         auto insertIter = allZcTxHashes_.insert(txHash);
+         if (!insertIter.second)
+            continue;
+      }
+      else
+      {
+         if (txmap_ptr->find(newZCPair.first) != txmap_ptr->end())
+            continue;
+      }
+
+      keysToWrite.push_back(newZCPair.first);
    }
 
    map<BinaryData, BinaryData> txhashmap_update;
@@ -1376,10 +1411,10 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
 
             for (auto& keypair : keymap)
             {
-                  auto&& childrenKeys = getTxChildren(keypair.second);
-                  childKeys.insert(move(keypair.second));
-                  for (auto& c_key : childrenKeys)
-                     childKeys.insert(move(c_key));
+               auto&& childrenKeys = getTxChildren(keypair.second);
+               childKeys.insert(move(keypair.second));
+               for (auto& c_key : childrenKeys)
+                  childKeys.insert(move(c_key));
             }
          }
 
@@ -1507,7 +1542,7 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
       return;
 
    //find BDVs affected by invalidated keys
-   if(invalidatedKeys.size() > 0)
+   if (invalidatedKeys.size() > 0)
    {
       //TODO: multi thread this at some point
       
@@ -1811,7 +1846,11 @@ ZeroConfContainer::BulkFilterData ZeroConfContainer::ZCisMineBulkFilter(
 
       auto& opZcKey = input.opRef_.getDbKey();
       if (!getzckeyfortxhash(input.opRef_.getTxHashRef(), opZcKey))
+      {
+         if (BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER ||
+            allZcTxHashes_.find(input.opRef_.getTxHashRef()) == allZcTxHashes_.end())
          continue;
+      }
 
       isChained = true;
 
@@ -2042,14 +2081,8 @@ const shared_ptr<map<BinaryData, set<BinaryData>>>
 void ZeroConfContainer::updateZCinDB(const vector<BinaryData>& keysToWrite, 
    const vector<BinaryData>& keysToDelete)
 {
-   //TODO: bulk writes
-
-   //should run in its own thread to make sure we can get a write tx
-   DB_SELECT dbs = ZERO_CONF;
-
    auto txmap = txMap_.get();
-
-   auto&& tx = db_->beginTransaction(dbs, LMDB::ReadWrite);
+   auto&& tx = db_->beginTransaction(ZERO_CONF, LMDB::ReadWrite);
 
    for (auto& key : keysToWrite)
    {
@@ -2080,12 +2113,13 @@ void ZeroConfContainer::updateZCinDB(const vector<BinaryData>& keysToWrite,
       else
          keyWithPrefix = key;
 
-      auto dbIter = db_->getIterator(dbs);
+      auto dbIter = db_->getIterator(ZERO_CONF);
 
       if (!dbIter->seekTo(keyWithPrefix))
          continue;
 
       vector<BinaryData> ktd;
+      ktd.push_back(keyWithPrefix);
 
       do
       {
@@ -2098,7 +2132,7 @@ void ZeroConfContainer::updateZCinDB(const vector<BinaryData>& keysToWrite,
       while (dbIter->advanceAndRead(DB_PREFIX_ZCDATA));
 
       for (auto Key : ktd)
-         db_->deleteValue(dbs, Key);
+         db_->deleteValue(ZERO_CONF, Key);
    }
 }
 
@@ -2525,6 +2559,7 @@ void ZeroConfContainer::increaseParserThreadPool(unsigned count)
       parserThreads_.push_back(thread(processZcThread));
 
    parserThreadCount_ = parserThreads_.size();
+   LOGINFO << "now running " << parserThreadCount_ << " zc parser threads";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
