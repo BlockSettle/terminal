@@ -79,12 +79,15 @@ if test "x$cross_compiling" != "xyes"; then
 	AX_SWIG_PYTHON([no])
 	AS_IF([test -z $AX_SWIG_PYTHON_CPPFLAGS], 
 		[AC_MSG_ERROR([failed to procure swig include path, make sure swig is installed])])
+	AC_SUBST([PYTHON_LIBS], [`python-config --libs`])
 	AX_PYTHON_MODULE([psutil], [fatal])
 else
 AC_SUBST([AX_SWIG_PYTHON_CPPFLAGS], [`python-config --includes`])
+AC_SUBST([PYTHON_LIBS], [`python-config --libs`])
 fi
 
 AC_MSG_RESULT([AX_SWIG_PYTHON_CPPFLAGS: $AX_SWIG_PYTHON_CPPFLAGS])
+AC_MSG_RESULT([PYTHON_LIBS: $PYTHON_LIBS])
 
 AC_CHECK_PROG([HAVE_PYRCC4], [pyrcc4], [yes], [no])
 AS_IF([test $HAVE_PYRCC4 == yes], [],
@@ -175,9 +178,6 @@ AC_CONFIG_FILES(Makefile
 
 AM_CONDITIONAL([BUILD_BENCH], [test x$want_benchmark = xyes])
 AM_CONDITIONAL([BUILD_TESTS], [test "x$want_tests" = "xyes"])
-if test "x$want_tests" = "xyes"; then
-AC_CONFIG_FILES(cppForSwig/gtest/Makefile)
-fi
 
 AC_CONFIG_SUBDIRS([cppForSwig/fcgi cppForSwig/cryptopp])
 
