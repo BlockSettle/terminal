@@ -20,7 +20,7 @@ if HAVE_CLANG
 SWIG_FLAGS += -D__CLANG__
 endif
 
-INCLUDE_FILES = -Ibech32/ref/c++ -Icryptopp -Ifcgi
+INCLUDE_FILES = -Ibech32/ref/c++ -Ifcgi
 
 ARMORYDB_SOURCE_FILES = main.cpp
 

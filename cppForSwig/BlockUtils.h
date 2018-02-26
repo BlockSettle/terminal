@@ -31,8 +31,8 @@
 #include "ScrAddrObj.h"
 #include "bdmenums.h"
 
-#include "cryptlib.h"
-#include "sha.h"
+#include "cryptopp/cryptlib.h"
+#include "cryptopp/sha.h"
 #include "UniversalTimer.h"
 
 #include <functional>
