@@ -526,4 +526,30 @@ namespace DBTestUtils
          ssh.totalTxioCount_ += txioCount;
       }
    }
+
+   /////////////////////////////////////////////////////////////////////////////
+   void prettyPrintSsh(StoredScriptHistory& ssh)
+   {
+      cout << "balance: " << ssh.totalUnspent_ << endl;
+      cout << "txioCount: " << ssh.totalTxioCount_ << endl;
+
+      for(auto& subssh : ssh.subHistMap_)
+      {
+         cout << "key: " << subssh.first.toHexStr() << ", txCount:" << 
+            subssh.second.txioCount_ << endl;
+        
+         for(auto& txio : subssh.second.txioMap_)
+         {
+            cout << "   amount: " << txio.second.getValue();
+            cout << "   keys: " << txio.second.getDBKeyOfOutput().toHexStr();
+            if (txio.second.hasTxIn())
+            {
+               cout << " to " << txio.second.getDBKeyOfInput().toHexStr();
+            }
+ 
+	    cout << ", isUTXO: " << txio.second.isUTXO();
+            cout << endl;
+         }
+      }
+   }
 }

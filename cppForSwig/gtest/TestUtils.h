@@ -144,6 +144,7 @@ namespace DBTestUtils
       Clients* clients, const string& bdvId, const BinaryData& txHash);
 
    void addTxioToSsh(StoredScriptHistory&, const map<BinaryData, TxIOPair>&);
+   void prettyPrintSsh(StoredScriptHistory& ssh);
 }
 
 namespace ResolverUtils
