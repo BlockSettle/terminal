@@ -69,7 +69,7 @@ libCppBlockUtils_la_LIBADD = lmdb/liblmdb.la \
 		 	 	fcgi/libfcgi/libfcgi.la \
 		 	 	$(PYTHON_LIBS)
 		 	 	-lpthread
-libCppBlockUtils_la_LDFLAGS = $(LDFLAGS) -shared
+libCppBlockUtils_la_LDFLAGS = $(LDFLAGS) `pkg-config --libs python-2.7` -shared
 
 if BUILD_DARWIN
 libCppBlockUtils_la_LDFLAGS += -Wl,-rpath,@executable_path/ -Wl,-rpath,@loader_path/
