@@ -435,9 +435,6 @@ void ShardedSshParser::putCheckpoint(unsigned boundsCount)
    auto closeShard = 
       [this, metaShardPtr, dbSharded, &topBlockHeight](unsigned shardId)->void
    {
-      if (!init_)
-         return;
-
       {
          auto bounds = dbSharded->getShardBounds(shardId);
          auto topHeight = min(bounds.second, topBlockHeight);
@@ -454,6 +451,9 @@ void ShardedSshParser::putCheckpoint(unsigned boundsCount)
             topHashKey.getDataRef(), blockPtr->getThisHashRef());
       }
       
+      if (!init_)
+         return;
+
       try
       {
          //close the shard, we won't need it again
