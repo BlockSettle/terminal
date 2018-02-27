@@ -59,10 +59,10 @@ if HAVE_GUI
 lib_LTLIBRARIES += libCppBlockUtils.la
 libCppBlockUtils_la_SOURCES = $(CPPBLOCKUTILS_SOURCE_FILES) \
 			      CppBlockUtils_wrap.cxx
-libCppBlockUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
-		    		$(EXTRA_PYTHON_INCLUDES) $(AX_SWIG_PYTHON_CPPFLAGS)
+libCppBlockUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 libCppBlockUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 				-Ifcgi/include \
+				$(EXTRA_PYTHON_INCLUDES) $(AX_SWIG_PYTHON_CPPFLAGS) \
 				-D__STDC_LIMIT_MACROS
 libCppBlockUtils_la_LIBADD = lmdb/liblmdb.la \
 		 	 	cryptopp/libcryptopp.la \

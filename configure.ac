@@ -8,7 +8,7 @@ LT_INIT
 
 AC_CANONICAL_HOST
 
-#reset these flags if they are the default -g -02
+# Reset these flags if they are the system default "-g -02".
 AS_IF([test "$CFLAGS" = "-g -O2"] ,[AC_SUBST(CFLAGS, [ ])])
 AS_IF([test "$CXXFLAGS" = "-g -O2"] ,[AC_SUBST(CXXFLAGS, [ ])])
 
@@ -183,6 +183,7 @@ AC_CONFIG_SUBDIRS([cppForSwig/fcgi cppForSwig/cryptopp])
 
 AC_OUTPUT
 
+echo "  Armory flags"
 echo "  CC              = $CC"
 echo "  CFLAGS          = $CFLAGS"
 echo "  CPP             = $CPP"
