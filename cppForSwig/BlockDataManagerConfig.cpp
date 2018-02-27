@@ -742,6 +742,25 @@ string BlockDataManagerConfig::getCookie(const string& datadir)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+string BlockDataManagerConfig::getDbModeStr()
+{
+   switch(getDbType())
+   {
+   case ARMORY_DB_BARE: 
+      return "DB_BARE";
+
+   case ARMORY_DB_FULL:
+      return "DB_FULL";
+  
+   case ARMORY_DB_SUPER:
+      return "DB_SUPER";
+
+   default:
+      throw runtime_error("invalid db type!");
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //
 // ConfigFile
 //

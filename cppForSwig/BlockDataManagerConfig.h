@@ -137,6 +137,8 @@ public:
    {
       return armoryDbType_;
    }
+
+   static string getDbModeStr(void);
 };
 
 ////

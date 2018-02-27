@@ -495,8 +495,8 @@ void LMDBBlockDatabase::openDatabases(
    if (DatabaseContainer::magicBytes_.getSize() == 0)
       DatabaseContainer::magicBytes_ = magic;
 
-   SCOPED_TIMER("openDatabases");
    LOGINFO << "Opening databases...";
+   LOGINFO << "dbmode: " << BlockDataManagerConfig::getDbModeStr();
 
    magicBytes_ = magic;
    genesisTxHash_ = genesisTxHash;
@@ -572,6 +572,7 @@ void LMDBBlockDatabase::openDatabases(
 /////////////////////////////////////////////////////////////////////////////
 void LMDBBlockDatabase::openSupernodeDBs()
 {
+   LOGINFO << "opening supernode shards";
    shared_ptr<DatabaseContainer> dbPtr;
 
    //SUBSSH
