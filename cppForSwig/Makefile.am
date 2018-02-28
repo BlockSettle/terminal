@@ -23,7 +23,7 @@ endif
 INCLUDE_FILES = -Ibech32/ref/c++ -Icryptopp -Ifcgi
 
 DB_SOURCE_FILES = main.cpp
-CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
+ARMORYUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	BtcUtils.cpp DBUtils.cpp EncryptionUtils.cpp \
 	BDM_seder.cpp DataObject.cpp FcgiMessage.cpp \
 	SocketObject.cpp SwigClient.cpp StringSockets.cpp \
@@ -42,6 +42,20 @@ CPPBLOCKUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
 	BlockchainScanner_Super.cpp BlockDataMap.cpp BitcoinP2P.cpp  \
 	SshParser.cpp
 
+# libArmoryUtils - Required by all Armory programs/libraries.
+# May be able to modularize in the future so that it's not monolithic.
+lib_LTLIBRARIES += libArmoryUtils.la
+libArmoryUtils_la_SOURCES = $(ARMORYUTILS_SOURCE_FILES)
+libArmoryUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
+libArmoryUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
+				-Ifcgi/include \
+				-D__STDC_LIMIT_MACROS
+libArmoryUtils_la_LIBADD = lmdb/liblmdb.la \
+		 	 	cryptopp/libcryptopp.la \
+		 	 	fcgi/libfcgi/libfcgi.la \
+		 	 	-lpthread
+libArmoryUtils_la_LDFLAGS = $(LDFLAGS) -shared
+
 #ArmoryDB
 bin_PROGRAMS += ArmoryDB
 ArmoryDB_SOURCES = $(DB_SOURCE_FILES)
@@ -50,26 +64,26 @@ ArmoryDB_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 ArmoryDB_LDADD = fcgi/libfcgi/libfcgi.la \
 		 cryptopp/libcryptopp.la \
 		 lmdb/liblmdb.la \
-		 libCppBlockUtils.la \
+		 libArmoryUtils.la \
 		 -lpthread
 ArmoryDB_LDFLAGS = -static $(LDFLAGS)
 
-#libCppBlockUtils - "shared" LDFLAG due to SWIG requirements
+#libCppBlockUtils - SWIG/GUI library.
+# "shared" LDFLAG due to SWIG requirements.
 if HAVE_GUI
 lib_LTLIBRARIES += libCppBlockUtils.la
-libCppBlockUtils_la_SOURCES = $(CPPBLOCKUTILS_SOURCE_FILES) \
-			      CppBlockUtils_wrap.cxx
-libCppBlockUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
+libCppBlockUtils_la_SOURCES = CppBlockUtils_wrap.cxx
+libCppBlockUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
+				$(PYTHON_CFLAGS)
 libCppBlockUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 				-Ifcgi/include \
-				$(EXTRA_PYTHON_INCLUDES) $(AX_SWIG_PYTHON_CPPFLAGS) \
 				-D__STDC_LIMIT_MACROS
 libCppBlockUtils_la_LIBADD = lmdb/liblmdb.la \
 		 	 	cryptopp/libcryptopp.la \
 		 	 	fcgi/libfcgi/libfcgi.la \
-		 	 	$(PYTHON_LIBS)
+		 	 	libArmoryUtils.la \
 		 	 	-lpthread
-libCppBlockUtils_la_LDFLAGS = $(LDFLAGS) `pkg-config --libs python-2.7` -shared
+libCppBlockUtils_la_LDFLAGS = $(LDFLAGS) $(PYTHON_LDFLAGS) -shared
 
 if BUILD_DARWIN
 libCppBlockUtils_la_LDFLAGS += -Wl,-rpath,@executable_path/ -Wl,-rpath,@loader_path/
@@ -77,15 +91,15 @@ endif
 
 #custom rules
 CppBlockUtils_wrap.cxx: CppBlockUtils.i
-	swig $(SWIG_FLAGS) CppBlockUtils.i 
+	swig $(SWIG_FLAGS) CppBlockUtils.i
 
 .PHONY: CppBlockUtils_wrap.cxx
+endif
 
 clean-local:
 	rm -f CppBlockUtils.py
 	rm -f CppBlockUtils_wrap.cxx
 	rm -f CppBlockUtils_wrap.h
-endif
 
 # .include file prevents gtest subdir from building a second copy of Armory.
 # Also provides a convenient spot to place all test-related materials.
