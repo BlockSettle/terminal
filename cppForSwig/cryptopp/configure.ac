@@ -21,8 +21,6 @@ AC_ARG_ENABLE([debug],
               [want_debug="$enableval"], [want_debug=no])
 
 if test "x$want_debug" = "xyes" -a $ac_cv_c_compiler_gnu != no; then
-  CFLAGS="-O0 -g"
-  CXXFLAGS="-O0 -g"
   AC_DEFINE([DEBUG], 1, [Define for debugging])
 fi
 

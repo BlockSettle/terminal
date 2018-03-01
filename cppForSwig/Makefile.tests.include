@@ -22,19 +22,6 @@ gtest_ContainerTests_LDADD = gtest/libgtest.la libArmoryCommon.la
 gtest_ContainerTests_LDFLAGS = $(AM_LDFLAGS) $(LDFLAGS) -static
 TESTS += gtest/ContainerTests
 
-if HAVE_GUI
-# CppBlockUtilsTests
-bin_PROGRAMS += gtest/CppBlockUtilsTests
-gtest_CppBlockUtilsTests_SOURCES = gtest/CppBlockUtilsTests.cpp
-gtest_CppBlockUtilsTests_CXXFLAGS = $(AM_CXXFLAGS)
-gtest_CppBlockUtilsTests_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
-gtest_CppBlockUtilsTests_LDADD = -Llmdb -llmdb \
-	-Lcryptopp -lcryptopp \
-	-Lfcgi/libfcgi -lfcgi \
-	gtest/libgtest.la libArmoryCommon.la libArmoryCLI.la libArmoryGUI.la
-gtest_CppBlockUtilsTests_LDFLAGS = $(AM_LDFLAGS) $(LDFLAGS) -static
-TESTS += gtest/CppBlockUtilsTests
-
 # DB1kIterTest
 bin_PROGRAMS += gtest/DB1kIterTest
 gtest_DB1kIterTest_SOURCES = gtest/DB1kIterTest.cpp
@@ -43,7 +30,7 @@ gtest_DB1kIterTest_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 gtest_DB1kIterTest_LDADD = -Llmdb -llmdb \
 	-Lcryptopp -lcryptopp \
 	-Lfcgi/libfcgi -lfcgi \
-	gtest/libgtest.la libArmoryCommon.la libArmoryCLI.la libArmoryGUI.la
+	gtest/libgtest.la libArmoryCLI.la
 gtest_DB1kIterTest_LDFLAGS = $(AM_LDFLAGS) $(LDFLAGS) -static
 TESTS += gtest/DB1kIterTest
 
@@ -55,7 +42,20 @@ gtest_SupernodeTests_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 gtest_SupernodeTests_LDADD = -Llmdb -llmdb \
 	-Lcryptopp -lcryptopp \
 	-Lfcgi/libfcgi -lfcgi \
-	gtest/libgtest.la libArmoryCommon.la libArmoryGUI.la
+	gtest/libgtest.la libArmoryCLI.la libArmoryGUI.la
 gtest_SupernodeTests_LDFLAGS = $(AM_LDFLAGS) $(LDFLAGS) -static
 TESTS += gtest/SupernodeTests
+
+if HAVE_GUI
+# CppBlockUtilsTests - Contains the bulk of the tests (CLI or GUI)
+bin_PROGRAMS += gtest/CppBlockUtilsTests
+gtest_CppBlockUtilsTests_SOURCES = gtest/CppBlockUtilsTests.cpp
+gtest_CppBlockUtilsTests_CXXFLAGS = $(AM_CXXFLAGS)
+gtest_CppBlockUtilsTests_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
+gtest_CppBlockUtilsTests_LDADD = -Llmdb -llmdb \
+	-Lcryptopp -lcryptopp \
+	-Lfcgi/libfcgi -lfcgi \
+	gtest/libgtest.la libArmoryCLI.la libArmoryGUI.la
+gtest_CppBlockUtilsTests_LDFLAGS = $(AM_LDFLAGS) $(LDFLAGS) -static
+TESTS += gtest/CppBlockUtilsTests
 endif

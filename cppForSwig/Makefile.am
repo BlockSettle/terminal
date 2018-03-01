@@ -24,39 +24,71 @@ INCLUDE_FILES = -Ibech32/ref/c++ -Icryptopp -Ifcgi
 
 ARMORYDB_SOURCE_FILES = main.cpp
 
-ARMORYGUI_SOURCE_FILES = SwigClient.cpp WalletManager.cpp Wallets.cpp \
-	CoinSelection.cpp TransactionBatch.cpp Accounts.cpp Addresses.cpp \
-	AssetEncryption.cpp Assets.cpp DecryptedDataContainer.cpp \
-	DerivationScheme.cpp
-ARMORYCLI_SOURCE_FILES = lmdb_wrapper.cpp BlockObj.cpp BlockUtils.cpp \
-	BtcWallet.cpp LedgerEntry.cpp ScrAddrObj.cpp Blockchain.cpp \
-	BDM_mainthread.cpp BDM_supportClasses.cpp nodeRPC.cpp BDM_Server.cpp \
-	BlockDataViewer.cpp HistoryPager.cpp Progress.cpp txio.cpp \
-	StoredBlockObj.cpp DatabaseBuilder.cpp BlockchainScanner.cpp \
-	BlockchainScanner_Super.cpp BlockDataMap.cpp BitcoinP2P.cpp  \
-	SshParser.cpp
-ARMORYCOMMON_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
-	BtcUtils.cpp DBUtils.cpp EncryptionUtils.cpp \
-	BDM_seder.cpp DataObject.cpp FcgiMessage.cpp \
-	SocketObject.cpp StringSockets.cpp \
-	BlockDataManagerConfig.cpp TxClasses.cpp \
-	Script.cpp Signer.cpp \
-	Transactions.cpp ReentrantLock.cpp JSON_codec.cpp \
-	log.cpp TxEvalState.cpp \
-	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp
+ARMORYGUI_SOURCE_FILES = CoinSelection.cpp \
+	SwigClient.cpp \
+	TransactionBatch.cpp \
+	WalletManager.cpp \
+	Wallets.cpp
+ARMORYCLI_SOURCE_FILES = Accounts.cpp \
+	Addresses.cpp \
+	AssetEncryption.cpp \
+	Assets.cpp \
+	BDM_mainthread.cpp \
+	BDM_Server.cpp \
+	BDM_supportClasses.cpp \
+	BitcoinP2P.cpp \
+	BlockchainScanner.cpp \
+	BlockchainScanner_Super.cpp \
+	BlockDataViewer.cpp \
+	BlockUtils.cpp \
+	BtcWallet.cpp \
+	DatabaseBuilder.cpp \
+	DataObject.cpp \
+	DecryptedDataContainer.cpp \
+	DerivationScheme.cpp \
+	FcgiMessage.cpp \
+	HistoryPager.cpp \
+	LedgerEntry.cpp \
+	lmdb_wrapper.cpp \
+	log.cpp \
+	nodeRPC.cpp \
+	Progress.cpp \
+	ReentrantLock.cpp \
+	ScrAddrObj.cpp \
+	SocketObject.cpp \
+	SshParser.cpp \
+	StringSockets.cpp \
+	StoredBlockObj.cpp \
+	txio.cpp
+ARMORYCOMMON_SOURCE_FILES = BDM_seder.cpp \
+	BinaryData.cpp \
+	Blockchain.cpp \
+	BlockDataManagerConfig.cpp \
+	BlockDataMap.cpp \
+	BlockObj.cpp \
+	BtcUtils.cpp \
+	DBUtils.cpp \
+	EncryptionUtils.cpp \
+	JSON_codec.cpp \
+	Script.cpp \
+	Signer.cpp \
+	Transactions.cpp \
+	TxClasses.cpp \
+	TxEvalState.cpp \
+	txio.cpp \
+	UniversalTimer.cpp \
+	bech32/ref/c++/bech32.cpp \
+	bech32/ref/c++/segwit_addr.cpp
 
 # libArmoryCommon - Required by all Armory programs/libraries.
 # May be able to modularize in the future so that it's not monolithic.
 lib_LTLIBRARIES += libArmoryCommon.la
 libArmoryCommon_la_SOURCES = $(ARMORYCOMMON_SOURCE_FILES)
 libArmoryCommon_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
-libArmoryCommon_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
-				-Ifcgi/include \
-				-D__STDC_LIMIT_MACROS
+libArmoryCommon_la_CXXFLAGS = $(AM_CXXFLAGS) -D__STDC_LIMIT_MACROS
 libArmoryCommon_la_LIBADD = lmdb/liblmdb.la \
-		 	 	cryptopp/libcryptopp.la \
-		 	 	fcgi/libfcgi/libfcgi.la \
-		 	 	-lpthread
+				cryptopp/libcryptopp.la \
+				-lpthread
 libArmoryCommon_la_LDFLAGS = $(LDFLAGS) -shared
 
 # Common command-line functionality library
@@ -65,12 +97,10 @@ libArmoryCLI_la_SOURCES = $(ARMORYCLI_SOURCE_FILES)
 libArmoryCLI_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
 			$(PYTHON_CFLAGS)
 libArmoryCLI_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
-			-Ifcgi/include \
 			-D__STDC_LIMIT_MACROS
 libArmoryCLI_la_LIBADD = lmdb/liblmdb.la \
-			cryptopp/libcryptopp.la \
-			fcgi/libfcgi/libfcgi.la \
-			libArmoryCommon.la \
+			 fcgi/libfcgi/libfcgi.la \
+			 libArmoryCommon.la \
 			-lpthread
 libArmoryCLI_la_LDFLAGS = $(LDFLAGS) -shared
 
@@ -80,8 +110,6 @@ ArmoryDB_SOURCES = $(ARMORYDB_SOURCE_FILES)
 ArmoryDB_CXXFLAGS = $(AM_CXXFLAGS) -D__STDC_LIMIT_MACROS
 ArmoryDB_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 ArmoryDB_LDADD = fcgi/libfcgi/libfcgi.la \
-		 cryptopp/libcryptopp.la \
-		 lmdb/liblmdb.la \
 		 libArmoryCommon.la \
 		 libArmoryCLI.la \
 		 -lpthread
@@ -93,13 +121,9 @@ lib_LTLIBRARIES += libArmoryGUI.la
 libArmoryGUI_la_SOURCES = $(ARMORYGUI_SOURCE_FILES)
 libArmoryGUI_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
 			$(PYTHON_CFLAGS)
-libArmoryGUI_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
-			-Ifcgi/include \
+libArmoryGUI_la_CXXFLAGS = $(AM_CXXFLAGS)
 			-D__STDC_LIMIT_MACROS
-libArmoryGUI_la_LIBADD = lmdb/liblmdb.la \
-			cryptopp/libcryptopp.la \
-			fcgi/libfcgi/libfcgi.la \
-			libArmoryCommon.la \
+libArmoryGUI_la_LIBADD = libArmoryCommon.la \
 			-lpthread
 libArmoryGUI_la_LDFLAGS = $(LDFLAGS) $(PYTHON_LDFLAGS) -shared
 
@@ -112,11 +136,7 @@ libCppBlockUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
 libCppBlockUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 				-Ifcgi/include \
 				-D__STDC_LIMIT_MACROS
-libCppBlockUtils_la_LIBADD = lmdb/liblmdb.la \
-		 	 	cryptopp/libcryptopp.la \
-		 	 	fcgi/libfcgi/libfcgi.la \
-		 	 	libArmoryCommon.la \
-		 	 	libArmoryGUI.la \
+libCppBlockUtils_la_LIBADD = libArmoryGUI.la \
 		 	 	-lpthread
 libCppBlockUtils_la_LDFLAGS = $(LDFLAGS) $(PYTHON_LDFLAGS) -shared
 
