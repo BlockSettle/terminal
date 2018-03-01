@@ -22,55 +22,89 @@ endif
 
 INCLUDE_FILES = -Ibech32/ref/c++ -Icryptopp -Ifcgi
 
-DB_SOURCE_FILES = main.cpp
-ARMORYUTILS_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
-	BtcUtils.cpp DBUtils.cpp EncryptionUtils.cpp \
-	BDM_seder.cpp DataObject.cpp FcgiMessage.cpp \
-	SocketObject.cpp SwigClient.cpp StringSockets.cpp \
-	BlockDataManagerConfig.cpp TxClasses.cpp \
-	WalletManager.cpp Wallets.cpp Script.cpp Signer.cpp \
-	Transactions.cpp CoinSelection.cpp ReentrantLock.cpp JSON_codec.cpp \
-	TransactionBatch.cpp log.cpp TxEvalState.cpp \
-	Accounts.cpp Addresses.cpp AssetEncryption.cpp Assets.cpp \
-	DecryptedDataContainer.cpp DerivationScheme.cpp \
-	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp \
-	lmdb_wrapper.cpp BlockObj.cpp BlockUtils.cpp \
+ARMORYDB_SOURCE_FILES = main.cpp
+
+ARMORYGUI_SOURCE_FILES = SwigClient.cpp WalletManager.cpp Wallets.cpp \
+	CoinSelection.cpp TransactionBatch.cpp Accounts.cpp Addresses.cpp \
+	AssetEncryption.cpp Assets.cpp DecryptedDataContainer.cpp \
+	DerivationScheme.cpp
+ARMORYCLI_SOURCE_FILES = lmdb_wrapper.cpp BlockObj.cpp BlockUtils.cpp \
 	BtcWallet.cpp LedgerEntry.cpp ScrAddrObj.cpp Blockchain.cpp \
 	BDM_mainthread.cpp BDM_supportClasses.cpp nodeRPC.cpp BDM_Server.cpp \
 	BlockDataViewer.cpp HistoryPager.cpp Progress.cpp txio.cpp \
 	StoredBlockObj.cpp DatabaseBuilder.cpp BlockchainScanner.cpp \
 	BlockchainScanner_Super.cpp BlockDataMap.cpp BitcoinP2P.cpp  \
 	SshParser.cpp
+ARMORYCOMMON_SOURCE_FILES = UniversalTimer.cpp BinaryData.cpp \
+	BtcUtils.cpp DBUtils.cpp EncryptionUtils.cpp \
+	BDM_seder.cpp DataObject.cpp FcgiMessage.cpp \
+	SocketObject.cpp StringSockets.cpp \
+	BlockDataManagerConfig.cpp TxClasses.cpp \
+	Script.cpp Signer.cpp \
+	Transactions.cpp ReentrantLock.cpp JSON_codec.cpp \
+	log.cpp TxEvalState.cpp \
+	bech32/ref/c++/bech32.cpp bech32/ref/c++/segwit_addr.cpp
 
-# libArmoryUtils - Required by all Armory programs/libraries.
+# libArmoryCommon - Required by all Armory programs/libraries.
 # May be able to modularize in the future so that it's not monolithic.
-lib_LTLIBRARIES += libArmoryUtils.la
-libArmoryUtils_la_SOURCES = $(ARMORYUTILS_SOURCE_FILES)
-libArmoryUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
-libArmoryUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
+lib_LTLIBRARIES += libArmoryCommon.la
+libArmoryCommon_la_SOURCES = $(ARMORYCOMMON_SOURCE_FILES)
+libArmoryCommon_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
+libArmoryCommon_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 				-Ifcgi/include \
 				-D__STDC_LIMIT_MACROS
-libArmoryUtils_la_LIBADD = lmdb/liblmdb.la \
+libArmoryCommon_la_LIBADD = lmdb/liblmdb.la \
 		 	 	cryptopp/libcryptopp.la \
 		 	 	fcgi/libfcgi/libfcgi.la \
 		 	 	-lpthread
-libArmoryUtils_la_LDFLAGS = $(LDFLAGS) -shared
+libArmoryCommon_la_LDFLAGS = $(LDFLAGS) -shared
+
+# Common command-line functionality library
+lib_LTLIBRARIES += libArmoryCLI.la
+libArmoryCLI_la_SOURCES = $(ARMORYCLI_SOURCE_FILES)
+libArmoryCLI_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
+			$(PYTHON_CFLAGS)
+libArmoryCLI_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
+			-Ifcgi/include \
+			-D__STDC_LIMIT_MACROS
+libArmoryCLI_la_LIBADD = lmdb/liblmdb.la \
+			cryptopp/libcryptopp.la \
+			fcgi/libfcgi/libfcgi.la \
+			libArmoryCommon.la \
+			-lpthread
+libArmoryCLI_la_LDFLAGS = $(LDFLAGS) -shared
 
 #ArmoryDB
 bin_PROGRAMS += ArmoryDB
-ArmoryDB_SOURCES = $(DB_SOURCE_FILES)
+ArmoryDB_SOURCES = $(ARMORYDB_SOURCE_FILES)
 ArmoryDB_CXXFLAGS = $(AM_CXXFLAGS) -D__STDC_LIMIT_MACROS
 ArmoryDB_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES)
 ArmoryDB_LDADD = fcgi/libfcgi/libfcgi.la \
 		 cryptopp/libcryptopp.la \
 		 lmdb/liblmdb.la \
-		 libArmoryUtils.la \
+		 libArmoryCommon.la \
+		 libArmoryCLI.la \
 		 -lpthread
-ArmoryDB_LDFLAGS = -static $(LDFLAGS)
+ArmoryDB_LDFLAGS = -shared $(LDFLAGS)
 
-#libCppBlockUtils - SWIG/GUI library.
-# "shared" LDFLAG due to SWIG requirements.
 if HAVE_GUI
+# Common GUI functionality library
+lib_LTLIBRARIES += libArmoryGUI.la
+libArmoryGUI_la_SOURCES = $(ARMORYGUI_SOURCE_FILES)
+libArmoryGUI_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
+			$(PYTHON_CFLAGS)
+libArmoryGUI_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
+			-Ifcgi/include \
+			-D__STDC_LIMIT_MACROS
+libArmoryGUI_la_LIBADD = lmdb/liblmdb.la \
+			cryptopp/libcryptopp.la \
+			fcgi/libfcgi/libfcgi.la \
+			libArmoryCommon.la \
+			-lpthread
+libArmoryGUI_la_LDFLAGS = $(LDFLAGS) $(PYTHON_LDFLAGS) -shared
+
+#libCppBlockUtils - SWIG library.
+# "shared" LDFLAG due to SWIG requirements.
 lib_LTLIBRARIES += libCppBlockUtils.la
 libCppBlockUtils_la_SOURCES = CppBlockUtils_wrap.cxx
 libCppBlockUtils_la_CPPFLAGS = $(AM_CPPFLAGS) $(INCLUDE_FILES) \
@@ -81,12 +115,14 @@ libCppBlockUtils_la_CXXFLAGS = $(AM_CXXFLAGS) -Ilmdb \
 libCppBlockUtils_la_LIBADD = lmdb/liblmdb.la \
 		 	 	cryptopp/libcryptopp.la \
 		 	 	fcgi/libfcgi/libfcgi.la \
-		 	 	libArmoryUtils.la \
+		 	 	libArmoryCommon.la \
+		 	 	libArmoryGUI.la \
 		 	 	-lpthread
 libCppBlockUtils_la_LDFLAGS = $(LDFLAGS) $(PYTHON_LDFLAGS) -shared
 
 if BUILD_DARWIN
 libCppBlockUtils_la_LDFLAGS += -Wl,-rpath,@executable_path/ -Wl,-rpath,@loader_path/
+libArmoryCLI_la_LDFLAGS += -Wl,-rpath,@executable_path/ -Wl,-rpath,@loader_path/
 endif
 
 #custom rules
