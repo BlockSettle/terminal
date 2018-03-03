@@ -34,6 +34,7 @@ gtest_DB1kIterTest_LDADD = -Llmdb -llmdb \
 gtest_DB1kIterTest_LDFLAGS = $(AM_LDFLAGS) $(LDFLAGS) -static
 TESTS += gtest/DB1kIterTest
 
+if HAVE_GUI
 # SupernodeTests
 bin_PROGRAMS += gtest/SupernodeTests
 gtest_SupernodeTests_SOURCES = gtest/SupernodeTests.cpp
@@ -46,7 +47,6 @@ gtest_SupernodeTests_LDADD = -Llmdb -llmdb \
 gtest_SupernodeTests_LDFLAGS = $(AM_LDFLAGS) $(LDFLAGS) -static
 TESTS += gtest/SupernodeTests
 
-if HAVE_GUI
 # CppBlockUtilsTests - Contains the bulk of the tests (CLI or GUI)
 bin_PROGRAMS += gtest/CppBlockUtilsTests
 gtest_CppBlockUtilsTests_SOURCES = gtest/CppBlockUtilsTests.cpp
