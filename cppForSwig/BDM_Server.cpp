@@ -1779,7 +1779,7 @@ bool BDV_Server_Object::registerWallet(
 
    //register wallet with BDV
    auto bdvPtr = (BlockDataViewer*)this;
-   return bdvPtr->registerWallet(scrAddrVec, IDstr, wltIsNew) != nullptr;
+   return bdvPtr->registerWallet(scrAddrVec, IDstr, wltIsNew);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1830,7 +1830,7 @@ bool BDV_Server_Object::registerLockbox(
 
    //register wallet with BDV
    auto bdvPtr = (BlockDataViewer*)this;
-   return bdvPtr->registerLockbox(scrAddrVec, IDstr, wltIsNew) != nullptr;
+   return bdvPtr->registerLockbox(scrAddrVec, IDstr, wltIsNew);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

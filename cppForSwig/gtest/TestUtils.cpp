@@ -239,7 +239,7 @@ namespace DBTestUtils
       auto& argVec = result.getArgVector();
       auto retint = dynamic_pointer_cast<DataObject<IntType>>(argVec[0]);
       if (retint->getObj().getVal() == 0)
-         throw runtime_error("server returned false to registerWallet query");
+         waitOnWalletRefresh(clients, bdvId);
    }
 
    /////////////////////////////////////////////////////////////////////////////
@@ -297,7 +297,7 @@ namespace DBTestUtils
       auto& argVec = result.getArgVector();
       auto retint = dynamic_pointer_cast<DataObject<IntType>>(argVec[0]);
       if (retint->getObj().getVal() == 0)
-         throw runtime_error("server returned false to registerWallet query");
+         waitOnWalletRefresh(clients, bdvId);
    }
 
    /////////////////////////////////////////////////////////////////////////////

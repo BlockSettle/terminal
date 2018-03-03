@@ -8780,7 +8780,7 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
    DBTestUtils::regWallet(clients_, bdvID, hashVec, assetWlt->getID());
 
    //wait on signals
-   DBTestUtils::waitOnWalletRefresh(clients_, bdvID);
+   //DBTestUtils::waitOnWalletRefresh(clients_, bdvID);
 
    //check balances
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);

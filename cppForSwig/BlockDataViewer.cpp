@@ -31,7 +31,7 @@ BlockDataViewer::~BlockDataViewer()
 }
 
 /////////////////////////////////////////////////////////////////////////////
-shared_ptr<BtcWallet> BlockDataViewer::registerWallet(
+bool BlockDataViewer::registerWallet(
    vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew)
 {
    if (IDstr.empty())
@@ -41,7 +41,7 @@ shared_ptr<BtcWallet> BlockDataViewer::registerWallet(
 }
 
 /////////////////////////////////////////////////////////////////////////////
-shared_ptr<BtcWallet> BlockDataViewer::registerLockbox(
+bool BlockDataViewer::registerLockbox(
    vector<BinaryData> const & scrAddrVec, string IDstr, bool wltIsNew)
 {
    if (IDstr.empty())
@@ -784,7 +784,7 @@ WalletGroup::~WalletGroup()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-shared_ptr<BtcWallet> WalletGroup::registerWallet(
+bool WalletGroup::registerWallet(
    vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew)
 {
    if (IDstr.empty())
@@ -813,10 +813,10 @@ shared_ptr<BtcWallet> WalletGroup::registerWallet(
       }
    }
 
-   registerAddresses(scrAddrVec, IDstr, wltIsNew);
+   auto result = registerAddresses(scrAddrVec, IDstr, wltIsNew);
 
    theWallet->resetCounters();
-   return theWallet;
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

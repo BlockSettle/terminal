@@ -65,12 +65,9 @@ public:
    // blockchain in RAM, each scan will take 30-120 seconds.  Registering makes 
    // sure that the intial blockchain scan picks up wallet-relevant stuff as 
    // it goes, and does a full [re-]scan of the blockchain only if necessary.
-   shared_ptr<BtcWallet> createWallet(const string& id);
-   shared_ptr<BtcWallet> createLockbox(const string& id);
-
-   shared_ptr<BtcWallet> registerWallet(vector<BinaryData> const& scrAddrVec,
+   bool registerWallet(vector<BinaryData> const& scrAddrVec,
                               string ID, bool wltIsNew);
-   shared_ptr<BtcWallet> registerLockbox(vector<BinaryData> const& scrAddrVec, 
+   bool registerLockbox(vector<BinaryData> const& scrAddrVec, 
                               string ID, bool wltIsNew);
    void       unregisterWallet(const string& ID);
    void       unregisterLockbox(const string& ID);
@@ -264,7 +261,7 @@ public:
 
    ~WalletGroup();
 
-   shared_ptr<BtcWallet> registerWallet(
+   bool registerWallet(
       vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew);
    void unregisterWallet(const string& IDstr);
    bool registerAddresses(const vector<BinaryData>& saVec,
