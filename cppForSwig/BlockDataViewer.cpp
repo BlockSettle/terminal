@@ -457,8 +457,6 @@ shared_ptr<BlockHeader> BlockDataViewer::getHeaderByHash(
 vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
    const vector<BinaryData>& scrAddrVec, bool ignoreZc) const
 {
-   ScrAddrFilter* saf = bdmPtr_->getScrAddrFilter().get();
-
    auto scrAddrMap = saf_->getScrAddrMap();
 
    if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)

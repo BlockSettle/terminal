@@ -16,6 +16,7 @@
 #include "BlockDataViewer.h"
 
 #include "nodeRPC.h"
+#include "BitcoinP2p.h"
 
 #include <ctime>
 

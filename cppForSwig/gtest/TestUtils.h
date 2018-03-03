@@ -44,6 +44,7 @@
 #include "../Wallets.h"
 #include "../WalletManager.h"
 #include "../BIP32_Serialization.h"
+#include "../BitcoinP2p.h"
 
 
 #ifdef _MSC_VER

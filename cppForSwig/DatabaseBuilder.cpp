@@ -10,7 +10,7 @@
 #include "BlockUtils.h"
 #include "BlockchainScanner.h"
 #include "BlockchainScanner_Super.h"
-#include "BDM_supportClasses.h"
+#include "ScrAddrFilter.h"
 #include "Transactions.h"
 
 /////////////////////////////////////////////////////////////////////////////

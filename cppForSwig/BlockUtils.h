@@ -36,8 +36,10 @@
 #include "UniversalTimer.h"
 
 #include <functional>
-#include "BDM_supportClasses.h"
+#include "ScrAddrFilter.h"
 #include "nodeRPC.h"
+#include "BitcoinP2p.h"
+#include "BDV_Notification.h"
 
 #ifndef MAXSIZE_T
    #if defined(_WIN64) || defined(__X86_64__)

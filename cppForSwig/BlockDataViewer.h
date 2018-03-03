@@ -21,7 +21,8 @@ using namespace std;
 
 #include "BlockUtils.h"
 #include "txio.h"
-#include "BDM_supportClasses.h"
+#include "BDV_Notification.h"
+#include "ZeroConf.h"
 #include "util.h"
 #include "bdmenums.h"
 

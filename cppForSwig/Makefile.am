@@ -35,7 +35,8 @@ ARMORYCLI_SOURCE_FILES = Accounts.cpp \
 	Assets.cpp \
 	BDM_mainthread.cpp \
 	BDM_Server.cpp \
-	BDM_supportClasses.cpp \
+    ScrAddrFilter.cpp \
+	ZeroConf.cpp \
 	BitcoinP2P.cpp \
 	BlockchainScanner.cpp \
 	BlockchainScanner_Super.cpp \

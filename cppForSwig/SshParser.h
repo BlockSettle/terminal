@@ -10,7 +10,7 @@
 #define _SSH_PARSER_H
 
 #include "lmdb_wrapper.h"
-#include "BDM_supportClasses.h"
+#include "ScrAddrFilter.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 struct SshBatch
