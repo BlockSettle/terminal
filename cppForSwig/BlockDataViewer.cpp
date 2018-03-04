@@ -35,7 +35,7 @@ bool BlockDataViewer::registerWallet(
    vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew)
 {
    if (IDstr.empty())
-      return nullptr;
+      return true;
 
    return groups_[group_wallet].registerWallet(scrAddrVec, IDstr, wltIsNew);
 }
@@ -45,7 +45,7 @@ bool BlockDataViewer::registerLockbox(
    vector<BinaryData> const & scrAddrVec, string IDstr, bool wltIsNew)
 {
    if (IDstr.empty())
-      return nullptr;
+      return true;
    
    return groups_[group_lockbox].registerWallet(scrAddrVec, IDstr, wltIsNew);
 }
@@ -788,9 +788,7 @@ bool WalletGroup::registerWallet(
    vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew)
 {
    if (IDstr.empty())
-   {
-      return nullptr;
-   }
+      return true;
    
    shared_ptr<BtcWallet> theWallet;
 

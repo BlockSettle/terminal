@@ -7554,7 +7554,7 @@ TEST_F(BlockUtilsBare, Load5Blocks_SideScan)
    //post initial load address registration
    wlt->addScrAddress(TestChain::scrAddrD);
    //wait on the address scan
-   DBTestUtils::waitOnWalletRefresh(clients_, bdvID);
+   DBTestUtils::waitOnWalletRefresh(clients_, bdvID, wlt->walletID());
 
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
    EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);

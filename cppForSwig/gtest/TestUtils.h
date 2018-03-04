@@ -114,13 +114,15 @@ namespace DBTestUtils
    vector<LedgerEntryData> getHistoryPage(Clients* clients, const string& bdvId,
       const string& delegateId, uint32_t pageId);
 
-   void waitOnSignal(Clients* clients, const string& bdvId,
+   vector<shared_ptr<DataMeta>> waitOnSignal(
+      Clients* clients, const string& bdvId,
       string command, const string& signal);
    void waitOnBDMReady(Clients* clients, const string& bdvId);
 
    void waitOnNewBlockSignal(Clients* clients, const string& bdvId);
    void waitOnNewZcSignal(Clients* clients, const string& bdvId);
-   void waitOnWalletRefresh(Clients* clients, const string& bdvId);
+   void waitOnWalletRefresh(Clients* clients, const string& bdvId, 
+      const BinaryData& wltId);
    void triggerNewBlockNotification(BlockDataManagerThread* bdmt);
 
    struct ZcVector

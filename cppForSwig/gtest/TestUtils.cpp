@@ -239,7 +239,10 @@ namespace DBTestUtils
       auto& argVec = result.getArgVector();
       auto retint = dynamic_pointer_cast<DataObject<IntType>>(argVec[0]);
       if (retint->getObj().getVal() == 0)
-         waitOnWalletRefresh(clients, bdvId);
+      {
+         BinaryData wltId = (wltName);
+         waitOnWalletRefresh(clients, bdvId, wltId);
+      }
    }
 
    /////////////////////////////////////////////////////////////////////////////
@@ -297,7 +300,10 @@ namespace DBTestUtils
       auto& argVec = result.getArgVector();
       auto retint = dynamic_pointer_cast<DataObject<IntType>>(argVec[0]);
       if (retint->getObj().getVal() == 0)
-         waitOnWalletRefresh(clients, bdvId);
+      {
+         BinaryData wltId = (wltName);
+         waitOnWalletRefresh(clients, bdvId, wltId);
+      }
    }
 
    /////////////////////////////////////////////////////////////////////////////
@@ -340,7 +346,8 @@ namespace DBTestUtils
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   void waitOnSignal(Clients* clients, const string& bdvId,
+   vector<shared_ptr<DataMeta>> waitOnSignal(
+      Clients* clients, const string& bdvId,
       string command, const string& signal)
    {
       Command cmd;
@@ -350,6 +357,8 @@ namespace DBTestUtils
       BinaryDataObject bdo(command);
       cmd.args_.push_back(move(bdo));
       cmd.serialize();
+
+      vector<shared_ptr<DataMeta>> resultVec;
 
       auto processCallback = [&](Arguments args)->bool
       {
@@ -363,7 +372,10 @@ namespace DBTestUtils
 
             auto&& cb = argstr->getObj().toStr();
             if (cb == signal)
+            {
+               resultVec = argVec;
                return true;
+            }
          }
 
          return false;
@@ -374,7 +386,7 @@ namespace DBTestUtils
          auto&& result = clients->runCommand(cmd.command_);
 
          if (processCallback(move(result)))
-            return;
+            return resultVec;
       }
    }
 
@@ -397,9 +409,28 @@ namespace DBTestUtils
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   void waitOnWalletRefresh(Clients* clients, const string& bdvId)
+   void waitOnWalletRefresh(Clients* clients, const string& bdvId,
+      const BinaryData& wltId)
    {
-      waitOnSignal(clients, bdvId, "getStatus", "BDV_Refresh");
+      while (1)
+      {
+         auto&& result = waitOnSignal(clients, bdvId, "getStatus", "BDV_Refresh");
+         if (result.size() != 3)
+         {
+            cout << "invalid result vector size in waitOnWalletRefresh";
+            throw runtime_error("");
+         }
+
+         auto argstr = dynamic_pointer_cast<DataObject<BinaryDataVector>>(result[2]);
+         if (argstr == nullptr)
+         {
+            cout << "invalid result entry type in waitOnWalletRefresh";
+            throw runtime_error("");
+         }
+
+         if (argstr->getObj().get()[0] == wltId)
+            break;
+      }
    }
 
    /////////////////////////////////////////////////////////////////////////////
