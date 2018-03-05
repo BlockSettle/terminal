@@ -18,16 +18,13 @@ AS_IF([test "$CXXFLAGS" = "-g -O2"] ,[AC_SUBST(CXXFLAGS, [ ])])
 
 #debug flag
 AC_ARG_ENABLE([debug],
-              AS_HELP_STRING([--enable-debug],[compile with debug symbols @<:@default=no@:>@]),
+              AS_HELP_STRING([--enable-debug],
+              [compile with debug symbols @<:@default=no@:>@]),
               [want_debug="$enableval"], [want_debug=no])
 
+# Debug flags picked up from cppForSwig folder. No need to overwrite them.
 if test "x$want_debug" = "xyes" -a $ac_cv_c_compiler_gnu != no; then
-  CFLAGS="$CFLAGS -O0 -g"
-  CXXFLAGS="$CXXFLAGS -O0 -g"
   AC_DEFINE([DEBUG], 1, [Define for debugging])
-else
-  CFLAGS="$CFLAGS -O2"
-  CXXFLAGS="$CXXFLAGS"
 fi
 
 # Checks for programs.
@@ -90,3 +87,4 @@ echo "  CXX             = $CXX"
 echo "  CXXFLAGS        = $CXXFLAGS"
 echo "  LDFLAGS         = $LDFLAGS"
 echo "  LD              = $LD"
+echo "  debug symbols   = $want_debug"
