@@ -1025,11 +1025,14 @@ vector<LedgerEntry> WalletGroup::getHistoryPage(
          return result;
       };
 
-      auto& leMap = hist_.getPageLedgerMap(
+      auto leMap = hist_.getPageLedgerMap(
          getTxio, buildLedgers, pageId, updateID, nullptr);
 
-      for (const LedgerEntry& le : values(leMap))
-         vle.push_back(le);
+      if (leMap != nullptr)
+      {
+         for (auto& le : *leMap)
+            vle.push_back(le.second);
+      }
    }
 
    if (order_ == order_ascending)

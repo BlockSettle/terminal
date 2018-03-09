@@ -760,10 +760,11 @@ ScrAddrObj& BtcWallet::getScrAddrObjRef(const BinaryData& key)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const map<BinaryData, LedgerEntry>& BtcWallet::getHistoryPage(uint32_t pageId) 
+shared_ptr<map<BinaryData, LedgerEntry>> BtcWallet::getHistoryPage(
+   uint32_t pageId)
 {
    if (!bdvPtr_->isBDMRunning())
-      return LedgerEntry::EmptyLedgerMap_;
+      return nullptr;
 
    if (pageId >= getHistoryPageCount())
       throw std::range_error("pageID is out of range");
@@ -785,11 +786,11 @@ vector<LedgerEntry> BtcWallet::getHistoryPageAsVector(uint32_t pageId)
 {
    try
    {
-      auto& ledgerMap = getHistoryPage(pageId);
+      auto ledgerMap = getHistoryPage(pageId);
       
       vector<LedgerEntry> ledgerVec;
 
-      for (const auto& ledgerPair : ledgerMap)
+      for (const auto& ledgerPair : *ledgerMap)
          ledgerVec.push_back(ledgerPair.second);
 
       return ledgerVec;

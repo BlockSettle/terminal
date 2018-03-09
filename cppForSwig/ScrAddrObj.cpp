@@ -450,8 +450,8 @@ vector<LedgerEntry> ScrAddrObj::getHistoryPageById(uint32_t id)
       uint32_t start, uint32_t end)->map<BinaryData, LedgerEntry>
       { return this->updateLedgers(txioMap, start, end); };
 
-   auto& leMap = hist_.getPageLedgerMap(getTxio, buildLedgers, id, updateID_);
-   return getTxLedgerAsVector(leMap);
+   auto leMap = hist_.getPageLedgerMap(getTxio, buildLedgers, id, updateID_);
+   return getTxLedgerAsVector(*leMap);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

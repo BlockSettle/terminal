@@ -135,8 +135,8 @@ void BDV_Server_Object::buildMethodMap()
             pageId = 0;
             while (1)
             {
-               auto&& ledgerMap = theWallet->getHistoryPage(pageId++);
-               for (auto& lePair : ledgerMap)
+               auto ledgerMap = theWallet->getHistoryPage(pageId++);
+               for (auto& lePair : *ledgerMap)
                {
                   auto& leHash = lePair.second.getTxHash();
                   if (leHash == txHash)

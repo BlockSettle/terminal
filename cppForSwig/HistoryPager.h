@@ -10,7 +10,9 @@
 
 #include <map>
 #include <functional>
+#include <memory>
 
+#include "ThreadSafeClasses.h"
 #include "BinaryData.h"
 #include "LedgerEntry.h"
 #include "BlockObj.h"
@@ -29,7 +31,7 @@ private:
       uint32_t count_;
       unsigned updateID_ = UINT32_MAX;
 
-      map<BinaryData, LedgerEntry> pageLedgers_;
+      TransactionalMap<BinaryData, LedgerEntry> pageLedgers_;
 
       Page(void) : blockStart_(UINT32_MAX), blockEnd_(UINT32_MAX), count_(0)
       {}
@@ -46,7 +48,7 @@ private:
    };
 
    bool isInitialized_ = false;
-   vector<Page> pages_;
+   vector<shared_ptr<Page>> pages_;
    map<uint32_t, uint32_t> SSHsummary_;
 
    uint32_t currentPage_ = -1;
@@ -57,13 +59,13 @@ public:
 
    HistoryPager(void) {}
 
-   const map<BinaryData, LedgerEntry>& getPageLedgerMap(
+   shared_ptr<map<BinaryData, LedgerEntry>> getPageLedgerMap(
       function< map<BinaryData, TxIOPair>(uint32_t, uint32_t) > getTxio,
       function< map<BinaryData, LedgerEntry>(
          const map<BinaryData, TxIOPair>&, uint32_t, uint32_t) > buildLedgers,
       uint32_t pageId, unsigned updateID, map<BinaryData, TxIOPair>* txioMap = nullptr);
 
-   const map<BinaryData, LedgerEntry>& getPageLedgerMap(uint32_t pageId);
+   shared_ptr<map<BinaryData, LedgerEntry>> getPageLedgerMap(uint32_t pageId);
 
    void reset(void) { 
       pages_.clear(); 

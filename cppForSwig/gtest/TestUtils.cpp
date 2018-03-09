@@ -610,10 +610,10 @@ namespace DBTestUtils
       shared_ptr<BtcWallet> wlt, const BinaryData& txHash)
    {
       //get ledgermap from wallet
-      auto& ledgerMap = wlt->getHistoryPage(0);
+      auto ledgerMap = wlt->getHistoryPage(0);
 
       //grab ledger by hash
-      for (auto& ledger : ledgerMap)
+      for (auto& ledger : *ledgerMap)
       {
          if (ledger.second.getTxHash() == txHash)
             return ledger.second;

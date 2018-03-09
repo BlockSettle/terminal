@@ -99,7 +99,7 @@ public:
    void setWalletID(BinaryData const & wltId) { walletID_ = wltId; }
    const BinaryData& walletID() const { return walletID_; }
 
-   const map<BinaryData, LedgerEntry>& getHistoryPage(uint32_t);
+   shared_ptr<map<BinaryData, LedgerEntry>> getHistoryPage(uint32_t);
    vector<LedgerEntry> getHistoryPageAsVector(uint32_t);
    size_t getHistoryPageCount(void) const { return histPages_.getPageCount(); }
 
