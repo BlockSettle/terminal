@@ -130,6 +130,8 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       scanData.saStruct_.zcMap_ = 
          move(zcAction->packet_.txioMap_);
 
+      scanData.saStruct_.newZcKeys_ = zcAction->packet_.newZcKeys_;
+
       if (zcAction->packet_.purgePacket_ != nullptr)
       {
          scanData.saStruct_.invalidatedZcKeys_ =
@@ -241,20 +243,6 @@ void BlockDataViewer::registerArbitraryAddressVec(
    vector<shared_ptr<ScrAddrFilter::WalletInfo>> wltInfoVec;
    wltInfoVec.push_back(move(wltInfo));
    saf_->registerAddressBatch(move(wltInfoVec), false);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-const LedgerEntry& BlockDataViewer::getTxLedgerByHash_FromWallets(
-   const BinaryData& txHash) const
-{
-   return groups_[group_wallet].getTxLedgerByHash(txHash);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-const LedgerEntry& BlockDataViewer::getTxLedgerByHash_FromLockboxes(
-   const BinaryData& txHash) const
-{
-   return groups_[group_lockbox].getTxLedgerByHash(txHash);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -373,7 +361,7 @@ vector<LedgerEntry> BlockDataViewer::getWalletsHistoryPage(uint32_t pageId,
    bool rebuildLedger, bool remapWallets)
 {
    return groups_[group_wallet].getHistoryPage(pageId, 
-      rebuildLedger, remapWallets);
+      updateID_, rebuildLedger, remapWallets);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -387,7 +375,7 @@ vector<LedgerEntry> BlockDataViewer::getLockboxesHistoryPage(uint32_t pageId,
    bool rebuildLedger, bool remapWallets)
 {
    return groups_[group_lockbox].getHistoryPage(pageId,
-      rebuildLedger, remapWallets);
+      updateID_, rebuildLedger, remapWallets);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -916,21 +904,6 @@ bool WalletGroup::hasID(const BinaryData& ID) const
 }
 
 /////////////////////////////////////////////////////////////////////////////
-const LedgerEntry& WalletGroup::getTxLedgerByHash(
-   const BinaryData& txHash) const
-{
-   ReadWriteLock::ReadLock rl(lock_);
-   for (const auto& wlt : values(wallets_))
-   {
-      const LedgerEntry& le = wlt->getLedgerEntryForTx(txHash);
-      if (le.getTxTime() != 0)
-         return le;
-   }
-
-   return LedgerEntry::EmptyLedger_;
-}
-
-/////////////////////////////////////////////////////////////////////////////
 void WalletGroup::reset()
 {
    ReadWriteLock::ReadLock rl(lock_);
@@ -988,7 +961,8 @@ bool WalletGroup::pageHistory(bool forcePaging, bool pageAnyway)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-vector<LedgerEntry> WalletGroup::getHistoryPage(uint32_t pageId,
+vector<LedgerEntry> WalletGroup::getHistoryPage(
+   uint32_t pageId, unsigned updateID, 
    bool rebuildLedger, bool remapWallets)
 {
    unique_lock<mutex> mu(globalLedgerLock_);
@@ -999,43 +973,69 @@ vector<LedgerEntry> WalletGroup::getHistoryPage(uint32_t pageId,
    if (order_ == order_ascending)
       pageId = hist_.getPageCount() - pageId - 1;
 
-   //if (pageId == hist_.getCurrentPage() && !rebuildLedger && !remapWallets)
-      //return globalLedger_;
-
    if (rebuildLedger || remapWallets)
       pageHistory(remapWallets, false);
 
    hist_.setCurrentPage(pageId);
-
    vector<LedgerEntry> vle;
 
+   if (rebuildLedger || remapWallets)
+      updateID = UINT32_MAX;
+
    {
-      //globalLedger_.clear();
       ReadWriteLock::ReadLock rl(lock_);
-      for (auto& wlt : values(wallets_))
+
+      set<BinaryData> localFilterSet;
+      map<BinaryData, shared_ptr<BtcWallet>> localWalletMap;
+      for (auto& wlt_pair : wallets_)
       {
-         auto getTxio = [&wlt](uint32_t start, uint32_t end,
-            map<BinaryData, TxIOPair>& outMap)->void
-         { return wlt->getTxioForRange(start, end, outMap); };
-
-         auto buildLedgers = [&wlt](map<BinaryData, LedgerEntry>& le,
-            const map<BinaryData, TxIOPair>& txioMap,
-            uint32_t startBlock, uint32_t endBlock)->void
-         { wlt->updateWalletLedgersFromTxio(le, txioMap, startBlock, endBlock); };
-
-         if (!wlt->uiFilter_)
+         if (!wlt_pair.second->uiFilter_)
             continue;
 
-         map<BinaryData, LedgerEntry> leMap;
-         hist_.getPageLedgerMap(getTxio, buildLedgers, pageId, leMap);
-
-         for (const LedgerEntry& le : values(leMap))
-            vle.push_back(le);
+         localFilterSet.insert(wlt_pair.first);
+         localWalletMap.insert(wlt_pair);
       }
+
+      if (localFilterSet != wltFilterSet_)
+      {
+         updateID = UINT32_MAX;
+         wltFilterSet_ = move(localFilterSet);
+      }
+
+      auto getTxio = [&localWalletMap](
+         uint32_t start, uint32_t end)->map<BinaryData, TxIOPair>
+      {
+         return map<BinaryData, TxIOPair>();
+      };
+
+      auto buildLedgers = [&localWalletMap](
+         const map<BinaryData, TxIOPair>& txioMap,
+         uint32_t startBlock, uint32_t endBlock)->map<BinaryData, LedgerEntry>
+      {
+         map<BinaryData, LedgerEntry> result;
+         for (auto& wlt_pair : localWalletMap)
+         {
+            auto&& txio_map = wlt_pair.second->getTxioForRange(
+               startBlock, endBlock);
+            auto&& ledgerMap = wlt_pair.second->updateWalletLedgersFromTxio(
+               txio_map, startBlock, endBlock);
+            result.insert(ledgerMap.begin(), ledgerMap.end());
+         }
+
+         return result;
+      };
+
+      auto& leMap = hist_.getPageLedgerMap(
+         getTxio, buildLedgers, pageId, updateID, nullptr);
+
+      for (const LedgerEntry& le : values(leMap))
+         vle.push_back(le);
    }
 
    if (order_ == order_ascending)
+   {
       sort(vle.begin(), vle.end());
+   }
    else
    {
       LedgerEntry_DescendingOrder desc;
@@ -1090,52 +1090,6 @@ void WalletGroup::scanWallets(ScanWalletStruct& scanData,
       wlt.second->scanWallet(scanData, updateID);
       validZcSet_.insert(
          wlt.second->validZcKeys_.begin(), wlt.second->validZcKeys_.end());
-   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void WalletGroup::updateGlobalLedgerFirstPage(uint32_t startBlock,
-   uint32_t endBlock, BDV_refresh forceRefresh)
-{
-   //There is a fundamental difference between the first history page and all
-   //the others: the first page maintains ZC, new blocks and can undergo
-   //reorgs while every other history page is purely static
-
-   ReadWriteLock::ReadLock rl(lock_);
-
-
-   if (forceRefresh == BDV_refreshSkipRescan)
-      getHistoryPage(0, true, false);
-   else if (forceRefresh == BDV_refreshAndRescan)
-      getHistoryPage(0, true, true);
-   else if (hist_.getCurrentPage() == 0)
-   {
-      unique_lock<mutex> mu(globalLedgerLock_);
-
-      LedgerEntry::purgeLedgerVectorFromHeight(globalLedger_, startBlock);
-
-      for (auto& wlt : values(wallets_))
-      {
-         map<BinaryData, TxIOPair> txioMap;
-         wlt->getTxioForRange(startBlock, UINT32_MAX, txioMap);
-
-         map<BinaryData, LedgerEntry> leMap;
-         wlt->updateWalletLedgersFromTxio(leMap, txioMap, startBlock, UINT32_MAX);
-
-         if (!wlt->uiFilter_)
-            continue;
-
-         for (const auto& lePair : leMap)
-            globalLedger_.push_back(lePair.second);
-      }
-
-      if (order_ == order_ascending)
-         sort(globalLedger_.begin(), globalLedger_.end());
-      else
-      {
-         LedgerEntry_DescendingOrder desc;
-         sort(globalLedger_.begin(), globalLedger_.end(), desc);
-      }
    }
 }
 

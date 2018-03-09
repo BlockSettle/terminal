@@ -120,7 +120,7 @@ namespace DBTestUtils
    void waitOnBDMReady(Clients* clients, const string& bdvId);
 
    void waitOnNewBlockSignal(Clients* clients, const string& bdvId);
-   void waitOnNewZcSignal(Clients* clients, const string& bdvId);
+   vector<LedgerEntryData> waitOnNewZcSignal(Clients* clients, const string& bdvId);
    void waitOnWalletRefresh(Clients* clients, const string& bdvId, 
       const BinaryData& wltId);
    void triggerNewBlockNotification(BlockDataManagerThread* bdmt);
@@ -148,6 +148,11 @@ namespace DBTestUtils
 
    void addTxioToSsh(StoredScriptHistory&, const map<BinaryData, TxIOPair>&);
    void prettyPrintSsh(StoredScriptHistory& ssh);
+   LedgerEntry getLedgerEntryFromWallet(shared_ptr<BtcWallet>, const BinaryData&);
+   LedgerEntry getLedgerEntryFromAddr(ScrAddrObj*, const BinaryData&);
+
+   void updateWalletsLedgerFilter(
+      Clients*, const string&, const vector<BinaryData>&);
 }
 
 namespace ResolverUtils

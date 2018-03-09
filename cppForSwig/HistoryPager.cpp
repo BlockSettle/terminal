@@ -17,11 +17,11 @@ void HistoryPager::addPage(uint32_t count, uint32_t bottom, uint32_t top)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-map<BinaryData, LedgerEntry>& HistoryPager::getPageLedgerMap(
-   function< void(uint32_t, uint32_t, map<BinaryData, TxIOPair>&) > getTxio,
-   function< void(map<BinaryData, LedgerEntry>&, 
-                  const map<BinaryData, TxIOPair>&, uint32_t) > buildLedgers,
-   uint32_t pageId,
+const map<BinaryData, LedgerEntry>& HistoryPager::getPageLedgerMap(
+   function< map<BinaryData, TxIOPair>(uint32_t, uint32_t) > getTxio,
+   function< map<BinaryData, LedgerEntry>(
+      const map<BinaryData, TxIOPair>&, uint32_t, uint32_t) > buildLedgers,
+   uint32_t pageId, unsigned updateID,
    map<BinaryData, TxIOPair>* txioMap)
 {
    if (!isInitialized_)
@@ -33,7 +33,7 @@ map<BinaryData, LedgerEntry>& HistoryPager::getPageLedgerMap(
    currentPage_ = pageId;
    Page& page = pages_[pageId];
 
-   if (page.pageLedgers_.size() != 0)
+   if (updateID != UINT32_MAX && page.updateID_ == updateID)
    {
       //already loaded this page
       return page.pageLedgers_;
@@ -44,40 +44,25 @@ map<BinaryData, LedgerEntry>& HistoryPager::getPageLedgerMap(
    //load page's block range from ssh and build ledgers
    if (txioMap != nullptr)
    {
-      getTxio(page.blockStart_, page.blockEnd_, *txioMap);
-      buildLedgers(page.pageLedgers_, *txioMap, page.blockStart_);
+      *txioMap = getTxio(page.blockStart_, page.blockEnd_);
+      page.pageLedgers_ = 
+         buildLedgers(*txioMap, page.blockStart_, page.blockEnd_);
    }
    else
    {
-      map<BinaryData, TxIOPair> txio; 
-      getTxio(page.blockStart_, page.blockEnd_, txio);
-      buildLedgers(page.pageLedgers_, txio, page.blockStart_);
+      auto&& txio = getTxio(page.blockStart_, page.blockEnd_);
+      page.pageLedgers_ = 
+         buildLedgers(txio, page.blockStart_, page.blockEnd_);
    }
 
+   if(updateID != UINT32_MAX)
+      page.updateID_ = updateID;
    return page.pageLedgers_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void HistoryPager::getPageLedgerMap(
-   function< void(uint32_t, uint32_t, map<BinaryData, TxIOPair>&) > getTxio,
-   function< void(map<BinaryData, LedgerEntry>&,
-   const map<BinaryData, TxIOPair>&, uint32_t, uint32_t) > buildLedgers,
-   uint32_t pageId,
-   map<BinaryData, LedgerEntry>& leMap) const
-{
-   if (!isInitialized_)
-      throw std::runtime_error("Uninitialized history");
-
-   const Page& page = pages_[pageId];
-
-   //load page's block range from ssh and build ledgers
-   map<BinaryData, TxIOPair> txio;
-   getTxio(page.blockStart_, page.blockEnd_, txio);
-   buildLedgers(leMap, txio, page.blockStart_, page.blockEnd_);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-map<BinaryData, LedgerEntry>& HistoryPager::getPageLedgerMap(uint32_t pageId)
+const map<BinaryData, LedgerEntry>& HistoryPager::getPageLedgerMap(
+   uint32_t pageId)
 {
    if (!isInitialized_)
       throw std::runtime_error("Uninitialized history");

@@ -1358,7 +1358,7 @@ TEST_F(BlockUtilsWithWalletTest, ZeroConfUpdate)
    EXPECT_EQ(wlt->getScrAddrObjByKey(TestChain::scrAddrE)->getFullBalance(), 3 * COIN);
 
    //test ledger entry
-   LedgerEntry le = wlt->getLedgerEntryForTx(ZChash);
+   LedgerEntry le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash);
 
    EXPECT_EQ(le.getTxTime(), 1300000000);
    EXPECT_EQ(le.isSentToSelf(), false);
@@ -1459,11 +1459,11 @@ TEST_F(BlockUtilsWithWalletTest, UnrelatedZC_CheckLedgers)
    EXPECT_EQ(ssh.getScriptBalance(), 5 * COIN);
 
    //grab ledger for 1st ZC, should be empty
-   auto zcledger = wlt->getLedgerEntryForTx(ZChash1);
+   auto zcledger = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash1);
    EXPECT_EQ(zcledger.getTxHash(), BtcUtils::EmptyHash());
 
    //grab ledger for 2nd ZC
-   zcledger = wlt->getLedgerEntryForTx(ZChash2);
+   zcledger = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash2);
    EXPECT_EQ(zcledger.getValue(), 30 * COIN);
    EXPECT_EQ(zcledger.getTxTime(), 14100000);
    EXPECT_FALSE(zcledger.isOptInRBF());
@@ -1509,9 +1509,9 @@ TEST_F(BlockUtilsWithWalletTest, UnrelatedZC_CheckLedgers)
    EXPECT_EQ(ssh.getScriptBalance(), 5 * COIN);
 
    //try to get ledgers, ZCs should be all gone
-   zcledger = wlt->getLedgerEntryForTx(ZChash1);
+   zcledger = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash1);
    EXPECT_EQ(zcledger.getTxHash(), BtcUtils::EmptyHash());
-   zcledger = wlt->getLedgerEntryForTx(ZChash2);
+   zcledger = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash2);
    EXPECT_EQ(zcledger.getTxTime(), 1231009513);
 }
 
@@ -2347,7 +2347,7 @@ TEST_F(BlockUtilsWithWalletTest, ChainZC_RBFchild_Test)
    EXPECT_EQ(scrObj->getFullBalance(), 15 * COIN);
 
    //grab ledger
-   auto zcledger = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto zcledger = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger.isOptInRBF());
@@ -2427,13 +2427,13 @@ TEST_F(BlockUtilsWithWalletTest, ChainZC_RBFchild_Test)
    //grab ledgers
 
    //first zc should be valid still
-   auto zcledger1 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto zcledger1 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger1.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger1.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger1.isOptInRBF());
 
    //second zc should be valid
-   auto zcledger2 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto zcledger2 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger2.getValue(), -17 * COIN);
    EXPECT_EQ(zcledger2.getTxTime(), 15000000);
    EXPECT_TRUE(zcledger2.isOptInRBF());
@@ -2530,17 +2530,17 @@ TEST_F(BlockUtilsWithWalletTest, ChainZC_RBFchild_Test)
    //grab ledgers
 
    //first zc should be replaced, hence the ledger should be empty
-   auto zcledger3 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto zcledger3 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger3.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger3.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger3.isOptInRBF());
 
    //second zc should be replaced
-   auto zcledger8 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto zcledger8 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger8.getTxHash(), BtcUtils::EmptyHash_);
 
    //third zc should be valid
-   auto zcledger9 = dbAssetWlt->getLedgerEntryForTx(ZCHash3);
+   auto zcledger9 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash3);
    EXPECT_EQ(zcledger9.getValue(), -6 * COIN);
    EXPECT_EQ(zcledger9.getTxTime(), 17000000);
    EXPECT_TRUE(zcledger9.isOptInRBF());

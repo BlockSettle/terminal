@@ -29,9 +29,9 @@ void BlockDataManager::registerBDVwithZCcontainer(
       return bdvPtr->hasScrAddress(scrAddr);
    };
 
-   auto newzc = [bdvPtr](ZeroConfContainer::NotificationPacket& zcMap)->void
+   auto newzc = [bdvPtr](ZeroConfContainer::NotificationPacket& notif)->void
    {
-      bdvPtr->zcCallback(zcMap);
+      bdvPtr->zcCallback(notif);
    };
 
    auto zcerror = [bdvPtr](string& error, string& id)->void

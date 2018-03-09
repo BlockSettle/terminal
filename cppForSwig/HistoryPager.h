@@ -27,6 +27,7 @@ private:
       uint32_t blockStart_;
       uint32_t blockEnd_;
       uint32_t count_;
+      unsigned updateID_ = UINT32_MAX;
 
       map<BinaryData, LedgerEntry> pageLedgers_;
 
@@ -56,21 +57,13 @@ public:
 
    HistoryPager(void) {}
 
-   map<BinaryData, LedgerEntry>& getPageLedgerMap(
-      function< void(uint32_t, uint32_t, map<BinaryData, TxIOPair>& ) > getTxio,
-      function< void(map<BinaryData, LedgerEntry>&, 
-                     const map<BinaryData, TxIOPair>&, uint32_t) > buildLedgers,
-      uint32_t pageId,
-      map<BinaryData, TxIOPair>* txioMap = nullptr);
+   const map<BinaryData, LedgerEntry>& getPageLedgerMap(
+      function< map<BinaryData, TxIOPair>(uint32_t, uint32_t) > getTxio,
+      function< map<BinaryData, LedgerEntry>(
+         const map<BinaryData, TxIOPair>&, uint32_t, uint32_t) > buildLedgers,
+      uint32_t pageId, unsigned updateID, map<BinaryData, TxIOPair>* txioMap = nullptr);
 
-   void getPageLedgerMap(
-      function< void(uint32_t, uint32_t, map<BinaryData, TxIOPair>&) > getTxio,
-      function< void(map<BinaryData, LedgerEntry>&,
-      const map<BinaryData, TxIOPair>&, uint32_t, uint32_t) > buildLedgers,
-      uint32_t pageId,
-      map<BinaryData, LedgerEntry>& leMap) const;
-
-   map<BinaryData, LedgerEntry>& getPageLedgerMap(uint32_t pageId);
+   const map<BinaryData, LedgerEntry>& getPageLedgerMap(uint32_t pageId);
 
    void reset(void) { 
       pages_.clear(); 

@@ -809,7 +809,7 @@ void BDV_Server_Object::buildMethodMap()
       LedgerEntryVector lev;
       for (unsigned y = 0; y < wltGroup.getPageCount(); y++)
       {
-         auto&& histPage = wltGroup.getHistoryPage(y, false, false);
+         auto&& histPage = wltGroup.getHistoryPage(y, false, false, UINT32_MAX);
          for (auto& le : histPage)
          {
             LedgerEntryData led(le.getWalletID(),

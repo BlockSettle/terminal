@@ -6313,10 +6313,21 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
 
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
    EXPECT_EQ(scrObj->getFullBalance(), 50*COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
-   EXPECT_EQ(scrObj->getFullBalance(), 20*COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
    EXPECT_EQ(scrObj->getFullBalance(), 65*COIN);
+
+   {
+      //check scrAddr ledger before checking balance to make sure fetching 
+      //ledgers does not corrupt the scrAddrObj txio map
+      scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+      auto&& leSA = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZChash1);
+      EXPECT_EQ(leSA.getTxTime(), 1300000000);
+      EXPECT_EQ(leSA.getValue(), -1000000000);
+      EXPECT_EQ(leSA.getBlockNum(), UINT32_MAX);
+      EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+   }
+
 
    fullBalance = wlt->getFullBalance();
    spendableBalance = wlt->getSpendableBalance(4);
@@ -6326,7 +6337,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(unconfirmedBalance, 165 * COIN);
 
    //check ledger for ZC
-   LedgerEntry le = wlt->getLedgerEntryForTx(ZChash1);
+   auto&& le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash1);
    EXPECT_EQ(le.getTxTime(), 1300000000);
    EXPECT_EQ(le.getValue(),  3000000000);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
@@ -6428,10 +6439,20 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
 
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
    EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
-   EXPECT_EQ(scrObj->getFullBalance(), 70 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrC);
    EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+
+   {
+      //check scrAddr ledger before checking balance to make sure fetching 
+      //ledgers does not corrupt the scrAddrObj txio map
+      scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrB);
+      auto&& leSA = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZChash1);
+      EXPECT_EQ(leSA.getTxTime(), 1231009513);
+      EXPECT_EQ(leSA.getValue(), -1000000000);
+      EXPECT_EQ(leSA.getBlockNum(), 5);
+      EXPECT_EQ(scrObj->getFullBalance(), 70 * COIN);
+   }
 
    fullBalance = wlt->getFullBalance();
    spendableBalance = wlt->getSpendableBalance(5);
@@ -6440,7 +6461,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    EXPECT_EQ(spendableBalance, 40 * COIN);
    EXPECT_EQ(unconfirmedBalance, 140 * COIN);
 
-   le = wlt->getLedgerEntryForTx(ZChash1);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash1);
    EXPECT_EQ(le.getTxTime(), 1231009513);
    EXPECT_EQ(le.getValue(), 3000000000);
    EXPECT_EQ(le.getBlockNum(), 5);
@@ -6451,7 +6472,6 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZC_Plus3_TestLedgers)
    StoredTx zcStx4;
 
    EXPECT_EQ(iface_->getStoredZcTx(zcStx4, zcKey), false);
-
    dbtx.reset();
 }
 
@@ -6543,7 +6563,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZCchain)
    EXPECT_EQ(spendableBalance, 0 * COIN);
    EXPECT_EQ(unconfirmedBalance, 80 * COIN);
 
-   LedgerEntry le = wlt->getLedgerEntryForTx(ZChash1);
+   auto&& le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash1);
    EXPECT_EQ(le.getTxTime(), 1400000000);
    EXPECT_EQ(le.getValue(), -25 * COIN);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
@@ -6567,13 +6587,13 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZCchain)
    EXPECT_EQ(spendableBalance, 0 * COIN);
    EXPECT_EQ(unconfirmedBalance, 80 * COIN);
 
-   le = wlt->getLedgerEntryForTx(ZChash1);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash1);
    EXPECT_EQ(le.getTxTime(), 1400000000);
    EXPECT_EQ(le.getValue(), -25 * COIN);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
    EXPECT_FALSE(le.isChainedZC());   
 
-   le = wlt->getLedgerEntryForTx(ZChash2);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash2);
    EXPECT_EQ(le.getTxTime(), 1500000000);
    EXPECT_EQ(le.getValue(), 30 * COIN);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
@@ -6598,13 +6618,13 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZCchain)
    EXPECT_EQ(spendableBalance, 5 * COIN);
    EXPECT_EQ(unconfirmedBalance, 135 * COIN);
 
-   le = wlt->getLedgerEntryForTx(ZChash1);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash1);
    EXPECT_EQ(le.getTxTime(), 1231008309);
    EXPECT_EQ(le.getValue(), -25 * COIN);
    EXPECT_EQ(le.getBlockNum(), 3);
    EXPECT_FALSE(le.isChainedZC());
 
-   le = wlt->getLedgerEntryForTx(ZChash2);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash2);
    EXPECT_EQ(le.getTxTime(), 1500000000);
    EXPECT_EQ(le.getValue(), 30 * COIN);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
@@ -6633,7 +6653,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_ZCchain)
    EXPECT_EQ(spendableBalance, 40 * COIN);
    EXPECT_EQ(unconfirmedBalance, 140 * COIN);
 
-   le = wlt->getLedgerEntryForTx(ZChash2);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, ZChash2);
    EXPECT_EQ(le.getTxTime(), 1231009513);
    EXPECT_EQ(le.getValue(), 30 * COIN);
    EXPECT_EQ(le.getBlockNum(), 5);
@@ -6803,7 +6823,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_RBF)
    EXPECT_EQ(unconfirmedBalance, 105 * COIN);
 
    //check ledger
-   auto le = wlt->getLedgerEntryForTx(RBFhash);
+   auto&& le = DBTestUtils::getLedgerEntryFromWallet(wlt, RBFhash);
    EXPECT_EQ(le.getTxTime(), 1400000000);
    EXPECT_EQ(le.getValue(), -30 * COIN);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
@@ -6828,10 +6848,10 @@ TEST_F(BlockUtilsBare, Load3Blocks_RBF)
    EXPECT_EQ(unconfirmedBalance, 135 * COIN);
 
    //verify replacement in ledgers
-   le = wlt->getLedgerEntryForTx(RBFhash);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, RBFhash);
    EXPECT_EQ(le.getTxHash(), BtcUtils::EmptyHash_);
 
-   le = wlt->getLedgerEntryForTx(spendRBFhash);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, spendRBFhash);
    EXPECT_EQ(le.getTxTime(), 1500000000);
    EXPECT_EQ(le.getValue(), 30 * COIN);
    EXPECT_EQ(le.getBlockNum(), UINT32_MAX);
@@ -6861,7 +6881,7 @@ TEST_F(BlockUtilsBare, Load3Blocks_RBF)
    EXPECT_EQ(unconfirmedBalance, 140 * COIN);
    
    //verify replacement ZC is invalid now
-   le = wlt->getLedgerEntryForTx(spendRBFhash);
+   le = DBTestUtils::getLedgerEntryFromWallet(wlt, spendRBFhash);
    EXPECT_EQ(le.getTxHash(), BtcUtils::EmptyHash_);
 }
 
@@ -8202,7 +8222,7 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
    EXPECT_EQ(scrObj->getFullBalance(), 15 * COIN);
 
    //grab ledger
-   auto zcledger = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger.isOptInRBF());
@@ -8311,12 +8331,12 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
    //grab ledgers
 
    //first zc should be replaced, hence the ledger should be empty
-   auto zcledger2 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger2 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger2.getTxHash(), BtcUtils::EmptyHash_);
 
    //second zc should be valid
    //grab ledger
-   auto zcledger3 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto&& zcledger3 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger3.getValue(), 26 * COIN);
    EXPECT_EQ(zcledger3.getTxTime(), 15000000);
    EXPECT_TRUE(zcledger3.isOptInRBF());
@@ -8420,19 +8440,19 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
    //grab ledgers
 
    //first zc should be replaced, hence the ledger should be empty
-   auto zcledger4 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger4 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger4.getTxHash(), BtcUtils::EmptyHash_);
 
    //second zc should be valid
    //grab ledger
-   auto zcledger5 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto&& zcledger5 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger5.getValue(), 26 * COIN);
    EXPECT_EQ(zcledger5.getTxTime(), 15000000);
    EXPECT_TRUE(zcledger5.isOptInRBF());
 
    //third zc should be valid
    //grab ledger
-   auto zcledger6 = dbAssetWlt->getLedgerEntryForTx(ZCHash3);
+   auto&& zcledger6 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash3);
    EXPECT_EQ(zcledger6.getValue(), -16 * COIN);
    EXPECT_EQ(zcledger6.getTxTime(), 16000000);
    EXPECT_TRUE(zcledger6.isChainedZC());
@@ -8552,19 +8572,19 @@ TEST_F(BlockUtilsBare, Replace_ZC_Test)
    //grab ledgers
 
    //first zc should be replaced, hence the ledger should be empty
-   auto zcledger7 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger7 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger7.getTxHash(), BtcUtils::EmptyHash_);
 
    //second zc should be replaced
-   auto zcledger8 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto&& zcledger8 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger8.getTxHash(), BtcUtils::EmptyHash_);
 
    //third zc should be replaced
-   auto zcledger9 = dbAssetWlt->getLedgerEntryForTx(ZCHash3);
+   auto&& zcledger9 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash3);
    EXPECT_EQ(zcledger9.getTxHash(), BtcUtils::EmptyHash_);
 
    //fourth zc should be valid
-   auto zcledger10 = dbAssetWlt->getLedgerEntryForTx(ZCHash4);
+   auto&& zcledger10 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash4);
    EXPECT_EQ(zcledger10.getValue(), 22 * COIN);
    EXPECT_EQ(zcledger10.getTxTime(), 17000000);
    EXPECT_FALSE(zcledger10.isChainedZC());
@@ -8766,7 +8786,7 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
    EXPECT_EQ(assetWlt_balanceCount[2], 27 * COIN);
 
    //grab ledger
-   auto zcledger = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger.isOptInRBF());
@@ -8778,9 +8798,6 @@ TEST_F(BlockUtilsBare, RegisterAddress_AfterZC)
    hashVec.insert(hashVec.begin(), hashSet.begin(), hashSet.end());
 
    DBTestUtils::regWallet(clients_, bdvID, hashVec, assetWlt->getID());
-
-   //wait on signals
-   //DBTestUtils::waitOnWalletRefresh(clients_, bdvID);
 
    //check balances
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrA);
@@ -8924,7 +8941,9 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
 
       ZCHash1 = move(BtcUtils::getHash256(bogusTx));
       DBTestUtils::pushNewZc(theBDMt_, zcVec);
-      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      auto&& ledgerVec = DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      for (auto& ledger : ledgerVec)
+         EXPECT_EQ(ledger.getTxHash(), ZCHash1);
    }
 
    //check balances
@@ -8938,13 +8957,20 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
    EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
 
    //check new wallet balances
-   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
-   EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
+   {
+      scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
+      auto&& zcledgerSA = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZCHash1);
+      EXPECT_EQ(zcledgerSA.getValue(), 10 * COIN);
+      EXPECT_EQ(zcledgerSA.getTxTime(), 14000000);
+      EXPECT_FALSE(zcledgerSA.isOptInRBF());
+      EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
+   }
    scrObj = dbAssetWlt->getScrAddrObjByKey(TestChain::scrAddrD);
    EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
 
    //grab wallet ledger
-   auto zcledger = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger.getValue(), 10 * COIN);
    EXPECT_EQ(zcledger.getTxTime(), 14000000);
    EXPECT_FALSE(zcledger.isOptInRBF());
@@ -9017,7 +9043,9 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
 
       ZCHash2 = move(BtcUtils::getHash256(rawTx));
       DBTestUtils::pushNewZc(theBDMt_, zcVec2);
-      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      auto&& ledgerVec = DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      for (auto& ledger : ledgerVec)
+         EXPECT_EQ(ledger.getTxHash(), ZCHash2);
    }
 
    //check balances
@@ -9031,17 +9059,25 @@ TEST_F(BlockUtilsBare, TwoZC_CheckLedgers)
    EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
 
    //check new wallet balances
-   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
-   EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
+   {
+      scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
+      auto&& zcledgerSA = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZCHash1);
+      EXPECT_EQ(zcledgerSA.getValue(), 10 * COIN);
+      EXPECT_EQ(zcledgerSA.getTxTime(), 14000000);
+      EXPECT_FALSE(zcledgerSA.isOptInRBF());
+      EXPECT_EQ(scrObj->getFullBalance(), 10 * COIN);
+   }
+
    scrObj = dbAssetWlt->getScrAddrObjByKey(TestChain::scrAddrD);
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
 
    //grab wallet ledger
-   auto zcledger2 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger2 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger2.getValue(), 10 * COIN);
    EXPECT_EQ(zcledger2.getTxTime(), 14000000);
 
-   auto zcledger3 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto&& zcledger3 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger3.getValue(), 5 * COIN);
    EXPECT_EQ(zcledger3.getTxTime(), 15000000);
 
@@ -9224,7 +9260,9 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
 
       ZCHash1 = move(BtcUtils::getHash256(rawTx));
       DBTestUtils::pushNewZc(theBDMt_, zcVec);
-      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      auto&& ledgerVec = DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      for (auto& ledger : ledgerVec)
+         EXPECT_EQ(ledger.getTxHash(), ZCHash1);
    }
 
    //check balances
@@ -9236,8 +9274,16 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
    EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
    EXPECT_EQ(scrObj->getFullBalance(), 8 * COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
-   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+
+   {
+      scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
+      auto&& zcledger_sa = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZCHash1);
+      EXPECT_EQ(zcledger_sa.getValue(), -30 * COIN);
+      EXPECT_EQ(zcledger_sa.getTxTime(), 14000000);
+      EXPECT_TRUE(zcledger_sa.isOptInRBF());
+      EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   }
 
    //check new wallet balances
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
@@ -9246,7 +9292,7 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
    EXPECT_EQ(scrObj->getFullBalance(), 15 * COIN);
 
    //grab ledger
-   auto zcledger = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger.isOptInRBF());
@@ -9297,7 +9343,9 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
 
       ZCHash2 = move(BtcUtils::getHash256(rawTx));
       DBTestUtils::pushNewZc(theBDMt_, zcVec3);
-      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      auto&& ledgerVec = DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      for (auto& ledger : ledgerVec)
+         EXPECT_EQ(ledger.getTxHash(), ZCHash2);
    }
 
    //check balances
@@ -9309,16 +9357,32 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
    EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
    EXPECT_EQ(scrObj->getFullBalance(), 25 * COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
-   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   {
+      scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
+      auto&& zcledger_sa = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZCHash1);
+      EXPECT_EQ(zcledger_sa.getValue(), -30 * COIN);
+      EXPECT_EQ(zcledger_sa.getTxTime(), 14000000);
+      EXPECT_TRUE(zcledger_sa.isOptInRBF());
+      EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   }
 
    //check new wallet balances
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[1]);
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
-   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
-   EXPECT_EQ(scrObj->getFullBalance(), 4 * COIN);
+
+   {
+      scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
+      auto&& zcledger_sa = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZCHash2);
+      EXPECT_EQ(zcledger_sa.getValue(), 4 * COIN);
+      EXPECT_EQ(zcledger_sa.getTxTime(), 15000000);
+      EXPECT_TRUE(zcledger_sa.isOptInRBF());
+      EXPECT_EQ(scrObj->getFullBalance(), 4 * COIN);
+   }
+
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[3]);
    EXPECT_EQ(scrObj->getFullBalance(), 6 * COIN);
 
@@ -9326,13 +9390,13 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
    //grab ledgers
 
    //first zc should be valid still
-   auto zcledger1 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   auto&& zcledger1 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger1.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger1.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger1.isOptInRBF());
 
    //second zc should be valid
-   auto zcledger2 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto&& zcledger2 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger2.getValue(), -17 * COIN);
    EXPECT_EQ(zcledger2.getTxTime(), 15000000);
    EXPECT_TRUE(zcledger2.isOptInRBF());
@@ -9399,7 +9463,9 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
 
       ZCHash3 = move(BtcUtils::getHash256(rawTx));
       DBTestUtils::pushNewZc(theBDMt_, zcVec2);
-      DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      auto&& ledgerVec = DBTestUtils::waitOnNewZcSignal(clients_, bdvID);
+      for (auto& ledger : ledgerVec)
+         EXPECT_EQ(ledger.getTxHash(), ZCHash3);
    }
 
    //check balances
@@ -9411,16 +9477,28 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
    EXPECT_EQ(scrObj->getFullBalance(), 55 * COIN);
    scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrD);
    EXPECT_EQ(scrObj->getFullBalance(), 8 * COIN);
-   scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
-   EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
+   {
+      scrObj = wlt->getScrAddrObjByKey(TestChain::scrAddrE);
+      auto&& zcledger_sa = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZCHash1);
+      EXPECT_EQ(zcledger_sa.getValue(), -30 * COIN);
+      EXPECT_EQ(zcledger_sa.getTxTime(), 14000000);
+      EXPECT_TRUE(zcledger_sa.isOptInRBF());
+      EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
+   }
 
    //check new wallet balances
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[0]);
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[1]);
    EXPECT_EQ(scrObj->getFullBalance(), 15 * COIN);
-   scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
-   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   {
+      scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[2]);
+      auto&& zcledger_sa = DBTestUtils::getLedgerEntryFromAddr(
+         (ScrAddrObj*)scrObj, ZCHash2);
+      EXPECT_EQ(zcledger_sa.getTxHash(), BtcUtils::EmptyHash());
+      EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+   }
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[3]);
    EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
    scrObj = dbAssetWlt->getScrAddrObjByKey(addrVec[4]);
@@ -9428,22 +9506,133 @@ TEST_F(BlockUtilsBare, ChainZC_RBFchild_Test)
 
    //grab ledgers
 
-   //first zc should be replaced, hence the ledger should be empty
-   auto zcledger3 = dbAssetWlt->getLedgerEntryForTx(ZCHash1);
+   //first zc should be valid
+   auto&& zcledger3 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash1);
    EXPECT_EQ(zcledger3.getValue(), 27 * COIN);
    EXPECT_EQ(zcledger3.getTxTime(), 14000000);
    EXPECT_TRUE(zcledger3.isOptInRBF());
 
    //second zc should be replaced
-   auto zcledger8 = dbAssetWlt->getLedgerEntryForTx(ZCHash2);
+   auto&& zcledger8 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash2);
    EXPECT_EQ(zcledger8.getTxHash(), BtcUtils::EmptyHash_);
 
    //third zc should be valid
-   auto zcledger9 = dbAssetWlt->getLedgerEntryForTx(ZCHash3);
+   auto&& zcledger9 = DBTestUtils::getLedgerEntryFromWallet(dbAssetWlt, ZCHash3);
    EXPECT_EQ(zcledger9.getValue(), -6 * COIN);
    EXPECT_EQ(zcledger9.getTxTime(), 17000000);
    EXPECT_TRUE(zcledger9.isOptInRBF());
 }
+
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(BlockUtilsBare, Load5Blocks_CheckWalletFilters)
+{
+   theBDMt_->start(config.initMode_);
+   auto&& bdvID = DBTestUtils::registerBDV(clients_, magic_);
+
+   vector<BinaryData> scrAddrVec1, scrAddrVec2;
+   scrAddrVec1.push_back(TestChain::scrAddrA);
+   scrAddrVec1.push_back(TestChain::scrAddrB);
+   scrAddrVec1.push_back(TestChain::scrAddrC);
+
+   scrAddrVec2.push_back(TestChain::scrAddrD);
+   scrAddrVec2.push_back(TestChain::scrAddrE);
+   scrAddrVec2.push_back(TestChain::scrAddrF);
+
+   const vector<BinaryData> lb1ScrAddrs
+   {
+      TestChain::lb1ScrAddr,
+      TestChain::lb1ScrAddrP2SH
+   };
+   const vector<BinaryData> lb2ScrAddrs
+   {
+      TestChain::lb2ScrAddr,
+      TestChain::lb2ScrAddrP2SH
+   };
+
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec1, "wallet1");
+   DBTestUtils::regWallet(clients_, bdvID, scrAddrVec2, "wallet2");
+
+   DBTestUtils::regLockbox(clients_, bdvID, lb1ScrAddrs, TestChain::lb1B58ID);
+   DBTestUtils::regLockbox(clients_, bdvID, lb2ScrAddrs, TestChain::lb2B58ID);
+
+   auto bdvPtr = DBTestUtils::getBDV(clients_, bdvID);
+
+   //wait on signals
+   DBTestUtils::goOnline(clients_, bdvID);
+   DBTestUtils::waitOnBDMReady(clients_, bdvID);
+   auto wlt1 = bdvPtr->getWalletOrLockbox(wallet1id);
+   auto wlt2 = bdvPtr->getWalletOrLockbox(wallet2id);
+   auto wltLB1 = bdvPtr->getWalletOrLockbox(LB1ID);
+   auto wltLB2 = bdvPtr->getWalletOrLockbox(LB2ID);
+   auto delegateID = DBTestUtils::getLedgerDelegate(clients_, bdvID);
+
+
+   const ScrAddrObj* scrObj;
+   scrObj = wlt1->getScrAddrObjByKey(TestChain::scrAddrA);
+   EXPECT_EQ(scrObj->getFullBalance(), 50 * COIN);
+   scrObj = wlt1->getScrAddrObjByKey(TestChain::scrAddrB);
+   EXPECT_EQ(scrObj->getFullBalance(), 70 * COIN);
+   scrObj = wlt1->getScrAddrObjByKey(TestChain::scrAddrC);
+   EXPECT_EQ(scrObj->getFullBalance(), 20 * COIN);
+   scrObj = wlt2->getScrAddrObjByKey(TestChain::scrAddrD);
+   EXPECT_EQ(scrObj->getFullBalance(), 65 * COIN);
+   scrObj = wlt2->getScrAddrObjByKey(TestChain::scrAddrE);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wlt2->getScrAddrObjByKey(TestChain::scrAddrF);
+   EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
+
+   scrObj = wltLB1->getScrAddrObjByKey(TestChain::lb1ScrAddr);
+   EXPECT_EQ(scrObj->getFullBalance(), 5 * COIN);
+   scrObj = wltLB1->getScrAddrObjByKey(TestChain::lb1ScrAddrP2SH);
+   EXPECT_EQ(scrObj->getFullBalance(), 25 * COIN);
+   scrObj = wltLB2->getScrAddrObjByKey(TestChain::lb2ScrAddr);
+   EXPECT_EQ(scrObj->getFullBalance(), 30 * COIN);
+   scrObj = wltLB2->getScrAddrObjByKey(TestChain::lb2ScrAddrP2SH);
+   EXPECT_EQ(scrObj->getFullBalance(), 0 * COIN);
+
+   EXPECT_EQ(wlt1->getFullBalance(), 140 * COIN);
+   EXPECT_EQ(wlt2->getFullBalance(), 100 * COIN);
+   EXPECT_EQ(wltLB1->getFullBalance(), 30 * COIN);
+   EXPECT_EQ(wltLB2->getFullBalance(), 30 * COIN);
+
+
+   //grab delegate ledger
+   auto&& delegateLedger1 = DBTestUtils::getHistoryPage(clients_, bdvID, delegateID, 0);
+
+   unsigned wlt1_count = 0, wlt2_count = 0;
+   for (auto& ledger : delegateLedger1)
+   {
+      if (ledger.getID() == "wallet1")
+         ++wlt1_count;
+      else if (ledger.getID() == "wallet2")
+         ++wlt2_count;
+   }
+
+   EXPECT_EQ(wlt1_count, 11);
+   EXPECT_EQ(wlt2_count, 7);
+
+   vector<BinaryData> idVec;
+   idVec.push_back(wallet1id);
+   DBTestUtils::updateWalletsLedgerFilter(clients_, bdvID, idVec);
+   BinaryData emptyBD;
+   DBTestUtils::waitOnWalletRefresh(clients_, bdvID, emptyBD);
+
+   auto&& delegateLedger2 = DBTestUtils::getHistoryPage(clients_, bdvID, delegateID, 0);
+
+   wlt1_count = 0;
+   wlt2_count = 0;
+   for (auto& ledger : delegateLedger2)
+   {
+      if (ledger.getID() == "wallet1")
+         ++wlt1_count;
+      else if (ledger.getID() == "wallet2")
+         ++wlt2_count;
+   }
+
+   EXPECT_EQ(wlt1_count, 11);
+   EXPECT_EQ(wlt2_count, 0);
+}
+
 
 // Comments need to be added....
 // Most of this data is from the BIP32 test vectors.

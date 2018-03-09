@@ -212,6 +212,7 @@ public:
    {
       map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> txioMap_;
       shared_ptr<ZcPurgePacket> purgePacket_;
+      set<BinaryData> newZcKeys_;
    };
 
    struct BDV_Callbacks

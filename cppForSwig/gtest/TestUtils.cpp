@@ -403,9 +403,26 @@ namespace DBTestUtils
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   void waitOnNewZcSignal(Clients* clients, const string& bdvId)
+   vector<LedgerEntryData> waitOnNewZcSignal(Clients* clients, const string& bdvId)
    {
-      waitOnSignal(clients, bdvId, "getStatus", "BDV_ZC");
+      auto&& result = waitOnSignal(clients, bdvId, "getStatus", "BDV_ZC");
+
+      if (result.size() != 2)
+      {
+         cout << "invalid result vector size in waitOnNewZcSignal";
+         throw runtime_error("");
+      }
+
+      auto arg_bdov = 
+         dynamic_pointer_cast<DataObject<LedgerEntryVector>>(result[1]);
+      if (arg_bdov == nullptr)
+      {
+         cout << "invalid result entry type in waitOnNewBlockSignal";
+         throw runtime_error("");
+      }
+
+      auto&& levec = arg_bdov->getObj();
+      return levec.toVector();
    }
 
    /////////////////////////////////////////////////////////////////////////////
@@ -415,6 +432,10 @@ namespace DBTestUtils
       while (1)
       {
          auto&& result = waitOnSignal(clients, bdvId, "getStatus", "BDV_Refresh");
+
+         if (wltId.getSize() == 0)
+            return;
+
          if (result.size() != 3)
          {
             cout << "invalid result vector size in waitOnWalletRefresh";
@@ -582,5 +603,58 @@ namespace DBTestUtils
             cout << endl;
          }
       }
+   }
+
+   /////////////////////////////////////////////////////////////////////////////
+   LedgerEntry getLedgerEntryFromWallet(
+      shared_ptr<BtcWallet> wlt, const BinaryData& txHash)
+   {
+      //get ledgermap from wallet
+      auto& ledgerMap = wlt->getHistoryPage(0);
+
+      //grab ledger by hash
+      for (auto& ledger : ledgerMap)
+      {
+         if (ledger.second.getTxHash() == txHash)
+            return ledger.second;
+      }
+
+      return LedgerEntry();
+   }
+
+   /////////////////////////////////////////////////////////////////////////////
+   LedgerEntry getLedgerEntryFromAddr(
+      ScrAddrObj* scrAddrObj, const BinaryData& txHash)
+   {
+      //get ledgermap from wallet
+      auto& ledgerMap = scrAddrObj->getHistoryPageById(0);
+
+      //grab ledger by hash
+      for (auto& ledger : ledgerMap)
+      {
+         if (ledger.getTxHash() == txHash)
+            return ledger;
+      }
+
+      return LedgerEntry();
+   }
+
+   /////////////////////////////////////////////////////////////////////////////
+   void updateWalletsLedgerFilter(
+      Clients* clients, const string& bdvId, const vector<BinaryData>& idVec)
+   {
+      Command cmd;
+
+      cmd.method_ = "updateWalletsLedgerFilter";
+      cmd.ids_.push_back(bdvId);
+
+      BinaryDataVector bdVec;
+      for (auto id : idVec)
+         bdVec.push_back(move(id));
+
+      cmd.args_.push_back(move(bdVec));
+      cmd.serialize();
+
+      clients->runCommand(cmd.command_);
    }
 }

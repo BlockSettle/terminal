@@ -88,19 +88,10 @@ void ScrAddrObj::addTxIO(TxIOPair& txio, bool isZeroConf)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void ScrAddrObj::pprintLedger() const 
-{ 
-   cout << "Address Ledger: " << getScrAddr().toHexStr() << endl;
-   for(const auto ledger : *ledger_)
-      ledger.second.pprintOneLine();
-}
-
-////////////////////////////////////////////////////////////////////////////////
 void ScrAddrObj::clearBlkData(void)
 {
    relevantTxIO_.clear();
    hist_.reset();
-   ledger_ = &LedgerEntry::EmptyLedgerMap_;
    totalTxioCount_ = 0;
 }
 
@@ -224,8 +215,6 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
 
       relevantTxIO_[txioPair.first] = move(txioPair.second);
    }
-   
-   updateLedgers(*ledger_, zcTxIOMap, 0, UINT32_MAX, false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -323,24 +312,15 @@ void ScrAddrObj::updateAfterReorg(uint32_t lastValidBlockHeight)
       else
          relevantTxIO_.erase(txioIter++);
    }
-
-   //clean up ledgers
-   BinaryData cutOffHghtX = DBUtils::heightAndDupToHgtx(lastValidBlockHeight + 1, 0);
-   uint16_t zero = 0;
-   cutOffHghtX.append((uint8_t*)&zero, 2);
-
-   auto leRange = ledger_->equal_range(cutOffHghtX);
-   ledger_->erase(leRange.first, ledger_->end());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void ScrAddrObj::updateLedgers(map<BinaryData, LedgerEntry>& leMap,
+map<BinaryData, LedgerEntry> ScrAddrObj::updateLedgers(
                                const map<BinaryData, TxIOPair>& txioMap,
-                               uint32_t startBlock, uint32_t endBlock,
-                               bool purge) const
+                               uint32_t startBlock, uint32_t endBlock) const
 {
-   LedgerEntry::computeLedgerMap(leMap, txioMap, startBlock, endBlock,
-                                 scrAddr_, db_, bc_, purge);
+   return LedgerEntry::computeLedgerMap(txioMap, startBlock, endBlock,
+                                 scrAddr_, db_, bc_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -359,23 +339,22 @@ void ScrAddrObj::fetchDBScrAddrData(uint32_t startBlock,
    //maintains first page worth of TxIO in RAM. This call purges ZC, so you 
    //should rescan ZC right after
 
-   map<BinaryData, TxIOPair> hist;
-   getHistoryForScrAddr(startBlock, endBlock, hist, true);
+   auto hist = getHistoryForScrAddr(startBlock, endBlock, true);
    
    if (hist.size() != 0)
       updateID_ = updateID;
    
    updateTxIOMap(hist);
-   updateLedgers(*ledger_, hist, startBlock, endBlock, false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ScrAddrObj::getHistoryForScrAddr(
+map<BinaryData, TxIOPair> ScrAddrObj::getHistoryForScrAddr(
    uint32_t startBlock, uint32_t endBlock,
-   map<BinaryData, TxIOPair>& outMap,
    bool update,
    bool withMultisig) const
 {
+   map<BinaryData, TxIOPair> outMap;
+
    //check relevantTxio_ first to see if it has some of the TxIOs
    uint32_t localTxioBottom = hist_.getPageBottom(0);
    if (update==false && endBlock > localTxioBottom)
@@ -396,7 +375,7 @@ void ScrAddrObj::getHistoryForScrAddr(
          BinaryData startHeight = DBUtils::heightAndDupToHgtx(startBlock, 0);
          startHeight.append(WRITE_UINT16_BE(0));
 
-         for (auto txioPair : relevantTxIO_)
+         for (auto& txioPair : relevantTxIO_)
          {
             if (txioPair.second >= startHeight)
             {
@@ -410,7 +389,7 @@ void ScrAddrObj::getHistoryForScrAddr(
       }
          
       if (startBlock >= localTxioBottom)
-         return;
+         return outMap;
 
       endBlock = localTxioBottom -1;
    }
@@ -427,7 +406,7 @@ void ScrAddrObj::getHistoryForScrAddr(
       withMultisig = true;
 
    if (!ssh.isInitialized())
-      return;
+      return outMap;
 
    //Serve content as a map. Do not overwrite existing TxIOs to avoid wiping ZC
    //data, Since the data isn't overwritten, iterate the map from its end to make
@@ -453,6 +432,8 @@ void ScrAddrObj::getHistoryForScrAddr(
 
       ++subSSHiter;
    }
+
+   return outMap;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -461,43 +442,26 @@ vector<LedgerEntry> ScrAddrObj::getHistoryPageById(uint32_t id)
    if (id > hist_.getPageCount())
       throw std::range_error("pageId out of range");
 
-   auto getTxio = [this](uint32_t start, 
-                         uint32_t end, 
-                         map<BinaryData, TxIOPair>& outMap)->void
-      { this->getHistoryForScrAddr(start, end, outMap, false); };
+   auto getTxio = [this](
+      uint32_t start, uint32_t end)->map<BinaryData, TxIOPair>
+      { return this->getHistoryForScrAddr(start, end, false); };
 
-   auto buildLedgers = [this](map<BinaryData, LedgerEntry>& leMap,
-                              const map<BinaryData, TxIOPair>& txioMap,
-                              uint32_t cutoff)->void
-      { this->updateLedgers(leMap, txioMap, cutoff, UINT32_MAX, false); };
+   auto buildLedgers = [this](const map<BinaryData, TxIOPair>& txioMap,
+      uint32_t start, uint32_t end)->map<BinaryData, LedgerEntry>
+      { return this->updateLedgers(txioMap, start, end); };
 
-
-   return getTxLedgerAsVector(hist_.getPageLedgerMap(getTxio, buildLedgers, id));
+   auto& leMap = hist_.getPageLedgerMap(getTxio, buildLedgers, id, updateID_);
+   return getTxLedgerAsVector(leMap);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void ScrAddrObj::mapHistory()
 {
-   ledger_ = &LedgerEntry::EmptyLedgerMap_;
-
    //create history map
    auto getSummary = [this]()->map<uint32_t, uint32_t>
       { return db_->getSSHSummary(this->getScrAddr(), UINT32_MAX); };
 
    hist_.mapHistory(getSummary); 
-
-   //grab first page and point ScrAddrObj's ledger at it
-   auto getTxio = [this](uint32_t start, 
-                         uint32_t end, 
-                         map<BinaryData, TxIOPair>& outMap)->void
-      { this->getHistoryForScrAddr(start, end, outMap, true); };
-
-   auto buildLedgers = [this](map<BinaryData, LedgerEntry>& leMap,
-                              const map<BinaryData, TxIOPair>& txioMap,
-                              uint32_t cutoff)->void
-      { this->updateLedgers(leMap, txioMap, cutoff, UINT32_MAX, false); };
-
-   ledger_ = &hist_.getPageLedgerMap(getTxio, buildLedgers, 0, &relevantTxIO_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -527,45 +491,17 @@ ScrAddrObj& ScrAddrObj::operator= (const ScrAddrObj& rhs)
    this->utxos_.reset();
    this->utxos_.scrAddrObj_ = this;
    
-   this->ledger_ = &LedgerEntry::EmptyLedgerMap_;
-   if (this->hist_.getPageCount() != 0)
-      this->ledger_ = &this->hist_.getPageLedgerMap(0);
-
    return *this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 vector<LedgerEntry> ScrAddrObj::getTxLedgerAsVector(
-   map<BinaryData, LedgerEntry>& leMap) const
+   const map<BinaryData, LedgerEntry>& leMap) const
 {
    vector<LedgerEntry>le;
 
    for (auto& lePair : leMap)
       le.push_back(lePair.second);
-
-   return le;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-LedgerEntry ScrAddrObj::getFirstLedger() const
-{
-   auto getTxio = [this](uint32_t start,
-      uint32_t end,
-      map<BinaryData, TxIOPair>& outMap)->void
-   { this->getHistoryForScrAddr(start, end, outMap, true); };
-
-   auto buildLedgers = [this](map<BinaryData, LedgerEntry>& leMap,
-      const map<BinaryData, TxIOPair>& txioMap,
-      uint32_t bottom, uint32_t top)->void
-   { this->updateLedgers(leMap, txioMap, bottom, top, false); };
-
-   map<BinaryData, LedgerEntry> leMap;
-   size_t lastPage = hist_.getPageCount();
-   hist_.getPageLedgerMap(getTxio, buildLedgers, lastPage-1, leMap);
-
-   LedgerEntry le;
-   if (leMap.size())
-      le = leMap.begin()->second;
 
    return le;
 }

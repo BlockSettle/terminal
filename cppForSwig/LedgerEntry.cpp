@@ -152,16 +152,14 @@ void LedgerEntry::purgeLedgerVectorFromHeight(
 }
 
 //////////////////////////////////////////////////////////////////////////////
-void LedgerEntry::computeLedgerMap(map<BinaryData, LedgerEntry> &leMap,
+map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
    const map<BinaryData, TxIOPair>& txioMap,
    uint32_t startBlock, uint32_t endBlock,
    const BinaryData& ID,
    const LMDBBlockDatabase* db,
-   const Blockchain* bc,
-   bool purge)
+   const Blockchain* bc)
 {
-   if (purge)
-      LedgerEntry::purgeLedgerMapFromHeight(leMap, startBlock);
+   map<BinaryData, LedgerEntry> leMap;
 
    //arrange txios by transaction
    map<BinaryData, vector<const TxIOPair*> > TxnTxIOMap;
@@ -300,6 +298,8 @@ void LedgerEntry::computeLedgerMap(map<BinaryData, LedgerEntry> &leMap,
       le.scrAddrSet_ = move(scrAddrSet);
       leMap[txioVec.first] = le;
    }
+
+   return leMap;
 }
 
 // kate: indent-width 3; replace-tabs on;

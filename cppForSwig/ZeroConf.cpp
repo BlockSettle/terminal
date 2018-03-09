@@ -764,6 +764,10 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
       }
    }
 
+   set<BinaryData> newZcKeys;
+   for (auto tx_pair : txmap_update)
+      newZcKeys.insert(tx_pair.first);
+
    txHashToDBKey_.update(txhashmap_update);
    txMap_.update(txmap_update);
 
@@ -864,6 +868,7 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
       if (callbackIter == bdvcallbacks->end())
          continue;
 
+      notificationPacket.newZcKeys_ = newZcKeys;
       callbackIter->second.newZcCallback_(notificationPacket);
    }
 }

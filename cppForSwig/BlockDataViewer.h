@@ -85,11 +85,6 @@ public:
       getFullZeroConfTxIOMap() const
    { return zeroConfCont_->getFullTxioMap(); }
 
-   const LedgerEntry& getTxLedgerByHash_FromWallets(
-      const BinaryData& txHash) const;
-   const LedgerEntry& getTxLedgerByHash_FromLockboxes(
-      const BinaryData& txHash) const;
-
    Tx                getTxByHash(BinaryData const & txHash) const;
    TxOut             getPrevTxOut(TxIn & txin) const;
    Tx                getPrevTx(TxIn & txin) const;
@@ -270,12 +265,10 @@ public:
    bool hasID(const BinaryData& ID) const;
    shared_ptr<BtcWallet> getWalletByID(const BinaryData& ID) const;
 
-   const LedgerEntry& getTxLedgerByHash(const BinaryData& txHash) const;
-
    void reset();
    
    size_t getPageCount(void) const { return hist_.getPageCount(); }
-   vector<LedgerEntry> getHistoryPage(uint32_t pageId,
+   vector<LedgerEntry> getHistoryPage(uint32_t pageId, unsigned updateID, 
       bool rebuildLedger, bool remapWallets);
 
    const set<BinaryData>& getValidZcSet(void) const
@@ -290,9 +283,6 @@ private:
    void updateLedgerFilter(const vector<BinaryData>& walletsVec);
 
    void scanWallets(ScanWalletStruct&, int32_t);
-   void updateGlobalLedgerFirstPage(uint32_t startBlock, 
-      uint32_t endBlock, BDV_refresh forceRefresh);
-
    map<BinaryData, shared_ptr<BtcWallet> > getWalletMap(void) const;
 
    uint32_t getBlockInVicinity(uint32_t) const;
@@ -308,7 +298,6 @@ private:
    //a single one), the globalLedger does not merge wallet level txn. It
    //can thus have several entries under the same transaction. Thus, this
    //cannot be a map nor a set.
-   vector<LedgerEntry> globalLedger_;
    HistoryPager hist_;
    HistoryOrdering order_ = order_descending;
 
@@ -320,6 +309,7 @@ private:
    std::mutex globalLedgerLock_;
 
    set<BinaryData> validZcSet_;
+   set<BinaryData> wltFilterSet_;
 };
 
 #endif
