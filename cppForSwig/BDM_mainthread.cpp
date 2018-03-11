@@ -20,41 +20,6 @@
 
 #include <ctime>
 
-////////////////////////////////////////////////////////////////////////////////
-void BlockDataManager::registerBDVwithZCcontainer(
-   BDV_Server_Object* bdvPtr)
-{
-   auto filter = [bdvPtr](const BinaryData& scrAddr)->bool
-   {
-      return bdvPtr->hasScrAddress(scrAddr);
-   };
-
-   auto newzc = [bdvPtr](ZeroConfContainer::NotificationPacket& notif)->void
-   {
-      bdvPtr->zcCallback(notif);
-   };
-
-   auto zcerror = [bdvPtr](string& error, string& id)->void
-   {
-      bdvPtr->zcErrorCallback(error, id);
-   };
-
-   ZeroConfContainer::BDV_Callbacks callbacks;
-   callbacks.addressFilter_ = filter;
-   callbacks.newZcCallback_ = newzc;
-   callbacks.zcErrorCallback_ = zcerror;
-
-   zeroConfCont_->insertBDVcallback(
-      move(bdvPtr->getID()), move(callbacks));
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void BlockDataManager::unregisterBDVwithZCcontainer(
-   const string& bdvID)
-{
-   zeroConfCont_->eraseBDVcallback(bdvID);
-}
-
 BDM_CallBack::~BDM_CallBack()
 {}
 

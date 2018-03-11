@@ -397,7 +397,8 @@ void BlockDataViewer::flagRefresh(
    BDV_refresh refresh, const BinaryData& refreshID,
    unique_ptr<BDV_Notification_ZC> zcPtr)
 { 
-   auto notif = make_unique<BDV_Notification_Refresh>(refresh, refreshID);
+   auto notif = make_unique<BDV_Notification_Refresh>(
+      getID(), refresh, refreshID);
    if (zcPtr != nullptr)
       notif->zcPacket_ = move(zcPtr->packet_);
 
@@ -744,7 +745,7 @@ tuple<uint64_t, uint64_t> BlockDataViewer::getAddrFullBalance(
 unique_ptr<BDV_Notification_ZC> BlockDataViewer::createZcNotification(
    function<bool(const BinaryData&)> filter)
 {
-   ZeroConfContainer::NotificationPacket packet;
+   ZeroConfContainer::NotificationPacket packet(getID());
 
    //grab zc map
    auto txiomap = zeroConfCont_->getFullTxioMap();

@@ -45,8 +45,7 @@ enum ParsedTxStatus
    Tx_Invalid
 };
 
-class ZeroConfContainer;
-
+////////////////////////////////////////////////////////////////////////////////
 struct ZeroConfData
 {
    Tx            txobj_;
@@ -190,6 +189,8 @@ struct ZcPurgePacket
    map<BinaryData, BinaryData> minedTxioKeys_;
 };
 
+class ZeroConfCallbacks;
+
 ////////////////////////////////////////////////////////////////////////////////
 class ZeroConfContainer
 {
@@ -210,16 +211,14 @@ private:
 public:
    struct NotificationPacket
    {
+      string bdvID_;
       map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>> txioMap_;
       shared_ptr<ZcPurgePacket> purgePacket_;
       set<BinaryData> newZcKeys_;
-   };
 
-   struct BDV_Callbacks
-   {
-      function<void(NotificationPacket&)> newZcCallback_;
-      function<bool(const BinaryData&)> addressFilter_;
-      function<void(string&, string&)> zcErrorCallback_;
+      NotificationPacket(const string& bdvID) :
+         bdvID_(bdvID)
+      {}
    };
 
    struct ZcActionStruct
@@ -235,9 +234,11 @@ private:
    TransactionalMap<HashString, ParsedTx>       txMap_;              //<zcKey, zcTx>
    TransactionalSet<HashString>                 txOutsSpentByZC_;    //<txOutDbKeys>
    set<HashString>                              allZcTxHashes_;
-   map<BinaryData, map<unsigned, BinaryData>>   outPointsSpentByKey_; //<txHash, map<opId, ZcKeys>>
+   
+   //<txHash, map<opId, ZcKeys>>
+   map<BinaryData, map<unsigned, BinaryData>>   outPointsSpentByKey_;
 
-                                                                      //<scrAddr,  <dbKeyOfOutput, TxIOPair>>
+   //<scrAddr,  <dbKeyOfOutput, TxIOPair>>
    TransactionalMap<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>>  txioMap_;
 
    //<zcKey, vector<ScrAddr>>
@@ -256,7 +257,6 @@ private:
    shared_ptr<BitcoinP2P> networkNode_;
    BlockingStack<ZeroConfInvPacket> newInvTxStack_;
 
-   TransactionalMap<string, BDV_Callbacks> bdvCallbacks_;
    mutex parserMutex_;
 
    vector<thread> parserThreads_;
@@ -267,6 +267,7 @@ private:
 
    unsigned parserThreadCount_ = 0;
    mutex parserThreadMutex_;
+   unique_ptr<ZeroConfCallbacks> bdvCallbacks_;
 
 private:
    BulkFilterData ZCisMineBulkFilter(ParsedTx & tx, const BinaryData& ZCkey,
@@ -337,8 +338,10 @@ public:
    void init(shared_ptr<ScrAddrFilter>, bool clearMempool);
    void shutdown();
 
-   void insertBDVcallback(string, BDV_Callbacks);
-   void eraseBDVcallback(string);
+   void setZeroConfCallbacks(unique_ptr<ZeroConfCallbacks> ptr)
+   {
+      bdvCallbacks_ = move(ptr);
+   }
 
    void broadcastZC(const BinaryData& rawzc,
       const string& bdvId, uint32_t timeout_ms);
@@ -347,6 +350,19 @@ public:
    void pushZcToParser(const BinaryData& rawTx);
 
    shared_ptr<map<BinaryData, TxIOPair>> getTxioMapForScrAddr(const BinaryData&) const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class ZeroConfCallbacks
+{
+public:
+   virtual ~ZeroConfCallbacks(void) = 0;
+
+   virtual set<string> hasScrAddr(const BinaryDataRef&) const = 0;
+   virtual void pushZcNotification(
+      ZeroConfContainer::NotificationPacket& packet) = 0;
+   virtual void errorCallback(
+      const string& bdvId, string& errorStr, const string& txHash) = 0;
 };
 
 #endif

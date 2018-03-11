@@ -177,9 +177,6 @@ public:
       std::function<void()> headersRead, headersUpdated, blockDataLoaded;
    };
    
-   void registerBDVwithZCcontainer(BDV_Server_Object*);
-   void unregisterBDVwithZCcontainer(const string&);
-
    bool hasException(void) const { return exceptPtr_ != nullptr; }
    exception_ptr getException(void) const { return exceptPtr_; }
 
@@ -238,6 +235,10 @@ public:
 
    unsigned getCheckedTxCount(void) const { return checkTransactionCount_; }
    NodeStatusStruct getNodeStatus(void) const;
+   void registerZcCallbacks(unique_ptr<ZeroConfCallbacks> ptr)
+   {
+      zeroConfCont_->setZeroConfCallbacks(move(ptr));
+   }
 };
 
 ///////////////////////////////////////////////////////////////////////////////

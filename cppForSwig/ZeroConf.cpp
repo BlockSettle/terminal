@@ -819,14 +819,12 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
          //flag relevant BDVs
          for (auto& addrRef : addrRefs)
          {
-            for (auto& callbacks : *bdvcallbacks)
+            auto&& bdvid_set = bdvCallbacks_->hasScrAddr(addrRef);
+            for (auto& bdvid : bdvid_set)
             {
-               if (callbacks.second.addressFilter_(addrRef))
-               {
-                  auto& bdv = flaggedBDVs[callbacks.first];
-                  bdv.second.invalidatedKeys_.insert(invalidKey);
-                  bdv.first = true;
-               }
+               auto& bdv = flaggedBDVs[bdvid];
+               bdv.second.invalidatedKeys_.insert(invalidKey);
+               bdv.first = true;
             }
          }
       }
@@ -847,7 +845,7 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
       if (!bdvMap.second.first)
          continue;
 
-      NotificationPacket notificationPacket;
+      NotificationPacket notificationPacket(bdvMap.first);
       for (auto& sa : bdvMap.second.second.txioKeys_)
       {
          auto saIter = txiomapPtr->find(sa);
@@ -864,12 +862,8 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
             move(bdvMap.second.second.invalidatedKeys_);
       }
 
-      auto callbackIter = bdvcallbacks->find(bdvMap.first);
-      if (callbackIter == bdvcallbacks->end())
-         continue;
-
       notificationPacket.newZcKeys_ = newZcKeys;
-      callbackIter->second.newZcCallback_(notificationPacket);
+      bdvCallbacks_->pushZcNotification(notificationPacket);
    }
 }
 
@@ -998,10 +992,9 @@ ZeroConfContainer::BulkFilterData ZeroConfContainer::ZCisMineBulkFilter(
 
    auto& tx = parsedTx.tx_;
    auto mainAddressSet = scrAddrMap_->get();
-   auto bdvcallbacks = bdvCallbacks_.get();
 
-   auto filter = [mainAddressSet, &bdvcallbacks]
-   (const BinaryData& addr)->pair<bool, set<string>>
+   auto filter = [mainAddressSet, this]
+      (const BinaryData& addr)->pair<bool, set<string>>
    {
       pair<bool, set<string>> flaggedBDVs;
       flaggedBDVs.first = false;
@@ -1017,12 +1010,7 @@ ZeroConfContainer::BulkFilterData ZeroConfContainer::ZCisMineBulkFilter(
 
       flaggedBDVs.first = true;
 
-      for (auto& callbacks : *bdvcallbacks)
-      {
-         if (callbacks.second.addressFilter_(addr))
-            flaggedBDVs.second.insert(callbacks.first);
-      }
-
+      flaggedBDVs.second = move(bdvCallbacks_->hasScrAddr(addr.getRef()));
       return flaggedBDVs;
    };
 
@@ -1606,31 +1594,9 @@ void ZeroConfContainer::pushZcToParser(const BinaryData& rawTx)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ZeroConfContainer::insertBDVcallback(string id, BDV_Callbacks callback)
-{
-   bdvCallbacks_.insert(move(make_pair(move(id), move(callback))));
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void ZeroConfContainer::eraseBDVcallback(string id)
-{
-   bdvCallbacks_.erase(id);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
    const string& bdvId, uint32_t timeout_ms)
 {
-   BDV_Callbacks bdv_cb;
-   {
-      auto bdvsPtr = bdvCallbacks_.get();
-      auto bdvIter = bdvsPtr->find(bdvId);
-      if (bdvIter == bdvsPtr->end())
-         throw runtime_error("broadcast error: unknown bdvId");
-
-      bdv_cb = bdvIter->second;
-   }
-
    Tx zcTx(rawzc);
 
    //get tx hash
@@ -1641,7 +1607,7 @@ void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
    {
       string errorMsg("node is offline, cannot broadcast");
       LOGWARN << errorMsg;
-      bdv_cb.zcErrorCallback_(errorMsg, txHashStr);
+      bdvCallbacks_->errorCallback(bdvId, errorMsg, txHashStr);
       return;
    }
 
@@ -1714,7 +1680,7 @@ void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
    {
       auto&& errorMsg = gds->getMessage();
       networkNode_->unregisterGetTxCallback(txHash);
-      bdv_cb.zcErrorCallback_(errorMsg, txHashStr);
+      bdvCallbacks_->errorCallback(bdvId, errorMsg, txHashStr);
       return;
    }
 
@@ -1758,7 +1724,7 @@ void ZeroConfContainer::broadcastZC(const BinaryData& rawzc,
    if (!gds->status())
    {
       auto&& errorMsg = gds->getMessage();
-      bdv_cb.zcErrorCallback_(errorMsg, txHashStr);
+      bdvCallbacks_->errorCallback(bdvId, errorMsg, txHashStr);
    }
    else
    {
@@ -1944,3 +1910,11 @@ const BinaryData& ParsedTx::getTxHash(void) const
       txHash_ = move(tx_.getThisHash());
    return txHash_;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// ZeroConfCallbacks
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+ZeroConfCallbacks::~ZeroConfCallbacks() 
+{}

@@ -555,7 +555,7 @@ namespace DBTestUtils
          auto subssh_key = txio_pair.first.getSliceRef(0, 4);
 
          auto& subssh = ssh.subHistMap_[subssh_key];
-         subssh.txioMap_.insert(txio_pair);
+         subssh.txioMap_[txio_pair.first] = txio_pair.second;
 
          unsigned txioCount = 1;
          if (txio_pair.second.hasTxIn())

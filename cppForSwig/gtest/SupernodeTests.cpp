@@ -1446,6 +1446,7 @@ TEST_F(BlockUtilsWithWalletTest, UnrelatedZC_CheckLedgers)
       theBDMt_->bdm()->zeroConfCont()->getTxioMapForScrAddr(
          TestChain::scrAddrD);
    ASSERT_NE(zcTxios, nullptr);
+   EXPECT_EQ(zcTxios->size(), 1);
    iface_->getStoredScriptHistory(ssh, TestChain::scrAddrD);
    DBTestUtils::addTxioToSsh(ssh, *zcTxios);
    EXPECT_EQ(ssh.getScriptBalance(), 65 * COIN);

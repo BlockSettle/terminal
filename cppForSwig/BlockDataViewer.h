@@ -52,7 +52,7 @@ class BDMnotReady : public exception
 class BlockDataViewer
 {
 private:
-   virtual void pushNotification(unique_ptr<BDV_Notification>) = 0;
+   virtual void pushNotification(shared_ptr<BDV_Notification>) = 0;
 
 public:
    BlockDataViewer(BlockDataManager* bdm);
@@ -209,6 +209,8 @@ public:
 
    unique_ptr<BDV_Notification_ZC> createZcNotification(
       function<bool(const BinaryData&)>);
+
+   virtual const string& getID(void) const = 0;
 
 protected:
    atomic<bool> rescanZC_;
