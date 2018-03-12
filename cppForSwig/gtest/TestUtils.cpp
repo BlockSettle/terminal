@@ -627,7 +627,7 @@ namespace DBTestUtils
       ScrAddrObj* scrAddrObj, const BinaryData& txHash)
    {
       //get ledgermap from wallet
-      auto& ledgerMap = scrAddrObj->getHistoryPageById(0);
+      auto&& ledgerMap = scrAddrObj->getHistoryPageById(0);
 
       //grab ledger by hash
       for (auto& ledger : ledgerMap)
