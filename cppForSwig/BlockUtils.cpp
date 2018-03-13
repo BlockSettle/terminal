@@ -1144,3 +1144,42 @@ void BlockDataManager::pollNodeStatus() const
    if (pollThr.joinable())
       pollThr.detach();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+void BlockDataManager::blockUntilReady() const
+{
+   while (1)
+   {
+      try
+      {
+         isReadyFuture_.wait();
+         return;
+      }
+      catch (future_error&)
+      {
+         this_thread::sleep_for(chrono::seconds(1));
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool BlockDataManager::isReady() const
+{
+   bool isready = false;
+
+   while (1)
+   {
+      try
+      {
+         isready = isReadyFuture_.wait_for(chrono::seconds(0)) ==
+            std::future_status::ready;
+         break;
+      }
+      catch (future_error&)
+      {
+         this_thread::sleep_for(chrono::seconds(1));
+      }
+   }
+
+   return isready;
+}

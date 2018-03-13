@@ -218,14 +218,8 @@ public:
 
 public:
    bool isRunning(void) const { return BDMstate_ != BDM_offline; }
-   void blockUntilReady(void) const { isReadyFuture_.wait(); }
-   bool isReady(void) const
-   {
-      return 
-         isReadyFuture_.wait_for(chrono::seconds(0)) == 
-         std::future_status::ready;
-   }
-   
+   void blockUntilReady(void) const;
+   bool isReady(void) const;
    void resetDatabases(ResetDBMode mode);
    
    void terminateAllScans(void) 
