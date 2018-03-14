@@ -451,7 +451,7 @@ vector<LedgerEntry> ScrAddrObj::getHistoryPageById(uint32_t id)
       { return this->updateLedgers(txioMap, start, end); };
 
    auto leMap = hist_.getPageLedgerMap(getTxio, buildLedgers, id, updateID_);
-   return getTxLedgerAsVector(*leMap);
+   return getTxLedgerAsVector(leMap.get());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -496,11 +496,14 @@ ScrAddrObj& ScrAddrObj::operator= (const ScrAddrObj& rhs)
 
 ////////////////////////////////////////////////////////////////////////////////
 vector<LedgerEntry> ScrAddrObj::getTxLedgerAsVector(
-   const map<BinaryData, LedgerEntry>& leMap) const
+   const map<BinaryData, LedgerEntry>* leMap) const
 {
    vector<LedgerEntry>le;
 
-   for (auto& lePair : leMap)
+   if (leMap == nullptr)
+      return le;
+
+   for (auto& lePair : *leMap)
       le.push_back(lePair.second);
 
    return le;
