@@ -1495,7 +1495,7 @@ void BDV_Server_Object::haltThreads()
    if (initT_.joinable())
       initT_.join();
 
-   cb_.reset();
+   cb_->shutdown();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
