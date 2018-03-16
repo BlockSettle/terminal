@@ -9634,6 +9634,125 @@ TEST_F(BlockUtilsBare, Load5Blocks_CheckWalletFilters)
 }
 
 
+TEST_F(BlockUtilsBare, Ledger_RandomWalletId)
+{
+   //gotta derive callback class
+   class UTCallback : public SwigClient::PythonCallback
+   {
+   private:
+      BlockingStack<BDMAction> actionStack_;
+
+   public:
+      UTCallback(const SwigClient::BlockDataViewer& bdv) :
+         PythonCallback(bdv)
+      {}
+
+      void run(BDMAction action, void* ptr, int block = 0)
+      {
+         actionStack_.push_back(move(action));
+      }
+
+      void progress(
+         BDMPhase phase,
+         const vector<string> &walletIdVec,
+         float progress, unsigned secondsRem,
+         unsigned progressNumeric
+         )
+      {}
+
+      void waitOnSignal(BDMAction signal)
+      {
+         while (1)
+         {
+            auto action = actionStack_.pop_front();
+	    cout << "   action: " << int(action) << endl;
+            if (action == signal)
+            {
+               actionStack_.clear();
+               return;
+            }
+         }
+      }
+   };
+
+   //
+   TestUtils::setBlocks({ "0", "1", "2", "3" }, blk0dat_);
+
+   //run clients from fcgiserver object instead
+   clients_->exitRequestLoop();
+   clients_->shutdown();
+
+   delete clients_;
+   delete theBDMt_;
+   clients_ = nullptr;
+
+   FCGX_Init();
+   ScrAddrFilter::init();
+   theBDMt_ = new BlockDataManagerThread(config);
+   FCGI_Server server(theBDMt_, config.fcgiPort_, false);
+
+   server.checkSocket();
+   server.init();
+
+   theBDMt_->start(config.initMode_);
+
+   auto fcgiLoop = [&](void)->void
+   { server.enterLoop(); };
+
+   auto tID = thread(fcgiLoop);
+
+   auto&& bdvObj = SwigClient::BlockDataViewer::getNewBDV(
+      "127.0.0.1", config.fcgiPort_, SocketType::SocketFcgi);
+   bdvObj.registerWithDB(config.magicBytes_);
+
+   vector<BinaryData> scrAddrVec;
+   scrAddrVec.push_back(TestChain::scrAddrA);
+   scrAddrVec.push_back(TestChain::scrAddrB);
+   scrAddrVec.push_back(TestChain::scrAddrC);
+
+   const auto &walletId = SecureBinaryData().GenerateRandom(8).toHexStr();
+   auto&& wallet = bdvObj.registerWallet(walletId, scrAddrVec, true);
+
+   //wait on signals
+   bdvObj.goOnline();
+   UTCallback pCallback(bdvObj);
+   pCallback.startLoop();
+   pCallback.waitOnSignal(BDMAction_Ready);
+
+/*   const auto &walletId = SecureBinaryData().GenerateRandom(8).toHexStr();
+   auto&& wallet = bdvObj.registerWallet(walletId, scrAddrVec, true);
+   pCallback.waitOnSignal(BDMAction_Refresh);*/
+   //bdvObj.updateWalletsLedgerFilter({ walletId });
+   //pCallback.waitOnSignal(BDMAction_Refresh);
+
+   auto w1AddrBalances = wallet.getAddrBalancesFromDB();
+   ASSERT_NE(w1AddrBalances.size(), 0);
+   vector<uint64_t> balanceVec;
+   balanceVec = w1AddrBalances[TestChain::scrAddrA];	// crashes here, too
+   EXPECT_EQ(balanceVec[0], 50 * COIN);
+   balanceVec = w1AddrBalances[TestChain::scrAddrB];
+   EXPECT_EQ(balanceVec[0], 30 * COIN);
+   balanceVec = w1AddrBalances[TestChain::scrAddrC];
+   EXPECT_EQ(balanceVec[0], 55 * COIN);
+
+   auto ledgerDelegate = bdvObj.getLedgerDelegateForScrAddr(walletId, TestChain::scrAddrA);
+   EXPECT_FALSE(ledgerDelegate.getHistoryPage(0).empty());
+
+   //cleanup
+   bdvObj.unregisterFromDB();
+   pCallback.shutdown();
+   bdvObj.shutdown(config.cookie_);
+   
+   if (tID.joinable())
+      tID.join();
+
+   server.shutdown();
+
+   delete theBDMt_;
+   theBDMt_ = nullptr;
+}
+
+
 // Comments need to be added....
 // Most of this data is from the BIP32 test vectors.
 class TestCryptoECDSA : public ::testing::Test
