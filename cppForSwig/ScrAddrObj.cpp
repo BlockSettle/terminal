@@ -357,7 +357,7 @@ map<BinaryData, TxIOPair> ScrAddrObj::getHistoryForScrAddr(
 
    //check relevantTxio_ first to see if it has some of the TxIOs
    uint32_t localTxioBottom = hist_.getPageBottom(0);
-   if (update==false && endBlock > localTxioBottom)
+   if (update==false && endBlock > localTxioBottom && lastSeenBlock_ != 0)
    {
       if (startBlock <= localTxioBottom)
       {
@@ -396,11 +396,18 @@ map<BinaryData, TxIOPair> ScrAddrObj::getHistoryForScrAddr(
 
    //grab txio range from ssh
    StoredScriptHistory ssh;
-   db_->getStoredScriptHistory(ssh, scrAddr_, startBlock, endBlock);
+   auto start = startBlock;
+   if (startBlock == UINT32_MAX && lastSeenBlock_ == 0)
+      start = lastSeenBlock_;
+   db_->getStoredScriptHistory(ssh, scrAddr_, start, endBlock);
 
    //update scrAddrObj containers
    totalTxioCount_ = ssh.totalTxioCount_;
-   lastSeenBlock_ = endBlock;
+
+   if (endBlock != UINT32_MAX)
+      lastSeenBlock_ = endBlock;
+   else if (lastSeenBlock_ == 0)
+      lastSeenBlock_ = bc_->top()->getBlockHeight();
 
    if (scrAddr_[0] == SCRIPT_PREFIX_MULTISIG)
       withMultisig = true;

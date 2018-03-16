@@ -9634,7 +9634,8 @@ TEST_F(BlockUtilsBare, Load5Blocks_CheckWalletFilters)
 }
 
 
-TEST_F(BlockUtilsBare, Ledger_RandomWalletId)
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(BlockUtilsBare, GrabAddrLedger_PostReg)
 {
    //gotta derive callback class
    class UTCallback : public SwigClient::PythonCallback
@@ -9665,7 +9666,6 @@ TEST_F(BlockUtilsBare, Ledger_RandomWalletId)
          while (1)
          {
             auto action = actionStack_.pop_front();
-	    cout << "   action: " << int(action) << endl;
             if (action == signal)
             {
                actionStack_.clear();
@@ -9710,20 +9710,15 @@ TEST_F(BlockUtilsBare, Ledger_RandomWalletId)
    scrAddrVec.push_back(TestChain::scrAddrB);
    scrAddrVec.push_back(TestChain::scrAddrC);
 
-   const auto &walletId = SecureBinaryData().GenerateRandom(8).toHexStr();
-   auto&& wallet = bdvObj.registerWallet(walletId, scrAddrVec, true);
-
    //wait on signals
    bdvObj.goOnline();
    UTCallback pCallback(bdvObj);
    pCallback.startLoop();
    pCallback.waitOnSignal(BDMAction_Ready);
 
-/*   const auto &walletId = SecureBinaryData().GenerateRandom(8).toHexStr();
-   auto&& wallet = bdvObj.registerWallet(walletId, scrAddrVec, true);
-   pCallback.waitOnSignal(BDMAction_Refresh);*/
-   //bdvObj.updateWalletsLedgerFilter({ walletId });
-   //pCallback.waitOnSignal(BDMAction_Refresh);
+   const auto &walletId = SecureBinaryData().GenerateRandom(8).toHexStr();
+   auto&& wallet = bdvObj.registerWallet(walletId, scrAddrVec, false);
+   pCallback.waitOnSignal(BDMAction_Refresh);
 
    auto w1AddrBalances = wallet.getAddrBalancesFromDB();
    ASSERT_NE(w1AddrBalances.size(), 0);
