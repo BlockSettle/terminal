@@ -323,8 +323,7 @@ map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
          }
          catch (exception&)
          {
-            LMDBEnv::Transaction zctx;
-            db->beginDBTransaction(&zctx, ZERO_CONF, LMDB::ReadOnly);
+            auto&& zctx = db->beginTransaction(ZERO_CONF, LMDB::ReadOnly);
 
             StoredTx stx;
             if (!db->getStoredZcTx(stx, txioVec.first))
