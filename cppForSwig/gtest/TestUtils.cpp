@@ -563,7 +563,7 @@ namespace DBTestUtils
             ssh.totalUnspent_ -= txio_pair.second.getValue();
 
             auto txinKey_prefix = 
-               txio_pair.second.getDBKeyOfInput().getSliceRef(0, 4);
+               txio_pair.second.getDBKeyOfInput().getSliceCopy(0, 4);
             if (txio_pair.second.getDBKeyOfOutput().startsWith(txinKey_prefix))
             {
                ssh.totalUnspent_ += txio_pair.second.getValue();
