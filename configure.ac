@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([BitcoinArmory],[0.96.3.992],[moothecowlord@gmail.com])
+AC_INIT([BitcoinArmory],[0.96.4],[moothecowlord@gmail.com])
 
 AM_INIT_AUTOMAKE([1.11 subdir-objects foreign -Wall -Werror])
 
