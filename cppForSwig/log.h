@@ -66,7 +66,6 @@
 #include <memory>
 #include <chrono>
 #include "OS_TranslatePath.h"
-#include "make_unique.h"
 
 #define FILEANDLINE "(" << __FILE__ << ":" << __LINE__ << ") "
 #define LOGERR    (LoggerObj(LogLvlError ).getLogStream() << FILEANDLINE )
@@ -209,7 +208,6 @@ public:
    bool     noStdout_;
 };
 
-
 ////////////////////////////////////////////////////////////////////////////////
 class NullStream : public LogStream
 {
@@ -310,35 +308,63 @@ private:
 
 };
 
+////////////////////////////////////////////////////////////////////////////////
+class StreamBuffer : public LogStream
+{
+private:
+   stringstream ss_;
 
-// I missed the opportunity with the above class, to design it as a constantly
-// constructing/destructing object that adds a newline on every destruct.  So 
-// instead I create this little wrapper that does it for me.
+public:
+   StreamBuffer(void)
+   {}
+
+   LogStream& operator<<(const char * str) { ss_ << str; return *this; }
+   LogStream& operator<<(string const & str) { ss_ << str.c_str(); return *this; }
+   LogStream& operator<<(int i) { ss_ << i; return *this; }
+   LogStream& operator<<(unsigned int i) { ss_ << i; return *this; }
+   LogStream& operator<<(unsigned long long int i) { ss_ << i; return *this; }
+   LogStream& operator<<(float f) { ss_ << f; return *this; }
+   LogStream& operator<<(double d) { ss_ << d; return *this; }
+#if !defined(_MSC_VER) && !defined(__MINGW32__) && defined(__LP64__)
+   LogStream& operator<<(size_t i) { ss_ << i; return *this; }
+#endif
+
+   string str(void) { return ss_.str(); }
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
 class LoggerObj
 {
 private:
    static mutex mu_;
-   unique_ptr<unique_lock<mutex>> lockPtr_ = nullptr;
+   StreamBuffer buffer_;
 
 public:
    LoggerObj(LogLevel lvl) : logLevel_(lvl) 
-   {
-      lockPtr_ = move(make_unique<unique_lock<mutex>>(mu_));
-   }
+   {}
 
    LogStream & getLogStream(void) 
    { 
-      LogStream & lg = Log::GetInstance().Get(logLevel_);
-      lg << "-" << Log::ToString(logLevel_);
-      lg << "- " << NowTime() << ": ";
-      return lg;
+      buffer_ << "-" << Log::ToString(logLevel_);
+      buffer_ << "- " << NowTime() << ": ";
+      return buffer_;
    }
 
    ~LoggerObj(void) 
    { 
-      Log::GetInstance().Get(logLevel_) << "\n";
+      //terminate buffer with newline
+      buffer_ << "\n";
+
+      //process wide lock
+      unique_lock<mutex> lock(mu_);
+
+      //push buffer to log stream
+      LogStream & lg = Log::GetInstance().Get(logLevel_);
+      lg << buffer_.str();
+
+      //flush streams
       Log::GetInstance().FlushStreams();
-      lockPtr_.reset();
    }
 
 private:
