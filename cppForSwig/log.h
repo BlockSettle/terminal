@@ -64,6 +64,7 @@
 #include <thread>
 #include <mutex>
 #include <memory>
+#include <chrono>
 #include "OS_TranslatePath.h"
 #include "make_unique.h"
 
@@ -344,44 +345,6 @@ private:
    LogLevel logLevel_;
 };
 
-
-//#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-//#   if defined (BUILDING_FILELOG_DLL)
-//#       define FILELOG_DECLSPEC   __declspec (dllexport)
-//#   elif defined (USING_FILELOG_DLL)
-//#       define FILELOG_DECLSPEC   __declspec (dllimport)
-//#   else
-//#       define FILELOG_DECLSPEC
-//#   endif // BUILDING_DBSIMPLE_DLL
-//#else
-//#   define FILELOG_DECLSPEC
-//#endif // _WIN32
-
-//#ifndef FILELOG_MAX_LEVEL
-//#define FILELOG_MAX_LEVEL LogLvlDEBUG4
-//#endif
-
-// Print the current time ("YYYY-MM-DD - HH:MM:SS.sss")
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-
-#include <windows.h>
-inline string NowTime()
-{
-    char buffer[LOGTIMEBUFLEN];
-    if (GetTimeFormatA(LOCALE_USER_DEFAULT, 0, 0, 
-            "yyyy'-'MM'-'dd' - 'HH':'mm':'ss", buffer, LOGTIMEBUFLEN) == 0)
-        return "Error in NowTime()";
-
-    char result[LOGTIMEBUFLEN] = {0};
-    SYSTEMTIME curTime;
-    GetSystemTime(&curTime);
-    snprintf(result, sizeof(result), "%s.%03ld", buffer, curTime.wMilliseconds); 
-    return result;
-}
-
-#else
-
-#include <chrono>
 inline string NowTime()
 {
     // Getting current time in ms is way trickier than it should be.
@@ -405,5 +368,4 @@ inline string NowTime()
     return result;
 }
 
-#endif //WIN32
 #endif //__LOG_H__
