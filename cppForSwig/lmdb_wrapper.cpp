@@ -1777,7 +1777,7 @@ Tx LMDBBlockDatabase::getFullTxCopy(BinaryData ldbKey6B) const
    }
    
    shared_ptr<BlockHeader> header;
-   if (getDbType() != ARMORY_DB_SUPER)
+   if (getDbType() != ARMORY_DB_SUPER || dup != 0x7F)
       header = blockchainPtr_->getHeaderByHeight(height);
    else
       header = blockchainPtr_->getHeaderById(height);
