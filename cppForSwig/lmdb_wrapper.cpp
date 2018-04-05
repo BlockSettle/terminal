@@ -2030,7 +2030,7 @@ BinaryData LMDBBlockDatabase::getTxHashForLdbKey(BinaryDataRef ldbKey6B) const
 
       if (stxVal.getSize() == 0)
       {
-         LOGERR << "TxRef key does not exist in BLKDATA DB";
+         LOGERR << "TxRef key does not exist in ZC DB";
          return BinaryData(0);
       }
 
