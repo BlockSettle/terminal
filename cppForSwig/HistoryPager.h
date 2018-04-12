@@ -45,6 +45,12 @@ private:
          //history pages are order backwards
          return this->blockStart_ > rhs.blockStart_;
       }
+
+      static bool comparator(
+         const shared_ptr<Page>& a, const shared_ptr<Page>& b)
+      {
+         return *a < *b;
+      }
    };
 
    bool isInitialized_ = false;
@@ -73,7 +79,7 @@ public:
    }
 
    void addPage(uint32_t count, uint32_t bottom, uint32_t top);
-   void sortPages(void) { std::sort(pages_.begin(), pages_.end()); }
+   void sortPages(void);
    
    bool mapHistory(
       function< map<uint32_t, uint32_t>(void) > getSSHsummary);

@@ -216,3 +216,9 @@ uint32_t HistoryPager::getPageIdForBlockHeight(uint32_t blk) const
 
    return 0;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+void HistoryPager::sortPages()
+{
+   std::sort(pages_.begin(), pages_.end(), Page::comparator); 
+}
