@@ -27,9 +27,10 @@ struct HeightAndDup
 {
    const unsigned height_;
    const uint8_t dup_;
+   bool isMain_;
 
-   HeightAndDup(unsigned height, uint8_t dup) :
-      height_(height), dup_(dup)
+   HeightAndDup(unsigned height, uint8_t dup, bool isMain) :
+      height_(height), dup_(dup), isMain_(isMain)
    {}
 };
 

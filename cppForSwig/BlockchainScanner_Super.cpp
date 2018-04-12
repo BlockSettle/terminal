@@ -498,7 +498,7 @@ StoredTxOut BlockchainScanner_Super::getStxoByHash(
          auto hd_iter = heightAndDupMap_.find(block_id);
          if (hd_iter == heightAndDupMap_.end())
             continue;
-         if (hd_iter->second.dup_ == 0xFF)
+         if (!hd_iter->second.isMain_)
             continue;
 
          auto data = db_->getValueNoCopy(STXO, bw_key.getDataRef());
@@ -760,7 +760,7 @@ void BlockchainScanner_Super::processInputsThread(
             subssh.txioMap_[txoutkey] = move(txio);
 
             //add to spentTxOuts_
-            spentness[stxo.getDBKey(false)] = txinkey;
+            spentness[txoutkey] = txinkey;
          }
       }
    }
