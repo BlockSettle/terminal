@@ -580,7 +580,7 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
          progress_, reportprogress);
 
       bcs.scan();
-      bcs.updateSSH(forceRescanSSH_);
+      bcs.updateSSH(forceRescanSSH_ & init);
 
       return bcs.getTopScannedBlockHash();
    }

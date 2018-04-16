@@ -2888,7 +2888,10 @@ void LMDBBlockDatabase::resetHistoryForAddressVector(
 void LMDBBlockDatabase::resetSSHdb()
 {
    if (getDbType() == ARMORY_DB_SUPER)
-      return resetSSHdb_Super();
+   {
+      resetSSHdb_Super();
+      return;
+   }
 
    map<BinaryData, int> sshKeys;
 

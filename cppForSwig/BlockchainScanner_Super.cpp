@@ -1160,7 +1160,7 @@ void BlockchainScanner_Super::updateSSH(bool force)
    TIMER_RESTART("updateSSH");
 
    ShardedSshParser sshParser(
-      db_, startAt_, topBlock->getBlockHeight(), totalThreadCount_, init_);
+      db_, scanFrom, topBlock->getBlockHeight(), totalThreadCount_, init_);
    sshParser.updateSsh();
 
    {
