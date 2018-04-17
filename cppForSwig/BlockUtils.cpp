@@ -999,6 +999,7 @@ void BlockDataManager::loadDiskState(const ProgressCallback &progress,
       checkTransactionCount_ = dbBuilder_->getCheckedTxCount();
 
    BDMstate_ = BDM_ready;
+   LOGINFO << "BDM is ready";
 }
 
 ////////////////////////////////////////////////////////////////////////////////
