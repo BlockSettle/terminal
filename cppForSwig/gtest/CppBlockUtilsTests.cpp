@@ -9609,7 +9609,7 @@ TEST_F(BlockUtilsBare, Load5Blocks_CheckWalletFilters)
    }
 
    EXPECT_EQ(wlt1_count, 11);
-   EXPECT_EQ(wlt2_count, 7);
+   EXPECT_EQ(wlt2_count, 9);
 
    vector<BinaryData> idVec;
    idVec.push_back(wallet1id);
