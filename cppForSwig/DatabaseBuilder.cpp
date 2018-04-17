@@ -134,9 +134,6 @@ void DatabaseBuilder::init()
          scanFrom, (int)reorgState.reorgBranchPoint_->getBlockHeight() + 1);
    }
    
-   LOGINFO << "scanning new blocks from #" << scanFrom << " to #" <<
-      blockchain_->top()->getBlockHeight();
-
    TIMER_START("scanning");
    while (1)
    {
@@ -548,6 +545,9 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
 {
    if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
+      LOGINFO << "scanning new blocks from #" << startHeight << " to #" <<
+         blockchain_->top()->getBlockHeight();
+
       BlockchainScanner bcs(blockchain_, db_, scrAddrFilter_.get(),
          blockFiles_, bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
          progress_, reportprogress);
