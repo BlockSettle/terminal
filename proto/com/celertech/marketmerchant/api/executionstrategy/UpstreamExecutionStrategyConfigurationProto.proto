@@ -1,0 +1,76 @@
+
+package com.celertech.marketmerchant.api.executionstrategyconfiguration;
+
+option java_package = "com.celertech.marketmerchant.api.executionstrategyconfiguration";
+
+import "com/celertech/marketmerchant/api/enums/PropertyTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+
+message FindAllMerchantExecutionStrategySchema {
+	optional string clientRequestId = 1;
+}
+
+message FindAllMerchantExecutionStrategyProfileRequest {
+	optional string clientRequestId = 1;
+}
+
+message FindAllMerchantExecutionStrategyConfigurationRequest {
+	optional string clientRequestId = 1;
+}
+
+message CreateMerchantExecutionStrategyConfigurationRequest {
+	optional string clientRequestId = 1;
+
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 3;
+	optional string securityId = 4;
+	optional string executionStrategyName = 5;
+	
+	repeated MerchantExecutionStrategyProperty properties = 6;
+}
+
+message UpdateMerchantExecutionStrategyConfigurationRequest {
+	optional string clientRequestId = 1;
+
+	//	if productType && assetType && securityId is null, system will interpret the update request to default configuration of execution strategy
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 3;
+	optional string securityId = 4;
+	optional string executionStrategyName = 5;
+	
+	repeated MerchantExecutionStrategyProperty properties = 6;
+}
+
+message DeleteMerchantExecutionStrategyConfigurationRequest {
+	optional string clientRequestId = 1;
+
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 3;
+	optional string securityId = 4;
+	optional string executionStrategyName = 5;
+}
+
+//not used should be removed in 7.0.0
+message FindActiveMerchantExecutionStrategyProfile {
+	optional string clientRequestId = 1;
+}
+
+//not used should be removed in 7.0.0
+message SetActiveMerchantExecutionStrategyProfile {
+	optional string clientRequestId = 1;
+	
+	optional string executionStrategyName = 2;
+}
+
+message MerchantExecutionStrategyProperty {
+	optional string propertyKey = 1;
+	optional string propertyValue = 2;
+}
+
+message UpdateOnMarketMerchantExecutionStrategyProfileAndConfigurationRequest {
+}
+
+//not used should be removed in 7.0.0
+message UpdateOnMarketMerchantActiveMerchantExecutionStrategyRequest {
+}

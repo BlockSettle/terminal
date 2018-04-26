@@ -1,0 +1,18 @@
+package com.celertech.staticdata.api.enums.producttype;
+
+option java_package = "com.celertech.staticdata.api.enums";
+
+enum ProductType {
+
+	PUT_OPTION = 1;
+	CALL_OPTION = 2;
+	OUTRIGHT = 3;
+	FORWARD = 4;
+	SPOT = 5;
+	SWAP = 6;
+	STRATEGY = 7;
+	SHARE = 8;
+	MONEY_MARKET = 9;
+	BITCOIN = 10;
+	PRIVATE_SHARE = 11;
+}

@@ -1,0 +1,39 @@
+package com.celertech.marketmerchant.api.priceassembly;
+
+import "com/celertech/marketmerchant/api/priceassembly/UpstreamPriceAssemblyConfigurationProto.proto";
+option java_package = "com.celertech.marketmerchant.api.priceassembly";
+
+message PriceAssemblerConfigurationDownstreamEvent {
+	optional int64 id = 1;
+	optional string type = 2;
+	optional string code = 3;
+	optional string name = 4;
+	optional string description = 5;
+	repeated PriceAssemblerProperty priceAssemblerProperties = 6;
+	
+	optional int64 createdTimestampUtcInMillis = 7;
+    optional int64 updatedTimestampUtcInMillis = 8;
+}
+
+message DeletePriceAssemblerConfigurationConfirmation {
+	optional int64 id = 1;
+}
+
+message PriceAssemblyConfigurationDownstreamEvent {
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string name = 4;
+	optional string description = 5;
+	
+	optional int64 createdTimestampUtcInMillis = 9;
+    optional int64 updatedTimestampUtcInMillis = 10;
+    
+	repeated string priceAssemblerCodes = 11;
+}
+
+message DeletePriceAssemblyConfigurationConfirmation {
+	optional int64 id = 1;
+}
+

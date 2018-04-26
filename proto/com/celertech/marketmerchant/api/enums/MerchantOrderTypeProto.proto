@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.merchantordertype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum MerchantOrderType {
+
+	CLIENT_ORDER = 1;
+	BANK_ORDER = 2;
+
+}

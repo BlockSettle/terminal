@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.predicatetype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum PredicateType {
+
+	USERNAME = 1;
+	EXCHANGE = 2;
+	ASSET_TYPE = 3;
+	PRODUCT_TYPE = 4;
+	SECURITY_CODE = 5;
+	SECURITY_ID = 6;
+	SIDE = 7;
+}

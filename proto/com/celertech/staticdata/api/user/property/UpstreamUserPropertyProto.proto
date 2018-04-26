@@ -1,0 +1,76 @@
+syntax = "proto2";
+
+package com.celertech.staticdata.api.user.property;
+
+option java_package = "com.celertech.staticdata.api.user.property";
+
+
+message CreateUserPropertyRequest {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+	optional string key = 3;
+    optional string value = 4;
+    optional string description = 5;
+}
+
+message UpdateUserPropertyRequest {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional string username = 3;
+	optional string key = 4;
+    optional string value = 5;
+    optional string description = 6;
+}
+
+message DeleteUserPropertyRequest {
+
+    optional string clientRequestId = 1;
+
+    optional int64 id = 2;
+}
+
+message UpdateOnStaticDataUserPropertyRequest {
+
+    optional string clientRequestId = 1;
+
+}
+
+message UpdateOnStaticDataUserPropertyForUsernameRequest {
+
+    optional string clientRequestId = 1;
+    optional string username = 2;
+
+}
+
+message FindUserPropertyByUsernameAndKey {
+
+    optional string clientRequestId = 1;
+
+    optional string username = 2;
+    optional string key = 3;
+}
+
+message FindUserPropertiesByUsername {
+
+    optional string clientRequestId = 1;
+
+    optional string username = 2;
+}
+
+message FindUserPropertiesByKey {
+
+    optional string clientRequestId = 1;
+
+    optional string key = 2;
+}
+
+message FindAllUserProperties {
+
+    optional string clientRequestId = 1;
+
+}
+

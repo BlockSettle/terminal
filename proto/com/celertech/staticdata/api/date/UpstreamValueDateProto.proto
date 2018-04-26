@@ -1,0 +1,36 @@
+package com.celertech.staticdata.api.date;
+
+option java_package = "com.celertech.staticdata.api.date";
+
+message ValueDateSubscriptionRequest {
+
+	//The unique requestId to be sent on subscription
+	optional string requestId = 1;
+	
+	//Either SUBSCRIBE or UNSUBSCRIBE
+	optional RequestType requestType = 2;
+	
+	//TenorCode that we are requesting a valueDate for
+	optional string tenorCode = 3;
+	
+	//The horizonDate of the request, can set to null which the server will default to 'today'. When horizonDate is set the server will return a valueDate as if the server was on that particular day
+	optional string horizonDate = 4;
+	
+	//The base currencyCode. e.g. EUR in EUR/USD
+	optional string baseCurrencyCode = 5;
+	
+	//The term currencyCode. e.g. USD in EUR/USD
+	optional string termCurrencyCode = 6;
+	
+	//The split currencyCode. e.g. if EUR/JPY is split by USD, then the split currencyCode is USD
+	optional string splitCurrencyCode = 7;
+	
+	
+	enum RequestType {
+		
+		SUBSCRIBE = 1;
+		UNSUBSCRIBE = 2;
+	
+	}
+	
+}

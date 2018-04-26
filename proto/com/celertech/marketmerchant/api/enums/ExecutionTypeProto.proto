@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.executiontype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum ExecutionType {
+
+	NEW = 1;
+	TRADE = 2;
+	CANCELED = 3;
+	REPLACED = 4;
+	PENDING_CANCEL = 5;
+	REJECTED = 6;
+	PENDING_NEW = 7;
+	RESTATEMENT = 8;
+	UNKNOWN = 9;
+	PENDING_AMEND = 10;
+	AMEND = 11;
+	SUSPENDED = 12;
+	TRADE_CORRECT = 13;
+	TRADE_CANCEL = 14;
+	TRADE_RELEASED_CLEARING = 15;
+
+}

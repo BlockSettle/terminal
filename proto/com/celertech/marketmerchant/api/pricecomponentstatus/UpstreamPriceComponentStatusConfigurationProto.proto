@@ -1,0 +1,60 @@
+package com.celertech.marketmerchant.api.pricecomponentstatus;
+
+option java_package = "com.celertech.marketmerchant.api.pricecomponentstatus";
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/PriceComponentStatusProto.proto";
+
+message PersistPriceComponentStateConfiguration {
+
+	optional string clientRequestId = 1;
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    optional string securityId = 4;
+    
+    optional string streamCode = 5;
+    
+    optional string curveType = 6;
+  
+  	optional com.celertech.marketmerchant.api.enums.pricecomponentstatus.PriceComponentStatus priceComponentStatus = 7;
+
+}
+
+message DeletePriceComponentStateConfiguration {
+
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+
+}
+
+message FindAllPriceComponentStates {
+
+	optional string clientRequestId = 1;
+
+}
+
+message FindPriceComponentState {
+
+	optional string clientRequestId = 1;
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    optional string securityId = 4;
+    
+    optional string streamCode = 5;
+    
+    optional string curveType = 6;
+
+}
+
+message UpdateOnPriceComponentState {
+}

@@ -1,0 +1,22 @@
+package com.celertech.staticdata.api.broker;
+
+option java_package = "com.celertech.staticdata.api.broker";
+
+message BrokerDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string code = 2;
+	optional string name = 3;
+	optional string description = 4;
+	optional double commissionRate = 5;
+	optional bool riskMonitored = 6;
+	optional bool enabled = 7;
+
+	optional int64 createdInMillis = 8;
+	optional int64 updatedInMillis = 9;
+}
+
+message DeleteBrokerConfirmation {
+
+	optional int64 id = 1;
+}

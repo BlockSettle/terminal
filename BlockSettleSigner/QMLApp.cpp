@@ -56,6 +56,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
+   connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
 }
 
 void QMLAppObj::settingsConnections()
@@ -106,12 +107,19 @@ void QMLAppObj::Start()
    }
 }
 
+void QMLAppObj::disconnect()
+{
+   listener_->disconnect();
+   listener_ = nullptr;
+   connection_ = nullptr;
+   statusUpdater_->clearConnections();
+}
+
 void QMLAppObj::onOfflineChanged()
 {
    if (params_->offline()) {
       logger_->info("Going offline");
-      listener_.reset();
-      connection_.reset();
+      disconnect();
    }
    else {
       OnlineProcessing();
@@ -130,8 +138,7 @@ void QMLAppObj::onListenSocketChanged()
       return;
    }
    logger_->info("Restarting listening socket");
-   listener_.reset();
-   connection_.reset();
+   disconnect();
    OnlineProcessing();
 }
 
@@ -207,6 +214,12 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
       , Q_ARG(QVariant, QVariant::fromValue(txInfo)));
 }
 
+void QMLAppObj::onSysTrayMsgClicked()
+{
+   logger_->debug("Systray message clicked");
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+}
+
 void QMLAppObj::OnlineProcessing()
 {
    logger_->debug("Going online with socket {}:{}, network {}", params_->listenAddress().toStdString()
@@ -228,7 +241,6 @@ void QMLAppObj::OnlineProcessing()
 
    if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
       logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());
-//      throw std::runtime_error("failed to bind listening socket");
       statusUpdater_->setSocketOk(false);
       return;
    }

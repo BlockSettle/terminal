@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.celertech.piggybank.api.enums.producttype;
+
+option java_package = "com.celertech.piggybank.api.enums";
+
+enum ProductType {
+
+	SPOT = 1;
+	FORWARD = 2;
+	SWAP = 3;
+	MONEY_MARKET = 4;
+	NON_DELIVERABLE_FORWARD = 5;
+	NON_DELIVERABLE_SWAP = 6;
+	BITCOIN = 7;
+	PRIVATE_SHARE = 8;
+}

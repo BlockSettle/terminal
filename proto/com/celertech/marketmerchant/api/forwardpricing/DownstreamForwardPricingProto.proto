@@ -1,0 +1,113 @@
+package com.celertech.marketmerchant.api.forwardpricing;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ComponentRateStatusProto.proto";
+import "com/celertech/marketmerchant/api/types/TimeOfWeekProto.proto";
+ 
+option java_package = "com.celertech.marketmerchant.api.forwardpricing";
+
+message ForwardPricingDownstreamEvent {
+
+    optional int64 tickId = 1;    
+    optional string securityId = 2;
+    // human readable tenor value
+    optional string tenorCode = 3;
+
+    optional int64 updatedTimestampUtcInMillis = 4;
+
+    optional int32 sizeInBaseCcy = 5;
+
+	// these really need to be quoted as swap points
+    optional double bidForwardPoints = 6;
+    optional double offerForwardPoints = 7;
+    optional double midForwardPoints = 8;
+
+	// break out spread to permit use of interpolation strategies 
+	// further down the pricing chain  
+	optional double bidSpread = 9;
+	optional double offerSpread = 10;
+
+	optional int32 maxBidSize = 11;
+    optional int32 maxOfferSize = 12;
+
+	optional com.celertech.marketmerchant.api.enums.componentratestatus.ComponentRateStatus bidState = 13;
+    optional com.celertech.marketmerchant.api.enums.componentratestatus.ComponentRateStatus offerState = 14;
+
+	// Effective date in local date format ('CCYY-MM-DD').
+	// Typically rolls at 5pm EST, but schedule depends on market convention (and accuracy and timeliness of upstream provider).
+	// A mismatch between the effective date (if known) and system trade date will render the curve indicative.
+    optional string effectiveDate = 15;
+
+	// Value date in local date format ('CCYY-MM-DD') implied by the tenor, relative to effective date (if provided - otherwise today's trade date).
+	// Value date may roll in advance of the effectiveDate, according to the settlement center schedule and trading preference.
+	//  e.g. Auckland close for NZD and Manila close for PHP, in advance of the effectiveDate.
+	//
+	// If supplied, when resolving fwd pillars the day count between valueDate and effectiveDate will take precedence. 
+	// The server will compare against the internal calendar and monitor for any discrepancies.    
+    // Missing value date indicates the requested tenor is not recognized.
+    optional string valueDate = 16;
+    optional int32 dayCount = 17;
+    
+	optional string location = 18;
+	optional string author = 19;
+	optional int32 displayPrecision = 20;
+	optional int32 displayScale = 21 [default = 0];
+
+	// Associated forward pricing profile.
+	optional int64 pricingCurveId = 22;
+    
+    // Indicate if value has been derived or interpolated.
+    optional bool interpolated = 23;
+    
+    optional string curveType = 24;
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 25;
+    optional string fixingDate = 26;
+    optional double bidAllInPx = 27;
+    optional double offerAllInPx = 28;
+    optional string requestId = 29;
+    
+}
+
+//not used
+/**
+ * Sufficient data to synchronize state.
+ */
+message ActiveForwardPricingDownstreamEvent {
+    // asset type
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+    
+    // security type
+    optional string securityId = 3;
+        
+	// Null indicates there is no associated curve for {assetType, securityId} which may indicate a configuration error.
+    optional int64 currForwardPricingId = 4;
+
+    //
+    optional int64 nextForwardPricingId = 5;
+}
+
+//not used
+message DeleteForwardPricingConfigurationConfirmation {
+
+    optional int64 id = 1;
+
+}
+
+//not used
+/**
+ * Refer to upstream description.
+ */
+message ForwardPricingConfigurationDownstreamEvent {
+
+    optional string clientRequestId = 1;
+    optional int64 id = 2;
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 3;
+    optional string securityId = 4;     
+    optional int64 primaryMarketCurveId = 5;
+    optional int64 fallbackMarketCurveId = 6;
+    optional int64 riskCentreId = 7;
+
+    optional com.celertech.marketmerchant.api.types.timeofweek.TimeOfWeek startTime = 8;
+    optional com.celertech.marketmerchant.api.types.timeofweek.TimeOfWeek endTime = 9;
+}

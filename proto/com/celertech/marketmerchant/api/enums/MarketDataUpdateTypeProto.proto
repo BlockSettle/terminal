@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.marketdataupdatetype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum MarketDataUpdateType {
+
+	INCREMENTAL = 1;
+	FULL_SNAPSHOT = 2;
+}

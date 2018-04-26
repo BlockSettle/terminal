@@ -1,0 +1,148 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.session;
+
+import "com/celertech/baseserver/api/enums/FixMapperTypeProto.proto";
+import "com/celertech/baseserver/api/enums/FixMessageStorageProto.proto";
+import "com/celertech/baseserver/api/session/SessionWindowProto.proto";
+
+option java_package = "com.celertech.baseserver.api.session";
+
+message CreateApiSessionRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 socketConfigurationId = 2;
+	optional string sessionKey = 3;
+	optional bool enabled = 4;
+	repeated SessionWindow sessions = 5;
+
+}
+
+message UpdateApiSessionRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+	optional bool enabled = 3;
+	repeated SessionWindow sessions = 4;
+
+}
+
+message CreateFixSessionRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 socketConfigurationId = 2;
+	optional string senderCompId = 3;
+	optional string targetCompId = 4;
+	optional int32 heartbeatInterval = 5;
+	optional string startSchedule = 6;
+    optional string stopSchedule = 7;
+    optional string eodSchedule = 8;
+	optional bool enabled = 9;
+    optional com.celertech.baseserver.api.enums.fixmappertype.FixMapperType fixMapperType = 10;
+    optional string fixMapperName = 11;
+    optional string dataDictionaryFilePath = 12;
+    optional com.celertech.baseserver.api.enums.fixmessagestorage.FixMessageStorage fixMessageStorage = 13;
+	optional bool sslEnabled = 14;
+	optional bool resetSequenceOnLogon = 15;
+	repeated SessionWindow sessions = 16;
+
+}
+
+message CreateSwiftSessionRequest {
+
+    optional string clientRequestId = 1;
+    optional int64 socketConfigurationId = 2;
+    optional string sessionKey = 3;
+    optional string mappingFilename = 4;
+    optional bool enabled = 5;
+	repeated SessionWindow sessions = 6;
+
+}
+
+message ManipulateSessionRequest {
+
+	optional string clientRequestId = 1;
+	optional string sessionKey = 2;
+	optional string requestName = 3;
+
+  	repeated RequestProperty requestProperty = 4;
+
+	message RequestProperty {
+	    optional string property = 1;
+	    optional string value = 2;
+  	}
+}
+
+message UpdateFixSessionRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+	optional string senderCompId = 3;
+    optional string targetCompId = 4;
+    optional int32 heartbeatInterval = 5;
+	optional string startSchedule = 6;
+    optional string stopSchedule = 7;
+    optional string eodSchedule = 8;
+	optional bool enabled = 9;
+	optional com.celertech.baseserver.api.enums.fixmappertype.FixMapperType fixMapperType = 10;
+    optional string fixMapperName = 11;
+    optional string dataDictionaryFilePath = 12;
+    optional com.celertech.baseserver.api.enums.fixmessagestorage.FixMessageStorage fixMessageStorage = 13;
+    optional bool sslEnabled = 14;
+	optional bool resetSequenceOnLogon = 15;
+	repeated SessionWindow sessions = 16;
+
+}
+
+message UpdateSwiftSessionRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+	optional string sessionKey = 3;
+	optional bool enabled = 4;
+	repeated SessionWindow sessions = 5;
+}
+
+message DisconnectSessionRequest {
+
+	optional string clientRequestId = 1;
+
+	optional string subsystem = 2;
+	optional string node = 3;
+	optional string sessionKey = 4;
+	optional string sessionToken = 5;
+	optional string message = 6;
+
+}
+
+message FindFixSessionsBySocketId {
+
+	optional string clientRequestId = 1;
+	optional int64 socketConfigurationId = 2;
+}
+
+message FindApiSessionsBySocketId {
+
+	optional string clientRequestId = 1;
+	optional int64 socketConfigurationId = 2;
+}
+
+message FindSwiftSessionsBySocketId {
+
+	optional string clientRequestId = 1;
+	optional int64 socketConfigurationId = 2;
+}
+
+message DeleteSessionRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+
+message FixSessionEndOfDayRequest {
+
+    optional string clientRequestId = 1;
+    optional string sessionKey = 2;
+
+}

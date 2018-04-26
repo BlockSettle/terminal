@@ -1,0 +1,85 @@
+package com.celertech.staticdata.api.account.property;
+
+option java_package = "com.celertech.staticdata.api.account.property";
+
+// Creates an account property
+message CreateAccountPropertyRequest {
+
+	optional string clientRequestId = 1;
+
+	//The account short code
+	optional string code = 2;
+	
+	//The property key
+	optional string key = 3;
+	
+	//The property value
+    optional string value = 4;
+    
+    //The property description
+    optional string description = 5;
+}
+
+message UpdateAccountPropertyRequest {
+
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string key = 4;
+    optional string value = 5;
+    optional string description = 6;
+}
+
+message DeleteAccountPropertyRequest {
+
+    optional string clientRequestId = 1;
+    
+    optional int64 id = 2;
+}
+
+// Clients can register for updates on all Account Property changes
+message UpdateOnStaticDataAccountPropertyRequest {
+
+    optional string clientRequestId = 1;
+    
+}
+
+// Clients can register for updates on a specific Account Property changes
+message UpdateOnStaticDataAccountPropertyForCodeRequest {
+
+    optional string clientRequestId = 1;
+    
+    // The account short code 
+    optional string code = 2;
+    
+}
+
+message FindAccountPropertyByCodeAndKey {
+
+    optional string clientRequestId = 1;
+
+    optional string code = 2;
+    optional string key = 3;
+}
+
+message FindAccountPropertiesByCode {
+
+    optional string clientRequestId = 1;
+    
+    optional string code = 2;
+}
+
+message FindAccountPropertiesByKey {
+
+    optional string clientRequestId = 1;
+    
+    optional string key = 2;
+}
+
+message FindAllAccountProperties {
+
+    optional string clientRequestId = 1;
+    
+}
+

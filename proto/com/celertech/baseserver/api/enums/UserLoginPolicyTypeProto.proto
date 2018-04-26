@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.enums.userloginpolicytype;
+
+option java_package = "com.celertech.baseserver.api.enums";
+
+enum UserLoginPolicyType {
+
+    DISCONNECT_PREVIOUS_SESSION = 0;
+    DISALLOW_NEW_SESSION = 1;
+
+}

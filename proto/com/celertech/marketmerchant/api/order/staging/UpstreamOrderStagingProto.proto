@@ -1,0 +1,15 @@
+package com.celertech.marketmerchant.api.order.staging;
+
+option java_package = "com.celertech.marketmerchant.api.order.staging";
+
+
+message AcceptStagedOrderRequest {
+	optional string orderId = 1;
+	optional string traderSessionKey = 2;
+}
+
+message RejectStagedOrderRequest {
+	optional string orderId = 1;
+	optional string reason = 2;
+	optional string traderSessionKey = 3;
+}

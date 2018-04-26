@@ -1,0 +1,40 @@
+package com.celertech.marketmerchant.api.curveconfiguration;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/InterpolationTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.curveconfiguration";
+
+message CurveConfigurationDownstreamEvent {
+
+    // unique identifier
+    optional int64 id = 1;
+    
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+   
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    // actual security id represented behind in security definition or warehouse configuration
+    optional string securityId = 4;
+   
+    // display security id in MM GUI 
+    optional string displaySecurityId = 5;
+
+    // curve type
+    optional string curveType = 6;
+    
+    optional com.celertech.marketmerchant.api.interpolationtype.InterpolationType interpolationType = 7;
+    
+    optional int64 createdTimestampUtcInMillis = 8;
+    
+    optional int64 updatedTimestampUtcInMillis = 9;
+    
+}
+
+message DeleteCurveConfigurationConfirmation {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;	
+
+}

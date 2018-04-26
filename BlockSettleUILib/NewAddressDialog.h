@@ -20,8 +20,13 @@ public:
       , bool isNested = false, QWidget* parent = nullptr);
    ~NewAddressDialog() override = default;
 
+protected:
+   void showEvent(QShowEvent* event) override;
 private slots:
    void copyToClipboard();
+
+private:
+   void UpdateSizeToAddress();
 
 private:
    Ui::NewAddressDialog* ui_;

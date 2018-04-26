@@ -1,0 +1,375 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.quote;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/HandlingInstructionProto.proto";
+import "com/celertech/marketmerchant/api/enums/QuoteCancelTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/QuoteRequestRejectReasonProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/SideProto.proto";
+import "com/celertech/marketmerchant/api/enums/DayCountProto.proto";
+import "com/celertech/marketmerchant/api/enums/CutProto.proto";
+import "com/celertech/marketmerchant/api/enums/SettlementMethodProto.proto";
+import "com/celertech/marketmerchant/api/enums/OptionTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataQuoteTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.quote";
+
+
+/**
+* Users can submit a request to receive a price for a give size from a given destination.
+*/
+message QuoteRequest {
+
+	//Unique identifier for a quote request
+	optional string quoteRequestId = 1;
+
+	//Handling instructions for quote request;
+	//AUTOMATED_NO_BROKER quotes will not be manually priced
+	//AUTOMATED_BROKER_OK quotes can be manually priced
+	//MANUAL not in use
+	optional com.celertech.marketmerchant.api.enums.handlinginstruction.HandlingInstruction handlingInstruction = 2;
+
+	//Specify the number of related instruments in quote request
+	repeated QuoteRequestGroup quoteRequestGroup = 3;
+
+	//Account associated with the quote request, can be non-unique
+    optional string account = 4;
+
+    //quote requestor's authentication address; specific to bitcoin
+    optional string authenticationAddress = 5;
+
+    //quote requestor's receipt address; specific to bitcoin private share
+    optional string receiptAddress = 6;
+}
+
+message QuoteRequestGroup {
+
+	//Asset type of quote request; valid values are:
+	//EQUITY: Not yet supported
+	//FUTURE: Not yet supported
+	//OPTION: Not yet supported
+	//FX
+	//FIXED_INCOME
+	//STRUCTURED_PRODUCT: Not yet supported
+	//BITCOIN
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 1;
+
+	//Product type of quote request; valid values are:
+	//SPOT: Valid for assetType FX;
+	//FORWARD: Valid for assetType FX;
+	//SWAP: Valid for assetType FX;
+	//DUAL_CURRENCY_DEPOSIT: Not yet supported
+	//MONEY_MARKET: Valid for assetType FIXED_INCOME;
+	//XBT: Valid for assetType BITCOIN;
+	//PRIVATE_SHARE: Valid for assetType BITCOIN
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+
+	//Top level security identifier (Example: E-Mini S&P 500 contract ESH6, ES is the securityCode)
+	//For FX the ISO standard security code
+	optional string securityCode = 4;
+
+	//Security identifier
+	optional string securityId = 5;
+
+	//Date of trade settlement
+	//Compulsory field
+	optional string settlementDate = 6;
+
+	//Maturity of the quote; used for quote requests related to FIXED_INCOME
+	optional string maturityDate = 7;
+
+	//Side of order; valid values are BUY, SELL
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 8;
+
+	//Quote request quantity
+	optional double qty = 9;
+
+	//Currency used for quote request price
+	optional string currency = 10;
+
+	//StreamCode identifier
+	optional string partyId = 11;
+
+	//Expiration time of the quote specified
+	optional int64 expireTimeInUtcInMillis = 12;
+
+	repeated QuoteRequestLegGroup quoteRequestLegGroup = 13;
+
+	//Settlement method for a contract; not currently in use
+    optional com.celertech.marketmerchant.api.enums.settlementmethod.SettlementMethod settlementMethod = 14;
+
+    //Interest conversion; not currently in use
+	optional bool interestConversion = 15;
+
+	//Rate of interest by principal, par value, or face value; not currently in use
+    optional double couponRate = 16;
+
+    //Indicates settlement period.  If settlementDate is present, settlementDate will override this field.
+    //Valid values are standard fx tenor codes
+    optional string settlementType = 17;
+
+	//Destination of quote request; specified only for cases where a quote request is to be directed to a specific destination (liquidity provider)
+	//Value should correspond to the destination property specified in the warehouse destinations xml configuration
+    optional string destinationKey = 18;
+
+    optional string rateSource = 19;
+
+	//Identifies the type of quote
+    //INDICATIVE - quote contain reference price
+    //TRADEABLE - quote can be hit
+ 	optional com.celertech.marketmerchant.api.enums.marketdataquotetype.MarketDataQuoteType quoteType = 20;
+
+ 	// Private Shares offered for sale
+ 	// Only applies to PRIVATE_SHARE productType and SELL side
+ 	optional bytes coinTransactionInput = 21;
+}
+
+message QuoteRequestLegGroup {
+
+	//Quote request leg group qty
+	optional double qty = 1;
+
+    //Indicates settlement period.  If settlementDate is present, settlementDate will override this field.
+    //Valid values are standard FX tenor codes
+	optional string settlementType = 2;
+
+	//Date of trade settlement
+	optional string settlementDate = 3;
+
+	//Not currently in use
+	repeated InstrumentLegUpstreamEvent instrumentLeg = 4;
+
+	//Not currently in use
+	repeated UnderlyingInstrumentUpstreamEvent underlyingInstrumentUpstreamEvent = 5;
+
+	//Date of maturity date for FIX_INCOME or fixing date for NDF/NDS
+	optional string maturityDate = 6;
+
+}
+
+/**
+ * To be sent in to the PriceEngine to cancel a quote
+ */
+message QuoteCancelRequest {
+
+	//Unique identifier for a quote request
+    optional string quoteRequestId = 1;
+
+    //Identifies the type of quote cancel; valid corresponds to that of FIX tag 298
+    optional com.celertech.marketmerchant.api.enums.quotecanceltype.QuoteCancelType quoteCancelType = 2;
+
+}
+
+
+/**
+ * Quote to be sent from Celer MarketMerchant GUI to suspend a QuoteNotification
+ */
+message QuoteCancelNotification {
+
+	//Session token of the user who sent the quote request
+    optional string requestorSessionToken = 1;
+
+    optional string clientRequestId = 2;
+
+	//Unique identifier for a quote request
+    optional string quoteRequestId = 3;
+
+    //Unique identifier for quote
+    optional string quoteId = 4;
+
+    //Identifies the type of quote cancel; valid corresponds to that of FIX tag 298
+    optional com.celertech.marketmerchant.api.enums.quotecanceltype.QuoteCancelType quoteCancelType = 5;
+
+    optional string clientTierCode  = 6;
+
+	//Session key of the user who sent the quote request
+    optional string requestorSessionKey = 7;
+
+}
+
+
+/**
+ * Quote to be sent from Celer MarketMerchant GUI in response to a QuoteRequestNotification
+ */
+message QuoteNotification {
+
+	//Session key of the user who sent the quote request
+	optional string requestorSessionKey = 1;
+
+	//Session token of the user who sent the quote request
+    optional string requestorSessionToken = 2;
+
+	//Unique identifier for a quote request
+    optional string quoteRequestId  = 3;
+
+	//Asset type of quote request; valid values are:
+	//EQUITY: Not yet supported
+	//FUTURE: Not yet supported
+	//OPTION: Not yet supported
+	//FX
+	//FIXED_INCOME
+	//STRUCTURED_PRODUCT: Not yet supported
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 4;
+
+	//Top level security identifier (Example: E-Mini S&P 500 contract ESH6, ES is the securityCode)
+	//For FX the ISO standard security code
+    optional string securityCode = 6;
+
+	//Security identifier
+    optional string securityId = 7;
+
+	//Side of order; valid values are BUY, SELL
+    optional com.celertech.marketmerchant.api.enums.side.Side side = 8;
+
+    //Bid price or rate
+	optional double bidPx = 9;
+
+	//Bid fx spot rate
+	optional double bidSpotPx = 10;
+
+	//Offer price or rate
+	optional double offerPx = 11;
+
+	//Offer fx spot rate
+	optional double offerSpotPx = 12;
+
+	//Bid quantity
+	optional double bidSize = 13;
+
+	//Offer quantity
+	optional double offerSize = 14;
+
+	//Amount of time the quote is valid for, specified in seconds
+	optional int32 quoteValidityInSecs = 15;
+    optional string clientTierCode  = 16;
+
+    repeated LegQuoteGroup legQuoteGroup = 18;
+    repeated UnderlyingQuotePrice underlyingQuotePrice = 19;
+
+    //Not currently in use
+    optional com.celertech.marketmerchant.api.enums.settlementmethod.SettlementMethod settlementMethod = 20;
+
+    //Not currently in use
+	optional bool interestConversion = 21;
+
+	//Not currently in use.  Rate of interest by principal, par, or face value; corresponding to FIX tag 223
+    optional double couponRate = 22;
+
+    //Not currently in use
+    optional com.celertech.marketmerchant.api.enums.cut.Cut cut = 23;
+
+	//Product type of quote request; valid values are:
+	//SPOT: Valid for assetType FX;
+	//FORWARD: Valid for assetType FX;
+	//SWAP: Valid for assetType FX;
+	//DUAL_CURRENCY_DEPOSIT: Not yet supported
+	//MONEY_MARKET: Valid for assetType FIXED_INCOME;
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 24;
+
+	//Account on which orders on which this quote request is executed against is booked into
+    optional string accountBookOn = 25;
+
+    //authentication address; specific to bitcoin
+	optional string dealerAuthenticationAddress = 26;
+
+	// contra-quantity; not being used
+	optional double bidContraQty = 27;
+	optional double offerContraQty = 28;
+
+	// represents a on-chain transaction by dealer; specific to bitcoin
+	optional bytes dealerTransaction = 29;
+
+	// represents dealer's coin join input; sepcific to bitcoin private share
+	optional bytes coinTransactionInput = 30;
+
+	// dealer's receipt address; specific to bitcoin private share
+	optional string receiptAddress = 31;
+
+	message LegQuoteGroup {
+		optional double bidForwardPoints = 2;
+		optional double offerForwardPoints = 3;
+		optional string currency = 4;
+		optional string settlementDate = 5;
+		optional string settlementType = 6;
+		optional string maturityDate = 7;
+
+		repeated InstrumentLegUpstreamEvent instrumentLeg = 8;
+		repeated UnderlyingInstrumentUpstreamEvent underlyingInstrumentUpstreamEvent = 9;
+    }
+
+	message UnderlyingQuotePrice {
+
+		optional string securityId = 1;
+		optional double bidSpotPx = 2;
+		optional double offerSpotPx = 3;
+	}
+}
+
+message UnderlyingInstrumentUpstreamEvent {
+
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType underlyingAssetType = 1;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType underlyingProductType = 2;
+	//309
+	optional string underlyingSecurityId = 3;
+	//810
+	optional double underlyingPx = 4;
+	optional int32 refId = 5;
+}
+
+message InstrumentLegUpstreamEvent {
+	//602
+	optional string legSecurityId = 1;
+	optional string legCurrency = 2;
+	//249
+	optional string legIssueDate = 3;
+	//588
+	optional string legSettlDate = 4;
+    optional com.celertech.marketmerchant.api.enums.daycount.DayCount legDayCount = 5;
+	optional double legPx = 6;
+    optional double legQty = 7;
+    optional int32 underlyingRefId = 8;
+	optional com.celertech.marketmerchant.api.enums.optiontype.OptionType legOptionType = 9;  //Tag 1358
+
+}
+
+/**
+ * Quote reject to be sent from Celer MarketMerchant GUI to reject a quote request
+ */
+message QuoteRequestRejectNotification {
+    optional string requestorSessionToken = 1;
+    optional string quoteRequestId = 2;
+    optional com.celertech.marketmerchant.api.enums.quoterequestrejectreason.QuoteRequestRejectReason quoteRequestRejectReason = 3;
+    optional string rejectText = 4;
+    repeated QuoteRequestRejectGroupNotification quoteRequestRejectGroup = 5;
+    optional string requestorSessionKey = 6;
+}
+
+message QuoteRequestRejectGroupNotification {
+
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 1;
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+    optional string securityCode = 4;
+    optional string securityId = 5;
+    optional string text = 6;
+
+}
+
+/**
+ * Message to be used for when we want to find all outstanding quotes ie. On Celer MarketMerchant GUI login, go get all outstanding quotes
+ */
+message FindAllQuotesRequest {
+
+    optional string clientRequestId = 1;
+
+}
+
+/**
+ * Message to be used for when we want to update any session of incoming quote requests, i.e. Celer MarketMerchant GUI
+ */
+message UpdateOnMarketMerchantQuoteNotificationRequest {
+
+    optional string clientRequestId = 1;
+
+}

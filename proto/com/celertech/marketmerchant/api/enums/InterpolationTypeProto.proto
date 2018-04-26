@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.interpolationtype;
+
+option java_package = "com.celertech.marketmerchant.api.interpolationtype";
+
+enum InterpolationType {
+
+	LINEAR = 1;
+
+}

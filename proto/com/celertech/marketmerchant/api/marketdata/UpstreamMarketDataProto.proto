@@ -1,0 +1,68 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.marketdata;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataRequestTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataUpdateTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataQuoteTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.marketdata";
+
+message MarketDataRequest {
+
+	optional string marketDataRequestId = 1;
+	optional com.celertech.marketmerchant.api.enums.marketdatarequesttype.MarketDataRequestType marketDataRequestType = 2;
+	optional com.celertech.marketmerchant.api.enums.marketdataupdatetype.MarketDataUpdateType marketDataUpdateType = 3;
+	optional int32 marketDepth = 4;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 5;
+	optional string securityCode = 7;
+	optional string securityId = 8;
+	optional string streamId = 9;
+	optional string settlementType = 10;
+	optional string settlementDate = 11;
+	optional string maturityDate = 12;
+	optional com.celertech.marketmerchant.api.enums.marketdataquotetype.MarketDataQuoteType marketDataQuoteType = 13;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 14;
+	optional string rateSource = 15;
+
+}
+
+
+message MarketMerchantDestinationSubscriptionRequest {
+
+    optional string clientRequestId = 1;
+    optional com.celertech.marketmerchant.api.enums.marketdatarequesttype.MarketDataRequestType marketDataRequestType = 2;
+    optional com.celertech.marketmerchant.api.enums.marketdataupdatetype.MarketDataUpdateType marketDataUpdateType = 3;
+    optional int32 marketDepth = 4;
+    optional string destinationKey = 5;
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 6;
+    optional string securityCode = 8;
+    optional string securityId = 9;
+    optional string sessionKey = 10;
+    optional string sessionToken = 11;
+
+}
+
+message UpdateOnAllSecurityStatusRequest {
+
+	optional string clientRequestId = 1;
+	optional string exchangeCode = 2;
+	optional string securityCode = 3;
+	optional com.celertech.marketmerchant.api.enums.marketdataupdatetype.MarketDataUpdateType type = 4;
+}
+
+
+message MarketMerchantDestinationCommand {
+
+	optional string clientRequestId = 1;
+	optional Operation operation = 2;
+	optional string marketDataDestinationKey = 3;
+
+	enum Operation {
+    	START = 0;
+    	STOP = 1;
+    	EOD = 2;
+	}
+}

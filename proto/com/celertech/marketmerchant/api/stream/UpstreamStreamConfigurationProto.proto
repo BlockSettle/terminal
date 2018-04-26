@@ -1,0 +1,88 @@
+package com.celertech.marketmerchant.api.stream;
+
+import "com/celertech/marketmerchant/api/enums/PriceRoundingModeProto.proto";
+import "com/celertech/marketmerchant/api/enums/PriceAssemblerTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.stream";
+
+message CreateStreamConfiguration {
+	optional string clientRequestId = 1;
+	optional string code = 2;
+	optional string name = 3;
+	optional string description = 4;
+	optional string priceAssemblyConfigurationCode = 5;
+}
+
+message UpdateStreamConfiguration {
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string name = 4;
+	optional string description = 5;
+	optional string priceAssemblyConfigurationCode = 6;
+}
+
+message FindAllStreamConfigurations {
+
+	optional string clientRequestId = 1;
+	
+}
+
+message FindStreamConfigurationByCode {
+
+	optional string clientRequestId = 1;
+	optional string code = 2;
+
+}
+
+message FindStreamConfigurationById {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+
+}
+
+message DeleteStreamConfiguration {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+
+message CreateSecurityIdStream {
+	optional string clientRequestId = 1;
+
+	optional string streamCode = 2;
+	optional string securityId = 3;
+	optional int64 throttleMaximumMessageRateInMilliseconds = 4;
+	optional double throttlePriceMovementThreshold = 5;
+	optional double priceToleranceThresholdAsPercentage = 6;
+}
+
+message UpdateSecurityIdStream {
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+	optional string streamCode = 3;
+	optional string securityId = 4;
+	optional int64 throttleMaximumMessageRateInMilliseconds = 5;
+	optional double throttlePriceMovementThreshold = 6;
+	optional double priceToleranceThresholdAsPercentage = 7;
+}
+
+message FindSecurityIdStreamsByStreamCode {
+	optional string clientRequestId = 1;
+	optional string streamCode = 2;
+}
+
+message DeleteSecurityIdStream {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+message UpdateOnMarketMerchantStreamConfigurationRequest {
+}
+
+message UpdateOnMarketMerchantSecurityIdStreamRequest {
+}

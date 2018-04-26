@@ -1,0 +1,153 @@
+syntax = "proto2";
+
+package com.celertech.staticdata.api.account;
+
+option java_package = "com.celertech.staticdata.api.account";
+
+//Creates an account in the Staticdata module
+message CreateAccount {
+
+	optional string clientRequestId = 1;
+
+	//Unique code that represents the account
+	optional string code = 2;
+
+	//Name of the account, can be non-unique
+	optional string name = 3;
+
+	//Description of the account, can be non-unique
+	optional string description = 4;
+
+	//CtiCode of the account, can be non-unique
+	optional string ctiCode = 5;
+
+	//FeeCode of the account, can be non-unique
+	optional string feeCode = 6;
+
+	//Party message that is used to encapsulate multiple party information for this account
+	repeated Party party = 7;
+
+	//Enables this account to auto clear any trades made against this account
+	optional bool autoClearEnabled = 8;
+
+	//Enables this account
+	optional bool enabled = 9;
+
+	//Enables this account to be a CSA account
+	optional bool creditCsa = 10;
+
+	//Enables this account to be a CLS settled account
+	optional bool creditClsSettled = 11;
+
+	//Enables this account to be a credit checked
+	optional bool creditCheckEnabled = 12;
+
+	//Deprecated
+	optional string partyId = 13;
+}
+
+//Deletes the account either by id or code.  If both specified, then Id will take precendence
+message DeleteAccount {
+
+	optional string clientRequestId = 1;
+
+	//Id of the account
+	optional int64 id = 2;
+
+	//Code of the account
+	optional string code = 3;
+}
+
+//Find a single account by its Id
+message FindAccountById {
+
+	optional string clientRequestId = 1;
+
+	//Id of the account
+	optional int64 id = 2;
+}
+
+//Find a single account by its code
+message FindAccountByCode {
+
+	optional string clientRequestId = 1;
+
+	//Code of the account
+	optional string code = 2;
+}
+
+//Finds all accounts
+message FindAllAccounts {
+
+	optional string clientRequestId = 1;
+
+}
+
+//Bulk update message that takes a multiple number of UpdateAccount messages
+message BulkUpdateAccountRequest {
+
+	optional string clientRequestId = 1;
+
+	repeated UpdateAccount updateAccountRequest = 2;
+}
+
+//Updates an account in the Staticdata module
+message UpdateAccount {
+
+	optional string clientRequestId = 1;
+
+
+	//Id of the account to be updated
+	optional int64 id = 2;
+
+	//Unique code that represents the account
+	optional string code = 3;
+
+	//Name of the account, can be non-unique
+	optional string name = 4;
+
+	//Description of the account, can be non-unique
+	optional string description = 5;
+
+	//CtiCode of the account, can be non-unique
+	optional string ctiCode = 6;
+
+	//FeeCode of the account, can be non-unique
+	optional string feeCode = 7;
+
+	//Party message that is used to encapsulate multiple party information for this account
+	repeated Party party = 8;
+
+	//Enables this account to auto clear any trades made against this account
+    optional bool autoClearEnabled = 9;
+
+    //Enables this account
+    optional bool enabled = 10;
+
+    //Enables this account to be a CSA account
+    optional bool creditCsa = 11;
+
+    //Enables this account to be a CLS settled account
+    optional bool creditClsSettled = 12;
+
+    //Enables this account to be a CLS settled account
+    optional bool creditCheckEnabled = 13;
+
+    //deprecated
+    optional string partyId = 14;
+}
+
+/**
+ * Party message that is used to encapsulate multiple party information for a given account
+ */
+message Party {
+
+	//Free text
+	optional string partyIdSource = 1;
+	optional string partyId = 2;
+}
+
+//Message to subscribe to any create, update or delete account actions
+message UpdateOnStaticDataAccountRequest {
+
+}

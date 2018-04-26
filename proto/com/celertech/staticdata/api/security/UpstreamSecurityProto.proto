@@ -1,0 +1,807 @@
+package com.celertech.staticdata.api.security;
+
+import "com/celertech/staticdata/api/enums/OptionTypeProto.proto";
+import "com/celertech/staticdata/api/enums/AssetTypeProto.proto";
+import "com/celertech/staticdata/api/enums/SideProto.proto";
+import "com/celertech/staticdata/api/enums/StrategyTypeProto.proto";
+import "com/celertech/staticdata/api/enums/ProductTypeProto.proto";
+import "com/celertech/staticdata/api/property/PropertyProto.proto";
+
+option java_package = "com.celertech.staticdata.api.security";
+
+message CreateEquitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional string code = 2;
+	optional string securityId = 3;
+	optional string description = 4;
+	optional int64 exchangeId = 5;
+	optional string currency = 6;
+	optional int32 divisor = 7;
+	optional bool enabled = 8;
+
+}
+
+message CreateEquitySecurityAlias {
+	optional string clientRequestId = 1;
+	optional int64 exchangeId = 2;
+    optional int64 equitySecurityId = 3;
+    optional string securityCode = 5;
+    optional string securityId = 6;
+    optional string securityIdSource = 7;
+    optional string securityCodeAlias = 8;
+    optional string securityIdAlias = 9;
+}
+
+message DeleteEquitySecurityAlias {
+	optional string clientRequestId = 1;
+    optional int64 equitySecurityId = 2;
+	optional int64 exchangeId = 3;
+    optional string securityCode = 4;
+    optional string securityId = 5;
+    optional string securityIdSource = 6;
+    optional string securityCodeAlias = 7;
+    optional string securityIdAlias = 8;
+}
+
+message CreateFutureStrategySecurity {
+
+	optional string clientRequestId = 1;
+	optional com.celertech.staticdata.api.enums.strategytype.StrategyType strategyType = 2;
+	optional string code = 3;
+	optional string securityId = 4;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string currency = 7;
+	optional double tickValue = 8;
+	optional int32 tickSize = 9;
+	optional string expiry = 11;
+	optional bool isFractionalContract = 12;
+	optional int32 divisor = 13;
+	optional int32 numerator = 14;
+	optional int32 denominator = 15;
+	optional bool enabled = 16;
+
+	repeated CreateFutureStrategyAlias alias = 17;
+
+	repeated CreateFutureStrategyLegSecurity leg = 18;
+}
+
+message CreateFutureStrategyAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 exchangeId = 2;
+	optional int64 futureSecurityId = 3;
+	optional int64 futureStrategyId = 4;
+    optional string securityCode = 5;
+    optional string securityId = 6;
+    optional string securityIdSource = 7;
+    optional string securityCodeAlias = 8;
+    optional string securityIdAlias = 9;
+}
+
+
+message DeleteFutureStrategyAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 futureStrategyId = 2;
+	optional string securityIdSource = 3;
+}
+
+message CreateFutureStrategyLegSecurity {
+
+	optional string underlyingCode = 2;
+	optional string underlyingSecurityId = 3;
+	optional string underlyingSecurityDescription = 4;
+	optional int64 underlyingExchangeId = 5;
+	optional string underlyingExpiry = 6;
+	optional string underlyingCurrency = 7;
+	optional com.celertech.staticdata.api.enums.side.Side side = 8;
+	optional int32 ratioQty = 9;
+
+}
+
+
+message CreateFutureSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional string code = 2;
+	optional string description = 4;
+	optional int64 exchangeId = 5;
+	optional string currency = 6;
+	optional bool enabled = 7;
+
+	repeated CreateFutureMaturitySecurity maturity = 8;
+}
+
+message CreateFutureMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 futureSecurityId = 2;
+	optional string securityId = 3;
+	optional string expiry = 7;
+	optional bool isFractionalContract = 11;
+	optional double tickValue = 9;
+	optional int32 tickSize = 8;
+	optional int32 divisor = 10;
+	optional int32 numerator = 12;
+	optional int32 denominator = 13;
+	optional bool enabled = 14;
+	
+	repeated CreateFutureMaturityAlias alias = 15;
+
+}
+
+message CreateFutureMaturityAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 exchangeId = 2;
+	optional int64 futureSecurityId = 3;
+	optional int64 futureMaturityId = 4;
+    optional string securityCode = 5;
+    optional string securityId = 6;
+    optional string securityIdSource = 7;
+    optional string securityCodeAlias = 8;
+    optional string securityIdAlias = 9;
+}
+
+message DeleteFutureMaturityAlias {
+	optional string clientRequestId = 1;
+
+    optional int64 futureMaturityId = 2;
+
+	optional int64 exchangeId = 3;
+
+    optional string securityCode = 4;
+    optional string securityId = 5;
+    optional string securityIdSource = 6;
+    optional string securityCodeAlias = 7;
+    optional string securityIdAlias = 8;
+
+    optional int64 futureSecurityId = 9;
+
+}
+
+
+
+message CreateOptionSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 exchangeId = 2;
+	optional string code = 3;
+	optional string description = 4;
+	optional string currency = 5;
+	optional bool enabled = 6;
+
+	repeated CreateOptionMaturitySecurity maturity = 8;
+}
+
+message CreateOptionMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 optionSecurityId = 2;
+	optional string securityId = 3;
+	optional string currency = 6;
+	optional string expiry = 7;
+	optional int32 tickSize = 8;
+	optional double tickValue = 9;
+	optional int32 divisor = 10;
+	optional com.celertech.staticdata.api.enums.optiontype.OptionType optionType = 11;
+	optional double strike = 12;
+	optional bool isFractionalContract = 13;
+	optional int32 numerator = 14;
+	optional int32 denominator = 15;
+	optional bool enabled = 16;
+
+	repeated CreateOptionMaturityAlias alias = 17;
+
+}
+
+message CreateOptionMaturityAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 exchangeId = 2;
+    optional int64 optionSecurityId = 3;
+    optional int64 optionMaturityId = 4;
+    optional string securityCode = 5;
+    optional string securityId = 6;
+    optional string securityIdSource = 7;
+    optional string securityCodeAlias = 8;
+    optional string securityIdAlias = 9;
+}
+
+message DeleteOptionMaturityAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 optionMaturityId = 2;
+	optional int64 exchangeId = 3;
+    optional string securityCode = 4;
+    optional string securityId = 5;
+    optional string securityIdSource = 6;
+    optional string securityCodeAlias = 7;
+    optional string securityIdAlias = 8;
+    optional int64 optionSecurityId = 9;
+}
+
+message CreateFxSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional string code = 2;
+	optional string description = 4;
+	optional int64 exchangeId = 5;
+	optional string currency = 6;
+	optional bool enabled = 7;
+	
+	repeated CreateFxMaturitySecurity maturity = 8;
+
+}
+
+message CreateFxMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 fxSecurityId = 2;
+	optional string securityId = 3;
+	optional string expiry = 7;
+	optional double tickValue = 9;
+	optional int32 tickSize = 8;
+	optional int32 divisor = 10;
+	optional int32 pipDefinition = 11;
+	optional int32 forwardPipDefinition = 12;
+	optional string currency = 13;
+	optional bool enabled = 14;
+	optional bool clsSettled = 15;
+	
+    optional PricingMode pricingMode = 16;
+    
+    enum PricingMode {
+        
+        QUOTES = 1;
+        STREAM = 2;
+    
+    }
+    
+	repeated CreateFxMaturityAlias alias = 17;
+    repeated com.celertech.staticdata.api.property.Property property = 18;
+}
+
+
+message CreateFxMaturityAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 exchangeId = 2;
+    optional int64 fxSecurityId = 3;
+    optional int64 fxMaturityId = 4;
+    optional string securityCode = 5;
+    optional string securityId = 6;
+    optional string securityIdSource = 7;
+    optional string securityCodeAlias = 8;
+    optional string securityIdAlias = 9;
+}
+
+message DeleteFxMaturityAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 fxMaturityId = 2;
+	optional int64 exchangeId = 3;
+    optional string securityCode = 4;
+    optional string securityId = 5;
+    optional string securityIdSource = 6;
+    optional string securityCodeAlias = 7;
+    optional string securityIdAlias = 8;
+    optional int64 fxSecurityId = 9;
+}
+
+
+
+message CreateFixedIncomeSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional string code = 2;
+	optional string description = 4;
+	optional int64 exchangeId = 5;
+	optional string currency = 6;
+	optional bool enabled = 7;
+	
+	repeated CreateFixedIncomeMaturitySecurity maturity = 8;
+
+}
+
+message CreateFixedIncomeMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 fiSecurityId = 2;
+	optional string securityId = 3;
+	optional string expiry = 7;
+	optional double tickValue = 9;
+	optional int32 tickSize = 8;
+	optional int32 divisor = 10;
+	optional string currency = 11;
+	optional bool enabled = 12;
+	optional string settlementType = 14;
+	
+	repeated CreateFixedIncomeMaturityAlias alias = 13;
+
+}
+
+message CreateFixedIncomeMaturityAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 exchangeId = 2;
+    optional int64 fiSecurityId = 3;
+    optional int64 fiMaturityId = 4;
+    optional string securityCode = 5;
+    optional string securityId = 6;
+    optional string securityIdSource = 7;
+    optional string securityCodeAlias = 8;
+    optional string securityIdAlias = 9;
+}
+
+message DeleteFixedIncomeMaturityAlias {
+	optional string clientRequestId = 1;
+	
+	optional int64 fiMaturityId = 2;
+	optional string securityIdSource = 3;
+
+	optional int64 exchangeId = 4;
+    optional string securityCode = 5;
+    optional string securityId = 6;
+    optional string securityCodeAlias = 7;
+    optional string securityIdAlias = 8;
+    optional int64 fiSecurityId = 9;
+}
+
+
+message DeleteSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 2;
+	optional int64 id = 3;
+}
+
+
+message DeleteSecurityMaturity {
+
+	optional string clientRequestId = 1;
+
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 2;
+	optional int64 id = 3;
+}
+
+message FindSecurityByExchangeIdAndCode {
+
+	optional string clientRequestId = 1;
+	
+	optional int64 exchangeId = 2;
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 3;
+	optional string code = 4;
+}
+
+message FindSecurityById {
+
+	optional string clientRequestId = 1;
+
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 2;
+	optional int64 id = 3;
+}
+
+message FindSecurityByExchangeCodeAndSecurityCodeAndSecurityId {
+
+	optional string clientRequestId = 1;
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 2;
+	optional string exchangeCode = 3;
+	optional string securityCode = 4;
+	optional string securityId = 5;
+}
+
+message FindSecuritiesByExchange {
+
+	optional string clientRequestId = 1;
+	optional int64 exchangeId = 2;
+	optional string exchangeCode = 3;
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 4;
+}
+
+message FindEquitySecurityBySecurityIdSourceAndSecurityIdRequest {
+	
+	optional string clientRequestId = 1;
+	
+	optional string exchangeCode = 2; 
+	optional string securityIdSource = 3; 
+	optional string securityCodeAlias = 4;
+	optional string securityIdAlias = 5;
+}
+
+message FindFutureMaturityBySecurityIdSourceAndSecurityIdRequest {
+	
+	optional string clientRequestId = 1;
+	
+	optional string exchangeCode = 2; 
+	optional string securityIdSource = 3; 
+	optional string securityCodeAlias = 4;
+	optional string securityIdAlias = 5;
+}
+
+message FindFutureStrategyBySecurityIdSourceAndSecurityIdRequest {
+	
+	optional string clientRequestId = 1;
+	
+	optional string exchangeCode = 2; 
+	optional string securityIdSource = 3; 
+	optional string securityCodeAlias = 4;
+	optional string securityIdAlias = 5;
+}
+
+message FindOptionMaturityBySecurityIdSourceAndSecurityIdRequest {
+	
+	optional string clientRequestId = 1;
+	
+	optional string exchangeCode = 2; 
+    optional string securityIdSource = 3; 
+    optional string securityCodeAlias = 4;
+    optional string securityIdAlias = 5;
+}
+
+message FindFxMaturityBySecurityIdSourceAndSecurityIdRequest {
+	
+	optional string clientRequestId = 1;
+	
+	optional string exchangeCode = 2; 
+	optional string securityIdSource = 3; 
+    optional string securityCodeAlias = 4;
+    optional string securityIdAlias = 5;
+}
+
+message FindFixedIncomeMaturityBySecurityIdSourceAndSecurityIdRequest {
+	
+	optional string clientRequestId = 1;
+	
+	optional string exchangeCode = 2; 
+	optional string securityIdSource = 3; 
+    optional string securityCodeAlias = 4;
+    optional string securityIdAlias = 5;
+}
+
+
+message UpdateEquitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string securityId = 4;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string currency = 7;
+	optional int32 divisor = 8;
+	optional bool enabled = 9;
+
+}
+
+
+message UpdateFutureSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string currency = 7;
+	optional bool enabled = 15;
+
+}
+
+message UpdateFutureMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional int64 futureSecurityId = 3;
+	optional string securityId = 4;
+	optional string expiry = 5;
+	optional double tickValue = 6;
+	optional int32 tickSize = 7;
+	optional int32 divisor = 8;
+	optional bool enabled = 9;	
+	optional bool isFractional = 10;
+	optional int32 numerator = 11;
+	optional int32 denominator = 12; 
+}
+
+message UpdateOptionSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional int64 exchangeId = 3;
+	optional string code = 4;
+	optional string description = 5;
+	optional string currency = 7;
+	optional bool enabled = 17;
+
+}
+
+message UpdateOptionMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional int64 optionSecurityId = 3;
+	optional string securityId = 4;
+	optional string expiry = 5;
+	optional com.celertech.staticdata.api.enums.optiontype.OptionType optionType = 6;
+	optional double strike =7;
+	optional bool isFractional = 8;
+	optional double tickValue = 9;
+	optional int32 tickSize = 10;
+	optional int32 divisor = 11;
+	optional int32 numerator = 12;
+	optional int32 denominator = 13; 
+	optional bool enabled = 14;	
+}
+
+message UpdateFxSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string currency = 7;
+	optional double tickValue = 8;
+	optional int32 tickSize = 9;
+	optional bool enabled = 10;
+	optional int32 divisor = 11;
+	optional bool clsSettled = 12;
+}
+
+message UpdateFxMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional int64 fxSecurityId = 3;
+	optional string securityId = 4;
+	optional string expiry = 5;
+	optional double tickValue = 6;
+	optional int32 tickSize = 7;
+	optional int32 divisor = 8;
+	optional int32 pipDefinition = 9;
+	optional int32 forwardPipDefinition = 10;
+	optional bool enabled = 11;	 
+	optional bool clsSettled = 12;
+	
+    optional PricingMode pricingMode = 13;
+    
+    enum PricingMode {
+        
+        QUOTES = 1;
+        STREAM = 2;
+    
+    }
+    
+    repeated com.celertech.staticdata.api.property.Property property = 14;
+    
+}
+
+message UpdateFxMaturitySecurityGroup {
+
+	optional string clientRequestId = 1;
+	optional int64 fxSecurityId = 2;
+	optional string securityId = 3;
+    repeated string groupName = 4;
+    
+}
+
+message UpdateFixedIncomeSecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string currency = 7;
+	optional bool enabled = 10;
+}
+
+
+message UpdateFixedIncomeMaturitySecurity {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional int64 fiSecurityId = 3;
+	optional string securityId = 4;
+	optional string expiry = 5;
+	optional double tickValue = 6;
+	optional int32 tickSize = 7;
+	optional int32 divisor = 8;
+	optional bool enabled = 9;	
+	optional string settlementType = 10; 
+}
+
+message UpdateOnStaticDataSecurityRequest {
+
+	optional string clientRequestId = 1;
+
+}
+
+message SecuritySearchRequest {
+
+	optional string clientRequestId = 1;
+	
+	optional int64 exchangeId = 2;
+	optional string exchangeCode = 3;
+	optional string securityCode = 4;
+	optional int64 securityId = 5;
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 6;
+	optional com.celertech.staticdata.api.enums.strategytype.StrategyType strategyType = 7;
+	optional com.celertech.staticdata.api.enums.producttype.ProductType productType = 8;
+}
+
+/** Only to be used by internal API.  This is currently being used by OrderRouting */
+message FindAllFutureMaturitiesForExchangeRequest {
+
+	optional string clientRequestId = 1;
+	optional string exchangeName = 2;
+	optional int64 exchangeId = 3;
+}
+
+message FindEquitySecurityForEquitySecurityIdRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 equitySecurityId = 2;
+}
+
+message FindFutureMaturitiesForFutureSecurityIdRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 futureSecurityId = 2;
+}
+
+/** Only to be used by internal API.  This is currently being used by OrderRouting */
+message FindAllOptionMaturitiesForExchangeRequest {
+
+	optional string clientRequestId = 1;
+	optional string exchangeName = 2;
+	optional int64 exchangeId = 3;
+}
+
+message StaticDataDestinationCommand {
+
+	optional string clientRequestId = 1;
+	optional Operation operation = 2;
+	optional string staticDataDestinationKey = 3;
+
+	enum Operation {
+    	START = 0;
+    	STOP = 1;
+    	UPDATE = 2;
+	}
+}
+
+message FindOptionMaturitiesForOptionSecurityIdRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 optionSecurityId = 2;
+}
+
+message FindOptionMaturitiesForOptionSecurityIdAndOptionTypeRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 securityId = 2;
+	optional com.celertech.staticdata.api.enums.optiontype.OptionType optionType = 3;
+}
+
+message FindFutureStrategiesForFutureStrategySecurityIdRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 futureStrategySecurityId = 2;
+}
+
+message FindFxMaturitiesForFxSecurityIdRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 futureSecurityId = 2;
+}
+
+message FindAllFxMaturitiesForExchangeRequest {
+
+	optional string clientRequestId = 1;
+	optional string exchangeName = 2;
+	optional int64 exchangeId = 3;
+}
+
+message FindAllFxCurrencyGroupForExchangeRequest {
+
+	optional string clientRequestId = 1;
+	optional string exchangeName = 2;
+	optional int64 exchangeId = 3;
+}
+
+message FindAllFixedIncomeMaturitiesForExchangeRequest {
+
+	optional string clientRequestId = 1;
+	optional string exchangeName = 2;
+	optional int64 exchangeId = 3;
+}
+
+message FindFixedIncomeMaturitiesForFxSecurityIdRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 futureSecurityId = 2;
+}
+
+message FindListingRequest {
+
+	optional string clientRequestId = 1;
+    optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 2;
+    optional string exchangeCode = 3;
+    optional string securityId = 4;
+    optional bool isStrategy = 5;
+    
+}
+
+message FindEquitySecurityListingsByExchangeAndSecurityCode {
+
+    optional string exchangeCode = 1;
+    optional string securityCode = 2;
+    optional string clientRequestId = 3;
+
+}
+
+message FindFutureMaturityListingsByExchangeAndSecurityCode {
+
+    optional string exchangeCode = 1;
+    optional string securityCode = 2;
+    optional string clientRequestId = 3;
+
+}
+
+message FindOptionMaturityListingsByExchangeAndSecurityCode {
+
+    optional string exchangeCode = 1;
+    optional string securityCode = 2;
+    optional string clientRequestId = 3;
+
+}
+
+message FindFxMaturitiesByExchangeAndCode {
+
+    optional string exchangeCode = 1;
+    optional string code = 2;
+    optional string clientRequestId = 3;
+
+}
+
+message FindFixedIncomeMaturitiesByExchangeAndCode {
+
+    optional string exchangeCode = 1;
+    optional string code = 2;
+    optional string clientRequestId = 3;
+
+}
+
+message FindAllFxSplitValueDateSecurities {
+
+    optional string clientRequestId = 1;
+
+}
+
+message UpdateOnStaticDataFxCurrencyGroupRequest {
+
+	optional string clientRequestId = 1;
+
+}

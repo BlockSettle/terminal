@@ -1,0 +1,61 @@
+package com.celertech.marketmerchant.api.tradeflowswitch;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/tradeflowswitch/RuleProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.tradeflowswitch";
+
+message ActiveTradeFlowDownstreamEvent {
+
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 1;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+    
+    optional string securityId = 3;
+    
+    optional string priceWorkflowCode = 4;
+    
+    optional string orderWorkflowCode = 5;
+
+}
+
+message TradeFlowOverrideDownstreamEvent {
+
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 1;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+    
+    optional string securityId = 3;
+    
+    optional string priceWorkflowCode = 4;
+    
+    optional string orderWorkflowCode = 5;
+}
+
+message DeleteTradeFlowOverrideConfirmation {
+
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 1;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+    
+    optional string securityId = 3;
+}
+
+message TradeFlowConfigurationDownstreamEvent {
+
+	optional int64 id = 1;
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    optional string securityId = 4;
+    
+    repeated com.celertech.marketmerchant.api.tradeflowswitch.Rule rules = 5;
+
+}

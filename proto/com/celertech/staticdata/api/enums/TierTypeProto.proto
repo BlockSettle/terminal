@@ -1,0 +1,9 @@
+package com.celertech.staticdata.api.enums.tiertype;
+
+option java_package = "com.celertech.staticdata.api.enums";
+
+enum TierType {
+
+	MIN_MAX_BREACH = 1;
+	BID_OFFER = 2;
+}

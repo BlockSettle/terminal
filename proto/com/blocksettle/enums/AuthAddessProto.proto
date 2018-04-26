@@ -1,0 +1,43 @@
+syntax = "proto2";
+
+package com.blocksettle.enums.authaddress;
+
+option java_package = "com.blocksettle.enums.authaddress";
+
+// state of authentication address as it known to the blocksettle system
+enum AuthAddressState
+{
+   // VerificationInProgress - current verification state is not determined yet
+   VerificationInProgress = 1;
+   // NotSubmittedState - address was not submitted for verification
+   // there were no blocksettle related transactions on that address
+   NotSubmittedState = 2;
+   // SubmittedState - address receive initial funds from Blocksettle
+   // but there is not enough confirmations at the moment
+   SubmittedState = 3;
+   // PendingVerificationState - address was submitted to blocksettle, we send coins
+   // and get required number of verifications. Now we are waiting for customer to prove
+   // ownership of the address and send us some of the coins back
+   PendingVerificationState = 4;
+   // VerificationSubmittedState - there is valid output transaction from address to BS
+   // just not enough confirmations
+   VerificationSubmittedState = 5;
+   // VerifiedState - addrss is completely verified and good to go
+   VerifiedState = 6;
+   // RevokedState - user (or BS) revoked this address and it could not be user any more
+   RevokedState = 7;
+   // VerificationFailed - something went wrong. Terminal failed to get state of address.
+   VerificationFailed = 8;
+}
+
+enum AuthAddressType
+{
+   BitcoinAddressType = 1;
+   ColoredCoinsAddressType = 2;
+}
+
+enum BitcoinNetworkType
+{
+   MainNetType = 1;
+   TestNetType = 2;
+}

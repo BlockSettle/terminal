@@ -1,0 +1,32 @@
+package com.celertech.staticdata.api.exchange;
+
+import "com/celertech/staticdata/api/enums/AssetTypeProto.proto";
+
+
+option java_package = "com.celertech.staticdata.api.exchange";
+
+message ExchangeDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string code = 2;
+	optional string name = 3;
+	optional string description = 4;
+	repeated com.celertech.staticdata.api.enums.assettype.AssetType supportedAssetType = 5;
+	optional bool enabled = 6;
+
+	optional int64 createdInMillis = 7;
+	optional int64 updatedInMillis = 8;
+	
+	repeated ExchangeAliasDownstreamEvent exchangeAlias = 9;
+}
+
+message ExchangeAliasDownstreamEvent {
+    optional int64 exchangeId = 1;
+    optional string exchangeIdSource = 2; //Bloomberg
+    optional string exchangeCodeAlias = 3;
+}
+
+message DeleteExchangeConfirmation {
+
+	optional int64 id = 1;
+}

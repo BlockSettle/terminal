@@ -1,0 +1,124 @@
+/*******************************************************************************
+ * This source code is subject to copyright.
+ * No part of this work may be reproduced without the consent of Celer Technologies
+ * and all rights are reserved,  whether the whole or part of this material is concerned,
+ * including the rights of translation, reprinting, reproduction, electronic and other
+ * dissemination and reuse of illustrations, diagrams, formulae and other content.
+ *
+ * Copyright Celer Technologies 2012.
+ *******************************************************************************/
+
+syntax = "proto2";
+
+package com.celertech.baseserver.communication.protobuf;
+
+option java_package = "com.celertech.baseserver.communication.netty.protobuf";
+
+/**
+ * The encompassing message that wraps all messages that are sent / received via the API
+ */
+message ProtobufMessage {
+
+	required string protobufClassName = 1;
+    required bytes protobufMessageContents = 2;
+
+    optional int64 sequenceNumber = 3;
+}
+
+
+/**
+ * A special, higher abstraction message, that represents a response to a request sent in.  The
+ * SingleResponseMessage represents the response to any requests that are to return only either
+ * zero or one result.  i.e. findById
+ *
+ * This SingleResponseMessage will still need to be wrapped in a ProtobufMessage
+ */
+message SingleResponseMessage {
+
+	optional string clientRequestId = 1;
+	optional ResponsePayload payload = 2;
+
+}
+
+/**
+ * A special, higher abstraction message, that represents a response to a request sent in.  The
+ * MultiResponseMessage represents the response to any requests that return zero or more results
+ * i.e. findAll
+ *
+ * This MultiResponseMessage will still need to be wrapped in a ProtobufMessage
+ */
+message MultiResponseMessage {
+
+    optional string clientRequestId = 1;
+    repeated ResponsePayload payload = 2;
+
+}
+
+/**
+ * A special, higher abstraction message, that represents an exception was encountered when processing a request.
+ *
+ * This ExceptionResponseMessage will still need to be wrapped in a ProtobufMessage
+ */
+message ExceptionResponseMessage {
+    optional string clientRequestId = 1;
+    optional ResponsePayload payload = 2;
+}
+
+/**
+ * A special, higher abstraction message, that represents the request was not allowed to be sent by this particular connection.
+ *
+ * This AccessDeniedMessage will still need to be wrapped in a ProtobufMessage
+ */
+message AccessDeniedMessage {
+    optional string clientRequestId = 1;
+    optional string text = 2;
+    optional ResponsePayload payload = 3;
+}
+
+/**
+ * The payload of either the SingleResponseMessage or MultiResponseMessage
+ */
+message ResponsePayload {
+	required string className = 1;
+	required bytes contents = 2;
+}
+
+
+
+/**
+ * A request to reconnect to the server.  Must pass in a sessionToken and last received sequence number
+ */
+message ReconnectionRequest {
+
+    optional string sessionToken = 1;
+    optional int64 lastReceivedSequenceNumber = 2;
+}
+
+/**
+ * A message to denote that a reconnection attempt has failed.
+ */
+message ReconnectionFailedMessage {
+
+    optional string sessionToken = 1;
+    optional string message = 2;
+}
+
+/**
+ * An event that is sent from the server to notify the client which host they are connect to
+ */
+message ConnectedEvent {
+
+	optional string connectedHost = 1;
+	optional int32 heartbeatIntervalInSecs = 2;
+
+}
+
+/**
+ * Heartbeat message that is sent in both directions between the client and server
+ */
+message Heartbeat {
+	optional string clientRequestId = 1;
+
+	optional string text = 2;
+}
+

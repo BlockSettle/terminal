@@ -1,0 +1,22 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.quoterequestrejectreason;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum QuoteRequestRejectReason {
+
+	UNKNOWN_SYMBOL = 1;
+	EXCHANGE = 2;
+	QUOTE_REQUEST_EXCEEDS_LIMIT = 3;
+	TOO_LATE_TO_ENTER = 4;
+	INVALID_PRICE = 5;
+	NOT_AUTHORIZED_TO_REQUEST_QUOTE = 6;
+	NO_MATCH_FOR_INQUIRY = 7;
+	NO_MARKET_FOR_INSTRUMENT = 8;
+	NO_INVENTORY = 9;
+	PASS = 10;
+	INSUFFICIENT_CREDIT = 11;
+	OTHER = 12;
+	UNABLE_TO_QUOTE = 13;
+}

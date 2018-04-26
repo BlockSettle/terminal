@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.order;
+
+option java_package = "com.celertech.marketmerchant.api.order";
+
+message KeyValue {
+	optional string key = 1;
+	optional string value = 2;
+}

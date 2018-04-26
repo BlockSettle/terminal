@@ -20,15 +20,14 @@ void CoinControlWidget::updateSelectedTotals()
 {
    ui_->labelTotalAmount->setText(coinControlModel_->GetSelectedBalance());
    ui_->labelTotalTransactions->setText(QString::number(coinControlModel_->GetSelectedTransactionsCount()));
+   ui_->checkBoxUseAllSelected->setChecked(false);
    emit coinSelectionChanged(coinControlModel_->GetSelectedTransactionsCount());
 }
 
 void CoinControlWidget::onAutoSelClicked(int state)
 {
-   ui_->treeViewUTXO->setEnabled(state == Qt::Unchecked);
    if (state == Qt::Checked) {
       ui_->labelTotalAmount->setText(coinControlModel_->GetTotalBalance());
-      coinControlModel_->clearSelection();
       ui_->labelTotalTransactions->clear();
       emit coinSelectionChanged(MAXSIZE_T);
    }

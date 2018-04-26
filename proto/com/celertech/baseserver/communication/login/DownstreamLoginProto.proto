@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.communication.login;
+
+option java_package = "com.celertech.baseserver.communication.login";
+
+
+message LoginResponse {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+	optional bool loggedIn = 3;
+	optional string message = 4;
+	optional string sessionToken = 6;
+}
+
+message LogoutMessage {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+	optional string message = 3;
+	optional bool forcedLogout = 4;
+
+}

@@ -1,0 +1,19 @@
+package com.celertech.staticdata.api.enums.valuedatestatus;
+
+option java_package = "com.celertech.staticdata.api.enums";
+
+enum ValueDateStatus {
+	
+	//If the event's valueDate falls on a valid business day
+	WORK_DAY = 2;
+	
+	//If the event's valueDate falls either a weekend or holiday
+	REST_DAY = 3;
+	
+	//If the event's valueDate is CLOSED, i.e. if the resolved value date is in the past and has elapsed, or if the resolved valueDate has cutoffs in play
+	CLOSED = 4;
+	
+	//If tender is invalid or cannot be priced
+	INVALID_RANGE = 5;
+		
+}

@@ -1,0 +1,45 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.socket;
+
+import "com/celertech/baseserver/api/enums/SocketTypeProto.proto";
+import "com/celertech/baseserver/api/enums/FixVersionProto.proto";
+import "com/celertech/baseserver/api/enums/ApiEncodingTypeProto.proto";
+
+option java_package = "com.celertech.baseserver.api.socket";
+
+message CreateSocketRequest {
+
+	optional string clientRequestId = 1;
+
+	optional string code = 2;
+	optional com.celertech.baseserver.api.enums.sockettype.SocketType socketType = 3;
+	optional com.celertech.baseserver.api.enums.fixversion.FixVersion fixVersion = 4;
+	optional com.celertech.baseserver.api.enums.apiencodingtype.ApiEncodingType apiEncodingType = 5;
+	optional string hostname = 6;
+	optional int32 port = 7;
+	optional bool local = 8;
+	optional bool enabled = 9;
+	optional bool acceptor = 10;
+}
+
+message UpdateSocketRequest {
+
+    optional string clientRequestId = 1;
+
+    optional int64 id = 2;
+    optional string code = 3;
+    optional bool enabled = 4;
+
+}
+
+message FindAllSockets {
+
+	optional string clientRequestId = 1;
+}
+
+message DeleteSocketRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 socketId = 2;
+}

@@ -34,6 +34,7 @@ public:
    void SetListener(const std::shared_ptr<HeadlessContainerListener> &);
 
    void setSocketOk(bool);
+   void clearConnections();
 
    Q_INVOKABLE void deactivateAutoSign();
    Q_INVOKABLE void activateAutoSign();

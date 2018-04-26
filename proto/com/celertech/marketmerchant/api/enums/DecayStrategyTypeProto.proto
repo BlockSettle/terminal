@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.decaystrategytype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum DecayStrategyType {
+
+	LINEAR = 1;
+	NO_DECAY = 2;
+
+}

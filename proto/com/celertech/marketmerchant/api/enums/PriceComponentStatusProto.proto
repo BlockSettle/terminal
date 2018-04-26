@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.pricecomponentstatus;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum PriceComponentStatus {
+
+	ON = 1;
+	OFF = 2;
+
+}

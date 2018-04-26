@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.quotingtype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum QuotingType {
+
+	AUTOMATIC = 1;
+	MANUAL = 2;
+	DIRECT = 3;
+	INDICATIVE = 4;
+	TRADEABLE = 5;
+
+}

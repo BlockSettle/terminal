@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.assettype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum AssetType {
+
+	EQUITY = 1;
+	FUTURE = 2;
+	OPTION = 3;
+	FX = 4;
+	FIXED_INCOME = 5;
+	STRUCTURED_PRODUCT = 6;
+	CRYPTO = 7;
+}

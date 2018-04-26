@@ -293,9 +293,6 @@ void QToggleItem::showCheckBox(bool state, int column)
    for (int i = 0; i < rowCount(); i++) {
       auto tgChild = static_cast<QToggleItem*>(child(i, column));
       tgChild->showCheckBox(state, column);
-      if (!state && isVisible()) {
-         tgChild->setVisible(true);
-      }
    }
 
    if (!state) {
@@ -336,6 +333,12 @@ void QToggleItem::setData(const QVariant &value, int role)
       auto tParent = dynamic_cast<QToggleItem *>(parent());
       if (tParent != nullptr) {
          tParent->updateCheckMark();
+      } else {
+         for (int  i=0; i < rowCount(); i++) {
+            auto childItem = dynamic_cast<QToggleItem *>(child(i, 0));
+            childItem->setVisible(state == Qt::Checked);
+            childItem->QStandardItem::setData(state, Qt::CheckStateRole);
+         }
       }
    }
 }
@@ -350,10 +353,11 @@ void QToggleItem::updateCheckMark(int column)
       }
    }
    if (!nbVisibleChildren) {
-      setCheckState(Qt::Unchecked);
+      QStandardItem::setData(Qt::Unchecked, Qt::CheckStateRole);
    }
    else {
-      setCheckState((nbVisibleChildren == rowCount()) ? Qt::Checked : Qt::PartiallyChecked);
+      setVisible(nbVisibleChildren != 0);
+      QStandardItem::setData((nbVisibleChildren == rowCount()) ? Qt::Checked : Qt::PartiallyChecked, Qt::CheckStateRole);
    }
 }
 

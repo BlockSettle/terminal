@@ -1,0 +1,13 @@
+package com.celertech.staticdata.api.enums.assettype;
+
+option java_package = "com.celertech.staticdata.api.enums";
+
+enum AssetType {
+
+	FUTURE = 1;
+	OPTION = 2;
+	EQUITY = 3;
+	FX = 4;
+	FIXED_INCOME = 5;
+	CRYPTO = 6
+}

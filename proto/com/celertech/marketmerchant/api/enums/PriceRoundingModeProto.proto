@@ -1,0 +1,18 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.priceroundingmode;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum PriceRoundingMode {
+
+	ROUND_UP = 1;
+	ROUND_DOWN = 2;
+	ROUND_CEILING = 3;
+	ROUND_FLOOR = 4;
+	ROUND_HALF_UP = 5;
+	ROUND_HALF_DOWN = 6;
+	ROUND_HALF_EVEN = 7;
+	ROUND_UNNECESSARY = 8;
+
+}

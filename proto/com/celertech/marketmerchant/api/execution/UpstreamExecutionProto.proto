@@ -1,0 +1,9 @@
+package com.celertech.marketmerchant.api.execution;
+
+message UpdateOnMarketMerchantExecutionRequest {
+    optional string clientRequestId = 1;
+}
+
+message UpdateOnMarketMerchantBankOrderExecutionRequest {
+	optional string clientRequestId = 1;
+}

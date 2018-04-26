@@ -1,0 +1,81 @@
+package com.celertech.staticdata.api.exchange;
+
+import "com/celertech/staticdata/api/enums/AssetTypeProto.proto";
+
+option java_package = "com.celertech.staticdata.api.exchange";
+
+message CreateExchange {
+
+	optional string clientRequestId = 1;
+
+	optional string code = 2;
+	optional string name = 3;
+	optional string description = 4;
+	repeated com.celertech.staticdata.api.enums.assettype.AssetType supportedAssetType = 5;
+	optional bool enabled = 6;
+	
+	repeated CreateExchangeAlias exchangeAlias = 7;
+}
+
+
+message CreateExchangeAlias {
+    optional string clientRequestId = 1;
+    
+    optional int64 exchangeId = 2;
+    optional string exchangeIdSource = 3;
+    optional string exchangeCodeAlias = 4;
+}
+
+message DeleteExchangeAlias {
+    optional string clientRequestId = 1;
+    
+    optional int64 exchangeId = 2;
+    optional string exchangeIdSource = 3;
+    optional string exchangeCodeAlias = 4;
+}
+
+message DeleteExchange {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+}
+
+message FindAllExchanges {
+
+	optional string clientRequestId = 1;
+
+}
+
+message FindExchangeByExchangeIdSourceAndExchangeCodeAlias {
+
+	optional string clientRequestId = 1;
+	optional string exchangeIdSource = 2;
+    optional string exchangeCodeAlias = 3;
+
+}
+
+message FindExchangeByCode {
+
+	optional string clientRequestId = 1;
+	optional string code = 2;
+
+}
+
+message UpdateExchange {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string name = 4;
+	optional string description = 5;
+	repeated com.celertech.staticdata.api.enums.assettype.AssetType supportedAssetType = 6;
+	optional bool enabled = 7;
+}
+
+message UpdateOnStaticDataExchangeRequest {
+
+	optional string clientRequestId = 1;
+
+}

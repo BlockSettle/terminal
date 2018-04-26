@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+package com.celertech.staticdata.api.user.account;
+
+import "com/celertech/staticdata/api/account/DownstreamAccountProto.proto";
+
+option java_package = "com.celertech.staticdata.api.user.account";
+
+message UserAccountDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string username = 2;
+	optional com.celertech.staticdata.api.account.AccountDownstreamEvent account = 3;
+}
+
+message DeleteUserAccountNotification {
+
+	optional int64 id = 1;
+	optional int64 accountId = 2;
+	optional string accountCode = 3;
+}

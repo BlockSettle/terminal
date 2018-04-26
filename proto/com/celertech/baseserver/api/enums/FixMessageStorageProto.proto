@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.enums.fixmessagestorage;
+
+option java_package = "com.celertech.baseserver.api.enums";
+
+enum FixMessageStorage {
+
+	MEMORY = 0;
+	DATABASE = 1;
+}

@@ -1,0 +1,18 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.order.bitcoin;
+
+option java_package = "com.celertech.marketmerchant.api.order.bitcoin";
+
+message SignTransactionNotification {
+	optional string orderId = 1;
+	optional string quoteRequestId = 2;
+
+	optional bytes counterPartyTransactionInput = 3;
+
+	// time until recipient can sign transaction
+    optional int64 expireTimeInUtcInMillis = 4;
+
+    // time when this SignTransactionNotification is sent
+    optional int64 timestampInUtcInMillis = 5;
+}

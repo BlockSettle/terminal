@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.accounttype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum AccountType {
+
+	CLIENT = 1;
+	HOUSE = 2;
+}

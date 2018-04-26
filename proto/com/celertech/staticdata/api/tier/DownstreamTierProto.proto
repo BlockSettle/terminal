@@ -1,0 +1,33 @@
+package com.celertech.staticdata.api.tier;
+
+import "com/celertech/staticdata/api/enums/TierTypeProto.proto";
+import "com/celertech/staticdata/api/tier/UpstreamTierProto.proto";
+
+option java_package = "com.celertech.staticdata.api.tier";
+
+message TierDownstreamEvent {
+
+    optional int64 id = 1;
+    optional string code = 2;
+    optional string name = 3;
+    optional string description = 4;
+	optional string referenceTierCode = 5;
+	repeated string securityId = 6;
+	optional com.celertech.staticdata.api.enums.tiertype.TierType tierType = 7;
+
+    /**
+     * Looks to be weird to be using the TierSpread object from the upstream proto in the TierDownstreamEvent.
+     * However since both the UpstreamTierProto and DownstreamTierProto are in the same java packages, we
+     * can't have the same Class name.  We could have the same object but with different names, but that
+     * might be overkill so just using the upstream object for now
+     */
+    repeated Ladder ladder = 8;
+
+    optional int64 createdTimestampUtcInMillis = 9;
+    optional int64 updatedTimestampUtcInMillis = 10;
+}
+
+message DeleteTierConfirmation {
+
+    optional int64 id = 1;
+}

@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.handlinginstruction;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+
+enum HandlingInstruction {
+
+	AUTOMATED_NO_BROKER = 1;
+	AUTOMATED_BROKER_OK = 2;
+	MANUAL = 3;
+
+}

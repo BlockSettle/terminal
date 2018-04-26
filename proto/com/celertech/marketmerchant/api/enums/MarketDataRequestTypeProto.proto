@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.marketdatarequesttype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum MarketDataRequestType {
+
+	SNAPSHOT = 1;
+	SNAPSHOT_PLUS_UPDATES = 2;
+	DISABLE_SNAPSHOTS = 3;
+}

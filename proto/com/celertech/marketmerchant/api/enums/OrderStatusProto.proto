@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.orderstatus;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum OrderStatus {
+
+	NEW = 1;
+	PART_FILLED = 2;
+	FILLED = 3;
+	CANCELED = 4;
+	PENDING_CANCEL = 5;
+	REJECTED = 6;
+	PENDING_NEW = 7;
+	RESTATEMENT = 8;
+	PENDING_AMEND = 9;
+	TRADE_CORRECT = 10;
+	TRADE_CANCEL = 11;
+	TRADE_RELEASED_CLEARING = 12;
+	EXPIRED = 13;
+	SUSPENDED = 14;
+	REPLACED = 16;
+}

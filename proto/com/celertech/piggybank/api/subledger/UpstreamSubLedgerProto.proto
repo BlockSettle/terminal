@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+package com.celertech.piggybank.api.subledger;
+
+option java_package = "com.celertech.piggybank.api.subledger";
+
+//import "com/celertech/piggybank/api/enums/AssetTypeProto.proto";
+//import "com/celertech/piggybank/api/enums/ProductTypeProto.proto";
+
+message FindAllSubLedgersByAccount {
+
+    optional string clientRequestId = 1;
+    optional string account = 2;
+
+}
+
+message FindAllSubLedgers {
+
+    optional string clientRequestId = 1;
+
+}

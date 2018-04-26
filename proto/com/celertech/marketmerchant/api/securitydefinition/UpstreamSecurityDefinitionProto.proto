@@ -1,0 +1,59 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.securitydefinition;
+
+import "com/celertech/marketmerchant/api/enums/PriceRoundingModeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.securitydefinition";
+
+message CreateSecurityDefinition {
+	optional string clientRequestId = 1;
+	optional string securityId = 2;
+	optional com.celertech.marketmerchant.api.enums.priceroundingmode.PriceRoundingMode bidRoundingMode = 3;
+	optional com.celertech.marketmerchant.api.enums.priceroundingmode.PriceRoundingMode offerRoundingMode = 4;
+	optional int32 decimalPlaces = 5;
+	optional int32 pipDefinition = 6;
+	optional int32 inverseDecimalPlaces = 7;
+	optional int32 inversePipDefinition = 8;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 9;
+	repeated string group = 10;
+}
+
+message UpdateSecurityDefinition {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+	optional string securityId = 3;
+	optional com.celertech.marketmerchant.api.enums.priceroundingmode.PriceRoundingMode bidRoundingMode = 4;
+	optional com.celertech.marketmerchant.api.enums.priceroundingmode.PriceRoundingMode offerRoundingMode = 5;
+	optional int32 decimalPlaces = 6;
+	optional int32 pipDefinition = 7;
+	optional int32 inverseDecimalPlaces = 8;
+	optional int32 inversePipDefinition = 9;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 10;
+	repeated string group = 11;
+	
+}
+
+message DeleteSecurityDefinition {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+message FindSecurityDefinitionBySecurityId {
+	optional string clientRequestId = 1;
+	optional string securityId = 2;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+}
+
+message FindSecurityDefinitionById {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+message FindAllSecurityDefinitions {
+	optional string clientRequestId = 1;
+}
+
+message UpdateOnMarketMerchantSecurityDefinitionRequest {
+}

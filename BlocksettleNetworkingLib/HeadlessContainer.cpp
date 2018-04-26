@@ -40,11 +40,13 @@ public:
       }
       if ((packet.type() != headless::AuthenticationRequestType)
          && (authTicket_.isNull() || (SecureBinaryData(packet.authticket()) != authTicket_))) {
-         if ((packet.type() == headless::DisconnectionRequestType) && packet.authticket().empty()) {
-            emit authFailed();
+         if (packet.type() == headless::DisconnectionRequestType) {
+            if (packet.authticket().empty()) {
+               emit authFailed();
+            }
             return;
          }
-         logger_->error("[HeadlessListener] auth ticket mismatch!");
+         logger_->error("[HeadlessListener] {} auth ticket mismatch!", packet.type());
          emit error();
          return;
       }

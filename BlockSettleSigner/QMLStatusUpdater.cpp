@@ -35,6 +35,12 @@ void QMLStatusUpdater::setSocketOk(bool val)
    }
 }
 
+void QMLStatusUpdater::clearConnections()
+{
+   connectedClients_.clear();
+   emit connectionsChanged();
+}
+
 void QMLStatusUpdater::deactivateAutoSign()
 {
    if (listener_) {

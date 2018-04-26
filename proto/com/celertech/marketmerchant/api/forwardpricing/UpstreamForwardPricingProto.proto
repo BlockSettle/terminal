@@ -1,0 +1,127 @@
+package com.celertech.marketmerchant.api.forwardpricing;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/types/TimeOfWeekProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+ 
+option java_package = "com.celertech.marketmerchant.api.forwardpricing";
+
+//not used
+/**
+ * 
+ * Price engine will rely on the risk curve configuration to choose market curves for pricing. 
+ * Preference is to rotate curves based on risk center schedule rather.
+ * 
+ */
+message CreateForwardPricingConfigurationRequest {
+	// correlation key
+    optional string clientRequestId = 1;
+    
+    // Mandatory. Part of composite primary key.
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+    
+    // Mandatory. Part of logical primary key.
+    optional string securityId = 3;
+        
+	// Mandatory. fk to MarketCurve.id
+    optional int64 primaryMarketCurveId = 4;
+
+	// fk to MarketCurve.id
+	// Used for interpolation and indicative pricing in the event primary curve pillars are stale
+    optional int64 fallbackMarketCurveId = 5;
+    
+    // Only a single curve can be active, for a given asset type and security.
+    // Curves will be dormant unless their associated risk centre is active*.
+    //
+    // * If there is only a single candidate curve for a risk center then
+    // it is will be consider active, subject to the schedule, if any.
+    // In the event of a tie a warning will be emitted and the curve with the largest id will be chosen.
+    optional int64 riskCentreId = 6;
+
+	// Start schedule
+	// Assumed to be always active if start and end times are the same (or both omitted).
+    optional com.celertech.marketmerchant.api.types.timeofweek.TimeOfWeek startTime = 7;
+
+	// Start schedule
+	// Assumed to be always active if start and end times are the same (or both omitted).
+    optional com.celertech.marketmerchant.api.types.timeofweek.TimeOfWeek endTime = 8;	    
+}
+
+//not used
+message UpdateForwardPricingConfigurationRequest {
+	// correlation key
+    optional string clientRequestId = 1;
+
+	// unique identifier
+    optional int64 id = 2;
+
+    // asset type
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 3;
+    
+    // security type
+    optional string securityId = 4;
+        
+	// fk to MarketCurve.id
+    optional int64 primaryMarketCurveId = 5;
+
+	// fk to MarketCurve.id
+	// used for interpolation and indicative pricing in the event primary curve pillars are stale
+    optional int64 fallbackMarketCurveId = 6;
+ 
+    // Only a single curve can be active, for a given asset type and security.
+    // Curves will be dormant unless their associated risk centre is active.
+    // Or there is a single curve, in which case the risk centre is ignored.
+    // In the event of a tie a warning will be emitted and the curve with the largest id will be chosen.
+    optional int64 riskCentreId = 7;
+    
+	// Start schedule
+    optional com.celertech.marketmerchant.api.types.timeofweek.TimeOfWeek startTime = 8;
+
+	// End schedule
+    optional com.celertech.marketmerchant.api.types.timeofweek.TimeOfWeek endTime = 9;
+}
+
+//not used
+message DeleteForwardPricingConfigurationRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;	
+}
+
+//not used
+message FindAllForwardPricingConfigurationsRequest {
+
+    optional string clientRequestId = 1;
+}
+
+//not used
+message ActiveForwardPricingSubscriptionRequest {
+
+    optional string clientRequestId = 1;
+}
+
+// Subscribe to indicative forward points.
+message UpdateOnMarketMerchantForwardPricingRequest {
+
+    optional string clientRequestId = 1;
+    optional string securityId = 2;
+    // subscribe to a set of predefined tenors, including specific dates in local date format, 'CCYY-MM-DD'. 
+	optional double sizeInBaseCcy = 4 [default = 0];
+	optional string tenor = 3;
+	optional string curveType = 5;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 6;
+}
+
+// Subscribe to indicative forward points.
+message FindMarketMerchantForwardPricingByAccountCodeRequest {
+
+    optional string clientRequestId = 1;
+    optional string securityId = 2;
+    // subscribe to a set of predefined tenors, including specific dates in local date format, 'CCYY-MM-DD'. 
+	optional string tenor = 3;
+	optional double sizeInBaseCcy = 4 [default = 0];
+	optional string accountCode = 5;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 6;
+	// this is the requestId will return in ForwardPricingDownstreamEvent
+    optional string requestId = 7;
+}

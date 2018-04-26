@@ -1,0 +1,19 @@
+package com.celertech.staticdata.api.date;
+
+option java_package = "com.celertech.staticdata.api.date";
+
+message HolidayDefinitionDownstreamEvent {
+
+	optional int64 id = 2;
+    optional string holidayCalendar = 3;
+    optional string name = 4;
+    optional string holidayDate = 5;
+
+	optional int64 createdTimestampUtcInMillis = 6;
+    optional int64 updatedTimestampUtcInMillis = 7;
+}
+
+message DeleteHolidayDefinitionConfirmation {
+
+	optional int64 id = 1;
+}

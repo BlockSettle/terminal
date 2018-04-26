@@ -1,0 +1,25 @@
+package com.celertech.marketmerchant.api.liquiditycontrol;
+
+import "com/celertech/marketmerchant/api/enums/PriceRoundingModeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/LiquidityControlFilterTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/DecayStrategyTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.liquiditycontrol";
+
+message LiquidityControlDownstreamEvent {
+	optional int64 id = 1;
+	optional string streamCode = 2;
+	optional string securityId = 3;
+	optional com.celertech.marketmerchant.api.enums.liquiditycontrolfiltertype.LiquidityControlFilterType liquidityControlFilterType = 4;
+	optional com.celertech.marketmerchant.api.enums.decaystrategytype.DecayStrategyType decayStrategyType = 5;
+	optional int32 decayTimeResolutionInMillis = 6;
+	optional double intervalValue = 7;
+	optional int32 interval = 8;
+	optional int64 createdTimestampUtcInMillis = 9;
+    optional int64 updatedTimestampUtcInMillis = 10;
+}
+
+message DeleteLiquidityControlConfirmation {
+	optional int64 id = 1;
+}

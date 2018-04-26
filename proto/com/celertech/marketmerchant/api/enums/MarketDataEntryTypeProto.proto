@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.marketdataentrytype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum MarketDataEntryType {
+
+	BID = 1;
+	OFFER = 2;
+	TRADE = 3;
+	OPEN = 4;
+	CLOSE = 5;
+	HIGH = 6;
+	LOW = 7;
+	TOTALTRADEDVOL = 8;
+	SETTLEMENT = 9;
+	VWAP = 10;
+	MID_PRICE = 11;
+	EMPTY_BOOK = 12;
+}

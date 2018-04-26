@@ -1,0 +1,102 @@
+import multiprocessing
+import os, sys, stat
+import shutil
+import subprocess
+
+from component_configurator import Configurator
+
+class MPIRSettings(Configurator):
+   def __init__(self, settings):
+      Configurator.__init__(self, settings)
+      self._version = '3.0.0'
+      self._package_name = 'mpir'
+
+      self._package_url = 'http://mpir.org/' + self._package_name + '-%s.zip' % self._version
+
+   def get_package_name(self):
+      return self._package_name
+
+   def get_unpacked_sources_dir(self):
+      return os.path.join(self._project_settings.get_sources_dir(), self._package_dir_name + '-' + self._version)
+
+   def get_url(self):
+      return self._package_url
+
+   def is_archive(self):
+      return True
+
+   def config_windows(self):
+      self.copy_sources_to_build()
+      return True
+
+   def get_solution_file(self):
+      return os.path.join( self.get_build_dir(), 'build.vc14', 'mpir.sln')
+
+   def config_x(self):
+      os.chmod(os.path.join(self.get_unpacked_sources_dir(), 'configure'), stat.S_IEXEC + stat.S_IREAD + stat.S_IXGRP + stat.S_IRGRP)
+      os.chmod(os.path.join(self.get_unpacked_sources_dir(), 'install-sh'), stat.S_IEXEC + stat.S_IREAD + stat.S_IXGRP + stat.S_IRGRP)
+      os.chmod(os.path.join(self.get_unpacked_sources_dir(), 'strip_fPIC.sh'), stat.S_IEXEC + stat.S_IREAD + stat.S_IXGRP + stat.S_IRGRP)
+      os.chmod(os.path.join(self.get_unpacked_sources_dir(), 'mpn', 'm4-ccas'), stat.S_IEXEC + stat.S_IREAD + stat.S_IXGRP + stat.S_IRGRP)
+
+      command = []
+      command.append(os.path.join(self.get_unpacked_sources_dir(), 'configure'))
+      command.append('--prefix')
+      command.append(self.get_install_dir())
+      command.append('--enable-gmpcompat')
+
+      result = subprocess.call(command)
+      return result == 0
+
+   def make_windows(self):
+      print('Making MPIR')
+      buildcfg = self.get_win_build_mode() + '|' + self.get_win_platform()
+
+      command = []
+      command.append('devenv')
+      command.append(self.get_solution_file())
+      command.append('/build')
+      command.append(buildcfg)
+      command.append('/project')
+      command.append('lib_mpir_core2')
+      print('Running ' + ' '.join(command))
+
+      result = subprocess.call(command)
+      return result == 0
+
+   def get_win_build_mode(self):
+      if self._project_settings.get_build_mode() == 'release':
+         return 'Release'
+      else:
+         return 'Debug'
+
+   def get_win_platform(self):
+      return 'x64'
+
+   def make_x(self):
+      command = []
+
+      command.append('make')
+      command.append('-j')
+      command.append( str(multiprocessing.cpu_count()) )
+
+      result = subprocess.call(command)
+      return result == 0
+
+   def install_win(self):
+      output_dir = os.path.join( self.get_build_dir(), 'lib', self.get_win_platform(), self.get_win_build_mode())
+      # copy libs
+      self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib' )
+
+      # copy headers
+      self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'include'), '.h')
+
+      return True
+
+   def install_x(self):
+      command = []
+
+      command.append('make')
+      command.append('install')
+
+      result = subprocess.call(command)
+      return result == 0

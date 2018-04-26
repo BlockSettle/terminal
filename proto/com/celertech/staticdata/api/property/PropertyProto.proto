@@ -1,0 +1,10 @@
+package com.celertech.staticdata.api.property;
+
+option java_package = "com.celertech.staticdata.api.property";
+
+//Property messages are typically used as composite fields to dynamically extend the core data model
+message Property {
+
+    optional string key = 1;
+    optional string value = 2;
+}

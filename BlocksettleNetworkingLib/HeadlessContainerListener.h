@@ -39,6 +39,8 @@ public:
 
    void SetLimits(const SignContainer::Limits &limits);
 
+   bool disconnect(const std::string &clientId = {});
+
 signals:
    void passwordRequired(const bs::wallet::TXSignRequest &, const QString &prompt);
    void clientAuthenticated(const std::string &clientId, const std::string &clientInfo);
@@ -68,7 +70,6 @@ private:
    using PasswordReceivedCb = std::function<void(const std::string &password)>;
    using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, std::string> &)>;
 
-   bool disconnect(const std::string &clientId = {});
    bool sendData(const std::string &data, const std::string &clientId = {});
    bool onRequestPacket(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSignTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet

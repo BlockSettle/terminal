@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.quotecanceltype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum QuoteCancelType {
+
+	CANCEL_FOR_ONE_OR_MORE_SECURITIES = 1;
+	CANCEL_FOR_SECURITY_TYPE = 2;
+	CANCEL_FOR_UNDERLYING_SECURITY = 3;
+	CANCEL_ALL_QUOTES = 4;
+	CANCEL_QUOTE_SPECIFIED_IN_QUOTEID = 5;
+	CANCEL_BY_QUOTE_TYPE = 6;
+	CANCEL_FOR_SECURITY_ISSUER = 7;
+	CANCEL_FOR_ISSUER_OF_UNDERLYING_SECURITY = 8;
+}

@@ -1,0 +1,10 @@
+package com.celertech.marketmerchant.api.order.staging;
+
+import "com/celertech/marketmerchant/api/enums/StagedOrderStatusProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.order.staging";
+
+message StagedOrderActionReject {
+	optional string orderId = 1;
+	optional string reason = 2;
+}

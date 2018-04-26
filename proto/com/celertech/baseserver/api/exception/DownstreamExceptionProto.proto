@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.exception;
+
+option java_package = "com.celertech.baseserver.api.exception";
+
+message PersistenceException {
+
+	optional string message = 1;
+
+}
+
+message RequestRejectedException {
+
+	optional string message = 1;
+}

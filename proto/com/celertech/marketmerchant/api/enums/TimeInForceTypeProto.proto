@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.timeinforcetype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum TimeInForceType {
+
+	DAY = 1;
+	GTD = 2;
+	GTC = 3;
+	FOK = 4;
+	OPG = 5;
+	IOC = 6;
+	GTX = 7;
+	ATC = 8;
+}

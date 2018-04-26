@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.marketdatarequestrejectreason;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum MarketDataRequestRejectReason {
+
+	UNKNOWN_SYMBOL = 1;
+	DUPLICATE_MD_REQ_ID = 2;
+	INSUFFICIENT_BANDWIDTH = 3;
+	INSUFFICIENT_PERMISSIONS = 4;
+	UNSUPPORTED_SUBSCRIPTION_REQUEST_TYPE = 5;
+	UNSUPPORTED_MARKET_DEPTH = 6;
+	UNSUPPORTED_MD_UPDATE_TYPE = 7;
+	UNSUPPORTED_AGGREGATED_BOOK = 8;
+	UNSUPPORTED_MD_ENTRY_TYPE = 9;
+	UNSUPPORTED_TRADING_SESSION_ID = 10;
+	UNSUPPORTED_SCOPE = 11;
+	UNSUPPORTED_OPEN_CLOSE_SETTLE_FLAG = 12;
+	UNSUPPORTED_MD_IMPLICIT_DELETE = 13;
+	INSUFFICIENT_CREDIT = 14;
+	HALTED = 15;
+}

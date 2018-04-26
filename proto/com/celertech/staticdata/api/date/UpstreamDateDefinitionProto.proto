@@ -1,0 +1,44 @@
+package com.celertech.staticdata.api.date;
+
+option java_package = "com.celertech.staticdata.api.date";
+
+message CreateHolidayDefinition {
+
+	optional string clientRequestId = 1;
+
+	optional string holidayCalendar = 2;
+	optional string name = 3;
+	optional string holidayDate = 4;
+	
+}
+
+message DeleteHolidayDefinition {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+}
+
+message FindAllHolidayDefinitionsByHolidayCalendar {
+
+	optional string clientRequestId = 1;
+	optional string holidayCalendar = 2;
+	optional string startDate = 3;
+
+}
+
+message UpdateHolidayDefinition {
+
+	optional string clientRequestId = 1;
+
+	optional int64 id = 2;
+    optional string holidayCalendar = 3;
+    optional string name = 4;
+    optional string holidayDate = 5;
+}
+
+message UpdateOnStaticDataHolidayDefinitionRequest {
+
+	optional string clientRequestId = 1;
+
+}

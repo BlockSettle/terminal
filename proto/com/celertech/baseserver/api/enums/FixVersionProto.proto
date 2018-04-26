@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.enums.fixversion;
+
+option java_package = "com.celertech.baseserver.api.enums";
+
+enum FixVersion {
+
+	FIX40 = 0;
+    FIX41 = 1;
+    FIX42 = 2;
+    FIX43 = 3;
+    FIX44 = 4;
+    FIX50 = 5;
+    FIXT11 = 6;
+
+}

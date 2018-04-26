@@ -1,0 +1,28 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.securitydefinition;
+
+import "com/celertech/marketmerchant/api/enums/PriceRoundingModeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.securitydefinition";
+
+message SecurityDefinitionDownstreamEvent {
+	optional int64 id = 1;
+	optional string securityId = 2;
+	optional com.celertech.marketmerchant.api.enums.priceroundingmode.PriceRoundingMode bidRoundingMode = 3;
+	optional com.celertech.marketmerchant.api.enums.priceroundingmode.PriceRoundingMode offerRoundingMode = 4;
+	optional int32 decimalPlaces = 5;
+	optional int32 pipDefinition = 6;
+	optional int32 inverseDecimalPlaces = 7;
+	optional int32 inversePipDefinition = 8;
+
+	optional int64 createdTimestampUtcInMillis = 9;
+   optional int64 updatedTimestampUtcInMillis = 10;
+   optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 11;
+   repeated string group = 12;
+}
+
+message DeleteSecurityDefinitionConfirmation {
+	optional int64 id = 1;
+}

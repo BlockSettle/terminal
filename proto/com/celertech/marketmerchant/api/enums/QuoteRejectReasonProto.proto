@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.quoterejectreason;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum QuoteRejectReason {
+
+	UNKNOWN_SYMBOL = 1;
+	EXCHANGE_CLOSED = 2;
+	QUOTE_REQUEST_EXCEEDS_LIMIT = 3;
+	TOO_LATE_TO_ENTER = 4;
+	UNKNOWN_QUOTE = 5;
+	DUPLICATE_QUOTE = 6;
+	INVALID_BID_ASK_SPREAD = 7;
+	INVALID_PRICE = 8;
+	NOT_AUTHORIZED_TO_QUOTE_SECURITY = 9;
+	OTHER = 99;
+	PRICE_EXCEEDS_CURRENT_PRICE_BAND = 10;
+	QUOTE_LOCKED_UNABLE_TO_UPDATE_CANCEL = 11;
+	INVALID_OR_UNKNOWN_SECURITY_ISSUER = 12;
+	INVALID_OR_UNKNOW_ISSUER_OF_UNDERLYING_SECURITY = 13;
+}

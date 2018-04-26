@@ -1,0 +1,29 @@
+package com.celertech.marketmerchant.api.types.timeofweek;
+
+option java_package = "com.celertech.marketmerchant.api.types";
+
+/* Representation of a simplified weekly schedule
+ * 
+ */ 
+message TimeZone {
+    // Logical timezone name
+	optional string timezone = 1;
+	
+	// ZoneInfo code
+	optional string zoneInfoTimezone = 2;
+}
+
+message TimeOfWeek {
+    // TODO Define bitmask for Sun..Sat
+    // Time of day
+    
+    // Days of week bitmask
+    // Sun = 0 .. Sat = 6
+	optional int32 weekdays = 1;
+	
+	// GMT offset in seconds
+	optional int32 gmtOffset = 2;
+	
+	// fk to TimeZone
+	optional string timezone = 3;
+}

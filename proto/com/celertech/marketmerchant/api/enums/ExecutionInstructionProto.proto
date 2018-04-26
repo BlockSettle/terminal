@@ -1,0 +1,18 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.executioninstruction;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+
+enum ExecutionInstruction {
+
+	INSTITUTIONS_ONLY = 1;
+	DO_NOT_REDUCE = 2;
+	PRIMARY_PEG = 3;
+	SUSPEND = 4;
+	FIXED_PEG = 5;
+	CUSTOMER_DISPLAY = 6;
+	MID_PRICE_PEG = 7;
+
+}

@@ -1,0 +1,32 @@
+package com.celertech.marketmerchant.api.ndf;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.ndf";
+
+message LiquiditySwapPointDownstreamEvent {
+
+	optional int64 id = 1;
+
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    optional string securityId = 4;
+    
+    optional string curveType = 5;
+    
+    optional string nearTenorCode = 6;
+	
+	optional string farTenorCode = 7;
+	
+	optional double swapPoints = 8;
+
+}
+
+message DeleteLiquiditySwapPointConfirmation {
+
+	optional int64 id = 1;
+}

@@ -100,13 +100,13 @@ signals:
 
 public slots:
    void onSelectionChanged(size_t nbSelected) {
-      if (!nbSelected || (nbSelected == MAXSIZE_T)) {
+      if (!nbSelected) {
          state_ = Qt::Unchecked;
       }
       else if (nbSelected < totalTxCount_) {
          state_ = Qt::PartiallyChecked;
       }
-      else if (nbSelected == totalTxCount_) {
+      else if ((nbSelected == totalTxCount_) || (nbSelected == MAXSIZE_T)) {
          state_ = Qt::Checked;
       }
       update();

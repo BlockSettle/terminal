@@ -1,0 +1,104 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.marketdata;
+
+import "com/celertech/marketmerchant/api/enums/MarketDataEntryTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataQuoteTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataTradingStatusTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataActionTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/MarketDataRequestRejectReasonProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.marketdata";
+
+message MarketDataFullSnapshotDownstreamEvent {
+
+    optional string marketDataRequestId = 1;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	optional string exchangeCode = 3;
+	optional string securityCode = 4;
+	optional string securityId = 5;
+	optional int32 marketDepth = 6;
+	optional double totalTradedVolume = 7;
+	optional int64 snapshotTimestampInMillis = 8;
+
+	repeated MarketDataPriceSnapshotLevel marketDataPriceSnapshotLevel = 9;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 11;
+    optional string maturityDate = 12;
+
+	message MarketDataPriceSnapshotLevel {
+		optional com.celertech.marketmerchant.api.enums.marketdataentrytype.MarketDataEntryType marketDataEntryType = 1;
+		optional string entryId = 2;
+		optional double entryPrice = 3;
+		optional double entrySize = 4;
+		optional int32 entryPosition = 5;
+		optional string quoteEntryId = 6;
+		optional string settlementType = 7;
+        optional string settlementDate = 8;
+		optional com.celertech.marketmerchant.api.enums.marketdataquotetype.MarketDataQuoteType marketDataQuoteType = 9;
+		optional string displayEntryPrice = 10;
+		optional double spotRate = 11;
+		optional double forwardPoints = 12;
+		optional string rateSource = 14;
+
+  	}
+
+}
+
+message MarketDataIncrementalDownstreamEvent {
+
+    optional string marketDataRequestId = 1;
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	optional string exchangeCode = 3;
+	optional string securityCode = 4;
+	optional string securityId = 5;
+	optional double totalTradedVolume = 6;
+	optional int64 snapshotTimestampInMillis = 7;
+
+	repeated MarketDataPriceSnapshotLevel marketDataPriceSnapshotLevel = 9;
+	repeated int64 checkpointTimestamp = 10;
+
+	message MarketDataPriceSnapshotLevel {
+		optional com.celertech.marketmerchant.api.enums.marketdataactiontype.MarketDataActionType marketDataActionType = 1;
+		optional com.celertech.marketmerchant.api.enums.marketdataentrytype.MarketDataEntryType marketDataEntryType = 2;
+		optional string entryId = 3;
+		optional double entryPrice = 4;
+		optional double entrySize = 5;
+		optional int32 entryPosition = 6;
+		optional string quoteEntryId = 7;
+		optional string settlementType = 8;
+        optional string settlementDate = 9;
+        optional com.celertech.marketmerchant.api.enums.marketdataquotetype.MarketDataQuoteType marketDataQuoteType = 10;
+  	}
+}
+
+message MarketMerchantSecurityStatusDownstreamEvent {
+
+	optional string exchangeCode = 1;
+	optional string securityCode = 2;
+	optional com.celertech.marketmerchant.api.enums.marketdatatradingstatustype.MarketDataTradingStatusType status = 3;
+	optional string updated = 4;
+}
+
+message MarketMerchantDestinationCommandDownstreamEvent {
+
+	optional Operation operation = 2;
+	optional string marketDataDestinationKey = 3;
+	optional string exchangeCode = 4;
+
+	enum Operation {
+    	START = 0;
+    	STOP = 1;
+    	EOD = 2;
+	}
+}
+
+message MarketDataRequestRejectDownstreamEvent {
+
+    optional string marketDataRequestId = 1;
+    optional com.celertech.marketmerchant.api.enums.marketdatarequestrejectreason.MarketDataRequestRejectReason marketDataRequestRejectReason = 2;
+    optional string text = 3;
+
+}
+

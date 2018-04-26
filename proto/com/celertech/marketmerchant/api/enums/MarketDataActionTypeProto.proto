@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.marketdataactiontype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum MarketDataActionType {
+
+	NEW = 1;
+	CHANGE = 2;
+	DELETED = 3;
+}

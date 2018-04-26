@@ -1,0 +1,27 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.marketstatistic;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.marketstatistic";
+
+message MarketStatisticSnapshotDownstreamEvent {
+
+	optional string marketStatisticRequestId = 1;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+	optional string securityId = 4;
+	optional string securityCode = 5;
+
+	optional MarketStatisticSnapshot snapshot = 6;
+
+	message MarketStatisticSnapshot {
+
+		optional double lastPx = 1;
+		optional double bestBidPx = 2;
+		optional double bestOfferPx = 3;
+		optional double dailyVolume = 4;
+	}
+}

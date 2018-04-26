@@ -1,0 +1,33 @@
+package com.celertech.piggybank.api.generalledger;
+
+option java_package = "com.celertech.piggybank.api.generalledger";
+
+import "com/celertech/piggybank/api/enums/AssetTypeProto.proto";
+import "com/celertech/piggybank/api/enums/ProductTypeProto.proto";
+import "com/celertech/piggybank/api/enums/SideProto.proto";
+
+// Creates an General Ledger Transaction
+message CreateGeneralLedgerTransaction {
+
+	optional int64 clientTransactionId = 1;
+	optional string account = 2;
+	optional com.celertech.piggybank.api.enums.assettype.AssetType assetType = 3;
+	optional com.celertech.piggybank.api.enums.producttype.ProductType productType = 4;
+	optional string securityId = 5;
+	optional double qty = 6;
+	optional double price = 7;
+	optional com.celertech.piggybank.api.enums.side.Side side = 8;
+    optional string currency = 9;
+    optional string tradeDate = 10;
+    optional string settlementDate = 11;
+    optional string username = 12;
+}
+
+message FindAllGeneralLedgersForUsernameAndTradeDate {
+	
+	optional string clientRequestId = 1;
+	
+	optional string username = 2;
+	optional string startTradeDate = 3;
+	optional string endTradeDate = 4;
+}

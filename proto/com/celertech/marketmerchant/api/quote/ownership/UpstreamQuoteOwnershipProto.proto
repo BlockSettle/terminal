@@ -1,0 +1,9 @@
+package com.celertech.marketmerchant.api.quote.ownership;
+
+option java_package = "com.celertech.marketmerchant.api.quote.ownership";
+
+message QuoteOwnershipRequest {
+	optional string quoteRequestId = 1;
+	optional string requestorSessionKey = 2;
+	optional string requestorSessionToken = 3;
+}

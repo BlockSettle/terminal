@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package com.celertech.piggybank.api.enums.assettype;
+
+option java_package = "com.celertech.piggybank.api.enums";
+
+enum AssetType {
+
+	EQUITY = 1;
+	FUTURE = 2;
+	OPTION = 3;
+	FX = 4;
+	FIXED_INCOME = 5;
+	CRYPTO = 6;
+}

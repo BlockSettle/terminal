@@ -1,0 +1,30 @@
+package com.celertech.staticdata.api.user.limit;
+
+import "com/celertech/staticdata/api/enums/AssetTypeProto.proto";
+
+option java_package = "com.celertech.staticdata.api.user.limit";
+
+message UserLimitDownstreamEvent {
+
+	optional string username = 1;
+	optional string exchangeCode = 3;
+	optional string securityCode = 5;
+	optional double maximumVolume = 6;
+	optional double positionLimit = 7;
+	optional bool enabled = 8;
+
+	optional int64 createdInMillis = 9;
+	optional int64 updatedInMillis = 10;
+    optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 11;
+    
+}
+
+
+message DeleteUserLimitNotification {
+
+	optional string username = 1;
+    optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 2;
+	optional string exchangeCode = 3;
+	optional string securityCode = 4;
+
+}

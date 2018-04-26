@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.marketdatatradingstatustype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum MarketDataTradingStatusType {
+
+	OPEN = 1;
+	HALT = 2;
+	RESUME = 3;
+	PREOPEN = 4;
+	CLOSE = 5;
+	UNKNOWN = 6;
+	FASTMARKET = 7;
+}

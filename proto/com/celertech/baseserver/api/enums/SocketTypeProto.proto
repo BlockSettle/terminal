@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.enums.sockettype;
+
+option java_package = "com.celertech.baseserver.api.enums";
+
+enum SocketType {
+
+	FIX = 0;
+	CELER = 1;
+   SWIFT = 2;
+}

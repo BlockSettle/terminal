@@ -1,0 +1,64 @@
+package com.celertech.marketmerchant.api.ndf;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.ndf";
+
+message PersistLiquiditySwapPoint {
+
+	optional string clientRequestId = 1;
+
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+	
+	optional string securityId = 4;
+	
+	optional string curveType = 5;
+	
+	optional string nearTenorCode = 6;
+	
+	optional string farTenorCode = 7;
+	
+	optional double swapPoints = 8;
+}
+
+message DeleteLiquiditySwapPoint {
+
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+
+}
+
+message FindAllLiquiditySwapPoints {
+
+	optional string clientRequestId = 1;
+
+}
+
+message FindAllLiquiditySwapPointsByForwardCurveKey {
+
+	optional string clientRequestId = 1;
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+	
+	optional string securityId = 4;
+	
+	optional string curveType = 5;
+
+}
+
+message FindLiquiditySwapPointById {
+
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+
+}
+
+message UpdateOnLiquiditySwapPoint {
+}

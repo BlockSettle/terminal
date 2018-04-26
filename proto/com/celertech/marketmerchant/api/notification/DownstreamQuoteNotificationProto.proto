@@ -1,0 +1,19 @@
+package com.celertech.marketmerchant.api.notification;
+
+option java_package = "com.celertech.marketmerchant.api.notification";
+
+message QuoteNotificationDownstreamEvent {
+
+    optional string sessionKey = 1;
+    optional string groupCode = 2;
+    optional int64 createdTimestampUtcInMillis = 3;
+
+}
+
+message DeleteQuoteNotificationConfirmation {
+
+    optional string sessionKey = 1;
+    optional string groupCode = 2;
+
+}
+

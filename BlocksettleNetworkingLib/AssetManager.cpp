@@ -198,6 +198,9 @@ void AssetManager::onMDUpdate(bs::network::Asset::Type at, const QString &securi
       return;
    }
    double lastPx = 0;
+   double bidPrice = 0;
+
+   double productPrice = 0;
    CurrencyPair cp(security.toStdString());
    std::string ccy;
 
@@ -212,17 +215,26 @@ void AssetManager::onMDUpdate(bs::network::Asset::Type at, const QString &securi
       return;
    }
 
+   if (ccy.empty()) {
+      return;
+   }
+
    for (const auto &field : fields) {
       if (field.type == bs::network::MDField::PriceLast) {
          lastPx = field.value;
+         break;
+      } else  if (field.type == bs::network::MDField::PriceBid) {
+         bidPrice = field.value;
       }
    }
 
-   if ((lastPx > 0) && !ccy.empty()) {
+   productPrice = (lastPx > 0) ? lastPx : bidPrice;
+
+   if (productPrice > 0) {
       if (ccy == cp.DenomCurrency()) {
-         lastPx = 1 / lastPx;
+         productPrice = 1 / productPrice;
       }
-      prices_[ccy] = lastPx;
+      prices_[ccy] = productPrice;
       emit priceChanged(ccy);
    }
 }

@@ -1,0 +1,29 @@
+syntax = "proto2";
+
+package com.celertech.staticdata.api.user.property;
+
+option java_package = "com.celertech.staticdata.api.user.property";
+
+message UserPropertyDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string username = 2;
+   optional string key = 3;
+   optional string value = 4;
+   optional string description = 5;
+	optional int64 createdTimestampUtcInMillis = 6;
+	optional int64 updatedTimestampUtcInMillis = 7;
+}
+
+
+message DeleteUserPropertyNotification {
+
+	optional int64 id = 1;
+	optional string username = 2;
+   optional string key = 3;
+   optional string value = 4;
+   optional string description = 5;
+   optional int64 createdTimestampUtcInMillis = 6;
+	optional int64 updatedTimestampUtcInMillis = 7;
+
+}

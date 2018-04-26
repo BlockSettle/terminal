@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.enums.apiencodingtype;
+
+option java_package = "com.celertech.baseserver.api.enums";
+
+enum ApiEncodingType {
+
+	BINARY = 0;
+    SPDY = 1;
+    HTTP = 2;
+}

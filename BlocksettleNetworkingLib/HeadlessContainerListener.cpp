@@ -44,6 +44,9 @@ bool HeadlessContainerListener::disconnect(const std::string &clientId)
    if (rc && !clientId.empty()) {
       OnClientDisconnected(clientId);
    }
+   if (clientId.empty()) {
+      authTicket_.clear();
+   }
    return rc;
 }
 
@@ -89,7 +92,12 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
 
    if ((packet.type() != headless::AuthenticationRequestType)
       && (authTicket_.isNull() || (SecureBinaryData(packet.authticket()) != authTicket_))) {
-      logger_->error("[HeadlessContainerListener] auth ticket mismatch!");
+      if (packet.authticket().empty() && authTicket_.isNull()) {
+         logger_->info("[HeadlessContainerListener] request {} ignored due to empty auth ticket", packet.type());
+      }
+      else {
+         logger_->error("[HeadlessContainerListener] auth ticket mismatch!");
+      }
       disconnect(clientId);
       return;
    }

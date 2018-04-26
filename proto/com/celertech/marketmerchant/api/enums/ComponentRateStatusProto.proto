@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.componentratestatus;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+/**
+ * Component rate states, in increasing order of good-ness.
+ */
+enum ComponentRateStatus {
+
+	ERROR = 1;
+	RFQ = 2;
+	FIRM = 3;
+}

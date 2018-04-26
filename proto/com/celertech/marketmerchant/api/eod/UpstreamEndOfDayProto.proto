@@ -1,0 +1,28 @@
+package com.celertech.marketmerchant.api.eod;
+
+option java_package = "com.celertech.marketmerchant.api.eod";
+
+message FindAllEndOfDaySchedulesRequest {
+	optional string clientRequestId = 1;
+}
+
+message CreateEndOfDayScheduleRequest {
+
+	optional string clientRequestId = 1;
+	optional string cronExpression = 2;
+	optional bool enabled = 3;
+}
+
+message UpdateEndOfDayScheduleRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+	optional string cronExpression = 3;
+	optional bool enabled = 4;
+}
+
+message DeleteEndOfDayScheduleRequest {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}

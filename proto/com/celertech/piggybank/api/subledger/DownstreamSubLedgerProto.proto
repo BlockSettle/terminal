@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package com.celertech.piggybank.api.subledger;
+
+option java_package = "com.celertech.piggybank.api.subledger";
+
+import "com/celertech/piggybank/api/enums/AssetTypeProto.proto";
+import "com/celertech/piggybank/api/enums/ProductTypeProto.proto";
+
+message SubLedgerSnapshotDownstreamEvent {
+
+   optional int64 generalLedgerTransactionId = 1;
+   optional string account = 2;
+   optional com.celertech.piggybank.api.enums.assettype.AssetType assetType = 3;
+   optional com.celertech.piggybank.api.enums.producttype.ProductType productType = 4;
+	optional string securityId = 5;
+	optional string currency = 6;
+	optional double netPosition = 7;
+
+	optional string notionalCurrency = 8;
+	optional double notionalNetPosition = 9;
+
+}

@@ -1,0 +1,24 @@
+package com.celertech.marketmerchant.api.tradeflowswitch;
+
+import "com/celertech/marketmerchant/api/enums/DayOfWeekProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.tradeflowswitch";
+
+
+message Rule {
+
+	optional com.celertech.marketmerchant.api.enums.dayofweek.DayOfWeek startDay = 1;
+	
+	//HH:mm:ss.SSS
+	optional string startTime = 2;
+	
+	optional com.celertech.marketmerchant.api.enums.dayofweek.DayOfWeek endDay = 3;
+	
+	//HH:mm:ss.SSS
+	optional string endTime = 4;
+	
+	optional string priceWorkflowCode = 5;
+    
+    optional string orderWorkflowCode = 6;
+    
+}

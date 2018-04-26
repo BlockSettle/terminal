@@ -1,0 +1,7 @@
+package com.celertech.marketmerchant.api.status;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/TradingSessionStatusProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.status";
+

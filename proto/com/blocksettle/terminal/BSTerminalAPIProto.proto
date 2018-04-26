@@ -1,0 +1,40 @@
+syntax = "proto2";
+
+package com.blocksettle.terminal.bsterminalapi;
+
+option java_package = "com.blocksettle.terminal.bsterminalapi";
+
+import "com/blocksettle/enums/AuthAddessProto.proto";
+
+// use this message when you connect to local terminal connection
+// this will initiate notifications stream from terminal
+// all notification event will be packed in ProtobufMessage
+//    SubscribeToTerminalResponse will be returned as response inside of ProtobufMessage
+message SubscribeToTerminalRequest
+{
+   // UserId - celer user property
+   required string UserId = 1;
+   optional string clientRequestId = 2;
+}
+
+message SubscribeToTerminalResponse
+{
+   required bool subscribed = 1;
+   optional string clientrequestid = 2;
+   optional string errorMessage = 3;
+}
+
+message VerifiedAddressListUpdateEvent
+{
+   required com.blocksettle.enums.authaddress.AuthAddressType type = 1;
+   repeated string address = 2;
+   optional string clientrequestid = 3;
+   // debugMessage - might be used for log output only ( in case there is error )
+   optional string debugMessage = 4;
+}
+
+message SessionEndedEvent
+{
+   optional string clientrequestid = 1;
+   optional string reason = 2;
+}

@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.cancelrejectresponseto;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum CancelRejectResponseTo {
+
+	ORDER_CANCEL_REQUEST = 1;
+	ORDER_CANCEL_REPLACE_REQUEST = 2;
+}

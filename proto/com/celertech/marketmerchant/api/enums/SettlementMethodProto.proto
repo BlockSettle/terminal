@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.settlementmethod;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum SettlementMethod {
+
+	CASH = 1;
+	PHYSICAL = 2;
+}

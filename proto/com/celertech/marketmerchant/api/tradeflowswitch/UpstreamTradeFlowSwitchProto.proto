@@ -1,0 +1,91 @@
+package com.celertech.marketmerchant.api.tradeflowswitch;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/tradeflowswitch/RuleProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.tradeflowswitch";
+
+message UpdateOnActiveTradeFlow {
+}
+
+message FindAllActiveTradeFlow {
+	optional string clientRequestId = 1;
+}
+
+message PersistTradeFlowOverride {
+
+	optional string clientRequestId = 1;
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    optional string securityId = 4;
+    
+    optional string priceWorkflowCode = 5;
+    
+    optional string orderWorkflowCode = 6;
+}
+
+message DeleteTradeFlowOverride {
+
+	optional string clientRequestId = 1;
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+
+	optional string securityId = 4;
+}
+
+message FindAllTradeFlowOverride {
+	
+	optional string clientRequestId = 1;
+	
+}
+
+message UpdateOnTradeFlowOverride {
+}
+
+message PersistTradeFlowConfiguration {
+
+	optional string clientRequestId = 1;
+
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    optional string securityId = 4;
+    
+	repeated com.celertech.marketmerchant.api.tradeflowswitch.Rule rules = 5;
+
+}
+
+message FindAllTradeFlowConfiguartion {
+
+
+
+	optional string clientRequestId = 1;
+
+}
+
+message FindTradeFlowConfigurationBySecurityId {
+
+	optional string clientRequestId = 1;
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+    
+    optional string securityId = 4;
+	
+}
+
+message UpdateOnTradeFlowConfigurartion {
+}
+

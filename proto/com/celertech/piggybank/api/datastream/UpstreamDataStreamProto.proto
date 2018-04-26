@@ -1,0 +1,10 @@
+package com.celertech.piggybank.api.datastream;
+
+option java_package = "com.celertech.piggybank.api.datastream";
+
+// Clients can register for updates on all ledger changes
+message UpdateOnTransactionCreationRequest {
+
+    optional string clientRequestId = 1;
+    
+}

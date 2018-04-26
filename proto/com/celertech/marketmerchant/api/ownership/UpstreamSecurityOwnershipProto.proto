@@ -1,0 +1,28 @@
+package com.celertech.marketmerchant.api.ownership;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/OwnershipTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.ownership";
+
+/**
+* Changing security ownership.
+* Claiming ownership, or reset ownership back to public.
+*/
+message PossessSecurityOwnershipRequest {
+	
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 1;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 2;
+	optional string securityId = 3;
+	optional com.celertech.marketmerchant.api.enums.ownershiptype.OwnershipType ownership = 4;
+	optional string curveType = 5;
+	
+}
+
+/**
+* subscribe for the ownership changes
+*/
+message UpdateOnSecurityOwnershipsRequest {
+	
+}

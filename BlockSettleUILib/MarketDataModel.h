@@ -36,7 +36,6 @@ private:
    void appendRow(const QToggleRow &);
 };
 
-
 class MarketDataModel : public QStandardItemModel
 {
 Q_OBJECT

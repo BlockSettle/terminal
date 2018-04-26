@@ -1,0 +1,489 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.order;
+
+import "com/celertech/marketmerchant/api/enums/AccountTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ExecutionInstructionProto.proto";
+import "com/celertech/marketmerchant/api/enums/HandlingInstructionProto.proto";
+import "com/celertech/marketmerchant/api/enums/OptionTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/OrderTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/SideProto.proto";
+import "com/celertech/marketmerchant/api/enums/StrategyTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/TimeInForceTypeProto.proto";
+
+import "com/celertech/marketmerchant/api/order/OrderMetadata.proto";
+
+option java_package = "com.celertech.marketmerchant.api.order";
+
+message CreateFutureOrderRequest {
+
+	optional string clientOrderId = 2;
+	optional string exchangeIdSource = 3;
+	//optional string exchange = 4;
+	optional string securityIdSource = 5;
+	optional string securityCode = 6;
+	optional string securityId = 7;
+	optional string expiry = 8;
+	optional com.celertech.marketmerchant.api.enums.accounttype.AccountType accountType = 9;
+	optional string account = 10;
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 11;
+	optional double qty = 12;
+	optional double price = 13;
+	optional com.celertech.marketmerchant.api.enums.ordertype.OrderType orderType = 14;
+	optional com.celertech.marketmerchant.api.enums.timeinforcetype.TimeInForceType timeInForce = 15;
+	optional string timeInForceExpiry = 16;
+	optional string orderText = 17;
+	optional string giveIn = 18;
+	optional string giveUp = 19;
+	optional com.celertech.marketmerchant.api.enums.strategytype.StrategyType strategyType = 20;
+
+	repeated CreateFutureStrategyLegOrder leg = 21;
+	optional com.celertech.marketmerchant.api.enums.handlinginstruction.HandlingInstruction handlingInstruction = 22;
+	optional string onBehalfOfCompId = 23;
+	optional string deliverToCompId = 24;
+    optional string currency = 25;
+    //optional double minQty = 26;
+    //optional double maxFloor = 27;
+    optional string quoteId = 28;
+
+}
+
+message CreateFutureStrategyLegOrder {
+
+	optional string underlyingCode = 1;
+	optional string underlyingSecurityId = 2;
+	optional string underlyingExpiry = 3;
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 4;
+	optional int32 ratioQty = 5;
+
+}
+
+message CreateOptionOrderRequest {
+
+	optional string clientRequestId = 1;
+	optional string clientOrderId = 2;
+	optional string exchangeIdSource = 3;
+	//optional string exchange = 4;
+	optional string securityIdSource = 5;
+	optional string securityCode = 6;
+	optional string securityId = 7;
+	optional string expiry = 8;
+	optional com.celertech.marketmerchant.api.enums.optiontype.OptionType optionType = 9;
+	optional double strike = 10;
+	optional string account = 11;
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 12;
+	optional double qty = 13;
+	optional double price = 14;
+	optional com.celertech.marketmerchant.api.enums.ordertype.OrderType orderType = 15;
+	optional com.celertech.marketmerchant.api.enums.timeinforcetype.TimeInForceType timeInForce = 16;
+	optional string timeInForceExpiry = 17;
+	optional string orderText = 18;
+	optional com.celertech.marketmerchant.api.enums.accounttype.AccountType accountType = 19;
+	optional string giveIn = 20;
+	optional string giveUp = 21;
+    optional com.celertech.marketmerchant.api.enums.handlinginstruction.HandlingInstruction handlingInstruction = 22;
+    optional string onBehalfOfCompId = 23;
+    optional string deliverToCompId = 24;
+    optional string currency = 25;
+    //optional double minQty = 26;
+    //optional double maxFloor = 27;
+    optional string quoteId = 28;
+
+}
+
+message CreateFxOrderRequest {
+
+	optional string clientRequestId = 1;
+
+	//Unique identifier for orders. Uniqueness must be guaranteed within a single trading day
+	optional string clOrderId = 2;
+
+	//optional string exchangeCode = 3;
+
+	//Top level security identifier (Example: E-Mini S&P 500 contract ESH6, ES is the securityCode)
+	//For FX the ISO standard security code
+	optional string securityCode = 4;
+
+	//Security identifier
+	optional string securityId = 5;
+
+	//Account type associated with the account:
+	//CLIENT external client account
+	//HOUSE internal account
+	optional com.celertech.marketmerchant.api.enums.accounttype.AccountType accountType = 6;
+
+	//Account associated with the quote request
+	optional string account = 7;
+
+	//Side of order; valid values are BUY, SELL
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 8;
+
+	//Number of shares ordered
+	optional double qty = 9;
+
+	//Price per share
+	optional double price = 10;
+
+	//Identifies currency used for price
+	optional string currency = 11;
+
+	//Order type
+	//Valid value:
+	//PREVIOUSLY_QUOTED previously quoted
+	optional com.celertech.marketmerchant.api.enums.ordertype.OrderType orderType = 12;
+
+	//Free format text
+	optional string orderText = 13;
+
+    //optional double minQty = 14;
+
+    //optional double maxFloor = 15;
+
+    //Unique identifier for quote
+    optional string quoteId = 16;
+
+    //Specifies how long the order remains in effect
+    //Valid value:
+    //FOK fill or kill
+    optional com.celertech.marketmerchant.api.enums.timeinforcetype.TimeInForceType timeInForce = 17;
+
+    //Time in force expiry date
+    //Format: yyyy-MM-dd
+    //not in use
+	optional string timeInForceExpiry = 18;
+
+	//Handling instructions for order request;
+	//AUTOMATED_NO_BROKER quotes will not be manually priced
+	//AUTOMATED_BROKER_OK quotes can be manually priced
+	//MANUAL not in use
+    optional com.celertech.marketmerchant.api.enums.handlinginstruction.HandlingInstruction handlingInstruction = 19;
+
+    //Assigned value used to identify firm originating message if the message was delivered by a third party
+    optional string onBehalfOfCompId = 20;
+
+    //Assigned value used to identify the firm targeted to receive the message if the message is delivered by a third party
+    optional string deliverToCompId = 21;
+
+    //Specific date if trade settlement (SettlementDate)
+    //Format: yyyy-MM-dd
+	optional string settlementDate = 22;
+
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 23;
+
+
+    //For productType of SPOT or FORWARD, the size of leg is 1
+    //For productType of SWAP, the size of leg is 2
+    repeated CreateFxStrategyLegOrder leg = 24;
+
+    //For productType of SPOT or FORWARD, settlementType is tenorCode, ie 1W
+    //For productType of SWAP, the format of settlementType is near leg tenor - far leg tenor. ie 1W-2W
+    optional string settlementType = 25;
+
+    //Execution destination as defined by institution when order is entered
+    optional string exDestination = 26;
+
+    repeated KeyValue orderMetadata = 27;
+
+    optional string trader = 28;
+
+    optional string rateSource = 29;
+
+    //for quantity vs. quantity trade e.g. Peer FX SPOT
+    optional double contraQty = 30;
+}
+
+message CreateBitcoinOrderRequest {
+
+	optional string clientRequestId = 1;
+	//Unique identifier for orders. Uniqueness must be guaranteed within a single trading day
+	optional string clOrderId = 2;
+	//optional string exchangeCode = 3;
+	//Top level security identifier (Example: E-Mini S&P 500 contract ESH6, ES is the securityCode)
+	//For FX the ISO standard security code
+	optional string securityCode = 4;
+	//Security identifier
+	optional string securityId = 5;
+	//Account type associated with the account:
+	//CLIENT external client account
+	//HOUSE internal account
+	optional com.celertech.marketmerchant.api.enums.accounttype.AccountType accountType = 6;
+	//Account associated with the quote request
+	optional string account = 7;
+	//Side of order; valid values are BUY, SELL
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 8;
+	//Number of shares ordered
+	optional double qty = 9;
+	//Price per share
+	optional double price = 10;
+	//Identifies currency used for price
+	optional string currency = 11;
+	//Order type
+	//Valid value:
+	//PREVIOUSLY_QUOTED previously quoted
+	optional com.celertech.marketmerchant.api.enums.ordertype.OrderType orderType = 12;
+	//Free format text
+	optional string orderText = 13;
+    //optional double minQty = 14;
+    //optional double maxFloor = 15;
+    //Unique identifier for quote
+    optional string quoteId = 16;
+    //Specifies how long the order remains in effect
+    //Valid value:
+    //FOK fill or kill
+    optional com.celertech.marketmerchant.api.enums.timeinforcetype.TimeInForceType timeInForce = 17;
+    //Time in force expiry date
+    //Format: yyyy-MM-dd
+    //not in use
+	optional string timeInForceExpiry = 18;
+	//Handling instructions for order request;
+	//AUTOMATED_NO_BROKER quotes will not be manually priced
+	//AUTOMATED_BROKER_OK quotes can be manually priced
+	//MANUAL not in use
+    optional com.celertech.marketmerchant.api.enums.handlinginstruction.HandlingInstruction handlingInstruction = 19;
+    //Assigned value used to identify firm originating message if the message was delivered by a third party
+    optional string onBehalfOfCompId = 20;
+    //Assigned value used to identify the firm targeted to receive the message if the message is delivered by a third party
+    optional string deliverToCompId = 21;
+	//Product type associated with the order; valid values are SPOT, FORWARD, SWAP
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 23;
+
+    //Execution destination as defined by institution when order is entered
+    optional string exDestination = 24;
+    repeated KeyValue orderMetadata = 25;
+    optional string trader = 26;
+
+    // represents a on-chain transaction by requestor; specific to bitcoin
+    optional bytes requestorTransaction = 27;
+
+    // specific to bitcoin private share; only required if side = BUY
+    optional bytes requestorCoinTransactionInput = 28;
+}
+
+
+message CreateFxStrategyLegOrder {
+
+	//Top level security identifier (Example: E-Mini S&P 500 contract ESH6, ES is the securityCode)
+	//For FX the ISO standard security code
+	optional string underlyingCode = 1;
+
+	//Security identifier
+	optional string underlyingSecurityId = 2;
+
+	//Leg SettlementDate
+	optional string legValueDate = 3;
+
+	optional string settlementType = 9;
+
+	//Side of order; valid values are BUY, SELL
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 4;
+
+	//Order qty
+	optional double qty = 5;
+
+	//Order price
+	optional double price = 6;
+
+	//Leg Forward Point. May be a negative value
+	optional double legForwardPts = 7;
+
+	//Leg spot rate
+	optional double legSpotPrice = 8;
+
+    //Maturity of the quote; used for quote requests related to FIXED_INCOME
+    //Fixing date for NON_DELIVERABLE_FORWARD
+	optional string maturityDate = 10;
+
+	//for quantity vs. quantity trade e.g. Peer FX SPOT
+	optional double contraQty = 11;
+}
+
+message CreateFixedIncomeOrderRequest {
+
+	optional string clientRequestId = 1;
+
+	//Unique identifier for order. Uniqueness must be guaranteed within a single trading day
+	optional string clOrderId = 2;
+
+	//optional string exchangeCode = 3;
+
+	//Top level security identifier (Example: E-Mini S&P 500 contract ESH6, ES is the securityCode)
+	//For FX the ISO standard security code
+	optional string securityCode = 4;
+
+	//Security identifier
+	optional string securityId = 5;
+
+	//Account type associated with the account:
+	//CLIENT external client account
+	//HOUSE internal account
+	optional com.celertech.marketmerchant.api.enums.accounttype.AccountType accountType = 6;
+
+	//Account associated with the quote request
+	optional string account = 7;
+
+	//Side of order; valid values are BUY, SELL
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 8;
+
+	//Order qty
+	optional double qty = 9;
+
+	//Order price
+	optional double price = 10;
+
+	//Identifies currency used for price
+	optional string currency = 11;
+
+	//Order type
+	//Valid value:
+	//PREVIOUSLY_QUOTED previously quoted
+	optional com.celertech.marketmerchant.api.enums.ordertype.OrderType orderType = 12;
+
+	//Free format text
+	optional string orderText = 13;
+
+    //optional double minQty = 14;
+    //optional double maxFloor = 15;
+
+    //Unique identifier for quote
+    optional string quoteId = 16;
+
+    //Specifies how long the order remains in effect
+    //Valid value:
+    //FOK fill or kill
+	optional com.celertech.marketmerchant.api.enums.timeinforcetype.TimeInForceType timeInForce = 17;
+
+	//Time in force expiry date
+    //Format: yyyy-MM-dd
+    //not in use
+	optional string timeInForceExpiry = 18;
+
+	//Handling instructions for quote request;
+	//AUTOMATED_NO_BROKER quotes will not be manually priced
+	//AUTOMATED_BROKER_OK quotes can be manually priced
+	//MANUAL not in use
+    optional com.celertech.marketmerchant.api.enums.handlinginstruction.HandlingInstruction handlingInstruction = 19;
+
+    //Assigned value used to identify firm originating message if the message was delivered by a third party
+    optional string onBehalfOfCompId = 20;
+
+    //Assigned value used to identify the firm targeted to receive the message if the message is delivered by a third party
+    optional string deliverToCompId = 21;
+
+    //Specific date if trade settlement (SettlementDate)
+    //Format: yyyy-MM-dd
+    optional string settlementDate = 22;
+
+    //Date of maturity
+    //Format: yyyy-MM-dd
+    //should be the same as settlementDate
+	optional string maturityDate = 23;
+
+	//ProductType
+	//MONEY_MARKET money market
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 24;
+
+    repeated KeyValue orderMetadata = 25;
+
+    optional string trader = 26;
+
+	//FIX tag 63
+    optional string settlementType = 27;
+
+}
+
+message CreateEquityOrderRequest {
+
+	optional string clientOrderId = 2;
+	optional string exchangeIdSource = 3;
+	//optional string exchange = 4;
+	optional string securityIdSource = 5;
+	optional string securityCode = 6;
+	optional string securityId = 7;
+	optional com.celertech.marketmerchant.api.enums.accounttype.AccountType accountType = 9;
+	optional string account = 10;
+	optional com.celertech.marketmerchant.api.enums.side.Side side = 11;
+	optional double qty = 12;
+	optional double price = 13;
+	optional string currency = 14;
+	optional com.celertech.marketmerchant.api.enums.ordertype.OrderType orderType = 15;
+	optional com.celertech.marketmerchant.api.enums.timeinforcetype.TimeInForceType timeInForce = 16;
+	optional string timeInForceExpiry = 17;
+	optional string orderText = 18;
+	optional string giveIn = 19;
+	optional string giveUp = 20;
+    optional com.celertech.marketmerchant.api.enums.handlinginstruction.HandlingInstruction handlingInstruction = 21;
+    optional string onBehalfOfCompId = 22;
+    optional string deliverToCompId = 23;
+    //optional double minQty = 24;
+    //optional double maxFloor = 26;
+    optional com.celertech.marketmerchant.api.enums.executioninstruction.ExecutionInstruction executionInstruction = 27;
+    optional string quoteId = 28;
+
+}
+
+message CancelOrderRequest {
+
+	optional int64 orderId = 2;
+	optional string clOrdId = 3;
+	optional string origClOrdId = 4;
+    optional string onBehalfOfCompId = 5;
+    optional string deliverToCompId = 6;
+}
+
+message AmendOrderRequest {
+
+	optional int64 orderId = 2;
+	optional string clOrdId = 3;
+	optional string origClOrdId = 4;
+	optional string account = 5;
+	optional double qty = 6;
+	optional double price = 7;
+	optional string orderText = 8;
+	optional string giveIn = 9;
+	optional string giveUp = 10;
+	optional string onBehalfOfCompId = 11;
+    optional string deliverToCompId = 12;
+}
+
+
+message FindAllAssignedOrderSnapshots {
+
+    optional string clientRequestId = 1;
+}
+
+message FindAllOrderSnapshotsBySessionKey {
+
+	optional string clientRequestId = 1;
+}
+
+message FindAllOrderSnapshotsByClientOrderId {
+
+    optional string clientRequestId = 1;
+
+    //Unique identifier for Order as assigned by institution. Uniqueness must be guaranteed within a single trading day
+    optional string clOrderId = 2;
+}
+
+message FindAllOrderSnapshotsByOrderId {
+
+    optional string clientRequestId = 1;
+
+    //Unique identifier for Order as assigned by sell-side (broker, exchange, ECN). Uniqueness must be guaranteed within a single trading day
+    optional int64 orderId = 2;
+}
+
+
+message MarketMerchantDestinationCommand {
+
+	optional string clientRequestId = 1;
+	optional string marketMerchantDestinationKey = 3;
+	optional Operation operation = 2;
+
+	enum Operation {
+    	START = 0;
+    	STOP = 1;
+    	EOD = 2;
+	}
+}

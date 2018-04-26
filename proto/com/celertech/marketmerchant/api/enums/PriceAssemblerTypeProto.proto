@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.priceassemblertype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum PriceAssemblerType {
+	TIER = 1;
+	PANIC = 2;
+	DYNAMIC = 3;
+}

@@ -1,0 +1,58 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.session;
+
+import "com/celertech/baseserver/api/enums/FixMapperTypeProto.proto";
+import "com/celertech/baseserver/api/enums/FixMessageStorageProto.proto";
+import "com/celertech/baseserver/api/session/SessionWindowProto.proto";
+
+option java_package = "com.celertech.baseserver.api.session";
+
+message ApiSessionDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 socketConfigurationId = 2;
+	optional string sessionKey = 3;
+	optional bool enabled = 4;
+	repeated SessionWindow sessions = 5;
+
+}
+
+message FixSessionDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 socketConfigurationId = 2;
+	optional string sessionKey = 3;
+	optional string senderCompId = 4;
+	optional string targetCompId = 5;
+	optional int32 heartbeatInterval = 6;
+	optional string startSchedule = 7;
+	optional string stopSchedule = 8;
+	optional string eodSchedule = 9;
+    optional com.celertech.baseserver.api.enums.fixmappertype.FixMapperType fixMapperType = 10;
+    optional string fixMapperName = 11;
+    optional string dataDictionaryFilePath = 12;
+    optional com.celertech.baseserver.api.enums.fixmessagestorage.FixMessageStorage fixMessageStorage = 13;
+    optional bool sslEnabled = 14;
+	optional bool resetSequenceOnLogon = 15;
+    optional bool enabled = 16;
+    repeated SessionWindow sessions = 17;
+
+}
+
+message SwiftSessionDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 socketConfigurationId = 2;
+	optional string sessionKey = 3;
+	optional bool enabled = 4;
+	repeated SessionWindow sessions = 5;
+
+}
+
+
+message DeleteSessionConfirmation {
+
+	optional int64 id = 1;
+	optional int64 socketConfigurationId = 2;
+}

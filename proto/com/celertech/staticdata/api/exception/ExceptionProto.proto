@@ -1,0 +1,8 @@
+package com.celertech.staticdata.api.exception;
+
+option java_package = "com.celertech.staticdata.api.exception";
+
+message StaticDataException {
+
+	optional string text = 1;
+}

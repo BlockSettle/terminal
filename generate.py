@@ -1,0 +1,121 @@
+import os
+import platform
+import shutil
+import subprocess
+import sys
+
+from build.settings               import Settings
+from build.protobuf_settings      import ProtobufSettings
+from build.gtest_settings         import GtestSettings
+from build.jom_settings           import JomSettings
+from build.qt_settings            import QtSettings
+from build.cryptopp_settings      import CryptoppSettings
+from build.spdlog_settings        import SpdlogSettings
+from build.zeromq_settings        import ZeroMQSettings
+from build.libqrencode_settings   import LibQREncode
+from build.mpir_settings          import MPIRSettings
+from build.libbtc_settings        import LibBTC
+
+def generate_project(build_mode, build_server, build_test_tools):
+   project_settings = Settings(build_mode)
+   if build_server:
+      project_settings.set_server_build_settings()
+
+   print('Checking 3rd party components')
+   print('Build mode        : ' + project_settings.get_build_mode())
+   print('CMake generator   : ' + project_settings.get_cmake_generator())
+   print('Download path     : ' + project_settings.get_downloads_dir())
+   print('Install dir       : ' + project_settings.get_common_build_dir())
+   print('Build test tools : ' + str(build_test_tools))
+
+   required_3rdparty = []
+   if project_settings._is_windows:
+      required_3rdparty.append(JomSettings(project_settings))
+
+   required_3rdparty += [
+      ProtobufSettings(project_settings),
+      QtSettings(project_settings),
+      CryptoppSettings(project_settings),
+      SpdlogSettings(project_settings),
+      ZeroMQSettings(project_settings),
+      LibQREncode(project_settings),
+      MPIRSettings(project_settings),
+      LibBTC(project_settings)
+      ]
+
+   if build_test_tools:
+      required_3rdparty.append(GtestSettings(project_settings))
+
+   for component in required_3rdparty:
+      if not component.config_component():
+         print('FAILED to build ' + component.get_package_name() + '. Cancel project generation')
+         return 1
+
+   print('3rd party components ready')
+   print('Start generating project')
+   os.chdir(project_settings.get_project_root())
+
+   generated_dir = os.path.join(os.getcwd(), 'generated_proto')
+   build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode)
+
+   if os.path.isfile(generated_dir):
+      os.remove(generated_dir)
+   elif os.path.isdir(generated_dir):
+      shutil.rmtree(generated_dir)
+
+   if os.path.isfile(build_dir):
+      os.remove(build_dir)
+   elif os.path.isdir(build_dir):
+      shutil.rmtree(build_dir)
+
+   os.makedirs(build_dir)
+   os.chdir(build_dir)
+
+   command = []
+
+   command.append('cmake')
+   command.append('../build')
+   command.append('-G')
+   command.append( project_settings.get_cmake_generator())
+   command.append('-DCMAKE_CURRENT_SOURCE_DIR=..')
+   if build_mode == 'debug':
+      command.append('-DCMAKE_BUILD_TYPE=Debug')
+      if project_settings._is_windows:
+         command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+         command.append('-DCMAKE_CONFIGURATION_TYPES=Debug')
+   else:
+      command.append('-DCMAKE_BUILD_TYPE=Release')
+      if project_settings._is_windows:
+         command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /DNDEBUG')
+         command.append('-DCMAKE_CONFIGURATION_TYPES=Release')
+
+   if build_test_tools:
+      command.append('-DBUILD_TEST_TOOLS=1')
+
+   # to remove cmake 3.10 dev warnings
+   command.append('-Wno-dev')
+
+   result = subprocess.call(command)
+   if result == 0:
+      print('Project generated to :' + build_dir)
+      return 0
+   else:
+      print('Cmake failed')
+      return 1
+
+if __name__ == '__main__':
+   build_mode = 'release'
+   build_test_tools = False
+
+   if len(sys.argv) != 1:
+      low_args = [ a.lower() for a in sys.argv[1:] ]
+      for a in low_args:
+         if a == 'test':
+            build_test_tools = True
+         elif a == 'release' or a == 'debug':
+            build_mode = a
+         else:
+            print('Undefined parameter: ', a)
+            sys.exit(1)
+
+   sys.exit(generate_project(build_mode, False, build_test_tools))

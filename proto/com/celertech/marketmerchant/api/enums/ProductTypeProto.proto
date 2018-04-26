@@ -1,0 +1,18 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.producttype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum ProductType {
+
+	SPOT = 1;
+	FORWARD = 2;
+	SWAP = 3;
+	DUAL_CURRENCY_DEPOSIT = 4;
+	MONEY_MARKET = 5;
+	NON_DELIVERABLE_FORWARD = 6;
+	BITCOIN = 7;						// Valid for AssetType=CRYPTO only
+	NON_DELIVERABLE_SWAP = 8;
+	PRIVATE_SHARE = 9;				// Valid for AssetType=CRYPTO only
+}

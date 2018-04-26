@@ -1,0 +1,50 @@
+package com.celertech.staticdata.api.date;
+
+import "com/celertech/staticdata/api/enums/ValueDateStatusProto.proto";
+
+option java_package = "com.celertech.staticdata.api.date";
+
+message ValueDateDownstreamEvent {
+
+	//The unique requestId that was sent on the subscription
+    optional string requestId = 1;
+
+	//The tenorCode that the original request was made for
+	optional string tenorCode = 2;
+    
+    //The horizonDate that is used to generate the ValueDateDownstreamEvent from
+    optional string horizonDate = 3;
+    
+    //The base currencyCode. e.g. EUR in EUR/USD
+    optional string baseCurrencyCode = 4;
+    
+    //The term currencyCode. e.g. USD in EUR/USD
+    optional string termCurrencyCode = 5;
+    
+    //The split currencyCode. e.g. if EUR/JPY is split by USD, then the split currencyCode is USD
+    optional string splitCurrencyCode = 6;
+    
+    //The start value date.  This is the near leg date for any forward based valueDate requests
+    optional string nearLegValueDate = 7;
+    
+    //The resolved value date.  This is the far leg date for any forward based valueDate requests
+    optional string farLegValueDate = 8;
+    
+    //For split settlement where the currency has non mutual value dates.  Holds the base currencyCode's resolved valueDate
+	optional string farLegBaseValueDate = 9;
+	
+	//For split settlement where the currency has non mutual value dates.  Holds the term currencyCode's resolved valueDate
+    optional string farLegTermValueDate = 10;
+    
+    //The valueDateStatus of this event.  Valid values:
+    //WORK_DAY - If the event's valueDate falls on a valid business day
+    //REST_DAY - If the event's valueDate falls either a weekend or holiday
+    //CLOSED - If the event's valueDate is CLOSED, i.e. if the resolved value date is in the past and has elapsed, or if the resolved valueDate has cutoffs in play
+    optional com.celertech.staticdata.api.enums.valuedatestatus.ValueDateStatus valueDateStatus = 11;
+    
+    //An informational message if given 
+	optional string message = 12;
+
+	//The time that this event was generated
+	optional int64 createdTimestampUtcInMillis = 13;
+}

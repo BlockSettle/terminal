@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.quoteresponsetype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum QuoteResponseType {
+
+	HIT_LIFT = 1;
+	COUNTER = 2;
+	EXPIRED = 3;
+	COVER = 4;
+	DONE_AWAY = 5;
+	PASS = 6;
+	END_TRADE = 7;
+	TIMED_OUT = 8;
+}

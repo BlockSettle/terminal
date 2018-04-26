@@ -789,7 +789,7 @@ void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& chang
 void CreateTransactionDialogAdvanced::SetPredefinedFee(const int64_t& manualFee)
 {
    ui_->comboBoxFeeSuggestions->clear();
-   ui_->comboBoxFeeSuggestions->addItem(tr("%1 satoshi").arg(manualFee), manualFee);
+   ui_->comboBoxFeeSuggestions->addItem(tr("%1 satoshi").arg(manualFee), (qlonglong)manualFee);
    transactionData_->SetTotalFee(manualFee);
 }
 

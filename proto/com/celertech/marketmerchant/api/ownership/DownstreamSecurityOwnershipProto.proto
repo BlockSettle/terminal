@@ -1,0 +1,18 @@
+package com.celertech.marketmerchant.api.ownership;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/OwnershipTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.ownership";
+
+message SecurityOwnershipDownstreamEvent {
+	
+	optional string sessionKey = 1;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+	optional string securityId = 4;
+	optional com.celertech.marketmerchant.api.enums.ownershiptype.OwnershipType ownership = 5;
+	optional string username = 6;
+	optional string curveType = 7;
+}

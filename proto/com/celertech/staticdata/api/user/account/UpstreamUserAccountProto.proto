@@ -1,0 +1,41 @@
+syntax = "proto2";
+
+package com.celertech.staticdata.api.user.account;
+
+option java_package = "com.celertech.staticdata.api.user.account";
+
+message CreateUserAccount {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+	optional int64 accountId = 3;
+	optional string accountCode = 4;
+}
+
+message DeleteUserAccount {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+	optional string accountCode = 3;
+}
+
+message FindAssignedUserAccounts {
+
+	optional string clientRequestId = 1;
+
+}
+
+message FindUserAccountsByUsername {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+}
+
+message UpdateOnStaticDataUserAccountRequest {
+
+	optional string clientRequestId = 1;
+
+}

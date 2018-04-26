@@ -1,0 +1,16 @@
+package com.celertech.marketmerchant.api.status;
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/TradingSessionStatusProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.status";
+
+message TradingSessionStatusDownstreamEvent {
+
+	optional string securityId = 1;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+	optional com.celertech.marketmerchant.api.enums.tradingsessionstatus.TradingSessionStatus tradingSessionStatus = 3;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 4;
+}
+

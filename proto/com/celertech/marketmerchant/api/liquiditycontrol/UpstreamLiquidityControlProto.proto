@@ -1,0 +1,56 @@
+package com.celertech.marketmerchant.api.liquiditycontrol;
+
+import "com/celertech/marketmerchant/api/enums/PriceRoundingModeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/LiquidityControlFilterTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/DecayStrategyTypeProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.liquiditycontrol";
+
+message CreateLiquidityControl {
+	optional string clientRequestId = 1;
+	optional string streamCode = 2;
+	optional string securityId = 3;
+	optional com.celertech.marketmerchant.api.enums.liquiditycontrolfiltertype.LiquidityControlFilterType liquidityControlFilterType = 4;
+	optional com.celertech.marketmerchant.api.enums.decaystrategytype.DecayStrategyType decayStrategyType = 5;
+	optional int32 decayTimeResolutionInMillis = 6;
+	optional double intervalValue = 7;
+	optional int32 interval = 8;
+}
+
+message UpdateLiquidityControl {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+	optional string streamCode = 3;
+	optional string securityId = 4;
+	optional com.celertech.marketmerchant.api.enums.liquiditycontrolfiltertype.LiquidityControlFilterType liquidityControlFilterType = 5;
+	optional com.celertech.marketmerchant.api.enums.decaystrategytype.DecayStrategyType decayStrategyType = 6;
+	optional int32 decayTimeResolutionInMillis = 7;
+	optional double intervalValue = 8;
+	optional int32 interval = 9;
+	
+}
+
+message DeleteLiquidityControl {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+message FindLiquidityControlByStreamCodeAndSecurityId {
+	optional string clientRequestId = 1;
+	optional string streamCode = 2;
+	optional string securityId = 3;
+}
+
+message FindLiquidityControlById {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+message FindAllLiquidityControls {
+	optional string clientRequestId = 1;
+}
+
+message UpdateOnLiquidityControlRequest {
+
+}

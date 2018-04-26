@@ -1,0 +1,19 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.partyidsource;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum PartyIdSource {
+
+	BIC = 1;
+	GENERAL_ACCEPTED = 2;
+	CUSTOM_CODE = 3;
+	ISO = 4;
+	SETTLEMENT_ENTITY_LOCATION = 5;
+	MIC = 6;
+	CSD = 7;
+	AUS_BUSINESS_NUMBER = 8;
+	AUS_TAX_NUMBER = 9;
+	DIRECTED_BROKER = 10;
+}

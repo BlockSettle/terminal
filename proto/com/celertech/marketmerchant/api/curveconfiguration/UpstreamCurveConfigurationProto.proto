@@ -1,0 +1,77 @@
+package com.celertech.marketmerchant.api.curveconfiguration;
+
+option java_package = "com.celertech.marketmerchant.api.curveconfiguration";
+
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/InterpolationTypeProto.proto";
+
+message CreateCurveConfigurationRequest {
+
+	// correlation key
+    optional string clientRequestId = 1;
+   
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 2;
+   
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+   
+    // actual security id represented behind in security definition or warehouse configuration
+    optional string securityId = 4;
+   
+    // display security id in MM GUI 
+    optional string displaySecurityId = 5;
+
+    // curve type
+    optional string curveType = 6;
+    
+    optional com.celertech.marketmerchant.api.interpolationtype.InterpolationType interpolationType = 7;
+}
+
+message UpdateCurveConfigurationRequest {
+	
+	// correlation key
+    optional string clientRequestId = 1;
+    
+    // unique identifier
+    optional int64 id = 2;
+    
+    optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 3;
+   
+    optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 4;
+    
+    // actual security id represented behind in security definition or warehouse configuration
+    optional string securityId = 5;
+   
+    // display security id in MM GUI 
+    optional string displaySecurityId = 6;
+
+    // curve type
+    optional string curveType = 7;
+    
+    optional com.celertech.marketmerchant.api.interpolationtype.InterpolationType interpolationType = 8;
+    
+}
+
+message DeleteCurveConfigurationRequest {
+
+	// correlation key
+    optional string clientRequestId = 1;
+    
+    // unique identifier
+    optional int64 id = 2;
+
+}
+
+message FindAllCurveConfigurationRequest {
+
+	// correlation key
+    optional string clientRequestId = 1;
+    
+}
+
+message UpdateOnCurveConfigurationRequest {
+
+    // correlation key
+	optional string clientRequestId = 1;
+
+}

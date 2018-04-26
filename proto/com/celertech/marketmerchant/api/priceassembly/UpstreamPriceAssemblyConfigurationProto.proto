@@ -1,0 +1,88 @@
+package com.celertech.marketmerchant.api.priceassembly;
+
+option java_package = "com.celertech.marketmerchant.api.priceassembly";
+
+message CreatePriceAssemblerConfiguration {
+	optional string clientRequestId = 1;
+	
+	optional string type = 2;
+	optional string code = 3;
+	optional string name = 4;
+	optional string description = 5;
+	repeated PriceAssemblerProperty priceAssemblerProperties = 6;
+}
+
+message UpdatePriceAssemblerConfiguration {
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+	optional string type = 3;
+	optional string code = 4;
+	optional string name = 5;
+	optional string description = 6;
+	repeated PriceAssemblerProperty priceAssemblerProperties = 7;
+}
+
+message PriceAssemblerProperty {
+	optional string propertyKey = 1;
+	optional string propertyValue = 2;
+}
+
+message FindAllPriceAssemblerConfigurations {
+
+	optional string clientRequestId = 1;
+	
+}
+
+message FindPriceAssemblerConfigurationByCode {
+
+	optional string clientRequestId = 1;
+	optional string code = 2;
+
+}
+
+message DeletePriceAssemblerConfiguration {
+
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+
+message UpdateOnMarketMerchantPriceAssemblyConfigurationRequest {
+}
+
+message CreatePriceAssemblyConfiguration {
+	optional string clientRequestId = 1;
+	
+	optional string code = 2;
+	optional string name = 3;
+	optional string description = 4;
+	repeated string priceAssemblerCodes = 8;
+}
+
+message UpdatePriceAssemblyConfiguration {
+	optional string clientRequestId = 1;
+	
+	optional int64 id = 2;
+	optional string code = 3;
+	optional string name = 4;
+	optional string description = 5;
+	repeated string priceAssemblerCodes = 9;
+}
+
+message DeletePriceAssemblyConfiguration {
+	optional string clientRequestId = 1;
+	optional int64 id = 2;
+}
+
+message FindAllPriceAssemblyConfigurations {
+	optional string clientRequestId = 1;
+
+}
+
+message FindPriceAssemblyConfigurationByCode {
+	optional string clientRequestId = 1;
+
+	optional string code = 2;
+}
+

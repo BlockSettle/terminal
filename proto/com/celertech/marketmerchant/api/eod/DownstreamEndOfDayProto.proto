@@ -1,0 +1,10 @@
+package com.celertech.marketmerchant.api.eod;
+
+option java_package = "com.celertech.marketmerchant.api.eod";
+
+message EndOfDayDownstreamEvent {
+
+    optional int64 id = 1;
+	optional string cronExpression = 2;
+    optional bool enabled = 3;
+}

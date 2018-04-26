@@ -1,0 +1,57 @@
+package com.celertech.marketmerchant.api.executionstrategyconfiguration;
+
+option java_package = "com.celertech.marketmerchant.api.executionstrategyconfiguration";
+
+import "com/celertech/marketmerchant/api/enums/PropertyTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+
+message MerchantExecutionStrategySchemaDefinitionDownstreamEvent {
+	optional string executionStrategyName = 1;
+	repeated MerchantExecutionStrategySchemaDownstreamEvent merchantExecutionStrategySchemaDownstreamEvent = 2;
+}
+
+message MerchantExecutionStrategySchemaDownstreamEvent {
+	optional string propertyKey = 1;
+    optional com.celertech.marketmerchant.api.enums.propertytype.PropertyType propertyType = 2;
+	optional string propertyValue = 3;
+}
+
+message MerchantExecutionStrategyProfileDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string executionStrategyName = 2;
+    optional MerchantExecutionStrategyConfigurationDownstreamEvent defaultConfiguration = 3;
+    
+    optional int64 createdTimestampUtcInMillis = 4;
+    optional int64 updatedTimestampUtcInMillis = 5;
+}
+
+message MerchantExecutionStrategyConfigurationDownstreamEvent {
+	optional int64 id = 1;
+	
+	optional string executionStrategyName = 2;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 4;
+	optional string securityId = 5;
+	
+	repeated MerchantExecutionStrategyPropertyDownstreamEvent defaultMerchantExecutionStrategyProperties = 6;
+}
+
+message DeleteMerchantExecutionStrategyConfigurationConfirmation  {
+	optional int64 id = 1;
+	
+	optional string executionStrategyName = 2;
+	optional com.celertech.marketmerchant.api.enums.producttype.ProductType productType = 3;
+	optional com.celertech.marketmerchant.api.enums.assettype.AssetType assetType = 4;
+	optional string securityId = 5;
+}
+
+message MerchantExecutionStrategyPropertyDownstreamEvent {
+	optional string propertyKey = 1;
+	optional string propertyValue = 2;
+}
+
+message ActiveMerchantExecutionStrategyProfileDownstreamEvent {
+	optional string executionStrategyName = 1;
+}

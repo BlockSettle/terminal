@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.cut;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum Cut {
+
+	NEW_YORK = 1;
+	TOKYO = 2;
+
+}

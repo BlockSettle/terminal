@@ -1,0 +1,86 @@
+syntax = "proto2";
+
+package com.celertech.staticdata.api.account;
+
+import "com/celertech/staticdata/api/account/UpstreamAccountProto.proto";
+
+option java_package = "com.celertech.staticdata.api.account";
+
+//Account message that is sent from the server
+message AccountDownstreamEvent {
+
+	//Id of the account
+	optional int64 id = 1;
+
+	//Unique code that represents the account
+	optional string code = 2;
+
+	//Name of the account, can be non-unique
+	optional string name = 3;
+
+	//Description of the account, can be non-unique
+	optional string description = 4;
+
+	//CtiCode of the account, can be non-unique
+	optional string ctiCode = 5;
+
+	//FeeCode of the account, can be non-unique
+	optional string feeCode = 7;
+
+	/**
+     * Looks to be weird to be using the Party object from the upstream proto in the AccountDownstreamEvent.
+     * However since both the UpstreamAccountProto and DownstreamAccountProto are in the same java packages, we
+     * can't have the same Class name.  We could have the same object but with different names, but that
+     * might be overkill so just using the upstream object for now
+     */
+	repeated Party party = 8;
+
+	//Enables this account to auto clear any trades made against this account
+	optional bool autoClearEnabled = 9;
+
+	//Enables this account
+	optional bool enabled = 10;
+
+	//Enables this account to be a CSA account
+	optional bool creditCsa = 11;
+
+	//Enables this account to be a CLS settled account
+	optional bool creditClsSettled = 12;
+
+	//Enables this account to be a CLS settled account
+    optional bool creditCheckEnabled = 13;
+
+	//UTC timestamp represented as milliseconds since epoch
+	optional int64 createdInMillis = 14;
+
+	//UTC timestamp represented as milliseconds since epoch
+	optional int64 updatedInMillis = 15;
+}
+
+//Confirmation message when an account is deleted
+message DeleteAccountConfirmation {
+
+	optional int64 id = 1;
+}
+
+
+message BulkAccountDownstreamEvent {
+
+    optional int64 id = 1;
+
+	optional int32 statusCode = 2;
+	optional string errorText = 3;
+
+    repeated IdAndCode successful= 4;
+    repeated IdAndCode failed = 5;
+}
+
+
+message IdAndCode {
+
+	optional int32 statusCode = 1;
+	optional string errorText = 2;
+
+    optional int64 id = 3;
+    optional string code = 4;
+}

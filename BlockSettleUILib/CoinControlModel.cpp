@@ -267,16 +267,7 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
       if (index.column() == 0) {
          return node->getCheckedState();
       }
-   }
-   else if ((role == Qt::FontRole) && (index.column() == ColumnBalance)) {
-      const auto selectedAmount = node->getSelectedAmount();
-      if (selectedAmount <= 0) {
-         QFont font;
-         font.setItalic(true);
-         return font;
-      }
-   }
-   else if ((role == Qt::TextAlignmentRole) && (index.column() == ColumnBalance)) {
+   } else if ((role == Qt::TextAlignmentRole) && (index.column() == ColumnBalance)) {
       return Qt::AlignRight;
    }
    return QVariant{};

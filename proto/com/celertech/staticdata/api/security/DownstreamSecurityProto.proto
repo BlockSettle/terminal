@@ -1,0 +1,405 @@
+package com.celertech.staticdata.api.security;
+
+import "com/celertech/staticdata/api/enums/OptionTypeProto.proto";
+import "com/celertech/staticdata/api/enums/AssetTypeProto.proto";
+import "com/celertech/staticdata/api/enums/SideProto.proto";
+import "com/celertech/staticdata/api/enums/StrategyTypeProto.proto";
+import "com/celertech/staticdata/api/property/PropertyProto.proto";
+
+option java_package = "com.celertech.staticdata.api.security";
+
+message EquitySecurityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 exchangeId = 2;
+	optional string exchangeCode = 3;
+	optional string code = 4;
+	optional string securityId = 5;
+	optional string description = 6;
+	optional string currency = 7;
+	optional int32 divisor = 8;
+	optional bool enabled = 9;
+	optional int64 createdInMillis = 10;
+	optional int64 updatedInMillis = 11;
+	
+	repeated EquitySecurityAliasDownstreamEvent alias = 12;
+
+	message EquitySecurityAliasDownstreamEvent {
+		optional int64 equitySecurityId = 1;
+	    optional string securityCode = 2;
+	    optional string securityId = 3;
+	    optional string securityIdSource = 4;
+	    optional string securityCodeAlias = 5;
+	    optional string securityIdAlias = 6;
+	}
+}
+
+message FutureSecurityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 exchangeId = 2;
+	optional string exchangeCode = 3;
+	optional string code = 4;
+	optional string description = 5;
+	optional string currency = 6;
+	optional bool enabled = 7;
+
+	optional int64 createdInMillis = 8;
+	optional int64 updatedInMillis = 9;
+
+}
+
+message FutureSecurityMaturityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 futureSecurityId = 2;
+	optional string code = 3;
+	optional string securityId = 4;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string exchangeCode = 7;
+	optional string currency = 8;
+	optional string expiry = 9;
+	optional int32 tickSize = 10;
+	optional double tickValue = 11;
+	optional int32 divisor = 12;
+	optional bool isFractionalContract = 13;
+	optional int32 numerator = 14;
+	optional int32 denominator = 15;
+	optional bool enabled = 16;
+
+	optional int64 createdInMillis = 17;
+	optional int64 updatedInMillis = 18;
+
+	repeated FutureMaturityAliasDownstreamEvent alias = 19;
+	
+	message FutureMaturityAliasDownstreamEvent {
+		optional int64 futureSecurityId = 1;
+	    optional string securityCode = 2;
+	    optional string securityId = 3;
+	    optional string securityIdSource = 4;
+	    optional string securityCodeAlias = 5;
+	    optional string securityIdAlias = 6;
+	}
+}
+
+
+
+message FutureStrategySecurityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 exchangeId = 2;
+	optional string exchangeCode = 3;
+	optional com.celertech.staticdata.api.enums.strategytype.StrategyType strategyType = 4;
+	optional string code = 5;
+	optional string securityId = 6;
+	optional string description = 7;
+	optional string expiry = 8;
+	optional string currency = 9;
+	optional double tickValue = 10;
+	optional int32 tickSize = 11;
+	optional int32 divisor = 12;
+	optional bool isFractionalContract = 13;
+	optional int32 numerator = 14;
+	optional int32 denominator = 15;
+	optional bool enabled = 16;
+
+	repeated FutureStrategyAliasDownstreamEvent alias = 17;
+
+	repeated FutureStrategyLegSecurityDownstreamEvent leg = 18;
+
+	optional int64 createdInMillis = 19;
+	optional int64 updatedInMillis = 20;
+	
+	message FutureStrategyAliasDownstreamEvent {
+		optional int64 futureSecurityId = 1;
+	    optional string securityCode = 2;
+	    optional string securityId = 3;
+	    optional string securityIdSource = 4;
+	    optional string securityCodeAlias = 5;
+	    optional string securityIdAlias = 6;
+	}
+}
+
+
+message FutureStrategyLegSecurityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 strategyId = 2;
+	optional string underlyingCode = 3;
+	optional string underlyingSecurityId = 4;
+	optional string underlyingSecurityDescription = 5;
+	optional int64 underlyingExchangeId = 6;
+	optional string underlyingExpiry = 7;
+	optional string underlyingCurrency = 8;
+	optional com.celertech.staticdata.api.enums.side.Side side = 9;
+	optional int32 ratioQty = 10;
+
+	optional int64 createdInMillis = 11;
+}
+
+
+message OptionSecurityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 exchangeId = 2;
+	optional string exchangeCode = 3;
+	optional string code = 4;
+	optional string description = 6;
+	optional string currency = 7;
+	optional bool enabled = 8;
+
+	optional int64 createdInMillis = 9;
+	optional int64 updatedInMillis = 10;
+
+}
+
+message OptionSecurityMaturityDownstreamEvent {
+
+
+	optional int64 id = 1;
+	optional int64 optionSecurityId = 2;
+	optional string code = 3;
+	optional string securityId = 4;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string exchangeCode = 7;
+	optional string currency = 8;
+	optional string expiry = 9;
+	optional int32 tickSize = 10;
+	optional double tickValue = 11;
+	optional int32 divisor = 12;
+	optional double strike = 13;
+	optional com.celertech.staticdata.api.enums.optiontype.OptionType optionType = 14;
+	optional bool isFractionalContract = 15;
+	optional int32 numerator = 16;
+	optional int32 denominator = 17;
+	optional bool enabled = 18;
+	optional int64 createdInMillis = 19;
+	optional int64 updatedInMillis = 20;
+	
+	repeated OptionMaturityAliasDownstreamEvent alias = 21;
+
+	message OptionMaturityAliasDownstreamEvent {
+		optional int64 optionMaturityId = 1;
+		optional string securityCode = 2;
+	    optional string securityId = 3;
+	    optional string securityIdSource = 4;
+	    optional string securityCodeAlias = 5;
+	    optional string securityIdAlias = 6;
+	}
+}
+
+
+message FxSecurityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string code = 2;
+	optional string securityId = 3;
+	optional string description = 4;
+	optional int64 exchangeId = 5;
+	optional string exchangeCode = 6;
+	optional string currency = 7;
+	optional int32 tickSize = 8;
+	optional double tickValue = 9;
+	optional bool enabled = 10;
+	optional bool clsSettled = 11;
+
+	optional int64 createdInMillis = 12;
+	optional int64 updatedInMillis = 13;
+	
+}
+
+message FxSecurityMaturityDownstreamEvent {
+
+    enum PricingMode {
+        
+        QUOTES = 1;
+        STREAM = 2;
+    
+    }
+
+	optional int64 id = 1;
+	optional int64 fxSecurityId = 2;
+	optional string code = 3;
+	optional string securityId = 4;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string exchangeCode = 7;
+	optional string currency = 8;
+	optional string expiry = 9;
+	optional int32 tickSize = 10;
+	optional double tickValue = 11;
+	optional int32 divisor = 12;
+	optional int32 pipDefinition = 13;
+	optional int32 forwardPipDefinition = 14;
+	optional bool enabled = 15;
+	optional bool clsSettled = 16;
+	optional int64 createdInMillis = 17;
+	optional int64 updatedInMillis = 18;
+	
+    repeated FxMaturityAliasDownstreamEvent alias = 19;
+    
+    optional PricingMode pricingMode = 20;
+    	
+    //Property message that is used to dynamically extend the FxSecurityDownstreamEvent
+	repeated com.celertech.staticdata.api.property.Property property = 21;
+    
+	message FxMaturityAliasDownstreamEvent {
+	    optional int64 fxMaturityId = 1;
+	    optional string securityCode = 2;
+	    optional string securityId = 3;
+	    optional string securityIdSource = 4;
+	    optional string securityCodeAlias = 5;
+	    optional string securityIdAlias = 6;
+	}
+}
+
+message FixedIncomeSecurityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string code = 2;
+	optional string securityId = 3;
+	optional string description = 4;
+	optional int64 exchangeId = 5;
+	optional string exchangeCode = 6;
+	optional string currency = 7;
+	optional int32 tickSize = 8;
+	optional double tickValue = 9;
+	optional bool enabled = 10;
+
+	optional int64 createdInMillis = 11;
+	optional int64 updatedInMillis = 12;
+	
+}
+
+message FixedIncomeSecurityMaturityDownstreamEvent {
+
+	optional int64 id = 1;
+	optional int64 fiSecurityId = 2;
+	optional string code = 3;
+	optional string securityId = 4;
+	optional string description = 5;
+	optional int64 exchangeId = 6;
+	optional string exchangeCode = 7;
+	optional string currency = 8;
+	optional string expiry = 9;
+	optional int32 tickSize = 10;
+	optional double tickValue = 11;
+	optional int32 divisor = 12;
+	optional bool enabled = 18;
+	optional int64 createdInMillis = 19;
+	optional int64 updatedInMillis = 20;
+	optional string settlementType = 22;
+	
+    repeated FixedIncomeMaturityAliasDownstreamEvent alias = 21;
+
+	message FixedIncomeMaturityAliasDownstreamEvent {
+	    optional int64 fiMaturityId = 1;
+	    optional string securityCode = 2;
+	    optional string securityId = 3;
+	    optional string securityIdSource = 4;
+	    optional string securityCodeAlias = 5;
+	    optional string securityIdAlias = 6;
+	}
+}
+
+
+message DeleteSecurityNotification {
+
+	optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 2;
+	optional int64 id = 3;
+}
+
+message DeleteSecurityMaturityNotification {
+
+    optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 1;
+    optional int64 id = 2;
+    optional string securityId = 3;
+}
+
+message StaticDataDestinationCommandDownstreamEvent {
+
+	optional Operation operation = 2;
+	optional string staticDataDestinationName = 3;
+	optional string exchangeName = 4;
+
+	enum Operation {
+    	START = 0;
+    	STOP = 1;
+    	UPDATE = 2;
+	}
+}
+
+message DeleteFutureMaturityAliasDownstreamEvent {
+    optional int64 futureSecurityId = 1;
+    optional string securityCode = 2;
+    optional string securityId = 3;
+    optional string securityIdSource = 4;
+    optional string securityCodeAlias = 5;
+    optional string securityIdAlias = 6;
+    optional string exchangeCode = 7;
+}
+
+message DeleteFxMaturityAliasDownstreamEvent {
+    optional int64 fxSecurityId = 1;
+    optional string securityCode = 2;
+    optional string securityId = 3;
+    optional string securityIdSource = 4;
+    optional string securityCodeAlias = 5;
+    optional string securityIdAlias = 6;
+    optional string exchangeCode = 7;
+}
+
+message DeleteOptionMaturityAliasDownstreamEvent {
+    optional int64 optionSecurityId = 1;
+    optional string securityCode = 2;
+    optional string securityId = 3;
+    optional string securityIdSource = 4;
+    optional string securityCodeAlias = 5;
+    optional string securityIdAlias = 6;
+    optional string exchangeCode = 7;
+}
+
+message DeleteEquityMaturityAliasDownstreamEvent {
+    optional int64 equitySecurityId = 1;
+    optional string securityCode = 2;
+    optional string securityId = 3;
+    optional string securityIdSource = 4;
+    optional string securityCodeAlias = 5;
+    optional string securityIdAlias = 6;
+    optional string exchangeCode = 7;
+}
+
+message DeleteFixedIncomeMaturityAliasDownstreamEvent {
+    optional int64 fixedIncomeSecurityId = 1;
+    optional string securityCode = 2;
+    optional string securityId = 3;
+    optional string securityIdSource = 4;
+    optional string securityCodeAlias = 5;
+    optional string securityIdAlias = 6;
+    optional string exchangeCode = 7;
+}
+
+message SplitValueDateSecurityIdDownstreamEvent {
+	repeated SplitValueDateSecurity securityIds = 1;
+
+	message SplitValueDateSecurity {
+	    optional string securityId = 1;
+	}
+}
+
+message FxCurrencyGroupDownstreamEvent {
+
+	optional string groupName = 1;
+	repeated string securityId = 2;
+
+}
+
+message FxCurrencyGroupDownstreamEvents {
+
+	repeated FxCurrencyGroupDownstreamEvent fxCurrencyGroupDownstreamEvent = 1;
+
+}
+
+

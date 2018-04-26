@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.producttype.quotenotificationtype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum QuoteNotificationType {
+
+	QUOTE_WITHDRAWN = 1;
+	PENDING_ACKNOWLEDGE = 2;
+
+}

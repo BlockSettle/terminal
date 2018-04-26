@@ -1,0 +1,25 @@
+package com.celertech.marketmerchant.api.notification;
+
+option java_package = "com.celertech.marketmerchant.api.notification";
+
+message CreateQuoteNotificationRequest {
+
+	optional string clientRequestId = 1;
+	optional string sessionKey = 2;
+	optional string groupCode = 3;
+
+}
+
+message DeleteQuoteNotificationRequest {
+
+	optional string clientRequestId = 1;
+	optional string sessionKey = 2;
+	optional string groupCode = 3;
+
+}
+
+message FindAllQuoteNotificationsRequest {
+
+	optional string clientRequestId = 1;
+
+}

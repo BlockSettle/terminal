@@ -1,0 +1,10 @@
+package com.celertech.staticdata.api.enums.optiontype;
+
+option java_package = "com.celertech.staticdata.api.enums";
+
+enum OptionType {
+
+	PUT = 1;
+	CALL = 2;
+	
+}

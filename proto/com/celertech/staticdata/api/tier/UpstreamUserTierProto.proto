@@ -1,0 +1,41 @@
+package com.celertech.staticdata.api.tier;
+
+import "com/celertech/staticdata/api/tier/UpstreamTierProto.proto";
+
+option java_package = "com.celertech.staticdata.api.tier";
+
+message CreateUserTier {
+
+    optional string clientRequestId = 1;
+    optional string sessionKey = 2;
+    optional int64 tierId = 3;
+
+}
+
+message DeleteUserTier {
+
+    optional string clientRequestId = 1;
+    optional int64 id = 2;
+}
+
+message FindUserTierBySessionKey {
+
+    optional string clientRequestId = 1;
+
+    optional string sessionKey = 2;
+}
+
+message UpdateUserTier {
+
+    optional string clientRequestId = 1;
+
+    optional int64 id = 2;
+    optional string sessionKey = 3;
+    optional int64 tierId = 4;
+}
+
+//message UpdateOnMarketMerchantTierRequest {
+//
+//    optional string clientRequestId = 1;
+//
+//}

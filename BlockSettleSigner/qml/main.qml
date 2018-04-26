@@ -119,6 +119,13 @@ ApplicationWindow {
         dlg.rejected.connect(function() {
             passwordEntered(txInfo.walletId, '')
         })
+        mainWindow.requestActivate()
         dlg.open()
     }
+
+   function raiseWindow() {
+        mainWindow.raise()
+        mainWindow.flags |= Qt.WindowStaysOnTopHint	// hack while raise() doesn't work properly
+        mainWindow.flags &= ~Qt.WindowStaysOnTopHint
+   }
 }

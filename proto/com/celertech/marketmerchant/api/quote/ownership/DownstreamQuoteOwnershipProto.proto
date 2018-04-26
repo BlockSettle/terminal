@@ -1,0 +1,13 @@
+package com.celertech.marketmerchant.api.quote.ownership;
+
+option java_package = "com.celertech.marketmerchant.api.quote.ownership";
+
+message QuoteOwnershipResponse {
+	optional string quoteRequestId = 1;
+	optional string owner = 2;
+}
+
+message QuoteOwnershipRuleBreach {
+	optional string quoteRequestId = 1;
+	optional string reason = 2;
+}

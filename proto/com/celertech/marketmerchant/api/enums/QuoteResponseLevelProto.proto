@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.quoteresponselevel;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+// FIX 5.0SP2 tag 301
+enum QuoteResponseLevel {
+	NO_ACKNOWLEDGEMENT = 0;
+	ONLY_NEGATIVE_OR_ERRONEOUS_QUOTES = 1;
+	EACH_QUOTE = 2;
+	SUMMARY_ACKNOWLEDGE = 3;
+}

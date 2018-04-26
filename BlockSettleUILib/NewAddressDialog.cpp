@@ -39,3 +39,30 @@ void NewAddressDialog::copyToClipboard()
 {
    QApplication::clipboard()->setText(address_.display());
 }
+
+void NewAddressDialog::showEvent(QShowEvent* event)
+{
+   UpdateSizeToAddress();
+   QDialog::showEvent(event);
+}
+
+void NewAddressDialog::UpdateSizeToAddress()
+{
+   QString addressText = ui_->lineEditNewAddress->text();
+
+   QFontMetrics fm{ ui_->lineEditNewAddress->font() };
+
+   layout()->activate();
+   auto currentWidth = ui_->lineEditNewAddress->width();
+   auto textWidth = fm.width(addressText) + fm.descent() + fm.ascent();
+
+   if (currentWidth >= textWidth) {
+      return;
+   }
+
+   ui_->lineEditNewAddress->setMinimumWidth(textWidth);
+   auto leftMargin = ui_->lineEditNewAddress->textMargins().left();
+   auto rightMargin = ui_->lineEditNewAddress->textMargins().right();
+
+   layout()->activate();
+}

@@ -100,7 +100,7 @@ CustomDialog {
             }
 
             CustomLabelValue {
-                text:   txInfo.amount
+                text:   txInfo.amount.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -110,7 +110,7 @@ CustomDialog {
             }
 
             CustomLabelValue {
-                text:   txInfo.fee
+                text:   txInfo.fee.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -120,7 +120,7 @@ CustomDialog {
             }
 
             CustomLabelValue {
-                text:   txInfo.total
+                text:   txInfo.total.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
         }

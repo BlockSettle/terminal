@@ -1,0 +1,66 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.user;
+
+import "com/celertech/baseserver/api/enums/UserLoginPolicyTypeProto.proto";
+
+option java_package = "com.celertech.baseserver.api.user";
+
+message SystemUserDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string username = 2;
+    optional string email = 3;
+	optional com.celertech.baseserver.api.enums.userloginpolicytype.UserLoginPolicyType userLoginPolicyType = 4;
+	optional bool enabled = 5;
+	optional bool expired = 6;
+	optional bool locked = 7;
+	optional bool passwordExpired = 8;
+	optional int64 createdInMillis = 9;
+	optional int64 updatedInMillis = 10;
+
+}
+
+message StandardUserDownstreamEvent {
+
+	optional int64 id = 1;
+	optional string username = 2;
+	optional string forename = 3;
+    optional string surname = 4;
+    optional string region = 5;
+    optional string email = 6;
+    optional string telephone = 7;
+    optional int32 passwordValidDays = 8;
+    optional int64 passwordExpiryDateInMillis = 9;
+    optional com.celertech.baseserver.api.enums.userloginpolicytype.UserLoginPolicyType userLoginPolicyType = 10;
+	optional bool enabled = 11;
+	optional bool expired = 12;
+	optional bool locked = 13;
+	optional bool passwordExpired = 14;
+	optional int64 createdInMillis = 15;
+	optional int64 updatedInMillis = 16;
+	optional int64 lastLoggedInMillis = 17;
+
+}
+
+
+message DeleteUserConfirmation {
+
+	optional int64 id = 1;
+	optional string username = 2;
+
+}
+
+
+message ChangeUserPasswordConfirmation {
+    optional string username = 1;
+    optional bool succeeded = 2;
+    repeated string message = 3;
+}
+
+message ResetUserPasswordToken {
+
+    optional string username = 1;
+    optional string resetUserPasswordToken = 2;
+    optional int64 validToTimestampUtcInMillis = 3;
+}

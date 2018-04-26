@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.propertytype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum PropertyType {
+
+	INT = 1;
+	DOUBLE = 2;
+	STRING= 3;
+	LONG = 4;
+}

@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.session;
+
+import "com/celertech/baseserver/api/enums/DayOfWeekProto.proto";
+
+option java_package = "com.celertech.baseserver.api.session";
+
+message SessionWindow {
+	    optional com.celertech.baseserver.api.enums.dayofweek.DayOfWeek startDay = 1;
+	    optional int64 startTime = 2;
+		optional com.celertech.baseserver.api.enums.dayofweek.DayOfWeek endDay = 3;
+		optional int64 endTime = 4;
+}

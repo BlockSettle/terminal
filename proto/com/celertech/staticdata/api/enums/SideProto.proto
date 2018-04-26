@@ -1,0 +1,12 @@
+package com.celertech.staticdata.api.enums.side;
+
+option java_package = "com.celertech.staticdata.api.enums";
+
+enum Side {
+
+	BUY = 1;
+	SELL = 2;
+	SELL_SHORT = 3;
+	SELL_SHORT_EXCEMPT = 4;
+	
+}

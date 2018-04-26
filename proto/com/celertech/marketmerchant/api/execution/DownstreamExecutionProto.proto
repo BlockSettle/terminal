@@ -1,0 +1,21 @@
+package com.celertech.marketmerchant.api.execution;
+
+import "com/celertech/marketmerchant/api/enums/SideProto.proto";
+import "com/celertech/marketmerchant/api/enums/AssetTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/OrderTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/AccountTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/OrderStatusProto.proto";
+import "com/celertech/marketmerchant/api/enums/ExecutionTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/OptionTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/ProductTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/StrategyTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/TimeInForceTypeProto.proto";
+import "com/celertech/marketmerchant/api/enums/HandlingInstructionProto.proto";
+import "com/celertech/marketmerchant/api/enums/CancelRejectResponseToProto.proto";
+import "com/celertech/marketmerchant/api/enums/CancelRejectReasonProto.proto";
+
+option java_package = "com.celertech.marketmerchant.api.execution";
+
+message EndOfDayNotification {
+	repeated string exchange = 1;
+}

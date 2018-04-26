@@ -1,0 +1,75 @@
+package com.celertech.staticdata.api.user.limit;
+
+import "com/celertech/staticdata/api/enums/AssetTypeProto.proto";
+
+option java_package = "com.celertech.staticdata.api.user.limit";
+
+
+message CreateUserLimitRequest {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+	optional string exchangeCode = 4;
+	optional string securityCode = 6;
+	optional double maximumVolume = 7;
+	optional double positionLimit = 8;
+	optional bool enabled = 9;
+    optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 10;
+
+}
+
+
+message FindUserLimitsByUsername {
+
+	optional string clientRequestId = 1;
+
+	optional string username = 2;
+}
+
+
+//FIXME: This should be an internal message, not to be used as part of public API
+message FindAllUserLimits {
+
+	optional string clientRequestId = 1;
+
+}
+
+
+//FIXME: This should be an internal message, not to be used as part of public API
+message UpdateOnStaticDataUserLimitRequest {
+
+	optional string clientRequestId = 1;
+
+}
+
+
+message FindAssignedUserLimits {
+
+	optional string clientRequestId = 1;
+}
+
+
+message DeleteUserLimitRequest {
+
+	optional string clientRequestId = 1;
+	optional string username = 2;
+    optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 3;
+	optional string exchangeCode = 4;
+	optional string securityCode = 5;
+
+}
+
+
+message UpdateUserLimitRequest {
+
+	optional string clientRequestId = 1;
+	optional string username = 2;
+	optional string exchangeCode = 3;
+	optional string securityCode = 4;
+	optional double maximumVolume = 5;
+	optional double positionLimit = 6;
+	optional bool enabled = 7;
+    optional com.celertech.staticdata.api.enums.assettype.AssetType assetType = 8;
+
+}

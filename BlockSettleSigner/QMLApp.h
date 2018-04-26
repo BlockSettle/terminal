@@ -41,12 +41,14 @@ private slots:
    void onWalletsDirChanged();
    void onListenSocketChanged();
    void onLimitsChanged();
+   void onSysTrayMsgClicked();
 
 private:
    void OnlineProcessing();
    void walletsLoad();
    void settingsConnections();
    void requestPassword(const bs::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
+   void disconnect();
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

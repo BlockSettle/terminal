@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.ordertype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum OrderType {
+
+	MARKET = 1;
+	LIMIT = 2;
+	STOP_LIMIT = 3;
+	STOP_MARKET = 4;
+	MOC = 5;
+	MOO = 6;
+	PEGGED = 7;
+	PREVIOUSLY_QUOTED = 8;
+}

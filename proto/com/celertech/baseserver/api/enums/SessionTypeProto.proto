@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.enums.sessiontype;
+
+option java_package = "com.celertech.baseserver.api.enums";
+
+enum SessionType {
+
+	CELER = 0;
+	FIX = 1;
+	SWIFT = 2;
+	WEB = 3;
+
+}

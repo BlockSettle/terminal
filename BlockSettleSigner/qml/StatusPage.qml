@@ -44,6 +44,7 @@ Item {
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
                     text:   signerStatus.socketOk ? "" : qsTr("Failed to bind")
+                    checked: !signerStatus.offline
                     onClicked: {
                         signerParams.offline = !checked
                     }
@@ -117,6 +118,7 @@ Item {
                     }
                     ColumnLayout {
                         spacing: 0
+                        visible: !signerStatus.offline
                         Layout.leftMargin: 0
                         Layout.rightMargin: 0
                         Repeater {

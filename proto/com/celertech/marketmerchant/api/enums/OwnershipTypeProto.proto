@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package com.celertech.marketmerchant.api.enums.ownershiptype;
+
+option java_package = "com.celertech.marketmerchant.api.enums";
+
+enum OwnershipType {
+
+/** PUBLIC when reset ownership to no one */
+	PUBLIC = 1;
+
+/** claiming for ownership, including overriding existing ownership */
+	OWNED = 2;
+
+}

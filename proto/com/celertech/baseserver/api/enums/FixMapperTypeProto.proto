@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.celertech.baseserver.api.enums.fixmappertype;
+
+option java_package = "com.celertech.baseserver.api.enums";
+
+enum FixMapperType {
+
+	XML = 0;
+   JAVA = 1;
+
+}
