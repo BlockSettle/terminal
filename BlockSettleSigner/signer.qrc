@@ -1,0 +1,41 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/bs_logo.png</file>
+        <file alias="FULL_LOGO">images/full_logo.png</file>
+        <file alias="TEMPLATE_WALLET_BACKUP">templates/wallet_backup.html</file>
+        <file>qml/main.qml</file>
+        <file>qml/AutoSignPage.qml</file>
+        <file>qml/DirSelectionDialog.qml</file>
+        <file>qml/InfoBanner.qml</file>
+        <file>qml/InfoBannerComponent.qml</file>
+        <file>qml/PasswordEntryDialog.qml</file>
+        <file>qml/SettingsGrid.qml</file>
+        <file>qml/SettingsPage.qml</file>
+        <file>qml/StatusPage.qml</file>
+        <file>qml/WalletBackupDialog.qml</file>
+        <file>qml/WalletChangePasswordDialog.qml</file>
+        <file>qml/WalletCreateDialog.qml</file>
+        <file>qml/WalletDeleteDialog.qml</file>
+        <file>qml/WalletExportWoDialog.qml</file>
+        <file>qml/WalletImportDialog.qml</file>
+        <file>qml/WalletNewDialog.qml</file>
+        <file>qml/WalletsPage.qml</file>
+        <file>qml/WalletsView.qml</file>
+        <file>qml/CustomTextInput.qml</file>
+        <file>qml/CustomLabel.qml</file>
+        <file>qml/CustomHeader.qml</file>
+        <file>qml/CustomTabButton.qml</file>
+        <file>qml/CustomCheckBox.qml</file>
+        <file>qml/CustomButton.qml</file>
+        <file>qml/CustomLabelValue.qml</file>
+        <file>qml/CustomSwitch.qml</file>
+        <file>qml/CustomButtonBar.qml</file>
+        <file>qml/CustomContainer.qml</file>
+        <file>qml/CustomHeaderPanel.qml</file>
+        <file>qml/CustomDialog.qml</file>
+        <file>qml/CustomRadioButton.qml</file>
+        <file>qml/CustomButtonPrimary.qml</file>
+        <file>qml/CustomProgressBar.qml</file>
+        <file>qml/CustomComboBox.qml</file>
+    </qresource>
+</RCC>

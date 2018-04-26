@@ -1,0 +1,39 @@
+#ifndef __ABOUT_DIALOG_H__
+#define __ABOUT_DIALOG_H__
+
+#include <QDialog>
+#include <memory>
+
+#include "VersionChecker.h"
+
+namespace Ui {
+    class AboutDialog;
+}
+
+class AboutDialog : public QDialog
+{
+Q_OBJECT
+
+public:
+   AboutDialog(QString changeLogBaseUrl, QWidget* parent = nullptr);
+   ~AboutDialog() override = default;
+
+   void setTab(int tab);
+   static std::string version() { return terminalVersion_; }
+
+private slots:
+   void onCheckForUpdates();
+   void latestVerReceived(bool weAreUpToDate);
+   void changeLogReceived(const QString &reqVer, const QStringList &changeLog);
+   void viewChangleLog();
+
+private:
+   void reset();
+
+private:
+   Ui::AboutDialog*     ui_;
+   static std::string   terminalVersion_;
+   bs::VersionChecker   verChecker_;
+};
+
+#endif // __ABOUT_DIALOG_H__

@@ -1,0 +1,54 @@
+#ifndef __ADDRESS_VERIFICATION_POOL_H__
+#define __ADDRESS_VERIFICATION_POOL_H__
+
+#include "AuthAddress.h"
+
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <unordered_map>
+#include <unordered_set>
+
+class AddressVerificator;
+
+namespace spdlog {
+   class logger;
+};
+
+class AddressVerificationPool
+{
+public:
+   using verificationCompletedCallback = function<void (AddressVerificationState state)>;
+public:
+   // pool Id will be used as wallet ID in verificator, as well as identifier in log
+   AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger, const std::string& poolId);
+
+   ~AddressVerificationPool() noexcept = default;
+
+   AddressVerificationPool(const AddressVerificationPool&) = delete;
+   AddressVerificationPool& operator = (const AddressVerificationPool&) = delete;
+
+   AddressVerificationPool(AddressVerificationPool&&) = delete;
+   AddressVerificationPool& operator = (AddressVerificationPool&&) = delete;
+
+   bool SubmitForVerification(const std::shared_ptr<AuthAddress>& address
+      , const verificationCompletedCallback& onCompleted);
+
+   bool SetBSAddressList(const std::unordered_set<std::string>& addressList);
+
+private:
+   void completeVerification(const std::shared_ptr<AuthAddress>& address, AddressVerificationState state);
+
+private:
+   std::shared_ptr<spdlog::logger>  logger_;
+   const std::string                poolId_;
+
+   using resultsCollection = std::unordered_map<std::string, verificationCompletedCallback >;
+
+   std::atomic_flag  pendingLockerFlag_ = ATOMIC_FLAG_INIT;
+   resultsCollection pendingResults_;
+
+   std::shared_ptr<AddressVerificator>    verificator_;
+};
+
+#endif // __ADDRESS_VERIFICATION_POOL_H__

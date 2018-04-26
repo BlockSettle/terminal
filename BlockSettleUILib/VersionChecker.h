@@ -1,0 +1,57 @@
+#ifndef __VERSION_CHECKER_H__
+#define __VERSION_CHECKER_H__
+
+#include <atomic>
+#include <deque>
+#include <functional>
+
+#include <QNetworkAccessManager>
+#include <QObject>
+#include <QUrl>
+
+class QNetworkReply;
+
+namespace bs {
+   struct ChangeLog
+   {
+      QString versionString;
+      std::vector<QString> newFeatures;
+      std::vector<QString> bugFixes;
+   };
+
+   class VersionChecker : public QObject
+   {
+      Q_OBJECT
+
+   public:
+      VersionChecker(const QString &baseUrl);
+      ~VersionChecker() override = default;
+
+      bool loadLatestVersion();
+
+      QString getLatestVersion() const;
+
+      const std::vector<ChangeLog>& getChangeLog() const;
+
+   signals:
+      void latestVersionLoaded(bool weAreUpToDate);
+      void failedToLoadVersion();
+
+   private slots:
+      void finishedReply(QNetworkReply *);
+
+   private:
+      bool sendRequest(const QUrl &url);
+      bool processReply(const QByteArray &data);
+
+   private:
+      QNetworkAccessManager   nam_;
+      QString                 baseUrl_;
+
+      QString                 latestVer_;
+      std::vector<ChangeLog>  changeLog_;
+   };
+}
+
+
+#endif // __VERSION_CHECKER_H__

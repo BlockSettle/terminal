@@ -1,0 +1,6 @@
+#ifndef __SIGNER_VERSION_H__
+#define __SIGNER_VERSION_H__
+
+#define SIGNER_VERSION_STRING "${BS_VERSION_STRING}. Revision ${BS_REVISIOIN_SHA1}"
+
+#endif // __SIGNER_VERSION_H__
