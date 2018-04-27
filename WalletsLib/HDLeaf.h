@@ -192,8 +192,8 @@ namespace bs {
          Path::Elem  lastIntIdx_ = 0;
          Path::Elem  lastExtIdx_ = 0;
 
-         std::unordered_map<BinaryData, BinaryData>   hashToPubKey_;
-         std::unordered_map<BinaryData, hd::Path>     pubKeyToPath_;
+         std::unordered_map<BinaryData, BinaryData> hashToPubKey_;
+         std::unordered_map<BinaryData, hd::Path>   pubKeyToPath_;
          using TempAddress = std::pair<Path, AddressEntryType>;
          std::unordered_map<Path::Elem, TempAddress>  tempAddresses_;
 
@@ -296,7 +296,7 @@ namespace bs {
          volatile bool  validationStarted_, validationEnded_;
          double         balanceCorrection_ = 0;
          std::set<UTXO> invalidTx_;
-         std::unordered_set<BinaryData>   invalidTxHash_;
+         std::unordered_set<BinaryData> invalidTxHash_;
          QThreadPool    threadPool_;
       };
 

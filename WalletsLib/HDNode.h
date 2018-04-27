@@ -12,7 +12,6 @@
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
 #include "MetaData.h"
-#include "Wallets.h"
 
 
 namespace bs {

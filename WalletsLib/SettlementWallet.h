@@ -13,6 +13,8 @@
 #include "BlockDataManagerConfig.h"
 #include "BtcDefinitions.h"
 #include "MetaData.h"
+#include "Wallets.h"
+
 
 class PyBlockDataManager;
 class SafeBtcWallet;
@@ -223,11 +225,11 @@ namespace bs {
 
    private:
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
-      std::unordered_map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>>   addressBySettlementId_;
+      std::unordered_map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
       std::unordered_map<int, std::shared_ptr<SettlementAssetEntry>>                assets_;
       std::map<int, std::shared_ptr<SafeBtcWallet> >     rtWallets_;
       std::unordered_map<std::string, int>               rtWalletsById_;
-      std::unordered_map<BinaryData, int>                assetIndexByAddr_;
+      std::unordered_map<BinaryData, int>   assetIndexByAddr_;
       int   lastIndex_ = 0;
    };
 

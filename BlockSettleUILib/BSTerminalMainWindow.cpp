@@ -114,10 +114,15 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    bdm_ = PyBlockDataManager::createDataManager(applicationSettings_->GetArmorySettings()
       , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
-   PyBlockDataManager::setInstance(bdm_);
-   connect(bdm_.get(), &PyBlockDataManager::txBroadcastError, [](const QString &txHash, const QString &error) {
-      NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { txHash, error });
-   });
+   if (bdm_) {
+      PyBlockDataManager::setInstance(bdm_);
+      connect(bdm_.get(), &PyBlockDataManager::txBroadcastError, [](const QString &txHash, const QString &error) {
+         NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { txHash, error });
+      });
+   }
+   else {
+      logMgr_->logger()->error("Failed to create BlockDataManager");
+   }
 
    otpManager_ = std::make_shared<OTPManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
    connect(otpManager_.get(), &OTPManager::SyncCompleted, this, &BSTerminalMainWindow::OnOTPSyncCompleted);
@@ -170,7 +175,9 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
    applicationSettings_->SaveSettings();
 
    NotificationCenter::destroyInstance();
-   bdm_->removeListener(bdmListener_.get());
+   if (bdm_) {
+       bdm_->removeListener(bdmListener_.get());
+   }
    if (signContainer_) {
       signContainer_->Stop();
    }
@@ -229,7 +236,9 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addAction(ui->action_Quit);
    sysTrayIcon_->setContextMenu(trayMenu);
 
-   connect(bdm_.get(), &PyBlockDataManager::zeroConfReceived, this, &BSTerminalMainWindow::showZcNotification);
+   if (bdm_) {
+      connect(bdm_.get(), &PyBlockDataManager::zeroConfReceived, this, &BSTerminalMainWindow::showZcNotification);
+   }
 }
 
 void BSTerminalMainWindow::setupIcon()
@@ -493,9 +502,10 @@ void BSTerminalMainWindow::setupBDM()
 {
    bdmListener_ = std::make_shared<MainBlockListener>(this);
    connect(this, &BSTerminalMainWindow::onBDMStateChanged, this, &BSTerminalMainWindow::BDMStateChanged);
-   bdm_->addListener(bdmListener_.get());
-
-   QtConcurrent::run(bdm_.get(), &PyBlockDataManager::setupConnection);
+   if (bdm_) {
+      bdm_->addListener(bdmListener_.get());
+      QtConcurrent::run(bdm_.get(), &PyBlockDataManager::setupConnection);
+   }
 }
 
 bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)

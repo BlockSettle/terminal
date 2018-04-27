@@ -4,6 +4,8 @@
 #include <btc/random.h>
 #include <btc/ecc.h>
 #include "EncryptionUtils.h"
+#include "make_unique.h"
+
 
 using namespace bs;
 

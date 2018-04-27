@@ -145,8 +145,6 @@ StatusBarView::StatusBarView(const std::shared_ptr<PyBlockDataManager>& bdm, std
    setOfflineStatus();
    SetLoggedOutStatus();
 
-   listener_ = std::make_shared<StatusViewBlockListener>(this);
-
    connect(this, &StatusBarView::onSetOfflineStatus, this, &StatusBarView::setOfflineStatus);
    connect(this, &StatusBarView::onSetConnectingStatus, this, &StatusBarView::setConnectingStatus);
    connect(this, &StatusBarView::onSetErrorStatus, this, &StatusBarView::setErrorStatus);
@@ -164,7 +162,10 @@ StatusBarView::StatusBarView(const std::shared_ptr<PyBlockDataManager>& bdm, std
    connect(walletsManager_.get(), &WalletsManager::walletImportStarted, this, &StatusBarView::onWalletImportStarted);
    connect(walletsManager_.get(), &WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
 
-   bdm_->addListener(listener_.get());
+   if (bdm_) {
+      listener_ = std::make_shared<StatusViewBlockListener>(this);
+      bdm_->addListener(listener_.get());
+   }
 }
 
 QWidget *StatusBarView::CreateSeparator()

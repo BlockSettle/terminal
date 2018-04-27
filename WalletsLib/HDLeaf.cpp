@@ -4,6 +4,8 @@
 #include "CheckRecipSigner.h"
 #include "HDNode.h"
 #include "SafeLedgerDelegate.h"
+#include "Wallets.h"
+
 
 #define ADDR_KEY     0x00002002
 
@@ -914,8 +916,9 @@ bool hd::Leaf::deserialize(const BinaryData &ser, const std::shared_ptr<hd::Node
 class LeafResolver : public ResolverFeed
 {
 public:
-   LeafResolver(const std::unordered_map<BinaryData, BinaryData> &map)
-      : hashToPubKey_(map) {}
+   using BinaryDataMap = std::unordered_map<BinaryData, BinaryData>;
+
+   LeafResolver(const BinaryDataMap &map) : hashToPubKey_(map) {}
 
    BinaryData getByVal(const BinaryData& key) override {
       const auto itKey = hashToPubKey_.find(key);
@@ -931,13 +934,13 @@ public:
    }
 
 private:
-   const std::unordered_map<BinaryData, BinaryData>   hashToPubKey_;
+   const BinaryDataMap hashToPubKey_;
 };
 
 class LeafSigningResolver : public LeafResolver
 {
 public:
-   LeafSigningResolver(const std::unordered_map<BinaryData, BinaryData> &map, const SecureBinaryData &password
+   LeafSigningResolver(const BinaryDataMap &map, const SecureBinaryData &password
       , const hd::Path &rootPath, const std::shared_ptr<hd::Node> &rootNode
       , const std::unordered_map<BinaryData, hd::Path> &pathMap)
       : LeafResolver(map), password_(password), rootPath_(rootPath), rootNode_(rootNode), pathMap_(pathMap) {}
@@ -969,7 +972,7 @@ private:
    const hd::Path          rootPath_;
    SecureBinaryData        privKey_;
    const std::shared_ptr<hd::Node>                 rootNode_;
-   const std::unordered_map<BinaryData, hd::Path>  pathMap_;
+   const std::unordered_map<BinaryData, hd::Path> pathMap_;
 };
 
 

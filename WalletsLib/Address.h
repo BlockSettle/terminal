@@ -5,9 +5,11 @@
 
 #include <QByteArray>
 
+#include "Addresses.h"
 #include "BinaryData.h"
 #include "BTCNumericTypes.h"
-#include "Wallets.h"
+#include "TxClasses.h"
+
 
 namespace bs {
    class Address : public BinaryData

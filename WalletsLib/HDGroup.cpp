@@ -1,5 +1,6 @@
 #include "HDGroup.h"
 #include "HDNode.h"
+#include "Wallets.h"
 
 #define LEAF_KEY     0x00002001
 

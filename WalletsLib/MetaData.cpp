@@ -6,6 +6,7 @@
 #include "SafeBtcWallet.h"
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"
+#include "Wallets.h"
 
 
 #define ASSETMETA_PREFIX      0xAC

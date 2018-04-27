@@ -7,8 +7,10 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "AuthAddress.h"
@@ -100,7 +102,7 @@ private:
    verification_callback   userCallback_;
 
    //bsAddressList_ - list received from public bridge
-   std::unordered_set<BinaryData>   bsAddressList_;
+   std::unordered_set<BinaryData> bsAddressList_;
 
    // addresses that were added to a wallet
    // user auth address list

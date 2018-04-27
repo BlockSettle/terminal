@@ -3,7 +3,6 @@
 #include <QMutexLocker>
 #include "ApplicationSettings.h"
 #include "HDWallet.h"
-#include "Wallets.h"
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 

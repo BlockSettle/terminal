@@ -4,9 +4,10 @@
 #include <bech32/ref/c++/segwit_addr.h>
 #include "SystemFileUtils.h"
 #include "MetaData.h"
+#include "Wallets.h"
+
 
 using namespace bs;
-
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc, bool extOnlyAddresses, const bs::wallet::Seed &seed)
    : QObject(nullptr), name_(name), desc_(desc), netType_(seed.networkType()), extOnlyAddresses_(extOnlyAddresses)

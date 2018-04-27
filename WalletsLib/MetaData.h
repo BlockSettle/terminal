@@ -10,12 +10,24 @@
 #include "Address.h"
 #include "BtcDefinitions.h"
 #include "EasyCoDec.h"
+#include "lmdbpp.h"
+#include "Script.h"
+#include "Signer.h"
 #include "UtxoReservation.h"
-#include "Wallets.h"
 
 
 class PyBlockDataManager;
 class SafeBtcWallet;
+
+
+#define WALLETTYPE_KEY          0x00000001
+#define ROOTASSET_KEY           0x00000007
+#define WALLETNAME_KEY          0x00000020
+#define WALLETDESCRIPTION_KEY   0x00000021
+#define MASTERID_KEY            0x000000A0
+#define MAINWALLET_KEY          0x000000A1
+#define WALLETMETA_PREFIX       0xB0
+#define WALLETMETA_DBNAME       "WalletHeader"
 
 
 namespace bs {
@@ -67,7 +79,7 @@ namespace bs {
 
       class MetaData
       {
-         std::unordered_map<BinaryData, shared_ptr<AssetEntryMeta> >   data_;
+         std::unordered_map<BinaryData, shared_ptr<AssetEntryMeta>>   data_;
 
       protected:
          unsigned int      nbMetaData_;
