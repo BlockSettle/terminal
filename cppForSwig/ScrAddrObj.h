@@ -224,7 +224,7 @@ public:
    vector<UnspentTxOut> getSpendableTxOutList(bool ignoreZC=true) const;
    
    vector<LedgerEntry> getTxLedgerAsVector(
-      const map<BinaryData, LedgerEntry>* leMap) const;
+      const map<BinaryData, LedgerEntry>& leMap) const;
 
    map<BinaryData, TxIOPair> &   getTxIOMap(void) { return relevantTxIO_; }
    const map<BinaryData, TxIOPair> & getTxIOMap(void) const 

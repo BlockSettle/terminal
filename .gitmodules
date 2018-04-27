@@ -1,3 +1,0 @@
-[submodule "cppForSwig/fcgi"]
-	path = cppForSwig/fcgi
-	url = https://github.com/goatpig/libfcgi.git

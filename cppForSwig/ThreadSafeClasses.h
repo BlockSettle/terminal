@@ -316,27 +316,23 @@ public:
       memory_order_acq_rel, memory_order_acquire));
 
       auto valptrcopy = valptr;
-      while (1)
+      if (!top_.compare_exchange_strong(valptrcopy, maxptr_,
+         memory_order_acq_rel, memory_order_acquire))
       {
-         if (!top_.compare_exchange_strong(valptrcopy, maxptr_,
-            memory_order_acq_rel, memory_order_relaxed))
+         AtomicEntry<T>* nextptr;
+         do
          {
-            AtomicEntry<T>* nextptr = 
-               valptr->next_.load(memory_order_acquire);
-            if (nextptr == maxptr_)
-               continue;
-
-            count_.fetch_sub(1, memory_order_acq_rel);
-            bottom_.store(nextptr, memory_order_release);
-            break;
-         }
-         else
-         {
-            count_.fetch_sub(1, memory_order_acq_rel);
-            bottom_.store(nullptr, memory_order_release);
-            top_.store(nullptr, memory_order_release);
-            break;
-         }
+            nextptr = valptr->next_.load(memory_order_acquire);
+         } while (nextptr == maxptr_);
+      
+         count_.fetch_sub(1, memory_order_acq_rel);
+         bottom_.store(nextptr, memory_order_release);
+      }
+      else
+      {
+         count_.fetch_sub(1, memory_order_acq_rel);
+         bottom_.store(nullptr, memory_order_release);
+         top_.store(nullptr, memory_order_release);
       }
 
       //delete ptr and return value
@@ -353,7 +349,7 @@ public:
    {
       //create object
       AtomicEntry<T>* newentry = new AtomicEntry<T>(move(obj));
-      newentry->next_.store(maxptr_, memory_order_relaxed);
+      newentry->next_.store(maxptr_, memory_order_release);
 
       AtomicEntry<T>* nullentry = nullptr;
 
@@ -365,17 +361,13 @@ public:
             topentry = top_.load(memory_order_acquire);
       } 
       while (!top_.compare_exchange_weak(topentry, maxptr_,
-      memory_order_acq_rel, memory_order_relaxed));
+      memory_order_acq_rel, memory_order_acquire));
 
       if (topentry != nullptr)
-      {
          topentry->next_.store(newentry, memory_order_release);
-      }
-      else
-      {
-         bottom_.compare_exchange_strong(nullentry, newentry,
-            memory_order_acq_rel, memory_order_relaxed);
-      }
+
+      bottom_.compare_exchange_strong(nullentry, newentry,
+         memory_order_acq_rel, memory_order_acquire);
 
       count_.fetch_add(1, memory_order_acq_rel);
       top_.store(newentry, memory_order_release);

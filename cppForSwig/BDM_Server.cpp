@@ -172,6 +172,39 @@ void BDV_Server_Object::buildMethodMap()
 
    methodMap_["getHistoryPage"] = getHistoryPage;
 
+   methodMap_["getHistoryPageCount"] = [this]
+      (const vector<string>& ids, Arguments& args)->Arguments
+   {
+      if (ids.size() < 2)
+         throw runtime_error("unexpected id count");
+
+      auto& nextID = ids[1];
+
+      //is it a ledger from a delegate?
+      auto delegateIter = delegateMap_.find(nextID);
+      if (delegateIter != delegateMap_.end())
+      {
+         auto& delegateObject = delegateIter->second;
+
+         Arguments retarg;
+         retarg.push_back(delegateObject.getPageCount());
+         return retarg;
+      }
+
+      //or a wallet?
+      auto theWallet = getWalletOrLockbox(nextID);
+      if (theWallet != nullptr)
+      {
+
+         Arguments retarg;
+         retarg.push_back(theWallet->getHistoryPageCount());
+         return retarg;
+      }
+
+      throw runtime_error("invalid id");
+      return Arguments();
+   };
+
    //registerWallet
    auto registerWallet = [this]
       (const vector<string>& ids, Arguments& args)->Arguments
@@ -1495,7 +1528,7 @@ void BDV_Server_Object::haltThreads()
    if (initT_.joinable())
       initT_.join();
 
-   cb_->shutdown();
+   cb_.reset();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

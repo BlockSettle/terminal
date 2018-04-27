@@ -1777,7 +1777,7 @@ Tx LMDBBlockDatabase::getFullTxCopy(BinaryData ldbKey6B) const
    }
    
    shared_ptr<BlockHeader> header;
-   if (getDbType() != ARMORY_DB_SUPER || dup != 0x7F)
+   if (getDbType() != ARMORY_DB_SUPER)
       header = blockchainPtr_->getHeaderByHeight(height);
    else
       header = blockchainPtr_->getHeaderById(height);
@@ -2030,7 +2030,7 @@ BinaryData LMDBBlockDatabase::getTxHashForLdbKey(BinaryDataRef ldbKey6B) const
 
       if (stxVal.getSize() == 0)
       {
-         LOGERR << "TxRef key does not exist in ZC DB";
+         LOGERR << "TxRef key does not exist in BLKDATA DB";
          return BinaryData(0);
       }
 
@@ -2234,27 +2234,10 @@ bool LMDBBlockDatabase::getStoredTx_byHash(const BinaryData& txHash,
       return false;
 
    auto&& dbKey = getDBKeyForHash(txHash);
-   if (dbKey.getSize() < 6)
+   if (dbKey.getSize() == 0)
       return false;
 
-   if (getDbType() == ARMORY_DB_SUPER)
-   {
-      auto hgtx = dbKey.getSliceRef(0, 4);
-      if (DBUtils::hgtxToDupID(hgtx) == 0x7F)
-      {
-         auto block_id = DBUtils::hgtxToHeight(hgtx);
-         auto header = blockchainPtr_->getHeaderById(block_id);
-         
-         BinaryWriter bw;
-         bw.put_BinaryData(DBUtils::heightAndDupToHgtx(
-            header->getBlockHeight(), header->getDuplicateID()));
-         bw.put_BinaryDataRef(dbKey.getSliceRef(
-            4, dbKey.getSize() - 4));
-
-         dbKey = bw.getData();
-      }
-   }
-
+   auto&& tx = beginTransaction(STXO, LMDB::ReadOnly);
    return getStoredTx_byDBKey(*stx, dbKey);
 }
 
@@ -2888,10 +2871,7 @@ void LMDBBlockDatabase::resetHistoryForAddressVector(
 void LMDBBlockDatabase::resetSSHdb()
 {
    if (getDbType() == ARMORY_DB_SUPER)
-   {
-      resetSSHdb_Super();
-      return;
-   }
+      return resetSSHdb_Super();
 
    map<BinaryData, int> sshKeys;
 

@@ -116,7 +116,7 @@ public:
    void         serializeDBValue(BinaryWriter &    bw ) const;
    void       unserializeDBValue(BinaryData const & bd);
    void       unserializeDBValue(BinaryDataRef      bd);
-   void       unserializeDBKey(BinaryDataRef key) {}
+   void       unserializeDBKey(BinaryDataRef) {}
 
    void pprintOneLine(uint32_t indent=3);
 

@@ -20,7 +20,7 @@ BinarySocket::BinarySocket(const string& addr, const string& port) :
 {
    //resolve address
    struct addrinfo hints;
-   struct addrinfo *result;
+   struct addrinfo *result = nullptr;
    memset(&hints, 0, sizeof(hints));
    hints.ai_family = AF_UNSPEC;
    hints.ai_socktype = SOCK_STREAM;
@@ -421,7 +421,8 @@ void BinarySocket::writeAndRead(
          errorss << "poll() error in readAndWrite: " << errornum;
          if (verbose_)
             LOGERR << errorss.str();
-         throw SocketError(errorss.str());
+//         throw SocketError(errorss.str());
+         break;      //! Workaround for proper process shutdown
       }
 
       if (pfd.revents & POLLNVAL)
@@ -445,7 +446,8 @@ void BinarySocket::writeAndRead(
          errorss << "POLLERR error in readAndWrite";
          if (verbose_)
             LOGERR << errorss.str();
-         throw SocketError(errorss.str());
+//         throw SocketError(errorss.str());
+         break;      //! Workaround for proper process shutdown
       }
 
       if (pfd.revents & POLLOUT)

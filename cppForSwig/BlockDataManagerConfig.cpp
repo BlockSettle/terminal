@@ -912,7 +912,7 @@ bool NodeChainState::processState(
    
    if (pct_int != prev_pct_int_)
    {
-      LOGINFO << "waiting on node sync: " << float(pct_ * 100.0) << "%";
+      LOGINFO << "waiting on node sync: " << pct_ << "%";
       prev_pct_int_ = pct_int;
    }
 

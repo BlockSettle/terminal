@@ -43,10 +43,9 @@ void BlockchainScanner_Super::scan()
    }
 
    startAt_ = scanFrom;
-   LOGINFO << "scanning new blocks from #" << startAt_ << " to #" << 
-      topBlock->getBlockHeight();
 
    heightAndDupMap_ = move(blockchain_->getHeightAndDupMap());
+
    vector<future<bool>> completedFutures;
    unsigned _count = 0;
 
@@ -499,7 +498,7 @@ StoredTxOut BlockchainScanner_Super::getStxoByHash(
          auto hd_iter = heightAndDupMap_.find(block_id);
          if (hd_iter == heightAndDupMap_.end())
             continue;
-         if (!hd_iter->second.isMain_)
+         if (hd_iter->second.dup_ == 0xFF)
             continue;
 
          auto data = db_->getValueNoCopy(STXO, bw_key.getDataRef());
@@ -761,7 +760,7 @@ void BlockchainScanner_Super::processInputsThread(
             subssh.txioMap_[txoutkey] = move(txio);
 
             //add to spentTxOuts_
-            spentness[txoutkey] = txinkey;
+            spentness[stxo.getDBKey(false)] = txinkey;
          }
       }
    }
@@ -946,8 +945,8 @@ void BlockchainScanner_Super::writeBlockData()
       {
          chrono::duration<double> total =
             batch->parseTxOutEnd_ - batch->parseTxOutStart_;
-         //LOGINFO << "   parsed TxOuts in " << total.count() << "s";
-         //LOGINFO << "     waited on batch for " << batch->waitOnBatch_.count() << "s";
+         LOGINFO << "   parsed TxOuts in " << total.count() << "s";
+         LOGINFO << "     waited on batch for " << batch->waitOnBatch_.count() << "s";
          //LOGINFO << "     got block files in " << batch->preloadBlockFiles_.count() << "s";         
          //LOGINFO << "     merged txout ssh in " << batch->mergeTxoutSsh_.count() << "s";
          //LOGINFO << "     parsed block files in " << batch->parseBlock_.count() << "s";
@@ -957,18 +956,18 @@ void BlockchainScanner_Super::writeBlockData()
 
          total =
             batch->parseTxInEnd_ - batch->parseTxInStart_;
-         //LOGINFO << "   parsed TxIns in " << total.count() << "s";
-         //LOGINFO << "     waited on batch for " << batch->waitOnTxInBatch_.count() << "s";
+         LOGINFO << "   parsed TxIns in " << total.count() << "s";
+         LOGINFO << "     waited on batch for " << batch->waitOnTxInBatch_.count() << "s";
          //LOGINFO << "     merged txin ssh in " << batch->mergeTxInSsh_.count() << "s";
-         //LOGINFO << "   serialized ssh in " << batch->serializeSsh_.count() << "s";
+         LOGINFO << "   serialized ssh in " << batch->serializeSsh_.count() << "s";
 
          total =
             batch->writeSshEnd_ - batch->writeSshStart_;
-         //LOGINFO << "   put subssh in " << total.count() << "s";
+         LOGINFO << "   put subssh in " << total.count() << "s";
 
          total =
             batch->writeSpentnessEnd_ - batch->writeSpentnessStart_;
-         //LOGINFO << "   put spentness in " << total.count() << "s";
+         LOGINFO << "   put spentness in " << total.count() << "s";
          
          map<unsigned, unsigned> distributionMap;
          for (auto& distPair : batch->spentnessDistribution_)
@@ -981,7 +980,7 @@ void BlockchainScanner_Super::writeBlockData()
             if (count >= 5)
                break;
 
-            //LOGINFO << "     shardId: " << rIter->second << ", count: " << rIter->first;
+            LOGINFO << "     shardId: " << rIter->second << ", count: " << rIter->first;
 
             ++count;
             ++rIter;
@@ -1161,7 +1160,7 @@ void BlockchainScanner_Super::updateSSH(bool force)
    TIMER_RESTART("updateSSH");
 
    ShardedSshParser sshParser(
-      db_, scanFrom, topBlock->getBlockHeight(), totalThreadCount_, init_);
+      db_, startAt_, topBlock->getBlockHeight(), totalThreadCount_, init_);
    sshParser.updateSsh();
 
    {

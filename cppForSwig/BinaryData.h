@@ -128,8 +128,10 @@ public:
       data_.clear();
    }
 
-   bool isNull(void) { return (data_.size()==0);}
-   
+   bool isNull(void) const { return (data_.size()==0);}
+   // [AT] return true if binary data is empty or contain only zero values
+   bool zeroFilled() const;
+
    BinaryData& operator=(const BinaryData &o)
    {
       data_ = o.data_;
@@ -604,6 +606,15 @@ private:
 
 };
 
+namespace std {
+   template <> struct hash<BinaryData>
+   {
+      size_t operator()(const BinaryData& x) const
+      {
+         return hash<std::string>()(x.toBinStr());
+      }
+   };
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1876,6 +1887,7 @@ public:
    size_t getBufferSizeRemaining(void) { return binReader_.getSizeRemaining(); }
    size_t getFileSizeRemaining(void)   { return fileBytesRemaining_; }
    size_t getBufferSize(void)          { return binReader_.getSize(); }
+   bool   isEmpty() const { return (fileBytesRemaining_ == 0) && (binReader_.getSizeRemaining() == 0);}
 
 private:
 

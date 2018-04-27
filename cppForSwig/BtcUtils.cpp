@@ -7,9 +7,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "BtcUtils.h"
-#include "cryptopp/hmac.h"
-#include "cryptopp/sha.h"
-#include "cryptopp/base64.h"
+#include "hmac.h"
+#include "sha.h"
+#include "base64.h"
 #include "EncryptionUtils.h"
 #include "BlockDataManagerConfig.h"
 #include "bech32/ref/c++/segwit_addr.h"
@@ -32,6 +32,27 @@ const map<char, uint8_t> BtcUtils::base58Vals_ = {
    { 'q', 48 }, { 'r', 49 }, { 's', 50 }, { 't', 51 }, { 'u', 52 }, { 'v', 53 }, 
    { 'w', 54 }, { 'x', 55 }, { 'y', 56 }, { 'z', 57 }
 };
+
+#include <cassert>
+
+////////////////////////////////////////////////////////////////////////////////
+bool BtcUtils::verifyChecksum256(const BinaryData& data, const BinaryData& checksum)
+{
+   if (data.zeroFilled()) {
+      return false;
+   }
+
+   BinaryData actualChecksum = getHash256(data);
+   assert(checksum.getSize() <= 32);
+
+   for (size_t i=0; i < checksum.getSize(); ++i) {
+      if (actualChecksum[i] != checksum[i]) {
+         return false;
+      }
+   }
+
+   return true;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 BinaryData BtcUtils::computeID(const SecureBinaryData& pubkey)

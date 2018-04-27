@@ -9,7 +9,6 @@
 #include "Signer.h"
 #include "Script.h"
 #include "Transactions.h"
-#include "make_unique.h"
 
 StackItem::~StackItem()
 {}

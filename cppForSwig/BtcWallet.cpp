@@ -784,16 +784,21 @@ shared_ptr<map<BinaryData, LedgerEntry>> BtcWallet::getHistoryPage(
 ////////////////////////////////////////////////////////////////////////////////
 vector<LedgerEntry> BtcWallet::getHistoryPageAsVector(uint32_t pageId)
 {
-   auto ledgerMap = getHistoryPage(pageId);
+   try
+   {
+      auto ledgerMap = getHistoryPage(pageId);
+      
+      vector<LedgerEntry> ledgerVec;
 
-   vector<LedgerEntry> ledgerVec;
-   if (ledgerMap == nullptr)
+      for (const auto& ledgerPair : *ledgerMap)
+         ledgerVec.push_back(ledgerPair.second);
+
       return ledgerVec;
-
-   for (const auto& ledgerPair : *ledgerMap)
-      ledgerVec.push_back(ledgerPair.second);
-
-   return ledgerVec;
+   }
+   catch (std::range_error &e)
+   {
+      throw e;
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

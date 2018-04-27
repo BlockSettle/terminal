@@ -112,6 +112,19 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
    //with scrAddr. Since several wallets may reference the same scrAddr, we 
    //can't modify original txio, so we use a copy.
 
+   //to figure out the ZC key in a txio
+   auto getZcKeyFromTxio = [](const TxIOPair& txio)->BinaryData
+   {
+      //txin takes precedence over txout when figuring which ZC modified 
+      //the txio last
+      if (txio.hasTxInZC())
+         return txio.getDBKeyOfInput();
+      else if (txio.hasTxOutZC())
+         return txio.getDBKeyOfOutput();
+
+      return BinaryData();
+   };
+
    map<BinaryData, BinaryDataRef> invalidatedZCMap;
 
    //look for invalidated keys, delete from validZcKeys_ as we go
@@ -130,17 +143,8 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
 
             for (auto& txiokey : keyIter->second)
             {
-               auto&& insertIter = invalidatedZCMap.insert(make_pair(
+               invalidatedZCMap.insert(make_pair(
                   txiokey, zcIter->getRef()));
-
-               if (insertIter.second == false)
-               {
-                  //If we got here, this zctxio entry is flagged 
-                  //twice, i.e. for both input and output. Set the
-                  //IO reference to null so that the purge code 
-                  //knows to get rid of the entire entry
-                  insertIter.first->second = BinaryDataRef();
-               }
             }
 
             validZCKeys_.erase(keyIter++);
@@ -190,20 +194,8 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
       }
 
       newZC[txiopair.first] = newtxio;
-
-      if (txiopair.second.hasTxOutZC())
-      {
-         auto& zckeyset = 
-            validZCKeys_[txiopair.second.getDBKeyOfOutput()];
-         zckeyset.insert(txiopair.first);
-      }
-
-      if (txiopair.second.hasTxInZC())
-      {
-         auto& zckeyset =
-            validZCKeys_[txiopair.second.getDBKeyOfInput()];
-         zckeyset.insert(txiopair.first);
-      }
+      auto& zckeyset = validZCKeys_[getZcKeyFromTxio(txiopair.second)];
+      zckeyset.insert(txiopair.first);
    }
 
    //nothing to do if we didn't find new ZC
@@ -237,15 +229,8 @@ bool ScrAddrObj::purgeZC(
       if (txioIter == relevantTxIO_.end())
          continue;
 
-      if (zc.second.isNull())
-      {
-         //the entire entry needs to go
-         relevantTxIO_.erase(txioIter);
-         purged = true;
-         continue;
-      }
-
       TxIOPair& txio = txioIter->second;
+
       if (txio.getTxRefOfOutput().getDBKeyRef() == zc.second)
       {
          BinaryData txInKey;
@@ -372,7 +357,7 @@ map<BinaryData, TxIOPair> ScrAddrObj::getHistoryForScrAddr(
 
    //check relevantTxio_ first to see if it has some of the TxIOs
    uint32_t localTxioBottom = hist_.getPageBottom(0);
-   if (update==false && endBlock > localTxioBottom && lastSeenBlock_ != 0)
+   if (update==false && endBlock > localTxioBottom)
    {
       if (startBlock <= localTxioBottom)
       {
@@ -411,18 +396,11 @@ map<BinaryData, TxIOPair> ScrAddrObj::getHistoryForScrAddr(
 
    //grab txio range from ssh
    StoredScriptHistory ssh;
-   auto start = startBlock;
-   if (startBlock == UINT32_MAX && lastSeenBlock_ == 0)
-      start = lastSeenBlock_;
-   db_->getStoredScriptHistory(ssh, scrAddr_, start, endBlock);
+   db_->getStoredScriptHistory(ssh, scrAddr_, startBlock, endBlock);
 
    //update scrAddrObj containers
    totalTxioCount_ = ssh.totalTxioCount_;
-
-   if (endBlock != UINT32_MAX)
-      lastSeenBlock_ = endBlock;
-   else if (lastSeenBlock_ == 0)
-      lastSeenBlock_ = bc_->top()->getBlockHeight();
+   lastSeenBlock_ = endBlock;
 
    if (scrAddr_[0] == SCRIPT_PREFIX_MULTISIG)
       withMultisig = true;
@@ -473,7 +451,7 @@ vector<LedgerEntry> ScrAddrObj::getHistoryPageById(uint32_t id)
       { return this->updateLedgers(txioMap, start, end); };
 
    auto leMap = hist_.getPageLedgerMap(getTxio, buildLedgers, id, updateID_);
-   return getTxLedgerAsVector(leMap.get());
+   return getTxLedgerAsVector(*leMap);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -518,14 +496,11 @@ ScrAddrObj& ScrAddrObj::operator= (const ScrAddrObj& rhs)
 
 ////////////////////////////////////////////////////////////////////////////////
 vector<LedgerEntry> ScrAddrObj::getTxLedgerAsVector(
-   const map<BinaryData, LedgerEntry>* leMap) const
+   const map<BinaryData, LedgerEntry>& leMap) const
 {
    vector<LedgerEntry>le;
 
-   if (leMap == nullptr)
-      return le;
-
-   for (auto& lePair : *leMap)
+   for (auto& lePair : leMap)
       le.push_back(lePair.second);
 
    return le;

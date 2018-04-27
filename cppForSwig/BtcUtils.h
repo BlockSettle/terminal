@@ -29,10 +29,10 @@
 #include <stdexcept>
 
 #include "BinaryData.h"
-#include "cryptopp/cryptlib.h"
-#include "cryptopp/sha.h"
-#include "cryptopp/integer.h"
-#include "cryptopp/ripemd.h"
+#include "cryptlib.h"
+#include "sha.h"
+#include "integer.h"
+#include "ripemd.h"
 #include "UniversalTimer.h"
 #include "log.h"
 
@@ -326,6 +326,8 @@ public:
    static const BinaryData& BadAddress() { return BadAddress_; }
    static const BinaryData& EmptyHash() { return EmptyHash_;  }
 
+   static bool verifyChecksum256(const BinaryData& data, const BinaryData& checksum);
+
    /////////////////////////////////////////////////////////////////////////////
    static uint64_t readVarInt(uint8_t const * strmPtr, size_t remaining, 
       uint32_t* lenOutPtr=NULL)
@@ -492,7 +494,19 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   static void getSha256(const uint8_t* data, 
+   static vector<bool> UnpackBitsToVector(const BinaryData& bits, uint32_t nBits)
+   {
+      vector<bool> out;
+      out.reserve(nBits);
+      for (uint32_t i = 0; i<nBits; i++) {
+         uint8_t bit = bits[i / 8] & (1 << ( i%8));
+         out.push_back(bit>0);
+      }
+      return out;
+   }
+
+   /////////////////////////////////////////////////////////////////////////////
+   static void getSha256(const uint8_t* data,
                          size_t len, 
                          BinaryData& hashOutput)
    {
@@ -1959,6 +1973,7 @@ public:
 
       return output.getData();
    }
+
 
    static BinaryData rsToDerSig(BinaryDataRef bdr);
 

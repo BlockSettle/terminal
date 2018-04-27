@@ -630,11 +630,10 @@ map<unsigned, HeightAndDup> Blockchain::getHeightAndDupMap(void) const
 
    for (auto& block_pair : *headermap)
    {
-      HeightAndDup hd(block_pair.second->getBlockHeight(), 
-         block_pair.second->getDuplicateID(),
-         block_pair.second->isMainBranch());
-
-      hd_map.insert(make_pair(block_pair.first, hd));
+      hd_map.insert(make_pair(
+         block_pair.first,
+         HeightAndDup(block_pair.second->getBlockHeight(),
+                      block_pair.second->getDuplicateID())));
    }
 
    return hd_map;

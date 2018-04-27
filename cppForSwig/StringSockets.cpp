@@ -78,6 +78,7 @@ int32_t HttpSocket::makePacket(char** packet, const char* msg)
    pos += strlen(msg);
 
    memset(*packet + pos, 0, 1);
+
    return pos;
 }
 

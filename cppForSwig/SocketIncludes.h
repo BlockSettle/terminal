@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
+
+#include <stdexcept>
 #define closesocket close
 
 typedef int SOCKET;
@@ -31,10 +33,10 @@ typedef int SOCKET;
 ////////////////////////////////////////////////////////////////////////////////
 #include <string>
 
-struct SocketError : public runtime_error
+struct SocketError : public std::runtime_error
 {
 public:
-   SocketError(const string& e) : runtime_error(e)
+   SocketError(const std::string& e) : std::runtime_error(e)
    {}
 
 };
