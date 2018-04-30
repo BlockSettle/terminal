@@ -1,0 +1,18 @@
+{
+  "version": "0.6.1",
+  "date": "2017-09-15",
+  "changelog": {
+    "New features":
+    [
+      "Transaction comments",
+      "Simultaneous Private Market settlement on dealer and requester sides",
+      "Improve dealer reply UI experience",
+      "Re-worked Transaction Details dialog to contain more info in a more compact form",
+      "Increase fee for unconfirmed transaction - support for RBF and CPFP"
+    ],
+    "Bug fixes":
+    [
+      "Various Private Market flow fixes"
+    ]
+  }
+}

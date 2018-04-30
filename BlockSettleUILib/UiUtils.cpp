@@ -1,0 +1,497 @@
+#include "UiUtils.h"
+
+#include "ApplicationSettings.h"
+#include "AuthAddressManager.h"
+#include "BinaryData.h"
+#include "BlockDataManagerConfig.h"
+#include "BTCNumericTypes.h"
+#include "BtcUtils.h"
+#include "CoinControlModel.h"
+#include "HDWallet.h"
+#include "QtAwesome.h"
+#include "SignContainer.h"
+#include "TxClasses.h"
+#include "WalletsManager.h"
+
+#include <QDateTime>
+#include <QComboBox>
+#include <QImage>
+#include <QPixmap>
+#include <QDebug>
+
+#include <algorithm>
+
+#include <qrencode.h>
+
+// this symbol should be used as group separator, not ' ' ( space )
+static const QChar defaultGroupSeparatorChar = QLatin1Char(0xa0);
+
+template <typename T> bool contains(const vector<T>& v, const T& value)
+{
+   return std::find(v.begin(), v.end(), value) != v.end();
+}
+
+const QLatin1String UiUtils::XbtCurrency = QLatin1String("XBT");
+
+void UiUtils::SetupLocale()
+{
+   auto locale = QLocale(QLocale::C);
+   auto options = locale.numberOptions();
+
+   options |= QLocale::RejectGroupSeparator;
+   options &= ~QLocale::OmitGroupSeparator;
+
+   locale.setNumberOptions(options);
+
+   QLocale::setDefault(locale);
+}
+
+QString UiUtils::displayDateTime(const QDateTime& datetime)
+{
+   static const QString format = QLatin1String("yyyy-MM-dd hh:mm:ss");
+   return datetime.toString(format);
+}
+
+QString UiUtils::displayDateTime(uint64_t time)
+{
+   return displayDateTime(QDateTime::fromTime_t(time));
+}
+
+QString UiUtils::displayTimeMs(const QDateTime& datetime)
+{
+   static const QString format = QLatin1String("hh:mm:ss.zzz");
+   return datetime.toString(format);
+}
+
+constexpr int UiUtils::GetPricePrecisionXBT()
+{
+   return 2;
+}
+
+constexpr int UiUtils::GetPricePrecisionFX()
+{
+   return 4;
+}
+
+constexpr int UiUtils::GetPricePrecisionCC()
+{
+   return 6;
+}
+
+
+template<>
+BTCNumericTypes::balance_type UiUtils::amountToBtc(BTCNumericTypes::balance_type value)
+{
+   return value;
+}
+
+static int addLeaves(QComboBox *comboBox, int &index, const QString &prefix, const std::string &defWalletId
+   , const std::vector<std::shared_ptr<bs::Wallet>> &leaves, const std::shared_ptr<SignContainer> &container)
+{
+   int selected = 0;
+   for (const auto &leaf : leaves) {
+      if ((leaf->GetType() == bs::wallet::Type::Authentication) || (leaf->GetType() == bs::wallet::Type::ColorCoin)) {
+         continue;
+      }
+      if (container && !container->isOffline() && container->isWalletOffline(leaf->GetWalletId())) {
+         continue;
+      }
+      comboBox->addItem(prefix + QString::fromStdString(leaf->GetShortName()));
+      comboBox->setItemData(index, QString::fromStdString(leaf->GetWalletId()), UiUtils::WalletIdRole);
+      comboBox->setItemData(index, leaf->GetSpendableBalance(), UiUtils::WalletBalanceRole);
+      if (defWalletId == leaf->GetWalletId()) {
+         selected = index;
+      }
+      index++;
+   }
+   return selected;
+}
+
+int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<SignContainer> &container, const std::string& selectedWalletId)
+{
+   if ((walletsManager == nullptr) || (walletsManager->GetHDWalletsCount() == 0)) {
+      return -1;
+   }
+   std::string defaultWalletId = selectedWalletId;
+   if (defaultWalletId.empty()) {
+      const auto &defWallet = walletsManager->GetDefaultWallet();
+      if (defWallet) {
+         defaultWalletId = defWallet->GetWalletId();
+      }
+   }
+
+   int selected = 0;
+   int index = 0;
+
+   auto b = comboBox->blockSignals(true);
+   comboBox->clear();
+   for (size_t i = 0; i < walletsManager->GetHDWalletsCount(); i++) {
+      const auto &hdWallet = walletsManager->GetHDWallet(i);
+      const auto &groups = hdWallet->getGroups();
+      if (groups.empty()) {
+         selected = qMax(selected, addLeaves(comboBox, index, QString::fromStdString(hdWallet->getName()) + QLatin1String("/")
+            , defaultWalletId, hdWallet->getLeaves(), container));
+      }
+      else {
+         for (const auto &group : groups) {
+            const auto prefix = QString::fromStdString(hdWallet->getName()) + QLatin1String("/") + QString::fromStdString(group->getName()) + QLatin1String("/");
+            selected = qMax(selected, addLeaves(comboBox, index, prefix, defaultWalletId, group->getAllLeaves()
+               , container));
+         }
+      }
+   }
+   comboBox->blockSignals(b);
+   QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, selected));
+   return selected;
+}
+
+void UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
+{
+   int walletIndex = 0;
+   if (comboBox->count() == 0) {
+      return;
+   }
+
+   for (int i=0; i<comboBox->count(); ++i) {
+      if (comboBox->itemData(i, WalletIdRole).toString().toStdString() == walletId) {
+         walletIndex = i;
+         break;
+      }
+   }
+
+   if (comboBox->currentIndex() != walletIndex) {
+      comboBox->setCurrentIndex(walletIndex);
+   }
+}
+
+int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<WalletsManager> &walletsManager)
+{
+   if ((walletsManager == nullptr) || (walletsManager->GetHDWalletsCount() == 0)) {
+      return -1;
+   }
+   int selected = 0;
+   const auto &priWallet = walletsManager->GetPrimaryWallet();
+   auto b = comboBox->blockSignals(true);
+   comboBox->clear();
+   for (size_t i = 0; i < walletsManager->GetHDWalletsCount(); i++) {
+      const auto &hdWallet = walletsManager->GetHDWallet(i);
+      if (hdWallet == priWallet) {
+         selected = i;
+      }
+      comboBox->addItem(QString::fromStdString(hdWallet->getName()));
+      comboBox->setItemData(i, QString::fromStdString(hdWallet->getWalletId()), UiUtils::WalletIdRole);
+   }
+   comboBox->blockSignals(b);
+   QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, selected));
+   return selected;
+}
+
+void UiUtils::fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager> &authAddressManager)
+{
+   comboBox->clear();
+   const auto &addrList = authAddressManager->GetVerifiedAddressList();
+   if (!addrList.empty()) {
+      const auto b = comboBox->blockSignals(true);
+      for (const auto &address : addrList) {
+         comboBox->addItem(address.display());
+      }
+      comboBox->blockSignals(b);
+      QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));
+   }
+}
+
+QPixmap UiUtils::getQRCode(const QString& address, int size)
+{
+   QRcode* code = QRcode_encodeString(address.toLatin1(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+   if (code) {
+      const int width = code->width;
+      const int Margin = 1;
+      const int imageWidth = 8 * (code->width + 2 * Margin);
+
+      QImage image(imageWidth, imageWidth, QImage::Format_Mono);
+      image.fill(1);
+
+      for (int i = 0; i < width; ++i) {
+         for (int l = 8*(i+Margin); l < 8*(i+Margin)+8; ++l) {
+            for (int j = 0; j < width; ++j) {
+               if (code->data[width * i + j] & 0x01) {
+                  image.scanLine(l+Margin)[j+Margin] = 0x00;
+               } else {
+                  image.scanLine(l+Margin)[j+Margin] = 0xff;
+               }
+            }
+         }
+      }
+
+      QRcode_free(code);
+      if (size) {
+         return QPixmap::fromImage(image.scaledToWidth(size));
+      }
+      else {
+         return QPixmap::fromImage(image);
+      }
+   } else {
+      qDebug() << "Error encoding QR code" << strerror(errno);
+      return QPixmap();
+   }
+}
+
+double UiUtils::parseAmountBtc(const QString& text)
+{
+   return QLocale().toDouble(text);
+}
+
+QString UiUtils::displayCurrencyAmount(double amount)
+{
+   return UnifyValueString(QLocale().toString(amount, 'f', GetAmountPrecisionFX()));
+}
+
+QString UiUtils::displayCCAmount(double amount)
+{
+   return UnifyValueString(QLocale().toString(amount, 'f', GetAmountPrecisionCC()));
+}
+
+QString UiUtils::displayQuantity(double quantity, const QString& currency)
+{
+   return QObject::tr("%2 %1").arg(UiUtils::displayQty(quantity, currency)).arg(currency);
+}
+
+QString UiUtils::displayQty(double quantity, const QString &currency)
+{
+   if (currency == XbtCurrency) {
+      return UiUtils::displayAmount(quantity);
+   }
+   else {
+      return UiUtils::displayCurrencyAmount(quantity);
+   }
+}
+
+QString UiUtils::displayQuantity(double quantity, const std::string& currency)
+{
+   return displayQuantity(quantity, QString::fromStdString(currency));
+}
+
+QString UiUtils::displayQty(double quantity, const std::string &currency)
+{
+   return displayQty(quantity, QString::fromStdString(currency));
+}
+
+QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type at)
+{
+   switch(at) {
+   case bs::network::Asset::SpotFX:
+      return UiUtils::displayPriceFX(price);
+   case bs::network::Asset::SpotXBT:
+      return UiUtils::displayPriceXBT(price);
+   case bs::network::Asset::PrivateMarket:
+      return UiUtils::displayPriceCC(price);
+   }
+
+   return QString();
+}
+
+QString UiUtils::displayPriceFX(double price)
+{
+   return UnifyValueString(QLocale().toString(price, 'f', GetPricePrecisionFX()));
+}
+
+QString UiUtils::displayPriceXBT(double price)
+{
+   return UnifyValueString(QLocale().toString(price, 'f', GetPricePrecisionXBT()));
+}
+
+QString UiUtils::displayPriceCC(double price)
+{
+   return UnifyValueString(QLocale().toString(price, 'f', GetPricePrecisionCC()));
+}
+
+int UiUtils::GetPricePrecisionForAssetType(const bs::network::Asset::Type& assetType)
+{
+   switch(assetType) {
+   case bs::network::Asset::SpotFX:
+      return GetPricePrecisionFX();
+   case bs::network::Asset::SpotXBT:
+      return GetPricePrecisionXBT();
+   case bs::network::Asset::PrivateMarket:
+      return GetPricePrecisionCC();
+   }
+
+   return 0;
+}
+
+QString UiUtils::displayAmountForProduct(double quantity, const QString& product, bs::network::Asset::Type at)
+{
+   if (product == XbtCurrency) {
+      return UiUtils::displayAmount(quantity);
+   } else {
+      if (at == bs::network::Asset::PrivateMarket) {
+         return UiUtils::displayCCAmount(quantity);
+      } else {
+         return UiUtils::displayCurrencyAmount(quantity);
+      }
+   }
+}
+
+static void getPrecsFor(const std::string &security, const std::string &product, bs::network::Asset::Type at, int &qtyPrec, int &valuePrec)
+{
+   switch (at) {
+   case bs::network::Asset::Type::SpotFX:
+      qtyPrec = UiUtils::GetAmountPrecisionFX();
+      valuePrec = UiUtils::GetAmountPrecisionFX();
+      break;
+   case bs::network::Asset::Type::SpotXBT:
+      qtyPrec = UiUtils::GetAmountPrecisionXBT();
+      valuePrec = UiUtils::GetAmountPrecisionFX();
+      if (security.substr(0, security.find('/')) != product) {
+         std::swap(qtyPrec, valuePrec);
+      }
+      break;
+   case bs::network::Asset::Type::PrivateMarket:
+      qtyPrec = UiUtils::GetAmountPrecisionCC();
+      // special case. display value for XBT with 6 decimals
+      valuePrec = 6;
+      break;
+   }
+}
+
+QString UiUtils::displayQty(double qty, const std::string &security, const std::string &product, bs::network::Asset::Type at)
+{
+   int qtyPrec = -1, valuePrec = -1;
+   getPrecsFor(security, product, at, qtyPrec, valuePrec);
+   return UnifyValueString(QLocale().toString(qty, 'f', qtyPrec));
+}
+
+QString UiUtils::displayValue(double value, const std::string &security, const std::string &product, bs::network::Asset::Type at)
+{
+   int qtyPrec = -1, valuePrec = -1;
+   getPrecsFor(security, product, at, qtyPrec, valuePrec);
+   return UnifyValueString(QLocale().toString(value, 'f', valuePrec));
+}
+
+QString UiUtils::displayAddress(const QString &addr)
+{
+   if (addr.length() <= 64) {
+      return addr;
+   }
+   else {
+      return addr.left(30) + QLatin1String("...") + addr.right(30);
+   }
+}
+
+QString UiUtils::displayShortAddress(const QString &addr, const uint maxLength)
+{
+   if ((maxLength < 5) || (addr.length() <= maxLength)) {
+      return addr;
+   }
+
+   const uint subLength = (maxLength - 3) / 2;
+   return addr.left(subLength) + QLatin1String("...") + addr.right(subLength);
+}
+
+
+std::string UiUtils::getSelectedWalletId(QComboBox* comboBox)
+{
+   return comboBox->currentData(WalletIdRole).toString().toStdString();
+}
+
+static QtAwesome* qtAwesome_ = nullptr;
+
+void UiUtils::setupIconFont(QObject* parent)
+{
+   qtAwesome_ = new QtAwesome(parent);
+   qtAwesome_->initInfinity();
+}
+
+QIcon UiUtils::icon(int character, const QVariantMap& options)
+{
+   return qtAwesome_->icon(character, options);
+}
+
+QIcon UiUtils::icon(const QString& name, const QVariantMap& options)
+{
+   return qtAwesome_->icon(name, options);
+}
+
+QIcon UiUtils::icon(const char* name, const QVariantMap& options)
+{
+   return qtAwesome_->icon(QLatin1String(name), options);
+}
+
+QString UiUtils::UnifyValueString(const QString& value)
+{
+   // we set C locale that use '.' as decimal separator. So no need to replace
+
+   QString updatedValue = value;
+   updatedValue.replace(QLocale().groupSeparator(), defaultGroupSeparatorChar);
+
+   return updatedValue;
+}
+
+QString UiUtils::NormalizeString(const QString& value)
+{
+   QString copy{value};
+
+   if (copy.startsWith(QLocale().decimalPoint())) {
+      copy = QLatin1Char('0') + copy;
+   }
+
+   copy.remove(QLatin1Char(' '));
+   copy.remove(defaultGroupSeparatorChar);
+
+   return copy;
+}
+
+
+QValidator::State UiUtils::ValidateDoubleString(QString &input, int &pos, const int decimals)
+{
+   if (input.isEmpty()) {
+      return QValidator::Acceptable;
+   }
+
+   static const QChar defaultDecimalsSeparatorChar = QLatin1Char('.');
+
+   QString tempCopy = UiUtils::NormalizeString(input);
+
+   bool metDecimalSeparator = false;
+   int afterDecimal = 0;
+
+   const QChar zeroChar = QLatin1Char('0');
+
+   bool decimalRequired = tempCopy.startsWith(zeroChar);
+
+   for (int i=0; i < tempCopy.length(); i++) {
+      const auto c = tempCopy.at(i);
+
+      if (c.isDigit()) {
+         if (decimalRequired) {
+            if (c != zeroChar) {
+               return QValidator::Invalid;
+            }
+         }
+         if (metDecimalSeparator) {
+            afterDecimal++;
+            if (afterDecimal > decimals) {
+               return QValidator::Invalid;
+            }
+         }
+      } else if (c == defaultDecimalsSeparatorChar) {
+         if (metDecimalSeparator || (decimals == 0)) {
+            return QValidator::Invalid;
+         }
+
+         decimalRequired = false;
+         metDecimalSeparator = true;
+      } else {
+         return QValidator::Invalid;
+      }
+   }
+
+   bool converted = false;
+   double newValue = QLocale().toDouble(tempCopy, &converted);
+   if (!converted) {
+      return QValidator::Invalid;
+   }
+
+   return QValidator::Acceptable;
+}

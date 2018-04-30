@@ -1,0 +1,104 @@
+import multiprocessing
+import os
+import shutil
+import subprocess
+
+from component_configurator import Configurator
+
+class GtestSettings(Configurator):
+   def __init__(self, settings):
+      Configurator.__init__(self, settings)
+      self._version = '1.8.0'
+      self._package_name = 'Gtest'
+
+      if settings.on_windows():
+         self._package_url = 'https://github.com/google/googletest/archive/release-'+self._version+'.zip'
+      else:
+         self._package_url = 'https://github.com/google/googletest/archive/release-'+self._version+'.tar.gz'
+
+   def get_package_name(self):
+      return self._package_name
+
+   def get_url(self):
+      return self._package_url
+
+   def is_archive(self):
+      return True
+
+   def get_unpacked_gtest_sources_dir(self):
+      return os.path.join(self._project_settings.get_sources_dir(), 'googletest-release-' + self._version)
+
+   def config(self):
+      command = []
+
+      command.append('cmake')
+      command.append(self.get_unpacked_gtest_sources_dir())
+      command.append('-DBUILD_GTEST=ON')
+      command.append('-G')
+
+      print('Using generator: ' + self._project_settings.get_cmake_generator())
+
+      command.append(self._project_settings.get_cmake_generator())
+      result = subprocess.call(command)
+      return result == 0
+
+   def make_windows(self):
+      command = []
+
+      command.append('devenv')
+      command.append(self.get_solution_file())
+      command.append('/build')
+      command.append(self.get_win_build_configuration())
+      command.append('/project')
+      command.append('gtest')
+      command.append('/project')
+      command.append('gtest_main')
+
+      print('Start building GTest')
+      print(' '.join(command))
+
+      result = subprocess.call(command)
+      return result == 0
+
+   def get_solution_file(self):
+      return 'googletest-distribution.sln'
+
+   def get_win_build_configuration(self):
+      if self._project_settings.get_build_mode() == 'release':
+         return 'Release'
+      else:
+         return 'Debug'
+
+   def install_win(self):
+      lib_dir = os.path.join(self.get_build_dir(), 'googlemock', 'gtest', self.get_win_build_configuration())
+      include_dir = os.path.join(self.get_unpacked_gtest_sources_dir(), 'googletest', 'include')
+
+      install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+      install_include_dir = os.path.join(self.get_install_dir(), 'include')
+
+      self.filter_copy(lib_dir, install_lib_dir, '.lib')
+      self.filter_copy(include_dir, install_include_dir)
+
+      return True
+
+   def make_x(self):
+      command = []
+
+      command.append('make')
+      command.append('-j')
+      command.append( str(multiprocessing.cpu_count()) )
+
+      result = subprocess.call(command)
+      return result == 0
+
+   def install_x(self):
+      include_dir = os.path.join( self.get_unpacked_gtest_sources_dir(), 'googletest/include')
+      lib_dir = os.path.join(self.get_build_dir(), 'googlemock/gtest')
+
+      install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+      install_include_dir = os.path.join(self.get_install_dir(), 'include')
+
+      self.filter_copy(lib_dir, install_lib_dir, '.a')
+      self.filter_copy(include_dir, install_include_dir)
+
+      return True

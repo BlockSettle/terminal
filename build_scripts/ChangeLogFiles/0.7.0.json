@@ -1,0 +1,32 @@
+{
+  "version": {
+    "major" : 0,
+    "minor" : 7,
+    "patch" : 0
+  },
+  "date": "2017-10-23",
+  "prev-version": "0.6.2",
+  "changelog": {
+    "New features":
+    [
+      "HD (BIP44) Wallets encryption with slight wallet password UI changes",
+      "Separated watching-only and signing wallets with child process signer starting from the same terminal binary",
+      "Pass-thru versioning of all BlockSettle components",
+      "Bech32 native SegWit addresses support",
+      "Re-worked wallet create/import/delete UI",
+      "All wizards were replaced by regular styled dialogs",
+      "Updated simple and advaced \"Create transaction\" dialogs",
+      "advanced create transaction dialog could be called by holding shift from main window",
+      "updated design for Login window",
+      "updated design for RFQ ticket",
+      "updated design for dealer reply",
+      "More clear new primary wallet process if it doesn't exist"
+    ],
+    "Bug fixes":
+    [
+      "UI fixes and improvements",
+      "Private Market flow fixes",
+      "Kill local headless signing process from previous unclean shutdown"
+    ]
+  }
+}

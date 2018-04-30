@@ -1,0 +1,21 @@
+{
+  "version": {
+    "major" : 0,
+    "minor" : 7,
+    "patch" : 1
+  },
+  "prev_version" : "0.7.0",
+  "date": "2017-12-25",
+  "changelog": {
+    "New features":
+    [
+      "Offline mode for signer",
+      "Qt/QML offline signer UI",
+      "Confirm fee on additional Auth Address"
+    ],
+    "Bug fixes":
+    [
+      "Fixed SpotXBT flow for bech32 addresses"
+    ]
+  }
+}

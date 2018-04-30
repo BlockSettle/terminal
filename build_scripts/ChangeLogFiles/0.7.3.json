@@ -1,0 +1,22 @@
+{
+  "version": {
+    "major" : 0,
+    "minor" : 7,
+    "patch" : 3
+  },
+  "prev_version" : "0.7.2",
+  "date": "2018-01-23",
+  "changelog": {
+    "New features":
+    [
+      "Authentication charged according to EUR/XBT price"
+    ],
+    "Bug fixes":
+    [
+      "Private market indicative prices",
+      "UI fixes",
+      "Fee management improved",
+      "Wallet importing"
+    ]
+  }
+}

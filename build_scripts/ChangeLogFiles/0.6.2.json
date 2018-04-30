@@ -1,0 +1,23 @@
+{
+  "version": {
+    "major" : 0,
+    "minor" : 6,
+    "patch" : 2
+  },
+  "date": "2017-10-23",
+  "prev-version": "0.6.1",
+  "changelog": {
+    "New features":
+    [
+      "UTXO reservation for both XBT and Private Market shares",
+      "Installation packages for Windows and Ubuntu",
+      "Allow detection of revoke SpotXBT transaction"
+    ],
+    "Bug fixes":
+    [
+      "Connect to Public Bridge at login to Matching system (instead of start-up)",
+      "More validations at Private Market settlement",
+      "Auth address revoke by BlockSettle is now properly detected"
+    ]
+  }
+}

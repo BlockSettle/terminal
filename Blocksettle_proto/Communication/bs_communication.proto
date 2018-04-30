@@ -1,0 +1,186 @@
+syntax = "proto2";
+
+package Blocksettle.Communication;
+
+enum RequestType
+{
+   SubmitAuthAddressForVerificationType = 1;
+   GetBSFundingAddressListType          = 2;
+   ErrorMessageResponseType             = 3;
+   GenerateOTPRequestType               = 4;
+   GetCCGenesisAddressesType            = 5;
+   SubmitCCAddrInitialDistribType       = 6;
+   GenerateCCSeedRequestType            = 7;
+   RevokeAuthAddressRequestType         = 8;
+   ConfirmAuthAddressSubmitType         = 9;
+}
+
+enum AddressNetworkType
+{
+   MainNetType = 1;
+   TestNetType = 2;
+}
+
+enum AddressScriptType
+{
+   PayToHashScriptType = 1;
+   NestedSegWitScriptType = 2;
+   NativeSegWitScriptType = 3;
+}
+
+// type of address used for verifications ( bitcoin, colored coin etc)
+enum AddressType
+{
+   BitcoinsAddressType        = 1;
+}
+
+message RequestPacket
+{
+   // requestType - hint to requestData type
+   required RequestType requestType = 1;
+   required bytes       requestData = 2;
+   optional bytes       dataSignature = 3;
+   optional bytes       otpId = 4;
+   optional int64       keyIndex = 5;
+   optional bytes	unsignedMixIn = 6;
+}
+
+message ResponsePacket
+{
+   required RequestType responseType = 1;
+   required bytes       responseData = 2;
+   optional bytes       dataSignature = 3;
+}
+
+message SubmitAuthAddressForVerificationRequest
+{
+   required AddressType          addressType = 2;
+   required AddressNetworkType   networkType = 3;
+   required AddressScriptType    scriptType = 4;
+   required bytes                address160hex = 5;
+   required bytes                publicKey = 7;
+   required string               userName = 8;
+}
+
+message GetBSFundingAddressListRequest
+{
+   required AddressType       addressListType = 1;
+}
+
+message GetBSFundingAddressListResponse
+{
+   required AddressType       addressListType         = 1;
+   // for now it will be always of type AddressList.
+   // use bytes just to simplify signature verification
+   repeated bytes             addressList             = 2;
+}
+
+message SubmitAuthAddressForVerificationResponse
+{
+   required bool                 keySubmitted = 1;
+   optional AddressNetworkType   networkType = 2;
+   optional AddressScriptType    scriptType = 3;
+   required bytes                address160hex = 4;
+   optional bytes                publicKey = 5;
+   optional string               errorMessage = 6;
+   optional bool                 requestConfirmation = 7;
+   optional float 		 validationAmount = 8;
+}
+
+message ErrorMessageResponse
+{
+   required string errorMessage = 1;
+}
+
+message ClientAddress
+{
+   required string fullName = 1;
+   optional string address1 = 2;
+   optional string address2 = 3;
+   optional string postcode = 4;
+   optional string state = 5;
+   optional string city = 6;
+   optional string country = 7;
+   optional string mainPhone = 8;
+   optional string company = 9;
+   optional string countryCode = 10;
+}
+
+message GenerateOTPRequest
+{
+   required string userName = 1;
+   required string userId = 2;
+   optional ClientAddress address = 3;
+}
+
+message GetCCGenesisAddressesRequest
+{
+   required AddressNetworkType   networkType = 1;
+   optional int32                hasRevision = 2;
+}
+
+message GetCCGenesisAddressesResponse
+{
+   required AddressNetworkType   networkType  = 1;
+   required int32                revision     = 2;
+   repeated CCSecurityDefinition ccSecurities = 3;
+
+   message CCSecurityDefinition {
+      required string securityId  = 1;
+      required string product     = 2;
+      required bytes  genesisAddr = 3;
+      required uint64 satoshisNb  = 4;
+      optional string description = 5;
+   }
+
+   optional bytes   signature = 4;	// only for storage purposes
+}
+
+message SubmitAddrForInitialDistributionRequest
+{
+   required AddressNetworkType   networkType     = 1;
+   required bytes                prefixedAddress = 2;
+   required uint32               bsSeed          = 3;
+   required string               userName        = 4;
+}
+
+message SubmitAddrForInitialDistributionResponse
+{
+   required bool                 success         = 1;
+   required bytes                prefixedAddress = 2;
+   optional string               errorMessage    = 3;
+}
+
+message GenerateCCSeedRequest
+{
+   required string userName = 1;
+   required string ccProduct = 2;
+   optional double amount = 3;
+}
+
+message CCSeedResponse
+{
+   required uint32 bsSeed = 1;
+   required string ccProduct = 2;
+}
+
+message RevokeAuthAddressRequest
+{
+   required string authAddress = 1;
+}
+
+
+message ConfirmAuthSubmitRequest
+{
+   required string userName = 1;
+   required string address = 2;
+   required AddressNetworkType networkType = 3;
+   required AddressScriptType  scriptType = 4;
+   required bytes  publicKey = 5;
+}
+
+message ConfirmAuthSubmitResponse
+{
+   required string address = 1;
+   optional string errorMsg = 2;
+}

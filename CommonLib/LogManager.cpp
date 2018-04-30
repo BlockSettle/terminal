@@ -1,0 +1,160 @@
+#include "LogManager.h"
+#include <spdlog/spdlog.h>
+
+using namespace bs;
+
+static const std::string catDefault = "_default_";
+static const std::string tearline = "--------------------------------------------------------------";
+
+LogManager::LogManager(const OnErrorCallback &cb)
+   : cb_(cb)
+{}
+
+bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::string &category)
+{
+   if (!logger) {
+      return true;
+   }
+   bool exists = (loggers_.find(category) != loggers_.end());
+   if (category.empty()) {
+      exists = (defaultLogger_ != nullptr);
+      defaultLogger_ = logger;
+   }
+   else {
+      loggers_[category] = logger;
+   }
+   logger->info(tearline);
+   return !exists;
+}
+
+bool LogManager::add(const LogConfig &config)
+{
+   std::shared_ptr<spdlog::logger> logger;
+   try {
+      logger = create(config);
+   }
+   catch (const spdlog::spdlog_ex &) {
+      if (cb_) {
+         cb_();
+         try {
+            logger = create(config);
+         }
+         catch (...) {}
+      }
+   }
+   if (!logger) {
+      return true;
+   }
+   return add(logger, config.category);
+}
+
+void LogManager::add(const std::vector<LogConfig> &configs)
+{
+   for (const auto &config : configs) {
+      add(config);
+   }
+}
+
+static spdlog::level::level_enum convertLevel(LogLevel level)
+{
+   switch (level) {
+   case LogLevel::debug:   return spdlog::level::debug;
+   case LogLevel::info:    return spdlog::level::info;
+   case LogLevel::warn:    return spdlog::level::warn;
+   case LogLevel::err:     return spdlog::level::err;
+   case LogLevel::crit:    return spdlog::level::critical;
+   case LogLevel::off:
+   default:                return spdlog::level::off;
+   }
+}
+
+std::shared_ptr<spdlog::logger> LogManager::create(const LogConfig &config)
+{
+   std::shared_ptr<spdlog::logger> result;
+   if (config.category.empty()) {
+      result = createOrAppend(defaultLogger_, config);
+   }
+   else {
+      const auto &itLogger = loggers_.find(config.category);
+      result = createOrAppend((itLogger == loggers_.end()) ? nullptr : itLogger->second, config);
+   }
+
+   if (!result) {
+      return nullptr;
+   }
+   if (!config.pattern.empty()) {
+      result->set_pattern(config.pattern);
+      patterns_[config.category.empty() ? catDefault : config.category] = config.pattern;
+   }
+   const auto level = convertLevel(config.level);
+   result->set_level(level);
+   result->flush_on(level);
+   return result;
+}
+
+std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr<spdlog::logger> &logger, const LogConfig &config)
+{
+   std::shared_ptr<spdlog::logger> result;
+   const auto level = convertLevel(config.level);
+   if (logger) {
+      auto sinks = logger->sinks();
+      if (config.fileName.empty()) {
+         sinks.push_back(std::make_shared<spdlog::sinks::stdout_sink_mt>());
+      }
+      else {
+         if (sinks_.find(config.fileName) != sinks_.end()) {
+            return nullptr;
+         }
+         sinks.push_back(std::make_shared<spdlog::sinks::simple_file_sink_mt>(config.fileName, config.truncate));
+      }
+      result = std::make_shared<spdlog::logger>(config.category, std::begin(sinks), std::end(sinks));
+   }
+   else {
+      const auto itSink = sinks_.find(config.fileName);
+      if (itSink == sinks_.end()) {
+         result = spdlog::basic_logger_mt(config.category, config.fileName, config.truncate);
+         sinks_[config.fileName] = result->sinks()[0];
+      }
+      else {
+         result = std::make_shared<spdlog::logger>(config.category, itSink->second);
+      }
+   }
+   return result;
+}
+
+std::shared_ptr<spdlog::logger> LogManager::copy(const std::shared_ptr<spdlog::logger> &logger, const std::string &srcCat
+   , const std::string &category)
+{
+   const auto &sinks = logger->sinks();
+   const auto &result = std::make_shared<spdlog::logger>(category, std::begin(sinks), std::end(sinks));
+   result->set_level(logger->level());
+   result->flush_on(logger->level());
+
+   const auto &itPattern = patterns_.find(srcCat);
+   if ((itPattern != patterns_.end()) && !itPattern->second.empty()) {
+      result->set_pattern(itPattern->second);
+      patterns_[category.empty() ? catDefault : category] = itPattern->second;
+   }
+
+   add(result, category);
+   return result;
+}
+
+std::shared_ptr<spdlog::logger> LogManager::logger(const std::string &category)
+{
+   if (category.empty()) {
+      if (defaultLogger_) {
+         return defaultLogger_;
+      }
+   }
+   else {
+      const auto &it = loggers_.find(category);
+      if (it != loggers_.end()) {
+         return it->second;
+      }
+      if (defaultLogger_) {
+         return copy(defaultLogger_, catDefault, category);
+      }
+   }
+   return spdlog::stdout_logger_mt("stdout");
+}

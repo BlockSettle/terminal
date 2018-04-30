@@ -1,0 +1,21 @@
+{
+  "version": {
+    "major" : 0,
+    "minor" : 7,
+    "patch" : 5
+  },
+  "prev_version" : "0.7.4",
+  "date": "2018-03-05",
+  "changelog": {
+    "New features":
+    [
+      "UI improvements",
+      "MD filtering",
+      "Change log updated"
+    ],
+    "Bug fixes":
+    [
+      "Some critical issues fixed"
+    ]
+  }
+}

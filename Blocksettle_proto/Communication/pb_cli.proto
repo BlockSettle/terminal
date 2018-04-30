@@ -1,0 +1,134 @@
+syntax = "proto2";
+
+package Blocksettle.Communication.pbcli;
+
+enum CLIRequestType
+{
+   ErrorMessageType = 1;
+   GetStatusMessageType = 2;
+   LoadUTXOMessageType = 3;
+   CheckAuthAddressMessageType = 4;
+   ReloadWalletMessageType = 5;
+   SendCCTokenMessageType = 6;
+   OTPUpdateMessageType = 7;
+   AuthVerificationTransactionType = 8;
+   AuthRevokeTransactionType = 9;
+   CCDistributionTransactionType = 10;
+}
+
+enum ArmoryConnectionState
+{
+   ArmoryConnectionOffline = 1;
+   ArmoryConnectionScanning = 2;
+   ArmoryConnectionConnected = 3;
+   ArmoryConnectionReady = 4;
+}
+
+enum AuthAddressVerificationState
+{
+   VerificationFailedState = 1;
+   InProgressState = 2;
+   NotSubmittedState = 3;
+   SubmittedState = 4;
+   PendingVerificationState = 5;
+   VerificationSubmittedState = 6;
+   VerifiedState = 7;
+   RevokedState = 8;
+   RevokedByBSState = 9;
+}
+
+message CLIRequestPacket
+{
+   required CLIRequestType requestType = 1;
+   optional bytes          requestData = 2;
+}
+
+message CLIResponsePacket
+{
+   required CLIRequestType responseType = 1;
+   required bytes          responseData = 2;
+}
+
+message PBStatusResponse
+{
+   required bool ConnectedToCeler = 1;
+   required bool ConnectedToGenoa = 2;
+   required bool AdminAPIStarted = 3;
+   required bool CelerMerchantConnected = 4;
+   required bool CelerPiggyBankConnected = 5;
+   required bool CelerStaticDataConnected = 6;
+
+   required string PBVersion = 7;
+
+   optional string GenoaVersion = 8;
+   optional string BlocksettleVersion = 9;
+   optional string UnifyVersion = 10;
+   optional string LandfallVersion = 11;
+
+   required ArmoryConnectionState armoryConnectionState = 12;
+}
+
+message ErrorMessage
+{
+   required string messageText = 1;
+   optional bytes originalMessage = 2;
+}
+
+message LoadUTXOResponse
+{
+   repeated Transactions serializedUTXO = 1;
+
+   message Transactions {
+      required string wallet = 1;
+      repeated bytes  transactions = 2;
+   }
+}
+
+message CheckAuthAddressRequestPacket
+{
+   required string authAddress = 1;
+}
+
+message CheckAuthAddressResponsePacket
+{
+   required string authAddress = 1;
+   required AuthAddressVerificationState verificationState = 2;
+}
+
+
+message ReloadWalletRequest
+{
+   required string reason = 1;
+}
+
+
+message SendCCTokenRequest
+{
+   required string userId = 1;
+   required string ccToken = 2;
+   required string ccProduct = 3;
+   required uint32 amount = 4;
+}
+
+message OTPUpdateRequest
+{
+   required string user_id = 1;
+   required string otp_id = 2;
+}
+
+message AuthVerificationTransactionResponse
+{
+   required bool transaction_broadcasted = 1;
+}
+
+
+message AuthRevokeTransactionResponse
+{
+   required bool transaction_broadcasted = 1;
+}
+
+
+message CCDistributionTransactionResponse
+{
+   required bool transaction_broadcasted = 1;
+}

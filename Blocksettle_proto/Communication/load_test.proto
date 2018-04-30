@@ -1,0 +1,79 @@
+syntax = "proto2";
+
+package Blocksettle.Communication.load_test;
+
+enum AdminCommandCode
+{
+   StartConnectCode = 1;
+   StartCustomerTradingCode = 2;
+   StopCustomerTradingCode = 3;
+}
+
+message AdminCommandHeader
+{
+   required AdminCommandCode command_code = 1;
+   optional string command_data = 2;
+}
+
+message AdminCommandConnect
+{
+   required bool connect_to_armory = 1;
+   required bool connect_to_celer = 2;
+}
+
+enum CustomerUpdateType
+{
+   AppReadyStatus = 1;
+   CelerStatusUpdateType = 2;
+   ArmoryStatusUpdateType = 3;
+   BalanceUpdateType = 4;
+   RFQSentUpdateType = 5;
+   RFQReceivedUpdateType = 6;
+   TradingStoppedUpdateType = 7;
+}
+
+enum RFQProductGroup
+{
+   SpotFXGroupType = 1;
+   SpotXBTGroupType = 2;
+   SpotPMGroupType = 3;
+   UndefinedGroupType = 4;
+}
+
+message CustomerUpdateHeader
+{
+   required CustomerUpdateType update_type = 1;
+   required string customer_email = 2;
+   optional string update_data = 3;
+}
+
+message CelerStatusUpdate
+{
+   required bool     connected = 1;
+   optional uint64   login_time = 2;
+}
+
+message ArmoryStatusUpdate
+{
+   required bool connected = 1;
+}
+
+message BalanceUpdate
+{
+   required string ccy = 1;
+   required double amount = 2;
+}
+
+message RFQSentUpdate
+{
+   required string rfq_id = 1;
+   required RFQProductGroup group_type = 2;
+   required uint64 timestamp = 3;
+}
+
+message RFQReceivedUpdate
+{
+   required string rfq_id = 1;
+   required RFQProductGroup group_type = 2;
+   required uint64 timestamp = 3;
+}
