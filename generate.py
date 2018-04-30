@@ -3,18 +3,19 @@ import platform
 import shutil
 import subprocess
 import sys
+sys.path.insert(0, 'common')
 
-from build.settings               import Settings
-from build.protobuf_settings      import ProtobufSettings
-from build.gtest_settings         import GtestSettings
-from build.jom_settings           import JomSettings
-from build.qt_settings            import QtSettings
-from build.cryptopp_settings      import CryptoppSettings
-from build.spdlog_settings        import SpdlogSettings
-from build.zeromq_settings        import ZeroMQSettings
-from build.libqrencode_settings   import LibQREncode
-from build.mpir_settings          import MPIRSettings
-from build.libbtc_settings        import LibBTC
+from build_scripts.settings               import Settings
+from build_scripts.protobuf_settings      import ProtobufSettings
+from build_scripts.gtest_settings         import GtestSettings
+from build_scripts.jom_settings           import JomSettings
+from build_scripts.qt_settings            import QtSettings
+from build_scripts.cryptopp_settings      import CryptoppSettings
+from build_scripts.spdlog_settings        import SpdlogSettings
+from build_scripts.zeromq_settings        import ZeroMQSettings
+from build_scripts.libqrencode_settings   import LibQREncode
+from build_scripts.mpir_settings          import MPIRSettings
+from build_scripts.libbtc_settings        import LibBTC
 
 def generate_project(build_mode, build_server, build_test_tools):
    project_settings = Settings(build_mode)
@@ -74,7 +75,7 @@ def generate_project(build_mode, build_server, build_test_tools):
    command = []
 
    command.append('cmake')
-   command.append('../build')
+   command.append('..')
    command.append('-G')
    command.append( project_settings.get_cmake_generator())
    command.append('-DCMAKE_CURRENT_SOURCE_DIR=..')
@@ -110,9 +111,7 @@ if __name__ == '__main__':
    if len(sys.argv) != 1:
       low_args = [ a.lower() for a in sys.argv[1:] ]
       for a in low_args:
-         if a == 'test':
-            build_test_tools = True
-         elif a == 'release' or a == 'debug':
+         if a == 'release' or a == 'debug':
             build_mode = a
          else:
             print('Undefined parameter: ', a)
