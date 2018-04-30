@@ -1,8 +1,8 @@
 # Building BlockSettle terminal
 
 * Run the following command:
-`python generate.py [debug] [test]`
-(last 2 arguments are used to enable debugging symbols and enable the build of unit tests)
+`python generate.py [debug]`
+(last optional argument is used to enable debugging symbols)
 
 * Go to `terminal.debug` or `terminal.release` dir (depending on the 'debug' argument on the previous step) and type your favourite make command (basically `make -j4`). Windows users should open the BlockSettle.sln file in one of these dirs.
 
