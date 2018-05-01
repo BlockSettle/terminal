@@ -67,9 +67,10 @@ class PyBlockDataManager : public QObject, public SwigClient::PythonCallback
 {
    Q_OBJECT
 public:
-   static std::shared_ptr<PyBlockDataManager> createDataManager(const ArmorySettings& settings, const std::string &txCacheFN);
+   static std::shared_ptr<PyBlockDataManager> createDataManager(const ArmorySettings &, const std::string &txCacheFN);
 
-   PyBlockDataManager(const ArmorySettings& settings, const std::string &txCacheFN);
+   PyBlockDataManager(const std::shared_ptr<SwigClient::BlockDataViewer> &, const ArmorySettings &
+      , const std::string &txCacheFN);
    ~PyBlockDataManager() noexcept override;
 
    PyBlockDataManager(const PyBlockDataManager&) = delete;
@@ -81,7 +82,6 @@ public:
    void run(BDMAction action, void* ptr, int block=0) override;
    void progress( BDMPhase phase, const vector<string> &walletIdVec, float progress,
                   unsigned secondsRem, unsigned progressNumeric) override;
-   bool ignoreRemoteLoopException(const std::string& errorMessage) override;
 
    // NOTE: at this point collection is not concurrent, there should not be additions and
    // notification processing from different threads.
@@ -114,7 +114,7 @@ public:
 
    int  GetConfirmationsNumber(const LedgerEntryData& item);
 
-   float estimateFee(unsigned int nbBlocks) const;
+   float estimateFee(unsigned int nbBlocks);
 
    NodeStatusStruct getNodeStatus();
 
@@ -160,7 +160,7 @@ private:
    std::vector<PyBlockDataListener*>      listeners_;
 
    PyBlockDataManagerState                currentState_;
-   std::shared_ptr<SwigClient::BlockDataViewer>       bdv_;
+   std::shared_ptr<SwigClient::BlockDataViewer> bdv_;
 
    uint32_t                               topBlockHeight_;
 

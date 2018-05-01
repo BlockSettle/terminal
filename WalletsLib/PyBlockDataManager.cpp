@@ -25,7 +25,8 @@ static std::shared_ptr<PyBlockDataManager> globalInstance = nullptr;
 
 std::shared_ptr<PyBlockDataManager> PyBlockDataManager::createDataManager(const ArmorySettings& settings, const std::string &txCacheFN)
 {
-   return std::make_shared<PyBlockDataManager>(settings, txCacheFN);
+   return std::make_shared<PyBlockDataManager>(std::make_shared<SwigClient::BlockDataViewer>(SwigClient::BlockDataViewer::getNewBDV(settings.armoryDBIp
+      , settings.armoryDBPort, settings.socketType)), settings, txCacheFN);
 }
 
 BlockDataListenerSignalAdapter::BlockDataListenerSignalAdapter(QObject* parent)
@@ -37,16 +38,15 @@ void BlockDataListenerSignalAdapter::StateChanged(PyBlockDataManagerState newSta
    emit OnStateChanged(newState);
 }
 
-PyBlockDataManager::PyBlockDataManager(const ArmorySettings& settings, const std::string &txCacheFN)
-   : PythonCallback()
+PyBlockDataManager::PyBlockDataManager(const std::shared_ptr<SwigClient::BlockDataViewer> &bdv, const ArmorySettings& settings, const std::string &txCacheFN)
+   : PythonCallback(bdv.get())
    , settings_(settings)
    , currentState_(PyBlockDataManagerState::Offline)
+   , bdv_(bdv)
    , topBlockHeight_(0)
    , armoryProcess_(nullptr)
    , txCache_(txCacheFN)
 {
-   bdv_ = SwigClient::BlockDataViewer::getNewBDVPointer(settings_.armoryDBIp
-      , settings_.armoryDBPort, settings_.socketType);
    stopMonitorEvent_ = std::make_shared<ManualResetEvent>();
 
    connect(this, &PyBlockDataManager::ScheduleRPCBroadcast, this
@@ -55,23 +55,23 @@ PyBlockDataManager::PyBlockDataManager(const ArmorySettings& settings, const std
 
 void PyBlockDataManager::registerBDV()
 {
-   FastLock lock(bdvLock_);
+   BinaryData magicBytes;
    switch (settings_.netType) {
    case NetworkType::TestNet:
-      bdv_->registerWithDB(READHEX(TESTNET_MAGIC_BYTES));
+      magicBytes = READHEX(TESTNET_MAGIC_BYTES);
       break;
-
    case NetworkType::RegTest:
-      bdv_->registerWithDB(READHEX(REGTEST_MAGIC_BYTES));
+      magicBytes = READHEX(REGTEST_MAGIC_BYTES);
       break;
-
    case NetworkType::MainNet:
-      bdv_->registerWithDB(READHEX(MAINNET_MAGIC_BYTES));
+      magicBytes = READHEX(MAINNET_MAGIC_BYTES);
       break;
-
    default:
       throw std::runtime_error("unknown network type");
    }
+
+   FastLock lock(bdvLock_);
+   bdv_->registerWithDB(magicBytes);
 }
 
 PyBlockDataManager::~PyBlockDataManager() noexcept
@@ -262,7 +262,20 @@ bool PyBlockDataManager::goOnline()
    try {
       FastLock lock(bdvLock_);
       bdv_->goOnline();
-      startLoop(bdv_.get());
+//      startLoop();
+      const auto loop = [this](void)->void {
+         try {
+            this->remoteLoop();
+         }
+         catch (const DbErrorMsg &) {
+            OnConnectionError();
+         }
+         catch (...) {
+            OnConnectionError();
+         }
+      };
+
+      thr_ = std::thread(loop);
    }
    catch (runtime_error &)
    {
@@ -467,7 +480,7 @@ bool PyBlockDataManager::IsTransactionConfirmed(const LedgerEntryData& item)
    return GetConfirmationsNumber(item) > 1;
 }
 
-float PyBlockDataManager::estimateFee(unsigned int nbBlocks) const
+float PyBlockDataManager::estimateFee(unsigned int nbBlocks)
 {
    try {
       FastLock lock(bdvLock_);
@@ -595,17 +608,6 @@ bool PyBlockDataManager::broadcastZC(const BinaryData& rawTx)
    return false;
 }
 
-bool PyBlockDataManager::ignoreRemoteLoopException(const std::string& errorMessage)
-{
-   qDebug() << QString::fromStdString("[PyBlockDataManager::ignoreRemoteLoopException] get socket error in callback: ")
-      << QString::fromStdString(errorMessage);
-
-   OnConnectionError();
-
-   return false;
-}
-
-
 bool PyBlockDataManager::OnArmoryAvailable()
 {
    try {
@@ -625,11 +627,6 @@ bool PyBlockDataManager::OnArmoryAvailable()
 
 bool PyBlockDataManager::startConnectionMonitor()
 {
-   {
-      FastLock lock(bdvLock_);
-      bdv_ = SwigClient::BlockDataViewer::getNewBDVPointer(settings_.armoryDBIp
-         , settings_.armoryDBPort, settings_.socketType);
-   }
    stopMonitorEvent_->ResetEvent();
    if (connectionMonitorThread_.joinable()) {
       connectionMonitorThread_.join();

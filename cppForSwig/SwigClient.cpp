@@ -984,8 +984,8 @@ void BlockHeader::unserialize(uint8_t const * ptr, uint32_t size)
 // PythonCallback
 //
 ///////////////////////////////////////////////////////////////////////////////
-PythonCallback::PythonCallback(const BlockDataViewer& bdv) :
-   sock_(bdv.sock_), bdvID_(bdv.getID()), bdvPtr_(&bdv)
+PythonCallback::PythonCallback(const BlockDataViewer *bdv) :
+   sock_(bdv->sock_), bdvPtr_(bdv)
 {
    orderMap_["continue"]         = CBO_continue;
    orderMap_["NewBlock"]         = CBO_NewBlock;
@@ -1029,7 +1029,7 @@ void PythonCallback::remoteLoop(void)
 {
    Command sendCmd;
    sendCmd.method_ = "registerCallback";
-   sendCmd.ids_.push_back(bdvID_);
+   sendCmd.ids_.push_back(bdvPtr_->getID());
    BinaryDataObject bdo("waitOnBDV");
    sendCmd.args_.push_back(move(bdo));
    sendCmd.serialize();

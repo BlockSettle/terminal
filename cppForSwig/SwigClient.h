@@ -282,18 +282,19 @@ namespace SwigClient
          CBO_BDV_Error
       };
 
+   protected:
       bool run_ = true;
       thread thr_;
 
+   private:
       const shared_ptr<BinarySocket> sock_;
-      const string bdvID_;
       SOCKET sockfd_;
 
       map<string, CallbackOrder> orderMap_;
       const BlockDataViewer* bdvPtr_;
 
    public:
-      PythonCallback(const BlockDataViewer& bdv);
+      PythonCallback(const BlockDataViewer *bdv);
       virtual ~PythonCallback(void) = 0;
 
       virtual void run(BDMAction action, void* ptr, int block = 0) = 0;
