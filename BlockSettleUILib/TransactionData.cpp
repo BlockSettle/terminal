@@ -445,13 +445,14 @@ bool TransactionData::IsMaxAmount(unsigned int recipientId) const
    return itRecip->second->IsMaxAmount();
 }
 
-bs::Address TransactionData::GetFallbackRecvAddress() const
+bs::Address TransactionData::GetFallbackRecvAddress()
 {
    if (!fallbackRecvAddress_.isNull()) {
       return fallbackRecvAddress_;
    }
    if (wallet_ != nullptr) {
       const auto addr = wallet_->GetNewExtAddress();
+      createAddress(addr, wallet_);
       wallet_->RegisterWallet();
       fallbackRecvAddress_ = addr;
    }

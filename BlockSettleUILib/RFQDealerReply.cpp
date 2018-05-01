@@ -182,6 +182,9 @@ bs::Address RFQDealerReply::getRecvAddress() const
    const auto index = ui_->comboBoxRecvAddr->currentIndex();
    if (index <= 0) {
       const auto recvAddr = curWallet_->GetNewExtAddress();
+      if (transactionData_) {
+         transactionData_->createAddress(recvAddr, curWallet_);
+      }
       if (curWallet_->GetType() != bs::wallet::Type::ColorCoin) {
          curWallet_->SetAddressComment(recvAddr, bs::wallet::Comment::toString(bs::wallet::Comment::SettlementPayOut));
       }
