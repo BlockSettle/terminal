@@ -7,7 +7,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "SwigClient.h"
-#include "SocketIncludes.h"
 
 using namespace SwigClient;
 
@@ -33,13 +32,8 @@ BlockDataViewer BlockDataViewer::getNewBDV(const string& addr,
    else if (st == SocketFcgi)
       sockptr = make_shared<FcgiSocket>(HttpSocket(sock));
 
-   return BlockDataViewer(sockptr);
-}
-
-std::shared_ptr<BlockDataViewer> BlockDataViewer::getNewBDVPointer(
-      const string& addr, const string& port, SocketType st)
-{
-   return std::make_shared<BlockDataViewer>(getNewBDV(addr, port, st));
+   BlockDataViewer bdv(sockptr);
+   return bdv;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -990,8 +984,8 @@ void BlockHeader::unserialize(uint8_t const * ptr, uint32_t size)
 // PythonCallback
 //
 ///////////////////////////////////////////////////////////////////////////////
-PythonCallback::PythonCallback()
-   : sock_(nullptr)
+PythonCallback::PythonCallback(const BlockDataViewer& bdv) :
+   sock_(bdv.sock_), bdvID_(bdv.getID()), bdvPtr_(&bdv)
 {
    orderMap_["continue"]         = CBO_continue;
    orderMap_["NewBlock"]         = CBO_NewBlock;
@@ -1005,13 +999,8 @@ PythonCallback::PythonCallback()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void PythonCallback::startLoop(BlockDataViewer* bdv)
+void PythonCallback::startLoop(void)
 {
-   sock_ = bdv->sock_;
-   bdvID_ = bdv->getID();
-   bdvPtr_ = bdv;
-   run_ = true;
-
    auto loop = [this](void)->void
    { this->remoteLoop(); };
 
@@ -1176,31 +1165,11 @@ void PythonCallback::remoteLoop(void)
          if (!processCallback(move(args)))
             return;
       }
-      catch (const SocketError& e)
+      catch (runtime_error&)
       {
-         if (!ignoreRemoteLoopException(e.what())) {
-            break;
-         }
-      }
-      catch (const runtime_error& e)
-      {
-         if (!ignoreRemoteLoopException(e.what())) {
-            break;
-         }
-      }
-      catch (const DbErrorMsg &e) {  // Temporary fix to avoid crashes
-         if (!ignoreRemoteLoopException(e.what())) {
-            break;
-         }
+         continue;
       }
    }
-
-   return;
-}
-
-bool PythonCallback::ignoreRemoteLoopException(const std::string& errorMessage)
-{
-   return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

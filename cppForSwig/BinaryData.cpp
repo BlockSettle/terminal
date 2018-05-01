@@ -225,19 +225,6 @@ bool BinaryData::operator==(BinaryDataRef const & bd2) const
 }
 
 /////////////////////////////////////////////////////////////////////////////
-bool BinaryData::zeroFilled() const
-{
-   if (!isNull()) {
-      for (const auto& b : data_) {
-         if (b != 0) {
-            return false;
-         }
-      }
-   }
-   return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////
 bool BinaryData::operator<(BinaryDataRef const & bd2) const
 {
    size_t minLen = min(getSize(), bd2.getSize());

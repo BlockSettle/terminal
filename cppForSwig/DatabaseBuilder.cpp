@@ -134,9 +134,6 @@ void DatabaseBuilder::init()
          scanFrom, (int)reorgState.reorgBranchPoint_->getBlockHeight() + 1);
    }
    
-   LOGINFO << "scanning new blocks from #" << scanFrom << " to #" <<
-      blockchain_->top()->getBlockHeight();
-
    TIMER_START("scanning");
    while (1)
    {
@@ -309,12 +306,12 @@ Blockchain::ReorganizationState DatabaseBuilder::updateBlocksInDB(
    {
       boVec.push_back(make_shared<BlockOffset>(topBlockOffset_));
       tIDs.push_back(thread(addblocks, topBlockOffset_.fileID_ + i, 0, 
-                     boVec.back(), verbose));
+	                  boVec.back(), verbose));
    }
 
    boVec.push_back(make_shared<BlockOffset>(topBlockOffset_));
    addblocks(topBlockOffset_.fileID_, topBlockOffset_.offset_,
-             boVec.back(), verbose);
+	          boVec.back(), verbose);
 
    for (auto& tID : tIDs)
    {
@@ -548,6 +545,9 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
 {
    if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
+      LOGINFO << "scanning new blocks from #" << startHeight << " to #" <<
+         blockchain_->top()->getBlockHeight();
+
       BlockchainScanner bcs(blockchain_, db_, scrAddrFilter_.get(),
          blockFiles_, bdmConfig_.threadCount_, bdmConfig_.ramUsage_,
          progress_, reportprogress);
@@ -580,7 +580,7 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
          progress_, reportprogress);
 
       bcs.scan();
-      bcs.updateSSH(forceRescanSSH_);
+      bcs.updateSSH(forceRescanSSH_ & init);
 
       return bcs.getTopScannedBlockHash();
    }

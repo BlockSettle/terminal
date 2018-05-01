@@ -554,11 +554,7 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForWallets()
    auto getPageId = [this](uint32_t block)->uint32_t
    { return this->groups_[group_wallet].getPageIdForBlockHeight(block); };
 
-   auto getPageCount = [this]() {
-      return this->groups_[group_wallet].getPageCount();
-   };
-
-   return LedgerDelegate(getHist, getBlock, getPageId, getPageCount);
+   return LedgerDelegate(getHist, getBlock, getPageId);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -573,11 +569,7 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForLockboxes()
    auto getPageId = [this](uint32_t block)->uint32_t
    { return this->groups_[group_lockbox].getPageIdForBlockHeight(block); };
 
-   auto getPageCount = [this]() {
-      return this->groups_[group_lockbox].getPageCount();
-   };
-
-   return LedgerDelegate(getHist, getBlock, getPageId, getPageCount);
+   return LedgerDelegate(getHist, getBlock, getPageId);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -611,11 +603,7 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForScrAddr(
    auto getPageId = [&](uint32_t block)->uint32_t
    { return sca.getPageIdForBlockHeight(block); };
 
-   auto getPageCount = [&]() {
-      return sca.getPageCount();
-   };
-
-   return LedgerDelegate(getHist, getBlock, getPageId, getPageCount);
+   return LedgerDelegate(getHist, getBlock, getPageId);
 }
 
 
@@ -1026,13 +1014,22 @@ vector<LedgerEntry> WalletGroup::getHistoryPage(
          uint32_t startBlock, uint32_t endBlock)->map<BinaryData, LedgerEntry>
       {
          map<BinaryData, LedgerEntry> result;
+         unsigned i = 0;
          for (auto& wlt_pair : localWalletMap)
          {
             auto&& txio_map = wlt_pair.second->getTxioForRange(
                startBlock, endBlock);
             auto&& ledgerMap = wlt_pair.second->updateWalletLedgersFromTxio(
                txio_map, startBlock, endBlock);
-            result.insert(ledgerMap.begin(), ledgerMap.end());
+
+            for (auto& ledger : ledgerMap)
+            {
+               BinaryWriter bw;
+               bw.put_uint32_t(i++);
+
+               auto&& ledger_pair = make_pair(bw.getData(), move(ledger.second));
+               result.insert(move(ledger_pair));
+            }
          }
 
          return result;

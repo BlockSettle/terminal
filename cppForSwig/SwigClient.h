@@ -2,7 +2,7 @@
 //                                                                            //
 //  Copyright (C) 2016, goatpig.                                              //
 //  Distributed under the MIT license                                         //
-//  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
+//  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //                                      
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -74,7 +74,6 @@ namespace SwigClient
       LedgerDelegate(shared_ptr<BinarySocket>, const string&, const string&);
 
       vector<LedgerEntryData> getHistoryPage(uint32_t id);
-//      size_t getPageCount();
    };
 
    class BtcWallet;
@@ -286,15 +285,15 @@ namespace SwigClient
       bool run_ = true;
       thread thr_;
 
-      shared_ptr<BinarySocket> sock_;
-      string bdvID_;
+      const shared_ptr<BinarySocket> sock_;
+      const string bdvID_;
       SOCKET sockfd_;
 
       map<string, CallbackOrder> orderMap_;
       const BlockDataViewer* bdvPtr_;
 
    public:
-      PythonCallback();
+      PythonCallback(const BlockDataViewer& bdv);
       virtual ~PythonCallback(void) = 0;
 
       virtual void run(BDMAction action, void* ptr, int block = 0) = 0;
@@ -304,10 +303,8 @@ namespace SwigClient
          float progress, unsigned secondsRem,
          unsigned progressNumeric
          ) = 0;
-      virtual bool ignoreRemoteLoopException(const std::string& errorMessage);
 
-
-      void startLoop(BlockDataViewer* bdv);
+      void startLoop(void);
       void remoteLoop(void);
 
       void shutdown(void);
@@ -362,9 +359,6 @@ namespace SwigClient
       const string& getID(void) const { return bdvID_; }
 
       static BlockDataViewer getNewBDV(
-            const string& addr, const string& port, SocketType);
-
-      static std::shared_ptr<BlockDataViewer> getNewBDVPointer(
          const string& addr, const string& port, SocketType);
 
       LedgerDelegate getLedgerDelegateForWallets(void);

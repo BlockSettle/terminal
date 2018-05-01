@@ -35,9 +35,6 @@ using namespace std;
 #define ROOTASSET_KEY         0x00000007
 #define MAIN_ACCOUNT_KEY      0x00000008
 
-#define WALLETNAME_KEY        0x00000020
-#define WALLETDESCRIPTION_KEY 0x00000021
-
 #define MASTERID_KEY          0x000000A0
 #define MAINWALLET_KEY        0x000000A1
 

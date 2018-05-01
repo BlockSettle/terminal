@@ -389,14 +389,20 @@ void Command::serialize()
    if (method_.size() == 0)
       throw runtime_error("empty command");
 
-   std::string packet;
-   packet.reserve(256);
+   stringstream ss;
 
-   for (auto id : ids_) {
-      packet += "&" + id;
+   for (auto id : ids_)
+   {
+      //id
+      ss << "&" << id;
    }
-   packet += "&" + method_ + "." + args_.serialize();
 
+   ss << "&" << method_;
+   ss << ".";
+   ss << args_.serialize();
+
+   //hash the packet
+   auto&& packet = ss.str();
    auto&& hash = BtcUtils::getHash256(packet);
    
    //prepend first 4 bytes of hash as checksum
