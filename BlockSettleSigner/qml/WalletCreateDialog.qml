@@ -23,7 +23,6 @@ CustomDialog {
                 Layout.preferredHeight: 40
                 Layout.fillWidth: true
                 text:  qsTr("Create New Wallet")
-
             }
         }
 
@@ -121,13 +120,11 @@ CustomDialog {
                 CustomButtonPrimary {
                     Layout.fillWidth: true
                     text:   qsTr("CONFIRM")
-
+                    enabled:    acceptable
                     onClicked: {
                         accept()
                     }
                 }
-
-
             }
 
             Flow {
@@ -136,7 +133,6 @@ CustomDialog {
                 padding: 5
                 height: childrenRect.height + 10
 
-
                 CustomButton {
                     Layout.fillWidth: true
                     text:   qsTr("Cancel")
@@ -144,7 +140,6 @@ CustomDialog {
                         onClicked: root.close();
                     }
                 }
-
             }
         }
     }
