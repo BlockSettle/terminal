@@ -11,8 +11,10 @@ CustomDialog {
     property string password
     property string recoveryKey
     property bool isPrimary:    false
-    property bool acceptable:   (tfName.text.length && tfPassword.text.length && taKey.text.length)
-
+    property bool acceptable:   (tfName.text.length && tfPassword.text.length &&
+                                 (digitalBackup ? (lblDBFile.text != "...")
+                                                : walletsProxy.isValidPaperKey(taKey.text))
+                                )
     width: parent.width * 0.5
     height: parent.height * 0.7
     id:root
@@ -122,7 +124,7 @@ CustomDialog {
                 Layout.maximumWidth: 110
                 text:   digitalBackup ? qsTr("Digital backup file:") : qsTr("Recovery key:")
             }
-            CustomTextInput {
+            CustomTextArea {
                 visible: !digitalBackup
                 id: taKey
                 Layout.fillWidth: true
@@ -165,17 +167,14 @@ CustomDialog {
                 LayoutMirroring.childrenInherit: true
                 anchors.left: parent.left   // anchor left becomes right
 
-
                 CustomButtonPrimary {
                     Layout.fillWidth: true
                     text:   qsTr("CONFIRM")
-
+                    enabled: acceptable
                     onClicked: {
                         accept()
                     }
                 }
-
-
             }
 
             Flow {
