@@ -195,44 +195,17 @@ Item {
 
                         CustomButton {
                             id: btnSignOfflineTx
-                            text: (requestId == 0) ? qsTr("Sign Offline From File") : qsTr("Confirm")
-                            visible:    (requestId >= 0)
-                            property int requestId: 0
+                            text: qsTr("Sign Offline From File")
                             onClicked: {
-                                if (requestId == 0) {
-                                    if (!ldrOfflineFileDlg.item) {
-                                        ldrOfflineFileDlg.active = true
-                                    }
-                                    ldrOfflineFileDlg.item.open();
+                                if (!ldrOfflineFileDlg.item) {
+                                    ldrOfflineFileDlg.active = true
                                 }
-                                else {
-                                    offlineProc.processRequest(requestId)
-                                    requestId = 0
-                                }
-                            }
-                        }
-
-                        CustomButton {
-                            id: btnCancelSignOfflineTx
-                            text:   qsTr("Cancel")
-                            visible:    (btnSignOfflineTx.requestId)
-                            onClicked: {
-                                offlineProc.removeSignReq(btnSignOfflineTx.requestId)
-                                btnSignOfflineTx.requestId = 0
+                                ldrOfflineFileDlg.item.open();
                             }
                         }
                     }
                 }
             }
-
-            Label {
-                id: lblParsedTx
-                Layout.fillWidth: true
-                font.pixelSize: 12
-                color:  "lightsteelblue"
-                visible:    (btnSignOfflineTx.requestId)
-            }
-
         }
     }
 
@@ -262,8 +235,7 @@ Item {
                 filePath = decodeURIComponent(filePath)
 
                 var reqId = offlineProc.parseFile(filePath)
-                btnSignOfflineTx.requestId = reqId
-                lblParsedTx.text = offlineProc.parsedText(reqId)
+                offlineProc.processRequest(reqId)
             }
         }
     }
