@@ -41,12 +41,3 @@ double TXInfo::amount() const
    }
    return result / BTCNumericTypes::BalanceDivider;
 }
-
-double TXInfo::total() const
-{
-   uint64_t result = 0;
-   for (const auto &input : txReq_.inputs) {
-      result += input.getValue();
-   }
-   return result / BTCNumericTypes::BalanceDivider;
-}

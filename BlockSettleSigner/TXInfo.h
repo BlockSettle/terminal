@@ -34,7 +34,7 @@ public:
    QStringList recvAddresses() const;
    int txSize() const { return (int)txReq_.estimateTxSize(); }
    double amount() const;
-   double total() const;
+   double total() const { return amount() + fee(); }
    double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }
 
 signals:
