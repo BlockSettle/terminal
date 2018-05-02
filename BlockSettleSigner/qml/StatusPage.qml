@@ -185,30 +185,27 @@ Item {
                 }
             }
 
-            RowLayout {
+            CustomButtonBar {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.topMargin: 20
 
-                CustomButtonBar {
-                    Layout.fillWidth: true
+                Flow {
+                    id: buttonRow
+                    spacing: 5
+                    padding: 5
+                    width: parent.width
+                    height: childrenRect.height + 10
 
-                    Flow {
-                        id: buttonRow
-                        spacing: 5
-                        padding: 5
-                        width: parent.width
-                        height: childrenRect.height + 10
-
-                        CustomButton {
-                            id: btnSignOfflineTx
-                            text: qsTr("Sign Offline From File")
-                            onClicked: {
-                                if (!ldrOfflineFileDlg.item) {
-                                    ldrOfflineFileDlg.active = true
-                                }
-                                ldrOfflineFileDlg.item.open();
+                    CustomButton {
+                        id: btnSignOfflineTx
+                        text: qsTr("Sign Offline From File")
+                        width: parent.width - 10
+                        onClicked: {
+                            if (!ldrOfflineFileDlg.item) {
+                                ldrOfflineFileDlg.active = true
                             }
+                            ldrOfflineFileDlg.item.open();
                         }
                     }
                 }
