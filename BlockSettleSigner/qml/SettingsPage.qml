@@ -49,19 +49,17 @@ Item {
                 Layout.rightMargin: 10
 
                 CustomLabel {
-                    text:   qsTr("Offline mode:")
+                    text:   qsTr("Connection mode:")
                     Layout.minimumWidth: 125
                     Layout.preferredWidth: 125
                     Layout.maximumWidth: 125
                 }
                 CustomCheckBox {
                     Layout.fillWidth: true
-                    text: checked ? qsTr("Enabled") : qsTr("Disabled")
-                    checked:    signerParams.offline
+                    text: signerStatus.socketOk ? "" : qsTr("Failed to bind")
+                    checked:    !signerParams.offline
                     onCheckStateChanged: {
-                        btnNetwork.enabled = !checked
-                        gridNetwork.state = (!checked && btnNetwork.checked) ? "normal" : "hidden"
-                        signerParams.offline = checked
+                        signerParams.offline = !checked
                     }
                 }
             }
