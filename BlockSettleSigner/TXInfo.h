@@ -21,6 +21,8 @@ class TXInfo : public QObject
    Q_PROPERTY(double amount READ amount NOTIFY dataChanged)
    Q_PROPERTY(double total READ total NOTIFY dataChanged)
    Q_PROPERTY(double fee READ fee NOTIFY dataChanged)
+   Q_PROPERTY(double changeAmount READ changeAmount NOTIFY dataChanged)
+   Q_PROPERTY(bool hasChange READ hasChange NOTIFY dataChanged)
 
 public:
    TXInfo() : QObject(), txReq_() {}
@@ -36,6 +38,8 @@ public:
    double amount() const;
    double total() const { return amount() + fee(); }
    double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }
+   bool hasChange() const { return (txReq_.change.value > 0); }
+   double changeAmount() const { return txReq_.change.value / BTCNumericTypes::BalanceDivider; }
 
 signals:
    void dataChanged();
