@@ -15,12 +15,14 @@ CustomDialog {
                                  (digitalBackup ? (lblDBFile.text != "...")
                                                 : walletsProxy.isValidPaperKey(taKey.text))
                                 )
-    width: parent.width * 0.5
-    height: parent.height * 0.7
+    width: 400
+    height: 350
     id:root
 
     ColumnLayout {
+        anchors.fill: parent
         Layout.fillWidth: true
+        Layout.fillHeight: true
         spacing: 10
 
         RowLayout{
@@ -153,6 +155,10 @@ CustomDialog {
             }
         }
 
+        Rectangle {
+            Layout.fillHeight: true
+        }
+
         CustomButtonBar {
             Layout.topMargin: 20
             id: rowButtons
@@ -183,7 +189,6 @@ CustomDialog {
                 padding: 5
                 height: childrenRect.height + 10
 
-
                 CustomButton {
                     Layout.fillWidth: true
                     text:   qsTr("Cancel")
@@ -191,7 +196,6 @@ CustomDialog {
                         onClicked: root.close();
                     }
                 }
-
             }
         }
     }
