@@ -113,14 +113,21 @@ Item {
                     CustomLabel {
                         Layout.fillWidth: true
                         visible: !signerStatus.offline
-                        text:   qsTr("%1 connection[s]:").arg(Number(signerStatus.connections))
+                        text:   signerStatus.connections ? qsTr("%1 connection[s]:").arg(Number(signerStatus.connections))
+                                                         : qsTr("Connections:")
                         Layout.preferredHeight: 25
+                    }
+                    CustomLabel {
+                        visible: !signerStatus.connections
+                        Layout.alignment: Qt.AlignRight
+                        text:   qsTr("None")
                     }
                     ColumnLayout {
                         spacing: 0
-                        visible: !signerStatus.offline
+                        visible: !signerStatus.offline && signerStatus.connections
                         Layout.leftMargin: 0
                         Layout.rightMargin: 0
+                        Layout.alignment: Qt.AlignRight
                         Repeater {
                             model: signerStatus.connectedClients
                             CustomLabelValue {
