@@ -131,6 +131,10 @@ void WalletImporter::onHDWalletError(unsigned int id, std::string errMsg)
 void WalletImporter::Import(const std::string &name, const std::string &description
    , bs::wallet::Seed seed, bool primary, const SecureBinaryData &password)
 {
+   if (!signingContainer_ || signingContainer_->isOffline()) {
+      emit error(tr("Can't start import with missing or offline signer"));
+      return;
+   }
    password_ = password;
    createWalletReq_ = signingContainer_->CreateHDWallet(seed.networkType(), name, description, password, primary, seed);
    if (!createWalletReq_) {
