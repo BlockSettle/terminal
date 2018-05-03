@@ -14,4 +14,3 @@ Dialog {
         border.color:  "#0A1619"
     }
 }
-

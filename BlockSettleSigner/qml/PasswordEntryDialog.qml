@@ -70,7 +70,6 @@ CustomDialog {
                 verticalAlignment: Text.AlignTop
                 Layout.fillHeight: true
             }
-
             ColumnLayout{
                 spacing: 0
                 Layout.leftMargin: 0
@@ -88,7 +87,6 @@ CustomDialog {
                 Layout.fillWidth: true
                 text:   qsTr("Transaction Size")
             }
-
             CustomLabelValue {
                 text:   txInfo.txSize
                 Layout.alignment: Qt.AlignRight
@@ -98,7 +96,6 @@ CustomDialog {
                 Layout.fillWidth: true
                 text:   qsTr("Transaction Amount")
             }
-
             CustomLabelValue {
                 text:   txInfo.amount.toFixed(8)
                 Layout.alignment: Qt.AlignRight
@@ -106,9 +103,19 @@ CustomDialog {
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Network Fee")
+                text:   qsTr("Return Amount")
+                visible:    txInfo.hasChange
+            }
+            CustomLabelValue {
+                visible:    txInfo.hasChange
+                text:   txInfo.changeAmount.toFixed(8)
+                Layout.alignment: Qt.AlignRight
             }
 
+            CustomLabel {
+                Layout.fillWidth: true
+                text:   qsTr("Network Fee")
+            }
             CustomLabelValue {
                 text:   txInfo.fee.toFixed(8)
                 Layout.alignment: Qt.AlignRight
@@ -118,7 +125,6 @@ CustomDialog {
                 Layout.fillWidth: true
                 text:   qsTr("Total")
             }
-
             CustomLabelValue {
                 text:   txInfo.total.toFixed(8)
                 Layout.alignment: Qt.AlignRight
@@ -195,7 +201,6 @@ CustomDialog {
                 text: qsTr("On completion just press [Enter] or [Return]")
                 Layout.fillWidth: true
             }
-
             CustomLabelValue {
                 text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
                 Layout.fillWidth: true
@@ -250,7 +255,6 @@ CustomDialog {
                         onClicked: passwordDialog.reject();
                     }
                 }
-
             }
         }
     }

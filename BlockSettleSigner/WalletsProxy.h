@@ -44,6 +44,8 @@ public:
    Q_INVOKABLE int indexOfWalletId(const QString &walletId) const;
    Q_INVOKABLE QString walletIdForIndex(int) const;
 
+   Q_INVOKABLE bool isValidPaperKey(const QString &) const;
+
 signals:
    void walletError(const QString &walletId, const QString &errMsg) const;
    void walletsChanged();

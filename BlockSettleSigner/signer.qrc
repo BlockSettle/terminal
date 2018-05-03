@@ -21,6 +21,7 @@
         <file>qml/WalletNewDialog.qml</file>
         <file>qml/WalletsPage.qml</file>
         <file>qml/WalletsView.qml</file>
+        <file>qml/CustomTextArea.qml</file>
         <file>qml/CustomTextInput.qml</file>
         <file>qml/CustomLabel.qml</file>
         <file>qml/CustomHeader.qml</file>

@@ -113,14 +113,21 @@ Item {
                     CustomLabel {
                         Layout.fillWidth: true
                         visible: !signerStatus.offline
-                        text:   qsTr("%1 connection[s]:").arg(Number(signerStatus.connections))
+                        text:   signerStatus.connections ? qsTr("%1 connection[s]:").arg(Number(signerStatus.connections))
+                                                         : qsTr("Connections:")
                         Layout.preferredHeight: 25
+                    }
+                    CustomLabel {
+                        visible: !signerStatus.connections
+                        Layout.alignment: Qt.AlignRight
+                        text:   qsTr("None")
                     }
                     ColumnLayout {
                         spacing: 0
-                        visible: !signerStatus.offline
+                        visible: !signerStatus.offline && signerStatus.connections
                         Layout.leftMargin: 0
                         Layout.rightMargin: 0
+                        Layout.alignment: Qt.AlignRight
                         Repeater {
                             model: signerStatus.connectedClients
                             CustomLabelValue {
@@ -178,61 +185,31 @@ Item {
                 }
             }
 
-            RowLayout {
+            CustomButtonBar {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.topMargin: 20
 
-                CustomButtonBar {
-                    Layout.fillWidth: true
+                Flow {
+                    id: buttonRow
+                    spacing: 5
+                    padding: 5
+                    width: parent.width
+                    height: childrenRect.height + 10
 
-                    Flow {
-                        id: buttonRow
-                        spacing: 5
-                        padding: 5
-                        width: parent.width
-                        height: childrenRect.height + 10
-
-                        CustomButton {
-                            id: btnSignOfflineTx
-                            text: (requestId == 0) ? qsTr("Sign Offline From File") : qsTr("Confirm")
-                            visible:    (requestId >= 0)
-                            property int requestId: 0
-                            onClicked: {
-                                if (requestId == 0) {
-                                    if (!ldrOfflineFileDlg.item) {
-                                        ldrOfflineFileDlg.active = true
-                                    }
-                                    ldrOfflineFileDlg.item.open();
-                                }
-                                else {
-                                    offlineProc.processRequest(requestId)
-                                    requestId = 0
-                                }
+                    CustomButton {
+                        id: btnSignOfflineTx
+                        text: qsTr("Sign Offline From File")
+                        width: parent.width - 10
+                        onClicked: {
+                            if (!ldrOfflineFileDlg.item) {
+                                ldrOfflineFileDlg.active = true
                             }
-                        }
-
-                        CustomButton {
-                            id: btnCancelSignOfflineTx
-                            text:   qsTr("Cancel")
-                            visible:    (btnSignOfflineTx.requestId)
-                            onClicked: {
-                                offlineProc.removeSignReq(btnSignOfflineTx.requestId)
-                                btnSignOfflineTx.requestId = 0
-                            }
+                            ldrOfflineFileDlg.item.open();
                         }
                     }
                 }
             }
-
-            Label {
-                id: lblParsedTx
-                Layout.fillWidth: true
-                font.pixelSize: 12
-                color:  "lightsteelblue"
-                visible:    (btnSignOfflineTx.requestId)
-            }
-
         }
     }
 
@@ -262,8 +239,7 @@ Item {
                 filePath = decodeURIComponent(filePath)
 
                 var reqId = offlineProc.parseFile(filePath)
-                btnSignOfflineTx.requestId = reqId
-                lblParsedTx.text = offlineProc.parsedText(reqId)
+                offlineProc.processRequest(reqId)
             }
         }
     }

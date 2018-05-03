@@ -11,14 +11,18 @@ CustomDialog {
     property string password
     property string recoveryKey
     property bool isPrimary:    false
-    property bool acceptable:   (tfName.text.length && tfPassword.text.length && taKey.text.length)
-
-    width: parent.width * 0.5
-    height: parent.height * 0.7
+    property bool acceptable:   (tfName.text.length && tfPassword.text.length &&
+                                 (digitalBackup ? (lblDBFile.text != "...")
+                                                : walletsProxy.isValidPaperKey(taKey.text))
+                                )
+    width: 400
+    height: 350
     id:root
 
     ColumnLayout {
+        anchors.fill: parent
         Layout.fillWidth: true
+        Layout.fillHeight: true
         spacing: 10
 
         RowLayout{
@@ -122,7 +126,7 @@ CustomDialog {
                 Layout.maximumWidth: 110
                 text:   digitalBackup ? qsTr("Digital backup file:") : qsTr("Recovery key:")
             }
-            CustomTextInput {
+            CustomTextArea {
                 visible: !digitalBackup
                 id: taKey
                 Layout.fillWidth: true
@@ -151,6 +155,10 @@ CustomDialog {
             }
         }
 
+        Rectangle {
+            Layout.fillHeight: true
+        }
+
         CustomButtonBar {
             Layout.topMargin: 20
             id: rowButtons
@@ -165,17 +173,14 @@ CustomDialog {
                 LayoutMirroring.childrenInherit: true
                 anchors.left: parent.left   // anchor left becomes right
 
-
                 CustomButtonPrimary {
                     Layout.fillWidth: true
                     text:   qsTr("CONFIRM")
-
+                    enabled: acceptable
                     onClicked: {
                         accept()
                     }
                 }
-
-
             }
 
             Flow {
@@ -184,7 +189,6 @@ CustomDialog {
                 padding: 5
                 height: childrenRect.height + 10
 
-
                 CustomButton {
                     Layout.fillWidth: true
                     text:   qsTr("Cancel")
@@ -192,7 +196,6 @@ CustomDialog {
                         onClicked: root.close();
                     }
                 }
-
             }
         }
     }
