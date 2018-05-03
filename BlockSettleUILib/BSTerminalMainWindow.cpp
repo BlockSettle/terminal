@@ -452,7 +452,7 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
    if (walletsManager_->GetWalletsCount() != 0) {
        action_send_->setEnabled(true);
    } else {
-      QTimer::singleShot(1234, [this] { createWallet(false); });
+      QTimer::singleShot(1234, [this] { createWallet(!walletsManager_->HasPrimaryWallet()); });
    }
 }
 
