@@ -916,6 +916,9 @@ std::shared_ptr<AddressEntry> bs::SettlementWallet::getAddressEntryForAddr(const
 
 SecureBinaryData bs::SettlementWallet::GetPublicKeyFor(const bs::Address &addr)
 {
+   if (addr.isNull()) {
+      return {};
+   }
    const auto asset = assets_[getAssetIndexByAddr(addr)];
    if (!asset) {
       return {};
