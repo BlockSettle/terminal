@@ -128,7 +128,9 @@ size_t AuthAddressManager::GetAddressCount()
 bs::Address AuthAddressManager::GetAddress(size_t index)
 {
    FastLock locker(lockList_);
-   assert(index < addresses_.size());
+   if (index >= addresses_.size()) {
+      return {};
+   }
    return addresses_[index];
 }
 
@@ -878,16 +880,18 @@ std::vector<bs::Address> AuthAddressManager::GetVerifiedAddressList() const
 
 size_t AuthAddressManager::FromVerifiedIndex(size_t index) const
 {
-   size_t nbVerified = 0;
-   for (size_t i = 0; i < addresses_.size(); i++) {
-      if (GetState(addresses_[i]) == AddressVerificationState::Verified) {
-         if (nbVerified == index) {
-            return i;
+   if (index < addresses_.size()) {
+      size_t nbVerified = 0;
+      for (size_t i = 0; i < addresses_.size(); i++) {
+         if (GetState(addresses_[i]) == AddressVerificationState::Verified) {
+            if (nbVerified == index) {
+               return i;
+            }
+            nbVerified++;
          }
-         nbVerified++;
       }
    }
-   return 0;
+   return UINT32_MAX;
 }
 
 void AuthAddressManager::SetBSAddressList(const std::unordered_set<std::string>& bsAddressList)

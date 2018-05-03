@@ -24,6 +24,16 @@ void WalletImporter::onWalletScanComplete(bs::hd::Group *grp, bs::hd::Path::Elem
       return;
    }
    if (isValid) {
+      if (grp) {
+         const auto &wlt = grp->getLeaf(wallet);
+         if (wlt) {
+            std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> addressesToSync;
+            for (const auto &addr : wlt->GetUsedAddressList()) {
+               addressesToSync.push_back({ wlt, addr });
+            }
+            signingContainer_->SyncAddresses(addressesToSync);
+         }
+      }
       if (grp->getIndex() == rootWallet_->getXBTGroupType()) {
          const bs::hd::Path::Elem nextWallet = (wallet == UINT32_MAX) ? 0 : wallet + 1;
          bs::hd::Path path;
@@ -131,6 +141,10 @@ void WalletImporter::onHDWalletError(unsigned int id, std::string errMsg)
 void WalletImporter::Import(const std::string &name, const std::string &description
    , bs::wallet::Seed seed, bool primary, const SecureBinaryData &password)
 {
+   if (!signingContainer_ || signingContainer_->isOffline()) {
+      emit error(tr("Can't start import with missing or offline signer"));
+      return;
+   }
    password_ = password;
    createWalletReq_ = signingContainer_->CreateHDWallet(seed.networkType(), name, description, password, primary, seed);
    if (!createWalletReq_) {

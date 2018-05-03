@@ -629,6 +629,10 @@ bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr
 
    if ((qrn.assetType == bs::network::Asset::SpotXBT) && authAddressManager_ && transData) {
       authKey = authAddressManager_->GetPublicKey(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
+      if (authKey.empty()) {
+         logger_->error("[RFQDealerReply::submit] empty auth key");
+         return {};
+      }
       logger_->debug("[RFQDealerReply::submit] using wallet {}", transData->GetWallet()->GetWalletName());
 
       const bool reversed = (qrn.product != bs::network::XbtCurrency);

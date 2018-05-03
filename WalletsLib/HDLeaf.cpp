@@ -425,6 +425,9 @@ void hd::Leaf::addAddress(const bs::Address &addr, const BinaryData &pubChainedK
 
 std::shared_ptr<hd::Node> hd::Leaf::getNodeForAddr(const bs::Address &addr) const
 {
+   if (addr.isNull()) {
+      return nullptr;
+   }
    const auto index = getAddressIndex(addr);
    if (index == UINT32_MAX) {
       return nullptr;

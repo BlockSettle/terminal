@@ -83,6 +83,7 @@ private slots:
    void onCreateHDWalletError(unsigned int id, std::string error);
 
    void onMaxClicked();
+   void onAmountEdited(const QString &);
 
    void onCreateWalletClicked();
 
@@ -197,6 +198,8 @@ private:
 
    QString currentBidPrice_;
    QString currentOfferPrice_;
+
+   bool maxAmount_ = false;
 };
 
 #endif // __RFQ_TICKET_XBT_H__
