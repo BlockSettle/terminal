@@ -24,6 +24,16 @@ void WalletImporter::onWalletScanComplete(bs::hd::Group *grp, bs::hd::Path::Elem
       return;
    }
    if (isValid) {
+      if (grp) {
+         const auto &wlt = grp->getLeaf(wallet);
+         if (wlt) {
+            std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> addressesToSync;
+            for (const auto &addr : wlt->GetUsedAddressList()) {
+               addressesToSync.push_back({ wlt, addr });
+            }
+            signingContainer_->SyncAddresses(addressesToSync);
+         }
+      }
       if (grp->getIndex() == rootWallet_->getXBTGroupType()) {
          const bs::hd::Path::Elem nextWallet = (wallet == UINT32_MAX) ? 0 : wallet + 1;
          bs::hd::Path path;
