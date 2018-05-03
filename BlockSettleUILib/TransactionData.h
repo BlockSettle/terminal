@@ -109,6 +109,9 @@ public:
    void clear();
    std::vector<UTXO> inputs() const;
 
+   void setMaxSpendAmount(bool maxAmount = true) { maxSpendAmount_ = maxAmount; }
+   bool maxSpendAmount() const { return maxSpendAmount_; }
+
 private:
    void InvalidateTransactionData();
    bool UpdateTransactionData();
@@ -131,6 +134,7 @@ private:
 
    std::vector<UTXO>    usedUTXO_;
    TransactionSummary   summary_;
+   bool     maxSpendAmount_ = false;
 
    bs::wallet::TXSignRequest  unsignedTxReq_;
 

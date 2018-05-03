@@ -62,7 +62,7 @@ RFQTicketXBT::RFQTicketXBT(QWidget* parent)
 
    connect(ui_->pushButtonCreateWallet, &QPushButton::clicked, this, &RFQTicketXBT::onCreateWalletClicked);
 
-   connect(ui_->lineEditAmount, &QLineEdit::textEdited, this, &RFQTicketXBT::updateSubmitButton);
+   connect(ui_->lineEditAmount, &QLineEdit::textEdited, this, &RFQTicketXBT::onAmountEdited);
 
    connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
    connect(this, &RFQTicketXBT::update, this, &RFQTicketXBT::onTransactinDataChanged);
@@ -695,6 +695,7 @@ void RFQTicketXBT::submitButtonClicked()
       transactionData_->SetFallbackRecvAddress(recvAddress());
 
       if ((rfq.side == bs::network::Side::Sell) && (rfq.product == bs::network::XbtCurrency)) {
+         transactionData_->setMaxSpendAmount(maxAmount_);
          transactionData_->ReserveUtxosFor(rfq.quantity, rfq.requestId);
       }
    } else if (rfq.assetType == bs::network::Asset::PrivateMarket) {
@@ -838,7 +839,14 @@ void RFQTicketXBT::onMaxClicked()
       ui_->lineEditAmount->setText(UiUtils::displayCurrencyAmount(qMax<double>(balanceInfo.amount, 0)));
       break;
    }
+   maxAmount_ = true;
 
+   updateSubmitButton();
+}
+
+void RFQTicketXBT::onAmountEdited(const QString &)
+{
+   maxAmount_ = false;
    updateSubmitButton();
 }
 

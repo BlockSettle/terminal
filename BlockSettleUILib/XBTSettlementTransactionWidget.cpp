@@ -218,7 +218,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
    signingContainer_->SyncAddresses({ {transactionData_->GetWallet(), recvAddr_} });
 
    const auto recipient = transactionData_->RegisterNewRecipient();
-   transactionData_->UpdateRecipientAmount(recipient, amount_);
+   transactionData_->UpdateRecipientAmount(recipient, amount_, transactionData_->maxSpendAmount());
    transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
 
    const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey, AddressEntryType_P2WPKH);
