@@ -80,7 +80,7 @@ public:
    void RemoveRecipient(unsigned int recipientId);
 
    void SetFallbackRecvAddress(const bs::Address &addr) { fallbackRecvAddress_ = addr; }
-   bs::Address GetFallbackRecvAddress() const;
+   bs::Address GetFallbackRecvAddress();
 
    bs::Address GetRecipientAddress(unsigned int recipientId) const;
    BTCNumericTypes::balance_type GetRecipientAmount(unsigned int recipientId) const;
