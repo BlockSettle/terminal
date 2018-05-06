@@ -607,7 +607,7 @@ bool AddressVerificator::RegisterUserAddress(const std::shared_ptr<AuthAddress>&
    }
 
    logger_->debug("[AddressVerificator::RegisterUserAddress] add address to update Q: {}"
-      , address->GetChainedAddress().display<std::string()>);
+      , address->GetChainedAddress().display<std::string>());
 
    AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(address));
    return true;
