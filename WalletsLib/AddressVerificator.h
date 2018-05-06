@@ -106,8 +106,11 @@ private:
 
    // addresses that were added to a wallet
    // user auth address list
-   std::set<BinaryData>             authAddressSet_, pendingRegAddresses_;
+   std::set<BinaryData>             authAddressSet_;
    mutable std::atomic_flag         authAddressSetFlag_ = ATOMIC_FLAG_INIT;
+
+   std::set<BinaryData>             pendingRegAddresses_;
+   mutable std::atomic_flag         pendingRegAddressFlag_ = ATOMIC_FLAG_INIT;
 
    std::queue<ExecutionCommand>     waitingForUpdateQueue_;
    std::atomic_flag                 waitingForUpdateQueueFlag_ = ATOMIC_FLAG_INIT;

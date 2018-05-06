@@ -23,13 +23,24 @@ bool AddressVerificationPool::SubmitForVerification(const std::shared_ptr<AuthAd
 {
    auto addressString = address->GetChainedAddress().display<std::string>();
 
-   logger_->debug("[AddressVerificationPool::SubmitForVerification] {}: submitting {}"
-      , poolId_, addressString);
+   uint pendingVerifications = 0;
 
    {
       FastLock locker(pendingLockerFlag_);
-      pendingResults_.emplace(addressString, onCompleted);
+      auto it = pendingResults_.find(addressString);
+      if (it == pendingResults_.end()) {
+         std::queue<verificationCompletedCallback> q;
+         q.emplace(onCompleted);
+         pendingResults_.emplace(addressString, std::move(q));
+         pendingVerifications = 1;
+      } else {
+         it->second.emplace(onCompleted);
+         pendingVerifications = it->second.size();
+      }
    }
+
+   logger_->debug("[AddressVerificationPool::SubmitForVerification] {}: submitting {}. Pending verification for address: {}"
+      , poolId_, addressString, pendingVerifications);
 
    verificator_->StartAddressVerification(address);
    verificator_->RegisterAddresses();
@@ -40,20 +51,20 @@ bool AddressVerificationPool::SubmitForVerification(const std::shared_ptr<AuthAd
 void AddressVerificationPool::completeVerification(const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
 {
    auto addressString = address->GetChainedAddress().display<std::string>();
-   verificationCompletedCallback onCompleted;
+   std::queue<verificationCompletedCallback> callbackQueue;
 
    size_t pendingCount = 0;
    {
       FastLock locker(pendingLockerFlag_);
       auto it = pendingResults_.find(addressString);
       if (it != pendingResults_.end()) {
-         onCompleted = std::move(it->second);
+         callbackQueue = std::move(it->second);
          pendingResults_.erase(it);
       }
       pendingCount = pendingResults_.size();
    }
 
-   if (!onCompleted) {
+   if (callbackQueue.empty()) {
       logger_->error("[AddressVerificationPool::completeVerification] {}: no pending verifications for {}. Pending count {}"
          , poolId_, addressString, pendingCount);
       return;
@@ -62,7 +73,11 @@ void AddressVerificationPool::completeVerification(const std::shared_ptr<AuthAdd
    logger_->debug("[AddressVerificationPool::completeVerification] {} : {} is {}"
       , poolId_, addressString, to_string(state));
 
-   onCompleted(state);
+   while (!callbackQueue.empty()) {
+      auto onCompleted = callbackQueue.front();
+      callbackQueue.pop();
+      onCompleted(state);
+   }
 }
 
 bool AddressVerificationPool::SetBSAddressList(const std::unordered_set<std::string>& addressList)
