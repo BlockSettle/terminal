@@ -584,14 +584,14 @@ bool PyBlockDataManager::broadcastZC(const BinaryData& rawTx)
          qDebug() << "[PyBlockDataManager::broadcastZC] TX hash null";
       }
 
-      {
-         FastLock lock(bdvLock_);
-         pendingBroadcasts_.insert(tx.getThisHash());
-      }
+      // {
+      //    FastLock lock(bdvLock_);
+      //    pendingBroadcasts_.insert(tx.getThisHash());
+      // }
 
       bdv_->broadcastZC(rawTx);
 
-      emit ScheduleRPCBroadcast(rawTx);
+      // emit ScheduleRPCBroadcast(rawTx);
       return true;
    } catch (const SocketError& e) {
       qDebug() << QLatin1String("[PyBlockDataManager::broadcastZC] SocketError: ") << QString::fromStdString(e.what());

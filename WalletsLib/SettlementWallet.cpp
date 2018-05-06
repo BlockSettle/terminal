@@ -1221,6 +1221,11 @@ bs::PayoutSigner::Type bs::PayoutSigner::WhichSignature(const Tx& tx
 
       auto inputState = verifierState.getSignedStateForInput(inputId);
 
+      if (inputState.getSigCount() == 0) {
+         logger->error("[bs::PayoutSigner::WhichSignature] no signatures received for TX: {}"
+            , tx.getThisHash().toHexStr());
+      }
+
       if (inputState.isSignedForPubKey(ae->getAsset()->buyChainedPubKey())) {
          return SignedByBuyer;
       } else if (inputState.isSignedForPubKey(ae->getAsset()->sellChainedPubKey())) {
