@@ -23,9 +23,9 @@ public:
    ~AddressVerificatorListener() noexcept override = default;
 
    void OnRefresh() override {
-      if (refreshEnabled_) {
+      // if (refreshEnabled_) {
          verificator_->OnRefresh();
-      }
+      // }
    }
 
    void setRefreshEnabled(bool enabled = true) { refreshEnabled_ = enabled; }
@@ -606,7 +606,10 @@ bool AddressVerificator::RegisterUserAddress(const std::shared_ptr<AuthAddress>&
       pendingRegAddresses_.insert(address->GetChainedAddress().prefixed());
    }
 
-   AddCommandToQueue(CreateAddressValidationCommand(address));
+   logger_->debug("[AddressVerificator::RegisterUserAddress] add address to update Q: {}"
+      , address->GetChainedAddress().display<std::string()>);
+
+   AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(address));
    return true;
 }
 
@@ -651,6 +654,8 @@ void AddressVerificator::RegisterAddresses()
 
 void AddressVerificator::OnRefresh()
 {
+   logger_->debug("[AddressVerificator::OnRefresh] get refresh command");
+
    ExecutionCommand command;
    {
       FastLock locker(waitingForUpdateQueueFlag_);
