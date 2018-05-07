@@ -51,6 +51,7 @@ enum ResponseEntryType
    AuthAddressVerificationTransactionType = 3;
    AuthRevokeTransactionType = 4;
    CCDistributionTransactionType = 5;
+   AuthAddressVerificationRejectType = 6;
 }
 
 message ResponseEntry
@@ -107,4 +108,9 @@ message CCDistributionTransaction
    required string   cc_product = 1;
    repeated string   address = 2;
    required bytes    transaction = 3;
+}
+
+message AuthVerificationRejectedMessage
+{
+   required AuthAddressReservationInfo reservation_info = 1;
 }
