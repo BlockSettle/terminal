@@ -23,9 +23,9 @@ public:
    ~AddressVerificatorListener() noexcept override = default;
 
    void OnRefresh() override {
-      if (refreshEnabled_) {
+      // if (refreshEnabled_) {
          verificator_->OnRefresh();
-      }
+      // }
    }
 
    void setRefreshEnabled(bool enabled = true) { refreshEnabled_ = enabled; }
@@ -155,6 +155,8 @@ bool AddressVerificator::StartAddressVerification(const std::shared_ptr<AuthAddr
    auto addressCopy = std::make_shared<AuthAddress>(*address);
 
    if (AddressWasRegistered(addressCopy)) {
+      logger_->debug("[AddressVerificator::StartAddressVerification] adding verification command to queue: {}"
+         , address->GetChainedAddress().display<std::string>());
       return AddCommandToQueue(CreateAddressValidationCommand(addressCopy));
    }
 
@@ -219,7 +221,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVarificati
    auto ledgerDelegate = bdm->getLedgerDelegateForScrAddr(walletId_, prefixedAddress);
    if (!ledgerDelegate) {
       if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < 3)) {
-         logger_->warn("[AddressVerificator::ValidateAddress] Failed to get ledger for {} - retrying command", walletId_);
+         logger_->debug("[AddressVerificator::ValidateAddress] Failed to get ledger for {} - retrying command", walletId_);
          AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(state));
          addressRetries_[prefixedAddress]++;    // reschedule validation since error occured
       }
@@ -599,13 +601,21 @@ bool AddressVerificator::AddressWasRegistered(const std::shared_ptr<AuthAddress>
 
 bool AddressVerificator::RegisterUserAddress(const std::shared_ptr<AuthAddress>& address)
 {
+   {
+      FastLock locker(pendingRegAddressFlag_);
+      pendingRegAddresses_.insert(address->GetChainedAddress().prefixed());
+   }
+
+   logger_->debug("[AddressVerificator::RegisterUserAddress] add address to update Q: {}"
+      , address->GetChainedAddress().display<std::string>());
+
    AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(address));
-   pendingRegAddresses_.insert(address->GetChainedAddress().prefixed());
    return true;
 }
 
 void AddressVerificator::RegisterBSAuthAddresses()
 {
+   FastLock locker(pendingRegAddressFlag_);
    pendingRegAddresses_.insert(bsAddressList_.begin(), bsAddressList_.end());
 }
 
@@ -614,6 +624,7 @@ void AddressVerificator::RegisterAddresses()
    if (pendingRegAddresses_.empty()) {
       return;
    }
+
    pendingRegAddresses_.insert(authAddressSet_.begin(), authAddressSet_.end());
    if (pendingRegAddresses_ == authAddressSet_) {
       return;
@@ -643,6 +654,8 @@ void AddressVerificator::RegisterAddresses()
 
 void AddressVerificator::OnRefresh()
 {
+   logger_->debug("[AddressVerificator::OnRefresh] get refresh command");
+
    ExecutionCommand command;
    {
       FastLock locker(waitingForUpdateQueueFlag_);

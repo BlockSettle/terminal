@@ -8,6 +8,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <queue>
 
 class AddressVerificator;
 
@@ -43,7 +44,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    const std::string                poolId_;
 
-   using resultsCollection = std::unordered_map<std::string, verificationCompletedCallback >;
+   using resultsCollection = std::unordered_map<std::string, std::queue<verificationCompletedCallback> >;
 
    std::atomic_flag  pendingLockerFlag_ = ATOMIC_FLAG_INIT;
    resultsCollection pendingResults_;
