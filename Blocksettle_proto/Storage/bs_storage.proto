@@ -112,5 +112,6 @@ message CCDistributionTransaction
 
 message AuthVerificationRejectedMessage
 {
-   required AuthAddressReservationInfo reservation_info = 1;
+   required string user_name = 1;
+   required string reservation_id = 2;
 }
