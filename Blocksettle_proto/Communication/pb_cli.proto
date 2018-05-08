@@ -14,6 +14,7 @@ enum CLIRequestType
    AuthVerificationTransactionType = 8;
    AuthRevokeTransactionType = 9;
    CCDistributionTransactionType = 10;
+   AuthVerificationRejectedType = 11;
 }
 
 enum ArmoryConnectionState
@@ -131,4 +132,11 @@ message AuthRevokeTransactionResponse
 message CCDistributionTransactionResponse
 {
    required bool transaction_broadcasted = 1;
+}
+
+
+message AuthVerificationRejectReponse
+{
+   required bool fee_released = 1;
+   optional string debug_message = 2;
 }
