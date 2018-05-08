@@ -78,6 +78,9 @@ public:
    bool IsCCAddressSubmitted (const std::string &address) const;
    bool SetCCAddressSubmitted(const std::string &address);
 
+   static void UpdateSetFromString(const std::string& value, std::unordered_set<std::string> &set);
+   static std::string SetToString(const std::unordered_set<std::string> &set);
+
 public slots:
    void CloseConnection();
    void sendHeartbeat();
@@ -114,10 +117,8 @@ private:
    void loginSuccessCallback(const std::string& userName, const std::string& sessionToken, int32_t heartbeatInterval);
    void loginFailedCallback(const std::string& errorMessage);
 
-   void UpdateSetFromString(const std::string& value, std::unordered_set<std::string> &set);
-   void AddToSet(const std::string& address, std::unordered_set<std::string> &set);
+   static void AddToSet(const std::string& address, std::unordered_set<std::string> &set);
 
-   std::string SetToString(const std::unordered_set<std::string> &set);
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<spdlog::logger>        logger_;
