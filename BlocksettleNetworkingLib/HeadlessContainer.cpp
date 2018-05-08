@@ -483,6 +483,10 @@ void HeadlessContainer::SendPassword(const std::string &walletId, const Password
 
 HeadlessContainer::RequestId HeadlessContainer::SetUserId(const BinaryData &userId)
 {
+   if (!listener_->isAuthenticated()) {
+      logger_->warn("[HeadlessContainer] setting userid without being authenticated is not allowed");
+      return 0;
+   }
    headless::SetUserIdRequest request;
    if (!userId.isNull()) {
       request.set_userid(userId.toBinStr());
@@ -507,6 +511,10 @@ static headless::AddressType getAddressType(AddressEntryType aet)
 HeadlessContainer::RequestId HeadlessContainer::SyncAddresses(
    const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &addresses)
 {
+   if (!listener_->isAuthenticated()) {
+      logger_->warn("[HeadlessContainer] syncing addresses without being authenticated is not allowed");
+      return 0;
+   }
    if (addresses.empty()) {
       return 0;
    }
@@ -628,6 +636,10 @@ HeadlessContainer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::s
 void HeadlessContainer::SetLimits(const std::shared_ptr<bs::hd::Wallet> &wallet, const SecureBinaryData &pass
    , bool autoSign)
 {
+   if (!listener_->isAuthenticated()) {
+      logger_->warn("[HeadlessContainer] setting limits without being authenticated is not allowed");
+      return;
+   }
    if (!wallet) {
       logger_->error("[HeadlessContainer] no root wallet for SetLimits");
       return;
