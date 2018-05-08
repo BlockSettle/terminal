@@ -607,7 +607,7 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
       if (authWallet_ != nullptr) {
          for (const auto &addr : authWallet_->GetUsedAddressList()) {
             AddAddress(addr);
-            if (submittedAddresses.find(addr.prefixed().toHexStr()) != submittedAddresses.end()) {
+            if (submittedAddresses.find(addr.display<std::string>()) != submittedAddresses.end()) {
                SetState(addr, AddressVerificationState::Submitted);
             }
          }
