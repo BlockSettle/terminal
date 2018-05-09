@@ -111,8 +111,12 @@ bool ZmqSecuredServerConnection::ReadFromDataSocket()
          sockaddr_in peerInfo = { 0 };
          socklen_t peerLen = sizeof(peerInfo);
 #endif
-         if (getpeername(socket, (sockaddr *)&peerInfo, &peerLen) == 0) {
+         const auto rc = getpeername(socket, (sockaddr *)&peerInfo, &peerLen);
+         if (rc == 0) {
             clientInfo_[clientIdStr] = inet_ntoa(peerInfo.sin_addr);
+         }
+         else {
+            clientInfo_[clientIdStr] = "Not detected";
          }
       }
    }
