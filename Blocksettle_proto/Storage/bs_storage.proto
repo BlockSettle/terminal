@@ -57,7 +57,8 @@ enum ResponseEntryType
 message ResponseEntry
 {
    required ResponseEntryType type = 1;
-   required bytes             data = 2;
+   required string            request_id = 2;
+   required bytes             data = 3;
 }
 
 message ResponseFile
@@ -89,13 +90,13 @@ message AuthAddressReservationInfo
    required string address = 1;
    required string user_name = 2;
    required string reservation_id = 3;
+   required string request_id = 4;
 }
 
 message AuthAddressVerificationTransaction {
    repeated AuthAddressReservationInfo reservations = 1;
    required bytes verification_transaction = 2;
 }
-
 
 message AuthRevokeTransaction
 {

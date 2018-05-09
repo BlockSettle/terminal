@@ -515,9 +515,10 @@ AddressEntryType AuthAddressManager::mapFromScriptType(AddressScriptType scrType
 void AuthAddressManager::SubmitToCeler(const bs::Address &address)
 {
    if (celerClient_->IsConnected()) {
+      const std::string addressString = address.display<std::string>();
       std::unordered_set<std::string> submittedAddresses = celerClient_->GetSubmittedAuthAddressSet();
-      if (submittedAddresses.find(address.prefixed().toHexStr()) == submittedAddresses.end()) {
-         submittedAddresses.emplace(address.prefixed().toHexStr());
+      if (submittedAddresses.find(addressString) == submittedAddresses.end()) {
+         submittedAddresses.emplace(addressString);
          celerClient_->SetSubmittedAuthAddressSet(submittedAddresses);
       }
    }
@@ -606,7 +607,7 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
       if (authWallet_ != nullptr) {
          for (const auto &addr : authWallet_->GetUsedAddressList()) {
             AddAddress(addr);
-            if (submittedAddresses.find(addr.prefixed().toHexStr()) != submittedAddresses.end()) {
+            if (submittedAddresses.find(addr.display<std::string>()) != submittedAddresses.end()) {
                SetState(addr, AddressVerificationState::Submitted);
             }
          }
