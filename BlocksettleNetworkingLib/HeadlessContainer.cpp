@@ -483,6 +483,11 @@ void HeadlessContainer::SendPassword(const std::string &walletId, const Password
 
 HeadlessContainer::RequestId HeadlessContainer::SetUserId(const BinaryData &userId)
 {
+   if (!listener_) {
+      logger_->warn("[HeadlessContainer::SetUserId] listener not set yet");
+      return 0;
+   }
+
    if (!listener_->isAuthenticated()) {
       logger_->warn("[HeadlessContainer] setting userid without being authenticated is not allowed");
       return 0;
