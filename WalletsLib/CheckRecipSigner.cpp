@@ -64,9 +64,20 @@ struct recip_compare {
 };
 void CheckRecipSigner::removeDupRecipients()
 {  // can be implemented later in a better way without temporary std::set
-   std::set<std::shared_ptr<ScriptRecipient>, recip_compare> recipSet(recipients_.begin(), recipients_.end());
-   recipients_.clear();
-   recipients_.insert(recipients_.end(), recipSet.begin(), recipSet.end());
+   vector<shared_ptr<ScriptRecipient>> uniqueRecepients;
+
+   std::set<std::shared_ptr<ScriptRecipient>, recip_compare> recipSet;
+   for (const auto r : recipients_) {
+      auto it = recipSet.find(r);
+      if (it != recipSet.end()) {
+         continue;
+      }
+
+      uniqueRecepients.emplace_back(r);
+      recipSet.emplace(r);
+   }
+
+   recipients_.swap(uniqueRecepients);
 }
 
 bool CheckRecipSigner::hasInputAddress(const bs::Address &addr, uint64_t lotsize) const
