@@ -17,7 +17,8 @@ class ZeroMQSettings(Configurator):
         else:
             # download linux/osx release source package. simply to avoid reconfigure
             self._package_name = 'zeromq-' + self._version
-            self._package_url = 'https://github.com/zeromq/libzmq/releases/download/v' + self._version + '/' + self._package_name + '.tar.gz'
+            self._package_url = 'https://github.com/zeromq/libzmq/releases/download/v' + self._version + \
+                                '/' + self._package_name + '.tar.gz'
 
     def get_package_name(self):
         return self._package_name
@@ -143,16 +144,16 @@ class ZeroMQSettings(Configurator):
         print('Installing ZeroMQ')
 
         if self._project_settings.get_build_mode() == 'release':
-            srcLibDir = os.path.join(self.get_build_dir(), 'lib', 'Release')
-            srcDllDir = os.path.join(self.get_build_dir(), 'bin', 'Release')
+            src_lib_dir = os.path.join(self.get_build_dir(), 'lib', 'Release')
+            src_dll_dir = os.path.join(self.get_build_dir(), 'bin', 'Release')
         else:
-            srcLibDir = os.path.join(self.get_build_dir(), 'lib', 'Debug')
-            srcDllDir = os.path.join(self.get_build_dir(), 'bin', 'Debug')
+            src_lib_dir = os.path.join(self.get_build_dir(), 'lib', 'Debug')
+            src_dll_dir = os.path.join(self.get_build_dir(), 'bin', 'Debug')
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
 
-        self.filter_copy(srcLibDir, install_lib_dir)
-        self.filter_copy(srcDllDir, install_lib_dir, cleanupDst=False)
+        self.filter_copy(src_lib_dir, install_lib_dir)
+        self.filter_copy(src_dll_dir, install_lib_dir, cleanupDst=False)
 
         include_dir = self.get_include_dir_win()
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
