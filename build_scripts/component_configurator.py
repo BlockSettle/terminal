@@ -1,9 +1,12 @@
 import os
+import requests
 import shutil
 import tarfile
-import wget
 import zipfile
 import subprocess
+
+requests.packages.urllib3.disable_warnings()
+
 
 class Configurator:
    def __init__(self, project_settings):
@@ -39,7 +42,10 @@ class Configurator:
          return True
 
       if not os.path.isfile(self._download_path):
-         wget.download( url, self._download_path )
+         req = requests.get(url, stream=True)
+         req.raw.decode_content = True
+         with open(self._download_path, 'wb+') as save_file:
+            shutil.copyfileobj(req.raw, save_file)
 
       print('\nDownloaded: ' + self.get_package_name())
 
@@ -74,7 +80,7 @@ class Configurator:
             else:
                extractor.extractall( self.get_unpacked_sources_dir() )
          except:
-            print "unpacking exception"
+            print("unpacking exception")
 
    # some packages will be unpacked to individual directory by default
    # if it is not happening - overload this function and return False, directory will be created
