@@ -5,93 +5,88 @@ import subprocess
 
 from component_configurator import Configurator
 
+
 class CryptoppSettings(Configurator):
-   def __init__(self, settings):
-      Configurator.__init__(self, settings)
-      self._version = 'master'
-      self._package_name = 'cryptopp'
+    def __init__(self, settings):
+        Configurator.__init__(self, settings)
+        self._version = 'master'
+        self._package_name = 'cryptopp'
 
-      self._package_url = 'https://github.com/weidai11/cryptopp/archive/32f715f1d723e2bbb78b44fa9e167da64214e2e6.zip'
+        self._package_url = 'https://github.com/weidai11/cryptopp/archive/32f715f1d723e2bbb78b44fa9e167da64214e2e6.zip'
 
-   def get_package_name(self):
-      return self._package_name
+    def get_package_name(self):
+        return self._package_name
 
-   def get_url(self):
-      return self._package_url
+    def get_url(self):
+        return self._package_url
 
-   def is_archive(self):
-      return True
+    def is_archive(self):
+        return True
 
-   def config(self):
-      command = []
+    def config(self):
+        command = ['cmake',
+                   self.get_unpacked_sources_dir(),
+                   '-G',
+                   self._project_settings.get_cmake_generator()]
 
-      command.append('cmake')
-      command.append(self.get_unpacked_sources_dir())
-      command.append('-G')
-      command.append(self._project_settings.get_cmake_generator())
-      if self._project_settings.on_windows():
-         command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
-         command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
-      else:
-         command.append('-DDISABLE_NATIVE_ARCH=1')
+        if self._project_settings.on_windows():
+            command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
+            command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+        else:
+            command.append('-DDISABLE_NATIVE_ARCH=1')
 
-      result = subprocess.call(command)
+        result = subprocess.call(command)
 
-      return result == 0
+        return result == 0
 
-   def make_windows(self):
-      command = []
+    def make_windows(self):
+        command = ['devenv',
+                   self.get_solution_file(),
+                   '/build',
+                   self.get_win_build_configuration()]
 
-      command.append('devenv')
-      command.append(self.get_solution_file())
-      command.append('/build')
-      command.append(self.get_win_build_configuration())
+        result = subprocess.call(command)
+        return result == 0
 
-      result = subprocess.call(command)
-      return result == 0
+    def get_solution_file(self):
+        return 'cryptopp.sln'
 
-   def get_solution_file(self):
-      return 'cryptopp.sln'
+    def get_win_build_configuration(self):
+        if self._project_settings.get_build_mode() == 'release':
+            return 'Release'
+        else:
+            return 'Debug'
 
-   def get_win_build_configuration(self):
-      if self._project_settings.get_build_mode() == 'release':
-         return 'Release'
-      else:
-         return 'Debug'
+    def install_win(self):
+        lib_dir = os.path.join(self.get_build_dir(), self.get_win_build_configuration())
+        include_dir = self.get_unpacked_sources_dir()
 
-   def install_win(self):
-      lib_dir = os.path.join(self.get_build_dir(), self.get_win_build_configuration())
-      include_dir = self.get_unpacked_sources_dir()
+        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-      install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-      install_include_dir = os.path.join(self.get_install_dir(), 'include')
+        self.filter_copy(lib_dir, install_lib_dir, '.lib')
+        self.filter_copy(include_dir, install_include_dir)
 
-      self.filter_copy(lib_dir, install_lib_dir, '.lib')
-      self.filter_copy(include_dir, install_include_dir)
+        return True
 
-      return True
+    def make_x(self):
+        command = ['make', '-j', str(multiprocessing.cpu_count())]
 
-   def make_x(self):
-      command = []
+        result = subprocess.call(command)
+        return result == 0
 
-      command.append('make')
-      command.append('-j')
-      command.append( str(multiprocessing.cpu_count()) )
+    def install_x(self):
+        lib_dir = self.get_build_dir()
+        include_dir = self.get_unpacked_sources_dir()
 
-      result = subprocess.call(command)
-      return result == 0
+        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-   def install_x(self):
-      lib_dir = self.get_build_dir()
-      include_dir = self.get_unpacked_sources_dir()
+        self.filter_copy(lib_dir, install_lib_dir, '.a')
+        self.filter_copy(include_dir, install_include_dir)
 
-      install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-      install_include_dir = os.path.join(self.get_install_dir(), 'include')
+        return True
 
-      self.filter_copy(lib_dir, install_lib_dir, '.a')
-      self.filter_copy(include_dir, install_include_dir)
-
-      return True
-
-   def get_unpacked_sources_dir(self):
-      return os.path.join(self._project_settings.get_sources_dir(), "cryptopp-32f715f1d723e2bbb78b44fa9e167da64214e2e6")
+    def get_unpacked_sources_dir(self):
+        return os.path.join(self._project_settings.get_sources_dir(),
+                            "cryptopp-32f715f1d723e2bbb78b44fa9e167da64214e2e6")

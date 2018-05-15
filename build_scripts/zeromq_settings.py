@@ -5,6 +5,7 @@ import multiprocessing
 
 from component_configurator import Configurator
 
+
 class ZeroMQSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
@@ -12,11 +13,12 @@ class ZeroMQSettings(Configurator):
 
         if settings.on_windows():
             self._package_name = 'libzmq-' + self._version
-            self._package_url = 'https://github.com/zeromq/libzmq/archive/v' + self._version +'.zip'
+            self._package_url = 'https://github.com/zeromq/libzmq/archive/v' + self._version + '.zip'
         else:
             # download linux/osx release source package. simply to avoid reconfigure
             self._package_name = 'zeromq-' + self._version
-            self._package_url = 'https://github.com/zeromq/libzmq/releases/download/v' + self._version +'/' + self._package_name +'.tar.gz'
+            self._package_url = 'https://github.com/zeromq/libzmq/releases/download/v' + self._version + \
+                                '/' + self._package_name + '.tar.gz'
 
     def get_package_name(self):
         return self._package_name
@@ -25,7 +27,7 @@ class ZeroMQSettings(Configurator):
         return self._package_url
 
     def get_install_dir(self):
-      return os.path.join(self._project_settings.get_common_build_dir(), 'ZeroMQ')
+        return os.path.join(self._project_settings.get_common_build_dir(), 'ZeroMQ')
 
     def is_archive(self):
         return True
@@ -34,7 +36,7 @@ class ZeroMQSettings(Configurator):
         command = []
 
         # patch cmake file
-        cmakeFileName = os.path.abspath( os.path.join(self.get_unpacked_sources_dir(), 'CMakeLists.txt') )
+        cmakeFileName = os.path.abspath(os.path.join(self.get_unpacked_sources_dir(), 'CMakeLists.txt'))
         with open(cmakeFileName, 'r') as f:
             lines = [line for line in f]
 
@@ -54,13 +56,13 @@ class ZeroMQSettings(Configurator):
         command.append(self.get_unpacked_sources_dir())
         command.append('-DZMQ_BUILD_TESTS=OFF')
         command.append('-G')
-        command.append( self._project_settings.get_cmake_generator())
+        command.append(self._project_settings.get_cmake_generator())
 
         result = subprocess.call(command)
         return result == 0
 
     def update_project_toolset(self):
-        project_file = os.path.join( self.get_vs_project_root(), 'libzmq', 'libzmq.vcxproj')
+        project_file = os.path.join(self.get_vs_project_root(), 'libzmq', 'libzmq.vcxproj')
 
         with open(project_file, 'r') as f:
             lines = [line for line in f]
@@ -77,41 +79,35 @@ class ZeroMQSettings(Configurator):
     def config_x(self):
         self.copy_sources_to_build()
 
-        reconfCommand = []
-        reconfCommand.append('./autogen.sh')
+        reconf_command = ['./autogen.sh']
+        result = subprocess.call(reconf_command)
 
-        result = subprocess.call(reconfCommand)
         if result != 0:
             return False
 
-        command = []
-
-        command.append('./configure')
-
-        command.append('--enable-libunwind=no')
-        command.append('--verbose')
-        command.append('--prefix')
-        command.append(self.get_install_dir())
-        command.append('--without-libsodium')
+        command = ['./configure',
+                   '--enable-libunwind=no',
+                   '--verbose',
+                   '--prefix',
+                   self.get_install_dir(),
+                   '--without-libsodium']
 
         result = subprocess.call(command)
         return result == 0
 
     def get_vs_project_root(self):
-        return os.path.join( self.get_build_dir(), 'builds', 'msvc', self.get_vs_version())
+        return os.path.join(self.get_build_dir(), 'builds', 'msvc', self.get_vs_version())
 
     def get_solution_file(self):
         return os.path.join('ZeroMQ.sln')
 
     def make_windows(self):
-        command = []
-
-        command.append('devenv')
-        command.append(self.get_solution_file())
-        command.append('/build')
-        command.append(self.get_win_configuration())
-        command.append('/project')
-        command.append('libzmq')
+        command = ['devenv',
+                   self.get_solution_file(),
+                   '/build',
+                   self.get_win_configuration(),
+                   '/project',
+                   'libzmq']
 
         result = subprocess.call(command)
 
@@ -135,16 +131,11 @@ class ZeroMQSettings(Configurator):
     def get_vs_version(self):
         vs_year = self.get_vs_year()
         if vs_year > 2015:
-          return 'vs2015'
+            return 'vs2015'
         return 'vs' + vs_year
 
     def make_x(self):
-        command = []
-
-        command.append('make')
-
-        command.append('-j')
-        command.append( str(multiprocessing.cpu_count()) )
+        command = ['make', '-j', str(multiprocessing.cpu_count())]
 
         result = subprocess.call(command)
         return result == 0
@@ -153,16 +144,16 @@ class ZeroMQSettings(Configurator):
         print('Installing ZeroMQ')
 
         if self._project_settings.get_build_mode() == 'release':
-            srcLibDir = os.path.join( self.get_build_dir(), 'lib', 'Release')
-            srcDllDir = os.path.join( self.get_build_dir(), 'bin', 'Release')
+            src_lib_dir = os.path.join(self.get_build_dir(), 'lib', 'Release')
+            src_dll_dir = os.path.join(self.get_build_dir(), 'bin', 'Release')
         else:
-            srcLibDir = os.path.join( self.get_build_dir(), 'lib', 'Debug')
-            srcDllDir = os.path.join( self.get_build_dir(), 'bin', 'Debug')
+            src_lib_dir = os.path.join(self.get_build_dir(), 'lib', 'Debug')
+            src_dll_dir = os.path.join(self.get_build_dir(), 'bin', 'Debug')
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
 
-        self.filter_copy(srcLibDir, install_lib_dir)
-        self.filter_copy(srcDllDir, install_lib_dir, cleanupDst = False)
+        self.filter_copy(src_lib_dir, install_lib_dir)
+        self.filter_copy(src_dll_dir, install_lib_dir, cleanupDst=False)
 
         include_dir = self.get_include_dir_win()
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
@@ -177,16 +168,14 @@ class ZeroMQSettings(Configurator):
         else:
             toolset = 'v120'
 
-        return os.path.join(self.get_build_dir(), 'bin', self.get_win_platform(), self.get_win_configuration_output_dir(), toolset, 'dynamic')
+        return os.path.join(self.get_build_dir(), 'bin', self.get_win_platform(),
+                            self.get_win_configuration_output_dir(), toolset, 'dynamic')
 
     def get_include_dir_win(self):
         return os.path.join(self.get_unpacked_sources_dir(), 'include')
 
     def install_x(self):
-        command = []
-
-        command.append('make')
-        command.append('install')
+        command = ['make', 'install']
 
         result = subprocess.call(command)
         return result == 0

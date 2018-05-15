@@ -57,7 +57,7 @@ bool CheckRecipSigner::findRecipAddress(const Address &address, cbFindRecip cb) 
 }
 
 struct recip_compare {
-   bool operator() (const std::shared_ptr<ScriptRecipient> &a, const std::shared_ptr<ScriptRecipient> &b)
+   bool operator() (const std::shared_ptr<ScriptRecipient> &a, const std::shared_ptr<ScriptRecipient> &b) const
    {
       return (a->getSerializedScript() < b->getSerializedScript());
    }
