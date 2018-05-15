@@ -5,100 +5,93 @@ import subprocess
 
 from component_configurator import Configurator
 
+
 class GtestSettings(Configurator):
-   def __init__(self, settings):
-      Configurator.__init__(self, settings)
-      self._version = '1.8.0'
-      self._package_name = 'Gtest'
+    def __init__(self, settings):
+        Configurator.__init__(self, settings)
+        self._version = '1.8.0'
+        self._package_name = 'Gtest'
 
-      if settings.on_windows():
-         self._package_url = 'https://github.com/google/googletest/archive/release-'+self._version+'.zip'
-      else:
-         self._package_url = 'https://github.com/google/googletest/archive/release-'+self._version+'.tar.gz'
+        if settings.on_windows():
+            self._package_url = 'https://github.com/google/googletest/archive/release-' + self._version + '.zip'
+        else:
+            self._package_url = 'https://github.com/google/googletest/archive/release-' + self._version + '.tar.gz'
 
-   def get_package_name(self):
-      return self._package_name
+    def get_package_name(self):
+        return self._package_name
 
-   def get_url(self):
-      return self._package_url
+    def get_url(self):
+        return self._package_url
 
-   def is_archive(self):
-      return True
+    def is_archive(self):
+        return True
 
-   def get_unpacked_gtest_sources_dir(self):
-      return os.path.join(self._project_settings.get_sources_dir(), 'googletest-release-' + self._version)
+    def get_unpacked_gtest_sources_dir(self):
+        return os.path.join(self._project_settings.get_sources_dir(), 'googletest-release-' + self._version)
 
-   def config(self):
-      command = []
+    def config(self):
+        command = ['cmake',
+                   self.get_unpacked_gtest_sources_dir(),
+                   '-DBUILD_GTEST=ON',
+                   '-G',
+                   self._project_settings.get_cmake_generator()]
 
-      command.append('cmake')
-      command.append(self.get_unpacked_gtest_sources_dir())
-      command.append('-DBUILD_GTEST=ON')
-      command.append('-G')
+        print('Using generator: ' + self._project_settings.get_cmake_generator())
 
-      print('Using generator: ' + self._project_settings.get_cmake_generator())
+        result = subprocess.call(command)
+        return result == 0
 
-      command.append(self._project_settings.get_cmake_generator())
-      result = subprocess.call(command)
-      return result == 0
+    def make_windows(self):
+        command = ['devenv',
+                   self.get_solution_file(),
+                   '/build',
+                   self.get_win_build_configuration(),
+                   '/project',
+                   'gtest',
+                   '/project',
+                   'gtest_main']
 
-   def make_windows(self):
-      command = []
+        print('Start building GTest')
+        print(' '.join(command))
 
-      command.append('devenv')
-      command.append(self.get_solution_file())
-      command.append('/build')
-      command.append(self.get_win_build_configuration())
-      command.append('/project')
-      command.append('gtest')
-      command.append('/project')
-      command.append('gtest_main')
+        result = subprocess.call(command)
+        return result == 0
 
-      print('Start building GTest')
-      print(' '.join(command))
+    def get_solution_file(self):
+        return 'googletest-distribution.sln'
 
-      result = subprocess.call(command)
-      return result == 0
+    def get_win_build_configuration(self):
+        if self._project_settings.get_build_mode() == 'release':
+            return 'Release'
+        else:
+            return 'Debug'
 
-   def get_solution_file(self):
-      return 'googletest-distribution.sln'
+    def install_win(self):
+        lib_dir = os.path.join(self.get_build_dir(), 'googlemock', 'gtest', self.get_win_build_configuration())
+        include_dir = os.path.join(self.get_unpacked_gtest_sources_dir(), 'googletest', 'include')
 
-   def get_win_build_configuration(self):
-      if self._project_settings.get_build_mode() == 'release':
-         return 'Release'
-      else:
-         return 'Debug'
+        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-   def install_win(self):
-      lib_dir = os.path.join(self.get_build_dir(), 'googlemock', 'gtest', self.get_win_build_configuration())
-      include_dir = os.path.join(self.get_unpacked_gtest_sources_dir(), 'googletest', 'include')
+        self.filter_copy(lib_dir, install_lib_dir, '.lib')
+        self.filter_copy(include_dir, install_include_dir)
 
-      install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-      install_include_dir = os.path.join(self.get_install_dir(), 'include')
+        return True
 
-      self.filter_copy(lib_dir, install_lib_dir, '.lib')
-      self.filter_copy(include_dir, install_include_dir)
+    def make_x(self):
+        command = ['make', '-j', str(multiprocessing.cpu_count())]
 
-      return True
+        result = subprocess.call(command)
+        return result == 0
 
-   def make_x(self):
-      command = []
+    def install_x(self):
+        include_dir = os.path.join(self.get_unpacked_gtest_sources_dir(), 'googletest/include')
+        lib_dir = os.path.join(self.get_build_dir(), 'googlemock/gtest')
 
-      command.append('make')
-      command.append('-j')
-      command.append( str(multiprocessing.cpu_count()) )
+        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-      result = subprocess.call(command)
-      return result == 0
+        self.filter_copy(lib_dir, install_lib_dir, '.a')
+        self.filter_copy(include_dir, install_include_dir)
 
-   def install_x(self):
-      include_dir = os.path.join( self.get_unpacked_gtest_sources_dir(), 'googletest/include')
-      lib_dir = os.path.join(self.get_build_dir(), 'googlemock/gtest')
-
-      install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-      install_include_dir = os.path.join(self.get_install_dir(), 'include')
-
-      self.filter_copy(lib_dir, install_lib_dir, '.a')
-      self.filter_copy(include_dir, install_include_dir)
-
-      return True
+        return True
