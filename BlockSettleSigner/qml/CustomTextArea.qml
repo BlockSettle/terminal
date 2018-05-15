@@ -6,6 +6,7 @@ TextArea {
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 11
     color: "white"
+    wrapMode: TextEdit.WordWrap
 
     background: Rectangle {
         implicitWidth: 200

@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import QtQuick.Dialogs 1.2
 
+
 CustomDialog {
     property bool primaryWalletExists: false
     property bool digitalBackup: false
@@ -15,6 +16,8 @@ CustomDialog {
                                  (digitalBackup ? (lblDBFile.text != "...")
                                                 : walletsProxy.isValidPaperKey(taKey.text))
                                 )
+
+    property int inputLabelsWidth: 105
     width: 400
     height: 350
     id:root
@@ -43,9 +46,9 @@ CustomDialog {
 
             CustomLabel {
                 Layout.fillWidth: true
-                Layout.minimumWidth: 110
-                Layout.preferredWidth: 110
-                Layout.maximumWidth: 110
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
                 text:   qsTr("Wallet Name:")
             }
             CustomTextInput {
@@ -65,9 +68,9 @@ CustomDialog {
 
             CustomLabel {
                 Layout.fillWidth: true
-                Layout.minimumWidth: 110
-                Layout.preferredWidth: 110
-                Layout.maximumWidth: 110
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
                 text:   qsTr("Wallet Description:")
             }
             CustomTextInput {
@@ -85,9 +88,9 @@ CustomDialog {
 
             CustomLabel {
                 Layout.fillWidth: true
-                Layout.minimumWidth: 110
-                Layout.preferredWidth: 110
-                Layout.maximumWidth: 110
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
                 text:   qsTr("Wallet Password:")
             }
             CustomTextInput {
@@ -107,7 +110,7 @@ CustomDialog {
             CustomCheckBox {
                 id: cbPrimary
                 Layout.fillWidth: true
-                Layout.leftMargin: 110 + 5
+                Layout.leftMargin: inputLabelsWidth + 5
                 enabled: !primaryWalletExists
                 text:   qsTr("Primary Wallet")
             }
@@ -121,9 +124,9 @@ CustomDialog {
 
             CustomLabel {
                 Layout.fillWidth: true
-                Layout.minimumWidth: 110
-                Layout.preferredWidth: 110
-                Layout.maximumWidth: 110
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
                 text:   digitalBackup ? qsTr("Digital backup file:") : qsTr("Recovery key:")
             }
             CustomTextArea {

@@ -318,17 +318,30 @@ QString WalletsProxy::walletIdForIndex(int index) const
    return {};
 }
 
-bool WalletsProxy::isValidPaperKey(const QString &s) const
+bool WalletsProxy::isValidPaperKey(QString rootPrivateKey)
 {
-   if (s.isEmpty()) {
+   if (rootPrivateKey.isEmpty()) {
       return false;
    }
-   const auto &sLines = s.split(QLatin1Char('\n'), QString::SkipEmptyParts);
-   if (sLines.size() != 2) {
+   const auto &sLines = rootPrivateKey.split(QLatin1Char('\n'), QString::SkipEmptyParts);
+   QString cleanedString = rootPrivateKey.simplified();
+
+   if (cleanedString.size() != rootPrivateKeyLen) {
       return false;
    }
    try {
-      EasyCoDec::Data ecData = { sLines[0].toStdString(), sLines[1].toStdString() };
+       //TODO[bogumil]: move this validation to utils suggested by reviewers
+      const auto& codeCodec = EasyCoDec();
+      const std::string& hexStr = codeCodec.toHex(cleanedString.toStdString());
+      const auto data = BinaryData::CreateFromHex(hexStr);
+      int dataLength = (data.getSize() / 2) - 2;
+      const auto &firstHash = data.getSliceCopy(dataLength, 2);
+      const auto &secondHash = data.getSliceCopy(dataLength + 2 + dataLength, 2);
+      if (BtcUtils::getHash256(data.getSliceCopy(0, dataLength)).getSliceCopy(0, 2) != firstHash ||
+          BtcUtils::getHash256(data.getSliceCopy(dataLength + 2, dataLength)).getSliceCopy(0, 2) != secondHash) {
+         return false;
+      }
+      EasyCoDec::Data ecData = codeCodec.fromHex(hexStr);
       const auto &privKey = bs::wallet::Seed::decodeEasyCodeChecksum(ecData);
       return (privKey.getSize() == 32);
    }
