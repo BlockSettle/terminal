@@ -2,7 +2,7 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import QtQuick.Dialogs 1.2
-
+import com.blocksettle.EasyEncValidator 1.0
 
 CustomDialog {
     property bool primaryWalletExists: false
@@ -12,15 +12,18 @@ CustomDialog {
     property string password
     property string recoveryKey
     property bool isPrimary:    false
-    property bool acceptable:   (tfName.text.length && tfPassword.text.length &&
-                                 (digitalBackup ? (lblDBFile.text != "...")
-                                                : walletsProxy.isValidPaperKey(taKey.text))
-                                )
+    property bool acceptable: tfName.text.length &&
+                              tfPassword.text.length &&
+                              (digitalBackup ? lblDBFile.text != "..." : keyLine1.acceptableInput && keyLine2.acceptableInput) &&
+                              (digitalBackup ? true : keyLine1.acceptableInput != keyLine2.acceptableInput)
 
     property int inputLabelsWidth: 105
+    property string paperBackupCode: keyLine1.text + " " + keyLine2.text
     width: 400
     height: 350
     id:root
+
+
 
     ColumnLayout {
         anchors.fill: parent
@@ -116,7 +119,9 @@ CustomDialog {
             }
         }
 
+
         RowLayout {
+            visible: !digitalBackup
             spacing: 5
             Layout.fillWidth: true
             Layout.leftMargin: 10
@@ -127,19 +132,84 @@ CustomDialog {
                 Layout.minimumWidth: inputLabelsWidth
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
-                text:   digitalBackup ? qsTr("Digital backup file:") : qsTr("Recovery key:")
+                text: qsTr("Recovery key line 1:")
             }
-            CustomTextArea {
-                visible: !digitalBackup
-                id: taKey
-                Layout.fillWidth: true
-                placeholderText: qsTr("2 lines of 36-chars each encoded key or\nBech32-encoded or base58check-encoded key")
-                selectByMouse: true
 
+            CustomTextInput {
+                id: keyLine1
+                Layout.fillWidth: true
+                selectByMouse: true
+                activeFocusOnPress: true
+                validator: EasyEncValidator {}
+                onAcceptableInputChanged: {
+                    if (acceptableInput && !keyLine2.acceptableInput) {
+                        console.log("LINE ONE ACCEPTED")
+                        keyLine2.forceActiveFocus();
+                    }
+                }
+            }
+        }
+
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            visible: !digitalBackup
+            CustomLabel {
+                Layout.fillWidth: true
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                text: qsTr("Recovery key line 2:")
+            }
+
+            CustomTextInput {
+                id: keyLine2
+                Layout.fillWidth: true
+                validator: EasyEncValidator {}
+                selectByMouse: true
+                activeFocusOnPress: true
+                onAcceptableInputChanged: {
+                    if (acceptableInput && !keyLine1.acceptableInput) {
+                        console.log("LINE TWO ACCEPTED")
+                        keyLine1.forceActiveFocus();
+                    }
+                }
+
+            }
+        }
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            visible: !digitalBackup
+
+            CustomLabel {
+                Layout.fillWidth: true
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                text: qsTr("")
+            }
+        }
+
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            visible: digitalBackup
+            CustomLabel {
+                Layout.fillWidth: true
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                text: qsTr("Digital backup:")
             }
 
             CustomLabel {
-                visible:    digitalBackup
                 id:     lblDBFile
                 Layout.fillWidth: true
                 Layout.maximumWidth: 120
@@ -147,7 +217,6 @@ CustomDialog {
                 wrapMode: Label.Wrap
             }
             CustomButton {
-                visible:    digitalBackup
                 text:   qsTr("Select")
                 onClicked: {
                     if (!ldrDBFileDlg.item) {
@@ -208,7 +277,7 @@ CustomDialog {
         walletDesc = tfDesc.text
         password = tfPassword.text
         isPrimary = cbPrimary.checked
-        recoveryKey = digitalBackup ? lblDBFile.text : taKey.text
+        recoveryKey = digitalBackup ? lblDBFile.text : paperBackupCode
     }
 
     Loader {

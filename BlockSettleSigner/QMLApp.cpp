@@ -16,6 +16,7 @@
 #include "WalletsProxy.h"
 #include "WalletsViewModel.h"
 #include "ZmqSecuredServerConnection.h"
+#include "EasyEncValidator.h"
 
 Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(TXInfo)
@@ -35,6 +36,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
+   qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
 
    walletsMgr_ = std::make_shared<WalletsManager>(logger_, params_->netType(), params_->getWalletsDir().toStdString());
 

@@ -7,8 +7,6 @@ Switch {
     text: parent.text
     checked: true
 
-    property bool highlithedOrPressed: { down || styleData.highlighted; }
-
     contentItem: Text {
         rightPadding: control.indicator.width + control.spacing
         text: control.text
@@ -41,7 +39,7 @@ Switch {
     background: Rectangle {
         implicitWidth: 100
         implicitHeight: 40
-        visible:  control.highlithedOrPressed
+        visible:  control.down
         color: "transparent"
     }
 }
