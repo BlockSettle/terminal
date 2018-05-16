@@ -310,20 +310,31 @@ EasyCoDec::Data bs::wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const
 
 SecureBinaryData bs::wallet::Seed::decodeEasyCodeChecksum(const EasyCoDec::Data &easyData, size_t ckSumSize)
 {
-   const auto chkSumPrivKey = BinaryData::CreateFromHex(EasyCoDec().toHex(easyData));
-   if (chkSumPrivKey.getSize() != (32 + 2 * ckSumSize)) {
-      throw std::invalid_argument("invalid key size");
-   }
-   const size_t halfSize = 16 + ckSumSize;
-   const auto privKeyHalf1 = chkSumPrivKey.getSliceCopy(0, 16);
-   const auto privKeyHalf2 = chkSumPrivKey.getSliceCopy(halfSize, 16);
-   const auto hash1 = chkSumPrivKey.getSliceCopy(16, ckSumSize);
-   const auto hash2 = chkSumPrivKey.getSliceCopy(chkSumPrivKey.getSize() - ckSumSize, ckSumSize);
-   if ((BtcUtils::getHash256(privKeyHalf1).getSliceCopy(0, ckSumSize) != hash1)
-      || (BtcUtils::getHash256(privKeyHalf2).getSliceCopy(0, ckSumSize) != hash2)) {
-      throw std::runtime_error("checksum failure");
-   }
+   auto const privKeyHalf1 = decodeEasyCodeLineChecksum(easyData.part1, ckSumSize);
+   auto const privKeyHalf2 = decodeEasyCodeLineChecksum(easyData.part2, ckSumSize);
+
    return (privKeyHalf1 + privKeyHalf2);
+}
+
+BinaryData bs::wallet::Seed::decodeEasyCodeLineChecksum(const string& easyCodeHalf, size_t ckSumSize, size_t keyValueSize)
+{
+    const auto& hexStr = EasyCoDec().toHex(easyCodeHalf);
+    const auto keyHalfWithChecksum = BinaryData::CreateFromHex(hexStr);
+
+    size_t halfSize = keyValueSize + ckSumSize;
+
+    if (keyHalfWithChecksum.getSize() != halfSize) {
+        throw std::invalid_argument("invalid key size");
+    }
+
+    const auto privKeyValue = keyHalfWithChecksum.getSliceCopy(0, keyValueSize);
+    const auto hashValue = keyHalfWithChecksum.getSliceCopy(keyValueSize, ckSumSize);
+
+    if (BtcUtils::getHash256(privKeyValue).getSliceCopy(0, ckSumSize) != hashValue) {
+        throw std::runtime_error("checksum failure");
+    }
+
+    return privKeyValue;
 }
 
 bs::wallet::Seed bs::wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &easyData, NetworkType netType

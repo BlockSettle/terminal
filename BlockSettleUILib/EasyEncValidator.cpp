@@ -1,7 +1,6 @@
-#include "BinaryData.h"
 #include "EncryptionUtils.h"
 #include "EasyEncValidator.h"
-
+#include "MetaData.h"
 
 QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
 {
@@ -33,7 +32,9 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
    }
    prevPos_ = pos;
    if (input.length() == maxLen()) {
-      return QValidator::State::Acceptable;
+       if (validateKey(input) == Valid) {
+           return QValidator::State::Acceptable;
+       }
    }
    return QValidator::State::Intermediate;
 }
@@ -72,16 +73,12 @@ EasyEncValidator::ValidationResult EasyEncValidator::validateKey(const QString &
 
 EasyEncValidator::ValidationResult EasyEncValidator::validateChecksum(const std::string &in) const
 {
-   const auto data = BinaryData::CreateFromHex(EasyCoDec().toHex(in));
-   if (data.getSize() != (numWords_ * 2)) {
-      return InvalidFormat;
-   }
-   const auto dataSize = (numWords_ - 1) * 2;
-   const auto &hash = data.getSliceCopy(dataSize, 2);
-   if (BtcUtils::getHash256(data.getSliceCopy(0, dataSize)).getSliceCopy(0, 2) != hash) {
-      return InvalidChecksum;
-   }
-   return Valid;
+    try {
+        bs::wallet::Seed::decodeEasyCodeLineChecksum(in);
+        return Valid;
+    } catch (...) {
+        return InvalidChecksum;
+    }
 }
 
 void EasyEncValidator::fixup(QString &input) const
@@ -106,4 +103,14 @@ void EasyEncValidator::fixup(QString &input) const
    if (input.length() > maxLen()) {
       input = input.left(maxLen());
    }
+}
+
+QLocale EasyEncValidator::locale() const
+{
+    return QValidator::locale();
+}
+
+void EasyEncValidator::setLocale(const QLocale &locale)
+{
+    QValidator::setLocale(locale);
 }

@@ -16,6 +16,15 @@ public:
       InvalidChecksum
    };
 
+   //contructor used by the QmlEngine
+   explicit EasyEncValidator(QObject *parent = nullptr) :
+       QValidator(parent),
+       wordSize_(4),
+       numWords_(9),
+       hasChecksum_(true),
+       codec_(std::make_shared<EasyCoDec>())
+   {}
+
    EasyEncValidator(const std::shared_ptr<EasyCoDec> &codec, QObject *parent = nullptr
       , size_t numWords = 8, bool hasChecksum = false, size_t wordSize = 4)
       : QValidator(parent)
@@ -24,6 +33,9 @@ public:
 
    State validate(QString &input, int &pos) const override;
    void fixup(QString &input) const override;
+
+   QLocale locale() const;
+   void setLocale(const QLocale & locale);
 
    bool isValidKeyFormat(const QString &) const;
    ValidationResult validateKey(const QString &) const;
