@@ -316,11 +316,11 @@ SecureBinaryData bs::wallet::Seed::decodeEasyCodeChecksum(const EasyCoDec::Data 
    return (privKeyHalf1 + privKeyHalf2);
 }
 
-BinaryData bs::wallet::Seed::decodeEasyCodeLineChecksum(const string& easyCodeHalf, size_t ckSumSize)
+BinaryData bs::wallet::Seed::decodeEasyCodeLineChecksum(const string& easyCodeHalf, size_t ckSumSize, size_t keyValueSize)
 {
     const auto& hexStr = EasyCoDec().toHex(easyCodeHalf);
     const auto keyHalfWithChecksum = BinaryData::CreateFromHex(hexStr);
-    size_t keyValueSize = 16;
+
     size_t halfSize = keyValueSize + ckSumSize;
 
     if (keyHalfWithChecksum.getSize() != halfSize) {
