@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
+import com.blocksettle.PasswordConfirmValidator 1.0
 
 CustomDialog {
     property bool primaryWalletExists: false
@@ -8,11 +9,16 @@ CustomDialog {
     property string walletDesc
     property string password
     property bool isPrimary:    false
-    property bool acceptable:   (tfName.text.length && tfPassword.text.length)
+    property bool acceptable:   tfName.text.length && tfPassword.text.length && confirmPassword.acceptableInput
+    property int inputLabelsWidth: 110
 
     id:root
+    height: 340
+    width: 400
 
     ColumnLayout {
+        anchors.fill: parent
+        Layout.fillHeight: true
         Layout.fillWidth: true
         spacing: 10
         width: parent.width
@@ -33,9 +39,9 @@ CustomDialog {
             Layout.rightMargin: 10
 
             CustomLabel {
-                Layout.minimumWidth: 110
-                Layout.preferredWidth: 110
-                Layout.maximumWidth: 110
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
                 text:   qsTr("Wallet Name:")
             }
@@ -53,9 +59,9 @@ CustomDialog {
             Layout.rightMargin: 10
 
             CustomLabel {
-                Layout.minimumWidth: 110
-                Layout.preferredWidth: 110
-                Layout.maximumWidth: 110
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
                 text:   qsTr("Wallet Description:")
             }
@@ -73,9 +79,9 @@ CustomDialog {
             Layout.rightMargin: 10
 
             CustomLabel {
-                Layout.minimumWidth: 110
-                Layout.preferredWidth: 110
-                Layout.maximumWidth: 110
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
                 text:   qsTr("Wallet Password:")
             }
@@ -93,13 +99,57 @@ CustomDialog {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
 
+            CustomLabel {
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                Layout.fillWidth: true
+                text:   qsTr("Confirm Password:")
+            }
+            CustomTextInput {
+                id: confirmPassword
+                Layout.fillWidth: true
+                echoMode: TextField.Password
+                selectByMouse: true
+                validator: PasswordConfirmValidator {
+                    id: walletPasswordValidator
+                    compareTo: tfPassword.text
+                }
+            }
+        }
+
+        RowLayout {
+            visible: walletPasswordValidator.statusMsg !== ""
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                Layout.leftMargin: inputLabelsWidth + 5
+                Layout.fillWidth: true
+                text: walletPasswordValidator.statusMsg
+                color: confirmPassword.acceptableInput ? "green" : "red"
+            }
+        }
+
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
             CustomCheckBox {
                 id: cbPrimary
                 Layout.fillWidth: true
-                Layout.leftMargin: 110 + 5
+                Layout.leftMargin: inputLabelsWidth + 5
                 enabled: !primaryWalletExists
                 text:   qsTr("Primary Wallet")
             }
+        }
+
+        Rectangle {
+            Layout.fillHeight: true
         }
 
         CustomButtonBar {

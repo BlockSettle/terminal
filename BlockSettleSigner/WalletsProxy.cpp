@@ -317,21 +317,3 @@ QString WalletsProxy::walletIdForIndex(int index) const
    }
    return {};
 }
-
-bool WalletsProxy::isValidPaperKey(const QString &s) const
-{
-   if (s.isEmpty()) {
-      return false;
-   }
-   const auto &sLines = s.split(QLatin1Char('\n'), QString::SkipEmptyParts);
-   if (sLines.size() != 2) {
-      return false;
-   }
-   try {
-      EasyCoDec::Data ecData = { sLines[0].toStdString(), sLines[1].toStdString() };
-      const auto &privKey = bs::wallet::Seed::decodeEasyCodeChecksum(ecData);
-      return (privKey.getSize() == 32);
-   }
-   catch (const std::exception &) {}
-   return false;
-}
