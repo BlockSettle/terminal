@@ -16,7 +16,7 @@ class PasswordConfirmValidator : public QValidator
 
 public:
     PasswordConfirmValidator(QObject *parent = nullptr);
-    State validate(QString &input, int &pos) const override;
+    State validate(QString &input, int &) const override;
 
     QLocale locale() const;
     void setLocale(const QLocale & locale);
