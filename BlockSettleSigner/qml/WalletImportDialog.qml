@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import QtQuick.Dialogs 1.2
 import com.blocksettle.EasyEncValidator 1.0
+import com.blocksettle.PasswordConfirmValidator 1.0
 
 CustomDialog {
     property bool primaryWalletExists: false
@@ -14,13 +15,16 @@ CustomDialog {
     property bool isPrimary:    false
     property bool acceptable: tfName.text.length &&
                               tfPassword.text.length &&
-                              (digitalBackup ? lblDBFile.text != "..." : keyLine1.acceptableInput && keyLine2.acceptableInput) &&
-                              (digitalBackup ? true : keyLine1.acceptableInput != keyLine2.acceptableInput)
+                              confirmPassword.acceptableInput &&
+                              (digitalBackup ? lblDBFile.text !== "..." :
+                                               keyLine1.acceptableInput && keyLine2.acceptableInput) &&
+                              (digitalBackup ? true :
+                                               keyLine1.text !== keyLine2.text)
 
     property int inputLabelsWidth: 105
     property string paperBackupCode: keyLine1.text + " " + keyLine2.text
     width: 400
-    height: 350
+    height: 440
     id:root
 
 
@@ -110,6 +114,45 @@ CustomDialog {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
 
+            CustomLabel {
+                Layout.fillWidth: true
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                text:   qsTr("Confirm Password:")
+            }
+            CustomTextInput {
+                id: confirmPassword
+                Layout.fillWidth: true
+                selectByMouse: true
+                echoMode: TextField.Password
+                validator: PasswordConfirmValidator { compareTo: tfPassword.text }
+            }
+        }
+
+        RowLayout {
+            visible: confirmPassword.validator.statusMsg !== ""
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                topPadding: 1
+                bottomPadding: 1
+                Layout.fillWidth: true
+                Layout.leftMargin: inputLabelsWidth + 5
+                text:  confirmPassword.validator.statusMsg
+                color: confirmPassword.acceptableInput ? "green" : "red";
+            }
+        }
+
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
             CustomCheckBox {
                 id: cbPrimary
                 Layout.fillWidth: true
@@ -128,6 +171,7 @@ CustomDialog {
             Layout.rightMargin: 10
 
             CustomLabel {
+                id: keyLine1Label
                 Layout.fillWidth: true
                 Layout.minimumWidth: inputLabelsWidth
                 Layout.preferredWidth: inputLabelsWidth
@@ -143,10 +187,25 @@ CustomDialog {
                 validator: EasyEncValidator {}
                 onAcceptableInputChanged: {
                     if (acceptableInput && !keyLine2.acceptableInput) {
-                        console.log("LINE ONE ACCEPTED")
                         keyLine2.forceActiveFocus();
                     }
                 }
+            }
+        }
+
+        RowLayout {
+            visible: !digitalBackup && keyLine1.acceptableInput
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                topPadding: 1
+                bottomPadding: 1
+                Layout.fillWidth: true
+                Layout.leftMargin: inputLabelsWidth + 5
+                text:  qsTr("Line 1 Valid")
+                color: "green"
             }
         }
 
@@ -157,11 +216,12 @@ CustomDialog {
             Layout.rightMargin: 10
             visible: !digitalBackup
             CustomLabel {
+                id: keyLine2Label
                 Layout.fillWidth: true
                 Layout.minimumWidth: inputLabelsWidth
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
-                text: qsTr("Recovery key line 2:")
+                text: qsTr("Recovery Key Line 2:")
             }
 
             CustomTextInput {
@@ -172,26 +232,26 @@ CustomDialog {
                 activeFocusOnPress: true
                 onAcceptableInputChanged: {
                     if (acceptableInput && !keyLine1.acceptableInput) {
-                        console.log("LINE TWO ACCEPTED")
                         keyLine1.forceActiveFocus();
                     }
                 }
-
             }
         }
+
         RowLayout {
-            spacing: 5
+            visible: !digitalBackup && keyLine2.acceptableInput
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
-            visible: !digitalBackup
 
             CustomLabel {
+                topPadding: 1
+                bottomPadding: 1
                 Layout.fillWidth: true
-                Layout.minimumWidth: inputLabelsWidth
-                Layout.preferredWidth: inputLabelsWidth
-                Layout.maximumWidth: inputLabelsWidth
-                text: qsTr("")
+                Layout.leftMargin: inputLabelsWidth + 5
+                text:  keyLine1.text === keyLine2.text ?
+                           qsTr("Same Code Used in Line 1 and Line 2") : qsTr("Line 2 Valid")
+                color: keyLine1.text === keyLine2.text ? "red" : "green"
             }
         }
 

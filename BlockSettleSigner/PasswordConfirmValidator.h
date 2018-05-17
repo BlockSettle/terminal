@@ -1,0 +1,49 @@
+#ifndef PasswordConfirmValidator_H
+#define PasswordConfirmValidator_H
+
+#include <QObject>
+#include <QQuickItem>
+#include <QString>
+#include <QValidator>
+
+class PasswordConfirmValidator : public QValidator
+{
+    Q_OBJECT
+
+    Q_PROPERTY(QString compareTo READ getCompareTo WRITE setCompareTo)
+    Q_PROPERTY(QString statusMsg READ getStatusMsg NOTIFY errorChanged)
+    Q_PROPERTY(QString name READ getName WRITE setName)
+
+public:
+    PasswordConfirmValidator(QObject *parent = nullptr);
+    State validate(QString &input, int &pos) const override;
+
+    QLocale locale() const;
+    void setLocale(const QLocale & locale);
+
+    QString getCompareTo() const;
+    void setCompareTo(const QString& compareTo);
+
+    QString getStatusMsg() const;
+    void setStatusMsg(const QString &erros) const;
+
+    QString getName() const;
+    void setName(const QString &name);
+
+signals:
+    void errorChanged(const QString& newErrors) const;
+
+private:
+    QString compareTo_;
+    QString name_ = QCoreApplication::translate("", "Wallet Password");
+
+    QString dontMatchMsgTmpl_ = QString::fromStdString("%1s ") +  QCoreApplication::translate("", "do not match!");
+    QString tooLongTmpl_ =
+            QCoreApplication::translate("", "Confiramtion") +
+            QString::fromStdString(" %1 ") +
+            QCoreApplication::translate("", "to long!");
+    QString validTmpl_ = QString::fromStdString("%1s ") +  QCoreApplication::translate("", " match!");
+    mutable QString statusMsg_;
+};
+
+#endif // PasswordConfirmValidator_H
