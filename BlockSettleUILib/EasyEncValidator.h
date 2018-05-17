@@ -2,12 +2,20 @@
 #define __EASY_ENC_VALIDATOR_H__
 
 #include <memory>
+#include <QObject>
+#include <QCoreApplication>
+#include <QString>
 #include <QValidator>
 #include "EasyCoDec.h"
 
 
 class EasyEncValidator : public QValidator
 {
+
+   Q_OBJECT
+   Q_PROPERTY(QString statusMsg READ getStatusMsg NOTIFY statusMsgChanged)
+   Q_PROPERTY(QString name READ getName WRITE setName)
+
 public:
    enum ValidationResult {
       Valid,
@@ -40,12 +48,27 @@ public:
    bool isValidKeyFormat(const QString &) const;
    ValidationResult validateKey(const QString &) const;
 
+   QString getStatusMsg() const;
+   void setStatusMsg(const QString &getStatusMsg) const;
+
+   QString getName() const;
+   void setName(const QString &getName);
+
+
+signals:
+   void statusMsgChanged(const QString& newStatusMsg) const;
+
 private:
    const size_t   wordSize_;
    const size_t   numWords_;
    const bool     hasChecksum_;
    std::shared_ptr<EasyCoDec> codec_;
    mutable int    prevPos_ = 0;
+   mutable QString statusMsg_;
+   QString name_ = QString::fromStdString("Line");
+
+   QString validMsgTmpl_ = QString::fromStdString("%1 ") + QCoreApplication::translate("", "Valid");
+   QString invalidMsgTmpl_ = QCoreApplication::translate("", "Wrong checksum in ") + QString::fromStdString(" %1");
 
 private:
    constexpr int maxLen() const { return wordSize_ * numWords_ + numWords_ - 1; }

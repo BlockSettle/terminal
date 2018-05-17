@@ -5,6 +5,7 @@
 QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
 {
    if (input.isEmpty()) {
+      setStatusMsg({});
       return QValidator::State::Intermediate;
    }
    input = input.toLower();
@@ -13,6 +14,7 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
       const char c = input.at(i).toLatin1();
       if ((allowedChars.find(c) == allowedChars.end()) && (c != ' ')) {
          pos = i;
+         setStatusMsg(invalidMsgTmpl_.arg(name_));
          return QValidator::State::Invalid;
       }
 
@@ -24,6 +26,7 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
       }
    }
    if (!isValidKeyFormat(input)) {
+      setStatusMsg(invalidMsgTmpl_.arg(name_));
       return QValidator::State::Intermediate;
    }
    if ((input.length() > maxLen()) && (prevPos_ == (pos - 1))) {
@@ -33,9 +36,12 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
    prevPos_ = pos;
    if (input.length() == maxLen()) {
        if (validateKey(input) == Valid) {
+           setStatusMsg(validMsgTmpl_.arg(name_));
            return QValidator::State::Acceptable;
        }
    }
+
+   setStatusMsg(invalidMsgTmpl_.arg(name_));
    return QValidator::State::Intermediate;
 }
 
@@ -71,10 +77,31 @@ EasyEncValidator::ValidationResult EasyEncValidator::validateKey(const QString &
    return Valid;
 }
 
+QString EasyEncValidator::getStatusMsg() const
+{
+   return statusMsg_;
+}
+
+QString EasyEncValidator::getName() const
+{
+   return name_;
+}
+
+void EasyEncValidator::setName(const QString &name)
+{
+   name_ = name;
+}
+
+void EasyEncValidator::setStatusMsg(const QString &statusMsg) const
+{
+   statusMsg_ = statusMsg;
+   emit statusMsgChanged(statusMsg);
+}
+
 EasyEncValidator::ValidationResult EasyEncValidator::validateChecksum(const std::string &in) const
 {
-    try {
-        bs::wallet::Seed::decodeEasyCodeLineChecksum(in);
+   try {
+      bs::wallet::Seed::decodeEasyCodeLineChecksum(in);
         return Valid;
     } catch (...) {
         return InvalidChecksum;
