@@ -66,7 +66,7 @@ QString PasswordConfirmValidator::getStatusMsg() const
 void PasswordConfirmValidator::setStatusMsg(const QString &error) const
 {
    statusMsg_ = error;
-   emit errorChanged(error);
+   emit statusMsgChanged(error);
 }
 
 QString PasswordConfirmValidator::getName() const

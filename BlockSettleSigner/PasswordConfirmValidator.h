@@ -11,7 +11,7 @@ class PasswordConfirmValidator : public QValidator
     Q_OBJECT
 
     Q_PROPERTY(QString compareTo READ getCompareTo WRITE setCompareTo)
-    Q_PROPERTY(QString statusMsg READ getStatusMsg NOTIFY errorChanged)
+    Q_PROPERTY(QString statusMsg READ getStatusMsg NOTIFY statusMsgChanged)
     Q_PROPERTY(QString name READ getName WRITE setName)
 
 public:
@@ -31,17 +31,17 @@ public:
     void setName(const QString &name);
 
 signals:
-    void errorChanged(const QString& newErrors) const;
+    void statusMsgChanged(const QString& newErrors) const;
 
 private:
     QString compareTo_;
-    QString name_ = QCoreApplication::translate("", "Wallet Password");
+    QString name_ = QCoreApplication::translate("", "Password");
 
     QString dontMatchMsgTmpl_ = QString::fromStdString("%1s ") +  QCoreApplication::translate("", "do not match!");
     QString tooLongTmpl_ =
             QCoreApplication::translate("", "Confiramtion") +
             QString::fromStdString(" %1 ") +
-            QCoreApplication::translate("", "to long!");
+            QCoreApplication::translate("", "too long!");
     QString validTmpl_ = QString::fromStdString("%1s ") +  QCoreApplication::translate("", " match!");
     mutable QString statusMsg_;
 };

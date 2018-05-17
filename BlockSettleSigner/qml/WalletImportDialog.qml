@@ -24,7 +24,7 @@ CustomDialog {
     property int inputLabelsWidth: 105
     property string paperBackupCode: keyLine1.text + " " + keyLine2.text
     width: 400
-    height: 440
+    height: !digitalBackup ? 440 : 370
     id:root
 
 
@@ -176,7 +176,7 @@ CustomDialog {
                 Layout.minimumWidth: inputLabelsWidth
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
-                text: qsTr("Recovery key line 1:")
+                text: qsTr("Recovery key Line 1:")
             }
 
             CustomTextInput {
@@ -184,7 +184,7 @@ CustomDialog {
                 Layout.fillWidth: true
                 selectByMouse: true
                 activeFocusOnPress: true
-                validator: EasyEncValidator {}
+                validator: EasyEncValidator { id: line1Validator; name: qsTr("Line 1") }
                 onAcceptableInputChanged: {
                     if (acceptableInput && !keyLine2.acceptableInput) {
                         keyLine2.forceActiveFocus();
@@ -194,7 +194,7 @@ CustomDialog {
         }
 
         RowLayout {
-            visible: !digitalBackup && keyLine1.acceptableInput
+            visible: !digitalBackup && line1Validator.statusMsg !== ""
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -204,8 +204,8 @@ CustomDialog {
                 bottomPadding: 1
                 Layout.fillWidth: true
                 Layout.leftMargin: inputLabelsWidth + 5
-                text:  qsTr("Line 1 Valid")
-                color: "green"
+                text:  line1Validator.statusMsg
+                color: keyLine1.acceptableInput ? "green" : "red"
             }
         }
 
@@ -227,7 +227,7 @@ CustomDialog {
             CustomTextInput {
                 id: keyLine2
                 Layout.fillWidth: true
-                validator: EasyEncValidator {}
+                validator: EasyEncValidator { id: line2Validator; name: qsTr("Line 2") }
                 selectByMouse: true
                 activeFocusOnPress: true
                 onAcceptableInputChanged: {
@@ -239,7 +239,7 @@ CustomDialog {
         }
 
         RowLayout {
-            visible: !digitalBackup && keyLine2.acceptableInput
+            visible: !digitalBackup && line2Validator.statusMsg !== ""
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -250,8 +250,8 @@ CustomDialog {
                 Layout.fillWidth: true
                 Layout.leftMargin: inputLabelsWidth + 5
                 text:  keyLine1.text === keyLine2.text ?
-                           qsTr("Same Code Used in Line 1 and Line 2") : qsTr("Line 2 Valid")
-                color: keyLine1.text === keyLine2.text ? "red" : "green"
+                           qsTr("Same Code Used in Line 1 and Line 2") : line2Validator.statusMsg
+                color: keyLine1.text === keyLine2.text || !keyLine2.acceptableInput ? "red" : "green"
             }
         }
 
@@ -261,6 +261,7 @@ CustomDialog {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
             visible: digitalBackup
+            anchors.bottom: fillRect.top
             CustomLabel {
                 Layout.fillWidth: true
                 Layout.minimumWidth: inputLabelsWidth
@@ -280,7 +281,7 @@ CustomDialog {
                 text:   qsTr("Select")
                 onClicked: {
                     if (!ldrDBFileDlg.item) {
-                        ldrDBFileDlg.active = true
+                        ldrDBFileDlg.active = true;
                     }
                     ldrDBFileDlg.item.open();
                 }
@@ -288,6 +289,7 @@ CustomDialog {
         }
 
         Rectangle {
+            id: fillRect
             Layout.fillHeight: true
         }
 
@@ -310,7 +312,7 @@ CustomDialog {
                     text:   qsTr("CONFIRM")
                     enabled: acceptable
                     onClicked: {
-                        accept()
+                        accept();
                     }
                 }
             }
