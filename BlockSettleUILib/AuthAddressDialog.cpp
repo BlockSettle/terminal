@@ -118,10 +118,11 @@ void AuthAddressDialog::showInfo(const QString &title, const QString &text)
    MessageBoxInfo(title, text).exec();
 }
 
-void AuthAddressDialog::onAuthAddrSubmitError(const QString &addr, const QString &error)
+void AuthAddressDialog::onAuthAddrSubmitError(const QString &, const QString &)
 {
-   MessageBoxCritical(tr("Unsuccessful Submission")
-      , tr("Please fund your EUR account prior to submitting an Authentication Address"), error).exec();
+   MessageBoxWarning(tr("Submission Aborted")
+      , tr("The process of submitting an Authentication Address has been aborted. "
+           "Any reserved balance will have been returned")).exec();
    close();
 }
 
