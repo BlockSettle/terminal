@@ -17,6 +17,8 @@ class PyBlockDataManager;
 class TransactionsViewItem;
 class TxOut;
 
+//sublcassing this Dialog is not a good idea because of how it handles minimumSize
+
 class TransactionDetailDialog : public QDialog
 {
 Q_OBJECT
@@ -25,6 +27,11 @@ public:
    TransactionDetailDialog(TransactionsViewItem, const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<PyBlockDataManager> &, QWidget* parent = nullptr);
    ~TransactionDetailDialog() override = default;
+   virtual QSize minimumSizeHint() const override;
+   QSize minimumSize() const;
+
+   static const int extraTreeWidgetColumnMargin = 10;
+   static const int minHeightAtRendering = 500;
 
 private:
    Ui::TransactionDetailDialog*  ui_;

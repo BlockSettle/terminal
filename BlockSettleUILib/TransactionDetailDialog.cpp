@@ -103,9 +103,10 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
    ui_->treeAddresses->expandItem(itemSender);
    ui_->treeAddresses->expandItem(itemReceiver);
 
-   for (int i = 0; i < 4; ++i) {
+   for (int i = 0; i < ui_->treeAddresses->columnCount(); ++i) {
       ui_->treeAddresses->resizeColumnToContents(i);
-      ui_->treeAddresses->setColumnWidth(i, ui_->treeAddresses->columnWidth(i) + 10);
+      ui_->treeAddresses->setColumnWidth(i,
+                                         ui_->treeAddresses->columnWidth(i) + extraTreeWidgetColumnMargin);
    }
    adjustSize();
 
@@ -122,6 +123,25 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
          menu->popup(ui_->treeAddresses->mapToGlobal(p));
       }
    });
+
+   setMinimumHeight(minHeightAtRendering);
+   resize(minimumSize());
+}
+
+QSize TransactionDetailDialog::minimumSize() const
+{
+   int minWidth = 2 * extraTreeWidgetColumnMargin;
+
+   for(int i = 0; i < ui_->treeAddresses->columnCount(); ++i) {
+      minWidth += ui_->treeAddresses->columnWidth(i) + extraTreeWidgetColumnMargin;
+   }
+
+   return QSize(minWidth, minimumHeight());
+}
+
+QSize TransactionDetailDialog::minimumSizeHint() const
+{
+   return minimumSize();
 }
 
 void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wallet, const TxOut& out, bool isOutput, bool isTxOutgoing)
