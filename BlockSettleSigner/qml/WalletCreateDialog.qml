@@ -3,13 +3,16 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.PasswordConfirmValidator 1.0
 
+import "bscontrols"
+
 CustomDialog {
     property bool primaryWalletExists: false
     property string walletName
     property string walletDesc
     property string password
     property bool isPrimary:    false
-    property bool acceptable:   tfName.text.length && tfPassword.text.length && confirmPassword.acceptableInput
+    property bool acceptable:   tfName.text.length &&
+                                newPasswordWithConfirm.acceptableInput
     property int inputLabelsWidth: 110
 
     id:root
@@ -72,65 +75,13 @@ CustomDialog {
             }
         }
 
-        RowLayout {
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabel {
-                Layout.minimumWidth: inputLabelsWidth
-                Layout.preferredWidth: inputLabelsWidth
-                Layout.maximumWidth: inputLabelsWidth
-                Layout.fillWidth: true
-                text:   qsTr("Wallet Password:")
-            }
-            CustomTextInput {
-                id: tfPassword
-                Layout.fillWidth: true
-                echoMode: TextField.Password
-                selectByMouse: true
-            }
-        }
-
-        RowLayout {
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabel {
-                Layout.minimumWidth: inputLabelsWidth
-                Layout.preferredWidth: inputLabelsWidth
-                Layout.maximumWidth: inputLabelsWidth
-                Layout.fillWidth: true
-                text:   qsTr("Confirm Password:")
-            }
-            CustomTextInput {
-                id: confirmPassword
-                Layout.fillWidth: true
-                echoMode: TextField.Password
-                selectByMouse: true
-                validator: PasswordConfirmValidator {
-                    id: walletPasswordValidator
-                    compareTo: tfPassword.text
-                }
-            }
-        }
-
-        RowLayout {
-            visible: walletPasswordValidator.statusMsg !== ""
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabel {
-                Layout.leftMargin: inputLabelsWidth + 5
-                Layout.fillWidth: true
-                text: walletPasswordValidator.statusMsg
-                color: confirmPassword.acceptableInput ? "green" : "red"
-            }
+        BSConfirmedPasswordInput {
+            id: newPasswordWithConfirm
+            columnSpacing: 10
+            passwordLabelTxt: qsTr("Wallet Password")
+            passwordInputPlaceholder: qsTr("New Wallet Password")
+            confirmLabelTxt: qsTr("Confirm Password")
+            confirmInputPlaceholder: qsTr("Confirm New Wallet Password")
         }
 
         RowLayout {

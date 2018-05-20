@@ -3,29 +3,30 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.PasswordConfirmValidator 1.0
 
+import "bscontrols"
+
 
 CustomDialog {
+    id: changeWalletPasswordDialog
+
     property string walletName
     property string walletId
     property bool walletEncrypted
     property string oldPassword
     property string newPassword
-
-    property bool acceptable: confirmPassword.acceptableInput
+    property bool acceptable: newPasswordWithConfirm.acceptableInput &&
+                              tfOldPassword.text.length
     property int inputLablesWidth: 110
 
 
-    id: changeWalletPasswordDialog
-    height: 270
-
     ColumnLayout {
+
+        id: mainLayout
         anchors.fill: parent
         Layout.fillWidth: true
-        Layout.fillHeight: true
         spacing: 10
 
         RowLayout{
-            Layout.alignment: Qt.AlignTop
             CustomHeaderPanel{
                 id: panelHeader
                 Layout.preferredHeight: 40
@@ -37,7 +38,6 @@ CustomDialog {
 
         RowLayout {
             spacing: 5
-            Layout.alignment: Qt.AlignTop
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -47,9 +47,9 @@ CustomDialog {
                 elide: Label.ElideRight
                 text: qsTr("Current password:")
                 wrapMode: Text.WordWrap
-                Layout.minimumWidth: inputLablesWidth
-                Layout.preferredWidth: inputLablesWidth
-                Layout.maximumWidth: inputLablesWidth
+                Layout.minimumWidth: 110
+                Layout.preferredWidth: 110
+                Layout.maximumWidth: 110
                 Layout.fillWidth: true
             }
             CustomTextInput {
@@ -62,80 +62,16 @@ CustomDialog {
             }
         }
 
-        RowLayout {
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-            Layout.alignment: Qt.AlignTop
-
-            CustomLabel {
-                elide: Label.ElideRight
-                text: qsTr("New Password:")
-                wrapMode: Text.WordWrap
-                Layout.minimumWidth: inputLablesWidth
-                Layout.preferredWidth: inputLablesWidth
-                Layout.maximumWidth: inputLablesWidth
-                Layout.fillWidth: true
-            }
-            CustomTextInput {
-                id: tfNewPassword1
-                focus: true
-                placeholderText: qsTr("New password")
-                echoMode: TextField.Password
-                Layout.fillWidth: true
-            }
+        BSConfirmedPasswordInput {
+            id: newPasswordWithConfirm
+            columnSpacing: 10
+            passwordLabelTxt: qsTr("New Password")
+            passwordInputPlaceholder: qsTr("New Password")
+            confirmLabelTxt: qsTr("Confirm New")
+            confirmInputPlaceholder: qsTr("Confirm New Password")
         }
-
-        RowLayout {
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-            Layout.alignment: Qt.AlignTop
-
-            CustomLabel {
-                elide: Label.ElideRight
-                text: qsTr("Confirm New:")
-                wrapMode: Text.WordWrap
-                Layout.minimumWidth: inputLablesWidth
-                Layout.preferredWidth: inputLablesWidth
-                Layout.maximumWidth: inputLablesWidth
-                Layout.fillWidth: true
-            }
-            CustomTextInput {
-                id: confirmPassword
-                focus: true
-                placeholderText: qsTr("New password again")
-                echoMode: TextField.Password
-                Layout.fillWidth: true
-                validator: PasswordConfirmValidator {
-                    compareTo: tfNewPassword1.text
-                }
-            }
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignTop
-            opacity: confirmPassword.validator.statusMsg === "" ? 0.0 : 1.0
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabel {
-                topPadding: 1
-                bottomPadding: 1
-                Layout.fillWidth: true
-                Layout.leftMargin: inputLablesWidth + 5
-                text:  confirmPassword.validator.statusMsg
-                color: confirmPassword.acceptableInput ? "green" : "red";
-            }
-        }
-
 
         CustomButtonBar {
-            Layout.alignment: Qt.AlignBottom
             Layout.topMargin: 20
             id: rowButtons
 
@@ -152,9 +88,8 @@ CustomDialog {
 
                 CustomButtonPrimary {
                     Layout.fillWidth: true
-                    enabled: acceptable
                     text:   qsTr("CONFIRM")
-
+                    enabled: acceptable
                     onClicked: {
                         accept()
                     }
@@ -184,7 +119,7 @@ CustomDialog {
 
     onAccepted: {
         oldPassword = tfOldPassword.text
-        newPassword = confirmPassword.text
+        newPassword = newPasswordWithConfirm.text
     }
 
 }
