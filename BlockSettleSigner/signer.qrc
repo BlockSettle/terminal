@@ -38,5 +38,11 @@
         <file>qml/CustomButtonPrimary.qml</file>
         <file>qml/CustomProgressBar.qml</file>
         <file>qml/CustomComboBox.qml</file>
+        <file>qml/bscontrols/qmldir</file>
+        <file>qml/bscontrols/BSConfirmedPasswordInput.qml</file>
+        <file>qml/bscontrols/BSInputLabel.qml</file>
+        <file>qml/bscontrols/BSTextInput.qml</file>
+        <file>qml/bscontrols/BSStyle.qml</file>
+        <file>qml/bscontrols/BSEasyCodeInput.qml</file>
     </qresource>
 </RCC>

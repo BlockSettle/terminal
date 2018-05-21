@@ -1,0 +1,7 @@
+module BlockSettleControls
+
+BSInputLabel 1.0 BSInputLabel.qml
+BSTextInput 1.0 BSTextInput.qml
+BSConfirmedPasswordInput 1.0 BSConfirmedPasswordInput.qml
+BSEasyCodeInput 1.0 BSEasyCodeInput.qml
+singleton BSStyle 1.0 BSStyle.qml
