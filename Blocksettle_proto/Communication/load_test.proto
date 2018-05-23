@@ -19,6 +19,12 @@ message AdminCommandConnect
 {
    required bool connect_to_armory = 1;
    required bool connect_to_celer = 2;
+   required string celer_host = 3;
+   required string celer_port = 4;
+   required string pub_host = 5;
+   required string pub_port = 6;
+   required string armory_host = 7;
+   required string armory_port = 8;
 }
 
 enum CustomerUpdateType
