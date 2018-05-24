@@ -29,6 +29,11 @@ message AdminCommandConnect
    optional uint64 generate_address_interval = 10;
 }
 
+message AdminCommandStartTrading
+{
+   required uint64 rfq_send_timeout = 1;
+}
+
 enum CustomerUpdateType
 {
    AppReadyStatus = 1;
