@@ -176,10 +176,12 @@ void RFQDealerReply::updateAutoSignState()
 bs::Address RFQDealerReply::getRecvAddress() const
 {
    if (!curWallet_) {
+      logger_->warn("[RFQDealerReply::getRecvAddress] no current wallet");
       return {};
    }
 
    const auto index = ui_->comboBoxRecvAddr->currentIndex();
+   logger_->debug("[RFQDealerReply::getRecvAddress] obtaining addr #{} from wallet {}", index, curWallet_->GetWalletName());
    if (index <= 0) {
       const auto recvAddr = curWallet_->GetNewExtAddress();
       if (transactionData_) {
@@ -240,10 +242,8 @@ void RFQDealerReply::reset()
       baseProduct_ = cp.NumCurrency();
       product_ = cp.ContraCurrency(currentQRN_.product);
 
-      if (currentQRN_.assetType == bs::network::Asset::SpotFX) {
-         transactionData_ = nullptr;
-      }
-      else {
+      transactionData_ = nullptr;
+      if (currentQRN_.assetType != bs::network::Asset::SpotFX) {
          transactionData_ = std::make_shared<TransactionData>([this]() { onTransactionDataChanged(); }
             , true, true);
          if (walletsManager_ != nullptr) {
@@ -430,9 +430,7 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
       }
    }
    else if (qrn.assetType == bs::network::Asset::SpotXBT) {
-      if (!curWallet_ || (curWallet_ == ccWallet_)) {
-         walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, signingContainer_));
-      }
+      walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, signingContainer_));
    }
 }
 
