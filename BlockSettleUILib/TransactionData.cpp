@@ -210,6 +210,7 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
       }
 
       fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_, transactions);
+      fee += 70;     // a small epsilon to make UtxoSelection happy
    }
    fee = fee / BTCNumericTypes::BalanceDivider;
 
@@ -444,6 +445,15 @@ bool TransactionData::IsMaxAmount(unsigned int recipientId) const
    }
    return itRecip->second->IsMaxAmount();
 }
+
+void TransactionData::setMaxSpendAmount(bool maxAmount)
+{
+   maxSpendAmount_ = maxAmount;
+   if (maxAmount) {
+      summary_.hasChange = false;
+   }
+}
+
 
 bs::Address TransactionData::GetFallbackRecvAddress()
 {
