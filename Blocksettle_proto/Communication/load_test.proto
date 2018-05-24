@@ -25,6 +25,8 @@ message AdminCommandConnect
    required string pub_port = 6;
    required string armory_host = 7;
    required string armory_port = 8;
+   required bool   generate_address = 9;
+   optional uint64 generate_address_interval = 10;
 }
 
 enum CustomerUpdateType
@@ -36,6 +38,7 @@ enum CustomerUpdateType
    RFQSentUpdateType = 5;
    RFQReceivedUpdateType = 6;
    TradingStoppedUpdateType = 7;
+   XBTBalanceUpdateType = 8;
 }
 
 enum RFQProductGroup
@@ -82,4 +85,10 @@ message RFQReceivedUpdate
    required string rfq_id = 1;
    required RFQProductGroup group_type = 2;
    required uint64 timestamp = 3;
+}
+
+message XBTBalanceUpdate
+{
+   required double xbt_balance = 1;
+   required uint64 used_address_count = 2;
 }
