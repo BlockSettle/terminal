@@ -44,6 +44,7 @@ enum CustomerUpdateType
    RFQReceivedUpdateType = 6;
    TradingStoppedUpdateType = 7;
    XBTBalanceUpdateType = 8;
+   ErrorNotificationType = 9;
 }
 
 enum RFQProductGroup
@@ -96,4 +97,10 @@ message XBTBalanceUpdate
 {
    required double xbt_balance = 1;
    required uint64 used_address_count = 2;
+}
+
+
+message ErrorNotification
+{
+   required string message = 1;
 }
