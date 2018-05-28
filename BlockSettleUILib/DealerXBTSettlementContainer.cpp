@@ -39,6 +39,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       }
       authKey_ = BinaryData::CreateFromHex(qn.authKey);
       reqAuthKey_ = BinaryData::CreateFromHex(qn.reqAuthKey);
+      if (authKey_.isNull() || reqAuthKey_.isNull()) {
+         throw std::runtime_error("missing auth key");
+      }
       settlIdStr_ = qn.settlementId;
       const auto buyAuthKey = weSell_ ? reqAuthKey_ : authKey_;
       const auto sellAuthKey = weSell_ ? authKey_ : reqAuthKey_;
@@ -47,6 +50,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
          BinaryData::CreateFromHex(settlIdStr_), buyAuthKey, sellAuthKey, comment_);
    }
    else {
+      if (!settlAddr_->getAsset() || settlAddr_->getAsset()->settlementId().isNull()) {
+         throw std::runtime_error("invalid settlement address");
+      }
       if (weSell_) {
          authKey_ = settlAddr_->getAsset()->sellAuthPubKey();
          reqAuthKey_ = settlAddr_->getAsset()->buyAuthPubKey();

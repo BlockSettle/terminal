@@ -104,7 +104,11 @@ bool TransactionData::UpdateTransactionData()
             return false;
          }
          maxAmount &= it.second->IsMaxAmount();
-         recipientsMap.emplace(it.first, it.second->GetScriptRecipient());
+         const auto &recip = it.second->GetScriptRecipient();
+         if (!recip) {
+            return false;
+         }
+         recipientsMap.emplace(it.first, recip);
       }
    }
 
@@ -116,7 +120,6 @@ bool TransactionData::UpdateTransactionData()
             ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
             : PaymentStruct(recipientsMap, totalFee_, 0, 0);
          summary_.balanceToSpent = UiUtils::amountToBtc(payment.spendVal_);
-
 
          if (payment.spendVal_ < availableBalance) {
             UtxoSelection selection;
