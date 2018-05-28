@@ -159,15 +159,16 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    bs::CheckRecipSigner signer;
    try {
       signer.deserializeState(dealerTx_);
-      foundRecipAddr = signer.findRecipAddress(bs::Address(rfq.receiptAddress), [lotSize, quote, &amountValid](uint64_t value) {
+      foundRecipAddr = signer.findRecipAddress(bs::Address(rfq.receiptAddress)
+         , [lotSize, quote, &amountValid](uint64_t value, uint64_t valReturn, uint64_t valInput) {
          if ((quote.side == bs::network::Side::Sell) && qFuzzyCompare(quote.quantity, value / lotSize)) {
-            amountValid = true;
+            amountValid = valInput == (value + valReturn);
          }
          else if (quote.side == bs::network::Side::Buy) {
             const auto quoteVal = static_cast<uint64_t>(quote.quantity * quote.price * BTCNumericTypes::BalanceDivider);
             const auto diff = (quoteVal > value) ? quoteVal - value : value - quoteVal;
             if (diff < 3) {
-               amountValid = true;
+               amountValid = valInput > (value + valReturn);
             }
          }
       });

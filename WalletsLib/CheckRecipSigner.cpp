@@ -40,16 +40,22 @@ bool bs::TxAddressChecker::containsInputAddress(Tx tx, uint64_t lotsize, uint64_
 
 bool CheckRecipSigner::findRecipAddress(const Address &address, cbFindRecip cb) const
 {
-   uint64_t value = 0;
+   uint64_t valOutput = 0, valReturn = 0, valInput = 0;
    for (const auto &recipient : recipients_) {
       const auto recipientAddress = bs::CheckRecipSigner::getRecipientAddress(recipient);
       if (address == recipientAddress) {
-         value += recipient->getValue();
+         valOutput += recipient->getValue();
+      }
+      else {
+         valReturn += recipient->getValue();
       }
    }
-   if (value) {
+   for (const auto &spender : spenders_) {
+      valInput += spender->getValue();
+   }
+   if (valOutput) {
       if (cb) {
-         cb(value);
+         cb(valOutput, valReturn, valInput);
       }
       return true;
    }
