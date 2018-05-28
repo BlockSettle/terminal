@@ -79,7 +79,12 @@ bs::Address::Address(const std::string& data, Format format, AddressEntryType ae
       case Format::Bech32:
          try {
             copyFrom(BtcUtils::segWitAddressToScrAddr(data));
-            aet_ = aet = AddressEntryType_P2WPKH;
+            if (getSize() == 20) {
+               aet_ = aet = AddressEntryType_P2WPKH;
+            }
+            else if (getSize() == 32) {
+               aet_ = aet = AddressEntryType_P2WSH;
+            }
          }
          catch (const std::exception &) {}
          break;
@@ -366,20 +371,25 @@ bool bs::Address::operator==(const bs::Address &addr) const
 
 shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
 {
-   switch (getType()) {
-   case AddressEntryType_P2PKH:
-      return std::make_shared<Recipient_P2PKH>(unprefixed(), value);
+   try {
+      switch (getType()) {
+      case AddressEntryType_P2PKH:
+         return std::make_shared<Recipient_P2PKH>(unprefixed(), value);
 
-   case AddressEntryType_P2WSH:
-      return std::make_shared<Recipient_PW2SH>(unprefixed(), value);
+      case AddressEntryType_P2WSH:
+         return std::make_shared<Recipient_PW2SH>(unprefixed(), value);
 
-   case AddressEntryType_P2SH:
-      return std::make_shared<Recipient_P2SH>(unprefixed(), value);
+      case AddressEntryType_P2SH:
+         return std::make_shared<Recipient_P2SH>(unprefixed(), value);
 
-   case AddressEntryType_P2WPKH:
-      return std::make_shared<Recipient_P2WPKH>(unprefixed(), value);
+      case AddressEntryType_P2WPKH:
+         return std::make_shared<Recipient_P2WPKH>(unprefixed(), value);
 
-   default:
+      default:
+         return nullptr;
+      }
+   }
+   catch (...) {
       return nullptr;
    }
 }
