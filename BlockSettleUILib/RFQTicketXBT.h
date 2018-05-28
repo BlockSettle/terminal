@@ -175,7 +175,6 @@ private:
    std::shared_ptr<bs::Wallet>   ccWallet_;
    std::shared_ptr<bs::Wallet>   recvWallet_;
 
-   mutable double    feeValue_ = 0;
    unsigned int      leafCreateReqId_ = 0;
 
    std::unordered_map<std::string, double>      rfqMap_;
