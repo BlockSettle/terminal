@@ -33,7 +33,7 @@ namespace bs {
          deserializeState(bd);
       }
 
-      using cbFindRecip = std::function<void(uint64_t)>;
+      using cbFindRecip = std::function<void(uint64_t valOutput, uint64_t valReturn, uint64_t valInput)>;
       bool findRecipAddress(const Address &address, cbFindRecip cb) const;
 
       bool hasInputAddress(const Address &, uint64_t lotsize = 1) const;
