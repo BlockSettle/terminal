@@ -46,7 +46,8 @@ Q_OBJECT
 
 public:
    QuoteProvider(const std::shared_ptr<AssetManager> &assetManager
-      , const std::shared_ptr<spdlog::logger>& logger);
+      , const std::shared_ptr<spdlog::logger>& logger
+      , bool debugTraffic = true);
    ~QuoteProvider() noexcept = default;
 
    QuoteProvider(const QuoteProvider&) = delete;
@@ -135,6 +136,8 @@ private:
    // key quote request id
    std::unordered_map<std::string, std::string> quoteCcys_;
    mutable std::atomic_flag      quoteCcysLock_ = ATOMIC_FLAG_INIT;
+
+   bool debugTraffic_;
 };
 
 #endif // __CELER_QUOTE_PROVIDER_H__

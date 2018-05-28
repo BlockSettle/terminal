@@ -42,9 +42,10 @@ enum CustomerUpdateType
    BalanceUpdateType = 4;
    RFQSentUpdateType = 5;
    RFQReceivedUpdateType = 6;
-   TradingStoppedUpdateType = 7;
-   XBTBalanceUpdateType = 8;
-   ErrorNotificationType = 9;
+   RFQCancelledUpdateType = 7;
+   TradingStoppedUpdateType = 8;
+   XBTBalanceUpdateType = 9;
+   ErrorNotificationType = 10;
 }
 
 enum RFQProductGroup
@@ -87,6 +88,13 @@ message RFQSentUpdate
 }
 
 message RFQReceivedUpdate
+{
+   required string rfq_id = 1;
+   required RFQProductGroup group_type = 2;
+   required uint64 timestamp = 3;
+}
+
+message RFQCancelledUpdate
 {
    required string rfq_id = 1;
    required RFQProductGroup group_type = 2;

@@ -16,7 +16,10 @@ namespace spdlog
 class CelerSubmitRFQSequence : public CelerCommandSequence<CelerSubmitRFQSequence>
 {
 public:
-   CelerSubmitRFQSequence(const std::string& accountName, const bs::network::RFQ& rfq, const std::shared_ptr<spdlog::logger>& logger);
+   CelerSubmitRFQSequence(const std::string& accountName
+      , const bs::network::RFQ& rfq
+      , const std::shared_ptr<spdlog::logger>& logger
+      , bool debugPrintRFQ = true);
    ~CelerSubmitRFQSequence() noexcept = default;
 
    CelerSubmitRFQSequence(const CelerSubmitRFQSequence&) = delete;
@@ -33,6 +36,8 @@ private:
    const std::string accountName_;
    bs::network::RFQ rfq_;
    std::shared_ptr<spdlog::logger> logger_;
+
+   bool debugPrintRFQ_;
 };
 
 #endif // __CELER_SUBMIT_RFQ_H__

@@ -3,7 +3,6 @@
 
 #include "AssetManager.h"
 #include "BlockDataManagerConfig.h"
-#include "CelerSubmitRFQSequence.h"
 #include "CurrencyPair.h"
 #include "TransactionData.h"
 #include "UiUtils.h"

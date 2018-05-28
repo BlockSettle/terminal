@@ -108,10 +108,12 @@ bool bs::PayinsContainer::erase(const std::string& settlementId)
 
 
 QuoteProvider::QuoteProvider(const std::shared_ptr<AssetManager>& assetManager
-      , const std::shared_ptr<spdlog::logger>& logger)
+      , const std::shared_ptr<spdlog::logger>& logger
+      , bool debugTraffic)
  : logger_(logger)
  , assetManager_(assetManager)
  , dealerPayins_(logger)
+ , debugTraffic_(debugTraffic)
 {
 }
 
@@ -187,7 +189,9 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
          logger_->error("[QuoteProvider::onQuoteResponse] Failed to parse QuoteDownstreamEvent");
          return false;
    }
-   logger_->debug("[QuoteProvider::onQuoteResponse]: {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[QuoteProvider::onQuoteResponse]: {}", response.DebugString());
+   }
 
    Quote quote;
 
@@ -331,7 +335,9 @@ bool QuoteProvider::onQuoteReject(const std::string& data)
       logger_->error("[QuoteProvider::onQuoteReject] Failed to parse QuoteRequestRejectDownstreamEvent");
       return false;
    }
-   logger_->debug("[QuoteProvider::onQuoteReject] {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[QuoteProvider::onQuoteReject] {}", response.DebugString());
+   }
 
    QString text;
    if (response.quoterequestrejectgroup_size() > 0) {
@@ -391,7 +397,9 @@ bool QuoteProvider::onQuoteAck(const std::string& data)
    }
 
    const auto rejReason = response.quoterejectreason();
-   logger_->debug("[QuoteProvider::onQuoteAck] {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[QuoteProvider::onQuoteAck] {}", response.DebugString());
+   }
 
    switch (response.quotestatus()) {
    case com::celertech::marketmerchant::api::enums::quotestatus::REJECTED:
@@ -425,7 +433,9 @@ bool QuoteProvider::onOrderReject(const std::string& data)
       return false;
    }
 
-   logger_->debug("[QuoteProvider::onOrderReject] {} ", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[QuoteProvider::onOrderReject] {} ", response.DebugString());
+   }
    emit orderRejected(QString::fromStdString(response.externalclorderid()), QString::fromStdString(response.rejectreason()));
 
    return true;
@@ -436,7 +446,7 @@ void QuoteProvider::SubmitRFQ(const bs::network::RFQ& rfq)
    if (!assetManager_->HaveAssignedAccount()) {
       logger_->error("[QuoteProvider::SubmitRFQ] submitting RFQ with empty account name");
    }
-   auto sequence = std::make_shared<CelerSubmitRFQSequence>(assetManager_->GetAssignedAccount(), rfq, logger_);
+   auto sequence = std::make_shared<CelerSubmitRFQSequence>(assetManager_->GetAssignedAccount(), rfq, logger_, debugTraffic_);
    if (!celerClient_->ExecuteSequence(sequence)) {
       logger_->error("[QuoteProvider::SubmitRFQ] failed to execute CelerSubmitRFQSequence");
    } else {
@@ -526,7 +536,9 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
          logger_->error("[QuoteProvider::onBitcoinOrderSnapshot] Failed to parse BitcoinOrderSnapshotDownstreamEvent");
          return false;
    }
-   logger_->debug("[QuoteProvider::onBitcoinOrderSnapshot] {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[QuoteProvider::onBitcoinOrderSnapshot] {}", response.DebugString());
+   }
 
    auto orderDate = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
    auto ageSeconds = orderDate.secsTo(QDateTime::currentDateTime());
@@ -584,7 +596,9 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
       logger_->error("[QuoteProvider::onFxOrderSnapshot] Failed to parse FxOrderSnapshotDownstreamEvent");
       return false;
    }
-   logger_->debug("[FxOrderSnapshot] {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[FxOrderSnapshot] {}", response.DebugString());
+   }
 
    if (!resync && (response.orderstatus() == FILLED)) {
       emit quoteOrderFilled(response.quoteid());
@@ -620,7 +634,10 @@ bool QuoteProvider::onQuoteCancelled(const std::string& data)
       logger_->error("[QuoteProvider::onQuoteCancelled] Failed to parse QuoteCancelDownstreamEvent");
       return false;
    }
-   logger_->debug("[QuoteCancel] {}", response.DebugString());
+
+   if (debugTraffic_) {
+      logger_->debug("[QuoteCancel] {}", response.DebugString());
+   }
 
    cleanQuoteRequestCcy(response.quoterequestid());
 
@@ -636,7 +653,9 @@ bool QuoteProvider::onSignTxNotif(const std::string& data)
       logger_->error("[QuoteProvider::onSignTxNotif] Failed to parse SignTransactionNotification");
       return false;
    }
-   logger_->debug("[SignTxNotification] {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[SignTxNotification] {}", response.DebugString());
+   }
 
    emit signTxRequested(QString::fromStdString(response.orderid()), QString::fromStdString(response.quoterequestid()));
    return true;
@@ -728,7 +747,9 @@ bool QuoteProvider::onQuoteReqNotification(const std::string& data)
 
    saveQuoteRequestCcy(qrn.quoteRequestId, qrn.product);
 
-   logger_->debug("[QuoteProvider::onQuoteReqNotif] {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[QuoteProvider::onQuoteReqNotif] {}", response.DebugString());
+   }
    emit quoteReqNotifReceived(qrn);
 
    return true;
@@ -743,7 +764,9 @@ bool QuoteProvider::onQuoteNotifCancelled(const std::string& data)
    }
 
    emit quoteNotifCancelled(QString::fromStdString(response.quoterequestid()));
-   logger_->debug("[QuoteProvider::onQuoteNotifCancelled] {}", response.DebugString());
+   if (debugTraffic_) {
+      logger_->debug("[QuoteProvider::onQuoteNotifCancelled] {}", response.DebugString());
+   }
    return true;
 }
 
