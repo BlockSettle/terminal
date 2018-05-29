@@ -39,8 +39,9 @@ namespace bs {
       bool hasInputAddress(const Address &, uint64_t lotsize = 1) const;
       uint64_t estimateFee(float feePerByte) const;
       uint64_t spendValue() const;
+      std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }
 
-      vector<Address> GetInputAddressList(const std::shared_ptr<spdlog::logger>& logger) const;
+      std::vector<Address> GetInputAddressList(const std::shared_ptr<spdlog::logger>& logger) const;
 
       void removeDupRecipients();
 
