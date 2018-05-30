@@ -20,6 +20,11 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
 ## MacOS X
 To be added later...
 
+# Cloning the repo
+Use your favourite git command to clone this repo, then enter it and execut:
+* git submodule init
+* git submodule update
+
 # Building BlockSettle terminal
 
 * Run the following command:
