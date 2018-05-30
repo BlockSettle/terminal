@@ -5,9 +5,6 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
 ## Windows
 * Install Python 2.7 (3.6 wasn't fully tested, yet)
 * Install cmake
-* Install the following Python modules (pip install):
-  * wget
-  * requests
 * Install MySQL Connector from https://dev.mysql.com/downloads/connector/cpp/
 
 ## Ubuntu
@@ -20,8 +17,13 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
 ## MacOS X
 To be added later...
 
+## Common to all platforms
+Install the following Python modules (pip install):
+* wget
+* requests
+
 # Cloning the repo
-Use your favourite git command to clone this repo, then enter it and execut:
+Use your favourite git command to clone this repo, then enter it and execute:
 * git submodule init
 * git submodule update
 
