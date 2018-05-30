@@ -730,7 +730,7 @@ std::shared_ptr<TransactionData> RFQTicketXBT::GetTransactionData() const
 double RFQTicketXBT::estimatedFee() const
 {
    const auto wallet = getCurrentWallet();
-   if (wallet == nullptr) {
+   if (!wallet || !transactionData_) {
       return 0;
    }
 
