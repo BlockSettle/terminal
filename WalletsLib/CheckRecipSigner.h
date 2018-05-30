@@ -40,6 +40,7 @@ namespace bs {
       uint64_t estimateFee(float feePerByte) const;
       uint64_t spendValue() const;
       std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }
+      std::vector<shared_ptr<ScriptRecipient>> recipients() const { return recipients_; }
 
       std::vector<Address> GetInputAddressList(const std::shared_ptr<spdlog::logger>& logger) const;
 
