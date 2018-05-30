@@ -1,3 +1,25 @@
+# Supported platforms
+Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
+
+# Before building (pre-requisites)
+## Windows
+* Install Python 2.7 (3.6 wasn't fully tested, yet)
+* Install cmake
+* Install the following Python modules (pip install):
+  * wget
+  * requests
+* Install MySQL Connector from https://dev.mysql.com/downloads/connector/cpp/
+
+## Ubuntu
+* Install python-pip package (it will install Python)
+* Install cmake
+* Install Qt5 build pre-requisites by running `apt build-dep qt5-default`
+* Install libmysqlclient-dev package
+* Install autoconf and libtool packages
+
+## MacOS X
+To be added later...
+
 # Building BlockSettle terminal
 
 * Run the following command:
@@ -7,5 +29,3 @@
 * Go to `terminal.debug` or `terminal.release` dir (depending on the 'debug' argument on the previous step) and type your favourite make command (basically `make -j4`). Windows users should open the BlockSettle.sln file in one of these dirs.
 
 * The binary can then be found in build_terminal dir
-
-Currently supported platforms: Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
