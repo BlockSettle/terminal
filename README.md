@@ -6,6 +6,7 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
 * Install Python 2.7 (3.6 wasn't fully tested, yet)
 * Install cmake
 * Install MySQL Connector from https://dev.mysql.com/downloads/connector/cpp/
+* Install YASM from https://yasm.tortall.net/Download.html (Win64 installer)
 
 ## Ubuntu
 * Install python-pip package (it will install Python)
@@ -13,6 +14,7 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
 * Install Qt5 build pre-requisites by running `apt build-dep qt5-default`
 * Install libmysqlclient-dev package
 * Install autoconf and libtool packages
+* Install yasm package
 
 ## MacOS X
 To be added later...
