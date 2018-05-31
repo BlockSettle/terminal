@@ -987,7 +987,7 @@ void RFQDealerReply::onQuoteReqNotification(const bs::network::QuoteReqNotificat
    }
 }
 
-void RFQDealerReply::onQuoteReqCancelled(const QString &reqId)
+void RFQDealerReply::onQuoteReqCancelled(const QString &reqId, bool byUser)
 {
    const auto itQR = aqQuoteReqs_.find(reqId.toStdString());
    if (itQR == aqQuoteReqs_.end()) {
@@ -998,8 +998,13 @@ void RFQDealerReply::onQuoteReqCancelled(const QString &reqId)
    if (qrn.assetType == bs::network::Asset::SpotXBT) {
       utxoAdapter_->unreserve(qrn.settlementId);
    }
-   qrn.status = bs::network::QuoteReqNotification::Withdrawn;
+   qrn.status = byUser ? bs::network::QuoteReqNotification::Withdrawn : bs::network::QuoteReqNotification::PendingAck;
    onQuoteReqNotification(qrn);
+}
+
+void RFQDealerReply::onQuoteReqRejected(const QString &reqId)
+{
+   onQuoteReqCancelled(reqId, true);
 }
 
 void RFQDealerReply::onQuoteReceived(const bs::network::Quote& quote)
@@ -1023,7 +1028,7 @@ void RFQDealerReply::onQuoteNotifCancelled(const QString &reqId)
    else {
       utxoAdapter_->unreserve(qrn.settlementId);
    }
-   onQuoteReqCancelled(reqId);
+   onQuoteReqCancelled(reqId, true);
 }
 
 void RFQDealerReply::onOrderUpdated(const bs::network::Order &order)
@@ -1058,7 +1063,7 @@ void RFQDealerReply::aqTick()
       }
    }
    for (const auto expReqId : expiredEntries) {
-      onQuoteReqCancelled(expReqId);
+      onQuoteReqCancelled(expReqId, true);
    }
 }
 

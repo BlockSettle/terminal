@@ -200,9 +200,9 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
    return false;
 }
 
-void RequestingQuoteWidget::onQuoteCancelled(const QString &reqId)
+void RequestingQuoteWidget::onQuoteCancelled(const QString &reqId, bool byUser)
 {
-   if (reqId.toStdString() == rfq_.requestId) {
+   if (!byUser && (reqId.toStdString() == rfq_.requestId)) {
       quote_ = bs::network::Quote();
       ui_->labelQuoteValue->setText(tr("Waiting for quote..."));
       ui_->labelDetails->clear();

@@ -79,7 +79,7 @@ public slots:
 signals:
    void quoteReceived(const bs::network::Quote& quote) const;
    void quoteRejected(const QString &reqId, const QString &reason) const;
-   void quoteCancelled(const QString &reqId) const;
+   void quoteCancelled(const QString &reqId, bool userCancelled) const;
    void quoteOrderFilled(const std::string& quoteId) const;
    void orderUpdated(const bs::network::Order& order) const;
    void orderFailed(const std::string& quoteId, const std::string& reason) const;

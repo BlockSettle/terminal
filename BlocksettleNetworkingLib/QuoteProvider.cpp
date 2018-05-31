@@ -624,7 +624,9 @@ bool QuoteProvider::onQuoteCancelled(const std::string& data)
 
    cleanQuoteRequestCcy(response.quoterequestid());
 
-   emit quoteCancelled(QString::fromStdString(response.quoterequestid()));
+   emit quoteCancelled(QString::fromStdString(response.quoterequestid())
+      , response.quotecanceltype() == com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_ALL_QUOTES
+      /*&& (response.quotecancelreason() == "QUOTE_CANCEL_BY_USER")*/);
    return true;
 }
 

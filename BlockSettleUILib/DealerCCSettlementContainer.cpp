@@ -52,7 +52,6 @@ void DealerCCSettlementContainer::activate()
          }
          else if ((order_.side == bs::network::Side::Sell) &&
          (value == static_cast<uint64_t>(order_.quantity * order_.price * BTCNumericTypes::BalanceDivider))) {
-//            logger_->debug("sell: valInput={}, value={}, valReturn={}", valInput, value, valReturn);
             amountValid_ = valInput > (value + valReturn);
          }
       });

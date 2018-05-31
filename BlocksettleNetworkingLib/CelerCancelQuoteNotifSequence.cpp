@@ -25,7 +25,7 @@ CelerMessage CelerCancelQuoteNotifSequence::send()
    QuoteCancelNotification request;
 
    request.set_quoterequestid(reqId_.toStdString());
-   request.set_quotecanceltype(com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_ALL_QUOTES);
+   request.set_quotecanceltype(com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_QUOTE_SPECIFIED_IN_QUOTEID);
    request.set_requestorsessionkey(reqSessToken_.section(QLatin1Char(':'), 0, 0).toStdString());
    request.set_requestorsessiontoken(reqSessToken_.toStdString());
 

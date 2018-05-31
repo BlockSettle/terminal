@@ -34,7 +34,7 @@ public:
 public slots:
    void ticker();
    bool onQuoteReceived(const bs::network::Quote& quote);
-   void onQuoteCancelled(const QString &reqId);
+   void onQuoteCancelled(const QString &reqId, bool byUser);
    void onOrderFilled(const std::string &quoteId);
    void onOrderFailed(const std::string& quoteId, const std::string& reason);
    void onReject(const QString &reqId, const QString &reason);
