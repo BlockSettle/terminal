@@ -29,9 +29,30 @@ message AdminCommandConnect
    optional uint64 generate_address_interval = 10;
 }
 
+message RFQAmount
+{
+   required string ccy     = 1;
+   required double amount  = 2;
+}
+
+message RFQAmountsCollection
+{
+   repeated string      security_list  = 1;
+   repeated RFQAmount   amounts        = 2;
+}
+
+message DealingPrice
+{
+   required string security   = 1;
+   required double base_price = 2;
+}
+
 message AdminCommandStartTrading
 {
-   required uint64 rfq_send_timeout = 1;
+   required uint64               rfq_send_timeout  = 1;
+
+   required RFQAmountsCollection fx_rfq_amounts    = 2;
+   repeated DealingPrice         fx_dealing_prices = 3;
 }
 
 enum CustomerUpdateType
