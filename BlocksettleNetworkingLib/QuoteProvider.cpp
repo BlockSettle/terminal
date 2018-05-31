@@ -28,6 +28,11 @@ using namespace com::celertech::marketmerchant::api::enums::side;
 using namespace com::celertech::marketmerchant::api::order;
 using namespace com::celertech::marketmerchant::api::quote;
 
+bool QuoteProvider::isRepliableStatus(const bs::network::QuoteReqNotification::Status status)
+{
+   return ((status == bs::network::QuoteReqNotification::PendingAck)
+      || (status == bs::network::QuoteReqNotification::Replied));
+}
 
 SecureBinaryData bs::PayinsContainer::get(const std::string& settlementId) const
 {
