@@ -160,7 +160,6 @@ uint64_t CheckRecipSigner::spendValue() const
    return result;
 }
 
-
 vector<Address> CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>& logger) const
 {
    const auto &bdm = PyBlockDataManager::instance();

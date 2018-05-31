@@ -156,6 +156,7 @@ message GenerateCCSeedRequest
    required string userName = 1;
    required string ccProduct = 2;
    optional double amount = 3;
+   optional uint32 lotSize = 4;
 }
 
 message CCSeedResponse
