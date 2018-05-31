@@ -109,6 +109,8 @@ message CCDistributionTransaction
    required string   cc_product = 1;
    repeated string   address = 2;
    required bytes    transaction = 3;
+   repeated string   user_name = 4;
+   repeated uint32   amount = 5;
 }
 
 message AuthVerificationRejectedMessage

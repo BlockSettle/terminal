@@ -39,6 +39,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       }
       authKey_ = BinaryData::CreateFromHex(qn.authKey);
       reqAuthKey_ = BinaryData::CreateFromHex(qn.reqAuthKey);
+      if (authKey_.isNull() || reqAuthKey_.isNull()) {
+         throw std::runtime_error("missing auth key");
+      }
       settlIdStr_ = qn.settlementId;
       const auto buyAuthKey = weSell_ ? reqAuthKey_ : authKey_;
       const auto sellAuthKey = weSell_ ? authKey_ : reqAuthKey_;
@@ -47,6 +50,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
          BinaryData::CreateFromHex(settlIdStr_), buyAuthKey, sellAuthKey, comment_);
    }
    else {
+      if (!settlAddr_->getAsset() || settlAddr_->getAsset()->settlementId().isNull()) {
+         throw std::runtime_error("invalid settlement address");
+      }
       if (weSell_) {
          authKey_ = settlAddr_->getAsset()->sellAuthPubKey();
          reqAuthKey_ = settlAddr_->getAsset()->buyAuthPubKey();
@@ -98,8 +104,21 @@ bool DealerXBTSettlementContainer::accept(const std::string& password)
       }
    }
    else {
+      const auto &txWallet = transactionData_->GetWallet();
+      if (txWallet->GetType() != bs::wallet::Type::Bitcoin) {
+         logger_->error("[DealerSettlDialog::onAccepted] Invalid payout wallet type: {}", (int)txWallet->GetType());
+         emit error(tr("Invalid payout wallet type"));
+         emit failed();
+         return false;
+      }
       const auto &receivingAddress = transactionData_->GetFallbackRecvAddress();
-      signingContainer_->SyncAddresses({ { transactionData_->GetWallet(), receivingAddress } });
+      if (!txWallet->containsAddress(receivingAddress)) {
+         logger_->error("[DealerSettlDialog::onAccepted] Invalid receiving address");
+         emit error(tr("Invalid receiving address"));
+         emit failed();
+         return false;
+      }
+      signingContainer_->SyncAddresses({ { txWallet, receivingAddress } });
       try {
          const auto txReq = settlWallet_->CreatePayoutTXRequest(settlWallet_->GetInputFor(settlAddr_)
             , receivingAddress, transactionData_->FeePerByte());
@@ -247,9 +266,10 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          emit failed();
          return;
       }
-      transactionData_->GetWallet()->SetTransactionComment(signedTX, comment_);
+      const auto &txWallet = transactionData_->GetWallet();
+      txWallet->SetTransactionComment(signedTX, comment_);
       settlWallet_->SetTransactionComment(signedTX, comment_);
-      transactionData_->GetWallet()->SetAddressComment(transactionData_->GetFallbackRecvAddress()
+      txWallet->SetAddressComment(transactionData_->GetFallbackRecvAddress()
          , bs::wallet::Comment::toString(bs::wallet::Comment::SettlementPayOut));
 
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payout sent");

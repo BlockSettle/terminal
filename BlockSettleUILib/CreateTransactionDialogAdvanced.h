@@ -92,7 +92,7 @@ private:
    void validateAddOutputButton();
    void validateCreateButton();
 
-   void AddRecipient(const QString& addressString, double amount, bool isMax = false);
+   void AddRecipient(const bs::Address &, double amount, bool isMax = false);
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void SetMinimumFee(float totalFee, float feePerByte = 0);

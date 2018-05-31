@@ -116,7 +116,6 @@ void RFQTicketXBT::setWallets()
   if (prevRecvWallet != recvWallet_) {
      fillRecvAddresses();
   }
-  estimatedFee();
 }
 
 void RFQTicketXBT::resetTicket()
@@ -550,7 +549,7 @@ bool RFQTicketXBT::checkBalance(double qty) const
    const auto balance = getBalanceInfo();
    switch (balance.productType) {
    case ProductGroupType::XBTGroupType:
-      return ((qty + feeValue_) <= balance.amount);
+      return ((qty + estimatedFee()) <= balance.amount);
    case ProductGroupType::CCGroupType:
    case ProductGroupType::FXGroupType:
       return (qty <= balance.amount);
@@ -730,12 +729,8 @@ std::shared_ptr<TransactionData> RFQTicketXBT::GetTransactionData() const
 
 double RFQTicketXBT::estimatedFee() const
 {
-   if (feeValue_ > 0) {
-      return feeValue_;
-   }
-
    const auto wallet = getCurrentWallet();
-   if (wallet == nullptr) {
+   if (!wallet || !transactionData_) {
       return 0;
    }
 
@@ -745,10 +740,8 @@ double RFQTicketXBT::estimatedFee() const
    if (maxVal <= 0) {
       return 0;
    }
-   feeValue_ = balance - maxVal;
-   return feeValue_;
+   return (balance - maxVal);
 }
-
 
 void RFQTicketXBT::saveLastSideSelection(const std::string& product, const std::string& security, bs::network::Side::Type sideIndex)
 {

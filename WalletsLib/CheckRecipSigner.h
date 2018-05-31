@@ -33,14 +33,16 @@ namespace bs {
          deserializeState(bd);
       }
 
-      using cbFindRecip = std::function<void(uint64_t)>;
+      using cbFindRecip = std::function<void(uint64_t valOutput, uint64_t valReturn, uint64_t valInput)>;
       bool findRecipAddress(const Address &address, cbFindRecip cb) const;
 
       bool hasInputAddress(const Address &, uint64_t lotsize = 1) const;
       uint64_t estimateFee(float feePerByte) const;
       uint64_t spendValue() const;
+      std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }
+      std::vector<shared_ptr<ScriptRecipient>> recipients() const { return recipients_; }
 
-      vector<Address> GetInputAddressList(const std::shared_ptr<spdlog::logger>& logger) const;
+      std::vector<Address> GetInputAddressList(const std::shared_ptr<spdlog::logger>& logger) const;
 
       void removeDupRecipients();
 

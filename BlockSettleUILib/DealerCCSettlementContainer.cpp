@@ -46,13 +46,14 @@ void DealerCCSettlementContainer::activate()
    bs::CheckRecipSigner signer;
    try {
       signer.deserializeState(txReqData_);
-      foundRecipAddr_ = signer.findRecipAddress(ownRecvAddr_, [this](uint64_t value) {
+      foundRecipAddr_ = signer.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
          if ((order_.side == bs::network::Side::Buy) && qFuzzyCompare(order_.quantity, value / lotSize_)) {
-            amountValid_ = true;
+            amountValid_ = true; //valInput == (value + valReturn);
          }
          else if ((order_.side == bs::network::Side::Sell) &&
-            (value == static_cast<uint64_t>(order_.quantity * order_.price * BTCNumericTypes::BalanceDivider))) {
-            amountValid_ = true;
+         (value == static_cast<uint64_t>(order_.quantity * order_.price * BTCNumericTypes::BalanceDivider))) {
+//            logger_->debug("sell: valInput={}, value={}, valReturn={}", valInput, value, valReturn);
+            amountValid_ = valInput > (value + valReturn);
          }
       });
    }

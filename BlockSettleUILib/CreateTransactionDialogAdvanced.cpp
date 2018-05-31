@@ -474,11 +474,12 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 
 void CreateTransactionDialogAdvanced::onAddOutput()
 {
-   const QString addressString{ui_->lineEditAddress->text()};
-   auto maxValue = transactionData_->CalculateMaxAmount(lineEditAddress()->text().toStdString());
+   const bs::Address address(ui_->lineEditAddress->text());
+
+   auto maxValue = transactionData_->CalculateMaxAmount(address);
    const bool maxAmount = qFuzzyCompare(maxValue, currentValue_);
 
-   AddRecipient(addressString, currentValue_, maxAmount);
+   AddRecipient(address, currentValue_, maxAmount);
 
    // clear edits
    ui_->lineEditAddress->clear();
@@ -490,17 +491,15 @@ void CreateTransactionDialogAdvanced::onAddOutput()
    ui_->pushButtonAddOutput->setEnabled(false);
 }
 
-void CreateTransactionDialogAdvanced::AddRecipient(const QString& addressString, double amount, bool isMax)
+void CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &address, double amount, bool isMax)
 {
    auto recipientId = transactionData_->RegisterNewRecipient();
-
-   bs::Address address{addressString};
 
    transactionData_->UpdateRecipientAddress(recipientId, address);
    transactionData_->UpdateRecipientAmount(recipientId, amount);
 
    // add to the model
-   outputsModel_->AddRecipient(recipientId, addressString, amount);
+   outputsModel_->AddRecipient(recipientId, address.display(), amount);
 }
 
 void CreateTransactionDialogAdvanced::validateAddOutputButton()
