@@ -81,7 +81,7 @@ signals:
 public:
    void onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn);
    void onQuoteNotifCancelled(const QString &reqId);
-   void onQuoteReqCancelled(const QString &reqId);
+   void onQuoteReqCancelled(const QString &reqId, bool byUser);
    void onQuoteRejected(const QString &reqId, const QString &reason);
    void onSecurityMDUpdated(const QString &security, const bs::network::MDFields &);
    void onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn);

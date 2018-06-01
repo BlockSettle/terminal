@@ -111,8 +111,11 @@ void QuoteRequestsModel::onQuoteNotifCancelled(const QString &reqId)
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::PendingAck);
 }
 
-void QuoteRequestsModel::onQuoteReqCancelled(const QString &reqId)
+void QuoteRequestsModel::onQuoteReqCancelled(const QString &reqId, bool byUser)
 {
+   if (!byUser) {
+      return;
+   }
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::Withdrawn);
 }
 

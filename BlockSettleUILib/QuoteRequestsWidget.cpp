@@ -114,10 +114,10 @@ void QuoteRequestsWidget::onQuoteNotifCancelled(const QString &reqId)
    }
 }
 
-void QuoteRequestsWidget::onQuoteReqCancelled(const QString &reqId)
+void QuoteRequestsWidget::onQuoteReqCancelled(const QString &reqId, bool byUser)
 {
    if (model_) {
-      model_->onQuoteReqCancelled(reqId);
+      model_->onQuoteReqCancelled(reqId, byUser);
    }
 }
 

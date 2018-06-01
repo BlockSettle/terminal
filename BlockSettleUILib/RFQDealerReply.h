@@ -67,7 +67,8 @@ namespace bs {
          void setQuoteReqNotification(const network::QuoteReqNotification &, double indicBid, double indicAsk);
          void quoteReqNotifStatusChanged(const network::QuoteReqNotification &);
          void onQuoteReqNotification(const network::QuoteReqNotification &);
-         void onQuoteReqCancelled(const QString &reqId);
+         void onQuoteReqCancelled(const QString &reqId, bool byUser);
+         void onQuoteReqRejected(const QString &reqId);
          void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
          void onBestQuotePrice(const QString reqId, double price, bool own);
          void onAutoPassChanged();
