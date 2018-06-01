@@ -4,7 +4,6 @@
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "CelerClient.h"
-#include "CelerSubmitRFQSequence.h"
 #include "DialogManager.h"
 #include "NotificationCenter.h"
 #include "OrderListModel.h"

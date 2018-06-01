@@ -9,7 +9,8 @@
 
 using namespace com::celertech::marketmerchant::api::quote;
 
-CelerSubmitRFQSequence::CelerSubmitRFQSequence(const std::string& accountName, const bs::network::RFQ& rfq, const std::shared_ptr<spdlog::logger>& logger)
+CelerSubmitRFQSequence::CelerSubmitRFQSequence(const std::string& accountName, const bs::network::RFQ& rfq
+   , const std::shared_ptr<spdlog::logger>& logger, bool debugPrintRFQ)
  : CelerCommandSequence("CelerSubmitRFQSequence",
       {
          { false, nullptr, &CelerSubmitRFQSequence::submitRFQ }
@@ -17,6 +18,7 @@ CelerSubmitRFQSequence::CelerSubmitRFQSequence(const std::string& accountName, c
    , accountName_(accountName)
    , rfq_(rfq)
    , logger_(logger)
+   , debugPrintRFQ_(debugPrintRFQ)
 {}
 
 
@@ -69,7 +71,9 @@ CelerMessage CelerSubmitRFQSequence::submitRFQ()
    message.messageType = CelerAPI::QuoteUpstreamType;
    message.messageData = request.SerializeAsString();
 
-   logger_->debug("RFQ: {}", request.DebugString());
+   if (debugPrintRFQ_) {
+      logger_->debug("RFQ: {}", request.DebugString());
+   }
 
    return message;
 }

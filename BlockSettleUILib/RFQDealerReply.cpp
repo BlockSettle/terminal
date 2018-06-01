@@ -312,15 +312,9 @@ void RFQDealerReply::reset()
    }
 }
 
-static bool isRepliableStatus(const bs::network::QuoteReqNotification::Status status)
-{
-   return ((status == bs::network::QuoteReqNotification::PendingAck)
-      || (status == bs::network::QuoteReqNotification::Replied));
-}
-
 void RFQDealerReply::quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn)
 {
-   if (!isRepliableStatus(qrn.status)) {
+   if (!QuoteProvider::isRepliableStatus(qrn.status)) {
       sentNotifs_.erase(qrn.quoteRequestId);
    }
 
@@ -442,7 +436,7 @@ void RFQDealerReply::priceChanged()
 
 void RFQDealerReply::updateSubmitButton()
 {
-   bool isQRNRepliable = (!currentQRN_.empty() && isRepliableStatus(currentQRN_.status));
+   bool isQRNRepliable = (!currentQRN_.empty() && QuoteProvider::isRepliableStatus(currentQRN_.status));
    if ((currentQRN_.assetType != bs::network::Asset::SpotFX)
       && (!signingContainer_ || signingContainer_->isOffline())) {
       isQRNRepliable = false;

@@ -19,6 +19,40 @@ message AdminCommandConnect
 {
    required bool connect_to_armory = 1;
    required bool connect_to_celer = 2;
+   required string celer_host = 3;
+   required string celer_port = 4;
+   required string pub_host = 5;
+   required string pub_port = 6;
+   required string armory_host = 7;
+   required string armory_port = 8;
+   required bool   generate_address = 9;
+   optional uint64 generate_address_interval = 10;
+}
+
+message RFQAmount
+{
+   required string ccy     = 1;
+   required double amount  = 2;
+}
+
+message RFQAmountsCollection
+{
+   repeated string      security_list  = 1;
+   repeated RFQAmount   amounts        = 2;
+}
+
+message DealingPrice
+{
+   required string security   = 1;
+   required double base_price = 2;
+}
+
+message AdminCommandStartTrading
+{
+   required uint64               rfq_send_timeout  = 1;
+
+   required RFQAmountsCollection fx_rfq_amounts    = 2;
+   repeated DealingPrice         fx_dealing_prices = 3;
 }
 
 enum CustomerUpdateType
@@ -29,7 +63,10 @@ enum CustomerUpdateType
    BalanceUpdateType = 4;
    RFQSentUpdateType = 5;
    RFQReceivedUpdateType = 6;
-   TradingStoppedUpdateType = 7;
+   RFQCancelledUpdateType = 7;
+   TradingStoppedUpdateType = 8;
+   XBTBalanceUpdateType = 9;
+   ErrorNotificationType = 10;
 }
 
 enum RFQProductGroup
@@ -76,4 +113,23 @@ message RFQReceivedUpdate
    required string rfq_id = 1;
    required RFQProductGroup group_type = 2;
    required uint64 timestamp = 3;
+}
+
+message RFQCancelledUpdate
+{
+   required string rfq_id = 1;
+   required RFQProductGroup group_type = 2;
+   required uint64 timestamp = 3;
+}
+
+message XBTBalanceUpdate
+{
+   required double xbt_balance = 1;
+   required uint64 used_address_count = 2;
+}
+
+
+message ErrorNotification
+{
+   required string message = 1;
 }
