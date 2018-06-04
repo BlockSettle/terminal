@@ -55,7 +55,7 @@ bool SingleCelerConnectionListener::ProcessDataFromClient(const std::string& dat
 
 bool SingleCelerConnectionListener::ProcessHeartBeat(int64_t sequenceNumber)
 {
-   SPDLOG_DEBUG( logger_, "[SingleCelerConnectionListener] {}: heartbeat received"
+   logger_->debug("[SingleCelerConnectionListener] {}: heartbeat received"
       , GetName());
 
    return ReturnHeartbeat(sequenceNumber);
