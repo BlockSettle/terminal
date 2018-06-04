@@ -38,18 +38,22 @@ bool ZmqStreamServerConnection::ReadFromDataSocket()
    MessageHolder id;
    MessageHolder data;
 
-   int result = zmq_msg_recv(&id, dataSocket_.get(), ZMQ_DONTWAIT);
-   if (result == -1) {
-      logger_->error("[ZmqStreamServerConnection::listenFunction] {} failed to recv ID frame from stream: {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
+   {
+      FastLock locker(socketLockFlag_);
 
-   result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
-   if (result == -1) {
-      logger_->error("[ZmqStreamServerConnection::listenFunction] {} failed to recv data frame from stream: {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
+      int result = zmq_msg_recv(&id, dataSocket_.get(), ZMQ_DONTWAIT);
+      if (result == -1) {
+         logger_->error("[ZmqStreamServerConnection::listenFunction] {} failed to recv ID frame from stream: {}"
+            , connectionName_, zmq_strerror(zmq_errno()));
+         return false;
+      }
+
+      result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
+      if (result == -1) {
+         logger_->error("[ZmqStreamServerConnection::listenFunction] {} failed to recv data frame from stream: {}"
+            , connectionName_, zmq_strerror(zmq_errno()));
+         return false;
+      }
    }
 
    if (data.GetSize() == 0) {
