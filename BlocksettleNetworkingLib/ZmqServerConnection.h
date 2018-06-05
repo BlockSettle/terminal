@@ -5,6 +5,7 @@
 #include "ZmqContext.h"
 
 #include <atomic>
+#include <deque>
 #include <thread>
 #include <unordered_map>
 
@@ -48,14 +49,17 @@ protected:
 
    virtual bool ReadFromDataSocket() = 0;
 
+   virtual bool QueueDataToSend(const std::string& clientId, const std::string& data, bool sendMore);
+
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<ZmqContext>      context_;
 
    std::string                      connectionName_;
 
-   std::atomic_flag                 socketLockFlag_ = ATOMIC_FLAG_INIT;
+   // should be accessed only from overloaded ReadFromDataSocket.
    ZmqContext::sock_ptr             dataSocket_;
+
    std::unordered_map<std::string, std::string> clientInfo_;
 
 private:
@@ -74,8 +78,20 @@ private:
       CommandStop
    };
 
+   struct DataToSend
+   {
+      std::string clientId;
+      std::string data;
+      bool        sendMore;
+   };
+
+   bool SendDataCommand();
+   bool SendDataToDataSocket();
+
 private:
    std::thread                      listenThread_;
+
+   std::atomic_flag                 controlSocketLockFlag_ = ATOMIC_FLAG_INIT;
 
    ZmqContext::sock_ptr             threadMasterSocket_;
    ZmqContext::sock_ptr             threadSlaveSocket_;
@@ -83,6 +99,9 @@ private:
    ServerConnectionListener*        listener_;
 
    bool extraLogging_;
+
+   std::atomic_flag                 dataQueueLock_ = ATOMIC_FLAG_INIT;
+   std::deque<DataToSend>           dataQueue_;
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__

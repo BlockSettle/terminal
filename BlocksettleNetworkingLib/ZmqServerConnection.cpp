@@ -167,7 +167,9 @@ void ZmqServerConnection::listenFunction()
          }
 
          auto command_code = command.ToInt();
-         if (command_code == ZmqServerConnection::CommandStop) {
+         if (command_code == ZmqServerConnection::CommandSend) {
+            SendDataToDataSocket();
+         } else if (command_code == ZmqServerConnection::CommandStop) {
             break;
          } else {
             logger_->error("[ZmqServerConnection::listenFunction] unexpected command code {} for {}"
@@ -207,7 +209,13 @@ void ZmqServerConnection::stopServer()
    logger_->debug("[ZmqServerConnection::stopServer] stopping {}", connectionName_);
 
    int command = ZmqServerConnection::CommandStop;
-   int result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+   int result = 0;
+
+   {
+      FastLock locker{controlSocketLockFlag_};
+      result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+   }
+
    if (result == -1) {
       logger_->error("[ZmqServerConnection::stopServer] failed to send stop comamnd for {} : {}"
          , connectionName_, zmq_strerror(zmq_errno()));
@@ -215,6 +223,19 @@ void ZmqServerConnection::stopServer()
    }
 
    listenThread_.join();
+}
+
+bool ZmqServerConnection::SendDataCommand()
+{
+   int command = ZmqServerConnection::CommandSend;
+   int result = 0;
+
+   {
+      FastLock locker{controlSocketLockFlag_};
+      result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+   }
+
+   return result != -1;
 }
 
 void ZmqServerConnection::notifyListenerOnData(const std::string& clientId, const std::string& data)
@@ -240,4 +261,44 @@ std::string ZmqServerConnection::GetClientInfo(const std::string &clientId) cons
       return it->second;
    }
    return "Unknown";
+}
+
+bool ZmqServerConnection::QueueDataToSend(const std::string& clientId, const std::string& data, bool sendMore)
+{
+   {
+      FastLock locker{dataQueueLock_};
+      dataQueue_.emplace_back( DataToSend{clientId, data, sendMore});
+   }
+
+   return SendDataCommand();
+}
+
+bool ZmqServerConnection::SendDataToDataSocket()
+{
+   std::deque<DataToSend> pendingData;
+
+   {
+      FastLock locker{dataQueueLock_};
+      pendingData.swap(dataQueue_);
+   }
+
+   for (const auto &dataPacket : pendingData) {
+      int result = zmq_send(dataSocket_.get(), dataPacket.clientId.c_str(), dataPacket.clientId.size(), ZMQ_SNDMORE);
+      if (result != dataPacket.clientId.size()) {
+         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send client id {}. {} packets dropped"
+            , connectionName_, zmq_strerror(zmq_errno())
+            , pendingData.size());
+         return false;
+      }
+
+      result = zmq_send(dataSocket_.get(), dataPacket.data.data(), dataPacket.data.size(), (dataPacket.sendMore ? ZMQ_SNDMORE : 0));
+      if (result != dataPacket.data.size()) {
+         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send data frame {}. {} packets dropped"
+            , connectionName_, zmq_strerror(zmq_errno())
+            , pendingData.size());
+         return false;
+      }
+   }
+
+   return true;
 }

@@ -32,7 +32,6 @@ public:
 
 protected:
    bool sendRawData(const std::string& data);
-   bool sendRawData(const char* data, size_t size);
    void notifyOnData(const std::string& data);
 
 protected:
