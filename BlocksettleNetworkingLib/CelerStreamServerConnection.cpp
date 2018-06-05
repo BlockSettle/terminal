@@ -4,8 +4,9 @@
 #include "ActiveStreamClient.h"
 
 CelerStreamServerConnection::CelerStreamServerConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ZmqContext>& context)
- : ZmqStreamServerConnection(logger, context)
+      , const std::shared_ptr<ZmqContext>& context
+      , bool extraLogging)
+ : ZmqStreamServerConnection(logger, context, extraLogging)
 {}
 
 ZmqStreamServerConnection::server_connection_ptr CelerStreamServerConnection::CreateActiveConnection()

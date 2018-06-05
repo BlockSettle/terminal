@@ -17,7 +17,8 @@ class ZmqServerConnection : public ServerConnection
 {
 public:
    ZmqServerConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ZmqContext>& context);
+      , const std::shared_ptr<ZmqContext>& context
+      , bool extraLogging = false);
 
    ~ZmqServerConnection() noexcept override;
 
@@ -80,6 +81,8 @@ private:
    ZmqContext::sock_ptr             threadSlaveSocket_;
 
    ServerConnectionListener*        listener_;
+
+   bool extraLogging_;
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__

@@ -29,7 +29,7 @@ public:
    std::shared_ptr<spdlog::logger>     GetLogger() const;
 
    std::shared_ptr<ServerConnection>   CreateGenoaAPIServerConnection() const;
-   std::shared_ptr<ServerConnection>   CreateCelerAPIServerConnection() const;
+   std::shared_ptr<ServerConnection>   CreateCelerAPIServerConnection(bool extraLogging = false) const;
 
    std::shared_ptr<DataConnection>     CreateCelerClientConnection() const;
    std::shared_ptr<DataConnection>     CreateGenoaClientConnection(bool monitored = false) const;

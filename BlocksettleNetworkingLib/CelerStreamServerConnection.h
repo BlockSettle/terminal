@@ -7,7 +7,8 @@ class CelerStreamServerConnection : public ZmqStreamServerConnection
 {
 public:
    CelerStreamServerConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ZmqContext>& context);
+      , const std::shared_ptr<ZmqContext>& context
+      , bool extraLogging = false);
    ~CelerStreamServerConnection() noexcept = default;
 
    CelerStreamServerConnection(const CelerStreamServerConnection&) = delete;

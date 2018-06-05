@@ -8,8 +8,8 @@
 #include <spdlog/spdlog.h>
 
 ZmqStreamServerConnection::ZmqStreamServerConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ZmqContext>& context)
- : ZmqServerConnection(logger, context)
+      , const std::shared_ptr<ZmqContext>& context, bool extraLogging)
+ : ZmqServerConnection(logger, context, extraLogging)
 {}
 
 ZmqContext::sock_ptr ZmqStreamServerConnection::CreateDataSocket()

@@ -9,8 +9,8 @@
 using namespace com::celertech::baseserver::communication::protobuf;
 
 SingleCelerConnectionListener::SingleCelerConnectionListener(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::string& name)
- : SingleConnectionServerListener(connectionManager->CreateCelerAPIServerConnection()
+      , const std::string& name, bool extraLogging)
+ : SingleConnectionServerListener(connectionManager->CreateCelerAPIServerConnection(extraLogging)
       , connectionManager->GetLogger(), name)
 {}
 

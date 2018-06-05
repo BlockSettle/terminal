@@ -7,12 +7,13 @@
 #include <zmq.h>
 
 ZmqServerConnection::ZmqServerConnection(const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ZmqContext>& context)
+   , const std::shared_ptr<ZmqContext>& context, bool extraLogging)
    : logger_(logger)
    , context_(context)
    , dataSocket_(ZmqContext::CreateNullSocket())
    , threadMasterSocket_(ZmqContext::CreateNullSocket())
    , threadSlaveSocket_(ZmqContext::CreateNullSocket())
+   , extraLogging_{extraLogging}
 {
    assert(logger_ != nullptr);
    assert(context_ != nullptr);
@@ -135,6 +136,11 @@ void ZmqServerConnection::listenFunction()
    int errorCount = 0;
 
    while(true) {
+      if (extraLogging_) {
+         logger_->debug("[ZmqServerConnection::listenFunction] {} start poll"
+            , connectionName_);
+      }
+
       result = zmq_poll(poll_items, 2, -1);
       if (result == -1) {
          errorCount++;
@@ -171,10 +177,18 @@ void ZmqServerConnection::listenFunction()
       }
 
       if (poll_items[ZmqServerConnection::DataSocketIndex].revents & ZMQ_POLLIN) {
+         if (extraLogging_) {
+            logger_->debug("[ZmqServerConnection::listenFunction] {} start read data"
+               , connectionName_);
+         }
          if (!ReadFromDataSocket()) {
             logger_->error("[ZmqServerConnection::listenFunction] failed to read from data socket on {}"
                , connectionName_);
             break;
+         }
+         if (extraLogging_) {
+            logger_->debug("[ZmqServerConnection::listenFunction] {} data read completed"
+               , connectionName_);
          }
       }
    }
