@@ -44,8 +44,7 @@ public:
          sizeBuffer[bufferLength] |= 0x80;
          ++bufferLength;
       }
-      return _S::sendRawData(std::string((char*)sizeBuffer, bufferLength+1))
-         && _S::sendRawData(data);
+      return _S::sendRawData(std::string((char*)sizeBuffer, bufferLength+1) + data);
    }
 
 protected:
