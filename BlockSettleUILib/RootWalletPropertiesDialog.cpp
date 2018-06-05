@@ -317,7 +317,7 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
          bs::hd::Path path;
          path.append(bs::hd::purpose, true);
          path.append(bs::hd::CoinType::BlockSettle_CC, true);
-         path.append(bs::hd::Group::keyToPathElem(cc), true);
+         path.append(cc, true);
          const auto reqId = signingContainer_->CreateHDLeaf(wallet_, path);
          if (reqId) {
             createCCWalletReqs_[reqId] = cc;
@@ -337,7 +337,7 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, BinaryData pub
 
       const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, walletsManager_->GetNetworkType());
       const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
-      group->createLeaf(bs::hd::Group::keyToPathElem(cc), leafNode);
+      group->createLeaf(bs::hd::Path::keyToElem(cc), leafNode);
 
       if (createCCWalletReqs_.empty()) {
          startWalletScan();

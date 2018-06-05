@@ -401,7 +401,7 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
                   bs::hd::Path path;
                   path.append(bs::hd::purpose, true);
                   path.append(bs::hd::BlockSettle_CC, true);
-                  path.append(bs::hd::Group::keyToPathElem(qrn.product), true);
+                  path.append(qrn.product, true);
                   leafCreateReqId_ = signingContainer_->CreateHDLeaf(walletsManager_->GetPrimaryWallet(), path);
                }
             } else {

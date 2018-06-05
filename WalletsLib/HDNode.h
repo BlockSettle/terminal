@@ -33,16 +33,19 @@ namespace bs {
          }
 
          void append(Elem elem, bool hardened = false);
+         void append(const std::string &key, bool hardened = false);
          size_t length() const { return path_.size(); }
          Elem get(int index) const;   // negative index is an offset from end
          void clear();
          bool isAbolute() const { return isAbsolute_; }
 
          std::string toString(bool alwaysAbsolute = true) const;
-         static Path fromString(const std::string &);
 
          void setHardened(size_t index);
          bool isHardened(size_t index) const;
+
+         static Path fromString(const std::string &);
+         static Elem keyToElem(const std::string &key);
 
       private:
          std::vector<Elem> path_;
