@@ -66,7 +66,7 @@ std::shared_ptr<ServerConnection> ConnectionManager::CreateGenoaAPIServerConnect
 
 std::shared_ptr<ServerConnection> ConnectionManager::CreateCelerAPIServerConnection(bool extraLogging) const
 {
-   return std::make_shared<CelerStreamServerConnection>(logger_, zmqContext_);
+   return std::make_shared<CelerStreamServerConnection>(logger_, zmqContext_, extraLogging);
 }
 
 std::shared_ptr<DataConnection> ConnectionManager::CreateCelerClientConnection() const
