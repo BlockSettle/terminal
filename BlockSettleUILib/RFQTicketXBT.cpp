@@ -327,7 +327,9 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
          balance.product = productToSpend;
          balance.productType = ProductGroupType::CCGroupType;
       } else {
-         balance.amount = assetManager_ ? assetManager_->getBalance(productToSpend.toStdString()) : 0.0;
+         const double divisor = std::pow(10, UiUtils::GetAmountPrecisionFX());
+         const double intBalance = std::floor((assetManager_ ? assetManager_->getBalance(productToSpend.toStdString()) : 0.0) * divisor);
+         balance.amount = intBalance / divisor;
          balance.product = productToSpend;
          balance.productType = ProductGroupType::FXGroupType;
       }
