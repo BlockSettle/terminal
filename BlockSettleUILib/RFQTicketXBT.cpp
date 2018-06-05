@@ -12,6 +12,7 @@
 #include "CoinControlDialog.h"
 #include "CoinSelection.h"
 #include "CurrencyPair.h"
+#include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
@@ -672,7 +673,7 @@ void RFQTicketXBT::submitButtonClicked()
 
    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    // just in case if 2 customers submit RFQ in exactly same ms
-   rfq.requestId = "blocksettle:" + std::to_string(rand() % 1000 ) +  std::to_string(timestamp.count());
+   rfq.requestId = "blocksettle:" + SecureBinaryData().GenerateRandom(8).toHexStr() +  std::to_string(timestamp.count());
 
   switch (currentGroupType_) {
    case ProductGroupType::GroupNotSelected:
