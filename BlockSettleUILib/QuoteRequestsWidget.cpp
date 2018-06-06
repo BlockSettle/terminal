@@ -38,8 +38,6 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    sortModel_->setSourceModel(model_);
 
    ui_->treeViewQuoteRequests->setModel(sortModel_);
-   ui_->treeViewQuoteRequests->setSortingEnabled(true);
-   ui_->treeViewQuoteRequests->sortByColumn(0, Qt::AscendingOrder);
 
    connect(model_, &QAbstractItemModel::rowsInserted, [this]() {
       ui_->treeViewQuoteRequests->expandAll();
@@ -181,7 +179,7 @@ void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
    case ApplicationSettings::dropQN:
       dropQN_ = val.toBool();
       break;
-   
+
    default:   break;
    }
 }
