@@ -15,6 +15,8 @@ enum CLIRequestType
    AuthRevokeTransactionType = 9;
    CCDistributionTransactionType = 10;
    AuthVerificationRejectedType = 11;
+   FundCCGenAddrType = 12;
+   FundCCGATransactionType = 13;
 }
 
 enum ArmoryConnectionState
@@ -139,4 +141,11 @@ message AuthVerificationRejectReponse
 {
    required bool fee_released = 1;
    optional string debug_message = 2;
+}
+
+message FundCCGenAddrRequest
+{
+   required string cc_product = 1;
+   required uint32 amount = 2;
+   optional string reference = 3;
 }
