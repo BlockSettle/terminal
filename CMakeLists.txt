@@ -336,6 +336,7 @@ IF(WIN32)
          Qt5FontDatabaseSupportd.lib
          Qt5EventDispatcherSupportd.lib
          Qt5ThemeSupportd.lib
+         Qt5WindowsUIAutomationSupportd.lib
          Qt5AccessibilitySupportd.lib )
       LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
       SET(QT_QUICK_LIBS
@@ -363,6 +364,7 @@ IF(WIN32)
          Qt5FontDatabaseSupport.lib
          Qt5EventDispatcherSupport.lib
          Qt5ThemeSupport.lib
+         Qt5WindowsUIAutomationSupport.lib
          Qt5AccessibilitySupport.lib )
       LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
       SET(QT_QUICK_LIBS
