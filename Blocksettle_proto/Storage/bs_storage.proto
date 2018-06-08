@@ -52,6 +52,7 @@ enum ResponseEntryType
    AuthRevokeTransactionType = 4;
    CCDistributionTransactionType = 5;
    AuthAddressVerificationRejectType = 6;
+   FundCCGenAddrTransactionType = 7;
 }
 
 message ResponseEntry
@@ -117,4 +118,12 @@ message AuthVerificationRejectedMessage
 {
    required string user_name = 1;
    required string reservation_id = 2;
+}
+
+message FundCCGenAddrTransaction
+{
+   required bytes    transaction = 1;
+   repeated string   cc_product = 2;
+   repeated uint32   amount = 3;
+   repeated string   reference = 4;
 }

@@ -77,7 +77,7 @@ void CCTokenEntryDialog::tokenChanged()
             bs::hd::Path path;
             path.append(bs::hd::purpose, true);
             path.append(bs::hd::BlockSettle_CC, true);
-            path.append(bs::hd::Group::keyToPathElem(ccProduct_), true);
+            path.append(ccProduct_, true);
             createWalletReqId_ = signingContainer_->CreateHDLeaf(priWallet, path);
          }
          else {
@@ -114,7 +114,7 @@ void CCTokenEntryDialog::onWalletCreated(unsigned int id, BinaryData pubKey, Bin
    const auto priWallet = walletsMgr_->GetPrimaryWallet();
    const auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, walletsMgr_->GetNetworkType());
-   ccWallet_ = group->createLeaf(bs::hd::Group::keyToPathElem(ccProduct_), leafNode);
+   ccWallet_ = group->createLeaf(bs::hd::Path::keyToElem(ccProduct_), leafNode);
    if (ccWallet_) {
       walletOk_ = true;
       ui_->labelTokenHint->setText(tr("Private Market subwallet for %1 created!").arg(QString::fromStdString(ccProduct_)));

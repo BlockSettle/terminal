@@ -36,7 +36,6 @@ namespace bs {
          bool deleteLeaf(const std::shared_ptr<bs::Wallet> &);
          bool deleteLeaf(const Path::Elem &);
          bool deleteLeaf(const std::string &key);
-         static Path::Elem keyToPathElem(const std::string &key);
          static std::string nameForType(CoinType ct);
 
          virtual bs::wallet::Type getType() const { return bs::wallet::Type::Bitcoin; }
