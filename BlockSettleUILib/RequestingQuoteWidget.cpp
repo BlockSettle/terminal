@@ -1,5 +1,6 @@
 #include "RequestingQuoteWidget.h"
 #include "ui_RequestingQuoteWidget.h"
+#include <QStyle>
 
 #include "AssetManager.h"
 #include "BlockDataManagerConfig.h"
