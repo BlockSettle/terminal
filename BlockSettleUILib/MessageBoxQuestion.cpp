@@ -1,4 +1,5 @@
 #include "MessageBoxQuestion.h"
+#include <QStyle>
 
 #include "ui_MessageBoxQuestion.h"
 
