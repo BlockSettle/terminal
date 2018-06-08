@@ -11,8 +11,8 @@ class QtSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self.jom = JomSettings(settings)
-        self._release = '5.10'
-        self._version = self._release + '.1'
+        self._release = '5.11'
+        self._version = self._release + '.0'
         self._package_name = 'qt-everywhere-src-' + self._version
 
         if self._project_settings.on_windows():
