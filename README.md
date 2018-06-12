@@ -1,5 +1,5 @@
 # Supported platforms
-Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015
+Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015 or VS2017 15.7.3 or up.
 
 # Before building (pre-requisites)
 ## Windows
