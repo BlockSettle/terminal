@@ -31,7 +31,8 @@ class MPIRSettings(Configurator):
         return True
 
     def get_solution_file(self):
-        return os.path.join(self.get_build_dir(), 'build.vc14', 'mpir.sln')
+        return os.path.join(self.get_build_dir(), 'build.vc'
+           + self._project_settings.get_vs_version_number(), 'mpir.sln')
 
     def config_x(self):
         os.chmod(os.path.join(self.get_unpacked_sources_dir(), 'configure'),
@@ -60,7 +61,7 @@ class MPIRSettings(Configurator):
                    '/build',
                    buildcfg,
                    '/project',
-                   'lib_mpir_core2']
+                   'lib_mpir_gc']	# lib_mpir_core2 doesn't build with VS2017 now
         print('Running ' + ' '.join(command))
 
         result = subprocess.call(command)
