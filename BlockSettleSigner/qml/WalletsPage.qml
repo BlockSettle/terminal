@@ -23,6 +23,8 @@ Item {
         }
     }
 
+    id: view
+
     ScrollView {
         id: scrollView
         anchors.fill: parent
@@ -30,6 +32,7 @@ Item {
 
         ColumnLayout {
             id:     colWallets
+            width: view.width
             spacing: 5
 
             CustomHeader {
@@ -54,13 +57,14 @@ Item {
 
             WalletsView {
                 id: walletsView
-                implicitWidth: scrollView.width
-                implicitHeight: scrollView.height - rowButtons.height - header.height - colWallets.spacing * 2
+                implicitWidth: view.width
+                implicitHeight: view.height - rowButtons.height - header.height - colWallets.spacing * 3
             }
 
             CustomButtonBar {
                 id: rowButtons
-                height: childrenRect.height
+                implicitHeight: childrenRect.height
+                Layout.fillWidth: true
 
                 Flow {
                     id: buttonRow

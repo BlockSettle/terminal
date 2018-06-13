@@ -5,6 +5,8 @@ import QtQuick.Dialogs 1.2
 import com.blocksettle.OfflineProc 1.0
 
 Item {
+    id: view
+
     ScrollView {
         anchors.fill: parent
         Layout.fillWidth: true
@@ -12,12 +14,14 @@ Item {
 
         ColumnLayout {
             width:  parent.parent.width
+            id: column
 
             Behavior on height {
                 NumberAnimation { duration: 500 }
             }
 
             GridLayout {
+                id: grid1
                 columns:    2
                 Layout.fillWidth: true
                 Layout.topMargin: 5
@@ -77,6 +81,7 @@ Item {
             }
 
             ColumnLayout{
+                id: c1
                 Layout.preferredHeight: 195
                 Layout.fillWidth: true
 
@@ -185,17 +190,23 @@ Item {
                 }
             }
 
+            Rectangle {
+                implicitHeight: view.height - grid1.height - c1.height
+                                - btns.height - column.spacing * 4
+                Layout.fillWidth: true
+                color: "#1c2835"
+            }
+
             CustomButtonBar {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.topMargin: 20
+                implicitHeight: childrenRect.height
+                id: btns
 
                 Flow {
                     id: buttonRow
                     spacing: 5
                     padding: 5
                     width: parent.width
-                    height: childrenRect.height + 10
 
                     CustomButton {
                         id: btnSignOfflineTx
