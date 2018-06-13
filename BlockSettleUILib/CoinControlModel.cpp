@@ -15,15 +15,15 @@ class CoinControlNode
 {
 public:
    CoinControlNode(const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
-	  : name_(name)
-	  , comment_(comment)
-	  , row_(row)
-	  , parent_(parent)
+      : name_(name)
+      , comment_(comment)
+      , row_(row)
+      , parent_(parent)
    {}
 
    virtual ~CoinControlNode() noexcept
    {
-	  qDeleteAll(childs_);
+      qDeleteAll(childs_);
    }
 
    CoinControlNode(const CoinControlNode&) = delete;
@@ -32,18 +32,14 @@ public:
    CoinControlNode(CoinControlNode&&) = delete;
    CoinControlNode& operator = (CoinControlNode&&) = delete;
 
-   int getRow() const {  return row_; }
+   int getRow() const { return row_; }
 
    QString getName() const { return name_; }
    QString getComment() const { return comment_; }
 
    bool hasChildren() const { return !childs_.empty(); }
    int  childrenCount() const { return childs_.count(); }
-   void appendChildrenNode(CoinControlNode* node) {
-	   qDebug()<<"child: "<<node->getRow();
-	   qDebug()<<node->getName();
-	   childs_.push_back(node);
-   }
+   void appendChildrenNode(CoinControlNode* node) { childs_.push_back(node); }
    CoinControlNode* getChild(const int i) { return (i < childs_.size() ? childs_[i] : nullptr); }
 
    CoinControlNode* getParent() const { return parent_; }
@@ -57,75 +53,75 @@ public:
    virtual int  getCheckedState() const = 0;
 
    virtual void UpdateParentWithSelectionInfo(int totalSelectedDiff, BTCNumericTypes::balance_type selectedAmountDiff
-											, BTCNumericTypes::balance_type totalAmountDiff) = 0;
+                                            , BTCNumericTypes::balance_type totalAmountDiff) = 0;
 
    void UpdateChildsState(int state) {
-	  for (int i = 0; i < childs_.size(); ++i) {
-		 childs_[i]->setCheckedState(state);
-	  }
+      for (int i = 0; i < childs_.size(); ++i) {
+         childs_[i]->setCheckedState(state);
+      }
    }
 
    virtual void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)
    {
-	  for (int i = 0; i < childs_.size(); ++i) {
-		 childs_[i]->ApplySelection(selectedInputs);
-	  }
+      for (int i = 0; i < childs_.size(); ++i) {
+         childs_[i]->ApplySelection(selectedInputs);
+      }
    }
 
    virtual void NotifyChildAdded()
    {
-	  // do nothing by default
+      // do nothing by default
    }
 
    void sort(int column, Qt::SortOrder order);
 private:
    QString                    name_;
    QString                    comment_;
+   QList<CoinControlNode*>    childs_;
    int                        row_;
    CoinControlNode         *  parent_;
-	QList<CoinControlNode*>    childs_;
 };
 
 class TransactionNode : public CoinControlNode
 {
 public:
    TransactionNode(bool isSelected, int transactionIndex, const UTXO& transaction, const std::shared_ptr<bs::Wallet> &wallet, CoinControlNode *parent)
-	  : CoinControlNode(QString::fromStdString(transaction.getTxHash().toHexStr(true)), QString(), parent->childrenCount(), parent)
-	  , checkedState_(isSelected ? Qt::Checked : Qt::Unchecked)
-	  , transactionIndex_(transactionIndex)
+      : CoinControlNode(QString::fromStdString(transaction.getTxHash().toHexStr(true)), QString(), parent->childrenCount(), parent)
+      , checkedState_(isSelected ? Qt::Checked : Qt::Unchecked)
+      , transactionIndex_(transactionIndex)
    {
-	  amount_ = wallet ? wallet->GetTxBalance(transaction.getValue()) : transaction.getValue() / BTCNumericTypes::BalanceDivider;
+      amount_ = wallet ? wallet->GetTxBalance(transaction.getValue()) : transaction.getValue() / BTCNumericTypes::BalanceDivider;
    }
 
    ~TransactionNode() noexcept override = default;
 
    BTCNumericTypes::balance_type getTotalAmount() const override
    {
-	  return amount_;
+      return amount_;
    }
    BTCNumericTypes::balance_type getSelectedAmount() const override { return amount_; }
 
    int getSelectionCount() const override {
-	  return (checkedState_ == Qt::Checked ? 1 : 0);
+      return (checkedState_ == Qt::Checked ? 1 : 0);
    }
 
    int  getCheckedState() const override
    {
-	  return checkedState_;
+      return checkedState_;
    }
 
    void setCheckedState(int state) override
    {
-	  if (checkedState_ == state) {
-		 return;
-	  }
+      if (checkedState_ == state) {
+         return;
+      }
 
-	  checkedState_ = state;
-	  if (checkedState_ == Qt::Checked) {
-		 getParent()->UpdateParentWithSelectionInfo(1, amount_, 0);
-	  } else {
-		 getParent()->UpdateParentWithSelectionInfo(-1, -amount_, 0);
-	  }
+      checkedState_ = state;
+      if (checkedState_ == Qt::Checked) {
+         getParent()->UpdateParentWithSelectionInfo(1, amount_, 0);
+      } else {
+         getParent()->UpdateParentWithSelectionInfo(-1, -amount_, 0);
+      }
    }
 
    void UpdateParentWithSelectionInfo(int, BTCNumericTypes::balance_type, BTCNumericTypes::balance_type) override {}
@@ -145,11 +141,11 @@ class CPFPTransactionNode : public TransactionNode
 {
 public:
    CPFPTransactionNode(bool isSelected, int transactionIndex, const UTXO& transaction, const std::shared_ptr<bs::Wallet> &wallet, CoinControlNode *parent)
-	  : TransactionNode(isSelected, transactionIndex, transaction, wallet, parent) {}
+      : TransactionNode(isSelected, transactionIndex, transaction, wallet, parent) {}
 
    void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs) override
    {
-	  selectedInputs->SetCPFPTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
+      selectedInputs->SetCPFPTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
    }
 };
 
@@ -157,84 +153,84 @@ class AddressNode : public CoinControlNode
 {
 public:
    AddressNode(const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
-	  : CoinControlNode(name, comment, row, parent)
+      : CoinControlNode(name, comment, row, parent)
    {}
    ~AddressNode() noexcept override = default;
 
    void AddTransaction(TransactionNode *transaction) {
-	  appendChildrenNode(transaction);
-	  NotifyChildAdded();
-	  AddBalance(transaction->getSelectionCount(), transaction->getTotalAmount(), transaction->getTotalAmount());
+      appendChildrenNode(transaction);
+      NotifyChildAdded();
+      AddBalance(transaction->getSelectionCount(), transaction->getTotalAmount(), transaction->getTotalAmount());
    }
 
    BTCNumericTypes::balance_type getTotalAmount() const override {
-	  return totalBalance_;
+      return totalBalance_;
    }
    BTCNumericTypes::balance_type getSelectedAmount() const override {
-	  return selectedBalance_;
+      return selectedBalance_;
    }
 
    int getSelectionCount() const override {
-	  return totalSelected_;
+      return totalSelected_;
    }
 
    int  getCheckedState() const override
    {
-	  return checkedState_;
+      return checkedState_;
    }
 
    void setCheckedState(int state) override
    {
-	  UpdateChildsState(state);
+      UpdateChildsState(state);
    }
 
 protected:
    void UpdateParentWithSelectionInfo(int totalSelectedDiff, BTCNumericTypes::balance_type selectedAmountDiff
-	  , BTCNumericTypes::balance_type totalAmountDiff) override
+      , BTCNumericTypes::balance_type totalAmountDiff) override
    {
-	  AddBalance(true, selectedAmountDiff, totalAmountDiff, totalSelectedDiff);
+      AddBalance(true, selectedAmountDiff, totalAmountDiff, totalSelectedDiff);
    }
 
    void NotifyChildAdded() override
    {
-	  ++totalChilds_;
-	  if (!isRoot()) {
-		 getParent()->NotifyChildAdded();
-	  }
+      ++totalChilds_;
+      if (!isRoot()) {
+         getParent()->NotifyChildAdded();
+      }
    }
 
 private:
    void AddBalance(bool selected, BTCNumericTypes::balance_type amount, BTCNumericTypes::balance_type totalInc, int countInc = 1)
    {
-	  const auto oldTotalSelected = totalSelected_;
-	  const auto oldSelected = selectedBalance_;
+      const auto oldTotalSelected = totalSelected_;
+      const auto oldSelected = selectedBalance_;
 
-	  totalBalance_ += totalInc;
-	  if (selected) {
-		 totalSelected_ += countInc;
-		 selectedBalance_ += amount;
-	  }
+      totalBalance_ += totalInc;
+      if (selected) {
+         totalSelected_ += countInc;
+         selectedBalance_ += amount;
+      }
 
-	  UpdateCheckState();
+      UpdateCheckState();
 
-	  if (!isRoot()) {
-		 getParent()->UpdateParentWithSelectionInfo(totalSelected_ - oldTotalSelected, selectedBalance_ - oldSelected, totalInc);
-	  }
+      if (!isRoot()) {
+         getParent()->UpdateParentWithSelectionInfo(totalSelected_ - oldTotalSelected, selectedBalance_ - oldSelected, totalInc);
+      }
    }
 
    void UpdateCheckState()
    {
-	  if (totalSelected_ != totalChilds_) {
-		 if (totalSelected_ == 0) {
-			checkedState_ = Qt::Unchecked;
-		 }
-		 else {
-			checkedState_ = Qt::PartiallyChecked;
-		 }
-	  }
-	  else {
-		 checkedState_ = Qt::Checked;
-	  }
+      if (totalSelected_ != totalChilds_) {
+         if (totalSelected_ == 0) {
+            checkedState_ = Qt::Unchecked;
+         }
+         else {
+            checkedState_ = Qt::PartiallyChecked;
+         }
+      }
+      else {
+         checkedState_ = Qt::Checked;
+      }
    }
 
 private:
@@ -277,25 +273,25 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
    const auto node = getNodeByIndex(index);
 
    if (role == Qt::DisplayRole) {
-	  switch(index.column())
-	  {
-	  case ColumnName:
-		 return node->getName();
-	  case ColumnComment:
-		 return node->getComment();
-	  case ColumnBalance: {
-		 const auto amount = (node->getSelectedAmount() <= 0) ? node->getTotalAmount() : node->getSelectedAmount();
-		 return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
-	  }
-	  default:
-		 return QVariant{};
-	  }
+      switch(index.column())
+      {
+      case ColumnName:
+         return node->getName();
+      case ColumnComment:
+         return node->getComment();
+      case ColumnBalance: {
+         const auto amount = (node->getSelectedAmount() <= 0) ? node->getTotalAmount() : node->getSelectedAmount();
+         return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
+      }
+      default:
+         return QVariant{};
+      }
    } else if (role == Qt::CheckStateRole) {
-	  if (index.column() == 0) {
-		 return node->getCheckedState();
-	  }
+      if (index.column() == 0) {
+         return node->getCheckedState();
+      }
    } else if ((role == Qt::TextAlignmentRole) && (index.column() == ColumnBalance)) {
-	  return Qt::AlignRight;
+      return Qt::AlignRight;
    }
    return QVariant{};
 }
@@ -303,14 +299,14 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
 bool CoinControlModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
    if (role == Qt::CheckStateRole) {
-	  int state = value.toInt();
+      int state = value.toInt();
 
-	  auto node = getNodeByIndex(index);
-	  node->setCheckedState(state);
+      auto node = getNodeByIndex(index);
+      node->setCheckedState(state);
 
-	  emit layoutChanged();
-	  emit selectionChanged();
-	  return true;
+      emit layoutChanged();
+      emit selectionChanged();
+      return true;
    }
 
    return false;
@@ -319,16 +315,16 @@ bool CoinControlModel::setData(const QModelIndex& index, const QVariant& value, 
 QVariant CoinControlModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
    if (orientation != Qt::Horizontal || role != Qt::DisplayRole ) {
-	  return QVariant();
+      return QVariant();
    }
 
    switch (section) {
    case ColumnName:
-	  return tr("Address/Hash");
+      return tr("Address/Hash");
    case ColumnComment:
-	  return tr("Comment");
+      return tr("Comment");
    case ColumnBalance:
-	  return tr("Balance");
+      return tr("Balance");
    }
    return QVariant();
 }
@@ -355,13 +351,13 @@ bool CoinControlModel::hasChildren(const QModelIndex& parent) const
 QModelIndex CoinControlModel::index(int row, int column, const QModelIndex& parent) const
 {
    if (!hasIndex(row, column, parent)) {
-	  return QModelIndex();
+      return QModelIndex();
    }
 
    auto node = getNodeByIndex(parent);
    auto child = node->getChild(row);
    if (child == nullptr) {
-	  return QModelIndex();
+      return QModelIndex();
    }
    return createIndex(row, column, static_cast<void*>(child));
 }
@@ -369,14 +365,14 @@ QModelIndex CoinControlModel::index(int row, int column, const QModelIndex& pare
 QModelIndex CoinControlModel::parent(const QModelIndex& child) const
 {
    if (!child.isValid()) {
-	  return QModelIndex();
+      return QModelIndex();
    }
 
    auto node = getNodeByIndex(child);
    auto parentNode = node->getParent();
 
    if ((parentNode == nullptr) || (parentNode == root_.get())) {
-	  return QModelIndex();
+      return QModelIndex();
    }
 
    return createIndex(parentNode->getRow(), 0, static_cast<void*>(parentNode));
@@ -386,8 +382,8 @@ Qt::ItemFlags CoinControlModel::flags(const QModelIndex& index) const
 {
    Qt::ItemFlags flags = QAbstractItemModel::flags(index);
    if (index.column() == 0) {
-	  flags |= Qt::ItemIsUserCheckable;
-	  // flags |= Qt::ItemIsAutoTristate;
+      flags |= Qt::ItemIsUserCheckable;
+      // flags |= Qt::ItemIsAutoTristate;
    }
    return flags;
 }
@@ -400,7 +396,7 @@ size_t CoinControlModel::GetSelectedTransactionsCount() const
 QString CoinControlModel::GetSelectedBalance() const
 {
    if (root_ == nullptr) {
-	  return {};
+      return {};
    }
    const auto amount = qMax<BTCNumericTypes::balance_type>(root_->getSelectedAmount(), 0);
    return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
@@ -409,7 +405,7 @@ QString CoinControlModel::GetSelectedBalance() const
 QString CoinControlModel::GetTotalBalance() const
 {
    if (root_ == nullptr) {
-	  return {};
+      return {};
    }
    const auto amount = qMax<BTCNumericTypes::balance_type>(root_->getTotalAmount(), 0);
    return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
@@ -418,60 +414,57 @@ QString CoinControlModel::GetTotalBalance() const
 CoinControlNode* CoinControlModel::getNodeByIndex(const QModelIndex& index) const
 {
    if (!index.isValid()) {
-	  return root_.get();
+      return root_.get();
    }
    return static_cast<CoinControlNode*>(index.internalPointer());
 }
 
 void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)
 {
-	qDebug() << "Loading inputs";
    for (size_t i = 0; i < selectedInputs->GetTransactionsCount(); ++i ) {
-	   qDebug() << "Loading tr";
-	  const UTXO& input = selectedInputs->GetTransaction(i);
-	  bool isSelected = selectedInputs->IsTransactionSelected(i);
-	  const auto address = bs::Address::fromUTXO(input);
-	  const auto addrStr = address.display<std::string>();
+      const UTXO& input = selectedInputs->GetTransaction(i);
+      bool isSelected = selectedInputs->IsTransactionSelected(i);
+      const auto address = bs::Address::fromUTXO(input);
+      const auto addrStr = address.display<std::string>();
 
-	  auto addressIt = addressNodes_.find(addrStr);
-	  AddressNode *addressNode = nullptr;
+      auto addressIt = addressNodes_.find(addrStr);
+      AddressNode *addressNode = nullptr;
 
-	  if (addressIt == addressNodes_.end()) {
-		 addressNode = new AddressNode(address.display()
-			, QString::fromStdString(selectedInputs->GetWallet()->GetAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
-		 root_->appendChildrenNode(addressNode);
-		 addressNodes_.emplace(addrStr, addressNode);
-	  } else {
-		 addressNode = static_cast<AddressNode*>(addressIt->second);
-	  }
-	  addressNode->AddTransaction(new TransactionNode(isSelected, i, input, selectedInputs->GetWallet(), addressNode));    //TODO: Add TX comment
+      if (addressIt == addressNodes_.end()) {
+         addressNode = new AddressNode(address.display()
+            , QString::fromStdString(selectedInputs->GetWallet()->GetAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
+         root_->appendChildrenNode(addressNode);
+         addressNodes_.emplace(addrStr, addressNode);
+      } else {
+         addressNode = static_cast<AddressNode*>(addressIt->second);
+      }
+      addressNode->AddTransaction(new TransactionNode(isSelected, i, input, selectedInputs->GetWallet(), addressNode));    //TODO: Add TX comment
    }
 
    const auto cpfpList = selectedInputs->GetCPFPInputs();
    if (!cpfpList.empty()) {
-	   qDebug() << "Loading cpf";
-	  cpfp_ = std::make_shared<AddressNode>(tr("CPFP Eligible Outputs"), tr("Child-Pays-For-Parent transactions"), addressNodes_.size(), root_.get());
-	  root_->appendChildrenNode(cpfp_.get());
-	  for (size_t i = 0; i < cpfpList.size(); i++) {
-		 const auto &input = cpfpList[i];
-		 const auto address = bs::Address::fromUTXO(input);
-		 const auto addrStr = address.display<std::string>();
-		 AddressNode *addressNode = nullptr;
-		 const auto itAddr = cpfpNodes_.find(addrStr);
+      cpfp_ = std::make_shared<AddressNode>(tr("CPFP Eligible Outputs"), tr("Child-Pays-For-Parent transactions"), addressNodes_.size(), root_.get());
+      root_->appendChildrenNode(cpfp_.get());
+      for (size_t i = 0; i < cpfpList.size(); i++) {
+         const auto &input = cpfpList[i];
+         const auto address = bs::Address::fromUTXO(input);
+         const auto addrStr = address.display<std::string>();
+         AddressNode *addressNode = nullptr;
+         const auto itAddr = cpfpNodes_.find(addrStr);
 
-		 if (itAddr == cpfpNodes_.end()) {
-			const int row = cpfpNodes_.size();
-			addressNode = new AddressNode(address.display()
-			   , QString::fromStdString(selectedInputs->GetWallet()->GetAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
-			cpfp_->appendChildrenNode(addressNode);
-			cpfpNodes_[addrStr] = addressNode;
-		 }
-		 else {
-			addressNode = static_cast<AddressNode *>(itAddr->second);
-		 }
-		 const auto isSel = selectedInputs->IsTransactionSelected(i + selectedInputs->GetTransactionsCount());
-		 addressNode->AddTransaction(new CPFPTransactionNode(isSel, i, input, selectedInputs->GetWallet(), addressNode));
-	  }
+         if (itAddr == cpfpNodes_.end()) {
+            const int row = cpfpNodes_.size();
+            addressNode = new AddressNode(address.display()
+               , QString::fromStdString(selectedInputs->GetWallet()->GetAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
+            cpfp_->appendChildrenNode(addressNode);
+            cpfpNodes_[addrStr] = addressNode;
+         }
+         else {
+            addressNode = static_cast<AddressNode *>(itAddr->second);
+         }
+         const auto isSel = selectedInputs->IsTransactionSelected(i + selectedInputs->GetTransactionsCount());
+         addressNode->AddTransaction(new CPFPTransactionNode(isSel, i, input, selectedInputs->GetWallet(), addressNode));
+      }
    }
 }
 

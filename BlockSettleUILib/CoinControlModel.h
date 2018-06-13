@@ -2,7 +2,6 @@
 #define __COIN_CONTROL_MODEL_H__
 
 #include <QAbstractItemModel>
-#include <QSortFilterProxyModel>
 
 #include "WalletsManager.h"
 
@@ -22,11 +21,11 @@ Q_OBJECT
 private:
    enum Column
    {
-	  ColumnName,
-	  ColumnComment,
-	  ColumnBalance,
-	  ColumnEmpty,
-	  ColumnsCount
+      ColumnName,
+      ColumnComment,
+      ColumnBalance,
+      ColumnEmpty,
+      ColumnsCount
    };
 
 public:
@@ -54,17 +53,15 @@ public:
    void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs);
 
    void clearSelection();
-
-   void sort(int column, Qt::SortOrder order  = Qt::AscendingOrder ) override;
-
+   void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 signals:
    void selectionChanged();
 
 public slots:
    void selectAll(int sel);
-	CoinControlNode* getNodeByIndex(const QModelIndex& index) const;
-private:
 
+private:
+   CoinControlNode* getNodeByIndex(const QModelIndex& index) const;
 
    void loadInputs(const std::shared_ptr<SelectedTransactionInputs> &selectedInputs);
 
@@ -73,8 +70,5 @@ private:
    WalletsManager::wallet_gen_type  wallet_;
    std::unordered_map<std::string, CoinControlNode*> addressNodes_, cpfpNodes_;
 };
-
-
-
 
 #endif // __COIN_CONTROL_MODEL_H__

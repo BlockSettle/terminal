@@ -26,12 +26,12 @@ void CoinControlWidget::updateSelectedTotals()
 void CoinControlWidget::onAutoSelClicked(int state)
 {
    if (state == Qt::Checked) {
-	  ui_->labelTotalAmount->setText(coinControlModel_->GetTotalBalance());
-	  ui_->labelTotalTransactions->clear();
-	  emit coinSelectionChanged(MAXSIZE_T);
+      ui_->labelTotalAmount->setText(coinControlModel_->GetTotalBalance());
+      ui_->labelTotalTransactions->clear();
+      emit coinSelectionChanged(MAXSIZE_T);
    }
    else {
-	  updateSelectedTotals();
+      updateSelectedTotals();
    }
 }
 
@@ -41,11 +41,6 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
    ui_->checkBoxUseAllSelected->setChecked(selectedInputs->UseAutoSel());
 
    coinControlModel_ = new CoinControlModel(selectedInputs);
-   /*coinControlModelProxy_ = new SortingCoinControlModel(this);
-   coinControlModelProxy_->setSourceModel(coinControlModel_);
-   coinControlModelProxy_->setDynamicSortFilter(true);
-   ui_->treeViewUTXO->setModel(coinControlModelProxy_);
-   */
    ui_->treeViewUTXO->setModel(coinControlModel_);
    auto ccHeader = new CCHeader(selectedInputs->GetTotalTransactionsCount(), Qt::Horizontal, ui_->treeViewUTXO);
    ccHeader->setStretchLastSection(true);
@@ -56,7 +51,7 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
 
    connect(ccHeader, &CCHeader::stateChanged, coinControlModel_, &CoinControlModel::selectAll);
    connect(this, &CoinControlWidget::coinSelectionChanged, ccHeader, &CCHeader::onSelectionChanged);
-   auto sigCon = connect(ccHeader, SIGNAL(sectionClicked(int)), ui_->treeViewUTXO, SLOT(sortByColumn(int)));
+   connect(ccHeader, SIGNAL(sectionClicked(int)), ui_->treeViewUTXO, SLOT(sortByColumn(int)));
 
    connect(coinControlModel_, &CoinControlModel::selectionChanged, this, &CoinControlWidget::updateSelectedTotals);
    connect(ui_->checkBoxUseAllSelected, &QCheckBox::stateChanged, this, &CoinControlWidget::onAutoSelClicked);
