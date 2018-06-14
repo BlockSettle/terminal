@@ -53,7 +53,7 @@ public:
    void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs);
 
    void clearSelection();
-
+   void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 signals:
    void selectionChanged();
 

@@ -261,7 +261,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Selected Transactions:</string>
+               <string>Transaction Inputs:</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -289,7 +289,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Selected Amount:</string>
+               <string>Total Amount:</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
