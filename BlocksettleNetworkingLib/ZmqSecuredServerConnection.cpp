@@ -140,21 +140,5 @@ bool ZmqSecuredServerConnection::ReadFromDataSocket()
 
 bool ZmqSecuredServerConnection::SendDataToClient(const std::string& clientId, const std::string& data)
 {
-   FastLock locker(socketLockFlag_);
-
-   int result = zmq_send(dataSocket_.get(), clientId.c_str(), clientId.size(), ZMQ_SNDMORE);
-   if (result != clientId.size()) {
-      logger_->error("[ZmqSecuredServerConnection::SendDataToClient] {} failed to send client id {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
-   if (result != data.size()) {
-      logger_->error("[ZmqSecuredServerConnection::SendDataToClient] {} failed to send data frame {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   return true;
+   return QueueDataToSend(clientId, data, false);
 }

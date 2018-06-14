@@ -71,7 +71,7 @@ private:
    QString invalidMsgTmpl_ = QCoreApplication::translate("", "Wrong checksum in ") + QString::fromStdString(" %1");
 
 private:
-   constexpr int maxLen() const { return wordSize_ * numWords_ + numWords_ - 1; }
+   int maxLen() const { return wordSize_ * numWords_ + numWords_ - 1; }
    ValidationResult validateChecksum(const std::string &) const;
 };
 

@@ -46,8 +46,6 @@ private:
    void onZeroFrame(const std::string& clientId);
    void onDataFrameReceived(const std::string& clientId, const std::string& data);
 
-   bool sendRawData(const std::string& clientId, const char* data, size_t size);
-
    server_connection_ptr findConnection(const std::string& clientId);
 
 private:
