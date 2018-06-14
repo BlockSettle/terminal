@@ -55,7 +55,9 @@ SET( PROJECT_BINARY_DIR ${BLOCK_SETTLE_ROOT}/build_terminal/${CMAKE_BUILD_TYPE} 
 
 SET( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
 IF( WIN32 )
-    # output libs to same path as binaries on windows just to make life easier
+   # output libs to same path as binaries on windows just to make life easier
+   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+   SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
    SET( LIBRARY_OUTPUT_PATH ${EXECUTABLE_OUTPUT_PATH} )
 ELSE()
    SET( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/libs )
