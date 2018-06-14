@@ -128,7 +128,7 @@ public:
 
    void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs) override
    {
-	  selectedInputs->SetTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
+     selectedInputs->SetTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
    }
 
 protected:
@@ -243,21 +243,26 @@ private:
 
 
 void CoinControlNode::sort(int column, Qt::SortOrder order) {
-	qSort(std::begin(childs_), std::end(childs_), [column, order](CoinControlNode* left, CoinControlNode* right) {
+   qSort(std::begin(childs_), std::end(childs_), [column, order](CoinControlNode* left, CoinControlNode* right) {
 
-		double res;
-		if (column == 0)
-			res = left->getName().compare(right->getName());
-		else if (column == 1)
-			res = left->getComment().compare(right->getComment());
-		else
-			res = ((TransactionNode*)left)->getTotalAmount() - ((TransactionNode*)right)->getTotalAmount();
+      bool res = true;
+      switch(column){
+      case 0:
+         res = left->getName().compare(right->getName()) < 0;
+         break;
+      case 1:
+         res = left->getComment().compare(right->getComment()) < 0;
+         break;
+      default:
+         res = ((TransactionNode*)left)->getTotalAmount() < ((TransactionNode*)right)->getTotalAmount();
+         break;
+      }
 
-		if (order)
-			return res < 0;
-		else
-			return res > 0;
-	});
+      if (order == Qt::DescendingOrder)
+         return !res;
+
+      return res;
+   });
 }
 
 CoinControlModel::CoinControlModel(const std::shared_ptr<SelectedTransactionInputs> &selectedInputs, QObject* parent)
@@ -487,8 +492,7 @@ void CoinControlModel::selectAll(int sel)
 }
 
 void CoinControlModel::sort(int column, Qt::SortOrder order){
-
-	root_->sort(column, order);
-	emit layoutChanged();
-	emit selectionChanged();
+   root_->sort(column, order);
+   emit layoutChanged();
+   emit selectionChanged();
 }
