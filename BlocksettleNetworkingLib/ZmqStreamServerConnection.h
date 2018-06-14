@@ -21,8 +21,7 @@ protected:
 
 public:
    ZmqStreamServerConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ZmqContext>& context
-      , bool extraLogging = false);
+      , const std::shared_ptr<ZmqContext>& context);
    ~ZmqStreamServerConnection() noexcept override = default;
 
    ZmqStreamServerConnection(const ZmqStreamServerConnection&) = delete;

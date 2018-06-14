@@ -13,7 +13,7 @@ class SingleCelerConnectionListener : public SingleConnectionServerListener
 {
 public:
    SingleCelerConnectionListener(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::string& name, bool extraLogging = false);
+      , const std::string& name);
    ~SingleCelerConnectionListener() noexcept override = default;
 
    SingleCelerConnectionListener(const SingleCelerConnectionListener&) = delete;

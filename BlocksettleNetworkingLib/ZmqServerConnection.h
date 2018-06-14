@@ -18,8 +18,7 @@ class ZmqServerConnection : public ServerConnection
 {
 public:
    ZmqServerConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ZmqContext>& context
-      , bool extraLogging = false);
+      , const std::shared_ptr<ZmqContext>& context);
 
    ~ZmqServerConnection() noexcept override;
 
@@ -97,8 +96,6 @@ private:
    ZmqContext::sock_ptr             threadSlaveSocket_;
 
    ServerConnectionListener*        listener_;
-
-   bool extraLogging_;
 
    std::atomic_flag                 dataQueueLock_ = ATOMIC_FLAG_INIT;
    std::deque<DataToSend>           dataQueue_;
