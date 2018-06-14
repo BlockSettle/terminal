@@ -55,7 +55,7 @@ SET( PROJECT_BINARY_DIR ${BLOCK_SETTLE_ROOT}/build_terminal/${CMAKE_BUILD_TYPE} 
 
 SET( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
 IF( WIN32 )
-	# output libs to same path as binaries on windows just to make life easier
+   # output libs to same path as binaries on windows just to make life easier
    SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
    SET( LIBRARY_OUTPUT_PATH ${EXECUTABLE_OUTPUT_PATH} )
@@ -102,9 +102,9 @@ INCLUDE_DIRECTORIES( ${ZEROMQ_INCLUDE_DIR} )
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${ZEROMQ_ROOT}/lib)
 IF( WIN32 )
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	  SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_2_3" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_2_3" )
    ELSE()
-	  SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_2_3" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_2_3" )
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE ()
    SET( ZMQ_LIB_NAME "libzmq.a" "zmq" )
@@ -113,15 +113,15 @@ FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO
 
 IF( NOT ZMQ_LIB )
    IF( WIN32 )
-	  IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		 SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_2_3" )
-	  ELSE()
-		 SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_2_3" )
-	  ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_2_3" )
+      ELSE()
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_2_3" )
+      ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    ENDIF( WIN32 )
    FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
    IF( NOT ZMQ_LIB)
-	  MESSAGE(FATAL_ERROR "Could not find ZMQ lib")
+      MESSAGE(FATAL_ERROR "Could not find ZMQ lib")
    ENDIF( NOT ZMQ_LIB)
 ENDIF( NOT ZMQ_LIB)
 
@@ -157,7 +157,7 @@ SET(QRENCODE_INCLUDE_DIR      ${QRENCODE_ROOT}/include)
 SET(QRENCODE_LIB_NAME "qrencode")
 IF (WIN32)
    IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	  SET(QRENCODE_LIB_NAME "qrencoded")
+      SET(QRENCODE_LIB_NAME "qrencoded")
    ENDIF ()
 ENDIF (WIN32)
 FIND_LIBRARY(QRENCODE_LIB NAMES ${QRENCODE_LIB_NAME} REQUIRED PATHS ${QRENCODE_LIB_DIR} NO_DEFAULT_PATH)
@@ -318,221 +318,221 @@ IF(WIN32)
 
 IF(WIN32)
    SET(OS_SPECIFIC_LIBS
-	  Ws2_32
-	  Iphlpapi
-	  imm32
-	  winmm
-	  dwmapi
-	  netapi32
-	  userenv
-	  version
-	  UxTheme
-	  Qt5::QWindowsIntegrationPlugin
-	  Qt5::QICOPlugin)
+      Ws2_32
+      Iphlpapi
+      imm32
+      winmm
+      dwmapi
+      netapi32
+      userenv
+      version
+      UxTheme
+      Qt5::QWindowsIntegrationPlugin
+      Qt5::QICOPlugin)
 
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	  SET(QT_LIBS
-		 qtharfbuzzd.lib
-		 qtpcre2d.lib
-		 qtlibpngd.lib
-		 Qt5FontDatabaseSupportd.lib
-		 Qt5EventDispatcherSupportd.lib
-		 Qt5ThemeSupportd.lib
-		 Qt5WindowsUIAutomationSupportd.lib
-		 Qt5AccessibilitySupportd.lib )
-	  LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
-	  SET(QT_QUICK_LIBS
-		 ${QT5_LIB_ROOT}/Qt5Quickd.lib
-		 ${QT5_LIB_ROOT}/Qt5QuickWidgetsd.lib
-		 ${QT5_LIB_ROOT}/Qt5QuickControls2d.lib
-		 ${QT5_LIB_ROOT}/Qt5QuickTemplates2d.lib
-		 ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugind.lib
-		 ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
-		 ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
-		 ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
-		 ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
-		 ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugind.lib
-		 ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
-		 ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
-		 ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
-		 ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
-		 ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
-	  )
+      SET(QT_LIBS
+         qtharfbuzzd.lib
+         qtpcre2d.lib
+         qtlibpngd.lib
+         Qt5FontDatabaseSupportd.lib
+         Qt5EventDispatcherSupportd.lib
+         Qt5ThemeSupportd.lib
+         Qt5WindowsUIAutomationSupportd.lib
+         Qt5AccessibilitySupportd.lib )
+      LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
+      SET(QT_QUICK_LIBS
+         ${QT5_LIB_ROOT}/Qt5Quickd.lib
+         ${QT5_LIB_ROOT}/Qt5QuickWidgetsd.lib
+         ${QT5_LIB_ROOT}/Qt5QuickControls2d.lib
+         ${QT5_LIB_ROOT}/Qt5QuickTemplates2d.lib
+         ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugind.lib
+         ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
+         ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
+         ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
+         ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
+         ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugind.lib
+         ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
+         ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
+         ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
+         ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
+         ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
+      )
    ELSE()
-	  SET(QT_LIBS
-		 qtharfbuzz.lib
-		 qtpcre2.lib
-		 qtlibpng.lib
-		 Qt5FontDatabaseSupport.lib
-		 Qt5EventDispatcherSupport.lib
-		 Qt5ThemeSupport.lib
-		 Qt5WindowsUIAutomationSupport.lib
-		 Qt5AccessibilitySupport.lib )
-	  LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
-	  SET(QT_QUICK_LIBS
-		 ${QT5_LIB_ROOT}/Qt5Quick.lib
-		 ${QT5_LIB_ROOT}/Qt5QuickWidgets.lib
-		 ${QT5_LIB_ROOT}/Qt5QuickControls2.lib
-		 ${QT5_LIB_ROOT}/Qt5QuickTemplates2.lib
-		 ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugin.lib
-		 ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
-		 ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
-		 ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
-		 ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
-		 ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugin.lib
-		 ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
-		 ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
-		 ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
-		 ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
-		 ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
-	  )
+      SET(QT_LIBS
+         qtharfbuzz.lib
+         qtpcre2.lib
+         qtlibpng.lib
+         Qt5FontDatabaseSupport.lib
+         Qt5EventDispatcherSupport.lib
+         Qt5ThemeSupport.lib
+         Qt5WindowsUIAutomationSupport.lib
+         Qt5AccessibilitySupport.lib )
+      LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
+      SET(QT_QUICK_LIBS
+         ${QT5_LIB_ROOT}/Qt5Quick.lib
+         ${QT5_LIB_ROOT}/Qt5QuickWidgets.lib
+         ${QT5_LIB_ROOT}/Qt5QuickControls2.lib
+         ${QT5_LIB_ROOT}/Qt5QuickTemplates2.lib
+         ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugin.lib
+         ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
+         ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
+         ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
+         ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
+         ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugin.lib
+         ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
+         ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
+         ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
+         ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
+         ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
+      )
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE(WIN32)
    FIND_PACKAGE( ZLIB )
    IF ( NOT ZLIB_FOUND )
-	  MESSAGE(FATAL_ERROR "ZLIB not found")
+      MESSAGE(FATAL_ERROR "ZLIB not found")
    ENDIF( NOT ZLIB_FOUND )
 
    IF ( APPLE )
-	  FIND_PACKAGE( CUPS )
-	  IF ( NOT CUPS_FOUND )
-		 MESSAGE(FATAL_ERROR "CUPS not found")
-	  ENDIF( NOT CUPS_FOUND )
+      FIND_PACKAGE( CUPS )
+      IF ( NOT CUPS_FOUND )
+         MESSAGE(FATAL_ERROR "CUPS not found")
+      ENDIF( NOT CUPS_FOUND )
 
-	  SET(OS_SPECIFIC_LIBS
-		 "-framework Foundation"
-		 "-framework CoreFoundation"
-		 "-framework CoreServices"
-		 "-framework CoreText"
-		 "-framework AppKit"
-		 "-framework Cocoa"
-		 "-framework Carbon"
-		 "-framework IOKit"
-		 "-framework Security"
-		 "-framework SystemConfiguration"
-		 "-framework QuartzCore"
-		 Qt5::QCocoaIntegrationPlugin
-		 Qt5::PrintSupport
-		 Qt5::QICOPlugin
-		 ${ZLIB_LIBRARIES}
-		 ${CUPS_LIBRARIES})
+      SET(OS_SPECIFIC_LIBS
+         "-framework Foundation"
+         "-framework CoreFoundation"
+         "-framework CoreServices"
+         "-framework CoreText"
+         "-framework AppKit"
+         "-framework Cocoa"
+         "-framework Carbon"
+         "-framework IOKit"
+         "-framework Security"
+         "-framework SystemConfiguration"
+         "-framework QuartzCore"
+         Qt5::QCocoaIntegrationPlugin
+         Qt5::PrintSupport
+         Qt5::QICOPlugin
+         ${ZLIB_LIBRARIES}
+         ${CUPS_LIBRARIES})
 
-	  IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		 SET(QT_LIBS
-			libqtharfbuzz_debug.a
-			libqtpcre2_debug.a
-			libqtlibpng_debug.a
-			libQt5EventDispatcherSupport_debug.a
-			libQt5ThemeSupport_debug.a
-			libQt5FontDatabaseSupport_debug.a
-			libQt5ClipboardSupport_debug.a
-			libQt5GraphicsSupport_debug.a
-			libQt5AccessibilitySupport_debug.a
-			libQt5EdidSupport_debug.a
-			)
-		 SET(QT_QUICK_LIBS
-			${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin_debug.a
-			${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin_debug.a
-			${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin_debug.a
-			${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin_debug.a
-			${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin_debug.a
-			${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin_debug.a
-			${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin_debug.a
-			${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin_debug.a
-			${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin_debug.a
-			${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin_debug.a
-			${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin_debug.a
-			${QT5_LIB_ROOT}/libQt5Quick_debug.a
-			${QT5_LIB_ROOT}/libQt5QuickWidgets_debug.a
-			${QT5_LIB_ROOT}/libQt5QuickControls2_debug.a
-			${QT5_LIB_ROOT}/libQt5QuickTemplates2_debug.a
-		 )
-	  ELSE()
-		 SET(QT_LIBS
-			libqtharfbuzz.a
-			libqtpcre2.a
-			libqtlibpng.a
-			libQt5EventDispatcherSupport.a
-			libQt5ThemeSupport.a
-			libQt5FontDatabaseSupport.a
-			libQt5ClipboardSupport.a
-			libQt5GraphicsSupport.a
-			libQt5AccessibilitySupport.a
-			libQt5EdidSupport.a
-			)
-		 SET(QT_QUICK_LIBS
-			${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
-			${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
-			${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
-			${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
-			${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
-			${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
-			${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
-			${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
-			${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
-			${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
-			${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
-			${QT5_LIB_ROOT}/libQt5QuickControls2.a
-			${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
-		 )
-	  ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+         SET(QT_LIBS
+            libqtharfbuzz_debug.a
+            libqtpcre2_debug.a
+            libqtlibpng_debug.a
+            libQt5EventDispatcherSupport_debug.a
+            libQt5ThemeSupport_debug.a
+            libQt5FontDatabaseSupport_debug.a
+            libQt5ClipboardSupport_debug.a
+            libQt5GraphicsSupport_debug.a
+            libQt5AccessibilitySupport_debug.a
+            libQt5EdidSupport_debug.a
+            )
+         SET(QT_QUICK_LIBS
+            ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin_debug.a
+            ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin_debug.a
+            ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin_debug.a
+            ${QT5_LIB_ROOT}/libQt5Quick_debug.a
+            ${QT5_LIB_ROOT}/libQt5QuickWidgets_debug.a
+            ${QT5_LIB_ROOT}/libQt5QuickControls2_debug.a
+            ${QT5_LIB_ROOT}/libQt5QuickTemplates2_debug.a
+         )
+      ELSE()
+         SET(QT_LIBS
+            libqtharfbuzz.a
+            libqtpcre2.a
+            libqtlibpng.a
+            libQt5EventDispatcherSupport.a
+            libQt5ThemeSupport.a
+            libQt5FontDatabaseSupport.a
+            libQt5ClipboardSupport.a
+            libQt5GraphicsSupport.a
+            libQt5AccessibilitySupport.a
+            libQt5EdidSupport.a
+            )
+         SET(QT_QUICK_LIBS
+            ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
+            ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
+            ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
+            ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
+            ${QT5_LIB_ROOT}/libQt5QuickControls2.a
+            ${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
+         )
+      ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
    ELSE(APPLE)
-	  FIND_PACKAGE( Threads REQUIRED )
-	  FIND_PACKAGE( X11 REQUIRED )
-	  FIND_PACKAGE( XCB REQUIRED )
-	  FIND_PACKAGE( Freetype REQUIRED )
-	  FIND_PACKAGE( Fontconfig REQUIRED )
+      FIND_PACKAGE( Threads REQUIRED )
+      FIND_PACKAGE( X11 REQUIRED )
+      FIND_PACKAGE( XCB REQUIRED )
+      FIND_PACKAGE( Freetype REQUIRED )
+      FIND_PACKAGE( Fontconfig REQUIRED )
 
-	  SET(QT_LIBS
-		 libqtharfbuzz.a
-		 libqtpcre2.a
-		 libQt5EventDispatcherSupport.a
-		 libQt5ThemeSupport.a
-		 libQt5ServiceSupport.a
-		 libQt5XcbQpa.a
-		 libQt5EdidSupport.a
-		 )
+      SET(QT_LIBS
+         libqtharfbuzz.a
+         libqtpcre2.a
+         libQt5EventDispatcherSupport.a
+         libQt5ThemeSupport.a
+         libQt5ServiceSupport.a
+         libQt5XcbQpa.a
+         libQt5EdidSupport.a
+         )
 
-	  SET(OS_SPECIFIC_LIBS
-		 dl
-		 ${CMAKE_THREAD_LIBS_INIT}
-		 ${ZLIB_LIBRARIES}
-		 ${XCB_LIBRARIES}
-		 ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
-		 ${FREETYPE_LIBRARIES}
-		 ${FONTCONFIG_LIBRARIES}
-		 X11-xcb
-		 Xrender
-		 png
-		 Qt5::QXcbIntegrationPlugin
-		 Qt5::QICOPlugin
-		 ${X11_LIBRARIES}
-		 ${X11_Xi_LIB}
-		 )
+      SET(OS_SPECIFIC_LIBS
+         dl
+         ${CMAKE_THREAD_LIBS_INIT}
+         ${ZLIB_LIBRARIES}
+         ${XCB_LIBRARIES}
+         ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
+         ${FREETYPE_LIBRARIES}
+         ${FONTCONFIG_LIBRARIES}
+         X11-xcb
+         Xrender
+         png
+         Qt5::QXcbIntegrationPlugin
+         Qt5::QICOPlugin
+         ${X11_LIBRARIES}
+         ${X11_Xi_LIB}
+         )
 
-	  SET(QT_QUICK_LIBS
-		 ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
-		 ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
-		 ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
-		 ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
-		 ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
-		 ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
-		 ${QT5_QML_ROOT}/QtQuick/PrivateWidgets/libwidgetsplugin.a
-		 ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
-		 ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
-		 ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
-		 ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
-		 ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
-		 ${QT5_LIB_ROOT}/libQt5QuickControls2.a
-		 ${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
-	  )
+      SET(QT_QUICK_LIBS
+         ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
+         ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
+         ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
+         ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
+         ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
+         ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
+         ${QT5_QML_ROOT}/QtQuick/PrivateWidgets/libwidgetsplugin.a
+         ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
+         ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
+         ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
+         ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
+         ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
+         ${QT5_LIB_ROOT}/libQt5QuickControls2.a
+         ${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
+      )
    ENDIF( APPLE )
 ENDIF(WIN32)
 
 FOREACH(lib_name ${QT_LIBS})
    IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
-	  MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
+      MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
    ENDIF()
 
    LIST(APPEND OS_SPECIFIC_LIBS ${QT5_LIB_ROOT}/${lib_name})
