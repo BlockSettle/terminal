@@ -13,6 +13,7 @@ enum RequestType
    GenerateCCSeedRequestType            = 7;
    RevokeAuthAddressRequestType         = 8;
    ConfirmAuthAddressSubmitType         = 9;
+   FundCCGenAddrRequestType		= 10;
 }
 
 enum AddressNetworkType
@@ -184,4 +185,12 @@ message ConfirmAuthSubmitResponse
 {
    required string address = 1;
    optional string errorMsg = 2;
+}
+
+message FundCCGenAddrRequest
+{
+   required string   cc_product = 1;
+   required uint32   amount = 2;
+   required uint32   lot_size = 3;
+   optional string   reference = 4;
 }

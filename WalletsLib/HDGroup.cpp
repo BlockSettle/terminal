@@ -18,7 +18,7 @@ std::shared_ptr<hd::Leaf> hd::Group::getLeaf(hd::Path::Elem elem) const
 
 std::shared_ptr<hd::Leaf> hd::Group::getLeaf(const std::string &key) const
 {
-   return getLeaf(keyToPathElem(key));
+   return getLeaf(hd::Path::keyToElem(key));
 }
 
 std::vector<std::shared_ptr<bs::hd::Leaf>> hd::Group::getLeaves() const
@@ -59,7 +59,7 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(Path::Elem elem, const std::shar
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(const std::string &key, const std::shared_ptr<Node> &extNode)
 {
-   return createLeaf(keyToPathElem(key), extNode);
+   return createLeaf(hd::Path::keyToElem(key), extNode);
 }
 
 bool hd::Group::addLeaf(const std::shared_ptr<hd::Leaf> &leaf, bool signal)
@@ -111,26 +111,13 @@ bool hd::Group::deleteLeaf(const std::shared_ptr<bs::Wallet> &wallet)
 
 bool hd::Group::deleteLeaf(const std::string &key)
 {
-   return deleteLeaf(keyToPathElem(key));
+   return deleteLeaf(hd::Path::keyToElem(key));
 }
 
 void hd::Group::onLeafChanged()
 {
    needsCommit_ = true;
    emit changed();
-}
-
-hd::Path::Elem hd::Group::keyToPathElem(const std::string &key)
-{
-   hd::Path::Elem result = 0;
-   const std::string &str = (key.length() > 4) ? key.substr(0, 4) : key;
-   if (str.empty()) {
-      return result;
-   }
-   for (size_t i = 0; i < str.length(); i++) {
-      result |= static_cast<hd::Path::Elem>(str[str.length() - 1 - i]) << (i*8);
-   }
-   return result;
 }
 
 void hd::Group::setDB(const std::shared_ptr<LMDBEnv> &dbEnv, LMDB *db)

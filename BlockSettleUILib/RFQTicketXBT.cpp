@@ -12,6 +12,7 @@
 #include "CoinControlDialog.h"
 #include "CoinSelection.h"
 #include "CurrencyPair.h"
+#include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
@@ -327,7 +328,9 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
          balance.product = productToSpend;
          balance.productType = ProductGroupType::CCGroupType;
       } else {
-         balance.amount = assetManager_ ? assetManager_->getBalance(productToSpend.toStdString()) : 0.0;
+         const double divisor = std::pow(10, UiUtils::GetAmountPrecisionFX());
+         const double intBalance = std::floor((assetManager_ ? assetManager_->getBalance(productToSpend.toStdString()) : 0.0) * divisor);
+         balance.amount = intBalance / divisor;
          balance.product = productToSpend;
          balance.productType = ProductGroupType::FXGroupType;
       }
@@ -672,7 +675,7 @@ void RFQTicketXBT::submitButtonClicked()
 
    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    // just in case if 2 customers submit RFQ in exactly same ms
-   rfq.requestId = "blocksettle:" + std::to_string(rand() % 1000 ) +  std::to_string(timestamp.count());
+   rfq.requestId = "blocksettle:" + SecureBinaryData().GenerateRandom(8).toHexStr() +  std::to_string(timestamp.count());
 
   switch (currentGroupType_) {
    case ProductGroupType::GroupNotSelected:
@@ -994,7 +997,7 @@ void RFQTicketXBT::onCreateWalletClicked()
    bs::hd::Path path;
    path.append(bs::hd::purpose, true);
    path.append(bs::hd::BlockSettle_CC, true);
-   path.append(bs::hd::Group::keyToPathElem(getProduct().toStdString()), true);
+   path.append(getProduct().toStdString(), true);
    leafCreateReqId_ = signingContainer_->CreateHDLeaf(walletsManager_->GetPrimaryWallet(), path);
    if (leafCreateReqId_ == 0) {
       showHelp(tr("Create CC wallet request failed"));

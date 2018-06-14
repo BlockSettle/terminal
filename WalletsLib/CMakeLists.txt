@@ -25,5 +25,3 @@ TARGET_LINK_LIBRARIES(${CPP_WALLET_LIB_NAME}
    ${COMMON_LIB_NAME}
    Qt5::Core
 )
-
-qt5_use_modules( ${CPP_WALLET_LIB_NAME} Core )

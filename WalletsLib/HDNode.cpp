@@ -64,6 +64,24 @@ void hd::Path::append(Elem elem, bool hardened)
    }
 }
 
+hd::Path::Elem hd::Path::keyToElem(const std::string &key)
+{
+   hd::Path::Elem result = 0;
+   const std::string &str = (key.length() > 4) ? key.substr(0, 4) : key;
+   if (str.empty()) {
+      return result;
+   }
+   for (size_t i = 0; i < str.length(); i++) {
+      result |= static_cast<hd::Path::Elem>(str[str.length() - 1 - i]) << (i * 8);
+   }
+   return result;
+}
+
+void hd::Path::append(const std::string &key, bool hardened)
+{
+   append(keyToElem(key), hardened);
+}
+
 std::string hd::Path::toString(bool alwaysAbsolute) const
 {
    if (path_.empty()) {
