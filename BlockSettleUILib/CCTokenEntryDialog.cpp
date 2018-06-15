@@ -35,11 +35,11 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &CCTokenEntryDialog::accept);
 
    connect(ui_->lineEditToken, &QLineEdit::textEdited, this, &CCTokenEntryDialog::tokenChanged);
-   connect(ui_->lineEditToken, &QLineEdit::editingFinished, this, &CCTokenEntryDialog::tokenChanged);
+   //connect(ui_->lineEditToken, &QLineEdit::editingFinished, this, &CCTokenEntryDialog::tokenChanged);
 
    connect(ui_->lineEditOtpPassword, &QLineEdit::textEdited, this, &CCTokenEntryDialog::passwordChanged);
-   connect(ui_->lineEditOtpPassword, &QLineEdit::editingFinished, this, &CCTokenEntryDialog::passwordChanged);
-   
+   //connect(ui_->lineEditOtpPassword, &QLineEdit::editingFinished, this, &CCTokenEntryDialog::passwordChanged);
+
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
 
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
