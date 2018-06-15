@@ -97,35 +97,12 @@ void ZmqStreamServerConnection::onDataFrameReceived(const std::string& clientId,
 
 bool ZmqStreamServerConnection::sendRawData(const std::string& clientId, const std::string& rawData)
 {
-   return sendRawData(clientId, rawData.c_str(), rawData.size());
-}
-
-bool ZmqStreamServerConnection::sendRawData(const std::string& clientId, const char* data, size_t size)
-{
    if (!isActive()) {
       logger_->error("[ZmqStreamServerConnection::sendRawData] cound not send. not connected");
       return false;
    }
 
-   FastLock locker(socketLockFlag_);
-
-   // XXX - since rate will not be huge and will go through one thread for now
-   // send directly to stream socket
-   // ZMQ_SNDMORE - should be set every time for stream socket
-
-   int result = zmq_send(dataSocket_.get(), clientId.c_str(), clientId.size(), ZMQ_SNDMORE);
-   if (result != clientId.size()) {
-      logger_->error("[ZmqStreamServerConnection::sendRawData] {} failed to send client id {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   result = zmq_send(dataSocket_.get(), data, size, ZMQ_SNDMORE);
-   if (result != size) {
-      logger_->error("[ZmqStreamServerConnection::sendRawData] {} failed to send data frame {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
+   QueueDataToSend(clientId, rawData, true);
 
    return true;
 }

@@ -19,11 +19,6 @@ bool ActiveStreamClient::sendRawData(const std::string& data)
    return serverConnection_->sendRawData(connectionId_, data);
 }
 
-bool ActiveStreamClient::sendRawData(const char* data, size_t size)
-{
-   return serverConnection_->sendRawData(connectionId_, data, size);
-}
-
 void ActiveStreamClient::notifyOnData(const std::string& data)
 {
    serverConnection_->notifyListenerOnData(connectionId_, data);

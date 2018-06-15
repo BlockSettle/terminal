@@ -78,7 +78,6 @@ private:
 }; // class DelegateForNameColumn
 
 
-
 CoinControlWidget::CoinControlWidget(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CoinControlWidget())
@@ -130,11 +129,14 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
 
    auto ccHeader = new CCHeader(selectedInputs->GetTotalTransactionsCount(), Qt::Horizontal, ui_->treeViewUTXO);
    ccHeader->setStretchLastSection(true);
+   ccHeader->setSectionsClickable(true);
+   ui_->treeViewUTXO->setSortingEnabled(true);
    ui_->treeViewUTXO->setHeader(ccHeader);
    ui_->treeViewUTXO->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    connect(ccHeader, &CCHeader::stateChanged, coinControlModel_, &CoinControlModel::selectAll);
    connect(this, &CoinControlWidget::coinSelectionChanged, ccHeader, &CCHeader::onSelectionChanged);
+   connect(ccHeader, SIGNAL(sectionClicked(int)), ui_->treeViewUTXO, SLOT(sortByColumn(int)));
 
    connect(coinControlModel_, &CoinControlModel::selectionChanged, this, &CoinControlWidget::updateSelectedTotals);
    connect(ui_->checkBoxUseAllSelected, &QCheckBox::stateChanged, this, &CoinControlWidget::onAutoSelClicked);
