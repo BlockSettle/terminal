@@ -30,7 +30,6 @@ public:
    {
    }
 
-
    bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option,
                     const QModelIndex &index) Q_DECL_OVERRIDE
    {
@@ -40,21 +39,10 @@ public:
             {
                QMouseEvent *e = static_cast<QMouseEvent*>(event);
 
-               if (e->button() == Qt::LeftButton) {
-                  const QPoint pos = e->pos();
+               if (e->button() == Qt::LeftButton && option.rect.contains(e->pos())) {
+                  mouseButtonPressed_ = true;
 
-                  QRect textRect = QApplication::style()->subElementRect(QStyle::SE_ItemViewItemText,
-                                                                          &option);
-
-                  if (textRect.contains(pos)) {
-                     mouseButtonPressed_ = true;
-
-                     return false;
-                  } else {
-                     return QStyledItemDelegate::editorEvent(event, model, option, index);
-                  }
-               } else {
-                  return QStyledItemDelegate::editorEvent(event, model, option, index);
+                  return false;
                }
             }
                break;
@@ -63,38 +51,28 @@ public:
             {
                QMouseEvent *e = static_cast<QMouseEvent*>(event);
 
-               if (e->button() == Qt::LeftButton) {
-                  const QPoint pos = e->pos();
+               if (e->button() == Qt::LeftButton && option.rect.contains(e->pos())
+                  && mouseButtonPressed_) {
+                  mouseButtonPressed_ = false;
 
-                  QRect textRect = QApplication::style()->subElementRect(QStyle::SE_ItemViewItemText,
-                                                                          &option);
+                  const int currentState = model->data(index, Qt::CheckStateRole).toInt();
+                  model->setData(index, (currentState == Qt::Unchecked ?
+                                             Qt::Checked : Qt::Unchecked),
+                                 Qt::CheckStateRole);
 
-                  if (textRect.contains(pos) && mouseButtonPressed_) {
-                     mouseButtonPressed_ = false;
-
-                     const int currentState = model->data(index, Qt::CheckStateRole).toInt();
-                     model->setData(index, (currentState == Qt::Unchecked ?
-                                               Qt::Checked : Qt::Unchecked),
-                                    Qt::CheckStateRole);
-
-                     return false;
-                  } else {
-                     mouseButtonPressed_ = false;
-
-                     return QStyledItemDelegate::editorEvent(event, model, option, index);
-                  }
+                  return false;
                } else {
-                  return QStyledItemDelegate::editorEvent(event, model, option, index);
+                  mouseButtonPressed_ = false;
                }
             }
                break;
 
             default :
-               return QStyledItemDelegate::editorEvent(event, model, option, index);
+               break;
          }
-      } else {
-         return QStyledItemDelegate::editorEvent(event, model, option, index);
       }
+
+      return QStyledItemDelegate::editorEvent(event, model, option, index);
    }
 
 private:
@@ -149,7 +127,7 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
 
    coinControlModel_ = new CoinControlModel(selectedInputs);
    ui_->treeViewUTXO->setModel(coinControlModel_);
-
+   ui_->treeViewUTXO->setExpandsOnDoubleClick(false);
    ui_->treeViewUTXO->setItemDelegateForColumn(0, new DelegateFor0Column(ui_->treeViewUTXO));
 
    auto ccHeader = new CCHeader(selectedInputs->GetTotalTransactionsCount(), Qt::Horizontal, ui_->treeViewUTXO);
