@@ -520,7 +520,7 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
    ui_->pushButtonCreate->setEnabled(isTxValid
       && isSignerReady
       && !broadcasting_
-      && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNative->isChecked()
+      && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
          || (selectedChangeAddress_.isValid())));
 }
 
