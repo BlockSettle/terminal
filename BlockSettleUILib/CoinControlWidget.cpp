@@ -13,25 +13,23 @@
 
 
 //
-// DelegateFor0Column
+// DelegateForNameColumn
 //
 
-//! Delegate for the first (0) column.
-class DelegateFor0Column Q_DECL_FINAL : public QStyledItemDelegate
+//! Delegate for the first (0) column with names, adresses.
+class DelegateForNameColumn final : public QStyledItemDelegate
 {
 public:
-   explicit DelegateFor0Column(QObject *parent)
+   explicit DelegateForNameColumn(QObject *parent)
       : QStyledItemDelegate(parent)
       , mouseButtonPressed_(false)
    {
    }
 
-   virtual ~DelegateFor0Column()
-   {
-   }
+   ~DelegateForNameColumn() noexcept override = default;
 
    bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option,
-                    const QModelIndex &index) Q_DECL_OVERRIDE
+                    const QModelIndex &index) override
    {
       if (index.isValid()) {
          switch (event->type()) {
@@ -77,7 +75,7 @@ public:
 
 private:
    bool mouseButtonPressed_;
-}; // class DelegateFor0Column
+}; // class DelegateForNameColumn
 
 
 
@@ -128,7 +126,7 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
    coinControlModel_ = new CoinControlModel(selectedInputs);
    ui_->treeViewUTXO->setModel(coinControlModel_);
    ui_->treeViewUTXO->setExpandsOnDoubleClick(false);
-   ui_->treeViewUTXO->setItemDelegateForColumn(0, new DelegateFor0Column(ui_->treeViewUTXO));
+   ui_->treeViewUTXO->setItemDelegateForColumn(0, new DelegateForNameColumn(ui_->treeViewUTXO));
 
    auto ccHeader = new CCHeader(selectedInputs->GetTotalTransactionsCount(), Qt::Horizontal, ui_->treeViewUTXO);
    ccHeader->setStretchLastSection(true);
