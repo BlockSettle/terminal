@@ -1219,7 +1219,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QRadioButton" name="radioButtonNewAddress">
+             <widget class="QRadioButton" name="radioButtonNewAddrNative">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -1227,10 +1227,26 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>New Address</string>
+               <string>New Native SegWit</string>
               </property>
               <property name="checked">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radioButtonNewAddrNested">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>New Nested SegWit</string>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -2280,7 +2296,7 @@
   <tabstop>pushButtonMax</tabstop>
   <tabstop>textEditComment</tabstop>
   <tabstop>pushButtonAddOutput</tabstop>
-  <tabstop>radioButtonNewAddress</tabstop>
+  <tabstop>radioButtonNewAddrNative</tabstop>
   <tabstop>radioButtonExistingAddress</tabstop>
   <tabstop>pushButtonCreate</tabstop>
   <tabstop>pushButtonSelectInputs</tabstop>
