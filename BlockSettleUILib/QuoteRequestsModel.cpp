@@ -8,6 +8,10 @@
 #include "UiUtils.h"
 
 
+static const QColor c_redColor = QColor(0xcf, 0x29, 0x2e);
+static const QColor c_greenColor = QColor(0x22, 0xC0, 0x64);
+
+
 QString QuoteRequestsModel::Header::toString(QuoteRequestsModel::Header::Index h)
 {
    switch (h) {
@@ -157,9 +161,9 @@ QBrush QuoteRequestsModel::colorForQuotedPrice(double quotedPrice, double bestQP
       return {};
    }
    if (own && qFuzzyCompare(quotedPrice, bestQPrice)) {
-      return Qt::darkGreen;
+      return c_greenColor;
    }
-   return Qt::darkRed;
+   return c_redColor;
 }
 
 void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn)
@@ -510,10 +514,10 @@ void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::
 
          if (!qFuzzyIsNull(prevPrice)) {
             if (indicPrice > prevPrice) {
-               grp->child(index, Header::IndicPx)->setBackground(Qt::darkGreen);
+               grp->child(index, Header::IndicPx)->setBackground(c_greenColor);
             }
             else if (indicPrice < prevPrice) {
-               grp->child(index, Header::IndicPx)->setBackground(Qt::darkRed);
+               grp->child(index, Header::IndicPx)->setBackground(c_redColor);
             }
          }
       }
