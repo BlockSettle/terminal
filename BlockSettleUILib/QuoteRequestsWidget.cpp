@@ -87,7 +87,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    ui_->treeViewQuoteRequests->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Status, new ProgressDelegate());
 
-   auto * doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
+   auto *doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::QuotedPx,
       doNotDrawSelectionDelegate);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::IndicPx,
