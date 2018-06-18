@@ -291,7 +291,7 @@ unsigned int XBTSettlementTransactionWidget::createPayoutTx(const BinaryData& pa
       const auto txReq = wallet->CreatePayoutTXRequest(wallet->GetInputFromTX(settlAddr_, payinHash, qty), recvAddr
          , transactionData_->GetTransactionSummary().feePerByte);
       const auto authAddr = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
-      logger_->debug("[XBTSettlementTransactionWidget] pay-out fee = {}", txReq.fee);
+      logger_->debug("[XBTSettlementTransactionWidget] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
       std::string password;
 
       if (clientSells_) {
