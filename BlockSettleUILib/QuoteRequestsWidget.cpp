@@ -10,6 +10,28 @@
 #include "UiUtils.h"
 
 
+//
+// DoNotDrawSelectionDelegate
+//
+
+//! This delegate just clears selection bit and paints item as
+//! unselected always.
+class DoNotDrawSelectionDelegate final : public QStyledItemDelegate
+{
+public:
+   explicit DoNotDrawSelectionDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
+
+   void paint(QPainter *painter, const QStyleOptionViewItem &opt,
+              const QModelIndex &index) const override
+   {
+      QStyleOptionViewItem changedOpt = opt;
+      changedOpt.state &= ~(QStyle::State_Selected);
+
+      QStyledItemDelegate::paint(painter, changedOpt, index);
+   }
+}; // class DoNotDrawSelectionDelegate
+
+
 QuoteRequestsWidget::QuoteRequestsWidget(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::QuoteRequestsWidget())
@@ -64,6 +86,16 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
 
    ui_->treeViewQuoteRequests->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Status, new ProgressDelegate());
+
+   auto *doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::QuotedPx,
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::IndicPx,
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::BestPx,
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Empty,
+      doNotDrawSelectionDelegate);
 }
 
 void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
