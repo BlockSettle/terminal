@@ -89,7 +89,8 @@ void RequestingQuoteWidget::ticker()
    }
    else {
       ui_->progressBar->setValue(timeDiff);
-      ui_->progressBar->setFormat(tr("%1 second(s) remaining").arg(QString::number(timeDiff/1000)));
+      ui_->progressBar->setFormat(tr("%1 second(s) remaining")
+         .arg(QString::number(timeDiff > 0 ? timeDiff/1000 : 0)));
    }
 }
 
