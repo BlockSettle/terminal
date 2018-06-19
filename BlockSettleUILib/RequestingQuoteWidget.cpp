@@ -28,6 +28,7 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
    ui_->labelQuoteValue->show();
 
    ui_->pushButtonAccept->hide();
+   ui_->labelHint->clear();
    ui_->labelHint->show();
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
@@ -149,9 +150,8 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
       ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price, assetType));
       ui_->labelQuoteValue->show();
 
-      if (quote.assetType == bs::network::Asset::SpotFX) {
+      if (quote.assetType == bs::network::Asset::SpotFX)
          ui_->labelHint->clear();
-      }
 
       double value = rfq_.quantity * quote.price;
 
@@ -186,13 +186,14 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
          .arg(contrProductString));
 
       if (rfq_.side == bs::network::Side::Buy) {
-         balanceOk_ = (value < assetManager_->getBalance(contrProductString.toStdString()));
+         const auto currency = contrProductString.toStdString();
+         const auto balance = assetManager_->getBalance(currency);
+         balanceOk_ = (value < balance);
          ui_->pushButtonAccept->setEnabled(balanceOk_);
-         if (!balanceOk_) {
-            ui_->labelHint->setText(tr("Unable to accept - exceeds your balance on %1").arg(contrProductString));
-         } else {
-            ui_->labelHint->setText(tr("Balance on %1 is sufficient").arg(contrProductString));
-         }
+         if (!balanceOk_)
+            ui_->labelHint->setText(tr("Insufficient %1 balance")
+               .arg(QString::number(balance, 'f',
+                  (currency == bs::network::XbtCurrency ? 8 : 2))));
       }
 
       return true;
@@ -206,7 +207,6 @@ void RequestingQuoteWidget::onQuoteCancelled(const QString &reqId, bool byUser)
       quote_ = bs::network::Quote();
       ui_->labelQuoteValue->setText(tr("Waiting for quote..."));
       ui_->labelDetails->clear();
-      ui_->labelHint->setText(tr("Previous quote was pulled by originator"));
    }
 }
 
