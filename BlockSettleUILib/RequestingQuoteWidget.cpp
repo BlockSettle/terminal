@@ -164,8 +164,6 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
       QString contrProductString;
       QString valueString;
 
-      QString priceString;
-
       CurrencyPair cp(rfq_.security);
 
       if (cp.NumCurrency() != rfq_.product) {
@@ -177,10 +175,7 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
       valueString = UiUtils::displayAmountForProduct(value, contrProductString, rfq_.assetType);
 
-      priceString = UiUtils::displayPriceForAssetType(quote.price, quote.assetType);
-
-      ui_->labelDetails->setText(tr("%1\n%2 %3 %4\n%5 %6 %7")
-         .arg(priceString)
+      ui_->labelDetails->setText(tr("%1 %2 %3\n%4 %5 %6")
          .arg((rfq_.side == bs::network::Side::Buy) ? tr("Receive") : tr("Deliver"))
          .arg(productAmountString)
          .arg(productString)
