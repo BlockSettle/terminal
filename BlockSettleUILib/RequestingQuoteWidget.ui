@@ -481,13 +481,29 @@
                <string>TextLabel</string>
               </property>
               <property name="alignment">
-               <set>Qt::AlignCenter</set>
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelHint">
+              <property name="text">
+               <string>As the request is priced, the most competitive quote will be displayed.</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="subtleLabel" stdset="0">
+               <bool>true</bool>
+              </property>
+              <property name="smallPrint" stdset="0">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -548,22 +564,6 @@
            </property>
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="labelHint">
-           <property name="text">
-            <string>As the request is priced, the most competitive quote will be displayed.</string>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-           <property name="subtleLabel" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="smallPrint" stdset="0">
-            <bool>true</bool>
            </property>
           </widget>
          </item>
