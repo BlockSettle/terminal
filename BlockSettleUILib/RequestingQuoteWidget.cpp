@@ -176,12 +176,12 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
       priceString = UiUtils::displayPriceForAssetType(quote.price, quote.assetType);
 
-      ui_->labelDetails->setText(tr("%1 %2 %3 @ %4 - %5 %6 %7")
-         .arg(tr(bs::network::Side::toString(rfq_.side)))
+      ui_->labelDetails->setText(tr("%1\n%2 %3 %4\n%5 %6 %7")
+         .arg(priceString)
+         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Receive") : tr("Deliver"))
          .arg(productAmountString)
          .arg(productString)
-         .arg(priceString)
-         .arg((rfq_.side == bs::network::Side::Buy) ? tr("deliver") : tr("receive"))
+         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Deliver") : tr("Receive"))
          .arg(valueString)
          .arg(contrProductString));
 
