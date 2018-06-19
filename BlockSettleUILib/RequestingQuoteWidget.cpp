@@ -175,15 +175,6 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
       valueString = UiUtils::displayAmountForProduct(value, contrProductString, rfq_.assetType);
 
-      ui_->labelDetails->setText(tr("%1 %2 %3\n%4 %5 %6")
-         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Receive") : tr("Deliver"))
-         .arg(productAmountString)
-         .arg(productString)
-         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Deliver") : tr("Receive"))
-         .arg(valueString)
-         .arg(contrProductString));
-      ui_->labelDetails->show();
-
       if (rfq_.side == bs::network::Side::Buy) {
          const auto currency = contrProductString.toStdString();
          const auto balance = assetManager_->getBalance(currency);
@@ -196,6 +187,18 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
             ui_->labelHint->show();
          }
       }
+
+      if (rfq_.side == bs::network::Side::Buy && !balanceOk_)
+         return true;
+
+      ui_->labelDetails->setText(tr("%1 %2 %3\n%4 %5 %6")
+         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Receive") : tr("Deliver"))
+         .arg(productAmountString)
+         .arg(productString)
+         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Deliver") : tr("Receive"))
+         .arg(valueString)
+         .arg(contrProductString));
+      ui_->labelDetails->show();
 
       return true;
    }
