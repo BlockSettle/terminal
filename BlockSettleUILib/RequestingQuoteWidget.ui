@@ -44,21 +44,6 @@
       </size>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="spacing">
-       <number>10</number>
-      </property>
-      <property name="leftMargin">
-       <number>10</number>
-      </property>
-      <property name="topMargin">
-       <number>10</number>
-      </property>
-      <property name="rightMargin">
-       <number>10</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="minimumSize">
@@ -73,23 +58,8 @@
         <property name="wellGroupBoxWithButtonBar" stdset="0">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <property name="spacing">
-          <number>5</number>
-         </property>
-         <property name="leftMargin">
-          <number>5</number>
-         </property>
-         <property name="topMargin">
-          <number>5</number>
-         </property>
-         <property name="rightMargin">
-          <number>5</number>
-         </property>
-         <property name="bottomMargin">
-          <number>5</number>
-         </property>
-         <item>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0" colspan="2">
           <widget class="QWidget" name="horizontalWidget_2" native="true">
            <property name="minimumSize">
             <size>
@@ -113,45 +83,10 @@
             <property name="bottomMargin">
              <number>0</number>
             </property>
-            <item>
-             <widget class="QLabel" name="label_5">
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>100</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Quantity</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="labelQuantity">
-              <property name="text">
-               <string>TextLabel</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-              <property name="whiteLabel" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="1" column="0" colspan="2">
           <widget class="QWidget" name="horizontalWidget_3" native="true">
            <property name="minimumSize">
             <size>
@@ -213,7 +148,7 @@
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="2" column="0" colspan="2">
           <widget class="QWidget" name="horizontalWidget_4" native="true">
            <property name="minimumSize">
             <size>
@@ -275,7 +210,7 @@
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="3" column="0" colspan="2">
           <widget class="QWidget" name="horizontalWidget_5" native="true">
            <property name="minimumSize">
             <size>
@@ -337,7 +272,7 @@
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="4" column="0">
           <widget class="QWidget" name="horizontalWidget" native="true">
            <property name="minimumSize">
             <size>
@@ -371,20 +306,55 @@
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QLabel" name="labelSide">
-              <property name="text">
-               <string>TextLabel</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-              <property name="whiteLabel" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
            </layout>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLabel" name="labelSide">
+           <property name="text">
+            <string>TextLabel</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>100</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Quantity</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLabel" name="labelQuantity">
+           <property name="text">
+            <string>TextLabel</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
         </layout>
