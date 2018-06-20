@@ -6,10 +6,7 @@
 #include "QuoteRequestsWidget.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
-
-
-static const QColor c_redColor = QColor(0xcf, 0x29, 0x2e);
-static const QColor c_greenColor = QColor(0x22, 0xC0, 0x64);
+#include "Colors.h"
 
 
 QString QuoteRequestsModel::Header::toString(QuoteRequestsModel::Header::Index h)
