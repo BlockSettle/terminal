@@ -451,11 +451,16 @@ void CreateTransactionDialogAdvanced::preSetValue(const double value)
 void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addressString)
 {
    try {
-      bs::Address address{addressString};
+      bs::Address address{addressString.trimmed()};
       currentAddressValid_ = address.isValid();
    } catch (...) {
       currentAddressValid_ = false;
    }
+
+   if (currentAddressValid_)
+      UiUtils::setWrongState(ui_->lineEditAddress, false);
+   else
+      UiUtils::setWrongState(ui_->lineEditAddress, true);
 
    validateAddOutputButton();
 }
