@@ -13,7 +13,6 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "XbtAmountValidator.h"
-#include "Colors.h"
 
 #include <QFileDialog>
 #include <QDebug>
