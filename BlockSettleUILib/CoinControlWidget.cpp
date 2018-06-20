@@ -100,7 +100,8 @@ void CoinControlWidget::onAutoSelClicked(int state)
    if (state == Qt::Checked) {
       ui_->labelTotalAmount->setText(coinControlModel_->GetTotalBalance());
       ui_->labelTotalTransactions->clear();
-      emit coinSelectionChanged(MAXSIZE_T);
+      coinControlModel_->clearSelection();
+      emit coinSelectionChanged(0);
    }
    else {
       updateSelectedTotals();
