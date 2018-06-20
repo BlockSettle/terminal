@@ -13,6 +13,7 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "XbtAmountValidator.h"
+#include "Colors.h"
 
 #include <QFileDialog>
 #include <QDebug>
@@ -121,13 +122,17 @@ QPushButton *CreateTransactionDialogSimple::pushButtonCancel() const
 void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressString)
 {
    try {
-      bs::Address address{addressString};
+      bs::Address address{addressString.trimmed()};
+      transactionData_->UpdateRecipientAddress(recipientId_, address);
       if (address.isValid()) {
          ui_->pushButtonMax->setEnabled(true);
-         transactionData_->UpdateRecipientAddress(recipientId_, address);
+         UiUtils::setWrongState(ui_->lineEditAddress, false);
          return;
+      } else {
+         UiUtils::setWrongState(ui_->lineEditAddress, true);
       }
    } catch(...) {
+      UiUtils::setWrongState(ui_->lineEditAddress, true);
    }
 
    ui_->pushButtonMax->setEnabled(false);
