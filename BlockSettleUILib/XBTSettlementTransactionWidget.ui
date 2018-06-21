@@ -132,7 +132,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -203,7 +203,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -274,7 +274,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -345,7 +345,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -416,7 +416,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -487,7 +487,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -558,7 +558,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -653,7 +653,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -683,7 +683,7 @@
                <string>---</string>
               </property>
               <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -727,7 +727,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -757,7 +757,7 @@
                <string>---</string>
               </property>
               <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -825,7 +825,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -896,7 +896,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -967,7 +967,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>210</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>

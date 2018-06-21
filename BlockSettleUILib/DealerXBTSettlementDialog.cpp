@@ -39,23 +39,11 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    ui_->labelWallet->setText(QString::fromStdString("<b>%1</b>").arg(QString::fromStdString(settlContainer_->walletName())));
 
-   const auto addressToDisplay = UiUtils::displayShortAddress(settlContainer_->receiveAddress().display(), 20);
-
    if (settlContainer_->weSell()) {
-      ui_->labelWalletDescription->setText(tr("Sending wallet:"));
-
-      ui_->labelAddressDescription->setText(tr("Settlement address:"));
-      ui_->labelAddress->setText(QString::fromStdString("<b>%1</b>").arg(addressToDisplay));
-
-      ui_->labelTransactionDescription->setText(tr("To spend:"));
+      ui_->labelTransactionDescription->setText(tr("Deliver"));
       ui_->labelTransactioAmount->setText(UiUtils::displayQuantity(settlContainer_->amount(), UiUtils::XbtCurrency));
    } else {
-      ui_->labelWalletDescription->setText(tr("Receiving wallet:"));
-
-      ui_->labelAddressDescription->setText(tr("Receiving address:"));
-      ui_->labelAddress->setText(QString::fromStdString("<b>%1</b>").arg(addressToDisplay));
-
-      ui_->labelTransactionDescription->setText(tr("To receive:"));
+      ui_->labelTransactionDescription->setText(tr("Receive"));
       ui_->labelTransactioAmount->setText(tr("Waiting for pay-in TX"));
    }
 
@@ -101,33 +89,33 @@ void DealerXBTSettlementDialog::onRequestorAddressStateChanged(AddressVerificati
    switch (state)
    {
    case AddressVerificationState::VerificationFailed:
-      color = QString::fromStdString("red");
+      color = QString::fromStdString("#CF292E");
       stateText = tr("Verification failed");
       break;
    case AddressVerificationState::InProgress:
-      color = QString::fromStdString("yellow");
+      color = QString::fromStdString("#F7B03A");
       stateText = tr("In progress");
       break;
    case AddressVerificationState::NotSubmitted:
-      color = QString::fromStdString("red");
+      color = QString::fromStdString("#CF292E");
       stateText = tr("Not submitted to BS");
       break;
    case AddressVerificationState::Submitted:
    case AddressVerificationState::PendingVerification:
    case AddressVerificationState::VerificationSubmitted:
-      color = QString::fromStdString("red");
+      color = QString::fromStdString("#CF292E");
       stateText = tr("Not verified");
       break;
    case AddressVerificationState::Verified:
-      color = QString::fromStdString("darkGreen");
+      color = QString::fromStdString("#22C064");
       stateText = tr("Verified");
       break;
    case AddressVerificationState::Revoked:
-      color = QString::fromStdString("red");
+      color = QString::fromStdString("#CF292E");
       stateText = tr("Revoked");
       break;
    case AddressVerificationState::RevokedByBS:
-      color = QString::fromStdString("red");
+      color = QString::fromStdString("#CF292E");
       stateText = tr("Revoked by BS");
       break;
    }

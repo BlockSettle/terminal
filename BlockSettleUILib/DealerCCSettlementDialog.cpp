@@ -43,14 +43,11 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
 
    ui_->labelTotal->setText(UiUtils::displayAmount(settlContainer_->quantity() * settlContainer_->price()));
 
-   ui_->labelReceiptAddress->setText(QString::fromStdString(reqRecvAddr));
-
    settlContainer_->activate();
 
-   const auto strValid = tr("<span style=\"color: darkGreen;\">valid</span>");
-   const auto strInvalid = tr("<span style=\"color: red;\">invalid</span>");
+   const auto strValid = tr("<span style=\"color: #22C064;\">Verified</span>");
+   const auto strInvalid = tr("<span style=\"color: #CF292E;\">Invalid</span>");
    ui_->labelCounterpartyTx->setText(settlContainer_->foundRecipAddr() ? strValid : strInvalid);
-   ui_->labelCounterpartyAmount->setText(settlContainer_->isAmountValid() ? strValid : strInvalid);
 
    ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(settlContainer_->GetSigningWalletName()));
 
