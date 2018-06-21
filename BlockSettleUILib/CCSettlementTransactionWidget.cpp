@@ -21,8 +21,8 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CCSettlementTransactionWidget())
    , timer_(this)
-   , sValid(tr("<span style=\"color: darkGreen;\">valid</span>"))
-   , sInvalid(tr("<span style=\"color: red;\">invalid</span>"))
+   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
 
@@ -110,9 +110,8 @@ void CCSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
 
    ui_->labelPrice->setText(UiUtils::displayPriceCC(quote.price));
 
-   ui_->labelTotalValue->setText(tr("%1 %2")
-      .arg(UiUtils::displayAmount(amount_ * price_))
-      .arg(QString::fromStdString(bs::network::XbtCurrency)));
+   ui_->labelTotalValue->setText(tr("%1")
+      .arg(UiUtils::displayAmount(amount_ * price_)));
 
 
    clientSells_ = (rfq.side == bs::network::Side::Sell);
@@ -137,7 +136,6 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    requesterTx_ = BinaryData::CreateFromHex(rfq.coinTxInput);
 
    // addDetailRow(tr("Receipt address"), QString::fromStdString(dealerAddress_));
-   ui_->labelTransactionAmount->setText(UiUtils::displayQuantity(rfq.quantity, rfq.product));
 
    if (!clientSells_) {
       if ((amount_ * price_) > assetManager_->getBalance(bs::network::XbtCurrency, transactionData_->GetSigningWallet())) {
@@ -178,7 +176,6 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    }
 
    ui_->labelDelaerTxHalf->setText(foundRecipAddr ? sValid : sInvalid);
-   ui_->labelDealersAmount->setText(amountValid ? sValid : sInvalid);
 
    if (genAddr.isNull()) {
       emit genAddrVerified(false);
