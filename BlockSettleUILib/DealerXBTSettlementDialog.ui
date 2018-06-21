@@ -140,6 +140,9 @@
               <property name="text">
                <string>...</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -198,6 +201,9 @@
              <widget class="QLabel" name="labelSecurityId">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -258,6 +264,9 @@
               <property name="text">
                <string>...</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -316,6 +325,9 @@
              <widget class="QLabel" name="labelSide">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -376,6 +388,9 @@
               <property name="text">
                <string>...</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -435,6 +450,9 @@
               <property name="text">
                <string>...</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -493,6 +511,9 @@
              <widget class="QLabel" name="labelTotal">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -573,6 +594,9 @@
              <widget class="QLabel" name="labelRequestorAuthAddress">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -694,6 +718,9 @@
              <widget class="QLabel" name="labelTransactioAmount">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>

@@ -145,6 +145,9 @@
               <property name="text">
                <string>Product Group</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -157,6 +160,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -207,6 +213,9 @@
               <property name="text">
                <string>Security ID</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -219,6 +228,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -269,6 +281,9 @@
               <property name="text">
                <string>Product</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -281,6 +296,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -331,6 +349,9 @@
               <property name="text">
                <string>Side</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -343,6 +364,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -393,6 +417,9 @@
               <property name="text">
                <string>Quantity</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -405,6 +432,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -455,6 +485,9 @@
               <property name="text">
                <string>Price</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -467,6 +500,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -517,6 +553,9 @@
               <property name="text">
                <string>Total Value (XBT)</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -529,6 +568,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -603,6 +645,9 @@
               <property name="text">
                <string>Delivery</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -615,6 +660,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -665,6 +713,9 @@
               <property name="text">
                <string>Payment</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -677,6 +728,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -727,6 +781,9 @@
               <property name="text">
                <string>Genesis Address</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -739,6 +796,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
