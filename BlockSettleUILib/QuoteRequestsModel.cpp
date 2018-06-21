@@ -549,5 +549,5 @@ QVariant QuoteGroupReqItem::data(int role) const
 QuoteReqItem::QuoteReqItem(const std::shared_ptr<bs::StatsCollector> &sc, const QString &text, const QString &key)
    : QuoteGroupReqItem(sc, text, key)
 {
-   setFlags(Qt::ItemNeverHasChildren);
+//   setFlags(Qt::ItemNeverHasChildren);  // currently inhibits item selection
 }

@@ -62,24 +62,11 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
 
    ui_->treeViewQuoteRequests->setModel(sortModel_);
 
-   connect(model_, &QAbstractItemModel::rowsInserted, [this]() {
-      ui_->treeViewQuoteRequests->expandAll();
-      for (int i = 0; i < sortModel_->columnCount(); i++) {
-         ui_->treeViewQuoteRequests->resizeColumnToContents(i);
-      }
-   });
-   connect(model_, &QAbstractItemModel::rowsRemoved, [this] {
-      const auto &indices = ui_->treeViewQuoteRequests->selectionModel()->selectedIndexes();
-      if (indices.isEmpty()) {
-         emit Selected(bs::network::QuoteReqNotification(), 0, 0);
-      }
-      else {
-         onQuoteReqNotifSelected(indices.first());
-      }
-   });
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
    });
+   connect(model_, &QAbstractItemModel::rowsInserted, this, &QuoteRequestsWidget::onRowsInserted);
+   connect(model_, &QAbstractItemModel::rowsRemoved, this, &QuoteRequestsWidget::onRowsRemoved);
    connect(sortModel_, &QSortFilterProxyModel::rowsInserted, this, &QuoteRequestsWidget::onRowsChanged);
    connect(sortModel_, &QSortFilterProxyModel::rowsRemoved, this, &QuoteRequestsWidget::onRowsChanged);
 
@@ -227,6 +214,32 @@ void QuoteRequestsWidget::onRowsChanged()
    NotificationCenter::notify(bs::ui::NotifyType::DealerQuotes, { cntChildren });
 }
 
+void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, int last)
+{
+   for (int row = first; row <= last; row++) {
+      const auto &index = model_->index(row, 0, parent);
+      if (index.data(QuoteRequestsModel::Role::ReqId).isNull()) {
+         ui_->treeViewQuoteRequests->expandAll();
+         ui_->treeViewQuoteRequests->resizeColumnToContents(0);
+      }
+      else {
+         for (int i = 0; i < sortModel_->columnCount(); i++) {
+            ui_->treeViewQuoteRequests->resizeColumnToContents(i);
+         }
+      }
+   }
+}
+
+void QuoteRequestsWidget::onRowsRemoved(const QModelIndex &, int, int)
+{
+   const auto &indices = ui_->treeViewQuoteRequests->selectionModel()->selectedIndexes();
+   if (indices.isEmpty()) {
+      emit Selected(bs::network::QuoteReqNotification(), 0, 0);
+   }
+   else {
+      onQuoteReqNotifSelected(indices.first());
+   }
+}
 
 bs::SecurityStatsCollector::SecurityStatsCollector(const std::shared_ptr<ApplicationSettings> appSettings, ApplicationSettings::Setting param)
    : appSettings_(appSettings), param_(param)
