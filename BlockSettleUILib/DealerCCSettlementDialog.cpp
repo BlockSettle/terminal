@@ -6,6 +6,8 @@
 #include "MetaData.h"
 #include "PyBlockDataManager.h"
 #include "UiUtils.h"
+#include "WalletsManager.h"
+#include "HDWallet.h"
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/spdlog.h>
@@ -13,7 +15,9 @@
 
 DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<DealerCCSettlementContainer> &container
-      , const std::string &reqRecvAddr, QWidget* parent)
+      , const std::string &reqRecvAddr
+      , std::shared_ptr<WalletsManager> walletsManager
+      , QWidget* parent)
    : BaseDealerSettlementDialog(logger, container, parent)
    , ui_(new Ui::DealerCCSettlementDialog())
    , settlContainer_(container)
@@ -49,7 +53,9 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    const auto strInvalid = tr("<span style=\"color: #CF292E;\">Invalid</span>");
    ui_->labelCounterpartyTx->setText(settlContainer_->foundRecipAddr() ? strValid : strInvalid);
 
-   ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(settlContainer_->GetSigningWalletName()));
+   ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet")
+      .arg(QString::fromStdString(walletsManager->GetHDRootForLeaf(
+         settlContainer_->GetSigningWallet()->GetWalletId())->getName())));
 
    ui_->verticalWidgetPassword->hide();
    connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &DealerCCSettlementDialog::validateGUI);

@@ -151,16 +151,20 @@ void XBTSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
       const auto rootSellingWalletId = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId())->getWalletId();
       sellFromPrimary_ = rootAuthWalletId == rootSellingWalletId;
 
-      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-In").arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletName())));
+      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-In")
+         .arg(QString::fromStdString(walletsManager_->GetHDRootForLeaf(
+            transactionData_->GetWallet()->GetWalletId())->getName())));
 
       if (sellFromPrimary_) {
          ui_->labelHintAuthPassword->hide();
          ui_->horizontalWidgetAuthPassword->hide();
       } else {
-         ui_->labelHintAuthPassword->setText(tr("Enter password for \"%1\" wallet to sign revoke Pay-Out").arg(QString::fromStdString(rootAuthWallet->getName())));
+         ui_->labelHintAuthPassword->setText(tr("Enter password for \"%1\" wallet to sign revoke Pay-Out")
+            .arg(QString::fromStdString(rootAuthWallet->getName())));
       }
    } else {
-      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-Out").arg(QString::fromStdString(rootAuthWallet->getName())));
+      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-Out")
+         .arg(QString::fromStdString(rootAuthWallet->getName())));
       ui_->labelHintAuthPassword->hide();
       ui_->horizontalWidgetAuthPassword->hide();
    }
@@ -364,7 +368,8 @@ void XBTSettlementTransactionWidget::acceptSpotXBT()
       }
       catch (const std::exception &e) {
          logger_->warn("[XBTSettlementTransactionWidget::acceptSpotXBT] Pay-Out failed: {}", e.what());
-         ui_->labelHintPassword->setText(tr("Pay-Out to dealer failed: %1").arg(QString::fromStdString(e.what())));
+         ui_->labelHintPassword->setText(tr("Pay-Out to dealer failed: %1")
+            .arg(QString::fromStdString(e.what())));
          return;
       }
    }

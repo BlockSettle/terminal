@@ -47,6 +47,8 @@ public:
 
    QString GetSigningWalletName() const;
 
+   std::shared_ptr<bs::Wallet> GetSigningWallet() const { return wallet_; }
+
 signals:
    void signTxRequest(const QString &orderId, std::string txData);
    void genAddressVerified(bool result);

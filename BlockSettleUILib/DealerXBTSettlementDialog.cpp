@@ -10,6 +10,7 @@
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
+#include "HDWallet.h"
 
 #include <spdlog/spdlog.h>
 
@@ -17,6 +18,7 @@
 DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<DealerXBTSettlementContainer> &settlContainer
       , const std::shared_ptr<AssetManager>& assetManager
+      , std::shared_ptr<WalletsManager> walletsManager
       , QWidget* parent)
    : BaseDealerSettlementDialog(logger, settlContainer, parent)
    , ui_(new Ui::DealerXBTSettlementDialog())
@@ -37,7 +39,9 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    ui_->labelTotal->setText(UiUtils::displayCurrencyAmount(settlContainer_->amount() * settlContainer_->price()));
 
-   ui_->labelWallet->setText(QString::fromStdString("<b>%1</b>").arg(QString::fromStdString(settlContainer_->walletName())));
+   ui_->labelWallet->setText(QString::fromStdString("<b>%1</b>")
+      .arg(QString::fromStdString(walletsManager->GetHDRootForLeaf(
+         settlContainer_->GetWallet()->GetWalletId())->getName())));
 
    if (settlContainer_->weSell()) {
       ui_->labelTransactionDescription->setText(tr("Deliver"));

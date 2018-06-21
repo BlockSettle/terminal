@@ -9,6 +9,7 @@
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
+#include "HDWallet.h"
 
 #include <QLabel>
 #include <QtConcurrent/QtConcurrentRun>
@@ -119,7 +120,8 @@ void CCSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
 
    auto signingWallet = transactionData->GetSigningWallet();
    if (signingWallet) {
-      auto walletName = QString::fromStdString(signingWallet->GetWalletName());
+      auto walletName = QString::fromStdString(walletsManager_->GetHDRootForLeaf(
+         signingWallet->GetWalletId())->getName());
       ui_->labelPasswordHint->setText(tr("Enter \"%1\" wallet password to accept").arg(walletName));
    }
    updateAcceptButton();
