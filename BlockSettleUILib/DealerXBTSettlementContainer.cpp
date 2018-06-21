@@ -1,5 +1,6 @@
 #include "DealerXBTSettlementContainer.h"
 #include <spdlog/spdlog.h>
+#include "CheckRecipSigner.h"
 #include "SignContainer.h"
 #include "QuoteProvider.h"
 #include "TransactionData.h"
@@ -28,6 +29,14 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    settlWallet_ = walletsMgr->GetSettlementWallet();
    if (!settlWallet_) {
       throw std::runtime_error("missing settlement wallet");
+   }
+
+   if (weSell_) {
+      const Tx tx(BinaryData::CreateFromHex(order_.reqTransaction));
+      const bs::TxChecker txChecker(tx);
+      if ((tx.getNumTxIn() != 1) || !txChecker.hasInput(BinaryData::CreateFromHex(order_.dealerTransaction))) {
+         throw std::runtime_error("invalid payout spender");
+      }
    }
 
    comment_ = std::string(bs::network::Side::toString(order.side)) + " " + order.security + " @ " + std::to_string(order.price);
