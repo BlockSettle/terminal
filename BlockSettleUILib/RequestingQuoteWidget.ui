@@ -408,6 +408,12 @@
          </item>
          <item>
           <widget class="QWidget" name="widgetQuoteDetails" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -419,7 +425,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <property name="spacing">
-             <number>3</number>
+             <number>0</number>
             </property>
             <property name="leftMargin">
              <number>20</number>
@@ -478,13 +484,9 @@
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="font">
-               <font>
-                <pointsize>14</pointsize>
-               </font>
-              </property>
               <property name="text">
-               <string>TextLabel</string>
+               <string>Deliver 1.0 EUR
+Receive 10.28 SEK</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
