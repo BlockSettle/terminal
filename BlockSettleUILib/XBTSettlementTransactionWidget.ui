@@ -7,14 +7,20 @@
     <x>0</x>
     <y>0</y>
     <width>340</width>
-    <height>570</height>
+    <height>630</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>340</width>
+    <height>630</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Form</string>
@@ -126,7 +132,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -197,7 +203,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -268,7 +274,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -339,7 +345,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -410,7 +416,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -481,7 +487,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -552,7 +558,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -640,14 +646,14 @@
             <item>
              <widget class="QLabel" name="label_9">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -658,7 +664,7 @@
                </size>
               </property>
               <property name="text">
-               <string>User Auth Address</string>
+               <string>Requester Authentication Address</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -675,6 +681,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -711,14 +720,14 @@
             <item>
              <widget class="QLabel" name="label_10">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -729,7 +738,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Dealer Auth Address</string>
+               <string>Responder Authentication Address</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -746,6 +755,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -813,7 +825,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -884,7 +896,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
@@ -955,7 +967,7 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>210</width>
                 <height>0</height>
                </size>
               </property>
