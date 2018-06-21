@@ -123,16 +123,23 @@ private:
 };
 
 
-class QuoteReqItem : public QStandardItem
+class QuoteGroupReqItem : public QStandardItem
 {
 public:
-   QuoteReqItem(const std::shared_ptr<bs::StatsCollector> &
+   QuoteGroupReqItem(const std::shared_ptr<bs::StatsCollector> &
       , const QString &text, const QString &key = {});
    QVariant data(int role = Qt::UserRole + 1) const override;
 
 private:
    std::shared_ptr<bs::StatsCollector> statsCollector_;
    QString  key_;
+};
+
+class QuoteReqItem : public QuoteGroupReqItem
+{
+public:
+   QuoteReqItem(const std::shared_ptr<bs::StatsCollector> &
+      , const QString &text, const QString &key = {});
 };
 
 

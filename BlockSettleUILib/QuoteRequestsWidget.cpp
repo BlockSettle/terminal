@@ -39,6 +39,7 @@ QuoteRequestsWidget::QuoteRequestsWidget(QWidget* parent)
    , sortModel_(nullptr)
 {
    ui_->setupUi(this);
+   ui_->treeViewQuoteRequests->setUniformRowHeights(true);
 
    connect(ui_->treeViewQuoteRequests, &QTreeView::clicked, this, &QuoteRequestsWidget::onQuoteReqNotifSelected);
    connect(ui_->treeViewQuoteRequests, &QTreeView::doubleClicked, this, &QuoteRequestsWidget::onQuoteReqNotifSelected);
@@ -63,7 +64,9 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
 
    connect(model_, &QAbstractItemModel::rowsInserted, [this]() {
       ui_->treeViewQuoteRequests->expandAll();
-      ui_->treeViewQuoteRequests->resizeColumnToContents(0);
+      for (int i = 0; i < sortModel_->columnCount(); i++) {
+         ui_->treeViewQuoteRequests->resizeColumnToContents(i);
+      }
    });
    connect(model_, &QAbstractItemModel::rowsRemoved, [this] {
       const auto &indices = ui_->treeViewQuoteRequests->selectionModel()->selectedIndexes();
@@ -84,7 +87,6 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    connect(appSettings.get(), &ApplicationSettings::settingChanged, this, &QuoteRequestsWidget::onSettingChanged);
    connect(assetManager_.get(), &AssetManager::securitiesReceived, this, &QuoteRequestsWidget::onSecuritiesReceived);
 
-   ui_->treeViewQuoteRequests->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Status, new ProgressDelegate());
 
    auto *doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
