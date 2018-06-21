@@ -4,12 +4,14 @@ import shutil
 import multiprocessing
 
 from component_configurator import Configurator
-
+from openpgm_settings       import OpenPGMSettings
 
 class ZeroMQSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '4.2.3'
+
+        self._openpgm_settings = OpenPGMSettings(settings)
 
         if settings.on_windows():
             self._package_name = 'libzmq-' + self._version
@@ -35,7 +37,7 @@ class ZeroMQSettings(Configurator):
     def config_windows(self):
         command = []
 
-        # patch cmake file
+        # patch cmake file`
         cmakeFileName = os.path.abspath(os.path.join(self.get_unpacked_sources_dir(), 'CMakeLists.txt'))
         with open(cmakeFileName, 'r') as f:
             lines = [line for line in f]
@@ -61,21 +63,6 @@ class ZeroMQSettings(Configurator):
         result = subprocess.call(command)
         return result == 0
 
-    def update_project_toolset(self):
-        project_file = os.path.join(self.get_vs_project_root(), 'libzmq', 'libzmq.vcxproj')
-
-        with open(project_file, 'r') as f:
-            lines = [line for line in f]
-
-        for index, line in enumerate(lines):
-            if line.find('<PlatformToolset>') != -1:
-                lines[index] = '    <PlatformToolset>v140</PlatformToolset>'
-                break
-
-        with open(project_file, 'w') as f:
-            for line in lines:
-                f.write(line)
-
     def config_x(self):
         self.copy_sources_to_build()
 
@@ -90,9 +77,14 @@ class ZeroMQSettings(Configurator):
                    '--verbose',
                    '--prefix',
                    self.get_install_dir(),
-                   '--without-libsodium']
+                   '--without-libsodium',
+                   '--with-pgm']
 
-        result = subprocess.call(command)
+        compile_variables = os.environ.copy()
+        compile_variables['pgm_LIBS'] = self._openpgm_settings.lflags()
+        compile_variables['pgm_CFLAGS'] = self._openpgm_settings.cflags()
+
+        result = subprocess.call(command, env=compile_variables)
         return result == 0
 
     def get_vs_project_root(self):
