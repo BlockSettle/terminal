@@ -20,10 +20,6 @@ MarketDataProvider::MarketDataProvider(const std::shared_ptr<spdlog::logger>& lo
  : logger_(logger)
  , filterUsdProducts_(true)
 {
-   qRegisterMetaType<bs::network::Asset::Type>("AssetType");
-   qRegisterMetaType<bs::network::SecurityDef>("SecurityDef");
-   qRegisterMetaType<bs::network::MDField>("MDField");
-   qRegisterMetaType<bs::network::MDFields>("MDFields");
 }
 
 void MarketDataProvider::ConnectToCelerClient(const std::shared_ptr<CelerClient>& celerClient, bool filterUsdProducts)

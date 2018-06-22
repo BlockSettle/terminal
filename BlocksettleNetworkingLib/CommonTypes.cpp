@@ -2,6 +2,32 @@
 
 using namespace bs::network;
 
+class CommonTypesMetaRegistration
+{
+public:
+   CommonTypesMetaRegistration()
+   {
+      qRegisterMetaType<bs::network::Asset::Type>("AssetType");
+      qRegisterMetaType<bs::network::Quote>("Quote");
+      qRegisterMetaType<bs::network::Order>("Order");
+      qRegisterMetaType<bs::network::SecurityDef>("SecurityDef");
+      qRegisterMetaType<bs::network::QuoteReqNotification>("QuoteReqNotification");
+      qRegisterMetaType<bs::network::QuoteNotification>("QuoteNotification");
+      qRegisterMetaType<bs::network::MDField>("MDField");
+      qRegisterMetaType<bs::network::MDFields>("MDFields");
+      qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
+   }
+
+   ~CommonTypesMetaRegistration() noexcept = default;
+
+   CommonTypesMetaRegistration(const CommonTypesMetaRegistration&) = delete;
+   CommonTypesMetaRegistration& operator = (const CommonTypesMetaRegistration&) = delete;
+
+   CommonTypesMetaRegistration(CommonTypesMetaRegistration&&) = delete;
+   CommonTypesMetaRegistration& operator = (CommonTypesMetaRegistration&&) = delete;
+};
+
+static CommonTypesMetaRegistration commonTypesRegistrator{};
 
 bool RFQ::isXbtBuy() const
 {

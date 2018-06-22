@@ -27,8 +27,6 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    , ui_(new Ui::RFQReplyWidget())
 {
    ui_->setupUi(this);
-   qRegisterMetaType<bs::network::QuoteNotification>("QuoteNotification");
-   qRegisterMetaType<bs::network::QuoteReqNotification>("QuoteReqNotification");
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
