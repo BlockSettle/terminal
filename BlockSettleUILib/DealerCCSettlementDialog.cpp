@@ -71,11 +71,11 @@ void DealerCCSettlementDialog::validateGUI()
 void DealerCCSettlementDialog::onGenAddressVerified(bool addressVerified)
 {
    if (addressVerified) {
-      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: darkGreen;\">valid</span></b>"));
+      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: #22C064;\">Verified</span></b>"));
       ui_->lineEditPassword->setEnabled(true);
       ui_->verticalWidgetPassword->show();
    } else {
-      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: red;\">invalid</span></b>"));
+      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: #CF292E;\">Invalid</span></b>"));
       ui_->lineEditPassword->setEnabled(false);
    }
    validateGUI();
