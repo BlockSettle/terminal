@@ -2,6 +2,7 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+#include "ZMQHelperFunctions.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
@@ -165,27 +166,6 @@ bool ZmqDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr& socket)
       return false;
    }
    return true;
-}
-
-static int get_monitor_event(void *monitor)
-{
-   // First frame in message contains event number and value
-   zmq_msg_t msg;
-   zmq_msg_init(&msg);
-   if (zmq_msg_recv(&msg, monitor, 0) == -1)
-      return -1; // Interruped, presumably
-   assert(zmq_msg_more(&msg));
-
-   uint8_t *data = (uint8_t *)zmq_msg_data(&msg);
-   uint16_t event = *(uint16_t *)(data);
-
-   // Second frame in message contains event address
-   zmq_msg_init(&msg);
-   if (zmq_msg_recv(&msg, monitor, 0) == -1)
-      return -1; // Interruped, presumably
-   assert(!zmq_msg_more(&msg));
-
-   return event;
 }
 
 void ZmqDataConnection::listenFunction()

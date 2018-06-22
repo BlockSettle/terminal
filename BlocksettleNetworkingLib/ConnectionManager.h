@@ -7,8 +7,10 @@ namespace spdlog {
    class logger;
 };
 
-class ServerConnection;
 class DataConnection;
+class PublisherConnection;
+class ServerConnection;
+class SubscriberConnection;
 class ZmqContext;
 class ZmqSecuredDataConnection;
 class ZmqSecuredServerConnection;
@@ -40,6 +42,9 @@ public:
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;
 
    std::shared_ptr<ServerConnection>   CreateMDRestServerConnection() const;
+
+   std::shared_ptr<PublisherConnection>   CreatePublisherConnection() const;
+   std::shared_ptr<SubscriberConnection>  CreateSubscriberConnection() const;
 
 private:
    bool InitNetworkLibs();
