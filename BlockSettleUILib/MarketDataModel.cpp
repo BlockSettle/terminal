@@ -1,5 +1,6 @@
 #include "MarketDataModel.h"
 #include "CommonTypes.h"
+#include "Colors.h"
 #include <QLocale>
 
 #include "UiUtils.h"
@@ -193,11 +194,11 @@ QBrush MarketDataModel::bgColorForCol(const QString &security, MarketDataModel::
       if (!qFuzzyIsNull(prev)) {
          if (price > prev) {
             priceUpdates_[security][col].row = row;
-            return QColor(0x22, 0xC0, 0x64);
+            return c_greenColor;
          }
          else if (price < prev) {
             priceUpdates_[security][col].row = row;
-            return QColor(0xcf, 0x29, 0x2e);
+            return c_redColor;
          }
       }
       break;

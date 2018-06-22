@@ -29,6 +29,10 @@ QLabel {
   border-width: 1px;
   border-color: #F03B5D; }
 
+*[wrongState="true"] {
+  color: #CF292E;
+}
+
 a {
   font-family: 'Open Sans', sans-serif; }
 
