@@ -39,9 +39,8 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    ui_->labelTotal->setText(UiUtils::displayCurrencyAmount(settlContainer_->amount() * settlContainer_->price()));
 
-   ui_->labelWallet->setText(QString::fromStdString("<b>%1</b>")
-      .arg(QString::fromStdString(walletsManager->GetHDRootForLeaf(
-         settlContainer_->GetWallet()->GetWalletId())->getName())));
+   ui_->labelWallet->setText(QString::fromStdString(walletsManager->GetHDRootForLeaf(
+      settlContainer_->GetWallet()->GetWalletId())->getName()));
 
    if (settlContainer_->weSell()) {
       ui_->labelTransactionDescription->setText(tr("Deliver"));
