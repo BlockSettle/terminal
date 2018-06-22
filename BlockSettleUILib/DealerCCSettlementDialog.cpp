@@ -21,6 +21,8 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    : BaseDealerSettlementDialog(logger, container, parent)
    , ui_(new Ui::DealerCCSettlementDialog())
    , settlContainer_(container)
+   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
    connectToProgressBar(ui_->progressBar);
@@ -49,9 +51,7 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
 
    settlContainer_->activate();
 
-   const auto strValid = tr("<span style=\"color: #22C064;\">Verified</span>");
-   const auto strInvalid = tr("<span style=\"color: #CF292E;\">Invalid</span>");
-   ui_->labelCounterpartyTx->setText(settlContainer_->foundRecipAddr() ? strValid : strInvalid);
+   ui_->labelCounterpartyTx->setText(settlContainer_->foundRecipAddr() ? sValid : sInvalid);
 
    ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet")
       .arg(QString::fromStdString(walletsManager->GetHDRootForLeaf(
@@ -71,11 +71,11 @@ void DealerCCSettlementDialog::validateGUI()
 void DealerCCSettlementDialog::onGenAddressVerified(bool addressVerified)
 {
    if (addressVerified) {
-      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: #22C064;\">Verified</span></b>"));
+      ui_->labelGenesisAddress->setText(sValid);
       ui_->lineEditPassword->setEnabled(true);
       ui_->verticalWidgetPassword->show();
    } else {
-      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: #CF292E;\">Invalid</span></b>"));
+      ui_->labelGenesisAddress->setText(sInvalid);
       ui_->lineEditPassword->setEnabled(false);
    }
    validateGUI();

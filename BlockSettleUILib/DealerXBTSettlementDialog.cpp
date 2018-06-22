@@ -86,7 +86,7 @@ void DealerXBTSettlementDialog::reject()
 
 void DealerXBTSettlementDialog::onRequestorAddressStateChanged(AddressVerificationState state)
 {
-   const auto formatString = tr("<b><span style=\"color: %1;\">%2</span></b>");
+   const auto formatString = tr("<span style=\"color: %1;\">%2</span>");
    QString color;
    QString stateText;
 
