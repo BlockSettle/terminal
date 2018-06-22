@@ -178,7 +178,7 @@
             <bool>true</bool>
            </property>
            <property name="text">
-            <string>Unsettled transactions</string>
+            <string>Non-settled transactions</string>
            </property>
            <property name="textFormat">
             <enum>Qt::AutoText</enum>
