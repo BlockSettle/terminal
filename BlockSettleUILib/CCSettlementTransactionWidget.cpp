@@ -158,6 +158,9 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    const auto lotSize = assetManager_->getCCLotSize(product_);
    bs::CheckRecipSigner signer;
    try {
+      if (!lotSize) {
+         throw std::runtime_error("invalid lot size");
+      }
       signer.deserializeState(dealerTx_);
       foundRecipAddr = signer.findRecipAddress(bs::Address(rfq.receiptAddress)
          , [lotSize, quote, &amountValid](uint64_t value, uint64_t valReturn, uint64_t valInput) {
@@ -175,6 +178,7 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    }
    catch (const std::exception &e) {
       logger_->debug("Signer deser exc: {}", e.what());
+      ui_->labelHint->setText(tr("Failed to verify dealer's TX: %1").arg(QLatin1String(e.what())));
    }
 
    ui_->labelDelaerTxHalf->setText(foundRecipAddr ? sValid : sInvalid);
