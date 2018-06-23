@@ -104,7 +104,8 @@ CustomDialog {
         }
 
         CustomButtonBar {
-            Layout.topMargin: 20
+            implicitHeight: childrenRect.height
+            implicitWidth: root.width
             id: rowButtons
 
             Flow {

@@ -115,7 +115,8 @@ CustomDialog {
         }
 
         CustomButtonBar {
-            Layout.topMargin: 20
+            implicitHeight: childrenRect.height
+            implicitWidth: changeWalletPasswordDialog.width
             id: rowButtons
 
             Flow {
