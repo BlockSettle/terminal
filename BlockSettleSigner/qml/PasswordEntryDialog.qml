@@ -27,6 +27,8 @@ CustomDialog {
         }
 
         CustomLabel {
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
             visible: !txInfo.nbInputs && txInfo.sendingWallet.length
             text:   qsTr("Wallet %1").arg(txInfo.sendingWallet)
         }
@@ -218,7 +220,8 @@ CustomDialog {
         }
 
         CustomButtonBar {
-            Layout.topMargin: 0
+            implicitHeight: childrenRect.height
+            implicitWidth: passwordDialog.width
             id: rowButtons
 
             Flow {
