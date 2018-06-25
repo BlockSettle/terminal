@@ -118,10 +118,10 @@ void CCSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
    clientSells_ = (rfq.side == bs::network::Side::Sell);
 
    if (rfq.side == bs::network::Side::Buy && rfq.product == bs::network::XbtCurrency) {
-      window()->setWindowTitle(tr("Settlement Delivery (Private Market)"));
+      window()->setWindowTitle(tr("Settlement Delivery"));
       ui_->labelPaymentName->setText(tr("Delivery"));
    } else {
-      window()->setWindowTitle(tr("Settlement Payment (Private Market)"));
+      window()->setWindowTitle(tr("Settlement Payment"));
       ui_->labelPaymentName->setText(tr("Payment"));
    }
 

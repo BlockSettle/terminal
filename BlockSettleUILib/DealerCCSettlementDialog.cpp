@@ -52,10 +52,10 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    settlContainer_->activate();
 
    if (settlContainer_->isDelivery()) {
-      setWindowTitle(tr("Settlement Delivery (Private Market)"));
+      setWindowTitle(tr("Settlement Delivery"));
       ui_->labelPaymentName->setText(tr("Delivery"));
    } else {
-      setWindowTitle(tr("Settlement Payment (Private Market)"));
+      setWindowTitle(tr("Settlement Payment"));
       ui_->labelPaymentName->setText(tr("Payment"));
    }
 
