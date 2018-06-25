@@ -7,19 +7,25 @@
     <x>0</x>
     <y>0</y>
     <width>340</width>
-    <height>555</height>
+    <height>630</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>340</width>
+    <height>630</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>Dealer's CC Settlement</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout_4">
    <property name="spacing">
     <number>0</number>
    </property>
@@ -55,7 +61,7 @@
        <height>16777215</height>
       </size>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
+     <layout class="QVBoxLayout" name="verticalLayout_3">
       <property name="spacing">
        <number>15</number>
       </property>
@@ -126,7 +132,7 @@
              <widget class="QLabel" name="label_8">
               <property name="minimumSize">
                <size>
-                <width>100</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -139,12 +145,18 @@
               <property name="text">
                <string>Product Group</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="labelProductGroup">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -182,7 +194,7 @@
              <widget class="QLabel" name="label_2">
               <property name="minimumSize">
                <size>
-                <width>100</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -195,12 +207,18 @@
               <property name="text">
                <string>Security ID</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="labelSecurityId">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -238,7 +256,7 @@
              <widget class="QLabel" name="label_3">
               <property name="minimumSize">
                <size>
-                <width>100</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -251,12 +269,18 @@
               <property name="text">
                <string>Product</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="labelProduct">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -294,7 +318,7 @@
              <widget class="QLabel" name="label_4">
               <property name="minimumSize">
                <size>
-                <width>100</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -307,12 +331,18 @@
               <property name="text">
                <string>Side</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="labelSide">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -350,7 +380,7 @@
              <widget class="QLabel" name="label_5">
               <property name="minimumSize">
                <size>
-                <width>100</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -363,12 +393,18 @@
               <property name="text">
                <string>Quantity</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="labelQuantity">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -406,7 +442,7 @@
              <widget class="QLabel" name="label_6">
               <property name="minimumSize">
                <size>
-                <width>100</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -417,7 +453,10 @@
                </size>
               </property>
               <property name="text">
-               <string>Price:</string>
+               <string>Price</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -425,6 +464,9 @@
              <widget class="QLabel" name="labelPrice">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -462,7 +504,7 @@
              <widget class="QLabel" name="label_7">
               <property name="minimumSize">
                <size>
-                <width>100</width>
+                <width>120</width>
                 <height>0</height>
                </size>
               </property>
@@ -473,7 +515,10 @@
                </size>
               </property>
               <property name="text">
-               <string>Total Value</string>
+               <string>Total Value (XBT)</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -481,6 +526,9 @@
              <widget class="QLabel" name="labelTotal">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -504,7 +552,7 @@
         <property name="title">
          <string>SETTLEMENT DETAILS</string>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_6">
+        <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>5</number>
          </property>
@@ -520,65 +568,6 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="QWidget" name="horizontalWidget7" native="true">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_9">
-            <property name="spacing">
-             <number>5</number>
-            </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label">
-              <property name="minimumSize">
-               <size>
-                <width>120</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>120</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Receipt Address:</string>
-              </property>
-              <property name="wordWrap">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="labelReceiptAddress">
-              <property name="text">
-               <string>...</string>
-              </property>
-              <property name="whiteLabel" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
          <item>
           <widget class="QWidget" name="horizontalWidget8" native="true">
            <property name="minimumSize">
@@ -604,7 +593,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_9">
+             <widget class="QLabel" name="labelPaymentName">
               <property name="minimumSize">
                <size>
                 <width>120</width>
@@ -618,7 +607,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Counterparty's TX Half:</string>
+               <string>Payment</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -626,68 +615,12 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="labelCounterpartyTx">
+             <widget class="QLabel" name="labelPayment">
               <property name="text">
                <string>...</string>
-              </property>
-              <property name="whiteLabel" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QWidget" name="horizontalWidget9" native="true">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_11">
-            <property name="spacing">
-             <number>5</number>
-            </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label_10">
-              <property name="minimumSize">
-               <size>
-                <width>120</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>120</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Counterparty's Amount:</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="labelCounterpartyAmount">
-              <property name="text">
-               <string>...</string>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -736,7 +669,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Genesis Address:</string>
+               <string>Genesis Address</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -747,6 +680,9 @@
              <widget class="QLabel" name="labelGenesisAddress">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -773,75 +709,22 @@
        </spacer>
       </item>
       <item>
-       <widget class="QWidget" name="verticalWidget_2" native="true">
+       <widget class="QProgressBar" name="progressBar">
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>0</height>
+          <height>25</height>
          </size>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_4">
-         <property name="spacing">
-          <number>3</number>
-         </property>
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="QProgressBar" name="progressBar">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>25</height>
-            </size>
-           </property>
-           <property name="value">
-            <number>24</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="labelHint">
-           <property name="text">
-            <string>Hint</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="labelError">
-           <property name="text">
-            <string>Error message</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-           </property>
-           <property name="errorMessage" stdset="0">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="value">
+         <number>24</number>
+        </property>
        </widget>
       </item>
      </layout>
@@ -855,7 +738,10 @@
        <height>50</height>
       </size>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
+     <property name="darkOverlay" stdset="0">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
        <number>10</number>
       </property>
@@ -891,9 +777,60 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="labelHint">
+        <property name="text">
+         <string>Hint</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelError">
+        <property name="text">
+         <string>Error message</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="errorMessage" stdset="0">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line_3">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>1</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>1</height>
+         </size>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QLabel" name="labelPasswordHint">
         <property name="text">
          <string>Enter Password to Accept</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
         <property name="italicLabel" stdset="0">
          <bool>false</bool>

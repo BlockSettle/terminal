@@ -8,6 +8,7 @@ namespace Ui {
    class DealerCCSettlementDialog;
 }
 class DealerCCSettlementContainer;
+class WalletsManager;
 
 
 class DealerCCSettlementDialog : public BaseDealerSettlementDialog
@@ -17,7 +18,9 @@ Q_OBJECT
 public:
    DealerCCSettlementDialog(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<DealerCCSettlementContainer> &
-      , const std::string &reqRecvAddr, QWidget* parent = nullptr);
+      , const std::string &reqRecvAddr
+      , std::shared_ptr<WalletsManager> walletsManager
+      , QWidget* parent = nullptr);
    ~DealerCCSettlementDialog() noexcept override = default;
 
    DealerCCSettlementDialog(const DealerCCSettlementDialog&) = delete;
@@ -39,6 +42,8 @@ private:
 private:
    Ui::DealerCCSettlementDialog*   ui_;
    std::shared_ptr<DealerCCSettlementContainer> settlContainer_;
+   const QString                   sValid;
+   const QString                   sInvalid;
 };
 
 #endif // __DEALER_CC_SETTLEMENT_DIALOG_H__

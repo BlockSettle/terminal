@@ -7,14 +7,20 @@
     <x>0</x>
     <y>0</y>
     <width>340</width>
-    <height>570</height>
+    <height>630</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>340</width>
+    <height>630</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Form</string>
@@ -155,6 +161,9 @@
               <property name="text">
                <string>---</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -225,6 +234,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -297,6 +309,9 @@
               <property name="text">
                <string>---</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -367,6 +382,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -439,6 +457,9 @@
               <property name="text">
                <string>---</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -509,6 +530,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -581,6 +605,9 @@
               <property name="text">
                <string>---</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -595,7 +622,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="title">
-         <string>XBT TRADE DETAILS</string>
+         <string>SETTLEMENT DETAILS</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
          <property name="spacing">
@@ -640,7 +667,7 @@
             <item>
              <widget class="QLabel" name="label_9">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -658,7 +685,7 @@
                </size>
               </property>
               <property name="text">
-               <string>User Auth Address</string>
+               <string>Requester Authentication Address</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -675,6 +702,12 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -711,7 +744,7 @@
             <item>
              <widget class="QLabel" name="label_10">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -729,7 +762,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Dealer Auth Address</string>
+               <string>Responder Authentication Address</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -746,6 +779,12 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -842,6 +881,9 @@
               <property name="text">
                <string>---</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -912,6 +954,9 @@
               </property>
               <property name="text">
                <string>---</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
@@ -1002,6 +1047,9 @@
               <property name="text">
                <string>---</string>
               </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
               <property name="whiteLabel" stdset="0">
                <bool>true</bool>
               </property>
@@ -1050,6 +1098,12 @@
    </item>
    <item>
     <widget class="QWidget" name="verticalWidget" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -1171,6 +1225,9 @@
         <property name="text">
          <string>...</string>
         </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
         <property name="italicLabel" stdset="0">
          <bool>false</bool>
         </property>
@@ -1232,39 +1289,6 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="verticalWidget_2" native="true">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <property name="spacing">
-          <number>3</number>
-         </property>
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
         </layout>
        </widget>
       </item>
