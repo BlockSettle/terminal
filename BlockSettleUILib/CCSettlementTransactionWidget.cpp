@@ -116,6 +116,15 @@ void CCSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
 
 
    clientSells_ = (rfq.side == bs::network::Side::Sell);
+
+   if (rfq.side == bs::network::Side::Buy && rfq.product == bs::network::XbtCurrency) {
+      setWindowTitle(tr("Settlement Delivery (Private Market)"));
+      ui_->labelPaymentName->setText(tr("Delivery"));
+   } else {
+      setWindowTitle(tr("Settlement Payment (Private Market)"));
+      ui_->labelPaymentName->setText(tr("Payment"));
+   }
+
    populateCCDetails(rfq, quote, genAddr);
 
    auto signingWallet = transactionData->GetSigningWallet();
@@ -139,17 +148,21 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
 
    // addDetailRow(tr("Receipt address"), QString::fromStdString(dealerAddress_));
 
+   bool verified = false;
+
    if (!clientSells_) {
       if ((amount_ * price_) > assetManager_->getBalance(bs::network::XbtCurrency, transactionData_->GetSigningWallet())) {
          ui_->labelHint->setText(tr("Insufficient XBT balance in signing wallet"));
          userKeyOk_ = false;
       }
-      ui_->labelPaymentBalance->setText(userKeyOk_ ? sValid : sInvalid);
+
+      verified = userKeyOk_;
+
       if (!userKeyOk_) {
+         ui_->labelPayment->setText(sInvalid);
+
          return;
       }
-   } else {
-      ui_->labelPaymentBalance->setText(sValid);
    }
 
    userKeyOk_ = false;
@@ -177,7 +190,9 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
       logger_->debug("Signer deser exc: {}", e.what());
    }
 
-   ui_->labelDelaerTxHalf->setText(foundRecipAddr ? sValid : sInvalid);
+   verified &= foundRecipAddr;
+
+   ui_->labelPayment->setText(verified ? sValid : sInvalid);
 
    if (genAddr.isNull()) {
       emit genAddrVerified(false);
