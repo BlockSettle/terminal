@@ -3,14 +3,16 @@ import os
 import shutil
 import subprocess
 
-from component_configurator import Configurator
-from jom_settings import JomSettings
+from build_scripts.component_configurator import Configurator
+from build_scripts.jom_settings import JomSettings
+from build_scripts.openssl_settings import OpenSslSettings
 
 
 class QtSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self.jom = JomSettings(settings)
+        self.openssl = OpenSslSettings(settings)
         self._release = '5.11'
         self._version = self._release + '.0'
         self._package_name = 'qt-everywhere-src-' + self._version
@@ -62,6 +64,12 @@ class QtSettings(Configurator):
         command.append('-qt-harfbuzz')
         command.append('-sql-sqlite')
         command.append('-sql-mysql')
+
+        command.append('-openssl')
+        command.append('-I')
+	command.append(self.openssl.get_install_dir() + '/include')
+        command.append('-L')
+	command.append(self.openssl.get_install_dir() + '/lib')
 
         if self._project_settings.on_linux():
             command.append('-system-freetype')
