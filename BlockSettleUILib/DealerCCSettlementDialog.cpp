@@ -51,7 +51,16 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
 
    settlContainer_->activate();
 
-   ui_->labelCounterpartyTx->setText(settlContainer_->foundRecipAddr() ? sValid : sInvalid);
+   if (settlContainer_->isDelivery()) {
+      setWindowTitle(tr("Settlement Delivery (Private Market)"));
+      ui_->labelPaymentName->setText(tr("Delivery"));
+   } else {
+      setWindowTitle(tr("Settlement Payment (Private Market)"));
+      ui_->labelPaymentName->setText(tr("Payment"));
+   }
+
+   ui_->labelPayment->setText(settlContainer_->foundRecipAddr() && settlContainer_->isAmountValid()
+      ? sValid : sInvalid);
 
    ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet")
       .arg(QString::fromStdString(walletsManager->GetHDRootForLeaf(
