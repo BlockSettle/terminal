@@ -622,7 +622,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="title">
-         <string>XBT TRADE DETAILS</string>
+         <string>SETTLEMENT DETAILS</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
          <property name="spacing">

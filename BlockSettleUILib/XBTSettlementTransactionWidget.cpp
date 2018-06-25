@@ -237,7 +237,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
     ui_->labelUserAuthAddress->setText(userKeyOk_ ? sValid : sInvalid);
 
    if (clientSells_) {
-      window()->setWindowTitle(tr("Settlement Pay-In Transaction"));
+      window()->setWindowTitle(tr("Settlement Pay-In (XBT)"));
 
       // addDetailRow(tr("Sending wallet"), tr("<b>%1</b> (%2)").arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletName()))
       //    .arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletId())));
@@ -252,7 +252,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       }
    }
    else {
-      window()->setWindowTitle(tr("Settlement Pay-Out Transaction"));
+      window()->setWindowTitle(tr("Settlement Pay-Out (XBT)"));
 
       // addDetailRow(tr("Receiving wallet"), tr("<b>%1</b> (%2)").arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletName()))
       //    .arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletId())));

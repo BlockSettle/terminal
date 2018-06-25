@@ -154,7 +154,7 @@ void DealerXBTSettlementDialog::onTimerExpired()
 
 void DealerXBTSettlementDialog::activate()
 {
-   setWindowTitle(tr("Settlement %1 Transaction").arg(settlContainer_->weSell() ? tr("Pay-In") : tr("Pay-Out")));
+   setWindowTitle(tr("Settlement %1 (XBT)").arg(settlContainer_->weSell() ? tr("Pay-In") : tr("Pay-Out")));
    settlContainer_->activate();
 }
 
