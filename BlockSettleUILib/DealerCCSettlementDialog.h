@@ -42,8 +42,8 @@ private:
 private:
    Ui::DealerCCSettlementDialog*   ui_;
    std::shared_ptr<DealerCCSettlementContainer> settlContainer_;
-   QString                         sValid;
-   QString                         sInvalid;
+   const QString                   sValid;
+   const QString                   sInvalid;
 };
 
 #endif // __DEALER_CC_SETTLEMENT_DIALOG_H__
