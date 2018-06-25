@@ -45,6 +45,8 @@ class OpenSslSettings(Configurator):
         return os.path.join(self.get_build_dir(), 'protobuf.sln')
 
     def config_x(self):
+        self.copy_sources_to_build()
+
         command = ['./config',
                    '--prefix='+self.get_install_dir(), '--openssldir='+self.get_install_dir()]
 
