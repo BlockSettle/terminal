@@ -122,7 +122,7 @@ void AuthAddressDialog::onAuthAddrSubmitError(const QString &, const QString &)
 {
    MessageBoxWarning(tr("Submission Aborted")
       , tr("The process of submitting an Authentication Address has been aborted. "
-           "Any reserved balance will have been returned")).exec();
+           "Any reserved balance will have been returned.")).exec();
    close();
 }
 
