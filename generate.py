@@ -16,6 +16,7 @@ from build_scripts.zeromq_settings        import ZeroMQSettings
 from build_scripts.libqrencode_settings   import LibQREncode
 from build_scripts.mpir_settings          import MPIRSettings
 from build_scripts.libbtc_settings        import LibBTC
+from build_scripts.openssl_settings       import OpenSslSettings
 
 def generate_project(build_mode, build_server, build_test_tools):
    project_settings = Settings(build_mode)
@@ -35,6 +36,7 @@ def generate_project(build_mode, build_server, build_test_tools):
 
    required_3rdparty += [
       ProtobufSettings(project_settings),
+      OpenSslSettings(project_settings),
       QtSettings(project_settings),
       CryptoppSettings(project_settings),
       SpdlogSettings(project_settings),
