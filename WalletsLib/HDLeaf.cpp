@@ -337,6 +337,8 @@ void hd::Leaf::reset()
    addressHashes_.clear();
    hashToPubKey_.clear();
    pubKeyToPath_.clear();
+   addressPool_.clear();
+   poolByAddr_.clear();
    emit walletReset();
 }
 
@@ -594,11 +596,11 @@ void hd::Leaf::topUpAddressPool(size_t nbIntAddresses, size_t nbExtAddresses)
 {
    const size_t nbPoolInt = nbIntAddresses ? 0 : getLastAddrPoolIndex(addrTypeInternal) - lastIntIdx_ + 1;
    const size_t nbPoolExt = nbExtAddresses ? 0 : getLastAddrPoolIndex(addrTypeExternal) - lastExtIdx_ + 1;
-   nbIntAddresses = qMax(nbIntAddresses, addressPoolSize_);
-   nbExtAddresses = qMax(nbExtAddresses, addressPoolSize_);
+   nbIntAddresses = qMax(nbIntAddresses, intAddressPoolSize_);
+   nbExtAddresses = qMax(nbExtAddresses, extAddressPoolSize_);
 
-   for (const auto aet : { AddressEntryType_P2SH, AddressEntryType_P2WPKH }) {
-      if (nbPoolInt < (addressPoolSize_ / 4)) {
+   for (const auto aet : poolAET_) {
+      if (nbPoolInt < (intAddressPoolSize_ / 4)) {
          const auto intAddresses = generateAddresses(addrTypeInternal, lastIntIdx_, nbIntAddresses, aet);
          for (const auto &addr : intAddresses) {
             addressPool_[addr.first] = addr.second;
@@ -606,7 +608,7 @@ void hd::Leaf::topUpAddressPool(size_t nbIntAddresses, size_t nbExtAddresses)
          }
       }
 
-      if (nbPoolExt < (addressPoolSize_ / 4)) {
+      if (nbPoolExt < (extAddressPoolSize_ / 4)) {
          const auto extAddresses = generateAddresses(addrTypeExternal, lastExtIdx_, nbExtAddresses, aet);
          for (const auto &addr : extAddresses) {
             addressPool_[addr.first] = addr.second;
@@ -995,6 +997,13 @@ std::shared_ptr<ResolverFeed> hd::Leaf::GetPublicKeyResolver()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+hd::AuthLeaf::AuthLeaf(const std::string &name, const std::string &desc)
+   : Leaf(name, desc, bs::wallet::Type::Authentication)
+{
+   intAddressPoolSize_ = 0;
+   extAddressPoolSize_ = 0;
+}
+
 void hd::AuthLeaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, const std::shared_ptr<Node> &rootNode)
 {
    const auto prevNode = node_;
@@ -1047,6 +1056,11 @@ void hd::AuthLeaf::SetUserID(const BinaryData &userId)
          lastExtIdx_ = qMax(lastExtIdx_, path.get(-1) + 1);
       }
       hd::BlockchainScanner::init(node_, GetWalletId());
+      const auto poolAddresses = generateAddresses(addrTypeExternal, lastExtIdx_, 5, AddressEntryType_P2WPKH);
+      for (const auto &addr : poolAddresses) {
+         addressPool_[addr.first] = addr.second;
+         poolByAddr_[addr.second] = addr.first;
+      }
    }
    inited_ = (node_ != nullptr);
 }
