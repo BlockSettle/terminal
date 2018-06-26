@@ -12,7 +12,8 @@ CustomDialog {
     property string exportDir:  Qt.resolvedUrl(".")
 
     id: exportWoWalletDialog
-    width: 400
+    implicitWidth: 400
+    implicitHeight: mainLayout.childrenRect.height
 
     FocusScope {
         anchors.fill: parent
@@ -35,6 +36,7 @@ CustomDialog {
             Layout.fillWidth: true
             spacing: 10
             width: parent.width
+            id: mainLayout
 
             RowLayout{
                 CustomHeaderPanel{
@@ -133,7 +135,7 @@ CustomDialog {
 
             CustomButtonBar {
                 implicitHeight: childrenRect.height
-                implicitWidth: changeWalletPasswordDialog.width
+                implicitWidth: exportWoWalletDialog.width
                 id: rowButtons
 
                 Flow {

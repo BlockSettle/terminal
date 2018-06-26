@@ -19,8 +19,8 @@ CustomDialog {
                               (digitalBackup ? lblDBFile.text !== "..." : rootKeyInput.acceptableInput)
     property int inputLabelsWidth: 105
 
-    width: 400
-    height: digitalBackup ? 370 : 440
+    implicitWidth: 400
+    implicitHeight: mainLayout.implicitHeight
     id: root
 
     FocusScope {
@@ -45,6 +45,7 @@ CustomDialog {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 10
+            id: mainLayout
 
             RowLayout{
                 Layout.fillWidth: true

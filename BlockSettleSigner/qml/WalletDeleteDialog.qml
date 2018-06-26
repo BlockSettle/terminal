@@ -10,7 +10,8 @@ CustomDialog {
     property bool   backup: chkBackup.checked
 
     id:root
-    width: 400
+    implicitWidth: 400
+    implicitHeight: mainLayout.childrenRect.height
 
     FocusScope {
         anchors.fill: parent
@@ -33,6 +34,7 @@ CustomDialog {
             Layout.fillWidth: true
             spacing: 10
             width: parent.width
+            id: mainLayout
 
             RowLayout{
                 CustomHeaderPanel{
@@ -56,8 +58,8 @@ CustomDialog {
                     width: parent.width
                     text:   isRootWallet
                             ? qsTr("Are you sure you wish to irrevocably delete the entire wallet <%1> and all associated wallet files from your computer?").arg(walletName)
-                            : rootName.length() ? qsTr("Are you sure you wish to delete leaf wallet <%1> from HD wallet <%2>?").arg(walletName).arg(rootName)
-                                                : qsTr("Are you sure you wish to delete wallet <%1>?").arg(walletName)
+                            : ( rootName.length ? qsTr("Are you sure you wish to delete leaf wallet <%1> from HD wallet <%2>?").arg(walletName).arg(rootName)
+                                                : qsTr("Are you sure you wish to delete wallet <%1>?").arg(walletName) )
                 }
             }
 

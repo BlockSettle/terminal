@@ -79,7 +79,7 @@ Item {
                         onClicked: {
                             var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "walletNewDlg")
                             dlgNew.accepted.connect(function() {
-                                if (dlgNew.type == 1) {
+                                if (dlgNew.type === 1) {
                                     var dlg = Qt.createQmlObject("WalletCreateDialog {}", mainWindow, "walletCreateDlg")
                                     dlg.primaryWalletExists = walletsProxy.primaryWalletExists
                                     dlg.accepted.connect(function() {
@@ -93,7 +93,7 @@ Item {
                                 else {
                                     var dlg = Qt.createQmlObject("WalletImportDialog {}", mainWindow, "walletImportDlg")
                                     dlg.primaryWalletExists = walletsProxy.primaryWalletExists
-                                    dlg.digitalBackup = (dlgNew.type == 3)
+                                    dlg.digitalBackup = (dlgNew.type === 3)
                                     dlg.accepted.connect(function(){
                                         if (walletsProxy.importWallet(dlg.walletName, dlg.walletDesc, dlg.isPrimary
                                                                       , dlg.recoveryKey, dlg.digitalBackup, dlg.password)) {
