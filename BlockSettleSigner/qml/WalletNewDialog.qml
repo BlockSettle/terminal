@@ -9,6 +9,12 @@ CustomDialog {
     implicitWidth: parent.width * 0.7
     implicitHeight: mainLayout.childrenRect.height
 
+    enum WalletType {
+        RandomSeed = 1,
+        PaperBackup = 2,
+        DigitalBackupFile = 3
+    }
+
     ColumnLayout {
         Layout.fillWidth: true
         spacing: 10
@@ -59,7 +65,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     text:   qsTr("Digital backup file")
                     onClicked: {
-                        type = 3
+                        type = WalletNewDialog.WalletType.DigitalBackupFile
                         accept()
                     }
                 }
@@ -68,7 +74,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     text:   qsTr("Paper backup")
                     onClicked: {
-                        type = 2
+                        type = WalletNewDialog.WalletType.PaperBackup
                         accept()
                     }
                 }
@@ -77,7 +83,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     text:   qsTr("Random Seed")
                     onClicked: {
-                        type = 1
+                        type = WalletNewDialog.WalletType.RandomSeed
                         accept()
                     }
                 }
