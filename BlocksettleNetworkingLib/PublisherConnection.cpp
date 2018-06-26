@@ -23,10 +23,14 @@ bool PublisherConnection::BindPublishingConnection(const std::string& host, cons
       return false;
    }
 
-   // epgm - is encapsulated PGM over UDP. No speed limit (default 40 Mbps, ZMQ_RATE)
-   // and no additional priviligies required (PGM use raw socket and IP datagramms )
-   // in case switch to PGM - check ZMQ_MULTICAST_HOPS ( Maximum network hops for multicast packets)
-   std::string endpoint = std::string("epgm://") + host + ":" + port;
+   // Why not PGM
+   // 1. PGM is based on IP datagram, and worldwide IP multicast is require global multicast IP
+   // 2. IP multicast traffic usually filtered by providers
+   // 3. ePGM is UDP based. And this is unicast with overhead, also UDP is not faster any more, since TCP/IP usually is prioritized
+   // 4. PGM protocol is still in draft phase ( for along time )
+   // 5. OpenPGM implementation is abandoned by Google and not developed any more
+   // So TCP/IP is good enough for us. And lets zmq take care about delivery, just use API.
+   std::string endpoint = std::string("tcp://") + host + ":" + port;
    int result = zmq_bind(tempDataSocket.get(), endpoint.c_str());
    if (result != 0) {
       logger_->error("[ZmqServerConnection::openConnection] failed to bind socket to {} : {}"

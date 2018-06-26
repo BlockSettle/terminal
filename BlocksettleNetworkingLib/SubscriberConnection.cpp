@@ -93,7 +93,7 @@ bool SubscriberConnection::ConnectToPublisher(const std::string& host, const std
    }
 
    // connect subscriber socket
-   std::string endpoint = std::string("epgm://") + host + ":" + port;
+   std::string endpoint = std::string("tcp://") + host + ":" + port;
    result = zmq_connect(tempDataSocket.get(), endpoint.c_str());
    if (result != 0) {
       logger_->error("[SubscriberConnection::ConnectToPublisher] failed to connect socket to {}. {}"

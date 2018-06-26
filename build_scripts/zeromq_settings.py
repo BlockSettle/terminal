@@ -4,14 +4,11 @@ import shutil
 import multiprocessing
 
 from component_configurator import Configurator
-from openpgm_settings       import OpenPGMSettings
 
 class ZeroMQSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '4.2.3'
-
-        self._openpgm_settings = OpenPGMSettings(settings)
 
         if settings.on_windows():
             self._package_name = 'libzmq-' + self._version
@@ -77,14 +74,9 @@ class ZeroMQSettings(Configurator):
                    '--verbose',
                    '--prefix',
                    self.get_install_dir(),
-                   '--without-libsodium',
-                   '--with-pgm']
+                   '--without-libsodium' ]
 
-        compile_variables = os.environ.copy()
-        compile_variables['pgm_LIBS'] = self._openpgm_settings.lflags()
-        compile_variables['pgm_CFLAGS'] = self._openpgm_settings.cflags()
-
-        result = subprocess.call(command, env=compile_variables)
+        result = subprocess.call(command)
         return result == 0
 
     def get_vs_project_root(self):
