@@ -7,6 +7,8 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015 or VS2017 15.7.3 or up.
 * Install cmake
 * Install MySQL Connector from https://dev.mysql.com/downloads/windows/installer/ and choose the web installer (select both Connector/C and Connector/C++ for installation)
 * Install YASM from https://yasm.tortall.net/Download.html (download Win64 ZIP archive and unpack it to c:\Program Files\yasm)
+* Install ActiveState Perl (https://www.activestate.com/ActivePerl)
+* Install NASM (http://www.nasm.us) and add it to global PATH variable
 
 ## Ubuntu
 * Install python-pip package (it will install Python)
@@ -15,6 +17,7 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015 or VS2017 15.7.3 or up.
 * Install libmysqlclient-dev package
 * Install autoconf and libtool packages
 * Install yasm package
+* Install nasm package
 
 ## MacOS X
 To be added later...
