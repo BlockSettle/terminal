@@ -41,9 +41,6 @@ class OpenSslSettings(Configurator):
         result = subprocess.call(command)
         return result == 0
 
-    def get_solution_file(self):
-        return os.path.join(self.get_build_dir(), 'protobuf.sln')
-
     def config_x(self):
         self.copy_sources_to_build()
 
