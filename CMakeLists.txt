@@ -102,9 +102,9 @@ INCLUDE_DIRECTORIES( ${ZEROMQ_INCLUDE_DIR} )
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${ZEROMQ_ROOT}/lib)
 IF( WIN32 )
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_2_3" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_2_5" )
    ELSE()
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_2_3" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_2_5" )
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE ()
    SET( ZMQ_LIB_NAME "libzmq.a" "zmq" )
@@ -114,9 +114,9 @@ FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO
 IF( NOT ZMQ_LIB )
    IF( WIN32 )
       IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_2_3" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_2_5" )
       ELSE()
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_2_3" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_2_5" )
       ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    ENDIF( WIN32 )
    FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
@@ -324,6 +324,7 @@ IF(WIN32)
       winmm
       dwmapi
       netapi32
+      crypt32
       userenv
       version
       UxTheme
