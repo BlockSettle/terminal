@@ -163,6 +163,8 @@ private:
 
    bool createWallet(bool primary, bool reportSuccess = true);
    void setLoginButtonText(const QString& text);
+
+   void setupShortcuts();
 };
 
 Q_DECLARE_METATYPE(LedgerEntryData)

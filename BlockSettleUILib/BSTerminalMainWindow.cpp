@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QShortcut>
 #include <QStringList>
 #include <QSystemTrayIcon>
 #include <QtConcurrent/QtConcurrentRun>
@@ -85,6 +86,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    ui->setupUi(this);
    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tabNews));
+
+   setupShortcuts();
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
@@ -979,3 +982,27 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
 
 void BSTerminalMainWindow::onCCInfoMissing()
 { }   // do nothing here since we don't know if user will need Private Market before logon to Celer
+
+
+void BSTerminalMainWindow::setupShortcuts()
+{
+   auto overviewTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+1")), this);
+   overviewTabShortcut->setContext(Qt::ApplicationShortcut);
+   connect(overviewTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(0);});
+
+   auto tradingTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+2")), this);
+   tradingTabShortcut->setContext(Qt::ApplicationShortcut);
+   connect(tradingTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(1);});
+
+   auto dealingTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+3")), this);
+   dealingTabShortcut->setContext(Qt::ApplicationShortcut);
+   connect(dealingTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(2);});
+
+   auto walletsTabShortcutt = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+4")), this);
+   walletsTabShortcutt->setContext(Qt::ApplicationShortcut);
+   connect(walletsTabShortcutt, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(3);});
+
+   auto transactionsTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+5")), this);
+   transactionsTabShortcut->setContext(Qt::ApplicationShortcut);
+   connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(4);});
+}
