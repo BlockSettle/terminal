@@ -22,7 +22,6 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger, cons
    , appSettings_(appSettings)
    , otpManager_(otpMgr)
 {
-   qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
 }
 
 void CCFileManager::LoadData()
