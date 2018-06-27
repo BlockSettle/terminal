@@ -6,6 +6,7 @@
 #include "AddressVerificator.h"
 #include "SettlementContainer.h"
 #include "SettlementWallet.h"
+#include "TransactionData.h"
 
 namespace spdlog {
    class logger;
@@ -47,6 +48,8 @@ public:
    uint64_t fee() const { return fee_; }
    std::string walletName() const;
    bs::Address receiveAddress() const;
+
+   std::shared_ptr<bs::Wallet> GetWallet() const { return transactionData_->GetWallet(); }
 
 signals:
    void cptyAddressStateChanged(AddressVerificationState);

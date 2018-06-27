@@ -6,6 +6,8 @@
 #include "MetaData.h"
 #include "PyBlockDataManager.h"
 #include "UiUtils.h"
+#include "WalletsManager.h"
+#include "HDWallet.h"
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/spdlog.h>
@@ -13,10 +15,14 @@
 
 DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<DealerCCSettlementContainer> &container
-      , const std::string &reqRecvAddr, QWidget* parent)
+      , const std::string &reqRecvAddr
+      , std::shared_ptr<WalletsManager> walletsManager
+      , QWidget* parent)
    : BaseDealerSettlementDialog(logger, container, parent)
    , ui_(new Ui::DealerCCSettlementDialog())
    , settlContainer_(container)
+   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
    connectToProgressBar(ui_->progressBar);
@@ -43,16 +49,22 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
 
    ui_->labelTotal->setText(UiUtils::displayAmount(settlContainer_->quantity() * settlContainer_->price()));
 
-   ui_->labelReceiptAddress->setText(QString::fromStdString(reqRecvAddr));
-
    settlContainer_->activate();
 
-   const auto strValid = tr("<span style=\"color: darkGreen;\">valid</span>");
-   const auto strInvalid = tr("<span style=\"color: red;\">invalid</span>");
-   ui_->labelCounterpartyTx->setText(settlContainer_->foundRecipAddr() ? strValid : strInvalid);
-   ui_->labelCounterpartyAmount->setText(settlContainer_->isAmountValid() ? strValid : strInvalid);
+   if (settlContainer_->isDelivery()) {
+      setWindowTitle(tr("Settlement Delivery"));
+      ui_->labelPaymentName->setText(tr("Delivery"));
+   } else {
+      setWindowTitle(tr("Settlement Payment"));
+      ui_->labelPaymentName->setText(tr("Payment"));
+   }
 
-   ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(settlContainer_->GetSigningWalletName()));
+   ui_->labelPayment->setText(settlContainer_->foundRecipAddr() && settlContainer_->isAmountValid()
+      ? sValid : sInvalid);
+
+   ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet")
+      .arg(QString::fromStdString(walletsManager->GetHDRootForLeaf(
+         settlContainer_->GetSigningWallet()->GetWalletId())->getName())));
 
    ui_->verticalWidgetPassword->hide();
    connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &DealerCCSettlementDialog::validateGUI);
@@ -68,11 +80,11 @@ void DealerCCSettlementDialog::validateGUI()
 void DealerCCSettlementDialog::onGenAddressVerified(bool addressVerified)
 {
    if (addressVerified) {
-      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: darkGreen;\">valid</span></b>"));
+      ui_->labelGenesisAddress->setText(sValid);
       ui_->lineEditPassword->setEnabled(true);
       ui_->verticalWidgetPassword->show();
    } else {
-      ui_->labelGenesisAddress->setText(tr("<b><span style=\"color: red;\">invalid</span></b>"));
+      ui_->labelGenesisAddress->setText(sInvalid);
       ui_->lineEditPassword->setEnabled(false);
    }
    validateGUI();

@@ -19,6 +19,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , lotSize_(lotSize)
    , genesisAddr_(genAddr)
    , autoSign_(autoSign)
+   , delivery_(order.side == bs::network::Side::Sell)
    , transactionData_(txData)
    , wallet_(txData->GetSigningWallet())
    , signingContainer_(container)

@@ -189,13 +189,20 @@ namespace bs {
          bool        isExtOnly_ = false;
          std::string name_, desc_;
          std::string suffix_;
+
          Path::Elem  lastIntIdx_ = 0;
          Path::Elem  lastExtIdx_ = 0;
+
+         size_t intAddressPoolSize_ = 100;
+         size_t extAddressPoolSize_ = 100;
+         const std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
 
          std::unordered_map<BinaryData, BinaryData> hashToPubKey_;
          std::unordered_map<BinaryData, hd::Path>   pubKeyToPath_;
          using TempAddress = std::pair<Path, AddressEntryType>;
          std::unordered_map<Path::Elem, TempAddress>  tempAddresses_;
+         std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressPool_;
+         std::map<bs::Address, AddrPoolKey>           poolByAddr_;
 
       private:
          shared_ptr<LMDBEnv> dbEnv_ = nullptr;
@@ -206,9 +213,6 @@ namespace bs {
          std::vector<bs::Address>                     extAddresses_;
          std::unordered_map<BinaryData, Path::Elem>   addrToIndex_;
          cb_complete_notify                           cbScanNotify_ = nullptr;
-         std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressPool_;
-         std::map<bs::Address, AddrPoolKey>           poolByAddr_;
-         const size_t addressPoolSize_ = 100;
          volatile bool activateAddressesInvoked_ = false;
 
       private:
@@ -230,8 +234,8 @@ namespace bs {
       class AuthLeaf : public Leaf
       {
       public:
-         AuthLeaf(const std::string &name, const std::string &desc)
-            : Leaf(name, desc, bs::wallet::Type::Authentication) {}
+         AuthLeaf(const std::string &name, const std::string &desc);
+
          void init(const std::shared_ptr<Node> &node, const hd::Path &
             , const std::shared_ptr<Node> &rootNode) override;
          void SetUserID(const BinaryData &) override;

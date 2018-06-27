@@ -167,8 +167,9 @@ void RFQDealerReply::onSignerStateUpdated()
 
 void RFQDealerReply::updateAutoSignState()
 {
-   ui_->horizontalWidgetASPassword->setVisible(autoSignNeedsPassword_);
-   ui_->checkBoxAutoSign->setEnabled(!autoSignNeedsPassword_ || (ui_->checkBoxAutoSign->checkState() != Qt::Unchecked));
+   ui_->checkBoxAutoSign->setEnabled((!autoSignNeedsPassword_
+         || (ui_->checkBoxAutoSign->checkState() != Qt::Unchecked))
+      && ui_->checkBoxAutoSign->checkState() != Qt::PartiallyChecked);
    ui_->comboBoxWalletAS->setEnabled(ui_->checkBoxAutoSign->checkState() == Qt::Unchecked);
    ui_->horizontalWidgetASPassword->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked) && autoSignNeedsPassword_);
 }
@@ -1269,6 +1270,7 @@ void RFQDealerReply::onCelerConnected()
 {
    ui_->checkBoxAQ->setEnabled(aqLoaded_);
    celerConnected_ = true;
+   ui_->groupBoxAutoSign->setEnabled(true);
 }
 
 void RFQDealerReply::onCelerDisconnected()
@@ -1276,6 +1278,8 @@ void RFQDealerReply::onCelerDisconnected()
    celerConnected_ = false;
    ui_->checkBoxAQ->setEnabled(false);
    ui_->checkBoxAQ->setCheckState(Qt::Unchecked);
+   ui_->groupBoxAutoSign->setEnabled(false);
    aqStateChanged(Qt::Unchecked);
+   emit autoSignActivated({}, ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), false);
    logger_->info("Disabled auto-quoting due to Celer disconnection");
 }

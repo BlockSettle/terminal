@@ -31,7 +31,7 @@ bool operator == (const EnvSettings& l, const EnvSettings& r)
 static const EnvSettings StagingEnvSettings{
    QLatin1String("104.155.117.179"),
    16001,
-   QLatin1String("155.4.111.15"),
+   QLatin1String("193.138.218.44"),
    9091};
 
 static const EnvSettings UATEnvSettings{
