@@ -93,8 +93,15 @@ void WalletsManager::Reset(NetworkType netType, const std::string &newWalletsDir
    emit walletChanged();
 }
 
-void WalletsManager::LoadWallets(const load_progress_delegate& progressDelegate)
+void WalletsManager::LoadWallets(const load_progress_delegate& progressDelegate, QString userWalletsDir)
 {
+   if (!userWalletsDir.isEmpty()) {
+      walletsPath_ = userWalletsDir.toStdString();
+   }
+
+   logger_->debug("[WalletsManager::LoadWallets] loading wallets from {}"
+      , walletsPath_);
+
    QDir walletsDir(QString::fromStdString(walletsPath_));
    if (!walletsDir.exists()) {
       logger_->debug("Creating wallets path {}", walletsPath_);

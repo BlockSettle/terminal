@@ -23,10 +23,11 @@ message AdminCommandConnect
    required string celer_port = 4;
    required string pub_host = 5;
    required string pub_port = 6;
-   required string armory_host = 7;
-   required string armory_port = 8;
-   required bool   generate_address = 9;
-   optional uint64 generate_address_interval = 10;
+   required string wallets_root = 7;
+   required string armory_host = 8;
+   required string armory_port = 9;
+   required bool   generate_address = 10;
+   optional uint64 generate_address_interval = 11;
 }
 
 message RFQAmount

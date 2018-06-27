@@ -52,7 +52,7 @@ public:
    void Reset(NetworkType, const std::string &newWalletsDir = {});
 
    std::string GetWalletsPath() const { return walletsPath_; }
-   void LoadWallets(const load_progress_delegate& progressDelegate);
+   void LoadWallets(const load_progress_delegate& progressDelegate, QString userWalletsDir = QString{});
    void BackupWallet(const hd_wallet_type &) const;
    void AddWallet(const hd_wallet_type &);
 
