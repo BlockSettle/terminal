@@ -111,6 +111,8 @@ namespace UiUtils
    QIcon icon( const QString& name, const QVariantMap& options = QVariantMap() );
    QIcon icon( const char* name, const QVariantMap& options = QVariantMap() );
 
+   void setWrongState(QWidget *widget, bool wrong);
+
    extern const QLatin1String XbtCurrency;
 }
 

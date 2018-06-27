@@ -247,9 +247,10 @@ void CreateTransactionDialogAdvanced::initUI()
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &CreateTransactionDialogAdvanced::onImportPressed);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateTransactionDialogAdvanced::reject);
 
-   ui_->radioButtonNewAddress->setChecked(true);
+   ui_->radioButtonNewAddrNative->setChecked(true);
 
-   connect(ui_->radioButtonNewAddress, &QRadioButton::clicked, this, &CreateTransactionDialogAdvanced::onNewAddressSelectedForChange);
+   connect(ui_->radioButtonNewAddrNative, &QRadioButton::clicked, this, &CreateTransactionDialogAdvanced::onNewAddressSelectedForChange);
+   connect(ui_->radioButtonNewAddrNested, &QRadioButton::clicked, this, &CreateTransactionDialogAdvanced::onNewAddressSelectedForChange);
    connect(ui_->radioButtonExistingAddress, &QRadioButton::clicked, this, &CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange);
 
    ui_->treeViewOutputs->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -413,7 +414,7 @@ void CreateTransactionDialogAdvanced::selectedWalletChanged(int index)
 {
    CreateTransactionDialog::selectedWalletChanged(index);
 
-   ui_->radioButtonNewAddress->setChecked(true);
+   ui_->radioButtonNewAddrNative->setChecked(true);
 }
 
 void CreateTransactionDialogAdvanced::onTransactionUpdated()
@@ -426,7 +427,8 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
 
    if (!changeAddressFixed_) {
       bool changeSelectionEnabled = summary.hasChange || (summary.transactionSize == 0);
-      ui_->radioButtonNewAddress->setEnabled(changeSelectionEnabled);
+      ui_->radioButtonNewAddrNative->setEnabled(changeSelectionEnabled);
+      ui_->radioButtonNewAddrNested->setEnabled(changeSelectionEnabled);
       ui_->radioButtonExistingAddress->setEnabled(changeSelectionEnabled);
       showExistingChangeAddress(changeSelectionEnabled);
    }
@@ -451,11 +453,16 @@ void CreateTransactionDialogAdvanced::preSetValue(const double value)
 void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addressString)
 {
    try {
-      bs::Address address{addressString};
+      bs::Address address{addressString.trimmed()};
       currentAddressValid_ = address.isValid();
    } catch (...) {
       currentAddressValid_ = false;
    }
+
+   if (currentAddressValid_)
+      UiUtils::setWrongState(ui_->lineEditAddress, false);
+   else
+      UiUtils::setWrongState(ui_->lineEditAddress, true);
 
    validateAddOutputButton();
 }
@@ -518,7 +525,8 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
    ui_->pushButtonCreate->setEnabled(isTxValid
       && isSignerReady
       && !broadcasting_
-      && (ui_->radioButtonNewAddress->isChecked() || (selectedChangeAddress_.isValid())));
+      && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
+         || (selectedChangeAddress_.isValid())));
 }
 
 void CreateTransactionDialogAdvanced::AddManualFeeEntries(float feePerByte, float totalFee)
@@ -587,8 +595,9 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
 {
    bs::Address result;
    if (transactionData_->GetTransactionSummary().hasChange) {
-      if (ui_->radioButtonNewAddress->isChecked()) {
-         result = transactionData_->GetWallet()->GetNewChangeAddress();
+      if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
+         result = transactionData_->GetWallet()->GetNewChangeAddress(
+            ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
          transactionData_->createAddress(result);
          transactionData_->GetWallet()->SetAddressComment(result, bs::wallet::Comment::toString(bs::wallet::Comment::ChangeAddress));
       } else {
@@ -738,7 +747,7 @@ void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
       showExistingChangeAddress(true);
    } else {
       if (!selectedChangeAddress_.isValid()) {
-         ui_->radioButtonNewAddress->setChecked(true);
+         ui_->radioButtonNewAddrNative->setChecked(true);
       }
    }
 }
@@ -777,7 +786,8 @@ void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& chang
 {
    ui_->radioButtonExistingAddress->setChecked(true);
 
-   ui_->radioButtonNewAddress->setEnabled(false);
+   ui_->radioButtonNewAddrNative->setEnabled(false);
+   ui_->radioButtonNewAddrNested->setEnabled(false);
 
    selectedChangeAddress_ = bs::Address{changeAddress};
    showExistingChangeAddress(true);

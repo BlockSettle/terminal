@@ -18,6 +18,7 @@
 #include <QImage>
 #include <QPixmap>
 #include <QDebug>
+#include <QStyle>
 
 #include <algorithm>
 
@@ -494,4 +495,11 @@ QValidator::State UiUtils::ValidateDoubleString(QString &input, int &pos, const 
    }
 
    return QValidator::Acceptable;
+}
+
+void UiUtils::setWrongState(QWidget *widget, bool wrong)
+{
+   widget->style()->unpolish(widget);
+   widget->setProperty("wrongState", wrong);
+   widget->style()->polish(widget);
 }

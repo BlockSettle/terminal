@@ -43,7 +43,7 @@ void BaseDealerSettlementDialog::setCriticalHintMessage(const QString& hint)
 {
    hintSetToCritical_ = true;
 
-   const auto formatString = tr("<b><span style=\"color: red;\">%1</span></b>");
+   const auto formatString = tr("<span style=\"color: #CF292E;\">%1</span>");
    QString text = formatString.arg(hint);
 
    QMetaObject::invokeMethod(errorLabel_, "show");

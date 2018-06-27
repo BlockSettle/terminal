@@ -11,7 +11,7 @@ using namespace bs;
 bool bs::TxAddressChecker::containsInputAddress(Tx tx, uint64_t lotsize, uint64_t value, unsigned int inputId)
 {
    TxIn in = tx.getTxInCopy(inputId);
-   if (!in.isInitialized()) {
+   if (!in.isInitialized() || !lotsize) {
       return false;
    }
    OutPoint op = in.getOutPoint();

@@ -9,6 +9,7 @@
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
+#include "HDWallet.h"
 
 #include <QLabel>
 #include <QtConcurrent/QtConcurrentRun>
@@ -21,8 +22,8 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CCSettlementTransactionWidget())
    , timer_(this)
-   , sValid(tr("<span style=\"color: darkGreen;\">valid</span>"))
-   , sInvalid(tr("<span style=\"color: red;\">invalid</span>"))
+   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
 
@@ -110,17 +111,26 @@ void CCSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
 
    ui_->labelPrice->setText(UiUtils::displayPriceCC(quote.price));
 
-   ui_->labelTotalValue->setText(tr("%1 %2")
-      .arg(UiUtils::displayAmount(amount_ * price_))
-      .arg(QString::fromStdString(bs::network::XbtCurrency)));
+   ui_->labelTotalValue->setText(tr("%1")
+      .arg(UiUtils::displayAmount(amount_ * price_)));
 
 
    clientSells_ = (rfq.side == bs::network::Side::Sell);
+
+   if (rfq.side == bs::network::Side::Buy && rfq.product == bs::network::XbtCurrency) {
+      window()->setWindowTitle(tr("Settlement Delivery"));
+      ui_->labelPaymentName->setText(tr("Delivery"));
+   } else {
+      window()->setWindowTitle(tr("Settlement Payment"));
+      ui_->labelPaymentName->setText(tr("Payment"));
+   }
+
    populateCCDetails(rfq, quote, genAddr);
 
    auto signingWallet = transactionData->GetSigningWallet();
    if (signingWallet) {
-      auto walletName = QString::fromStdString(signingWallet->GetWalletName());
+      auto walletName = QString::fromStdString(walletsManager_->GetHDRootForLeaf(
+         signingWallet->GetWalletId())->getName());
       ui_->labelPasswordHint->setText(tr("Enter \"%1\" wallet password to accept").arg(walletName));
    }
    updateAcceptButton();
@@ -137,19 +147,22 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    requesterTx_ = BinaryData::CreateFromHex(rfq.coinTxInput);
 
    // addDetailRow(tr("Receipt address"), QString::fromStdString(dealerAddress_));
-   ui_->labelTransactionAmount->setText(UiUtils::displayQuantity(rfq.quantity, rfq.product));
+
+   bool verified = false;
 
    if (!clientSells_) {
       if ((amount_ * price_) > assetManager_->getBalance(bs::network::XbtCurrency, transactionData_->GetSigningWallet())) {
          ui_->labelHint->setText(tr("Insufficient XBT balance in signing wallet"));
          userKeyOk_ = false;
       }
-      ui_->labelPaymentBalance->setText(userKeyOk_ ? sValid : sInvalid);
+
+      verified = userKeyOk_;
+
       if (!userKeyOk_) {
+         ui_->labelPayment->setText(sInvalid);
+
          return;
       }
-   } else {
-      ui_->labelPaymentBalance->setText(sValid);
    }
 
    userKeyOk_ = false;
@@ -158,6 +171,9 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    const auto lotSize = assetManager_->getCCLotSize(product_);
    bs::CheckRecipSigner signer;
    try {
+      if (!lotSize) {
+         throw std::runtime_error("invalid lot size");
+      }
       signer.deserializeState(dealerTx_);
       foundRecipAddr = signer.findRecipAddress(bs::Address(rfq.receiptAddress)
          , [lotSize, quote, &amountValid](uint64_t value, uint64_t valReturn, uint64_t valInput) {
@@ -175,10 +191,12 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    }
    catch (const std::exception &e) {
       logger_->debug("Signer deser exc: {}", e.what());
+      ui_->labelHint->setText(tr("Failed to verify dealer's TX: %1").arg(QLatin1String(e.what())));
    }
 
-   ui_->labelDelaerTxHalf->setText(foundRecipAddr ? sValid : sInvalid);
-   ui_->labelDealersAmount->setText(amountValid ? sValid : sInvalid);
+   verified &= foundRecipAddr;
+
+   ui_->labelPayment->setText(verified ? sValid : sInvalid);
 
    if (genAddr.isNull()) {
       emit genAddrVerified(false);
