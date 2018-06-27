@@ -65,11 +65,10 @@ class QtSettings(Configurator):
         command.append('-sql-sqlite')
         command.append('-sql-mysql')
 
-        command.append('-openssl')
-        command.append('-I')
-	command.append(self.openssl.get_install_dir() + '/include')
-        command.append('-L')
-	command.append(self.openssl.get_install_dir() + '/lib')
+        command.append('-openssl-linked')
+        # command.append('-no-securetransport')
+        command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
+        command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
 
         if self._project_settings.on_linux():
             command.append('-system-freetype')
@@ -104,7 +103,11 @@ class QtSettings(Configurator):
         command.append('-prefix')
         command.append(self.get_install_dir())
 
-        result = subprocess.call(command)
+        ssllibs_var = '-L{} -llibssl -llibcrypto'.format(os.path.join(self.openssl.get_install_dir(),'lib'))
+        compile_variables = os.environ.copy()
+        compile_variables['OPENSSL_LIBS'] = ssllibs_var
+
+        result = subprocess.call(command, env=compile_variables)
         if result != 0:
             print('Configure of QT failed')
             return False
