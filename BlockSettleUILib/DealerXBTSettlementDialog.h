@@ -18,6 +18,7 @@ namespace bs {
 }
 class AssetManager;
 class DealerXBTSettlementContainer;
+class WalletsManager;
 
 
 class DealerXBTSettlementDialog : public BaseDealerSettlementDialog
@@ -27,6 +28,7 @@ public:
    DealerXBTSettlementDialog(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<DealerXBTSettlementContainer> &
       , const std::shared_ptr<AssetManager>& assetManager
+      , std::shared_ptr<WalletsManager> walletsManager
       , QWidget* parent = nullptr);
    ~DealerXBTSettlementDialog() noexcept override = default;
 

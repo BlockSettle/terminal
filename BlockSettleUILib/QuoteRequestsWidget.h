@@ -131,6 +131,8 @@ private slots:
    void onQuoteRequest(const bs::network::QuoteReqNotification &qrn);
    void onSecuritiesReceived();
    void onRowsChanged();
+   void onRowsInserted(const QModelIndex &parent, int first, int last);
+   void onRowsRemoved(const QModelIndex &parent, int first, int last);
 
 private:
    Ui::QuoteRequestsWidget* ui_;

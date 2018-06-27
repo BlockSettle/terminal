@@ -23,9 +23,9 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::XBTSettlementTransactionWidget())
    , timer_(this)
-   , sValid(tr("<span style=\"color: darkGreen;\">valid</span>"))
-   , sInvalid(tr("<span style=\"color: red;\">invalid</span>"))
-   , sFailed(tr("<span style=\"color: red;\">failed</span>"))
+   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
+   , sFailed(tr("<span style=\"color: #CF292E;\">Failed</span>"))
    , waitForPayout_(false), waitForPayin_(false)
    , sellFromPrimary_(false)
 {
@@ -151,16 +151,20 @@ void XBTSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
       const auto rootSellingWalletId = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId())->getWalletId();
       sellFromPrimary_ = rootAuthWalletId == rootSellingWalletId;
 
-      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-In").arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletName())));
+      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-In")
+         .arg(QString::fromStdString(walletsManager_->GetHDRootForLeaf(
+            transactionData_->GetWallet()->GetWalletId())->getName())));
 
       if (sellFromPrimary_) {
          ui_->labelHintAuthPassword->hide();
          ui_->horizontalWidgetAuthPassword->hide();
       } else {
-         ui_->labelHintAuthPassword->setText(tr("Enter password for \"%1\" wallet to sign revoke Pay-Out").arg(QString::fromStdString(rootAuthWallet->getName())));
+         ui_->labelHintAuthPassword->setText(tr("Enter password for \"%1\" wallet to sign revoke Pay-Out")
+            .arg(QString::fromStdString(rootAuthWallet->getName())));
       }
    } else {
-      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-Out").arg(QString::fromStdString(rootAuthWallet->getName())));
+      ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-Out")
+         .arg(QString::fromStdString(rootAuthWallet->getName())));
       ui_->labelHintAuthPassword->hide();
       ui_->horizontalWidgetAuthPassword->hide();
    }
@@ -233,7 +237,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
     ui_->labelUserAuthAddress->setText(userKeyOk_ ? sValid : sInvalid);
 
    if (clientSells_) {
-      window()->setWindowTitle(tr("Settlement Pay-In Transaction"));
+      window()->setWindowTitle(tr("Settlement Pay-In (XBT)"));
 
       // addDetailRow(tr("Sending wallet"), tr("<b>%1</b> (%2)").arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletName()))
       //    .arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletId())));
@@ -248,7 +252,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       }
    }
    else {
-      window()->setWindowTitle(tr("Settlement Pay-Out Transaction"));
+      window()->setWindowTitle(tr("Settlement Pay-Out (XBT)"));
 
       // addDetailRow(tr("Receiving wallet"), tr("<b>%1</b> (%2)").arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletName()))
       //    .arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletId())));
@@ -291,7 +295,7 @@ unsigned int XBTSettlementTransactionWidget::createPayoutTx(const BinaryData& pa
       const auto txReq = wallet->CreatePayoutTXRequest(wallet->GetInputFromTX(settlAddr_, payinHash, qty), recvAddr
          , transactionData_->GetTransactionSummary().feePerByte);
       const auto authAddr = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
-      logger_->debug("[XBTSettlementTransactionWidget] pay-out fee = {}", txReq.fee);
+      logger_->debug("[XBTSettlementTransactionWidget] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
       std::string password;
 
       if (clientSells_) {
@@ -364,7 +368,8 @@ void XBTSettlementTransactionWidget::acceptSpotXBT()
       }
       catch (const std::exception &e) {
          logger_->warn("[XBTSettlementTransactionWidget::acceptSpotXBT] Pay-Out failed: {}", e.what());
-         ui_->labelHintPassword->setText(tr("Pay-Out to dealer failed: %1").arg(QString::fromStdString(e.what())));
+         ui_->labelHintPassword->setText(tr("Pay-Out to dealer failed: %1")
+            .arg(QString::fromStdString(e.what())));
          return;
       }
    }

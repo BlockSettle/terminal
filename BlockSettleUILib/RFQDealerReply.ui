@@ -1679,6 +1679,9 @@
              </property>
              <item>
               <widget class="QGroupBox" name="groupBoxAutoSign">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="title">
                 <string>AUTO SIGN</string>
                </property>
@@ -1803,7 +1806,7 @@
                    <item>
                     <widget class="QCheckBox" name="checkBoxAutoSign">
                      <property name="enabled">
-                      <bool>true</bool>
+                      <bool>false</bool>
                      </property>
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -1889,9 +1892,6 @@
                    </item>
                    <item>
                     <widget class="QLineEdit" name="lineEditAutoSignPassword">
-                     <property name="enabled">
-                      <bool>true</bool>
-                     </property>
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                        <horstretch>0</horstretch>

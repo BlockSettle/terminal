@@ -8,7 +8,9 @@
 #include "SelectedTransactionInputs.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
+#include <QDebug>
 
+class TransactionNode;
 class CoinControlNode
 {
 public:
@@ -70,6 +72,8 @@ public:
    {
       // do nothing by default
    }
+
+   void sort(int column, Qt::SortOrder order);
 private:
    QString                    name_;
    QString                    comment_;
@@ -124,7 +128,7 @@ public:
 
    void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs) override
    {
-      selectedInputs->SetTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
+     selectedInputs->SetTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
    }
 
 protected:
@@ -236,6 +240,30 @@ private:
    int totalChilds_ = 0;
    int checkedState_ = Qt::Unchecked;
 };
+
+
+void CoinControlNode::sort(int column, Qt::SortOrder order) {
+   qSort(std::begin(childs_), std::end(childs_), [column, order](CoinControlNode* left, CoinControlNode* right) {
+
+      bool res = true;
+      switch(column){
+      case 0:
+         res = left->getName().compare(right->getName()) < 0;
+         break;
+      case 1:
+         res = left->getComment().compare(right->getComment()) < 0;
+         break;
+      default:
+         res = ((TransactionNode*)left)->getTotalAmount() < ((TransactionNode*)right)->getTotalAmount();
+         break;
+      }
+
+      if (order == Qt::DescendingOrder)
+         return !res;
+
+      return res;
+   });
+}
 
 CoinControlModel::CoinControlModel(const std::shared_ptr<SelectedTransactionInputs> &selectedInputs, QObject* parent)
    : QAbstractItemModel(parent)
@@ -459,6 +487,12 @@ void CoinControlModel::clearSelection()
 void CoinControlModel::selectAll(int sel)
 {
    root_->UpdateChildsState(static_cast<Qt::CheckState>(sel));
+   emit layoutChanged();
+   emit selectionChanged();
+}
+
+void CoinControlModel::sort(int column, Qt::SortOrder order){
+   root_->sort(column, order);
    emit layoutChanged();
    emit selectionChanged();
 }

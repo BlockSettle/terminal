@@ -6,6 +6,7 @@
 #include "QuoteRequestsWidget.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
+#include "Colors.h"
 
 
 QString QuoteRequestsModel::Header::toString(QuoteRequestsModel::Header::Index h)
@@ -157,9 +158,9 @@ QBrush QuoteRequestsModel::colorForQuotedPrice(double quotedPrice, double bestQP
       return {};
    }
    if (own && qFuzzyCompare(quotedPrice, bestQPrice)) {
-      return Qt::darkGreen;
+      return c_greenColor;
    }
-   return Qt::darkRed;
+   return c_redColor;
 }
 
 void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn)
@@ -186,7 +187,7 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
    }
 
    if (indexSec < 0) {
-      groupItemSec = new QuoteReqItem(secStatsCollector_, groupNameSec, groupNameSec);
+      groupItemSec = new QuoteGroupReqItem(secStatsCollector_, groupNameSec, groupNameSec);
       QFont font;
       font.setBold(true);
       groupItemSec->setData(font, Qt::FontRole);
@@ -465,17 +466,20 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
    if (itQRN != notifications_.end()) {
       itQRN->second.status = status;
       forSpecificId(reqId, [status, details](QStandardItem *grp, int index) {
+         auto child = grp->child(index, Header::Status);
          if (!details.isEmpty()) {
-            grp->child(index, Header::Status)->setText(details);
+            child->setText(details);
          }
          else {
-            grp->child(index, Header::Status)->setText(quoteReqStatusDesc(status));
+            child->setText(quoteReqStatusDesc(status));
          }
-         grp->child(index, Header::Status)->setBackground(bgColorForStatus(status));
+         child->setBackground(bgColorForStatus(status));
 
          const bool showProgress = ((status == bs::network::QuoteReqNotification::Status::PendingAck)
             || (status == bs::network::QuoteReqNotification::Status::Replied));
-         grp->child(index, Header::Status)->setData(showProgress, Role::ShowProgress);
+         if (child->data(Role::ShowProgress).toBool() != showProgress) {
+            child->setData(showProgress, Role::ShowProgress);
+         }
       });
       emit quoteReqNotifStatusChanged(itQRN->second);
    }
@@ -510,10 +514,10 @@ void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::
 
          if (!qFuzzyIsNull(prevPrice)) {
             if (indicPrice > prevPrice) {
-               grp->child(index, Header::IndicPx)->setBackground(Qt::darkGreen);
+               grp->child(index, Header::IndicPx)->setBackground(c_greenColor);
             }
             else if (indicPrice < prevPrice) {
-               grp->child(index, Header::IndicPx)->setBackground(Qt::darkRed);
+               grp->child(index, Header::IndicPx)->setBackground(c_redColor);
             }
          }
       }
@@ -521,11 +525,11 @@ void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::
 }
 
 
-QuoteReqItem::QuoteReqItem(const std::shared_ptr<bs::StatsCollector> &sc, const QString &text, const QString &key)
+QuoteGroupReqItem::QuoteGroupReqItem(const std::shared_ptr<bs::StatsCollector> &sc, const QString &text, const QString &key)
    : QStandardItem(text), statsCollector_(sc), key_(key)
 {}
 
-QVariant QuoteReqItem::data(int role) const
+QVariant QuoteGroupReqItem::data(int role) const
 {
    if (statsCollector_) {
       switch (role)
@@ -540,4 +544,10 @@ QVariant QuoteReqItem::data(int role) const
       }
    }
    return QStandardItem::data(role);
+}
+
+QuoteReqItem::QuoteReqItem(const std::shared_ptr<bs::StatsCollector> &sc, const QString &text, const QString &key)
+   : QuoteGroupReqItem(sc, text, key)
+{
+//   setFlags(Qt::ItemNeverHasChildren);  // currently inhibits item selection
 }

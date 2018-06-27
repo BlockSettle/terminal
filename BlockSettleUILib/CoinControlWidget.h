@@ -28,6 +28,7 @@ signals:
 private slots:
    void updateSelectedTotals();
    void onAutoSelClicked(int state);
+   void rowClicked(const QModelIndex &index);
 
 private:
    Ui::CoinControlWidget* ui_;

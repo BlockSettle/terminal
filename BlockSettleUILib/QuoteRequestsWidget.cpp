@@ -10,6 +10,28 @@
 #include "UiUtils.h"
 
 
+//
+// DoNotDrawSelectionDelegate
+//
+
+//! This delegate just clears selection bit and paints item as
+//! unselected always.
+class DoNotDrawSelectionDelegate final : public QStyledItemDelegate
+{
+public:
+   explicit DoNotDrawSelectionDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
+
+   void paint(QPainter *painter, const QStyleOptionViewItem &opt,
+              const QModelIndex &index) const override
+   {
+      QStyleOptionViewItem changedOpt = opt;
+      changedOpt.state &= ~(QStyle::State_Selected);
+
+      QStyledItemDelegate::paint(painter, changedOpt, index);
+   }
+}; // class DoNotDrawSelectionDelegate
+
+
 QuoteRequestsWidget::QuoteRequestsWidget(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::QuoteRequestsWidget())
@@ -17,6 +39,7 @@ QuoteRequestsWidget::QuoteRequestsWidget(QWidget* parent)
    , sortModel_(nullptr)
 {
    ui_->setupUi(this);
+   ui_->treeViewQuoteRequests->setUniformRowHeights(true);
 
    connect(ui_->treeViewQuoteRequests, &QTreeView::clicked, this, &QuoteRequestsWidget::onQuoteReqNotifSelected);
    connect(ui_->treeViewQuoteRequests, &QTreeView::doubleClicked, this, &QuoteRequestsWidget::onQuoteReqNotifSelected);
@@ -39,22 +62,11 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
 
    ui_->treeViewQuoteRequests->setModel(sortModel_);
 
-   connect(model_, &QAbstractItemModel::rowsInserted, [this]() {
-      ui_->treeViewQuoteRequests->expandAll();
-      ui_->treeViewQuoteRequests->resizeColumnToContents(0);
-   });
-   connect(model_, &QAbstractItemModel::rowsRemoved, [this] {
-      const auto &indices = ui_->treeViewQuoteRequests->selectionModel()->selectedIndexes();
-      if (indices.isEmpty()) {
-         emit Selected(bs::network::QuoteReqNotification(), 0, 0);
-      }
-      else {
-         onQuoteReqNotifSelected(indices.first());
-      }
-   });
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
    });
+   connect(model_, &QAbstractItemModel::rowsInserted, this, &QuoteRequestsWidget::onRowsInserted);
+   connect(model_, &QAbstractItemModel::rowsRemoved, this, &QuoteRequestsWidget::onRowsRemoved);
    connect(sortModel_, &QSortFilterProxyModel::rowsInserted, this, &QuoteRequestsWidget::onRowsChanged);
    connect(sortModel_, &QSortFilterProxyModel::rowsRemoved, this, &QuoteRequestsWidget::onRowsChanged);
 
@@ -62,8 +74,17 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    connect(appSettings.get(), &ApplicationSettings::settingChanged, this, &QuoteRequestsWidget::onSettingChanged);
    connect(assetManager_.get(), &AssetManager::securitiesReceived, this, &QuoteRequestsWidget::onSecuritiesReceived);
 
-   ui_->treeViewQuoteRequests->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Status, new ProgressDelegate());
+
+   auto *doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::QuotedPx,
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::IndicPx,
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::BestPx,
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Empty,
+      doNotDrawSelectionDelegate);
 }
 
 void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
@@ -193,6 +214,32 @@ void QuoteRequestsWidget::onRowsChanged()
    NotificationCenter::notify(bs::ui::NotifyType::DealerQuotes, { cntChildren });
 }
 
+void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, int last)
+{
+   for (int row = first; row <= last; row++) {
+      const auto &index = model_->index(row, 0, parent);
+      if (index.data(QuoteRequestsModel::Role::ReqId).isNull()) {
+         ui_->treeViewQuoteRequests->expandAll();
+         ui_->treeViewQuoteRequests->resizeColumnToContents(0);
+      }
+      else {
+         for (int i = 0; i < sortModel_->columnCount(); i++) {
+            ui_->treeViewQuoteRequests->resizeColumnToContents(i);
+         }
+      }
+   }
+}
+
+void QuoteRequestsWidget::onRowsRemoved(const QModelIndex &, int, int)
+{
+   const auto &indices = ui_->treeViewQuoteRequests->selectionModel()->selectedIndexes();
+   if (indices.isEmpty()) {
+      emit Selected(bs::network::QuoteReqNotification(), 0, 0);
+   }
+   else {
+      onQuoteReqNotifSelected(indices.first());
+   }
+}
 
 bs::SecurityStatsCollector::SecurityStatsCollector(const std::shared_ptr<ApplicationSettings> appSettings, ApplicationSettings::Setting param)
    : appSettings_(appSettings), param_(param)

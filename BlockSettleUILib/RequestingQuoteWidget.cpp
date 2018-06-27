@@ -24,11 +24,12 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
 
    ui_->labelQuoteValue->setText(tr("Waiting for quote..."));
    ui_->labelDetails->clear();
-   ui_->labelDetails->show();
+   ui_->labelDetails->hide();
    ui_->labelQuoteValue->show();
 
    ui_->pushButtonAccept->hide();
-   ui_->labelHint->show();
+   ui_->labelHint->clear();
+   ui_->labelHint->hide();
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
@@ -88,7 +89,8 @@ void RequestingQuoteWidget::ticker()
    }
    else {
       ui_->progressBar->setValue(timeDiff);
-      ui_->progressBar->setFormat(tr("%n second(s) remaining", "", timeDiff/1000));
+      ui_->progressBar->setFormat(tr("%1 second(s) remaining")
+         .arg(QString::number(timeDiff > 0 ? timeDiff/1000 : 0)));
    }
 }
 
@@ -124,6 +126,7 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
             ui_->pushButtonAccept->show();
             setupTimer(Tradeable, quote.expirationTime.addMSecs(quote.timeSkewMs));
             ui_->labelHint->setText(tr("Now you can accept the reply until the timeout expires"));
+            ui_->labelHint->show();
          }
          else {
             onAccept();
@@ -151,6 +154,7 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
       if (quote.assetType == bs::network::Asset::SpotFX) {
          ui_->labelHint->clear();
+         ui_->labelHint->hide();
       }
 
       double value = rfq_.quantity * quote.price;
@@ -160,8 +164,6 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
       QString contrProductString;
       QString valueString;
-
-      QString priceString;
 
       CurrencyPair cp(rfq_.security);
 
@@ -174,26 +176,30 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
       valueString = UiUtils::displayAmountForProduct(value, contrProductString, rfq_.assetType);
 
-      priceString = UiUtils::displayPriceForAssetType(quote.price, quote.assetType);
-
-      ui_->labelDetails->setText(tr("%1 %2 %3 @ %4 - %5 %6 %7")
-         .arg(tr(bs::network::Side::toString(rfq_.side)))
-         .arg(productAmountString)
-         .arg(productString)
-         .arg(priceString)
-         .arg((rfq_.side == bs::network::Side::Buy) ? tr("deliver") : tr("receive"))
-         .arg(valueString)
-         .arg(contrProductString));
-
       if (rfq_.side == bs::network::Side::Buy) {
-         balanceOk_ = (value < assetManager_->getBalance(contrProductString.toStdString()));
+         const auto currency = contrProductString.toStdString();
+         const auto balance = assetManager_->getBalance(currency);
+         balanceOk_ = (value < balance);
          ui_->pushButtonAccept->setEnabled(balanceOk_);
          if (!balanceOk_) {
-            ui_->labelHint->setText(tr("Unable to accept - exceeds your balance on %1").arg(contrProductString));
-         } else {
-            ui_->labelHint->setText(tr("Balance on %1 is sufficient").arg(contrProductString));
+            ui_->labelHint->setText(tr("Insufficient %1 balance")
+               .arg(QString::number(balance, 'f',
+                  (currency == bs::network::XbtCurrency ? 8 : 2))));
+            ui_->labelHint->show();
          }
       }
+
+      if (rfq_.side == bs::network::Side::Buy && !balanceOk_)
+         return true;
+
+      ui_->labelDetails->setText(tr("%1 %2 %3\n%4 %5 %6")
+         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Receive") : tr("Deliver"))
+         .arg(productAmountString)
+         .arg(productString)
+         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Deliver") : tr("Receive"))
+         .arg(valueString)
+         .arg(contrProductString));
+      ui_->labelDetails->show();
 
       return true;
    }
@@ -206,7 +212,7 @@ void RequestingQuoteWidget::onQuoteCancelled(const QString &reqId, bool byUser)
       quote_ = bs::network::Quote();
       ui_->labelQuoteValue->setText(tr("Waiting for quote..."));
       ui_->labelDetails->clear();
-      ui_->labelHint->setText(tr("Previous quote was pulled by originator"));
+      ui_->labelDetails->hide();
    }
 }
 
@@ -250,6 +256,7 @@ void RequestingQuoteWidget::onAccept()
    ui_->progressBar->hide();
    ui_->pushButtonAccept->setEnabled(false);
    ui_->labelHint->setText(tr("Accepted - waiting for reply..."));
+   ui_->labelHint->show();
 
    emit quoteAccepted(QString::fromStdString(rfq_.requestId), quote_);
 }
