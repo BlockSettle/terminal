@@ -4,7 +4,7 @@
 
 #include <zmq.h>
 
-int get_monitor_event(void *monitor)
+int bs::network::get_monitor_event(void *monitor)
 {
    // First frame in message contains event number and value
    zmq_msg_t msg;

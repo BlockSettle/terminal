@@ -247,7 +247,7 @@ void ZmqDataConnection::listenFunction()
       }
 
       if (monSocket_ && (poll_items[ZmqDataConnection::MonitorSocketIndex].revents & ZMQ_POLLIN)) {
-         switch (get_monitor_event(monSocket_.get())) {
+         switch (bs::network::get_monitor_event(monSocket_.get())) {
          case ZMQ_EVENT_CONNECTED:
             if (!isConnected_) {
                notifyOnConnected();
