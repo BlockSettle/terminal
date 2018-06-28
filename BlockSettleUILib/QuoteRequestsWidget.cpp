@@ -227,7 +227,7 @@ void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, i
          ui_->treeViewQuoteRequests->resizeColumnToContents(0);
       }
       else {
-         for (int i = 0; i < sortModel_->columnCount(); i++) {
+         for (int i = 0; i < sortModel_->columnCount(); ++i) {
             ui_->treeViewQuoteRequests->resizeColumnToContents(i);
          }
       }
@@ -265,7 +265,7 @@ QString QuoteRequestsWidget::path(const QModelIndex &index) const
 
    while (idx.parent().isValid()) {
       idx = idx.parent();
-      res += QString::fromLatin1("/") + idx.data().toString();
+      res.prepend(QString::fromLatin1("/") + idx.data().toString());
    }
 
    return res;
@@ -273,13 +273,11 @@ QString QuoteRequestsWidget::path(const QModelIndex &index) const
 
 void QuoteRequestsWidget::expandIfNeeded(const QModelIndex &index)
 {
-   if (sortModel_->hasChildren(index)) {
-      for (int i = 0; i < sortModel_->rowCount(index); ++i)
-         expandIfNeeded(sortModel_->index(i, 0, index));
+   if (!collapsed_.contains(path(sortModel_->mapToSource(index))))
+      ui_->treeViewQuoteRequests->expand(index);
 
-      if (!collapsed_.contains(path(sortModel_->mapToSource(index))))
-         ui_->treeViewQuoteRequests->expand(index);
-   }
+   for (int i = 0; i < sortModel_->rowCount(index); ++i)
+      expandIfNeeded(sortModel_->index(i, 0, index));
 }
 
 bs::SecurityStatsCollector::SecurityStatsCollector(const std::shared_ptr<ApplicationSettings> appSettings, ApplicationSettings::Setting param)
