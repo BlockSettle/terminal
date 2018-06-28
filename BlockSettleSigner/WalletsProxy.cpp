@@ -3,14 +3,15 @@
 #include <spdlog/spdlog.h>
 #include "HDWallet.h"
 #include "PDFWriter.h"
+#include "SignerSettings.h"
 #include "WalletBackupFile.h"
 #include "WalletsManager.h"
 #include "WalletsProxy.h"
 
 
 WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<WalletsManager> &walletsMgr)
-   : logger_(logger), walletsMgr_(walletsMgr)
+   , const std::shared_ptr<WalletsManager> &walletsMgr, const std::shared_ptr<SignerSettings> &params)
+   : logger_(logger), walletsMgr_(walletsMgr), params_(params)
 {
    connect(walletsMgr_.get(), &WalletsManager::walletsReady, this, &WalletsProxy::onWalletsChanged);
    connect(walletsMgr_.get(), &WalletsManager::walletsLoaded, this, &WalletsProxy::onWalletsChanged);
@@ -116,7 +117,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
    if (wallet->isEncrypted()) {
       decrypted = wallet->getNode()->decrypt(password.toStdString());
       bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), false, seed).getWalletId() != wallet->getWalletId()) {
+      if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), seed).getWalletId() != wallet->getWalletId()) {
          logger_->error("[WalletsProxy] invalid password for {}", walletId.toStdString());
          emit walletError(walletId, tr("Invalid password for wallet %1 (id %2)")
             .arg(QString::fromStdString(wallet->getName())).arg(walletId));
@@ -199,7 +200,8 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 bool WalletsProxy::createWallet(const QString &name, const QString &desc, bool isPrimary, const QString &password)
 {
    try {
-      walletsMgr_->CreateWallet(name.toStdString(), desc.toStdString(), password.toStdString(), isPrimary);
+      walletsMgr_->CreateWallet(name.toStdString(), desc.toStdString(), params_->netType(), params_->getWalletsDir()
+         , password.toStdString(), isPrimary);
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
@@ -212,7 +214,7 @@ bool WalletsProxy::createWallet(const QString &name, const QString &desc, bool i
 bool WalletsProxy::importWallet(const QString &name, const QString &desc, bool isPrimary, const QString &key
    , bool digitalBackup, const QString &password)
 {
-   bs::wallet::Seed seed;
+   bs::wallet::Seed seed(NetworkType::Invalid);
    std::string wltName = name.toStdString();
    std::string wltDesc = desc.toStdString();
 
@@ -230,7 +232,7 @@ bool WalletsProxy::importWallet(const QString &name, const QString &desc, bool i
             return false;
          }
          else {
-            seed = bs::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode, walletsMgr_->GetNetworkType());
+            seed = bs::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode, params_->netType());
             wltName = wdb.name;
             wltDesc = wdb.description;
          }
@@ -245,15 +247,15 @@ bool WalletsProxy::importWallet(const QString &name, const QString &desc, bool i
          const auto seedLines = key.split(QLatin1String("\n"), QString::SkipEmptyParts);
          if (seedLines.count() == 2) {
             EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
-            seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, walletsMgr_->GetNetworkType());
+            seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, params_->netType());
          }
          else if (seedLines.count() == 4) {
             EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
             EasyCoDec::Data edChainCode = { seedLines[2].toStdString(), seedLines[3].toStdString() };
-            seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, walletsMgr_->GetNetworkType());
+            seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, params_->netType());
          }
          else {
-            seed = { key.toStdString(), walletsMgr_->GetNetworkType() };
+            seed = { key.toStdString(), params_->netType() };
          }
       }
       catch (const std::exception &e) {
@@ -264,7 +266,8 @@ bool WalletsProxy::importWallet(const QString &name, const QString &desc, bool i
    }
 
    try {
-      walletsMgr_->CreateWallet(wltName, wltDesc, password.toStdString(), isPrimary, seed);
+      walletsMgr_->CreateWallet(wltName, wltDesc, seed, params_->getWalletsDir()
+         , password.toStdString(), isPrimary);
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to import wallet: {}", e.what());
