@@ -156,7 +156,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
       QFile::remove(target);
    }
 
-   if (QFile::copy(QString::fromStdString(walletsManager_->GetWalletsPath() + "/" + walletFileName), target)) {
+   if (QFile::copy(appSettings_->GetHomeDir() + QString::fromStdString("/" + walletFileName), target)) {
       MessageBoxSuccess(title, tr("Wallet created")
          , tr("Created wallet file <b>%1</b> in <span>%2</span>")
             .arg(QString::fromStdString(walletFileName))
@@ -166,7 +166,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
       MessageBoxCritical(title
          , tr("Failed to copy")
          , tr("Failed to copy <b>%1</b> from %2 to %3")
-            .arg(QString::fromStdString(walletFileName)).arg(QString::fromStdString(walletsManager_->GetWalletsPath()))
+            .arg(QString::fromStdString(walletFileName)).arg(appSettings_->GetHomeDir())
             .arg(dir)
          , this).exec();
    }
@@ -335,7 +335,7 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, BinaryData pub
       const auto cc = createCCWalletReqs_[id];
       createCCWalletReqs_.erase(id);
 
-      const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, walletsManager_->GetNetworkType());
+      const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, wallet_->networkType());
       const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
       group->createLeaf(bs::hd::Path::keyToElem(cc), leafNode);
 

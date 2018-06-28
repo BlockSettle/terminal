@@ -323,7 +323,9 @@ void WalletsWidget::onNewWallet()
 bool WalletsWidget::CreateNewWallet(bool primary, bool report)
 {
    std::shared_ptr<bs::hd::Wallet> newWallet;
-   CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_, primary, this);
+   CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
+      , appSettings_->get<NetworkType>(ApplicationSettings::netType)
+      , appSettings_->GetHomeDir(), primary, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
          newWallet = walletsManager_->GetHDWalletById(createWalletDialog.getNewWalletId());
@@ -383,7 +385,7 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
       }
       else {
          const QFileInfo fi(importWalletDialog.GetWatchinOnlyFileName());
-         const auto targetFile = QString::fromStdString(walletsManager_->GetWalletsPath() + "/") + fi.fileName();
+         const auto targetFile = appSettings_->GetHomeDir() + QLatin1String("/") + fi.fileName();
          const auto title = tr("Wallet import error");
          if (QFile(targetFile).exists()) {
             MessageBoxCritical(title, tr("Watching-only wallet file %1 already exists!").arg(targetFile)).exec();
@@ -403,7 +405,7 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
                .arg(QString::fromStdString(newWallet->getWalletId()))).exec();
             return false;
          }
-         walletsManager_->AddWallet(newWallet);
+         walletsManager_->AddWallet(newWallet, appSettings_->GetHomeDir());
          if (report) {
             WalletCreateCompleteDialog(QString::fromStdString(newWallet->getName()), false, this).exec();
          }

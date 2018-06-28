@@ -13,11 +13,14 @@ using namespace Blocksettle::Communication;
 HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<ServerConnection> &conn
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<WalletsManager> &walletsMgr
+   , const std::string &walletsPath
    , const std::string &pwHash, bool hasUI)
    : QObject(nullptr), ServerConnectionListener()
    , connection_(conn)
    , logger_(logger)
    , walletsMgr_(walletsMgr)
+   , walletsPath_(walletsPath)
+   , backupPath_(walletsPath + "../backup")
    , pwHash_(pwHash)
    , hasUI_(hasUI)
 {
@@ -680,7 +683,7 @@ bool HeadlessContainerListener::onSyncAddress(const std::string &clientId, headl
    }
    for (const auto &hdWallet : walletsForBackup) {
       if (hdWallet) {
-         walletsMgr_->BackupWallet(hdWallet);
+         walletsMgr_->BackupWallet(hdWallet, backupPath_);
       }
    }
 
@@ -746,7 +749,7 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
       return false;
    }
 
-   walletsMgr_->BackupWallet(hdWallet);
+   walletsMgr_->BackupWallet(hdWallet, backupPath_);
 
    const auto onPassword = [this, hdWallet, path, clientId, id](const std::string &pass) {
       std::shared_ptr<bs::hd::Node> leafNode;
@@ -811,15 +814,14 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
 }
 
 bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsigned int id, const headless::NewHDWallet &request
-   , const std::string &password)
+   , const std::string &password, NetworkType netType)
 {
    std::shared_ptr<bs::hd::Wallet> wallet;
    try {
-      const auto netType = walletsMgr_->GetNetworkType();
       const auto seed = request.privatekey().empty() ? bs::wallet::Seed(request.seed(), netType)
          : bs::wallet::Seed(netType, request.privatekey());
       wallet = walletsMgr_->CreateWallet(request.name(), request.description()
-         , password, request.primary(), seed);
+         , seed, QString::fromStdString(walletsPath_), password, request.primary());
    }
    catch (const std::exception &e) {
       CreateHDWalletResponse(clientId, id, e.what());
@@ -844,6 +846,15 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    return true;
 }
 
+static NetworkType mapNetworkType(headless::NetworkType netType)
+{
+   switch (netType) {
+   case headless::MainNetType:   return NetworkType::MainNet;
+   case headless::TestNetType:   return NetworkType::TestNet;
+   default:    return NetworkType::Invalid;
+   }
+}
+
 bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, headless::RequestPacket &packet)
 {
    headless::CreateHDWalletRequest request;
@@ -856,7 +867,8 @@ bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, he
       return CreateHDLeaf(clientId, packet.id(), request.leaf(), request.password());
    }
    else if (request.has_wallet()) {
-      return CreateHDWallet(clientId, packet.id(), request.wallet(), request.password());
+      return CreateHDWallet(clientId, packet.id(), request.wallet(), request.password()
+         , mapNetworkType(request.wallet().nettype()));
    }
    else {
       CreateHDWalletResponse(clientId, packet.id(), "unknown request");
@@ -1006,7 +1018,7 @@ bool HeadlessContainerListener::onGetRootKey(const std::string &clientId, headle
    if (wallet->isEncrypted()) {
       decrypted = wallet->getNode()->decrypt(request.password());
       bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), false, seed).getWalletId() != wallet->getWalletId()) {
+      if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), seed).getWalletId() != wallet->getWalletId()) {
          logger_->error("[HeadlessContainerListener] invalid password for {}", request.rootwalletid());
          GetRootKeyResponse(clientId, packet.id(), nullptr, "invalid password");
          return false;
@@ -1199,7 +1211,7 @@ void HeadlessContainerListener::activateAutoSign(const std::string &walletId, co
       }
       const auto decrypted = wallet->getNode()->decrypt(password);
       bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), false, seed).getWalletId() != wallet->getWalletId()) {
+      if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), seed).getWalletId() != wallet->getWalletId()) {
          deactivateAutoSign(walletId, "invalid password");
          return;
       }

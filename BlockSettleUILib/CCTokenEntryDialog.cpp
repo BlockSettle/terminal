@@ -110,7 +110,7 @@ void CCTokenEntryDialog::onWalletCreated(unsigned int id, BinaryData pubKey, Bin
    createWalletReqId_ = 0;
    const auto priWallet = walletsMgr_->GetPrimaryWallet();
    const auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
-   const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, walletsMgr_->GetNetworkType());
+   const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, priWallet->networkType());
    ccWallet_ = group->createLeaf(bs::hd::Path::keyToElem(ccProduct_), leafNode);
    if (ccWallet_) {
       walletOk_ = true;

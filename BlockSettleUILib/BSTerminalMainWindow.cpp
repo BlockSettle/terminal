@@ -297,7 +297,8 @@ void BSTerminalMainWindow::LoadWallets(BSTerminalSplashScreen& splashScreen)
    connect(walletsManager_.get(), &WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsManager_.get(), &WalletsManager::error, this, &BSTerminalMainWindow::showError);
 
-   walletsManager_->LoadWallets(progressDelegate);
+   walletsManager_->LoadWallets(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
+      , applicationSettings_->GetHomeDir(), progressDelegate);
 
    if (signContainer_->opMode() != SignContainer::OpMode::Offline) {
       addrSyncer_ = std::make_shared<HeadlessAddressSyncer>(signContainer_, walletsManager_);
@@ -797,7 +798,8 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
             , this);
          if (createSettlReq.exec() == QDialog::Accepted) {
             const auto title = tr("Settlement wallet");
-            if (walletsManager_->CreateSettlementWallet()) {
+            if (walletsManager_->CreateSettlementWallet(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
+               , applicationSettings_->GetHomeDir())) {
                MessageBoxSuccess(title, tr("Settlement wallet successfully created")).exec();
             } else {
                showError(title, tr("Failed to create"));

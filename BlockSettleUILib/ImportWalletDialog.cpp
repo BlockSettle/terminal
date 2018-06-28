@@ -18,7 +18,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       , bool createPrimary, QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::ImportWalletDialog)
-   , netType_(walletsManager->GetNetworkType())
+   , netType_(appSettings->get<NetworkType>(ApplicationSettings::netType))
    , walletsMgr_(walletsManager)
    , appSettings_(appSettings)
    , seedData_(seedData)
@@ -50,7 +50,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       appSettings->SetWalletScanIndex(walletId, idx);
    };
    walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager, PyBlockDataManager::instance()
-      , assetMgr, authMgr, cbr, cbw);
+      , assetMgr, authMgr, appSettings_->GetHomeDir(), cbr, cbw);
 
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);
    connect(walletImporter_.get(), &WalletImporter::error, this, &ImportWalletDialog::onError);
@@ -109,23 +109,18 @@ void ImportWalletDialog::onImportAccepted()
       return;
    }
 
-   bs::wallet::Seed seed;
    try {
-      seed = bs::wallet::Seed::fromEasyCodeChecksum(seedData_, chainCodeData_, netType_);
-   } catch (...)
-   {}
+      const auto seed = bs::wallet::Seed::fromEasyCodeChecksum(seedData_, chainCodeData_, netType_);
+      walletName_ = ui_->lineEditWalletName->text();
+      auto description = ui_->lineEditDescription->text().toStdString();
+      importedAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
 
-   if (seed.empty()) {
-      onError(tr("Invalid backup data"));
-      return;
+      ui_->pushButtonImport->setEnabled(false);
+
+      walletImporter_->Import(walletName_.toStdString(), description, seed, importedAsPrimary_
+         , ui_->lineEditPassword->text().toStdString());
    }
-
-   walletName_ = ui_->lineEditWalletName->text();
-   auto description = ui_->lineEditDescription->text().toStdString();
-   importedAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
-
-   ui_->pushButtonImport->setEnabled(false);
-
-   walletImporter_->Import(walletName_.toStdString(), description, seed, importedAsPrimary_
-      , ui_->lineEditPassword->text().toStdString());
+   catch (...) {
+      onError(tr("Invalid backup data"));
+   }
 }

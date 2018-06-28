@@ -45,7 +45,7 @@ void VerifyWalletBackupDialog::onPrivKeyChanged()
    easyData.part2 = ui_->lineEditPrivKey2->text().toStdString();
    try {
       const auto seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, netType_);
-      bs::hd::Wallet newWallet(wallet_->getName(), wallet_->getDesc(), false, seed);
+      bs::hd::Wallet newWallet(wallet_->getName(), wallet_->getDesc(), seed);
       if (newWallet.getWalletId() == wallet_->getWalletId()) {
          ui_->labelResult->setStyleSheet(QLatin1String("QLabel {color : green;}"));
          ui_->labelResult->setText(tr("Valid"));

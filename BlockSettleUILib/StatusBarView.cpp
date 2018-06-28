@@ -75,7 +75,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<PyBlockDataManager>& bdm, std
 {
 
    QString windowIconName;
-   if (walletsManager->GetNetworkType() == NetworkType::TestNet)
+   if (bdm_->networkType() == NetworkType::TestNet)
    {
       windowIconName = QLatin1String("_TESTNET");
    }
