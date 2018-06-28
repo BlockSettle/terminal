@@ -3,16 +3,18 @@ import os
 import shutil
 import subprocess
 
-from component_configurator import Configurator
-from jom_settings import JomSettings
+from build_scripts.component_configurator import Configurator
+from build_scripts.jom_settings import JomSettings
+from build_scripts.openssl_settings import OpenSslSettings
 
 
 class QtSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self.jom = JomSettings(settings)
+        self.openssl = OpenSslSettings(settings)
         self._release = '5.11'
-        self._version = self._release + '.0'
+        self._version = self._release + '.1'
         self._package_name = 'qt-everywhere-src-' + self._version
 
         if self._project_settings.on_windows():
@@ -63,6 +65,16 @@ class QtSettings(Configurator):
         command.append('-sql-sqlite')
         command.append('-sql-mysql')
 
+        command.append('-openssl-linked')
+        # command.append('-no-securetransport')
+        command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
+        command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
+
+        if self._project_settings.on_osx():
+            command.append('-L/usr/local/opt/mysql@5.7/lib')
+            command.append('-I/usr/local/opt/mysql@5.7/include')
+            command.append('-I/usr/local/opt/mysql@5.7/include/mysql')
+
         if self._project_settings.on_linux():
             command.append('-system-freetype')
             command.append('-fontconfig')
@@ -96,7 +108,11 @@ class QtSettings(Configurator):
         command.append('-prefix')
         command.append(self.get_install_dir())
 
-        result = subprocess.call(command)
+        ssllibs_var = '-L{} -llibssl -llibcrypto'.format(os.path.join(self.openssl.get_install_dir(),'lib'))
+        compile_variables = os.environ.copy()
+        compile_variables['OPENSSL_LIBS'] = ssllibs_var
+
+        result = subprocess.call(command, env=compile_variables)
         if result != 0:
             print('Configure of QT failed')
             return False

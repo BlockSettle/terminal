@@ -8,7 +8,7 @@ from component_configurator import Configurator
 class ZeroMQSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '4.2.3'
+        self._version = '4.2.5'
 
         if settings.on_windows():
             self._package_name = 'libzmq-' + self._version

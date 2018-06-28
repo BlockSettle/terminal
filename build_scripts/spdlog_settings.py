@@ -9,7 +9,7 @@ class SpdlogSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._package_name = "SPDLog"
-        self._version = '0.16.3'
+        self._version = '0.17.0'
         self._package_url = "https://github.com/gabime/spdlog/archive/v" + self._version + ".zip"
 
     def get_package_name(self):
