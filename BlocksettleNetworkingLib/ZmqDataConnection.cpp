@@ -2,6 +2,7 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+#include "ZMQHelperFunctions.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
@@ -167,27 +168,6 @@ bool ZmqDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr& socket)
    return true;
 }
 
-static int get_monitor_event(void *monitor)
-{
-   // First frame in message contains event number and value
-   zmq_msg_t msg;
-   zmq_msg_init(&msg);
-   if (zmq_msg_recv(&msg, monitor, 0) == -1)
-      return -1; // Interruped, presumably
-   assert(zmq_msg_more(&msg));
-
-   uint8_t *data = (uint8_t *)zmq_msg_data(&msg);
-   uint16_t event = *(uint16_t *)(data);
-
-   // Second frame in message contains event address
-   zmq_msg_init(&msg);
-   if (zmq_msg_recv(&msg, monitor, 0) == -1)
-      return -1; // Interruped, presumably
-   assert(!zmq_msg_more(&msg));
-
-   return event;
-}
-
 void ZmqDataConnection::listenFunction()
 {
    zmq_pollitem_t  poll_items[3];
@@ -267,7 +247,7 @@ void ZmqDataConnection::listenFunction()
       }
 
       if (monSocket_ && (poll_items[ZmqDataConnection::MonitorSocketIndex].revents & ZMQ_POLLIN)) {
-         switch (get_monitor_event(monSocket_.get())) {
+         switch (bs::network::get_monitor_event(monSocket_.get())) {
          case ZMQ_EVENT_CONNECTED:
             if (!isConnected_) {
                notifyOnConnected();

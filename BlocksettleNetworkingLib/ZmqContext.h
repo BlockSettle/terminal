@@ -39,6 +39,9 @@ public:
    sock_ptr    CreateServerSocket();
    sock_ptr    CreateClientSocket();
 
+   sock_ptr    CreatePublishSocket();
+   sock_ptr    CreateSubscribeSocket();
+
    static sock_ptr  CreateNullSocket();
 
 private:
