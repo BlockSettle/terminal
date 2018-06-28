@@ -19,8 +19,6 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    , walletsManager_(nullptr)
 {
    ui_->setupUi(this);
-   qRegisterMetaType<bs::network::Quote>("Quote");
-   qRegisterMetaType<bs::network::Order>("Order");
 
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
 

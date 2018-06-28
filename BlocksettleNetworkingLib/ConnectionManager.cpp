@@ -4,6 +4,8 @@
 #include "CelerStreamServerConnection.h"
 #include "GenoaConnection.h"
 #include "GenoaStreamServerConnection.h"
+#include "PublisherConnection.h"
+#include "SubscriberConnection.h"
 #include "ZmqContext.h"
 #include "ZmqDataConnection.h"
 #include "ZmqSecuredDataConnection.h"
@@ -108,4 +110,14 @@ std::shared_ptr<ServerConnection> ConnectionManager::CreatePubBridgeServerConnec
 std::shared_ptr<ServerConnection> ConnectionManager::CreateMDRestServerConnection() const
 {
    return std::make_shared<GenoaStreamServerConnection>(logger_, zmqContext_);
+}
+
+std::shared_ptr<PublisherConnection> ConnectionManager::CreatePublisherConnection() const
+{
+   return std::make_shared<PublisherConnection>(logger_, zmqContext_);
+}
+
+std::shared_ptr<SubscriberConnection> ConnectionManager::CreateSubscriberConnection() const
+{
+   return std::make_shared<SubscriberConnection>(logger_, zmqContext_);
 }

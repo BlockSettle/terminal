@@ -132,13 +132,20 @@ private slots:
    void onSecuritiesReceived();
    void onRowsChanged();
    void onRowsInserted(const QModelIndex &parent, int first, int last);
-   void onRowsRemoved(const QModelIndex &parent, int first, int last);
+   void onRowsRemoved(const QModelIndex &parent, int first, int last);   
+   void onCollapsed(const QModelIndex &index);
+   void onExpanded(const QModelIndex &index);
+
+private:
+   QString path(const QModelIndex &index) const;
+   void expandIfNeeded(const QModelIndex &index = QModelIndex());
 
 private:
    Ui::QuoteRequestsWidget* ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   QStringList             collapsed_;
    QuoteRequestsModel *    model_;
    QuoteReqSortModel *     sortModel_;
    bool  dropQN_ = false;

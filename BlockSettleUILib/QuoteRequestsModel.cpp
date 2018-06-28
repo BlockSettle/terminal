@@ -280,11 +280,11 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
       groupItem->setData(1, Role::Grade);
 
       auto siCompleted = new QStandardItem();
-      siCompleted->setData(QColor(Qt::green), Qt::TextColorRole);
+      siCompleted->setData(c_greenColor, Qt::TextColorRole);
       siCompleted->setTextAlignment(Qt::AlignRight);
 
       auto siFailed = new QStandardItem();
-      siFailed->setData(QColor(Qt::red), Qt::TextColorRole);
+      siFailed->setData(c_redColor, Qt::TextColorRole);
       siFailed->setTextAlignment(Qt::AlignRight);
 
       QList<QStandardItem*> rootRow;
@@ -451,9 +451,9 @@ QBrush QuoteRequestsModel::bgColorForStatus(bs::network::QuoteReqNotification::S
 {
    switch (status) {
       case bs::network::QuoteReqNotification::Withdrawn:    return Qt::magenta;
-      case bs::network::QuoteReqNotification::Rejected:     return Qt::red;
-      case bs::network::QuoteReqNotification::Replied:      return Qt::green;
-      case bs::network::QuoteReqNotification::TimedOut:     return Qt::yellow;
+      case bs::network::QuoteReqNotification::Rejected:     return c_redColor;
+      case bs::network::QuoteReqNotification::Replied:      return c_greenColor;
+      case bs::network::QuoteReqNotification::TimedOut:     return c_yellowColor;
       case bs::network::QuoteReqNotification::PendingAck:
       default:       return QBrush();
    }

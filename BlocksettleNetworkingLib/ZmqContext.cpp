@@ -49,3 +49,13 @@ std::string ZmqContext::GenerateConnectionName(const std::string& host, const st
 {
    return host+":"+port+"_" + idGenerator_.getNextId();
 }
+
+ZmqContext::sock_ptr ZmqContext::CreatePublishSocket()
+{
+   return { zmq_socket(context_.get(), ZMQ_PUB), zmq_close };
+}
+
+ZmqContext::sock_ptr ZmqContext::CreateSubscribeSocket()
+{
+   return { zmq_socket(context_.get(), ZMQ_SUB), zmq_close };
+}
