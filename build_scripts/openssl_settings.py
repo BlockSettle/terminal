@@ -35,7 +35,7 @@ class OpenSslSettings(Configurator):
         print('Generating openssl project')
         print('Please make sure you have installed Perl and NASM (and both of them are in %PATH%)')
 
-        command = ['perl', 'Configure', '--prefix='+self.get_install_dir(),
+        command = ['perl', 'Configure', 'no-shared', '--prefix='+self.get_install_dir(),
                    '--openssldir='+self.get_install_dir(), 'VC-WIN64A']
 
         result = subprocess.call(command)
@@ -44,7 +44,7 @@ class OpenSslSettings(Configurator):
     def config_x(self):
         self.copy_sources_to_build()
 
-        command = ['./config',
+        command = ['./config', 'no-shared'
                    '--prefix='+self.get_install_dir(), '--openssldir='+self.get_install_dir()]
 
         result = subprocess.call(command)
