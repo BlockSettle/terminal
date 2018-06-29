@@ -202,7 +202,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QTreeView" name="treeViewTransactions">
+    <widget class="TreeViewWithEnterKey" name="treeViewTransactions">
      <property name="alternatingRowColors">
       <bool>true</bool>
      </property>
@@ -220,6 +220,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TreeViewWithEnterKey</class>
+   <extends>QTreeView</extends>
+   <header>TreeViewWithEnterKey.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
