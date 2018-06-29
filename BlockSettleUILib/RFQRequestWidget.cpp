@@ -1,6 +1,5 @@
 #include "RFQRequestWidget.h"
 #include "ui_RFQRequestWidget.h"
-#include <QDebug>
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "CelerClient.h"
@@ -10,6 +9,11 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
+#include "TreeViewWithEnterKey.h"
+
+#include <QShortcut>
+#include <QPushButton>
+#include <QLineEdit>
 
 
 RFQRequestWidget::RFQRequestWidget(QWidget* parent)
@@ -72,6 +76,34 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    });
 
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQTicket, &RFQTicketXBT::disablePanel);
+
+   auto * marketShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
+   marketShrt->setContext(Qt::WidgetWithChildrenShortcut);
+   connect(marketShrt, &QShortcut::activated,
+      [this](){ this->ui_->widgetMarketData->view()->setFocus(); });
+
+   auto * rfqShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+2")), this);
+   rfqShrt->setContext(Qt::WidgetWithChildrenShortcut);
+   connect(rfqShrt, &QShortcut::activated,
+      [this](){
+         if (this->ui_->pageRFQTicket->lineEditAmount()->isVisible())
+            this->ui_->pageRFQTicket->lineEditAmount()->setFocus();
+         else
+            this->ui_->pageRFQTicket->setFocus();
+      });
+
+   auto * ordersShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+3")), this);
+   ordersShrt->setContext(Qt::WidgetWithChildrenShortcut);
+   connect(ordersShrt, &QShortcut::activated,
+      [this](){ this->ui_->treeViewOrders->setFocus(); });
+
+   auto * submitRfqShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+S")), this);
+   submitRfqShrt->setContext(Qt::WidgetWithChildrenShortcut);
+   connect(submitRfqShrt, &QShortcut::activated,
+      [this]() {
+         if (this->ui_->pageRFQTicket->submitButton()->isEnabled())
+            this->ui_->pageRFQTicket->submitButton()->click();
+      });
 }
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)

@@ -63,6 +63,11 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    connect(mdProvider.get(), &MarketDataProvider::MDReqRejected, this, &MarketDataWidget::onMDRejected);
 }
 
+TreeViewWithEnterKey* MarketDataWidget::view() const
+{
+   return ui->treeViewMarketData;
+}
+
 void MarketDataWidget::onMDRejected(const std::string &security, const std::string &reason)
 {
    if (security.empty()) {

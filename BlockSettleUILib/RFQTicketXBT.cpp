@@ -730,6 +730,16 @@ std::shared_ptr<TransactionData> RFQTicketXBT::GetTransactionData() const
    return transactionData_;
 }
 
+QPushButton* RFQTicketXBT::submitButton() const
+{
+   return ui_->pushButtonSubmit;
+}
+
+QLineEdit* RFQTicketXBT::lineEditAmount() const
+{
+   return ui_->lineEditAmount;
+}
+
 double RFQTicketXBT::estimatedFee() const
 {
    const auto wallet = getCurrentWallet();

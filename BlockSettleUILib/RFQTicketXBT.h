@@ -11,6 +11,11 @@
 #include "CommonTypes.h"
 #include "TransactionData.h"
 
+QT_BEGIN_NAMESPACE
+class QPushButton;
+class QLineEdit;
+QT_END_NAMESPACE
+
 namespace Ui {
     class RFQTicketXBT;
 }
@@ -47,6 +52,9 @@ public:
    void resetTicket();
 
    std::shared_ptr<TransactionData> GetTransactionData() const;
+
+   QPushButton* submitButton() const;
+   QLineEdit* lineEditAmount() const;
 
 public slots:
    void setSecurityId(const QString& productGroup, const QString& currencyPair
