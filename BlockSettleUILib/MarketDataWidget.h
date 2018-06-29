@@ -41,6 +41,7 @@ private slots:
    void onHeaderStateChanged(bool state);
    void onRowClicked(const QModelIndex& index);
    void onMDRejected(const std::string &security, const std::string &reason);
+   void onEnterKeyPressed(const QModelIndex &index);
 
 private:
    Ui::MarketDataWidget    *              ui;

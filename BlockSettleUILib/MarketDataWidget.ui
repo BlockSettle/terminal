@@ -100,7 +100,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QTreeView" name="treeViewMarketData">
+    <widget class="TreeViewWithEnterKey" name="treeViewMarketData">
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
      </property>
@@ -117,6 +117,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TreeViewWithEnterKey</class>
+   <extends>QTreeView</extends>
+   <header>TreeViewWithEnterKey.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
