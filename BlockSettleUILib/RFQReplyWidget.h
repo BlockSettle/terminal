@@ -66,6 +66,7 @@ private slots:
 
 private:
    void showSettlementDialog(QDialog *dlg);
+   void setupShortcuts();
 
 private:
    using transaction_data_ptr = std::shared_ptr<TransactionData>;

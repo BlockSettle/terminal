@@ -153,6 +153,26 @@ bool RFQDealerReply::autoSign() const
    return (ui_->checkBoxAutoSign->checkState() == Qt::Checked);
 }
 
+CustomDoubleSpinBox* RFQDealerReply::bidSpinBox() const
+{
+   return ui_->spinBoxBidPx;
+}
+
+CustomDoubleSpinBox* RFQDealerReply::offerSpinBox() const
+{
+   return ui_->spinBoxOfferPx;
+}
+
+QPushButton* RFQDealerReply::pullButton() const
+{
+   return ui_->pushButtonPull;
+}
+
+QPushButton* RFQDealerReply::quoteButton() const
+{
+   return ui_->pushButtonSubmit;
+}
+
 void RFQDealerReply::onSignerStateUpdated()
 {
    ui_->groupBoxAutoSign->setVisible(signingContainer_ && !signingContainer_->isOffline());

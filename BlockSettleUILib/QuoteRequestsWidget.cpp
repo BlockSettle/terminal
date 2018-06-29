@@ -8,6 +8,7 @@
 #include "QuoteProvider.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
+#include "TreeViewWithEnterKey.h"
 
 
 //
@@ -66,6 +67,8 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
            this, &QuoteRequestsWidget::onCollapsed);
    connect(ui_->treeViewQuoteRequests, &QTreeView::expanded,
            this, &QuoteRequestsWidget::onExpanded);
+   connect(ui_->treeViewQuoteRequests, &TreeViewWithEnterKey::enterKeyPressed,
+           this, &QuoteRequestsWidget::onEnterKeyPressed);
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
    });
@@ -121,6 +124,11 @@ void QuoteRequestsWidget::addSettlementContainer(const std::shared_ptr<bs::Settl
    if (model_) {
       model_->addSettlementContainer(container);
    }
+}
+
+TreeViewWithEnterKey* QuoteRequestsWidget::view() const
+{
+   return ui_->treeViewQuoteRequests;
 }
 
 void QuoteRequestsWidget::onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn)
@@ -255,6 +263,11 @@ void QuoteRequestsWidget::onExpanded(const QModelIndex &index)
 {
    if (index.isValid())
       collapsed_.removeOne(path(sortModel_->mapToSource(index)));
+}
+
+void QuoteRequestsWidget::onEnterKeyPressed(const QModelIndex &index)
+{
+   onQuoteReqNotifSelected(index);
 }
 
 QString QuoteRequestsWidget::path(const QModelIndex &index) const

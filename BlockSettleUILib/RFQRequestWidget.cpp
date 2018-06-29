@@ -77,6 +77,11 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
 
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQTicket, &RFQTicketXBT::disablePanel);
 
+   setupShortcuts();
+}
+
+void RFQRequestWidget::setupShortcuts()
+{
    auto * marketShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
    marketShrt->setContext(Qt::WidgetWithChildrenShortcut);
    connect(marketShrt, &QShortcut::activated,

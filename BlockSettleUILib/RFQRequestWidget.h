@@ -50,6 +50,9 @@ public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
 
 private:
+   void setupShortcuts();
+
+private:
    Ui::RFQRequestWidget* ui_;
 
    std::shared_ptr<spdlog::logger>     logger_;
