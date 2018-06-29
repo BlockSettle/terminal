@@ -177,7 +177,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QTreeView" name="treeViewAddresses">
+       <widget class="TreeViewWithEnterKey" name="treeViewAddresses">
         <property name="alternatingRowColors">
          <bool>true</bool>
         </property>
@@ -375,6 +375,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>TreeViewWithEnterKey</class>
+   <extends>QTreeView</extends>
+   <header>TreeViewWithEnterKey.h</header>
+  </customwidget>
   <customwidget>
    <class>WalletsTreeView</class>
    <extends>QTreeView</extends>
