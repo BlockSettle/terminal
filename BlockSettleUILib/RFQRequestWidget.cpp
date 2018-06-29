@@ -29,6 +29,8 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
    connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
    connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
+
+   setupShortcuts();
 }
 
 void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
@@ -76,8 +78,6 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    });
 
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQTicket, &RFQTicketXBT::disablePanel);
-
-   setupShortcuts();
 }
 
 void RFQRequestWidget::setupShortcuts()

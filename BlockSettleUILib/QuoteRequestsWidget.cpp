@@ -68,7 +68,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    connect(ui_->treeViewQuoteRequests, &QTreeView::expanded,
            this, &QuoteRequestsWidget::onExpanded);
    connect(ui_->treeViewQuoteRequests, &TreeViewWithEnterKey::enterKeyPressed,
-           this, &QuoteRequestsWidget::onEnterKeyPressed);
+           this, &QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed);
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
    });
@@ -265,7 +265,7 @@ void QuoteRequestsWidget::onExpanded(const QModelIndex &index)
       collapsed_.removeOne(path(sortModel_->mapToSource(index)));
 }
 
-void QuoteRequestsWidget::onEnterKeyPressed(const QModelIndex &index)
+void QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed(const QModelIndex &index)
 {
    onQuoteReqNotifSelected(index);
 }

@@ -138,7 +138,7 @@ private slots:
    void onRowsRemoved(const QModelIndex &parent, int first, int last);   
    void onCollapsed(const QModelIndex &index);
    void onExpanded(const QModelIndex &index);
-   void onEnterKeyPressed(const QModelIndex &index);
+   void onEnterKeyInQuoteRequestsPressed(const QModelIndex &index);
 
 private:
    QString path(const QModelIndex &index) const;

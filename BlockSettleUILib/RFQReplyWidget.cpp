@@ -35,6 +35,8 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
    connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
+
+   setupShortcuts();
 }
 
 void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
@@ -108,8 +110,6 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
 
    connect(celerClient_.get(), &CelerClient::OnConnectedToServer, ui_->pageRFQReply, &RFQDealerReply::onCelerConnected);
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQReply, &RFQDealerReply::onCelerDisconnected);
-
-   setupShortcuts();
 }
 
 void RFQReplyWidget::setupShortcuts()

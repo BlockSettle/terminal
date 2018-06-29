@@ -51,6 +51,8 @@ private:
    int getUIFilterSettings() const;
    void updateAddressFilters(int filterSettings);
 
+   void setupShortcuts();
+
 private slots:
    void showWalletProperties(const QModelIndex& index);
    void showSelectedWalletProperties();
@@ -65,8 +67,8 @@ private slots:
    void onRevokeSettlement();
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
    void onDeleteWallet();
-
    void onFilterSettingsChanged();
+   void onEnterKeyInAddressesPressed(const QModelIndex &index);
 
 private:
    Ui::WalletsWidget* ui;
