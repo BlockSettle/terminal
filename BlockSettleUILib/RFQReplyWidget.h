@@ -11,6 +11,7 @@
 #include "TransactionData.h"
 #include "CoinControlModel.h"
 #include "CommonTypes.h"
+#include "TabWithShortcut.h"
 
 namespace Ui {
     class RFQReplyWidget;
@@ -34,7 +35,7 @@ namespace bs {
    class SecurityStatsCollector;
 }
 
-class RFQReplyWidget : public QWidget
+class RFQReplyWidget : public TabWithShortcut
 {
 Q_OBJECT
 
@@ -53,6 +54,8 @@ public:
       , const std::shared_ptr<SignContainer> &);
    void SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
 
+   void shortcutActivated(ShortcutType s) override;
+
 signals:
    void orderFilled();
 
@@ -66,7 +69,6 @@ private slots:
 
 private:
    void showSettlementDialog(QDialog *dlg);
-   void setupShortcuts();
 
 private:
    using transaction_data_ptr = std::shared_ptr<TransactionData>;

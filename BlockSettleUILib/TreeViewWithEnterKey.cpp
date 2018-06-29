@@ -14,6 +14,14 @@ TreeViewWithEnterKey::TreeViewWithEnterKey(QWidget *parent)
 {
 }
 
+void TreeViewWithEnterKey::activate()
+{
+   setFocus();
+
+   selectionModel()->select(currentIndex(),
+      QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+}
+
 void TreeViewWithEnterKey::keyPressEvent(QKeyEvent *event)
 {
    if (currentIndex().isValid()) {

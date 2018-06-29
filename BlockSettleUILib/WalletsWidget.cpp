@@ -1,3 +1,4 @@
+
 #include "WalletsWidget.h"
 #include "ui_WalletsWidget.h"
 
@@ -8,7 +9,6 @@
 #include <QMenu>
 #include <QModelIndex>
 #include <QSortFilterProxyModel>
-#include <QShortcut>
 
 #include "AddressDetailDialog.h"
 #include "AddressListModel.h"
@@ -121,7 +121,7 @@ private:
 Q_DECLARE_OPERATORS_FOR_FLAGS(AddressSortFilterModel::Filter)
 
 WalletsWidget::WalletsWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui(new Ui::WalletsWidget())
    , walletsManager_(nullptr)
    , walletsModel_(nullptr)
@@ -147,8 +147,6 @@ WalletsWidget::WalletsWidget(QWidget* parent)
 
    connect(ui->treeViewAddresses, &TreeViewWithEnterKey::enterKeyPressed,
            this, &WalletsWidget::onEnterKeyInAddressesPressed);
-
-   setupShortcuts();
 }
 
 void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
@@ -177,19 +175,6 @@ void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const s
    for (auto button : {ui->pushButtonEmpty, ui->pushButtonUnused, ui->pushButtonUsed}) {
       connect(button, &QPushButton::toggled, this, &WalletsWidget::onFilterSettingsChanged);
    }
-}
-
-void WalletsWidget::setupShortcuts()
-{
-   auto * walletsShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
-   walletsShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(walletsShrt, &QShortcut::activated,
-      [this](){ this->ui->treeViewWallets->setFocus(); });
-
-   auto * addressShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+2")), this);
-   addressShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(addressShrt, &QShortcut::activated,
-      [this](){ this->ui->treeViewAddresses->setFocus(); });
 }
 
 void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
@@ -432,6 +417,24 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
    }
 
    return true;
+}
+
+void WalletsWidget::shortcutActivated(ShortcutType s)
+{
+   switch (s) {
+      case ShortcutType::Alt_1 : {
+         ui->treeViewWallets->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_2 : {
+         ui->treeViewAddresses->activate();
+      }
+         break;
+
+      default :
+         break;
+   }
 }
 
 void WalletsWidget::onImportComplete(const std::string &walletId)

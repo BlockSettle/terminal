@@ -5,6 +5,8 @@
 #include <QMenu>
 #include <memory>
 
+#include "TabWithShortcut.h"
+
 namespace Ui {
     class PortfolioWidget;
 };
@@ -19,7 +21,7 @@ class TransactionsViewModel;
 class UnconfirmedTransactionFilter;
 class WalletsManager;
 
-class PortfolioWidget : public QWidget
+class PortfolioWidget : public TabWithShortcut
 {
 Q_OBJECT
 
@@ -32,6 +34,8 @@ public:
    void SetSigningContainer(const std::shared_ptr<SignContainer> &container);
 
    void ConnectToMD(const std::shared_ptr<ApplicationSettings>& appSettings, const std::shared_ptr<MarketDataProvider> &mdProvider);
+
+   void shortcutActivated(ShortcutType s) override;
 
 private slots:
    void showTransactionDetails(const QModelIndex& index);

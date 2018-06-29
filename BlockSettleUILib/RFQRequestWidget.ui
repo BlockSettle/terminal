@@ -15,16 +15,16 @@
     <number>5</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <item>
     <widget class="QWidget" name="verticalWidget" native="true">
@@ -240,15 +240,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>TreeViewWithEnterKey</class>
-   <extends>QTreeView</extends>
-   <header>TreeViewWithEnterKey.h</header>
-  </customwidget>
-  <customwidget>
    <class>MarketDataWidget</class>
    <extends>QWidget</extends>
    <header>MarketDataWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TreeViewWithEnterKey</class>
+   <extends>QTreeView</extends>
+   <header>TreeViewWithEnterKey.h</header>
   </customwidget>
   <customwidget>
    <class>RFQTicketXBT</class>

@@ -54,6 +54,7 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
+#include "TabWithShortcut.h"
 
 #include <spdlog/spdlog.h>
 
@@ -85,7 +86,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UiUtils::SetupLocale();
 
    ui->setupUi(this);
-   ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tabNews));
 
    setupShortcuts();
 
@@ -143,7 +143,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    setupMenu();
    setupStatusBar();
 
-   ui->tabTransactions->setEnabled(false);
+   ui->widgetTransactions->setEnabled(false);
 
    if (!signContainer_->Start()) {
       MessageBoxWarning(tr("BlockSettle Signer"), tr("Failed to start local signer process")).exec();
@@ -411,7 +411,7 @@ void BSTerminalMainWindow::setupStatusBar()
 
 void BSTerminalMainWindow::InitTransactionsView()
 {
-   ui->tabTransactions->setEnabled(true);
+   ui->widgetTransactions->setEnabled(true);
 
    ui->widgetTransactions->SetTransactionsModel(transactionsModel_);
    ui->widgetPortfolio->SetTransactionsModel(transactionsModel_);
@@ -557,7 +557,7 @@ void BSTerminalMainWindow::onReceive()
 {
    const auto &defWallet = walletsManager_->GetDefaultWallet();
    std::string selWalletId = defWallet ? defWallet->GetWalletId() : std::string{};
-   if (ui->tabWidget->currentWidget() == ui->tabWallets) {
+   if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
       const auto &wallets = ui->widgetWallets->GetSelectedWallets();
       if (wallets.size() == 1) {
          selWalletId = wallets[0]->GetWalletId();
@@ -579,7 +579,7 @@ void BSTerminalMainWindow::onSend()
 {
    std::string selectedWalletId;
 
-   if (ui->tabWidget->currentWidget() == ui->tabWallets) {
+   if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
       const auto &wallets = ui->widgetWallets->GetSelectedWallets();
       if (wallets.size() == 1) {
          selectedWalletId = wallets[0]->GetWalletId();
@@ -983,7 +983,6 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
 void BSTerminalMainWindow::onCCInfoMissing()
 { }   // do nothing here since we don't know if user will need Private Market before logon to Celer
 
-
 void BSTerminalMainWindow::setupShortcuts()
 {
    auto overviewTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+1")), this);
@@ -1005,4 +1004,52 @@ void BSTerminalMainWindow::setupShortcuts()
    auto transactionsTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+5")), this);
    transactionsTabShortcut->setContext(Qt::ApplicationShortcut);
    connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(4);});
+
+   auto alt_1 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
+   alt_1->setContext(Qt::ApplicationShortcut);
+   connect(alt_1, &QShortcut::activated, [this]() {
+         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+            TabWithShortcut::ShortcutType::Alt_1);
+      }
+   );
+
+   auto alt_2 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+2")), this);
+   alt_2->setContext(Qt::ApplicationShortcut);
+   connect(alt_2, &QShortcut::activated, [this]() {
+         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+            TabWithShortcut::ShortcutType::Alt_2);
+      }
+   );
+
+   auto alt_3 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+3")), this);
+   alt_3->setContext(Qt::ApplicationShortcut);
+   connect(alt_3, &QShortcut::activated, [this]() {
+         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+            TabWithShortcut::ShortcutType::Alt_3);
+      }
+   );
+
+   auto alt_s = new QShortcut(QKeySequence(QString::fromLatin1("Alt+S")), this);
+   alt_s->setContext(Qt::ApplicationShortcut);
+   connect(alt_s, &QShortcut::activated, [this]() {
+         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+            TabWithShortcut::ShortcutType::Alt_S);
+      }
+   );
+
+   auto alt_p = new QShortcut(QKeySequence(QString::fromLatin1("Alt+P")), this);
+   alt_p->setContext(Qt::ApplicationShortcut);
+   connect(alt_p, &QShortcut::activated, [this]() {
+         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+            TabWithShortcut::ShortcutType::Alt_P);
+      }
+   );
+
+   auto alt_q = new QShortcut(QKeySequence(QString::fromLatin1("Alt+Q")), this);
+   alt_q->setContext(Qt::ApplicationShortcut);
+   connect(alt_q, &QShortcut::activated, [this]() {
+         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+            TabWithShortcut::ShortcutType::Alt_Q);
+      }
+   );
 }

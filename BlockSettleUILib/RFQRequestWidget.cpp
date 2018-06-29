@@ -1,3 +1,4 @@
+
 #include "RFQRequestWidget.h"
 #include "ui_RFQRequestWidget.h"
 #include "ApplicationSettings.h"
@@ -11,13 +12,12 @@
 #include "SignContainer.h"
 #include "TreeViewWithEnterKey.h"
 
-#include <QShortcut>
 #include <QPushButton>
 #include <QLineEdit>
 
 
 RFQRequestWidget::RFQRequestWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui_(new Ui::RFQRequestWidget())
    , authAddressManager_(nullptr)
    , walletsManager_(nullptr)
@@ -29,8 +29,6 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
    connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
    connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
-
-   setupShortcuts();
 }
 
 void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
@@ -38,6 +36,38 @@ void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
+   }
+}
+
+void RFQRequestWidget::shortcutActivated(ShortcutType s)
+{
+   switch (s) {
+      case ShortcutType::Alt_1 : {
+         ui_->widgetMarketData->view()->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_2 : {
+         if (ui_->pageRFQTicket->lineEditAmount()->isVisible())
+            ui_->pageRFQTicket->lineEditAmount()->setFocus();
+         else
+            ui_->pageRFQTicket->setFocus();
+      }
+         break;
+
+      case ShortcutType::Alt_3 : {
+         ui_->treeViewOrders->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_S : {
+         if (ui_->pageRFQTicket->submitButton()->isEnabled())
+            ui_->pageRFQTicket->submitButton()->click();
+      }
+         break;
+
+      default :
+         break;
    }
 }
 
@@ -78,37 +108,6 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    });
 
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQTicket, &RFQTicketXBT::disablePanel);
-}
-
-void RFQRequestWidget::setupShortcuts()
-{
-   auto * marketShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
-   marketShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(marketShrt, &QShortcut::activated,
-      [this](){ this->ui_->widgetMarketData->view()->setFocus(); });
-
-   auto * rfqShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+2")), this);
-   rfqShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(rfqShrt, &QShortcut::activated,
-      [this](){
-         if (this->ui_->pageRFQTicket->lineEditAmount()->isVisible())
-            this->ui_->pageRFQTicket->lineEditAmount()->setFocus();
-         else
-            this->ui_->pageRFQTicket->setFocus();
-      });
-
-   auto * ordersShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+3")), this);
-   ordersShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(ordersShrt, &QShortcut::activated,
-      [this](){ this->ui_->treeViewOrders->setFocus(); });
-
-   auto * submitRfqShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+S")), this);
-   submitRfqShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(submitRfqShrt, &QShortcut::activated,
-      [this]() {
-         if (this->ui_->pageRFQTicket->submitButton()->isEnabled())
-            this->ui_->pageRFQTicket->submitButton()->click();
-      });
 }
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)

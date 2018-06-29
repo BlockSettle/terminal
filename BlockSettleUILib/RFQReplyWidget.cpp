@@ -1,10 +1,10 @@
+
 #include "RFQReplyWidget.h"
 #include "ui_RFQReplyWidget.h"
 #include <spdlog/logger.h>
 
 #include <QDesktopWidget>
 #include <QPushButton>
-#include <QShortcut>
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
@@ -27,7 +27,7 @@
 using namespace bs::ui;
 
 RFQReplyWidget::RFQReplyWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui_(new Ui::RFQReplyWidget())
 {
    ui_->setupUi(this);
@@ -35,8 +35,6 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
    connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
-
-   setupShortcuts();
 }
 
 void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
@@ -48,6 +46,48 @@ void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &wa
       if (signingContainer_) {
          signingContainer_->GetInfo(walletsManager_->GetPrimaryWallet());
       }
+   }
+}
+
+void RFQReplyWidget::shortcutActivated(ShortcutType s)
+{
+   switch (s) {
+      case ShortcutType::Alt_1 : {
+         ui_->widgetQuoteRequests->view()->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_2 : {
+         if (ui_->pageRFQReply->bidSpinBox()->isVisible()) {
+            if (ui_->pageRFQReply->bidSpinBox()->isEnabled())
+               ui_->pageRFQReply->bidSpinBox()->setFocus();
+            else
+               ui_->pageRFQReply->offerSpinBox()->setFocus();
+         } else {
+            ui_->pageRFQReply->setFocus();
+         }
+      }
+         break;
+
+      case ShortcutType::Alt_3 : {
+         ui_->treeViewOrders->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_Q : {
+         if (ui_->pageRFQReply->quoteButton()->isEnabled())
+            ui_->pageRFQReply->quoteButton()->click();
+      }
+         break;
+
+      case ShortcutType::Alt_P : {
+         if (ui_->pageRFQReply->pullButton()->isEnabled())
+            ui_->pageRFQReply->pullButton()->click();
+      }
+         break;
+
+      default :
+         break;
    }
 }
 
@@ -110,49 +150,6 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
 
    connect(celerClient_.get(), &CelerClient::OnConnectedToServer, ui_->pageRFQReply, &RFQDealerReply::onCelerConnected);
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQReply, &RFQDealerReply::onCelerDisconnected);
-}
-
-void RFQReplyWidget::setupShortcuts()
-{
-   auto * rfqShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
-   rfqShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(rfqShrt, &QShortcut::activated,
-      [this](){ this->ui_->widgetQuoteRequests->view()->setFocus(); });
-
-   auto * replyShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+2")), this);
-   replyShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(replyShrt, &QShortcut::activated,
-      [this](){
-         if (this->ui_->pageRFQReply->bidSpinBox()->isVisible()) {
-            if (this->ui_->pageRFQReply->bidSpinBox()->isEnabled())
-               this->ui_->pageRFQReply->bidSpinBox()->setFocus();
-            else
-               this->ui_->pageRFQReply->offerSpinBox()->setFocus();
-         } else {
-            this->ui_->pageRFQReply->setFocus();
-         }
-      });
-
-   auto * ordersShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+3")), this);
-   ordersShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(ordersShrt, &QShortcut::activated,
-      [this](){ this->ui_->treeViewOrders->setFocus(); });
-
-   auto * quoteShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+Q")), this);
-   quoteShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(quoteShrt, &QShortcut::activated,
-      [this]() {
-         if (this->ui_->pageRFQReply->quoteButton()->isEnabled())
-            this->ui_->pageRFQReply->quoteButton()->click();
-      });
-
-   auto * pullShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+P")), this);
-   pullShrt->setContext(Qt::WidgetWithChildrenShortcut);
-   connect(pullShrt, &QShortcut::activated,
-      [this]() {
-         if (this->ui_->pageRFQReply->pullButton()->isEnabled())
-            this->ui_->pageRFQReply->pullButton()->click();
-      });
 }
 
 void RFQReplyWidget::onReplied(const bs::network::QuoteNotification &qn)

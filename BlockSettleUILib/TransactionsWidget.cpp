@@ -107,7 +107,7 @@ public:
 
 
 TransactionsWidget::TransactionsWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui(new Ui::TransactionsWidget())
    , transactionsModel_(nullptr)
    , sortFilterModel_(nullptr)
@@ -190,6 +190,11 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    ui->treeViewTransactions->setModel(sortFilterModel_);
    ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::RbfFlag));
 //   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
+}
+
+void TransactionsWidget::shortcutActivated(ShortcutType s)
+{
+
 }
 
 void TransactionsWidget::walletsChanged()

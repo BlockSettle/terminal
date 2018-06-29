@@ -4,6 +4,7 @@
 #include <memory>
 #include <QWidget>
 #include "WalletsManager.h"
+#include "TabWithShortcut.h"
 
 
 namespace Ui {
@@ -25,7 +26,7 @@ class WalletImporter;
 class WalletsViewModel;
 
 
-class WalletsWidget : public QWidget
+class WalletsWidget : public TabWithShortcut
 {
 Q_OBJECT
 
@@ -42,6 +43,8 @@ public:
    bool CreateNewWallet(bool primary, bool report = true);
    bool ImportNewWallet(bool primary, bool report = true);
 
+   void shortcutActivated(ShortcutType s) override;
+
 private:
    void InitWalletsView(const std::string& defaultWalletId);
 
@@ -50,8 +53,6 @@ private:
 
    int getUIFilterSettings() const;
    void updateAddressFilters(int filterSettings);
-
-   void setupShortcuts();
 
 private slots:
    void showWalletProperties(const QModelIndex& index);

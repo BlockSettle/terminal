@@ -561,6 +561,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          treeView->selectionModel()->select(selection[0], QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
          treeView->expand(selection[0]);
          treeView->scrollTo(selection[0]);
+         treeView->setCurrentIndex(selection[0]);
       }
    }
 }
