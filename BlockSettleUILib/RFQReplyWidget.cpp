@@ -146,7 +146,7 @@ void RFQReplyWidget::setupShortcuts()
             this->ui_->pageRFQReply->quoteButton()->click();
       });
 
-   auto * pullShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+Q")), this);
+   auto * pullShrt = new QShortcut(QKeySequence(QString::fromLatin1("Alt+P")), this);
    pullShrt->setContext(Qt::WidgetWithChildrenShortcut);
    connect(pullShrt, &QShortcut::activated,
       [this]() {
