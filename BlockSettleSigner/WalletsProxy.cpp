@@ -2,6 +2,7 @@
 #include <QVariant>
 #include <QBuffer>
 #include <QByteArray>
+#include <QPixmap>
 
 #include <spdlog/spdlog.h>
 
