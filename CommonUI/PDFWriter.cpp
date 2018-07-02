@@ -1,7 +1,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QPainter>
+#include <QTextCursor>
 #include "PDFWriter.h"
+#include "UiUtils.h"
 
 
 PDFWriter::PDFWriter(const QString &templateFN, const QUrl &baseUrl) : printer_(QPrinter::HighResolution)
@@ -44,6 +46,11 @@ bool PDFWriter::substitute(const QVariantHash &vars)
       }
       const auto replaceStr = QLatin1String("%") + var.key() + QLatin1String("%");
       substitutedText_.replace(replaceStr, var.value().toString());
+
+      if (var.key() == QLatin1String("privkey1"))
+         privKey1 = var.value().toString();
+      else if (var.key() == QLatin1String("privkey2"))
+         privKey2 = var.value().toString();
    }
    return true;
 }
@@ -62,6 +69,18 @@ bool PDFWriter::output(const QString &outputFN)
       painter.end();
    }
    doc_.setHtml(substitutedText_);
+
+   const QString c_qrPlaceholder = QLatin1String("__QR_OF_KEY__");
+
+   auto cursor = doc_.find(c_qrPlaceholder);
+
+   if (!cursor.isNull()) {
+      for (int i = 0; i < c_qrPlaceholder.length(); ++i)
+         cursor.deleteChar();
+
+      cursor.insertImage(UiUtils::getQRCode(privKey1 + QLatin1String("\n") + privKey2).toImage());
+   }
+
    doc_.print(&printer_);
    substitutedText_.clear();
    return true;
