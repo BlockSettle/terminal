@@ -1,10 +1,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QPainter>
-#include <QBuffer>
-#include <QByteArray>
 #include "PDFWriter.h"
-#include "UiUtils.h"
 
 
 PDFWriter::PDFWriter(const QString &templateFN, const QUrl &baseUrl) : printer_(QPrinter::HighResolution)
@@ -41,29 +38,13 @@ bool PDFWriter::substitute(const QVariantHash &vars)
    }
    substitutedText_ = templateText_;
 
-   QString privKey1, privKey2;
-
    for (auto var = vars.begin(); var != vars.end(); ++var) {
       if (var.key().isEmpty()) {
          continue;
       }
       const auto replaceStr = QLatin1String("%") + var.key() + QLatin1String("%");
       substitutedText_.replace(replaceStr, var.value().toString());
-
-      if (var.key() == QLatin1String("privkey1"))
-         privKey1 = var.value().toString();
-      else if (var.key() == QLatin1String("privkey2"))
-         privKey2 = var.value().toString();
    }
-
-   if (!privKey1.isEmpty() && !privKey2.isEmpty()) {
-      QByteArray data;
-      QBuffer buf(&data);
-      UiUtils::getQRCode(privKey1 + QLatin1String("\n") + privKey2).save(&buf, "PNG");
-      substitutedText_.replace(QLatin1String("%QR%"),
-         QString::fromStdString(data.toBase64().toStdString()));
-   }
-
    return true;
 }
 
