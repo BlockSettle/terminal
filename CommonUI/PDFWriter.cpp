@@ -1,7 +1,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QPainter>
-#include <QTextCursor>
+#include <QBuffer>
+#include <QByteArray>
 #include "PDFWriter.h"
 #include "UiUtils.h"
 
@@ -40,6 +41,8 @@ bool PDFWriter::substitute(const QVariantHash &vars)
    }
    substitutedText_ = templateText_;
 
+   QString privKey1, privKey2;
+
    for (auto var = vars.begin(); var != vars.end(); ++var) {
       if (var.key().isEmpty()) {
          continue;
@@ -52,6 +55,15 @@ bool PDFWriter::substitute(const QVariantHash &vars)
       else if (var.key() == QLatin1String("privkey2"))
          privKey2 = var.value().toString();
    }
+
+   if (!privKey1.isEmpty() && !privKey2.isEmpty()) {
+      QByteArray data;
+      QBuffer buf(&data);
+      UiUtils::getQRCode(privKey1 + QLatin1String("\n") + privKey2).save(&buf, "PNG");
+      substitutedText_.replace(QLatin1String("%QR%"),
+         QString::fromStdString(data.toBase64().toStdString()));
+   }
+
    return true;
 }
 
@@ -69,18 +81,6 @@ bool PDFWriter::output(const QString &outputFN)
       painter.end();
    }
    doc_.setHtml(substitutedText_);
-
-   const QString c_qrPlaceholder = QLatin1String("__QR_OF_KEY__");
-
-   auto cursor = doc_.find(c_qrPlaceholder);
-
-   if (!cursor.isNull()) {
-      for (int i = 0; i < c_qrPlaceholder.length(); ++i)
-         cursor.deleteChar();
-
-      cursor.insertImage(UiUtils::getQRCode(privKey1 + QLatin1String("\n") + privKey2).toImage());
-   }
-
    doc_.print(&printer_);
    substitutedText_.clear();
    return true;

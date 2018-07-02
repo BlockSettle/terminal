@@ -21,8 +21,6 @@ private:
    QTextDocument  doc_;
    QString        templateText_;
    QString        substitutedText_;
-   QString        privKey1;
-   QString        privKey2;
 };
 
 #endif // __PDF_WRITER_H__
