@@ -130,7 +130,7 @@ class Configurator:
         return result
 
     def copy_sources_to_build(self):
-        print('Copy unacked sources to build directory for: ' + self.get_package_name())
+        print('Copy unpacked sources to build directory for: ' + self.get_package_name())
         src = self.get_unpacked_sources_dir()
         dst = self.get_build_dir()
 
