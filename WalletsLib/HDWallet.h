@@ -33,7 +33,8 @@ namespace bs {
 
          std::shared_ptr<hd::Wallet> CreateWatchingOnly(const SecureBinaryData &password) const;
          bool isWatchingOnly() const { return (rootNode_ == nullptr); }
-         bool isEncrypted() const { return (rootNode_ && rootNode_->isEncrypted()); }
+         wallet::EncryptionType encryptionType() const;
+         SecureBinaryData encryptionKey() const { return rootNode_ ? rootNode_->encKey() : SecureBinaryData{}; }
          bool isPrimary() const;
          NetworkType networkType() const { return netType_; }
 
@@ -54,7 +55,8 @@ namespace bs {
          void createStructure();
          void setUserId(const BinaryData &usedId);
          bool eraseFile();
-         bool changePassword(const SecureBinaryData &newPass, const SecureBinaryData &oldPass = {});
+         bool changePassword(const SecureBinaryData &newPass, const SecureBinaryData &oldPass = {}
+            , wallet::EncryptionType encType = wallet::EncryptionType::Password, const SecureBinaryData &encKey = {});
 
          void RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew = false);
          void SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm);

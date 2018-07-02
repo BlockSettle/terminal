@@ -99,7 +99,7 @@ public:
 
    hd_wallet_type CreateWallet(const std::string& name, const std::string& description
       , bs::wallet::Seed, const QString &walletsPath
-      , const std::string &password = {}, bool primary = false);
+      , const SecureBinaryData &password = {}, bool primary = false);
    void AdoptNewWallet(const hd_wallet_type &, const QString &walletsPath);
 
    float estimatedFeePerByte(unsigned int blocksToWait) const;

@@ -352,6 +352,14 @@ std::string hd::Leaf::GetWalletDescription() const
    return desc_;
 }
 
+wallet::EncryptionType hd::Leaf::encryptionType() const
+{
+   if (!rootNode_) {
+      return wallet::EncryptionType::Unencrypted;
+   }
+   return rootNode_->encType();
+}
+
 bool hd::Leaf::containsAddress(const bs::Address &addr)
 {
    return (getAddressIndexForAddr(addr) != UINT32_MAX);
@@ -469,7 +477,7 @@ std::shared_ptr<hd::Node> hd::Leaf::GetPrivNodeFor(const bs::Address &addr, cons
       return nullptr;
    }
    std::shared_ptr<hd::Node> leafNode;
-   if (rootNode_->isEncrypted()) {
+   if (rootNode_->encType() != wallet::EncryptionType::Unencrypted) {
       if (password.isNull()) {
          return nullptr;
       }
@@ -957,7 +965,7 @@ public:
          throw std::runtime_error("no pubkey found");
       }
       std::shared_ptr<hd::Node> leafNode;
-      if (rootNode_->isEncrypted()) {
+      if (rootNode_->encType() != wallet::EncryptionType::Unencrypted) {
          if (password_.isNull()) {
             throw std::runtime_error("no password for encrypted key");
          }

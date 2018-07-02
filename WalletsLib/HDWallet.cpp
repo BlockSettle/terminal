@@ -645,7 +645,7 @@ std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryDat
    auto woWallet = std::make_shared<hd::Wallet>(getWalletId(), netType_, extOnlyAddresses_, name_, desc_);
 
    std::shared_ptr<hd::Node> extNode;
-   if (rootNode_->isEncrypted()) {
+   if (rootNode_->encType() != wallet::EncryptionType::Unencrypted) {
       extNode = rootNode_->decrypt(password);
       if (!extNode) {
          return nullptr;
@@ -664,9 +664,18 @@ std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryDat
    return woWallet;
 }
 
-bool hd::Wallet::changePassword(const SecureBinaryData &newPass, const SecureBinaryData &oldPass)
+wallet::EncryptionType hd::Wallet::encryptionType() const
 {
-   if (isEncrypted()) {
+   if (!rootNode_) {
+      return wallet::EncryptionType::Unencrypted;
+   }
+   return rootNode_->encType();
+}
+
+bool hd::Wallet::changePassword(const SecureBinaryData &newPass, const SecureBinaryData &oldPass
+   , wallet::EncryptionType encType, const SecureBinaryData &encKey)
+{
+   if (encryptionType() != wallet::EncryptionType::Unencrypted) {
       if (oldPass.isNull()) {
          return false;
       }
@@ -675,10 +684,10 @@ bool hd::Wallet::changePassword(const SecureBinaryData &newPass, const SecureBin
       if (bs::hd::Wallet(getName(), getDesc(), seed).getWalletId() != getWalletId()) {
          return false;
       }
-      rootNode_ = decrypted->encrypt(newPass);
+      rootNode_ = decrypted->encrypt(newPass, encType, encKey);
    }
    else {
-      rootNode_ = rootNode_->encrypt(newPass);
+      rootNode_ = rootNode_->encrypt(newPass, encType, encKey);
    }
    for (const auto &group : groups_) {
       group.second->updateRootNode(rootNode_, newPass);

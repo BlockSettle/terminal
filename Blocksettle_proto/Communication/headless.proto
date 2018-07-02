@@ -112,6 +112,8 @@ message PasswordRequest
 {
    string   walletId = 1;
    string   prompt = 2;
+   uint32   encType = 3;
+   bytes    encKey = 4;
 }
 
 message PasswordReply
@@ -257,8 +259,9 @@ message GetHDWalletInfoRequest
 
 message GetHDWalletInfoResponse
 {
-   bool     encrypted = 1;
-   string       error = 2;
+   uint32	encryption_type = 1;
+   bytes	encryption_key = 2;
+   string       error = 3;
 }
 
 
@@ -274,6 +277,8 @@ message ChangePasswordRequest
    string   rootWalletId = 1;
    string   oldPassword = 2;
    string   newPassword = 3;
+   uint32   newEncType = 4;
+   bytes    newEncKey = 5;
 }
 
 message ChangePasswordResponse

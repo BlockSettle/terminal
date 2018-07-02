@@ -53,11 +53,11 @@ signals:
    void autoSignRequiresPwd(const std::string &walletId);
 
 public slots:
-   void passwordReceived(const std::string &walletId, const std::string &password);
-   void activateAutoSign(const std::string &walletId, const std::string &password);
+   void passwordReceived(const std::string &walletId, const SecureBinaryData &password);
+   void activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
    void deactivateAutoSign(const std::string &walleteId, const std::string &reason = {});
    void addPendingAutoSignReq(const std::string &walletId);
-   bool isAutoSignActive(const std::string &walleteId) const;
+   bool isAutoSignActive(const std::string &walletId) const;
 
 private slots:
    void onXbtSpent(const qint64 value, bool autoSign);
@@ -68,8 +68,8 @@ protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
 
 private:
-   using PasswordReceivedCb = std::function<void(const std::string &password)>;
-   using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, std::string> &)>;
+   using PasswordReceivedCb = std::function<void(const SecureBinaryData &password)>;
+   using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
 
    bool sendData(const std::string &data, const std::string &clientId = {});
    bool onRequestPacket(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
@@ -95,8 +95,8 @@ private:
       , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}, const std::shared_ptr<bs::hd::Wallet> &wallet = nullptr);
    void GetRootKeyResponse(const std::string &clientId, unsigned int id, const std::shared_ptr<bs::hd::Node> &
       , const std::string &errorOrId);
-   void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, bool encrypted = false
-      , const std::string &error = {});
+   void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, bs::wallet::EncryptionType encType
+      , const SecureBinaryData &encKey = {}, const std::string &error = {});
    void SyncAddrResponse(const std::string &clientId, unsigned int id, const std::set<std::string> &failedWallets
       , const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void ChangePasswordResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bool ok);
@@ -104,9 +104,9 @@ private:
       , const std::string &clientId = {}, unsigned int id = 0);
 
    bool CreateHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDLeaf &request
-      , const std::string &password);
+      , const SecureBinaryData &password);
    bool CreateHDWallet(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDWallet &request
-      , const std::string &password, NetworkType);
+      , const SecureBinaryData &password, NetworkType);
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::wallet::TXSignRequest &
       , const QString &prompt, const PasswordReceivedCb &cb, bool autoSign);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
@@ -129,13 +129,13 @@ private:
    std::unordered_set<std::string>     connectedClients_;
 
    std::unordered_map<std::string, std::vector<PasswordReceivedCb>>  passwordCallbacks_;
-   std::unordered_map<std::string, std::string> passwords_;
+   std::unordered_map<std::string, SecureBinaryData>                 passwords_;
    std::unordered_set<std::string>  autoSignPwdReqs_;
 
    struct TempPasswords {
       std::unordered_map<std::string, std::unordered_set<std::string>>  rootLeaves;
       std::unordered_set<std::string>  reqWalletIds;
-      std::unordered_map<std::string, std::string> passwords;
+      std::unordered_map<std::string, SecureBinaryData> passwords;
    };
    std::unordered_map<int, TempPasswords> tempPasswords_;
    int reqSeqNo_ = 0;

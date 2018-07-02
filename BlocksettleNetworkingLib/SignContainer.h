@@ -48,7 +48,7 @@ public:
          , manualPassKeepInMemS(manPwTime) {}
    };
    using RequestId = unsigned int;
-   using PasswordType = std::string;
+   using PasswordType = SecureBinaryData;
 
    SignContainer(const std::shared_ptr<spdlog::logger> &, OpMode opMode);
    ~SignContainer() noexcept = default;
@@ -86,7 +86,8 @@ public:
    virtual RequestId GetInfo(const std::shared_ptr<bs::hd::Wallet> &) = 0;
    virtual void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) = 0;
    virtual RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &newPass
-      , const SecureBinaryData &oldPass = {}) = 0;
+      , const SecureBinaryData &oldPass = {}, bs::wallet::EncryptionType encType = bs::wallet::EncryptionType::Password
+      , const SecureBinaryData &encKey = {}) = 0;
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }
@@ -103,13 +104,14 @@ signals:
    void Error(unsigned int id, std::string error);
    void TXSigned(unsigned int id, BinaryData signedTX, std::string error);
 
-   void PasswordRequested(std::string walletId, std::string prompt);
+   void PasswordRequested(std::string walletId, std::string prompt, bs::wallet::EncryptionType
+      , SecureBinaryData encKey);
 
    void HDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
    void HDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void DecryptedRootKey(unsigned int id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
-   void HDWalletInfo(unsigned int id, bool encrypted);
+   void HDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &encKey);
    void MissingWallets(const std::vector<std::string> &);
    void AddressSyncFailed(const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void AddressSyncComplete();

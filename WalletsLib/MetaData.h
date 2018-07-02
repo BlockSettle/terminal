@@ -196,6 +196,12 @@ namespace bs {
          Settlement
       };
 
+      enum class EncryptionType : uint8_t {
+         Unencrypted,
+         Password,
+         Freja
+      };
+
       size_t getInputScrSize(const std::shared_ptr<AddressEntry> &);
    }  // namepsace wallet
 
@@ -248,7 +254,8 @@ namespace bs {
       virtual void AddUnconfirmedBalance(BTCNumericTypes::balance_type delta);
       virtual bool isInitialized() const { return inited_; }
       virtual bool isWatchingOnly() const { return false; }
-      virtual bool isEncrypted() const { return false; }
+      virtual wallet::EncryptionType encryptionType() const { return wallet::EncryptionType::Unencrypted; }
+      virtual SecureBinaryData encryptionKey() const { return {}; }
       virtual bool hasExtOnlyAddresses() const { return false; }
       virtual std::string GetAddressComment(const bs::Address& address) const;
       virtual bool SetAddressComment(const bs::Address &addr, const std::string &comment);
@@ -389,7 +396,7 @@ namespace bs {
       }
    };
 
-   using cbPassForWallet = std::function<SecureBinaryData(const std::string &walletId)>;
+   using cbPassForWallet = std::function<SecureBinaryData(const std::shared_ptr<bs::Wallet> &)>;
    BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const cbPassForWallet &);
 
 }  //namespace bs

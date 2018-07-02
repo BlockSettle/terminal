@@ -80,7 +80,8 @@ private slots:
    void InitTransactionsView();
    void SetOfflineUIView();
    void SignerReady();
-   void onPasswordRequested(std::string walletId, std::string prompt);
+   void onPasswordRequested(std::string walletId, std::string prompt
+      , bs::wallet::EncryptionType, SecureBinaryData encKey);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
 

@@ -908,9 +908,10 @@ void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 #endif
 }
 
-void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string prompt)
+void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string prompt
+   , bs::wallet::EncryptionType encType, SecureBinaryData encKey)
 {
-   std::string password;
+   SignContainer::PasswordType password;
 
    if (walletId.empty()) {
       logMgr_->logger("ui")->error("[onPasswordRequested] can\'t ask password for empty wallet id");
@@ -926,9 +927,11 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       }
 
       if (!walletName.isEmpty()) {
-         EnterWalletPassword passwordDialog(walletName, QString::fromStdString(prompt), this);
+         const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
+         EnterWalletPassword passwordDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
+            , encType, encKey, QString::fromStdString(prompt), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
-            password = passwordDialog.GetPassword().toStdString();
+            password = passwordDialog.GetPassword();
          } else {
             logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
                , walletId, walletName.toStdString());
