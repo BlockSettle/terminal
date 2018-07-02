@@ -48,10 +48,10 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    ${CRYPTO_LIB_NAME}
    ${ZMQ_LIB}
    ${QT_QUICK_LIBS}
-   ${OPENSSL_LIBS}
    Qt5::Core
    Qt5::Network
    Qt5::Qml
    Qt5::Quick
    Qt5::Gui
+   ${OPENSSL_LIBS}
 )
