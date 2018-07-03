@@ -435,7 +435,7 @@ static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::hd::Wallet> &h
    return WalletNode::Type::WalletRegular;
 }
 
-void WalletsViewModel::onHDWalletInfo(unsigned int id, bool encrypted)
+void WalletsViewModel::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &)
 {
    if (hdInfoReqIds_.empty() || (hdInfoReqIds_.find(id) == hdInfoReqIds_.end())) {
       return;
@@ -586,7 +586,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
          }
          hdWallet = parent ? parent->hdWallet() : nullptr;
       }
-      const bool encrypted = (hdWallet && hdWallet->isEncrypted());
+      const bool encrypted = (hdWallet && (hdWallet->encryptionType() != bs::wallet::EncryptionType::Unencrypted));
 
       switch (role) {
       case NameRole:       return node->data(static_cast<int>(WalletRegColumns::ColumnName), Qt::DisplayRole);

@@ -210,7 +210,7 @@ void RFQReplyWidget::onReadyToAutoSign()
    }
 }
 
-void RFQReplyWidget::onAutoSignActivated(const QString &password, const QString &hdWalletId, bool active)
+void RFQReplyWidget::onAutoSignActivated(const SecureBinaryData &password, const QString &hdWalletId, bool active)
 {
    if (walletsManager_ == nullptr) {
       return;
@@ -222,7 +222,7 @@ void RFQReplyWidget::onAutoSignActivated(const QString &password, const QString 
          , hdWalletId.toStdString());
       hdWallet = walletsManager_->GetPrimaryWallet();
    }
-   signingContainer_->SetLimits(hdWallet, password.toStdString(), active);
+   signingContainer_->SetLimits(hdWallet, password, active);
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
