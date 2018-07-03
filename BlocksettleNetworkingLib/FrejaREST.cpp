@@ -504,12 +504,13 @@ bool FrejaAuth::start(const QString &userId)
    if (userId.isEmpty()) {
       return false;
    }
+   stopped_ = false;
+   authRef_.clear();
    const auto reqId_ = freja_.sendInitAuthRequest(userId);
    if (!reqId_) {
       return false;
    }
    userId_ = userId;
-   stopped_ = false;
    emit statusUpdated(userId_, tr("request sent"));
    logger_->debug("Freja auth started for {}", userId.toStdString());
    return true;
@@ -583,7 +584,7 @@ FrejaSign::FrejaSign(const std::shared_ptr<spdlog::logger> &logger, unsigned int
 {
    qRegisterMetaType<SecureBinaryData>();
 
-   timer_.setInterval(pollInterval ? pollInterval : 3 * 1000);
+   timer_.setInterval(pollInterval ? pollInterval * 1000 : 3 * 1000);
    connect(&timer_, &QTimer::timeout, this, &FrejaSign::onTimer);
 
    connect(&freja_, &FrejaREST::repliedInitSignRequest, this, &FrejaSign::onRepliedInitSignRequest);
@@ -596,11 +597,12 @@ bool FrejaSign::start(const QString &userId, const QString &title, const QString
    if (userId.isEmpty()) {
       return false;
    }
+   stopped_ = false;
+   signRef_.clear();
    const auto reqId_ = freja_.sendSignRequest(userId, title, data);
    if (!reqId_) {
       return false;
    }
-   stopped_ = false;
    emit statusUpdated(tr("request sent"));
    logger_->debug("Freja sign started for {}:{}", userId.toStdString(), data.toStdString());
    return true;

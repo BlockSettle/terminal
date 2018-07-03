@@ -10,6 +10,8 @@
 #include <unordered_set>
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
+#include "FrejaREST.h"
+#include "MetaData.h"
 #include "UserScript.h"
 
 namespace Ui {
@@ -61,7 +63,9 @@ namespace bs {
 
       signals:
          void aqScriptLoaded(const QString &filename);
-         void autoSignActivated(const QString &password, const QString &hdWalletId, bool active);
+         void autoSignActivated(const SecureBinaryData &password, const QString &hdWalletId, bool active);
+         void submitQuoteNotif(const network::QuoteNotification &);
+         void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 
       public slots:
          void setQuoteReqNotification(const network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -100,10 +104,10 @@ namespace bs {
          void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
-
-      signals:
-         void submitQuoteNotif(const network::QuoteNotification &);
-         void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+         void onFrejaSignComplete(SecureBinaryData);
+         void onFrejaSignFailed(const QString &text);
+         void onFrejaStatusUpdated(const QString &status);
+         void startFrejaSigning();
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -132,8 +136,10 @@ namespace bs {
          double   indicBid_;
          double   indicAsk_;
          std::atomic_bool     autoUpdatePrices_;
-         bool     autoSignNeedsPassword_ = true;
-         bool     autoSignWalletEncrypted_ = true;
+         wallet::EncryptionType  walletEncType_ = wallet::EncryptionType::Password;
+         SecureBinaryData     walletEncKey_;
+         SecureBinaryData     asPassword_;
+         std::shared_ptr<FrejaSignWallet> frejaAS_;
          unsigned int         leafCreateReqId_ = 0;
 
          std::string product_;
