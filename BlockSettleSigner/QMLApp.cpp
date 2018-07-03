@@ -40,7 +40,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
 
-   walletsMgr_ = std::make_shared<WalletsManager>(logger_, params_->netType(), params_->getWalletsDir().toStdString());
+   walletsMgr_ = std::make_shared<WalletsManager>(logger_);
 
    walletsModel_ = new QmlWalletsViewModel(walletsMgr_, ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -56,7 +56,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
    ctxt_->setContextProperty(QStringLiteral("offlineProc"), offlineProc_.get());
 
-   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_);
+   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_, params_);
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
@@ -77,12 +77,12 @@ void QMLAppObj::settingsConnections()
 void QMLAppObj::walletsLoad()
 {
    logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(nullptr);
+   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
    if (walletsMgr_->GetWalletsCount() > 0) {
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
       if (!walletsMgr_->GetSettlementWallet()) {
-         if (!walletsMgr_->CreateSettlementWallet()) {
+         if (!walletsMgr_->CreateSettlementWallet(params_->netType(), params_->getWalletsDir())) {
             logger_->error("Failed to create Settlement wallet");
          }
       }
@@ -132,7 +132,7 @@ void QMLAppObj::onOfflineChanged()
 
 void QMLAppObj::onWalletsDirChanged()
 {
-   walletsMgr_->Reset(params_->netType(), params_->getWalletsDir().toStdString());
+   walletsMgr_->Reset();
    walletsLoad();
 }
 
@@ -237,7 +237,7 @@ void QMLAppObj::OnlineProcessing()
    }
 
    listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , params_->pwHash().toStdString(), true);
+      , params_->getWalletsDir().toStdString(), params_->pwHash().toStdString(), true);
    listener_->SetLimits(params_->limits());
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
