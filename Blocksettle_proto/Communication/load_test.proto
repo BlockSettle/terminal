@@ -7,6 +7,7 @@ enum AdminCommandCode
    StartConnectCode = 1;
    StartCustomerTradingCode = 2;
    StopCustomerTradingCode = 3;
+   GetXBTFundingAddressCode = 4;
 }
 
 message AdminCommandHeader
@@ -68,6 +69,7 @@ enum CustomerUpdateType
    TradingStoppedUpdateType = 8;
    XBTBalanceUpdateType = 9;
    ErrorNotificationType = 10;
+   XBTAddressType = 11;
 }
 
 enum RFQProductGroup
@@ -129,8 +131,13 @@ message XBTBalanceUpdate
    required uint64 used_address_count = 2;
 }
 
-
 message ErrorNotification
 {
    required string message = 1;
+}
+
+message XBTAddress
+{
+   required string   xbt_address = 1;
+   required bool     dealing_customer = 2;
 }

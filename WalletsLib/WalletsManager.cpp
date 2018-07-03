@@ -1,8 +1,11 @@
 #include "WalletsManager.h"
-#include <QDir>
-#include <QMutexLocker>
+
 #include "ApplicationSettings.h"
 #include "HDWallet.h"
+
+#include <QDir>
+#include <QMutexLocker>
+
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 
