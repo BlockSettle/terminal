@@ -41,7 +41,7 @@ public:
 public:
    WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<PyBlockDataManager>& bdm, bool preferWatchingOnly = true);
-   WalletsManager(const std::shared_ptr<spdlog::logger> &, NetworkType, const std::string &walletsDir);
+   WalletsManager(const std::shared_ptr<spdlog::logger> &);
    ~WalletsManager() noexcept;
 
    WalletsManager(const WalletsManager&) = delete;
@@ -49,12 +49,11 @@ public:
    WalletsManager(WalletsManager&&) = delete;
    WalletsManager& operator = (WalletsManager&&) = delete;
 
-   void Reset(NetworkType, const std::string &newWalletsDir = {});
+   void Reset();
 
-   std::string GetWalletsPath() const { return walletsPath_; }
-   void LoadWallets(const load_progress_delegate& progressDelegate);
-   void BackupWallet(const hd_wallet_type &) const;
-   void AddWallet(const hd_wallet_type &);
+   void LoadWallets(NetworkType, const QString &walletsPath, const load_progress_delegate &progressDelegate = nullptr);
+   void BackupWallet(const hd_wallet_type &, const std::string &targetDir) const;
+   void AddWallet(const hd_wallet_type &, const QString &walletsPath);
 
    size_t GetWalletsCount() const { return wallets_.size(); }
    bool HasPrimaryWallet() const;
@@ -67,7 +66,7 @@ public:
    wallet_gen_type GetDefaultWallet() const;
    wallet_gen_type GetCCWallet(const std::string &cc);
 
-   bool CreateSettlementWallet();
+   bool CreateSettlementWallet(NetworkType, const QString &walletsPath);
 
    size_t GetHDWalletsCount() const { return hdWalletsId_.size(); }
    const hd_wallet_type GetHDWallet(const unsigned int index) const;
@@ -89,7 +88,6 @@ public:
    BTCNumericTypes::balance_type GetSpendableBalance() const;
    BTCNumericTypes::balance_type GetUnconfirmedBalance() const;
    BTCNumericTypes::balance_type GetTotalBalance() const;
-   NetworkType GetNetworkType() const;
 
    uint32_t GetTopBlockHeight() const;
 
@@ -100,8 +98,9 @@ public:
    QString GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &, bool isReceiving);
 
    hd_wallet_type CreateWallet(const std::string& name, const std::string& description
-      , const std::string &password = {}, bool primary = false, bs::wallet::Seed seed = {});
-   void AdoptNewWallet(const hd_wallet_type &);
+      , bs::wallet::Seed, const QString &walletsPath
+      , const std::string &password = {}, bool primary = false);
+   void AdoptNewWallet(const hd_wallet_type &, const QString &walletsPath);
 
    float estimatedFeePerByte(unsigned int blocksToWait) const;
 
@@ -158,9 +157,6 @@ private:
    using wallet_container_type = std::unordered_map<std::string, wallet_gen_type>;
    using hd_wallet_container_type = std::unordered_map<std::string, hd_wallet_type>;
 
-   NetworkType                            networkType_;
-   std::string                            walletsPath_;
-   std::string                            backupPath_;
    unsigned int                           nbBackupFilesToKeep_ = 10;
    hd_wallet_container_type               hdWallets_;
    std::shared_ptr<bs::hd::DummyWallet>   hdDummyWallet_;

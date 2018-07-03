@@ -23,7 +23,7 @@ class WalletImporter : public QObject
 public:
    WalletImporter(const std::shared_ptr<SignContainer> &, const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<PyBlockDataManager> &, const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<AuthAddressManager> &, const QString &walletsPath
       , const bs::hd::Wallet::cb_scan_read_last &, const bs::hd::Wallet::cb_scan_write_last &);
 
    void Import(const std::string& name, const std::string& description
@@ -45,6 +45,7 @@ private:
    std::shared_ptr<PyBlockDataManager> bdm_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<AuthAddressManager> authMgr_;
+   const QString  walletsPath_;
    const bs::hd::Wallet::cb_scan_read_last   cbReadLast_;
    const bs::hd::Wallet::cb_scan_write_last  cbWriteLast_;
    std::shared_ptr<bs::hd::Wallet>     rootWallet_;

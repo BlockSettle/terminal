@@ -9,9 +9,11 @@
 WalletImporter::WalletImporter(const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<WalletsManager> &walletsMgr, const std::shared_ptr<PyBlockDataManager> &bdm
    , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<AuthAddressManager> &authMgr
+   , const QString &walletsPath
    , const bs::hd::Wallet::cb_scan_read_last &cbr, const bs::hd::Wallet::cb_scan_write_last &cbw)
    : QObject(nullptr), signingContainer_(container), walletsMgr_(walletsMgr), bdm_(bdm)
-   , assetMgr_(assetMgr), authMgr_(authMgr), cbReadLast_(cbr), cbWriteLast_(cbw)
+   , assetMgr_(assetMgr), authMgr_(authMgr), walletsPath_(walletsPath)
+   , cbReadLast_(cbr), cbWriteLast_(cbw)
 {
    connect(signingContainer_.get(), &SignContainer::HDWalletCreated, this, &WalletImporter::onHDWalletCreated);
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &WalletImporter::onHDLeafCreated);
@@ -64,7 +66,7 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::
    const auto &ccList = assetMgr_->privateShares();
    rootWallet_ = newWallet;
    rootWallet_->SetBDM(bdm_);
-   walletsMgr_->AdoptNewWallet(newWallet);
+   walletsMgr_->AdoptNewWallet(newWallet, walletsPath_);
 
    if (rootWallet_->isPrimary()) {
       authMgr_->CreateAuthWallet(password_, false);
@@ -97,7 +99,7 @@ void WalletImporter::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryD
       const auto cc = createCCWalletReqs_[id];
       createCCWalletReqs_.erase(id);
 
-      const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, walletsMgr_->GetNetworkType());
+      const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, rootWallet_->networkType());
       const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
       group->createLeaf(bs::hd::Path::keyToElem(cc), leafNode);
 
@@ -114,7 +116,7 @@ void WalletImporter::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryD
       const auto path = createNextWalletReqs_[id];
       createNextWalletReqs_.erase(id);
 
-      const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, walletsMgr_->GetNetworkType());
+      const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, rootWallet_->networkType());
       const auto group = rootWallet_->getGroup(static_cast<bs::hd::CoinType>(path.get(-2)));
       const auto leaf = group->createLeaf(path.get(-1), leafNode);
       if (!leaf) {
@@ -146,7 +148,7 @@ void WalletImporter::Import(const std::string &name, const std::string &descript
       return;
    }
    password_ = password;
-   createWalletReq_ = signingContainer_->CreateHDWallet(seed.networkType(), name, description, password, primary, seed);
+   createWalletReq_ = signingContainer_->CreateHDWallet(name, description, password, primary, seed);
    if (!createWalletReq_) {
       emit error(tr("Failed to create HD wallet"));
    }

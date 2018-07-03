@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <memory>
+#include "BtcDefinitions.h"
 
 
 namespace Ui {
@@ -23,7 +24,7 @@ class CreateWalletDialog : public QDialog
 
 public:
    CreateWalletDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
-      , bool createPrimary = false, QWidget *parent = nullptr);
+      , NetworkType, const QString &walletsPath, bool createPrimary = false, QWidget *parent = nullptr);
    ~CreateWalletDialog() noexcept override = default;
 
    bool walletCreated() const { return walletCreated_; }
@@ -48,6 +49,8 @@ private:
 private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
+   const NetworkType netType_;
+   const QString     walletsPath_;
    unsigned int      createReqId_ = 0;
    bool              walletCreated_ = false;
    std::string       walletId_;

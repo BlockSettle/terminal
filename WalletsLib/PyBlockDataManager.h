@@ -94,6 +94,7 @@ public:
    void registerWallet(std::shared_ptr<SafeBtcWallet> &, std::vector<BinaryData> const& scrAddrVec, std::string ID, bool wltIsNew);
 
    PyBlockDataManagerState GetState() const;
+   NetworkType networkType() const { return settings_.netType; }
 
    uint32_t GetTopBlockHeight() const;
 

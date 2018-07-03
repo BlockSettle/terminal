@@ -55,8 +55,8 @@ public:
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override;
    RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &
       , const SecureBinaryData &password = {}) override;
-   RequestId CreateHDWallet(NetworkType, const std::string &name, const std::string &desc
-      , const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed = {}) override;
+   RequestId CreateHDWallet(const std::string &name, const std::string &desc
+      , const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed) override;
    RequestId DeleteHD(const std::shared_ptr<bs::hd::Wallet> &) override;
    RequestId DeleteHD(const std::shared_ptr<bs::Wallet> &) override;
    RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) override;

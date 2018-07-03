@@ -78,8 +78,8 @@ public:
    virtual RequestId SetUserId(const BinaryData &) = 0;
    virtual RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) = 0;
    virtual RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &, const SecureBinaryData &password = {}) = 0;
-   virtual RequestId CreateHDWallet(NetworkType, const std::string &name, const std::string &desc
-      , const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed = {}) = 0;
+   virtual RequestId CreateHDWallet(const std::string &name, const std::string &desc
+      , const SecureBinaryData &password, bool primary, const bs::wallet::Seed &) = 0;
    virtual RequestId DeleteHD(const std::shared_ptr<bs::hd::Wallet> &) = 0;
    virtual RequestId DeleteHD(const std::shared_ptr<bs::Wallet> &) = 0;
    virtual RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) = 0;
