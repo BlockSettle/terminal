@@ -298,10 +298,21 @@ SecureBinaryData hd::Node::privateKey() const
 
 bs::wallet::Seed hd::Node::seed() const
 {
+   bs::wallet::Seed seed(netType_);
    if (hasPrivKey_) {
-      return bs::wallet::Seed(netType_, privateKey());
+      seed.setPrivateKey(privateKey());
    }
-   return bs::wallet::Seed(seed_.toBinStr(), netType_);
+   else {
+      seed.setSeed(seed_);
+   }
+   seed.setEncryptionType(encType_);
+   seed.setEncryptionKey(encKey_);
+   return seed;
+}
+
+std::string hd::Node::getId() const
+{
+   return BtcUtils::computeID(pubCompressedKey()).toBinStr();
 }
 
 BinaryData hd::Node::pubCompressedKey() const
@@ -527,7 +538,7 @@ std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
          result->seed_ = crypto.DecryptCBC(seed, key, iv_);
       }
    }
-   catch (...) {
+   catch (const std::exception &e) {
       return nullptr;
    }
    return result;

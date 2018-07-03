@@ -85,6 +85,7 @@ namespace bs {
          BinaryData chainCode() const;
          std::shared_ptr<AssetEntry_Single> getAsset(int id) const;
          bs::wallet::Seed seed() const;
+         std::string getId() const;
 
          const BinaryData &getSeed() const { return seed_; }
          NetworkType getNetworkType() const { return netType_; }

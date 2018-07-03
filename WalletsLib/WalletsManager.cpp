@@ -840,7 +840,7 @@ WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& n
       newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
    }
    if (!password.isNull()) {
-      newWallet->changePassword(password);
+      newWallet->changePassword(password, {}, seed.encryptionType(), seed.encryptionKey());
    }
    AdoptNewWallet(newWallet, walletsPath);
    return newWallet;

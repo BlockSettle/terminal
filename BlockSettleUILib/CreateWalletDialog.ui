@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>380</width>
-    <height>363</height>
+    <height>405</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -269,7 +269,132 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="horizontalWidget_4" native="true">
+          <widget class="QWidget" name="horizontalWidget_6" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_7">
+            <property name="spacing">
+             <number>5</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QRadioButton" name="radioButtonPassword">
+              <property name="text">
+               <string>Password</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radioButtonFreja">
+              <property name="text">
+               <string>Freja eID</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widgetFreja" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_8">
+            <property name="spacing">
+             <number>5</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="labelFreja">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>100</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="sizeIncrement">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="midLineWidth">
+               <number>0</number>
+              </property>
+              <property name="text">
+               <string>Freja email:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditFrejaId">
+              <property name="echoMode">
+               <enum>QLineEdit::Normal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonFreja">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Sign with Freja</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widgetPassword" native="true">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -293,7 +418,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_5">
+             <widget class="QLabel" name="labelPassword">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -340,7 +465,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="horizontalWidget_5" native="true">
+          <widget class="QWidget" name="widgetPasswordConfirm" native="true">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -364,7 +489,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_6">
+             <widget class="QLabel" name="labelPasswordConfirm">
               <property name="minimumSize">
                <size>
                 <width>100</width>

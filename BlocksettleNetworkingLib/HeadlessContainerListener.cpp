@@ -838,8 +838,10 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
 {
    std::shared_ptr<bs::hd::Wallet> wallet;
    try {
-      const auto seed = request.privatekey().empty() ? bs::wallet::Seed(request.seed(), netType)
+      auto seed = request.privatekey().empty() ? bs::wallet::Seed(request.seed(), netType)
          : bs::wallet::Seed(netType, request.privatekey());
+      seed.setEncryptionType(static_cast<bs::wallet::EncryptionType>(request.enctype()));
+      seed.setEncryptionKey(request.enckey());
       wallet = walletsMgr_->CreateWallet(request.name(), request.description()
          , seed, QString::fromStdString(walletsPath_), password, request.primary());
    }
@@ -900,6 +902,7 @@ bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, he
 void HeadlessContainerListener::CreateHDWalletResponse(const std::string &clientId, unsigned int id, const std::string &errorOrWalletId
    , const BinaryData &pubKey, const BinaryData &chainCode, const std::shared_ptr<bs::hd::Wallet> &wallet)
 {
+   logger_->debug("[HeadlessContainerListener] CreateHDWalletResponse: {}", errorOrWalletId);
    headless::CreateHDWalletResponse response;
    if (!pubKey.isNull() && !chainCode.isNull()) {
       auto leaf = response.mutable_leaf();

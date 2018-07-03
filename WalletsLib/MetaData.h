@@ -158,6 +158,13 @@ namespace bs {
       };
 
 
+      enum class EncryptionType : uint8_t {
+         Unencrypted,
+         Password,
+         Freja
+      };
+
+
       class Seed
       {
       public:
@@ -169,10 +176,16 @@ namespace bs {
          bool empty() const { return (privKey_.isNull() && seed_.isNull()); }
          bool hasPrivateKey() const { return (!privKey_.isNull()); }
          const SecureBinaryData &privateKey() const { return privKey_; }
+         void setPrivateKey(const SecureBinaryData &privKey) { privKey_ = privKey; }
          const BinaryData &chainCode() const { return chainCode_; }
          const BinaryData &seed() const { return seed_; }
+         void setSeed(const BinaryData &seed) { seed_ = seed; }
          NetworkType networkType() const { return netType_; }
          void setNetworkType(NetworkType netType) { netType_ = netType; }
+         EncryptionType encryptionType() const { return encType_; }
+         void setEncryptionType(EncryptionType encType) { encType_ = encType; }
+         SecureBinaryData encryptionKey() const { return encKey_; }
+         void setEncryptionKey(const SecureBinaryData &encKey) { encKey_ = encKey; }
 
          EasyCoDec::Data toEasyCodeChecksum(size_t ckSumSize = 2) const;
          static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
@@ -186,6 +199,8 @@ namespace bs {
          BinaryData        chainCode_;
          BinaryData        seed_;
          NetworkType       netType_ = NetworkType::Invalid;
+         SecureBinaryData  encKey_;
+         EncryptionType    encType_ = EncryptionType::Unencrypted;
       };
 
       enum class Type {
@@ -194,12 +209,6 @@ namespace bs {
          ColorCoin,
          Authentication,
          Settlement
-      };
-
-      enum class EncryptionType : uint8_t {
-         Unencrypted,
-         Password,
-         Freja
       };
 
       size_t getInputScrSize(const std::shared_ptr<AddressEntry> &);

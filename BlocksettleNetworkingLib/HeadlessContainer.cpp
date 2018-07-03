@@ -594,8 +594,12 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(const std::string
       if (seed.hasPrivateKey()) {
          wallet->set_privatekey(seed.privateKey().toBinStr());
       }
-      else {
+      else if (!seed.seed().isNull()) {
          wallet->set_seed(seed.seed().toBinStr());
+      }
+      wallet->set_enctype(static_cast<uint8_t>(seed.encryptionType()));
+      if (!seed.encryptionKey().isNull()) {
+         wallet->set_enckey(seed.encryptionKey().toBinStr());
       }
    }
 

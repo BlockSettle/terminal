@@ -344,7 +344,7 @@ void hd::Leaf::reset()
 
 std::string hd::Leaf::GetWalletId() const
 {
-   return (inited_ && node_) ? BtcUtils::computeID(node_->pubCompressedKey()).toBinStr() : "";
+   return (inited_ && node_) ? node_->getId() : "";
 }
 
 std::string hd::Leaf::GetWalletDescription() const

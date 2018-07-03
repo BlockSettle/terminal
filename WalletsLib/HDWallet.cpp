@@ -31,7 +31,7 @@ hd::Wallet::Wallet(const std::string &walletId, NetworkType netType, bool extOnl
 void hd::Wallet::initNew(const bs::wallet::Seed &seed)
 {
    rootNode_ = std::make_shared<hd::Node>(seed);
-   walletId_ = BtcUtils::computeID(rootNode_->pubCompressedKey()).toBinStr();
+   walletId_ = rootNode_->getId();
 }
 
 void hd::Wallet::loadFromFile(const std::string &filename)
@@ -651,7 +651,10 @@ std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryDat
          return nullptr;
       }
       bs::wallet::Seed seed(extNode->getNetworkType(), extNode->privateKey());
-      if (bs::hd::Wallet(getName(), getDesc(), seed).getWalletId() != getWalletId()) {
+      seed.setEncryptionType(extNode->encType());
+      seed.setEncryptionKey(extNode->encKey());
+      const auto &walletId = bs::hd::Wallet(getName(), getDesc(), seed).getWalletId();
+      if (walletId != getWalletId()) {
          return nullptr;
       }
    }
