@@ -21,16 +21,16 @@
   </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="0,0">
    <property name="leftMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="spacing">
     <number>5</number>
@@ -177,7 +177,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QTreeView" name="treeViewAddresses">
+       <widget class="TreeViewWithEnterKey" name="treeViewAddresses">
         <property name="alternatingRowColors">
          <bool>true</bool>
         </property>
@@ -375,6 +375,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>TreeViewWithEnterKey</class>
+   <extends>QTreeView</extends>
+   <header>TreeViewWithEnterKey.h</header>
+  </customwidget>
   <customwidget>
    <class>WalletsTreeView</class>
    <extends>QTreeView</extends>

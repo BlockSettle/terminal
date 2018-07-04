@@ -98,6 +98,7 @@ class AssetManager;
 class CelerClient;
 class QuoteRequestsModel;
 class QuoteReqSortModel;
+class TreeViewWithEnterKey;
 
 class QuoteRequestsWidget : public QWidget
 {
@@ -112,6 +113,8 @@ public:
       , const std::shared_ptr<ApplicationSettings> &appSettings);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
+
+   TreeViewWithEnterKey* view() const;
 
 signals:
    void Selected(const bs::network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -135,6 +138,7 @@ private slots:
    void onRowsRemoved(const QModelIndex &parent, int first, int last);   
    void onCollapsed(const QModelIndex &index);
    void onExpanded(const QModelIndex &index);
+   void onEnterKeyInQuoteRequestsPressed(const QModelIndex &index);
 
 private:
    QString path(const QModelIndex &index) const;

@@ -48,7 +48,7 @@ private:
 
 
 PortfolioWidget::PortfolioWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui_(new Ui::PortfolioWidget())
    , model_(nullptr)
    , filter_(nullptr)
@@ -92,6 +92,11 @@ void PortfolioWidget::ConnectToMD(const std::shared_ptr<ApplicationSettings>& ap
    , const std::shared_ptr<MarketDataProvider>& mdProvider)
 {
    ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio, mdProvider);
+}
+
+void PortfolioWidget::shortcutActivated(ShortcutType s)
+{
+
 }
 
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)

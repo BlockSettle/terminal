@@ -1,7 +1,7 @@
 #include "WalletsTreeView.h"
 
 WalletsTreeView::WalletsTreeView(QWidget *parent)
-    : QTreeView(parent)
+    : TreeViewWithEnterKey(parent)
 {
     setAlternatingRowColors(true);
     setItemsExpandable(true);

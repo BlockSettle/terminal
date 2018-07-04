@@ -1,9 +1,9 @@
 #ifndef __WALLETS_TREE_VIEW_H__
 #define __WALLETS_TREE_VIEW_H__
 
-#include <QTreeView>
+#include "TreeViewWithEnterKey.h"
 
-class WalletsTreeView : public QTreeView
+class WalletsTreeView : public TreeViewWithEnterKey
 {
     Q_OBJECT
 public:

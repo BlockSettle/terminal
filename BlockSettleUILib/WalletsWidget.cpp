@@ -1,3 +1,4 @@
+
 #include "WalletsWidget.h"
 #include "ui_WalletsWidget.h"
 
@@ -32,6 +33,8 @@
 #include "WalletsManager.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
+#include "TreeViewWithEnterKey.h"
+
 
 class AddressSortFilterModel : public QSortFilterProxyModel
 {
@@ -118,7 +121,7 @@ private:
 Q_DECLARE_OPERATORS_FOR_FLAGS(AddressSortFilterModel::Filter)
 
 WalletsWidget::WalletsWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui(new Ui::WalletsWidget())
    , walletsManager_(nullptr)
    , walletsModel_(nullptr)
@@ -141,6 +144,11 @@ WalletsWidget::WalletsWidget(QWidget* parent)
 
    actDeleteWallet_ = new QAction(tr("&Delete Permanently"));
    connect(actDeleteWallet_, &QAction::triggered, this, &WalletsWidget::onDeleteWallet);
+
+   connect(ui->treeViewAddresses, &TreeViewWithEnterKey::enterKeyPressed,
+           this, &WalletsWidget::onEnterKeyInAddressesPressed);
+   connect(ui->treeViewWallets, &WalletsTreeView::enterKeyPressed,
+           this, &WalletsWidget::onEnterKeyInWalletsPressed);
 }
 
 void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
@@ -415,6 +423,24 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
    return true;
 }
 
+void WalletsWidget::shortcutActivated(ShortcutType s)
+{
+   switch (s) {
+      case ShortcutType::Alt_1 : {
+         ui->treeViewWallets->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_2 : {
+         ui->treeViewAddresses->activate();
+      }
+         break;
+
+      default :
+         break;
+   }
+}
+
 void WalletsWidget::onImportComplete(const std::string &walletId)
 {
    walletsManager_->onWalletImported(walletId);
@@ -428,6 +454,16 @@ void WalletsWidget::onFilterSettingsChanged()
    appSettings_->set(ApplicationSettings::WalletFiltering, filterSettings);
 
    updateAddressFilters(filterSettings);
+}
+
+void WalletsWidget::onEnterKeyInAddressesPressed(const QModelIndex &index)
+{
+   showAddressProperties(index);
+}
+
+void WalletsWidget::onEnterKeyInWalletsPressed(const QModelIndex &index)
+{
+   showWalletProperties(index);
 }
 
 int WalletsWidget::getUIFilterSettings() const

@@ -21,16 +21,16 @@
     <number>5</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <item>
     <widget class="QWidget" name="verticalWidget" native="true">
@@ -228,7 +228,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QTreeView" name="treeViewOrders">
+          <widget class="TreeViewWithEnterKey" name="treeViewOrders">
            <property name="maximumSize">
             <size>
              <width>16777215</width>
@@ -371,6 +371,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>TreeViewWithEnterKey</class>
+   <extends>QTreeView</extends>
+   <header>TreeViewWithEnterKey.h</header>
+  </customwidget>
   <customwidget>
    <class>QuoteRequestsWidget</class>
    <extends>QWidget</extends>

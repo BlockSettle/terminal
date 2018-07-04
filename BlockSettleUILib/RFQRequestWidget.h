@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <memory>
 #include "CommonTypes.h"
+#include "TabWithShortcut.h"
 
 namespace Ui {
     class RFQRequestWidget;
@@ -27,7 +28,7 @@ namespace spdlog
    class logger;
 }
 
-class RFQRequestWidget : public QWidget
+class RFQRequestWidget : public TabWithShortcut
 {
 Q_OBJECT
 
@@ -45,6 +46,8 @@ public:
          , const std::shared_ptr<DialogManager> &dialogManager
          , const std::shared_ptr<SignContainer> &);
    void SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
+
+   void shortcutActivated(ShortcutType s) override;
 
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);

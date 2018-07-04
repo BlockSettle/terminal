@@ -31,8 +31,12 @@ class SelectedTransactionInputs;
 class SignContainer;
 class TransactionData;
 class WalletsManager;
+class CustomDoubleSpinBox;
 
+QT_BEGIN_NAMESPACE
 class QDoubleSpinBox;
+class QPushButton;
+QT_END_NAMESPACE
 
 namespace bs {
    namespace network {
@@ -58,6 +62,12 @@ namespace bs {
 
          std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
          bool autoSign() const;
+
+         CustomDoubleSpinBox* bidSpinBox() const;
+         CustomDoubleSpinBox* offerSpinBox() const;
+
+         QPushButton* pullButton() const;
+         QPushButton* quoteButton() const;
 
       signals:
          void aqScriptLoaded(const QString &filename);

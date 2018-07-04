@@ -107,7 +107,7 @@ public:
 
 
 TransactionsWidget::TransactionsWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui(new Ui::TransactionsWidget())
    , transactionsModel_(nullptr)
    , sortFilterModel_(nullptr)
@@ -152,6 +152,9 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       }
    });
 
+   connect(ui->treeViewTransactions, &TreeViewWithEnterKey::enterKeyPressed,
+          this, &TransactionsWidget::onEnterKeyInTrxPressed);
+
    ui->labelResultCount->hide();
 }
 
@@ -190,6 +193,12 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    ui->treeViewTransactions->setModel(sortFilterModel_);
    ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::RbfFlag));
 //   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
+}
+
+void TransactionsWidget::shortcutActivated(ShortcutType s)
+{
+   if (s == ShortcutType::Alt_1)
+      ui->treeViewTransactions->activate();
 }
 
 void TransactionsWidget::walletsChanged()
@@ -240,6 +249,11 @@ void TransactionsWidget::walletsFilterChanged(int index)
    }
    const auto &walletIds = ui->walletBox->itemData(index, UiUtils::WalletIdRole).toStringList();
    sortFilterModel_->updateFilters(walletIds, sortFilterModel_->searchString, sortFilterModel_->transactionDirection);
+}
+
+void TransactionsWidget::onEnterKeyInTrxPressed(const QModelIndex &index)
+{
+   showTransactionDetails(index);
 }
 
 void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
