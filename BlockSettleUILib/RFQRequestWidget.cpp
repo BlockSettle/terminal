@@ -1,6 +1,6 @@
+
 #include "RFQRequestWidget.h"
 #include "ui_RFQRequestWidget.h"
-#include <QDebug>
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "CelerClient.h"
@@ -10,10 +10,14 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
+#include "TreeViewWithEnterKey.h"
+
+#include <QPushButton>
+#include <QLineEdit>
 
 
 RFQRequestWidget::RFQRequestWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui_(new Ui::RFQRequestWidget())
    , authAddressManager_(nullptr)
    , walletsManager_(nullptr)
@@ -32,6 +36,56 @@ void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
+   }
+}
+
+void RFQRequestWidget::shortcutActivated(ShortcutType s)
+{
+   switch (s) {
+      case ShortcutType::Alt_1 : {
+         ui_->widgetMarketData->view()->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_2 : {
+         if (ui_->pageRFQTicket->lineEditAmount()->isVisible())
+            ui_->pageRFQTicket->lineEditAmount()->setFocus();
+         else
+            ui_->pageRFQTicket->setFocus();
+      }
+         break;
+
+      case ShortcutType::Alt_3 : {
+         ui_->treeViewOrders->activate();
+      }
+         break;
+
+      case ShortcutType::Ctrl_S : {
+         if (ui_->pageRFQTicket->submitButton()->isEnabled())
+            ui_->pageRFQTicket->submitButton()->click();
+      }
+         break;
+
+      case ShortcutType::Alt_S : {
+         ui_->pageRFQTicket->sellButton()->click();
+      }
+         break;
+
+      case ShortcutType::Alt_B : {
+         ui_->pageRFQTicket->buyButton()->click();
+      }
+         break;
+
+      case ShortcutType::Alt_P : {
+         if (ui_->pageRFQTicket->numCcyButton()->isChecked())
+            ui_->pageRFQTicket->denomCcyButton()->click();
+         else
+            ui_->pageRFQTicket->numCcyButton()->click();
+      }
+         break;
+
+      default :
+         break;
    }
 }
 

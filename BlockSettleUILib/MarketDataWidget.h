@@ -15,6 +15,7 @@ class MDSortFilterProxyModel;
 class MarketDataProvider;
 class ApplicationSettings;
 class MDHeader;
+class TreeViewWithEnterKey;
 
 
 class MarketDataWidget : public QWidget
@@ -27,6 +28,8 @@ public:
 
    void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
       , const std::shared_ptr<MarketDataProvider>& mdProvider);
+
+   TreeViewWithEnterKey* view() const;
 
 signals:
    void CurrencySelected(const QString& productGroup, const QString& currencyPair
@@ -41,6 +44,7 @@ private slots:
    void onHeaderStateChanged(bool state);
    void onRowClicked(const QModelIndex& index);
    void onMDRejected(const std::string &security, const std::string &reason);
+   void onEnterKeyPressed(const QModelIndex &index);
 
 private:
    Ui::MarketDataWidget    *              ui;

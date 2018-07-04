@@ -3,6 +3,7 @@
 #include "ui_MarketDataWidget.h"
 #include "MarketDataProvider.h"
 #include "MarketDataModel.h"
+#include "TreeViewWithEnterKey.h"
 
 
 MarketDataWidget::MarketDataWidget(QWidget* parent)
@@ -55,9 +56,16 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    connect(marketDataModel_, &MarketDataModel::needResize, this, &MarketDataWidget::resizeAndExpand);
 
    connect(ui->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::onRowClicked);
+   connect(ui->treeViewMarketData, &TreeViewWithEnterKey::enterKeyPressed,
+           this, &MarketDataWidget::onEnterKeyPressed);
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
    connect(mdProvider.get(), &MarketDataProvider::MDReqRejected, this, &MarketDataWidget::onMDRejected);
+}
+
+TreeViewWithEnterKey* MarketDataWidget::view() const
+{
+   return ui->treeViewMarketData;
 }
 
 void MarketDataWidget::onMDRejected(const std::string &security, const std::string &reason)
@@ -104,6 +112,14 @@ void MarketDataWidget::onRowClicked(const QModelIndex& index)
          emit CurrencySelected(group, currencyPair, bidPrice, offerPrice);
          break;
    }
+}
+
+void MarketDataWidget::onEnterKeyPressed(const QModelIndex &index)
+{
+   auto pairIndex = mdSortFilterModel_->index(index.row(),
+      static_cast<int>(MarketDataModel::MarketDataColumns::Product), index.parent());
+
+   onRowClicked(pairIndex);
 }
 
 void MarketDataWidget::resizeAndExpand()

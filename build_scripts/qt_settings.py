@@ -70,6 +70,11 @@ class QtSettings(Configurator):
         command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
         command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
 
+        if self._project_settings.on_osx():
+            command.append('-L/usr/local/opt/mysql@5.7/lib')
+            command.append('-I/usr/local/opt/mysql@5.7/include')
+            command.append('-I/usr/local/opt/mysql@5.7/include/mysql')
+
         if self._project_settings.on_linux():
             command.append('-system-freetype')
             command.append('-fontconfig')

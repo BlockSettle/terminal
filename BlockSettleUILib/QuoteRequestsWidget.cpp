@@ -8,6 +8,7 @@
 #include "QuoteProvider.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
+#include "TreeViewWithEnterKey.h"
 
 
 //
@@ -62,6 +63,12 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
 
    ui_->treeViewQuoteRequests->setModel(sortModel_);
 
+   connect(ui_->treeViewQuoteRequests, &QTreeView::collapsed,
+           this, &QuoteRequestsWidget::onCollapsed);
+   connect(ui_->treeViewQuoteRequests, &QTreeView::expanded,
+           this, &QuoteRequestsWidget::onExpanded);
+   connect(ui_->treeViewQuoteRequests, &TreeViewWithEnterKey::enterKeyPressed,
+           this, &QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed);
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
    });
@@ -117,6 +124,11 @@ void QuoteRequestsWidget::addSettlementContainer(const std::shared_ptr<bs::Settl
    if (model_) {
       model_->addSettlementContainer(container);
    }
+}
+
+TreeViewWithEnterKey* QuoteRequestsWidget::view() const
+{
+   return ui_->treeViewQuoteRequests;
 }
 
 void QuoteRequestsWidget::onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn)
@@ -185,7 +197,7 @@ void QuoteRequestsWidget::onQuoteRequest(const bs::network::QuoteReqNotification
 void QuoteRequestsWidget::onSecuritiesReceived()
 {
    sortModel_->SetFilter(appSettings_->get<QStringList>(ApplicationSettings::Filter_MD_QN));
-   ui_->treeViewQuoteRequests->expandAll();
+   expandIfNeeded();
 }
 
 void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
@@ -194,7 +206,7 @@ void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
    {
    case ApplicationSettings::Filter_MD_QN:
       sortModel_->SetFilter(val.toStringList());
-      ui_->treeViewQuoteRequests->expandAll();
+      expandIfNeeded();
       break;
 
    case ApplicationSettings::dropQN:
@@ -219,11 +231,11 @@ void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, i
    for (int row = first; row <= last; row++) {
       const auto &index = model_->index(row, 0, parent);
       if (index.data(QuoteRequestsModel::Role::ReqId).isNull()) {
-         ui_->treeViewQuoteRequests->expandAll();
+         expandIfNeeded();
          ui_->treeViewQuoteRequests->resizeColumnToContents(0);
       }
       else {
-         for (int i = 0; i < sortModel_->columnCount(); i++) {
+         for (int i = 0; i < sortModel_->columnCount(); ++i) {
             ui_->treeViewQuoteRequests->resizeColumnToContents(i);
          }
       }
@@ -239,6 +251,46 @@ void QuoteRequestsWidget::onRowsRemoved(const QModelIndex &, int, int)
    else {
       onQuoteReqNotifSelected(indices.first());
    }
+}
+
+void QuoteRequestsWidget::onCollapsed(const QModelIndex &index)
+{
+   if (index.isValid())
+      collapsed_.append(path(sortModel_->mapToSource(index)));
+}
+
+void QuoteRequestsWidget::onExpanded(const QModelIndex &index)
+{
+   if (index.isValid())
+      collapsed_.removeOne(path(sortModel_->mapToSource(index)));
+}
+
+void QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed(const QModelIndex &index)
+{
+   onQuoteReqNotifSelected(index);
+}
+
+QString QuoteRequestsWidget::path(const QModelIndex &index) const
+{
+   QModelIndex idx = model_->index(index.row(), 0, index.parent());
+
+   QString res = QString::fromLatin1("/") + idx.data().toString();
+
+   while (idx.parent().isValid()) {
+      idx = idx.parent();
+      res.prepend(QString::fromLatin1("/") + idx.data().toString());
+   }
+
+   return res;
+}
+
+void QuoteRequestsWidget::expandIfNeeded(const QModelIndex &index)
+{
+   if (!collapsed_.contains(path(sortModel_->mapToSource(index))))
+      ui_->treeViewQuoteRequests->expand(index);
+
+   for (int i = 0; i < sortModel_->rowCount(index); ++i)
+      expandIfNeeded(sortModel_->index(i, 0, index));
 }
 
 bs::SecurityStatsCollector::SecurityStatsCollector(const std::shared_ptr<ApplicationSettings> appSettings, ApplicationSettings::Setting param)

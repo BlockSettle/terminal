@@ -78,10 +78,10 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
       if (msg.empty()) {
          return { -1, false };
       }
-      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->tabDealing), (msg[0].toInt() > 0) };
+      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetRFQReply), (msg[0].toInt() > 0) };
 
    case bs::ui::NotifyType::BlockchainTX:
-      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->tabTransactions), true };
+      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true };
 
    default: break;
    }

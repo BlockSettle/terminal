@@ -138,7 +138,7 @@
       <property name="movable">
        <bool>false</bool>
       </property>
-      <widget class="QWidget" name="tab">
+      <widget class="PortfolioWidget" name="widgetPortfolio">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -148,91 +148,23 @@
        <attribute name="title">
         <string>OVERVIEW</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_4">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="PortfolioWidget" name="widgetPortfolio" native="true"/>
-        </item>
-       </layout>
       </widget>
-      <widget class="QWidget" name="tabTrading">
+      <widget class="RFQRequestWidget" name="widgetRFQ">
        <attribute name="title">
         <string>TRADE</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_5">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="RFQRequestWidget" name="widgetRFQ" native="true"/>
-        </item>
-       </layout>
       </widget>
-      <widget class="QWidget" name="tabDealing">
+      <widget class="RFQReplyWidget" name="widgetRFQReply">
        <attribute name="title">
         <string>DEALING</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="RFQReplyWidget" name="widgetRFQReply" native="true"/>
-        </item>
-       </layout>
       </widget>
-      <widget class="QWidget" name="tabWallets">
+      <widget class="WalletsWidget" name="widgetWallets">
        <attribute name="title">
         <string>WALLETS</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="WalletsWidget" name="widgetWallets" native="true"/>
-        </item>
-       </layout>
       </widget>
-      <widget class="QWidget" name="tabTransactions">
+      <widget class="TransactionsWidget" name="widgetTransactions">
        <property name="minimumSize">
         <size>
          <width>100</width>
@@ -241,28 +173,6 @@
        </property>
        <attribute name="title">
         <string>TRANSACTIONS</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="TransactionsWidget" name="widgetTransactions" native="true"/>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="tabNews">
-       <attribute name="title">
-        <string>NEWS</string>
        </attribute>
       </widget>
      </widget>
@@ -275,7 +185,7 @@
      <x>0</x>
      <y>0</y>
      <width>997</width>
-     <height>22</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

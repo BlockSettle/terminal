@@ -1,8 +1,10 @@
+
 #include "RFQReplyWidget.h"
 #include "ui_RFQReplyWidget.h"
 #include <spdlog/logger.h>
 
 #include <QDesktopWidget>
+#include <QPushButton>
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
@@ -19,11 +21,13 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
+#include "TreeViewWithEnterKey.h"
+#include "CustomDoubleSpinBox.h"
 
 using namespace bs::ui;
 
 RFQReplyWidget::RFQReplyWidget(QWidget* parent)
-   : QWidget(parent)
+   : TabWithShortcut(parent)
    , ui_(new Ui::RFQReplyWidget())
 {
    ui_->setupUi(this);
@@ -42,6 +46,48 @@ void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &wa
       if (signingContainer_) {
          signingContainer_->GetInfo(walletsManager_->GetPrimaryWallet());
       }
+   }
+}
+
+void RFQReplyWidget::shortcutActivated(ShortcutType s)
+{
+   switch (s) {
+      case ShortcutType::Alt_1 : {
+         ui_->widgetQuoteRequests->view()->activate();
+      }
+         break;
+
+      case ShortcutType::Alt_2 : {
+         if (ui_->pageRFQReply->bidSpinBox()->isVisible()) {
+            if (ui_->pageRFQReply->bidSpinBox()->isEnabled())
+               ui_->pageRFQReply->bidSpinBox()->setFocus();
+            else
+               ui_->pageRFQReply->offerSpinBox()->setFocus();
+         } else {
+            ui_->pageRFQReply->setFocus();
+         }
+      }
+         break;
+
+      case ShortcutType::Alt_3 : {
+         ui_->treeViewOrders->activate();
+      }
+         break;
+
+      case ShortcutType::Ctrl_Q : {
+         if (ui_->pageRFQReply->quoteButton()->isEnabled())
+            ui_->pageRFQReply->quoteButton()->click();
+      }
+         break;
+
+      case ShortcutType::Ctrl_P : {
+         if (ui_->pageRFQReply->pullButton()->isEnabled())
+            ui_->pageRFQReply->pullButton()->click();
+      }
+         break;
+
+      default :
+         break;
    }
 }
 

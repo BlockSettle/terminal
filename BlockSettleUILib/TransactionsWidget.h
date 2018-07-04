@@ -5,6 +5,8 @@
 
 #include <memory>
 
+#include "TabWithShortcut.h"
+
 class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
@@ -13,7 +15,7 @@ namespace Ui {
     class TransactionsWidget;
 };
 
-class TransactionsWidget : public QWidget
+class TransactionsWidget : public TabWithShortcut
 {
 Q_OBJECT
 
@@ -23,11 +25,14 @@ public:
 
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
 
+   void shortcutActivated(ShortcutType s) override;
+
 private slots:
    void showTransactionDetails(const QModelIndex& index);
    void updateResultCount();
    void walletsChanged();
    void walletsFilterChanged(int index);
+   void onEnterKeyInTrxPressed(const QModelIndex &index);
 
 private:
    Ui::TransactionsWidget* ui;
