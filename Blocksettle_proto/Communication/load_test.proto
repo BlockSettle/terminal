@@ -7,6 +7,7 @@ enum AdminCommandCode
    StartConnectCode = 1;
    StartCustomerTradingCode = 2;
    StopCustomerTradingCode = 3;
+   GetXBTFundingAddressCode = 4;
 }
 
 message AdminCommandHeader
@@ -23,10 +24,11 @@ message AdminCommandConnect
    required string celer_port = 4;
    required string pub_host = 5;
    required string pub_port = 6;
-   required string armory_host = 7;
-   required string armory_port = 8;
-   required bool   generate_address = 9;
-   optional uint64 generate_address_interval = 10;
+   required string wallets_root = 7;
+   required string armory_host = 8;
+   required string armory_port = 9;
+   required bool   generate_address = 10;
+   optional uint64 generate_address_interval = 11;
 }
 
 message RFQAmount
@@ -67,6 +69,7 @@ enum CustomerUpdateType
    TradingStoppedUpdateType = 8;
    XBTBalanceUpdateType = 9;
    ErrorNotificationType = 10;
+   XBTAddressType = 11;
 }
 
 enum RFQProductGroup
@@ -128,8 +131,13 @@ message XBTBalanceUpdate
    required uint64 used_address_count = 2;
 }
 
-
 message ErrorNotification
 {
    required string message = 1;
+}
+
+message XBTAddress
+{
+   required string   xbt_address = 1;
+   required bool     dealing_customer = 2;
 }

@@ -69,9 +69,29 @@ void TransactionData::InvalidateTransactionData()
    usedUTXO_.clear();
    memset((void*)&summary_, 0, sizeof(summary_));
 
-   UpdateTransactionData();
-   if (changedCallback_) {
-      changedCallback_();
+   if (transactionUpdateEnabled_) {
+      UpdateTransactionData();
+      if (changedCallback_) {
+         changedCallback_();
+      }
+   } else {
+      transactionUpdateRequired_ = true;
+   }
+}
+
+bool TransactionData::disableTransactionUpdate()
+{
+   bool prevState = transactionUpdateEnabled_;
+   transactionUpdateEnabled_ = false;
+   return prevState;
+}
+
+void TransactionData::enableTransactionUpdate()
+{
+   transactionUpdateEnabled_ = true;
+   if (transactionUpdateRequired_) {
+      transactionUpdateRequired_ = false;
+      UpdateTransactionData();
    }
 }
 
