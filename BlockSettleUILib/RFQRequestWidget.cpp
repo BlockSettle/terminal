@@ -66,6 +66,24 @@ void RFQRequestWidget::shortcutActivated(ShortcutType s)
       }
          break;
 
+      case ShortcutType::Alt_S : {
+         ui_->pageRFQTicket->sellButton()->click();
+      }
+         break;
+
+      case ShortcutType::Alt_B : {
+         ui_->pageRFQTicket->buyButton()->click();
+      }
+         break;
+
+      case ShortcutType::Alt_P : {
+         if (ui_->pageRFQTicket->numCcyButton()->isChecked())
+            ui_->pageRFQTicket->denomCcyButton()->click();
+         else
+            ui_->pageRFQTicket->numCcyButton()->click();
+      }
+         break;
+
       default :
          break;
    }

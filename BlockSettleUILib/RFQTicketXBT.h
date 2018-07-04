@@ -55,6 +55,10 @@ public:
 
    QPushButton* submitButton() const;
    QLineEdit* lineEditAmount() const;
+   QPushButton* buyButton() const;
+   QPushButton* sellButton() const;
+   QPushButton* numCcyButton() const;
+   QPushButton* denomCcyButton() const;
 
 public slots:
    void setSecurityId(const QString& productGroup, const QString& currencyPair

@@ -740,6 +740,26 @@ QLineEdit* RFQTicketXBT::lineEditAmount() const
    return ui_->lineEditAmount;
 }
 
+QPushButton* RFQTicketXBT::buyButton() const
+{
+   return ui_->pushButtonBuy;
+}
+
+QPushButton* RFQTicketXBT::sellButton() const
+{
+   return ui_->pushButtonSell;
+}
+
+QPushButton* RFQTicketXBT::numCcyButton() const
+{
+   return ui_->pushButtonNumCcy;
+}
+
+QPushButton* RFQTicketXBT::denomCcyButton() const
+{
+   return ui_->pushButtonDenomCcy;
+}
+
 double RFQTicketXBT::estimatedFee() const
 {
    const auto wallet = getCurrentWallet();
