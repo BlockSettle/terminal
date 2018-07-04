@@ -74,13 +74,13 @@ void RFQReplyWidget::shortcutActivated(ShortcutType s)
       }
          break;
 
-      case ShortcutType::Alt_Q : {
+      case ShortcutType::Ctrl_Q : {
          if (ui_->pageRFQReply->quoteButton()->isEnabled())
             ui_->pageRFQReply->quoteButton()->click();
       }
          break;
 
-      case ShortcutType::Alt_P : {
+      case ShortcutType::Ctrl_P : {
          if (ui_->pageRFQReply->pullButton()->isEnabled())
             ui_->pageRFQReply->pullButton()->click();
       }

@@ -147,6 +147,8 @@ WalletsWidget::WalletsWidget(QWidget* parent)
 
    connect(ui->treeViewAddresses, &TreeViewWithEnterKey::enterKeyPressed,
            this, &WalletsWidget::onEnterKeyInAddressesPressed);
+   connect(ui->treeViewWallets, &WalletsTreeView::enterKeyPressed,
+           this, &WalletsWidget::onEnterKeyInWalletsPressed);
 }
 
 void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
@@ -455,6 +457,11 @@ void WalletsWidget::onFilterSettingsChanged()
 void WalletsWidget::onEnterKeyInAddressesPressed(const QModelIndex &index)
 {
    showAddressProperties(index);
+}
+
+void WalletsWidget::onEnterKeyInWalletsPressed(const QModelIndex &index)
+{
+   showWalletProperties(index);
 }
 
 int WalletsWidget::getUIFilterSettings() const

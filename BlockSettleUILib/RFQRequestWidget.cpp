@@ -60,7 +60,7 @@ void RFQRequestWidget::shortcutActivated(ShortcutType s)
       }
          break;
 
-      case ShortcutType::Alt_S : {
+      case ShortcutType::Ctrl_S : {
          if (ui_->pageRFQTicket->submitButton()->isEnabled())
             ui_->pageRFQTicket->submitButton()->click();
       }

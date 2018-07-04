@@ -1029,27 +1029,27 @@ void BSTerminalMainWindow::setupShortcuts()
       }
    );
 
-   auto alt_s = new QShortcut(QKeySequence(QString::fromLatin1("Alt+S")), this);
+   auto alt_s = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+S")), this);
    alt_s->setContext(Qt::ApplicationShortcut);
    connect(alt_s, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_S);
+            TabWithShortcut::ShortcutType::Ctrl_S);
       }
    );
 
-   auto alt_p = new QShortcut(QKeySequence(QString::fromLatin1("Alt+P")), this);
+   auto alt_p = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+P")), this);
    alt_p->setContext(Qt::ApplicationShortcut);
    connect(alt_p, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_P);
+            TabWithShortcut::ShortcutType::Ctrl_P);
       }
    );
 
-   auto alt_q = new QShortcut(QKeySequence(QString::fromLatin1("Alt+Q")), this);
+   auto alt_q = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+Q")), this);
    alt_q->setContext(Qt::ApplicationShortcut);
    connect(alt_q, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_Q);
+            TabWithShortcut::ShortcutType::Ctrl_Q);
       }
    );
 }

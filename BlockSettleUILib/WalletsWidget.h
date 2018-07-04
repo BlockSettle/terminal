@@ -70,6 +70,7 @@ private slots:
    void onDeleteWallet();
    void onFilterSettingsChanged();
    void onEnterKeyInAddressesPressed(const QModelIndex &index);
+   void onEnterKeyInWalletsPressed(const QModelIndex &index);
 
 private:
    Ui::WalletsWidget* ui;
