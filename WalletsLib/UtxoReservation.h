@@ -22,8 +22,8 @@ namespace bs {
          bool filter(const std::string &walletId, std::vector<UTXO> &) const;
       private:
          void setParent(UtxoReservation *parent) { parent_ = parent; }
-         virtual void reserved(const std::string &walletId, const std::vector<UTXO> &) {}
-         virtual void unreserved(const std::string &walletId, const std::string &reserveId) {}
+         virtual void reserved(const std::string &, const std::vector<UTXO> &) {}
+         virtual void unreserved(const std::string &, const std::string &reserveId) {}
       protected:
          UtxoReservation * parent_ = nullptr;
       };
