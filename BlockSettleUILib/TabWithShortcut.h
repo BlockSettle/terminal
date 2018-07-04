@@ -21,7 +21,10 @@ public:
       Alt_3,
       Ctrl_S,
       Ctrl_P,
-      Ctrl_Q
+      Ctrl_Q,
+      Alt_S,
+      Alt_P,
+      Alt_B
    }; // enum ShortcutType
 
    explicit TabWithShortcut(QWidget *parent);
