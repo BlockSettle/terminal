@@ -99,7 +99,7 @@ bool DealerCCSettlementContainer::isAcceptable() const
    return (foundRecipAddr_ && amountValid_ && genAddrVerified_ && wallet_);
 }
 
-bool DealerCCSettlementContainer::accept(const string &password)
+bool DealerCCSettlementContainer::accept(const SecureBinaryData &password)
 {
    if (cancelled_) {
       return false;

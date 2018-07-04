@@ -14,10 +14,10 @@ namespace Ui {
 }
 namespace bs {
    class SettlementAddressEntry;
-   class Wallet;
 }
 class AssetManager;
 class DealerXBTSettlementContainer;
+class SignContainer;
 class WalletsManager;
 
 
@@ -29,6 +29,7 @@ public:
       , const std::shared_ptr<DealerXBTSettlementContainer> &
       , const std::shared_ptr<AssetManager>& assetManager
       , std::shared_ptr<WalletsManager> walletsManager
+      , const std::shared_ptr<SignContainer> &
       , QWidget* parent = nullptr);
    ~DealerXBTSettlementDialog() noexcept override = default;
 
@@ -39,7 +40,10 @@ public:
    DealerXBTSettlementDialog& operator = (DealerXBTSettlementDialog&&) = delete;
 
 protected:
-   void reject() override;
+   QWidget *widgetPassword() const override;
+   QLineEdit *lineEditPassword() const override;
+   QLabel *labelHint() const override;
+   QLabel *labelPassword() const override;
 
 private slots:
    void onAccepted();
@@ -60,12 +64,12 @@ private:
 
    void disableCancelOnOrder();
 
-   void onSettlementCompleted();
    void onSettlementFailed();
 
 private:
    Ui::DealerXBTSettlementDialog*   ui_;
    std::shared_ptr<DealerXBTSettlementContainer>   settlContainer_;
+   bool acceptable_ = false;
 };
 
 #endif // __DEALER_XBT_SETTLEMENT_DIALOG_H__
