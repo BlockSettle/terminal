@@ -58,8 +58,8 @@ public:
    RequestId SetUserId(const BinaryData &) override { return 0; }
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override { return 0; }
    RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &, const SecureBinaryData &password = {}) override { return 0; }
-   RequestId CreateHDWallet(NetworkType, const std::string &name, const std::string &desc
-      , const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed = {}) override { return 0; }
+   RequestId CreateHDWallet(const std::string &name, const std::string &desc
+      , const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed) override { return 0; }
    RequestId DeleteHD(const std::shared_ptr<bs::hd::Wallet> &) override { return 0; }
    RequestId DeleteHD(const std::shared_ptr<bs::Wallet> &) override { return 0; }
    RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) override { return 0; }

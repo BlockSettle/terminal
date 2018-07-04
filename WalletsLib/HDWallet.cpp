@@ -9,7 +9,7 @@
 
 using namespace bs;
 
-hd::Wallet::Wallet(const std::string &name, const std::string &desc, bool extOnlyAddresses, const bs::wallet::Seed &seed)
+hd::Wallet::Wallet(const std::string &name, const std::string &desc, const bs::wallet::Seed &seed, bool extOnlyAddresses)
    : QObject(nullptr), name_(name), desc_(desc), netType_(seed.networkType()), extOnlyAddresses_(extOnlyAddresses)
 {
    initNew(seed);
@@ -651,7 +651,7 @@ std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryDat
          return nullptr;
       }
       bs::wallet::Seed seed(extNode->getNetworkType(), extNode->privateKey());
-      if (bs::hd::Wallet(getName(), getDesc(), false, seed).getWalletId() != getWalletId()) {
+      if (bs::hd::Wallet(getName(), getDesc(), seed).getWalletId() != getWalletId()) {
          return nullptr;
       }
    }
@@ -672,7 +672,7 @@ bool hd::Wallet::changePassword(const SecureBinaryData &newPass, const SecureBin
       }
       const auto decrypted = rootNode_->decrypt(oldPass);
       bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (bs::hd::Wallet(getName(), getDesc(), false, seed).getWalletId() != getWalletId()) {
+      if (bs::hd::Wallet(getName(), getDesc(), seed).getWalletId() != getWalletId()) {
          return false;
       }
       rootNode_ = decrypted->encrypt(newPass);

@@ -161,7 +161,6 @@ namespace bs {
       class Seed
       {
       public:
-         Seed() {}
          Seed(NetworkType netType) : netType_(netType) {}
          Seed(const std::string &seed, NetworkType netType);
          Seed(NetworkType netType, const SecureBinaryData &privKey, const BinaryData &chainCode = {})

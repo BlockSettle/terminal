@@ -7,11 +7,14 @@
 #include "WalletsManager.h"
 
 CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
-      , const std::shared_ptr<SignContainer> &container, bool createPrimary, QWidget *parent)
+      , const std::shared_ptr<SignContainer> &container, NetworkType netType, const QString &walletsPath
+      , bool createPrimary, QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::CreateWalletDialog)
    , walletsManager_(walletsManager)
    , signingContainer_(container)
+   , netType_(netType)
+   , walletsPath_(walletsPath)
 {
    ui_->setupUi(this);
 
@@ -74,9 +77,9 @@ void CreateWalletDialog::CreateWallet()
 
    auto description = ui_->lineEditDescription->text();
 
-   createReqId_ = signingContainer_->CreateHDWallet(walletsManager_->GetNetworkType()
-      , ui_->lineEditWalletName->text().toStdString(), description.toStdString()
-      , ui_->lineEditPassword->text().toStdString(), ui_->checkBoxPrimaryWallet->isChecked());
+   createReqId_ = signingContainer_->CreateHDWallet(ui_->lineEditWalletName->text().toStdString()
+      , description.toStdString(), ui_->lineEditPassword->text().toStdString()
+      , ui_->checkBoxPrimaryWallet->isChecked(), bs::wallet::Seed(netType_));
 }
 
 void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg)
@@ -99,7 +102,7 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
       return;
    }
    createReqId_ = 0;
-   walletsManager_->AdoptNewWallet(wallet);
+   walletsManager_->AdoptNewWallet(wallet, walletsPath_);
    walletId_ = wallet->getWalletId();
    walletCreated_ = true;
    createdAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();

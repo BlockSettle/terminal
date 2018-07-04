@@ -574,7 +574,7 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDLeaf(const std::shared_p
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(NetworkType netType, const std::string &name
+HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(const std::string &name
    , const std::string &desc, const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed)
 {
    headless::CreateHDWalletRequest request;
@@ -584,7 +584,7 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(NetworkType netTy
    auto wallet = request.mutable_wallet();
    wallet->set_name(name);
    wallet->set_description(desc);
-   wallet->set_nettype((netType == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
+   wallet->set_nettype((seed.networkType() == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
    if (primary) {
       wallet->set_primary(true);
    }

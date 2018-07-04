@@ -50,9 +50,6 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
 {
    btc_ecc_start();
 
-   networkType_ = appSettings_->get<NetworkType>(ApplicationSettings::netType);
-   walletsPath_ = appSettings_->GetHomeDir().toStdString();
-   backupPath_ = appSettings_->GetBackupDir().toStdString();
    nbBackupFilesToKeep_ = appSettings_->get<unsigned int>(ApplicationSettings::nbBackupFilesKeep);
    listener_ = std::make_shared<WalletsManagerBlockListener>(this);
    if (bdm_) {
@@ -62,10 +59,9 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
    }
 }
 
-WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger, NetworkType netType, const std::string &walletsDir)
-   : logger_(logger), networkType_(netType), walletsPath_(walletsDir), preferWatchingOnly_(false)
+WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger)
+   : logger_(logger), preferWatchingOnly_(false)
 {
-   backupPath_ = walletsPath_ + "/../backup";
    btc_ecc_start();
 }
 
@@ -77,7 +73,7 @@ WalletsManager::~WalletsManager()
    btc_ecc_stop();
 }
 
-void WalletsManager::Reset(NetworkType netType, const std::string &newWalletsDir)
+void WalletsManager::Reset()
 {
    wallets_.clear();
    hdWallets_.clear();
@@ -89,26 +85,16 @@ void WalletsManager::Reset(NetworkType netType, const std::string &newWalletsDir
    settlementWallet_.reset();
    authAddressWallet_.reset();
 
-   networkType_ = netType;
-   if (!newWalletsDir.empty()) {
-      walletsPath_ = newWalletsDir;
-   }
    emit walletChanged();
 }
 
-void WalletsManager::LoadWallets(const load_progress_delegate& progressDelegate, QString userWalletsDir)
+void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath, const load_progress_delegate &progressDelegate)
 {
-   if (!userWalletsDir.isEmpty()) {
-      walletsPath_ = userWalletsDir.toStdString();
-   }
+   QDir walletsDir(walletsPath);
 
-   logger_->debug("[WalletsManager::LoadWallets] loading wallets from {}"
-      , walletsPath_);
-
-   QDir walletsDir(QString::fromStdString(walletsPath_));
    if (!walletsDir.exists()) {
-      logger_->debug("Creating wallets path {}", walletsPath_);
-      walletsDir.mkpath(QString::fromStdString(walletsPath_));
+      logger_->debug("Creating wallets path {}", walletsPath.toStdString());
+      walletsDir.mkpath(walletsPath);
    }
 
    QStringList filesFilter{QString::fromStdString("*.lmdb")};
@@ -142,10 +128,15 @@ void WalletsManager::LoadWallets(const load_progress_delegate& progressDelegate,
          if (progressDelegate) {
             progressDelegate(current);
          }
-         if (GetNetworkType() != wallet->networkType()) {
-            emit error(errorTitle, tr("Wallet %1 (from file %2) has incompatible network type")
-               .arg(QString::fromStdString(wallet->getName())).arg(file));
-            continue;
+         if (netType != wallet->networkType()) {
+            if (progressDelegate) { // loading in the terminal
+               emit error(errorTitle, tr("Wallet %1 (from file %2) has incompatible network type")
+                  .arg(QString::fromStdString(wallet->getName())).arg(file));
+               continue;
+            }
+            else {
+               logger_->warn("Network type mismatch: loading {}, wallet has {}", (int)netType, (int)wallet->networkType());
+            }
          }
 
          if (file.startsWith(QString::fromStdString(bs::hd::Wallet::fileNamePrefix(false)))) {
@@ -197,9 +188,9 @@ void WalletsManager::LoadWallets(const load_progress_delegate& progressDelegate,
    }
 
    try {
-      if (bs::SettlementWallet::exists(walletsPath_, GetNetworkType())) {
+      if (bs::SettlementWallet::exists(walletsPath.toStdString(), netType)) {
          logger_->debug("Loading settlement wallet");
-         settlementWallet_ = bs::SettlementWallet::loadFromFolder(walletsPath_, GetNetworkType());
+         settlementWallet_ = bs::SettlementWallet::loadFromFolder(walletsPath.toStdString(), netType);
          connect(settlementWallet_.get(), &bs::SettlementWallet::walletReady, this, &WalletsManager::onWalletReady);
       }
    }
@@ -210,17 +201,17 @@ void WalletsManager::LoadWallets(const load_progress_delegate& progressDelegate,
    emit walletsLoaded();
 }
 
-void WalletsManager::BackupWallet(const hd_wallet_type &wallet) const
+void WalletsManager::BackupWallet(const hd_wallet_type &wallet, const std::string &targetDir) const
 {
    if (wallet->isWatchingOnly()) {
       logger_->info("No need to backup watching-only wallet {}", wallet->getName());
       return;
    }
-   QString backupDir = QString::fromStdString(backupPath_);
+   const QString backupDir = QString::fromStdString(targetDir);
    QDir dirBackup(backupDir);
    if (!dirBackup.exists()) {
       if (!dirBackup.mkpath(backupDir)) {
-         logger_->error("Failed to create backup directory {}", backupDir.toStdString());
+         logger_->error("Failed to create backup directory {}", targetDir);
          emit error(tr("Wallet Backup error"), tr("Failed to create backup directory %1").arg(backupDir));
          return;
       }
@@ -238,7 +229,7 @@ void WalletsManager::BackupWallet(const hd_wallet_type &wallet) const
       }
    }
    const auto curTime = QDateTime::currentDateTime().toLocalTime().toString(QLatin1String("yyyyMMddHHmmss"));
-   const auto backupFile = backupDir.toStdString() + "/" + bs::hd::Wallet::fileNamePrefix(false)
+   const auto backupFile = targetDir + "/" + bs::hd::Wallet::fileNamePrefix(false)
       + wallet->getWalletId()  + "_" + curTime.toStdString() + ".lmdb";
    wallet->copyToFile(backupFile);
 }
@@ -256,11 +247,11 @@ bool WalletsManager::IsReadyForTrading() const
    return (HasPrimaryWallet() && HasSettlementWallet());
 }
 
-bool WalletsManager::CreateSettlementWallet()
+bool WalletsManager::CreateSettlementWallet(NetworkType netType, const QString &walletsPath)
 {
    logger_->debug("Creating settlement wallet");
    try {
-      settlementWallet_ = bs::SettlementWallet::create(walletsPath_, GetNetworkType());
+      settlementWallet_ = bs::SettlementWallet::create(walletsPath.toStdString(), netType);
    }
    catch (const std::exception &e) {
       logger_->error("Failed to create Settlement wallet: {}", e.what());
@@ -506,11 +497,6 @@ BTCNumericTypes::balance_type WalletsManager::GetTotalBalance() const
    }
 
    return totalBalance;
-}
-
-NetworkType WalletsManager::GetNetworkType() const
-{
-   return networkType_;
 }
 
 void WalletsManager::BlocksLoaded()
@@ -841,16 +827,13 @@ QString WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::share
 }
 
 WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& name, const std::string& description
-   , const std::string &password, bool primary, bs::wallet::Seed seed)
+   , bs::wallet::Seed seed, const QString &walletsPath, const std::string &password, bool primary)
 {
    if (preferWatchingOnly_) {
       throw std::runtime_error("Can't create wallets in watching-only mode");
    }
 
-   if (seed.networkType() == NetworkType::Invalid) {
-      seed.setNetworkType(GetNetworkType());
-   }
-   const auto newWallet = std::make_shared<bs::hd::Wallet>(name, description, false, seed);
+   const auto newWallet = std::make_shared<bs::hd::Wallet>(name, description, seed);
 
    if (hdWallets_.find(newWallet->getWalletId()) != hdWallets_.end()) {
       throw std::runtime_error("HD wallet with id " + newWallet->getWalletId() + " already exists");
@@ -863,13 +846,13 @@ WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& n
    if (!password.empty()) {
       newWallet->changePassword(password);
    }
-   AdoptNewWallet(newWallet);
+   AdoptNewWallet(newWallet, walletsPath);
    return newWallet;
 }
 
-void WalletsManager::AdoptNewWallet(const hd_wallet_type &wallet)
+void WalletsManager::AdoptNewWallet(const hd_wallet_type &wallet, const QString &walletsPath)
 {
-   wallet->saveToDir(walletsPath_);
+   wallet->saveToDir(walletsPath.toStdString());
    SaveWallet(wallet);
    if (bdm_) {
       wallet->RegisterWallet(bdm_);
@@ -878,12 +861,12 @@ void WalletsManager::AdoptNewWallet(const hd_wallet_type &wallet)
    emit walletsReady();
 }
 
-void WalletsManager::AddWallet(const hd_wallet_type &wallet)
+void WalletsManager::AddWallet(const hd_wallet_type &wallet, const QString &walletsPath)
 {
    if (!wallet) {
       return;
    }
-   wallet->saveToDir(walletsPath_);
+   wallet->saveToDir(walletsPath.toStdString());
    SaveWallet(wallet);
    if (bdm_) {
       wallet->RegisterWallet(bdm_);

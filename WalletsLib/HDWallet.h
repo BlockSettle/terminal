@@ -20,7 +20,7 @@ namespace bs {
          using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
          Wallet(const std::string &name, const std::string &desc
-            , bool extOnlyAddresses = false, const bs::wallet::Seed &seed = {});
+            , const bs::wallet::Seed &, bool extOnlyAddresses = false);
          Wallet(const std::string &filename, bool extOnlyAddresses = false);
          Wallet(const std::string &walletId, NetworkType netType, bool extOnlyAddresses
             , const std::string &name, const std::string &desc);

@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QBuffer>
 
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
@@ -12,6 +13,8 @@
 #include "PDFWriter.h"
 #include "SignContainer.h"
 #include "WalletBackupFile.h"
+#include "UiUtils.h"
+
 
 WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container, QWidget *parent)
@@ -98,11 +101,17 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
       f.close();
    }
    else {
+      QByteArray data;
+      QBuffer buf(&data);
+      UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2))
+         .save(&buf, "PNG");
+
       QVariantHash vars = {
          { QLatin1String("WalletName"), QString::fromStdString(wallet_->getName()) },
          { QLatin1String("WalletID"), QString::fromStdString(wallet_->getWalletId()) },
          { QLatin1String("privkey1"), QString::fromStdString(easyData.part1) },
-         { QLatin1String("privkey2"), QString::fromStdString(easyData.part2) }
+         { QLatin1String("privkey2"), QString::fromStdString(easyData.part2) },
+         { QLatin1String("QR"), QString::fromStdString(data.toBase64().toStdString()) }
       };
       if (chainCode.isNull()) {
          vars[QLatin1String("chaincode1")] = QString();
