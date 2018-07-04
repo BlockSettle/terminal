@@ -991,27 +991,27 @@ void BSTerminalMainWindow::onCCInfoMissing()
 void BSTerminalMainWindow::setupShortcuts()
 {
    auto overviewTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+1")), this);
-   overviewTabShortcut->setContext(Qt::ApplicationShortcut);
+   overviewTabShortcut->setContext(Qt::WindowShortcut);
    connect(overviewTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(0);});
 
    auto tradingTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+2")), this);
-   tradingTabShortcut->setContext(Qt::ApplicationShortcut);
+   tradingTabShortcut->setContext(Qt::WindowShortcut);
    connect(tradingTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(1);});
 
    auto dealingTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+3")), this);
-   dealingTabShortcut->setContext(Qt::ApplicationShortcut);
+   dealingTabShortcut->setContext(Qt::WindowShortcut);
    connect(dealingTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(2);});
 
    auto walletsTabShortcutt = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+4")), this);
-   walletsTabShortcutt->setContext(Qt::ApplicationShortcut);
+   walletsTabShortcutt->setContext(Qt::WindowShortcut);
    connect(walletsTabShortcutt, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(3);});
 
    auto transactionsTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+5")), this);
-   transactionsTabShortcut->setContext(Qt::ApplicationShortcut);
+   transactionsTabShortcut->setContext(Qt::WindowShortcut);
    connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(4);});
 
    auto alt_1 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
-   alt_1->setContext(Qt::ApplicationShortcut);
+   alt_1->setContext(Qt::WindowShortcut);
    connect(alt_1, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_1);
@@ -1019,7 +1019,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto alt_2 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+2")), this);
-   alt_2->setContext(Qt::ApplicationShortcut);
+   alt_2->setContext(Qt::WindowShortcut);
    connect(alt_2, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_2);
@@ -1027,7 +1027,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto alt_3 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+3")), this);
-   alt_3->setContext(Qt::ApplicationShortcut);
+   alt_3->setContext(Qt::WindowShortcut);
    connect(alt_3, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_3);
@@ -1035,7 +1035,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto ctrl_s = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+S")), this);
-   ctrl_s->setContext(Qt::ApplicationShortcut);
+   ctrl_s->setContext(Qt::WindowShortcut);
    connect(ctrl_s, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Ctrl_S);
@@ -1043,7 +1043,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto ctrl_p = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+P")), this);
-   ctrl_p->setContext(Qt::ApplicationShortcut);
+   ctrl_p->setContext(Qt::WindowShortcut);
    connect(ctrl_p, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Ctrl_P);
@@ -1051,7 +1051,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto ctrl_q = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+Q")), this);
-   ctrl_q->setContext(Qt::ApplicationShortcut);
+   ctrl_q->setContext(Qt::WindowShortcut);
    connect(ctrl_q, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Ctrl_Q);
@@ -1059,7 +1059,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto alt_s = new QShortcut(QKeySequence(QString::fromLatin1("Alt+S")), this);
-   alt_s->setContext(Qt::ApplicationShortcut);
+   alt_s->setContext(Qt::WindowShortcut);
    connect(alt_s, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_S);
@@ -1067,7 +1067,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto alt_b = new QShortcut(QKeySequence(QString::fromLatin1("Alt+B")), this);
-   alt_b->setContext(Qt::ApplicationShortcut);
+   alt_b->setContext(Qt::WindowShortcut);
    connect(alt_b, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_B);
@@ -1075,7 +1075,7 @@ void BSTerminalMainWindow::setupShortcuts()
    );
 
    auto alt_p = new QShortcut(QKeySequence(QString::fromLatin1("Alt+P")), this);
-   alt_p->setContext(Qt::ApplicationShortcut);
+   alt_p->setContext(Qt::WindowShortcut);
    connect(alt_p, &QShortcut::activated, [this]() {
          static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_P);

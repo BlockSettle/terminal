@@ -1,8 +1,11 @@
 #include "WalletsManager.h"
-#include <QDir>
-#include <QMutexLocker>
+
 #include "ApplicationSettings.h"
 #include "HDWallet.h"
+
+#include <QDir>
+#include <QMutexLocker>
+
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 
@@ -88,6 +91,7 @@ void WalletsManager::Reset()
 void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath, const load_progress_delegate &progressDelegate)
 {
    QDir walletsDir(walletsPath);
+
    if (!walletsDir.exists()) {
       logger_->debug("Creating wallets path {}", walletsPath.toStdString());
       walletsDir.mkpath(walletsPath);

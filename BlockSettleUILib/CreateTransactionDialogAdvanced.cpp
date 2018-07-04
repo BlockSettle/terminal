@@ -481,7 +481,7 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 
 void CreateTransactionDialogAdvanced::onAddOutput()
 {
-   const bs::Address address(ui_->lineEditAddress->text());
+   const bs::Address address(ui_->lineEditAddress->text().trimmed());
 
    auto maxValue = transactionData_->CalculateMaxAmount(address);
    const bool maxAmount = qFuzzyCompare(maxValue, currentValue_);

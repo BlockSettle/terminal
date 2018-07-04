@@ -112,6 +112,10 @@ public:
    void setMaxSpendAmount(bool maxAmount = true);
    bool maxSpendAmount() const { return maxSpendAmount_; }
 
+   // return previous state
+   bool disableTransactionUpdate();
+   void enableTransactionUpdate();
+
 private:
    void InvalidateTransactionData();
    bool UpdateTransactionData();
@@ -147,6 +151,9 @@ private:
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>>  createAddresses_;
+
+   bool transactionUpdateEnabled_ = true;
+   bool transactionUpdateRequired_ = false;
 };
 
 #endif // __TRANSACTION_DATA_H__
