@@ -208,7 +208,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogSimple::
       advancedDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets));
 
       // set inputs and amounts
-      auto address = ui_->lineEditAddress->text();
+      auto address = ui_->lineEditAddress->text().trimmed();
       if (!address.isEmpty()) {
          advancedDialog->preSetAddress(address);
       }
