@@ -40,7 +40,6 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${CPP_WALLET_LIB_NAME}
    ${CRYPTO_LIB_NAME}
    ${ZMQ_LIB}
-   ${OPENSSL_LIBS}
    ${QRENCODE_LIB}
    Qt5::Core
    Qt5::Widgets
@@ -48,4 +47,5 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    Qt5::Network
    Qt5::Qml
    Qt5::PrintSupport
+   ${OPENSSL_LIBS}
    )
