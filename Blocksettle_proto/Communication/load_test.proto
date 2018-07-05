@@ -70,6 +70,7 @@ enum CustomerUpdateType
    XBTBalanceUpdateType = 9;
    ErrorNotificationType = 10;
    XBTAddressType = 11;
+   OTPUpdateAddressType = 12;
 }
 
 enum RFQProductGroup
@@ -140,4 +141,17 @@ message XBTAddress
 {
    required string   xbt_address = 1;
    required bool     dealing_customer = 2;
+}
+
+enum OTPStatus
+{
+   NoOTP = 1;
+   OTPImported = 2;
+   OTPOutdated = 3;
+}
+
+message OTPUpdateMessage
+{
+   required OTPStatus   otp_status = 1;
+   required uint64      usage_count = 2;
 }
