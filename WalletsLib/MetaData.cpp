@@ -743,7 +743,8 @@ void bs::Wallet::firstInit()
    UpdateBalanceFromDB();
 }
 
-Signer bs::Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinaryData &password)
+Signer bs::Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinaryData &password,
+                             bool removeDuplicatedRecipients)
 {
    bs::CheckRecipSigner signer;
    signer.setFlags(SCRIPT_VERIFY_SEGWIT);
@@ -790,15 +791,18 @@ Signer bs::Wallet::getSigner(const wallet::TXSignRequest &request, const SecureB
       }
       signer.addRecipient(changeRecip);
    }
-   signer.removeDupRecipients();
+
+   if (removeDuplicatedRecipients)
+      signer.removeDupRecipients();
 
    signer.setFeed(GetResolver(password));
    return signer;
 }
 
-BinaryData bs::Wallet::SignTXRequest(const wallet::TXSignRequest &request, const SecureBinaryData &password)
+BinaryData bs::Wallet::SignTXRequest(const wallet::TXSignRequest &request,
+   const SecureBinaryData &password, bool removeDuplicatedRecipients)
 {
-   auto signer = getSigner(request, password);
+   auto signer = getSigner(request, password, removeDuplicatedRecipients);
    signer.sign();
    if (!signer.verify()) {
       throw std::logic_error("signer failed to verify");

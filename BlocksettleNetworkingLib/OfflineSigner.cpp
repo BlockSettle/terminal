@@ -19,7 +19,8 @@ bool OfflineSigner::Start()
    return true;
 }
 
-SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRequest &txSignReq, bool, TXSignMode, const PasswordType&)
+SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRequest &txSignReq,
+   bool, TXSignMode, const PasswordType&, bool)
 {
    if (!txSignReq.isValid()) {
       logger_->error("[HeadlessContainer] Invalid TXSignRequest");

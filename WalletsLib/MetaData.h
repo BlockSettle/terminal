@@ -282,7 +282,9 @@ namespace bs {
       virtual wallet::TXSignRequest CreateTXRequest(const std::vector<UTXO> &
          , const std::vector<std::shared_ptr<ScriptRecipient>> &
          , const uint64_t fee = 0, bool isRBF = false, bs::Address changeAddress = {});
-      virtual BinaryData SignTXRequest(const wallet::TXSignRequest &, const SecureBinaryData &password = {});
+      virtual BinaryData SignTXRequest(const wallet::TXSignRequest &,
+                                       const SecureBinaryData &password = {},
+                                       bool removeDuplicatedRecipients = true);
       virtual BinaryData SignPartialTXRequest(const wallet::TXSignRequest &, const SecureBinaryData &password = {});
 
       virtual wallet::TXSignRequest CreatePartialTXRequest(uint64_t spendVal, const std::vector<UTXO> &inputs = {}, bs::Address changeAddress = {}
@@ -313,7 +315,8 @@ namespace bs {
    private:
       bool isSegWitScript(const BinaryData &script);
       void doRegister(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew);
-      Signer getSigner(const wallet::TXSignRequest &, const SecureBinaryData &password);
+      Signer getSigner(const wallet::TXSignRequest &, const SecureBinaryData &password,
+                       bool removeDuplicatedRecipients = true);
 
    protected:
       std::string       walletName_;

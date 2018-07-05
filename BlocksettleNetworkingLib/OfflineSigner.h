@@ -38,7 +38,8 @@ public:
    bool isWalletOffline(const std::string &walletId) const override { return true; }
 
    RequestId SignTXRequest(const bs::wallet::TXSignRequest &, bool autoSign = false
-      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}) override;
+      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
+      , bool removeDuplicatedRecipients = true) override;
 
    RequestId SignPartialTXRequest(const bs::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) override

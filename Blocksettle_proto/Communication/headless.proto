@@ -84,6 +84,7 @@ message SignTXRequest
    bool           populateUTXOs = 8;
    bool           applyAutoSignRules = 9;
    string         password = 10;
+   bool           keepDuplicatedRecipients = 11;
 }
 
 message SignTXReply

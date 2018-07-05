@@ -343,7 +343,8 @@ void HeadlessContainer::ProcessSetLimitsResponse(unsigned int id, const std::str
 }
 
 HeadlessContainer::RequestId HeadlessContainer::SignTXRequest(const bs::wallet::TXSignRequest &txSignReq
-   , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password)
+   , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password
+   , bool removeDuplicatedRecipients)
 {
    if (!txSignReq.isValid()) {
       logger_->error("[HeadlessContainer] Invalid TXSignRequest");
@@ -351,6 +352,7 @@ HeadlessContainer::RequestId HeadlessContainer::SignTXRequest(const bs::wallet::
    }
    headless::SignTXRequest request;
    request.set_walletid(txSignReq.walletId);
+   request.set_keepduplicatedrecipients(!removeDuplicatedRecipients);
    if (autoSign) {
       request.set_applyautosignrules(true);
    }
