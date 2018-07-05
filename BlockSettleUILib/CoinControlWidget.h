@@ -57,9 +57,11 @@ protected:
       painter->save();
       QHeaderView::paintSection(painter, rect, logIndex);
       painter->restore();
+
       if (logIndex == 0) {
          QStyleOptionButton option;
-         option.rect = QRect(2, 2, height() - 4, height() - 4);
+         const QSize ch = checkboxSizeHint();
+         option.rect = QRect(2, (height() - ch.height()) / 2, ch.width(), ch.height());
 
          switch (state_)
          {
@@ -78,8 +80,21 @@ protected:
       }
    }
 
+   QSize sectionSizeFromContents(int logicalIndex) const override
+   {
+      if (logicalIndex == 0) {
+         const QSize orig = QHeaderView::sectionSizeFromContents(logicalIndex);
+         const QSize checkbox = checkboxSizeHint();
+
+         return QSize(orig.width() + checkbox.width() + 4,
+                      qMax(orig.height(), checkbox.height() + 4));
+      } else {
+         return QHeaderView::sectionSizeFromContents(logicalIndex);
+      }
+   }
+
    void mousePressEvent(QMouseEvent *event) {
-      if (QRect(0, 0, height(), height()).contains(event->x(), event->y())) {
+      if (QRect(0, 0, checkboxSizeHint().width() + 4, height()).contains(event->x(), event->y())) {
          if (state_ == Qt::Unchecked) {
             state_ = Qt::Checked;
          }
@@ -88,8 +103,16 @@ protected:
          }
          emit stateChanged(state_);
          update();
+      } else {
+         QHeaderView::mousePressEvent(event);
       }
-      QHeaderView::mousePressEvent(event);
+   }
+
+private:
+   QSize checkboxSizeHint() const
+   {
+      QStyleOptionButton opt;
+      return style()->subElementRect(QStyle::SE_CheckBoxIndicator, &opt).size();
    }
 
 private:

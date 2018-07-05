@@ -68,21 +68,37 @@ public:
    MDHeader(Qt::Orientation orient, QWidget *parent = nullptr) : QHeaderView(orient, parent) {}
 
 protected:
-   void paintSection(QPainter *painter, const QRect &rect, int logIndex) const {
+   void paintSection(QPainter *painter, const QRect &rect, int logIndex) const override {
       painter->save();
       QHeaderView::paintSection(painter, rect, logIndex);
       painter->restore();
-      if (logIndex == 0) {
+
+      if (logIndex == 0) { 
          QStyleOptionButton option;
-         option.rect = QRect(2, 2, height() - 4, height() - 4);
+         const QSize ch = checkboxSizeHint();
+         option.rect = QRect(2, (height() - ch.height()) / 2, ch.width(), ch.height());
          option.state = QStyle::State_Enabled;
          option.state |= state_ ? QStyle::State_On : QStyle::State_Off;
+
          style()->drawPrimitive(QStyle::PE_IndicatorCheckBox, &option, painter);
       }
    }
 
-   void mousePressEvent(QMouseEvent *event) {
-      if (QRect(0, 0, height(), height()).contains(event->x(), event->y())) {
+   QSize sectionSizeFromContents(int logicalIndex) const override
+   {
+      if (logicalIndex == 0) {
+         const QSize orig = QHeaderView::sectionSizeFromContents(logicalIndex);
+         const QSize checkbox = checkboxSizeHint();
+
+         return QSize(orig.width() + checkbox.width() + 4,
+                      qMax(orig.height(), checkbox.height() + 4));
+      } else {
+         return QHeaderView::sectionSizeFromContents(logicalIndex);
+      }
+   }
+
+   void mousePressEvent(QMouseEvent *event) override {
+      if (QRect(0, 0, checkboxSizeHint().width() + 4, height()).contains(event->x(), event->y())) {
          state_ = !state_;
          emit stateChanged(state_);
          update();
@@ -90,6 +106,13 @@ protected:
       else {
          QHeaderView::mousePressEvent(event);
       }
+   }
+
+private:
+   QSize checkboxSizeHint() const
+   {
+      QStyleOptionButton opt;
+      return style()->subElementRect(QStyle::SE_CheckBoxIndicator, &opt).size();
    }
 
 private:
