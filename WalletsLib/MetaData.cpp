@@ -792,8 +792,9 @@ Signer bs::Wallet::getSigner(const wallet::TXSignRequest &request, const SecureB
       signer.addRecipient(changeRecip);
    }
 
-   if (removeDuplicatedRecipients)
+   if (removeDuplicatedRecipients) {
       signer.removeDupRecipients();
+   }
 
    signer.setFeed(GetResolver(password));
    return signer;
