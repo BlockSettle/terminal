@@ -35,8 +35,8 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(QWidget* parent)
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &XBTSettlementTransactionWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &XBTSettlementTransactionWidget::onAccept);
-   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &XBTSettlementTransactionWidget::updateAcceptButton);
-   connect(ui_->lineEditAuthPassword, &QLineEdit::textChanged, this, &XBTSettlementTransactionWidget::updateAcceptButton);
+   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &XBTSettlementTransactionWidget::onPasswordChanged);
+   connect(ui_->lineEditAuthPassword, &QLineEdit::textChanged, this, &XBTSettlementTransactionWidget::onPasswordChanged);
 
    ui_->pushButtonAccept->setEnabled(false);
 
@@ -178,6 +178,11 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged()
    switch (dealerVerifState_) {
    case AddressVerificationState::Verified:
       text = sValid;
+      if (encType_ == bs::wallet::EncryptionType::Freja) {
+         const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId());
+         frejaSign_->start(userId_, tr("XBT settlement TX for %1 in wallet %2").arg(QString::fromStdString(rfq_.security))
+            .arg(QString::fromStdString(rootWallet->getName())), rootWallet->getWalletId());
+      }
       break;
    case AddressVerificationState::VerificationFailed:
       text = sFailed;
@@ -193,6 +198,8 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged()
 
 void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote& quote)
 {
+   infoReqId_ = signingContainer_->GetInfo(walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId()));
+
    addrVerificator_ = std::make_shared<AddressVerificator>(logger_, quote.settlementId
       , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
@@ -296,19 +303,8 @@ unsigned int XBTSettlementTransactionWidget::createPayoutTx(const BinaryData& pa
          , transactionData_->GetTransactionSummary().feePerByte);
       const auto authAddr = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
       logger_->debug("[XBTSettlementTransactionWidget] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
-      std::string password;
 
-      if (clientSells_) {
-         if (sellFromPrimary_) {
-            password = ui_->lineEditPassword->text().toStdString();
-         } else {
-            password = ui_->lineEditAuthPassword->text().toStdString();
-         }
-      } else {
-         password = ui_->lineEditPassword->text().toStdString();
-      }
-
-      return signingContainer_->SignPayoutTXRequest(txReq, authAddr, settlAddr_, false, password);
+      return signingContainer_->SignPayoutTXRequest(txReq, authAddr, settlAddr_, false, walletPassword_);
    }
    catch (const std::exception &e) {
       logger_->warn("[XBTSettlementTransactionWidget] failed to create pay-out transaction based on {}: {}"
@@ -356,7 +352,7 @@ void XBTSettlementTransactionWidget::acceptSpotXBT()
       const auto changeAddr = hasChange ? transactionData_->GetWallet()->GetNewChangeAddress() : bs::Address();
       const auto payinTxReq = transactionData_->CreateTXRequest(false, changeAddr);
       payinSignId_ = signingContainer_->SignTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
-         , ui_->lineEditPassword->text().toStdString());
+         , walletPassword_);
    } else {
       ui_->pushButtonCancel->setEnabled(false);
       try {    // create payout based on dealer TX
@@ -428,6 +424,12 @@ void XBTSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
+   frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
+   connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &XBTSettlementTransactionWidget::onFrejaSucceeded);
+   connect(frejaSign_.get(), &FrejaSign::failed, this, &XBTSettlementTransactionWidget::onFrejaFailed);
+   connect(frejaSign_.get(), &FrejaSign::statusUpdated, this, &XBTSettlementTransactionWidget::onFrejaStatusUpdated);
+
+   connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &XBTSettlementTransactionWidget::onHDWalletInfo);
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &XBTSettlementTransactionWidget::onTXSigned);
 }
 
@@ -455,16 +457,21 @@ void XBTSettlementTransactionWidget::detectDealerTxs()
    }
 }
 
+void XBTSettlementTransactionWidget::onPasswordChanged(const QString &)
+{
+   if (clientSells_ && !sellFromPrimary_) {
+      walletPassword_ = ui_->lineEditAuthPassword->text().toStdString();
+   }
+   else {
+      walletPassword_ = ui_->lineEditPassword->text().toStdString();
+   }
+}
+
 void XBTSettlementTransactionWidget::updateAcceptButton()
 {
-   bool passwordEntered = !ui_->lineEditPassword->text().isEmpty();
-   if (clientSells_ && !sellFromPrimary_) {
-      passwordEntered = passwordEntered && !ui_->lineEditAuthPassword->text().isEmpty();
-   }
-
    ui_->pushButtonAccept->setEnabled(userKeyOk_
       && (dealerVerifState_ == AddressVerificationState::Verified)
-      && passwordEntered);
+      && ((encType_ == bs::wallet::EncryptionType::Unencrypted) || !walletPassword_.isNull()));
 }
 
 void XBTSettlementTransactionWidget::onPayInZCDetected()
@@ -530,4 +537,42 @@ void XBTSettlementTransactionWidget::OrderReceived()
    } else {
       ui_->labelHintPassword->setText(tr("Waiting for dealer to broadcast both TXes to blockchain"));
    }
+}
+
+void XBTSettlementTransactionWidget::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
+   , const SecureBinaryData &encKey)
+{
+   if (!infoReqId_ || (id != infoReqId_)) {
+      return;
+   }
+   encType_ = encType;
+   userId_ = QString::fromStdString(encKey.toBinStr());
+
+   switch (encType_) {
+   case bs::wallet::EncryptionType::Freja:
+      ui_->labelHintPassword->setText(tr("Sign with Freja eID")); // there's no break missing below
+   case bs::wallet::EncryptionType::Unencrypted:
+      ui_->horizontalWidgetPassword->hide();
+      ui_->horizontalWidgetAuthPassword->hide();
+      break;
+   default: break;
+   }
+}
+
+void XBTSettlementTransactionWidget::onFrejaSucceeded(SecureBinaryData password)
+{
+   ui_->labelHintPassword->setText(tr("Accepted by Freja signing"));
+   walletPassword_ = password;
+   onAccept();
+}
+
+void XBTSettlementTransactionWidget::onFrejaFailed(const QString &text)
+{
+   ui_->labelHintPassword->setText(tr("Freja sign failed: %1").arg(text));
+   onCancel();
+}
+
+void XBTSettlementTransactionWidget::onFrejaStatusUpdated(const QString &status)
+{
+   ui_->labelHintPassword->setText(tr("Freja sign status: %1").arg(status));
 }

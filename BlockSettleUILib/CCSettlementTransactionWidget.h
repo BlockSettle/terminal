@@ -8,6 +8,8 @@
 
 #include "BinaryData.h"
 #include "CommonTypes.h"
+#include "FrejaREST.h"
+#include "MetaData.h"
 #include "SettlementWallet.h"
 #include "UtxoReservation.h"
 
@@ -57,12 +59,19 @@ private:
    void acceptSpotCC();
    bool createCCUnsignedTXdata();
    bool createCCSignedTXdata();
+   void startFrejaSign();
 
 private slots:
    void ticker();
+   void onPasswordUpdated(const QString &);
    void updateAcceptButton();
    void onGenAddrVerified(bool);
+   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &);
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
+
+   void onFrejaSucceeded(SecureBinaryData);
+   void onFrejaFailed(const QString &);
+   void onFrejaStatusUpdated(const QString &);
 
 signals:
    void settlementCancelled();
@@ -94,6 +103,7 @@ private:
    QString                    sInvalid;
    bool                       userKeyOk_ = false;
    unsigned int               ccSignId_ = 0;
+   unsigned int               infoReqId_ = 0;
 
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AssetManager>       assetManager_;
@@ -102,6 +112,11 @@ private:
    std::shared_ptr<SignContainer>      signingContainer_;
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
+
+   std::shared_ptr<FrejaSignWallet> frejaSign_;
+   bs::wallet::EncryptionType       encType_ = bs::wallet::EncryptionType::Unencrypted;
+   QString           userId_;
+   SecureBinaryData  walletPassword_;
 };
 
 #endif // __CC_SETTLEMENT_TRANSACTION_WIDGET_H__

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "MetaData.h"
 
 
 class WalletsManager;
@@ -111,7 +112,7 @@ public:
 private slots:
    void onWalletChanged();
    void onNewWalletAdded(const std::string &walletId);
-   void onHDWalletInfo(unsigned int id, bool encrypted);
+   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &encKey);
    void onMissingWallets(const std::vector<std::string> &);
    void onSignerAuthenticated();
 

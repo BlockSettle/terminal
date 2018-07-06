@@ -63,7 +63,8 @@ public:
    RequestId GetInfo(const std::shared_ptr<bs::hd::Wallet> &) override;
    void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) override;
    RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &newPass
-      , const SecureBinaryData &oldPass = {}) override;
+      , const SecureBinaryData &oldPass = {}, bs::wallet::EncryptionType encType = bs::wallet::EncryptionType::Password
+      , const SecureBinaryData &encKey = {}) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;

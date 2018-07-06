@@ -4,6 +4,9 @@
 #include <QDialog>
 #include <memory>
 #include "BtcDefinitions.h"
+#include "EncryptionUtils.h"
+#include "FrejaREST.h"
+#include "MetaData.h"
 
 
 namespace Ui {
@@ -36,6 +39,13 @@ private slots:
    void CreateWallet();
    void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
+   void onPasswordChanged(const QString &);
+   void onEncTypeChanged();
+   void onFrejaIdChanged(const QString &);
+   void startFrejaSign();
+   void onFrejaSucceeded(SecureBinaryData);
+   void onFrejaFailed(const QString &text);
+   void onFrejaStatusUpdated(const QString &status);
 
 protected:
    void showEvent(QShowEvent *event) override;
@@ -49,11 +59,13 @@ private:
 private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
-   const NetworkType netType_;
    const QString     walletsPath_;
    unsigned int      createReqId_ = 0;
    bool              walletCreated_ = false;
+   SecureBinaryData  walletPassword_;
+   bs::wallet::Seed  walletSeed_;
    std::string       walletId_;
+   FrejaSignWallet   frejaSign_;
 
    bool              createdAsPrimary_ = false;
 };

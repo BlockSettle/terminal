@@ -827,7 +827,7 @@ QString WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::share
 }
 
 WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& name, const std::string& description
-   , bs::wallet::Seed seed, const QString &walletsPath, const std::string &password, bool primary)
+   , bs::wallet::Seed seed, const QString &walletsPath, const SecureBinaryData &password, bool primary)
 {
    if (preferWatchingOnly_) {
       throw std::runtime_error("Can't create wallets in watching-only mode");
@@ -843,8 +843,8 @@ WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& n
    if (primary) {
       newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
    }
-   if (!password.empty()) {
-      newWallet->changePassword(password);
+   if (!password.isNull()) {
+      newWallet->changePassword(password, {}, seed.encryptionType(), seed.encryptionKey());
    }
    AdoptNewWallet(newWallet, walletsPath);
    return newWallet;

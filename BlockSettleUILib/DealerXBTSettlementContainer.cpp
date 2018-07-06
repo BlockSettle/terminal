@@ -97,7 +97,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
 
-bool DealerXBTSettlementContainer::accept(const std::string& password)
+bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
 {
    if (weSell_) {
       try {

@@ -967,7 +967,7 @@ BinaryData bs::SignMultiInputTX(const bs::wallet::TXMultiSignRequest &txMultiReq
       if (wallet->isWatchingOnly()) {
          throw std::logic_error("Won't sign with watching-only wallet");
       }
-      const SecureBinaryData &password = wallet->isEncrypted() ? cb(wallet->GetWalletId()) : SecureBinaryData{};
+      const SecureBinaryData &password = cb(wallet);
       signer.setFeed(wallet->GetResolver(password));
       signer.sign();
       signer.resetFeeds();

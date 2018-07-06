@@ -195,7 +195,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                settlContainer->activate();
             } else {
                auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
-                  sr.requestorAuthAddress, walletsManager_, this);
+                  sr.requestorAuthAddress, walletsManager_, signingContainer_, this);
                showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {
@@ -221,7 +221,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                   settlContainer->activate();
                } else {
                   auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
-                     walletsManager_, this);
+                     walletsManager_, signingContainer_, this);
                   showSettlementDialog(dsd);
                }
             } catch (const std::exception &e) {
@@ -256,7 +256,7 @@ void RFQReplyWidget::onReadyToAutoSign()
    }
 }
 
-void RFQReplyWidget::onAutoSignActivated(const QString &password, const QString &hdWalletId, bool active)
+void RFQReplyWidget::onAutoSignActivated(const SecureBinaryData &password, const QString &hdWalletId, bool active)
 {
    if (walletsManager_ == nullptr) {
       return;
@@ -268,7 +268,7 @@ void RFQReplyWidget::onAutoSignActivated(const QString &password, const QString 
          , hdWalletId.toStdString());
       hdWallet = walletsManager_->GetPrimaryWallet();
    }
-   signingContainer_->SetLimits(hdWallet, password.toStdString(), active);
+   signingContainer_->SetLimits(hdWallet, password, active);
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)

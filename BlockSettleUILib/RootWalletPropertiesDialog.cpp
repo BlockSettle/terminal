@@ -95,7 +95,8 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    ui_->rescanButton->setEnabled(PyBlockDataManager::instance()->GetState() == PyBlockDataManagerState::Ready);
    ui_->changePassphraseButton->setEnabled(false);
    if (!wallet_->isWatchingOnly()) {
-      walletEncrypted_ = wallet_->isEncrypted();
+      walletEncType_ = wallet_->encryptionType();
+      walletEncKey_ = wallet_->encryptionKey();
    }
 
    if (signingContainer_) {
@@ -174,25 +175,23 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   QString oldPassword;
-   QString newPassword;
-
-   ChangeWalletPasswordDialog changePasswordDialog{
-      QString::fromStdString(wallet_->getName())
-      , walletEncrypted_, this};
+   ChangeWalletPasswordDialog changePasswordDialog(wallet_
+      , walletEncType_, walletEncKey_, this);
 
    if (changePasswordDialog.exec() != QDialog::Accepted) {
       return;
    }
 
-   oldPassword = changePasswordDialog.GetOldPassword();
-   newPassword = changePasswordDialog.GetNewPassword();
+   const auto oldPassword = changePasswordDialog.GetOldPassword();
+   const auto newPassword = changePasswordDialog.GetNewPassword();
 
    if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, newPassword.toStdString(), oldPassword.toStdString());
+      signingContainer_->ChangePassword(wallet_, newPassword, oldPassword
+         , changePasswordDialog.GetNewEncryptionType(), changePasswordDialog.GetNewEncryptionKey());
    }
    else {
-      if (wallet_->changePassword(newPassword.toStdString(), oldPassword.toStdString())) {
+      if (wallet_->changePassword(newPassword, oldPassword, changePasswordDialog.GetNewEncryptionType()
+         , changePasswordDialog.GetNewEncryptionKey())) {
          MessageBoxSuccess message(tr("Password change")
             , tr("Wallet password successfully changed - don't forget your new password!")
             , this);
@@ -224,13 +223,15 @@ void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, 
    }
 }
 
-void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, bool encrypted)
+void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
+   , const SecureBinaryData &encKey)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
-   walletEncrypted_ = encrypted;
+   walletEncType_ = encType;
+   walletEncKey_ = encKey;
    ui_->changePassphraseButton->setEnabled(true);
 }
 

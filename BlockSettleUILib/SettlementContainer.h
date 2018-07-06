@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QTimer>
 #include "CommonTypes.h"
+#include "EncryptionUtils.h"
 
 
 namespace bs {
@@ -17,7 +18,7 @@ namespace bs {
       explicit SettlementContainer() : QObject(nullptr) {}
       ~SettlementContainer() override = default;
 
-      virtual bool accept(const std::string& password = {}) = 0;
+      virtual bool accept(const SecureBinaryData &password = {}) = 0;
       virtual bool cancel() = 0;
       virtual bool isAcceptable() const = 0;
 

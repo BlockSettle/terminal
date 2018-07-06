@@ -16,12 +16,16 @@
 #include "UiUtils.h"
 
 
+#include <spdlog/spdlog.h>
+
+
 WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container, QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletBackupDialog)
    , wallet_(wallet)
    , signingContainer_(container)
+   , frejaSign_(spdlog::get(""))
    , outputDir_(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).toStdString())
 {
    ui_->setupUi(this);
@@ -44,6 +48,11 @@ WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wa
 
       infoReqId_ = signingContainer_->GetInfo(wallet_);
    }
+
+   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &WalletBackupDialog::startFrejaSign);
+   connect(&frejaSign_, &FrejaSignWallet::succeeded, this, &WalletBackupDialog::onFrejaSucceeded);
+   connect(&frejaSign_, &FrejaSign::failed, this, &WalletBackupDialog::onFrejaFailed);
+   connect(&frejaSign_, &FrejaSignWallet::statusUpdated, this, &WalletBackupDialog::onFrejaStatusUpdated);
 
    outputFile_ = outputDir_ + "/backup_wallet_" + wallet->getName() + "_" + wallet->getWalletId();
    TextFileClicked();
@@ -138,15 +147,19 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    QDialog::accept();
 }
 
-void WalletBackupDialog::onHDWalletInfo(unsigned int id, bool encrypted)
+void WalletBackupDialog::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
+   , const SecureBinaryData &encKey)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
-   walletEncrypted_ = encrypted;
-   ui_->groupBoxPassword->setVisible(encrypted);
-   ui_->pushButtonBackup->setEnabled(!encrypted);
+   walletEncType_ = encType;
+   userId_ = QString::fromStdString(encKey.toBinStr());
+   ui_->groupBoxPassword->setVisible(encType != bs::wallet::EncryptionType::Unencrypted);
+   ui_->widgetPassword->setVisible(encType == bs::wallet::EncryptionType::Password);
+   ui_->widgetFreja->setVisible(encType == bs::wallet::EncryptionType::Freja);
+   ui_->pushButtonBackup->setEnabled(encType == bs::wallet::EncryptionType::Unencrypted);
 }
 
 void WalletBackupDialog::showError(const QString &title, const QString &text)
@@ -163,7 +176,7 @@ void WalletBackupDialog::onContainerError(unsigned int id, std::string errMsg)
    else if (id == privKeyReqId_) {
       privKeyReqId_ = 0;
       showError(tr("Private Key Error"), tr("Failed to get private key from signing process: %1").arg(QString::fromStdString(errMsg)));
-      if (walletEncrypted_) {
+      if (walletEncType_ == bs::wallet::EncryptionType::Password) {
          ui_->lineEditPassword->clear();
          onPasswordChanged();
       }
@@ -172,7 +185,31 @@ void WalletBackupDialog::onContainerError(unsigned int id, std::string errMsg)
 
 void WalletBackupDialog::onPasswordChanged()
 {
-   ui_->pushButtonBackup->setEnabled(!ui_->lineEditPassword->text().isEmpty());
+   walletPassword_ = ui_->lineEditPassword->text().toStdString();
+   ui_->pushButtonBackup->setEnabled(!walletPassword_.isNull());
+}
+
+void WalletBackupDialog::startFrejaSign()
+{
+   frejaSign_.start(userId_, tr("Backup wallet %1").arg(QString::fromStdString(wallet_->getName())), wallet_->getWalletId());
+   ui_->pushButtonFreja->setEnabled(false);
+}
+
+void WalletBackupDialog::onFrejaSucceeded(SecureBinaryData password)
+{
+   walletPassword_ = password;
+   ui_->pushButtonBackup->setEnabled(!walletPassword_.isNull());
+}
+
+void WalletBackupDialog::onFrejaFailed(const QString &text)
+{
+   ui_->labelFreja->setText(tr("Freja sign failed: %1").arg(text));
+   ui_->pushButtonFreja->setEnabled(true);
+}
+
+void WalletBackupDialog::onFrejaStatusUpdated(const QString &status)
+{
+   ui_->labelFreja->setText(tr("Freja status: %1").arg(status));
 }
 
 void WalletBackupDialog::TextFileClicked()
@@ -217,7 +254,7 @@ void WalletBackupDialog::onSelectFile()
 
 void WalletBackupDialog::accept()
 {
-   privKeyReqId_ = signingContainer_->GetDecryptedRootKey(wallet_, ui_->lineEditPassword->text().toStdString());
+   privKeyReqId_ = signingContainer_->GetDecryptedRootKey(wallet_, walletPassword_);
 }
 
 void WalletBackupDialog::reject()

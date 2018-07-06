@@ -25,7 +25,7 @@ public:
       , const std::shared_ptr<TransactionData> &, const std::shared_ptr<SignContainer> &, bool autoSign);
    ~DealerCCSettlementContainer() override;
 
-   bool accept(const std::string& password = {}) override;
+   bool accept(const SecureBinaryData &password = {}) override;
    bool cancel() override;
 
    bool isAcceptable() const override;
