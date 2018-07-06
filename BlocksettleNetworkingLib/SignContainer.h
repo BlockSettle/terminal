@@ -65,7 +65,7 @@ public:
 
    virtual RequestId SignTXRequest(const bs::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
-      , bool removeDuplicatedRecipients = true) = 0;
+      , bool keepDuplicatedRecipients = false) = 0;
    virtual RequestId SignPartialTXRequest(const bs::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) = 0;
    virtual RequestId SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const bs::Address &authAddr

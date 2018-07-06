@@ -41,7 +41,7 @@ public:
 
    RequestId SignTXRequest(const bs::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
-      , bool removeDuplicatedRecipients = true) override;
+      , bool keepDuplicatedRecipients = false) override;
    RequestId SignPartialTXRequest(const bs::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) override;
    RequestId SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const bs::Address &authAddr

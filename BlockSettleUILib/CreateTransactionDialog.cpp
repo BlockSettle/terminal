@@ -312,7 +312,7 @@ bool CreateTransactionDialog::CreateTransaction()
       }
 
       pendingTXSignId_ = signingContainer_->SignTXRequest(txReq, false,
-         SignContainer::TXSignMode::Full, {}, false);
+         SignContainer::TXSignMode::Full, {}, true);
       if (!pendingTXSignId_) {
          throw std::logic_error("Signer failed to send request");
       }
