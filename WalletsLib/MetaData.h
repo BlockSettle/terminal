@@ -241,7 +241,7 @@ namespace bs {
       bool operator !=(const Wallet &w) const { return (w.GetWalletId() != GetWalletId()); }
 
       virtual bool containsAddress(const bs::Address &addr) = 0;
-      virtual bool containsHiddenAddress(const bs::Address &addr) const { return false; }
+      virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
       virtual std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
       virtual uint32_t getAddrTxN(const bs::Address &addr) const;
       virtual BinaryData getRootId() const = 0;
