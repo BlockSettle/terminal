@@ -62,8 +62,10 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
 
    ui_->checkBoxAutoSign->setEnabled(false);
+   ui_->horizontalWidgetASFreja->setEnabled(true);
    connect(ui_->checkBoxAutoSign, &QCheckBox::clicked, this, &RFQDealerReply::onAutoSignActivated);
    connect(ui_->lineEditAutoSignPassword, &QLineEdit::textEdited, this, &RFQDealerReply::onAutoPassChanged);
+   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &RFQDealerReply::startFrejaSigning);
 }
 
 RFQDealerReply::~RFQDealerReply()
@@ -96,13 +98,19 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, this, &RFQDealerReply::onQuoteNotifCancelled);
    connect(utxoAdapter_.get(), &bs::OrderUtxoResAdapter::reservedUtxosChanged, this, &RFQDealerReply::onReservedUtxosChanged, Qt::QueuedConnection);
 
+   frejaAS_ = std::make_shared<FrejaSignWallet>(logger);
+   connect(frejaAS_.get(), &FrejaSignWallet::succeeded, this, &RFQDealerReply::onFrejaSignComplete);
+   connect(frejaAS_.get(), &FrejaSign::failed, this, &RFQDealerReply::onFrejaSignFailed);
+   connect(frejaAS_.get(), &FrejaSign::statusUpdated, this, &RFQDealerReply::onFrejaStatusUpdated);
+
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQDealerReply::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated);
-      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, bool encrypted) {
-         autoSignWalletEncrypted_ = encrypted;
-         autoSignNeedsPassword_ = autoSignWalletEncrypted_ && !signingContainer_->hasUI();
+      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, bs::wallet::EncryptionType encType
+         , const SecureBinaryData &encKey) {
+         walletEncType_ = encType;
+         walletEncKey_ = encKey;
          updateAutoSignState();
       });
       connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged);
@@ -187,11 +195,15 @@ void RFQDealerReply::onSignerStateUpdated()
 
 void RFQDealerReply::updateAutoSignState()
 {
-   ui_->checkBoxAutoSign->setEnabled((!autoSignNeedsPassword_
-         || (ui_->checkBoxAutoSign->checkState() != Qt::Unchecked))
+   ui_->checkBoxAutoSign->setEnabled(((walletEncType_ == wallet::EncryptionType::Unencrypted)
+      || signingContainer_->hasUI() || (ui_->checkBoxAutoSign->checkState() != Qt::Unchecked))
       && ui_->checkBoxAutoSign->checkState() != Qt::PartiallyChecked);
    ui_->comboBoxWalletAS->setEnabled(ui_->checkBoxAutoSign->checkState() == Qt::Unchecked);
-   ui_->horizontalWidgetASPassword->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked) && autoSignNeedsPassword_);
+   ui_->horizontalWidgetASPassword->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked)
+      && (walletEncType_ == wallet::EncryptionType::Password) && !signingContainer_->hasUI());
+   ui_->horizontalWidgetASFreja->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked)
+      && (walletEncType_ == wallet::EncryptionType::Freja));
+   ui_->labelFrejaStatus->setText(asPassword_.isNull() ? tr("Sign with Freja") : tr("Signed with Freja"));
 }
 
 bs::Address RFQDealerReply::getRecvAddress() const
@@ -1215,20 +1227,19 @@ void RFQDealerReply::onAQPull(const QString &reqId)
 
 void RFQDealerReply::onAutoPassChanged()
 {
-   ui_->checkBoxAutoSign->setEnabled(!ui_->lineEditAutoSignPassword->text().isEmpty());
+   asPassword_ = ui_->lineEditAutoSignPassword->text().toStdString();
+   ui_->checkBoxAutoSign->setEnabled(!asPassword_.isNull());
 }
 
 void RFQDealerReply::onAutoSignActivated()
 {
-   if (ui_->checkBoxAutoSign->checkState() != Qt::Unchecked) {
-      emit autoSignActivated(ui_->lineEditAutoSignPassword->text()
-         , ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), true);
+   if (ui_->checkBoxAutoSign->checkState() == Qt::PartiallyChecked) {
+      emit autoSignActivated(asPassword_, ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), true);
       ui_->lineEditAutoSignPassword->clear();
+      ui_->pushButtonFreja->setEnabled(true);
+      asPassword_.clear();
    }
-   else {
-      if (autoSignNeedsPassword_) {
-         ui_->checkBoxAutoSign->setEnabled(false);
-      }
+   else if (ui_->checkBoxAutoSign->checkState() == Qt::Unchecked) {
       emit autoSignActivated({}, ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), false);
    }
    updateAutoSignState();
@@ -1243,6 +1254,41 @@ void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool ac
       MessageBoxWarning(tr("Auto-Sign deactivated"), tr("Signer returned error: %1")
          .arg(QString::fromStdString(error))).exec();
    }
+}
+
+void RFQDealerReply::startFrejaSigning()
+{
+   if (!frejaAS_) {
+      return;
+   }
+   const auto &walletId = ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString().toStdString();
+   const auto &wallet = walletsManager_->GetHDWalletById(walletId);
+   if (!wallet) {
+      logger_->error("Failed to obtain auto-sign wallet for id {}", walletId);
+      return;
+   }
+   ui_->pushButtonFreja->setEnabled(false);
+   frejaAS_->start(QString::fromStdString(walletEncKey_.toBinStr())
+      , tr("Turn on auto-sign for wallet %1").arg(QString::fromStdString(wallet->getName())), walletId);
+}
+
+void RFQDealerReply::onFrejaSignComplete(SecureBinaryData password)
+{
+   asPassword_ = password;
+   ui_->pushButtonFreja->setEnabled(true);
+   updateAutoSignState();
+   ui_->checkBoxAutoSign->setEnabled(!asPassword_.isNull());
+}
+
+void RFQDealerReply::onFrejaSignFailed(const QString &text)
+{
+   ui_->labelFrejaStatus->setText(tr("Freja sign failed: %1").arg(text));
+   ui_->pushButtonFreja->setEnabled(true);
+}
+
+void RFQDealerReply::onFrejaStatusUpdated(const QString &status)
+{
+   ui_->labelFrejaStatus->setText(tr("Freja status: %1").arg(status));
 }
 
 void RFQDealerReply::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)

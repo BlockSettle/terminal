@@ -25,7 +25,7 @@ public:
    virtual std::string GetClientInfo(const std::string &clientId) const = 0;
 
    virtual bool SendDataToClient(const std::string& clientId, const std::string& data) = 0;
-   virtual bool SendDataToAllClients(const std::string& data) { return false; }
+   virtual bool SendDataToAllClients(const std::string& ) { return false; }
 };
 
 #endif // __SERVER_CONNECTION_H__

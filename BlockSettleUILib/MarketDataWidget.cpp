@@ -132,6 +132,7 @@ void MarketDataWidget::onHeaderStateChanged(bool state)
 {
    filteredView_ = state;
    marketDataModel_->setHeaderData(0, Qt::Horizontal, state ? tr("Filtered view") : tr("Visibility selection"));
+   ui->treeViewMarketData->resizeColumnToContents(0);
 
    if (state && (appSettings_ != nullptr)) {
       const auto settings = marketDataModel_->getVisibilitySettings();

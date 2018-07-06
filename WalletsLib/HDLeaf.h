@@ -106,7 +106,8 @@ namespace bs {
          std::string GetShortName() const override { return suffix_; }
          bs::wallet::Type GetType() const override { return type_; }
          bool isWatchingOnly() const override { return (rootNode_ == nullptr); }
-         bool isEncrypted() const override { return (rootNode_ && rootNode_->isEncrypted()); }
+         wallet::EncryptionType encryptionType() const override;
+         SecureBinaryData encryptionKey() const override { return rootNode_ ? rootNode_->encKey() : SecureBinaryData{}; }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
          std::vector<UTXO> getSpendableTxOutList(uint64_t val = UINT64_MAX) const override;

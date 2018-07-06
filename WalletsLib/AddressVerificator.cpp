@@ -220,7 +220,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVarificati
    }
    auto ledgerDelegate = bdm->getLedgerDelegateForScrAddr(walletId_, prefixedAddress);
    if (!ledgerDelegate) {
-      if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < 3)) {
+      if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < MaxAadressValidationErrorCount)) {
          logger_->debug("[AddressVerificator::ValidateAddress] Failed to get ledger for {} - retrying command", walletId_);
          AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(state));
          addressRetries_[prefixedAddress]++;    // reschedule validation since error occured

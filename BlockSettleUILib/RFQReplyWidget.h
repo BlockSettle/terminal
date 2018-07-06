@@ -65,7 +65,7 @@ private slots:
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);
    void onReadyToAutoSign();
-   void onAutoSignActivated(const QString &password, const QString &hdWalletId, bool active);
+   void onAutoSignActivated(const SecureBinaryData &password, const QString &hdWalletId, bool active);
 
 private:
    void showSettlementDialog(QDialog *dlg);

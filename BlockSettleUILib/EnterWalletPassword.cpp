@@ -1,9 +1,14 @@
 #include "EnterWalletPassword.h"
 #include "ui_EnterWalletPassword.h"
+#include <spdlog/spdlog.h>
 
-EnterWalletPassword::EnterWalletPassword(const QString& walletName, const QString &prompt, QWidget* parent)
-  : QDialog(parent)
-  , ui_(new Ui::EnterWalletPassword())
+
+EnterWalletPassword::EnterWalletPassword(const QString& walletName, const std::string &walletId
+   , bs::wallet::EncryptionType encType, const SecureBinaryData &encKey, const QString &prompt
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::EnterWalletPassword())
+   , frejaSign_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -28,14 +33,29 @@ EnterWalletPassword::EnterWalletPassword(const QString& walletName, const QStrin
          ui_->progressBar->setValue(timeLeft_ * 100);
       }
    });
-   timer_.start();
+   if (encType == bs::wallet::EncryptionType::Password) {
+      timer_.start();
+   }
+   else if (encType == bs::wallet::EncryptionType::Freja) {
+      ui_->label->setText(tr("Freja eID authentication in progress"));
+      ui_->lineEditPassword->hide();
+      connect(&frejaSign_, &FrejaSignWallet::succeeded, [this](SecureBinaryData password) {
+         password_ = password;
+         accept();
+      });
+      connect(&frejaSign_, &FrejaSign::failed, [this](const QString &) { reject(); });
+      connect(&frejaSign_, &FrejaSign::statusUpdated, [this](const QString &status) {
+         ui_->label->setText(tr("Freja eID auth: %1").arg(status));
+      });
+
+      const auto title = tr("Password for wallet %1").arg(walletName);
+      frejaSign_.start(QString::fromStdString(encKey.toBinStr()), title, walletId);
+      timer_.start();
+   }
 }
 
-QString EnterWalletPassword::GetPassword() const
-{
-   return ui_->lineEditPassword->text();
-}
 void EnterWalletPassword::PasswordChanged()
 {
-   ui_->pushButtonOk->setEnabled(!GetPassword().isEmpty());
+   ui_->pushButtonOk->setEnabled(!ui_->lineEditPassword->text().isEmpty());
+   password_ = ui_->lineEditPassword->text().toStdString();
 }

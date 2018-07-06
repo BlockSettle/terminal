@@ -20,6 +20,7 @@ public:
       , const std::shared_ptr<DealerCCSettlementContainer> &
       , const std::string &reqRecvAddr
       , std::shared_ptr<WalletsManager> walletsManager
+      , const std::shared_ptr<SignContainer> &
       , QWidget* parent = nullptr);
    ~DealerCCSettlementDialog() noexcept override = default;
 
@@ -30,7 +31,10 @@ public:
    DealerCCSettlementDialog& operator = (DealerCCSettlementDialog&&) = delete;
 
 protected:
-   void reject() override;
+   QWidget *widgetPassword() const override;
+   QLineEdit *lineEditPassword() const override;
+   QLabel *labelHint() const override;
+   QLabel *labelPassword() const override;
 
 private slots:
    void onAccepted();

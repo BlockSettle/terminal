@@ -85,6 +85,7 @@ namespace bs {
          BinaryData chainCode() const;
          std::shared_ptr<AssetEntry_Single> getAsset(int id) const;
          bs::wallet::Seed seed() const;
+         std::string getId() const;
 
          const BinaryData &getSeed() const { return seed_; }
          NetworkType getNetworkType() const { return netType_; }
@@ -96,10 +97,14 @@ namespace bs {
 
          void clearPrivKey();
          bool hasPrivateKey() const { return hasPrivKey_; }
-         bool isEncrypted() const { return isEncrypted_; }
+
+         wallet::EncryptionType encType() const { return encType_; }
+         SecureBinaryData encKey() const { return encKey_; }
 
          std::unique_ptr<hd::Node> decrypt(const SecureBinaryData &password);
-         std::shared_ptr<hd::Node> encrypt(const SecureBinaryData &password);
+         std::shared_ptr<hd::Node> encrypt(const SecureBinaryData &password
+            , wallet::EncryptionType encType = wallet::EncryptionType::Password
+            , const SecureBinaryData &key = {});
 
       protected:
          virtual std::shared_ptr<Node> create(const btc_hdnode &, NetworkType) const;
@@ -110,7 +115,8 @@ namespace bs {
          SecureBinaryData  iv_;
          btc_hdnode        node_ = {};
          bool              hasPrivKey_ = true;
-         bool              isEncrypted_ = false;
+         SecureBinaryData  encKey_;
+         wallet::EncryptionType  encType_ = wallet::EncryptionType::Unencrypted;
          const btc_chainparams * chainParams_ = nullptr;
          NetworkType       netType_;
 

@@ -308,7 +308,7 @@ void hd::Group::updateRootNode(const std::shared_ptr<hd::Node> &rootNode, const 
 {
    rootNode_ = rootNode;
    std::shared_ptr<hd::Node> extNode;
-   if (rootNode->isEncrypted()) {
+   if (rootNode->encType() != wallet::EncryptionType::Unencrypted) {
       extNode = rootNode->decrypt(password);
    }
    else {
@@ -379,7 +379,7 @@ void hd::AuthGroup::updateRootNode(const std::shared_ptr<hd::Node> &rootNode, co
 {
    hd::Group::updateRootNode(rootNode, password);
    std::shared_ptr<hd::Node> extNode;
-   if (rootNode->isEncrypted()) {
+   if (rootNode->encType() != wallet::EncryptionType::Unencrypted) {
       extNode = rootNode->decrypt(password);
    }
    else {

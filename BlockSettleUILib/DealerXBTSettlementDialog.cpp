@@ -19,8 +19,9 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
       , const std::shared_ptr<DealerXBTSettlementContainer> &settlContainer
       , const std::shared_ptr<AssetManager>& assetManager
       , std::shared_ptr<WalletsManager> walletsManager
+      , const std::shared_ptr<SignContainer> &signContainer
       , QWidget* parent)
-   : BaseDealerSettlementDialog(logger, settlContainer, parent)
+   : BaseDealerSettlementDialog(logger, settlContainer, signContainer, parent)
    , ui_(new Ui::DealerXBTSettlementDialog())
    , settlContainer_(settlContainer)
 {
@@ -39,8 +40,9 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    ui_->labelTotal->setText(UiUtils::displayCurrencyAmount(settlContainer_->amount() * settlContainer_->price()));
 
-   ui_->labelWallet->setText(QString::fromStdString(walletsManager->GetHDRootForLeaf(
-      settlContainer_->GetWallet()->GetWalletId())->getName()));
+   const auto &wallet = walletsManager->GetHDRootForLeaf(settlContainer_->GetWallet()->GetWalletId());
+   ui_->labelWallet->setText(QString::fromStdString(wallet->getName()));
+   setWallet(wallet);
 
    if (settlContainer_->weSell()) {
       ui_->labelTransactionDescription->setText(tr("Deliver"));
@@ -56,7 +58,6 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::cptyAddressStateChanged, this
       , &DealerXBTSettlementDialog::onRequestorAddressStateChanged);
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::timerExpired, this, &DealerXBTSettlementDialog::onTimerExpired);
-   connect(settlContainer_.get(), &DealerXBTSettlementContainer::completed, this, &DealerXBTSettlementDialog::onSettlementCompleted);
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::failed, this, &DealerXBTSettlementDialog::onSettlementFailed);
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::payInDetected, this, &DealerXBTSettlementDialog::payInDetected);
 
@@ -77,11 +78,10 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
    activate();
 }
 
-void DealerXBTSettlementDialog::reject()
-{
-   settlContainer_->cancel();
-   QDialog::reject();
-}
+QWidget *DealerXBTSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
+QLineEdit *DealerXBTSettlementDialog::lineEditPassword() const { return ui_->lineEditPassword; }
+QLabel *DealerXBTSettlementDialog::labelHint() const { return ui_->labelHint; }
+QLabel *DealerXBTSettlementDialog::labelPassword() const { return ui_->labelError; }
 
 void DealerXBTSettlementDialog::onRequestorAddressStateChanged(AddressVerificationState state)
 {
@@ -139,9 +139,12 @@ void DealerXBTSettlementDialog::onRequestorAddressStateChanged(AddressVerificati
 
 void DealerXBTSettlementDialog::updateControls()
 {
-   auto acceptable = settlContainer_->isAcceptable();
-   ui_->lineEditPassword->setEnabled(acceptable);
-   ui_->pushButtonAccept->setEnabled(acceptable && !ui_->lineEditPassword->text().isEmpty());
+   if (settlContainer_->isAcceptable() && !acceptable_) {
+      acceptable_ = true;
+      readyToAccept();
+   }
+   ui_->lineEditPassword->setEnabled(acceptable_);
+   ui_->pushButtonAccept->setEnabled(acceptable_ && !walletPassword_.isNull());
 }
 
 void DealerXBTSettlementDialog::onTimerExpired()
@@ -184,11 +187,6 @@ void DealerXBTSettlementDialog::onErrorFromContainer(const QString &text)
    updateControls();
 }
 
-void DealerXBTSettlementDialog::onSettlementCompleted()
-{
-   accept();
-}
-
 void DealerXBTSettlementDialog::disableCancelOnOrder()
 {
    ui_->pushButtonCancel->setEnabled(false);
@@ -202,7 +200,7 @@ void DealerXBTSettlementDialog::onAccepted()
    setHintText(tr("Waiting for transactions signing..."));
 
    ui_->lineEditPassword->setEnabled(false);
-   settlContainer_->accept(ui_->lineEditPassword->text().toStdString());
+   settlContainer_->accept(walletPassword_);
 
    updateControls();
 }
