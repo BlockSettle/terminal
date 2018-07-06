@@ -63,7 +63,8 @@ void HeadlessAppObj::OnlineProcessing()
       throw std::runtime_error("secure connection problem");
    }
 
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_, params_->pwHash().toStdString());
+   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
+      , params_->getWalletsDir().toStdString(), params_->pwHash().toStdString());
    listener_->SetLimits(params_->limits());
    if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
       logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());

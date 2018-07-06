@@ -120,7 +120,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       return false;
    }
    std::shared_ptr<bs::hd::Node> decrypted;
-   if (wallet->isEncrypted()) {
+   if (wallet->encryptionType() != bs::wallet::EncryptionType::Unencrypted) {
       decrypted = wallet->getNode()->decrypt(password.toStdString());
       bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
       if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), seed).getWalletId() != wallet->getWalletId()) {
