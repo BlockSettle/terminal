@@ -23,7 +23,7 @@ namespace bs {
       private:
          void setParent(UtxoReservation *parent) { parent_ = parent; }
          virtual void reserved(const std::string &, const std::vector<UTXO> &) {}
-         virtual void unreserved(const std::string &, const std::string &reserveId) {}
+         virtual void unreserved(const std::string &, const std::string &) {}    // args: walletId, reserveId
       protected:
          UtxoReservation * parent_ = nullptr;
       };
