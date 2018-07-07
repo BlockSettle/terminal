@@ -290,7 +290,8 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
    }
 
    const auto onPassword = [this, wallet, txSignReq, rootWalletId, clientId, id = packet.id(), partial
-      , reqType, value, autoSign = request.applyautosignrules()] (const SecureBinaryData &pass) {
+      , reqType, value, autoSign = request.applyautosignrules()
+      , keepDuplicatedRecipients = request.keepduplicatedrecipients()] (const SecureBinaryData &pass) {
       try {
          if ((wallet->encryptionType() != bs::wallet::EncryptionType::Unencrypted) && pass.isNull()) {
             logger_->error("[HeadlessContainerListener] empty password for wallet {}", wallet->GetWalletName());
@@ -298,7 +299,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
             return;
          }
          const auto tx = partial ? wallet->SignPartialTXRequest(txSignReq, pass)
-            : wallet->SignTXRequest(txSignReq, pass);
+            : wallet->SignTXRequest(txSignReq, pass, keepDuplicatedRecipients);
          SignTXResponse(clientId, id, reqType, {}, tx);
          emit xbtSpent(value, autoSign);
       }
