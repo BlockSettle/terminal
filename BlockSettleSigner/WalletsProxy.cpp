@@ -1,13 +1,11 @@
 #include <QFile>
 #include <QVariant>
-#include <QBuffer>
-#include <QByteArray>
 #include <QPixmap>
 
 #include <spdlog/spdlog.h>
 
 #include "HDWallet.h"
-#include "PDFWriter.h"
+#include "PaperBackupWriter.h"
 #include "SignerSettings.h"
 #include "WalletBackupFile.h"
 #include "WalletsManager.h"
@@ -161,31 +159,14 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 #endif
 
    if (isPrintable) {
-      QByteArray data;
-      QBuffer buf(&data);
-      UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2))
-         .save(&buf, "PNG");
-
-      QVariantHash vars = {
-         { QLatin1String("WalletName"), QString::fromStdString(wallet->getName()) },
-         { QLatin1String("WalletID"), QString::fromStdString(wallet->getWalletId()) },
-         { QLatin1String("privkey1"), QString::fromStdString(easyData.part1) },
-         { QLatin1String("privkey2"), QString::fromStdString(easyData.part2) },
-         { QLatin1String("QR"), QString::fromStdString(data.toBase64().toStdString()) }
-      };
-      if (decrypted->chainCode().isNull()) {
-         vars[QLatin1String("chaincode1")] = QString();
-         vars[QLatin1String("chaincode2")] = QString();
-      }
-      else {
-         vars[QLatin1String("chaincode1")] = QString::fromStdString(edChainCode.part1);
-         vars[QLatin1String("chaincode2")] = QString::fromStdString(edChainCode.part2);
-      }
-
       try {
-         PDFWriter pdfWriter(QLatin1String(":/TEMPLATE_WALLET_BACKUP"), QString::fromStdString(":/"));
-         pdfWriter.substitute(vars);
-         if (!pdfWriter.output(fileName)) {
+         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet->getName()),
+            QString::fromStdString(wallet->getWalletId()),
+            QString::fromStdString(easyData.part1),
+            QString::fromStdString(easyData.part2),
+            QPixmap(QLatin1String(":/FULL_LOGO")),
+            UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2)));
+         if (!pdfWriter.write(fileName)) {
             throw std::runtime_error("write failure");
          }
       }
