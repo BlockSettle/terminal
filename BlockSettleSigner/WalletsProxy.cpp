@@ -6,6 +6,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "HDNode.h"
 #include "HDWallet.h"
 #include "PDFWriter.h"
 #include "SignerSettings.h"
@@ -59,14 +60,27 @@ bool WalletsProxy::primaryWalletExists() const
    return walletsMgr_->HasPrimaryWallet();
 }
 
-bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPass, const QString &newPass)
+static bs::wallet::EncryptionType mapEncType(WalletInfo::EncryptionType encType)
+{
+   switch (encType)
+   {
+   case WalletInfo::EncryptionType::Password:   return bs::wallet::EncryptionType::Password;
+   case WalletInfo::EncryptionType::Freja:      return bs::wallet::EncryptionType::Freja;
+   case WalletInfo::EncryptionType::Unencrypted:
+   default:    return bs::wallet::EncryptionType::Unencrypted;
+   }
+}
+
+bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPass, const QString &newPass
+   , WalletInfo::EncryptionType encType, const QString &encKey)
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
       emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
       return false;
    }
-   if (!wallet->changePassword(newPass.toStdString(), oldPass.toStdString())) {
+   if (!wallet->changePassword(BinaryData::CreateFromHex(newPass.toStdString()), BinaryData::CreateFromHex(oldPass.toStdString())
+      , mapEncType(encType), encKey.toStdString())) {
       emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
       return false;
    }
@@ -209,11 +223,23 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
    return true;
 }
 
-bool WalletsProxy::createWallet(const QString &name, const QString &desc, bool isPrimary, const QString &password)
+WalletSeed *WalletsProxy::createWalletSeed() const
 {
+   auto result = new WalletSeed(params_->netType(), (QObject *)this);
+   result->setEncType(WalletInfo::Password);
+   return result;
+}
+
+bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletSeed *seed)
+{
+   if (!seed) {
+      emit walletError({}, tr("Failed to get wallet seed"));
+      return false;
+   }
    try {
-      walletsMgr_->CreateWallet(name.toStdString(), desc.toStdString(), params_->netType(), params_->getWalletsDir()
-         , password.toStdString(), isPrimary);
+      walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
+         , seed->seed(), params_->getWalletsDir()
+         , BinaryData::CreateFromHex(password.toStdString()), isPrimary);
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
@@ -223,63 +249,12 @@ bool WalletsProxy::createWallet(const QString &name, const QString &desc, bool i
    return true;
 }
 
-bool WalletsProxy::importWallet(const QString &name, const QString &desc, bool isPrimary, const QString &key
-   , bool digitalBackup, const QString &password)
+bool WalletsProxy::importWallet(bool isPrimary, WalletSeed *seed, const QString &password)
 {
-   bs::wallet::Seed seed(NetworkType::Invalid);
-   std::string wltName = name.toStdString();
-   std::string wltDesc = desc.toStdString();
-
-   if (digitalBackup) {
-      QFile file(key);
-      if (!file.exists()) {
-         emit walletError({}, tr("Digital Backup file %1 doesn't exist").arg(key));
-         return false;
-      }
-      if (file.open(QIODevice::ReadOnly)) {
-         QByteArray data = file.readAll();
-         const auto wdb = WalletBackupFile::Deserialize(std::string(data.data(), data.size()));
-         if (wdb.id.empty()) {
-            emit walletError({}, tr("Digital Backup file %1 corrupted").arg(key));
-            return false;
-         }
-         else {
-            seed = bs::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode, params_->netType());
-            wltName = wdb.name;
-            wltDesc = wdb.description;
-         }
-      }
-      else {
-         emit walletError({}, tr("Failed to read Digital Backup file %1").arg(key));
-         return false;
-      }
-   }
-   else {
-      try {
-         const auto seedLines = key.split(QLatin1String("\n"), QString::SkipEmptyParts);
-         if (seedLines.count() == 2) {
-            EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
-            seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, params_->netType());
-         }
-         else if (seedLines.count() == 4) {
-            EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
-            EasyCoDec::Data edChainCode = { seedLines[2].toStdString(), seedLines[3].toStdString() };
-            seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, params_->netType());
-         }
-         else {
-            seed = { key.toStdString(), params_->netType() };
-         }
-      }
-      catch (const std::exception &e) {
-         logger_->error("[WalletsProxy] failed to parse master key: {}", e.what());
-         emit walletError({}, tr("Failed to parse wallet key: %1").arg(QLatin1String(e.what())));
-         return false;
-      }
-   }
-
    try {
-      walletsMgr_->CreateWallet(wltName, wltDesc, seed, params_->getWalletsDir()
-         , password.toStdString(), isPrimary);
+      walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
+         , seed->seed(), params_->getWalletsDir()
+         , BinaryData::CreateFromHex(password.toStdString()), isPrimary);
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to import wallet: {}", e.what());
@@ -331,4 +306,69 @@ QString WalletsProxy::walletIdForIndex(int index) const
       return QString::fromStdString(wallet->getWalletId());
    }
    return {};
+}
+
+
+
+WalletSeed::WalletSeed(NetworkType netType, QObject *parent)
+   : QObject(parent), seed_(netType, SecureBinaryData().GenerateRandom(32))
+{}
+
+bool WalletSeed::parseDigitalBackupFile(const QString &filename)
+{
+   QFile file(filename);
+   if (!file.exists()) {
+      emit error(tr("Digital Backup file %1 doesn't exist").arg(filename));
+      return false;
+   }
+   if (file.open(QIODevice::ReadOnly)) {
+      QByteArray data = file.readAll();
+      const auto wdb = WalletBackupFile::Deserialize(std::string(data.data(), data.size()));
+      if (wdb.id.empty()) {
+         emit error(tr("Digital Backup file %1 corrupted").arg(filename));
+         return false;
+      }
+      else {
+         seed_ = bs::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode
+            , (seed_.networkType() == NetworkType::Invalid) ? NetworkType::TestNet : seed_.networkType());
+         walletName_ = QString::fromStdString(wdb.name);
+         walletDesc_ = QString::fromStdString(wdb.description);
+      }
+   }
+   else {
+      emit error(tr("Failed to read Digital Backup file %1").arg(filename));
+      return false;
+   }
+   emit seedChanged();
+   return true;
+}
+
+bool WalletSeed::parsePaperKey(const QString &key)
+{
+   try {
+      const auto seedLines = key.split(QLatin1String("\n"), QString::SkipEmptyParts);
+      if (seedLines.count() == 2) {
+         EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
+         seed_ = bs::wallet::Seed::fromEasyCodeChecksum(easyData, seed_.networkType());
+      }
+      else if (seedLines.count() == 4) {
+         EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
+         EasyCoDec::Data edChainCode = { seedLines[2].toStdString(), seedLines[3].toStdString() };
+         seed_ = bs::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, seed_.networkType());
+      }
+      else {
+         seed_ = { key.toStdString(), seed_.networkType() };
+      }
+   }
+   catch (const std::exception &e) {
+      emit error(tr("Failed to parse wallet key: %1").arg(QLatin1String(e.what())));
+      return false;
+   }
+   emit seedChanged();
+   return true;
+}
+
+QString WalletSeed::walletId() const
+{
+   return QString::fromStdString(bs::hd::Node(seed_).getId());
 }

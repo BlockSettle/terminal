@@ -5,6 +5,7 @@ import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
 import com.blocksettle.Wallets 1.0
 import com.blocksettle.WalletsProxy 1.0
+import com.blocksettle.WalletInfo 1.0
 
 Item {
     function isHdRoot() {
@@ -24,6 +25,19 @@ Item {
     }
 
     id: view
+
+    WalletInfo {
+        id: walletInfo
+    }
+
+    function getCurrentWallet(view) {
+        walletInfo.id = view.model.data(view.currentIndex, WalletsModel.WalletIdRole)
+        walletInfo.rootId = view.model.data(view.currentIndex, WalletsModel.RootWalletIdRole)
+        walletInfo.name = view.model.data(view.currentIndex, WalletsModel.NameRole)
+        walletInfo.encKey = view.model.data(view.currentIndex, WalletsModel.EncKeyRole)
+        walletInfo.encType = view.model.data(view.currentIndex, WalletsModel.IsEncryptedRole)
+        return walletInfo
+    }
 
     ScrollView {
         id: scrollView
@@ -82,10 +96,11 @@ Item {
                                 if (dlgNew.type === WalletNewDialog.WalletType.RandomSeed) {
                                     var dlg = Qt.createQmlObject("WalletCreateDialog {}", mainWindow, "walletCreateDlg")
                                     dlg.primaryWalletExists = walletsProxy.primaryWalletExists
+                                    dlg.seed = walletsProxy.createWalletSeed()
                                     dlg.accepted.connect(function() {
-                                        if (walletsProxy.createWallet(dlg.walletName, dlg.walletDesc, dlg.isPrimary
-                                                                      , dlg.password)) {
-                                            ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created").arg(dlg.walletName))
+                                        if (walletsProxy.createWallet(dlg.isPrimary, dlg.password, dlg.seed)) {
+                                            ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created")
+                                                                     .arg(dlg.seed.walletName))
                                         }
                                     })
                                     dlg.open()
@@ -95,8 +110,7 @@ Item {
                                     dlg.primaryWalletExists = walletsProxy.primaryWalletExists
                                     dlg.digitalBackup = (dlgNew.type === WalletNewDialog.WalletType.DigitalBackupFile)
                                     dlg.accepted.connect(function(){
-                                        if (walletsProxy.importWallet(dlg.walletName, dlg.walletDesc, dlg.isPrimary
-                                                                      , dlg.recoveryKey, dlg.digitalBackup, dlg.password)) {
+                                        if (walletsProxy.importWallet(dlg.isPrimary, dlg.seed, dlg.password)) {
                                             ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>").arg(dlg.walletName))
                                         }
                                     })
@@ -113,11 +127,10 @@ Item {
                         enabled:    isHdRoot()
                         onClicked: {
                             var dlg = Qt.createQmlObject("WalletChangePasswordDialog {}", mainWindow, "changePwDlg")
-                            dlg.walletId = walletsView.model.data(walletsView.currentIndex, WalletsModel.WalletIdRole)
-                            dlg.walletName = walletsView.model.data(walletsView.currentIndex, WalletsModel.NameRole)
-                            dlg.walletEncrypted = walletsView.model.data(walletsView.currentIndex, WalletsModel.IsEncryptedRole)
+                            dlg.wallet = getCurrentWallet(walletsView)
                             dlg.accepted.connect(function() {
-                                if (walletsProxy.changePassword(dlg.walletId, dlg.oldPassword, dlg.newPassword)) {
+                                if (walletsProxy.changePassword(dlg.walletId, dlg.oldPassword, dlg.newPassword,
+                                                                dlg.wallet.encType, dlg.wallet.encKey)) {
                                     ibSuccess.displayMessage(qsTr("New password successfully set for %1").arg(dlg.walletName))
                                 }
                             })
