@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
+import QtQuick.Window 2.1
 import Qt.labs.settings 1.0
 import com.blocksettle.TXInfo 1.0
 
@@ -114,10 +115,10 @@ ApplicationWindow {
         dlg.prompt = prompt
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
-            passwordEntered(txInfo.walletId, dlg.password)
+            passwordEntered(txInfo.wallet.id, dlg.password)
         })
         dlg.rejected.connect(function() {
-            passwordEntered(txInfo.walletId, '')
+            passwordEntered(txInfo.wallet.id, '')
         })
         mainWindow.requestActivate()
         dlg.open()
