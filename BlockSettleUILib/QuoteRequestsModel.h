@@ -1,7 +1,7 @@
 #ifndef QUOTEREQUESTSMODEL_H
 #define QUOTEREQUESTSMODEL_H
 
-#include <QStandardItemModel>
+#include <QAbstractItemModel>
 #include <QTimer>
 #include <memory>
 #include <unordered_map>
@@ -19,51 +19,48 @@ namespace bs {
 }
 class AssetManager;
 
-class QuoteRequestsModel : public QStandardItemModel
+class QuoteRequestsModel : public QAbstractItemModel
 {
-Q_OBJECT
+   Q_OBJECT
+
+signals:
+   void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
 
 public:
-   struct Header {
-      enum Index {
-         first,
-         SecurityID = first,
-         Product,
-         Side,
-         Quantity,
-         Party,
-         Status,
-         QuotedPx,
-         IndicPx,
-         BestPx,
-         Empty,
-         last
-      };
-      static QString toString(Index);
-      static QStringList labels();
+   enum class Column {
+      SecurityID = 0,
+      Product,
+      Side,
+      Quantity,
+      Party,
+      Status,
+      QuotedPx,
+      IndicPx,
+      BestPx,
+      Empty
    };
-   struct Role {
-      enum Index {
-         ReqId = Qt::UserRole,
-         Side,
-         ShowProgress,
-         Timeout,
-         TimeLeft,
-         BidPrice,
-         OfferPrice,
-         Grade,
-         AssetType,
-         QuotedPrice,
-         BestQPrice,
-         Product,
-         AllowFiltering
-      };
+
+   enum class Role {
+      ReqId = Qt::UserRole,
+      Side,
+      ShowProgress,
+      Timeout,
+      TimeLeft,
+      BidPrice,
+      OfferPrice,
+      Grade,
+      AssetType,
+      QuotedPrice,
+      BestQPrice,
+      Product,
+      AllowFiltering
    };
 
 public:
    QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
       , QObject* parent);
-   ~QuoteRequestsModel();
+   ~QuoteRequestsModel() override;
+
    QuoteRequestsModel(const QuoteRequestsModel&) = delete;
    QuoteRequestsModel& operator=(const QuoteRequestsModel&) = delete;
    QuoteRequestsModel(QuoteRequestsModel&&) = delete;
@@ -75,8 +72,14 @@ public:
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
 
-signals:
-   void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
+public:
+   int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+   QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+   QModelIndex parent(const QModelIndex &index) const override;
+   int rowCount(const QModelIndex &parent = QModelIndex()) const override;   
+   QVariant headerData(int section, Qt::Orientation orientation,
+                       int role = Qt::DisplayRole) const override;
 
 public:
    void onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn);
@@ -94,7 +97,7 @@ private slots:
    void onSettlementFailed();
 
 private:
-   using Prices = std::map<Role::Index, double>;
+   using Prices = std::map<Role, double>;
    using MDPrices = std::unordered_map<std::string, Prices>;
 
    std::shared_ptr<AssetManager> assetManager_;
@@ -108,10 +111,88 @@ private:
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
 
-private:
-   using cbItem = std::function<void(QStandardItem *grp, int itemIndex)>;
+   enum class DataType {
+      RFQ,
+      Group,
+      Market
+   };
 
-   void updateRow(QStandardItem *group, const bs::network::QuoteReqNotification &qrn);
+   struct IndexHelper {
+      IndexHelper *parent_;
+      void *data_;
+      DataType type_;
+   };
+
+   struct Status {
+      QString status_;
+      bool showProgress_;
+      int timeout_;
+      int timeleft_;
+   };
+
+   struct RFQ {
+      QString security_;
+      QString product_;
+      QString side_;
+      QString party_;
+      QString quantityString_;
+      QString quotedPriceString_;
+      QString indicativePxString_;
+      QString bestQuotedPxString_;
+      Status status_;
+      double indicativePx_;
+      double quotedPrice_;
+      double bestQuotedPx_;
+      bs::network::Asset::Type assetType_;
+      std::string reqId_;
+      QBrush quotedPriceBrush_;
+      QBrush indicativePxBrush_;
+      QBrush stateBrush_;
+      IndexHelper idx_;
+
+      RFQ()
+         : idx_({nullptr, this, DataType::RFQ})
+      {}
+   };
+
+   struct Group {
+      QString security_;
+      QFont font_;
+      std::vector<std::unique_ptr<RFQ>> rfqs_;
+      IndexHelper idx_;
+
+      Group()
+         : idx_({nullptr, this, DataType::Group})
+      {}
+   };
+
+   struct Market {
+      QString security_;
+      QFont font_;
+      std::vector<std::unique_ptr<Group>> groups_;
+      IndexHelper idx_;
+      Group settl_;
+
+      Market()
+         : idx_({nullptr, this, DataType::Market})
+      {
+         settl_.idx_ = idx_;
+      }
+   };
+
+   std::vector<std::unique_ptr<Market>> data_;
+
+private:
+   int findGroup(IndexHelper *idx);
+   Group* findGroup(Market *market, const QString &security);
+   int findMarket(IndexHelper *idx);
+   Market* findMarket(const QString &name);
+   QModelIndex lastIndex();
+
+private:
+   using cbItem = std::function<void(Group *g, int itemIndex)>;
+
+   void insertRfq(Group *group, const bs::network::QuoteReqNotification &qrn);
    void forSpecificId(const std::string &, const cbItem &);
    void forEachSecurity(const QString &, const cbItem &);
    void setStatus(const std::string &reqId, bs::network::QuoteReqNotification::Status, const QString &details = {});
@@ -121,26 +202,5 @@ private:
    static QBrush bgColorForStatus(bs::network::QuoteReqNotification::Status status);
    static QBrush colorForQuotedPrice(double quotedPx, double bestQuotedPx, bool own = false);
 };
-
-
-class QuoteGroupReqItem : public QStandardItem
-{
-public:
-   QuoteGroupReqItem(const std::shared_ptr<bs::StatsCollector> &
-      , const QString &text, const QString &key = {});
-   QVariant data(int role = Qt::UserRole + 1) const override;
-
-private:
-   std::shared_ptr<bs::StatsCollector> statsCollector_;
-   QString  key_;
-};
-
-class QuoteReqItem : public QuoteGroupReqItem
-{
-public:
-   QuoteReqItem(const std::shared_ptr<bs::StatsCollector> &
-      , const QString &text, const QString &key = {});
-};
-
 
 #endif // QUOTEREQUESTSMODEL_H
