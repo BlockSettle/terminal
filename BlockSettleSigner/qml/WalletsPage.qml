@@ -153,12 +153,10 @@ Item {
                             dlg.accepted.connect(function() {
                                 if (dlg.backup) {
                                     var dlgBkp = Qt.createQmlObject("WalletBackupDialog {}", mainWindow, "walletBackupDlg")
-                                    dlgBkp.walletId = walletsProxy.getRootWalletId(dlg.walletId)
-                                    dlgBkp.walletName = walletsProxy.getRootWalletName(dlg.walletId)
-                                    dlgBkp.walletEncrypted = walletsView.model.data(walletsView.currentIndex, WalletsModel.IsEncryptedRole)
+                                    dlgBkp.wallet = getCurrentWallet(walletsView)
                                     dlgBkp.targetDir = signerParams.dirDocuments
                                     dlgBkp.accepted.connect(function() {
-                                        if (walletsProxy.backupPrivateKey(dlgBkp.walletId, dlgBkp.targetDir + "/" + dlgBkp.backupFileName
+                                        if (walletsProxy.backupPrivateKey(dlgBkp.wallet.id, dlgBkp.targetDir + "/" + dlgBkp.backupFileName
                                                                           , dlgBkp.isPrintable, dlgBkp.password)) {
                                             if (walletsProxy.deleteWallet(dlg.walletId)) {
                                                 ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
@@ -185,15 +183,13 @@ Item {
                         enabled:    isHdRoot()
                         onClicked: {
                             var dlg = Qt.createQmlObject("WalletBackupDialog {}", mainWindow, "walletBackupDlg")
-                            dlg.walletId = walletsView.model.data(walletsView.currentIndex, WalletsModel.WalletIdRole)
-                            dlg.walletName = walletsView.model.data(walletsView.currentIndex, WalletsModel.NameRole)
-                            dlg.walletEncrypted = walletsView.model.data(walletsView.currentIndex, WalletsModel.IsEncryptedRole)
+                            dlg.wallet = getCurrentWallet(walletsView)
                             dlg.targetDir = signerParams.dirDocuments
                             dlg.accepted.connect(function() {
-                                if (walletsProxy.backupPrivateKey(dlg.walletId, dlg.targetDir + "/" + dlg.backupFileName
+                                if (walletsProxy.backupPrivateKey(dlg.wallet.id, dlg.targetDir + "/" + dlg.backupFileName
                                                                   , dlg.isPrintable, dlg.password)) {
                                     ibSuccess.displayMessage(qsTr("Backup of wallet %1 (id %2) to %3/%4 was successful")
-                                                             .arg(dlg.walletName).arg(dlg.walletId)
+                                                             .arg(dlg.wallet.name).arg(dlg.wallet.id)
                                                              .arg(dlg.targetDir).arg(dlg.backupFileName))
                                 }
                             })
@@ -207,15 +203,13 @@ Item {
                         enabled:    isHdRoot()
                         onClicked: {
                             var dlg = Qt.createQmlObject("WalletExportWoDialog {}", mainWindow, "exportWoDlg")
-                            dlg.walletId = walletsView.model.data(walletsView.currentIndex, WalletsModel.WalletIdRole)
-                            dlg.walletName = walletsView.model.data(walletsView.currentIndex, WalletsModel.NameRole)
-                            dlg.walletEncrypted = walletsView.model.data(walletsView.currentIndex, WalletsModel.IsEncryptedRole)
-                            dlg.woWalletFileName = walletsProxy.getWoWalletFile(dlg.walletId)
+                            dlg.wallet = getCurrentWallet(walletsView)
+                            dlg.woWalletFileName = walletsProxy.getWoWalletFile(dlg.wallet.id)
                             dlg.exportDir = decodeURIComponent(signerParams.walletsDir)
                             dlg.accepted.connect(function() {
-                                if (walletsProxy.exportWatchingOnly(dlg.walletId, dlg.exportDir, dlg.password)) {
+                                if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
                                     ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
-                                                             .arg(dlg.walletName).arg(dlg.walletId).arg(dlg.exportDir))
+                                                             .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
                                 }
                             })
                             dlg.open()

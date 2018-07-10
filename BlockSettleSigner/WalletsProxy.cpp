@@ -99,7 +99,7 @@ bool WalletsProxy::exportWatchingOnly(const QString &walletId, QString path, con
       emit walletError(walletId, tr("Failed to export: wallet not found"));
       return false;
    }
-   const auto woWallet = wallet->CreateWatchingOnly(password.toStdString());
+   const auto woWallet = wallet->CreateWatchingOnly(BinaryData::CreateFromHex(password.toStdString()));
    if (!woWallet) {
       logger_->error("[WalletsProxy] failed to create watching-only wallet for id {}", walletId.toStdString());
       emit walletError(walletId, tr("Failed to create watching-only wallet for %1 (id %2)")
@@ -135,13 +135,15 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
    }
    std::shared_ptr<bs::hd::Node> decrypted;
    if (wallet->encryptionType() != bs::wallet::EncryptionType::Unencrypted) {
-      decrypted = wallet->getNode()->decrypt(password.toStdString());
-      bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (bs::hd::Wallet(wallet->getName(), wallet->getDesc(), seed).getWalletId() != wallet->getWalletId()) {
-         logger_->error("[WalletsProxy] invalid password for {}", walletId.toStdString());
-         emit walletError(walletId, tr("Invalid password for wallet %1 (id %2)")
-            .arg(QString::fromStdString(wallet->getName())).arg(walletId));
-         return false;
+      decrypted = wallet->getNode()->decrypt(BinaryData::CreateFromHex(password.toStdString()));
+      if (decrypted) {
+         bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
+         if (bs::hd::Node(seed).getId() != wallet->getWalletId()) {
+            logger_->error("[WalletsProxy] invalid password for {}", walletId.toStdString());
+            emit walletError(walletId, tr("Invalid password for wallet %1 (id %2)")
+               .arg(QString::fromStdString(wallet->getName())).arg(walletId));
+            return false;
+         }
       }
    }
    else {
