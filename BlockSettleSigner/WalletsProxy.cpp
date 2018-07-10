@@ -309,10 +309,10 @@ QString WalletsProxy::walletIdForIndex(int index) const
 }
 
 
-
-WalletSeed::WalletSeed(NetworkType netType, QObject *parent)
-   : QObject(parent), seed_(netType, SecureBinaryData().GenerateRandom(32))
-{}
+void WalletSeed::setRandomKey()
+{
+   seed_.setPrivateKey(SecureBinaryData().GenerateRandom(32));
+}
 
 bool WalletSeed::parseDigitalBackupFile(const QString &filename)
 {

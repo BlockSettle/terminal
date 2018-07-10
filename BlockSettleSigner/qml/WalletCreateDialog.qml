@@ -23,6 +23,10 @@ CustomDialog {
     implicitWidth: 400
     implicitHeight: mainLayout.childrenRect.height
 
+    onSeedChanged: {
+        seed.setRandomKey()
+    }
+
     FocusScope {
         anchors.fill: parent
         focus: true
@@ -243,7 +247,7 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: root.close();
+                            onClicked: root.reject();
                         }
                     }
                 }
@@ -267,5 +271,9 @@ CustomDialog {
             seed.encType = WalletInfo.Password
             password = newPasswordWithConfirm.text
         }
+    }
+
+    onRejected: {
+        frejaSign.cancel()
     }
 }

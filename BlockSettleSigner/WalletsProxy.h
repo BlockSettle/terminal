@@ -31,10 +31,11 @@ class WalletSeed : public QObject
    Q_PROPERTY(bool mainNet READ isMainNet WRITE setMainNet NOTIFY seedChanged)
 
 public:
-   WalletSeed(QObject *parent = nullptr)
-      : QObject(parent), seed_(NetworkType::MainNet, SecureBinaryData().GenerateRandom(32)) {}
-   WalletSeed(NetworkType, QObject *parent = nullptr);
+   WalletSeed(QObject *parent = nullptr) : QObject(parent), seed_(NetworkType::MainNet) {}
+   WalletSeed::WalletSeed(NetworkType netType, QObject *parent)
+      : QObject(parent), seed_(netType) {}
 
+   Q_INVOKABLE void setRandomKey();
    Q_INVOKABLE bool parsePaperKey(const QString &);
    Q_INVOKABLE bool parseDigitalBackupFile(const QString &);
 

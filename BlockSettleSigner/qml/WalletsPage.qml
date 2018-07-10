@@ -109,9 +109,11 @@ Item {
                                     var dlg = Qt.createQmlObject("WalletImportDialog {}", mainWindow, "walletImportDlg")
                                     dlg.primaryWalletExists = walletsProxy.primaryWalletExists
                                     dlg.digitalBackup = (dlgNew.type === WalletNewDialog.WalletType.DigitalBackupFile)
+                                    dlg.seed = walletsProxy.createWalletSeed()
                                     dlg.accepted.connect(function(){
                                         if (walletsProxy.importWallet(dlg.isPrimary, dlg.seed, dlg.password)) {
-                                            ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>").arg(dlg.walletName))
+                                            ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>")
+                                                                     .arg(dlg.seed.walletName))
                                         }
                                     })
                                     dlg.open()
