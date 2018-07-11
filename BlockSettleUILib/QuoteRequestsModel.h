@@ -3,9 +3,13 @@
 
 #include <QAbstractItemModel>
 #include <QTimer>
+#include <QBrush>
+#include <QFont>
+
 #include <memory>
 #include <unordered_map>
 #include <functional>
+
 #include "CommonTypes.h"
 
 
@@ -68,7 +72,7 @@ public:
 
    void SetAssetManager(const std::shared_ptr<AssetManager>& assetManager);
    const bs::network::QuoteReqNotification &getQuoteReqNotification(const std::string &id) const;
-   double getPrice(const std::string &security, Role::Index) const;
+   double getPrice(const std::string &security, Role) const;
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
 
@@ -128,12 +132,28 @@ private:
       bool showProgress_;
       int timeout_;
       int timeleft_;
+
+      Status()
+         : showProgress_(false)
+         , timeout_(0)
+         , timeleft_(0)
+      {}
+
+      Status(const QString &status,
+         bool showProgress,
+         int timeout = 0,
+         int timeleft = 0)
+         : status_(status)
+         , showProgress_(showProgress)
+         , timeout_(timeout)
+         , timeleft_(timeleft)
+      {}
    };
 
    struct RFQ {
       QString security_;
       QString product_;
-      QString side_;
+      QString sideString_;
       QString party_;
       QString quantityString_;
       QString quotedPriceString_;
@@ -143,6 +163,7 @@ private:
       double indicativePx_;
       double quotedPrice_;
       double bestQuotedPx_;
+      bs::network::Side::Type side_;
       bs::network::Asset::Type assetType_;
       std::string reqId_;
       QBrush quotedPriceBrush_;
@@ -152,6 +173,38 @@ private:
 
       RFQ()
          : idx_({nullptr, this, DataType::RFQ})
+      {}
+
+      RFQ(const QString &security,
+         const QString &product,
+         const QString &sideString,
+         const QString &party,
+         const QString &quantityString,
+         const QString &quotedPriceString,
+         const QString &indicativePxString,
+         const QString &bestQuotedPxString,
+         const Status &status,
+         double indicativePx,
+         double quotedPrice,
+         double bestQuotedPx,
+         bs::network::Side::Type side,
+         bs::network::Asset::Type assetType,
+         const std::string &reqId)
+         : security_(security)
+         , product_(product)
+         , sideString_(sideString)
+         , party_(party)
+         , quantityString_(quantityString)
+         , quotedPriceString_(quotedPriceString)
+         , indicativePxString_(indicativePxString)
+         , bestQuotedPxString_(bestQuotedPxString)
+         , status_(status)
+         , indicativePx_(indicativePx)
+         , quotedPrice_(quotedPrice)
+         , bestQuotedPx_(bestQuotedPx)
+         , side_(side)
+         , assetType_(assetType)
+         , reqId_(reqId)
       {}
    };
 
@@ -163,6 +216,11 @@ private:
 
       Group()
          : idx_({nullptr, this, DataType::Group})
+      {}
+
+      explicit Group(const QString &security, const QFont & font = QFont())
+         : security_(security)
+         , font_(font)
       {}
    };
 
@@ -178,16 +236,21 @@ private:
       {
          settl_.idx_ = idx_;
       }
+
+      explicit Market(const QString &security, const QFont & font = QFont())
+         : security_(security)
+         , font_(font)
+      {}
    };
 
    std::vector<std::unique_ptr<Market>> data_;
 
 private:
-   int findGroup(IndexHelper *idx);
-   Group* findGroup(Market *market, const QString &security);
-   int findMarket(IndexHelper *idx);
-   Market* findMarket(const QString &name);
-   QModelIndex lastIndex();
+   int findGroup(IndexHelper *idx) const;
+   Group* findGroup(Market *market, const QString &security) const;
+   int findMarket(IndexHelper *idx) const;
+   Market* findMarket(const QString &name) const;
+   QModelIndex lastIndex() const;
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;
