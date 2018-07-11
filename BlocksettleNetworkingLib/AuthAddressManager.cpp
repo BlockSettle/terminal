@@ -160,7 +160,7 @@ bool AuthAddressManager::HaveOTP() const
    return otpManager_->CanSign();
 }
 
-bool AuthAddressManager::NeedsOTPPassword() const
+bool AuthAddressManager::needsOTPpassword() const
 {
    return (otpManager_ && otpManager_->IsEncrypted());
 }
@@ -180,11 +180,6 @@ bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
    }
 
    return SubmitAddressToPublicBridge(address);
-}
-
-bool AuthAddressManager::needsOTPpassword() const
-{
-   return otpManager_->IsEncrypted();
 }
 
 bool AuthAddressManager::CreateNewAuthAddress()

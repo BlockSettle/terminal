@@ -72,7 +72,6 @@ public:
    virtual bool HaveAuthWallet() const;
    virtual bool HasAuthAddr() const;
    virtual bool HaveOTP() const;
-   bool NeedsOTPPassword() const;
 
    void CreateAuthWallet(const SecureBinaryData &password = {}, bool signal = true);
    virtual bool CreateNewAuthAddress();
