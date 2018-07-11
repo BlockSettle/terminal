@@ -190,6 +190,7 @@ void CCTokenEntryDialog::onFrejaSucceeded(SecureBinaryData password)
 {
    otpPassword_ = password;
    passwordOk_ = true;
+   ui_->labelFreja->setText(tr("OTP signed with Freja"));
    updateOkState();
 }
 
