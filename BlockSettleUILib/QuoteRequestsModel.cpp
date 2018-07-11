@@ -521,9 +521,6 @@ void QuoteRequestsModel::ticker() {
                   &data_[i]->settl_.rfqs_.back()->idx_));
          }
       }
-
-      emit dataChanged(createIndex(0, static_cast<int>(Column::Status), &data_[0]->idx_),
-         createIndex(last.row(), static_cast<int>(Column::Status), last.internalPointer()));
    }
 }
 
