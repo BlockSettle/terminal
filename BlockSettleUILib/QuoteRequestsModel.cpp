@@ -442,7 +442,6 @@ QVariant QuoteRequestsModel::headerData(int section, Qt::Orientation orientation
       case Column::Quantity:    return tr("Quantity");
       case Column::Party:       return tr("Party");
       case Column::Status:      return tr("Status");
-      case Column::QuotedPx:    return tr("Quoted Price");
       case Column::IndicPx:     return tr("Indicative Px");
       case Column::BestPx:      return tr("Best Quoted Px");
       default:                  return QString();
@@ -506,8 +505,6 @@ void QuoteRequestsModel::ticker() {
    }
 
    if (!data_.empty()) {
-      const QModelIndex last = lastIndex();
-
       for (size_t i = 0; i < data_.size(); ++i) {
          for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
             emit dataChanged(createIndex(0, static_cast<int>(Column::Status),
