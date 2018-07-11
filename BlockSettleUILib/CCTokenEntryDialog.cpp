@@ -4,7 +4,7 @@
 
 #include <QLineEdit>
 #include <QPushButton>
-
+#include <spdlog/spdlog.h>
 #include "CCFileManager.h"
 #include "HDLeaf.h"
 #include "HDWallet.h"
@@ -17,30 +17,49 @@
 
 CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &walletsMgr
       , const std::shared_ptr<CCFileManager> &ccFileMgr
-      , const std::shared_ptr<SignContainer> &container, QWidget *parent)
+      , const std::shared_ptr<SignContainer> &container
+      , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::CCTokenEntryDialog())
    , ccFileMgr_(ccFileMgr)
    , signingContainer_(container)
    , walletsMgr_(walletsMgr)
+   , freja_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
-   ui_->groupBoxOtpPassword->setVisible(ccFileMgr_->needsOTPpassword());
-   if (!ccFileMgr_->needsOTPpassword()) {
-      passwordOk_ = true;
-   }
-   updateOkState();
-
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &CCTokenEntryDialog::accept);
-
    connect(ui_->lineEditToken, &QLineEdit::textEdited, this, &CCTokenEntryDialog::tokenChanged);
-   connect(ui_->lineEditOtpPassword, &QLineEdit::textEdited, this, &CCTokenEntryDialog::passwordChanged);
 
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
 
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CCTokenEntryDialog::onWalletFailed);
+
+   switch (ccFileMgr_->GetOtpEncType()) {
+   case bs::wallet::EncryptionType::Freja:
+      ui_->groupBoxOtpPassword->hide();
+      ui_->labelFreja->show();
+      connect(&freja_, &FrejaSignOTP::succeeded, this, &CCTokenEntryDialog::onFrejaSucceeded);
+      connect(&freja_, &FrejaSign::failed, this, &CCTokenEntryDialog::onFrejaFailed);
+      connect(&freja_, &FrejaSign::statusUpdated, this, &CCTokenEntryDialog::onFrejaStatusUpdated);
+      freja_.start(ccFileMgr_->GetOtpEncKey(), tr("Sign for CC Token Entry"), ccFileMgr_->GetOtpId());
+      break;
+
+   case bs::wallet::EncryptionType::Password:
+      ui_->labelFreja->hide();
+      ui_->groupBoxOtpPassword->show();
+      connect(ui_->lineEditOtpPassword, &QLineEdit::textEdited, this, &CCTokenEntryDialog::passwordChanged);
+      break;
+
+   case bs::wallet::EncryptionType::Unencrypted:
+   default:
+      ui_->labelFreja->hide();
+      ui_->groupBoxOtpPassword->hide();
+      passwordOk_ = true;
+      break;
+   }
+   updateOkState();
 }
 
 void CCTokenEntryDialog::tokenChanged()
@@ -94,6 +113,7 @@ void CCTokenEntryDialog::tokenChanged()
 void CCTokenEntryDialog::passwordChanged()
 {
    passwordOk_ = !ui_->lineEditOtpPassword->text().isEmpty();
+   otpPassword_ = ui_->lineEditOtpPassword->text().toStdString();
    updateOkState();
 }
 
@@ -141,10 +161,7 @@ void CCTokenEntryDialog::accept()
    const auto address = ccWallet_->GetNewExtAddress();
    signingContainer_->SyncAddresses({ { ccWallet_, address } });
 
-   const auto cbPasswordQuery = [this] {
-      return SecureBinaryData(ui_->lineEditOtpPassword->text().toStdString());
-   };
-
+   const auto &cbPasswordQuery = [this] { return otpPassword_; };
    if (!ccFileMgr_->SubmitAddressToPuB(address, seed_, cbPasswordQuery)) {
       reject();
       MessageBoxCritical(tr("CC Token submit failure")
@@ -155,10 +172,34 @@ void CCTokenEntryDialog::accept()
    }
 }
 
+void CCTokenEntryDialog::reject()
+{
+   freja_.stop(true);
+   QDialog::reject();
+}
+
 void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
 {
    QDialog::accept();
    MessageBoxInfo(tr("Successful Submission")
       , tr("The token has been submitted, please note that it might take a while before the"
          " transaction is broadcasted in the Terminal")).exec();
+}
+
+void CCTokenEntryDialog::onFrejaSucceeded(SecureBinaryData password)
+{
+   otpPassword_ = password;
+   passwordOk_ = true;
+   updateOkState();
+}
+
+void CCTokenEntryDialog::onFrejaFailed(const QString &)
+{
+   passwordOk_ = false;
+   QDialog::reject();
+}
+
+void CCTokenEntryDialog::onFrejaStatusUpdated(const QString &status)
+{
+   ui_->labelFreja->setText(tr("Freja status: %1").arg(status));
 }

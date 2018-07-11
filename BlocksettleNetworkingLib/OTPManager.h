@@ -30,7 +30,7 @@ public:
    };
 
 public:
-   using cbPassword = std::function<SecureBinaryData (bs::wallet::EncryptionType, const SecureBinaryData &encKey)>;
+   using cbPassword = std::function<SecureBinaryData (void)>;
    using cbChangePassword = std::function<bool (const std::shared_ptr<OTPFile> &, SecureBinaryData &oldPass
       , SecureBinaryData &newPass, bs::wallet::EncryptionType &, SecureBinaryData &encKey)>;
 

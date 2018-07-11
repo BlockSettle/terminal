@@ -152,7 +152,7 @@ bool OTPManager::Sign(const SecureBinaryData &data, const cbPassword &cbPass, co
    auto otp = GetOTPForCurrentUser();
    assert(otp && cbPass && cbSigned);
    SecureBinaryData password;
-   password = cbPass(otp->encryptionType(), otp->encryptionKey());
+   password = cbPass();
    return Sign(data, password, cbSigned);
 }
 
