@@ -138,6 +138,16 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             }
                break;
 
+            case Qt::TextColorRole: {
+               if (secStatsCollector_) {
+                  return secStatsCollector_->getColorFor(r->security_.toStdString());
+               }
+               else {
+                  return QVariant();
+               }
+            }
+                                    break;
+
             default:
                return QVariant();
          }
@@ -278,8 +288,10 @@ QModelIndex QuoteRequestsModel::index(int row, int column, const QModelIndex &pa
 
             if (row < m->groups_.size()) {
                return createIndex(row, column, &m->groups_.at(row)->idx_);
-            } else {
+            } else if (row < m->groups_.size() + m->settl_.rfqs_.size()){
                return createIndex(row, column, &m->settl_.rfqs_.at(row - m->groups_.size())->idx_);
+            } else {
+               return QModelIndex();
             }
          }
             break;
@@ -287,15 +299,21 @@ QModelIndex QuoteRequestsModel::index(int row, int column, const QModelIndex &pa
          case DataType::Group : {
             Group *g = static_cast<Group*>(idx->data_);
 
-            return createIndex(row, column, &g->rfqs_.at(row)->idx_);
+            if (row < g->rfqs_.size()) {
+               return createIndex(row, column, &g->rfqs_.at(row)->idx_);
+            } else {
+               return QModelIndex();
+            }
          }
             break;
 
          default :
             return QModelIndex();
       }
-   } else {
+   } else if (row < data_.size()) {
       return createIndex(row, column, &data_.at(row)->idx_);
+   } else {
+      return QModelIndex();
    }
 }
 
@@ -352,27 +370,6 @@ QuoteRequestsModel::Market* QuoteRequestsModel::findMarket(const QString &name) 
    }
 
    return nullptr;
-}
-
-QModelIndex QuoteRequestsModel::lastIndex() const
-{
-   if (!data_.empty()) {
-      if (!data_.back()->groups_.empty()) {
-         if (!data_.back()->groups_.back()->rfqs_.empty()) {
-            return createIndex((int) data_.back()->groups_.back()->rfqs_.size() - 1,
-               static_cast<int>(Column::Empty), &data_.back()->groups_.back()->rfqs_.back()->idx_);
-         } else {
-            return createIndex((int) data_.back()->groups_.size() - 1,
-               static_cast<int>(Column::Empty),
-               &data_.back()->groups_.back()->idx_);
-         }
-      } else {
-         return createIndex((int) data_.size() - 1, static_cast<int>(Column::Empty),
-            &data_.back()->idx_);
-      }
-   } else {
-      return QModelIndex();
-   }
 }
 
 QModelIndex QuoteRequestsModel::parent(const QModelIndex &index) const
@@ -510,10 +507,26 @@ void QuoteRequestsModel::ticker() {
 
    if (!data_.empty()) {
       const QModelIndex last = lastIndex();
-      static const QVector<int> roles({static_cast<int>(Role::TimeLeft)});
+
+      for (size_t i = 0; i < data_.size(); ++i) {
+         for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
+            emit dataChanged(createIndex(0, static_cast<int>(Column::Status),
+                  &data_[i]->groups_[j]->rfqs_.front()->idx_),
+               createIndex(data_[i]->groups_[j]->rfqs_.size() - 1, static_cast<int>(Column::Status),
+                  &data_[i]->groups_[j]->rfqs_.back()->idx_));
+         }
+
+         if (!data_[i]->settl_.rfqs_.empty()) {
+            const int r = data_[i]->groups_.size();
+            emit dataChanged(createIndex(r, static_cast<int>(Column::Status),
+                  &data_[i]->settl_.rfqs_.front()->idx_),
+               createIndex(r + data_[i]->settl_.rfqs_.size() - 1, static_cast<int>(Column::Status),
+                  &data_[i]->settl_.rfqs_.back()->idx_));
+         }
+      }
 
       emit dataChanged(createIndex(0, static_cast<int>(Column::Status), &data_[0]->idx_),
-         createIndex(last.row(), static_cast<int>(Column::Status), last.internalPointer()), roles);
+         createIndex(last.row(), static_cast<int>(Column::Status), last.internalPointer()));
    }
 }
 

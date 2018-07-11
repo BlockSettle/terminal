@@ -118,13 +118,26 @@ private:
    enum class DataType {
       RFQ,
       Group,
-      Market
+      Market,
+      Unknown
    };
 
    struct IndexHelper {
       IndexHelper *parent_;
       void *data_;
       DataType type_;
+
+      IndexHelper()
+         : parent_(nullptr)
+         , data_(nullptr)
+         , type_(DataType::Unknown)
+      {}
+
+      IndexHelper(IndexHelper *parent, void *data, DataType type)
+         : parent_(parent)
+         , data_(data)
+         , type_(type)
+      {}
    };
 
    struct Status {
@@ -172,7 +185,7 @@ private:
       IndexHelper idx_;
 
       RFQ()
-         : idx_({nullptr, this, DataType::RFQ})
+         : idx_(nullptr, this, DataType::RFQ)
       {}
 
       RFQ(const QString &security,
@@ -205,6 +218,7 @@ private:
          , side_(side)
          , assetType_(assetType)
          , reqId_(reqId)
+         , idx_(nullptr, this, DataType::RFQ)
       {}
    };
 
@@ -215,12 +229,13 @@ private:
       IndexHelper idx_;
 
       Group()
-         : idx_({nullptr, this, DataType::Group})
+         : idx_(nullptr, this, DataType::Group)
       {}
 
       explicit Group(const QString &security, const QFont & font = QFont())
          : security_(security)
          , font_(font)
+         , idx_(nullptr, this, DataType::Group)
       {}
    };
 
@@ -232,7 +247,7 @@ private:
       Group settl_;
 
       Market()
-         : idx_({nullptr, this, DataType::Market})
+         : idx_(nullptr, this, DataType::Market)
       {
          settl_.idx_ = idx_;
       }
@@ -240,7 +255,10 @@ private:
       explicit Market(const QString &security, const QFont & font = QFont())
          : security_(security)
          , font_(font)
-      {}
+         , idx_(nullptr, this, DataType::Market)
+      {
+         settl_.idx_ = idx_;
+      }
    };
 
    std::vector<std::unique_ptr<Market>> data_;
@@ -250,7 +268,6 @@ private:
    Group* findGroup(Market *market, const QString &security) const;
    int findMarket(IndexHelper *idx) const;
    Market* findMarket(const QString &name) const;
-   QModelIndex lastIndex() const;
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;
