@@ -139,7 +139,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                break;
 
             case Qt::TextColorRole: {
-               if (secStatsCollector_) {
+               if (secStatsCollector_ && index.column() < static_cast<int>(Column::Status)) {
                   return secStatsCollector_->getColorFor(r->security_.toStdString());
                }
                else {
@@ -442,6 +442,7 @@ QVariant QuoteRequestsModel::headerData(int section, Qt::Orientation orientation
       case Column::Quantity:    return tr("Quantity");
       case Column::Party:       return tr("Party");
       case Column::Status:      return tr("Status");
+      case Column::QuotedPx:    return tr("Quoted Price");
       case Column::IndicPx:     return tr("Indicative Px");
       case Column::BestPx:      return tr("Best Quoted Px");
       default:                  return QString();

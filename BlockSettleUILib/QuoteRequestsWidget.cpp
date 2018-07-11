@@ -10,6 +10,9 @@
 #include "UiUtils.h"
 #include "TreeViewWithEnterKey.h"
 
+#include <QStyle>
+#include <QStyleOptionProgressBar>
+
 
 //
 // DoNotDrawSelectionDelegate
@@ -82,7 +85,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    connect(assetManager_.get(), &AssetManager::securitiesReceived, this, &QuoteRequestsWidget::onSecuritiesReceived);
 
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(
-      static_cast<int>(QuoteRequestsModel::Column::Status), new ProgressDelegate());
+      static_cast<int>(QuoteRequestsModel::Column::Status), new ProgressDelegate(ui_->treeViewQuoteRequests));
 
    auto *doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(
@@ -453,22 +456,13 @@ void QuoteReqSortModel::SetFilter(const QStringList &visible)
 void ProgressDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt, const QModelIndex &index) const
 {
    if (index.data(static_cast<int>(QuoteRequestsModel::Role::ShowProgress)).toBool()) {
-      QProgressBar renderer;
+      QStyleOptionProgressBar pOpt;
+      pOpt.maximum = index.data(static_cast<int>(QuoteRequestsModel::Role::Timeout)).toInt();
+      pOpt.minimum = 0;
+      pOpt.progress = index.data(static_cast<int>(QuoteRequestsModel::Role::TimeLeft)).toInt();
+      pOpt.rect = opt.rect;
 
-      QString style = QString::fromStdString("QProgressBar { border: 1px solid #1c2835; border-radius: 4px; background-color: rgba(0, 0, 0, 0); }");
-
-      renderer.resize(opt.rect.size());
-      renderer.setMinimum(0);
-      renderer.setMaximum(index.data(static_cast<int>(QuoteRequestsModel::Role::Timeout)).toInt());
-      renderer.setValue(index.data(static_cast<int>(QuoteRequestsModel::Role::TimeLeft)).toInt());
-      renderer.setTextVisible(false);
-
-      //QApplication::style()->polish(&renderer);
-      renderer.setStyleSheet(style);
-      painter->save();
-      painter->translate(opt.rect.topLeft());
-      renderer.render(painter);
-      painter->restore();
+      QApplication::style()->drawControl(QStyle::CE_ProgressBar, &pOpt, painter, &pbar_);
    } else {
       QStyledItemDelegate::paint(painter, opt, index);
       return;
