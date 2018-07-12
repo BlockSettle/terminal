@@ -32,7 +32,7 @@ class WalletSeed : public QObject
 
 public:
    WalletSeed(QObject *parent = nullptr) : QObject(parent), seed_(NetworkType::MainNet) {}
-   WalletSeed::WalletSeed(NetworkType netType, QObject *parent)
+   WalletSeed(NetworkType netType, QObject *parent)
       : QObject(parent), seed_(netType) {}
 
    Q_INVOKABLE void setRandomKey();
