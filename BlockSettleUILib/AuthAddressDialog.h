@@ -11,7 +11,7 @@
 class AssetManager;
 class AuthAddressViewModel;
 class QItemSelection;
-class OTPFile;
+class OTPManager;
 
 namespace Ui {
     class AuthAddressDialog;
@@ -23,7 +23,7 @@ Q_OBJECT
 
 public:
    AuthAddressDialog(const std::shared_ptr<AuthAddressManager>& authAddressManager
-      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<AssetManager> &, const std::shared_ptr<OTPManager> &
       , const std::shared_ptr<ApplicationSettings> &, QWidget* parent = nullptr);
    ~AuthAddressDialog() override = default;
 
@@ -73,6 +73,7 @@ private:
    Ui::AuthAddressDialog*  ui_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
+   std::shared_ptr<OTPManager>            otpManager_;
    std::shared_ptr<ApplicationSettings>   settings_;
    AuthAddressViewModel                *  model_;
    bs::Address                            defaultAddr_;

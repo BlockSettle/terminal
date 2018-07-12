@@ -11,6 +11,8 @@ message OTPFile
    required bytes    chainCode         = 5;
    optional bool     encrypted         = 6;
    optional bytes    hash              = 7;
+   optional uint32   encryptionType    = 8;
+   optional string   encryptionKey     = 9;
 }
 
 message WalletBackupFile
