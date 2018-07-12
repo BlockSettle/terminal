@@ -10,6 +10,7 @@
 namespace spdlog {
    class logger;
 }
+class FrejaProxy;
 class HeadlessContainerListener;
 class OfflineProcessor;
 class QmlWalletsViewModel;
@@ -31,6 +32,9 @@ public:
 
    void Start();
    void SetRootObject(QObject *);
+
+signals:
+   void loadingComplete();
 
 private slots:
    void onPasswordAccepted(const QString &walletId, const QString &password);
@@ -60,6 +64,7 @@ private:
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
+   std::shared_ptr<FrejaProxy>                  frejaProxy_;
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;

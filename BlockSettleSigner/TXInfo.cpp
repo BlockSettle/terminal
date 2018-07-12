@@ -3,6 +3,96 @@
 #include "WalletsManager.h"
 
 
+static WalletInfo::EncryptionType mapEncType(bs::wallet::EncryptionType encType)
+{
+   switch (encType) {
+   case bs::wallet::EncryptionType::Password:      return WalletInfo::Password;
+   case bs::wallet::EncryptionType::Freja:         return WalletInfo::Freja;
+   case bs::wallet::EncryptionType::Unencrypted:
+   default:    return WalletInfo::Unencrypted;
+   }
+}
+
+WalletInfo::WalletInfo(const std::shared_ptr<WalletsManager> &walletsMgr, const std::string &walletId
+   , QObject *parent)
+   : QObject(parent), id_(QString::fromStdString(walletId))
+{
+   const auto &wallet = walletsMgr->GetWalletById(walletId);
+   if (wallet) {
+      const auto &rootWallet = walletsMgr->GetHDRootForLeaf(wallet->GetWalletId());
+      initFromWallet(wallet.get(), rootWallet->getWalletId());
+   }
+   else {
+      const auto &hdWallet = walletsMgr->GetHDWalletById(walletId);
+      if (!hdWallet) {
+         throw std::runtime_error("failed to find wallet id " + walletId);
+      }
+      initFromRootWallet(hdWallet);
+   }
+}
+
+void WalletInfo::initFromWallet(const bs::Wallet *wallet, const std::string &rootId)
+{
+   id_ = QString::fromStdString(wallet->GetWalletId());
+   rootId_ = QString::fromStdString(rootId);
+   name_ = QString::fromStdString(wallet->GetWalletName());
+   encType_ = mapEncType(wallet->encryptionType());
+   encKey_ = QString::fromStdString(wallet->encryptionKey().toBinStr());
+   emit dataChanged();
+}
+
+void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootWallet)
+{
+   id_ = QString::fromStdString(rootWallet->getWalletId());
+   name_ = QString::fromStdString(rootWallet->getName());
+   rootId_ = QString::fromStdString(rootWallet->getWalletId());
+   encType_ = mapEncType(rootWallet->encryptionType());
+   encKey_ = QString::fromStdString(rootWallet->encryptionKey().toBinStr());
+}
+
+void WalletInfo::setId(const QString &id)
+{
+   if (id_ == id) {
+      return;
+   }
+   id_ = id;
+   emit dataChanged();
+}
+
+void WalletInfo::setRootId(const QString &rootId)
+{
+   if (rootId_ == rootId) {
+      return;
+   }
+   rootId_ = rootId;
+   emit dataChanged();
+}
+
+void WalletInfo::setName(const QString &name)
+{
+   if (name_ == name) {
+      return;
+   }
+   name_ = name;
+   emit dataChanged();
+}
+
+void WalletInfo::setEncKey(const QString &encKey)
+{
+   if (encKey_ == encKey) {
+      return;
+   }
+   encKey_ = encKey;
+   emit dataChanged();
+}
+
+void WalletInfo::setEncType(int encType)
+{
+   encType_ = static_cast<EncryptionType>(encType);
+   emit dataChanged();
+}
+
+
 TXInfo::TXInfo(const std::shared_ptr<WalletsManager> &walletsMgr, const bs::wallet::TXSignRequest &txReq)
    : QObject(), walletsMgr_(walletsMgr), txReq_(txReq)
 {
@@ -11,15 +101,18 @@ TXInfo::TXInfo(const std::shared_ptr<WalletsManager> &walletsMgr, const bs::wall
 
 void TXInfo::init()
 {
-   const auto wallet = txReq_.walletId.empty() ? txReq_.wallet : walletsMgr_->GetWalletById(txReq_.walletId).get();
-   if (wallet) {
-      walletName_ = QString::fromStdString(wallet->GetWalletName());
+   if (txReq_.wallet) {
+      const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(txReq_.wallet->GetWalletId());
+      if (rootWallet) {
+         walletInfo_ = new WalletInfo(this);
+         walletInfo_->initFromWallet(txReq_.wallet, rootWallet->getWalletId());
+      }
+      else {
+         throw std::runtime_error("no root wallet for leaf " + txReq_.wallet->GetWalletId());
+      }
    }
    else {
-      const auto &hdWallet = walletsMgr_->GetHDWalletById(txReq_.walletId);
-      if (hdWallet) {
-         walletName_ = QString::fromStdString(hdWallet->getName());
-      }
+      walletInfo_ = new WalletInfo(walletsMgr_, txReq_.walletId, this);
    }
    emit dataChanged();
 }
