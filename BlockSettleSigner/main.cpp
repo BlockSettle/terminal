@@ -15,7 +15,7 @@
 #include "QMLApp.h"
 
 Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(BinaryDataVector)
+Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
 
 static int HeadlessApp(int argc, char **argv)
@@ -146,7 +146,7 @@ bool isHeadlessMode(int argc, char** argv)
 int main(int argc, char** argv)
 {
    qRegisterMetaType<std::string>();
-   qRegisterMetaType<BinaryDataVector>();
+   qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
    if (isHeadlessMode(argc, argv)) {

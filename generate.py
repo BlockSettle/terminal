@@ -17,6 +17,7 @@ from build_scripts.libqrencode_settings   import LibQREncode
 from build_scripts.mpir_settings          import MPIRSettings
 from build_scripts.libbtc_settings        import LibBTC
 from build_scripts.openssl_settings       import OpenSslSettings
+from build_scripts.websockets_settings    import WebsocketsSettings
 
 def generate_project(build_mode, build_server, build_test_tools):
    project_settings = Settings(build_mode)
@@ -43,7 +44,8 @@ def generate_project(build_mode, build_server, build_test_tools):
       ZeroMQSettings(project_settings),
       LibQREncode(project_settings),
       MPIRSettings(project_settings),
-      LibBTC(project_settings)
+      LibBTC(project_settings),
+      WebsocketsSettings(project_settings)
       ]
 
    if build_test_tools:

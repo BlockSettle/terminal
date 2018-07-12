@@ -30,7 +30,7 @@ Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 
 Q_IMPORT_PLUGIN(QICOPlugin)
 
-Q_DECLARE_METATYPE(BinaryDataVector)
+Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
 
 #include <QEvent>
@@ -113,7 +113,7 @@ static int GuiApp(int argc, char** argv)
 
    qRegisterMetaType<QVector<int> >();
    qRegisterMetaType<std::string>();
-   qRegisterMetaType<BinaryDataVector>();
+   qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
    // load settings
