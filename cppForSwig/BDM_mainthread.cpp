@@ -45,7 +45,6 @@ BlockDataManagerThread::~BlockDataManagerThread()
    }
 }
 
-
 void BlockDataManagerThread::start(BDM_INIT_MODE mode)
 {
    pimpl->mode = mode;
@@ -59,15 +58,23 @@ BlockDataManager *BlockDataManagerThread::bdm()
    return pimpl->bdm;
 }
 
-void BlockDataManagerThread::shutdown()
+bool BlockDataManagerThread::shutdown()
 {
-   if (pimpl->run)
-   {
-      pimpl->run = false;
+   if (pimpl == nullptr)
+      return false;
 
-      if (pimpl->tID.joinable())
-         pimpl->tID.join();
-   }
+   if (!pimpl->run)
+      return true;
+
+   pimpl->run = false;
+
+   pimpl->bdm->shutdownNode();
+   pimpl->bdm->shutdownNotifications();
+
+   if (pimpl->tID.joinable())
+      pimpl->tID.join();
+
+   return true;
 }
 
 void BlockDataManagerThread::join()
@@ -77,24 +84,6 @@ void BlockDataManagerThread::join()
       if (pimpl->tID.joinable())
          pimpl->tID.join();
    }
-}
-
-
-namespace
-{
-class OnFinish
-{
-   const function<void()> fn;
-public:
-   OnFinish(const function<void()> &_fn)
-      : fn(_fn) { }
-   ~OnFinish()
-   {
-      fn();
-   }
-};
-
-
 }
 
 void BlockDataManagerThread::run()
@@ -140,12 +129,6 @@ try
    tuple<BDMPhase, double, unsigned, unsigned> lastvalues;
    time_t lastProgressTime = 0;
 
-   class BDMStopRequest
-   {
-   public:
-      virtual ~BDMStopRequest() { }
-   };
-
    const auto loadProgress
       = [&](BDMPhase phase, double prog, unsigned time, unsigned numericProgress)
    {
@@ -154,32 +137,35 @@ try
          phase, prog, time, numericProgress, vector<string>());
 
       bdm->notificationStack_.push_back(move(notifPtr));
-
-      if (!pimpl->run)
-      {
-         LOGINFO << "Stop requested detected";
-         throw BDMStopRequest();
-      }
    };
 
-   try
-   {
-      unsigned mode = pimpl->mode & 0x00000003;
-      bool clearZc = bdm->config().clearMempool_;
+   unsigned mode = pimpl->mode & 0x00000003;
+   bool clearZc = bdm->config().clearMempool_;
 
-      if (mode == 0) bdm->doInitialSyncOnLoad(loadProgress);
-      else if (mode == 1) bdm->doInitialSyncOnLoad_Rescan(loadProgress);
-      else if (mode == 2) bdm->doInitialSyncOnLoad_Rebuild(loadProgress);
-      else if (mode == 3) bdm->doInitialSyncOnLoad_RescanBalance(loadProgress);
-
-      if (!bdm->config().checkChain_)
-         bdm->enableZeroConf(clearZc);
-   }
-   catch (BDMStopRequest&)
+   switch (mode)
    {
-      LOGINFO << "UI asked build/scan thread to finish";
-      return;
+   case 0:
+      bdm->doInitialSyncOnLoad(loadProgress);
+      break;
+
+   case 1:
+      bdm->doInitialSyncOnLoad_Rescan(loadProgress);
+      break;
+
+   case 2:
+      bdm->doInitialSyncOnLoad_Rebuild(loadProgress);
+      break;
+
+   case 3:
+      bdm->doInitialSyncOnLoad_RescanBalance(loadProgress);
+      break;
+
+   default:
+      throw runtime_error("invalid bdm init mode");
    }
+
+   if (!bdm->config().checkChain_)
+      bdm->enableZeroConf(clearZc);
 
    isReadyPromise.set_value(true);
 
@@ -194,7 +180,7 @@ try
          //purge zc container
          ZeroConfContainer::ZcActionStruct zcaction;
          zcaction.action_ = Zc_Purge;
-         zcaction.resultPromise_ = 
+         zcaction.resultPromise_ =
             make_unique<promise<shared_ptr<ZcPurgePacket>>>();
          zcaction.reorgState_ = reorgState;
          auto purgeFuture = zcaction.resultPromise_->get_future();
@@ -219,52 +205,18 @@ try
    bdm->networkNode_->registerNodeStatusLambda(updateNodeStatusLambda);
    bdm->nodeRPC_->registerNodeStatusLambda(updateNodeStatusLambda);
 
+   auto newBlockStack = bdm->networkNode_->getInvBlockStack();
    while (pimpl->run)
    {
-      //register promise with p2p interface
-      auto newBlocksPromise = make_shared<promise<bool>>();
-      auto newBlocksFuture = newBlocksPromise->get_future();
-
-      auto newBlocksCallback =
-         [newBlocksPromise](const vector<InvEntry>& vecIE)->void
-      {
-         for (auto& ie : vecIE)
-         {
-            if (ie.invtype_ == Inv_Terminate)
-            {
-               try
-               {
-                  throw runtime_error("terminate");
-               }
-               catch (...)
-               {
-                  newBlocksPromise->set_exception(current_exception());
-                  return;
-               }
-            }
-         }
-
-         newBlocksPromise->set_value(true);
-      };
-
       try
       {
-         bdm->networkNode_->registerInvBlockLambda(newBlocksCallback);
+         auto&& invVec = newBlockStack->pop_front();
 
          //keep updating until there are no more new blocks
          while (updateChainLambda());
-
-         //wait on future
-         newBlocksFuture.get();
       }
-      catch (exception &e)
+      catch (StopBlockingLoop&)
       {
-         LOGERR << "caught exception in main thread: " << e.what();
-         break;
-      }
-      catch (...)
-      {
-         LOGERR << "caught unknown exception in main thread";
          break;
       }
    }

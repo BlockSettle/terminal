@@ -63,7 +63,7 @@ signals:
    void OnStateChanged(PyBlockDataManagerState newState);
 };
 
-class PyBlockDataManager : public QObject, public SwigClient::PythonCallback
+class PyBlockDataManager : public QObject
 {
    Q_OBJECT
 public:
@@ -79,9 +79,9 @@ public:
    PyBlockDataManager(PyBlockDataManager&&) = delete;
    PyBlockDataManager& operator = (PyBlockDataManager&&) = delete;
 
-   void run(BDMAction action, void* ptr, int block=0) override;
+   void run(BDMAction action, void* ptr, int block=0);
    void progress( BDMPhase phase, const vector<string> &walletIdVec, float progress,
-                  unsigned secondsRem, unsigned progressNumeric) override;
+                  unsigned secondsRem, unsigned progressNumeric);
 
    // NOTE: at this point collection is not concurrent, there should not be additions and
    // notification processing from different threads.
@@ -100,7 +100,7 @@ public:
 
    std::shared_ptr<SafeLedgerDelegate> GetWalletsLedgerDelegate();
    std::shared_ptr<SafeLedgerDelegate> getLedgerDelegateForScrAddr(const string& walletID, const BinaryData& scrAddr);
-   std::vector<LedgerEntryData> getWalletsHistory(const std::vector<std::string> &walletIDs);
+   std::vector<ClientClasses::LedgerEntry> getWalletsHistory(const std::vector<std::string> &walletIDs);
 
    bool broadcastZC(const BinaryData& rawTx);
 
@@ -110,10 +110,10 @@ public:
    static void setInstance(std::shared_ptr<PyBlockDataManager> bdm);
 
    Tx getTxByHash(const BinaryData& hash);
-   bool IsTransactionVerified(const LedgerEntryData& item);
-   bool IsTransactionConfirmed(const LedgerEntryData& item);
+   bool IsTransactionVerified(const ClientClasses::LedgerEntry &);
+   bool IsTransactionConfirmed(const ClientClasses::LedgerEntry &);
 
-   int  GetConfirmationsNumber(const LedgerEntryData& item);
+   int  GetConfirmationsNumber(const ClientClasses::LedgerEntry &item);
 
    float estimateFee(unsigned int nbBlocks);
 
@@ -124,9 +124,9 @@ public:
    void OnConnectionError();
 
 signals:
-   void zeroConfReceived(const std::vector<LedgerEntryData>&);
+   void zeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &);
    void txBroadcastError(const QString &txHash, const QString &error);
-   void refreshed(const BinaryDataVector &ids);
+   void refreshed(const std::vector<BinaryData> &ids);
    void newBlock();
 
    void ScheduleRPCBroadcast(const BinaryData& rawTx);
@@ -152,9 +152,9 @@ private:
 
    void monitoringRoutine();
 
-   void onZCReceived(const std::vector<LedgerEntryData> &);
+   void onZCReceived(const std::vector<ClientClasses::LedgerEntry> &);
    void onNewBlock();
-   void onRefresh(const BinaryDataVector &ids);
+   void onRefresh(const std::vector<BinaryData> &ids);
 
 private:
    ArmorySettings                         settings_;
@@ -175,7 +175,7 @@ private:
    TxCacheFile                            txCache_;
    mutable std::atomic_flag  bdvLock_ = ATOMIC_FLAG_INIT;
 
-   std::unordered_set<BinaryData>         pendingBroadcasts_;
+   std::set<BinaryData>                   pendingBroadcasts_;
 };
 
 #endif // __BLOCK_DATA_MANAGER_H__

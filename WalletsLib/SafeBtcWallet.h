@@ -6,7 +6,6 @@
 #include <map>
 #include <QMutex>
 #include "BinaryData.h"
-#include "LedgerEntryData.h"
 #include "SwigClient.h"
 #include "TxClasses.h"
 
@@ -22,7 +21,7 @@ public:
    SafeBtcWallet(SafeBtcWallet&&) = delete;
    SafeBtcWallet& operator = (SafeBtcWallet&&) = delete;
 
-   std::vector<uint64_t> getBalancesAndCount(uint32_t topBlockHeight, bool IGNOREZC);
+   std::vector<uint64_t> getBalancesAndCount(uint32_t topBlockHeight);
    std::map<BinaryData, uint32_t> getAddrTxnCountsFromDB(void);
 
    std::map<BinaryData, std::vector<uint64_t> > getAddrBalancesFromDB(void);
@@ -31,7 +30,7 @@ public:
    std::vector<UTXO> getSpendableZCList();
    std::vector<UTXO> getRBFTxOutList();
 
-   std::vector<LedgerEntryData> getHistoryPage(uint32_t id);
+   std::vector<ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
 
 private:
    SwigClient::BtcWallet   btcWallet_;

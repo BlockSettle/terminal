@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+package Codec_FeeEstimate;
+
+message FeeEstimate
+{
+	required float feeByte = 1;
+	optional bool smartFee = 2;
+	optional string error = 3;
+}

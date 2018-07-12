@@ -11,7 +11,7 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-   ScrAddrFilter::init();
+   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 #ifdef _WIN32
    WSADATA wsaData;
@@ -35,19 +35,27 @@ int main(int argc, char* argv[])
    if (FCGX_Init())
       throw runtime_error("failed to initialize FCGI engine");
 
-
    //init db
+   BlockDataManagerConfig::setServiceType(SERVICE_WEBSOCKET);
    BlockDataManagerThread bdmThread(bdmConfig);
    bdmThread.start(bdmConfig.initMode_);
 
    //init listen loop
-   FCGI_Server server(&bdmThread, bdmConfig.fcgiPort_, bdmConfig.listen_all_);
+   WebSocketServer server;
    
    if (!bdmConfig.checkChain_)
    {
-      //start listening
-      server.checkSocket();
-      server.init();
+      //check we can listen on this ip:port
+      if (SimpleSocket::checkSocket("127.0.0.1", bdmConfig.listenPort_))
+      {
+         LOGERR << "There is already a process listening on port " << 
+            bdmConfig.listenPort_;
+         LOGERR << "ArmoryDB cannot start under these conditions. Shutting down!";
+         LOGERR << "Make sure to shutdown the conflicting process" <<
+            "before trying again (most likely another ArmoryDB instance)";
+
+         exit(1);
+      }
    }
 
 
@@ -57,7 +65,7 @@ int main(int argc, char* argv[])
    if (!bdmConfig.checkChain_)
    {
       //process incoming connections
-      server.enterLoop();
+      server.start(&bdmThread, true);
    }
    else
    {
@@ -66,6 +74,7 @@ int main(int argc, char* argv[])
 
    //stop all threads and clean up
    server.shutdown();
+   google::protobuf::ShutdownProtobufLibrary();
 
    return 0;
 }

@@ -13,7 +13,7 @@
 subSshParserResult parseSubSsh(
    unique_ptr<LDBIter> sshIter, int32_t scanFrom, bool resolveHashes,
    function<uint8_t(unsigned)> getDupIDForHeight,
-   shared_ptr<map<ScrAddrFilter::AddrAndHash, int>> scrAddrMapPtr,
+   shared_ptr<map<BinaryDataRef, shared_ptr<AddrAndHash>>> scrAddrMapPtr,
    BinaryData upperBound)
 {
    map<BinaryData, StoredScriptHistory> sshMap;
@@ -41,7 +41,7 @@ subSshParserResult parseSubSsh(
          auto&& sshKey = subsshkey.getSliceCopy(1, subsshkey.getSize() - 5);
 
          if (scrAddrMapPtr != nullptr &&
-            scrAddrMapPtr->find(sshKey) == scrAddrMapPtr->end())
+            scrAddrMapPtr->find(sshKey.getRef()) == scrAddrMapPtr->end())
          {
             sshPtr = nullptr;
             auto&& newKey =
@@ -200,19 +200,27 @@ void ShardedSshParser::updateSsh()
    };
    thread writer_thread(writer_lambda);
 
+   vector<thread::id> idVec;
    vector<thread> threads;
    for (unsigned i = 1; i < threadCount_; i++)
       threads.push_back(thread(ssh_lambda));
    tallySshThread();
 
    for (auto& thr : threads)
+   {
+      idVec.push_back(thr.get_id());
       if (thr.joinable())
          thr.join();
+   }
+
+   idVec.push_back(writer_thread.get_id());
 
    //kill writer thread
    serializedSshQueue_.completed();
    if (writer_thread.joinable())
       writer_thread.join();
+
+   DatabaseContainer_Sharded::clearThreadShardTx(idVec);
 
    LOGINFO << "Updated SSH";
 }
@@ -586,6 +594,7 @@ void ShardedSshParser::compileCheckpoints(void)
    //start writer thread
    thread writerThread(writerLbd);
 
+   vector<thread::id> idVec;
    vector<thread> threads;
    for (unsigned i = 1; i < threadCount_; i++)
    {
@@ -594,14 +603,21 @@ void ShardedSshParser::compileCheckpoints(void)
 
    parserLbd();
    for (auto& thr : threads)
+   {
+      idVec.push_back(thr.get_id());
       if (thr.joinable())
          thr.join();
+   }
+
+   idVec.push_back(writerThread.get_id());
 
    //kill checkpoints queue
    checkpointQueue_.completed();
 
    if (writerThread.joinable())
       writerThread.join();
+
+   DatabaseContainer_Sharded::clearThreadShardTx(idVec);
 
    LOGINFO << "updated ssh checkpoints";
 }

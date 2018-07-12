@@ -11,14 +11,13 @@
 #include "MetaData.h"
 
 
-class LedgerEntryData;
 class WalletsManager;
 class PyBlockDataManager;
 class SafeLedgerDelegate;
 
 struct TransactionsViewItem
 {
-   std::shared_ptr<LedgerEntryData> led;
+   std::shared_ptr<ClientClasses::LedgerEntry> led;
    Tx tx;
    bool initialized = false;
    QString mainAddress;
@@ -73,7 +72,7 @@ public:
 private slots:
    void updatePage();
    void refresh();
-   void onZeroConf(std::vector<LedgerEntryData> page);
+   void onZeroConf(std::vector<ClientClasses::LedgerEntry> page);
    void onRowUpdated(int index, TransactionsViewItem item, int colStart, int colEnd);
    void onNewItems(const TransactionItems items);
    void onItemsDeleted(const TransactionItems items);
@@ -88,11 +87,11 @@ private:
    void loadLedgerEntries();
    void ledgerToTxData();
    void loadNewTransactions();
-   void insertNewTransactions(const std::vector<LedgerEntryData> &page);
+   void insertNewTransactions(const std::vector<ClientClasses::LedgerEntry> &page);
    void loadTransactionDetails(unsigned int iStart, size_t count);
-   void updateBlockHeight(const std::vector<LedgerEntryData> &page);
+   void updateBlockHeight(const std::vector<ClientClasses::LedgerEntry> &page);
    void updateTransactionDetails(TransactionsViewItem &item, int index);
-   TransactionsViewItem itemFromTransaction(const LedgerEntryData& led);
+   TransactionsViewItem itemFromTransaction(const ClientClasses::LedgerEntry &);
    bool txKeyExists(const std::string &key);
    int getItemIndex(const TransactionsViewItem &) const;
 
@@ -126,7 +125,7 @@ public:
    };
 
    TransactionItems                    currentPage_;
-   std::vector<LedgerEntryData>        rawData_;
+   std::vector<ClientClasses::LedgerEntry>   rawData_;
    std::unordered_set<std::string>     currentKeys_;
    std::shared_ptr<PyBlockDataManager> bdm_;
    std::shared_ptr<SafeLedgerDelegate> ledgerDelegate_;

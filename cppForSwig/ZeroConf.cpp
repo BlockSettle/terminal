@@ -689,8 +689,6 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
                      {
                         try
                         {
-                           auto& txToReplace = getzctxforkey(idIter->second);
-
                            //gather replaced tx children
                            auto&& keySet = getTxChildren(idIter->second);
                            invalidatedKeys.insert(keySet.begin(), keySet.end());
@@ -791,7 +789,6 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
       //TODO: multi thread this at some point
 
       auto txmap = txMap_.get();
-      auto bdvcallbacks = bdvCallbacks_.get();
 
       for (auto& invalidKey : invalidatedKeys)
       {
@@ -838,7 +835,6 @@ void ZeroConfContainer::parseNewZC(map<BinaryData, ParsedTx> zcMap,
       return;
 
    auto txiomapPtr = txioMap_.get();
-   auto bdvcallbacks = bdvCallbacks_.get();
 
    for (auto& bdvMap : flaggedBDVs)
    {
@@ -990,7 +986,6 @@ ZeroConfContainer::BulkFilterData ZeroConfContainer::ZCisMineBulkFilter(
    if (parsedTx.status() == Tx_Mined || parsedTx.status() == Tx_Invalid)
       return bulkData;
 
-   auto& tx = parsedTx.tx_;
    auto mainAddressSet = scrAddrMap_->get();
 
    auto filter = [mainAddressSet, this]
@@ -999,7 +994,7 @@ ZeroConfContainer::BulkFilterData ZeroConfContainer::ZCisMineBulkFilter(
       pair<bool, set<string>> flaggedBDVs;
       flaggedBDVs.first = false;
 
-      auto addrIter = mainAddressSet->find(addr);
+      auto addrIter = mainAddressSet->find(addr.getRef());
       if (addrIter == mainAddressSet->end())
       {
          if (BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER)
@@ -1009,7 +1004,6 @@ ZeroConfContainer::BulkFilterData ZeroConfContainer::ZCisMineBulkFilter(
       }
 
       flaggedBDVs.first = true;
-
       flaggedBDVs.second = move(bdvCallbacks_->hasScrAddr(addr.getRef()));
       return flaggedBDVs;
    };
@@ -1456,7 +1450,7 @@ void ZeroConfContainer::init(shared_ptr<ScrAddrFilter> saf, bool clearMempool)
 {
    LOGINFO << "Enabling zero-conf tracking";
 
-   scrAddrMap_ = saf->getScrAddrTransactionalMap();
+   scrAddrMap_ = saf->getScrAddrMapPtr();
    loadZeroConfMempool(clearMempool);
 
    auto processZcThread = [this](void)->void
@@ -1552,6 +1546,7 @@ void ZeroConfContainer::processInvTxThread(void)
 ///////////////////////////////////////////////////////////////////////////////
 void ZeroConfContainer::processInvTxThread(ZeroConfInvPacket& packet)
 {
+   packet.invEntry_.invtype_ = Inv_Msg_Witness_Tx;
    auto payload =
       networkNode_->getTx(packet.invEntry_, packet.batchPtr_->timeout_);
 
@@ -1579,7 +1574,7 @@ void ZeroConfContainer::processInvTxThread(ZeroConfInvPacket& packet)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ZeroConfContainer::pushZcToParser(const BinaryData& rawTx)
+void ZeroConfContainer::pushZcToParser(const BinaryDataRef& rawTx)
 {
    pair<BinaryData, ParsedTx> zcpair;
    zcpair.first = getNewZCkey();
@@ -1749,9 +1744,15 @@ void ZeroConfContainer::shutdown()
    processInvTxVec(vecIE, false);
    zcEnabled_.store(false, memory_order_relaxed);
 
+   vector<thread::id> idVec;
    for (auto& parser : parserThreads_)
+   {
+      idVec.push_back(parser.get_id());
       if (parser.joinable())
          parser.join();
+   }
+
+   DatabaseContainer_Sharded::clearThreadShardTx(idVec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

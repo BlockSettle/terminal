@@ -169,10 +169,10 @@ class CoinSelection
 private:
    vector<UTXO> utxoVec_;
    uint64_t utxoVecValue_ = 0;
+   function<vector<UTXO>(uint64_t val)> getUTXOsForVal_;
    const uint64_t spendableValue_;
    unsigned topHeight_ = UINT32_MAX;
 
-   function<vector<UTXO>(uint64_t val)> getUTXOsForVal_;
    set<AddressBookEntry> addrBook_;
 
    exception_ptr except_ptr_ = nullptr;

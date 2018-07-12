@@ -13,8 +13,8 @@
 #include <QMenu>
 #include <QClipboard>
 
-#include "LedgerEntryData.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
+
 
 TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, const std::shared_ptr<WalletsManager>& walletsManager
    , const std::shared_ptr<PyBlockDataManager>& bdm, QWidget* parent)

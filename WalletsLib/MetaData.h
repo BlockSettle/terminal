@@ -9,7 +9,9 @@
 #include <QThreadPool>
 #include "Address.h"
 #include "BtcDefinitions.h"
+#include "ClientClasses.h"
 #include "EasyCoDec.h"
+#include "LedgerEntry.h"
 #include "lmdbpp.h"
 #include "Script.h"
 #include "Signer.h"
@@ -79,7 +81,7 @@ namespace bs {
 
       class MetaData
       {
-         std::unordered_map<BinaryData, shared_ptr<AssetEntryMeta>>   data_;
+         std::map<BinaryData, shared_ptr<AssetEntryMeta>>   data_;
 
       protected:
          unsigned int      nbMetaData_;
@@ -252,7 +254,7 @@ namespace bs {
       virtual void RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm = nullptr, bool asNew = false);
       virtual void SetBDM(const std::shared_ptr<PyBlockDataManager>& bdm);
       virtual void SetUserID(const BinaryData &) {}
-      virtual std::vector<LedgerEntryData> getHistoryPage(uint32_t id) const;
+      virtual std::vector<ClientClasses::LedgerEntry> getHistoryPage(uint32_t id) const;
 
       virtual bool isBalanceAvailable() const;
       virtual BTCNumericTypes::balance_type GetSpendableBalance() const;

@@ -19,7 +19,7 @@ public:
    SafeLedgerDelegate(SafeLedgerDelegate&&) = delete;
    SafeLedgerDelegate& operator = (SafeLedgerDelegate&&) = delete;
 
-   std::vector<LedgerEntryData> getHistoryPage(uint32_t id);
+   std::vector<ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
 
 private:
    SwigClient::LedgerDelegate delegate_;

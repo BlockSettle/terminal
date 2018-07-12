@@ -168,7 +168,8 @@ void WalletContainer::registerWithBDV(bool isNew)
    vector<BinaryData> addrVec;
    addrVec.insert(addrVec.end(), addrSet.begin(), addrSet.end());
 
-   auto&& swigWlt = bdv.registerWallet(wltSingle->getID(), addrVec, isNew);
+   auto&& swigWlt = bdv.instantiateWallet(wltSingle->getID());
+   swigWlt.registerAddresses(addrVec, isNew);
 
    swigWallet_ = make_shared<SwigClient::BtcWallet>(swigWlt);
 }

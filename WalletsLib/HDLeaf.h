@@ -51,7 +51,7 @@ namespace bs {
          std::vector<PooledAddress> generateAddresses(hd::Path::Elem prefix, hd::Path::Elem start
             , size_t nb, AddressEntryType aet);
          void scanAddresses(unsigned int startIdx, unsigned int portionSize = 100, const cb_write_last &cbw = nullptr);
-         void onRefresh(const BinaryDataVector &ids);
+         void onRefresh(const std::vector<BinaryData> &ids);
 
       private:
          struct Portion {
@@ -161,8 +161,8 @@ namespace bs {
          void scanComplete(const std::string &walletId);
 
       protected slots:
-         virtual void onZeroConfReceived(const std::vector<LedgerEntryData> &);
-         virtual void onRefresh(const BinaryDataVector &ids);
+         virtual void onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &);
+         virtual void onRefresh(const std::vector<BinaryData> &ids);
 
       protected:
          virtual bs::Address createAddress(const Path &path, Path::Elem index, AddressEntryType aet
@@ -174,7 +174,7 @@ namespace bs {
          Path getPathForAddress(const bs::Address &) const;
          std::shared_ptr<Node> getNodeForAddr(const bs::Address &) const;
          std::shared_ptr<hd::Node> GetPrivNodeFor(const bs::Address &, const SecureBinaryData &password);
-         void activateAddressesFromLedger(const std::vector<LedgerEntryData> &);
+         void activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &);
          void activateHiddenAddress(const bs::Address &);
          bs::Address createAddressWithPath(const hd::Path &, AddressEntryType, bool signal = true);
 
@@ -198,8 +198,8 @@ namespace bs {
          size_t extAddressPoolSize_ = 100;
          const std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
 
-         std::unordered_map<BinaryData, BinaryData> hashToPubKey_;
-         std::unordered_map<BinaryData, hd::Path>   pubKeyToPath_;
+         std::map<BinaryData, BinaryData> hashToPubKey_;
+         std::map<BinaryData, hd::Path>   pubKeyToPath_;
          using TempAddress = std::pair<Path, AddressEntryType>;
          std::unordered_map<Path::Elem, TempAddress>  tempAddresses_;
          std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressPool_;
@@ -212,7 +212,7 @@ namespace bs {
          std::unordered_map<Path::Elem, AddressTuple> addressMap_;
          std::vector<bs::Address>                     intAddresses_;
          std::vector<bs::Address>                     extAddresses_;
-         std::unordered_map<BinaryData, Path::Elem>   addrToIndex_;
+         std::map<BinaryData, Path::Elem>             addrToIndex_;
          cb_complete_notify                           cbScanNotify_ = nullptr;
          volatile bool activateAddressesInvoked_ = false;
 
@@ -285,8 +285,8 @@ namespace bs {
          bool isTxValid(const BinaryData &) const override;
 
       private slots:
-         void onZeroConfReceived(const std::vector<LedgerEntryData> &) override;
-         void onRefresh(const BinaryDataVector &ids) override;
+         void onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &) override;
+         void onRefresh(const std::vector<BinaryData> &ids) override;
 
       private:
          void validationProc();
@@ -301,7 +301,7 @@ namespace bs {
          volatile bool  validationStarted_, validationEnded_;
          double         balanceCorrection_ = 0;
          std::set<UTXO> invalidTx_;
-         std::unordered_set<BinaryData> invalidTxHash_;
+         std::set<BinaryData> invalidTxHash_;
          QThreadPool    threadPool_;
       };
 

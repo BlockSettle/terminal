@@ -93,7 +93,7 @@ public:
 
    void RegisterSavedWallets();
 
-   bool IsTransactionVerified(const LedgerEntryData& item);
+   bool IsTransactionVerified(const ClientClasses::LedgerEntry &);
    bs::Transaction::Direction GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &);
    QString GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &, bool isReceiving);
 
@@ -104,7 +104,7 @@ public:
 
    float estimatedFeePerByte(unsigned int blocksToWait) const;
 
-   std::vector<LedgerEntryData> getTxPage(uint32_t id) const;
+   std::vector<ClientClasses::LedgerEntry> getTxPage(uint32_t id) const;
 
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
 
@@ -127,7 +127,7 @@ public slots:
    void onWalletImported(const std::string &walletId) { emit walletImportFinished(walletId); }
 
 private slots:
-   void onZeroConfReceived(const std::vector<LedgerEntryData>&);
+   void onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &);
    void onBroadcastZCError(const QString &txHash, const QString &errMsg);
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);

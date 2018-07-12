@@ -1,7 +1,6 @@
 #include "TransactionsViewModel.h"
 
 #include "CheckRecipSigner.h"
-#include "LedgerEntryData.h"
 #include "PyBlockDataManager.h"
 #include "SafeLedgerDelegate.h"
 #include "UiUtils.h"
@@ -11,8 +10,6 @@
 #include <QMutexLocker>
 #include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrentRun>
-
-using namespace std;
 
 
 TransactionsViewModel::TransactionsViewModel(std::shared_ptr<PyBlockDataManager> bdm, const std::shared_ptr<WalletsManager>& walletsManager
@@ -232,18 +229,18 @@ void TransactionsViewModel::clear()
    endResetModel();
 }
 
-void TransactionsViewModel::onZeroConf(std::vector<LedgerEntryData> page)
+void TransactionsViewModel::onZeroConf(std::vector<ClientClasses::LedgerEntry> page)
 {
    QtConcurrent::run(&threadPool_, this, &TransactionsViewModel::insertNewTransactions, page);
 }
 
-TransactionsViewItem TransactionsViewModel::itemFromTransaction(const LedgerEntryData& led)
+TransactionsViewItem TransactionsViewModel::itemFromTransaction(const ClientClasses::LedgerEntry &led)
 {
    TransactionsViewItem item;
-   item.led = std::make_shared<LedgerEntryData>(led);
+   item.led = std::make_shared<ClientClasses::LedgerEntry>(led);
    item.displayDateTime = UiUtils::displayDateTime(led.getTxTime());
-   item.walletID = QString::fromStdString(led.getWalletID());
-   item.wallet = walletsManager_->GetWalletById(led.getWalletID());
+   item.walletID = QString::fromStdString(led.getID());
+   item.wallet = walletsManager_->GetWalletById(led.getID());
    if (!item.wallet && defaultWallet_) {
       item.wallet = defaultWallet_;
    }
@@ -258,9 +255,9 @@ TransactionsViewItem TransactionsViewModel::itemFromTransaction(const LedgerEntr
    return item;
 }
 
-static std::string mkTxKey(const LedgerEntryData &item)
+static std::string mkTxKey(const ClientClasses::LedgerEntry &item)
 {
-   return item.getTxHash().toBinStr() + item.getWalletID();
+   return item.getTxHash().toBinStr() + item.getID();
 }
 static std::string mkTxKey(const TransactionsViewItem &item)
 {
@@ -278,14 +275,14 @@ void TransactionsViewModel::loadNewTransactions()
       return;
    }
    refreshing_ = true;
-   std::vector<LedgerEntryData> allPages = walletsManager_->getTxPage(0);
+   std::vector<ClientClasses::LedgerEntry> allPages = walletsManager_->getTxPage(0);
 
    insertNewTransactions(allPages);
    updateBlockHeight(allPages);
    refreshing_ = false;
 }
 
-void TransactionsViewModel::insertNewTransactions(const std::vector<LedgerEntryData> &page)
+void TransactionsViewModel::insertNewTransactions(const std::vector<ClientClasses::LedgerEntry> &page)
 {
    if (!initialLoadCompleted_) {
       return;
@@ -295,7 +292,7 @@ void TransactionsViewModel::insertNewTransactions(const std::vector<LedgerEntryD
    const auto &settlWallet = walletsManager_->GetSettlementWallet();
 
    for (const auto led : page) {
-      if (settlWallet && settlWallet->isTempWalletId(led.getWalletID())) {
+      if (settlWallet && settlWallet->isTempWalletId(led.getID())) {
          continue;
       }
       const auto item = itemFromTransaction(led);
@@ -318,11 +315,11 @@ void TransactionsViewModel::insertNewTransactions(const std::vector<LedgerEntryD
    }
 }
 
-void TransactionsViewModel::updateBlockHeight(const std::vector<LedgerEntryData> &page)
+void TransactionsViewModel::updateBlockHeight(const std::vector<ClientClasses::LedgerEntry> &page)
 {
-   std::unordered_map<std::string, LedgerEntryData> newData;
+   std::unordered_map<std::string, std::shared_ptr<ClientClasses::LedgerEntry>> newData;
    for (const auto &item : page) {
-      newData[mkTxKey(item)] = item;
+      newData[mkTxKey(item)] = std::make_shared<ClientClasses::LedgerEntry>(item);
    }
    int firstRow = -1, lastRow = 0;
    std::vector<TransactionsViewItem> firstConfItems;
@@ -332,15 +329,15 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<LedgerEntryData>
          auto &item = currentPage_[i];
          const auto itPage = newData.find(mkTxKey(item));
          if (itPage != newData.end()) {
-            if (item.led->getValue() != itPage->second.getValue()) {
-               item.led = std::make_shared<LedgerEntryData>(itPage->second);
+            if (item.led->getValue() != itPage->second->getValue()) {
+               item.led = itPage->second;
                item.amountStr.clear();
                item.calcAmount(bdm_, walletsManager_);
             }
             item.isValid = item.wallet->isTxValid(item.led->getTxHash());
 
-            if (itPage->second.getBlockNum() < uint32_t(-1)) {
-               item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - itPage->second.getBlockNum();
+            if (itPage->second->getBlockNum() < uint32_t(-1)) {
+               item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - itPage->second->getBlockNum();
                if (item.confirmations == 1) {
                   firstConfItems.push_back(item);
                }

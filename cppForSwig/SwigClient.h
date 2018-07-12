@@ -14,12 +14,13 @@ and handle the data transmission with the BDM server
 #ifndef _SWIGCLIENT_H
 #define _SWIGCLIENT_H
 
-#include "BDM_seder.h"
 #include "StringSockets.h"
 #include "bdmenums.h"
 #include "log.h"
 #include "TxClasses.h"
 #include "BlockDataManagerConfig.h"
+#include "WebSocketClient.h"
+#include "AsyncClient.h"
 
 class WalletManager;
 class WalletContainer;
@@ -38,42 +39,18 @@ namespace SwigClient
    class BlockDataViewer;
 
    ///////////////////////////////////////////////////////////////////////////////
-   struct NoArmoryDBExcept : public runtime_error
-   {
-      NoArmoryDBExcept(void) : runtime_error("")
-      {}
-   };
-
-   struct BDVAlreadyRegistered : public runtime_error
-   {
-      BDVAlreadyRegistered(void) : runtime_error("")
-      {}
-   };
-
-   ///////////////////////////////////////////////////////////////////////////////
-   struct FeeEstimateStruct
-   {
-      const string error_;
-      const float val_;
-      const bool isSmart_;
-
-      FeeEstimateStruct(float val, bool isSmart, const string& error) :
-         val_(val), isSmart_(isSmart), error_(error)
-      {}
-   };
-
-   ///////////////////////////////////////////////////////////////////////////////
    class LedgerDelegate
    {
    private:
-      const string delegateID_;
-      const string bdvID_;
-      const shared_ptr<BinarySocket> sock_;
+      AsyncClient::LedgerDelegate asyncLed_;
 
    public:
-      LedgerDelegate(shared_ptr<BinarySocket>, const string&, const string&);
+      LedgerDelegate(void)
+      {}
 
-      vector<LedgerEntryData> getHistoryPage(uint32_t id);
+      LedgerDelegate(AsyncClient::LedgerDelegate&);
+
+      vector<::ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
    };
 
    class BtcWallet;
@@ -81,67 +58,40 @@ namespace SwigClient
    ///////////////////////////////////////////////////////////////////////////////
    class ScrAddrObj
    {
-      friend class ::WalletContainer;
-
    private:
-      const string bdvID_;
-      const string walletID_;
-      const BinaryData scrAddr_;
-      BinaryData addrHash_;
-      const shared_ptr<BinarySocket> sock_;
-
-      const uint64_t fullBalance_;
-      const uint64_t spendableBalance_;
-      const uint64_t unconfirmedBalance_;
-      const uint32_t count_;
-      const int index_;
-
-      string comment_;
-
-   private:
-      ScrAddrObj(const BinaryData& addr, const BinaryData& addrHash, int index) :
-         bdvID_(string()), walletID_(string()), index_(index),
-         scrAddr_(addr), addrHash_(addrHash),
-         sock_(nullptr), count_(0),
-         fullBalance_(0), spendableBalance_(0), unconfirmedBalance_(0)
-      {}
+      AsyncClient::ScrAddrObj asyncAddr_;
 
    public:
-      ScrAddrObj(SwigClient::BtcWallet*, const BinaryData&, int index,
-         uint64_t, uint64_t, uint64_t, uint32_t);
-      ScrAddrObj(shared_ptr<BinarySocket>,
-         const string&, const string&, const BinaryData&, int index, 
-         uint64_t, uint64_t, uint64_t, uint32_t);
+      ScrAddrObj(AsyncClient::ScrAddrObj&);
 
-      uint64_t getFullBalance(void) const { return fullBalance_; }
-      uint64_t getSpendableBalance(void) const { return spendableBalance_; }
-      uint64_t getUnconfirmedBalance(void) const { return unconfirmedBalance_; }
+      uint64_t getFullBalance(void) const;
+      uint64_t getSpendableBalance(void) const;
+      uint64_t getUnconfirmedBalance(void) const;
 
-      uint64_t getTxioCount(void) const { return count_; }
+      uint64_t getTxioCount(void) const;
 
       vector<UTXO> getSpendableTxOutList(bool);
-      const BinaryData& getScrAddr(void) const { return scrAddr_; }
-      const BinaryData& getAddrHash(void) const { return addrHash_; }
+      const BinaryData& getScrAddr(void) const;
+      const BinaryData& getAddrHash(void) const;
 
-      void setComment(const string& comment) { comment_ = comment; }
-      const string& getComment(void) const { return comment_; }
-      int getIndex(void) const { return index_; }
+      void setComment(const string& comment);
+      const string& getComment(void) const;
+      int getIndex(void) const;
    };
 
    ///////////////////////////////////////////////////////////////////////////////
    class BtcWallet
    {
       friend class ScrAddrObj;
+      friend class ::WalletContainer;
 
    protected:
-      const string walletID_;
-      const string bdvID_;
-      const shared_ptr<BinarySocket> sock_;
+      AsyncClient::BtcWallet asyncWallet_;
 
    public:
-      BtcWallet(const BlockDataViewer&, const string&);
+      BtcWallet(AsyncClient::BtcWallet& wlt);
       vector<uint64_t> getBalancesAndCount(
-         uint32_t topBlockHeight, bool IGNOREZC);
+         uint32_t topBlockHeight);
 
       vector<UTXO> getSpendableTxOutListForValue(uint64_t val);
       vector<UTXO> getSpendableZCList();
@@ -150,165 +100,49 @@ namespace SwigClient
       map<BinaryData, uint32_t> getAddrTxnCountsFromDB(void);
       map<BinaryData, vector<uint64_t> > getAddrBalancesFromDB(void);
 
-      vector<LedgerEntryData> getHistoryPage(uint32_t id);
-      LedgerEntryData getLedgerEntryForTxHash(
+      vector<::ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
+      shared_ptr<::ClientClasses::LedgerEntry> getLedgerEntryForTxHash(
          const BinaryData& txhash);
 
       ScrAddrObj getScrAddrObjByKey(const BinaryData&,
          uint64_t, uint64_t, uint64_t, uint32_t);
 
       vector<AddressBookEntry> createAddressBook(void) const;
+
+      virtual string registerAddresses(
+         const vector<BinaryData>& addrVec, bool isNew);
    };
 
    ///////////////////////////////////////////////////////////////////////////////
    class Lockbox : public BtcWallet
    {
    private:
-      uint64_t fullBalance_ = 0;
-      uint64_t spendableBalance_ = 0;
-      uint64_t unconfirmedBalance_ = 0;
-
-      uint64_t txnCount_ = 0;
-
-      set<BinaryData> scrAddrSet_;
+      AsyncClient::Lockbox asyncLockbox_;
 
    public:
+      Lockbox(AsyncClient::Lockbox& asynclb);
 
-      Lockbox(const BlockDataViewer& bdv, const string& id,
-         const vector<BinaryData>& addrVec) :
-         BtcWallet(bdv, id)
-      {
-         scrAddrSet_.insert(addrVec.begin(), addrVec.end());
-      }
+      void getBalancesAndCountFromDB(uint32_t topBlockHeight);
 
-      void getBalancesAndCountFromDB(uint32_t topBlockHeight, bool IGNOREZC);
+      uint64_t getFullBalance(void) const;
+      uint64_t getSpendableBalance(void) const;
+      uint64_t getUnconfirmedBalance(void) const;
+      uint64_t getWltTotalTxnCount(void) const;
 
-      uint64_t getFullBalance(void) const { return fullBalance_; }
-      uint64_t getSpendableBalance(void) const { return spendableBalance_; }
-      uint64_t getUnconfirmedBalance(void) const { return unconfirmedBalance_; }
-      uint64_t getWltTotalTxnCount(void) const { return txnCount_; }
-
-      bool hasScrAddr(const BinaryData&) const;
+      string registerAddresses(
+         const vector<BinaryData>& addrVec, bool isNew);
    };
-
-   ///////////////////////////////////////////////////////////////////////////////
-   class BlockHeader
-   {
-      friend class Blockchain;
-      friend class testBlockHeader;
-      friend class BlockData;
-
-   private:
-
-      void unserialize(uint8_t const * ptr, uint32_t size);
-      void unserialize(BinaryDataRef const & str)
-      {
-         unserialize(str.getPtr(), str.getSize());
-      }
-
-   public:
-
-      BlockHeader(void) {}
-      BlockHeader(const BinaryData&, unsigned);
-
-      uint32_t           getVersion(void) const      { return READ_UINT32_LE(getPtr()); }
-      BinaryData const & getThisHash(void) const     { return thisHash_; }
-      BinaryData         getPrevHash(void) const     { return BinaryData(getPtr() + 4, 32); }
-      BinaryData         getMerkleRoot(void) const   { return BinaryData(getPtr() + 36, 32); }
-      BinaryData         getDiffBits(void) const     { return BinaryData(getPtr() + 72, 4); }
-      uint32_t           getTimestamp(void) const    { return READ_UINT32_LE(getPtr() + 68); }
-      uint32_t           getNonce(void) const        { return READ_UINT32_LE(getPtr() + 76); }
-      uint32_t           getBlockHeight(void) const  { return blockHeight_; }
-
-      /////////////////////////////////////////////////////////////////////////////
-      BinaryDataRef  getThisHashRef(void) const   { return thisHash_.getRef(); }
-      BinaryDataRef  getPrevHashRef(void) const   { return BinaryDataRef(getPtr() + 4, 32); }
-      BinaryDataRef  getMerkleRootRef(void) const { return BinaryDataRef(getPtr() + 36, 32); }
-      BinaryDataRef  getDiffBitsRef(void) const   { return BinaryDataRef(getPtr() + 72, 4); }
-
-      /////////////////////////////////////////////////////////////////////////////
-      uint8_t const * getPtr(void) const  {
-         assert(isInitialized_);
-         return dataCopy_.getPtr();
-      }
-      size_t        getSize(void) const {
-         assert(isInitialized_);
-         return dataCopy_.getSize();
-      }
-      bool            isInitialized(void) const { return isInitialized_; }
-
-      void clearDataCopy() { dataCopy_.resize(0); }
-
-   private:
-      BinaryData     dataCopy_;
-      bool           isInitialized_ = false;
-      // Specific to the DB storage
-      uint32_t       blockHeight_ = UINT32_MAX;
-
-      // Derived properties - we expect these to be set after construct/copy
-      BinaryData     thisHash_;
-      double         difficultyDbl_ = 0.0;
-   };
-
 
    ///////////////////////////////////////////////////////////////////////////////
    class Blockchain
    {
    private:
-      const shared_ptr<BinarySocket> sock_;
-      const string bdvID_;
+      AsyncClient::Blockchain asyncBlockchain_;
 
    public:
       Blockchain(const BlockDataViewer&);
-      bool hasHeaderWithHash(const BinaryData& hash);
-      BlockHeader getHeaderByHeight(unsigned height);
-   };
-
-   ///////////////////////////////////////////////////////////////////////////////
-   class PythonCallback
-   {
-   private:
-
-      enum CallbackOrder
-      {
-         CBO_continue,
-         CBO_NewBlock,
-         CBO_ZC,
-         CBO_BDV_Refresh,
-         CBO_BDM_Ready,
-         CBO_progress,
-         CBO_terminate,
-         CBO_NodeStatus,
-         CBO_BDV_Error
-      };
-
-   protected:
-      bool run_ = true;
-      thread thr_;
-
-   private:
-      const shared_ptr<BinarySocket> sock_;
-      SOCKET sockfd_;
-
-      map<string, CallbackOrder> orderMap_;
-      const BlockDataViewer* bdvPtr_;
-
-   public:
-      PythonCallback(const BlockDataViewer *bdv);
-      virtual ~PythonCallback(void) = 0;
-
-      virtual void run(BDMAction action, void* ptr, int block = 0) = 0;
-      virtual void progress(
-         BDMPhase phase,
-         const vector<string> &walletIdVec,
-         float progress, unsigned secondsRem,
-         unsigned progressNumeric
-         ) = 0;
-
-      void startLoop(void);
-      void remoteLoop(void);
-
-      void shutdown(void);
+      ::ClientClasses::BlockHeader getHeaderByHash(const BinaryData& hash);
+      ClientClasses::BlockHeader getHeaderByHeight(unsigned height);
    };
 
    ///////////////////////////////////////////////////////////////////////////////
@@ -316,48 +150,32 @@ namespace SwigClient
    {
       friend class ScrAddrObj;
       friend class BtcWallet;
-      friend class PythonCallback;
+      friend class RemoteCallback;
       friend class LedgerDelegate;
       friend class Blockchain;
       friend class ::WalletManager;
 
    private:
-      string bdvID_;
-      shared_ptr<BinarySocket> sock_;
-
-      //save all tx we fetch by hash to reduce resource cost on redundant fetches
-      shared_ptr<map<BinaryData, Tx> > txMap_;
-      shared_ptr<map<BinaryData, BinaryData> > rawHeaderMap_;
-
-      mutable unsigned topBlock_ = 0;
+      AsyncClient::BlockDataViewer bdvAsync_;
 
    private:
-      BlockDataViewer(void);
-      BlockDataViewer(const shared_ptr<BinarySocket> sock);
-      bool isValid(void) const { return sock_ != nullptr; }
+      BlockDataViewer(void)
+      {}
 
-      const BlockDataViewer& operator=(const BlockDataViewer& rhs)
-      {
-         bdvID_ = rhs.bdvID_;
-         sock_ = rhs.sock_;
-         txMap_ = rhs.txMap_;
+      BlockDataViewer(AsyncClient::BlockDataViewer&);
+      
+      bool isValid(void) const;
 
-         return *this;
-      }
+      const BlockDataViewer& operator=(const BlockDataViewer& rhs);
 
-      void setTopBlock(unsigned block) const { topBlock_ = block; }
+      void setTopBlock(unsigned block) const;
 
    public:
       ~BlockDataViewer(void);
-      BtcWallet registerWallet(const string& id,
-         const vector<BinaryData>& addrVec,
-         bool isNew);
+      BtcWallet instantiateWallet(const string& id);
+      Lockbox instantiateLockbox(const string& id);
 
-      Lockbox registerLockbox(const string& id,
-         const vector<BinaryData>& addrVec,
-         bool isNew);
-
-      const string& getID(void) const { return bdvID_; }
+      const string& getID(void) const;
 
       static BlockDataViewer getNewBDV(
          const string& addr, const string& port, SocketType);
@@ -381,19 +199,19 @@ namespace SwigClient
       void updateWalletsLedgerFilter(const vector<BinaryData>& wltIdVec);
       bool hasRemoteDB(void);
 
-      NodeStatusStruct getNodeStatus(void);
-      unsigned getTopBlock(void) const { return topBlock_; }
-      FeeEstimateStruct estimateFee(unsigned, const string&);
+      shared_ptr<::ClientClasses::NodeStatusStruct> getNodeStatus(void);
+      unsigned getTopBlock(void) const;
+      ClientClasses::FeeEstimateStruct estimateFee(unsigned, const string&);
 
-      vector<LedgerEntryData> getHistoryForWalletSelection(
+      vector<::ClientClasses::LedgerEntry> getHistoryForWalletSelection(
          const vector<string>& wldIDs, const string& orderingStr);
 
-      uint64_t getValueForTxOut(const BinaryData& txHash, unsigned inputId);
       string broadcastThroughRPC(const BinaryData& rawTx);
 
       vector<UTXO> getUtxosForAddrVec(const vector<BinaryData>&);
 
-      void registerAddrList(const BinaryData&, const vector<BinaryData>&);
+      RemoteCallbackSetupStruct getRemoteCallbackSetupStruct(void) const
+      { return bdvAsync_.getRemoteCallbackSetupStruct(); }
    };
 
    ///////////////////////////////////////////////////////////////////////////////

@@ -62,10 +62,10 @@ class CryptoppSettings(Configurator):
         include_dir = self.get_unpacked_sources_dir()
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-        install_include_dir = os.path.join(self.get_install_dir(), 'include')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include/cryptopp')
 
         self.filter_copy(lib_dir, install_lib_dir, '.lib')
-        self.filter_copy(include_dir, install_include_dir)
+        self.filter_copy(include_dir, install_include_dir, '.h')
 
         return True
 
@@ -80,10 +80,10 @@ class CryptoppSettings(Configurator):
         include_dir = self.get_unpacked_sources_dir()
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-        install_include_dir = os.path.join(self.get_install_dir(), 'include')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include/cryptopp')
 
         self.filter_copy(lib_dir, install_lib_dir, '.a')
-        self.filter_copy(include_dir, install_include_dir)
+        self.filter_copy(include_dir, install_include_dir, '.h')
 
         return True
 

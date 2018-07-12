@@ -13,9 +13,9 @@ SafeLedgerDelegate::SafeLedgerDelegate(const SwigClient::LedgerDelegate& delegat
    , bdvLock_(bdvLock)
 {}
 
-std::vector<LedgerEntryData> SafeLedgerDelegate::getHistoryPage(uint32_t id)
+std::vector<ClientClasses::LedgerEntry> SafeLedgerDelegate::getHistoryPage(uint32_t id)
 {
-   std::vector<LedgerEntryData> result;
+   std::vector<ClientClasses::LedgerEntry> result;
 
    try {
       FastLock lock(bdvLock_);
@@ -30,5 +30,5 @@ std::vector<LedgerEntryData> SafeLedgerDelegate::getHistoryPage(uint32_t id)
       qDebug() << QLatin1String("[SafeLedgerDelegate::getHistoryPage] exception.");
    }
 
-   return std::vector<LedgerEntryData>{};
+   return std::vector<ClientClasses::LedgerEntry>{};
 }

@@ -18,19 +18,9 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//ScrAddrScanData Methods
-///////////////////////////////////////////////////////////////////////////////
-atomic<unsigned> ScrAddrFilter::keyCounter_;
-atomic<unsigned> ScrAddrFilter::WalletInfo::idCounter_;
-atomic<bool> ScrAddrFilter::run_;
-
-///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::init()
-{
-   keyCounter_.store(0, memory_order_relaxed);
-   run_.store(true, memory_order_relaxed);
-}
-
+//
+// ScrAddrFilter
+//
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::cleanUpPreviousChildren(LMDBBlockDatabase* lmdb)
 {
@@ -118,7 +108,7 @@ void ScrAddrFilter::updateAddressMerkleInDB()
 
    try
    {
-      sshSdbi = move(lmdb_->getStoredDBInfo(SSH, uniqueKey_));
+      sshSdbi = move(lmdb_->getStoredDBInfo(SSH, sdbiKey_));
    }
    catch (runtime_error&)
    {
@@ -129,7 +119,7 @@ void ScrAddrFilter::updateAddressMerkleInDB()
    }
 
    sshSdbi.metaHash_ = addrMerkle;
-   lmdb_->putStoredDBInfo(SSH, sshSdbi, uniqueKey_);
+   lmdb_->putStoredDBInfo(SSH, sshSdbi, sdbiKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -138,7 +128,7 @@ StoredDBInfo ScrAddrFilter::getSubSshSDBI(void) const
    StoredDBInfo sdbi;
    auto&& tx = lmdb_->beginTransaction(SUBSSH, LMDB::ReadOnly);
 
-   sdbi = move(lmdb_->getStoredDBInfo(SUBSSH, uniqueKey_));
+   sdbi = move(lmdb_->getStoredDBInfo(SUBSSH, sdbiKey_));
    return sdbi;
 }
 
@@ -146,475 +136,214 @@ StoredDBInfo ScrAddrFilter::getSubSshSDBI(void) const
 void ScrAddrFilter::putSubSshSDBI(const StoredDBInfo& sdbi)
 {
    auto&& tx = lmdb_->beginTransaction(SUBSSH, LMDB::ReadWrite);
-   lmdb_->putStoredDBInfo(SUBSSH, sdbi, uniqueKey_);
+   lmdb_->putStoredDBInfo(SUBSSH, sdbi, sdbiKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 StoredDBInfo ScrAddrFilter::getSshSDBI(void) const
 {
    auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
-   return lmdb_->getStoredDBInfo(SSH, uniqueKey_);
+   return lmdb_->getStoredDBInfo(SSH, sdbiKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::putSshSDBI(const StoredDBInfo& sdbi)
 {
    auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
-   lmdb_->putStoredDBInfo(SSH, sdbi, uniqueKey_);
+   lmdb_->putStoredDBInfo(SSH, sdbi, sdbiKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 set<BinaryData> ScrAddrFilter::getMissingHashes(void) const
 {
-   return lmdb_->getMissingHashes(uniqueKey_);
+   return lmdb_->getMissingHashes(sdbiKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::putMissingHashes(const set<BinaryData>& hashSet)
 {
    auto&& tx = lmdb_->beginTransaction(TXFILTERS, LMDB::ReadWrite);
-   lmdb_->putMissingHashes(hashSet, uniqueKey_);
+   lmdb_->putMissingHashes(hashSet, sdbiKey_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void ScrAddrFilter::getScrAddrCurrentSyncState()
 {
-   map<AddrAndHash, int> newSaMap;
-
    {
       auto scraddrmap = scrAddrMap_->get();
       auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
 
       for (auto& scrAddr : *scraddrmap)
       {
-         auto aah = scrAddr.first;
-         int height = getScrAddrCurrentSyncState(scrAddr.first.scrAddr_);
-         newSaMap.insert(move(make_pair(move(aah), height)));
+         StoredScriptHistory ssh;
+         lmdb_->getStoredScriptHistorySummary(ssh, scrAddr.first);
+
+         scrAddr.second->scannedHeight_ = ssh.scanHeight_;
       }
    }
-
-   scrAddrMap_->update(newSaMap);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-int ScrAddrFilter::getScrAddrCurrentSyncState(
-   BinaryData const & scrAddr)
+void ScrAddrFilter::setSSHLastScanned(set<BinaryDataRef>& addrSet, 
+   unsigned height)
 {
-   //grab ssh for scrAddr
-   StoredScriptHistory ssh;
-   lmdb_->getStoredScriptHistorySummary(ssh, scrAddr);
-
-   //update scrAddrData lowest scanned block
-   return ssh.scanHeight_;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::setSSHLastScanned(uint32_t height)
-{
-   LOGWARN << "Updating ssh last scanned";
-   
-   auto scraddrmap = scrAddrMap_->get();
    auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
-   for (const auto scrAddr : *scraddrmap)
+   for (auto& scrAddr : addrSet)
    {
       StoredScriptHistory ssh;
-      lmdb_->getStoredScriptHistorySummary(ssh, scrAddr.first.scrAddr_);
+      lmdb_->getStoredScriptHistorySummary(ssh, scrAddr);
       if (!ssh.isInitialized())
-         ssh.uniqueKey_ = scrAddr.first.scrAddr_;
+         ssh.uniqueKey_ = scrAddr;
 
       ssh.scanHeight_ = height;
-
       lmdb_->putStoredScriptHistorySummary(ssh);
    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-bool ScrAddrFilter::registerAddresses(const set<BinaryData>& saSet, string ID,
-   bool areNew, function<void(bool)> callback)
+void ScrAddrFilter::setSSHLastScanned(unsigned height)
 {
-   shared_ptr<WalletInfo> wltInfo = make_shared<WalletInfo>();
-   wltInfo->scrAddrSet_ = saSet;
-   wltInfo->ID_ = ID;
-   wltInfo->callback_ = callback;
+   set<BinaryDataRef> addrSet;
+   auto addrMap = scrAddrMap_->get();
+   for (auto& addr : *addrMap)
+      addrSet.insert(addr.first);
 
-   vector<shared_ptr<WalletInfo>> wltInfoVec;
-   wltInfoVec.push_back(wltInfo);
-
-   return registerAddressBatch(move(wltInfoVec), areNew);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-bool ScrAddrFilter::registerAddressBatch(
-   vector<shared_ptr<WalletInfo>>&& wltInfoVec, bool areNew)
-{
-   /***
-   return true if addresses were registered without the need for scanning
-   ***/
-
-   if (armoryDbType_ == ARMORY_DB_SUPER)
-   {
-      unique_lock<mutex> lock(mergeLock_);
-
-      map<AddrAndHash, int> updateMap;
-
-      for (auto& batch : wltInfoVec)
-      {
-         for (auto& sa : batch->scrAddrSet_)
-         {
-            AddrAndHash aah(sa);
-
-            updateMap.insert(make_pair(move(aah), 0));
-         }
-
-         batch->callback_(true);
-      }
-
-      scrAddrMap_->update(updateMap);
-
-      return true;
-   }
-
-   {
-      unique_lock<mutex> lock(mergeLock_);
-      
-      //check against already scanning addresses
-      for (auto& wlt : wltInfoVec)
-      {
-         for (auto& wltInfo : scanningAddresses_)
-         {
-            bool has = false;
-            auto addrIter = wlt->scrAddrSet_.begin();
-            while (addrIter != wlt->scrAddrSet_.end())
-            {
-               auto checkIter = wltInfo->scrAddrSet_.find(*addrIter);
-               if (checkIter == wltInfo->scrAddrSet_.end())
-               {
-                  ++addrIter;
-                  continue;
-               }
-
-               wlt->scrAddrSet_.erase(addrIter++);
-               has = true;
-            }
-
-            if (!has)
-               continue;
-
-            //there were address collisions between the set to scan and
-            //what's already scanning, let's bind the completion callback
-            //conditions to this concurent address set
-
-            shared_ptr<promise<bool>> parentSetPromise = 
-               make_shared<promise<bool>>();
-            shared_future<bool> childSetFuture = parentSetPromise->get_future();
-            auto originalParentCallback = wltInfo->callback_;
-            auto originalChildCallback = wlt->callback_;
-
-            auto parentCallback = [parentSetPromise, originalParentCallback]
-               (bool flag)->void
-            {
-               parentSetPromise->set_value(true);
-               originalParentCallback(flag);
-            };
-
-            auto childCallback = [childSetFuture, originalChildCallback]
-               (bool flag)->void
-            {
-               childSetFuture.wait();
-               originalChildCallback(flag);
-            };
-
-            wltInfo->callback_ = parentCallback;
-            wlt->callback_ = childCallback;
-         }
-      }
-
-      //add to scanning address container
-      scanningAddresses_.insert(wltInfoVec.begin(), wltInfoVec.end());
-   }
-
-   auto scraddrmapptr = scrAddrMap_->get();
-
-   struct pred
-   {
-      shared_ptr<map<AddrAndHash, int>> saMap_;
-      function<void(shared_ptr<WalletInfo>)> eraseLambda_;
-
-      pred(shared_ptr<map<AddrAndHash, int>> saMap,
-         function<void(shared_ptr<WalletInfo>)> eraselambda)
-         : saMap_(saMap), eraseLambda_(eraselambda)
-      {}
-
-      bool operator()(shared_ptr<WalletInfo> wltInfo) const
-      {
-         auto saIter = wltInfo->scrAddrSet_.begin();
-         while (saIter != wltInfo->scrAddrSet_.end())
-         {
-            if (saMap_->find(*saIter) == saMap_->end())
-            {
-               ++saIter;
-               continue;
-            }
-
-            wltInfo->scrAddrSet_.erase(saIter++);
-         }
-
-         if (wltInfo->scrAddrSet_.size() == 0)
-         {
-            wltInfo->callback_(true);
-
-            //clean up from scanning addresses container            
-            eraseLambda_(wltInfo);
-
-            return false;
-         }
-
-         return true;
-      }
-   };
-
-   auto eraseAddrSetLambda = [&](shared_ptr<WalletInfo> wltInfo)->void
-   {
-      unique_lock<mutex> lock(mergeLock_);
-      scanningAddresses_.erase(wltInfo);
-   };
-   
-   auto removeIter = remove_if(wltInfoVec.begin(), wltInfoVec.end(), 
-      pred(scraddrmapptr, eraseAddrSetLambda));
-   wltInfoVec.erase(wltInfoVec.begin(), removeIter);
-   
-   if (wltInfoVec.size() == 0)
-      return true;
-
-   LOGINFO << "Starting address registration process";
-
-   if (bdmIsRunning())
-   {
-      //BDM is initialized and maintenance thread is running, check mode
-
-      //create ScrAddrFilter for side scan         
-      shared_ptr<ScrAddrFilter> sca = copy();
-      sca->setParent(this);
-      bool hasNewSA = false;
-
-      vector<pair<BinaryData, unsigned>> saVec;
-      for (auto& batch : wltInfoVec)
-      {
-         if (batch->scrAddrSet_.size() == 0)
-            continue;
-
-         for (const auto& scrAddr : batch->scrAddrSet_)
-            saVec.push_back(make_pair(scrAddr, 0));
-
-         hasNewSA = true;
-      }
-
-      sca->regScrAddrVecForScan(saVec);
-      sca->buildSideScanData(wltInfoVec, areNew);
-      scanFilterInNewThread(sca);
-
-      if (!hasNewSA)
-         return true;
-
-      return false;
-   }
-   else
-   {
-      //BDM isnt initialized yet, the maintenance thread isnt running, 
-      //just register the scrAddr and return true.
-      map<AddrAndHash, int> newSaMap;
-      for (auto& batch : wltInfoVec)
-      {
-         for (const auto& scrAddr : batch->scrAddrSet_)
-         {
-            AddrAndHash aah(scrAddr);
-            newSaMap.insert(move(make_pair(move(aah), -1)));
-         }
-
-         batch->callback_(true);
-      }
-
-      scrAddrMap_->update(newSaMap);
-      return true;
-   }
+   setSSHLastScanned(addrSet, height);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::scanScrAddrThread()
+set<BinaryDataRef> ScrAddrFilter::updateAddrMap(
+   const set<BinaryDataRef>& addrSet, unsigned height)
 {
-   //Only one wallet at a time         
-   uint32_t endBlock = currentTopBlockHeight();
-   vector<string> wltIDs = scrAddrDataForSideScan_.getWalletIDString();
+   set<BinaryDataRef> addrRefSet;
+   auto scraddrmap = scrAddrMap_->get();
+   map<BinaryDataRef, shared_ptr<AddrAndHash>> updateMap;
 
-   BinaryData topScannedBlockHash;
+   for (auto& sa : addrSet)
    {
-      auto&& tx = lmdb_->beginTransaction(HEADERS, LMDB::ReadOnly);
-      StoredHeader sbh;
-      lmdb_->getBareHeader(sbh, endBlock);
-      topScannedBlockHash = sbh.thisHash_;
+      if (scraddrmap->find(sa) != scraddrmap->end())
+         continue;
+
+      auto aah = make_shared<AddrAndHash>(sa);
+      aah->scannedHeight_ = height;
+      updateMap.insert(move(make_pair(aah->scrAddr_.getRef(), aah)));
+      addrRefSet.insert(aah->scrAddr_.getRef());
    }
 
-   if(scrAddrDataForSideScan_.doScan_ == false)
-   {
-      //new addresses, set their last seen block in the ssh entries
-      setSSHLastScanned(currentTopBlockHeight());
-   }
-   else
-   {
-      //wipe ssh
-      auto scraddrmap = scrAddrMap_->get();
-      vector<BinaryData> saVec;
-      for (const auto& scrAddrPair : *scraddrmap)
-         saVec.push_back(scrAddrPair.first.scrAddr_);
-      wipeScrAddrsSSH(saVec);
-      saVec.clear();
-
-      //scan from 0
-      topScannedBlockHash =
-         applyBlockRangeToDB(0, endBlock, wltIDs, true);
-   }
-      
-   addToMergePile(topScannedBlockHash);
-
-   for (const auto& wID : wltIDs)
-      LOGINFO << "Completed scan of wallet " << wID;
+   scrAddrMap_->update(updateMap);
+   return addrRefSet;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::scanFilterInNewThread(shared_ptr<ScrAddrFilter> sca)
+void ScrAddrFilter::registerAddressBatch(shared_ptr<AddressBatch> batch)
 {
-   auto scanMethod = [sca](void)->void
-   { sca->scanScrAddrThread(); };
-
-   thread scanThread(scanMethod);
-   scanThread.detach();
+   registrationStack_.push_back(move(batch));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::addToMergePile(const BinaryData& lastScannedBlkHash)
+void ScrAddrFilter::registrationThread()
 {
-   if (parent_ == nullptr)
-      throw runtime_error("scf invalid parent");
-
-   scrAddrDataForSideScan_.lastScannedBlkHash_ = lastScannedBlkHash;
-   scrAddrDataForSideScan_.uniqueID_ = uniqueKey_;
-   parent_->scanDataPile_.push_back(scrAddrDataForSideScan_);
-   parent_->mergeSideScanPile();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::mergeSideScanPile()
-{
-   /***
-   We're about to add a set of newly registered scrAddrs to the BDM's
-   ScrAddrFilter map. Make sure they are scanned up to the last known
-   top block first, then merge it in.
-   ***/
-
-   vector<ScrAddrSideScanData> scanDataVec;
-   map<AddrAndHash, int> newScrAddrMap;
-
-   unique_lock<mutex> lock(mergeLock_);
-
-   try
+   while (1)
    {
-      //pop all we can from the pile
-      while (1)
-         scanDataVec.push_back(move(scanDataPile_.pop_back()));
-   }
-   catch (IsEmpty&)
-   {
-      //pile is empty
-   }
-
-   if (scanDataVec.size() == 0)
-      return;
-
-   vector<string> walletIDs;
-
-   auto bcptr = blockchain();
-   bool reportProgress = false;
-
-   uint32_t startHeight = bcptr->top()->getBlockHeight();
-   for (auto& scanData : scanDataVec)
-   {
-      auto& topHash = scanData.lastScannedBlkHash_;
-      auto&& idStrings = scanData.getWalletIDString();
-      if (scanData.doScan_)
-      {
-         walletIDs.insert(walletIDs.end(), idStrings.begin(), idStrings.end());
-         reportProgress = true;
-      }
-
+      shared_ptr<AddressBatch> batch;
       try
       {
-         auto header = bcptr->getHeaderByHash(topHash);
-         auto headerHeight = header->getBlockHeight();
-         if (startHeight > headerHeight)
-            startHeight = headerHeight;
+         batch = move(registrationStack_.pop_front());
+      }
+      catch (StopBlockingLoop&)
+      {
+         //end loop condition
+         break;
+      }
 
-         for (auto& wltInfo : scanData.wltInfoVec_)
+      if (BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER)
+      {
+         //no scanning required in supernode, just update the address map
+         auto&& addrSet = updateAddrMap(batch->scrAddrSet_, 0);
+         batch->callback_(addrSet);
+         continue;
+      }
+
+      //filter out collisions
+      set<BinaryDataRef> addrSet;
+      set<BinaryDataRef> collisions;
+      {
+         auto scraddrmap = scrAddrMap_->get();
+         for (auto& sa : batch->scrAddrSet_)
          {
-            for (auto& scannedAddr : wltInfo->scrAddrSet_)
+            BinaryData sabd(sa);
+            auto iter = scraddrmap->find(sa);
+            if (iter != scraddrmap->end())
             {
-               AddrAndHash aah(scannedAddr);
-               newScrAddrMap.insert(move(make_pair(move(aah), headerHeight)));
+               collisions.insert(iter->first);
+               continue;
             }
+
+            addrSet.insert(sa);
          }
       }
-      catch (range_error&)
+
+      if (addrSet.size() == 0)
       {
-         throw runtime_error("Couldn't grab top block from parallel scan by hash");
+         //all addresses are already registered, trigger the callback
+         batch->callback_(collisions);
+         continue;
       }
+
+      if (!bdmIsRunning())
+      {
+         //db isn't running yet, just update the addr map
+         auto&& newAddrSet = updateAddrMap(addrSet, 0);
+         batch->callback_(newAddrSet);
+         continue;
+      }
+
+      LOGINFO << "Starting address registration process";
+
+      //BDM is initialized and maintenance thread is running, scan batch
+      uint32_t topBlockHeight = blockchain()->top()->getBlockHeight();
+      
+      if (batch->isNew_)
+      {
+         //batch is flagged as new, all addresses within it are assumed
+         //clean of history. Update the map and continue
+         auto&& newAddrSet = updateAddrMap(addrSet, topBlockHeight);
+         setSSHLastScanned(addrSet, topBlockHeight);
+         batch->callback_(newAddrSet);
+         continue;
+      }
+
+      //scan the batch
+      vector<string> walletIDs;
+      walletIDs.push_back(batch->walletID_);
+      auto saf = getNew(SIDESCAN_ID);
+      saf->updateAddrMap(addrSet, 0);
+      saf->applyBlockRangeToDB(0, topBlockHeight, walletIDs, true);
+
+      //merge with main address filter
+      set<BinaryDataRef> newAddrSet;
+      auto newMap = saf->scrAddrMap_->get();
+      for (auto& saPair : *newMap)
+         newAddrSet.insert(saPair.first);
+      scrAddrMap_->update(*newMap);
+      updateAddressMerkleInDB();
+
+      //final scan to sync all addresses to same height
+      auto newTopBlock  = blockchain()->top()->getBlockHeight();
+      applyBlockRangeToDB(
+         topBlockHeight + 1, newTopBlock + 1, walletIDs, false);
+      
+      //cleanup
+      saf->cleanUpSdbis();
+
+      //notify
+      for (const auto& wID : walletIDs)
+         LOGINFO << "Completed scan of wallet " << wID;
+
+      batch->callback_(newAddrSet);
    }
 
-   //add addresses to main filter map
-   scrAddrMap_->update(newScrAddrMap);
-
-   //scan it all to sync all subssh and ssh to the same height
-   applyBlockRangeToDB(
-      startHeight + 1, 
-      bcptr->top()->getBlockHeight(),
-      walletIDs, reportProgress);
-   updateAddressMerkleInDB();
-
-   //clean up SDBI entries
-   {
-      //SSH
-      {
-         auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
-         for (auto& scanData : scanDataVec)
-            lmdb_->deleteValue(SSH, 
-               StoredDBInfo::getDBKey(scanData.uniqueID_));
-      }
-
-      //SUBSSH
-      {
-         auto&& tx = lmdb_->beginTransaction(SUBSSH, LMDB::ReadWrite);
-         for (auto& scanData : scanDataVec)
-            lmdb_->deleteValue(SUBSSH,
-               StoredDBInfo::getDBKey(scanData.uniqueID_));
-      }
-
-      //TXFILTERS
-      {
-         auto&& tx = lmdb_->beginTransaction(TXFILTERS, LMDB::ReadWrite);
-         for (auto& scanData : scanDataVec)
-            lmdb_->deleteValue(TXFILTERS,
-               DBUtils::getMissingHashesKey(scanData.uniqueID_));
-      }
-   }
-
-   //hit callbacks and clean up
-   for (auto& scandata : scanDataVec)
-   {
-      for (auto wltinfo : scandata.wltInfoVec_)
-      {
-         wltinfo->callback_(true);
-         scanningAddresses_.erase(wltinfo);
-      }
-   }
+   DatabaseContainer_Sharded::clearThreadShardTx(this_thread::get_id());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -625,11 +354,11 @@ int32_t ScrAddrFilter::scanFrom() const
    if (scrAddrMap_->size() > 0)
    {
       auto scraddrmap = scrAddrMap_->get();
-      lowestBlock = scraddrmap->begin()->second;
+      lowestBlock = scraddrmap->begin()->second->scannedHeight_;
 
       for (auto scrAddr : *scraddrmap)
       {
-         if (lowestBlock != scrAddr.second)
+         if (lowestBlock != scrAddr.second->scannedHeight_)
          {
             lowestBlock = -1;
             break;
@@ -644,37 +373,19 @@ int32_t ScrAddrFilter::scanFrom() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::clear()
+void ScrAddrFilter::resetSshDB()
 {
-   map<AddrAndHash, int> newSaMap;
-
-   {
-      scanDataPile_.clear();
-      auto scraddrmap = scrAddrMap_->get();
-
-      for (const auto& regScrAddr : *scraddrmap)
-      {
-         auto aah = regScrAddr.first;
-         newSaMap.insert(move(make_pair(move(aah), 0)));
-      }
-   }
-
-   scrAddrMap_->update(newSaMap);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::buildSideScanData(
-   const vector<shared_ptr<WalletInfo>>& wltInfoVec,
-   bool areNew)
-{
-   scrAddrDataForSideScan_.startScanFrom_ = INT32_MAX;
+   auto tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
    auto scraddrmap = scrAddrMap_->get();
-   for (const auto& scrAddr : *scraddrmap)
-      scrAddrDataForSideScan_.startScanFrom_ = 
-      min(scrAddrDataForSideScan_.startScanFrom_, scrAddr.second);
-
-   scrAddrDataForSideScan_.wltInfoVec_ = wltInfoVec;
-   scrAddrDataForSideScan_.doScan_ = !areNew;
+   
+   for (const auto& regScrAddr : *scraddrmap)
+   {
+      regScrAddr.second->scannedHeight_ = 0;
+      StoredScriptHistory ssh;
+      ssh.uniqueKey_ = regScrAddr.first;
+      ssh.scanHeight_ = -1;
+      lmdb_->putStoredScriptHistorySummary(ssh);
+   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -683,7 +394,7 @@ void ScrAddrFilter::getAllScrAddrInDB()
    auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
    auto dbIter = lmdb_->getIterator(SSH);   
 
-   map<AddrAndHash, int> scrAddrMap;
+   map<BinaryDataRef, shared_ptr<AddrAndHash>> scrAddrMap;
 
    //iterate over ssh DB
    while(dbIter->advanceAndRead(DB_PREFIX_SCRIPT))
@@ -691,37 +402,16 @@ void ScrAddrFilter::getAllScrAddrInDB()
       auto keyRef = dbIter->getKeyRef();
       StoredScriptHistory ssh;
       ssh.unserializeDBKey(dbIter->getKeyRef());
+      ssh.unserializeDBValue(dbIter->getValueReader());
 
-      AddrAndHash aah(ssh.uniqueKey_);
-      auto insertResult = scrAddrMap.insert(move(make_pair(move(aah), 0)));
-      if (!insertResult.second)
-      {
-         insertResult.second = 0;
-      }
+      auto aah = make_shared<AddrAndHash>(ssh.uniqueKey_.getRef());
+      aah->scannedHeight_ = ssh.scanHeight_;
+      
+      scrAddrMap.insert(
+         move(make_pair(aah->scrAddr_.getRef(), aah)));
    } 
 
    scrAddrMap_->update(scrAddrMap);
-   getScrAddrCurrentSyncState();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void ScrAddrFilter::putAddrMapInDB()
-{
-   auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
-
-   auto scraddrmap = scrAddrMap_->get();
-   for (const auto& scrAddrObj : *scraddrmap)
-   {
-      StoredScriptHistory ssh;
-      ssh.uniqueKey_ = scrAddrObj.first.scrAddr_;
-
-      auto&& sshKey = ssh.getDBKey();
-
-      BinaryWriter bw;
-      ssh.serializeDBValue(bw, ARMORY_DB_BARE);
-
-      lmdb_->putValue(SSH, sshKey.getRef(), bw.getDataRef());
-   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -732,7 +422,7 @@ BinaryData ScrAddrFilter::getAddressMapMerkle(void) const
 
    auto scraddrmap = scrAddrMap_->get();
    for (const auto& addr : *scraddrmap)
-      addrVec.push_back(addr.first.getHash());
+      addrVec.push_back(addr.second->getHash());
 
    if (addrVec.size() > 0)
       return BtcUtils::calculateMerkleRoot(addrVec);
@@ -752,9 +442,7 @@ bool ScrAddrFilter::hasNewAddresses(void) const
 
    {
       auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadOnly);
-      
       auto&& sdbi = getSshSDBI();
-
       dbMerkle = sdbi.metaHash_;
    }
 
@@ -771,4 +459,70 @@ bool ScrAddrFilter::hasNewAddresses(void) const
    }
 
    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+shared_ptr<map<TxOutScriptRef, int>> ScrAddrFilter::getOutScrRefMap(void)
+{
+   getScrAddrCurrentSyncState();
+   auto outset = make_shared<map<TxOutScriptRef, int>>();
+
+   auto scrAddrMap = scrAddrMap_->get();
+
+   for (auto& scrAddr : *scrAddrMap)
+   {
+      if (scrAddr.first.getSize() == 0)
+         continue;
+
+      TxOutScriptRef scrRef;
+      scrRef.setRef(scrAddr.first);
+      outset->insert(move(make_pair(
+         scrRef, scrAddr.second->scannedHeight_)));
+   }
+
+   return outset;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void ScrAddrFilter::cleanUpSdbis()
+{
+   //SSH
+   {
+      auto&& tx = lmdb_->beginTransaction(SSH, LMDB::ReadWrite);
+      lmdb_->deleteValue(SSH,
+         StoredDBInfo::getDBKey(sdbiKey_));
+   }
+
+   //SUBSSH
+   {
+      auto&& tx = lmdb_->beginTransaction(SUBSSH, LMDB::ReadWrite);
+      lmdb_->deleteValue(SUBSSH,
+         StoredDBInfo::getDBKey(sdbiKey_));
+   }
+
+   //TXFILTERS
+   {
+      auto&& tx = lmdb_->beginTransaction(TXFILTERS, LMDB::ReadWrite);
+      lmdb_->deleteValue(TXFILTERS,
+         DBUtils::getMissingHashesKey(sdbiKey_));
+   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void ScrAddrFilter::shutdown()
+{
+   registrationStack_.terminate();
+   if (thr_.joinable())
+      thr_.join();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void ScrAddrFilter::init()
+{
+   auto thrLambda = [this](void)->void
+   {
+      this->registrationThread();
+   };
+
+   thr_ = thread(thrLambda);
 }

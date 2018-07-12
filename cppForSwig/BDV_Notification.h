@@ -16,6 +16,7 @@
 #include "Blockchain.h"
 #include "LedgerEntry.h"
 #include "ZeroConf.h"
+#include "nodeRPC.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 struct BDV_Notification

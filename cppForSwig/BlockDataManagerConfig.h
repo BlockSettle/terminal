@@ -28,12 +28,14 @@
 #endif
 
 #define DEFAULT_ZCTHREAD_COUNT 100
+#define WEBSOCKET_PORT 7681
 
 ////////////////////////////////////////////////////////////////////////////////
 struct BlockDataManagerConfig
 {
 private:
    static ARMORY_DB_TYPE armoryDbType_;
+   static SOCKET_SERVICE service_;
 
 public:
    BDM_INIT_MODE initMode_ = INIT_RESUME;
@@ -61,8 +63,7 @@ public:
 
    NodeType nodeType_ = Node_BTC;
    string btcPort_;
-   string fcgiPort_;
-   bool listen_all_ = false;
+   string listenPort_;
    string rpcPort_;
 
    bool customFcgiPort_ = false;
@@ -138,85 +139,17 @@ public:
       return armoryDbType_;
    }
 
+   static void setServiceType(SOCKET_SERVICE _type)
+   {
+      service_ = _type;
+   }
+
+   static SOCKET_SERVICE getServiceType(void)
+   {
+      return service_;
+   }
+
    static string getDbModeStr(void);
-};
-
-////
-enum NodeStatus
-{
-   NodeStatus_Offline,
-   NodeStatus_Online,
-   NodeStatus_OffSync
-};
-
-////
-enum RpcStatus
-{
-   RpcStatus_Disabled,
-   RpcStatus_BadAuth,
-   RpcStatus_Online,
-   RpcStatus_Error_28
-};
-
-////
-enum ChainStatus
-{
-   ChainStatus_Unknown,
-   ChainStatus_Syncing,
-   ChainStatus_Ready
-};
-
-struct JSON_object;
-
-////////////////////////////////////////////////////////////////////////////////
-class NodeChainState
-{
-   friend class NodeRPC;
-
-private:
-   list<tuple<unsigned, uint64_t, uint64_t> > heightTimeVec_;
-   ChainStatus state_ = ChainStatus_Unknown;
-   float blockSpeed_ = 0.0f;
-   uint64_t eta_ = 0;
-   float pct_ = 0.0f;
-   unsigned blocksLeft_ = 0;
-
-   unsigned prev_pct_int_ = 0;
-
-private:
-   //so that SWIG 2.0 doesn't try to parse a shared_ptr object (and choke)
-   bool processState(shared_ptr<JSON_object> const getblockchaininfo_obj);
-
-public:
-   void appendHeightAndTime(unsigned, uint64_t);
-   unsigned getTopBlock(void) const;
-   ChainStatus state(void) const { return state_; }
-   float getBlockSpeed(void) const { return blockSpeed_; }
-
-   BinaryData serialize(void) const;
-   void unserialize(const BinaryData&);
-
-   void reset();
-   
-   float getProgressPct(void) const { return pct_; }
-   uint64_t getETA(void) const { return eta_; }
-   unsigned getBlocksLeft(void) const { return blocksLeft_; }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-struct NodeStatusStruct
-{
-   NodeStatus status_ = NodeStatus_Offline;
-   bool SegWitEnabled_ = false;
-   RpcStatus rpcStatus_ = RpcStatus_Disabled;
-   NodeChainState chainState_;
-
-   BinaryData serialize(void) const;
-   void deserialize(const BinaryData&);
-
-   //casting nastiness for python callbacks arg conversion until I 
-   //shove it all on the cpp side
-   static NodeStatusStruct cast_to_NodeStatusStruct(void* ptr);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

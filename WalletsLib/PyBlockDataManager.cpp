@@ -9,6 +9,7 @@
 #include <cassert>
 #include <exception>
 
+#include "ClientClasses.h"
 #include "DbHeader.h"
 #include "EncryptionUtils.h"
 #include "FastLock.h"
@@ -39,8 +40,7 @@ void BlockDataListenerSignalAdapter::StateChanged(PyBlockDataManagerState newSta
 }
 
 PyBlockDataManager::PyBlockDataManager(const std::shared_ptr<SwigClient::BlockDataViewer> &bdv, const ArmorySettings& settings, const std::string &txCacheFN)
-   : PythonCallback(bdv.get())
-   , settings_(settings)
+   : settings_(settings)
    , currentState_(PyBlockDataManagerState::Offline)
    , bdv_(bdv)
    , topBlockHeight_(0)
@@ -104,11 +104,11 @@ void PyBlockDataManager::run(BDMAction action, void* ptr, int block)
       break;
    case BDMAction_ZC:
       qDebug() << "BDMAction_ZC";
-      onZCReceived(*reinterpret_cast<std::vector<LedgerEntryData>*>(ptr));
+      onZCReceived(*reinterpret_cast<std::vector<ClientClasses::LedgerEntry>*>(ptr));
       break;
    case BDMAction_Refresh:
       qDebug() << "BDMAction_Refresh";
-      onRefresh(*reinterpret_cast<BinaryDataVector *>(ptr));
+      onRefresh(*reinterpret_cast<std::vector<BinaryData> *>(ptr));
       break;
    case BDMAction_Exited:
       // skip for now
@@ -199,7 +199,7 @@ void PyBlockDataManager::onNewBlock()
    emit newBlock();
 }
 
-void PyBlockDataManager::onRefresh(const BinaryDataVector &ids)
+void PyBlockDataManager::onRefresh(const std::vector<BinaryData> &ids)
 {
    emit refreshed(ids);
    QMutexLocker lock(&lsnMtx_);
@@ -265,7 +265,7 @@ bool PyBlockDataManager::goOnline()
 //      startLoop();
       const auto loop = [this](void)->void {
          try {
-            this->remoteLoop();
+//!            this->remoteLoop();
          }
          catch (const DbErrorMsg &) {
             OnConnectionError();
@@ -275,7 +275,7 @@ bool PyBlockDataManager::goOnline()
          }
       };
 
-      thr_ = std::thread(loop);
+//!      thr_ = std::thread(loop);
    }
    catch (runtime_error &)
    {
@@ -291,10 +291,10 @@ void PyBlockDataManager::registerWallet(std::shared_ptr<SafeBtcWallet> &wallet, 
    try {
       FastLock lock(bdvLock_);
       if (!wallet) {
-         wallet = std::make_shared<SafeBtcWallet>(bdv_->registerWallet(ID, scrAddrVec, wltIsNew), bdvLock_);
+//!         wallet = std::make_shared<SafeBtcWallet>(bdv_->registerWallet(ID, scrAddrVec, wltIsNew), bdvLock_);
       }
       else {
-         bdv_->registerWallet(ID, scrAddrVec, wltIsNew);
+//!         bdv_->registerWallet(ID, scrAddrVec, wltIsNew);
       }
    }
    catch (const std::exception &e) {
@@ -367,7 +367,7 @@ std::shared_ptr<SafeLedgerDelegate> PyBlockDataManager::getLedgerDelegateForScrA
    return nullptr;
 }
 
-std::vector<LedgerEntryData> PyBlockDataManager::getWalletsHistory(const std::vector<std::string> &walletIDs)
+std::vector<ClientClasses::LedgerEntry> PyBlockDataManager::getWalletsHistory(const std::vector<std::string> &walletIDs)
 {
    try {
       FastLock lock(bdvLock_);
@@ -461,7 +461,7 @@ Tx PyBlockDataManager::getTxByHash(const BinaryData& hash)
    return Tx{};
 }
 
-int PyBlockDataManager::GetConfirmationsNumber(const LedgerEntryData& item)
+int PyBlockDataManager::GetConfirmationsNumber(const ClientClasses::LedgerEntry &item)
 {
    if (item.getBlockNum() < uint32_t(-1)) {
       return GetTopBlockHeight() + 1 - item.getBlockNum();
@@ -470,12 +470,12 @@ int PyBlockDataManager::GetConfirmationsNumber(const LedgerEntryData& item)
    return 0;
 }
 
-bool PyBlockDataManager::IsTransactionVerified(const LedgerEntryData& item)
+bool PyBlockDataManager::IsTransactionVerified(const ClientClasses::LedgerEntry &item)
 {
    return GetConfirmationsNumber(item) >= 6;
 }
 
-bool PyBlockDataManager::IsTransactionConfirmed(const LedgerEntryData& item)
+bool PyBlockDataManager::IsTransactionConfirmed(const ClientClasses::LedgerEntry &item)
 {
    return GetConfirmationsNumber(item) > 1;
 }
@@ -508,7 +508,7 @@ NodeStatusStruct PyBlockDataManager::getNodeStatus()
 {
    try {
       FastLock lock(bdvLock_);
-      return bdv_->getNodeStatus();
+//!      return bdv_->getNodeStatus();
    } catch (...) {
       qDebug() << QLatin1String("[PyBlockDataManager::getNodeStatus] exception.");
    }
@@ -528,14 +528,14 @@ void PyBlockDataManager::OnConnectionError()
 void PyBlockDataManager::onShutdownConnection()
 {
    if (currentState_ != PyBlockDataManagerState::Offline) {
-      shutdown();
+//!      shutdown();
       SetState(PyBlockDataManagerState::Offline);
       emit goingOffline();
       startConnectionMonitor();
    }
 }
 
-void PyBlockDataManager::onZCReceived(const std::vector<LedgerEntryData> &entries)
+void PyBlockDataManager::onZCReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
    {
       FastLock lock(bdvLock_);

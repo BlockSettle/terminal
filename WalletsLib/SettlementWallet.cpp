@@ -244,8 +244,8 @@ public:
    }
 
 private:
-   std::unordered_map<BinaryData, struct FeedItem<BinaryData>> values_;
-   std::unordered_map<BinaryData, struct FeedItem<SecureBinaryData>> keys_;
+   std::map<BinaryData, struct FeedItem<BinaryData>> values_;
+   std::map<BinaryData, struct FeedItem<SecureBinaryData>> keys_;
 };
 
 
@@ -1034,7 +1034,7 @@ void bs::SettlementMonitor::checkNewEntries()
 
    while (!stopped_) {
       try {
-         std::vector<LedgerEntryData> nextPage;
+         std::vector<ClientClasses::LedgerEntry> nextPage;
          {
             FastLock locker(walletLock_);
             if (!rtWallet_ || stopped_) {
@@ -1075,7 +1075,7 @@ void bs::SettlementMonitor::checkNewEntries()
    }
 }
 
-bool bs::SettlementMonitor::IsPayInTransaction(const LedgerEntryData& entry) const
+bool bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry) const
 {
    const auto &bdm = PyBlockDataManager::instance();
    if (!bdm) {
@@ -1101,7 +1101,7 @@ bool bs::SettlementMonitor::IsPayInTransaction(const LedgerEntryData& entry) con
    return false;
 }
 
-bool bs::SettlementMonitor::IsPayOutTransaction(const LedgerEntryData& entry) const
+bool bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry) const
 {
    const auto &bdm = PyBlockDataManager::instance();
    if (!bdm) {
@@ -1147,7 +1147,7 @@ void bs::SettlementMonitor::SendPayInNotification(const int confirmationsNumber,
    }
 }
 
-void bs::SettlementMonitor::SendPayOutNotification(const LedgerEntryData& entry)
+void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEntry &entry)
 {
    auto confirmationsNumber = PyBlockDataManager::instance()->GetConfirmationsNumber(entry);
    if (payoutConfirmations_ != confirmationsNumber) {
@@ -1239,7 +1239,7 @@ bs::PayoutSigner::Type bs::PayoutSigner::WhichSignature(const Tx& tx
    return SignatureUndefined;
 }
 
-bs::PayoutSigner::Type bs::SettlementMonitor::CheckPayoutSignature(const LedgerEntryData& entry) const
+bs::PayoutSigner::Type bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry) const
 {
    const auto amount = entry.getValue();
    const uint64_t value = amount < 0 ? -amount : amount;

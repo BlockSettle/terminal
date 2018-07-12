@@ -498,12 +498,35 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+class BitcoinP2PSocket : public PersistentSocket
+{
+private:
+   shared_ptr<BlockingStack<vector<uint8_t>>> readDataStack_;
+
+public:
+   BitcoinP2PSocket(const string& addr, const string& port, 
+      shared_ptr<BlockingStack<vector<uint8_t>>> readStack) :
+      PersistentSocket(addr, port), readDataStack_(readStack)
+   {}
+
+   SocketType type(void) const { return SocketBitcoinP2P; }
+
+   void pushPayload(
+      unique_ptr<Socket_WritePayload>,
+      shared_ptr<Socket_ReadPayload>);
+   void respond(vector<uint8_t>&);
+};
+
+////////////////////////////////////////////////////////////////////////////////
 class BitcoinP2P
 {
 private:
+   const string addr_;
+   const string port_;
+
    const uint32_t magic_word_;
    struct sockaddr node_addr_;
-   DedicatedBinarySocket binSocket_;
+   unique_ptr<BitcoinP2PSocket> socket_;
 
    mutex connectMutex_, pollMutex_, writeMutex_;
    unique_ptr<promise<bool>> connectedPromise_ = nullptr;
@@ -517,8 +540,8 @@ private:
    exception_ptr process_except_ = nullptr;
 
    //callback lambdas
-   Stack<function<void(const vector<InvEntry>&)>> invBlockLambdas_;
-   function<void(vector<InvEntry>&)> invTxLambda_ = {};
+   shared_ptr<BlockingStack<vector<InvEntry>>> invBlockStack_;
+   function<void(vector<InvEntry>&)> invTxLambda_;
    function<void(void)> nodeStatusLambda_;
 
    //stores callback by txhash for getdata packet we send to the node
@@ -547,7 +570,7 @@ protected:
 private:
    void connectLoop(void);
 
-   void pollSocketThread();
+   //void pollSocketThread();
    void processDataStackThread(void);
    void processPayload(vector<unique_ptr<Payload>>);
 
@@ -582,14 +605,6 @@ public:
 
    shared_ptr<Payload> getTx(const InvEntry&, uint32_t timeout);
 
-   void registerInvBlockLambda(function<void(const vector<InvEntry>)> func)
-   {
-      if (!run_.load(memory_order_relaxed))
-         throw runtime_error("node has been shutdown");
-
-      invBlockLambdas_.push_back(move(func));
-   }
-
    void registerInvTxLambda(function<void(vector<InvEntry>)> func)
    {
       if (!run_.load(memory_order_relaxed))
@@ -606,6 +621,10 @@ public:
 
    void updateNodeStatus(bool connected);
    void registerNodeStatusLambda(function<void(void)> lbd) { nodeStatusLambda_ = lbd; }
+   shared_ptr<BlockingStack<vector<InvEntry>>> getInvBlockStack(void) const
+   {
+      return invBlockStack_;
+   }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

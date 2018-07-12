@@ -10,6 +10,7 @@
 #define _SSH_PARSER_H
 
 #include "lmdb_wrapper.h"
+#include "Blockchain.h"
 #include "ScrAddrFilter.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -77,7 +78,7 @@ typedef pair<set<BinaryData>, map<BinaryData, StoredScriptHistory>> subSshParser
 subSshParserResult parseSubSsh(
    unique_ptr<LDBIter>, int32_t scanFrom, bool,
    function<uint8_t(unsigned)>,
-   shared_ptr<map<ScrAddrFilter::AddrAndHash, int>>,
+   shared_ptr<map<BinaryDataRef, shared_ptr<AddrAndHash>>>,
    BinaryData upperBound);
 
 #endif

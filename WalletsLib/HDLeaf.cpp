@@ -109,13 +109,13 @@ void hd::BlockchainScanner::scanAddresses(unsigned int startIdx, unsigned int po
    });
 }
 
-void hd::BlockchainScanner::onRefresh(const BinaryDataVector &ids)
+void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids)
 {
    if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
       return;
    }
-   const auto it = std::find(ids.get().begin(), ids.get().end(), rescanWalletId_);
-   if (it == ids.get().end()) {
+   const auto it = std::find(ids.begin(), ids.end(), rescanWalletId_);
+   if (it == ids.end()) {
       return;
    }
    QtConcurrent::run(&threadPool_, this, &BlockchainScanner::processPortion);
@@ -240,12 +240,12 @@ void hd::Leaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, con
    }
 }
 
-void hd::Leaf::onZeroConfReceived(const std::vector<LedgerEntryData> &led)
+void hd::Leaf::onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &led)
 {
    activateAddressesFromLedger(led);
 }
 
-void hd::Leaf::onRefresh(const BinaryDataVector &ids)
+void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids)
 {
    hd::BlockchainScanner::onRefresh(ids);
 }
@@ -261,7 +261,7 @@ void hd::Leaf::firstInit()
    activateAddressesFromLedger(bdm_->getWalletsHistory({ GetWalletId() }));
 }
 
-void hd::Leaf::activateAddressesFromLedger(const std::vector<LedgerEntryData> &led)
+void hd::Leaf::activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &led)
 {
    bool activated = false;
    for (const auto &entry : led) {
@@ -929,7 +929,7 @@ bool hd::Leaf::deserialize(const BinaryData &ser, const std::shared_ptr<hd::Node
 class LeafResolver : public ResolverFeed
 {
 public:
-   using BinaryDataMap = std::unordered_map<BinaryData, BinaryData>;
+   using BinaryDataMap = std::map<BinaryData, BinaryData>;
 
    LeafResolver(const BinaryDataMap &map) : hashToPubKey_(map) {}
 
@@ -955,7 +955,7 @@ class LeafSigningResolver : public LeafResolver
 public:
    LeafSigningResolver(const BinaryDataMap &map, const SecureBinaryData &password
       , const hd::Path &rootPath, const std::shared_ptr<hd::Node> &rootNode
-      , const std::unordered_map<BinaryData, hd::Path> &pathMap)
+      , const std::map<BinaryData, hd::Path> &pathMap)
       : LeafResolver(map), password_(password), rootPath_(rootPath), rootNode_(rootNode), pathMap_(pathMap) {}
 
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey) override {
@@ -984,8 +984,8 @@ private:
    const SecureBinaryData  password_;
    const hd::Path          rootPath_;
    SecureBinaryData        privKey_;
-   const std::shared_ptr<hd::Node>                 rootNode_;
-   const std::unordered_map<BinaryData, hd::Path>  pathMap_;
+   const std::shared_ptr<hd::Node>        rootNode_;
+   const std::map<BinaryData, hd::Path>   pathMap_;
 };
 
 
@@ -1201,17 +1201,17 @@ void hd::CCLeaf::firstInit()
    }
 }
 
-void hd::CCLeaf::onRefresh(const BinaryDataVector &ids)
+void hd::CCLeaf::onRefresh(const std::vector<BinaryData> &ids)
 {
    hd::Leaf::onRefresh(ids);
-   const auto it = std::find(ids.get().begin(), ids.get().end(), GetWalletId());
-   if (it == ids.get().end()) {
+   const auto it = std::find(ids.begin(), ids.end(), GetWalletId());
+   if (it == ids.end()) {
       return;
    }
    firstInit();
 }
 
-void hd::CCLeaf::onZeroConfReceived(const std::vector<LedgerEntryData> &led)
+void hd::CCLeaf::onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &led)
 {
    hd::Leaf::onZeroConfReceived(led);
    findInvalidUTXOs(hd::Leaf::getSpendableZCList());

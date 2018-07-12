@@ -692,7 +692,7 @@ void WalletsManager::UpdateSavedWallets()
    }
 }
 
-bool WalletsManager::IsTransactionVerified(const LedgerEntryData& item)
+bool WalletsManager::IsTransactionVerified(const ClientClasses::LedgerEntry &item)
 {
    return (bdm_ && bdm_->IsTransactionVerified(item));
 }
@@ -909,11 +909,11 @@ void WalletsManager::onCCInfoLoaded()
    }
 }
 
-void WalletsManager::onZeroConfReceived(const std::vector<LedgerEntryData> &ledger)
+void WalletsManager::onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &ledger)
 {
    unsigned int foundCnt = 0;
    for (const auto led : ledger) {
-      auto wallet = GetWalletById(led.getWalletID());
+      auto wallet = GetWalletById(led.getID());
       if (wallet != nullptr) {
          foundCnt++;
          wallet->AddUnconfirmedBalance(led.getValue() / BTCNumericTypes::BalanceDivider);
@@ -969,12 +969,12 @@ float WalletsManager::estimatedFeePerByte(unsigned int blocksToWait) const
    return feePerByte_[blocksToWait];
 }
 
-std::vector<LedgerEntryData> WalletsManager::getTxPage(uint32_t id) const
+std::vector<ClientClasses::LedgerEntry> WalletsManager::getTxPage(uint32_t id) const
 {
    if (!bdm_) {
       return {};
    }
-   std::vector<LedgerEntryData> result;
+   std::vector<ClientClasses::LedgerEntry> result;
    {
       QMutexLocker lock(&mtxWallets_);
       for (const auto &wallet : wallets_) {

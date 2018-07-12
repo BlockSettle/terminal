@@ -36,7 +36,7 @@ private:
    size_t      nbMaxElems_;
    LMDB     *  db_ = nullptr;
    shared_ptr<LMDBEnv>  dbEnv_;
-   std::unordered_map<BinaryData, BinaryData>   map_, mapModified_;
+   std::map<BinaryData, BinaryData> map_, mapModified_;
    mutable QReadWriteLock  rwLock_;
    mutable QWaitCondition  wcModified_;
    mutable QMutex          mtxModified_;
@@ -56,12 +56,10 @@ public:
       if (!tx.isInitialized()) {
          return;
       }
-      CacheFile::put(key, tx.serializeWithMetaData());
+      CacheFile::put(key, tx.serialize());
    }
    Tx get(const BinaryData &key) {
-      Tx tx;
-      tx.unserializeWithMetaData(CacheFile::get(key));
-      return tx;
+      return Tx(CacheFile::get(key));
    }
 
    void stop() { CacheFile::stop(); }

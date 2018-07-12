@@ -8,11 +8,11 @@ SafeBtcWallet::SafeBtcWallet(const SwigClient::BtcWallet& btcWallet, std::atomic
    , bdvLock_(lock)
 {}
 
-std::vector<uint64_t> SafeBtcWallet::getBalancesAndCount(uint32_t topBlockHeight, bool IGNOREZC)
+std::vector<uint64_t> SafeBtcWallet::getBalancesAndCount(uint32_t topBlockHeight)
 {
    try {
       FastLock lock(bdvLock_);
-      return btcWallet_.getBalancesAndCount(topBlockHeight, IGNOREZC);
+      return btcWallet_.getBalancesAndCount(topBlockHeight);
    } catch (const std::exception &e) {
       qDebug() << "[SafeBtcWallet::getBalancesAndCount] exception:" << e.what();
    }
@@ -52,13 +52,9 @@ std::vector<UTXO> SafeBtcWallet::getSpendableTxOutListForValue(uint64_t val)
    try {
       FastLock lock(bdvLock_);
       return btcWallet_.getSpendableTxOutListForValue(val);
-   }
-   catch (const DbErrorMsg &e) {  // "buffer overflow" on supernode - don't reconnect to prevent stalls
-      qDebug() << QLatin1String("[SafeBtcWallet::getSpendableTxOutListForValue] DB exception:")
-         << QString::fromStdString(e.what());
-      return {};
    } catch (const std::exception &e) {
       qDebug() << QLatin1String("[SafeBtcWallet::getSpendableTxOutListForValue] exception:") << e.what();
+      return {};
    } catch (...) {
       qDebug() << QLatin1String("[SafeBtcWallet::getSpendableTxOutListForValue] exception");
    }
@@ -90,20 +86,18 @@ std::vector<UTXO> SafeBtcWallet::getRBFTxOutList()
    return std::vector<UTXO>{};
 }
 
-std::vector<LedgerEntryData> SafeBtcWallet::getHistoryPage(uint32_t id)
+std::vector<ClientClasses::LedgerEntry> SafeBtcWallet::getHistoryPage(uint32_t id)
 {
    try {
       FastLock lock(bdvLock_);
       return btcWallet_.getHistoryPage(id);
    }
-   catch (const DbErrorMsg &) {
-      return {};
-   }
    catch (const std::exception &e) {
       qDebug() << QLatin1String("[SafeBtcWallet::getHistoryPage] exception: ") << e.what();
+      return {};
    } catch (...) {
       qDebug() << QLatin1String("[SafeBtcWallet::getHistoryPage] exception");
    }
    PyBlockDataManager::instance()->OnConnectionError();
-   return std::vector<LedgerEntryData>{};
+   return std::vector<ClientClasses::LedgerEntry>{};
 }

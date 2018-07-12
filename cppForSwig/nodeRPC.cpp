@@ -24,8 +24,7 @@ NodeRPC::NodeRPC(
    BlockDataManagerConfig& config) :
    bdmConfig_(config)
 {
-   socket_ = make_unique<HttpSocket>(
-      BinarySocket("127.0.0.1", bdmConfig_.rpcPort_));
+   socket_ = make_unique<HttpSocket>("127.0.0.1", bdmConfig_.rpcPort_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -44,10 +43,10 @@ RpcStatus NodeRPC::setupConnection()
    basicAuthString_ = move(authString);
    auto&& b64_ba = BtcUtils::base64_encode(basicAuthString_);
 
-   socket_->resetHeaders();
    stringstream auth_header;
    auth_header << "Authorization: Basic " << b64_ba;
-   socket_->addHeader(auth_header.str());
+   auto header_str = auth_header.str();
+   socket_->precacheHttpHeader(header_str);
 
    goodNode_ = true;
    nodeChainState_.reset();
@@ -74,20 +73,18 @@ RpcStatus NodeRPC::testConnection()
    {
       goodNode_ = false;
 
-
       JSON_object json_obj;
       json_obj.add_pair("method", "getblockcount");
 
       try
       {
-         auto&& serializedPacket = JSON_encode(json_obj);
-         auto&& response = socket_->writeAndRead(serializedPacket);
+         auto&& response = queryRPC(json_obj);
          auto&& response_obj = JSON_decode(response);
 
          if (response_obj.isResponseValid(json_obj.id_))
          {
-            goodNode_ = true;
             state = RpcStatus_Online;
+            goodNode_ = true;
          }
          else
          {
@@ -213,7 +210,7 @@ float NodeRPC::getFeeByte(unsigned blocksToConfirm)
 
    json_obj.add_pair("params", json_array);
 
-   auto&& response = socket_->writeAndRead(JSON_encode(json_obj));
+   auto&& response = queryRPC(json_obj);
    auto&& response_obj = JSON_decode(response);
 
    if (!response_obj.isResponseValid(json_obj.id_))
@@ -259,7 +256,7 @@ FeeEstimateResult NodeRPC::getFeeByteSmart(
 
    json_obj.add_pair("params", json_array);
 
-   auto&& response = socket_->writeAndRead(JSON_encode(json_obj));
+   auto&& response = queryRPC(json_obj);
    auto&& response_obj = JSON_decode(response);
 
    if (!response_obj.isResponseValid(json_obj.id_))
@@ -316,8 +313,7 @@ bool NodeRPC::updateChainStatus(void)
    JSON_object json_getblockchaininfo;
    json_getblockchaininfo.add_pair("method", "getblockchaininfo");
 
-   auto&& response = JSON_decode(
-      socket_->writeAndRead(JSON_encode(json_getblockchaininfo)));
+   auto&& response = JSON_decode(queryRPC(json_getblockchaininfo));
    if (!response.isResponseValid(json_getblockchaininfo.id_))
       throw JSON_Exception("invalid response");
 
@@ -336,8 +332,7 @@ bool NodeRPC::updateChainStatus(void)
    json_getheader.add_pair("method", "getblockheader");
    json_getheader.add_pair("params", params_obj);
 
-   auto&& block_header = JSON_decode(
-      socket_->writeAndRead(JSON_encode(json_getheader)));
+   auto&& block_header = JSON_decode(queryRPC(json_getheader));
 
    if (!block_header.isResponseValid(json_getheader.id_))
       throw JSON_Exception("invalid response");
@@ -426,7 +421,7 @@ void NodeRPC::waitOnChainSync(function<void(void)> callbck)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-string NodeRPC::broadcastTx(const BinaryData& rawTx) const
+string NodeRPC::broadcastTx(const BinaryDataRef& rawTx)
 {
    ReentrantLock lock(this);
 
@@ -439,7 +434,7 @@ string NodeRPC::broadcastTx(const BinaryData& rawTx) const
 
    json_obj.add_pair("params", json_array);
 
-   auto&& response = socket_->writeAndRead(JSON_encode(json_obj));
+   auto&& response = queryRPC(json_obj);
    auto&& response_obj = JSON_decode(response);
 
    string return_str;
@@ -479,7 +474,7 @@ void NodeRPC::shutdown()
    JSON_object json_obj;
    json_obj.add_pair("method", "stop");
 
-   auto&& response = socket_->writeAndRead(JSON_encode(json_obj));
+   auto&& response = queryRPC(json_obj);
    auto&& response_obj = JSON_decode(response);
 
    if (!response_obj.isResponseValid(json_obj.id_))
@@ -492,4 +487,134 @@ void NodeRPC::shutdown()
       throw JSON_Exception("invalid response");
 
    LOGINFO << responseStr->val_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+string NodeRPC::queryRPC(JSON_object& request)
+{
+   auto write_payload = make_unique<WritePayload_String>();
+   write_payload->data_ = move(JSON_encode(request));
+
+   auto promPtr = make_shared<promise<string>>();
+   auto fut = promPtr->get_future();
+
+   auto callback = [promPtr](string body)->void
+   {
+      promPtr->set_value(move(body));
+   };
+
+   auto read_payload = make_shared<Socket_ReadPayload>(request.id_);
+   read_payload->callbackReturn_ = make_unique<CallbackReturn_HttpBody>(callback);
+   socket_->pushPayload(move(write_payload), read_payload);
+
+   return fut.get();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// NodeChainState
+//
+////////////////////////////////////////////////////////////////////////////////
+bool ::NodeChainState::processState(
+   shared_ptr<JSON_object> const getblockchaininfo_obj)
+{
+   if (state_ == ChainStatus_Ready)
+      return false;
+
+   //progress status
+   auto pct_obj = getblockchaininfo_obj->getValForKey("verificationprogress");
+   auto pct_val = dynamic_pointer_cast<JSON_number>(pct_obj);
+   if (pct_val == nullptr)
+      return false;
+
+   pct_ = min(pct_val->val_, 1.0);
+   auto pct_int = unsigned(pct_ * 10000.0);
+
+   if (pct_int != prev_pct_int_)
+   {
+      LOGINFO << "waiting on node sync: " << float(pct_ * 100.0) << "%";
+      prev_pct_int_ = pct_int;
+   }
+
+   if (pct_ >= 0.9995)
+   {
+      state_ = ChainStatus_Ready;
+      return true;
+   }
+
+   //compare top block timestamp to now
+   if (heightTimeVec_.size() == 0)
+      return false;
+
+   uint64_t now = time(0);
+   uint64_t diff = 0;
+
+   auto blocktime = get<1>(heightTimeVec_.back());
+   if (now > blocktime)
+      diff = now - blocktime;
+
+   //we got this far, node is still syncing, let's compute progress and eta
+   state_ = ChainStatus_Syncing;
+
+   //average amount of blocks left to sync based on timestamp diff
+   auto blocksLeft = diff / 600;
+
+   //compute block syncing speed based off of the last 20 top blocks
+   auto iterend = heightTimeVec_.rbegin();
+   auto time_end = get<2>(*iterend);
+
+   auto iterbegin = heightTimeVec_.begin();
+   auto time_begin = get<2>(*iterbegin);
+
+   if (time_end <= time_begin)
+      return false;
+
+   auto blockdiff = get<0>(*iterend) - get<0>(*iterbegin);
+   if (blockdiff == 0)
+      return false;
+
+   auto timediff = time_end - time_begin;
+   blockSpeed_ = float(blockdiff) / float(timediff);
+   eta_ = uint64_t(float(blocksLeft) * blockSpeed_);
+
+   blocksLeft_ = blocksLeft;
+
+   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unsigned ::NodeChainState::getTopBlock() const
+{
+   if (heightTimeVec_.size() == 0)
+      throw runtime_error("");
+
+   return get<0>(heightTimeVec_.back());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void ::NodeChainState::appendHeightAndTime(unsigned height, uint64_t timestamp)
+{
+   try
+   {
+      if (getTopBlock() == height)
+         return;
+   }
+   catch (...)
+   {
+   }
+
+   heightTimeVec_.push_back(make_tuple(height, timestamp, time(0)));
+
+   //force the list at 20 max entries
+   while (heightTimeVec_.size() > 20)
+      heightTimeVec_.pop_front();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void ::NodeChainState::reset()
+{
+   heightTimeVec_.clear();
+   state_ = ChainStatus_Unknown;
+   blockSpeed_ = 0.0f;
+   eta_ = 0;
 }

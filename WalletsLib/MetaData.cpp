@@ -590,7 +590,7 @@ void bs::Wallet::UpdateBalanceFromDB()
    if (!isBalanceAvailable()) {
       return;
    }
-   const auto balanceVector = btcWallet_->getBalancesAndCount(bdm_->GetTopBlockHeight(), false);
+   const auto balanceVector = btcWallet_->getBalancesAndCount(bdm_->GetTopBlockHeight());
    if (balanceVector.size() < 4) {
       return;
    }
@@ -613,7 +613,7 @@ void bs::Wallet::UpdateBalanceFromDB()
    }
 }
 
-std::vector<LedgerEntryData> bs::Wallet::getHistoryPage(uint32_t id) const
+std::vector<ClientClasses::LedgerEntry> bs::Wallet::getHistoryPage(uint32_t id) const
 {
    if (!btcWallet_) {
       return {};

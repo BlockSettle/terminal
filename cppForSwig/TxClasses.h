@@ -352,7 +352,6 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 class Tx
 {
-   friend class BtcWallet;
    friend class BlockDataManager;
    friend class TransactionVerifier;
 
@@ -389,7 +388,6 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    BinaryData         serialize(void) const    { return dataCopy_; }
-   BinaryData         serializeWithMetaData(void) const;
    BinaryData         serializeNoWitness(void) const;
 
    /////////////////////////////////////////////////////////////////////////////
@@ -398,9 +396,6 @@ public:
    void unserialize(BinaryDataRef const & str) { unserialize(str.getPtr(), str.getSize()); }
    void unserialize(BinaryRefReader & brr);
    void unserialize_swigsafe_(BinaryData const & rawTx) { unserialize(rawTx); }
-
-   void unserializeWithMetaData(const BinaryData& rawTx);
-
 
    /////////////////////////////////////////////////////////////////////////////
    uint32_t    getLockTime(void) const { return lockTime_; }
@@ -566,6 +561,8 @@ struct UTXO
 ////////////////////////////////////////////////////////////////////////////////
 class AddressBookEntry
 {
+   friend struct CallbackReturn_VectorAddressBookEntry;
+
 public:
 
    /////
@@ -575,7 +572,7 @@ public:
    const BinaryData& getScrAddr(void) { return scrAddr_; }
 
    /////
-   vector<BinaryData> getTxHashList(void) const
+   const vector<BinaryData>& getTxHashList(void) const
    {
       return txHashList_;
    }

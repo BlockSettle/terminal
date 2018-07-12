@@ -1,7 +1,5 @@
 #include "AddressVerificator.h"
 
-#include "LedgerEntryData.h"
-
 #include "PyBlockDataManager.h"
 #include "BinaryData.h"
 #include "FastLock.h"
@@ -142,10 +140,9 @@ void AddressVerificator::commandQueueThreadFunction()
 
 bool AddressVerificator::SetBSAddressList(const std::unordered_set<std::string>& addressList)
 {
-   bsAddressList_.reserve(addressList.size());
    for (const auto &addr : addressList) {
       bs::Address address(addr);
-      bsAddressList_.insert(address.prefixed());
+      bsAddressList_.emplace(address.prefixed());
    }
    return true;
 }
@@ -348,7 +345,7 @@ void AddressVerificator::ReturnValidationResult(const std::shared_ptr<AddressVar
    userCallback_(state->address, state->currentState);
 }
 
-bool AddressVerificator::IsInitialBsTransaction(const LedgerEntryData& entry
+bool AddressVerificator::IsInitialBsTransaction(const ClientClasses::LedgerEntry &entry
    , const std::shared_ptr<AddressVarificationData>& state, bool &isVerified)
 {
    int64_t entryValue = (entry.getValue() < 0 ? -entry.getValue() : entry.getValue());
@@ -413,7 +410,7 @@ bool AddressVerificator::IsInitialBsTransaction(const LedgerEntryData& entry
    return true;
 }
 
-bool AddressVerificator::IsVerificationTransaction(const LedgerEntryData& entry
+bool AddressVerificator::IsVerificationTransaction(const ClientClasses::LedgerEntry &entry
    , const std::shared_ptr<AddressVarificationData>& state, bool &isVerified)
 {
    if (entry.getValue() <= (GetAuthAmount() * 2)) {
@@ -482,7 +479,7 @@ bool AddressVerificator::IsVerificationTransaction(const LedgerEntryData& entry
    return true;
 }
 
-bool AddressVerificator::HasRevokeOutputs(const LedgerEntryData& entry
+bool AddressVerificator::HasRevokeOutputs(const ClientClasses::LedgerEntry &entry
    , const std::shared_ptr<AddressVarificationData>& state)
 {
    const auto &bdm = PyBlockDataManager::instance();
@@ -535,7 +532,7 @@ bool AddressVerificator::HasRevokeOutputs(const LedgerEntryData& entry
 //returns true if
 // - coins from initial transaction sent in any amount to any address
 // - anything is sent from verification transaction
-bool AddressVerificator::IsRevokeTransaction(const LedgerEntryData& entry
+bool AddressVerificator::IsRevokeTransaction(const ClientClasses::LedgerEntry &entry
    , const std::shared_ptr<AddressVarificationData>& state)
 {
    const auto &bdm = PyBlockDataManager::instance();
@@ -566,7 +563,7 @@ bool AddressVerificator::IsRevokeTransaction(const LedgerEntryData& entry
    return false;
 }
 
-bool AddressVerificator::IsBSRevokeTranscation(const LedgerEntryData& entry, const std::shared_ptr<AddressVarificationData>& state)
+bool AddressVerificator::IsBSRevokeTranscation(const ClientClasses::LedgerEntry &entry, const std::shared_ptr<AddressVarificationData>& state)
 {
    const auto &bdm = PyBlockDataManager::instance();
    if (!bdm) {

@@ -225,11 +225,11 @@ namespace bs {
 
    private:
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
-      std::unordered_map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
+      std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
       std::unordered_map<int, std::shared_ptr<SettlementAssetEntry>>                assets_;
       std::map<int, std::shared_ptr<SafeBtcWallet> >     rtWallets_;
       std::unordered_map<std::string, int>               rtWalletsById_;
-      std::unordered_map<BinaryData, int>   assetIndexByAddr_;
+      std::map<BinaryData, int>   assetIndexByAddr_;
       int   lastIndex_ = 0;
    };
 
@@ -312,13 +312,13 @@ namespace bs {
       std::shared_ptr<spdlog::logger> logger_;
 
    protected:
-      bool IsPayInTransaction(const LedgerEntryData& entry) const;
-      bool IsPayOutTransaction(const LedgerEntryData& entry) const;
+      bool IsPayInTransaction(const ClientClasses::LedgerEntry &) const;
+      bool IsPayOutTransaction(const ClientClasses::LedgerEntry &) const;
 
-      PayoutSigner::Type CheckPayoutSignature(const LedgerEntryData& entry) const;
+      PayoutSigner::Type CheckPayoutSignature(const ClientClasses::LedgerEntry &) const;
 
       void SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash);
-      void SendPayOutNotification(const LedgerEntryData& entry);
+      void SendPayOutNotification(const ClientClasses::LedgerEntry &);
    };
 
 }  //namespace bs

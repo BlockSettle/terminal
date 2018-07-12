@@ -26,7 +26,6 @@ class AddressVerificator;
 class ApplicationSettings;
 class CelerClient;
 class ConnectionManager;
-class LedgerEntryData;
 class OTPManager;
 class RequestReplyCommand;
 class ResolverFeed_AuthAddress;

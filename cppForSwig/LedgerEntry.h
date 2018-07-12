@@ -13,6 +13,7 @@
 #include "BlockObj.h"
 #include "Blockchain.h"
 #include "StoredBlockObj.h"
+#include "BDVCodec.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -133,12 +134,14 @@ public:
    static map<BinaryData, LedgerEntry> computeLedgerMap(
                                 const map<BinaryData, TxIOPair>& txioMap,
                                 uint32_t startBlock, uint32_t endBlock,
-                                const BinaryData& ID,
+                                const BinaryDataRef ID,
                                 const LMDBBlockDatabase* db,
                                 const Blockchain* bc);
    
-   set<BinaryData> getScrAddrList(void) const
+   const set<BinaryData>& getScrAddrList(void) const
    { return scrAddrSet_; }
+
+   void fillMessage(::Codec_LedgerEntry::LedgerEntry* msg);
    
 public:
 
@@ -151,7 +154,6 @@ private:
    
    //holds either a scrAddr or a walletId
    BinaryData       ID_;
-
    int64_t          value_;
    uint32_t         blockNum_;
    BinaryData       txHash_;

@@ -17,12 +17,13 @@
 
 namespace spdlog {
    class logger;
-};
-
+}
+namespace ClientClasses {
+   class LedgerEntry;
+}
 
 struct AddressVarificationData;
 class AddressVerificatorListener;
-class LedgerEntryData;
 class SafeBtcWallet;
 
 // once we could connect to a super node we should not wait for refresh signals from armory
@@ -88,12 +89,12 @@ private:
 
    void ReturnValidationResult(const std::shared_ptr<AddressVarificationData>& state);
 
-   bool IsInitialBsTransaction(const LedgerEntryData& entry, const std::shared_ptr<AddressVarificationData>& state, bool &isVerified);
-   bool IsVerificationTransaction(const LedgerEntryData& entry, const std::shared_ptr<AddressVarificationData>& state, bool &isVerified);
-   bool IsRevokeTransaction(const LedgerEntryData& entry, const std::shared_ptr<AddressVarificationData>& state);
-   bool HasRevokeOutputs(const LedgerEntryData &, const std::shared_ptr<AddressVarificationData> &);
+   bool IsInitialBsTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state, bool &isVerified);
+   bool IsVerificationTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state, bool &isVerified);
+   bool IsRevokeTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state);
+   bool HasRevokeOutputs(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData> &);
 
-   bool IsBSRevokeTranscation(const LedgerEntryData& entry, const std::shared_ptr<AddressVarificationData>& state);
+   bool IsBSRevokeTranscation(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -102,7 +103,7 @@ private:
    verification_callback   userCallback_;
 
    //bsAddressList_ - list received from public bridge
-   std::unordered_set<BinaryData> bsAddressList_;
+   std::set<BinaryData>    bsAddressList_;
 
    // addresses that were added to a wallet
    // user auth address list
@@ -125,7 +126,7 @@ private:
    std::shared_ptr<AddressVerificatorListener> listener_;
    std::shared_ptr<SafeBtcWallet>    internalWallet_;
 
-   std::unordered_map<BinaryData, unsigned int> addressRetries_;
+   std::map<BinaryData, unsigned int> addressRetries_;
 };
 
 #endif // __AUTH_ADDRESS_VERIFICATOR_H__

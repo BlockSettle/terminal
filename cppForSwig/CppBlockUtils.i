@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 %module(directors="1") CppBlockUtils
-%feature("director") PythonCallback;
+%feature("director") RemoteCallback;
 %feature("director") PythonSigner;
 %feature("director") PythonSigner_BCH;
 %feature("director") UniversalSigner;
@@ -76,7 +76,6 @@ namespace std
    %template(vector_uint64_t) std::vector<uint64_t>; 
    %template(vector_float) std::vector<float>;
    %template(vector_string) std::vector<string>;
-   %template(vector_LedgerEntryData) std::vector<LedgerEntryData>;
    %template(set_BinaryData) std::set<BinaryData>;
    %template(vector_UTXO) std::vector<UTXO>;
    %template(vector_AddressBookEntry) std::vector<AddressBookEntry>;
@@ -405,7 +404,6 @@ namespace std
 %include "DbHeader.h"
 %include "SwigClient.h"
 %include "bdmenums.h"
-%include "LedgerEntryData.h"
 %include "TxClasses.h"
 %include "WalletManager.h"
 %include "BlockDataManagerConfig.h"

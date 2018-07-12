@@ -99,8 +99,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    }
 
    qRegisterMetaType<PyBlockDataManagerState>();
-   qRegisterMetaType<LedgerEntryData>();
-   qRegisterMetaType<std::vector<LedgerEntryData> >();
+//!   qRegisterMetaType<ClientClasses::LedgerEntry>();
+//!   qRegisterMetaType<std::vector<ClientClasses::LedgerEntry>>();
    qRegisterMetaType<std::vector<UTXO> >();
    connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
@@ -826,7 +826,7 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
    }
 }
 
-void BSTerminalMainWindow::showZcNotification(const std::vector<LedgerEntryData>& entries)
+void BSTerminalMainWindow::showZcNotification(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
    if (entries.empty()) {
       return;
@@ -834,7 +834,7 @@ void BSTerminalMainWindow::showZcNotification(const std::vector<LedgerEntryData>
    QStringList lines;
    for (const auto& led : entries) {
       const auto tx = bdm_->getTxByHash(led.getTxHash());
-      const auto &wallet = walletsManager_->GetWalletById(led.getWalletID());
+      const auto &wallet = walletsManager_->GetWalletById(led.getID());
       if (!wallet) {
          continue;
       }

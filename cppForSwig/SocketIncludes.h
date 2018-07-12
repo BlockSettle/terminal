@@ -9,6 +9,9 @@
 #ifndef _H_SOCKET_INCLUDES
 #define _H_SOCKET_INCLUDES
 
+#include <exception>
+#include <string>
+
 #ifdef _WIN32
 #include <WinSock2.h>
 #include <ws2tcpip.h>
@@ -22,6 +25,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <poll.h>
 #define closesocket close
 
 typedef int SOCKET;
@@ -31,10 +35,10 @@ typedef int SOCKET;
 ////////////////////////////////////////////////////////////////////////////////
 #include <string>
 
-struct SocketError : public runtime_error
+struct SocketError : public std::runtime_error
 {
 public:
-   SocketError(const string& e) : runtime_error(e)
+   SocketError(const std::string& e) : std::runtime_error(e)
    {}
 
 };

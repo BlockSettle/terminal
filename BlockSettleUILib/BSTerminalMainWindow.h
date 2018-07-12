@@ -140,7 +140,7 @@ private slots:
    void openAccountInfoDialog();
    void openOTPDialog();
    void openCCTokenDialog();
-   void showZcNotification(const std::vector<LedgerEntryData>& entries);
+   void showZcNotification(const std::vector<ClientClasses::LedgerEntry> &);
 
    void onLogin();
    void onLogout();
@@ -168,8 +168,8 @@ private:
    void setupShortcuts();
 };
 
-Q_DECLARE_METATYPE(LedgerEntryData)
-Q_DECLARE_METATYPE(std::vector<LedgerEntryData>)
+//!Q_DECLARE_METATYPE(ClientClasses::LedgerEntry)
+//!Q_DECLARE_METATYPE(std::vector<ClientClasses::LedgerEntry>)
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<UTXO>)
 

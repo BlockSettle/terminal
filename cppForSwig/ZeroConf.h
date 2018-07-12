@@ -263,7 +263,7 @@ private:
    atomic<bool> zcEnabled_;
    const unsigned maxZcThreadCount_;
 
-   shared_ptr<TransactionalMap<ScrAddrFilter::AddrAndHash, int>> scrAddrMap_;
+   shared_ptr<TransactionalMap<BinaryDataRef, shared_ptr<AddrAndHash>>> scrAddrMap_;
 
    unsigned parserThreadCount_ = 0;
    mutex parserThreadMutex_;
@@ -347,7 +347,7 @@ public:
       const string& bdvId, uint32_t timeout_ms);
 
    bool isEnabled(void) const { return zcEnabled_.load(memory_order_relaxed); }
-   void pushZcToParser(const BinaryData& rawTx);
+   void pushZcToParser(const BinaryDataRef& rawTx);
 
    shared_ptr<map<BinaryData, TxIOPair>> getTxioMapForScrAddr(const BinaryData&) const;
 };

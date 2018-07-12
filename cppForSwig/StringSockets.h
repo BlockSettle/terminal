@@ -13,6 +13,8 @@
 #include "SocketObject.h"
 #include "FcgiMessage.h"
 
+typedef vector<uint8_t>::iterator vecIter;
+
 ///////////////////////////////////////////////////////////////////////////////
 struct HttpError : public SocketError
 {
@@ -30,24 +32,40 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-class HttpSocket : public BinarySocket
+class HttpSocket : public PersistentSocket
 {
-   friend class FcgiSocket;
-
-   vector<string> headers_;
-
 private:
-   struct packetData
+   struct PacketData
    {
-      vector<uint8_t> httpData;
-      int content_length = -1;
-      size_t header_len = 0;
+      vector<uint8_t> httpData_;
+      int content_length_ = -1;
+      size_t header_len_ = SIZE_MAX;
 
       void clear(void)
       {
-         httpData.clear();
-         content_length = -1;
-         header_len = 0;
+         if (content_length_ == -1 || header_len_ == SIZE_MAX)
+         {
+            httpData_.clear();
+         }
+         else
+         {
+            if (content_length_ + header_len_ > httpData_.size())
+            {
+               vector<uint8_t> leftOverData;
+               leftOverData.insert(leftOverData.end(),
+                  move_iterator<vecIter>(httpData_.begin() + 
+                     header_len_ + content_length_),
+                  move_iterator<vecIter>(httpData_.end()));
+               httpData_ = move(leftOverData);
+            }
+            else
+            {
+               httpData_.clear();
+            }
+         }
+
+         content_length_ = -1;
+         header_len_ = SIZE_MAX;
       }
 
       void get_content_len(const string& header_str)
@@ -60,7 +78,7 @@ private:
          auto tokpos = header_str.find(search_tok_caps);
          if (tokpos != string::npos)
          {
-            content_length = atoi(header_str.c_str() +
+            content_length_ = atoi(header_str.c_str() +
                tokpos + search_tok_caps.size());
             return;
          }
@@ -69,7 +87,7 @@ private:
          tokpos = header_str.find(search_tok);
          if (tokpos != string::npos)
          {
-            content_length = atoi(header_str.c_str() +
+            content_length_ = atoi(header_str.c_str() +
                tokpos + search_tok.size());
             return;
          }
@@ -77,49 +95,87 @@ private:
    };
 
 private:
-   int32_t makePacket(char** packet, const char* msg);
-   string getBody(vector<uint8_t>);
-   void setupHeaders(void);
+   PacketData currentRead_;
+   unique_ptr<HttpMessage> messageWithPrecacheHeaders_;
+   TransactionalMap<uint16_t, shared_ptr<Socket_ReadPayload>> payloadMap_;
+
+protected:
+   void addReadPayload(shared_ptr<Socket_ReadPayload>);
+   vector<uint8_t> getHttpPayload(const char*, size_t);
 
 public:
-   HttpSocket(const BinarySocket&);
+   HttpSocket(const string& addr, const string& port);
 
-   void resetHeaders(void);
-   void addHeader(string);
-
-   virtual string writeAndRead(const string&, SOCKET sockfd = SOCK_MAX);
+   static size_t getHttpBodyOffset(const char*, size_t);
    virtual SocketType type(void) const { return SocketHttp; }
+   virtual bool processPacket(vector<uint8_t>&, vector<uint8_t>&);
+
+   virtual void pushPayload(
+      unique_ptr<Socket_WritePayload>,
+      shared_ptr<Socket_ReadPayload>);
+   virtual void respond(vector<uint8_t>&);
+
+   void precacheHttpHeader(string& header) 
+   {
+      messageWithPrecacheHeaders_->addHeader(move(header));
+   }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 class FcgiSocket : public HttpSocket
 {
 private:
-   void addStringParam(const string& name, const string& val);
-
-   struct packetStruct
+   struct PacketStruct
    {
-      vector<uint8_t> fcgidata;
-      vector<uint8_t> httpData;
+      vector<uint8_t> httpData_;
 
       int endpacket = 0;
       size_t ptroffset = 0;
-      uint16_t fcgiid = 0;
 
-      void clear(void)
+      BinaryDataRef getHttpBody(void)
       {
-         fcgidata.clear();
-         httpData.clear();
+         if (httpData_.size() == 0)
+            return BinaryDataRef();
 
-         endpacket = 0;
-         ptroffset = 0;
+         auto offset = HttpSocket::
+            getHttpBodyOffset((char*)&httpData_[0], httpData_.size());
+         
+         BinaryDataRef httpBody(&httpData_[0] + offset, 
+            httpData_.size() - offset);
+         
+         return httpBody;
       }
    };
 
+   map<uint16_t, PacketStruct> packetMap_;
+   vector<uint8_t> leftOver_;
+
+private:
+   PacketStruct& getPacketStruct(uint16_t);
+   void deletePacketStruct(uint16_t);
+
 public:
-   FcgiSocket(const HttpSocket&);
-   string writeAndRead(const string&, SOCKET sfd = SOCK_MAX);
+   FcgiSocket(const string& addr, const string& port);
    SocketType type(void) const { return SocketFcgi; }
+
+   bool processPacket(vector<uint8_t>&, vector<uint8_t>&);
+   void pushPayload(
+      unique_ptr<Socket_WritePayload>,
+      shared_ptr<Socket_ReadPayload>);
 };
 
+///////////////////////////////////////////////////////////////////////////////
+struct CallbackReturn_HttpBody : public CallbackReturn
+{
+private:
+   function<void(string)> userCallbackLambda_;
+
+public:
+   CallbackReturn_HttpBody(function<void(string)> lbd) :
+      userCallbackLambda_(lbd)
+   {}
+
+   //virtual
+   void callback(BinaryDataRef);
+};
 #endif

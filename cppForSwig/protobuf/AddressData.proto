@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package Codec_AddressData;
+
+message AddressData
+{
+	required bytes scrAddr = 1;
+	repeated uint64 value = 2 [packed=true];
+}
+
+message ManyAddressData
+{
+	repeated AddressData scrAddrData = 1;
+}

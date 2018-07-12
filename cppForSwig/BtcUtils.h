@@ -29,14 +29,12 @@
 #include <stdexcept>
 
 #include "BinaryData.h"
-#include "cryptlib.h"
-#include "sha.h"
-#include "integer.h"
-#include "ripemd.h"
+#include "cryptopp/cryptlib.h"
+#include "cryptopp/sha.h"
+#include "cryptopp/integer.h"
+#include "cryptopp/ripemd.h"
 #include "UniversalTimer.h"
 #include "log.h"
-
-class LedgerEntryData;
 
 #define HEADER_SIZE 80
 #define COIN 100000000ULL
@@ -1723,12 +1721,6 @@ public:
    static int cast_to_int(void* in)
    {
       return *(reinterpret_cast<int*>(in));
-   }
-
-   static const vector<LedgerEntryData>& cast_to_LedgerVector(void* in)
-   {
-      vector<LedgerEntryData>* vle = (vector<LedgerEntryData>*)in;
-      return *vle;
    }
 
    static const string& cast_to_string(void* in)

@@ -16,18 +16,15 @@
 #include <future>
 
 #include "BitcoinP2p.h"
-#include "./fcgi/include/fcgiapp.h"
-#include "./fcgi/include/fcgios.h"
-
 #include "BlockDataViewer.h"
-#include "DataObject.h"
-#include "BDM_seder.h"
 #include "EncryptionUtils.h"
 #include "LedgerEntry.h"
 #include "DbHeader.h"
-#include "FcgiMessage.h"
 #include "BDV_Notification.h"
+#include "BDVCodec.h"
 #include "ZeroConf.h"
+#include "Server.h"
+#include "BtcWallet.h"
 
 #define MAX_CONTENT_LENGTH 1024*1024*1024
 #define CALLBACK_EXPIRE_COUNT 5
@@ -38,24 +35,81 @@ enum WalletType
    TypeLockbox
 };
 
+class BDV_Server_Object;
+
 ///////////////////////////////////////////////////////////////////////////////
-class SocketCallback : public Callback
+struct BDV_Payload
+{
+   shared_ptr<BDV_packet> packet_;
+   shared_ptr<BDV_Server_Object> bdvPtr_;
+   BinaryDataRef payloadRef_;
+   uint32_t messageID_;
+   //uint64_t bdvID_;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct BDV_FragmentedMessage
+{
+   vector<shared_ptr<BDV_Payload>> payloads_;
+   FragmentedMessage message_;
+
+   void mergePayload(shared_ptr<BDV_Payload>);
+   bool getMessage(shared_ptr<::google::protobuf::Message>);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+class Callback
+{
+public:
+
+   virtual ~Callback() = 0;
+
+   virtual void callback(shared_ptr<::Codec_BDVCommand::BDVCallback>) = 0;
+   virtual bool isValid(void) = 0;
+   virtual void shutdown(void) = 0;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+class LongPoll : public Callback
 {
 private:
    mutex mu_;
    atomic<unsigned> count_;
+   TimedStack<shared_ptr<::Codec_BDVCommand::BDVCallback>> notificationStack_;
 
    function<unsigned(void)> isReady_;
 
+private:
+   shared_ptr<::google::protobuf::Message> respond_inner(
+      vector<shared_ptr<::Codec_BDVCommand::BDVCallback>>& orderVec);
+
 public:
-   SocketCallback(function<unsigned(void)> isReady) :
+   LongPoll(function<unsigned(void)> isReady) :
       Callback(), isReady_(isReady)
    {
       count_.store(0, memory_order_relaxed);
    }
 
-   void emit(void);
-   Arguments respond(const string&);
+   shared_ptr<::google::protobuf::Message> respond(
+      shared_ptr<::Codec_BDVCommand::BDVCommand>);
+
+   ~LongPoll(void)
+   {
+      shutdown();
+   }
+
+   void shutdown(void)
+   {
+      //after signaling shutdown, grab the mutex to make sure 
+      //all responders threads have terminated
+      notificationStack_.terminate();
+      unique_lock<mutex> lock(mu_);
+   }
+
+   void resetCounter(void)
+   {
+      count_.store(0, memory_order_relaxed);
+   }
 
    bool isValid(void)
    {
@@ -71,19 +125,26 @@ public:
       return true;
    }
 
-   ~SocketCallback(void)
+   void callback(shared_ptr<::Codec_BDVCommand::BDVCallback> command)
    {
-      Callback::shutdown();
-
-      //after signaling shutdown, grab the mutex to make sure 
-      //all responders threads have terminated
-      unique_lock<mutex> lock(mu_);
+      notificationStack_.push_back(move(command));
    }
+};
 
-   void resetCounter(void)
-   {
-      count_.store(0, memory_order_relaxed);
-   }
+///////////////////////////////////////////////////////////////////////////////
+class WS_Callback : public Callback
+{
+private:
+   const uint64_t bdvID_;
+
+public:
+   WS_Callback(const uint64_t& bdvid) :
+      bdvID_(bdvid)
+   {}
+
+   void callback(shared_ptr<::Codec_BDVCommand::BDVCallback>);
+   bool isValid(void) { return true; }
+   void shutdown(void) {}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -91,12 +152,9 @@ class BDV_Server_Object : public BlockDataViewer
 {
    friend class Clients;
 
-private:
-   map<string, function<Arguments(
-      const vector<string>&, Arguments&)>> methodMap_;
-   
+private: 
    thread initT_;
-   shared_ptr<SocketCallback> cb_;
+   unique_ptr<Callback> cb_;
 
    string bdvID_;
    BlockDataManagerThread* bdmT_;
@@ -105,9 +163,7 @@ private:
 
    struct walletRegStruct
    {
-      vector<BinaryData> scrAddrVec;
-      string IDstr;
-      bool isNew;
+      shared_ptr<::Codec_BDVCommand::BDVCommand> command_;
       WalletType type_;
    };
 
@@ -117,40 +173,49 @@ private:
    shared_ptr<promise<bool>> isReadyPromise_;
    shared_future<bool> isReadyFuture_;
 
+   function<void(unique_ptr<BDV_Notification>)> notifLambda_;
+
+   map<unsigned, shared_ptr<BDV_FragmentedMessage>> fragmentedPackets_;
+   atomic<unsigned> packetProcess_threadLock_;
+
 private:
    BDV_Server_Object(BDV_Server_Object&) = delete; //no copies
       
-   void buildMethodMap(void);
+   shared_ptr<::google::protobuf::Message> processCommand(
+      shared_ptr<::Codec_BDVCommand::BDVCommand>);
    void startThreads(void);
 
-   bool registerWallet(
-      vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew);
-   bool registerLockbox(
-      vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew);
-   void registerAddrVec(const string&, vector<BinaryData> const& scrAddrVec);
+   void registerWallet(shared_ptr<::Codec_BDVCommand::BDVCommand>);
+   void registerLockbox(shared_ptr<::Codec_BDVCommand::BDVCommand>);
+   void populateWallets(map<string, walletRegStruct>&);
 
-   void resetCounter(void) const
+   void resetCounter(void)
    {
-      if (cb_ != nullptr)
-         cb_->resetCounter();
+      auto longpoll = dynamic_cast<LongPoll*>(cb_.get());
+      if (longpoll != nullptr)
+         longpoll->resetCounter();
    }
 
+   void setup(void);
+
+   void flagRefresh(
+      BDV_refresh refresh, const BinaryData& refreshId,
+      unique_ptr<BDV_Notification_ZC> zcPtr);
+
 public:
-   BDV_Server_Object(BlockDataManagerThread *bdmT);
+   BDV_Server_Object(const string& id, BlockDataManagerThread *bdmT);
+
    ~BDV_Server_Object(void) 
    { 
       haltThreads(); 
    }
 
    const string& getID(void) const { return bdvID_; }
-   void pushNotification(shared_ptr<BDV_Notification>);
+   void processNotification(shared_ptr<BDV_Notification>);
    void init(void);
-
-   Arguments executeCommand(const string& method, 
-                              const vector<string>& ids, 
-                              Arguments& args);
-  
    void haltThreads(void);
+   bool processPayload(shared_ptr<BDV_Payload>&, 
+      shared_ptr<::google::protobuf::Message>&);
 };
 
 class Clients;
@@ -180,9 +245,9 @@ class Clients
 private:
    TransactionalMap<string, shared_ptr<BDV_Server_Object>> BDVs_;
    mutable BlockingStack<bool> gcCommands_;
-   BlockDataManagerThread* bdmT_;
+   BlockDataManagerThread* bdmT_ = nullptr;
 
-   function<void(void)> fcgiShutdownCallback_;
+   function<void(void)> shutdownCallback_;
 
    atomic<bool> run_;
 
@@ -190,119 +255,49 @@ private:
 
    mutable BlockingStack<shared_ptr<BDV_Notification>> outerBDVNotifStack_;
    BlockingStack<shared_ptr<BDV_Notification_Packet>> innerBDVNotifStack_;
+   BlockingStack<shared_ptr<BDV_Payload>> packetQueue_;
 
 private:
-   void commandThread(void) const;
+   void notificationThread(void) const;
    void garbageCollectorThread(void);
    void unregisterAllBDVs(void);
    void bdvMaintenanceLoop(void);
    void bdvMaintenanceThread(void);
+   void messageParserThread(void);
 
 public:
+
+   Clients(void)
+   {}
+
    Clients(BlockDataManagerThread* bdmT,
-      function<void(void)> shutdownLambda) :
-      bdmT_(bdmT), fcgiShutdownCallback_(shutdownLambda)
+      function<void(void)> shutdownLambda)
    {
-      run_.store(true, memory_order_relaxed);
-
-      auto mainthread = [this](void)->void
-      {
-         commandThread();
-      };
-
-      auto outerthread = [this](void)->void
-      {
-         bdvMaintenanceLoop();
-      };
-
-      auto innerthread = [this](void)->void
-      {
-         bdvMaintenanceThread();
-      };
-
-      auto gcThread = [this](void)->void
-      {
-         garbageCollectorThread();
-      };
-
-      controlThreads_.push_back(thread(mainthread));
-      controlThreads_.push_back(thread(outerthread));
-      
-      unsigned innerThreadCount = 2;
-      if (BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER &&
-         bdmT_->bdm()->config().nodeType_ != Node_UnitTest)
-         innerThreadCount == thread::hardware_concurrency();
-      for (unsigned i = 0; i < innerThreadCount; i++)
-         controlThreads_.push_back(thread(innerthread));
-
-      auto callbackPtr = make_unique<ZeroConfCallbacks_BDV>(this);
-      bdmT_->bdm()->registerZcCallbacks(move(callbackPtr));
-
-      //no gc for unit tests
-      if (bdmT_->bdm()->config().nodeType_ == Node_UnitTest)
-         return;
-
-      controlThreads_.push_back(thread(gcThread));
+      init(bdmT, shutdownLambda);
    }
 
-   const shared_ptr<BDV_Server_Object>& get(const string& id) const;
-   Arguments runCommand(const string& cmd);
-   Arguments processShutdownCommand(Command&);
-   Arguments registerBDV(Arguments& arg);
+   void init(BlockDataManagerThread* bdmT,
+      function<void(void)> shutdownLambda);
+
+   shared_ptr<BDV_Server_Object> get(const string& id) const;
+   
+   void processShutdownCommand(
+      shared_ptr<::Codec_BDVCommand::StaticCommand>);
+   shared_ptr<::google::protobuf::Message> registerBDV(
+      shared_ptr<::Codec_BDVCommand::StaticCommand>, string bdvID);
    void unregisterBDV(const string& bdvId);
    void shutdown(void);
    void exitRequestLoop(void);
-};
-
-///////////////////////////////////////////////////////////////////////////////
-class FCGI_Server
-{
-   /***
-   Figure if it should use a socket or a named pipe.
-   Force it to listen only to localhost if we use a socket 
-   (both in *nix and win32 code files)
-   ***/
-
-private:
-   SOCKET sockfd_ = -1;
-   mutex mu_;
-   int run_ = true;
-   atomic<uint32_t> liveThreads_;
-
-   const string port_;
-   const string ip_;
-
-   Clients clients_;
-
-private:
-   function<void(void)> getShutdownCallback(void)
+   
+   void queuePayload(shared_ptr<BDV_Payload>& payload)
    {
-      auto shutdownCallback = [this](void)->void
-      {
-         this->haltFcgiLoop();
-      };
-
-      return shutdownCallback;
+      packetQueue_.push_back(move(payload));
    }
 
-public:
-   FCGI_Server(BlockDataManagerThread* bdmT, string port, bool listen_all) :
-      clients_(bdmT, getShutdownCallback()),
-      ip_(listen_all ? "" : "127.0.0.1"), port_(port)
-   {
-      LOGINFO << "Listening on port " << port;
-      if (listen_all)
-         LOGWARN << "Listening to all incoming connections";
-
-      liveThreads_.store(0, memory_order_relaxed);
-   }
-
-   void init(void);
-   void enterLoop(void);
-   void processRequest(FCGX_Request* req);
-   void haltFcgiLoop(void);
-   void shutdown(void) { clients_.shutdown(); }
-   void checkSocket(void) const;
+   shared_ptr<::google::protobuf::Message> processUnregisteredCommand(
+      const uint64_t& bdvId, shared_ptr<::Codec_BDVCommand::StaticCommand>);
+   shared_ptr<::google::protobuf::Message> processCommand(
+      shared_ptr<BDV_Payload>);
 };
 
 #endif
