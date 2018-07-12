@@ -21,6 +21,7 @@ namespace bs {
    }
 }
 class ApplicationSettings;
+class ConnectionManager;
 class HeadlessListener;
 class QProcess;
 class WalletsManager;
@@ -93,8 +94,10 @@ class RemoteSigner : public HeadlessContainer
 {
    Q_OBJECT
 public:
-   RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir, const QString &host
-      , const QString &port, const QString &pwHash = {}, OpMode opMode = OpMode::Remote);
+   RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
+      , const QString &port
+      , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash = {}
+      , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
    bool Start() override;
@@ -122,6 +125,9 @@ protected:
    const std::string    connPubKey_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    bool  authPending_ = false;
+
+private:
+   std::shared_ptr<ConnectionManager> connectionManager_;
 };
 
 class LocalSigner : public RemoteSigner
@@ -129,7 +135,9 @@ class LocalSigner : public RemoteSigner
    Q_OBJECT
 public:
    LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir, NetworkType
-      , const QString &port, const QString &pwHash = {}, double asSpendLimit = 0);
+      , const QString &port
+      , const std::shared_ptr<ConnectionManager>& connectionManager
+      , const QString &pwHash = {}, double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 
    bool Start() override;

@@ -34,6 +34,8 @@ public:
 
    std::string GetClientInfo(const std::string &clientId) const override;
 
+   bool SetZMQTransport(ZMQTransport transport);
+
 protected:
    bool isActive() const;
 
@@ -99,6 +101,8 @@ private:
 
    std::atomic_flag                 dataQueueLock_ = ATOMIC_FLAG_INIT;
    std::deque<DataToSend>           dataQueue_;
+
+   ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__

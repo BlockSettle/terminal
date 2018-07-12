@@ -19,9 +19,9 @@ namespace bs {
       class Wallet;
    }
 }
-class ApplicationSettings;
-class WalletsManager;
 
+class ApplicationSettings;
+class ConnectionManager;
 
 class SignContainer : public QObject
 {
@@ -30,7 +30,10 @@ public:
    enum class OpMode {
       Local = 1,
       Remote,
-      Offline
+      Offline,
+      // RemoteInproc - should be used for testing only, when you need to have signer and listener
+      // running in same process and could not use TCP for any reason
+      RemoteInproc
    };
    enum class TXSignMode {
       Full,
@@ -101,17 +104,17 @@ signals:
    void authenticated();
    void connectionError();
    void ready();
-   void Error(unsigned int id, std::string error);
-   void TXSigned(unsigned int id, BinaryData signedTX, std::string error);
+   void Error(RequestId id, std::string error);
+   void TXSigned(RequestId id, BinaryData signedTX, std::string error);
 
    void PasswordRequested(std::string walletId, std::string prompt, bs::wallet::EncryptionType
       , SecureBinaryData encKey);
 
-   void HDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
-   void HDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
-   void DecryptedRootKey(unsigned int id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
+   void HDLeafCreated(RequestId id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void HDWalletCreated(RequestId id, std::shared_ptr<bs::hd::Wallet>);
+   void DecryptedRootKey(RequestId id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
-   void HDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &encKey);
+   void HDWalletInfo(RequestId id, bs::wallet::EncryptionType, const SecureBinaryData &encKey);
    void MissingWallets(const std::vector<std::string> &);
    void AddressSyncFailed(const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void AddressSyncComplete();
@@ -126,7 +129,8 @@ protected:
 
 
 std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger> &
-   , const std::shared_ptr<ApplicationSettings> &);
+   , const std::shared_ptr<ApplicationSettings> &
+   , const std::shared_ptr<ConnectionManager>& );
 
 
 #endif // __SIGN_CONTAINER_H__

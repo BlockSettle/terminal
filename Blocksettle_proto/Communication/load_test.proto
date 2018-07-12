@@ -27,8 +27,9 @@ message AdminCommandConnect
    required string wallets_root = 7;
    required string armory_host = 8;
    required string armory_port = 9;
-   required bool   generate_address = 10;
-   optional uint64 generate_address_interval = 11;
+   required bool   need_auth_address = 10;
+   required bool   generate_address = 11;
+   optional uint64 generate_address_interval = 12;
 }
 
 message RFQAmount
@@ -55,6 +56,9 @@ message AdminCommandStartTrading
 
    required RFQAmountsCollection fx_rfq_amounts    = 2;
    repeated DealingPrice         fx_dealing_prices = 3;
+
+   optional RFQAmountsCollection xbt_rfq_amounts    = 4;
+   repeated DealingPrice         xbt_dealing_prices = 5;
 }
 
 enum CustomerUpdateType

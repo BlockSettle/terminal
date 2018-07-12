@@ -330,7 +330,7 @@ void BSTerminalMainWindow::InitAuthManager()
 
 void BSTerminalMainWindow::InitSigningContainer()
 {
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_);
+   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, connectionManager_);
    if (!signContainer_) {
       showError(tr("Signer"), tr("Creation failure"));
       return;

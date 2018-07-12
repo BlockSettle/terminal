@@ -74,7 +74,12 @@ bool ZmqDataConnection::openConnection(const std::string& host , const std::stri
    }
 
    // connect socket to server ( connection state will be changed in listen thread )
-   std::string endpoint = std::string("tcp://") + host + ":" + port;
+   std::string endpoint = ZmqContext::CreateConnectionEndpoint(zmqTransport_, host, port);
+   if (endpoint.empty()) {
+      logger_->error("[ZmqDataConnection::openConnection] failed to generate connection address");
+      return false;
+   }
+
    int result = zmq_connect(tempDataSocket.get(), endpoint.c_str());
    if (result != 0) {
       logger_->error("[ZmqDataConnection::openConnection] failed to connect socket to {}"
@@ -366,4 +371,17 @@ bool ZmqDataConnection::sendRawData(const std::string& rawData)
 ZmqContext::sock_ptr ZmqDataConnection::CreateDataSocket()
 {
    return context_->CreateStreamSocket();
+}
+
+bool ZmqDataConnection::SetZMQTransport(ZMQTransport transport)
+{
+   switch(transport) {
+   case ZMQTransport::TCPTransport:
+   case ZMQTransport::InprocTransport:
+      zmqTransport_ = transport;
+      return true;
+   default:
+      logger_->error("[ZmqDataConnection::SetZMQTransport] undefined transport");
+      return false;
+   }
 }

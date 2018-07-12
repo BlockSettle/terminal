@@ -1,11 +1,5 @@
 #include "HeadlessContainer.h"
-#include <QCoreApplication>
-#include <QDebug>
-#include <QDir>
-#include <QProcess>
-#include <QStandardPaths>
-#include <QtConcurrent/QtConcurrentRun>
-#include <spdlog/spdlog.h>
+
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
 #include "DataConnectionListener.h"
@@ -13,6 +7,16 @@
 #include "SettlementWallet.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
+
+#include <QCoreApplication>
+#include <QDebug>
+#include <QDir>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QtConcurrent/QtConcurrentRun>
+
+#include <spdlog/spdlog.h>
+
 
 using namespace Blocksettle::Communication;
 Q_DECLARE_METATYPE(headless::RequestPacket)
@@ -733,11 +737,14 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 }
 
 
-RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger, const QString &homeDir
-   , const QString &host, const QString &port, const QString &pwHash, OpMode opMode)
+RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
+   , const QString &host, const QString &port
+   , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash
+   , OpMode opMode)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), pwHash_(pwHash)
    , connPubKey_("t>ituO$mt-[Fl}&IE%EicU@L&LvC%8i$$nS3YFm}")
+   , connectionManager_{connectionManager}
 {}
 
 bool RemoteSigner::Start()
@@ -745,12 +752,16 @@ bool RemoteSigner::Start()
    if (connection_) {
       return true;
    }
-   const ConnectionManager connMgr(logger_);
-   connection_ = connMgr.CreateSecuredDataConnection(true);
+
+   connection_ = connectionManager_->CreateSecuredDataConnection(true);
    if (!connection_->SetServerPublicKey(connPubKey_)) {
       logger_->error("[HeadlessContainer] Failed to set connection pubkey");
       connection_ = nullptr;
       return false;
+   }
+
+   if (opMode() == OpMode::RemoteInproc) {
+      connection_->SetZMQTransport(ZMQTransport::InprocTransport);
    }
 
    listener_ = std::make_shared<HeadlessListener>(logger_, connection_);
@@ -914,8 +925,9 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
 
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger, const QString &homeDir, NetworkType netType
-   , const QString &port, const QString &pwHash, double asSpendLimit)
-   : RemoteSigner(logger, homeDir, QLatin1String("127.0.0.1"), port, pwHash, OpMode::Local)
+   , const QString &port
+   , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash, double asSpendLimit)
+   : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, connectionManager, pwHash, OpMode::Local)
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
