@@ -1,21 +1,38 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
+import com.blocksettle.FrejaProxy 1.0
+import com.blocksettle.FrejaSignWalletObject 1.0
+import com.blocksettle.WalletInfo 1.0
 
 CustomDialog {
-    property string walletName
-    property string walletId
-    property bool walletEncrypted
+    property WalletInfo wallet
     property string targetDir
     property string backupFileExt:  "." + (isPrintable ? "pdf" : "wdb")
-    property string backupFileName: "backup_wallet_" + walletName + "_" + walletId + backupFileExt
+    property string backupFileName: "backup_wallet_" + wallet.name + "_" + wallet.id + backupFileExt
     property string password
     property bool   isPrintable:    false
-    property bool   acceptable:     !walletEncrypted
+    property bool   acceptable:     (wallet.encType === WalletInfo.Unencrypted) || tfPassword.text.length || password.length
+    property FrejaSignWalletObject  frejaSign
 
     id:root
     implicitWidth: 400
     implicitHeight: mainLayout.childrenRect.height
+
+    onWalletChanged: {
+        if (wallet.encType === WalletInfo.Freja) {
+            frejaSign = freja.signWallet(wallet.encKey, qsTr("Backup wallet %1").arg(wallet.name),
+                                         wallet.rootId)
+
+            frejaSign.success.connect(function(key) {
+                password = key
+                labelFrejaStatus.text = qsTr("Password ok")
+            })
+            frejaSign.error.connect(function(text) {
+                root.reject()
+            })
+        }
+    }
 
     FocusScope {
         anchors.fill: parent
@@ -45,7 +62,7 @@ CustomDialog {
                     id: panelHeader
                     Layout.preferredHeight: 40
                     Layout.fillWidth: true
-                    text:   qsTr("Backup Private Key for Wallet %1").arg(walletName)
+                    text:   qsTr("Backup Private Key for Wallet %1").arg(wallet.name)
 
                 }
             }
@@ -57,7 +74,7 @@ CustomDialog {
                 Layout.rightMargin: 10
 
                 CustomLabel {
-                    visible:    walletEncrypted
+                    visible:    wallet.encType === WalletInfo.Password
                     elide: Label.ElideRight
                     text: qsTr("Password:")
                     Layout.minimumWidth: 110
@@ -67,7 +84,7 @@ CustomDialog {
                 }
                 CustomTextInput {
                     id: tfPassword
-                    visible: walletEncrypted
+                    visible:    wallet.encType === WalletInfo.Password
                     focus: true
                     placeholderText: qsTr("Wallet password")
                     echoMode: TextField.Password
@@ -75,14 +92,25 @@ CustomDialog {
                     onTextChanged: {
                         acceptable = (text.length > 0)
                     }
-
                     onAccepted: {
                         if (text && text.length > 0) {
                             accept()
                         }
                     }
                 }
+
+                CustomLabel {
+                    id: labelFreja
+                    visible: wallet.encType === WalletInfo.Freja
+                    text: qsTr("Sign with Freja eID")
+                }
+                CustomLabel {
+                    id: labelFrejaStatus
+                    visible: wallet.encType === WalletInfo.Freja
+                    text: frejaSign.status
+                }
             }
+
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -201,7 +229,7 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: root.close();
+                            onClicked: root.reject();
                         }
                     }
                 }
@@ -209,7 +237,21 @@ CustomDialog {
         }
     }
 
+    function toHex(str) {
+        var hex = '';
+        for(var i = 0; i < str.length; i++) {
+            hex += ''+str.charCodeAt(i).toString(16);
+        }
+        return hex;
+    }
+
     onAccepted: {
-        password = tfPassword.text
+        if (wallet.encType === WalletInfo.Password) {
+            password = toHex(tfPassword.text)
+        }
+    }
+
+    onRejected: {
+        frejaSign.cancel();
     }
 }

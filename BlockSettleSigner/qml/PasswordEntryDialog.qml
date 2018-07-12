@@ -2,18 +2,38 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.TXInfo 1.0
+import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.FrejaProxy 1.0
+import com.blocksettle.FrejaSignWalletObject 1.0
 
 
 CustomDialog {
     property string prompt
     property TXInfo txInfo
     property string password
+    property bool   acceptable: false
+    property FrejaSignWalletObject  frejaSign
     closePolicy: Popup.NoAutoClose
     modal: false
     id: passwordDialog
 
     implicitWidth: 400
     implicitHeight: mainLayout.childrenRect.height
+
+    onTxInfoChanged: {
+        if (txInfo.wallet.encType === WalletInfo.Freja) {
+            frejaSign = freja.signWallet(txInfo.wallet.encKey, prompt, txInfo.wallet.rootId)
+
+            frejaSign.success.connect(function(key) {
+                acceptable = true
+                password = key
+                passwordDialog.accept()
+            })
+            frejaSign.error.connect(function(text) {
+                passwordDialog.reject()
+            })
+        }
+    }
 
     FocusScope {
         anchors.fill: parent
@@ -50,8 +70,8 @@ CustomDialog {
             CustomLabel {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
-                visible: !txInfo.nbInputs && txInfo.sendingWallet.length
-                text:   qsTr("Wallet %1").arg(txInfo.sendingWallet)
+                visible: !txInfo.nbInputs && txInfo.wallet.name.length
+                text:   qsTr("Wallet %1").arg(txInfo.wallet.name)
             }
 
             GridLayout {
@@ -74,7 +94,7 @@ CustomDialog {
                     text:   qsTr("Sending Wallet")
                 }
                 CustomLabelValue {
-                    text:   txInfo.sendingWallet
+                    text:   txInfo.wallet.name
                     Layout.alignment: Qt.AlignRight
                 }
 
@@ -185,10 +205,17 @@ CustomDialog {
 
                 CustomTextInput {
                     id: tfPassword
+                    visible: txInfo.wallet.encType === WalletInfo.Password
                     focus: true
                     placeholderText: qsTr("Password")
                     echoMode: TextField.Password
                     Layout.fillWidth: true
+                }
+
+                CustomLabel {
+                    id: labelFreja
+                    visible: txInfo.wallet.encType === WalletInfo.Freja
+                    text: frejaSign.status
                 }
             }
 
@@ -252,7 +279,7 @@ CustomDialog {
                     CustomButtonPrimary {
                         Layout.fillWidth: true
                         text:   qsTr("CONFIRM")
-                        enabled: tfPassword.text.length
+                        enabled: tfPassword.text.length || acceptable
 
                         onClicked: {
                             passwordDialog.accept()
@@ -278,7 +305,17 @@ CustomDialog {
         }
     }
 
+    function toHex(str) {
+        var hex = '';
+        for(var i = 0; i < str.length; i++) {
+            hex += ''+str.charCodeAt(i).toString(16);
+        }
+        return hex;
+    }
+
     onAccepted: {
-        password = tfPassword.text
+        if (txInfo.wallet.encType === WalletInfo.Password) {
+            password = toHex(tfPassword.text)
+        }
     }
 }

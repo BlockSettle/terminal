@@ -3,25 +3,35 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import QtQuick.Dialogs 1.2
 import com.blocksettle.PasswordConfirmValidator 1.0
+import com.blocksettle.WalletSeed 1.0
+import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.FrejaProxy 1.0
+import com.blocksettle.FrejaSignWalletObject 1.0
 
 import "bscontrols"
 
 CustomDialog {
     property bool primaryWalletExists: false
     property bool digitalBackup: false
-    property string walletName
-    property string walletDesc
     property string password
-    property string recoveryKey
     property bool isPrimary:    false
+    property WalletSeed seed
+    property FrejaSignWalletObject  frejaSign
     property bool acceptable: tfName.text.length &&
-                              confirmedPassworrdInput.acceptableInput &&
+                              (confirmedPassworrdInput.acceptableInput || password.length) &&
                               (digitalBackup ? lblDBFile.text !== "..." : rootKeyInput.acceptableInput)
     property int inputLabelsWidth: 105
 
     implicitWidth: 400
     implicitHeight: mainLayout.implicitHeight
     id: root
+
+    Connections {
+        target: seed
+        onError: {
+            ibFailure.displayMessage(errMsg)
+        }
+    }
 
     FocusScope {
         anchors.fill: parent
@@ -63,6 +73,30 @@ CustomDialog {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
 
+                CustomRadioButton {
+                    id: rbMainNet
+                    text:   qsTr("MainNet")
+                    checked:    seed.mainNet
+                    onClicked: {
+                        seed.mainNet = true
+                    }
+                }
+                CustomRadioButton {
+                    id: rbTestNet
+                    text:   qsTr("TestNet")
+                    checked:    seed.testNet
+                    onClicked: {
+                        seed.testNet = true
+                    }
+                }
+            }
+
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
                 CustomLabel {
                     Layout.fillWidth: true
                     Layout.minimumWidth: inputLabelsWidth
@@ -75,6 +109,9 @@ CustomDialog {
                     selectByMouse: true
                     Layout.fillWidth: true
                     focus: true
+                    onEditingFinished: {
+                        seed.walletName = tfName.text
+                    }
                 }
             }
 
@@ -96,17 +133,72 @@ CustomDialog {
                     id: tfDesc
                     selectByMouse: true
                     Layout.fillWidth: true
+                    onEditingFinished: {
+                        seed.walletDesc = tfDesc.text
+                    }
+                }
+            }
+
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomRadioButton {
+                    id: rbPassword
+                    text:   qsTr("Password")
+                    checked:    true
+                }
+                CustomRadioButton {
+                    id: rbFreja
+                    text:   qsTr("Freja eID")
                 }
             }
 
             BSConfirmedPasswordInput {
                 id: confirmedPassworrdInput
+                visible:    rbPassword.checked
                 columnSpacing: 10
                 rowSpacing: 0
                 passwordLabelTxt: qsTr("Wallet Password")
                 passwordInputPlaceholder: qsTr("New Wallet Password")
                 confirmLabelTxt: qsTr("Confirm Password")
                 confirmInputPlaceholder: qsTr("Confirm New Wallet Password")
+            }
+
+            RowLayout {
+                visible:    rbFreja.checked
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomTextInput {
+                    id: tiFrejaId
+                    placeholderText: qsTr("Freja ID (email)")
+                }
+                CustomButton {
+                    id: btnFreja
+                    text:   !frejaSign ? qsTr("Sign with Freja") : frejaSign.status
+                    enabled:    !frejaSign && tiFrejaId.text.length
+                    onClicked: {
+                        seed.encType = WalletInfo.Freja
+                        seed.encKey = tiFrejaId.text
+                        password = ''
+                        frejaSign = freja.signWallet(tiFrejaId.text, qsTr("Password for wallet %1").arg(tfName.text),
+                                                              seed.walletId)
+                        btnFreja.enabled = false
+                        frejaSign.success.connect(function(key) {
+                            password = key
+                            text = qsTr("Successfully signed")
+                        })
+                        frejaSign.error.connect(function(text) {
+                            frejaSign = null
+                            btnFreja.enabled = tiFrejaId.text.length
+                        })
+                    }
+                }
             }
 
             RowLayout {
@@ -132,9 +224,14 @@ CustomDialog {
                 rowSpacing: 0
                 columnSpacing: 0
                 Layout.topMargin: 5
-                sectionHeaderTxt: qsTr("Enter Root Privat Key: ")
+                sectionHeaderTxt: qsTr("Enter Root Private Key: ")
                 line1LabelTxt: qsTr("Root Key Line 1")
                 line2LabelTxt: qsTr("Root Key Line 2")
+                onEntryComplete: {
+                    if (!seed.parsePaperKey(privateRootKey)) {
+                        ibFailure.displayMessage("Failed to parse paper backup key")
+                    }
+                }
             }
 
             RowLayout {
@@ -211,7 +308,7 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: root.close();
+                            onClicked: root.reject();
                         }
                     }
                 }
@@ -219,12 +316,23 @@ CustomDialog {
         }
     }
 
+    function toHex(str) {
+        var hex = '';
+        for (var i = 0; i < str.length; i++) {
+            hex += '' + str.charCodeAt(i).toString(16);
+        }
+        return hex;
+    }
+
     onAccepted: {
-        walletName = tfName.text
-        walletDesc = tfDesc.text
-        password = confirmedPassworrdInput.text
+        if (rbPassword.checked) {
+            password = toHex(confirmedPassworrdInput.text)
+        }
         isPrimary = cbPrimary.checked
-        recoveryKey = digitalBackup ? lblDBFile.text : paperBackupCode
+    }
+
+    onRejected: {
+        frejaSign.cancel()
     }
 
     Loader {
@@ -241,6 +349,9 @@ CustomDialog {
                 var filePath = fileUrl.toString()
                 filePath = filePath.replace(/(^file:\/{2})/, "")
                 lblDBFile.text = decodeURIComponent(filePath)
+                if (!seed.parseDigitalBackupFile(lblDBFile.text)) {
+                    ibFailure.displayMessage(qsTr("Failed to parse digital backup from %1").arg(lblDBFile.text))
+                }
             }
         }
     }

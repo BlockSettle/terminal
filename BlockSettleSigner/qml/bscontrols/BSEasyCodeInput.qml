@@ -29,7 +29,9 @@ ColumnLayout {
     property string easyCodePalceholder2: "kkkk kkkk kkkk kkkk kkkk kkkk kkkk kkkk kkkk"
     property string identicalLinesErrorMsg: "Same Code Used in Line 1 and Line 2"
 
-    property string  privateRootKey: keyLine1.text + " " + keyLine2.text
+    property string  privateRootKey: keyLine1.text + "\n" + keyLine2.text
+
+    signal entryComplete()
 
 
     RowLayout {
@@ -78,6 +80,11 @@ ColumnLayout {
                     keyLine2.forceActiveFocus();
                 }
             }
+            onEditingFinished: {
+                if (acceptableInput && keyLine2.acceptableInput) {
+                    entryComplete()
+                }
+            }
         }
     }
 
@@ -120,6 +127,11 @@ ColumnLayout {
             onAcceptableInputChanged: {
                 if (acceptableInput && !keyLine1.acceptableInput) {
                     keyLine1.forceActiveFocus();
+                }
+                onEditingFinished: {
+                    if (acceptableInput && keyLine1.acceptableInput) {
+                        entryComplete()
+                    }
                 }
             }
         }

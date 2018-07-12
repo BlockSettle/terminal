@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
+#include "FrejaProxy.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
 #include "HDWallet.h"
@@ -36,7 +37,12 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
+   qmlRegisterUncreatableType<FrejaProxy>("com.blocksettle.FrejaProxy", 1, 0,
+      "FrejaProxy", QStringLiteral("Cannot create a FrejaProxy instance"));
+   qmlRegisterType<FrejaSignWalletObject>("com.blocksettle.FrejaSignWalletObject", 1, 0, "FrejaSignWalletObject");
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
+   qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
+   qmlRegisterType<WalletSeed>("com.blocksettle.WalletSeed", 1, 0, "WalletSeed");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
 
@@ -58,6 +64,14 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 
    walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_, params_);
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
+   connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
+      if (walletsProxy_->walletsLoaded()) {
+         emit loadingComplete();
+      }
+   });
+
+   frejaProxy_ = std::make_shared<FrejaProxy>(logger_);
+   ctxt_->setContextProperty(QStringLiteral("freja"), frejaProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
@@ -167,12 +181,13 @@ void QMLAppObj::SetRootObject(QObject *obj)
 
 void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password)
 {
-   logger_->debug("Password for wallet {} was accepted", walletId.toStdString());
+   SecureBinaryData decodedPwd = BinaryData::CreateFromHex(password.toStdString());
+   logger_->debug("Password for wallet {} was accepted ({})", walletId.toStdString(), password.size());
    if (listener_) {
-      listener_->passwordReceived(walletId.toStdString(), password.toStdString());
+      listener_->passwordReceived(walletId.toStdString(), decodedPwd);
    }
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
-      offlineProc_->passwordEntered(walletId.toStdString(), password.toStdString());
+      offlineProc_->passwordEntered(walletId.toStdString(), decodedPwd);
       offlinePasswordRequests_.erase(walletId.toStdString());
    }
 }
@@ -191,14 +206,16 @@ void QMLAppObj::onPasswordRequested(const bs::wallet::TXSignRequest &txReq, cons
 void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
 {
    bs::wallet::TXSignRequest txReq;
+   QString walletName;
    txReq.walletId = walletId;
    if (txReq.walletId.empty()) {
       const auto &wallet = walletsMgr_->GetPrimaryWallet();
       if (wallet) {
          txReq.walletId = wallet->getWalletId();
+         walletName = QString::fromStdString(wallet->getName());
       }
    }
-   requestPassword(txReq, tr("Auto-Sign for %1").arg(QString::fromStdString(walletId)));
+   requestPassword(txReq, walletName.isEmpty() ? tr("Auto-Sign") : tr("Auto-Sign for %1").arg(walletName));
 }
 
 void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
@@ -209,7 +226,7 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
    if (alert && trayIcon_) {
       QString notifPrompt = prompt;
       if (!txReq.walletId.empty()) {
-         notifPrompt = tr("Enter password for %1").arg(txInfo->sendingWallet());
+         notifPrompt = tr("Enter password for %1").arg(txInfo->wallet()->name());
       }
       trayIcon_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
    }
