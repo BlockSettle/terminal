@@ -9,40 +9,11 @@
 #include "Colors.h"
 
 
-QString QuoteRequestsModel::Header::toString(QuoteRequestsModel::Header::Index h)
-{
-   switch (h) {
-      case SecurityID:  return tr("SecurityID");
-      case Product:     return tr("Product");
-      case Side:        return tr("Side");
-      case Quantity:    return tr("Quantity");
-      case Party:       return tr("Party");
-      case Status:      return tr("Status");
-      case QuotedPx:    return tr("Quoted Price");
-      case IndicPx:     return tr("Indicative Px");
-      case BestPx:      return tr("Best Quoted Px");
-      case Empty:       return QString();
-      default:          return tr("Undefined");
-   }
-}
-
-QStringList QuoteRequestsModel::Header::labels()
-{
-   QStringList rv;
-   for (int i = Header::first; i < Header::last; i++) {
-      rv << Header::toString(static_cast<Header::Index>(i));
-   }
-   return rv;
-}
-
-
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
  , QObject* parent)
-   : QStandardItemModel(parent)
+   : QAbstractItemModel(parent)
    , secStatsCollector_(statsCollector)
 {
-   setHorizontalHeaderLabels(Header::labels());
-
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &QuoteRequestsModel::ticker);
    timer_.start();
@@ -51,6 +22,431 @@ QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCo
 QuoteRequestsModel::~QuoteRequestsModel()
 {
    secStatsCollector_->saveState();
+}
+
+int QuoteRequestsModel::columnCount(const QModelIndex &) const
+{
+   return 10;
+}
+
+QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
+{
+   IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
+
+   switch (idx->type_) {
+      case DataType::RFQ : {
+         RFQ *r = static_cast<RFQ*>(idx->data_);
+
+         switch (role) {
+            case Qt::DisplayRole : {
+               switch(static_cast<Column>(index.column())) {
+                  case Column::SecurityID : {
+                     return r->security_;
+                  }
+
+                  case Column::Product : {
+                     return r->product_;
+                  }
+                  case Column::Side : {
+                     return r->sideString_;
+                  }
+
+                  case Column::Quantity : {
+                     return r->quantityString_;
+                  }
+
+                  case Column::Party : {
+                     return r->party_;
+                  }
+
+                  case Column::Status : {
+                     return r->status_.status_;
+                  }
+                     break;
+
+                  case Column::QuotedPx : {
+                     return r->quotedPriceString_;
+                  }
+
+                  case Column::IndicPx : {
+                     return r->indicativePxString_;
+                  }
+
+                  case Column::BestPx : {
+                     return r->bestQuotedPxString_;
+                  }
+
+                  default:
+                     return QVariant();
+               }
+            }
+               break;
+
+            case static_cast<int>(Role::ShowProgress) : {
+               return r->status_.showProgress_;
+            }
+               break;
+
+            case static_cast<int>(Role::Timeout) : {
+               return r->status_.timeout_;
+            }
+               break;
+
+            case static_cast<int>(Role::TimeLeft) : {
+               return r->status_.timeleft_;
+            }
+               break;
+
+            case static_cast<int>(Role::BestQPrice) : {
+               return r->bestQuotedPx_;
+            }
+               break;
+
+            case static_cast<int>(Role::QuotedPrice) : {
+               return r->quotedPrice_;
+            }
+               break;
+
+            case static_cast<int>(Role::AllowFiltering) : {
+               if (index.column() == 0) {
+                  return true;
+               } else {
+                  return false;
+               }
+            }
+               break;
+
+            case static_cast<int>(Role::ReqId) : {
+               return QString::fromStdString(r->reqId_);
+            }
+               break;
+
+            case Qt::BackgroundRole : {
+               switch (static_cast<Column>(index.column())) {
+                  case Column::QuotedPx :
+                     return r->quotedPriceBrush_;
+
+                  case Column::IndicPx :
+                     return r->indicativePxBrush_;
+
+                  case Column::Status :
+                     return r->stateBrush_;
+
+                  default :
+                     return QVariant();
+               }
+            }
+               break;
+
+            case Qt::TextColorRole: {
+               if (secStatsCollector_ && index.column() < static_cast<int>(Column::Status)) {
+                  return secStatsCollector_->getColorFor(r->security_.toStdString());
+               }
+               else {
+                  return QVariant();
+               }
+            }
+                                    break;
+
+            default:
+               return QVariant();
+         }
+      }
+         break;
+
+      case DataType::Group : {
+         Group *g = static_cast<Group*>(idx->data_);
+
+         switch (role) {
+            case Qt::FontRole : {
+               if (index.column() == static_cast<int>(Column::SecurityID)) {
+                  return g->font_;
+               } else {
+                  return QVariant();
+               }
+            }
+               break;
+
+            case Qt::DisplayRole : {
+               if (index.column() == static_cast<int>(Column::SecurityID)) {
+                  return g->security_;
+               } else {
+                  return QVariant();
+               }
+            }
+               break;
+
+            case Qt::TextColorRole : {
+               if (secStatsCollector_) {
+                  return secStatsCollector_->getColorFor(g->security_.toStdString());
+               } else {
+                  return QVariant();
+               }
+            }
+               break;
+
+            case static_cast<int>(Role::Grade) : {
+               if (secStatsCollector_) {
+                  return secStatsCollector_->getGradeFor(g->security_.toStdString());
+               } else {
+                  return QVariant();
+               }
+            }
+               break;
+
+            case static_cast<int>(Role::AllowFiltering) : {
+               return true;
+            }
+               break;
+
+            default :
+               return QVariant();
+         }
+      }
+         break;
+
+      case DataType::Market : {
+         Market *m = static_cast<Market*>(idx->data_);
+
+         switch (role) {
+            case static_cast<int>(Role::Grade) : {
+               return 1;
+            }
+               break;
+
+            case Qt::DisplayRole : {
+               switch (static_cast<Column>(index.column())) {
+                  case Column::SecurityID : {
+                     return m->security_;
+                  }
+
+                  case Column::Product : {
+                     if (m->security_ == groupNameSettlements_ && settlCompleted_) {
+                        return QString::number(settlCompleted_);
+                     } else {
+                        return QVariant();
+                     }
+                  }
+                     break;
+
+                  case Column::Side : {
+                     if (m->security_ == groupNameSettlements_ && settlFailed_) {
+                        return QString::number(settlFailed_);
+                     } else {
+                        return QVariant();
+                     }
+                  }
+                     break;
+
+                  default :
+                     return QVariant();
+               }
+            }
+               break;
+
+            case Qt::TextColorRole : {
+               if (index.column() == static_cast<int>(Column::Product)) {
+                  return c_greenColor;
+               } else if (index.column() == static_cast<int>(Column::Side)) {
+                  return c_redColor;
+               } else {
+                  return QVariant();
+               }
+            }
+               break;
+
+
+            case Qt::TextAlignmentRole : {
+               if (index.column() == static_cast<int>(Column::Product)
+                   || index.column() == static_cast<int>(Column::Side)) {
+                     return Qt::AlignRight;
+               } else {
+                  return QVariant();
+               }
+            }
+               break;
+
+            default :
+               return QVariant();
+         }
+      }
+         break;
+
+      default :
+         return QVariant();
+   }
+}
+
+QModelIndex QuoteRequestsModel::index(int row, int column, const QModelIndex &parent) const
+{
+   if (parent.isValid()) {
+      IndexHelper *idx = static_cast<IndexHelper*>(parent.internalPointer());
+
+      switch (idx->type_) {
+         case DataType::Market : {
+            Market *m = static_cast<Market*>(idx->data_);
+
+            if (row < m->groups_.size()) {
+               return createIndex(row, column, &m->groups_.at(row)->idx_);
+            } else if (row < m->groups_.size() + m->settl_.rfqs_.size()){
+               return createIndex(row, column, &m->settl_.rfqs_.at(row - m->groups_.size())->idx_);
+            } else {
+               return QModelIndex();
+            }
+         }
+            break;
+
+         case DataType::Group : {
+            Group *g = static_cast<Group*>(idx->data_);
+
+            if (row < g->rfqs_.size()) {
+               return createIndex(row, column, &g->rfqs_.at(row)->idx_);
+            } else {
+               return QModelIndex();
+            }
+         }
+            break;
+
+         default :
+            return QModelIndex();
+      }
+   } else if (row < data_.size()) {
+      return createIndex(row, column, &data_.at(row)->idx_);
+   } else {
+      return QModelIndex();
+   }
+}
+
+int QuoteRequestsModel::findGroup(IndexHelper *idx) const
+{
+   if (idx->parent_) {
+      auto *market = static_cast<Market*>(idx->parent_->data_);
+
+      auto it = std::find_if(market->groups_.cbegin(), market->groups_.cend(),
+         [&idx](const std::unique_ptr<Group> &g) { return (&g->idx_ == idx); });
+
+      if (it != market->groups_.cend()) {
+         return std::distance(market->groups_.cbegin(), it);
+      } else {
+         return -1;
+      }
+   } else if (idx->type_ == DataType::Market) {
+      return findMarket(idx);
+   } else {
+      return -1;
+   }
+}
+
+QuoteRequestsModel::Group* QuoteRequestsModel::findGroup(Market *market, const QString &security) const
+{
+   auto it = std::find_if(market->groups_.cbegin(), market->groups_.cend(),
+      [&] (const std::unique_ptr<Group> &g) { return (g->security_ == security); } );
+
+   if (it != market->groups_.cend()) {
+      return it->get();
+   } else {
+      return nullptr;
+   }
+}
+
+int QuoteRequestsModel::findMarket(IndexHelper *idx) const
+{
+   auto it = std::find_if(data_.cbegin(), data_.cend(),
+      [&idx](const std::unique_ptr<Market> &m) { return (&m->idx_ == idx); });
+
+   if (it != data_.cend()) {
+      return std::distance(data_.cbegin(), it);
+   } else {
+      return -1;
+   }
+}
+
+QuoteRequestsModel::Market* QuoteRequestsModel::findMarket(const QString &name) const
+{
+   for (size_t i = 0; i < data_.size(); ++i) {
+      if (data_[i]->security_ == name) {
+         return data_[i].get();
+      }
+   }
+
+   return nullptr;
+}
+
+QModelIndex QuoteRequestsModel::parent(const QModelIndex &index) const
+{
+   if (index.isValid()) {
+      IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
+
+      if (idx->parent_) {
+         switch (idx->parent_->type_) {
+            case DataType::Group : {
+               return createIndex(findGroup(idx->parent_), 0, idx->parent_);
+            }
+               break;
+
+            case DataType::Market : {
+               return createIndex(findMarket(idx->parent_), 0, idx->parent_);
+            }
+               break;
+
+            default :
+               return QModelIndex();
+         }
+      } else {
+         return QModelIndex();
+      }
+   } else {
+      return QModelIndex();
+   }
+}
+
+int QuoteRequestsModel::rowCount(const QModelIndex &parent) const
+{
+   if (parent.isValid()) {
+      IndexHelper *idx = static_cast<IndexHelper*>(parent.internalPointer());
+
+      switch (idx->type_) {
+         case DataType::Group : {
+            return static_cast<int>(static_cast<Group*>(idx->data_)->rfqs_.size());
+         }
+            break;
+
+         case DataType::Market : {
+            auto *market = static_cast<Market*>(idx->data_);
+            return static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size());
+         }
+            break;
+
+         default :
+            return 0;
+      }
+   } else {
+      return static_cast<int>(data_.size());
+   }
+}
+
+QVariant QuoteRequestsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+   if (orientation != Qt::Horizontal) {
+      return QVariant();
+   }
+
+   if (role != Qt::DisplayRole) {
+      return QVariant();
+   }
+
+   switch (static_cast<Column>(section)) {
+      case Column::SecurityID:  return tr("SecurityID");
+      case Column::Product:     return tr("Product");
+      case Column::Side:        return tr("Side");
+      case Column::Quantity:    return tr("Quantity");
+      case Column::Party:       return tr("Party");
+      case Column::Status:      return tr("Status");
+      case Column::QuotedPx:    return tr("Quoted Price");
+      case Column::IndicPx:     return tr("Indicative Px");
+      case Column::BestPx:      return tr("Best Quoted Px");
+      default:                  return QString();
+   }
 }
 
 void QuoteRequestsModel::SetAssetManager(const std::shared_ptr<AssetManager>& assetManager)
@@ -63,8 +459,10 @@ void QuoteRequestsModel::ticker() {
    const auto timeNow = QDateTime::currentDateTime();
 
    for (const auto &id : pendingDeleteIds_) {
-      forSpecificId(id, [](QStandardItem *grp, int idxItem) {
-         grp->removeRow(idxItem);
+      forSpecificId(id, [this](Group *g, int idxItem) {
+         beginRemoveRows(createIndex(findGroup(&g->idx_), 0, &g->idx_), idxItem, idxItem);
+         g->rfqs_.erase(g->rfqs_.begin() + idxItem);
+         endRemoveRows();
       });
       deletedRows.insert(id);
    }
@@ -73,19 +471,25 @@ void QuoteRequestsModel::ticker() {
    for (auto qrn : notifications_) {
       const auto timeDiff = timeNow.msecsTo(qrn.second.expirationTime.addMSecs(qrn.second.timeSkewMs));
       if ((timeDiff < 0) || (qrn.second.status == bs::network::QuoteReqNotification::Withdrawn)) {
-         forSpecificId(qrn.second.quoteRequestId, [](QStandardItem *grp, int itemIndex) {
-            grp->removeRow(itemIndex);
-            if ((grp->rowCount() == 0) && grp->parent()) {
-               grp->parent()->removeRow(grp->row());
+         forSpecificId(qrn.second.quoteRequestId, [this](Group *grp, int itemIndex) {
+            const auto row = findGroup(&grp->idx_);
+            beginRemoveRows(createIndex(row, 0, &grp->idx_), itemIndex, itemIndex);
+            grp->rfqs_.erase(grp->rfqs_.begin() + itemIndex);
+            endRemoveRows();
+
+            if (grp->rfqs_.size() == 0) {
+               const auto m = findMarket(grp->idx_.parent_);
+               beginRemoveRows(createIndex(m, 0, grp->idx_.parent_), row, row);
+               data_[m]->groups_.erase(data_[m]->groups_.begin() + row);
+               endRemoveRows();
             }
          });
          deletedRows.insert(qrn.second.quoteRequestId);
       }
       else if ((qrn.second.status == bs::network::QuoteReqNotification::PendingAck)
          || (qrn.second.status == bs::network::QuoteReqNotification::Replied)) {
-         forSpecificId(qrn.second.quoteRequestId, [timeDiff](QStandardItem *grp, int itemIndex) {
-            grp->child(itemIndex, Header::Status)->setData((int)timeDiff, Role::TimeLeft);
-            grp->child(itemIndex)->setData((int)timeDiff, Role::TimeLeft);
+         forSpecificId(qrn.second.quoteRequestId, [timeDiff](Group *grp, int itemIndex) {
+            grp->rfqs_[itemIndex]->status_.timeleft_ = (int) timeDiff;
          });
       }
    }
@@ -96,20 +500,49 @@ void QuoteRequestsModel::ticker() {
 
    for (const auto &settlContainer : settlContainers_) {
       forSpecificId(settlContainer.second->id(),
-         [timeLeft = settlContainer.second->timeLeftMs()](QStandardItem *grp, int itemIndex) {
-         grp->child(itemIndex, Header::Status)->setData(timeLeft, Role::TimeLeft);
-         grp->child(itemIndex)->setData(timeLeft, Role::TimeLeft);
+         [timeLeft = settlContainer.second->timeLeftMs()](Group *grp, int itemIndex) {
+         grp->rfqs_[itemIndex]->status_.timeleft_ = (int) timeLeft;
       });
+   }
+
+   if (!data_.empty()) {
+      for (size_t i = 0; i < data_.size(); ++i) {
+         for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
+            emit dataChanged(createIndex(0, static_cast<int>(Column::Status),
+                  &data_[i]->groups_[j]->rfqs_.front()->idx_),
+               createIndex(data_[i]->groups_[j]->rfqs_.size() - 1, static_cast<int>(Column::Status),
+                  &data_[i]->groups_[j]->rfqs_.back()->idx_));
+         }
+
+         if (!data_[i]->settl_.rfqs_.empty()) {
+            const int r = data_[i]->groups_.size();
+            emit dataChanged(createIndex(r, static_cast<int>(Column::Status),
+                  &data_[i]->settl_.rfqs_.front()->idx_),
+               createIndex(r + data_[i]->settl_.rfqs_.size() - 1, static_cast<int>(Column::Status),
+                  &data_[i]->settl_.rfqs_.back()->idx_));
+         }
+      }
    }
 }
 
 void QuoteRequestsModel::onQuoteNotifCancelled(const QString &reqId)
 {
-   forSpecificId(reqId.toStdString(), [](QStandardItem *group, int i) {
-      group->child(i, Header::QuotedPx)->setText(tr("pulled"));
+   int row = -1;
+   RFQ *rfq = nullptr;
+
+   forSpecificId(reqId.toStdString(), [&](Group *group, int i) {
+      row = i;
+      rfq = group->rfqs_[i].get();
+      rfq->quotedPriceString_ = tr("pulled");
    });
 
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::PendingAck);
+
+   if (row >= 0 && rfq) {
+      static const QVector<int> roles({Qt::DisplayRole});
+      const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx), &rfq->idx_);
+      emit dataChanged(idx, idx, roles);
+   }
 }
 
 void QuoteRequestsModel::onQuoteReqCancelled(const QString &reqId, bool byUser)
@@ -117,6 +550,7 @@ void QuoteRequestsModel::onQuoteReqCancelled(const QString &reqId, bool byUser)
    if (!byUser) {
       return;
    }
+
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::Withdrawn);
 }
 
@@ -127,27 +561,53 @@ void QuoteRequestsModel::onQuoteRejected(const QString &reqId, const QString &re
 
 void QuoteRequestsModel::onBestQuotePrice(const QString reqId, double price, bool own)
 {
-   forSpecificId(reqId.toStdString(), [price, own](QStandardItem *grp, int index) {
-      const auto assetType = static_cast<bs::network::Asset::Type>(grp->child(index, Header::SecurityID)->data(Role::AssetType).toInt());
+   int row = -1;
+   Group *g = nullptr;
 
-      grp->child(index, Header::BestPx)->setText(UiUtils::displayPriceForAssetType(price, assetType));
-      grp->child(index)->setData(price, Role::BestQPrice);
-      grp->child(index, Header::QuotedPx)->setBackground(
-         colorForQuotedPrice(grp->child(index)->data(Role::QuotedPrice).toDouble(), price, own));
+   forSpecificId(reqId.toStdString(), [&](Group *grp, int index) {
+      row = index;
+      g = grp;
+      const auto assetType = grp->rfqs_[index]->assetType_;
+
+      grp->rfqs_[index]->bestQuotedPxString_ = UiUtils::displayPriceForAssetType(price, assetType);
+      grp->rfqs_[index]->bestQuotedPx_ = price;
+      grp->rfqs_[index]->quotedPriceBrush_ = colorForQuotedPrice(
+         grp->rfqs_[index]->quotedPrice_, price, own);
    });
+
+   if (row >= 0 && g) {
+      static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
+         static_cast<int>(Qt::BackgroundRole)});
+      emit dataChanged(createIndex(row, static_cast<int>(Column::QuotedPx), &g->rfqs_[row]->idx_),
+         createIndex(row, static_cast<int>(Column::BestPx), &g->rfqs_[row]->idx_), roles);
+   }
 }
 
 void QuoteRequestsModel::onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn)
 {
-   forSpecificId(qn.quoteRequestId, [&qn](QStandardItem *group, int i) {
-      const auto assetType = static_cast<bs::network::Asset::Type>(group->child(i, Header::SecurityID)->data(Role::AssetType).toInt());
+   int row = -1;
+   Group *g = nullptr;
+
+   forSpecificId(qn.quoteRequestId, [&](Group *group, int i) {
+      row = i;
+      g = group;
+      const auto assetType = group->rfqs_[i]->assetType_;
       const double quotedPrice = (qn.side == bs::network::Side::Buy) ? qn.bidPx : qn.offerPx;
 
-      group->child(i, Header::QuotedPx)->setText(UiUtils::displayPriceForAssetType(quotedPrice, assetType));
-      group->child(i)->setData(quotedPrice, Role::QuotedPrice);
-      group->child(i, Header::QuotedPx)->setBackground(
-         colorForQuotedPrice(quotedPrice, group->child(i)->data(Role::BestQPrice).toDouble()));
+      group->rfqs_[i]->quotedPriceString_ =
+         UiUtils::displayPriceForAssetType(quotedPrice, assetType);
+      group->rfqs_[i]->quotedPrice_ = quotedPrice;
+      group->rfqs_[i]->quotedPriceBrush_ =
+         colorForQuotedPrice(quotedPrice, group->rfqs_[i]->bestQuotedPx_);
    });
+
+   if (row >= 0 && g) {
+      static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
+         static_cast<int>(Qt::BackgroundRole)});
+      const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx),
+         &g->rfqs_[row]->idx_);
+      emit dataChanged(idx, idx, roles);
+   }
 
    setStatus(qn.quoteRequestId, bs::network::QuoteReqNotification::Replied);
 }
@@ -157,105 +617,83 @@ QBrush QuoteRequestsModel::colorForQuotedPrice(double quotedPrice, double bestQP
    if (qFuzzyIsNull(quotedPrice) || qFuzzyIsNull(bestQPrice)) {
       return {};
    }
+
    if (own && qFuzzyCompare(quotedPrice, bestQPrice)) {
       return c_greenColor;
    }
+
    return c_redColor;
 }
 
 void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn)
 {
-   QString groupNameType = tr(bs::network::Asset::toString(qrn.assetType));
-   auto groupItemsType = findItems(groupNameType);
-   QStandardItem* groupItemType = nullptr;
-   if (groupItemsType.isEmpty()) {
-      groupItemType = new QStandardItem(groupNameType);
-      appendRow(QList<QStandardItem*>() << groupItemType);
-   }
-   else {
-      groupItemType = groupItemsType.first();
+   QString marketName = tr(bs::network::Asset::toString(qrn.assetType));
+   auto *market = findMarket(marketName);
+
+   if (!market) {
+      beginInsertRows(QModelIndex(), data_.size(), data_.size());
+      data_.push_back(std::unique_ptr<Market>(new Market(marketName)));
+      market = data_.back().get();
+      endInsertRows();
    }
 
    QString groupNameSec = QString::fromStdString(qrn.security);
-   QStandardItem* groupItemSec = nullptr;
-   int indexSec = -1;
-   for (int i = 0; i < groupItemType->rowCount(); i++) {
-      if (groupItemType->child(i, 0)->text() == groupNameSec) {
-         indexSec = i;
-         break;
-      }
-   }
+   auto *group = findGroup(market, groupNameSec);
 
-   if (indexSec < 0) {
-      groupItemSec = new QuoteGroupReqItem(secStatsCollector_, groupNameSec, groupNameSec);
+   if (!group) {
+      beginInsertRows(createIndex(findMarket(&market->idx_), 0, &market->idx_),
+         market->groups_.size(), market->groups_.size());
       QFont font;
       font.setBold(true);
-      groupItemSec->setData(font, Qt::FontRole);
-      groupItemSec->setData(true, Role::AllowFiltering);
-      groupItemType->appendRow(QList<QStandardItem*>() << groupItemSec);
-   }
-   else {
-      groupItemSec = groupItemType->child(indexSec, 0);
+      market->groups_.push_back(std::unique_ptr<Group>(new Group(groupNameSec, font)));
+      market->groups_.back()->idx_.parent_ = &market->idx_;
+      group = market->groups_.back().get();
+      endInsertRows();
    }
 
-   updateRow(groupItemSec, qrn);
+   insertRfq(group, qrn);
 }
 
-void QuoteRequestsModel::updateRow(QStandardItem *group, const bs::network::QuoteReqNotification &qrn)
+void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNotification &qrn)
 {
    auto itQRN = notifications_.find(qrn.quoteRequestId);
 
    if (itQRN == notifications_.end()) {
       const auto assetType = assetManager_->GetAssetTypeForSecurity(qrn.security);
-
-      QList<QStandardItem*> columns;
-      const QString security = QString::fromStdString(qrn.security);
-      QStandardItem *siSecurity = new QuoteReqItem(secStatsCollector_, security, security);
-      siSecurity->setData(QString::fromStdString(qrn.quoteRequestId), Role::ReqId);
-      siSecurity->setData(static_cast<int>(assetType), Role::AssetType);
-      siSecurity->setData(QString::fromStdString(qrn.product), Role::Product);
-      siSecurity->setData(true, Role::AllowFiltering);
-      columns << siSecurity;
-
-      columns << new QuoteReqItem(secStatsCollector_, QString::fromStdString(qrn.product), security);
-
-      auto siSide = new QuoteReqItem(secStatsCollector_, tr(bs::network::Side::toString(qrn.side)), security);
-      siSide->setData(static_cast<int>(qrn.side), Role::Side);
-
-      const auto amountStr = (qrn.assetType == bs::network::Asset::Type::PrivateMarket) ? UiUtils::displayCCAmount(qrn.quantity)
-         : UiUtils::displayQty(qrn.quantity, qrn.product);
-      auto siQuantity = new QuoteReqItem(secStatsCollector_, amountStr, security);
-      siQuantity->setTextAlignment(Qt::AlignRight);
-
-      columns << siSide << siQuantity << new QuoteReqItem(secStatsCollector_, QString(), security);
-
-      auto siStatus = new QStandardItem(quoteReqStatusDesc(qrn.status));
-      const bool showProgress = ((qrn.status == bs::network::QuoteReqNotification::Status::PendingAck)
-         || (qrn.status == bs::network::QuoteReqNotification::Status::Replied));
-      siStatus->setData(showProgress, Role::ShowProgress);
-      siStatus->setData(30000, Role::Timeout);     // QRN timeout in ms
-      columns << siStatus;
-
-      std::vector<QStandardItem *> priceItems = { new QStandardItem() };   // Quote price
-
       const CurrencyPair cp(qrn.security);
       const bool isBid = (qrn.side == bs::network::Side::Buy) ^ (cp.NumCurrency() == qrn.product);
-      const double indicPrice = isBid ? mdPrices_[qrn.security][Role::BidPrice] : mdPrices_[qrn.security][Role::OfferPrice];
-      if (!qFuzzyIsNull(indicPrice)) {
-         priceItems.push_back(new QStandardItem(UiUtils::displayPriceForAssetType(indicPrice, assetType)));
-      }
-      else {
-         priceItems.push_back(new QStandardItem());
-      }
+      const double indicPrice = isBid ? mdPrices_[qrn.security][Role::BidPrice] :
+         mdPrices_[qrn.security][Role::OfferPrice];
 
-      priceItems.push_back(new QStandardItem());   // Best quoted price
+      beginInsertRows(createIndex(findGroup(&group->idx_), 0, &group->idx_),
+         static_cast<int>(group->rfqs_.size()),
+         static_cast<int>(group->rfqs_.size()));
 
-      for (auto priceItem : priceItems) {
-         priceItem->setTextAlignment(Qt::AlignRight);
-         columns << priceItem;
-      }
+      group->rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(QString::fromStdString(qrn.security),
+         QString::fromStdString(qrn.product),
+         tr(bs::network::Side::toString(qrn.side)),
+         QString(),
+         (qrn.assetType == bs::network::Asset::Type::PrivateMarket) ?
+            UiUtils::displayCCAmount(qrn.quantity) : UiUtils::displayQty(qrn.quantity, qrn.product),
+         QString(),
+         (!qFuzzyIsNull(indicPrice) ? UiUtils::displayPriceForAssetType(indicPrice, assetType)
+            : QString()),
+         QString(),
+         {
+            quoteReqStatusDesc(qrn.status),
+            ((qrn.status == bs::network::QuoteReqNotification::Status::PendingAck)
+               || (qrn.status == bs::network::QuoteReqNotification::Status::Replied)),
+           30000
+         },
+         indicPrice, 0.0, 0.0,
+         qrn.side,
+         assetType,
+         qrn.quoteRequestId)));
 
-      group->appendRow(columns);
+      group->rfqs_.back()->idx_.parent_ = &group->idx_;
+
+      endInsertRows();
+
       notifications_[qrn.quoteRequestId] = qrn;
    }
    else {
@@ -266,84 +704,75 @@ void QuoteRequestsModel::updateRow(QStandardItem *group, const bs::network::Quot
 void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &container)
 {
    settlContainers_[container->id()] = container;
-   connect(container.get(), &bs::SettlementContainer::failed, this, &QuoteRequestsModel::onSettlementFailed);
-   connect(container.get(), &bs::SettlementContainer::completed, this, &QuoteRequestsModel::onSettlementCompleted);
-   connect(container.get(), &bs::SettlementContainer::timerExpired, this, &QuoteRequestsModel::onSettlementExpired);
+   connect(container.get(), &bs::SettlementContainer::failed,
+      this, &QuoteRequestsModel::onSettlementFailed);
+   connect(container.get(), &bs::SettlementContainer::completed,
+      this, &QuoteRequestsModel::onSettlementCompleted);
+   connect(container.get(), &bs::SettlementContainer::timerExpired,
+      this, &QuoteRequestsModel::onSettlementExpired);
 
-   QStandardItem* groupItem = nullptr;
-   auto groupItems = findItems(groupNameSettlements_);
-   if (groupItems.isEmpty()) {
-      groupItem = new QStandardItem(groupNameSettlements_);
-      QFont font;
-      font.setBold(true);
-      groupItem->setData(font, Qt::FontRole);
-      groupItem->setData(1, Role::Grade);
+   auto *market = findMarket(groupNameSettlements_);
 
-      auto siCompleted = new QStandardItem();
-      siCompleted->setData(c_greenColor, Qt::TextColorRole);
-      siCompleted->setTextAlignment(Qt::AlignRight);
-
-      auto siFailed = new QStandardItem();
-      siFailed->setData(c_redColor, Qt::TextColorRole);
-      siFailed->setTextAlignment(Qt::AlignRight);
-
-      QList<QStandardItem*> rootRow;
-      rootRow << groupItem << siCompleted << siFailed;
-      appendRow(rootRow);
-   }
-   else {
-      groupItem = groupItems.first();
+   if (!market) {
+      beginInsertRows(QModelIndex(), data_.size(), data_.size());
+      data_.push_back(std::unique_ptr<Market>(new Market(groupNameSettlements_)));
+      market = data_.back().get();
+      endInsertRows();
    }
 
    const auto collector = std::make_shared<bs::SettlementStatsCollector>(container);
    const auto assetType = assetManager_->GetAssetTypeForSecurity(container->security());
-   QList<QStandardItem*> columns;
-   QStandardItem *siSecurity = new QuoteReqItem(collector, QString::fromStdString(container->security()));
-   siSecurity->setData(static_cast<int>(assetType), Role::AssetType);
-   siSecurity->setData(QString::fromStdString(container->id()), Role::ReqId);
-   siSecurity->setData(QString::fromStdString(container->product()), Role::Product);
-   columns << siSecurity;
-
-   columns << new QuoteReqItem(collector, QString::fromStdString(container->product()));
-
-   auto siSide = new QuoteReqItem(collector, tr(bs::network::Side::toString(container->side())));
-   siSide->setData(static_cast<int>(container->side()), Role::Side);
-
    const auto amountStr = (container->assetType() == bs::network::Asset::Type::PrivateMarket)
-      ? UiUtils::displayCCAmount(container->quantity()) : UiUtils::displayQty(container->quantity(), container->product());
-   auto siQuantity = new QuoteReqItem(collector, amountStr);
-   siQuantity->setTextAlignment(Qt::AlignRight);
+      ? UiUtils::displayCCAmount(container->quantity())
+      : UiUtils::displayQty(container->quantity(), container->product());
 
-   columns << siSide << siQuantity << new QuoteReqItem(collector, {});
+   beginInsertRows(createIndex(findMarket(&market->idx_), 0, &market->idx_),
+      market->groups_.size() + market->settl_.rfqs_.size(),
+      market->groups_.size() + market->settl_.rfqs_.size());
 
-   auto siStatus = new QStandardItem();
-   connect(container.get(), &bs::SettlementContainer::timerStarted, [siStatus](int msDuration) {
-      siStatus->setData(msDuration, Role::Timeout);
-   });
-   siStatus->setData(true, Role::ShowProgress);
-   columns << siStatus;
+   market->settl_.rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(
+      QString::fromStdString(container->security()),
+      QString::fromStdString(container->product()),
+      tr(bs::network::Side::toString(container->side())),
+      QString(),
+      amountStr,
+      QString(),
+      UiUtils::displayPriceForAssetType(container->price(), assetType),
+      QString(),
+      {
+         QString(),
+         true
+      },
+      container->price(), 0.0, 0.0,
+      container->side(),
+      assetType,
+      container->id())));
 
-   std::vector<QStandardItem *> priceItems = { new QuoteReqItem(collector, UiUtils::displayPriceForAssetType(container->price(), assetType))
-      , new QStandardItem(), new QStandardItem() };
+   market->settl_.rfqs_.back()->idx_.parent_ = &market->idx_;
 
-   for (auto priceItem : priceItems) {
-      priceItem->setTextAlignment(Qt::AlignRight);
-      columns << priceItem;
-   }
+   connect(container.get(), &bs::SettlementContainer::timerStarted,
+      [s = market->settl_.rfqs_.back().get(), &market, this,
+       row = market->groups_.size() + market->settl_.rfqs_.size() - 1](int msDuration) {
+         s->status_.timeout_ = msDuration;
+         const QModelIndex idx = createIndex(row, 0, &s->idx_);
+         static const QVector<int> roles({static_cast<int>(Role::Timeout)});
+         emit dataChanged(idx, idx, roles);
+      }
+   );
 
-   groupItem->appendRow(columns);
+   endInsertRows();
 }
 
 
 void QuoteRequestsModel::onSettlementCompleted()
 {
-   settlCompleted_++;
+   ++settlCompleted_;
    deleteSettlement(qobject_cast<bs::SettlementContainer *>(sender()));
 }
 
 void QuoteRequestsModel::onSettlementFailed()
 {
-   settlFailed_++;
+   ++settlFailed_;
    deleteSettlement(qobject_cast<bs::SettlementContainer *>(sender()));
 }
 
@@ -364,34 +793,32 @@ void QuoteRequestsModel::deleteSettlement(bs::SettlementContainer *container)
 
 void QuoteRequestsModel::updateSettlementCounters()
 {
-   for (int i = 0; i < rowCount(); i++) {
-      if (item(i, 0)->text() == groupNameSettlements_) {
-         if (settlCompleted_) {
-            item(i, 1)->setText(QString::number(settlCompleted_));
-         }
-         if (settlFailed_) {
-            item(i, 2)->setText(QString::number(settlFailed_));
-         }
-         break;
-      }
+   auto * market = findMarket(groupNameSettlements_);
+
+   if (market) {
+      const int row = findMarket(&market->idx_);
+
+      emit dataChanged(createIndex(row, static_cast<int>(Column::Product), &market->idx_),
+         createIndex(row, static_cast<int>(Column::Side), &market->idx_));
    }
 }
 
 void QuoteRequestsModel::forSpecificId(const std::string &reqId, const cbItem &cb)
 {
-   const auto id = QString::fromStdString(reqId);
-   for (int i = 0; i < rowCount(); i++) {
-      auto groupItemType = item(i);
-      for (int j = 0; j < groupItemType->rowCount(); j++) {
-         QStandardItem *groupItemSec = groupItemType->child(j, 0);
-         if (groupItemSec->data(Role::ReqId).toString() == id) {
-            cb(groupItemType, j);
-            return;
+   for (size_t i = 0; i < data_.size(); ++i) {
+      if (!data_[i]->settl_.rfqs_.empty()) {
+         for (size_t k = 0; k < data_[i]->settl_.rfqs_.size(); ++k) {
+            if (data_[i]->settl_.rfqs_[k]->reqId_ == reqId) {
+               cb(&data_[i]->settl_, k);
+               return;
+            }
          }
-         for (int k = 0; k < groupItemSec->rowCount(); k++) {
-            QStandardItem *item = groupItemSec->child(k, 0);
-            if (item->data(Role::ReqId).toString() == id) {
-               cb(groupItemSec, k);
+      }
+
+      for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
+         for (size_t k = 0; k < data_[i]->groups_[j]->rfqs_.size(); ++k) {
+            if (data_[i]->groups_[j]->rfqs_[k]->reqId_ == reqId) {
+               cb(data_[i]->groups_[j].get(), k);
                return;
             }
          }
@@ -401,14 +828,12 @@ void QuoteRequestsModel::forSpecificId(const std::string &reqId, const cbItem &c
 
 void QuoteRequestsModel::forEachSecurity(const QString &security, const cbItem &cb)
 {
-   for (int i = 0; i < rowCount(); i++) {
-      auto groupItemType = item(i);
-      for (int j = 0; j < groupItemType->rowCount(); j++) {
-         QStandardItem *groupItemSec = groupItemType->child(j, 0);
-         if (groupItemSec->text() != security)
+   for (size_t i = 0; i < data_.size(); ++i) {
+      for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
+         if (data_[i]->groups_[j]->security_ != security)
             continue;
-         for (int k = 0; k < groupItemSec->rowCount(); k++) {
-            cb(groupItemSec, k);
+         for (size_t k = 0; k < data_[i]->groups_[j]->rfqs_.size(); ++k) {
+            cb(data_[i]->groups_[j].get(), k);
          }
       }
    }
@@ -423,7 +848,7 @@ const bs::network::QuoteReqNotification &QuoteRequestsModel::getQuoteReqNotifica
    return itQRN->second;
 }
 
-double QuoteRequestsModel::getPrice(const std::string &security, Role::Index role) const
+double QuoteRequestsModel::getPrice(const std::string &security, Role role) const
 {
    const auto itMDP = mdPrices_.find(security);
    if (itMDP != mdPrices_.end()) {
@@ -465,22 +890,26 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
    auto itQRN = notifications_.find(reqId);
    if (itQRN != notifications_.end()) {
       itQRN->second.status = status;
-      forSpecificId(reqId, [status, details](QStandardItem *grp, int index) {
-         auto child = grp->child(index, Header::Status);
+
+      forSpecificId(reqId, [this, status, details](Group *grp, int index) {
          if (!details.isEmpty()) {
-            child->setText(details);
+            grp->rfqs_[index]->status_.status_ = details;
          }
          else {
-            child->setText(quoteReqStatusDesc(status));
+            grp->rfqs_[index]->status_.status_ = quoteReqStatusDesc(status);
          }
-         child->setBackground(bgColorForStatus(status));
+
+         grp->rfqs_[index]->stateBrush_ = bgColorForStatus(status);
 
          const bool showProgress = ((status == bs::network::QuoteReqNotification::Status::PendingAck)
             || (status == bs::network::QuoteReqNotification::Status::Replied));
-         if (child->data(Role::ShowProgress).toBool() != showProgress) {
-            child->setData(showProgress, Role::ShowProgress);
-         }
+         grp->rfqs_[index]->status_.showProgress_ = showProgress;
+
+         const QModelIndex idx = createIndex(index, static_cast<int>(Column::Status),
+            &grp->rfqs_[index]->idx_);
+         emit dataChanged(idx, idx);
       });
+
       emit quoteReqNotifStatusChanged(itQRN->second);
    }
 }
@@ -496,58 +925,36 @@ void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::
       mdPrices_[security.toStdString()][Role::OfferPrice] = pxOffer.value;
    }
 
-   forEachSecurity(security, [security, pxBid, pxOffer, this](QStandardItem *grp, int index) {
+   forEachSecurity(security, [security, pxBid, pxOffer, this](Group *grp, int index) {
       const CurrencyPair cp(security.toStdString());
-      const bool isBuy = (static_cast<bs::network::Side::Type>(grp->child(index, Header::Side)->data(Role::Side).toInt()) == bs::network::Side::Buy)
-         ^ (cp.NumCurrency() == grp->child(index, Header::first)->data(Role::Product).toString().toStdString());
+      const bool isBuy = (grp->rfqs_[index]->side_ == bs::network::Side::Buy)
+         ^ (cp.NumCurrency() == grp->rfqs_[index]->product_.toStdString());
       double indicPrice = 0;
+
       if (isBuy && (pxBid.type != bs::network::MDField::Unknown)) {
          indicPrice = pxBid.value;
-      }
-      else if (!isBuy && (pxOffer.type != bs::network::MDField::Unknown)) {
+      } else if (!isBuy && (pxOffer.type != bs::network::MDField::Unknown)) {
          indicPrice = pxOffer.value;
       }
+
       if (indicPrice > 0) {
-         const auto prevPrice = grp->child(index, Header::IndicPx)->data(Qt::DisplayRole).toDouble();
-         const auto assetType = static_cast<bs::network::Asset::Type>(grp->child(index, Header::SecurityID)->data(Role::AssetType).toInt());
-         grp->child(index, Header::IndicPx)->setText(UiUtils::displayPriceForAssetType(indicPrice, assetType));
+         const auto prevPrice = grp->rfqs_[index]->indicativePx_;
+         const auto assetType = grp->rfqs_[index]->assetType_;
+         grp->rfqs_[index]->indicativePxString_ = UiUtils::displayPriceForAssetType(indicPrice, assetType);
+         grp->rfqs_[index]->indicativePx_ = indicPrice;
 
          if (!qFuzzyIsNull(prevPrice)) {
             if (indicPrice > prevPrice) {
-               grp->child(index, Header::IndicPx)->setBackground(c_greenColor);
+               grp->rfqs_[index]->indicativePxBrush_ = c_greenColor;
             }
             else if (indicPrice < prevPrice) {
-               grp->child(index, Header::IndicPx)->setBackground(c_redColor);
+               grp->rfqs_[index]->indicativePxBrush_ = c_redColor;
             }
          }
+
+         const QModelIndex idx = createIndex(index, static_cast<int>(Column::IndicPx),
+            &grp->rfqs_[index]->idx_);
+         emit dataChanged(idx, idx);
       }
    });
-}
-
-
-QuoteGroupReqItem::QuoteGroupReqItem(const std::shared_ptr<bs::StatsCollector> &sc, const QString &text, const QString &key)
-   : QStandardItem(text), statsCollector_(sc), key_(key)
-{}
-
-QVariant QuoteGroupReqItem::data(int role) const
-{
-   if (statsCollector_) {
-      switch (role)
-      {
-      case Qt::TextColorRole:
-         return statsCollector_->getColorFor(key_.toStdString());
-
-      case QuoteRequestsModel::Role::Grade:
-         return statsCollector_->getGradeFor(key_.toStdString());
-
-      default: break;
-      }
-   }
-   return QStandardItem::data(role);
-}
-
-QuoteReqItem::QuoteReqItem(const std::shared_ptr<bs::StatsCollector> &sc, const QString &text, const QString &key)
-   : QuoteGroupReqItem(sc, text, key)
-{
-//   setFlags(Qt::ItemNeverHasChildren);  // currently inhibits item selection
 }
