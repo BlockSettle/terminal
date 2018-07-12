@@ -39,12 +39,20 @@ std::shared_ptr<OTPFile> OTPFile::LoadFromFile(
       return nullptr;
    }
 
+   bs::wallet::EncryptionType encType = bs::wallet::EncryptionType::Unencrypted;
+   if (protoFile.has_encrypted() && protoFile.encrypted()) {
+      encType = bs::wallet::EncryptionType::Password;
+   }
+   if (protoFile.has_encryptiontype()) {
+      encType = static_cast<bs::wallet::EncryptionType>(protoFile.encryptiontype());
+   }
+
    return std::make_shared<OTPFile>(logger
                         , filePath
                         , protoFile.otpid()
                         , protoFile.chaincode()
                         , protoFile.nextprivatekey()
-                        , protoFile.encrypted()
+                        , encType, protoFile.encryptionkey()
                         , protoFile.hash()
                         , protoFile.usedkeyscount()
                         , QString::fromStdString(protoFile.importdatestring()));
@@ -53,7 +61,8 @@ std::shared_ptr<OTPFile> OTPFile::LoadFromFile(
 std::shared_ptr<OTPFile> OTPFile::CreateFromPrivateKey(
    const std::shared_ptr<spdlog::logger>& logger
    , const QString& filePath
-   , const SecureBinaryData& privateKey, const SecureBinaryData &password)
+   , const SecureBinaryData& privateKey, bs::wallet::EncryptionType encType
+   , const SecureBinaryData &password, const SecureBinaryData &encKey)
 {
    if (!filePath.isEmpty()) {
       QFileInfo fileInfo(filePath);
@@ -91,13 +100,13 @@ std::shared_ptr<OTPFile> OTPFile::CreateFromPrivateKey(
       return nullptr;
    }
 
-   const bool encrypted = !password.isNull();
    BinaryData hash;
-   if (encrypted) {
+   if (encType != bs::wallet::EncryptionType::Unencrypted) {
       firstKey = Encrypt(firstKey, password, hash);
    }
 
-   return std::make_shared<OTPFile>(logger, filePath, otpIdKey.toHexStr(), chainCode, firstKey, encrypted, hash);
+   return std::make_shared<OTPFile>(logger, filePath, otpIdKey.toHexStr(), chainCode, firstKey
+      , encType, encKey, hash);
 }
 
 SecureBinaryData OTPFile::GetNextKeyInChain(const SecureBinaryData& privateKey, const SecureBinaryData& chainCode)
@@ -116,12 +125,18 @@ void OTPFile::PadKey(SecureBinaryData &key)
 SecureBinaryData OTPFile::Encrypt(SecureBinaryData data, SecureBinaryData key, BinaryData &hash)
 {
    SecureBinaryData iv(BTC_AES::BLOCKSIZE);
+   auto logger = spdlog::get("");
    PadKey(key);
    try {
       hash = BtcUtils::hash256(data);
       return CryptoAES().EncryptCBC(data, key, iv);
    }
+   catch (const std::exception &e) {
+      logger->error("Encrypt exception: {}", e.what());
+      return {};
+   }
    catch (...) {
+      logger->error("Encrypt exception");
       return {};
    }
 }
@@ -146,7 +161,8 @@ OTPFile::OTPFile(const std::shared_ptr<spdlog::logger>& logger
         , const QString& filePath
         , const string &otpId, const SecureBinaryData& chainCodePlain
         , const SecureBinaryData& nextPrivateKeyPlain
-        , bool encrypted
+        , bs::wallet::EncryptionType encType
+        , const SecureBinaryData &encKey
         , const BinaryData &hash
         , unsigned int usedKeysCount
         , const QString& importDate)
@@ -157,7 +173,8 @@ OTPFile::OTPFile(const std::shared_ptr<spdlog::logger>& logger
    , chainCode_(chainCodePlain)
    , usedKeysCount_(usedKeysCount)
    , nextUnusedPrivateKey_(nextPrivateKeyPlain)
-   , encrypted_(encrypted)
+   , encType_(encType)
+   , encKey_(encKey)
    , hash_(hash)
 {}
 
@@ -188,9 +205,12 @@ bool OTPFile::SyncToFile()
    protoFile.set_usedkeyscount(usedKeysCount_);
    protoFile.set_nextprivatekey(nextUnusedPrivateKey_.toBinStr());
    protoFile.set_chaincode(chainCode_.toBinStr());
-   protoFile.set_encrypted(encrypted_);
-   if (encrypted_) {
+   protoFile.set_encryptiontype(static_cast<uint8_t>(encType_));
+   if (encType_ != bs::wallet::EncryptionType::Unencrypted) {
       protoFile.set_hash(hash_.toBinStr());
+      if (encType_ == bs::wallet::EncryptionType::Freja) {
+         protoFile.set_encryptionkey(encKey_.toBinStr());
+      }
    }
 
    std::string data = protoFile.SerializeAsString();
@@ -248,15 +268,17 @@ bool OTPFile::restoreBackup()
 
 SecureBinaryData OTPFile::GetCurrentPrivateKey(const SecureBinaryData &password) const
 {
-   if (encrypted_ && password.isNull()) {
+   const bool encrypted = (encType_ != bs::wallet::EncryptionType::Unencrypted);
+   if (encrypted && password.isNull()) {
       return {};
    }
-   return encrypted_ ? Decrypt(nextUnusedPrivateKey_, password, hash_) : nextUnusedPrivateKey_;
+   return encrypted ? Decrypt(nextUnusedPrivateKey_, password, hash_) : nextUnusedPrivateKey_;
 }
 
 SecureBinaryData OTPFile::AdvanceKeysTo(unsigned int usedKeys, const SecureBinaryData &password)
 {
-   if ((usedKeys < usedKeysCount_) || (encrypted_ && password.isNull())) {
+   const bool encrypted = (encType_ != bs::wallet::EncryptionType::Unencrypted);
+   if ((usedKeys < usedKeysCount_) || (encrypted && password.isNull())) {
       logger_->warn("[OTPFile::AdvanceKeysTo] wrong input data");
       return {};
    }
@@ -272,7 +294,7 @@ SecureBinaryData OTPFile::AdvanceKeysTo(unsigned int usedKeys, const SecureBinar
       usedKeysCount_++;
       nextUnusedPrivateKey_ = GetNextKeyInChain(nextUnusedPrivateKey_, chainCode_);
    }
-   if (encrypted_) {
+   if (encrypted) {
       nextUnusedPrivateKey_ = Encrypt(nextUnusedPrivateKey_, password, hash_);
    }
 
@@ -282,17 +304,27 @@ SecureBinaryData OTPFile::AdvanceKeysTo(unsigned int usedKeys, const SecureBinar
    return result;
 }
 
-bool OTPFile::UpdateCurrentPrivateKey(const SecureBinaryData &oldPass, const SecureBinaryData &newPass)
+bool OTPFile::UpdateCurrentPrivateKey(const SecureBinaryData &oldPass, const SecureBinaryData &newPass
+   , bs::wallet::EncryptionType encType, const SecureBinaryData &encKey)
 {
-   if (newPass.isNull()) {
-      return false;
-   }
    const auto decrypted = GetCurrentPrivateKey(oldPass);
    if (decrypted.isNull()) {
+      logger_->error("[OTPFile::UpdateCurrentPrivateKey] failed to decrypt");
       return false;
    }
-   nextUnusedPrivateKey_ = Encrypt(decrypted, newPass, hash_);
-   encrypted_ = true;
+   if (encType == bs::wallet::EncryptionType::Unencrypted) {
+      nextUnusedPrivateKey_ = decrypted;
+   }
+   else {
+      logger_->debug("newPass size = {}", newPass.getSize());
+      nextUnusedPrivateKey_ = Encrypt(decrypted, newPass, hash_);
+      if (nextUnusedPrivateKey_.isNull()) {
+         logger_->error("[OTPFile::UpdateCurrentPrivateKey] failed to encrypt");
+         return false;
+      }
+      encKey_ = encKey;
+   }
+   encType_ = encType;
    return SyncToFile();
 }
 

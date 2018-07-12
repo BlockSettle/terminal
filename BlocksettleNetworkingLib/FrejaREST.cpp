@@ -645,7 +645,6 @@ void FrejaSign::onRepliedSignRequestStatus(FrejaREST::SeqNo, const QString &stat
    reqId_ = 0;
    if (status == sApproved) {
       stop();
-      logger_->debug("Received signature: {} bytes", signature.size());
       onReceivedSignature(signature);
    }
    else if (status == sCancelled) {
@@ -688,7 +687,21 @@ void FrejaSignWallet::onReceivedSignature(const QByteArray &signature)
 {
    const auto secureSig = SecureBinaryData(signature.toStdString());
    const auto password = secureSig.getSliceCopy(64, 32);
-   logger_->debug("secureSig: {} bytes ({}), password: {} bytes ({})", secureSig.getSize(), secureSig.toHexStr(), password.getSize(), password.toHexStr());
    assert(password.getSize() == 32);
+   emit succeeded(password);
+}
+
+
+bool FrejaSignOTP::start(const QString &userId, const QString &title, const QString &otpId)
+{
+   const auto data = QLatin1String("OTP ") + otpId + QLatin1String(" password");
+   return FrejaSign::start(userId, title, data);
+}
+
+void FrejaSignOTP::onReceivedSignature(const QByteArray &signature)
+{
+   const auto secureSig = SecureBinaryData(signature.toStdString());
+   const auto password = secureSig.getSliceCopy(96, 16);
+   assert(password.getSize() == 16);
    emit succeeded(password);
 }

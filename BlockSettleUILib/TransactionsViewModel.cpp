@@ -415,14 +415,12 @@ void TransactionsViewModel::onDataLoaded()
 
 void TransactionsViewModel::onNewItems(const TransactionItems items)
 {
+   QMutexLocker locker(&updateMutex_);
    unsigned int curLastIdx = currentPage_.size();
-
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + items.size() - 1);
-   {
-      QMutexLocker locker(&updateMutex_);
-      currentPage_.insert(currentPage_.end(), items.begin(), items.end());
-   }
+   currentPage_.insert(currentPage_.end(), items.begin(), items.end());
    endInsertRows();
+
    QtConcurrent::run(&threadPool_, this, &TransactionsViewModel::loadTransactionDetails, curLastIdx, items.size());
 }
 

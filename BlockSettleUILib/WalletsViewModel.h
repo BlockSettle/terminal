@@ -167,7 +167,9 @@ public:
       StateRole,
       WalletIdRole,
       IsHDRootRole,
-      IsEncryptedRole
+      RootWalletIdRole,
+      IsEncryptedRole,
+      EncKeyRole
    };
    Q_ENUM(Roles)
 

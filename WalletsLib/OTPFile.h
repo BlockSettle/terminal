@@ -7,6 +7,7 @@
 #include <QDateTime>
 
 #include "EncryptionUtils.h"
+#include "MetaData.h"
 
 namespace spdlog
 {
@@ -21,7 +22,8 @@ public:
            , const std::string& otpId
            , const SecureBinaryData& chainCodePlain
            , const SecureBinaryData& nextPrivateKeyPlain
-           , bool encrypted = false
+           , bs::wallet::EncryptionType encType = bs::wallet::EncryptionType::Unencrypted
+           , const SecureBinaryData &encKey = {}
            , const BinaryData &hash = {}
            , unsigned int usedKeysCount = 0
            , const QString& importDate = QDateTime::currentDateTime().toString());
@@ -30,7 +32,8 @@ public:
       , const QString& filePath);
 
    static std::shared_ptr<OTPFile> CreateFromPrivateKey(const std::shared_ptr<spdlog::logger>& logger
-      , const QString& filePath, const SecureBinaryData& privateKey, const SecureBinaryData &password);
+      , const QString& filePath, const SecureBinaryData& privateKey, bs::wallet::EncryptionType
+      , const SecureBinaryData &password = {}, const SecureBinaryData &encKey = {});
 
    OTPFile() = delete;
    ~OTPFile() noexcept = default;
@@ -44,11 +47,13 @@ public:
    std::string GetOtpId() const { return otpId_; }
    SecureBinaryData GetChainCode() const { return chainCode_; }
    QString     GetShortId() const { return QString::fromStdString(otpId_.substr(0, 8)); }
-   bool        IsEncrypted() const { return encrypted_; }
+   bs::wallet::EncryptionType encryptionType() const { return encType_; }
+   SecureBinaryData encryptionKey() const { return encKey_; }
 
    unsigned int GetUsedKeysCount() const { return usedKeysCount_; }
    [[deprecated]] SecureBinaryData  GetCurrentPrivateKey(const SecureBinaryData &password = {}) const;
-   bool UpdateCurrentPrivateKey(const SecureBinaryData &oldPass, const SecureBinaryData &newPass);
+   bool UpdateCurrentPrivateKey(const SecureBinaryData &oldPass, const SecureBinaryData &newPass
+      , bs::wallet::EncryptionType encType = bs::wallet::EncryptionType::Password, const SecureBinaryData &encKey = {});
    SecureBinaryData AdvanceKeysTo(unsigned int usedKeys, const SecureBinaryData &password);
 
    std::pair<SecureBinaryData, unsigned int> Sign(const SecureBinaryData &data
@@ -78,7 +83,8 @@ private:
    SecureBinaryData           chainCode_;
    unsigned int               usedKeysCount_;
    SecureBinaryData           nextUnusedPrivateKey_;
-   bool                       encrypted_ = false;
+   bs::wallet::EncryptionType encType_ = bs::wallet::EncryptionType::Unencrypted;
+   SecureBinaryData           encKey_;
    BinaryData                 hash_;
 };
 

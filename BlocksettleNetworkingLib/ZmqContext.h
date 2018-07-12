@@ -45,10 +45,9 @@ public:
    static sock_ptr  CreateNullSocket();
 
 private:
-   std::shared_ptr<spdlog::logger> logger_;
-
+   std::shared_ptr<spdlog::logger>  logger_;
    ctx_ptr                          context_;
-
+   std::atomic_flag  lockerFlag_ = ATOMIC_FLAG_INIT;
    IdStringGenerator                idGenerator_;
 };
 

@@ -136,7 +136,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAuthManager();
    InitAssets();
 
-   authAddrDlg_ = std::make_shared<AuthAddressDialog>(authManager_, assetManager_, applicationSettings_, this);
+   authAddrDlg_ = std::make_shared<AuthAddressDialog>(authManager_, assetManager_, otpManager_, applicationSettings_, this);
 
    InitWalletsView();
    setupToolbar();

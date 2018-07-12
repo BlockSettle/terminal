@@ -46,6 +46,10 @@ public:
    bool wasAddressSubmitted(const bs::Address &);
    bool needsOTPpassword() const;
 
+   bs::wallet::EncryptionType GetOtpEncType() const { return otpManager_->GetEncType(); }
+   QString GetOtpEncKey() const { return otpManager_->GetEncKey(); }
+   QString GetOtpId() const { return otpManager_->GetShortId(); }
+
 signals:
    void CCSecurityDef(bs::network::CCSecurityDef);
    void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);

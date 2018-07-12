@@ -149,4 +149,20 @@ protected:
    void onReceivedSignature(const QByteArray &) override;
 };
 
+class FrejaSignOTP : public FrejaSign
+{
+   Q_OBJECT
+public:
+   FrejaSignOTP(const std::shared_ptr<spdlog::logger> &logger, unsigned int pollInterval = 2)
+      : FrejaSign(logger, pollInterval) {}
+
+   bool start(const QString &userId, const QString &title, const QString &otpId);
+
+signals:
+   void succeeded(SecureBinaryData password);
+
+protected:
+   void onReceivedSignature(const QByteArray &) override;
+};
+
 #endif // __FREJA_REST_H__

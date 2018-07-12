@@ -15,12 +15,13 @@
 
 
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager> &assetMgr
+   , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<OTPManager> &otpMgr
    , const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AuthAddressDialog())
    , authAddressManager_(authAddressManager)
    , assetManager_(assetMgr)
+   , otpManager_(otpMgr)
    , settings_(settings)
 {
    ui_->setupUi(this);
@@ -332,13 +333,14 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
    SecureBinaryData otpPassword = {};
 
    if (authAddressManager_->needsOTPpassword()) {
-      EnterOTPPasswordDialog passwordDialog{tr("Enter password to submit Authentication Address"), this};
+      EnterOTPPasswordDialog passwordDialog(otpManager_
+         , tr("Enter password to submit Authentication Address"), this);
       if (passwordDialog.exec() != QDialog::Accepted) {
          authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
          lastSubmittedAddress_ = bs::Address{};
          return;
       }
-      otpPassword = SecureBinaryData(passwordDialog.GetPassword().toStdString());
+      otpPassword = SecureBinaryData(passwordDialog.GetPassword());
    }
 
    authAddressManager_->ConfirmSubmitForVerification(lastSubmittedAddress_, otpPassword);

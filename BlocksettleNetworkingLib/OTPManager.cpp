@@ -43,11 +43,12 @@ bool OTPManager::RemoveOTPForCurrentUser()
    return true;
 }
 
-OTPManager::OTPImportResult OTPManager::ImportOTPForCurrentUser(const SecureBinaryData& rootKey, const SecureBinaryData &passphrase)
+OTPManager::OTPImportResult OTPManager::ImportOTPForCurrentUser(const SecureBinaryData& rootKey
+   , const SecureBinaryData &passphrase, bs::wallet::EncryptionType encType, const SecureBinaryData &encKey)
 {
    std::shared_ptr<OTPFile> newFile = OTPFile::CreateFromPrivateKey(logger_
       , applicationSettings_->get<QString>(ApplicationSettings::otpFileName)
-      , rootKey, passphrase);
+      , rootKey, encType, passphrase, encKey);
 
    if (newFile == nullptr) {
       logger_->error("[OTPManager::ImportOTPForCurrentUser] failed to import OTP from key");
@@ -102,7 +103,26 @@ QString OTPManager::GetShortId() const
    if (otp) {
       return otp->GetShortId();
    }
+   return QString();
+}
 
+bs::wallet::EncryptionType OTPManager::GetEncType() const
+{
+   auto otp = GetOTPForCurrentUser();
+   assert(otp != nullptr);
+   if (otp) {
+      return otp->encryptionType();
+   }
+   return bs::wallet::EncryptionType::Unencrypted;
+}
+
+QString OTPManager::GetEncKey() const
+{
+   auto otp = GetOTPForCurrentUser();
+   assert(otp != nullptr);
+   if (otp) {
+      return QString::fromStdString(otp->encryptionKey().toBinStr());
+   }
    return QString();
 }
 
@@ -132,13 +152,7 @@ bool OTPManager::Sign(const SecureBinaryData &data, const cbPassword &cbPass, co
    auto otp = GetOTPForCurrentUser();
    assert(otp && cbPass && cbSigned);
    SecureBinaryData password;
-   if (otp->IsEncrypted()) {
-      password = cbPass();
-      if (password.isNull()) {   // empty passwords are not allowed
-         return false;
-      }
-   }
-
+   password = cbPass();
    return Sign(data, password, cbSigned);
 }
 
@@ -157,11 +171,12 @@ bool OTPManager::Sign(const SecureBinaryData &dataToSign, const SecureBinaryData
 
 bool OTPManager::UpdatePassword(cbChangePassword cb)
 {
-   SecureBinaryData oldPass, newPass;
-   const auto otp = GetOTPForCurrentUser();
-   if (otp && cb && cb(oldPass, newPass)) {
+   SecureBinaryData oldPass, newPass, encKey;
+   bs::wallet::EncryptionType encType;
+   const auto &otp = GetOTPForCurrentUser();
+   if (otp && cb && cb(otp, oldPass, newPass, encType, encKey)) {
       logger_->debug("[OTPManager::UpdatePassword]");
-      return otp->UpdateCurrentPrivateKey(oldPass, newPass);
+      return otp->UpdateCurrentPrivateKey(oldPass, newPass, encType, encKey);
    }
    return false;
 }
@@ -170,7 +185,7 @@ bool OTPManager::IsEncrypted() const
 {
    const auto otp = GetOTPForCurrentUser();
    if (otp) {
-      return otp->IsEncrypted();
+      return (otp->encryptionType() != bs::wallet::EncryptionType::Unencrypted);
    }
    return false;
 }
