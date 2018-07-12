@@ -9,6 +9,7 @@
 #include <QSortFilterProxyModel>
 #include <QStyledItemDelegate>
 #include <QApplication>
+#include <QProgressBar>
 
 #include <memory>
 #include <unordered_map>
@@ -88,9 +89,18 @@ class ProgressDelegate : public QStyledItemDelegate
    Q_OBJECT
 
 public:
-   explicit ProgressDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
+   explicit ProgressDelegate(QWidget *parent = nullptr)
+      : QStyledItemDelegate(parent)
+   {
+      pbar_.setStyleSheet(QLatin1String("QProgressBar { border: 1px solid #1c2835; "
+         "border-radius: 4px; background-color: rgba(0, 0, 0, 0); }"));
+      pbar_.hide();
+   }
 
    void paint(QPainter *painter, const QStyleOptionViewItem &opt, const QModelIndex &index) const override;
+
+private:
+   QProgressBar pbar_;
 };
 
 

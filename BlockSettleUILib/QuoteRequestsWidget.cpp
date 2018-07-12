@@ -10,6 +10,9 @@
 #include "UiUtils.h"
 #include "TreeViewWithEnterKey.h"
 
+#include <QStyle>
+#include <QStyleOptionProgressBar>
+
 
 //
 // DoNotDrawSelectionDelegate
@@ -81,32 +84,40 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    connect(appSettings.get(), &ApplicationSettings::settingChanged, this, &QuoteRequestsWidget::onSettingChanged);
    connect(assetManager_.get(), &AssetManager::securitiesReceived, this, &QuoteRequestsWidget::onSecuritiesReceived);
 
-   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Status, new ProgressDelegate());
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::Status), new ProgressDelegate(ui_->treeViewQuoteRequests));
 
    auto *doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
-   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::QuotedPx,
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::QuotedPx),
       doNotDrawSelectionDelegate);
-   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::IndicPx,
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::IndicPx),
       doNotDrawSelectionDelegate);
-   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::BestPx,
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::BestPx),
       doNotDrawSelectionDelegate);
-   ui_->treeViewQuoteRequests->setItemDelegateForColumn(QuoteRequestsModel::Header::Empty,
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::Empty),
       doNotDrawSelectionDelegate);
 }
 
 void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
 {
    const auto quoteIndex = sortModel_->index(index.row(), 0, index.parent());
-   std::string qId = sortModel_->data(quoteIndex, QuoteRequestsModel::Role::ReqId).toString().toStdString();
+   std::string qId = sortModel_->data(quoteIndex,
+      static_cast<int>(QuoteRequestsModel::Role::ReqId)).toString().toStdString();
    const bs::network::QuoteReqNotification &qrn = model_->getQuoteReqNotification(qId);
 
    double bidPx = model_->getPrice(qrn.security, QuoteRequestsModel::Role::BidPrice);
    double offerPx = model_->getPrice(qrn.security, QuoteRequestsModel::Role::OfferPrice);
-   const double bestQPx = sortModel_->data(quoteIndex, QuoteRequestsModel::Role::BestQPrice).toDouble();
+   const double bestQPx = sortModel_->data(quoteIndex,
+      static_cast<int>(QuoteRequestsModel::Role::BestQPrice)).toDouble();
    if (!qFuzzyIsNull(bestQPx)) {
       CurrencyPair cp(qrn.security);
       bool isBuy = (qrn.side == bs::network::Side::Buy) ^ (cp.NumCurrency() == qrn.product);
-      const double quotedPx = sortModel_->data(quoteIndex, QuoteRequestsModel::Role::QuotedPrice).toDouble();
+      const double quotedPx = sortModel_->data(quoteIndex,
+         static_cast<int>(QuoteRequestsModel::Role::QuotedPrice)).toDouble();
       auto assetType = assetManager_->GetAssetTypeForSecurity(qrn.security);
       const auto pip = qFuzzyCompare(bestQPx, quotedPx) ? 0.0 : std::pow(10, -UiUtils::GetPricePrecisionForAssetType(assetType));
       if (isBuy) {
@@ -230,7 +241,7 @@ void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, i
 {
    for (int row = first; row <= last; row++) {
       const auto &index = model_->index(row, 0, parent);
-      if (index.data(QuoteRequestsModel::Role::ReqId).isNull()) {
+      if (index.data(static_cast<int>(QuoteRequestsModel::Role::ReqId)).isNull()) {
          expandIfNeeded();
          ui_->treeViewQuoteRequests->resizeColumnToContents(0);
       }
@@ -398,13 +409,17 @@ unsigned int bs::SettlementStatsCollector::getGradeFor(const std::string &) cons
 
 bool QuoteReqSortModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
-   const auto leftGrade = sourceModel()->data(left, QuoteRequestsModel::Role::Grade);
-   const auto rightGrade = sourceModel()->data(right, QuoteRequestsModel::Role::Grade);
+   const auto leftGrade = sourceModel()->data(left,
+      static_cast<int>(QuoteRequestsModel::Role::Grade));
+   const auto rightGrade = sourceModel()->data(right,
+      static_cast<int>(QuoteRequestsModel::Role::Grade));
    if (leftGrade != rightGrade) {
       return (leftGrade < rightGrade);
    }
-   const auto leftTL = sourceModel()->data(left, QuoteRequestsModel::Role::TimeLeft);
-   const auto rightTL = sourceModel()->data(right, QuoteRequestsModel::Role::TimeLeft);
+   const auto leftTL = sourceModel()->data(left,
+      static_cast<int>(QuoteRequestsModel::Role::TimeLeft));
+   const auto rightTL = sourceModel()->data(right,
+      static_cast<int>(QuoteRequestsModel::Role::TimeLeft));
    return (leftTL < rightTL);
 }
 
@@ -415,8 +430,9 @@ bool QuoteReqSortModel::filterAcceptsRow(int sourceRow, const QModelIndex &srcPa
    }
 
    const auto index = sourceModel()->index(sourceRow, 0, srcParent);
-   if (!sourceModel()->data(index, QuoteRequestsModel::Role::AllowFiltering).toBool()) {
-      return true;
+   if (!sourceModel()->data(index,
+      static_cast<int>(QuoteRequestsModel::Role::AllowFiltering)).toBool()) {
+         return true;
    }
    const auto security = sourceModel()->data(index).toString();
    if (visible_.find(security) != visible_.end()) {
@@ -439,23 +455,14 @@ void QuoteReqSortModel::SetFilter(const QStringList &visible)
 #include <QPainter>
 void ProgressDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt, const QModelIndex &index) const
 {
-   if (index.data(QuoteRequestsModel::Role::ShowProgress).toBool()) {
-      QProgressBar renderer;
+   if (index.data(static_cast<int>(QuoteRequestsModel::Role::ShowProgress)).toBool()) {
+      QStyleOptionProgressBar pOpt;
+      pOpt.maximum = index.data(static_cast<int>(QuoteRequestsModel::Role::Timeout)).toInt();
+      pOpt.minimum = 0;
+      pOpt.progress = index.data(static_cast<int>(QuoteRequestsModel::Role::TimeLeft)).toInt();
+      pOpt.rect = opt.rect;
 
-      QString style = QString::fromStdString("QProgressBar { border: 1px solid #1c2835; border-radius: 4px; background-color: rgba(0, 0, 0, 0); }");
-
-      renderer.resize(opt.rect.size());
-      renderer.setMinimum(0);
-      renderer.setMaximum(index.data(QuoteRequestsModel::Role::Timeout).toInt());
-      renderer.setValue(index.data(QuoteRequestsModel::Role::TimeLeft).toInt());
-      renderer.setTextVisible(false);
-
-      //QApplication::style()->polish(&renderer);
-      renderer.setStyleSheet(style);
-      painter->save();
-      painter->translate(opt.rect.topLeft());
-      renderer.render(painter);
-      painter->restore();
+      QApplication::style()->drawControl(QStyle::CE_ProgressBar, &pOpt, painter, &pbar_);
    } else {
       QStyledItemDelegate::paint(painter, opt, index);
       return;
