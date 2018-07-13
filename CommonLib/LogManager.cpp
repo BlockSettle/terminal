@@ -1,5 +1,6 @@
 #include "LogManager.h"
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/null_sink.h>
 
 using namespace bs;
 
@@ -8,7 +9,11 @@ static const std::string tearline = "-------------------------------------------
 
 LogManager::LogManager(const OnErrorCallback &cb)
    : cb_(cb)
-{}
+   , loggingEnabled_(true)
+{
+   auto nullSink = std::make_shared<spdlog::sinks::null_sink_mt> ();
+   nullLogger_ = std::make_shared<spdlog::logger>("null_logger", nullSink);
+}
 
 bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::string &category)
 {
@@ -23,7 +28,11 @@ bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::s
    else {
       loggers_[category] = logger;
    }
-   logger->info(tearline);
+
+   if (loggingEnabled_) {
+      logger->info(tearline);
+   }
+
    return !exists;
 }
 
@@ -142,19 +151,28 @@ std::shared_ptr<spdlog::logger> LogManager::copy(const std::shared_ptr<spdlog::l
 
 std::shared_ptr<spdlog::logger> LogManager::logger(const std::string &category)
 {
-   if (category.empty()) {
-      if (defaultLogger_) {
-         return defaultLogger_;
+   if (loggingEnabled_) {
+      if (category.empty()) {
+         if (defaultLogger_) {
+            return defaultLogger_;
+         }
       }
+      else {
+         const auto &it = loggers_.find(category);
+         if (it != loggers_.end()) {
+            return it->second;
+         }
+         if (defaultLogger_) {
+            return copy(defaultLogger_, catDefault, category);
+         }
+      }
+      return spdlog::stdout_logger_mt("stdout");
+   } else {
+      return nullLogger_;
    }
-   else {
-      const auto &it = loggers_.find(category);
-      if (it != loggers_.end()) {
-         return it->second;
-      }
-      if (defaultLogger_) {
-         return copy(defaultLogger_, catDefault, category);
-      }
-   }
-   return spdlog::stdout_logger_mt("stdout");
+}
+
+void LogManager::enableLogging(bool on)
+{
+   loggingEnabled_ = on;
 }

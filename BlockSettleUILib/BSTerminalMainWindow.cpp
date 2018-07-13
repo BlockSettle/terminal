@@ -105,6 +105,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });
+   logMgr_->enableLogging(applicationSettings_->get<bool>(ApplicationSettings::EnableLogging));
    logMgr_->add(applicationSettings_->GetLogsConfig());
 
    logMgr_->logger()->debug("Settings loaded from {}", applicationSettings_->GetSettingsPath().toStdString());
@@ -661,6 +662,8 @@ void BSTerminalMainWindow::openConfigDialog()
    configDialog.exec();
 
    UpdateMainWindowAppearence();
+
+   logMgr_->enableLogging(applicationSettings_->get<bool>(ApplicationSettings::EnableLogging));
 }
 
 void BSTerminalMainWindow::openAccountInfoDialog()

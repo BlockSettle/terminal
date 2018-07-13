@@ -78,6 +78,7 @@ public:
       ResetPassword_Url,
       GetAccount_Url,
       WalletFiltering,
+      EnableLogging,
       _last
    };
 
