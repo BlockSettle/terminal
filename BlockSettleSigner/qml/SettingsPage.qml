@@ -189,6 +189,10 @@ Item {
                     placeholderText: "0.0.0.0"
                     Layout.fillWidth: true
                     text:   signerParams.listenAddress
+                    validator: RegExpValidator {
+                        regExp: /^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])$/}
+                    onTextChanged: {
+                    }
                     onEditingFinished: {
                         signerParams.listenAddress = text
                     }
