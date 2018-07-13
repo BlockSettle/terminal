@@ -82,7 +82,6 @@ Item {
 
             ColumnLayout{
                 id: c1
-                Layout.preferredHeight: 195
                 Layout.fillWidth: true
 
 
@@ -123,7 +122,7 @@ Item {
                         Layout.preferredHeight: 25
                     }
                     CustomLabel {
-                        visible: !signerStatus.connections
+                        visible: !signerStatus.offline && !signerStatus.connections
                         Layout.alignment: Qt.AlignRight
                         text:   qsTr("None")
                     }
@@ -194,6 +193,7 @@ Item {
                 implicitHeight: view.height - grid1.height - c1.height
                                 - btns.height - column.spacing * 4
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 color: "#1c2835"
             }
 
