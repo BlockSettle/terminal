@@ -11,6 +11,7 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
    , ui_{ new Ui::GeneralSettingsPage{}}
 {
    ui_->setupUi(this);
+   ui_->warnLabel->hide();
 }
 
 void GeneralSettingsPage::displaySettings(const std::shared_ptr<ApplicationSettings>& appSettings
@@ -20,7 +21,7 @@ void GeneralSettingsPage::displaySettings(const std::shared_ptr<ApplicationSetti
    ui_->checkBoxMinimizeToTray->setChecked(appSettings->get<bool>(ApplicationSettings::minimizeToTray, displayDefault));
    ui_->checkBoxCloseToTray->setChecked(appSettings->get<bool>(ApplicationSettings::closeToTray, displayDefault));
    ui_->checkBoxShowTxNotification->setChecked(appSettings->get<bool>(ApplicationSettings::notifyOnTX, displayDefault));
-   ui_->checkBoxEnableLogging->setChecked(appSettings->get<bool>(ApplicationSettings::EnableLogging, displayDefault));
+   //ui_->checkBoxEnableLogging->setChecked(appSettings->get<bool>(ApplicationSettings::EnableLogging, displayDefault));
 }
 
 void GeneralSettingsPage::applyChanges(const std::shared_ptr<ApplicationSettings>& appSettings
@@ -30,5 +31,5 @@ void GeneralSettingsPage::applyChanges(const std::shared_ptr<ApplicationSettings
    appSettings->set(ApplicationSettings::minimizeToTray, ui_->checkBoxMinimizeToTray->isChecked());
    appSettings->set(ApplicationSettings::closeToTray, ui_->checkBoxCloseToTray->isChecked());
    appSettings->set(ApplicationSettings::notifyOnTX, ui_->checkBoxShowTxNotification->isChecked());
-   appSettings->set(ApplicationSettings::EnableLogging, ui_->checkBoxEnableLogging->isChecked());
+   //appSettings->set(ApplicationSettings::EnableLogging, ui_->checkBoxEnableLogging->isChecked());
 }
