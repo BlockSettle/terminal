@@ -1,6 +1,5 @@
 #include "LogManager.h"
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/null_sink.h>
 
 using namespace bs;
 
@@ -9,10 +8,7 @@ static const std::string tearline = "-------------------------------------------
 
 LogManager::LogManager(const OnErrorCallback &cb)
    : cb_(cb)
-   , loggingEnabled_(true)
 {
-   auto nullSink = std::make_shared<spdlog::sinks::null_sink_mt> ();
-   nullLogger_ = std::make_shared<spdlog::logger>("null_logger", nullSink);
 }
 
 bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::string &category)
@@ -28,10 +24,7 @@ bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::s
    else {
       loggers_[category] = logger;
    }
-
-   if (loggingEnabled_) {
-      logger->info(tearline);
-   }
+   logger->info(tearline);
 
    return !exists;
 }
@@ -67,6 +60,7 @@ void LogManager::add(const std::vector<LogConfig> &configs)
 static spdlog::level::level_enum convertLevel(LogLevel level)
 {
    switch (level) {
+   case LogLevel::trace:   return spdlog::level::trace;
    case LogLevel::debug:   return spdlog::level::debug;
    case LogLevel::info:    return spdlog::level::info;
    case LogLevel::warn:    return spdlog::level::warn;
@@ -151,28 +145,19 @@ std::shared_ptr<spdlog::logger> LogManager::copy(const std::shared_ptr<spdlog::l
 
 std::shared_ptr<spdlog::logger> LogManager::logger(const std::string &category)
 {
-   if (loggingEnabled_) {
-      if (category.empty()) {
-         if (defaultLogger_) {
-            return defaultLogger_;
-         }
+   if (category.empty()) {
+      if (defaultLogger_) {
+         return defaultLogger_;
       }
-      else {
-         const auto &it = loggers_.find(category);
-         if (it != loggers_.end()) {
-            return it->second;
-         }
-         if (defaultLogger_) {
-            return copy(defaultLogger_, catDefault, category);
-         }
-      }
-      return spdlog::stdout_logger_mt("stdout");
-   } else {
-      return nullLogger_;
    }
-}
-
-void LogManager::enableLogging(bool on)
-{
-   loggingEnabled_ = on;
+   else {
+      const auto &it = loggers_.find(category);
+      if (it != loggers_.end()) {
+         return it->second;
+      }
+      if (defaultLogger_) {
+         return copy(defaultLogger_, catDefault, category);
+      }
+   }
+   return spdlog::stdout_logger_mt("stdout");
 }

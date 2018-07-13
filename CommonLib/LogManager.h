@@ -18,12 +18,13 @@ namespace spdlog {
 namespace bs {
    enum class LogLevel
    {
-      off = 0,
+      trace = 0,
       debug = 1,
       info = 2,
       warn = 3,
       err = 4,
-      crit = 5
+      crit = 5,
+      off = 6,
    };
 
    struct LogConfig
@@ -51,8 +52,6 @@ namespace bs {
 
       std::shared_ptr<spdlog::logger> logger(const std::string &category = {});
 
-      void enableLogging(bool on);
-
    private:
       std::shared_ptr<spdlog::logger> create(const LogConfig &);
       std::shared_ptr<spdlog::logger> createOrAppend(const std::shared_ptr<spdlog::logger> &, const LogConfig &);
@@ -64,8 +63,6 @@ namespace bs {
       std::unordered_map<std::string, std::shared_ptr<spdlog::sinks::sink>>   sinks_;
       std::unordered_map<std::string, std::string> patterns_;
       std::shared_ptr<spdlog::logger>              defaultLogger_;
-      std::shared_ptr<spdlog::logger>              nullLogger_;
-      bool                                         loggingEnabled_;
    };
 
 }  // namespace bs
