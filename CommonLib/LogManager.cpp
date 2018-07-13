@@ -8,8 +8,7 @@ static const std::string tearline = "-------------------------------------------
 
 LogManager::LogManager(const OnErrorCallback &cb)
    : cb_(cb)
-{
-}
+{}
 
 bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::string &category)
 {
@@ -25,7 +24,6 @@ bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::s
       loggers_[category] = logger;
    }
    logger->info(tearline);
-
    return !exists;
 }
 

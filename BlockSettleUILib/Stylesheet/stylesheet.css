@@ -900,8 +900,6 @@ QPushButton:checked, QToolButton:checked, [buttonImportant="true"]:checked, [but
     background-image: url(":/resources/tick.png") no-repeat center;
     border-color: #22C064; }
 
-
-
 QComboBox,
 QDateEdit {
   border: 1px solid #81888f;
