@@ -166,7 +166,7 @@ void GeneralSettingsPage::checkSettings()
 
    if (ui_->groupBoxLogging->isChecked()) {
       if (ui_->logFileName->text().isEmpty()) {
-         ui_->warnLabel->setText(tr("Log file name can't be empty."));
+         ui_->warnLabel->setText(tr("Log files must be named."));
 
          emit illformedSettings(true);
 
@@ -176,7 +176,7 @@ void GeneralSettingsPage::checkSettings()
 
    if (ui_->groupBoxLoggingMsg->isChecked()) {
       if (ui_->logMsgFileName->text().isEmpty()) {
-         ui_->warnLabel->setText(tr("Log file name can't be empty."));
+         ui_->warnLabel->setText(tr("Log files must be named."));
 
          emit illformedSettings(true);
 
@@ -186,7 +186,7 @@ void GeneralSettingsPage::checkSettings()
 
    if (ui_->groupBoxLogging->isChecked() && ui_->groupBoxLoggingMsg->isChecked()) {
       if (ui_->logFileName->text() == ui_->logMsgFileName->text()) {
-         ui_->warnLabel->setText(tr("Logging can't be done in one file."));
+         ui_->warnLabel->setText(tr("Logging requires multiple files."));
 
          emit illformedSettings(true);
 
@@ -194,8 +194,7 @@ void GeneralSettingsPage::checkSettings()
       }
    }
 
-   ui_->warnLabel->setText(tr("Changes to logging settings will take effect "
-                              "after the application is restarted. "));
+   ui_->warnLabel->setText(tr("Changes will take effect after the application is restarted."));
 
    emit illformedSettings(false);
 }
