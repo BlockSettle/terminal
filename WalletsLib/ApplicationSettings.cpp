@@ -557,11 +557,13 @@ std::vector<std::pair<std::string, unsigned int>>  ApplicationSettings::Unfinish
    return result;
 }
 
-std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig() const
+std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig(bool getDefaultValue) const
 {
    std::vector<bs::LogConfig> result;
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault)));
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault,
+      getDefaultValue)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages,
+      getDefaultValue)));
    return result;
 }
 
