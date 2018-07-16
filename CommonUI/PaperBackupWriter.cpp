@@ -72,7 +72,7 @@ void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
 
       QStaticText text(QLatin1String(
          "<span style=\"color:#EC0A35\"><b>WARNING!</b></span> "
-         "Anyone who has access to this Unencrypted Paper Backup"
+         "Anyone who has access to this Unencrypted Paper Backup "
          "of your Root Private Key will be able to access all bitcoins in this"
          " wallet! Please keep this Paper Backup in a safe place."));
       QTextOption opt;
