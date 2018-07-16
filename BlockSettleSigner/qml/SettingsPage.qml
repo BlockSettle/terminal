@@ -189,7 +189,7 @@ Item {
                     selectByMouse: true
                     id: listenAddress
                     validator: RegExpValidator {
-                        regExp: /^\.?((?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){0,3}(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$/
+                        regExp: /^((?:[0-1]?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])\.){0,3}(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$/
                     }
                     onEditingFinished: {
                         signerParams.listenAddress = text
@@ -246,6 +246,9 @@ Item {
                     text:   signerParams.manualSignUnlimited ? qsTr("Unlimited") : signerParams.limitManualXbt
                     selectByMouse: true
                     id: limitManualXbt
+                    validator: RegExpValidator {
+                        regExp: /^[0-9]*\.?[0-9]*$/
+                    }
                     onEditingFinished: {
                         if (text !== qsTr("Unlimited")) {
                             signerParams.limitManualXbt = text
@@ -262,6 +265,9 @@ Item {
                     text:   signerParams.limitManualPwKeep
                     selectByMouse: true
                     id: limitManualPwKeep
+                    validator: RegExpValidator {
+                        regExp: /^(?:\d+(h|hour|m|min|minute|s|sec|second)?\s*)*$/
+                    }
                     onEditingFinished: {
                         signerParams.limitManualPwKeep = text
                     }
@@ -271,9 +277,8 @@ Item {
     }
 
     function storeSettings() {
-        if (signerParams.limitManualPwKeep !== limitManualPwKeep.text) {
-            signerParams.limitManualPwKeep = limitManualPwKeep.text
-        }
+        signerParams.limitManualPwKeep = limitManualPwKeep.text
+
         if (signerParams.limitManualXbt != limitManualXbt.text) {
             if (limitManualXbt.text !== qsTr("Unlimited")) {
                 signerParams.limitManualXbt = limitManualXbt.text

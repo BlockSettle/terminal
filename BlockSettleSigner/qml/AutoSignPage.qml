@@ -94,6 +94,9 @@ Item {
                     text:   signerParams.autoSignUnlimited ? qsTr("Unlimited") : signerParams.limitAutoSignXbt
                     selectByMouse: true
                     id: limitAutoSignXbt
+                    validator: RegExpValidator {
+                        regExp: /^[0-9]*\.?[0-9]*$/
+                    }
                     onEditingFinished: {
                         if (text !== qsTr("Unlimited")) {
                             signerParams.limitAutoSignXbt = text
@@ -106,10 +109,13 @@ Item {
                 }
                 CustomTextInput {
                     Layout.fillWidth: true
-                    placeholderText: "e.g. 1h or 15min or 600s or combined"
+                    placeholderText: "e.g. 1h or 15m or 600s or combined"
                     selectByMouse: true
                     text:   signerParams.limitAutoSignTime ? signerParams.limitAutoSignTime : qsTr("Unlimited")
                     id: limitAutoSignTime
+                    validator: RegExpValidator {
+                        regExp: /^(?:\d+(h|hour|m|min|minute|s|sec|second)?\s*)*$/
+                    }
                     onEditingFinished: {
                         signerParams.limitAutoSignTime = text
                     }
@@ -124,8 +130,7 @@ Item {
                 signerParams.limitAutoSignXbt = limitAutoSignXbt.text
             }
         }
-        if (signerParams.limitAutoSignTime !== limitAutoSignTime.text) {
-            signerParams.limitAutoSignTime = limitAutoSignTime.text
-        }
+
+        signerParams.limitAutoSignTime = limitAutoSignTime.text
     }
 }
