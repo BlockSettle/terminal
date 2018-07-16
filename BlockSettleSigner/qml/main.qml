@@ -107,6 +107,10 @@ ApplicationWindow {
         }
     }
 
+    onClosing: {
+        settingsPage.storeSettings();
+        autoSignPage.storeSettings();
+    }
 
     signal passwordEntered(string walletId, string password)
 

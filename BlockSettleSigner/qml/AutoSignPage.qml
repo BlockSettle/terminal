@@ -92,8 +92,12 @@ Item {
                 CustomTextInput {
                     Layout.fillWidth: true
                     text:   signerParams.autoSignUnlimited ? qsTr("Unlimited") : signerParams.limitAutoSignXbt
+                    selectByMouse: true
+                    id: limitAutoSignXbt
                     onEditingFinished: {
-                        signerParams.limitAutoSignXbt = text
+                        if (text !== qsTr("Unlimited")) {
+                            signerParams.limitAutoSignXbt = text
+                        }
                     }
                 }
 
@@ -103,12 +107,25 @@ Item {
                 CustomTextInput {
                     Layout.fillWidth: true
                     placeholderText: "e.g. 1h or 15min or 600s or combined"
+                    selectByMouse: true
                     text:   signerParams.limitAutoSignTime ? signerParams.limitAutoSignTime : qsTr("Unlimited")
+                    id: limitAutoSignTime
                     onEditingFinished: {
                         signerParams.limitAutoSignTime = text
                     }
                 }
             }
+        }
+    }
+
+    function storeSettings() {
+        if (signerParams.limitAutoSignXbt != limitAutoSignXbt.text) {
+            if (limitAutoSignXbt.text !== qsTr("Unlimited")) {
+                signerParams.limitAutoSignXbt = limitAutoSignXbt.text
+            }
+        }
+        if (signerParams.limitAutoSignTime !== limitAutoSignTime.text) {
+            signerParams.limitAutoSignTime = limitAutoSignTime.text
         }
     }
 }
