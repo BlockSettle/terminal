@@ -100,6 +100,13 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(
       static_cast<int>(QuoteRequestsModel::Column::Empty),
       doNotDrawSelectionDelegate);
+
+   const auto opt = ui_->treeViewQuoteRequests->viewOptions();
+   const auto fm = opt.fontMetrics;
+   const int width = fm.size(Qt::TextSingleLine, tr("No quote received")).width();
+   ui_->treeViewQuoteRequests->header()->resizeSection(
+      static_cast<int>(QuoteRequestsModel::Column::Status),
+      width);
 }
 
 void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
@@ -247,7 +254,9 @@ void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, i
       }
       else {
          for (int i = 0; i < sortModel_->columnCount(); ++i) {
-            ui_->treeViewQuoteRequests->resizeColumnToContents(i);
+            if (i != static_cast<int>(QuoteRequestsModel::Column::Status)) {
+               ui_->treeViewQuoteRequests->resizeColumnToContents(i);
+            }
          }
       }
    }
