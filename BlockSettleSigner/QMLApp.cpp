@@ -1,7 +1,6 @@
 #include <functional>
 #include <QtQml>
 #include <QQmlContext>
-#include <QSystemTrayIcon>
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
@@ -75,6 +74,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+   connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 }
 
 void QMLAppObj::settingsConnections()
@@ -239,6 +239,13 @@ void QMLAppObj::onSysTrayMsgClicked()
 {
    logger_->debug("Systray message clicked");
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+}
+
+void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
+{
+   if (reason == QSystemTrayIcon::DoubleClick) {
+      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   }
 }
 
 void QMLAppObj::OnlineProcessing()

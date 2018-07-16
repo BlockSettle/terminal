@@ -129,6 +129,7 @@ ApplicationWindow {
     }
 
    function raiseWindow() {
+        mainWindow.show()
         mainWindow.raise()
         mainWindow.flags |= Qt.WindowStaysOnTopHint	// hack while raise() doesn't work properly
         mainWindow.flags &= ~Qt.WindowStaysOnTopHint
