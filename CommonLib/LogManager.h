@@ -18,12 +18,13 @@ namespace spdlog {
 namespace bs {
    enum class LogLevel
    {
-      off = 0,
+      trace = 0,
       debug = 1,
       info = 2,
       warn = 3,
       err = 4,
-      crit = 5
+      crit = 5,
+      off = 6,
    };
 
    struct LogConfig
