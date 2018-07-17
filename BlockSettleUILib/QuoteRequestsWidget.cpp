@@ -102,7 +102,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
       doNotDrawSelectionDelegate);
 
    const auto opt = ui_->treeViewQuoteRequests->viewOptions();
-   const int width = opt.fontMetrics.boundingRect(tr("No quote received.")).width();
+   const int width = opt.fontMetrics.boundingRect(tr("No quote received")).width() + 10;
    ui_->treeViewQuoteRequests->header()->resizeSection(
       static_cast<int>(QuoteRequestsModel::Column::Status),
       width);
