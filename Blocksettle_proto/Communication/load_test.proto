@@ -12,52 +12,52 @@ enum AdminCommandCode
 
 message AdminCommandHeader
 {
-   required AdminCommandCode command_code = 1;
-   optional string command_data = 2;
+   required AdminCommandCode  command_code = 1;
+   optional string            command_data = 2;
 }
 
 message AdminCommandConnect
 {
-   required bool connect_to_armory = 1;
-   required bool connect_to_celer = 2;
-   required string celer_host = 3;
-   required string celer_port = 4;
-   required string pub_host = 5;
-   required string pub_port = 6;
-   required string wallets_root = 7;
-   required string armory_host = 8;
-   required string armory_port = 9;
-   required bool   need_auth_address = 10;
-   required bool   generate_address = 11;
-   optional uint64 generate_address_interval = 12;
+   required bool     connect_to_armory = 1;
+   required bool     connect_to_celer = 2;
+   required string   celer_host = 3;
+   required string   celer_port = 4;
+   required string   pub_host = 5;
+   required string   pub_port = 6;
+   required string   wallets_root = 7;
+   required string   armory_host = 8;
+   required string   armory_port = 9;
+   required bool     need_auth_address = 10;
+   required bool     generate_address = 11;
+   optional uint64   generate_address_interval = 12;
 }
 
 message RFQAmount
 {
-   required string ccy     = 1;
-   required double amount  = 2;
+   required string ccy = 1;
+   required double amount = 2;
 }
 
 message RFQAmountsCollection
 {
-   repeated string      security_list  = 1;
-   repeated RFQAmount   amounts        = 2;
+   repeated string      security_list = 1;
+   repeated RFQAmount   amounts = 2;
 }
 
 message DealingPrice
 {
-   required string security   = 1;
+   required string security = 1;
    required double base_price = 2;
 }
 
 message AdminCommandStartTrading
 {
-   required uint64               rfq_send_timeout  = 1;
+   required uint64               rfq_send_timeout = 1;
 
-   required RFQAmountsCollection fx_rfq_amounts    = 2;
+   required RFQAmountsCollection fx_rfq_amounts = 2;
    repeated DealingPrice         fx_dealing_prices = 3;
 
-   optional RFQAmountsCollection xbt_rfq_amounts    = 4;
+   optional RFQAmountsCollection xbt_rfq_amounts = 4;
    repeated DealingPrice         xbt_dealing_prices = 5;
 }
 
@@ -75,6 +75,7 @@ enum CustomerUpdateType
    ErrorNotificationType = 10;
    XBTAddressType = 11;
    OTPUpdateAddressType = 12;
+   AuthAddressStateType = 13;
 }
 
 enum RFQProductGroup
@@ -87,9 +88,9 @@ enum RFQProductGroup
 
 message CustomerUpdateHeader
 {
-   required CustomerUpdateType update_type = 1;
-   required string customer_email = 2;
-   optional string update_data = 3;
+   required CustomerUpdateType   update_type = 1;
+   required string               customer_email = 2;
+   optional string               update_data = 3;
 }
 
 message CelerStatusUpdate
@@ -111,23 +112,23 @@ message BalanceUpdate
 
 message RFQSentUpdate
 {
-   required string rfq_id = 1;
-   required RFQProductGroup group_type = 2;
-   required uint64 timestamp = 3;
+   required string            rfq_id = 1;
+   required RFQProductGroup   group_type = 2;
+   required uint64            timestamp = 3;
 }
 
 message RFQReceivedUpdate
 {
-   required string rfq_id = 1;
-   required RFQProductGroup group_type = 2;
-   required uint64 timestamp = 3;
+   required string            rfq_id = 1;
+   required RFQProductGroup   group_type = 2;
+   required uint64            timestamp = 3;
 }
 
 message RFQCancelledUpdate
 {
-   required string rfq_id = 1;
-   required RFQProductGroup group_type = 2;
-   required uint64 timestamp = 3;
+   required string            rfq_id = 1;
+   required RFQProductGroup   group_type = 2;
+   required uint64            timestamp = 3;
 }
 
 message XBTBalanceUpdate
@@ -158,4 +159,10 @@ message OTPUpdateMessage
 {
    required OTPStatus   otp_status = 1;
    required uint64      usage_count = 2;
+}
+
+message AuthAddressUpdate
+{
+   required string   auth_address = 1;
+   required string   address_state_string = 2;
 }
