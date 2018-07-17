@@ -102,8 +102,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
       doNotDrawSelectionDelegate);
 
    const auto opt = ui_->treeViewQuoteRequests->viewOptions();
-   const auto fm = opt.fontMetrics;
-   const int width = fm.size(Qt::TextSingleLine, tr("No quote received")).width();
+   const int width = opt.fontMetrics.boundingRect(tr("No quote received.")).width();
    ui_->treeViewQuoteRequests->header()->resizeSection(
       static_cast<int>(QuoteRequestsModel::Column::Status),
       width);
@@ -473,7 +472,9 @@ void ProgressDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt,
 
       QApplication::style()->drawControl(QStyle::CE_ProgressBar, &pOpt, painter, &pbar_);
    } else {
-      QStyledItemDelegate::paint(painter, opt, index);
-      return;
+      QStyleOptionViewItem changedOpt = opt;
+      changedOpt.state &= ~(QStyle::State_Selected);
+
+      QStyledItemDelegate::paint(painter, changedOpt, index);
    }
 }
