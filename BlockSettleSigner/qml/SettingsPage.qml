@@ -144,11 +144,6 @@ Item {
                 }
             }
 
-
-
-
-
-
             CustomHeader {
                 id: btnNetwork
                 text:   qsTr("Network Settings:")
@@ -177,6 +172,8 @@ Item {
                     echoMode:   TextField.Password
                     text:       signerParams.password
                     Layout.fillWidth: true
+                    selectByMouse: true
+                    id: password
                     onEditingFinished: {
                         signerParams.password = text
                     }
@@ -189,6 +186,11 @@ Item {
                     placeholderText: "0.0.0.0"
                     Layout.fillWidth: true
                     text:   signerParams.listenAddress
+                    selectByMouse: true
+                    id: listenAddress
+                    validator: RegExpValidator {
+                        regExp: /^((?:[0-1]?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])\.){0,3}(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$/
+                    }
                     onEditingFinished: {
                         signerParams.listenAddress = text
                     }
@@ -201,6 +203,12 @@ Item {
                     placeholderText: "23456"
                     Layout.fillWidth: true
                     text:   signerParams.listenPort
+                    selectByMouse: true
+                    id: listenPort
+                    validator: IntValidator {
+                        bottom: 0
+                        top: 65535
+                    }
                     onEditingFinished: {
                         signerParams.listenPort = text
                     }
@@ -236,8 +244,15 @@ Item {
                 CustomTextInput {
                     Layout.fillWidth: true
                     text:   signerParams.manualSignUnlimited ? qsTr("Unlimited") : signerParams.limitManualXbt
+                    selectByMouse: true
+                    id: limitManualXbt
+                    validator: RegExpValidator {
+                        regExp: /^[0-9]*\.?[0-9]*$/
+                    }
                     onEditingFinished: {
-                        signerParams.limitManualXbt = text
+                        if (text !== qsTr("Unlimited")) {
+                            signerParams.limitManualXbt = text
+                        }
                     }
                 }
 
@@ -248,11 +263,35 @@ Item {
                     Layout.fillWidth: true
                     placeholderText: "30s or 5min"
                     text:   signerParams.limitManualPwKeep
+                    selectByMouse: true
+                    id: limitManualPwKeep
+                    validator: RegExpValidator {
+                        regExp: /^(?:\d+(h|hour|m|min|minute|s|sec|second)?\s*)*$/
+                    }
                     onEditingFinished: {
                         signerParams.limitManualPwKeep = text
                     }
                 }
             }
+        }
+    }
+
+    function storeSettings() {
+        signerParams.limitManualPwKeep = limitManualPwKeep.text
+
+        if (signerParams.limitManualXbt != limitManualXbt.text) {
+            if (limitManualXbt.text !== qsTr("Unlimited")) {
+                signerParams.limitManualXbt = limitManualXbt.text
+            }
+        }
+        if (signerParams.listenPort !== listenPort.text) {
+            signerParams.listenPort = listenPort.text
+        }
+        if (signerParams.listenAddress !== listenAddress.text) {
+            signerParams.listenAddress = listenAddress.text
+        }
+        if (signerParams.password !== password.text) {
+            signerParams.password = password.text
         }
     }
 }

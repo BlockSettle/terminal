@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <QObject>
 #include "MetaData.h"
+#include <QSystemTrayIcon>
 
 
 namespace spdlog {
@@ -46,6 +47,7 @@ private slots:
    void onListenSocketChanged();
    void onLimitsChanged();
    void onSysTrayMsgClicked();
+   void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
 
 private:
    void OnlineProcessing();
