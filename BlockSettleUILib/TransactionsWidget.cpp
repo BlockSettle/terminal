@@ -40,22 +40,60 @@ public:
       QModelIndex directionIndex = src->index(source_row, static_cast<int>(TransactionsViewModel::Columns::SendReceive));
       int direction = src->data(directionIndex, TransactionsViewModel::FilterRole).toInt();
 
-      bool walletMatched = false;
-      if (!walletIds.isEmpty()) {
-         QModelIndex index = src->index(source_row, static_cast<int>(TransactionsViewModel::Columns::Wallet));
-         for (const auto &walletId : walletIds) {
-            if (src->data(index, TransactionsViewModel::FilterRole).toString() == walletId) {
-               walletMatched = true;
+      {
+         const QModelIndex index = src->index(source_row,
+            static_cast<int>(TransactionsViewModel::Columns::Wallet));
+         const auto srcWalletId = src->data(index, TransactionsViewModel::FilterRole).toString();
+
+         bool walletMatched = false;
+         if (!walletIds.isEmpty()) {
+            for (const auto &walletId : walletIds) {
+               if (srcWalletId == walletId) {
+                  walletMatched = true;
+               }
+            }
+            if (!walletMatched) {
+               return false;
             }
          }
-         if (!walletMatched) {
-            return false;
-         }
-      }
 
-      if (transactionDirection != bs::Transaction::Unknown) {
-         if (direction != transactionDirection) {
-            return false;
+         if (transactionDirection != bs::Transaction::Unknown) {
+            if (!walletIds.isEmpty()) {
+               const auto aIdx = src->index(source_row,
+                  static_cast<int>(TransactionsViewModel::Columns::Amount));
+               const auto a = aIdx.data(Qt::DisplayRole).toDouble();
+               const auto wallet = static_cast<bs::Wallet*>(aIdx.data(
+                  TransactionsViewModel::WalletRole).value<void*>());
+
+               for (const auto &walletId : walletIds) {
+                  if (wallet->GetType() == bs::wallet::Type::ColorCoin) {
+                        switch (transactionDirection) {
+                           case bs::Transaction::Received : {
+                              if (a < 0.0) {
+                                 return false;
+                              }
+                           }
+                              break;
+
+                           case bs::Transaction::Sent : {
+                              if (a > 0.0) {
+                                 return false;
+                              }
+                           }
+                              break;
+
+                           default :
+                              return false;
+                        }
+                  } else if (direction != transactionDirection) {
+                     return false;
+                  }
+               }
+            } else {
+               if (direction != transactionDirection) {
+                  return false;
+               }
+            }
          }
       }
 

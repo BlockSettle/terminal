@@ -122,7 +122,8 @@ public:
 
    enum Role {
       SortRole=Qt::UserRole,
-      FilterRole
+      FilterRole,
+      WalletRole
    };
 
    TransactionItems                    currentPage_;
