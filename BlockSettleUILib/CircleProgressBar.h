@@ -14,8 +14,8 @@ class CircleProgressBar : public QWidget
 {
    Q_OBJECT
 
-   Q_PROPERTY(int min READ min WRITE setMin)
-   Q_PROPERTY(int max READ max WRITE setMax)
+   Q_PROPERTY(int minimum READ minimum WRITE setMinimum)
+   Q_PROPERTY(int maximum READ maximum WRITE setMaximum)
    Q_PROPERTY(int value READ value WRITE setValue NOTIFY valueChanged)
    Q_PROPERTY(QColor color READ color WRITE setColor)
 
@@ -26,11 +26,11 @@ public:
    CircleProgressBar(QWidget *parent = nullptr);
    ~CircleProgressBar() noexcept override = default;
 
-   int min() const;
-   void setMin(int v);
+   int minimum() const;
+   void setMinimum(int v);
 
-   int max() const;
-   void setMax(int v);
+   int maximum() const;
+   void setMaximum(int v);
 
    int value() const;
    void setValue(int v);
