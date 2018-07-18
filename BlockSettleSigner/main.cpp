@@ -10,8 +10,8 @@
 #include <memory>
 #include <iostream>
 #include <spdlog/spdlog.h>
+#include "ArmoryConnection.h"
 #include "HeadlessApp.h"
-#include "PyBlockDataManager.h"
 #include "SignerSettings.h"
 #include "QMLApp.h"
 
