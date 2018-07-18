@@ -116,6 +116,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<PyBlockDataManager>& bdm, std
    progressBar_ = new CircleProgressBar(statusBar_);
    progressBar_->setMin(0);
    progressBar_->setMax(100);
+   progressBar_->hide();
 
    celerConnectionIconLabel_ = new QLabel(statusBar_);
    connectionStatusLabel_ = new QLabel(statusBar_);
@@ -133,8 +134,6 @@ StatusBarView::StatusBarView(const std::shared_ptr<PyBlockDataManager>& bdm, std
    statusBar_->addPermanentWidget(connectionStatusLabel_);
    statusBar_->addPermanentWidget(CreateSeparator());
    statusBar_->addPermanentWidget(containerStatusLabel_);
-
-   connectionStatusLabel_->hide();
 
    QWidget* w = new QWidget();
    w->setFixedWidth(6);
