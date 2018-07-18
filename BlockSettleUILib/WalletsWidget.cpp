@@ -149,17 +149,19 @@ WalletsWidget::WalletsWidget(QWidget* parent)
            this, &WalletsWidget::onEnterKeyInAddressesPressed);
    connect(ui->treeViewWallets, &WalletsTreeView::enterKeyPressed,
            this, &WalletsWidget::onEnterKeyInWalletsPressed);
+   connect(this, &WalletsWidget::showContextMenu, this, &WalletsWidget::onShowContextMenu, Qt::QueuedConnection);
 }
 
 void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &applicationSettings, const std::shared_ptr<AssetManager> &assetMgr
-   , const std::shared_ptr<AuthAddressManager> &authMgr)
+   , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryConnection> &armory)
 {
    walletsManager_ = manager;
    signingContainer_ = container;
    appSettings_ = applicationSettings;
    assetManager_ = assetMgr;
    authMgr_ = authMgr;
+   armory_ = armory;
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &WalletsWidget::onTXSigned);
 
@@ -247,7 +249,7 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
 
    const auto &hdWallet = node->hdWallet();
    if (hdWallet != nullptr) {
-      RootWalletPropertiesDialog(hdWallet, walletsManager_, signingContainer_, walletsModel_, appSettings_
+      RootWalletPropertiesDialog(hdWallet, walletsManager_, armory_, signingContainer_, walletsModel_, appSettings_
          , assetManager_, this).exec();
       return;
    }
@@ -266,7 +268,7 @@ void WalletsWidget::showAddressProperties(const QModelIndex& index)
    const size_t addrIndex = addressModel_->data(sourceIndex, AddressListModel::AddrIndexRole).toUInt();
    const auto address = (addrIndex < addresses.size()) ? addresses[addrIndex] : bs::Address();
 
-   AddressDetailDialog* dialog = new AddressDetailDialog(address, wallet, walletsManager_, this);
+   AddressDetailDialog* dialog = new AddressDetailDialog(address, wallet, walletsManager_, armory_, this);
    dialog->exec();
 }
 
@@ -280,20 +282,29 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
       curAddress_ = curWallet_->GetUsedAddressList()[addressIndex.row()];
    }
 
-   QMenu contextMenu;
-   contextMenu.addAction(actCopyAddr_);
+   auto contextMenu = new QMenu(this);
+   contextMenu->addAction(actCopyAddr_);
 
    if (curWallet_) {
-      contextMenu.addAction(actEditComment_);
-   }
-   if ((curWallet_ == walletsManager_->GetSettlementWallet()) && walletsManager_->GetAuthWallet()
-      /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && curWallet_->getAddrBalance(curAddress_)[0]) {
-      contextMenu.addAction(actRevokeSettl_);
+      contextMenu->addAction(actEditComment_);
    }
 
-   contextMenu.exec(ui->treeViewAddresses->mapToGlobal(p));
+   const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances) {
+      if ((curWallet_ == walletsManager_->GetSettlementWallet()) && walletsManager_->GetAuthWallet()
+         /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
+         contextMenu->addAction(actRevokeSettl_);
+      }
+      emit showContextMenu(contextMenu, ui->treeViewAddresses->mapToGlobal(p));
+   };
+   if (!curWallet_->getAddrBalance(curAddress_, cbAddrBalance)) {
+      emit showContextMenu(contextMenu, ui->treeViewAddresses->mapToGlobal(p));
+   }
 }
 
+void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
+{
+   menu->exec(where);
+}
 
 void WalletsWidget::onWalletContextMenu(const QPoint &p)
 {
@@ -373,7 +384,7 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
    if (importWalletDialog.exec() == QDialog::Accepted) {
       if (importWalletDialog.type() == ImportWalletTypeDialog::Full) {
          ImportWalletDialog createImportedWallet(walletsManager_, signingContainer_
-            , assetManager_, authMgr_, importWalletDialog.GetSeedData()
+            , assetManager_, authMgr_, armory_, importWalletDialog.GetSeedData()
             , importWalletDialog.GetChainCodeData(), appSettings_
             , importWalletDialog.GetName(), importWalletDialog.GetDescription()
             , primary, this);
@@ -539,36 +550,29 @@ void WalletsWidget::onRevokeSettlement()
       return;
    }
 
-   UTXO utxo;
-   try {
-      utxo = settlWallet->GetInputFor(ae, false);
-      if (!utxo.isInitialized()) {
-         throw std::runtime_error("missing input");
+   const auto &cbSettlInput = [this, settlWallet, sellAuthKey, title, ae] (UTXO utxo) {
+      SelectAddressDialog selectAddressDialog{ walletsManager_, walletsManager_->GetDefaultWallet(), this };
+      bs::Address recvAddr;
+      if (selectAddressDialog.exec() == QDialog::Accepted) {
+         recvAddr = selectAddressDialog.getSelectedAddress();
       }
-    }
-   catch (const std::exception &e) {
-      MessageBoxCritical(title, tr("Failed to find pay-in input"), QLatin1String(e.what())).exec();
-      return;
-   }
+      else {
+         return;
+      }
 
-   SelectAddressDialog selectAddressDialog{ walletsManager_, walletsManager_->GetDefaultWallet(), this };
-   bs::Address recvAddr;
-   if (selectAddressDialog.exec() == QDialog::Accepted) {
-      recvAddr = selectAddressDialog.getSelectedAddress();
-   }
-   else {
-      return;
-   }
-
-   try {
-      const auto feePerByte = walletsManager_->estimatedFeePerByte(2);
-      const auto txReq = settlWallet->CreatePayoutTXRequest(utxo, recvAddr, feePerByte);
-      const auto authAddr = bs::Address::fromPubKey(sellAuthKey, AddressEntryType_P2WPKH);
-      revokeReqId_ = signingContainer_->SignPayoutTXRequest(txReq, authAddr, ae);
-   }
-   catch (const std::exception &e) {
-      MessageBoxCritical(title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
-   }
+      const auto &cbFee = [this, settlWallet, utxo, recvAddr, sellAuthKey, title, ae](float feePerByte) {
+         try {
+            const auto txReq = settlWallet->CreatePayoutTXRequest(utxo, recvAddr, feePerByte);
+            const auto authAddr = bs::Address::fromPubKey(sellAuthKey, AddressEntryType_P2WPKH);
+            revokeReqId_ = signingContainer_->SignPayoutTXRequest(txReq, authAddr, ae);
+         }
+         catch (const std::exception &e) {
+            MessageBoxCritical(title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
+         }
+      };
+      walletsManager_->estimatedFeePerByte(2, cbFee);
+   };
+   settlWallet->GetInputFor(ae, cbSettlInput, false);
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
@@ -583,12 +587,7 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string
       return;
    }
 
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      MessageBoxCritical(title, tr("Unable to send transaction - Armory connection is missing")).exec();
-      return;
-   }
-   if (bdm->broadcastZC(signedTX)) {
+   if (armory_->broadcastZC(signedTX)) {
       walletsManager_->GetSettlementWallet()->SetTransactionComment(signedTX, "Settlement Revoke");
    }
    else {

@@ -32,24 +32,10 @@ AddressListModel::AddressListModel(std::shared_ptr<WalletsManager> walletsManage
    , AddressType addrType)
    : QAbstractTableModel(parent)
    , addrType_(addrType)
-   , stopped_(false)
 {
    connect(walletsManager.get(), &WalletsManager::walletsReady, this, &AddressListModel::updateData);
    connect(walletsManager.get(), &WalletsManager::walletChanged, this, &AddressListModel::updateData);
    connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &AddressListModel::updateData);
-}
-
-AddressListModel::~AddressListModel()
-{
-   stopUpdateThread();
-}
-
-void AddressListModel::stopUpdateThread()
-{
-   stopped_ = true;
-   if (updateThread_.joinable()) {
-      updateThread_.join();
-   }
 }
 
 bool AddressListModel::setWallets(const Wallets &wallets)
@@ -91,7 +77,6 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 
 void AddressListModel::updateData()
 {
-   stopUpdateThread();
    beginResetModel();
 
    addressRows_.clear();
@@ -141,19 +126,25 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 
 void AddressListModel::updateWalletData()
 {
-   stopped_ = false;
-
-   updateThread_ = std::thread([this] {
-      for (auto &addrRow : addressRows_) {
-         if (stopped_) {
+   for (size_t i = 0; i < addressRows_.size(); ++i) {
+      auto &addrRow = addressRows_[i];
+      const auto &cbTxN = [this, &addrRow, i](uint32_t txn) {
+         if (i >= addressRows_.size()) {
             return;
          }
-
-         addrRow.transactionCount = addrRow.wallet->getAddrTxN(addrRow.address);
-         addrRow.balance = addrRow.wallet->getAddrBalance(addrRow.address)[0];
-      }
-      emit dataChanged(index(0, ColumnTxCount), index(addressRows_.size() - 1, ColumnBalance));
-   });
+         addrRow.transactionCount = txn;
+         emit dataChanged(index(i, ColumnTxCount), index(i, ColumnTxCount));
+      };
+      const auto &cbBalance = [this, &addrRow, i](std::vector<uint64_t> balances) {
+         if (i >= addressRows_.size()) {
+            return;
+         }
+         addrRow.balance = balances[0];
+         emit dataChanged(index(i, ColumnBalance), index(i, ColumnBalance));
+      };
+      addrRow.wallet->getAddrTxN(addrRow.address, cbTxN);
+      addrRow.wallet->getAddrBalance(addrRow.address, cbBalance);
+   }
 }
 
 int AddressListModel::columnCount(const QModelIndex &) const

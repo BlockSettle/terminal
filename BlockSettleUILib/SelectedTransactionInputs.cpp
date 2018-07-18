@@ -9,36 +9,34 @@ SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::W
    , confirmedOnly_(confirmedOnly)
    , selectionChanged_(selectionChanged)
 {
-   const auto &inputs = wallet_->getSpendableTxOutList();
-   const auto &cpfpInputs = confirmedOnly ? std::vector<UTXO>{} : wallet_->getSpendableZCList();
-
-   SetInputs(inputs, cpfpInputs);
+   resetInputs([] {});
 }
 
 void SelectedTransactionInputs::Reload(const std::vector<UTXO> &utxos)
 {
-   SetInputs(wallet_->getSpendableTxOutList()
-      , confirmedOnly_ ? std::vector<UTXO>{} : wallet_->getSpendableZCList());
-   for (const auto &utxo : utxos) {
-      if (!filterUTXO(inputs_, utxo, 0)) {
-         filterUTXO(cpfpInputs_, utxo, inputs_.size());
+   const auto &cbFilter = [this, utxos] {
+      for (const auto &utxo : utxos) {
+         if (!filterUTXO(inputs_, utxo, 0)) {
+            filterUTXO(cpfpInputs_, utxo, inputs_.size());
+         }
       }
-   }
+   };
+   resetInputs(cbFilter);
 }
 
-void SelectedTransactionInputs::SetInputs(const std::vector<UTXO> &inputs, const std::vector<UTXO> &cpfpInputs)
+void SelectedTransactionInputs::SetFixedInputs(const std::vector<UTXO> &inputs)
 {
-   inputs_ = inputs;
-   cpfpInputs_ = cpfpInputs;
+   cpfpInputs_.clear();
+   inputs_ = swTransactionsOnly_ ? filterNonSWInputs(inputs) : inputs;
 
+   resetSelection();
+}
+
+void SelectedTransactionInputs::resetSelection()
+{
    selection_ = std::vector<bool>(inputs_.size() + cpfpInputs_.size(), false);
    totalSelected_ = 0;
    selectedBalance_ = 0;
-
-   if (swTransactionsOnly_) {
-      filterNotSWInputs(inputs_);
-      filterNotSWInputs(cpfpInputs_);
-   }
 
    totalBalance_ = 0;
    for (size_t i = 0; i < GetTotalTransactionsCount(); i++) {
@@ -47,6 +45,29 @@ void SelectedTransactionInputs::SetInputs(const std::vector<UTXO> &inputs, const
 
    if (selectionChanged_) {
       selectionChanged_();
+   }
+}
+
+void SelectedTransactionInputs::resetInputs(std::function<void()> cb)
+{
+   inputs_.clear();
+   cpfpInputs_.clear();
+
+   const auto &cbSpendable = [this, cb](std::vector<UTXO> inputs) {
+      inputs_ = inputs;
+      resetSelection();
+      cb();
+   };
+   const auto &cbCPFP = [this, cbSpendable](std::vector<UTXO> inputs) {
+      cpfpInputs_ = inputs;
+      wallet_->getSpendableTxOutList(cbSpendable);
+   };
+
+   if (confirmedOnly_) {
+      wallet_->getSpendableTxOutList(cbSpendable);
+   }
+   else {
+      wallet_->getSpendableZCList(cbCPFP);
    }
 }
 
@@ -67,23 +88,17 @@ bool SelectedTransactionInputs::filterUTXO(std::vector<UTXO> &inputs, const UTXO
    return true;
 }
 
-void SelectedTransactionInputs::filterNotSWInputs(std::vector<UTXO>& inputs)
+std::vector<UTXO> SelectedTransactionInputs::filterNonSWInputs(const std::vector<UTXO> &inputs)
 {
    std::vector<UTXO> filteredInputs;
-
-   if (inputs.empty()) {
-      return;
-   }
-
    filteredInputs.reserve(inputs.size());
 
-   for (const auto input : inputs) {
+   for (const auto &input : inputs) {
       if (isSegWit(input)) {
          filteredInputs.emplace_back(input);
       }
    }
-
-   inputs.swap(filteredInputs);
+   return filteredInputs;
 }
 
 size_t SelectedTransactionInputs::GetTransactionsCount() const

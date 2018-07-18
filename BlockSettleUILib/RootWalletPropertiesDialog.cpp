@@ -55,6 +55,7 @@ private:
 
 RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &container
    , WalletsViewModel *walletsModel
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -92,7 +93,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
 
    updateWalletDetails(wallet_);
 
-   ui_->rescanButton->setEnabled(PyBlockDataManager::instance()->GetState() == PyBlockDataManagerState::Ready);
+   ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
    ui_->changePassphraseButton->setEnabled(false);
    if (!wallet_->isWatchingOnly()) {
       walletEncType_ = wallet_->encryptionType();

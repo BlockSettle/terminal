@@ -78,20 +78,17 @@ void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsVie
       , Qt::SortOrder::DescendingOrder);
 }
 
-void PortfolioWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
-{
-   ui_->widgetCCProtfolio->SetPortfolioModel(model);
-}
-
-void PortfolioWidget::SetSigningContainer(const std::shared_ptr<SignContainer> &container)
+void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<MarketDataProvider> &mdProvider, const std::shared_ptr<CCPortfolioModel> &model
+   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<WalletsManager> &walletsMgr)
 {
    signContainer_ = container;
-}
+   armory_ = armory;
+   walletsManager_ = walletsMgr;
 
-void PortfolioWidget::ConnectToMD(const std::shared_ptr<ApplicationSettings>& appSettings
-   , const std::shared_ptr<MarketDataProvider>& mdProvider)
-{
    ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio, mdProvider);
+   ui_->widgetCCProtfolio->SetPortfolioModel(model);
 }
 
 void PortfolioWidget::shortcutActivated(ShortcutType s)
@@ -105,7 +102,7 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
       QModelIndex sourceIndex = filter_->mapToSource(index);
       auto txItem = model_->getItem(sourceIndex.row());
 
-      TransactionDetailDialog transactionDetailDialog(txItem, model_->GetWalletsManager(), PyBlockDataManager::instance(), this);
+      TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
       transactionDetailDialog.exec();
    }
 }
@@ -158,20 +155,25 @@ void PortfolioWidget::onCreateRBFDialog()
 {
    auto txItem = model_->getItem(actionRBF_->data().toInt());
 
-   if (!txItem.initialized) {
-      txItem.initialize(PyBlockDataManager::instance(), model_->GetWalletsManager());
-   }
+   const auto &cbDialog = [this, txItem] {
+      try {
+         auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
+            , walletsManager_, signContainer_
+            , txItem.tx, txItem.wallet
+            , this);
+         dlg->exec();
+      }
+      catch (const std::exception &e) {
+         MessageBoxCritical(tr("RBF Transaction"), tr("Failed to create RBF transaction")
+            , QLatin1String(e.what()), this).exec();
+      }
+   };
 
-   try {
-      auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(
-         model_->GetWalletsManager(), signContainer_
-         , txItem.tx, txItem.wallet
-         , this);
-      dlg->exec();
+   if (txItem.initialized) {
+      cbDialog();
    }
-   catch (const std::exception &e) {
-      MessageBoxCritical(tr("RBF Transaction"), tr("Failed to create RBF transaction")
-         , QLatin1String(e.what()), this).exec();
+   else {
+      txItem.initialize(armory_, walletsManager_, cbDialog);
    }
 }
 
@@ -179,20 +181,25 @@ void PortfolioWidget::onCreateCPFPDialog()
 {
    auto txItem = model_->getItem(actionCPFP_->data().toInt());
 
-   if (!txItem.initialized) {
-      txItem.initialize(PyBlockDataManager::instance(), model_->GetWalletsManager());
-   }
+   const auto &cbDialog = [this, txItem] {
+      try {
+         auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
+            , walletsManager_, signContainer_
+            , txItem.wallet, txItem.tx
+            , this);
+         dlg->exec();
+      }
+      catch (const std::exception &e) {
+         MessageBoxCritical(tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
+            , QLatin1String(e.what()), this).exec();
+      }
+   };
 
-   try {
-      auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(
-         model_->GetWalletsManager(), signContainer_
-         , txItem.wallet, txItem.tx
-         , this);
-      dlg->exec();
+   if (txItem.initialized) {
+      cbDialog();
    }
-   catch (const std::exception &e) {
-      MessageBoxCritical(tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
-         , QLatin1String(e.what()), this).exec();
+   else {
+      txItem.initialize(armory_, walletsManager_, cbDialog);
    }
 }
 

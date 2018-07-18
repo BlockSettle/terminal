@@ -13,6 +13,7 @@ namespace Ui {
    class ImportWalletDialog;
 }
 class ApplicationSettings;
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class SignContainer;
@@ -26,8 +27,8 @@ Q_OBJECT
 public:
    ImportWalletDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<AssetManager> &, const std::shared_ptr<AuthAddressManager> &
-      , const EasyCoDec::Data& walletData
-      , const EasyCoDec::Data& chainCodeData
+      , const std::shared_ptr<ArmoryConnection> &
+      , const EasyCoDec::Data& walletData, const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &
       , const std::string &walletName = {}, const std::string &walletDesc = {}
       , bool createPrimary = false, QWidget *parent = nullptr);
@@ -59,6 +60,7 @@ private:
    Ui::ImportWalletDialog *   ui_;
    std::shared_ptr<WalletsManager>  walletsMgr_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<WalletImporter>  walletImporter_;
    FrejaSignWallet   frejaSign_;
    bs::wallet::Seed  walletSeed_;

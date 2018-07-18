@@ -7,13 +7,15 @@
 
 #include "TabWithShortcut.h"
 
+namespace Ui {
+   class TransactionsWidget;
+}
+class ArmoryConnection;
 class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
+class WalletsManager;
 
-namespace Ui {
-    class TransactionsWidget;
-};
 
 class TransactionsWidget : public TabWithShortcut
 {
@@ -23,6 +25,7 @@ public:
    TransactionsWidget(QWidget* parent = nullptr );
    ~TransactionsWidget() override = default;
 
+   void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<ArmoryConnection> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
 
    void shortcutActivated(ShortcutType s) override;
@@ -39,6 +42,8 @@ private:
 
 private:
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
+   std::shared_ptr<WalletsManager>        walletsManager_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    TransactionsSortFilterModel            *sortFilterModel_;
 };
 

@@ -1,10 +1,10 @@
 #include "DealerCCSettlementDialog.h"
 #include "ui_DealerCCSettlementDialog.h"
 
+#include "ArmoryConnection.h"
 #include "CommonTypes.h"
 #include "DealerCCSettlementContainer.h"
 #include "MetaData.h"
-#include "PyBlockDataManager.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "HDWallet.h"

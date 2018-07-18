@@ -10,11 +10,11 @@
 #include <unordered_set>
 #include <queue>
 
-class AddressVerificator;
-
 namespace spdlog {
    class logger;
-};
+}
+class AddressVerificator;
+class ArmoryConnection;
 
 class AddressVerificationPool
 {
@@ -22,7 +22,8 @@ public:
    using verificationCompletedCallback = function<void (AddressVerificationState state)>;
 public:
    // pool Id will be used as wallet ID in verificator, as well as identifier in log
-   AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger, const std::string& poolId);
+   AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger, const std::string& poolId
+      , const std::shared_ptr<ArmoryConnection> &);
 
    ~AddressVerificationPool() noexcept = default;
 

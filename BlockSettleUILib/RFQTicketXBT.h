@@ -23,7 +23,7 @@ namespace bs {
    class RequesterUtxoResAdapter;
    class Wallet;
 }
-
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class CCAmountValidator;
@@ -46,7 +46,8 @@ public:
    void init(const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider
-      , const std::shared_ptr<SignContainer> &);
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &);
    void setWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
 
    void resetTicket();
@@ -182,6 +183,7 @@ private:
    std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<ArmoryConnection>   armory_;
 
    std::shared_ptr<bs::Wallet>   curWallet_;
    std::shared_ptr<bs::Wallet>   ccWallet_;

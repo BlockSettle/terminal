@@ -3,7 +3,6 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include "CheckRecipSigner.h"
 #include "HDNode.h"
-#include "SafeLedgerDelegate.h"
 #include "Wallets.h"
 
 
@@ -13,28 +12,14 @@ using namespace bs;
 
 
 hd::BlockchainScanner::BlockchainScanner(const cb_save_to_wallet &cbSave, const cb_completed &cbComplete)
-   : cbSaveToWallet_(cbSave), cbCompleted_(cbComplete), processing_(-1), stopped_(false)
-{
-   threadPool_.setMaxThreadCount(2);
-}
-
-hd::BlockchainScanner::~BlockchainScanner()
-{
-   stop();
-}
+   : cbSaveToWallet_(cbSave), cbCompleted_(cbComplete), processing_(-1)
+{}
 
 void hd::BlockchainScanner::init(const std::shared_ptr<Node> &node, const std::string &walletId)
 {
    node_ = node;
    walletId_ = walletId;
    rescanWalletId_ = "rescan_" + walletId;
-}
-
-void hd::BlockchainScanner::stop()
-{
-   stopped_ = true;
-   threadPool_.clear();
-   threadPool_.waitForDone();
 }
 
 bs::Address hd::BlockchainScanner::newAddress(const Path &path, AddressEntryType aet)
@@ -103,10 +88,9 @@ void hd::BlockchainScanner::scanAddresses(unsigned int startIdx, unsigned int po
       cbWriteLast_(walletId_, startIdx);
    }
    currentPortion_.registered = true;
-   QtConcurrent::run(&threadPool_, [this] {
-      std::shared_ptr<SafeBtcWallet> wlt;
-      PyBlockDataManager::instance()->registerWallet(wlt, getRegAddresses(currentPortion_.addresses), rescanWalletId_, true);
-   });
+
+   std::shared_ptr<AsyncClient::BtcWallet> wlt;
+   armoryConn_->registerWallet(wlt, rescanWalletId_, getRegAddresses(currentPortion_.addresses), true);
 }
 
 void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids)
@@ -118,7 +102,7 @@ void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids)
    if (it == ids.end()) {
       return;
    }
-   QtConcurrent::run(&threadPool_, this, &BlockchainScanner::processPortion);
+   processPortion();
 }
 
 void hd::BlockchainScanner::processPortion()
@@ -129,51 +113,60 @@ void hd::BlockchainScanner::processPortion()
 
    processing_ = (int)currentPortion_.start;
    currentPortion_.registered = false;
-   std::vector<PooledAddress> activeAddresses;
+   auto pooledAddresses = new std::map<Address, PooledAddress>;
 
+   const auto &cbProcess = [this] {
+      if (!currentPortion_.activeAddresses.empty()) {
+         if (cbSaveToWallet_) {
+            std::sort(currentPortion_.activeAddresses.begin(), currentPortion_.activeAddresses.end()
+               , [](const PooledAddress &a, const PooledAddress &b) { return (a.first.path < b.first.path); });
+            cbSaveToWallet_(currentPortion_.activeAddresses);
+         }
+         if (cbWriteLast_) {
+            cbWriteLast_(walletId_, currentPortion_.end + 1);
+         }
+         fillPortion(currentPortion_.end + 1, portionSize_);
+         currentPortion_.registered = true;
+         std::shared_ptr<AsyncClient::BtcWallet> wlt;
+         armoryConn_->registerWallet(wlt, rescanWalletId_, getRegAddresses(currentPortion_.addresses), false);
+      }
+      else {
+         currentPortion_.start = currentPortion_.end = 0;
+         currentPortion_.addresses.clear();
+         processing_ = -1;
+
+         if (cbWriteLast_) {
+            cbWriteLast_(walletId_, UINT32_MAX);
+         }
+         if (cbCompleted_) {
+            cbCompleted_();
+         }
+      }
+   };
+   const auto &cbDelegates = [this, pooledAddresses, cbProcess](std::map<bs::Address, AsyncClient::LedgerDelegate> ledgers) {
+      auto addressesProcessed = new std::set<Address>;
+      for (auto ledger : ledgers) {
+         const auto &cbLedger = [this, addr = ledger.first, addressesProcessed, pooledAddresses, cbProcess]
+         (std::vector<ClientClasses::LedgerEntry> entries) {
+            addressesProcessed->erase(addr);
+            if (!entries.empty()) {
+               currentPortion_.activeAddresses.push_back((*pooledAddresses)[addr]);
+            }
+            if (addressesProcessed->empty()) {
+               delete pooledAddresses;
+               cbProcess();
+            }
+         };
+         addressesProcessed->insert(ledger.first);
+         ledger.second.getHistoryPage(0, cbLedger);
+      }
+   };
+   std::vector<Address> addressesToScan;
    for (const auto &addr : currentPortion_.addresses) {
-      if (stopped_) {
-         break;
-      }
-      const auto ledgerDelegate = PyBlockDataManager::instance()->getLedgerDelegateForScrAddr(rescanWalletId_, addr.second.prefixed());
-      if (!ledgerDelegate) {
-         continue;
-      }
-      const auto page0 = ledgerDelegate->getHistoryPage(0);
-      if (!page0.empty()) {
-         activeAddresses.push_back(addr);
-      }
+      addressesToScan.push_back(addr.second);
+      (*pooledAddresses)[addr.second] = addr;
    }
-   if (stopped_) {
-      return;
-   }
-
-   if (!activeAddresses.empty()) {
-      if (cbSaveToWallet_) {
-         std::sort(activeAddresses.begin(), activeAddresses.end()
-            , [](const PooledAddress &a, const PooledAddress &b) { return (a.first.path < b.first.path); });
-         cbSaveToWallet_(activeAddresses);
-      }
-      if (cbWriteLast_) {
-         cbWriteLast_(walletId_, currentPortion_.end + 1);
-      }
-      fillPortion(currentPortion_.end + 1, portionSize_);
-      currentPortion_.registered = true;
-      std::shared_ptr<SafeBtcWallet> wlt;
-      PyBlockDataManager::instance()->registerWallet(wlt, getRegAddresses(currentPortion_.addresses), rescanWalletId_, false);
-   }
-   else {
-      currentPortion_.start = currentPortion_.end = 0;
-      currentPortion_.addresses.clear();
-      processing_ = -1;
-
-      if (cbWriteLast_) {
-         cbWriteLast_(walletId_, UINT32_MAX);
-      }
-      if (cbCompleted_) {
-         cbCompleted_();
-      }
-   }
+   armoryConn_->getLedgerDelegatesForAddresses(rescanWalletId_, addressesToScan, cbDelegates);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,16 +187,16 @@ hd::Leaf::~Leaf()
 
 void hd::Leaf::stop()
 {
-   hd::BlockchainScanner::stop();
    bs::Wallet::stop();
 }
 
-void hd::Leaf::SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm)
+void hd::Leaf::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
-   bs::Wallet::SetBDM(bdm);
-   if (bdm_) {
-      connect(bdm_.get(), &PyBlockDataManager::zeroConfReceived, this, &hd::Leaf::onZeroConfReceived, Qt::QueuedConnection);
-      connect(bdm.get(), &PyBlockDataManager::refreshed, this, &hd::Leaf::onRefresh, Qt::QueuedConnection);
+   bs::Wallet::SetArmory(armory);
+   hd::BlockchainScanner::setArmory(armory);
+   if (armory_) {
+      connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &hd::Leaf::onZeroConfReceived, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryConnection::refresh, this, &hd::Leaf::onRefresh, Qt::QueuedConnection);
    }
 }
 
@@ -240,9 +233,9 @@ void hd::Leaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, con
    }
 }
 
-void hd::Leaf::onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &led)
+void hd::Leaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
-   activateAddressesFromLedger(led);
+   activateAddressesFromLedger(armory_->getZCentries(reqId));
 }
 
 void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids)
@@ -254,45 +247,67 @@ void hd::Leaf::firstInit()
 {
    bs::Wallet::firstInit();
 
-   if (activateAddressesInvoked_ || !bdm_) {
+   if (activateAddressesInvoked_ || !armory_) {
       return;
    }
+   const auto &cb = [this](std::vector<ClientClasses::LedgerEntry> entries) {
+      activateAddressesFromLedger(entries);
+   };
    activateAddressesInvoked_ = true;
-   activateAddressesFromLedger(bdm_->getWalletsHistory({ GetWalletId() }));
+   armory_->getWalletsHistory({ GetWalletId() }, cb);
 }
 
 void hd::Leaf::activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &led)
 {
-   bool activated = false;
+   std::set<BinaryData> txHashes;
    for (const auto &entry : led) {
-      const auto tx = bdm_->getTxByHash(entry.getTxHash());
-      if (!tx.isInitialized()) {
-         continue;
-      }
-      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-         TxOut out = tx.getTxOutCopy((int)i);
-         const auto addr = bs::Address::fromTxOut(out);
-         if (containsHiddenAddress(addr)) {
-            activated = true;
-            activateHiddenAddress(addr);
-         }
-      }
-      for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-         auto in = tx.getTxInCopy((int)i);
-         OutPoint op = in.getOutPoint();
-         Tx prevTx = bdm_->getTxByHash(op.getTxHash());
-         if (prevTx.isInitialized()) {
-            const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
+      txHashes.insert(entry.getTxHash());
+   }
+   const auto &cb = [this](std::vector<Tx> txs) {
+      bool *activated = new bool(false);
+      std::set<BinaryData> opTxHashes;
+      std::map<BinaryData, std::set<uint32_t>> opTxIndices;
+
+      for (const auto &tx : txs) {
+         for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+            TxOut out = tx.getTxOutCopy((int)i);
+            const auto addr = bs::Address::fromTxOut(out);
             if (containsHiddenAddress(addr)) {
-               activated = true;
+               *activated = true;
                activateHiddenAddress(addr);
             }
          }
+         for (size_t i = 0; i < tx.getNumTxIn(); i++) {
+            auto in = tx.getTxInCopy((int)i);
+            OutPoint op = in.getOutPoint();
+            opTxHashes.insert(op.getTxHash());
+            opTxIndices[op.getTxHash()].insert(op.getTxOutIndex());
+         }
       }
-   }
-   if (activated) {
-      emit addressAdded();
-   }
+      const auto &cbInputs = [this, activated, opTxIndices](std::vector<Tx> inputs) {
+         for (const auto &prevTx : inputs) {
+            const auto &itIdx = opTxIndices.find(prevTx.getThisHash());
+            if (itIdx == opTxIndices.end()) {
+               continue;
+            }
+            for (const auto txOutIdx : itIdx->second) {
+               const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(txOutIdx));
+               if (containsHiddenAddress(addr)) {
+                  *activated = true;
+                  activateHiddenAddress(addr);
+               }
+            }
+         }
+         if (*activated) {
+            emit addressAdded();
+         }
+         delete activated;
+      };
+      if (!armory_->getTXsByHash(opTxHashes, cbInputs)) {
+         delete activated;
+      }
+   };
+   armory_->getTXsByHash(txHashes, cb);
 }
 
 void hd::Leaf::activateHiddenAddress(const bs::Address &addr)
@@ -702,25 +717,25 @@ hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
    return path;
 }
 
-std::vector<UTXO> hd::Leaf::getSpendableTxOutList(uint64_t val) const
+bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb, uint64_t val) const
 {
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      return {};
-   }
-   std::vector<UTXO> result;
-   for (const auto &utxo : bs::Wallet::getSpendableTxOutList(val)) {
-      const auto &addr = bs::Address::fromUTXO(utxo);
-      const auto &path = getPathForAddress(addr);
-      if (path.length() < 2) {
-         continue;
+   const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
+      std::vector<UTXO> result;
+      const auto curHeight = armory_ ? armory_->topBlock() : 0;
+      for (const auto &utxo : txOutList) {
+         const auto &addr = bs::Address::fromUTXO(utxo);
+         const auto &path = getPathForAddress(addr);
+         if (path.length() < 2) {
+            continue;
+         }
+         const uint32_t nbConf = (path.get(-2) == addrTypeExternal) ? 6 : 1;
+         if (utxo.getNumConfirm(curHeight) >= nbConf) {
+            result.emplace_back(utxo);
+         }
       }
-      const uint32_t nbConf = (path.get(-2) == addrTypeExternal) ? 6 : 1;
-      if (utxo.getNumConfirm(bdm->GetTopBlockHeight()) >= nbConf) {
-         result.emplace_back(utxo);
-      }
-   }
-   return result;
+      cb(result);
+   };
+   return bs::Wallet::getSpendableTxOutList(cbTxOutList, val);
 }
 
 std::string hd::Leaf::GetAddressIndex(const bs::Address &addr)
@@ -793,7 +808,7 @@ void hd::Leaf::onScanComplete()
    }
    emit scanComplete(GetWalletId());
    topUpAddressPool();
-   RegisterWallet(bdm_);
+   RegisterWallet(armory_);
 }
 
 hd::Path::Elem hd::Leaf::getLastAddrPoolIndex(Path::Elem addrType) const
@@ -1079,68 +1094,72 @@ void hd::AuthLeaf::SetUserID(const BinaryData &userId)
 hd::CCLeaf::CCLeaf(const std::string &name, const std::string &desc, bool extOnlyAddresses)
    : hd::Leaf(name, desc, bs::wallet::Type::ColorCoin, extOnlyAddresses)
    , validationStarted_(false), validationEnded_(false)
-{
-   threadPool_.setMaxThreadCount(1);
-   const auto &bdm = PyBlockDataManager::instance();
-   if (bdm) {
-      connect(bdm.get(), &PyBlockDataManager::zeroConfReceived, this, &hd::CCLeaf::onZeroConfReceived);
-      connect(bdm.get(), &PyBlockDataManager::refreshed, this, &hd::CCLeaf::onRefresh, Qt::QueuedConnection);
-   }
-}
+{}
 
 hd::CCLeaf::~CCLeaf()
 {
    validationStarted_ = false;
-   threadPool_.clear();
-   threadPool_.waitForDone();
 }
 
 void hd::CCLeaf::setData(const std::string &data)
 {
-   checker_ = std::make_shared<TxAddressChecker>(bs::Address(data));
+   checker_ = std::make_shared<TxAddressChecker>(bs::Address(data), armory_);
 }
 
-void hd::CCLeaf::UpdateBalanceFromDB()
+void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
 {
-   if (!validationEnded_) {
-      return;
-   }
-   hd::Leaf::UpdateBalanceFromDB();
-
-   QMutexLocker lock(&addrMapsMtx_);
-   if (updateAddrBalance_ && isBalanceAvailable()) {
+   {
+      QMutexLocker lock(&addrMapsMtx_);
       updateAddrBalance_ = false;
       addressBalanceMap_.clear();
-      for (const auto &utxo : getSpendableTxOutList()) {
-         auto &balanceVec = addressBalanceMap_[utxo.getRecipientScrAddr()];
-         if (balanceVec.empty()) {
-            balanceVec = { 0, 0, 0 };
-         }
-         balanceVec[0] += utxo.getValue();
-         balanceVec[1] += utxo.getValue();
-      }
-
-      for (const auto &utxo : getSpendableZCList()) {
-         auto &balanceVec = addressBalanceMap_[utxo.getRecipientScrAddr()];
-         if (balanceVec.empty()) {
-            balanceVec = { 0, 0, 0 };
-         }
-         balanceVec[2] += utxo.getValue();
-         balanceVec[0] = balanceVec[1] + balanceVec[2];
-      }
    }
+
+   if (!ZConly) {
+      const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
+         const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
+            QMutexLocker lock(&addrMapsMtx_);
+            for (const auto &utxo : spendableUTXOs) {
+               const auto &addr = utxo.getRecipientScrAddr();
+               auto &balanceVec = addressBalanceMap_[addr];
+               if (balanceVec.empty()) {
+                  balanceVec = { 0, 0, 0 };
+               }
+               balanceVec[0] += utxo.getValue();
+               balanceVec[1] += utxo.getValue();
+            }
+         };
+
+         findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
+      };
+      hd::Leaf::getSpendableTxOutList(cbRefresh);
+   }
+
+   const auto &cbRefreshZC = [this](std::vector<UTXO> utxos) {
+      const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
+         QMutexLocker lock(&addrMapsMtx_);
+         for (const auto &utxo : ZcUTXOs) {
+            auto &balanceVec = addressBalanceMap_[utxo.getRecipientScrAddr()];
+            if (balanceVec.empty()) {
+               balanceVec = { 0, 0, 0 };
+            }
+            balanceVec[2] += utxo.getValue();
+            balanceVec[0] = balanceVec[1] + balanceVec[2];
+         }
+      };
+
+      findInvalidUTXOs(utxos, cbUpdateZcBalance);
+   };
+   hd::Leaf::getSpendableZCList(cbRefreshZC);
 }
 
 void hd::CCLeaf::validationProc()
 {
    validationStarted_ = true;
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm || (bdm->GetState() != PyBlockDataManagerState::Ready)) {
+   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
       validationStarted_ = false;
       return;
    }
-   findInvalidUTXOs(hd::Leaf::getSpendableTxOutList());
-   findInvalidUTXOs(hd::Leaf::getSpendableZCList());
+   refreshInvalidUTXOs();
    validationEnded_ = true;
    hd::Leaf::firstInit();
    emit addressAdded();
@@ -1149,55 +1168,90 @@ void hd::CCLeaf::validationProc()
       return;
    }
 
-   for (const auto &address : GetUsedAddressList()) {
+   auto addressesToCheck = new std::set<bs::Address>;
+   for (const auto &addr : GetUsedAddressList()) {
+      addressesToCheck->insert(addr);
+   }
+
+   const auto &cbLedgers = [this, addressesToCheck](std::map<bs::Address, AsyncClient::LedgerDelegate> ledgers) {
+      for (auto ledger : ledgers) {
+         if (!validationStarted_) {
+            return;
+         }
+         const auto &cbCheck = [this, addr=ledger.first, addressesToCheck](Tx tx) {
+            const auto &cbResult = [this, tx](bool contained) {
+               if (!contained && tx.isInitialized()) {
+                  invalidTxHash_.insert(tx.getThisHash());
+               }
+            };
+            checker_->containsInputAddress(tx, cbResult, lotSizeInSatoshis_);
+
+            addressesToCheck->erase(addr);
+            if (addressesToCheck->empty()) {
+               delete addressesToCheck;
+               emit walletReset();
+            }
+         };
+         const auto &cbHistory = [this, cbCheck](std::vector<ClientClasses::LedgerEntry> entries) {
+            for (const auto &entry : entries) {
+               armory_->getTxByHash(entry.getTxHash(), cbCheck);
+            }
+         };
+         ledger.second.getHistoryPage(0, cbHistory);  //? Shouldn't we continue past the first page?
+      }
+   };
+   armory_->getLedgerDelegatesForAddresses(GetWalletId(), GetUsedAddressList(), cbLedgers);
+}
+
+void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<void(const std::vector<UTXO> &)> cb)
+{
+   std::set<BinaryData> txHashes;
+   std::map<BinaryData, UTXO> utxoMap;
+   for (const auto &utxo : utxos) {
       if (!validationStarted_) {
          return;
       }
-      const auto ledgerDelegate = bdm->getLedgerDelegateForScrAddr(GetWalletId(), address.id());
-      if (!ledgerDelegate) {
-         continue;
-      }
-      const auto &page = ledgerDelegate->getHistoryPage(0);
-      if (page.empty()) {
-         continue;
-      }
-      for (const auto &led : page) {
-         if (!isTxValid(led.getTxHash())) {
+      const auto &hash = utxo.getTxHash();
+      txHashes.insert(hash);
+      utxoMap[hash] = utxo;
+   }
+   const auto &cbProcess = [this, utxoMap, cb, utxos](std::vector<Tx> txs) {
+      struct Result {
+         uint64_t invalidBalance = 0;
+         std::set<BinaryData> txHashSet;
+      };
+      auto result = new Result;
+
+      for (const auto &tx : txs) {
+         const auto &itUtxo = utxoMap.find(tx.getThisHash());
+         if (itUtxo == utxoMap.end()) {
             continue;
          }
-         const auto &tx = bdm->getTxByHash(led.getTxHash());
-         if (!tx.isInitialized() || !checker_->containsInputAddress(tx, lotSizeInSatoshis_)) {
-            invalidTxHash_.insert(led.getTxHash());
-         }
+         const auto &cbResult = [this, tx, itUtxo, result, cb, utxos](bool contained) {
+            if (!contained) {
+               invalidTx_.insert(itUtxo->second);
+               invalidTxHash_.insert(tx.getThisHash());
+               result->invalidBalance += itUtxo->second.getValue();
+            }
+            result->txHashSet.erase(tx.getThisHash());
+            if (result->txHashSet.empty()) {
+               balanceCorrection_ += result->invalidBalance / BTCNumericTypes::BalanceDivider;
+               cb(filterUTXOs(utxos));
+               delete result;
+            }
+         };
+         result->txHashSet.insert(tx.getThisHash());
+         checker_->containsInputAddress(tx, cbResult, lotSizeInSatoshis_, itUtxo->second.getValue());
       }
-   }
-   emit walletReset();
-}
-
-void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos)
-{
-   uint64_t invalidBalance = 0;
-   for (const auto &utxo : utxos) {
-      const auto bdm = PyBlockDataManager::instance();
-      if (!validationStarted_ || !bdm) {
-         return;
-      }
-      const auto &hash = utxo.getTxHash();
-      const auto &tx = bdm->getTxByHash(hash);
-      if (!tx.isInitialized() || !checker_->containsInputAddress(tx, lotSizeInSatoshis_, utxo.getValue())) {
-         invalidTx_.insert(utxo);
-         invalidTxHash_.insert(hash);
-         invalidBalance += utxo.getValue();
-      }
-   }
-   balanceCorrection_ += invalidBalance / BTCNumericTypes::BalanceDivider;
+   };
+   armory_->getTXsByHash(txHashes, cbProcess);
 }
 
 void hd::CCLeaf::firstInit()
 {
    if (checker_ && !validationStarted_) {
       validationEnded_ = false;
-      QtConcurrent::run(&threadPool_, this, &hd::CCLeaf::validationProc);
+      validationProc();
    }
 }
 
@@ -1211,12 +1265,11 @@ void hd::CCLeaf::onRefresh(const std::vector<BinaryData> &ids)
    firstInit();
 }
 
-void hd::CCLeaf::onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &led)
+void hd::CCLeaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
-   hd::Leaf::onZeroConfReceived(led);
-   findInvalidUTXOs(hd::Leaf::getSpendableZCList());
-   UpdateBalanceFromDB();
-   emit addressAdded();
+   hd::Leaf::onZeroConfReceived(reqId);
+   refreshInvalidUTXOs(true);
+   emit addressAdded();    //?
 }
 
 std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
@@ -1230,20 +1283,26 @@ std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
    return result;
 }
 
-std::vector<UTXO> hd::CCLeaf::getSpendableTxOutList(uint64_t val) const
+bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb, uint64_t val) const
 {
    if (validationStarted_ && !validationEnded_) {
-      return {};
+      return false;
    }
-   return filterUTXOs(hd::Leaf::getSpendableTxOutList(val));
+   const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
+      cb(filterUTXOs(txOutList));
+   };
+   return hd::Leaf::getSpendableTxOutList(cbTxOutList, val);
 }
 
-std::vector<UTXO> hd::CCLeaf::getSpendableZCList() const
+bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
 {
    if (validationStarted_ && !validationEnded_) {
-      return {};
+      return false;
    }
-   return filterUTXOs(hd::Leaf::getSpendableZCList());
+   const auto &cbZCList = [this, cb](std::vector<UTXO> txOutList) {
+      cb(filterUTXOs(txOutList));
+   };
+   return hd::Leaf::getSpendableZCList(cb);
 }
 
 bool hd::CCLeaf::isBalanceAvailable() const
@@ -1275,20 +1334,32 @@ BTCNumericTypes::balance_type hd::CCLeaf::GetTotalBalance() const
    return correctBalance(hd::Leaf::GetTotalBalance());
 }
 
-std::vector<uint64_t> hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
+bool hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
 {
-   if (!lotSizeInSatoshis_ || !validationEnded_) {
-      return { 0, 0, 0 };
+   const auto &cb = [this, addr](std::vector<uint64_t> balances) {
+      emit addrBalanceReceived(addr, balances);
+   };
+   return getAddrBalance(addr, cb);
+}
+
+bool hd::CCLeaf::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
+{
+   if (!lotSizeInSatoshis_ || !validationEnded_ || !bs::Wallet::isBalanceAvailable()) {
+      return false;
    }
-   const auto it = addressBalanceMap_.find(addr.prefixed());
-   if (it == addressBalanceMap_.end()) {
-      return { 0, 0, 0 };
+   std::vector<uint64_t> xbtBalances;
+   {
+      const auto itBal = addressBalanceMap_.find(addr.prefixed());
+      if (itBal == addressBalanceMap_.end()) {
+         return false;
+      }
+      xbtBalances = itBal->second;
    }
-   auto xbtBalances = it->second;
    for (auto &balance : xbtBalances) {
       balance /= lotSizeInSatoshis_;
    }
-   return xbtBalances;
+   cb(xbtBalances);
+   return true;
 }
 
 bool hd::CCLeaf::isTxValid(const BinaryData &txHash) const

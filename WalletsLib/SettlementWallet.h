@@ -17,7 +17,6 @@
 
 
 class PyBlockDataManager;
-class SafeBtcWallet;
 
 namespace spdlog {
    class logger;
@@ -164,7 +163,7 @@ namespace bs {
       static std::shared_ptr<SettlementWallet> create(const std::string& folder, NetworkType);
       static std::shared_ptr<SettlementWallet> loadFromFolder(const std::string &folder, NetworkType netType);
 
-      UTXO GetInputFor(const shared_ptr<SettlementAddressEntry> &addr, bool allowZC = true);
+      bool GetInputFor(const shared_ptr<SettlementAddressEntry> &, std::function<void(UTXO)>, bool allowZC = true);
       uint64_t GetEstimatedFeeFor(UTXO input, const bs::Address &recvAddr, float feePerByte);
 
       bs::wallet::TXSignRequest CreatePayoutTXRequest(const UTXO &, const bs::Address &recvAddr, float feePerByte);
@@ -173,7 +172,7 @@ namespace bs {
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
 
       BinaryData getRootId() const override { return BinaryData(); }   // stub
-      std::vector<UTXO> getSpendableZCList() const override;
+      bool getSpendableZCList(std::function<void(std::vector<UTXO>)>) const override;
 
       std::shared_ptr<ResolverFeed> GetResolver(const SecureBinaryData &) override { return nullptr; }   // stub
       std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override { return nullptr; }   //stub
@@ -227,8 +226,8 @@ namespace bs {
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
       std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
       std::unordered_map<int, std::shared_ptr<SettlementAssetEntry>>                assets_;
-      std::map<int, std::shared_ptr<SafeBtcWallet> >     rtWallets_;
-      std::unordered_map<std::string, int>               rtWalletsById_;
+      std::map<int, std::shared_ptr<AsyncClient::BtcWallet>>   rtWallets_;
+      std::unordered_map<std::string, int>                     rtWalletsById_;
       std::map<BinaryData, int>   assetIndexByAddr_;
       int   lastIndex_ = 0;
    };
@@ -251,10 +250,11 @@ namespace bs {
          }
       }
 
-      static Type WhichSignature(const Tx &
+      static void WhichSignature(const Tx &
          , uint64_t value
          , const std::shared_ptr<bs::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger>& logger);
+         , const std::shared_ptr<spdlog::logger> &
+         , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
    };
 
    class SettlementMonitor : public QObject
@@ -262,9 +262,10 @@ namespace bs {
       Q_OBJECT
       friend class SettlementWallet;
    public:
-      SettlementMonitor(const std::shared_ptr<SafeBtcWallet> rtWallet
-         , const shared_ptr<bs::SettlementAddressEntry> &addr
-         , const std::shared_ptr<spdlog::logger>& logger
+      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+         , const std::shared_ptr<ArmoryConnection> &
+         , const shared_ptr<bs::SettlementAddressEntry> &
+         , const std::shared_ptr<spdlog::logger> &
          , QObject *parent = nullptr);
 
       ~SettlementMonitor() noexcept override;
@@ -289,14 +290,16 @@ namespace bs {
       void payOutConfirmed(PayoutSigner::Type signedBy);
 
    protected slots:
-      void checkNewEntries();
+      void checkNewEntries(unsigned int);
 
    private:
       std::atomic_bool                 stopped_;
       std::atomic_flag                 walletLock_ = ATOMIC_FLAG_INIT;
-      std::shared_ptr<SafeBtcWallet>   rtWallet_;
+      std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
+      std::shared_ptr<ArmoryConnection>         armory_;
       std::set<BinaryData>             ownAddresses_;
-      int         id_;
+      std::atomic_uint  currentPageId_;
+      int               id_;
 
       std::string                            addressString_;
       shared_ptr<bs::SettlementAddressEntry> addressEntry_;
@@ -312,10 +315,10 @@ namespace bs {
       std::shared_ptr<spdlog::logger> logger_;
 
    protected:
-      bool IsPayInTransaction(const ClientClasses::LedgerEntry &) const;
-      bool IsPayOutTransaction(const ClientClasses::LedgerEntry &) const;
+      void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
+      void IsPayOutTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
 
-      PayoutSigner::Type CheckPayoutSignature(const ClientClasses::LedgerEntry &) const;
+      void CheckPayoutSignature(const ClientClasses::LedgerEntry &, std::function<void(PayoutSigner::Type)>) const;
 
       void SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash);
       void SendPayOutNotification(const ClientClasses::LedgerEntry &);

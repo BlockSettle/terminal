@@ -18,9 +18,15 @@
 
 const unsigned int WaitTimeoutInSec = 30;
 
-CCSettlementTransactionWidget::CCSettlementTransactionWidget(QWidget* parent)
+CCSettlementTransactionWidget::CCSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<AssetManager> &assetManager, const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CCSettlementTransactionWidget())
+   , logger_(logger)
+   , assetManager_(assetManager)
+   , signingContainer_(container)
+   , armory_(armory)
    , timer_(this)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
@@ -33,6 +39,17 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(QWidget* parent)
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &CCSettlementTransactionWidget::onAccept);
    connect(this, &CCSettlementTransactionWidget::genAddrVerified, this, &CCSettlementTransactionWidget::onGenAddrVerified);
    connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &CCSettlementTransactionWidget::onPasswordUpdated);
+
+   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
+   bs::UtxoReservation::addAdapter(utxoAdapter_);
+
+   frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
+   connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &CCSettlementTransactionWidget::onFrejaSucceeded);
+   connect(frejaSign_.get(), &FrejaSign::failed, this, &CCSettlementTransactionWidget::onFrejaFailed);
+   connect(frejaSign_.get(), &FrejaSign::statusUpdated, this, &CCSettlementTransactionWidget::onFrejaStatusUpdated);
+
+   connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &CCSettlementTransactionWidget::onHDWalletInfo);
+   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &CCSettlementTransactionWidget::onTXSigned);
 
    ui_->lineEditPassword->setEnabled(false);
    ui_->pushButtonAccept->setEnabled(false);
@@ -165,7 +182,7 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    bool foundRecipAddr = false;
    bool amountValid = false;
    const auto lotSize = assetManager_->getCCLotSize(product_);
-   bs::CheckRecipSigner signer;
+   bs::CheckRecipSigner signer(armory_);
    try {
       if (!lotSize) {
          throw std::runtime_error("invalid lot size");
@@ -198,9 +215,11 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    else if (rfq.side == bs::network::Side::Buy) {
       ui_->labelHint->setText(tr("Waiting for genesis address verification to complete..."));
       ui_->labelGenesisAddress->setText(tr("Verifying"));
-      QtConcurrent::run([this, signer, genAddr, lotSize] {
-         emit genAddrVerified(signer.hasInputAddress(genAddr, lotSize));
-      });
+
+      const auto &cbHasInput = [this](bool has) {
+         emit genAddrVerified(has);
+      };
+      signer.hasInputAddress(genAddr, cbHasInput, lotSize);
    }
    else {
       emit genAddrVerified(true);
@@ -304,27 +323,27 @@ bool CCSettlementTransactionWidget::createCCUnsignedTXdata()
          , ccTxData_.inputs.size(), ccTxData_.recipients.size());
    }
    else {
-      const uint64_t spendVal = amount_ * price_ * BTCNumericTypes::BalanceDivider;
-      const float feePerByte = walletsManager_->estimatedFeePerByte(0);
+      const auto &cbFee = [this](float feePerByte) {
+         const uint64_t spendVal = amount_ * price_ * BTCNumericTypes::BalanceDivider;
 
-      try {
-         const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
-         if (!recipient) {
-            throw std::runtime_error("invalid recipient: " + dealerAddress_);
+         try {
+            const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
+            if (!recipient) {
+               throw std::runtime_error("invalid recipient: " + dealerAddress_);
+            }
+            ccTxData_ = transactionData_->CreatePartialTXRequest(spendVal, feePerByte, { recipient }, dealerTx_);
+            logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
          }
-         ccTxData_ = transactionData_->CreatePartialTXRequest(spendVal, feePerByte, { recipient }, dealerTx_);
-         logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
-      }
-      catch (const std::exception &e) {
-         logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
-            , dealerAddress_, e.what());
-         ui_->labelHint->setText(tr("Failed to create CC TX half"));
-         return false;
-      }
+         catch (const std::exception &e) {
+            logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
+               , dealerAddress_, e.what());
+            ui_->labelHint->setText(tr("Failed to create CC TX half"));
+         }
+      };
+      walletsManager_->estimatedFeePerByte(0, cbFee);
    }
 
    signingContainer_->SyncAddresses(transactionData_->createAddresses());
-
    return true;
 }
 
@@ -351,26 +370,6 @@ const std::string CCSettlementTransactionWidget::getCCTxData() const
 const std::string CCSettlementTransactionWidget::getTxSignedData() const
 {
    return ccTxSigned_;
-}
-
-void CCSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<SignContainer> &container)
-{
-   logger_ = logger;
-   assetManager_ = assetManager;
-   signingContainer_ = container;
-
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
-
-   frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
-   connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &CCSettlementTransactionWidget::onFrejaSucceeded);
-   connect(frejaSign_.get(), &FrejaSign::failed, this, &CCSettlementTransactionWidget::onFrejaFailed);
-   connect(frejaSign_.get(), &FrejaSign::statusUpdated, this, &CCSettlementTransactionWidget::onFrejaStatusUpdated);
-
-   connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &CCSettlementTransactionWidget::onHDWalletInfo);
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &CCSettlementTransactionWidget::onTXSigned);
 }
 
 void CCSettlementTransactionWidget::onPasswordUpdated(const QString &)

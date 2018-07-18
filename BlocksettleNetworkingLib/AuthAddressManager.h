@@ -24,6 +24,7 @@ namespace bs {
 }
 class AddressVerificator;
 class ApplicationSettings;
+class ArmoryConnection;
 class CelerClient;
 class ConnectionManager;
 class OTPManager;
@@ -42,7 +43,8 @@ class AuthAddressManager : public QObject
    Q_OBJECT
 
 public:
-   AuthAddressManager(const std::shared_ptr<spdlog::logger> &);
+   AuthAddressManager(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<ArmoryConnection> &);
    ~AuthAddressManager() noexcept;
 
    AuthAddressManager(const AuthAddressManager&) = delete;
@@ -158,6 +160,7 @@ private:
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   settings_;
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<OTPManager>            otpManager_;

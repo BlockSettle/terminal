@@ -99,7 +99,8 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -108,12 +109,13 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    assetManager_ = assetManager;
    dialogManager_ = dialogManager;
    signingContainer_ = container;
+   armory_ = armory;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, statsCollector_.get(), &bs::SecurityStatsCollector::onQuoteSubmitted);
 
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_, appSettings);
-   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, signingContainer_);
+   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, signingContainer_, armory_);
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, ui_->pageRFQReply, &RFQDealerReply::setQuoteReqNotification);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, quoteProvider_.get()
@@ -186,7 +188,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.txData, signingContainer_, ui_->pageRFQReply->autoSign());
+               , sr.recipientAddress, sr.txData, signingContainer_, armory_, ui_->pageRFQReply->autoSign());
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
 
             if (ui_->pageRFQReply->autoSign()) {
@@ -213,7 +215,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             try {
                const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order, walletsManager_
                   , quoteProvider_, iTransactionData->second, authAddressManager_->GetBSAddresses(), signingContainer_
-                  , ui_->pageRFQReply->autoSign());
+                  , armory_, ui_->pageRFQReply->autoSign());
 
                if (ui_->pageRFQReply->autoSign()) {
                   connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);

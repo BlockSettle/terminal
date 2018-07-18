@@ -5,11 +5,10 @@
 #include <QDir>
 #include <QThread>
 
+#include "ArmoryConnection.h"
 #include "BTCNumericTypes.h"
 #include "CoinSelection.h"
 #include "FastLock.h"
-#include "PyBlockDataManager.h"
-#include "SafeBtcWallet.h"
 #include "ScriptRecipient.h"
 #include "Signer.h"
 #include "SystemFileUtils.h"
@@ -658,15 +657,9 @@ void bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
 {
    auto index = asset->getIndex();
    const auto walletId = BtcUtils::scrAddrToBase58(asset->prefixedHash()).toBinStr();
-   // XXX: workaround for wallet registration.
-   // when wallet created twice for a settlement address loaded on start
-   // there are no problems with egtting history.
-   //if (rtWallets_.find(index) == rtWallets_.end())
-   {
-      PyBlockDataManager::instance()->registerWallet(rtWallets_[index], asset->supportedAddrHashes(), walletId, true);
-      rtWalletsById_[walletId] = index;
+   armory_->registerWallet(rtWallets_[index], walletId, asset->supportedAddrHashes(), true);
+   rtWalletsById_[walletId] = index;
 //      PyBlockDataManager::instance()->updateWalletsLedgerFilter({BinaryData(walletId)});
-   }
 }
 
 std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::newAddress(const BinaryData &settlementId, const BinaryData &buyAuthPubKey
@@ -695,10 +688,9 @@ std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::newAddress(con
    }
    saveAddressBySettlementId(aePtr);
 
-   const auto &bdm = PyBlockDataManager::instance();
-   if (bdm) {
+   if (armory_) {
       createTempWalletForAsset(asset);
-      RegisterWallet(bdm);
+      RegisterWallet(armory_);
    }
 
    emit addressAdded();
@@ -784,24 +776,31 @@ bool bs::SettlementWallet::isTempWalletId(const std::string &id) const
    return rtWalletsById_.find(id) != rtWalletsById_.end();
 }
 
-UTXO bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> &addr, bool allowZC)
+bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> &addr, std::function<void(UTXO)> cb
+   , bool allowZC)
 {
-   const auto rtWallet = rtWallets_[addr->getIndex()];
+   const auto &rtWallet = rtWallets_[addr->getIndex()];
    if (rtWallet == nullptr) {
-      throw std::logic_error("no virtual wallet for address");
+      return false;
    }
 
-   auto inputs = rtWallet->getSpendableTxOutListForValue();
-   if (inputs.empty() && allowZC) {
-      inputs = rtWallet->getSpendableZCList();
-   }
-   if (inputs.empty()) {
-      throw std::logic_error("no inputs");
-   }
-   if (inputs.size() != 1) {
-      throw std::logic_error("too many inputs");
-   }
-   return inputs[0];
+   const auto &cbSpendable = [this, cb, allowZC, rtWallet](std::vector<UTXO> inputs) {
+      if (inputs.empty()) {
+         if (allowZC) {
+            const auto &cbZC = [this, cb](std::vector<UTXO> zcs) {
+               if (zcs.size() == 1) {
+                  cb(zcs[0]);
+               }
+            };
+            rtWallet->getSpendableZCList(cbZC);
+         }
+      }
+      else if (inputs.size() == 1) {
+         cb(inputs[0]);
+      }
+   };
+   rtWallet->getSpendableTxOutListForValue(UINT64_MAX, cbSpendable);
+   return true;
 }
 
 uint64_t bs::SettlementWallet::GetEstimatedFeeFor(UTXO input, const bs::Address &recvAddr, float feePerByte)
@@ -812,7 +811,7 @@ uint64_t bs::SettlementWallet::GetEstimatedFeeFor(UTXO input, const bs::Address 
       input.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(addrEntry);
    }
    CoinSelection coinSelection([&input](uint64_t) -> std::vector<UTXO> { return { input }; }
-   , std::vector<AddressBookEntry>{}, PyBlockDataManager::instance()->GetTopBlockHeight(), inputAmount);
+   , std::vector<AddressBookEntry>{}, armory_->topBlock(), inputAmount);
 
    const auto &scriptRecipient = recvAddr.getRecipient(inputAmount);
    return coinSelection.getFeeForMaxVal(scriptRecipient->getSize(), feePerByte, { input });
@@ -931,14 +930,30 @@ bs::KeyPair bs::SettlementWallet::GetKeyPairFor(const bs::Address &addr, const S
    return {};
 }
 
-std::vector<UTXO> bs::SettlementWallet::getSpendableZCList() const
+bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
 {
-   auto utxos = bs::Wallet::getSpendableZCList();
+   auto result = new std::vector<UTXO>;
+   auto walletSet = new std::unordered_set<int>;
    for (const auto &rtWallet : rtWallets_) {
-      const auto &rtUtxos = rtWallet.second->getSpendableZCList();
-      utxos.insert(utxos.end(), rtUtxos.begin(), rtUtxos.end());
+      walletSet->insert(rtWallet.first);
    }
-   return utxos;
+   const auto &cbZCList = [this, result, walletSet, cb](std::vector<UTXO> utxos) {
+      result->insert(result->end(), utxos.begin(), utxos.end());
+
+      for (const auto &rtWallet : rtWallets_) {
+         const auto &cbRTWlist = [this, result, walletSet, id=rtWallet.first, cb](std::vector<UTXO> utxos) {
+            result->insert(result->end(), utxos.begin(), utxos.end());
+            walletSet->erase(id);
+            if (walletSet->empty()) {
+               delete walletSet;
+               cb(*result);
+               delete result;
+            }
+         };
+         rtWallet.second->getSpendableZCList(cbRTWlist);
+      }
+   };
+   return bs::Wallet::getSpendableZCList(cbZCList);
 }
 
 bool bs::SettlementWallet::EraseFile()
@@ -968,21 +983,18 @@ std::shared_ptr<bs::SettlementMonitor> bs::SettlementWallet::createMonitor(const
    if (rtWallet == nullptr) {
       return nullptr;
    }
-
-   const auto monitor = std::make_shared<bs::SettlementMonitor>(rtWallet, addr, logger);
-
-   monitor->moveToThread( PyBlockDataManager::instance()->thread());
-
-   return monitor;
+   return std::make_shared<bs::SettlementMonitor>(rtWallet, armory_, addr, logger);
 }
 
 
-bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<SafeBtcWallet> rtWallet
+bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+   , const std::shared_ptr<ArmoryConnection> &armory
    , const shared_ptr<bs::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger
    , QObject *parent)
  : QObject(parent)
  , rtWallet_(rtWallet)
+ , armory_(armory)
  , addressEntry_(addr)
  , payinConfirmations_(-1)
  , payoutConfirmations_(-1)
@@ -1000,137 +1012,137 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<SafeBtcWallet> rt
 
 void bs::SettlementMonitor::start()
 {
-   const auto &bdm = PyBlockDataManager::instance();
-   if (bdm) {
-      connect(bdm.get(), &PyBlockDataManager::zeroConfReceived, this
-         , &bs::SettlementMonitor::checkNewEntries, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this
+      , &bs::SettlementMonitor::checkNewEntries, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryConnection::newBlock, this
+      , &bs::SettlementMonitor::checkNewEntries, Qt::QueuedConnection);
 
-      connect(bdm.get(), &PyBlockDataManager::newBlock, this
-         , &bs::SettlementMonitor::checkNewEntries, Qt::QueuedConnection);
-   }
-   QMetaObject::invokeMethod(this, "checkNewEntries");
+   checkNewEntries(0);
 }
 
 void bs::SettlementMonitor::stop()
 {
    stopped_ = true;
-   const auto &bdm = PyBlockDataManager::instance();
-   if (bdm) {
-      disconnect(bdm.get(), &PyBlockDataManager::zeroConfReceived, this
-         , &bs::SettlementMonitor::checkNewEntries);
-      disconnect(bdm.get(), &PyBlockDataManager::newBlock, this
-         , &bs::SettlementMonitor::checkNewEntries);
-   }
+   disconnect(armory_.get(), &ArmoryConnection::zeroConfReceived, this
+      , &bs::SettlementMonitor::checkNewEntries);
+   disconnect(armory_.get(), &ArmoryConnection::newBlock, this
+      , &bs::SettlementMonitor::checkNewEntries);
 }
 
-void bs::SettlementMonitor::checkNewEntries()
+void bs::SettlementMonitor::checkNewEntries(unsigned int)
 {
-   unsigned int currentPageId = 0;
-
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
       , addressString_);
 
-   bool getHistory = false;
+   const std::function<void(std::vector<ClientClasses::LedgerEntry>)> cbHistory =
+      [this, &cbHistory] (std::vector<ClientClasses::LedgerEntry> entries) {
+      if (stopped_ || entries.empty()) {
+         return;
+      }
 
-   while (!stopped_) {
-      try {
-         std::vector<ClientClasses::LedgerEntry> nextPage;
-         {
-            FastLock locker(walletLock_);
-            if (!rtWallet_ || stopped_) {
-               break;
-            }
-            nextPage = rtWallet_->getHistoryPage(currentPageId);
-         }
-
-         if (stopped_) {
-            break;
-         }
-
-         if (nextPage.empty()) {
-            if (!getHistory) {
-               logger_->debug("[SettlementMonitor::checkNewEntries] empty page for {}"
-                  , addressString_);
-            }
-            break;
-         }
-
-         getHistory = true;
-
-         for (auto &entry : nextPage) {
-            if (IsPayInTransaction(entry)) {
-               SendPayInNotification(PyBlockDataManager::instance()->GetConfirmationsNumber(entry), entry.getTxHash());
-            } else if (IsPayOutTransaction(entry)) {
+      for (const auto &entry : entries) {
+         const auto &cbPayOut = [this, entry](bool ack) {
+            if (ack) {
                SendPayOutNotification(entry);
-            } else {
+            }
+            else {
                logger_->error("[SettlementMonitor::checkNewEntries] not payin or payout transaction detected for settlement address {}"
                   , addressString_);
             }
+         };
+         const auto &cbPayIn = [this, entry, cbPayOut](bool ack) {
+            if (ack) {
+               SendPayInNotification(armory_->getConfirmationsNumber(entry), entry.getTxHash());
+            }
+            else {
+               IsPayOutTransaction(entry, cbPayOut);
+            }
+         };
+         IsPayInTransaction(entry, cbPayIn);
+      }
+      {
+         FastLock locker(walletLock_);
+         if (!rtWallet_) {
+            return;
          }
-         currentPageId++;
       }
-      catch (...) {
-         break;
+      rtWallet_->getHistoryPage(currentPageId_++, cbHistory);
+   };
+   {
+      FastLock locker(walletLock_);
+      if (!rtWallet_) {
+         return;
       }
    }
+   currentPageId_ = 0;
+   rtWallet_->getHistoryPage(currentPageId_++, cbHistory);
 }
 
-bool bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry) const
+void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
+   , std::function<void(bool)> cb) const
 {
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      logger_->error("[bs::SettlementMonitor::IsPayInTransaction] No BDM");
-      return false;
-   }
-
-   auto tx = bdm->getTxByHash(entry.getTxHash());
-   if (!tx.isInitialized()) {
-      logger_->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
-         , entry.getTxHash().toHexStr());
-      return false;
-   }
-
-   for (int i = 0; i < tx.getNumTxOut(); ++i) {
-      TxOut out = tx.getTxOutCopy(i);
-      auto address = out.getScrAddressStr();
-      if (ownAddresses_.find(address) != ownAddresses_.end()) {
-         return true;
+   const auto &cbTX = [this, entry, cb](Tx tx) {
+      if (!tx.isInitialized()) {
+         logger_->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
+            , entry.getTxHash().toHexStr());
+         cb(false);
+         return;
       }
-   }
 
-   return false;
-}
-
-bool bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry) const
-{
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      logger_->error("[bs::SettlementMonitor::IsPayOutTransaction] No BDM");
-      return false;
-   }
-
-   auto tx = bdm->getTxByHash(entry.getTxHash());
-   if (!tx.isInitialized()) {
-      logger_->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
-         , entry.getTxHash().toHexStr());
-      return false;
-   }
-
-   for (int i = 0; i < tx.getNumTxIn(); ++i) {
-      TxIn in = tx.getTxInCopy(i);
-      OutPoint op = in.getOutPoint();
-
-      Tx prevTx = PyBlockDataManager::instance()->getTxByHash(op.getTxHash());
-      if (prevTx.isInitialized()) {
-         TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
-         auto address = prevOut.getScrAddressStr();
+      for (int i = 0; i < tx.getNumTxOut(); ++i) {
+         TxOut out = tx.getTxOutCopy(i);
+         auto address = out.getScrAddressStr();
          if (ownAddresses_.find(address) != ownAddresses_.end()) {
-            return true;
+            cb(true);
+            return;
          }
       }
-   }
+      cb(false);
+   };
+   armory_->getTxByHash(entry.getTxHash(), cbTX);
+}
 
-   return false;
+void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
+   , std::function<void(bool)> cb) const
+{
+   const auto &cbTX = [this, entry, cb](Tx tx) {
+      if (!tx.isInitialized()) {
+         logger_->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
+            , entry.getTxHash().toHexStr());
+         cb(false);
+         return;
+      }
+      std::set<BinaryData> txHashSet;
+      std::map<BinaryData, std::set<uint32_t>> txOutIdx;
+
+      for (int i = 0; i < tx.getNumTxIn(); ++i) {
+         TxIn in = tx.getTxInCopy(i);
+         OutPoint op = in.getOutPoint();
+
+         txHashSet.insert(op.getTxHash());
+         txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
+      }
+
+      const auto &cbTXs = [this, txOutIdx, cb](std::vector<Tx> txs) {
+         for (const auto &prevTx : txs) {
+            const auto &itIdx = txOutIdx.find(prevTx.getThisHash());
+            if (itIdx == txOutIdx.end()) {
+               continue;
+            }
+            for (const auto &txOutI : itIdx->second) {
+               const TxOut prevOut = prevTx.getTxOutCopy(txOutI);
+               const auto &address = prevOut.getScrAddressStr();
+               if (ownAddresses_.find(address) != ownAddresses_.end()) {
+                  cb(true);
+                  return;
+               }
+            }
+         }
+         cb(false);
+      };
+      armory_->getTXsByHash(txHashSet, cbTXs);
+   };
+   armory_->getTxByHash(entry.getTxHash(), cbTX);
 }
 
 void bs::SettlementMonitor::SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash)
@@ -1149,111 +1161,132 @@ void bs::SettlementMonitor::SendPayInNotification(const int confirmationsNumber,
 
 void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEntry &entry)
 {
-   auto confirmationsNumber = PyBlockDataManager::instance()->GetConfirmationsNumber(entry);
+   auto confirmationsNumber = armory_->getConfirmationsNumber(entry);
    if (payoutConfirmations_ != confirmationsNumber) {
       payoutConfirmations_ = confirmationsNumber;
 
-      if (payoutConfirmations_ >= confirmedThreshold()) {
-         if (!payoutConfirmedFlag_) {
-            payoutConfirmedFlag_ = true;
-            payoutSignedBy_ = CheckPayoutSignature(entry);
-            logger_->debug("[SettlementMonitor::SendPayOutNotification] confirmed payout for {}"
-               , addressString_);
-            emit payOutConfirmed(payoutSignedBy_);
+      const auto &cbPayoutType = [this](bs::PayoutSigner::Type poType) {
+         payoutSignedBy_ = poType;
+         if (payoutConfirmations_ >= confirmedThreshold()) {
+            if (!payoutConfirmedFlag_) {
+               payoutConfirmedFlag_ = true;
+               logger_->debug("[SettlementMonitor::SendPayOutNotification] confirmed payout for {}"
+                  , addressString_);
+               emit payOutConfirmed(payoutSignedBy_);
+            }
          }
-      } else {
-         payoutSignedBy_ = CheckPayoutSignature(entry);
-         logger_->debug("[SettlementMonitor::SendPayOutNotification] payout for {}. Confirmations: {}"
-            , addressString_, payoutConfirmations_);
-         emit payOutDetected(payoutConfirmations_, payoutSignedBy_);
-      }
+         else {
+            logger_->debug("[SettlementMonitor::SendPayOutNotification] payout for {}. Confirmations: {}"
+               , addressString_, payoutConfirmations_);
+            emit payOutDetected(payoutConfirmations_, payoutSignedBy_);
+         }
+      };
+      CheckPayoutSignature(entry, cbPayoutType);
    }
 }
 
-bs::PayoutSigner::Type bs::PayoutSigner::WhichSignature(const Tx& tx
+void bs::PayoutSigner::WhichSignature(const Tx& tx
    , uint64_t value
    , const std::shared_ptr<bs::SettlementAddressEntry> &ae
-   , const std::shared_ptr<spdlog::logger>& logger)
+   , const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ArmoryConnection> &armory, std::function<void(Type)> cb)
 {
    if (!tx.isInitialized()) {
-      return SignatureUndefined;
+      cb(SignatureUndefined);
+      return;
    }
 
-   uint32_t txHeight = UINT32_MAX;
-   uint32_t txIndex = 0, txOutIndex = 0;
-   const unsigned inputId = 0;
+   struct Result {
+      std::set<BinaryData> txHashSet;
+      std::map<BinaryData, std::set<uint32_t>>  txOutIdx;
+      uint64_t value;
+   };
+   auto result = new Result;
+   result->value = value;
 
+   const auto &cbProcess = [result, ae, tx, cb, logger](std::vector<Tx> txs) {
+      for (const auto &prevTx : txs) {
+         const auto &txHash = prevTx.getThisHash();
+         for (const auto &txOutIdx : result->txOutIdx[txHash]) {
+            TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+            result->value += prevOut.getValue();
+         }
+         result->txHashSet.erase(txHash);
+      }
+
+      uint32_t txHeight = UINT32_MAX;
+      uint32_t txIndex = 0, txOutIndex = 0;
+      const unsigned inputId = 0;
+
+      const auto settlAddrHash = BtcUtils::getSha256(ae->getScript());
+      const TxIn in = tx.getTxInCopy(inputId);
+      const OutPoint op = in.getOutPoint();
+      const auto payinHash = op.getTxHash();
+
+      UTXO utxo(result->value, txHeight, txIndex, txOutIndex, payinHash, BtcUtils::getP2WSHOutputScript(settlAddrHash));
+
+      //serialize signed tx
+      auto txdata = tx.serialize();
+      auto bctx = BCTX::parse(txdata);
+
+      map<BinaryData, map<unsigned, UTXO>> utxoMap;
+
+      utxoMap[utxo.getTxHash()][inputId] = utxo;
+
+      //setup verifier
+      try {
+         TransactionVerifier tsv(*bctx, utxoMap);
+
+         auto tsvFlags = tsv.getFlags();
+         tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
+         tsv.setFlags(tsvFlags);
+
+         auto verifierState = tsv.evaluateState();
+
+         auto inputState = verifierState.getSignedStateForInput(inputId);
+
+         if (inputState.getSigCount() == 0) {
+            logger->error("[bs::PayoutSigner::WhichSignature] no signatures received for TX: {}"
+               , tx.getThisHash().toHexStr());
+         }
+
+         if (inputState.isSignedForPubKey(ae->getAsset()->buyChainedPubKey())) {
+            cb(SignedByBuyer);
+            return;
+         }
+         else if (inputState.isSignedForPubKey(ae->getAsset()->sellChainedPubKey())) {
+            cb(SignedBySeller);
+            return;
+         }
+      }
+      catch (const std::exception &e) {
+         logger->error("[PayoutSigner::WhichSignature] exception {}", e.what());
+      }
+      cb(SignatureUndefined);
+   };
    if (value == 0) {    // needs to be a sum of inputs in this case
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          const OutPoint op = tx.getTxInCopy(i).getOutPoint();
-         Tx prevTx = PyBlockDataManager::instance()->getTxByHash(op.getTxHash());
-         if (prevTx.isInitialized()) {
-            TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
-            value += prevOut.getValue();
-         }
+         result->txHashSet.insert(op.getTxHash());
+         result->txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
+      armory->getTXsByHash(result->txHashSet, cbProcess);
    }
-
-   const auto settlAddrHash = BtcUtils::getSha256(ae->getScript());
-   const TxIn in = tx.getTxInCopy(inputId);
-   const OutPoint op = in.getOutPoint();
-   const auto payinHash = op.getTxHash();
-
-   UTXO utxo(value, txHeight, txIndex, txOutIndex, payinHash, BtcUtils::getP2WSHOutputScript(settlAddrHash));
-
-   //serialize signed tx
-   auto txdata = tx.serialize();
-   auto bctx = BCTX::parse(txdata);
-
-   map<BinaryData, map<unsigned, UTXO>> utxoMap;
-
-   utxoMap[utxo.getTxHash()][inputId] = utxo;
-
-   //setup verifier
-   try {
-      TransactionVerifier tsv(*bctx, utxoMap);
-
-      auto tsvFlags = tsv.getFlags();
-      tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
-      tsv.setFlags(tsvFlags);
-
-      auto verifierState = tsv.evaluateState();
-
-      auto inputState = verifierState.getSignedStateForInput(inputId);
-
-      if (inputState.getSigCount() == 0) {
-         logger->error("[bs::PayoutSigner::WhichSignature] no signatures received for TX: {}"
-            , tx.getThisHash().toHexStr());
-      }
-
-      if (inputState.isSignedForPubKey(ae->getAsset()->buyChainedPubKey())) {
-         return SignedByBuyer;
-      } else if (inputState.isSignedForPubKey(ae->getAsset()->sellChainedPubKey())) {
-         return SignedBySeller;
-      }
+   else {
+      cbProcess({});
    }
-   catch (const std::exception &e) {
-      logger->error("[PayoutSigner::WhichSignature] exception {}", e.what());
-   }
-
-   return SignatureUndefined;
 }
 
-bs::PayoutSigner::Type bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry) const
+void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry
+   , std::function<void(PayoutSigner::Type)> cb) const
 {
    const auto amount = entry.getValue();
    const uint64_t value = amount < 0 ? -amount : amount;
 
-   const auto txHash = entry.getTxHash();
-   const auto tx = PyBlockDataManager::instance()->getTxByHash(entry.getTxHash());
-
-   if (!tx.isInitialized()) {
-      logger_->error("[bs::SettlementMonitor::CheckPayoutSignature] TX not initialized for {}."
-         , entry.getTxHash().toHexStr());
-      return bs::PayoutSigner::SignatureUndefined;
-   }
-
-   return bs::PayoutSigner::WhichSignature(tx, value, addressEntry_, logger_);
+   const auto &cbTX = [this, value, cb](Tx tx) {
+      bs::PayoutSigner::WhichSignature(tx, value, addressEntry_, logger_, armory_, cb);
+   };
+   const auto tx = armory_->getTxByHash(entry.getTxHash(), cbTX);
 }
 
 bs::SettlementMonitor::~SettlementMonitor()

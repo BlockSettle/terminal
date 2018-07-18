@@ -14,6 +14,7 @@ namespace Ui {
 class QAction;
 
 class ApplicationSettings;
+class ArmoryConnection;
 class CCPortfolioModel;
 class MarketDataProvider;
 class SignContainer;
@@ -30,10 +31,10 @@ public:
    ~PortfolioWidget() override = default;
 
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model);
-   void SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model);
-   void SetSigningContainer(const std::shared_ptr<SignContainer> &container);
 
-   void ConnectToMD(const std::shared_ptr<ApplicationSettings>& appSettings, const std::shared_ptr<MarketDataProvider> &mdProvider);
+   void init(const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<MarketDataProvider> &
+      , const std::shared_ptr<CCPortfolioModel> &, const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -50,7 +51,9 @@ private:
    QMenu    contextMenu_;
    QAction  *actionRBF_;
    QAction  *actionCPFP_;
-   std::shared_ptr<SignContainer> signContainer_;
+   std::shared_ptr<SignContainer>      signContainer_;
+   std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<WalletsManager>     walletsManager_;
 };
 
 #endif // __PORFOLIO_WIDGET_H__

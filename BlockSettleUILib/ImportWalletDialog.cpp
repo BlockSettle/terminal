@@ -12,7 +12,7 @@
 
 ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<AssetManager> &assetMgr
-      , const std::shared_ptr<AuthAddressManager> &authMgr
+      , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryConnection> &armory
       , const EasyCoDec::Data& seedData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -22,6 +22,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    , ui_(new Ui::ImportWalletDialog)
    , walletsMgr_(walletsManager)
    , appSettings_(appSettings)
+   , armory_(armory)
    , frejaSign_(spdlog::get(""))
    , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
       , appSettings->get<NetworkType>(ApplicationSettings::netType)))
@@ -53,7 +54,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    const auto &cbw = [appSettings] (const std::string &walletId, unsigned int idx) {
       appSettings->SetWalletScanIndex(walletId, idx);
    };
-   walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager, PyBlockDataManager::instance()
+   walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager, armory
       , assetMgr, authMgr, appSettings_->GetHomeDir(), cbr, cbw);
 
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);
@@ -109,7 +110,7 @@ void ImportWalletDialog::onError(const QString &errMsg)
 
 void ImportWalletDialog::onWalletCreated(const std::string &walletId)
 {
-   if (PyBlockDataManager::instance()->GetState() == PyBlockDataManagerState::Ready) {
+   if (armory_->state() == ArmoryConnection::State::Ready) {
       emit walletsMgr_->walletImportStarted(walletId);
    }
    else {

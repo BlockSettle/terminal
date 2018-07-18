@@ -8,8 +8,8 @@
 #include <QPushButton>
 #include <QSortFilterProxyModel>
 
+#include "ArmoryConnection.h"
 #include "MetaData.h"
-#include "PyBlockDataManager.h"
 #include "TransactionsViewModel.h"
 #include "UiUtils.h"
 
@@ -59,7 +59,9 @@ public:
 };
 
 
-AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::shared_ptr<bs::Wallet> &wallet, const std::shared_ptr<WalletsManager>& walletsManager, QWidget* parent)
+AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::shared_ptr<bs::Wallet> &wallet
+   , const std::shared_ptr<WalletsManager>& walletsManager, const std::shared_ptr<ArmoryConnection> &armory
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AddressDetailDialog())
    , address_(address)
@@ -69,6 +71,12 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    setAttribute(Qt::WA_DeleteOnClose);
    ui_->setupUi(this);
    ui_->labelError->hide();
+
+   connect(wallet_.get(), &bs::Wallet::addrBalanceReceived, this, &AddressDetailDialog::onAddrBalanceReceived);
+   connect(wallet_.get(), &bs::Wallet::addrTxNReceived, this, &AddressDetailDialog::onAddrTxNReceived);
+
+   wallet_->getAddrBalance(address);
+   wallet_->getAddrTxN(address);
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &AddressDetailDialog::onCopyClicked);
@@ -87,24 +95,12 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    const auto comment = wallet_->GetAddressComment(address);
    ui_->labelComment->setText(QString::fromStdString(comment));
 
-   ui_->labelBalance->setText((wallet->GetType() == bs::wallet::Type::ColorCoin)
-      ? UiUtils::displayCCAmount(wallet_->getAddrBalance(address)[0]) : UiUtils::displayAmount(wallet_->getAddrBalance(address)[0]));
-   ui_->labelTransactions->setText(QString::number(wallet_->getAddrTxN(address)));
-
-   auto bdm = PyBlockDataManager::instance();
-   if (bdm && (bdm->GetState() != PyBlockDataManagerState::Ready)) {
-      bdm = nullptr;
-   }
-   try {
-      auto ledgerDelegate = bdm ? bdm->getLedgerDelegateForScrAddr(wallet_->GetWalletId(), address.id()) : nullptr;
-      if (ledgerDelegate == nullptr) {
-         throw std::runtime_error("failed to get ledger delegate");
-      }
+   const auto &cbLedgerDelegate = [this, armory](AsyncClient::LedgerDelegate delegate) {
       // XXX - if armory is offline we need to reflect this in current dialog
-      TransactionsViewModel* model = new TransactionsViewModel(bdm, walletsManager_, ledgerDelegate, this, wallet_);
+      TransactionsViewModel* model = new TransactionsViewModel(armory, walletsManager_, delegate, this, wallet_);
 
       IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
-      incomingFilter->address = address.display();
+      incomingFilter->address = address_.display();
       incomingFilter->setSourceModel(model);
       AddressTransactionFilter* inFilter = new AddressTransactionFilter(this);
       inFilter->setSourceModel(incomingFilter);
@@ -112,7 +108,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
       ui_->inputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
 
       OutgoingTransactionFilter* outgoingFilter = new OutgoingTransactionFilter(this);
-      outgoingFilter->address = address.display();
+      outgoingFilter->address = address_.display();
       outgoingFilter->setSourceModel(model);
       AddressTransactionFilter* outFilter = new AddressTransactionFilter(this);
       outFilter->setSourceModel(outgoingFilter);
@@ -121,17 +117,30 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
 
       ui_->inputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
       ui_->outputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   }
-   catch (const std::exception &e) {
-      ui_->labelError->setText(tr("Error loading address info: %1").arg(QString::fromStdString(e.what())));
-      onError();
-   }
-   catch (const DbErrorMsg &e) {
-      ui_->labelError->setText(tr("Error loading address info: %1").arg(QString::fromStdString(e.what())));
+   };
+   if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate)) {
+      ui_->labelError->setText(tr("Error loading address info"));
       onError();
    }
 
    ui_->labelQR->setPixmap(UiUtils::getQRCode(addressString, 128));
+}
+
+void AddressDetailDialog::onAddrBalanceReceived(const bs::Address &addr, std::vector<uint64_t> balance)
+{
+   if (addr != address_) {
+      return;
+   }
+   ui_->labelBalance->setText((wallet_->GetType() == bs::wallet::Type::ColorCoin)
+      ? UiUtils::displayCCAmount(balance[0]) : UiUtils::displayAmount(balance[0]));
+}
+
+void AddressDetailDialog::onAddrTxNReceived(const bs::Address &addr, uint32_t txn)
+{
+   if (addr != address_) {
+      return;
+   }
+   ui_->labelTransactions->setText(QString::number(txn));
 }
 
 void AddressDetailDialog::onError()

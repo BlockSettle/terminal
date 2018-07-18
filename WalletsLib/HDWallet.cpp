@@ -209,17 +209,17 @@ void hd::Wallet::setUserId(const BinaryData &userId)
    }
 }
 
-void hd::Wallet::SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm)
+void hd::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    for (const auto &leaf : getLeaves()) {
-      leaf->SetBDM(bdm);
+      leaf->SetArmory(armory);
    }
 }
 
-void hd::Wallet::RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew)
+void hd::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    for (const auto &leaf : getLeaves()) {
-      leaf->RegisterWallet(bdm, asNew);
+      leaf->RegisterWallet(armory, asNew);
    }
 }
 

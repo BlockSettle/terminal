@@ -8,9 +8,9 @@
 #include <QObject>
 #include <QMutex>
 #include <QDateTime>
+#include "ArmoryConnection.h"
 #include "BTCNumericTypes.h"
 #include "EncryptionUtils.h"
-#include "PyBlockDataManager.h"
 #include "SettlementWallet.h"
 
 
@@ -23,16 +23,12 @@ namespace bs {
       class DummyWallet;
    }
 }
-class WalletsManagerBlockListener;
 class ApplicationSettings;
 
 
 class WalletsManager : public QObject
 {
    Q_OBJECT
-
-   friend class WalletsManagerBlockListener;
-
 public:
    using load_progress_delegate = std::function<void(int)>;
    using wallet_gen_type = std::shared_ptr<bs::Wallet>;     // Generic wallet interface
@@ -40,7 +36,7 @@ public:
 
 public:
    WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<PyBlockDataManager>& bdm, bool preferWatchingOnly = true);
+      , const std::shared_ptr<ArmoryConnection> &, bool preferWatchingOnly = true);
    WalletsManager(const std::shared_ptr<spdlog::logger> &);
    ~WalletsManager() noexcept;
 
@@ -82,7 +78,7 @@ public:
    void SetUserId(const BinaryData &userId);
    const wallet_gen_type GetAuthWallet() const { return authAddressWallet_; }
 
-   bool IsBalanceLoaded() const;
+   bool IsArmoryReady() const;
    bool IsReadyForTrading() const;
 
    BTCNumericTypes::balance_type GetSpendableBalance() const;
@@ -94,17 +90,19 @@ public:
    void RegisterSavedWallets();
 
    bool IsTransactionVerified(const ClientClasses::LedgerEntry &);
-   bs::Transaction::Direction GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &);
-   QString GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &, bool isReceiving);
+   bool GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &
+      , std::function<void(bs::Transaction::Direction)>);
+   bool GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &
+      , bool isReceiving, std::function<void(QString)>);
 
    hd_wallet_type CreateWallet(const std::string& name, const std::string& description
       , bs::wallet::Seed, const QString &walletsPath
       , const SecureBinaryData &password = {}, bool primary = false);
    void AdoptNewWallet(const hd_wallet_type &, const QString &walletsPath);
 
-   float estimatedFeePerByte(unsigned int blocksToWait) const;
+   bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>) const;
 
-   std::vector<ClientClasses::LedgerEntry> getTxPage(uint32_t id) const;
+   bool getNewTransactions() const;
 
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
 
@@ -120,6 +118,7 @@ signals:
    void error(const QString &title, const QString &text) const;
    void walletImportStarted(const std::string &walletId);
    void walletImportFinished(const std::string &walletId);
+   void newTransactions(std::vector<ClientClasses::LedgerEntry>) const;
 
 public slots:
    void onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
@@ -127,18 +126,18 @@ public slots:
    void onWalletImported(const std::string &walletId) { emit walletImportFinished(walletId); }
 
 private slots:
-   void onZeroConfReceived(const std::vector<ClientClasses::LedgerEntry> &);
+   void onZeroConfReceived(ArmoryConnection::ReqIdType);
    void onBroadcastZCError(const QString &txHash, const QString &errMsg);
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);
    void onHDLeafDeleted(QString id);
+   void onRefresh();
+   void onStateChanged(ArmoryConnection::State);
 
 private:
    bool empty() const { return (wallets_.empty() && !settlementWallet_); }
 
    // notification from block data manager listener ( WalletsManagerBlockListener )
-   void BlocksLoaded();
-   void Ready();
    void ResumeRescan();
    void UpdateSavedWallets();
 
@@ -148,6 +147,10 @@ private:
    void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
    void EraseWallet(const wallet_gen_type &wallet);
    void SetAuthWalletFrom(const hd_wallet_type &);
+
+   void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
+      , std::function<void(bs::Transaction::Direction)>);
+   void updateTxDescCache(const BinaryData &txHash, const QString &, std::function<void(QString)>);
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
@@ -169,9 +172,13 @@ private:
    wallet_gen_type                        authAddressWallet_;
    BinaryData                             userId_;
    std::shared_ptr<bs::SettlementWallet>  settlementWallet_;
-   std::shared_ptr<PyBlockDataManager>    bdm_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    std::unordered_map<std::string, std::string> ccSecurities_;
-   std::shared_ptr<WalletsManagerBlockListener> listener_;
+
+   std::map<BinaryData, bs::Transaction::Direction>   txDirections_;
+   mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;
+   std::map<BinaryData, QString> txDesc_;
+   mutable std::atomic_flag      txDescLock_ = ATOMIC_FLAG_INIT;
 
    mutable std::map<unsigned int, float>     feePerByte_;
    mutable std::map<unsigned int, QDateTime> lastFeePerByte_;

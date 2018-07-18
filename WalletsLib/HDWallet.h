@@ -58,8 +58,8 @@ namespace bs {
          bool changePassword(const SecureBinaryData &newPass, const SecureBinaryData &oldPass = {}
             , wallet::EncryptionType encType = wallet::EncryptionType::Password, const SecureBinaryData &encKey = {});
 
-         void RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew = false);
-         void SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm);
+         void RegisterWallet(const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
+         void SetArmory(const std::shared_ptr<ArmoryConnection> &);
          bool startRescan(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr, const cb_scan_write_last &cbw = nullptr);
          void saveToDir(const std::string &targetDir);
          void saveToFile(const std::string &filename, bool force = false);

@@ -12,7 +12,8 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-
+#include <QObject>
+#include "AsyncClient.h"
 #include "AuthAddress.h"
 
 namespace spdlog {
@@ -22,24 +23,25 @@ namespace ClientClasses {
    class LedgerEntry;
 }
 
-struct AddressVarificationData;
-class AddressVerificatorListener;
-class SafeBtcWallet;
+struct AddressVerificationData;
+class ArmoryConnection;
 
 // once we could connect to a super node we should not wait for refresh signals from armory
 // we could just get info for address.
 // Probably this could be saved for users if they want to use own armory but not in supernode mode
-class AddressVerificator
+class AddressVerificator : public QObject
 {
+   Q_OBJECT
 public:
-   using verification_callback = function<void (const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)>;
+   using verification_callback = std::function<void (const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)>;
 
 private:
    using ExecutionCommand = std::function<void (void)>;
    struct AddressVarificationState;
 
 public:
-   AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::string& walletId, verification_callback callback);
+   AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &
+      , const std::string& walletId, verification_callback callback);
    ~AddressVerificator() noexcept;
 
    AddressVerificator(const AddressVerificator&) = delete;
@@ -54,18 +56,17 @@ public:
    bool StartAddressVerification(const std::shared_ptr<AuthAddress>& address);
    void RegisterBSAuthAddresses();
 
-   void OnRefresh();
-
    void RegisterAddresses();
 
    static uint64_t GetAuthAmount() { return 1000; }
 
-   std::vector<UTXO> GetVerificationInputs() const;
-   std::vector<UTXO> GetRevokeInputs() const;
+   void GetVerificationInputs(std::function<void(std::vector<UTXO>)>) const;
+   void GetRevokeInputs(std::function<void(std::vector<UTXO>)>) const;
+
+private slots:
+   void OnRefresh();
 
 private:
-   bool registerInternalWallet();
-
    bool startCommandQueue();
    bool stopCommandQueue();
 
@@ -75,30 +76,31 @@ private:
    void AddCommandToWaitingUpdateQueue(ExecutionCommand&& command);
 
    ExecutionCommand CreateAddressValidationCommand(const std::shared_ptr<AuthAddress>& address);
-   ExecutionCommand CreateAddressValidationCommand(const std::shared_ptr<AddressVarificationData>& state);
+   ExecutionCommand CreateAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state);
 
-   ExecutionCommand CreateBSAddressValidationCommand(const std::shared_ptr<AddressVarificationData>& state);
+   ExecutionCommand CreateBSAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state);
 
 private:
    bool AddressWasRegistered(const std::shared_ptr<AuthAddress>& address) const;
    bool RegisterUserAddress(const std::shared_ptr<AuthAddress>& address);
 
 private:
-   void ValidateAddress(const std::shared_ptr<AddressVarificationData>& state);
-   void CheckBSAddressState(const std::shared_ptr<AddressVarificationData>& state);
+   void ValidateAddress(const std::shared_ptr<AddressVerificationData>& state);
+   void doValidateAddress(const std::shared_ptr<AddressVerificationData>& state);
+   void CheckBSAddressState(const std::shared_ptr<AddressVerificationData>& state);
 
-   void ReturnValidationResult(const std::shared_ptr<AddressVarificationData>& state);
+   void ReturnValidationResult(const std::shared_ptr<AddressVerificationData>& state);
 
-   bool IsInitialBsTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state, bool &isVerified);
-   bool IsVerificationTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state, bool &isVerified);
-   bool IsRevokeTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state);
-   bool HasRevokeOutputs(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData> &);
+   bool IsInitialBsTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVerificationData>& state, bool &isVerified);
+   bool IsVerificationTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVerificationData>& state, bool &isVerified);
+   bool IsRevokeTransaction(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVerificationData>& state);
+   bool HasRevokeOutputs(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVerificationData> &);
 
-   bool IsBSRevokeTranscation(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVarificationData>& state);
+   bool IsBSRevokeTranscation(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVerificationData>& state);
 
 private:
-   std::shared_ptr<spdlog::logger>  logger_;
-
+   std::shared_ptr<spdlog::logger>     logger_;
+   std::shared_ptr<ArmoryConnection>   armory_;
    std::string       walletId_;
    verification_callback   userCallback_;
 
@@ -121,10 +123,9 @@ private:
    std::queue<ExecutionCommand>  commandsQueue_;
    std::condition_variable       dataAvailable_;
    mutable std::mutex            dataMutex_;
-   std::atomic<bool>             stopExecution_;
+   std::atomic_bool              stopExecution_;
 
-   std::shared_ptr<AddressVerificatorListener> listener_;
-   std::shared_ptr<SafeBtcWallet>    internalWallet_;
+   std::shared_ptr<AsyncClient::BtcWallet>   internalWallet_;
 
    std::map<BinaryData, unsigned int> addressRetries_;
 };

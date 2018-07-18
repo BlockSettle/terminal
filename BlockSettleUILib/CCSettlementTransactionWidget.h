@@ -19,7 +19,7 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
-
+class ArmoryConnection;
 class AssetManager;
 class SignContainer;
 class TransactionData;
@@ -35,12 +35,12 @@ class CCSettlementTransactionWidget : public QWidget
 Q_OBJECT
 
 public:
-   CCSettlementTransactionWidget(QWidget* parent = nullptr );
+   CCSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &, QWidget* parent = nullptr);
    ~CCSettlementTransactionWidget() override;
 
-   void init(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<SignContainer> &);
    void reset(const std::shared_ptr<WalletsManager> &walletsManager);
    void populateDetails(const bs::network::RFQ& rfq, const bs::network::Quote& quote
       , const std::shared_ptr<TransactionData>& transactionData, const bs::Address &genesis);
@@ -110,6 +110,7 @@ private:
    std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<ArmoryConnection>   armory_;
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 

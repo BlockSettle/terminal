@@ -28,7 +28,7 @@ public:
    SelectedTransactionInputs(SelectedTransactionInputs&&) = delete;
    SelectedTransactionInputs& operator = (SelectedTransactionInputs&&) = delete;
 
-   void SetInputs(const std::vector<UTXO> &inputs, const std::vector<UTXO> &cpfpInputs);
+   void SetFixedInputs(const std::vector<UTXO> &inputs);
 
    bool UseAutoSel() const { return useAutoSel_; }
    void SetUseAutoSel(const bool autoSelect);
@@ -55,8 +55,10 @@ public:
    void Reload(const std::vector<UTXO> &);
 
 private:
-   void filterNotSWInputs(std::vector<UTXO>& inputs);
+   std::vector<UTXO> filterNonSWInputs(const std::vector<UTXO> &);
    bool filterUTXO(std::vector<UTXO> &inputs, const UTXO &, size_t selectionStart);
+   void resetInputs(std::function<void()>);
+   void resetSelection();
 
 private:
    std::shared_ptr<bs::Wallet>   wallet_;

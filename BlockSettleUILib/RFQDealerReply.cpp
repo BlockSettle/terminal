@@ -78,7 +78,8 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory)
 {
    logger_ = logger;
    assetManager_ = assetManager;
@@ -86,6 +87,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    authAddressManager_ = authAddressManager;
    appSettings_ = appSettings;
    signingContainer_ = container;
+   armory_ = armory;
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
@@ -280,10 +282,13 @@ void RFQDealerReply::reset()
          transactionData_ = std::make_shared<TransactionData>([this]() { onTransactionDataChanged(); }
             , true, true);
          if (walletsManager_ != nullptr) {
-            transactionData_->SetFeePerByte(walletsManager_->estimatedFeePerByte(2));
+            const auto &cbFee = [this](float feePerByte) {
+               transactionData_->SetFeePerByte(feePerByte);
+            };
+            walletsManager_->estimatedFeePerByte(2, cbFee);
          }
          if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
-            transactionData_->SetWallet(curWallet_);
+            transactionData_->SetWallet(curWallet_, armory_->topBlock());
          }
          else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
             std::shared_ptr<bs::Wallet> wallet, xbtWallet = getXbtWallet();
@@ -297,7 +302,7 @@ void RFQDealerReply::reset()
                ccCoinSel_ = std::make_shared<SelectedTransactionInputs>(wallet, true, true);
             }
             transactionData_->SetSigningWallet(wallet);
-            transactionData_->SetWallet(xbtWallet);
+            transactionData_->SetWallet(xbtWallet, armory_->topBlock());
          }
       }
 
@@ -416,7 +421,7 @@ std::shared_ptr<bs::Wallet> RFQDealerReply::getXbtWallet()
 
 void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &qrn)
 {
-   if (PyBlockDataManager::instance()->GetState() != PyBlockDataManagerState::Ready) {
+   if (armory_->state() != ArmoryConnection::State::Ready) {
       return;
    }
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
@@ -574,7 +579,7 @@ void RFQDealerReply::setCurrentWallet(const std::shared_ptr<bs::Wallet> &newWall
 
    if (newWallet != nullptr) {
       if (transactionData_ != nullptr) {
-         transactionData_->SetWallet(newWallet);
+         transactionData_->SetWallet(newWallet, armory_->topBlock());
       }
    }
 }
@@ -639,15 +644,16 @@ double RFQDealerReply::getAmount() const
    return currentQRN_.quantity;
 }
 
-bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transData
-   , const bs::network::QuoteReqNotification &qrn, double price)
+bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transData
+   , const bs::network::QuoteReqNotification &qrn, double price
+   , std::function<void(bs::network::QuoteNotification)> cb)
 {
    if (qFuzzyIsNull(price)) {
-      return {};
+      return false;
    }
    const auto itQN = sentNotifs_.find(qrn.quoteRequestId);
    if ((itQN != sentNotifs_.end()) && (itQN->second == price)) {
-      return {};
+      return false;
    }
    std::string authKey, txData;
    bool isBid = (qrn.side == bs::network::Side::Buy);
@@ -656,7 +662,7 @@ bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr
       authKey = authAddressManager_->GetPublicKey(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
       if (authKey.empty()) {
          logger_->error("[RFQDealerReply::submit] empty auth key");
-         return {};
+         return false;
       }
       logger_->debug("[RFQDealerReply::submit] using wallet {}", transData->GetWallet()->GetWalletName());
 
@@ -703,7 +709,7 @@ bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr
          }
          catch (const std::exception &e) {
             logger_->error("[RFQDealerReply::submit] failed to create pay-in transaction: {}", e.what());
-            return {};
+            return false;
          }
       }
       else {
@@ -711,61 +717,71 @@ bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr
       }
    }
 
-   bs::network::QuoteNotification qn(qrn, authKey, price, txData);
+   auto qn = new bs::network::QuoteNotification(qrn, authKey, price, txData);
 
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
-      qn.receiptAddress = getRecvAddress().display<std::string>();
-      qn.reqAuthKey = qrn.requestorRecvAddress;
+      qn->receiptAddress = getRecvAddress().display<std::string>();
+      qn->reqAuthKey = qrn.requestorRecvAddress;
 
       std::shared_ptr<bs::Wallet> wallet = transData->GetSigningWallet();
       uint64_t spendVal = 0;
       float feePerByte = 0;
       uint64_t addedFee = 0;
 
+      const auto &cbFee = [this, qrn, transData, spendVal, wallet, cb, qn](float feePerByte) {
+         const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(spendVal);
+         std::vector<UTXO> inputs = utxoAdapter_->get(qn->quoteRequestId);
+         if (inputs.empty() && ccCoinSel_) {
+            inputs = ccCoinSel_->GetSelectedTransactions();
+            if (inputs.empty()) {
+               logger_->error("[RFQDealerReply::submit] no suitable inputs for CC sell");
+               cb({});
+               return;
+            }
+         }
+         try {
+            const auto changeAddr = wallet->GetNewChangeAddress();
+            transData->createAddress(changeAddr, wallet);
+            const auto txReq = wallet->CreatePartialTXRequest(spendVal, inputs, changeAddr, feePerByte
+               , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
+            qn->transactionData = txReq.serializeState().toHexStr();
+            utxoAdapter_->reserve(txReq, qn->quoteRequestId);
+            logger_->debug("Signing wallet {} with {} input[s], spend value = {}"
+               , wallet->GetWalletName(), txReq.inputs.size(), spendVal);
+         }
+         catch (const std::exception &e) {
+            logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
+            cb({});
+            return;
+         }
+         if (!transData->GetSigningWallet()) {
+            transData->SetSigningWallet(wallet);
+         }
+         cb(*qn);
+         delete qn;
+      };
+
       if (qrn.side == bs::network::Side::Buy) {
          if (!wallet) {
             wallet = getCCWallet(qrn.product);
          }
          spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
+         cbFee(0);
+         return true;
       }
       else {
          if (!wallet) {
             wallet = getXbtWallet();
          }
          spendVal = qrn.quantity * price * BTCNumericTypes::BalanceDivider;
-         feePerByte = walletsManager_->estimatedFeePerByte(2);
-      }
-      const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(spendVal);
-      std::vector<UTXO> inputs = utxoAdapter_->get(qn.quoteRequestId);
-      if (inputs.empty() && ccCoinSel_) {
-         inputs = ccCoinSel_->GetSelectedTransactions();
-         if (inputs.empty()) {
-            logger_->error("[RFQDealerReply::submit] no suitable inputs for CC sell");
-            return {};
-         }
-      }
-      try {
-         const auto changeAddr = wallet->GetNewChangeAddress();
-         transData->createAddress(changeAddr, wallet);
-         const auto txReq = wallet->CreatePartialTXRequest(spendVal, inputs, changeAddr, feePerByte
-            , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
-         qn.transactionData = txReq.serializeState().toHexStr();
-         utxoAdapter_->reserve(txReq, qn.quoteRequestId);
-         logger_->debug("Signing wallet {} with {} input[s], spend value = {}"
-            , wallet->GetWalletName(), txReq.inputs.size(), spendVal);
-      }
-      catch (const std::exception &e) {
-         logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
-         return {};
-      }
-      if (!transData->GetSigningWallet()) {
-         transData->SetSigningWallet(wallet);
+         walletsManager_->estimatedFeePerByte(2, cbFee);
+         return true;
       }
    }
 
-   logger_->debug("Submitted quote reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
-   emit submitQuoteNotif(qn);
-   return qn;
+   cb(*qn);
+   delete qn;
+   return true;
 }
 
 void RFQDealerReply::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)
@@ -786,10 +802,14 @@ void RFQDealerReply::submitButtonClicked()
       return;
    }
 
-   const auto qn = submitReply(transactionData_, currentQRN_, price);
-   if (!qn.quoteRequestId.empty()) {
-      sentNotifs_[qn.quoteRequestId] = price;
-   }
+   const auto &cbSubmit = [this, price](bs::network::QuoteNotification qn) {
+      if (!qn.quoteRequestId.empty()) {
+         logger_->debug("Submitted quote reply on {}: {}/{}", currentQRN_.quoteRequestId, qn.bidPx, qn.offerPx);
+         emit submitQuoteNotif(qn);
+         sentNotifs_[qn.quoteRequestId] = price;
+      }
+   };
+   submitReply(transactionData_, currentQRN_, price, cbSubmit);
    updateSubmitButton();
 }
 
@@ -1179,6 +1199,14 @@ void RFQDealerReply::onAQReply(const QString &reqId, double price)
       logger_->warn("[RFQDealerReply::onAQReply] QuoteReqNotification with id = {} not found", reqId.toStdString());
       return;
    }
+
+   const auto &cbSubmit = [this, itQRN](bs::network::QuoteNotification qn) {
+      if (!qn.quoteRequestId.empty()) {
+         logger_->debug("Submitted AQ reply on {}: {}/{}", itQRN->second.quoteRequestId, qn.bidPx, qn.offerPx);
+         emit submitQuoteNotif(qn);
+      }
+   };
+
    std::shared_ptr<TransactionData> transData;
    if (itQRN->second.assetType != bs::network::Asset::SpotFX) {
       auto wallet = getCurrentWallet();
@@ -1186,7 +1214,7 @@ void RFQDealerReply::onAQReply(const QString &reqId, double price)
          wallet = walletsManager_->GetDefaultWallet();
       }
       transData = std::make_shared<TransactionData>();
-      transData->SetWallet(wallet);
+      transData->SetWallet(wallet, armory_->topBlock());
       if (itQRN->second.assetType == bs::network::Asset::PrivateMarket) {
          const auto &cc = itQRN->second.product;
          const auto& ccWallet = getCCWallet(cc);
@@ -1206,10 +1234,17 @@ void RFQDealerReply::onAQReply(const QString &reqId, double price)
             curWallet_ = ccWallet;
          }
       }
-      transData->SetFeePerByte(walletsManager_->estimatedFeePerByte(2));
-      aqTxData_[itQRN->second.quoteRequestId] = transData;
+
+      const auto &cbFee = [this, itQRN, price, transData, cbSubmit](float feePerByte) {
+         transData->SetFeePerByte(feePerByte);
+         aqTxData_[itQRN->second.quoteRequestId] = transData;
+         submitReply(transData, itQRN->second, price, cbSubmit);
+      };
+      walletsManager_->estimatedFeePerByte(2, cbFee);
+      return;
    }
-   submitReply(transData, itQRN->second, price);
+
+   submitReply(transData, itQRN->second, price, cbSubmit);
 }
 
 void RFQDealerReply::onAQPull(const QString &reqId)

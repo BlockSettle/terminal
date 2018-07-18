@@ -4,6 +4,7 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include "AddressVerificator.h"
 #include "ApplicationSettings.h"
+#include "ArmoryConnection.h"
 #include "CelerClient.h"
 #include "CheckRecipSigner.h"
 #include "ClientClasses.h"
@@ -11,9 +12,7 @@
 #include "FastLock.h"
 #include "HDWallet.h"
 #include "OTPManager.h"
-#include "PyBlockDataManager.h"
 #include "RequestReplyCommand.h"
-#include "SafeBtcWallet.h"
 #include "SignContainer.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
@@ -22,8 +21,9 @@
 using namespace Blocksettle::Communication;
 
 
-AuthAddressManager::AuthAddressManager(const std::shared_ptr<spdlog::logger> &logger)
-   : logger_(logger), QObject(nullptr)
+AuthAddressManager::AuthAddressManager(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ArmoryConnection> &armory)
+   : QObject(nullptr), logger_(logger), armory_(armory)
 {}
 
 void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSettings
@@ -76,7 +76,7 @@ bool AuthAddressManager::setup()
       return false;
    }
 
-   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, SecureBinaryData().GenerateRandom(8).toHexStr()
+   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, SecureBinaryData().GenerateRandom(8).toHexStr()
       , [this](const std::shared_ptr<AuthAddress> addr, AddressVerificationState state)
    {
       if (!addressVerificator_) {
@@ -258,34 +258,44 @@ bool AuthAddressManager::Verify(const bs::Address &address)
       return false;
    }
 
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
+   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
       logger_->error("[AuthAddressManager::Verify] can't verify without Armory connection");
       emit Error(tr("Missing Armory connection"));
       return false;
    }
 
-   UTXO verificationInput;
-   for (const auto& utxo : addressVerificator_->GetVerificationInputs()) {
-      if (utxo.getTxHash() == GetInitialTxHash(address)) {
-         const bs::TxChecker txChecker(bdm->getTxByHash(utxo.getTxHash()));
-         if ((txChecker.receiverIndex(address) != utxo.getTxOutIndex())
-            || !txChecker.hasSpender(GetBSFundingAddress(address))) {
-            continue;
+   const auto &cbInputs = [this, address](std::vector<UTXO> inputs) {
+      std::set<BinaryData> txHashSet;
+      std::map<BinaryData, UTXO> utxoMap;
+      for (const auto &utxo : inputs) {
+         if (utxo.getTxHash() == GetInitialTxHash(address)) {
+            txHashSet.insert(utxo.getTxHash());
+            utxoMap[utxo.getTxHash()] = utxo;
          }
-         verificationInput = utxo;
-         break;
       }
-   }
-
-   if (!verificationInput.isInitialized()) {
-      logger_->error("[AuthAddressManager::Verify] did not get initial tx as spendable");
-      emit Error(tr("failed to find appropriate input"));
-      return false;
-   }
-
-   return SendVerifyTransaction(verificationInput, addressVerificator_->GetAuthAmount(), address
-      , addressVerificator_->GetAuthAmount());
+      const auto &cbTXs = [this, address, utxoMap](std::vector<Tx> txs) {
+         for (const auto &tx : txs) {
+            const bs::TxChecker txChecker(tx);
+            const auto &itUtxo = utxoMap.find(tx.getThisHash());
+            if (itUtxo == utxoMap.end()) {
+               continue;
+            }
+            const auto &cbSpender = [this, address, itUtxo](bool present) {
+               if (!present) {
+                  return;
+               }
+               const auto &verificationInput = itUtxo->second;
+               SendVerifyTransaction(verificationInput, addressVerificator_->GetAuthAmount()
+                  , address, addressVerificator_->GetAuthAmount());
+            };
+            if (txChecker.receiverIndex(address) == itUtxo->second.getTxOutIndex()) {
+               txChecker.hasSpender(GetBSFundingAddress(address), armory_, cbSpender);
+            }
+         }
+      };
+      armory_->getTXsByHash(txHashSet, cbTXs);
+   };
+   addressVerificator_->GetVerificationInputs(cbInputs);
 }
 
 bool AuthAddressManager::RevokeAddress(const bs::Address &address)
@@ -302,67 +312,73 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
       return false;
    }
 
-   UTXO verificationChangeInput;
-   for (const UTXO &tx : addressVerificator_->GetRevokeInputs()) {
-      if ((tx.getTxHash() == GetVerifChangeTxHash(address))) {
-         verificationChangeInput = tx;
-         break;
+   const auto &cbInputs = [this, address](std::vector<UTXO> inputs) {
+      UTXO verificationChangeInput;
+      for (const auto &tx : inputs) {
+         if ((tx.getTxHash() == GetVerifChangeTxHash(address))) {
+            verificationChangeInput = tx;
+            break;
+         }
       }
-   }
+      if (!verificationChangeInput.isInitialized()) {
+         emit Error(tr("no appropriate input found"));
+         logger_->error("[AuthAddressManager::RevokeAddress] did not get verify change tx as spendable");
+         return;
+      }
 
-   if (!verificationChangeInput.isInitialized()) {
-      emit Error(tr("no appropriate input found"));
-      logger_->error("[AuthAddressManager::RevokeAddress] did not get verify change tx as spendable");
-      return false;
-   }
+      const auto &cbFee = [this, verificationChangeInput](float feePerByte) {
+         const auto &priWallet = walletsManager_->GetPrimaryWallet();
+         const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
+         const auto &wallet = group->getLeaf(0);
+         if (!wallet) {
+            emit Error(tr("no XBT wallet found"));
+            logger_->error("[AuthAddressManager::RevokeAddress] XBT/0 wallet missing");
+            return;
+         }
 
-   const auto &priWallet = walletsManager_->GetPrimaryWallet();
-   const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
-   const auto &wallet = group->getLeaf(0);
-   if (!wallet) {
-      emit Error(tr("no XBT wallet found"));
-      logger_->error("[AuthAddressManager::RevokeAddress] XBT/0 wallet missing");
-      return false;
-   }
-   const float feePerByte = walletsManager_->estimatedFeePerByte(3);
-   const uint64_t fee = feePerByte * 135;  // magic formula for 2 inputs & 1 output, all native SW
+         const uint64_t fee = feePerByte * 135;  // magic formula for 2 inputs & 1 output, all native SW
 
-   bs::wallet::TXMultiSignRequest txMultiReq;
-   txMultiReq.addInput(verificationChangeInput, authWallet_);
+         auto txMultiReq = new bs::wallet::TXMultiSignRequest;
+         txMultiReq->addInput(verificationChangeInput, authWallet_);
 
-   const auto &feeUTXOs = wallet->getUTXOsToSpend(fee);
-   if (feeUTXOs.empty()) {
-      logger_->error("[AuthAddressManager::RevokeAddress] failed to find enough UTXOs to fund {}", fee);
-      emit Error(tr("Failed to find UTXOs to fund the fee"));
-      return false;
-   }
-   uint64_t changeVal = 0;
-   for (const auto &utxo : feeUTXOs) {
-      txMultiReq.addInput(utxo, wallet);
-      changeVal += utxo.getValue();
-   }
-   changeVal -= fee;
+         const auto &cbFeeUTXOs = [this, fee, txMultiReq, wallet](std::vector<UTXO> utxos) {
+            if (utxos.empty()) {
+               logger_->error("[AuthAddressManager::RevokeAddress] failed to find enough UTXOs to fund {}", fee);
+               emit Error(tr("Failed to find UTXOs to fund the fee"));
+               return;
+            }
+            uint64_t changeVal = 0;
+            for (const auto &utxo : utxos) {
+               txMultiReq->addInput(utxo, wallet);
+               changeVal += utxo.getValue();
+            }
+            changeVal -= fee;
 
-   const auto recipAddress = wallet->GetNewChangeAddress();
-   const auto &recip = recipAddress.getRecipient(verificationChangeInput.getValue() + changeVal);
-   if (!recip) {
-      logger_->error("[AuthAddressManager::RevokeAddress] failed to create recipient");
-      emit Error(tr("Failed to construct revoke transaction"));
-      return false;
-   }
-   txMultiReq.recipients.push_back(recip);
+            const auto recipAddress = wallet->GetNewChangeAddress();
+            const auto &recip = recipAddress.getRecipient(txMultiReq->inputs.cbegin()->first.getValue() + changeVal);
+            if (!recip) {
+               logger_->error("[AuthAddressManager::RevokeAddress] failed to create recipient");
+               emit Error(tr("Failed to construct revoke transaction"));
+               return;
+            }
+            txMultiReq->recipients.push_back(recip);
 
-   if (feeUTXOs.size() > 1) {
-      logger_->warn("[AuthAddressManager::RevokeAddress] TX size is greater than expected ({} more inputs)", feeUTXOs.size() - 1);
-      emit Info(tr("Revoke transaction size is greater than expected"));
-   }
+            if (utxos.size() > 1) {
+               logger_->warn("[AuthAddressManager::RevokeAddress] TX size is greater than expected ({} more inputs)", utxos.size() - 1);
+               emit Info(tr("Revoke transaction size is greater than expected"));
+            }
 
-   const auto id = signingContainer_->SignMultiTXRequest(txMultiReq);
-   if (id) {
-      signIdsRevoke_.insert(id);
-      return true;
-   }
-   return false;
+            const auto id = signingContainer_->SignMultiTXRequest(*txMultiReq);
+            if (id) {
+               signIdsRevoke_.insert(id);
+            }
+         };
+         wallet->getUTXOsToSpend(fee, cbFeeUTXOs);
+      };
+      const float feePerByte = walletsManager_->estimatedFeePerByte(3, cbFee);
+   };
+   addressVerificator_->GetRevokeInputs(cbInputs);
+   return true;
 }
 
 void AuthAddressManager::OnDataReceived(const std::string& data)
@@ -827,7 +843,7 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
 
 bool AuthAddressManager::BroadcastTransaction(const BinaryData& transactionData)
 {
-   return PyBlockDataManager::instance()->broadcastZC(transactionData);
+   return armory_->broadcastZC(transactionData);
 }
 
 BinaryData AuthAddressManager::GetPublicKey(size_t index)

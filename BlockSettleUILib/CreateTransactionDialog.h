@@ -11,6 +11,7 @@
 #include <QString>
 #include "MetaData.h"
 
+class ArmoryConnection;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -31,8 +32,10 @@ class CreateTransactionDialog : public QDialog
 Q_OBJECT
 
 public:
-   CreateTransactionDialog(const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, bool loadFeeSuggestions, QWidget* parent);
+   CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<SignContainer> &
+      , bool loadFeeSuggestions, QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
    void SelectWallet(const std::string& walletId);
@@ -77,7 +80,7 @@ protected:
    void showError(const QString &text, const QString &detailedText);
 
 signals:
-   void feeLoadingColmpleted(const std::map<unsigned int, float> &);
+   void feeLoadingCompleted(const std::map<unsigned int, float> &);
 
 protected slots:
    virtual void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &);
@@ -88,12 +91,13 @@ protected slots:
 
 private:
    void populateFeeList();
-   void feeUpdatingThreadFunction();
+   void loadFees();
    void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
 
 protected:
+   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<TransactionData> transactionData_;

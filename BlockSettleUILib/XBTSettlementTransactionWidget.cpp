@@ -19,9 +19,18 @@
 
 const unsigned int WaitTimeoutInSec = 30;
 
-XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(QWidget* parent)
+XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<AuthAddressManager>& manager, const std::shared_ptr<AssetManager> &assetManager
+   , const std::shared_ptr<QuoteProvider> &quoteProvider, const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::XBTSettlementTransactionWidget())
+   , logger_(logger)
+   , authAddressManager_(manager)
+   , assetManager_(assetManager)
+   , quoteProvider_(quoteProvider)
+   , signingContainer_(container)
+   , armory_(armory)
    , timer_(this)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
@@ -43,6 +52,19 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(QWidget* parent)
    connect(this, &XBTSettlementTransactionWidget::DealerVerificationStateChanged
       , this, &XBTSettlementTransactionWidget::onDealerVerificationStateChanged
       , Qt::QueuedConnection);
+
+   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
+   bs::UtxoReservation::addAdapter(utxoAdapter_);
+
+   frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
+   connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &XBTSettlementTransactionWidget::onFrejaSucceeded);
+   connect(frejaSign_.get(), &FrejaSign::failed, this, &XBTSettlementTransactionWidget::onFrejaFailed);
+   connect(frejaSign_.get(), &FrejaSign::statusUpdated, this, &XBTSettlementTransactionWidget::onFrejaStatusUpdated);
+
+   connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &XBTSettlementTransactionWidget::onHDWalletInfo);
+   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &XBTSettlementTransactionWidget::onTXSigned);
+
+   connect(armory_.get(), &ArmoryConnection::txBroadcastError, this, &XBTSettlementTransactionWidget::onZCError, Qt::QueuedConnection);
 }
 
 XBTSettlementTransactionWidget::~XBTSettlementTransactionWidget()
@@ -200,7 +222,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
 {
    infoReqId_ = signingContainer_->GetInfo(walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId()));
 
-   addrVerificator_ = std::make_shared<AddressVerificator>(logger_, quote.settlementId
+   addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, quote.settlementId
       , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
       dealerVerifState_ = state;
@@ -291,8 +313,6 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       ui_->labelTotalDescription->setText(tr("Total received"));
       ui_->labelTotalAmount->setText(UiUtils::displayQuantity(amount_ - UiUtils::amountToBtc(fee), UiUtils::XbtCurrency));
    }
-
-   connect(PyBlockDataManager::instance().get(), &PyBlockDataManager::txBroadcastError, this, &XBTSettlementTransactionWidget::onZCError, Qt::QueuedConnection);
 }
 
 unsigned int XBTSettlementTransactionWidget::createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr)
@@ -411,33 +431,11 @@ void XBTSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData sign
    }
 }
 
-void XBTSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager>& manager
-   , const std::shared_ptr<AssetManager> &assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container)
-{
-   logger_ = logger;
-   authAddressManager_ = manager;
-   assetManager_ = assetManager;
-   quoteProvider_ = quoteProvider;
-   signingContainer_ = container;
-
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
-
-   frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
-   connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &XBTSettlementTransactionWidget::onFrejaSucceeded);
-   connect(frejaSign_.get(), &FrejaSign::failed, this, &XBTSettlementTransactionWidget::onFrejaFailed);
-   connect(frejaSign_.get(), &FrejaSign::statusUpdated, this, &XBTSettlementTransactionWidget::onFrejaStatusUpdated);
-
-   connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &XBTSettlementTransactionWidget::onHDWalletInfo);
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &XBTSettlementTransactionWidget::onTXSigned);
-}
-
 void XBTSettlementTransactionWidget::payoutOnCancel()
 {
    utxoAdapter_->unreserve(reserveId_);
 
-   if (!PyBlockDataManager::instance()->broadcastZC(payoutData_)) {
+   if (!armory_->broadcastZC(payoutData_)) {
       logger_->error("[XBTSettlementTransactionWidget::payoutOnCancel] failed to broadcast payout");
       return;
    }
@@ -520,7 +518,7 @@ void XBTSettlementTransactionWidget::OrderReceived()
 {
    if (clientSells_) {
       try {
-         if (!PyBlockDataManager::instance()->broadcastZC(payinData_)) {
+         if (!armory_->broadcastZC(payinData_)) {
             throw std::runtime_error("Failed to bradcast transaction");
          }
          transactionData_->GetWallet()->SetTransactionComment(payinData_, comment_);

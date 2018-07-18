@@ -22,7 +22,7 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
-
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class SignContainer;
@@ -40,12 +40,12 @@ class XBTSettlementTransactionWidget : public QWidget
 Q_OBJECT
 
 public:
-   XBTSettlementTransactionWidget(QWidget* parent = nullptr );
+   XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<AssetManager> &, const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &
+      , QWidget* parent = nullptr);
    ~XBTSettlementTransactionWidget() override;
 
-   void init(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<AssetManager> &, const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<SignContainer> &);
    void reset(const std::shared_ptr<WalletsManager> &walletsManager);
    void populateDetails(const bs::network::RFQ& rfq, const bs::network::Quote& quote
       , const std::shared_ptr<TransactionData>& transactionData);
@@ -134,6 +134,7 @@ private:
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<AddressVerificator>    addrVerificator_;
    std::shared_ptr<SignContainer>         signingContainer_;
+   std::shared_ptr<ArmoryConnection>      armory_;
 
    std::shared_ptr<bs::SettlementMonitor>          monitor_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;

@@ -6,6 +6,7 @@
 namespace Ui {
     class CreateTransactionDialogSimple;
 }
+class ArmoryConnection;
 class CreateTransactionDialogAdvanced;
 
 
@@ -14,7 +15,8 @@ class CreateTransactionDialogSimple : public CreateTransactionDialog
 Q_OBJECT
 
 public:
-   CreateTransactionDialogSimple(const std::shared_ptr<WalletsManager> &
+   CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &, QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override = default;
 

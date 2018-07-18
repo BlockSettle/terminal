@@ -11,11 +11,11 @@ namespace Ui {
 namespace bs {
    class Wallet;
 }
+class ArmoryConnection;
 class QTreeWidgetItem;
-class WalletsManager;
-class PyBlockDataManager;
 class TransactionsViewItem;
 class TxOut;
+class WalletsManager;
 
 //sublcassing this Dialog is not a good idea because of how it handles minimumSize
 
@@ -25,7 +25,7 @@ Q_OBJECT
 
 public:
    TransactionDetailDialog(TransactionsViewItem, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<PyBlockDataManager> &, QWidget* parent = nullptr);
+      , const std::shared_ptr<ArmoryConnection> &, QWidget* parent = nullptr);
    ~TransactionDetailDialog() override = default;
    virtual QSize minimumSizeHint() const override;
    QSize minimumSize() const;

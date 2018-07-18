@@ -3,11 +3,11 @@
 #include "ui_CreateTransactionDialogSimple.h"
 
 #include "Address.h"
+#include "ArmoryConnection.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
 #include "OfflineSigner.h"
-#include "PyBlockDataManager.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
@@ -21,9 +21,10 @@ constexpr int highPriorityBlocksNumber = 0;
 constexpr int normalPriorityBlocksNumber = 3;
 constexpr int lowPriorityBlocksNumber = 6;
 
-CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<WalletsManager>& walletManager
+CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, QWidget* parent)
- : CreateTransactionDialog(walletManager, container, true, parent)
+ : CreateTransactionDialog(armory, walletManager, container, true, parent)
  , ui_(new Ui::CreateTransactionDialogSimple)
 {
    ui_->setupUi(this);
@@ -198,7 +199,7 @@ bool CreateTransactionDialogSimple::userRequestedAdvancedDialog() const
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogSimple::CreateAdvancedDialog()
 {
-   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(walletsManager_
+   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
       , signingContainer_, true, parentWidget());
 
    if (!offlineTransactions_.empty()) {
