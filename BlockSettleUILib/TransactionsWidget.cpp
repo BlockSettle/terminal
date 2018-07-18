@@ -42,7 +42,8 @@ public:
 
       bool walletMatched = false;
       if (!walletIds.isEmpty()) {
-         QModelIndex index = src->index(source_row, static_cast<int>(TransactionsViewModel::Columns::Wallet));
+         const QModelIndex index = src->index(source_row,
+            static_cast<int>(TransactionsViewModel::Columns::Wallet));
          for (const auto &walletId : walletIds) {
             if (src->data(index, TransactionsViewModel::FilterRole).toString() == walletId) {
                walletMatched = true;
@@ -54,7 +55,33 @@ public:
       }
 
       if (transactionDirection != bs::Transaction::Unknown) {
-         if (direction != transactionDirection) {
+         const auto aIdx = src->index(source_row,
+            static_cast<int>(TransactionsViewModel::Columns::Amount));
+         const auto wallet = static_cast<bs::Wallet*>(aIdx.data(
+            TransactionsViewModel::WalletRole).value<void*>());
+
+         if (!walletIds.isEmpty() && wallet->GetType() == bs::wallet::Type::ColorCoin) {
+            const auto a = aIdx.data(Qt::DisplayRole).toDouble();
+
+            switch (transactionDirection) {
+               case bs::Transaction::Received : {
+                  if (a < 0.0) {
+                     return false;
+                  }
+               }
+                  break;
+
+               case bs::Transaction::Sent : {
+                  if (a > 0.0) {
+                     return false;
+                  }
+               }
+                  break;
+
+               default :
+                  return false;
+            }
+         } else if (direction != transactionDirection) {
             return false;
          }
       }

@@ -41,11 +41,10 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    balanceLabel_ = new QLabel(statusBar_);
    balanceLabel_->setVisible(false);
 
-   progressBar_ = new QProgressBar(statusBar_);
+   progressBar_ = new CircleProgressBar(statusBar_);
    progressBar_->setMinimum(0);
    progressBar_->setMaximum(100);
-   progressBar_->setTextVisible(false);
-   progressBar_->setStyleSheet(QLatin1String("QProgressBar {\n   background: transparent;\n   border: 1px solid #666666;\n}\n\nQProgressBar::chunk {\n   margin: 1px;\n background: #666666;\n}"));
+   progressBar_->hide();
 
    celerConnectionIconLabel_ = new QLabel(statusBar_);
    connectionStatusLabel_ = new QLabel(statusBar_);
@@ -54,12 +53,12 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    containerStatusLabel_->setPixmap(iconContainerOffline_);
    containerStatusLabel_->setToolTip(tr("Signing container status"));
 
-   statusBar_->addWidget(progressBar_);
    statusBar_->addWidget(estimateLabel_);
    statusBar_->addWidget(balanceLabel_);
 
    statusBar_->addPermanentWidget(celerConnectionIconLabel_);
    statusBar_->addPermanentWidget(CreateSeparator());
+   statusBar_->addPermanentWidget(progressBar_);
    statusBar_->addPermanentWidget(connectionStatusLabel_);
    statusBar_->addPermanentWidget(CreateSeparator());
    statusBar_->addPermanentWidget(containerStatusLabel_);
@@ -122,6 +121,11 @@ QWidget *StatusBarView::CreateSeparator()
 void StatusBarView::onPrepareArmoryConnection(NetworkType netType, std::string, std::string)
 {
    setupBtcIcon(netType);
+
+   progressBar_->setVisible(false);
+   estimateLabel_->setVisible(false);
+   connectionStatusLabel_->show();
+
    onArmoryStateChanged(ArmoryConnection::State::Offline);
 }
 
@@ -129,6 +133,7 @@ void StatusBarView::onArmoryStateChanged(ArmoryConnection::State state)
 {
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
+   connectionStatusLabel_->show();
 
    switch (state) {
    case ArmoryConnection::State::Scanning:
@@ -179,6 +184,7 @@ void StatusBarView::onArmoryError(QString errorMessage)
 {
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
+   connectionStatusLabel_->show();
 
    connectionStatusLabel_->setToolTip(errorMessage);
    connectionStatusLabel_->setPixmap(iconError_);
@@ -192,47 +198,50 @@ void StatusBarView::updateBalances()
          .arg(QString::fromStdString(currency))
          .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency)));
    }
-
    balanceLabel_->setText(text);
+
+   progressBar_->setVisible(false);
+   estimateLabel_->setVisible(false);
+   connectionStatusLabel_->show();
 }
 
 void StatusBarView::updateDBHeadersProgress(float progress, unsigned secondsRem)
 {
-   connectionStatusLabel_->setToolTip(tr("Loading DB headers"));
+   progressBar_->setToolTip(tr("Loading DB headers"));
    updateProgress(progress, secondsRem);
 }
 
 void StatusBarView::updateOrganizingChainProgress(float progress, unsigned secondsRem)
 {
-   connectionStatusLabel_->setToolTip(tr("Organizing blockchains"));
+   progressBar_->setToolTip(tr("Organizing blockchains"));
    updateProgress(progress, secondsRem);
 }
 
 void StatusBarView::updateBlockHeadersProgress(float progress, unsigned secondsRem)
 {
-   connectionStatusLabel_->setToolTip(tr("Reading new block headers"));
+   progressBar_->setToolTip(tr("Reading new block headers"));
    updateProgress(progress, secondsRem);
 }
 
 void StatusBarView::updateBlockDataProgress(float progress, unsigned secondsRem)
 {
-   connectionStatusLabel_->setToolTip(tr("Building databases"));
+   progressBar_->setToolTip(tr("Building databases"));
    updateProgress(progress, secondsRem);
 }
 
 void StatusBarView::updateRescanProgress(float progress, unsigned secondsRem)
 {
-   connectionStatusLabel_->setToolTip(tr("Rescanning databases"));
+   progressBar_->setToolTip(tr("Rescanning databases"));
    updateProgress(progress, secondsRem);
 }
 
-void StatusBarView::updateProgress(float progress, unsigned secondsRem)
+void StatusBarView::updateProgress(float progress, unsigned)
 {
    progressBar_->setVisible(true);
    estimateLabel_->setVisible(true);
+   connectionStatusLabel_->hide();
 
    progressBar_->setValue(progress * 100);
-   progressBar_->setToolTip(QString(QLatin1String("%1 seconds remaining")).arg(secondsRem));
 }
 
 void StatusBarView::SetLoggedinStatus()

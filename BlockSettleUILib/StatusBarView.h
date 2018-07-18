@@ -4,13 +4,14 @@
 #include <QObject>
 #include <QStatusBar>
 #include <QLabel>
-#include <QProgressBar>
 #include <QPixmap>
 #include <QIcon>
 
 #include <memory>
 #include "ArmoryConnection.h"
 #include "CelerClient.h"
+#include "CircleProgressBar.h"
+
 
 class AssetManager;
 class SignContainer;
@@ -68,12 +69,12 @@ private:
 private:
    QStatusBar     *statusBar_;
 
-   QLabel         *estimateLabel_;
-   QLabel         *balanceLabel_;
-   QLabel         *celerConnectionIconLabel_;
-   QLabel         *connectionStatusLabel_;
-   QLabel         *containerStatusLabel_;
-   QProgressBar   *progressBar_;
+   QLabel            *estimateLabel_;
+   QLabel            *balanceLabel_;
+   QLabel            *celerConnectionIconLabel_;
+   QLabel            *connectionStatusLabel_;
+   QLabel            *containerStatusLabel_;
+   CircleProgressBar *progressBar_;
 
    const QSize iconSize_;
    QIcon       iconCeler_;

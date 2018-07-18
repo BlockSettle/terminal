@@ -14,6 +14,11 @@ TreeViewWithEnterKey::TreeViewWithEnterKey(QWidget *parent)
 {
 }
 
+QStyleOptionViewItem TreeViewWithEnterKey::viewOptions() const
+{
+   return QTreeView::viewOptions();
+}
+
 void TreeViewWithEnterKey::activate()
 {
    setFocus();

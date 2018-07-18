@@ -873,6 +873,21 @@ QPushButton:checked, QToolButton:checked, [buttonImportant="true"]:checked, [but
     border-color: #ffffff;
     background: transparent; }
 
+*[folderButton="true"] {
+  background: transparent;
+  color: #ffffff;
+  border-width: 1px 1px 1px 0px;
+  border-color: #81888f;
+  height: 20px; }
+
+*[folderButton="true"]:hover {
+  border-color: #ffffff;
+  background: transparent; }
+
+*[folderButton="true"]:pressed {
+  border-color: #247dac;
+  background: transparent; }
+
 *[iconButtonPaste="true"] {
   background-image: url(":/resources/copy.png") no-repeat center;
   background-repeat: no-repeat;

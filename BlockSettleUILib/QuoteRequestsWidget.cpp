@@ -100,6 +100,12 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(
       static_cast<int>(QuoteRequestsModel::Column::Empty),
       doNotDrawSelectionDelegate);
+
+   const auto opt = ui_->treeViewQuoteRequests->viewOptions();
+   const int width = opt.fontMetrics.boundingRect(tr("No quote received")).width() + 10;
+   ui_->treeViewQuoteRequests->header()->resizeSection(
+      static_cast<int>(QuoteRequestsModel::Column::Status),
+      width);
 }
 
 void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
@@ -247,7 +253,9 @@ void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, i
       }
       else {
          for (int i = 0; i < sortModel_->columnCount(); ++i) {
-            ui_->treeViewQuoteRequests->resizeColumnToContents(i);
+            if (i != static_cast<int>(QuoteRequestsModel::Column::Status)) {
+               ui_->treeViewQuoteRequests->resizeColumnToContents(i);
+            }
          }
       }
    }
@@ -464,7 +472,9 @@ void ProgressDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt,
 
       QApplication::style()->drawControl(QStyle::CE_ProgressBar, &pOpt, painter, &pbar_);
    } else {
-      QStyledItemDelegate::paint(painter, opt, index);
-      return;
+      QStyleOptionViewItem changedOpt = opt;
+      changedOpt.state &= ~(QStyle::State_Selected);
+
+      QStyledItemDelegate::paint(painter, changedOpt, index);
    }
 }

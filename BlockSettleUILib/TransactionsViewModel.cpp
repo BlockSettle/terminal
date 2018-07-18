@@ -117,6 +117,9 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
          return QVariant();
       }
    }
+   else if (role == WalletRole) {
+      return qVariantFromValue(static_cast<void*>(item.wallet.get()));
+   }
    else if (role == SortRole) {
       switch(col) {
       case Columns::Date:        return item.led->getTxTime();
