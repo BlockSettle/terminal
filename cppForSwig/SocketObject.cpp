@@ -381,12 +381,6 @@ void PersistentSocket::socketService_nix()
             readdata.resize(totalread + readIncrement);
          }
 
-         if (readAmt == 0)
-         {
-            LOGINFO << "POLLIN recv return 0";
-            break;
-         }
-
          if (totalread > 0)
          {
             readdata.resize(totalread);
@@ -404,6 +398,8 @@ void PersistentSocket::socketService_nix()
       if (pfd[1].revents & POLLHUP)
          break;
    }
+
+   run_.store(false, memory_order_relaxed);
 }
 #endif
 
@@ -533,12 +529,6 @@ void PersistentSocket::socketService_win()
             readdata.resize(totalread + readIncrement);
          }
 
-         if (readAmt == 0)
-         {
-            LOGINFO << "POLLIN recv return 0";
-            break;
-         }
-
          if (totalread > 0)
          {
             readdata.resize(totalread);
@@ -557,6 +547,8 @@ void PersistentSocket::socketService_win()
          break;
       }
    }
+
+   run_.store(false, memory_order_relaxed);
 }
 #endif
 
@@ -635,6 +627,8 @@ void PersistentSocket::init()
 ///////////////////////////////////////////////////////////////////////////////
 void PersistentSocket::initPipes()
 {
+   cleanUpPipes();
+
 #ifdef _WIN32
    for (unsigned i = 0; i < 1; i++)
       events_[i] = WSACreateEvent();
@@ -650,7 +644,10 @@ void PersistentSocket::cleanUpPipes()
    {
 #ifdef _WIN32
       if (events_[i] != nullptr)
+      {
          WSACloseEvent(events_[i]);
+         events_[i] = nullptr;
+      }
 #else
       if (pipes_[i] != SOCK_MAX)
          close(pipes_[i]);
@@ -695,6 +692,9 @@ int PersistentSocket::getPeerName(struct sockaddr& sa)
 ///////////////////////////////////////////////////////////////////////////////
 bool PersistentSocket::connectToRemote()
 {
+   if (run_.load(memory_order_relaxed))
+      return true;
+
    if (sockfd_ == SOCK_MAX)
    {
       if (!openSocket(false))
@@ -704,6 +704,7 @@ bool PersistentSocket::connectToRemote()
       }
    }
 
+   run_.store(true, memory_order_relaxed);
    initPipes();
 
    auto readLBD = [this](void)->void

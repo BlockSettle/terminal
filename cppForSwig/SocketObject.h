@@ -39,7 +39,7 @@ typedef function<bool(vector<uint8_t>, exception_ptr)>  ReadCallback;
 struct CallbackReturn
 {
    virtual ~CallbackReturn(void) = 0;
-   virtual void callback(BinaryDataRef) = 0;
+   virtual void callback(BinaryDataRef bdr) = 0;
 };
 
 struct CallbackReturn_CloseBitcoinP2PSocket : public CallbackReturn
@@ -53,8 +53,8 @@ public:
       dataStack_(datastack)
    {}
 
-   void callback(const BinaryDataRef& bdr, exception_ptr eptr) 
-   { dataStack_->terminate(eptr); }
+   void callback(const BinaryDataRef& bdr) 
+   { dataStack_->terminate(nullptr); }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -164,7 +164,7 @@ public:
    SocketPrototype(const string& addr, const string& port, bool init = true);
    virtual ~SocketPrototype(void) = 0;
 
-   bool testConnection(void);
+   virtual bool testConnection(void);
    bool isBlocking(void) const { return blocking_; }
    SOCKET openSocket(bool blocking);
    
@@ -281,6 +281,7 @@ public:
    int getPeerName(struct sockaddr& sa);
    bool connectToRemote(void);
    bool isValid(void) const { return sockfd_ != SOCK_MAX; }
+   bool testConnection(void) { return isValid(); }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
