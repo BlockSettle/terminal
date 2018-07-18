@@ -55,7 +55,7 @@ class QtSettings(Configurator):
             command.append('-debug')
 
         if self._project_settings.on_linux():
-            command.append('-dbus-linked')
+            command.append('-dbus')
         else:
             command.append('-no-dbus')
 
