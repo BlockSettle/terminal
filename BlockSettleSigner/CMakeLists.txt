@@ -58,5 +58,6 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    Qt5::Qml
    Qt5::Quick
    Qt5::Gui
+   Qt5::DBus
    ${OPENSSL_LIBS}
 )

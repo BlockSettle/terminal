@@ -47,5 +47,6 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    Qt5::Network
    Qt5::Qml
    Qt5::PrintSupport
+   Qt5::DBus
    ${OPENSSL_LIBS}
    )
