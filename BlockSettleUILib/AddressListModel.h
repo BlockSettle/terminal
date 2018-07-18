@@ -64,7 +64,7 @@ public:
 
    AddressListModel(std::shared_ptr<WalletsManager> walletsManager, QObject* parent
       , AddressType addrType = AddressType::All);
-   ~AddressListModel() override;
+   ~AddressListModel() noexcept = default;
 
    int rowCount(const QModelIndex & parent) const override;
    int columnCount(const QModelIndex & parent) const override;
