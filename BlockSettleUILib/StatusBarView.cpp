@@ -114,8 +114,8 @@ StatusBarView::StatusBarView(const std::shared_ptr<PyBlockDataManager>& bdm, std
    balanceLabel_->setVisible(false);
 
    progressBar_ = new CircleProgressBar(statusBar_);
-   progressBar_->setMin(0);
-   progressBar_->setMax(100);
+   progressBar_->setMinimum(0);
+   progressBar_->setMaximum(100);
    progressBar_->hide();
 
    celerConnectionIconLabel_ = new QLabel(statusBar_);

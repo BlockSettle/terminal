@@ -22,12 +22,12 @@ CircleProgressBar::CircleProgressBar(QWidget *parent)
    resize(size_);
 }
 
-int CircleProgressBar::min() const
+int CircleProgressBar::minimum() const
 {
    return min_;
 }
 
-void CircleProgressBar::setMin(int v)
+void CircleProgressBar::setMinimum(int v)
 {
    min_ = v;
 
@@ -36,12 +36,12 @@ void CircleProgressBar::setMin(int v)
    }
 }
 
-int CircleProgressBar::max() const
+int CircleProgressBar::maximum() const
 {
    return max_;
 }
 
-void CircleProgressBar::setMax(int v)
+void CircleProgressBar::setMaximum(int v)
 {
    max_ = v;
 
