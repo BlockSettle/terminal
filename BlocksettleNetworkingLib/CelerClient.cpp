@@ -124,12 +124,20 @@ void CelerClient::loginSuccessCallback(const std::string& userName, const std::s
          userId_ = properties[CelerUserProperties::UserIdPropertyName];
          otpId_ = properties[CelerUserProperties::OtpIdPropertyName];
          otpIndex_ = properties[CelerUserProperties::OtpUsedKeyIndexPropertyName];
-         submittedAuthAddressListProperty_ = properties[CelerUserProperties::SubmittedBtcAuthAddressListPropertyName];
-         submittedCCAddressListProperty_ = properties[CelerUserProperties::SubmittedCCAddressListPropertyName];
          bitcoinParticipant_ = properties[CelerUserProperties::BitcoinParticipantPropertyName];
 
-         UpdateSetFromString(submittedAuthAddressListProperty_.value, submittedAuthAddressSet_);
-         UpdateSetFromString(submittedCCAddressListProperty_.value, submittedCCAddressSet_);
+         const auto authIt = properties.find(CelerUserProperties::SubmittedBtcAuthAddressListPropertyName);
+         if (authIt != properties.end()) {
+            submittedAuthAddressListProperty_ = authIt->second;
+            UpdateSetFromString(submittedAuthAddressListProperty_.value, submittedAuthAddressSet_);
+         }
+
+         const auto ccIt = properties.find(CelerUserProperties::SubmittedCCAddressListPropertyName);
+         if (ccIt != properties.end()) {
+            submittedCCAddressListProperty_ = properties[CelerUserProperties::SubmittedCCAddressListPropertyName];
+            UpdateSetFromString(submittedCCAddressListProperty_.value, submittedCCAddressSet_);
+         }
+
          emit OnConnectedToServer();
       });
       ExecuteSequence(getUserIdSequence);
