@@ -35,7 +35,8 @@ public:
       , const std::shared_ptr<WalletsManager> &walletsMgr
       , const std::string &walletsPath
       , const std::string &pwHash = {}
-      , bool hasUI = false);
+      , bool hasUI = false
+      , bool backupEnabled = true);
    ~HeadlessContainerListener() noexcept override;
 
    void SetLimits(const SignContainer::Limits &limits);
@@ -139,6 +140,8 @@ private:
    };
    std::unordered_map<int, TempPasswords> tempPasswords_;
    int reqSeqNo_ = 0;
+
+   bool backupEnabled_ = true;
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__

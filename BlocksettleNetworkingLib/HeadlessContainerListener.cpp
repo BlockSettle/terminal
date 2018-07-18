@@ -14,7 +14,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<WalletsManager> &walletsMgr
    , const std::string &walletsPath
-   , const std::string &pwHash, bool hasUI)
+   , const std::string &pwHash, bool hasUI, bool backupEnabled)
    : QObject(nullptr), ServerConnectionListener()
    , connection_(conn)
    , logger_(logger)
@@ -23,6 +23,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , backupPath_(walletsPath + "../backup")
    , pwHash_(pwHash)
    , hasUI_(hasUI)
+   , backupEnabled_{backupEnabled}
 {
    connect(this, &HeadlessContainerListener::xbtSpent, this, &HeadlessContainerListener::onXbtSpent);
 }
@@ -701,9 +702,12 @@ bool HeadlessContainerListener::onSyncAddress(const std::string &clientId, headl
          newAddresses.push_back(std::tuple<std::shared_ptr<bs::Wallet>, std::string, headless::AddressType>{ wallet, index, request.address(i).addrtype() });
       }
    }
-   for (const auto &hdWallet : walletsForBackup) {
-      if (hdWallet) {
-         walletsMgr_->BackupWallet(hdWallet, backupPath_);
+
+   if (backupEnabled_) {
+      for (const auto &hdWallet : walletsForBackup) {
+         if (hdWallet) {
+            walletsMgr_->BackupWallet(hdWallet, backupPath_);
+         }
       }
    }
 
@@ -769,7 +773,9 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
       return false;
    }
 
-   walletsMgr_->BackupWallet(hdWallet, backupPath_);
+   if (backupEnabled_) {
+      walletsMgr_->BackupWallet(hdWallet, backupPath_);
+   }
 
    const auto onPassword = [this, hdWallet, path, clientId, id](const SecureBinaryData &pass) {
       std::shared_ptr<bs::hd::Node> leafNode;
