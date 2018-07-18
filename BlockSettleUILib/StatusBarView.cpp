@@ -266,6 +266,7 @@ void StatusBarView::updateProgress(float progress, unsigned)
 {
    progressBar_->setVisible(true);
    estimateLabel_->setVisible(true);
+   connectionStatusLabel_->hide();
 
    progressBar_->setValue(progress * 100);
 }
