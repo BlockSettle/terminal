@@ -74,7 +74,7 @@ public slots:
 
 private slots:
    void updateBalances();
-
+   void onSignerReady();
    void walletsLoaded();
 
    void onNumCcySelected();

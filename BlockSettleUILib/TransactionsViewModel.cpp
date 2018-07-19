@@ -38,7 +38,7 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
 
    if (armory_) {
       connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &TransactionsViewModel::onZeroConf, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::stateChanged, this, &TransactionsViewModel::onArmoryStateChanged, Qt::QueuedConnection);
+      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
    }
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
@@ -404,7 +404,7 @@ void TransactionsViewModel::ledgerToTxData()
 void TransactionsViewModel::onDataLoaded()
 {
    emit layoutChanged();
-   QtConcurrent::run(&threadPool_, this, &TransactionsViewModel::loadTransactionDetails, 0, rawData_.size());
+   loadTransactionDetails(0, rawData_.size());
    emit dataLoaded(currentPage_.size());
 }
 
@@ -416,7 +416,7 @@ void TransactionsViewModel::onNewItems(const TransactionItems items)
    currentPage_.insert(currentPage_.end(), items.begin(), items.end());
    endInsertRows();
 
-   QtConcurrent::run(&threadPool_, this, &TransactionsViewModel::loadTransactionDetails, curLastIdx, items.size());
+   loadTransactionDetails(curLastIdx, items.size());
 }
 
 int TransactionsViewModel::getItemIndex(const TransactionsViewItem &item) const

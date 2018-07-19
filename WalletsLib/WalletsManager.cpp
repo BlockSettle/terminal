@@ -24,7 +24,7 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
    if (armory_) {
       connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::txBroadcastError, this, &WalletsManager::onBroadcastZCError, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::stateChanged, this, &WalletsManager::onStateChanged, Qt::QueuedConnection);
+      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::newBlock, this, &WalletsManager::onRefresh, Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::refresh, this, &WalletsManager::onRefresh, Qt::QueuedConnection);
    }
@@ -443,7 +443,6 @@ BTCNumericTypes::balance_type WalletsManager::GetUnconfirmedBalance() const
    // TODO: make it lazy init
    BTCNumericTypes::balance_type totalUnconfirmed = 0;
 
-   QMutexLocker lock(&mtxWallets_);
    for (const auto& it : wallets_) {
       totalUnconfirmed += it.second->GetUnconfirmedBalance();
    }
@@ -456,10 +455,8 @@ BTCNumericTypes::balance_type WalletsManager::GetTotalBalance() const
    if (!IsArmoryReady()) {
       return 0;
    }
-   // TODO: make it lazy init
    BTCNumericTypes::balance_type totalBalance = 0;
 
-   QMutexLocker lock(&mtxWallets_);
    for (const auto& it : wallets_) {
       totalBalance += it.second->GetTotalBalance();
    }
@@ -482,6 +479,9 @@ void WalletsManager::onStateChanged(ArmoryConnection::State state)
       UpdateSavedWallets();
       emit walletsReady();
    }
+   else {
+      logger_->debug("[WalletsManager] Armory state changed: {}", (int)state);
+   }
 }
 
 void WalletsManager::onWalletReady(const QString &walletId)
@@ -496,8 +496,8 @@ void WalletsManager::onWalletReady(const QString &walletId)
       nbWallets++;
    }
    if (readyWallets_.size() >= nbWallets) {     
-      bool rc = armory_->goOnline();
-      logger_->debug("All wallets are ready - going online = {}", rc);
+      logger_->debug("All wallets are ready - going online");
+      armory_->goOnline();
       readyWallets_.clear();
    }
 }
@@ -510,7 +510,6 @@ bool WalletsManager::IsArmoryReady() const
 WalletsManager::wallet_gen_type WalletsManager::GetWalletById(const std::string& walletId) const
 {
    {
-      QMutexLocker lock(&mtxWallets_);
       auto it = wallets_.find(walletId);
       if (it != wallets_.end()) {
          return it->second;
@@ -526,7 +525,6 @@ WalletsManager::wallet_gen_type WalletsManager::GetWalletByAddress(const bs::Add
 {
    const auto &address = addr.unprefixed();
    {
-      QMutexLocker lock(&mtxWallets_);
       for (const auto wallet : wallets_) {
          if (wallet.second && (wallet.second->containsAddress(address)
             || wallet.second->containsHiddenAddress(address))) {
@@ -635,11 +633,11 @@ void WalletsManager::RegisterSavedWallets()
       return;
    }
    if (empty()) {
+      logger_->debug("Going online before wallets are added");
       armory_->goOnline();
       return;
    }
    {
-      QMutexLocker lock(&mtxWallets_);
       for (auto &it : wallets_) {
          it.second->RegisterWallet(armory_);
       }
@@ -652,7 +650,6 @@ void WalletsManager::RegisterSavedWallets()
 void WalletsManager::UpdateSavedWallets()
 {
    {
-      QMutexLocker lock(&mtxWallets_);
       for (auto &it : wallets_) {
          it.second->firstInit();
       }
@@ -932,7 +929,6 @@ void WalletsManager::AddWallet(const hd_wallet_type &wallet, const QString &wall
 void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr)
 {
    const auto &cc = ccProd.toStdString();
-   QMutexLocker lock(&mtxWallets_);
    for (const auto &wallet : wallets_) {
       if (wallet.second->GetType() != bs::wallet::Type::ColorCoin) {
          continue;
@@ -1043,7 +1039,6 @@ bool WalletsManager::getNewTransactions() const
       }
    };
    {
-      QMutexLocker lock(&mtxWallets_);
       for (const auto &wallet : wallets_) {
          if (armory_->state() != ArmoryConnection::State::Ready) {
             return false;

@@ -2,9 +2,6 @@
 
 #include <QFile>
 #include <QProcess>
-#include <QDebug>
-#include <QMutexLocker>
-#include <QTimer>
 
 #include <cassert>
 #include <exception>
@@ -18,153 +15,8 @@
 #include "SocketIncludes.h"
 
 const int DefaultArmoryDBStartTimeoutMsec = 500;
-constexpr uint64_t CheckConnectionTimeoutMiliseconds = 500;
 
-#if 0
-void PyBlockDataManager::run(BDMAction action, void* ptr, int block)
-{
-   switch(action) {
-   case BDMAction_Ready:
-      topBlockHeight_ = block;
-      SetState(PyBlockDataManagerState::Ready);
-      qDebug() << "BDMAction_Ready";
-      break;
-   case BDMAction_NewBlock:
-      topBlockHeight_ = block;
-      qDebug() << "BDMAction_NewBlock";
-      // force update
-      SetState(PyBlockDataManagerState::Ready);
-      onNewBlock();
-      break;
-   case BDMAction_ZC:
-      qDebug() << "BDMAction_ZC";
-      onZCReceived(*reinterpret_cast<std::vector<ClientClasses::LedgerEntry>*>(ptr));
-      break;
-   case BDMAction_Refresh:
-      qDebug() << "BDMAction_Refresh";
-      onRefresh(*reinterpret_cast<std::vector<BinaryData> *>(ptr));
-      break;
-   case BDMAction_Exited:
-      // skip for now
-      break;
-   case BDMAction_ErrorMsg:
-      // skip for now
-      break;
-   case BDMAction_NodeStatus:
-   {
-      NodeStatusStruct *nss = (NodeStatusStruct*)ptr;
-      QString nodeStatusString;
-      QString rpcStatusString;
-      QString chainStatusString;
-
-      switch(nss->status_)
-      {
-      case NodeStatus_Offline:
-         nodeStatusString = QLatin1String("Offline");
-         break;
-      case NodeStatus_Online:
-         nodeStatusString = QLatin1String("Online");
-         break;
-      case NodeStatus_OffSync:
-         nodeStatusString = QLatin1String("OffSync");
-         break;
-      }
-
-      switch(nss->rpcStatus_)
-      {
-      case RpcStatus_Disabled:
-         rpcStatusString = QLatin1String("Disabled");
-         break;
-      case RpcStatus_BadAuth:
-         rpcStatusString = QLatin1String("BadAuth");
-         break;
-      case RpcStatus_Online:
-         rpcStatusString = QLatin1String("Online");
-         break;
-      case RpcStatus_Error_28:
-         rpcStatusString = QLatin1String("Error_28");
-         break;
-      }
-
-      switch(nss->chainState_.state())
-      {
-      case ChainStatus_Unknown:
-         chainStatusString = QLatin1String("Unknown");
-         break;
-      case ChainStatus_Syncing:
-         chainStatusString = QLatin1String("Syncing");
-         break;
-      case ChainStatus_Ready:
-         chainStatusString = QLatin1String("Ready");
-         break;
-      }
-
-      QString segwitEnabled = nss->SegWitEnabled_ ? QLatin1String("Enabled") : QLatin1String("Disabled");
-
-      qDebug() << "Node status : " << nodeStatusString << "\n"
-               << "RPC status  : " << rpcStatusString << "\n"
-               << "Chain status: " << chainStatusString << "\n"
-               << "SegWit      : " << segwitEnabled;
-   }
-      break;
-
-   case BDMAction_BDV_Error:
-      BDV_Error_Struct *bdvErr = (BDV_Error_Struct *)ptr;
-      qDebug() << "BDMAction_BDV_Error: " << bdvErr->errType_ << " " << QString::fromStdString(bdvErr->errorStr_) << "\n"
-         << QString::fromStdString(bdvErr->extraMsg_) << "\n";
-
-      switch (bdvErr->errType_)
-      {
-      case Error_ZC:
-         emit txBroadcastError(QString::fromStdString(bdvErr->extraMsg_), QString::fromStdString(bdvErr->errorStr_));
-         break;
-      }
-   }
-}
-
-bool PyBlockDataManager::setupConnection()
-{
-   if (currentState_ != PyBlockDataManagerState::Offline) {
-      return false;
-   }
-
-   if (!isArmoryDBAvailable() && settings_.runLocally) {
-     qDebug() << QLatin1String("DB is offline");
-     if (!StartLocalArmoryDB()) {
-        qDebug() << QLatin1String("Failed to start DB");
-
-        SetState(PyBlockDataManagerState::Offline);
-        return false;
-     }
-   }
-
-   return startConnectionMonitor();
-}
-
-std::vector<ClientClasses::LedgerEntry> PyBlockDataManager::getWalletsHistory(const std::vector<std::string> &walletIDs)
-{
-   try {
-      FastLock lock(bdvLock_);
-      return bdv_->getHistoryForWalletSelection(walletIDs, "ascending");
-   }
-   catch (const DbErrorMsg &e) {
-      qDebug() << QLatin1String("[PyBlockDataManager::getWalletsHistory] DbErrorMsg: ") << QString::fromStdString(e.what());
-   }
-   catch (const std::exception &e) {
-      qDebug() << QLatin1String("[PyBlockDataManager::getWalletsHistory] exception: ") << QLatin1String(e.what());
-   }
-   catch (...) {
-      qDebug() << QLatin1String("[PyBlockDataManager::getWalletsHistory] exception");
-   }
-   return {};
-}
-
-bool PyBlockDataManager::isArmoryDBAvailable()
-{
-   FastLock lock(bdvLock_);
-   return bdv_->hasRemoteDB();
-}
-
+#if 0    // Disabled code below is kept for re-implementing it in ArmoryConnection
 bool PyBlockDataManager::StartLocalArmoryDB()
 {
    const QString armoryDBPath = settings_.armoryExecutablePath;
@@ -234,68 +86,11 @@ void PyBlockDataManager::onScheduleRPCBroadcast(const BinaryData& rawTx)
       }
    });
 }
-
-bool PyBlockDataManager::startConnectionMonitor()
-{
-   stopMonitorEvent_->ResetEvent();
-   if (connectionMonitorThread_.joinable()) {
-      connectionMonitorThread_.join();
-   }
-   connectionMonitorThread_ = std::thread(&PyBlockDataManager::monitoringRoutine, this);
-
-   return true;
-}
-
-bool PyBlockDataManager::stopConnectionMonitor()
-{
-   stopMonitorEvent_->SetEvent();
-   if (connectionMonitorThread_.joinable()) {
-      connectionMonitorThread_.join();
-   }
-
-   return true;
-}
-
-void PyBlockDataManager::monitoringRoutine()
-{
-   do {
-      if (isArmoryDBAvailable()) {
-         if (OnArmoryAvailable()) {
-            // ok, we got connected, no need for monitoring
-            break;
-         }
-      }
-   } while (!stopMonitorEvent_->WaitForEvent(CheckConnectionTimeoutMiliseconds));
-   qDebug() << "Quit monitoring";
-}
-
-bool PyBlockDataManager::updateWalletsLedgerFilter(const vector<BinaryData>& wltIdVec)
-{
-   try {
-      FastLock lock(bdvLock_);
-      bdv_->updateWalletsLedgerFilter(wltIdVec);
-      return true;
-   }
-   catch (const SocketError& e) {
-      qDebug() << QLatin1String("[PyBlockDataManager::broadcastZC] SocketError: ") << QString::fromStdString(e.what());
-   }
-   catch (const DbErrorMsg& e) {
-      qDebug() << QLatin1String("[PyBlockDataManager::broadcastZC] DbErrorMsg: ") << QString::fromStdString(e.what());
-   }
-   catch (const std::exception& e) {
-      qDebug() << QLatin1String("[PyBlockDataManager::broadcastZC] exception: ") << QString::fromStdString(e.what());
-   }
-   catch (...) {
-      qDebug() << QLatin1String("[PyBlockDataManager::broadcastZC] exception.");
-   }
-
-   OnConnectionError();
-
-   return false;
-}
 #endif //0
 
-Q_DECLARE_METATYPE(ArmoryConnection::State);
+Q_DECLARE_METATYPE(ArmoryConnection::State)
+Q_DECLARE_METATYPE(BDMPhase)
+Q_DECLARE_METATYPE(NetworkType)
 
 //==========================================================================================================
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger, const std::string &txCacheFN)
@@ -304,27 +99,51 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    , txCache_(txCacheFN)
    , regThreadRunning_(false)
    , connThreadRunning_(false)
+   , maintThreadRunning_(true)
    , reqIdSeq_(1)
+   , zcPersistenceTimeout_(30)
 {
-   qRegisterMetaType<State>();
+   qRegisterMetaType<ArmoryConnection::State>();
+   qRegisterMetaType<BDMPhase>();
+   qRegisterMetaType<NetworkType>();
+
+   const auto &cbZCMaintenance = [this] {
+      while (maintThreadRunning_) {
+         if (zcMaintCV_.wait_for(std::unique_lock<std::mutex>(zcMaintMutex_), std::chrono::seconds{ 10 })
+            != std::cv_status::timeout) {
+            if (!maintThreadRunning_) {
+               break;
+            }
+         }
+
+         std::vector<ReqIdType> zcToDelete;
+         const auto curTime = std::chrono::system_clock::now();
+
+         FastLock lock(zcLock_);
+         for (const auto &zc : zcData_) {
+            const std::chrono::duration<double> timeDiff = curTime - zc.second.received;
+            if (timeDiff > zcPersistenceTimeout_) {
+               zcToDelete.push_back(zc.first);
+            }
+         }
+         for (const auto &reqId : zcToDelete) {
+            zcData_.erase(reqId);
+         }
+      }
+   };
+   std::thread(cbZCMaintenance).detach();
 }
 
 ArmoryConnection::~ArmoryConnection()
 {
-   if (connectThread_.joinable()) {
-      connectThread_.join();
-   }
    stopServiceThreads();
 }
 
 void ArmoryConnection::stopServiceThreads()
 {
-   if (regThreadRunning_) {
-      regThreadRunning_ = false;
-      if (regThread_.joinable()) {
-         regThread_.join();
-      }
-   }
+   regThreadRunning_ = false;
+   maintThreadRunning_ = false;
+   zcMaintCV_.notify_one();
 }
 
 void ArmoryConnection::setupConnection(const ArmorySettings &settings)
@@ -332,11 +151,13 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
    emit prepareConnection(settings.netType, settings.armoryDBIp, settings.armoryDBPort);
 
    const auto &registerRoutine = [this, settings] {
+      logger_->debug("[ArmoryConnection::registerRoutine] started");
       while (regThreadRunning_) {
          try {
             registerBDV(settings.netType);
             if (!bdv_->getID().empty()) {
                cbRemote_ = std::make_shared<ArmoryCallback>(bdv_->getRemoteCallbackSetupStruct(), this, logger_);
+               logger_->debug("[ArmoryConnection::registerRoutine] got BDVid: {}", bdv_->getID());
                setState(State::Connected);
                break;
             }
@@ -350,9 +171,14 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
             emit connectionError(QLatin1String(e.what()));
             setState(State::Error);
          }
+         catch (...) {
+            logger_->error("[ArmoryConnection::setup] registerBDV exception");
+            emit connectionError(QString());
+         }
          std::this_thread::sleep_for(1s);
       }
       regThreadRunning_ = false;
+      logger_->debug("[ArmoryConnection::registerRoutine] completed");
    };
 
    const auto &connectRoutine = [this, settings, registerRoutine] {
@@ -372,12 +198,13 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
       }
       bdv_ = std::make_shared<AsyncClient::BlockDataViewer>(AsyncClient::BlockDataViewer::getNewBDV(
          settings.armoryDBIp, settings.armoryDBPort, SocketWS/*settings.socketType*/));
+      logger_->debug("[ArmoryConnection::connectRoutine] BDV connected");
 
       regThreadRunning_ = true;
-      regThread_ = std::thread(registerRoutine);
+      std::thread(registerRoutine).detach();
       connThreadRunning_ = false;
    };
-   connectThread_ = std::thread(connectRoutine);
+   std::thread(connectRoutine).detach();
 }
 
 bool ArmoryConnection::goOnline()
@@ -429,8 +256,9 @@ void ArmoryConnection::setState(State state)
 
 bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
 {
-   if (!bdv_ || (state_ != State::Ready) || (state_ != State::Connected)) {
-      logger_->error("[ArmoryConnection::goOnline] invalid state: {}", (int)state_);
+   if (!bdv_ || ((state_ != State::Ready) && (state_ != State::Connected))) {
+      logger_->error("[ArmoryConnection::broadcastZC] invalid state: {} (BDV null: {})"
+         , (int)state_, (bdv_ == nullptr));
       return false;
    }
 
@@ -448,7 +276,7 @@ ArmoryConnection::ReqIdType ArmoryConnection::setZC(const std::vector<ClientClas
 {
    const auto reqId = reqIdSeq_++;
    FastLock lock(zcLock_);
-   zcData_[reqId] = { std::move(entries) };
+   zcData_[reqId] = ZCData{ std::chrono::system_clock::now(), std::move(entries) };
    return reqId;
 }
 
@@ -465,8 +293,8 @@ std::vector<ClientClasses::LedgerEntry> ArmoryConnection::getZCentries(ArmoryCon
 std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
    , const std::string &walletId, const std::vector<BinaryData> &addrVec, bool asNew)
 {
-   if (!bdv_ || (state_ != State::Ready) || (state_ != State::Connected)) {
-      logger_->error("[ArmoryConnection::goOnline] invalid state: {}", (int)state_);
+   if (!bdv_ || ((state_ != State::Ready) && (state_ != State::Connected))) {
+      logger_->error("[ArmoryConnection::registerWallet] invalid state: {}", (int)state_);
       return {};
    }
    if (!wallet) {
@@ -504,6 +332,7 @@ bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletI
       logger_->error("[ArmoryConnection::getLedgerDelegatesForAddresses] invalid state: {}", (int)state_);
       return false;
    }
+
    auto addrSet = new std::set<bs::Address>;
    auto result = new std::map<bs::Address, AsyncClient::LedgerDelegate>;
    for (const auto &addr : addresses) {
@@ -661,7 +490,9 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 
    case BDMAction_Refresh:
       logger_->debug("[ArmoryCallback::run] BDMAction_Refresh");
-      emit connection_->refresh(*reinterpret_cast<std::vector<BinaryData> *>(ptr));
+      if (connection_->state() == ArmoryConnection::State::Ready) {
+         emit connection_->refresh(*reinterpret_cast<std::vector<BinaryData> *>(ptr));
+      }
       break;
 
    case BDMAction_NodeStatus: {

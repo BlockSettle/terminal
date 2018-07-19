@@ -71,10 +71,11 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
 
    SetLoggedOutStatus();
 
-   connect(armory_.get(), &ArmoryConnection::prepareConnection, this, &StatusBarView::onPrepareArmoryConnection);
-   connect(armory_.get(), &ArmoryConnection::stateChanged, this, &StatusBarView::onArmoryStateChanged);
-   connect(armory_.get(), &ArmoryConnection::progress, this, &StatusBarView::onArmoryProgress);
-   connect(armory_.get(), &ArmoryConnection::connectionError, this, &StatusBarView::onArmoryError);
+   connect(armory_.get(), &ArmoryConnection::prepareConnection, this, &StatusBarView::onPrepareArmoryConnection, Qt::QueuedConnection);
+   connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this
+      , SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryConnection::progress, this, &StatusBarView::onArmoryProgress, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryConnection::connectionError, this, &StatusBarView::onArmoryError, Qt::QueuedConnection);
 
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &StatusBarView::updateBalances);
    connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &StatusBarView::updateBalances);
@@ -101,12 +102,13 @@ void StatusBarView::setupBtcIcon(NetworkType netType)
 
    QIcon btcIcon(QLatin1String(":/ICON_BITCOIN") + iconSuffix);
    QIcon btcIconGray(QLatin1String(":/ICON_BITCOIN_GRAY"));
+   QIcon btcIconEnabled(QLatin1String(":/ICON_BITCOIN_ENABLED"));
+   QIcon btcIconError(QLatin1String(":/ICON_BITCOIN_ERROR"));
 
    iconOffline_ = btcIconGray.pixmap(iconSize_);
-   iconError_ = btcIconGray.pixmap(iconSize_);
+   iconError_ = btcIconError.pixmap(iconSize_);
    iconOnline_ = btcIcon.pixmap(iconSize_);
-   iconConnecting_ = btcIconGray.pixmap(iconSize_);
-
+   iconConnecting_ = btcIconEnabled.pixmap(iconSize_);
 }
 
 QWidget *StatusBarView::CreateSeparator()
@@ -124,7 +126,6 @@ void StatusBarView::onPrepareArmoryConnection(NetworkType netType, std::string, 
 
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
-   connectionStatusLabel_->show();
 
    onArmoryStateChanged(ArmoryConnection::State::Offline);
 }
@@ -137,6 +138,7 @@ void StatusBarView::onArmoryStateChanged(ArmoryConnection::State state)
 
    switch (state) {
    case ArmoryConnection::State::Scanning:
+   case ArmoryConnection::State::Connected:
       connectionStatusLabel_->setToolTip(tr("Connecting..."));
       connectionStatusLabel_->setPixmap(iconConnecting_);
       break;

@@ -167,10 +167,7 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQTicketXBT::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::AddressSyncComplete, this, &RFQTicketXBT::walletsLoaded);
-      connect(signingContainer_.get(), &SignContainer::ready, [this] {
-         updateSubmitButton();
-         ui_->receivingWalletWidget->setEnabled(!signingContainer_->isOffline());
-      });
+      connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
 
    updateSubmitButton();
@@ -372,6 +369,12 @@ void RFQTicketXBT::walletsLoaded()
       ui_->comboBoxXBTWallets->setEnabled(true);
       walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWallets, walletsManager_, signingContainer_));
    }
+}
+
+void RFQTicketXBT::onSignerReady()
+{
+   updateSubmitButton();
+   ui_->receivingWalletWidget->setEnabled(!signingContainer_->isOffline());
 }
 
 void RFQTicketXBT::fillRecvAddresses()

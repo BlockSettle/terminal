@@ -53,7 +53,7 @@ AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& lo
    , userCallback_(callback)
    , stopExecution_(false)
 {
-   connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressVerificator::OnRefresh);
+   connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressVerificator::OnRefresh, Qt::QueuedConnection);
 
    startCommandQueue();
 }

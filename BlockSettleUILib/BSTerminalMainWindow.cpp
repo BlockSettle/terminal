@@ -401,7 +401,7 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       QMetaObject::invokeMethod(this, "InitTransactionsView", Qt::QueuedConnection);
 
       if (walletsManager_->GetWalletsCount() != 0) {
-         action_send_->setEnabled(true);
+         QMetaObject::invokeMethod(action_send_, "setEnabled", Q_ARG(bool, true));
       }
       else {
          QTimer::singleShot(1234, [this] { createWallet(!walletsManager_->HasPrimaryWallet()); });
@@ -462,7 +462,7 @@ void BSTerminalMainWindow::initArmory()
       NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { txHash, error });
    });
    connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &BSTerminalMainWindow::onZCreceived, Qt::QueuedConnection);
-   connect(armory_.get(), &ArmoryConnection::stateChanged, this, &BSTerminalMainWindow::onArmoryStateChanged);
+   connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
 }
 
 void BSTerminalMainWindow::connectArmory()
@@ -845,10 +845,6 @@ void BSTerminalMainWindow::closeEvent(QCloseEvent* event)
    else {
       QMainWindow::closeEvent(event);
       QApplication::exit();
-      std::thread([] {
-         std::this_thread::sleep_for(std::chrono::seconds(10));
-         exit(0);
-      }).detach();
    }
 }
 

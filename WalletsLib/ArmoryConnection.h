@@ -2,6 +2,7 @@
 #define __ARMORY_CONNECTION_H__
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <thread>
@@ -90,7 +91,7 @@ public:
    unsigned int getConfirmationsNumber(const ClientClasses::LedgerEntry &item) const;
 
 signals:
-   void stateChanged(State) const;
+   void stateChanged(ArmoryConnection::State) const;
    void connectionError(QString) const;
    void prepareConnection(NetworkType, std::string host, std::string port) const;
    void progress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress) const;
@@ -116,17 +117,19 @@ private:
    TxCacheFile    txCache_;
 
    std::atomic_bool  regThreadRunning_;
-   std::thread       regThread_;
    std::atomic_bool  connThreadRunning_;
-   std::thread       connectThread_;
-
+   std::atomic_bool  maintThreadRunning_;
    std::atomic<ReqIdType>  reqIdSeq_;
-   const int      zcPersistenceTimeout_ = 30;   // seconds
+
+   const const std::chrono::duration<double> zcPersistenceTimeout_;
    struct ZCData {
+      std::chrono::system_clock::time_point     received;
       std::vector<ClientClasses::LedgerEntry>   entries;
    };
    std::unordered_map<ReqIdType, ZCData>  zcData_;
    mutable std::atomic_flag      zcLock_ = ATOMIC_FLAG_INIT;
+   std::condition_variable       zcMaintCV_;
+   mutable std::mutex            zcMaintMutex_;
 };
 
 #endif // __ARMORY_CONNECTION_H__
