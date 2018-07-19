@@ -340,6 +340,8 @@ SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb)
 INCLUDE_DIRECTORIES( ${CRYPTOPP_EXTRA_DIR} )
 INCLUDE_DIRECTORIES( ${MDB_DIR} )
 
+SET( QT_LINUX_LIBS )
+
 IF(WIN32)
    # setup leveldb_windows_port dirs
    SET( LEVELDB_WINDOWS_PORT_DIR  ${CRYPTO_LIB_DIR}/leveldb_windows_port/win32_posix)
@@ -518,32 +520,67 @@ ELSE(WIN32)
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
-      SET(QT_LIBS
+      SET( QT_LIBS
          libqtharfbuzz.a
-         libqtpcre2.a
-         libQt5EventDispatcherSupport.a
-         libQt5ThemeSupport.a
-         libQt5ServiceSupport.a
-         libQt5XcbQpa.a
-         libQt5EdidSupport.a
-         )
+         libqtpcre2.a )
 
-      SET(OS_SPECIFIC_LIBS
-         dl
-         ${CMAKE_THREAD_LIBS_INIT}
-         ${ZLIB_LIBRARIES}
-         ${XCB_LIBRARIES}
-         ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
-         ${FREETYPE_LIBRARIES}
-         ${FONTCONFIG_LIBRARIES}
-         X11-xcb
-         Xrender
-         png
+      SET( TMP_LIBS
+         libQt5XcbQpa.a
+         libQt5ServiceSupport.a
+         libQt5ThemeSupport.a
+         libQt5EventDispatcherSupport.a
+         libQt5FontDatabaseSupport.a
+         libQt5LinuxAccessibilitySupport.a
+         libQt5AccessibilitySupport.a
+         libQt5EdidSupport.a )
+
+      LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+
+      IF(NOT EXISTS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+         MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a")
+      ENDIF()
+
+      FOREACH(lib_name ${TMP_LIBS})
+         IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
+            MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
+         ENDIF()
+
+         LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
+      ENDFOREACH(lib_name)
+
+      SET( OS_SPECIFIC_LIBS
          Qt5::QXcbIntegrationPlugin
          Qt5::QICOPlugin
-         ${X11_LIBRARIES}
-         ${X11_Xi_LIB}
-         )
+         fontconfig
+         freetype
+         X11-xcb
+         X11
+         Xi
+         SM
+         ICE
+         Xrender
+         xcb-xkb
+         xcb-render-util
+         xcb-sync
+         xcb-xfixes
+         xcb-xinerama
+         xcb-randr
+         xcb-render
+         xcb-image
+         xcb-shm
+         xcb-keysyms
+         xcb-icccm
+         xcb-shape
+         xcb
+         xkbcommon-x11
+         xkbcommon
+         dbus-1
+         ${ZLIB_LIBRARIES}
+         png
+         m
+         double-conversion
+         dl
+         ${CMAKE_THREAD_LIBS_INIT} )
 
       SET(QT_QUICK_LIBS
          ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
@@ -569,7 +606,7 @@ FOREACH(lib_name ${QT_LIBS})
       MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
    ENDIF()
 
-   LIST(APPEND OS_SPECIFIC_LIBS ${QT5_LIB_ROOT}/${lib_name})
+   LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
 
 ADD_SUBDIRECTORY(BlockSettleApp)

@@ -48,16 +48,17 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    ${BLOCKSETTLE_UI_LIBRARY_NAME}
    ${BS_NETWORK_LIB_NAME}
    ${CPP_WALLET_LIB_NAME}
-   ${OS_SPECIFIC_LIBS}
    ${CRYPTO_LIB_NAME}
    ${ZMQ_LIB}
    ${QRENCODE_LIB}
+   ${QT_LINUX_LIBS}
    ${QT_QUICK_LIBS}
-   Qt5::Core
-   Qt5::Network
    Qt5::Qml
    Qt5::Quick
    Qt5::Gui
    Qt5::DBus
+   Qt5::Network
+   Qt5::Core
+   ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
 )
