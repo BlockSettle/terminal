@@ -107,6 +107,10 @@ ApplicationWindow {
         }
     }
 
+    onClosing: {
+        settingsPage.storeSettings();
+        autoSignPage.storeSettings();
+    }
 
     signal passwordEntered(string walletId, string password)
 
@@ -125,6 +129,7 @@ ApplicationWindow {
     }
 
    function raiseWindow() {
+        mainWindow.show()
         mainWindow.raise()
         mainWindow.flags |= Qt.WindowStaysOnTopHint	// hack while raise() doesn't work properly
         mainWindow.flags &= ~Qt.WindowStaysOnTopHint
