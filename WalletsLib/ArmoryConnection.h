@@ -121,7 +121,7 @@ private:
    std::atomic_bool  maintThreadRunning_;
    std::atomic<ReqIdType>  reqIdSeq_;
 
-   const const std::chrono::duration<double> zcPersistenceTimeout_;
+   const std::chrono::duration<double> zcPersistenceTimeout_;
    struct ZCData {
       std::chrono::system_clock::time_point     received;
       std::vector<ClientClasses::LedgerEntry>   entries;
