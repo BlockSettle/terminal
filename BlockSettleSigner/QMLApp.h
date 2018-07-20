@@ -22,6 +22,7 @@ class SignerSettings;
 class WalletsManager;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
+class DBusNotification;
 
 
 class QMLAppObj : public QObject
@@ -70,6 +71,18 @@ private:
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
+
+   enum NotificationMode {
+      QSystemTray,
+      Freedesktop
+   };
+
+   NotificationMode notifMode_;
+
+#ifdef BS_USE_DBUS
+   DBusNotification *dbus_;
+#endif // BS_USE_DBUS
+
    std::unordered_set<std::string>  offlinePasswordRequests_;
 };
 
