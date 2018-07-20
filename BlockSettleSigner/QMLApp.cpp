@@ -278,7 +278,7 @@ void QMLAppObj::onSysTrayMsgClicked()
 
 void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
-   if (reason == QSystemTrayIcon::DoubleClick) {
+   if (reason == QSystemTrayIcon::Trigger) {
       QMetaObject::invokeMethod(rootObj_, "raiseWindow");
    }
 }
