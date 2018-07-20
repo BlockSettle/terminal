@@ -41,6 +41,7 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${CRYPTO_LIB_NAME}
    ${ZMQ_LIB}
    ${QRENCODE_LIB}
+   ${WS_LIB}
    Qt5::Core
    Qt5::Widgets
    Qt5::Gui
