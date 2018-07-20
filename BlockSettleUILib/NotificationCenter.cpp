@@ -3,7 +3,6 @@
 #include "ApplicationSettings.h"
 #include "MessageBoxWarning.h"
 
-#include <QSystemTrayIcon>
 #if defined (Q_OS_WIN)
 #include <shellapi.h>
 #else
@@ -92,9 +91,24 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 NotificationTrayIconResponder::NotificationTrayIconResponder(const std::shared_ptr<QSystemTrayIcon> &trayIcon
    , const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
    : NotificationResponder(parent), trayIcon_(trayIcon), appSettings_(appSettings)
+   , notifMode_(QSystemTray)
+#ifdef BS_USE_DBUS
+   , dbus_(new DBusNotification(tr("BlockSettle Terminal"), this))
+#endif
 {
    connect(trayIcon_.get(), &QSystemTrayIcon::messageClicked, this, &NotificationTrayIconResponder::newVersionMessageClicked);
+
+#ifdef BS_USE_DBUS
+   if(dbus_->isValid()) {
+       notifMode_ = Freedesktop;
+
+       connect(dbus_, &DBusNotification::actionInvoked,
+         this, &NotificationTrayIconResponder::notificationAction);
+   }
+#endif // BS_USE_DBUS
 }
+
+static const QString c_newVersionAction = QLatin1String("BlockSettleNewVersionAction");
 
 void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
@@ -157,7 +171,16 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    default: return;
    }
 
-   trayIcon_->showMessage(title, text, icon, msecs);
+   if (notifMode_ == QSystemTray) {
+      trayIcon_->showMessage(title, text, icon, msecs);
+   }
+#ifdef BS_USE_DBUS
+   else {
+      dbus_->notifyDBus(icon, title, text, QIcon(), msecs,
+         (newVersionMessage_ ? c_newVersionAction : QString()),
+         (newVersionMessage_ ? tr("Update") : QString()));
+   }
+#endif // BS_USE_DBUS
 }
 
 void NotificationTrayIconResponder::newVersionMessageClicked()
@@ -191,3 +214,13 @@ void NotificationTrayIconResponder::newVersionMessageClicked()
 #endif
    }
 }
+
+#ifdef BS_USE_DBUS
+void NotificationTrayIconResponder::notificationAction(const QString &action)
+{
+   if (action == c_newVersionAction) {
+      newVersionMessage_ = true;
+      newVersionMessageClicked();
+   }
+}
+#endif // BS_USE_DBUS
