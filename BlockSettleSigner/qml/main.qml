@@ -129,9 +129,10 @@ ApplicationWindow {
     }
 
    function raiseWindow() {
-        mainWindow.show()
+        mainWindow.flags &= ~Qt.WindowMinimized
+        mainWindow.flags |= Qt.WindowActive
         mainWindow.raise()
-        mainWindow.flags |= Qt.WindowStaysOnTopHint	// hack while raise() doesn't work properly
+        mainWindow.flags |= Qt.WindowStaysOnTopHint    // hack while raise() doesn't work properly
         mainWindow.flags &= ~Qt.WindowStaysOnTopHint
    }
 }

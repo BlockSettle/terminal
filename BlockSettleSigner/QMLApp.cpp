@@ -88,6 +88,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    if (dbus_->isValid()) {
       notifMode_ = Freedesktop;
 
+      QObject::disconnect(trayIcon_, &QSystemTrayIcon::messageClicked,
+         this, &QMLAppObj::onSysTrayMsgClicked);
       connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    }
 #endif // BS_USE_DBUS
