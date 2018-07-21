@@ -100,9 +100,11 @@ NotificationTrayIconResponder::NotificationTrayIconResponder(const std::shared_p
 
 #ifdef BS_USE_DBUS
    if(dbus_->isValid()) {
-       notifMode_ = Freedesktop;
+      notifMode_ = Freedesktop;
 
-       connect(dbus_, &DBusNotification::actionInvoked,
+      disconnect(trayIcon_.get(), &QSystemTrayIcon::messageClicked,
+         this, &NotificationTrayIconResponder::newVersionMessageClicked);
+      connect(dbus_, &DBusNotification::actionInvoked,
          this, &NotificationTrayIconResponder::notificationAction);
    }
 #endif // BS_USE_DBUS
