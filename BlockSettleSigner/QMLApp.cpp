@@ -1,6 +1,7 @@
 #include <functional>
 #include <QtQml>
 #include <QQmlContext>
+#include <QGuiApplication>
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
@@ -276,11 +277,15 @@ void QMLAppObj::onSysTrayMsgClicked()
 {
    logger_->debug("Systray message clicked");
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   QGuiApplication::processEvents();
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
 }
 
 void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
    if (reason == QSystemTrayIcon::Trigger) {
+      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+      QGuiApplication::processEvents();
       QMetaObject::invokeMethod(rootObj_, "raiseWindow");
    }
 }
