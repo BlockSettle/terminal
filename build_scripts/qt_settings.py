@@ -58,10 +58,14 @@ class QtSettings(Configurator):
         else:
             command.append('-debug')
 
+        if self._project_settings.on_linux():
+            command.append('-dbus')
+        else:
+            command.append('-no-dbus')
+
         command.append('-confirm-license')
         command.append('-opensource')
         command.append('-static')
-        command.append('-no-dbus')
         command.append('-no-qml-debug')
         command.append('-no-opengl')
         command.append('-qt-pcre')

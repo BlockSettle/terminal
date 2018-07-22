@@ -1,4 +1,7 @@
 
+#ifndef PAPERBACKUPWRITER_H_INCLUDED
+#define PAPERBACKUPWRITER_H_INCLUDED
+
 #include <QString>
 #include <QPixmap>
 
@@ -30,3 +33,5 @@ private:
    QPixmap logo_;
    QPixmap qr_;
 }; // class WalletBackupPdfWriter
+
+#endif // PAPERBACKUPWRITER_H_INCLUDED
