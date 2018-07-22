@@ -15,6 +15,9 @@ class SpdlogSettings(Configurator):
     def get_package_name(self):
         return self._package_name
 
+    def get_revision_string(self):
+        return self._version
+
     def get_url(self):
         return self._package_url
 
