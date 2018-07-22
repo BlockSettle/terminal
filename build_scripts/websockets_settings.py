@@ -4,7 +4,7 @@ import shutil
 import subprocess
 
 from component_configurator import Configurator
-
+from openssl_settings import OpenSslSettings
 
 class WebsocketsSettings(Configurator):
     def __init__(self, settings):
@@ -12,6 +12,8 @@ class WebsocketsSettings(Configurator):
         self._version = '3.0.0'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
+
+        self._ssl_settings = OpenSslSettings(settings)
 
     def get_package_name(self):
         return self._package_name
@@ -34,9 +36,11 @@ class WebsocketsSettings(Configurator):
                    '-G',
                    self._project_settings.get_cmake_generator()]
 
-        print('Using generator: ' + self._project_settings.get_cmake_generator())
+        env_vars = os.environ.copy()
+        env_vars['OPENSSL_ROOT_DIR'] = self._ssl_settings.get_install_dir()
+        env_vars['OPENSSL_INCLUDE_DIR'] = os.path.join(self._ssl_settings.get_install_dir(), 'include')
 
-        result = subprocess.call(command)
+        result = subprocess.call(command, env=env_vars)
         return result == 0
 
     def make_windows(self):
