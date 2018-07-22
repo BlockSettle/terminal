@@ -1,6 +1,7 @@
 #include <functional>
 #include <QtQml>
 #include <QQmlContext>
+#include <QGuiApplication>
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
@@ -19,6 +20,10 @@
 #include "EasyEncValidator.h"
 #include "PasswordConfirmValidator.h"
 
+#ifdef BS_USE_DBUS
+#include "DBusNotification.h"
+#endif // BS_USE_DBUS
+
 Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(TXInfo)
 
@@ -26,6 +31,10 @@ Q_DECLARE_METATYPE(TXInfo)
 QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<SignerSettings> &params
    , QQmlContext *ctxt)
    : QObject(nullptr), logger_(logger), params_(params), ctxt_(ctxt)
+   , notifMode_(QSystemTray)
+#ifdef BS_USE_DBUS
+   , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
+#endif // BS_USE_DBUS
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
@@ -75,6 +84,16 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
+
+#ifdef BS_USE_DBUS
+   if (dbus_->isValid()) {
+      notifMode_ = Freedesktop;
+
+      QObject::disconnect(trayIcon_, &QSystemTrayIcon::messageClicked,
+         this, &QMLAppObj::onSysTrayMsgClicked);
+      connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+   }
+#endif // BS_USE_DBUS
 }
 
 void QMLAppObj::settingsConnections()
@@ -119,8 +138,17 @@ void QMLAppObj::Start()
       }
    }
    catch (const std::exception &e) {
-      trayIcon_->showMessage(tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what()))
-         , QSystemTrayIcon::Critical, 10000);
+      if (notifMode_ == QSystemTray) {
+         trayIcon_->showMessage(tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what()))
+            , QSystemTrayIcon::Critical, 10000);
+      }
+#ifdef BS_USE_DBUS
+      else {
+         dbus_->notifyDBus(QSystemTrayIcon::Critical,
+            tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what())),
+            QIcon(), 10000);
+      }
+#endif // BS_USE_DBUS
       throw std::runtime_error("failed to open connection");
    }
 }
@@ -228,7 +256,17 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
       if (!txReq.walletId.empty()) {
          notifPrompt = tr("Enter password for %1").arg(txInfo->wallet()->name());
       }
-      trayIcon_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
+
+      if (notifMode_ == QSystemTray) {
+         trayIcon_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
+      }
+#ifdef BS_USE_DBUS
+      else {
+         dbus_->notifyDBus(QSystemTrayIcon::Warning,
+            tr("Password request"), notifPrompt,
+            QIcon(), 30000);
+      }
+#endif // BS_USE_DBUS
    }
 
    QMetaObject::invokeMethod(rootObj_, "createPasswordDialog", Q_ARG(QVariant, prompt)
@@ -239,11 +277,15 @@ void QMLAppObj::onSysTrayMsgClicked()
 {
    logger_->debug("Systray message clicked");
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   QGuiApplication::processEvents();
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
 }
 
 void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
-   if (reason == QSystemTrayIcon::DoubleClick) {
+   if (reason == QSystemTrayIcon::Trigger) {
+      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+      QGuiApplication::processEvents();
       QMetaObject::invokeMethod(rootObj_, "raiseWindow");
    }
 }
