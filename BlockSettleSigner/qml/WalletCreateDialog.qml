@@ -21,7 +21,7 @@ CustomDialog {
 
     id:root
     implicitWidth: 400
-    implicitHeight: mainLayout.childrenRect.height
+    implicitHeight: mainLayout.implicitHeight
 
     onSeedChanged: {
         seed.setRandomKey()
