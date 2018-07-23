@@ -36,16 +36,18 @@ ENDIF ()
 TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${BLOCKSETTLE_UI_LIBRARY_NAME}
    ${BS_NETWORK_LIB_NAME}
-   ${OS_SPECIFIC_LIBS}
    ${CPP_WALLET_LIB_NAME}
    ${CRYPTO_LIB_NAME}
    ${ZMQ_LIB}
    ${QRENCODE_LIB}
-   Qt5::Core
+   ${QT_LINUX_LIBS}
+   Qt5::Qml
    Qt5::Widgets
    Qt5::Gui
+   Qt5::DBus
    Qt5::Network
-   Qt5::Qml
    Qt5::PrintSupport
+   Qt5::Core
+   ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
    )

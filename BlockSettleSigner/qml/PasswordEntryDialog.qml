@@ -14,11 +14,10 @@ CustomDialog {
     property bool   acceptable: false
     property FrejaSignWalletObject  frejaSign
     closePolicy: Popup.NoAutoClose
-    modal: false
     id: passwordDialog
 
     implicitWidth: 400
-    implicitHeight: mainLayout.childrenRect.height
+    implicitHeight: mainLayout.implicitHeight
 
     onTxInfoChanged: {
         if (txInfo.wallet.encType === WalletInfo.Freja) {

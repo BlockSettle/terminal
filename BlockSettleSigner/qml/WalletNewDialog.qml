@@ -7,7 +7,7 @@ CustomDialog {
     property int type: 0
     id: root
     implicitWidth: parent.width * 0.7
-    implicitHeight: mainLayout.childrenRect.height
+    implicitHeight: mainLayout.implicitHeight
 
     enum WalletType {
         RandomSeed = 1,

@@ -41,7 +41,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Current Mode")
+                        text:   qsTr("Online mode")
                     }
                 }
 
@@ -60,7 +60,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Auto Sign")
+                        text:   qsTr("Auto sign")
                     }
                 }
 
@@ -117,14 +117,27 @@ Item {
                     CustomLabel {
                         Layout.fillWidth: true
                         visible: !signerStatus.offline
-                        text:   signerStatus.connections ? qsTr("%1 connection[s]:").arg(Number(signerStatus.connections))
-                                                         : qsTr("Connections:")
+                        text:   qsTr("Network type")
+                        Layout.preferredHeight: 25
+
+                    }
+                    CustomLabelValue {
+                        visible: !signerStatus.offline
+                        text:   signerParams.testNet ? qsTr("Testnet") : qsTr("Mainnet")
+                        Layout.alignment: Qt.AlignRight
+                    }
+
+                    CustomLabel {
+                        Layout.fillWidth: true
+                        visible: !signerStatus.offline
+                        text: qsTr("Connections")
                         Layout.preferredHeight: 25
                     }
                     CustomLabel {
                         visible: !signerStatus.offline && !signerStatus.connections
                         Layout.alignment: Qt.AlignRight
                         text:   qsTr("None")
+                        padding: 5
                     }
                     ColumnLayout {
                         spacing: 0
