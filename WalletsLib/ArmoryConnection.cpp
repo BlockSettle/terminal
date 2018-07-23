@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <exception>
+#include <condition_variable>
 
 #include "ClientClasses.h"
 #include "DbHeader.h"
@@ -109,7 +110,8 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
 
    const auto &cbZCMaintenance = [this] {
       while (maintThreadRunning_) {
-         if (zcMaintCV_.wait_for(std::unique_lock<std::mutex>(zcMaintMutex_), std::chrono::seconds{ 10 })
+         std::unique_lock<std::mutex> cvLock(zcMaintMutex_);
+         if (zcMaintCV_.wait_for(cvLock, std::chrono::seconds(10))
             != std::cv_status::timeout) {
             if (!maintThreadRunning_) {
                break;
@@ -175,7 +177,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
             logger_->error("[ArmoryConnection::setup] registerBDV exception");
             emit connectionError(QString());
          }
-         std::this_thread::sleep_for(1s);
+         std::this_thread::sleep_for(std::chrono::seconds(1));
       }
       regThreadRunning_ = false;
       logger_->debug("[ArmoryConnection::registerRoutine] completed");
