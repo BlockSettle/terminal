@@ -148,6 +148,9 @@ Item {
 
                 CustomLabel {
                     text:   qsTr("Connection password")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
                 }
                 CustomTextInput {
                     placeholderText: qsTr("Password")
@@ -164,6 +167,9 @@ Item {
 
                 CustomLabel {
                     text:   qsTr("Listen IP address")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
                 }
                 CustomTextInput {
                     placeholderText: "0.0.0.0"
@@ -182,6 +188,9 @@ Item {
 
                 CustomLabel {
                     text:   qsTr("Listening port")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
                 }
                 CustomTextInput {
                     placeholderText: "23456"
