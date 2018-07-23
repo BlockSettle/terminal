@@ -6,6 +6,6 @@ Label {
  font.pixelSize: 11
  color: "white"
  wrapMode: Text.Wrap
- padding: 0, 5
+ padding: 5
 }
 

@@ -125,6 +125,7 @@ Item {
                         visible: !signerStatus.offline && !signerStatus.connections
                         Layout.alignment: Qt.AlignRight
                         text:   qsTr("None")
+                        padding: 5
                     }
                     ColumnLayout {
                         spacing: 0
