@@ -39,8 +39,6 @@ Item {
                 }
             }
 
-
-
             RowLayout {
                 id: row1
                 spacing: 5
@@ -49,16 +47,15 @@ Item {
                 Layout.rightMargin: 10
 
                 CustomLabel {
-                    text:   qsTr("Connection mode:")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
-                }
-                CustomCheckBox {
+                    text:   qsTr("Online mode")
                     Layout.fillWidth: true
-                    text: signerStatus.socketOk ? "" : qsTr("Failed to bind")
-                    checked:    !signerParams.offline
-                    onCheckStateChanged: {
+                }
+
+                CustomSwitch {
+                    Layout.alignment: Qt.AlignRight
+                    text:   signerStatus.socketOk ? "" : qsTr("Failed to bind")
+                    checked: !signerStatus.offline
+                    onClicked: {
                         signerParams.offline = !checked
                     }
                 }
@@ -72,74 +69,58 @@ Item {
                 Layout.rightMargin: 10
 
                 CustomLabel {
-                    text:   qsTr("Bitcoin network type TestNet:")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
-                }
-                CustomCheckBox {
+                    text:   qsTr("TestNet")
                     Layout.fillWidth: true
-                    text: checked ? qsTr("Enabled") : qsTr("Disabled")
-                    checked:    signerParams.testNet
-                    onCheckStateChanged: {
+                }
+
+                CustomSwitch {
+                    Layout.alignment: Qt.AlignRight
+                    checked: signerParams.testNet
+                    onClicked: {
                         signerParams.testNet = checked
                     }
                 }
             }
 
-            ColumnLayout {
-                id: col2
-                spacing: 10
+            RowLayout {
+                id: row3
+                Layout.topMargin: 5
                 Layout.fillWidth: true
-                Layout.leftMargin: 10
                 Layout.rightMargin: 10
+                Layout.leftMargin: 10
 
-                RowLayout {
-                    id: row3
-                    spacing: 5
-                    Layout.fillWidth: true
-
-
-                    CustomLabel {
-                        text:   qsTr("Wallets directory:")
-                        Layout.minimumWidth: 125
-                        Layout.preferredWidth: 125
-                        Layout.maximumWidth: 125
-                        Layout.fillWidth: true
-                    }
-
-                    CustomLabel {
-                        Layout.alignment: Qt.AlignRight
-                        Layout.fillWidth: true
-                        wrapMode: Text.Wrap
-                        text:   signerParams.walletsDir
-                        color: "#ffffff"
-
-                    }
+                CustomLabel {
+                    text:   qsTr("Wallets directory")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
                 }
 
-                RowLayout {
-                    id: row4
-                    spacing: 10
+                CustomLabel {
+                    Layout.alignment: Qt.AlignLeft
                     Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text:   signerParams.walletsDir
+                    color: "#ffffff"
 
-                    CustomButton {
-                        text:   qsTr("Select")
-                        Layout.minimumWidth: 80
-                        Layout.preferredWidth: 80
-                        Layout.maximumWidth: 80
-                        Layout.maximumHeight: 25
-                        Layout.leftMargin: 110 + 5
-                        onClicked: {
-                            if (!ldrWalletsDirDlg.item) {
-                                ldrWalletsDirDlg.active = true
-                            }
-                            ldrWalletsDirDlg.startFromFolder = Qt.resolvedUrl(signerParams.walletsDir)
-                            ldrWalletsDirDlg.item.accepted.connect(function() {
-                                signerParams.walletsDir = ldrWalletsDirDlg.dir
-                            })
-                            ldrWalletsDirDlg.item.open();
+                }
+
+                CustomButton {
+                    text:   qsTr("Select")
+                    Layout.minimumWidth: 80
+                    Layout.preferredWidth: 80
+                    Layout.maximumWidth: 80
+                    Layout.maximumHeight: 26
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        if (!ldrWalletsDirDlg.item) {
+                            ldrWalletsDirDlg.active = true
                         }
+                        ldrWalletsDirDlg.startFromFolder = Qt.resolvedUrl(signerParams.walletsDir)
+                        ldrWalletsDirDlg.item.accepted.connect(function() {
+                            signerParams.walletsDir = ldrWalletsDirDlg.dir
+                        })
+                        ldrWalletsDirDlg.item.open();
                     }
                 }
             }
@@ -154,6 +135,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
+                Layout.topMargin: 10
                 onClicked:  {
                     gridNetwork.state = checked ? "normal" : "hidden"
                     highlighted = !checked
@@ -165,13 +147,14 @@ Item {
                 id: gridNetwork
 
                 CustomLabel {
-                    text:   qsTr("Connection password:")
+                    text:   qsTr("Connection password")
                 }
                 CustomTextInput {
                     placeholderText: qsTr("Password")
                     echoMode:   TextField.Password
                     text:       signerParams.password
                     Layout.fillWidth: true
+                    Layout.rightMargin: 6
                     selectByMouse: true
                     id: password
                     onEditingFinished: {
@@ -180,11 +163,12 @@ Item {
                 }
 
                 CustomLabel {
-                    text:   qsTr("Listen IP address:")
+                    text:   qsTr("Listen IP address")
                 }
                 CustomTextInput {
                     placeholderText: "0.0.0.0"
                     Layout.fillWidth: true
+                    Layout.rightMargin: 6
                     text:   signerParams.listenAddress
                     selectByMouse: true
                     id: listenAddress
@@ -197,11 +181,12 @@ Item {
                 }
 
                 CustomLabel {
-                    text:   qsTr("Listening port:")
+                    text:   qsTr("Listening port")
                 }
                 CustomTextInput {
                     placeholderText: "23456"
                     Layout.fillWidth: true
+                    Layout.rightMargin: 6
                     text:   signerParams.listenPort
                     selectByMouse: true
                     id: listenPort
@@ -217,7 +202,7 @@ Item {
 
             CustomHeader {
                 visible: false
-                text:   qsTr("Limits:")
+                text:   qsTr("Limits")
                 font.pixelSize: 14
                 checkable: true
                 checked:   true
@@ -238,7 +223,7 @@ Item {
                 id: gridLimits
 
                 CustomLabel {
-                    text:   qsTr("Manual XBT spend limit:")
+                    text:   qsTr("Manual XBT spend limit")
 
                 }
                 CustomTextInput {
@@ -257,7 +242,7 @@ Item {
                 }
 
                 CustomLabel {
-                    text:   qsTr("Interval for keeping wallet password in memory:")
+                    text:   qsTr("Interval for keeping wallet password in memory")
                 }
                 CustomTextInput {
                     Layout.fillWidth: true
