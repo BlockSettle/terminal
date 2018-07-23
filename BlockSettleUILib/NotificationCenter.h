@@ -9,6 +9,12 @@
 #include <QList>
 #include <QVariant>
 #include <QIcon>
+#include <QSystemTrayIcon>
+
+#ifdef BS_USE_DBUS
+#include "DBusNotification.h"
+#endif // BS_USE_DBUS
+
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -103,11 +109,25 @@ public:
 
 private slots:
    void newVersionMessageClicked();
+#ifdef BS_USE_DBUS
+   void notificationAction(const QString &action);
+#endif // BS_USE_DBUS
 
 private:
    std::shared_ptr<QSystemTrayIcon>       trayIcon_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    bool  newVersionMessage_ = false;
+
+   enum NotificationMode {
+      QSystemTray,
+      Freedesktop
+   };
+
+   NotificationMode notifMode_;
+
+#ifdef BS_USE_DBUS
+   DBusNotification *dbus_;
+#endif // BS_USE_DBUS
 };
 
 #endif // __NOTIFICATION_CENTER_H__
