@@ -17,7 +17,7 @@ CustomDialog {
 
     id:root
     implicitWidth: 400
-    implicitHeight: mainLayout.childrenRect.height
+    implicitHeight: mainLayout.implicitHeight
 
     onWalletChanged: {
         if (wallet.encType === WalletInfo.Freja) {
