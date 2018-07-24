@@ -239,8 +239,8 @@ void CCSettlementTransactionWidget::startFrejaSign()
       return;
    }
    const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetSigningWallet()->GetWalletId());
-   frejaSign_->start(userId_, tr("CC settlement TX for %1 in wallet %2").arg(QString::fromStdString(rfq_.security))
-      .arg(QString::fromStdString(rootWallet->getName())), rootWallet->getWalletId());
+   frejaSign_->start(userId_, tr("%1 %2").arg(QString::fromStdString(rfq_.security))
+      .arg(clientSells_ ? tr("Delivery") : tr("Payment")), rootWallet->getWalletId());
 }
 
 void CCSettlementTransactionWidget::onAccept()

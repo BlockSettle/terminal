@@ -334,7 +334,7 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
 
    if (authAddressManager_->needsOTPpassword()) {
       EnterOTPPasswordDialog passwordDialog(otpManager_
-         , tr("Enter password to submit Authentication Address"), this);
+         , tr("Authentication Address Submission"), this);
       if (passwordDialog.exec() != QDialog::Accepted) {
          authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
          lastSubmittedAddress_ = bs::Address{};
