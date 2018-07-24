@@ -117,7 +117,7 @@ void CCSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
 
    clientSells_ = (rfq.side == bs::network::Side::Sell);
 
-   if (rfq.side == bs::network::Side::Buy && rfq.product == bs::network::XbtCurrency) {
+   if (clientSells_) {
       window()->setWindowTitle(tr("Settlement Delivery"));
       ui_->labelPaymentName->setText(tr("Delivery"));
    } else {
