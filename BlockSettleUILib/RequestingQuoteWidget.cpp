@@ -125,8 +125,6 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
          if (quote.assetType == bs::network::Asset::SpotFX) {
             ui_->pushButtonAccept->show();
             setupTimer(Tradeable, quote.expirationTime.addMSecs(quote.timeSkewMs));
-            ui_->labelHint->setText(tr("Now you can accept the reply until the timeout expires"));
-            ui_->labelHint->show();
          }
          else {
             onAccept();
@@ -182,9 +180,7 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
          balanceOk_ = (value < balance);
          ui_->pushButtonAccept->setEnabled(balanceOk_);
          if (!balanceOk_) {
-            ui_->labelHint->setText(tr("Insufficient %1 balance")
-               .arg(QString::number(balance, 'f',
-                  (currency == bs::network::XbtCurrency ? 8 : 2))));
+            ui_->labelHint->setText(tr("Insufficient balance"));
             ui_->labelHint->show();
          }
       }
