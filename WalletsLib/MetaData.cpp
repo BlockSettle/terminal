@@ -754,9 +754,11 @@ void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory,
       const auto &addrSet = getAddrHashSet();
       std::vector<BinaryData> addrVec;
       addrVec.insert(addrVec.end(), addrSet.begin(), addrSet.end());
-      armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, asNew);
+      const auto &cbRegister = [this] {
+         emit walletReady(QString::fromStdString(GetWalletId()));
+      };
+      armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
    }
-   emit walletReady(QString::fromStdString(GetWalletId()));
 }
 
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs

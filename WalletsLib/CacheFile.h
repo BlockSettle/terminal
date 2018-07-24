@@ -59,7 +59,11 @@ public:
       CacheFile::put(key, tx.serialize());
    }
    Tx get(const BinaryData &key) {
-      return Tx(CacheFile::get(key));
+      const auto &data = CacheFile::get(key);
+      if (data.isNull()) {
+         return Tx{};
+      }
+      return Tx(data);
    }
 
    void stop() { CacheFile::stop(); }

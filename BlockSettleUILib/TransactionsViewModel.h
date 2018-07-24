@@ -128,14 +128,13 @@ public:
    };
 
    TransactionItems                    currentPage_;
-   std::vector<ClientClasses::LedgerEntry>   rawData_;
+   std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>> rawData_;
    std::unordered_set<std::string>     currentKeys_;
    std::shared_ptr<ArmoryConnection>   armory_;
    AsyncClient::LedgerDelegate         ledgerDelegate_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::atomic_bool                    updateRunning_;
    mutable QMutex                      updateMutex_;
-   QThreadPool                         threadPool_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
    std::atomic_bool  stopped_;
    QFont             fontBold_;
@@ -143,7 +142,6 @@ public:
    int               updRowFirst_ = -1;
    int               updRowLast_ = 0;
    std::atomic_bool  initialLoadCompleted_;
-   std::atomic_uint  pageId_;
 };
 
 #endif // __TRANSACTIONS_VIEW_MODEL_H__

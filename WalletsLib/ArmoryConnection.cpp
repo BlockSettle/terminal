@@ -198,6 +198,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          cbRemote_->shutdown();
          cbRemote_.reset();
       }
+      isOnline_ = false;
       bdv_ = std::make_shared<AsyncClient::BlockDataViewer>(AsyncClient::BlockDataViewer::getNewBDV(
          settings.armoryDBIp, settings.armoryDBPort, SocketWS/*settings.socketType*/));
       logger_->debug("[ArmoryConnection::connectRoutine] BDV connected");
@@ -216,6 +217,7 @@ bool ArmoryConnection::goOnline()
       return false;
    }
    bdv_->goOnline();
+   isOnline_ = true;
    return true;
 }
 
@@ -293,7 +295,8 @@ std::vector<ClientClasses::LedgerEntry> ArmoryConnection::getZCentries(ArmoryCon
 }
 
 std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
-   , const std::string &walletId, const std::vector<BinaryData> &addrVec, bool asNew)
+   , const std::string &walletId, const std::vector<BinaryData> &addrVec, std::function<void()> cb
+   , bool asNew)
 {
    if (!bdv_ || ((state_ != State::Ready) && (state_ != State::Connected))) {
       logger_->error("[ArmoryConnection::registerWallet] invalid state: {}", (int)state_);
@@ -302,7 +305,14 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
    if (!wallet) {
       wallet = std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
    }
-   return wallet->registerAddresses(addrVec, asNew);
+   const auto &regId = wallet->registerAddresses(addrVec, asNew);
+   if (!isOnline_) {
+      preOnlineRegIds_[regId] = cb;
+   }
+   else {
+      cb();
+   }
+   return regId;
 }
 
 bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletIDs
@@ -380,7 +390,8 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
       }
       cb(tx);
    };
-   bdv_->getTxByHash(hash, cbUpdateCache);
+//!!   bdv_->getTxByHash(hash, cbUpdateCache);
+   cb({});
    return true;
 }
 
@@ -412,13 +423,15 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       txCache_.put(tx.getThisHash(), tx);
       cbAppendTx(tx);
    };
+   cb({});        //!!
+   return true;   //!!
    for (const auto &hash : hashes) {
       const auto &tx = txCache_.get(hash);
       if (tx.isInitialized()) {
          cbAppendTx(tx);
       }
       else {
-         bdv_->getTxByHash(hash, cbGetTx);
+//!!         bdv_->getTxByHash(hash, cbGetTx);
       }
    }
    return true;
@@ -460,6 +473,23 @@ bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &
    return getConfirmationsNumber(item) > 1;
 }
 
+void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
+{
+   if (!preOnlineRegIds_.empty()) {
+      for (const auto &id : ids) {
+         const auto regIdIt = preOnlineRegIds_.find(id.toBinStr());
+         if (regIdIt != preOnlineRegIds_.end()) {
+            logger_->debug("[ArmoryConnection::onRefresh] found preOnline registration id: {}", id.toBinStr());
+            regIdIt->second();
+            preOnlineRegIds_.erase(regIdIt);
+         }
+      }
+   }
+   if (state_ == ArmoryConnection::State::Ready) {
+      emit refresh(ids);
+   }
+}
+
 
 void ArmoryCallback::progress(BDMPhase phase, const vector<string> &walletIdVec, float progress,
    unsigned secondsRem, unsigned progressNumeric)
@@ -492,9 +522,7 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 
    case BDMAction_Refresh:
       logger_->debug("[ArmoryCallback::run] BDMAction_Refresh");
-      if (connection_->state() == ArmoryConnection::State::Ready) {
-         emit connection_->refresh(*reinterpret_cast<std::vector<BinaryData> *>(ptr));
-      }
+      connection_->onRefresh(*reinterpret_cast<std::vector<BinaryData> *>(ptr));
       break;
 
    case BDMAction_NodeStatus: {
