@@ -166,7 +166,7 @@ void OTPFileInfoDialog::onChangePwdClicked()
          ui_->labelFrejaOld->show();
          ui_->labelPwdHint->setText(tr("Sign with Freja eID"));
          frejaOld_.start(otpManager_->GetEncKey(), tr("Activate Freja eID Signing")
-            , tr("One-Time Password (OTP)"));
+            , otpManager_->GetShortId());
          break;
 
       case bs::wallet::EncryptionType::Unencrypted:
