@@ -180,8 +180,8 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged()
       text = sValid;
       if (encType_ == bs::wallet::EncryptionType::Freja) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId());
-         frejaSign_->start(userId_, tr("XBT settlement TX for %1 in wallet %2").arg(QString::fromStdString(rfq_.security))
-            .arg(QString::fromStdString(rootWallet->getName())), rootWallet->getWalletId());
+         frejaSign_->start(userId_, tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security))
+            .arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out")), rootWallet->getWalletId());
       }
       break;
    case AddressVerificationState::VerificationFailed:
