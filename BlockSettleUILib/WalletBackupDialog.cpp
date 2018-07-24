@@ -173,7 +173,7 @@ void WalletBackupDialog::onPasswordChanged()
 
 void WalletBackupDialog::startFrejaSign()
 {
-   frejaSign_.start(userId_, tr("Backup wallet %1").arg(QString::fromStdString(wallet_->getName())), wallet_->getWalletId());
+   frejaSign_.start(userId_, tr("Backup wallet"), wallet_->getWalletId());
    ui_->pushButtonFreja->setEnabled(false);
 }
 

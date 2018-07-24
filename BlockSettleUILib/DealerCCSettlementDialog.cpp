@@ -54,9 +54,13 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    if (settlContainer_->isDelivery()) {
       setWindowTitle(tr("Settlement Delivery"));
       ui_->labelPaymentName->setText(tr("Delivery"));
+      setFrejaPasswordPrompt(tr("%1 Delivery")
+         .arg(QString::fromStdString(settlContainer_->security())));
    } else {
       setWindowTitle(tr("Settlement Payment"));
       ui_->labelPaymentName->setText(tr("Payment"));
+      setFrejaPasswordPrompt(tr("%1 Payment")
+         .arg(QString::fromStdString(settlContainer_->security())));
    }
 
    ui_->labelPayment->setText(settlContainer_->foundRecipAddr() && settlContainer_->isAmountValid()

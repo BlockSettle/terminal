@@ -166,7 +166,7 @@ void CreateWalletDialog::onEncTypeChanged()
 
 void CreateWalletDialog::startFrejaSign()
 {
-   frejaSign_.start(ui_->lineEditFrejaId->text(), tr("New wallet creation"), walletId_);
+   frejaSign_.start(ui_->lineEditFrejaId->text(), tr("Activate Freja eID signing"), walletId_);
    ui_->pushButtonFreja->setEnabled(false);
    ui_->lineEditFrejaId->setEnabled(false);
 }

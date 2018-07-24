@@ -61,6 +61,11 @@ void BaseDealerSettlementDialog::setCriticalHintMessage(const QString& hint)
    QMetaObject::invokeMethod(errorLabel_, "setText", Q_ARG(QString, text));
 }
 
+void BaseDealerSettlementDialog::setFrejaPasswordPrompt(const QString &prompt)
+{
+   frejaPrompt_ = prompt;
+}
+
 void BaseDealerSettlementDialog::onTimerStarted(int msDuration)
 {
    progressBar_->show();
@@ -141,8 +146,7 @@ void BaseDealerSettlementDialog::startAccepting()
    case bs::wallet::EncryptionType::Freja:
       labelPassword()->show();
       setHintText(tr("Freja sign request sent to your mobile device"));
-      frejaSign_.start(userId_, tr("Settlement TX for %1 in wallet %2").arg(QString::fromStdString(settlContainer_->security()))
-         .arg(QString::fromStdString(rootWallet_->getName())), rootWallet_->getWalletId());  // set 30s timeout (not implemented by Freja, yet)
+      frejaSign_.start(userId_, frejaPrompt_, rootWallet_->getWalletId());  // set 30s timeout (not implemented by Freja, yet)
       break;
    default: break;
    }
