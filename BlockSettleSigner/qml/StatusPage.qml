@@ -102,42 +102,39 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        visible: !signerStatus.offline
                         text:   qsTr("Listen socket")
                         Layout.preferredHeight: 25
-
                     }
                     CustomLabelValue {
-                        visible: !signerStatus.offline
-                        text:   signerStatus.listenSocket
-                        color:  signerStatus.socketOk ? "white" : "red"
+                        text:   (signerStatus.offline ? qsTr("Closed") : signerStatus.listenSocket)
+                        color:  (signerStatus.offline ? "white" : (signerStatus.socketOk ? "white" : "red"))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        visible: !signerStatus.offline
                         text:   qsTr("Network type")
                         Layout.preferredHeight: 25
 
                     }
                     CustomLabelValue {
-                        visible: !signerStatus.offline
                         text:   signerParams.testNet ? qsTr("Testnet") : qsTr("Mainnet")
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        visible: !signerStatus.offline
                         text: qsTr("Connections")
                         Layout.preferredHeight: 25
                     }
                     CustomLabel {
-                        visible: !signerStatus.offline && !signerStatus.connections
+                        visible: signerStatus.offline || !signerStatus.connections
                         Layout.alignment: Qt.AlignRight
                         text:   qsTr("None")
                         padding: 5
+                        wrapMode: Text.NoWrap
                     }
                     ColumnLayout {
                         spacing: 0
@@ -150,6 +147,7 @@ Item {
                             CustomLabelValue {
                                 text:   modelData
                                 Layout.alignment: Qt.AlignRight
+                                wrapMode: Text.NoWrap
                             }
                         }
                     }
@@ -163,6 +161,7 @@ Item {
                         text:   Number(signerStatus.txSignedCount)
                         opacity:  signerStatus.txSignedCount > 0 ? 1 : 0.5
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
@@ -173,31 +172,32 @@ Item {
                         text:   qsTr("%1 of %2").arg(signerStatus.manualSignSpent.toFixed(8))
                         .arg(signerStatus.manualSignUnlimited ? qsTr("Unlimited") : signerStatus.manualSignLimit.toFixed(8))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
-                        visible: !signerStatus.offline
                         text:   qsTr("Auto-Sign spend limit")
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        visible: !signerStatus.offline
-                        text:   qsTr("%1 of %2").arg(signerStatus.autoSignSpent.toFixed(8))
-                        .arg(signerStatus.autoSignUnlimited ? qsTr("Unlimited") : signerStatus.autoSignLimit.toFixed(8))
+                        text:   (signerStatus.offline ? qsTr("0.00000000 of Unlimited") :
+                            qsTr("%1 of %2").arg(signerStatus.autoSignSpent.toFixed(8))
+                                .arg(signerStatus.autoSignUnlimited ? qsTr("Unlimited") :
+                                    signerStatus.autoSignLimit.toFixed(8)))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
-                        visible: !signerStatus.offline
                         text:   qsTr("Auto-Sign time limit");
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        visible: !signerStatus.offline
-                        text:   qsTr("%1 of %2")
+                        text:   (signerStatus.offline ? qsTr("None of Unlimited") : qsTr("%1 of %2")
                         .arg(signerStatus.autoSignTimeSpent ? signerStatus.autoSignTimeSpent : qsTr("None"))
-                        .arg(signerStatus.autoSignTimeLimit ? signerStatus.autoSignTimeLimit : qsTr("Unlimited"))
+                        .arg(signerStatus.autoSignTimeLimit ? signerStatus.autoSignTimeLimit : qsTr("Unlimited")))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
                 }
             }
