@@ -7,6 +7,7 @@
 #include <QThreadPool>
 #include <QColor>
 #include <QFont>
+#include <QMetaType>
 #include <atomic>
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
@@ -75,11 +76,9 @@ private slots:
    void updatePage();
    void refresh();
    void onZeroConf(ArmoryConnection::ReqIdType);
-   void onRowUpdated(int index, TransactionsViewItem item, int colStart, int colEnd);
+   void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
    void onNewItems(const TransactionItems items);
    void onItemsDeleted(const TransactionItems items);
-   void onRawDataLoaded();
-   void onDataLoaded();
    void onItemConfirmed(const TransactionsViewItem item);
 
    void onArmoryStateChanged(ArmoryConnection::State);
@@ -99,7 +98,6 @@ private:
 
 signals:
    void dataChangedInThread(const QModelIndex& start, const QModelIndex& end, const QVector<int> roles = QVector<int>());
-   void rowUpdated(int index, TransactionsViewItem item, int colStart, int colEnd);
    void itemsAdded(const TransactionItems items);
    void itemsDeleted(const TransactionItems items);
    void dataLoaded(int count);

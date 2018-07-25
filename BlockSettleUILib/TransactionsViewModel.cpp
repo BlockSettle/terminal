@@ -11,7 +11,6 @@
 #include <QtConcurrent/QtConcurrentRun>
 
 
-#include <spdlog/spdlog.h>
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<WalletsManager> &walletsManager
    , const AsyncClient::LedgerDelegate &ledgerDelegate, QObject* parent, const std::shared_ptr<bs::Wallet> &defWlt)
    : QAbstractTableModel(parent)
@@ -29,7 +28,6 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    qRegisterMetaType<TransactionItems>();
 
    connect(this, &TransactionsViewModel::itemsAdded, this, &TransactionsViewModel::onNewItems, Qt::QueuedConnection);
-   connect(this, &TransactionsViewModel::rowUpdated, this, &TransactionsViewModel::onRowUpdated, Qt::QueuedConnection);
    connect(this, &TransactionsViewModel::itemsDeleted, this, &TransactionsViewModel::onItemsDeleted, Qt::QueuedConnection);
    connect(this, &TransactionsViewModel::itemConfirmed, this, &TransactionsViewModel::onItemConfirmed, Qt::QueuedConnection);
 
@@ -254,12 +252,17 @@ TransactionsViewItem TransactionsViewModel::itemFromTransaction(const ClientClas
       item.walletName = QString::fromStdString(item.wallet->GetWalletName());
    }
    item.isValid = item.wallet ? item.wallet->isTxValid(item.led->getTxHash()) : false;
+   item.initialized = false;
    return item;
 }
 
+static std::string mkTxKey(const BinaryData &txHash, const std::string &id)
+{
+   return txHash.toBinStr() + id;
+}
 static std::string mkTxKey(const ClientClasses::LedgerEntry &item)
 {
-   return item.getTxHash().toBinStr() + item.getID();
+   return mkTxKey(item.getTxHash(), item.getID());
 }
 static std::string mkTxKey(const TransactionsViewItem &item)
 {
@@ -358,15 +361,11 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<ClientClasses::L
 void TransactionsViewModel::loadLedgerEntries()
 {
    const auto &cbPageCount = [this](uint64_t pageCnt) {
-      auto logger = spdlog::get("");
-      logger->debug("Page count = {}", pageCnt);
       for (uint32_t pageId = 0; pageId < pageCnt; ++pageId) {
          const auto &cbLedger = [this, pageId, pageCnt](std::vector<ClientClasses::LedgerEntry> entries) {
             rawData_[pageId] = entries;
-            auto logger = spdlog::get("");
-            logger->debug("Received {} entries for page {}", entries.size(), pageId);
             if (rawData_.size() >= pageCnt) {
-               onRawDataLoaded();
+               QtConcurrent::run(this, &TransactionsViewModel::ledgerToTxData);
             }
          };
          ledgerDelegate_.getHistoryPage(pageId, cbLedger);
@@ -375,52 +374,43 @@ void TransactionsViewModel::loadLedgerEntries()
    ledgerDelegate_.getPageCount(cbPageCount);
 }
 
-void TransactionsViewModel::onRawDataLoaded()
-{
-   auto watcher = new  QFutureWatcher<void>(this);
-   connect(watcher, SIGNAL(finished()), this, SLOT(onDataLoaded()));
-   const auto futLoadData = QtConcurrent::run(this, &TransactionsViewModel::ledgerToTxData);
-   watcher->setFuture(futLoadData);
-}
-
 void TransactionsViewModel::ledgerToTxData()
 {
-   auto logger = spdlog::get("");
-   QMutexLocker locker(&updateMutex_);
-   currentPage_.reserve(rawData_.size());
-   for (const auto &le : rawData_) {
-      for (const auto &led : le.second) {
-         const auto item = itemFromTransaction(led);
-         if (!item.isValid) {
-            continue;
+   size_t count = 0;
+   {
+      QMutexLocker locker(&updateMutex_);
+      currentPage_.reserve(rawData_.size());
+      for (const auto &le : rawData_) {
+         for (const auto &led : le.second) {
+            const auto item = itemFromTransaction(led);
+            if (!item.isValid) {
+               continue;
+            }
+            const auto txKey = mkTxKey(item);
+            if (txKeyExists(txKey)) {
+               continue;
+            }
+            count++;
+            currentKeys_.insert(txKey);
+            currentPage_.emplace_back(item);
          }
-         const auto txKey = mkTxKey(item);
-         if (txKeyExists(txKey)) {
-            continue;
-         }
-         currentKeys_.insert(txKey);
-         currentPage_.emplace_back(item);
       }
    }
-   logger->debug("Initial loading completed, size={}", currentPage_.size());
    initialLoadCompleted_ = true;
-}
 
-void TransactionsViewModel::onDataLoaded()
-{
-   auto logger = spdlog::get("");
-   logger->debug("[TransactionsViewModel::onDataLoaded]");
    emit layoutChanged();
-   loadTransactionDetails(0, rawData_.size());
+   loadTransactionDetails(0, count);
    emit dataLoaded(currentPage_.size());
 }
 
 void TransactionsViewModel::onNewItems(const TransactionItems items)
 {
-   QMutexLocker locker(&updateMutex_);
    unsigned int curLastIdx = currentPage_.size();
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + items.size() - 1);
-   currentPage_.insert(currentPage_.end(), items.begin(), items.end());
+   {
+      QMutexLocker locker(&updateMutex_);
+      currentPage_.insert(currentPage_.end(), items.begin(), items.end());
+   }
    endInsertRows();
 
    loadTransactionDetails(curLastIdx, items.size());
@@ -454,20 +444,11 @@ void TransactionsViewModel::onItemsDeleted(const TransactionItems items)
    }
 }
 
-void TransactionsViewModel::onRowUpdated(int row, TransactionsViewItem item, int c1, int c2)
+void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &item, int c1, int c2)
 {
-   if ((row < 0) && (updRowFirst_ >= 0)) {   // Final flush
-      emit dataChanged(index(updRowFirst_, c1), index(updRowLast_, c2));
-      updRowFirst_ = -1;
-      return;
-   }
-   if ((row < 0) || !item.led) {
-      return;
-   }
-
    int idx = -1;
    {
-      const auto itemKey = mkTxKey(item);
+      const auto &itemKey = mkTxKey(item);
       QMutexLocker locker(&updateMutex_);
       for (int i = qMax<int>(0, row - 5); i < qMin<int>(currentPage_.size(), row + 5); i++) {
          if (mkTxKey(currentPage_[i]) == itemKey) {
@@ -478,18 +459,7 @@ void TransactionsViewModel::onRowUpdated(int row, TransactionsViewItem item, int
       }
    }
    if (idx >= 0) {
-      if (updRowFirst_ < 0) {
-         updRowFirst_ = updRowLast_ = idx;
-      }
-      else {   // Update list in chunks to prevent signals queue overflow (repro'd on Windows)
-         if (((idx - updRowLast_) > 1) || (idx < updRowFirst_) || ((updRowLast_ - updRowFirst_) > 9)) {
-            emit dataChanged(index(updRowFirst_, c1), index(updRowLast_, c2));
-            updRowFirst_ = updRowLast_ = idx;
-         }
-         else {
-            updRowLast_ = idx;
-         }
-      }
+      emit dataChanged(index(idx, c1), index(idx, c2));
    }
 }
 
@@ -557,13 +527,12 @@ void TransactionsViewModel::loadTransactionDetails(unsigned int iStart, size_t c
       }
       updateTransactionDetails(item.second, item.first);
    }
-   emit rowUpdated(-1, {}, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Address));
 }
 
 void TransactionsViewModel::updateTransactionDetails(TransactionsViewItem &item, int index)
 {
-   const auto &cbInited = [this, index, item] {
-      emit rowUpdated(index, item, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Amount));
+   const auto &cbInited = [this, index, &item] {
+      onRowUpdated(index, item, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Amount));
    };
    item.initialize(armory_, walletsManager_, cbInited);
 }
@@ -605,18 +574,20 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
          return;
       }
       tx = newTx;
+      std::set<BinaryData> txHashSet;
       for (size_t i = 0; i < tx.getNumTxIn(); i++) {
          TxIn in = tx.getTxInCopy(i);
          OutPoint op = in.getOutPoint();
          if (txIns.find(op.getTxHash()) == txIns.end()) {
-            txHashes.insert(op.getTxHash());
+            txHashSet.insert(op.getTxHash());
          }
       }
-      if (txHashes.empty()) {
+      if (txHashSet.empty()) {
          cbInit();
       }
       else {
-         armory->getTXsByHash(txHashes, cbTXs);
+         txHashes = txHashSet;
+         armory->getTXsByHash(txHashSet, cbTXs);
       }
 
       if (dirStr.isEmpty()) {

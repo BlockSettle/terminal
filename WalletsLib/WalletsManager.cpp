@@ -649,10 +649,8 @@ void WalletsManager::RegisterSavedWallets()
 
 void WalletsManager::UpdateSavedWallets()
 {
-   {
-      for (auto &it : wallets_) {
-         it.second->firstInit();
-      }
+   for (auto &it : wallets_) {
+      it.second->firstInit();
    }
    if (settlementWallet_) {
       settlementWallet_->firstInit();

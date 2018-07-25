@@ -70,6 +70,9 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
             }
 
             for (const auto &prevTx : txs) {
+               if (!prevTx.isInitialized()) {
+                  continue;
+               }
                const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
                if (itTxOut == txOutIndices.end()) {
                   continue;

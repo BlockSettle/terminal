@@ -390,8 +390,7 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
       }
       cb(tx);
    };
-//!!   bdv_->getTxByHash(hash, cbUpdateCache);
-   cb({});
+   bdv_->getTxByHash(hash, cbUpdateCache);
    return true;
 }
 
@@ -406,7 +405,8 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
    auto result = new std::vector<Tx>;
 
    const auto &cbAppendTx = [this, hashSet, result, cb](Tx tx) {
-      hashSet->erase(tx.getThisHash());
+      const auto &txHash = tx.getThisHash();
+      hashSet->erase(txHash);
       result->emplace_back(tx);
       if (hashSet->empty()) {
          delete hashSet;
@@ -423,15 +423,13 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       txCache_.put(tx.getThisHash(), tx);
       cbAppendTx(tx);
    };
-   cb({});        //!!
-   return true;   //!!
    for (const auto &hash : hashes) {
       const auto &tx = txCache_.get(hash);
       if (tx.isInitialized()) {
          cbAppendTx(tx);
       }
       else {
-//!!         bdv_->getTxByHash(hash, cbGetTx);
+         bdv_->getTxByHash(hash, cbGetTx);
       }
    }
    return true;
