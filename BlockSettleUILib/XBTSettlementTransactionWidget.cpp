@@ -465,6 +465,8 @@ void XBTSettlementTransactionWidget::onPasswordChanged(const QString &)
    else {
       walletPassword_ = ui_->lineEditPassword->text().toStdString();
    }
+
+   updateAcceptButton();
 }
 
 void XBTSettlementTransactionWidget::updateAcceptButton()
