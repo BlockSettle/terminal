@@ -446,20 +446,14 @@ void TransactionsViewModel::onItemsDeleted(const TransactionItems items)
 
 void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &item, int c1, int c2)
 {
-   int idx = -1;
-   {
-      const auto &itemKey = mkTxKey(item);
-      QMutexLocker locker(&updateMutex_);
-      for (int i = qMax<int>(0, row - 5); i < qMin<int>(currentPage_.size(), row + 5); i++) {
-         if (mkTxKey(currentPage_[i]) == itemKey) {
-            currentPage_[i] = item;
-            idx = i;
-            break;
-         }
+   const auto &itemKey = mkTxKey(item);
+   QMutexLocker locker(&updateMutex_);
+   for (int i = qMax<int>(0, row - 5); i < qMin<int>(currentPage_.size(), row + 5); i++) {
+      if (mkTxKey(currentPage_[i]) == itemKey) {
+         currentPage_[i] = item;
+         emit dataChanged(index(i, c1), index(i, c2));
+         break;
       }
-   }
-   if (idx >= 0) {
-      emit dataChanged(index(idx, c1), index(idx, c2));
    }
 }
 

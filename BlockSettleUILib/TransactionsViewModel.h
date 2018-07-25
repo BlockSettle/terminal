@@ -137,8 +137,6 @@ public:
    std::atomic_bool  stopped_;
    QFont             fontBold_;
    QColor            colorGray_, colorRed_, colorYellow_, colorGreen_, colorInvalid_;
-   int               updRowFirst_ = -1;
-   int               updRowLast_ = 0;
    std::atomic_bool  initialLoadCompleted_;
 };
 
