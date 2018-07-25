@@ -33,7 +33,6 @@ private slots:
    void onSelectLogFile();
    void onSelectMsgLogFile();
    void onLogFileNameEdited(const QString &txt);
-   void onGroupBoxClicked(bool);
    void onLogLevelChanged(int);
 
 private:
