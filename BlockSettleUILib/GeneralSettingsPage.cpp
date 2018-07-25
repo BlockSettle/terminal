@@ -30,10 +30,6 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
       this, &GeneralSettingsPage::onSelectLogFile);
    connect(ui_->chooseLogFileMsgBtn, &QPushButton::clicked,
       this, &GeneralSettingsPage::onSelectMsgLogFile);
-   connect(ui_->groupBoxLogging, &QGroupBox::clicked,
-      this, &GeneralSettingsPage::onGroupBoxClicked);
-   connect(ui_->groupBoxLoggingMsg, &QGroupBox::clicked,
-      this, &GeneralSettingsPage::onGroupBoxClicked);
    connect(ui_->logLevel, QOverload<int>::of(&QComboBox::currentIndexChanged),
       this, &GeneralSettingsPage::onLogLevelChanged);
    connect(ui_->logLevelMsg, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -51,18 +47,8 @@ void GeneralSettingsPage::displaySettings(const std::shared_ptr<ApplicationSetti
    const auto cfg = appSettings->GetLogsConfig(displayDefault);
    ui_->logFileName->setText(QString::fromStdString(cfg.at(0).fileName));
    ui_->logMsgFileName->setText(QString::fromStdString(cfg.at(1).fileName));
-   if (cfg.at(0).level < bs::LogLevel::off) {
-      ui_->logLevel->setCurrentIndex(static_cast<int>(cfg.at(0).level));
-      ui_->groupBoxLogging->setChecked(true);
-   } else {
-      ui_->groupBoxLogging->setChecked(false);
-   }
-   if (cfg.at(1).level < bs::LogLevel::off) {
-      ui_->logLevelMsg->setCurrentIndex(static_cast<int>(cfg.at(1).level));
-      ui_->groupBoxLoggingMsg->setChecked(true);
-   } else {
-      ui_->groupBoxLoggingMsg->setChecked(false);
-   }
+   ui_->logLevel->setCurrentIndex(static_cast<int>(cfg.at(0).level));
+   ui_->logLevelMsg->setCurrentIndex(static_cast<int>(cfg.at(1).level));
 
    if (!displayDefault) {
       ui_->warnLabel->hide();
@@ -98,7 +84,7 @@ void GeneralSettingsPage::applyChanges(const std::shared_ptr<ApplicationSettings
       logSettings << QString::fromStdString(cfg.at(0).category);
       logSettings << QString::fromStdString(cfg.at(0).pattern);
 
-      if (ui_->groupBoxLogging->isChecked()) {
+      if (ui_->logLevel->currentIndex() < static_cast<int>(bs::LogLevel::off)) {
          logSettings << logLevel(ui_->logLevel->currentIndex());
       } else {
          logSettings << QString();
@@ -113,7 +99,7 @@ void GeneralSettingsPage::applyChanges(const std::shared_ptr<ApplicationSettings
       logSettings << QString::fromStdString(cfg.at(1).category);
       logSettings << QString::fromStdString(cfg.at(1).pattern);
 
-      if (ui_->groupBoxLoggingMsg->isChecked()) {
+      if (ui_->logLevelMsg->currentIndex() < static_cast<int>(bs::LogLevel::off)) {
          logSettings << logLevel(ui_->logLevelMsg->currentIndex());
       } else {
          logSettings << QString();
@@ -125,9 +111,10 @@ void GeneralSettingsPage::applyChanges(const std::shared_ptr<ApplicationSettings
 
 void GeneralSettingsPage::onSelectLogFile()
 {
-   QString fileName = QFileDialog::getOpenFileName(this,
+   QString fileName = QFileDialog::getSaveFileName(this,
       tr("Select file for General Terminal logs..."),
-      QFileInfo(ui_->logFileName->text()).path());
+      QFileInfo(ui_->logFileName->text()).path(),
+      QString(), nullptr, QFileDialog::DontConfirmOverwrite);
 
    if (!fileName.isEmpty()) {
       ui_->logFileName->setText(fileName);
@@ -136,9 +123,10 @@ void GeneralSettingsPage::onSelectLogFile()
 
 void GeneralSettingsPage::onSelectMsgLogFile()
 {
-   QString fileName = QFileDialog::getOpenFileName(this,
+   QString fileName = QFileDialog::getSaveFileName(this,
       tr("Select file for Matching Engine logs..."),
-      QFileInfo(ui_->logMsgFileName->text()).path());
+      QFileInfo(ui_->logMsgFileName->text()).path(),
+      QString(), nullptr, QFileDialog::DontConfirmOverwrite);
 
    if (!fileName.isEmpty()) {
       ui_->logMsgFileName->setText(fileName);
@@ -146,11 +134,6 @@ void GeneralSettingsPage::onSelectMsgLogFile()
 }
 
 void GeneralSettingsPage::onLogFileNameEdited(const QString &)
-{
-   checkSettings();
-}
-
-void GeneralSettingsPage::onGroupBoxClicked(bool)
 {
    checkSettings();
 }
