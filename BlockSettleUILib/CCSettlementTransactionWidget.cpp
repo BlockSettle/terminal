@@ -10,6 +10,7 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "HDWallet.h"
+#include "CelerClient.h"
 
 #include <QLabel>
 #include <QtConcurrent/QtConcurrentRun>
@@ -355,7 +356,8 @@ const std::string CCSettlementTransactionWidget::getTxSignedData() const
 
 void CCSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container
+   , std::shared_ptr<CelerClient> celerClient)
 {
    logger_ = logger;
    assetManager_ = assetManager;
@@ -363,6 +365,9 @@ void CCSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> &
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
+
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &CCSettlementTransactionWidget::onCancel);
 
    frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
    connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &CCSettlementTransactionWidget::onFrejaSucceeded);

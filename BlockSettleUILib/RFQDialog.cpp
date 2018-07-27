@@ -93,7 +93,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       if (rfq_.assetType == bs::network::Asset::SpotXBT) {
          xbtSettlementWidget_ = new XBTSettlementTransactionWidget(this);
          xbtSettlementWidget_->init(logger_, authAddressManager_, assetMgr_
-            , quoteProvider_, container_);
+            , quoteProvider_, container_, celerClient_);
 
          connect(xbtSettlementWidget_, &XBTSettlementTransactionWidget::settlementAccepted
             , this, &RFQDialog::onSettlementAccepted);
@@ -108,7 +108,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
          ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
       } else {
          ccSettlementWidget_ = new CCSettlementTransactionWidget(this);
-         ccSettlementWidget_->init(logger_, assetMgr_, container_);
+         ccSettlementWidget_->init(logger_, assetMgr_, container_, celerClient_);
 
          connect(ccSettlementWidget_, &CCSettlementTransactionWidget::settlementAccepted
             , this, &RFQDialog::onSettlementAccepted);

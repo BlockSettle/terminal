@@ -196,7 +196,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                settlContainer->activate();
             } else {
                auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
-                  sr.requestorAuthAddress, walletsManager_, signingContainer_, this);
+                  sr.requestorAuthAddress, walletsManager_, signingContainer_, celerClient_, this);
                showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {
@@ -222,7 +222,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                   settlContainer->activate();
                } else {
                   auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
-                     walletsManager_, signingContainer_, this);
+                     walletsManager_, signingContainer_, celerClient_, this);
                   showSettlementDialog(dsd);
                }
             } catch (const std::exception &e) {
