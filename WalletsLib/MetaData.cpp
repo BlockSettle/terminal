@@ -645,12 +645,12 @@ bool bs::Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) cons
    return true;
 }
 
-void bs::Wallet::UpdateBalanceFromDB()
+void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64_t>)> &cb)
 {
    if (!isBalanceAvailable()) {
       return;
    }
-   const auto &cb = [this](std::vector<uint64_t> balanceVector) {
+   const auto &cbBalances = [this, cb](std::vector<uint64_t> balanceVector) {
       if (balanceVector.size() < 4) {
          return;
       }
@@ -670,8 +670,11 @@ void bs::Wallet::UpdateBalanceFromDB()
          unconfirmedBalance_ = unconfirmedBalance;
       }
       emit balanceUpdated(balanceVector);
+      if (cb) {
+         cb(balanceVector);
+      }
    };
-   btcWallet_->getBalancesAndCount(armory_->topBlock(), cb);
+   btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
 }
 
 bool bs::Wallet::getHistoryPage(uint32_t id) const
