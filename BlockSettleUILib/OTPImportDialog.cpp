@@ -23,9 +23,6 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager, 
    ui_->pushButtonOk->setEnabled(false);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &OTPImportDialog::accept);
 
-   connect(ui_->lineEditPwd1, &QLineEdit::textEdited, this, &OTPImportDialog::onPasswordChanged);
-   connect(ui_->lineEditPwd2, &QLineEdit::textEdited, this, &OTPImportDialog::onPasswordChanged);
-
    validator_ = new EasyEncValidator(easyCodec_);
    ui_->lineEditOtp1->setValidator(validator_);
    connect(ui_->lineEditOtp1, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
@@ -34,16 +31,12 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager, 
    connect(ui_->lineEditOtp2, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp2, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
 
-   connect(ui_->radioButtonPassword, &QRadioButton::clicked, this, &OTPImportDialog::onEncTypeChanged);
-   connect(ui_->radioButtonFreja, &QRadioButton::clicked, this, &OTPImportDialog::onEncTypeChanged);
    connect(ui_->lineEditFrejaId, &QLineEdit::textChanged, this, &OTPImportDialog::onFrejaIdChanged);
    connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &OTPImportDialog::startFrejaSign);
 
    connect(&frejaSign_, &FrejaSignOTP::succeeded, this, &OTPImportDialog::onFrejaSucceeded);
    connect(&frejaSign_, &FrejaSign::failed, this, &OTPImportDialog::onFrejaFailed);
    connect(&frejaSign_, &FrejaSign::statusUpdated, this, &OTPImportDialog::onFrejaStatusUpdated);
-
-   onEncTypeChanged();
 }
 
 OTPImportDialog::~OTPImportDialog()
@@ -77,68 +70,13 @@ void OTPImportDialog::keyTextChanged()
 
    try {
       hexKey_ = easyCodec_->toHex(EasyCoDec::Data{ ui_->lineEditOtp1->text().toStdString(), ui_->lineEditOtp2->text().toStdString() });
-      ui_->lineEditPwd1->setFocus();
-      onPasswordChanged();
+      ui_->lineEditFrejaId->setFocus();
    }
    catch (const std::exception &e) {
       ui_->labelOtpHint->setText(tr("Failed to get OTP key: %1").arg(QLatin1String(e.what())));
       keyIsValid_ = false;
       ui_->lineEditOtp1->setFocus();
    }
-}
-
-void OTPImportDialog::onPasswordChanged()
-{
-   const auto pwd1 = ui_->lineEditPwd1->text().toStdString();
-   const auto pwd2 = ui_->lineEditPwd2->text().toStdString();
-
-   if (keyIsValid_ && ui_->radioButtonPassword->isChecked()) {
-      if (pwd1.empty() || pwd2.empty()) {
-         if (pwd1.empty()) {
-            ui_->labelPwdHint->setText(tr("Enter OTP password"));
-         }
-         else if (pwd2.empty()) {
-            ui_->labelPwdHint->setText(tr("Repeat OTP password"));
-         }
-
-         otpPassword_.clear();
-      }
-      else if (pwd1 != pwd2) {
-         ui_->labelPwdHint->setText(tr("Passwords don't match"));
-
-         otpPassword_.clear();
-      }
-      else {
-         ui_->labelPwdHint->clear();
-         otpPassword_ = ui_->lineEditPwd1->text().toStdString();
-      }
-   }
-   else if (!keyIsValid_){
-      ui_->labelPwdHint->setText(tr("Enter OTP"));
-   }
-   else {
-      ui_->labelPwdHint->clear();
-   }
-
-   updateAcceptButton();
-}
-
-void OTPImportDialog::onEncTypeChanged()
-{
-   if (ui_->radioButtonPassword->isChecked()) {
-      ui_->frejaWidget->hide();
-      ui_->pwdWidget->show();
-   }
-   else if (ui_->radioButtonFreja->isChecked()) {
-      ui_->frejaWidget->show();
-      ui_->pwdWidget->hide();
-
-      ui_->lineEditPwd1->clear();
-      ui_->lineEditPwd2->clear();
-   }
-
-   otpPassword_.clear();
-   onPasswordChanged();
 }
 
 void OTPImportDialog::onFrejaIdChanged(const QString &)
@@ -195,8 +133,7 @@ void OTPImportDialog::accept()
 
    const auto otpKey = SecureBinaryData(BinaryData::CreateFromHex(hexKey_));
    auto resultCode = otpManager_->ImportOTPForCurrentUser(otpKey,
-      otpPassword_, (ui_->radioButtonPassword->isChecked() ?
-         bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja));
+      otpPassword_, bs::wallet::EncryptionType::Freja);
    if (resultCode != OTPManager::OTPImportResult::Success) {
 
       QString errorText;
@@ -209,6 +146,8 @@ void OTPImportDialog::accept()
          break;
       case OTPManager::OTPImportResult::OutdatedOTP:
          errorText = tr("You are trying to import outdated OTP");
+         break;
+      default:
          break;
       }
 

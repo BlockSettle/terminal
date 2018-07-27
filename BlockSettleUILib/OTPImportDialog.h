@@ -28,10 +28,8 @@ public:
    ~OTPImportDialog() override;
 
 private slots:
-   void onPasswordChanged();
    void accept() override;
    void keyTextChanged();
-   void onEncTypeChanged();
    void onFrejaIdChanged(const QString &);
    void startFrejaSign();
    void onFrejaSucceeded(SecureBinaryData);

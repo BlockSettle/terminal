@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>385</width>
-    <height>422</height>
+    <height>288</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -65,6 +65,18 @@
         <string>OTP ROOT KEY</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
          <widget class="QWidget" name="horizontalWidget_2" native="true">
           <property name="minimumSize">
@@ -192,7 +204,7 @@
         </sizepolicy>
        </property>
        <property name="title">
-        <string>OTP PASSWORD</string>
+        <string>FREJA SIGNING</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <property name="leftMargin">
@@ -207,50 +219,6 @@
         <property name="bottomMargin">
          <number>0</number>
         </property>
-        <item>
-         <widget class="QWidget" name="horizontalWidget_4" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_8">
-           <property name="spacing">
-            <number>5</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QRadioButton" name="radioButtonPassword">
-             <property name="text">
-              <string>Password</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="radioButtonFreja">
-             <property name="text">
-              <string>Freja eID</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
         <item>
          <widget class="QWidget" name="frejaWidget" native="true">
           <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -281,7 +249,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Freja email</string>
+              <string>Email</string>
              </property>
              <property name="wordWrap">
               <bool>true</bool>
@@ -312,98 +280,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QWidget" name="pwdWidget" native="true">
-          <layout class="QGridLayout" name="gridLayout">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="QLabel" name="labelPwd">
-             <property name="minimumSize">
-              <size>
-               <width>60</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>60</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Enter Password</string>
-             </property>
-             <property name="wordWrap">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEditPwd1">
-             <property name="echoMode">
-              <enum>QLineEdit::Password</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="labelPwdConfirm">
-             <property name="minimumSize">
-              <size>
-               <width>60</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>60</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Confirm Password</string>
-             </property>
-             <property name="wordWrap">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="lineEditPwd2">
-             <property name="echoMode">
-              <enum>QLineEdit::Password</enum>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
          <widget class="QLabel" name="labelPwdHint">
           <property name="text">
            <string/>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Secure your OTP Root Key with a password and remember that this Root Key is different from your Primary Wallet</string>
-          </property>
-          <property name="wordWrap">
-           <bool>true</bool>
-          </property>
-          <property name="statusWarningLabel" stdset="0">
-           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -483,8 +362,6 @@
  <tabstops>
   <tabstop>lineEditOtp1</tabstop>
   <tabstop>lineEditOtp2</tabstop>
-  <tabstop>lineEditPwd1</tabstop>
-  <tabstop>lineEditPwd2</tabstop>
   <tabstop>pushButtonOk</tabstop>
  </tabstops>
  <resources>
