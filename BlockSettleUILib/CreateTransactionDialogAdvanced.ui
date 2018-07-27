@@ -1185,7 +1185,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox_3">
         <property name="title">
-         <string>RETURN CHANGE TO:</string>
+         <string>CHANGE ADDRESS</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_13">
          <property name="spacing">
@@ -1230,7 +1230,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>New Native SegWit</string>
+               <string>Native SegWit</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -1246,7 +1246,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>New Nested SegWit</string>
+               <string>Nested SegWit</string>
               </property>
               <property name="checked">
                <bool>false</bool>

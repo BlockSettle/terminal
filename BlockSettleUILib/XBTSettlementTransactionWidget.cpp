@@ -12,6 +12,7 @@
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
+#include <CelerClient.h>
 
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -22,7 +23,8 @@ const unsigned int WaitTimeoutInSec = 30;
 XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager>& manager, const std::shared_ptr<AssetManager> &assetManager
    , const std::shared_ptr<QuoteProvider> &quoteProvider, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
+   , const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<CelerClient> &celerClient
+   , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::XBTSettlementTransactionWidget())
    , logger_(logger)
@@ -65,6 +67,9 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &XBTSettlementTransactionWidget::onTXSigned);
 
    connect(armory_.get(), &ArmoryConnection::txBroadcastError, this, &XBTSettlementTransactionWidget::onZCError, Qt::QueuedConnection);
+
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &XBTSettlementTransactionWidget::onCancel);
 }
 
 XBTSettlementTransactionWidget::~XBTSettlementTransactionWidget()
@@ -202,8 +207,8 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged()
       text = sValid;
       if (encType_ == bs::wallet::EncryptionType::Freja) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId());
-         frejaSign_->start(userId_, tr("XBT settlement TX for %1 in wallet %2").arg(QString::fromStdString(rfq_.security))
-            .arg(QString::fromStdString(rootWallet->getName())), rootWallet->getWalletId());
+         frejaSign_->start(userId_, tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security))
+            .arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out")), rootWallet->getWalletId());
       }
       break;
    case AddressVerificationState::VerificationFailed:
@@ -463,6 +468,8 @@ void XBTSettlementTransactionWidget::onPasswordChanged(const QString &)
    else {
       walletPassword_ = ui_->lineEditPassword->text().toStdString();
    }
+
+   updateAcceptButton();
 }
 
 void XBTSettlementTransactionWidget::updateAcceptButton()

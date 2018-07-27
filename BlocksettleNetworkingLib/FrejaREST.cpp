@@ -679,7 +679,7 @@ void FrejaSign::onRequestFailed(FrejaREST::SeqNo)
 
 bool FrejaSignWallet::start(const QString &userId, const QString &title, const std::string &walletId)
 {
-   const auto data = QString::fromStdString("Wallet " + walletId + " password");
+   const auto data = QString::fromStdString("Wallet ID: " + walletId);
    return FrejaSign::start(userId, title, data);
 }
 
@@ -694,7 +694,7 @@ void FrejaSignWallet::onReceivedSignature(const QByteArray &signature)
 
 bool FrejaSignOTP::start(const QString &userId, const QString &title, const QString &otpId)
 {
-   const auto data = QLatin1String("OTP ") + otpId + QLatin1String(" password");
+   const auto data = QLatin1String("OTP ID: ") + otpId;
    return FrejaSign::start(userId, title, data);
 }
 

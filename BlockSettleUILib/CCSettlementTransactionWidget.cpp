@@ -10,6 +10,7 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "HDWallet.h"
+#include "CelerClient.h"
 
 #include <QLabel>
 #include <QtConcurrent/QtConcurrentRun>
@@ -20,7 +21,8 @@ const unsigned int WaitTimeoutInSec = 30;
 
 CCSettlementTransactionWidget::CCSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AssetManager> &assetManager, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
+   , const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<CelerClient> &celerClient
+   , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CCSettlementTransactionWidget())
    , logger_(logger)
@@ -50,6 +52,9 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(const std::shared_p
 
    connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &CCSettlementTransactionWidget::onHDWalletInfo);
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &CCSettlementTransactionWidget::onTXSigned);
+
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &CCSettlementTransactionWidget::onCancel);
 
    ui_->lineEditPassword->setEnabled(false);
    ui_->pushButtonAccept->setEnabled(false);
@@ -134,7 +139,7 @@ void CCSettlementTransactionWidget::populateDetails(const bs::network::RFQ& rfq
 
    clientSells_ = (rfq.side == bs::network::Side::Sell);
 
-   if (rfq.side == bs::network::Side::Buy && rfq.product == bs::network::XbtCurrency) {
+   if (clientSells_) {
       window()->setWindowTitle(tr("Settlement Delivery"));
       ui_->labelPaymentName->setText(tr("Delivery"));
    } else {
@@ -258,8 +263,8 @@ void CCSettlementTransactionWidget::startFrejaSign()
       return;
    }
    const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetSigningWallet()->GetWalletId());
-   frejaSign_->start(userId_, tr("CC settlement TX for %1 in wallet %2").arg(QString::fromStdString(rfq_.security))
-      .arg(QString::fromStdString(rootWallet->getName())), rootWallet->getWalletId());
+   frejaSign_->start(userId_, tr("%1 %2").arg(QString::fromStdString(rfq_.security))
+      .arg(clientSells_ ? tr("Delivery") : tr("Payment")), rootWallet->getWalletId());
 }
 
 void CCSettlementTransactionWidget::onAccept()
