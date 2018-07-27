@@ -21,6 +21,7 @@ class QuoteProvider;
 class SignContainer;
 class WalletsManager;
 class XBTSettlementTransactionWidget;
+class CelerClient;
 
 class RFQDialog : public QDialog
 {
@@ -34,6 +35,7 @@ public:
       , const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
+      , std::shared_ptr<CelerClient> celerClient
       , QWidget* parent = nullptr);
    ~RFQDialog() override = default;
 
@@ -63,6 +65,7 @@ private:
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      container_;
    std::shared_ptr<AssetManager>       assetMgr_;
+   std::shared_ptr<CelerClient>        celerClient_;
    std::unordered_map<std::string, std::string> ccTxMap_;
    std::map<QString, QString>          ccReqIdToOrder_;
 

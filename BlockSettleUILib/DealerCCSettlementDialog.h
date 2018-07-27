@@ -9,6 +9,7 @@ namespace Ui {
 }
 class DealerCCSettlementContainer;
 class WalletsManager;
+class CelerClient;
 
 
 class DealerCCSettlementDialog : public BaseDealerSettlementDialog
@@ -21,6 +22,7 @@ public:
       , const std::string &reqRecvAddr
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &
+      , std::shared_ptr<CelerClient>
       , QWidget* parent = nullptr);
    ~DealerCCSettlementDialog() noexcept override = default;
 

@@ -29,6 +29,7 @@ class SignContainer;
 class QuoteProvider;
 class TransactionData;
 class WalletsManager;
+class CelerClient;
 
 namespace SwigClient
 {
@@ -45,7 +46,7 @@ public:
 
    void init(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<AssetManager> &, const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<SignContainer> &);
+      , const std::shared_ptr<SignContainer> &, std::shared_ptr<CelerClient>);
    void reset(const std::shared_ptr<WalletsManager> &walletsManager);
    void populateDetails(const bs::network::RFQ& rfq, const bs::network::Quote& quote
       , const std::shared_ptr<TransactionData>& transactionData);

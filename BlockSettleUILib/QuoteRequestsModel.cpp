@@ -7,16 +7,21 @@
 #include "SettlementContainer.h"
 #include "UiUtils.h"
 #include "Colors.h"
+#include "CelerClient.h"
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
- , QObject* parent)
+ , std::shared_ptr<CelerClient> celerClient, QObject* parent)
    : QAbstractItemModel(parent)
    , secStatsCollector_(statsCollector)
+   , celerClient_(celerClient)
 {
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &QuoteRequestsModel::ticker);
    timer_.start();
+
+   connect(celerClient_.get(), &CelerClient::OnConnectionClosed,
+      this, &QuoteRequestsModel::clearModel);
 }
 
 QuoteRequestsModel::~QuoteRequestsModel()
@@ -774,6 +779,13 @@ void QuoteRequestsModel::onSettlementFailed()
 {
    ++settlFailed_;
    deleteSettlement(qobject_cast<bs::SettlementContainer *>(sender()));
+}
+
+void QuoteRequestsModel::clearModel()
+{
+   beginResetModel();
+   data_.clear();
+   endResetModel();
 }
 
 void QuoteRequestsModel::onSettlementExpired()

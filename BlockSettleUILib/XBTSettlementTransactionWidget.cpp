@@ -12,6 +12,7 @@
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
+#include <CelerClient.h>
 
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -413,7 +414,7 @@ void XBTSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData sign
 
 void XBTSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager>& manager
    , const std::shared_ptr<AssetManager> &assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container, std::shared_ptr<CelerClient> celerClient)
 {
    logger_ = logger;
    authAddressManager_ = manager;
@@ -423,6 +424,9 @@ void XBTSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> 
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
+
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &XBTSettlementTransactionWidget::onCancel);
 
    frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
    connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &XBTSettlementTransactionWidget::onFrejaSucceeded);
@@ -465,6 +469,8 @@ void XBTSettlementTransactionWidget::onPasswordChanged(const QString &)
    else {
       walletPassword_ = ui_->lineEditPassword->text().toStdString();
    }
+
+   updateAcceptButton();
 }
 
 void XBTSettlementTransactionWidget::updateAcceptButton()

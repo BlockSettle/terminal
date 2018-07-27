@@ -9,6 +9,7 @@
 #include "WalletsManager.h"
 #include "HDWallet.h"
 #include <QtConcurrent/QtConcurrentRun>
+#include <CelerClient.h>
 
 #include <spdlog/spdlog.h>
 
@@ -18,6 +19,7 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
       , const std::string &reqRecvAddr
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
+      , std::shared_ptr<CelerClient> celerClient
       , QWidget* parent)
    : BaseDealerSettlementDialog(logger, container, signContainer, parent)
    , ui_(new Ui::DealerCCSettlementDialog())
@@ -28,6 +30,9 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    ui_->setupUi(this);
    connectToProgressBar(ui_->progressBar);
    connectToHintLabel(ui_->labelHint, ui_->labelError);
+
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &DealerCCSettlementDialog::reject);
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &DealerCCSettlementDialog::reject);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &DealerCCSettlementDialog::onAccepted);

@@ -11,6 +11,7 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "HDWallet.h"
+#include "CelerClient.h"
 
 #include <spdlog/spdlog.h>
 
@@ -20,12 +21,16 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
       , const std::shared_ptr<AssetManager>& assetManager
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
+      , std::shared_ptr<CelerClient> celerClient
       , QWidget* parent)
    : BaseDealerSettlementDialog(logger, settlContainer, signContainer, parent)
    , ui_(new Ui::DealerXBTSettlementDialog())
    , settlContainer_(settlContainer)
 {
    ui_->setupUi(this);
+
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &DealerXBTSettlementDialog::reject);
 
    connectToProgressBar(ui_->progressBar);
    connectToHintLabel(ui_->labelHint, ui_->labelError);

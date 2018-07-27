@@ -112,7 +112,8 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, statsCollector_.get(), &bs::SecurityStatsCollector::onQuoteSubmitted);
 
-   ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_, appSettings);
+   ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
+                                  appSettings, celerClient_);
    ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, signingContainer_);
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, ui_->pageRFQReply, &RFQDealerReply::setQuoteReqNotification);
@@ -195,7 +196,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                settlContainer->activate();
             } else {
                auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
-                  sr.requestorAuthAddress, walletsManager_, signingContainer_, this);
+                  sr.requestorAuthAddress, walletsManager_, signingContainer_, celerClient_, this);
                showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {
@@ -221,7 +222,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                   settlContainer->activate();
                } else {
                   auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
-                     walletsManager_, signingContainer_, this);
+                     walletsManager_, signingContainer_, celerClient_, this);
                   showSettlementDialog(dsd);
                }
             } catch (const std::exception &e) {
