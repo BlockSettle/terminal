@@ -180,7 +180,7 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>30</height>
+             <height>25</height>
             </size>
            </property>
            <property name="maximumSize">
@@ -192,7 +192,7 @@
            <property name="sizeIncrement">
             <size>
              <width>0</width>
-             <height>30</height>
+             <height>25</height>
             </size>
            </property>
            <property name="headerPanel" stdset="0">
@@ -200,10 +200,10 @@
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <property name="spacing">
-             <number>5</number>
+             <number>0</number>
             </property>
             <property name="leftMargin">
-             <number>5</number>
+             <number>0</number>
             </property>
             <property name="topMargin">
              <number>0</number>

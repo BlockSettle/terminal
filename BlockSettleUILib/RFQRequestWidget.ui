@@ -153,7 +153,7 @@
             <item>
              <widget class="QLabel" name="label">
               <property name="text">
-               <string>Trade Blotter</string>
+               <string>TRADE BLOTTER</string>
               </property>
               <property name="headerLabel" stdset="0">
                <bool>true</bool>
