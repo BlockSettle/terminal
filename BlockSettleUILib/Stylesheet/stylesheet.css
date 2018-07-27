@@ -718,6 +718,7 @@ QPushButton, QToolButton, *[buttonImportant="true"], *[buttonSuccess="true"], *[
   text-transform: uppercase;
   background-color: transparent;
   padding: 0px 10px;
+  min-height: 20px;
   qproperty-iconSize: 22px; }
 
 QPushButton:hover, QToolButton:hover, [buttonImportant="true"]:hover, [buttonSuccess="true"]:hover, [buttonWarning="true"]:hover {
