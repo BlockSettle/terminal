@@ -376,7 +376,7 @@ QTabWidget::pane {
   /* The tab widget frame */
   border-top: 0 solid #C2C7CB;
   background-color: #b7bbbd;
-  margin: 0px 1px; }
+  margin: 0px; }
 
 QTabWidget::tab-bar {
   left: 5px;
