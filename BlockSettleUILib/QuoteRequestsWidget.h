@@ -144,7 +144,6 @@ public slots:
 private slots:
    void onSettingChanged(int setting, QVariant val);
    void onQuoteRequest(const bs::network::QuoteReqNotification &qrn);
-   void onSecuritiesReceived();
    void onRowsChanged();
    void onRowsInserted(const QModelIndex &parent, int first, int last);
    void onRowsRemoved(const QModelIndex &parent, int first, int last);   
@@ -155,6 +154,7 @@ private slots:
 private:
    QString path(const QModelIndex &index) const;
    void expandIfNeeded(const QModelIndex &index = QModelIndex());
+   void saveCollapsedState();
 
 private:
    Ui::QuoteRequestsWidget* ui_;
@@ -172,17 +172,11 @@ class QuoteReqSortModel : public QSortFilterProxyModel
 {
    Q_OBJECT
 public:
-   QuoteReqSortModel(const std::shared_ptr<AssetManager>& assetMgr, QObject *parent)
-      : QSortFilterProxyModel(parent), assetManager_(assetMgr) {}
-   void SetFilter(const QStringList &visible);
+   explicit QuoteReqSortModel(QObject *parent)
+      : QSortFilterProxyModel(parent) {}
 
 protected:
    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
-   bool filterAcceptsRow(int source_row, const QModelIndex & source_parent) const override;
-
-private:
-   std::shared_ptr<AssetManager> assetManager_;
-   std::set<QString>             visible_;
 };
 
 #endif // __QUOTE_REQUESTS_WIDGET_H__
