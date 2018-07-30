@@ -108,7 +108,7 @@ class AssetManager;
 class CelerClient;
 class QuoteRequestsModel;
 class QuoteReqSortModel;
-class TreeViewWithEnterKey;
+class RFQBlotterTreeView;
 class CelerClient;
 
 class QuoteRequestsWidget : public QWidget
@@ -126,7 +126,7 @@ public:
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
 
-   TreeViewWithEnterKey* view() const;
+   RFQBlotterTreeView* view() const;
 
 signals:
    void Selected(const bs::network::QuoteReqNotification &, double indicBid, double indicAsk);

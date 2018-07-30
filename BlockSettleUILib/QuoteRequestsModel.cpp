@@ -237,7 +237,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             }
 
             case static_cast<int>(Role::LimitOfRfqs) : {
-               return -1;
+               return m->limit_;
             }
 
             case static_cast<int>(Role::QuotedRfqsCount) : {
@@ -486,6 +486,8 @@ bool QuoteRequestsModel::setData(const QModelIndex &index, const QVariant &value
       IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
 
       auto * m = static_cast<Market*>(idx->data_);
+
+      m->limit_ = value.toInt();
 
       for (auto it = m->groups_.begin(), last = m->groups_.end(); it != last; ++it) {
          (*it)->limit_ = value.toInt();

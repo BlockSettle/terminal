@@ -269,9 +269,11 @@ private:
       std::vector<std::unique_ptr<Group>> groups_;
       IndexHelper idx_;
       Group settl_;
+      int limit_;
 
       Market()
          : idx_(nullptr, this, DataType::Market)
+         , limit_(-1)
       {
          settl_.idx_ = idx_;
       }
@@ -280,6 +282,7 @@ private:
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Market)
+         , limit_(-1)
       {
          settl_.idx_ = idx_;
       }

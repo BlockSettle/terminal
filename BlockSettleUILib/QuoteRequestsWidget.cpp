@@ -8,7 +8,7 @@
 #include "QuoteProvider.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
-#include "TreeViewWithEnterKey.h"
+#include "RFQBlotterTreeView.h"
 
 #include <QStyle>
 #include <QStyleOptionProgressBar>
@@ -76,7 +76,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
            this, &QuoteRequestsWidget::onCollapsed);
    connect(ui_->treeViewQuoteRequests, &QTreeView::expanded,
            this, &QuoteRequestsWidget::onExpanded);
-   connect(ui_->treeViewQuoteRequests, &TreeViewWithEnterKey::enterKeyPressed,
+   connect(ui_->treeViewQuoteRequests, &RFQBlotterTreeView::enterKeyPressed,
            this, &QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed);
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
@@ -148,7 +148,7 @@ void QuoteRequestsWidget::addSettlementContainer(const std::shared_ptr<bs::Settl
    }
 }
 
-TreeViewWithEnterKey* QuoteRequestsWidget::view() const
+RFQBlotterTreeView* QuoteRequestsWidget::view() const
 {
    return ui_->treeViewQuoteRequests;
 }

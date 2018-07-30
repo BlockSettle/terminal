@@ -27,7 +27,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="TreeViewWithEnterKey" name="treeViewQuoteRequests">
+    <widget class="RFQBlotterTreeView" name="treeViewQuoteRequests">
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
      </property>
@@ -46,9 +46,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>TreeViewWithEnterKey</class>
+   <class>RFQBlotterTreeView</class>
    <extends>QTreeView</extends>
-   <header>TreeViewWithEnterKey.h</header>
+   <header>RFQBlotterTreeView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
