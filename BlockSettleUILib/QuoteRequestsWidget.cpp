@@ -64,13 +64,12 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    model_ = new QuoteRequestsModel(statsCollector, celerClient, ui_->treeViewQuoteRequests);
    model_->SetAssetManager(assetManager);
 
-   sortModel_ = new QuoteReqSortModel(this);
+   sortModel_ = new QuoteReqSortModel(model_, this);
    sortModel_->setSourceModel(model_);
 
-   connect(model_, &QuoteRequestsModel::invalidateFilterModel,
-      sortModel_, &QuoteReqSortModel::invalidate);
-
    ui_->treeViewQuoteRequests->setModel(sortModel_);
+   ui_->treeViewQuoteRequests->setRfqModel(model_);
+   ui_->treeViewQuoteRequests->setSortModel(sortModel_);
 
    connect(ui_->treeViewQuoteRequests, &QTreeView::collapsed,
            this, &QuoteRequestsWidget::onCollapsed);
@@ -418,6 +417,14 @@ unsigned int bs::SettlementStatsCollector::getGradeFor(const std::string &) cons
 }
 
 
+QuoteReqSortModel::QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent)
+   : QSortFilterProxyModel(parent)
+   , model_(model)
+{
+   connect(model_, &QuoteRequestsModel::invalidateFilterModel,
+      this, &QuoteReqSortModel::invalidate);
+}
+
 bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) const
 {
    const auto index = sourceModel()->index(row, 0, parent);
@@ -427,15 +434,14 @@ bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) con
          static_cast<int>(QuoteRequestsModel::DataType::RFQ)) {
             if (parent.data(static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() > 0) {
                if (row - parent.data(static_cast<int>(
-                     QuoteRequestsModel::Role::QuotedRfqsCount)).toInt() <= parent.data(
+                     QuoteRequestsModel::Role::QuotedRfqsCount)).toInt() < parent.data(
                      static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() &&
                   !index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
                      return true;
                } else if (index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
                   return true;
                } else {
-                  sourceModel()->setData(parent, true,
-                     static_cast<int>(QuoteRequestsModel::Role::HasHiddenChildren));
+                  model_->setHiddenFlag(parent);
                   return false;
                }
             } else {

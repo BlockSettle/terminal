@@ -5,6 +5,9 @@
 #include "TreeViewWithEnterKey.h"
 
 
+class QuoteRequestsModel;
+class QuoteReqSortModel;
+
 //
 // RFQBlotterTreeView
 //
@@ -18,11 +21,18 @@ public:
    RFQBlotterTreeView(QWidget *parent);
    ~RFQBlotterTreeView() noexcept override = default;
 
+   void setRfqModel(QuoteRequestsModel *model);
+   void setSortModel(QuoteReqSortModel *model);
+
 protected:
    void contextMenuEvent(QContextMenuEvent *e) override;
 
 private:
    void setLimit(int limit);
+
+private:
+   QuoteRequestsModel * model_;
+   QuoteReqSortModel *sortModel_;
 }; // class RFQBlotterTreeView
 
 #endif // RFQBLOTTERTREEVIEW_H_INCLUDED

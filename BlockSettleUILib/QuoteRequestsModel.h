@@ -99,7 +99,6 @@ public:
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;   
    QVariant headerData(int section, Qt::Orientation orientation,
                        int role = Qt::DisplayRole) const override;
-   bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
 public:
    void onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn);
@@ -109,6 +108,8 @@ public:
    void onSecurityMDUpdated(const QString &security, const bs::network::MDFields &);
    void onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn);
    void onBestQuotePrice(const QString reqId, double price, bool own);
+   void limitRfqs(const QModelIndex &index, int limit);
+   void setHiddenFlag(const QModelIndex &index);
 
 private slots:
    void ticker();

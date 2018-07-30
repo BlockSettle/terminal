@@ -1,6 +1,7 @@
 
 #include "RFQBlotterTreeView.h"
 #include "QuoteRequestsModel.h"
+#include "QuoteRequestsWidget.h"
 
 #include <QContextMenuEvent>
 #include <QAbstractItemModel>
@@ -13,7 +14,19 @@
 
 RFQBlotterTreeView::RFQBlotterTreeView(QWidget *parent)
    : TreeViewWithEnterKey (parent)
+   , model_(nullptr)
+   , sortModel_(nullptr)
 {
+}
+
+void RFQBlotterTreeView::setRfqModel(QuoteRequestsModel *model)
+{
+   model_ = model;
+}
+
+void RFQBlotterTreeView::setSortModel(QuoteReqSortModel *model)
+{
+   sortModel_ = model;
 }
 
 void RFQBlotterTreeView::contextMenuEvent(QContextMenuEvent *e)
@@ -45,11 +58,13 @@ void RFQBlotterTreeView::contextMenuEvent(QContextMenuEvent *e)
 
 void RFQBlotterTreeView::setLimit(int limit)
 {
-   auto index = this->currentIndex();
+   auto index = sortModel_->mapToSource(currentIndex());
 
-   while (index.parent().isValid()) {
-      index = index.parent();
+   if (index.isValid()) {
+      while (index.parent().isValid()) {
+         index = index.parent();
+      }
+
+      model_->limitRfqs(index, limit);
    }
-
-   this->model()->setData(index, limit, static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs));
 }

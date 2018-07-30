@@ -90,7 +90,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             }
 
             case static_cast<int>(Role::LimitOfRfqs) : {
-               return -1;
+               return static_cast<Group*>(r->idx_.parent_->data_)->limit_;
             }
 
             case static_cast<int>(Role::QuotedRfqsCount) : {
@@ -468,37 +468,34 @@ QVariant QuoteRequestsModel::headerData(int section, Qt::Orientation orientation
    }
 }
 
-bool QuoteRequestsModel::setData(const QModelIndex &index, const QVariant &value, int role) {
-   if (role == static_cast<int>(Role::HasHiddenChildren)) {
+void QuoteRequestsModel::limitRfqs(const QModelIndex &index, int limit)
+{
+   if (!index.parent().isValid() && index.row() < static_cast<int>(data_.size())) {
       IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
 
-      if (idx->type_ == DataType::Group) {
-         static_cast<Group*>(idx->data_)->hasHidden_ = value.toBool();
+      auto *m = static_cast<Market*>(idx->data_);
 
-         const auto tmpIdx = createIndex(index.row(), 0, index.internalPointer());
-         emit dataChanged(tmpIdx, tmpIdx);
-
-         return true;
-      } else {
-         return false;
-      }
-   } else if(role == static_cast<int>(Role::LimitOfRfqs) && !index.parent().isValid()) {
-      IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
-
-      auto * m = static_cast<Market*>(idx->data_);
-
-      m->limit_ = value.toInt();
+      m->limit_ = limit;
 
       for (auto it = m->groups_.begin(), last = m->groups_.end(); it != last; ++it) {
-         (*it)->limit_ = value.toInt();
+         (*it)->limit_ = limit;
       }
 
       clearHiddenFlag();
       emit invalidateFilterModel();
+   }
+}
 
-      return true;
-   } else {
-      return false;
+void QuoteRequestsModel::setHiddenFlag(const QModelIndex &index)
+{
+   IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
+
+   if (idx->type_ == DataType::Group) {
+      const int mRow = findMarket(idx->parent_);
+
+      if (mRow >= 0 && index.row() < data_[mRow]->groups_.size()) {
+         static_cast<Group*>(idx->data_)->hasHidden_ = true;
+      }
    }
 }
 

@@ -172,12 +172,14 @@ class QuoteReqSortModel : public QSortFilterProxyModel
 {
    Q_OBJECT
 public:
-   explicit QuoteReqSortModel(QObject *parent)
-      : QSortFilterProxyModel(parent) {}
+   QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent);
 
 protected:
    bool filterAcceptsRow(int row, const QModelIndex &parent) const override;
    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
+
+private:
+   QuoteRequestsModel * model_;
 };
 
 #endif // __QUOTE_REQUESTS_WIDGET_H__
