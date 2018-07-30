@@ -33,7 +33,6 @@ protected slots:
 private:
    Ui::DealingSettingsPage *ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
-   SecuritiesModel                        *secModel_;
 };
 
 #endif // __DEALING_SETTINGS_PAGE_H__

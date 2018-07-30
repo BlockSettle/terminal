@@ -12,6 +12,8 @@
 
 #include <QStyle>
 #include <QStyleOptionProgressBar>
+#include <QProgressBar>
+#include <QPainter>
 
 
 //
@@ -56,12 +58,13 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    logger_ = logger;
    assetManager_ = assetManager;
    appSettings_ = appSettings;
+   collapsed_ = appSettings_->get<QStringList>(ApplicationSettings::Filter_MD_QN);
    dropQN_ = appSettings->get<bool>(ApplicationSettings::dropQN);
 
    model_ = new QuoteRequestsModel(statsCollector, celerClient, ui_->treeViewQuoteRequests);
    model_->SetAssetManager(assetManager);
 
-   sortModel_ = new QuoteReqSortModel(assetManager, this);
+   sortModel_ = new QuoteReqSortModel(this);
    sortModel_->setSourceModel(model_);
 
    ui_->treeViewQuoteRequests->setModel(sortModel_);
@@ -82,7 +85,6 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
 
    connect(quoteProvider.get(), &QuoteProvider::quoteReqNotifReceived, this, &QuoteRequestsWidget::onQuoteRequest);
    connect(appSettings.get(), &ApplicationSettings::settingChanged, this, &QuoteRequestsWidget::onSettingChanged);
-   connect(assetManager_.get(), &AssetManager::securitiesReceived, this, &QuoteRequestsWidget::onSecuritiesReceived);
 
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(
       static_cast<int>(QuoteRequestsModel::Column::Status), new ProgressDelegate(ui_->treeViewQuoteRequests));
@@ -211,21 +213,10 @@ void QuoteRequestsWidget::onQuoteRequest(const bs::network::QuoteReqNotification
    }
 }
 
-void QuoteRequestsWidget::onSecuritiesReceived()
-{
-   sortModel_->SetFilter(appSettings_->get<QStringList>(ApplicationSettings::Filter_MD_QN));
-   expandIfNeeded();
-}
-
 void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
 {
    switch (static_cast<ApplicationSettings::Setting>(setting))
    {
-   case ApplicationSettings::Filter_MD_QN:
-      sortModel_->SetFilter(val.toStringList());
-      expandIfNeeded();
-      break;
-
    case ApplicationSettings::dropQN:
       dropQN_ = val.toBool();
       break;
@@ -274,14 +265,23 @@ void QuoteRequestsWidget::onRowsRemoved(const QModelIndex &, int, int)
 
 void QuoteRequestsWidget::onCollapsed(const QModelIndex &index)
 {
-   if (index.isValid())
+   if (index.isValid()) {
       collapsed_.append(path(sortModel_->mapToSource(index)));
+      saveCollapsedState();
+   }
 }
 
 void QuoteRequestsWidget::onExpanded(const QModelIndex &index)
 {
-   if (index.isValid())
+   if (index.isValid()) {
       collapsed_.removeOne(path(sortModel_->mapToSource(index)));
+      saveCollapsedState();
+   }
+}
+
+void QuoteRequestsWidget::saveCollapsedState()
+{
+   appSettings_->set(ApplicationSettings::Filter_MD_QN, collapsed_);
 }
 
 void QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed(const QModelIndex &index)
@@ -431,36 +431,7 @@ bool QuoteReqSortModel::lessThan(const QModelIndex &left, const QModelIndex &rig
    return (leftTL < rightTL);
 }
 
-bool QuoteReqSortModel::filterAcceptsRow(int sourceRow, const QModelIndex &srcParent) const
-{
-   if (visible_.empty()) {
-      return true;
-   }
 
-   const auto index = sourceModel()->index(sourceRow, 0, srcParent);
-   if (!sourceModel()->data(index,
-      static_cast<int>(QuoteRequestsModel::Role::AllowFiltering)).toBool()) {
-         return true;
-   }
-   const auto security = sourceModel()->data(index).toString();
-   if (visible_.find(security) != visible_.end()) {
-      return false;
-   }
-   return true;
-}
-
-void QuoteReqSortModel::SetFilter(const QStringList &visible)
-{
-   visible_.clear();
-   for (const auto &item : visible) {
-      visible_.insert(item);
-   }
-
-   invalidateFilter();
-}
-
-#include <QProgressBar>
-#include <QPainter>
 void ProgressDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt, const QModelIndex &index) const
 {
    if (index.data(static_cast<int>(QuoteRequestsModel::Role::ShowProgress)).toBool()) {
