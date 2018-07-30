@@ -30,6 +30,7 @@ class QuoteRequestsModel : public QAbstractItemModel
 
 signals:
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
+   void invalidateFilterModel();
 
 public:
    enum class Column {
@@ -60,7 +61,17 @@ public:
       Product,
       AllowFiltering,
       HasHiddenChildren,
-      Quoted
+      Quoted,
+      Type,
+      LimitOfRfqs,
+      QuotedRfqsCount
+   };
+
+   enum class DataType {
+      RFQ = 0,
+      Group,
+      Market,
+      Unknown
    };
 
 public:
@@ -88,6 +99,7 @@ public:
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;   
    QVariant headerData(int section, Qt::Orientation orientation,
                        int role = Qt::DisplayRole) const override;
+   bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
 public:
    void onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn);
@@ -104,6 +116,7 @@ private slots:
    void onSettlementCompleted();
    void onSettlementFailed();
    void clearModel();
+   void clearHiddenFlag();
 
 private:
    using Prices = std::map<Role, double>;
@@ -120,13 +133,6 @@ private:
    std::unordered_set<std::string>  pendingDeleteIds_;
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
-
-   enum class DataType {
-      RFQ,
-      Group,
-      Market,
-      Unknown
-   };
 
    struct IndexHelper {
       IndexHelper *parent_;
@@ -238,11 +244,13 @@ private:
       IndexHelper idx_;
       bool hasHidden_;
       int limit_;
+      int quotedRfqsCount_;
 
       Group()
          : idx_(nullptr, this, DataType::Group)
          , hasHidden_(false)
          , limit_(-1)
+         , quotedRfqsCount_(0)
       {}
 
       explicit Group(const QString &security, const QFont & font = QFont())
@@ -251,6 +259,7 @@ private:
          , idx_(nullptr, this, DataType::Group)
          , hasHidden_(false)
          , limit_(-1)
+         , quotedRfqsCount_(0)
       {}
    };
 

@@ -67,6 +67,9 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    sortModel_ = new QuoteReqSortModel(this);
    sortModel_->setSourceModel(model_);
 
+   connect(model_, &QuoteRequestsModel::invalidateFilterModel,
+      sortModel_, &QuoteReqSortModel::invalidate);
+
    ui_->treeViewQuoteRequests->setModel(sortModel_);
 
    connect(ui_->treeViewQuoteRequests, &QTreeView::collapsed,
@@ -414,6 +417,37 @@ unsigned int bs::SettlementStatsCollector::getGradeFor(const std::string &) cons
    return container_->timeLeftMs();
 }
 
+
+bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) const
+{
+   const auto index = sourceModel()->index(row, 0, parent);
+
+   if (index.isValid() ) {
+      if(index.data(static_cast<int>(QuoteRequestsModel::Role::Type)).toInt() ==
+         static_cast<int>(QuoteRequestsModel::DataType::RFQ)) {
+            if (parent.data(static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() > 0) {
+               if (row - parent.data(static_cast<int>(
+                     QuoteRequestsModel::Role::QuotedRfqsCount)).toInt() <= parent.data(
+                     static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() &&
+                  !index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
+                     return true;
+               } else if (index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
+                  return true;
+               } else {
+                  sourceModel()->setData(parent, true,
+                     static_cast<int>(QuoteRequestsModel::Role::HasHiddenChildren));
+                  return false;
+               }
+            } else {
+               return true;
+            }
+      } else {
+         return true;
+      }
+   } else {
+      return false;
+   }
+}
 
 bool QuoteReqSortModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
