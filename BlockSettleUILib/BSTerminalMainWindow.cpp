@@ -132,6 +132,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    InitSigningContainer();
    LoadWallets(splashScreen);
+   QApplication::processEvents();
 
    InitAuthManager();
    InitAssets();
