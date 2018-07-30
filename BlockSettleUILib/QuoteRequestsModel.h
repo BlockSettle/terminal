@@ -58,7 +58,9 @@ public:
       QuotedPrice,
       BestQPrice,
       Product,
-      AllowFiltering
+      AllowFiltering,
+      HasHiddenChildren,
+      Quoted
    };
 
 public:
@@ -187,9 +189,11 @@ private:
       QBrush indicativePxBrush_;
       QBrush stateBrush_;
       IndexHelper idx_;
+      bool quoted_;
 
       RFQ()
          : idx_(nullptr, this, DataType::RFQ)
+         , quoted_(false)
       {}
 
       RFQ(const QString &security,
@@ -223,6 +227,7 @@ private:
          , assetType_(assetType)
          , reqId_(reqId)
          , idx_(nullptr, this, DataType::RFQ)
+         , quoted_(false)
       {}
    };
 
@@ -231,15 +236,21 @@ private:
       QFont font_;
       std::vector<std::unique_ptr<RFQ>> rfqs_;
       IndexHelper idx_;
+      bool hasHidden_;
+      int limit_;
 
       Group()
          : idx_(nullptr, this, DataType::Group)
+         , hasHidden_(false)
+         , limit_(-1)
       {}
 
       explicit Group(const QString &security, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Group)
+         , hasHidden_(false)
+         , limit_(-1)
       {}
    };
 
