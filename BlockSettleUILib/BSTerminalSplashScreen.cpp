@@ -1,6 +1,8 @@
 #include "BSTerminalSplashScreen.h"
 
 #include <QBitmap>
+#include <QApplication>
+
 
 BSTerminalSplashScreen::BSTerminalSplashScreen(const QPixmap& splash_image)
    : QSplashScreen(splash_image)
@@ -24,9 +26,11 @@ BSTerminalSplashScreen::~BSTerminalSplashScreen()
 void BSTerminalSplashScreen::SetTipText(const QString& tip)
 {
    progress_->setFormat(tip + QString::fromStdString(" %p%"));
+   QApplication::processEvents();
 }
 
 void BSTerminalSplashScreen::SetProgress(int progressValue)
 {
    progress_->setValue(progressValue);
+   QApplication::processEvents();
 }
