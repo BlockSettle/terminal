@@ -118,6 +118,7 @@ namespace UiUtils
 
    ApplicationSettings::Setting limitRfqSetting(bs::network::Asset::Type type);
    ApplicationSettings::Setting limitRfqSetting(const QString &name);
+   QString marketNameForLimit(ApplicationSettings::Setting s);
 
    extern const QLatin1String XbtCurrency;
 }

@@ -5,7 +5,6 @@
 #include "UiUtils.h"
 
 #include <QContextMenuEvent>
-#include <QAbstractItemModel>
 #include <QMenu>
 
 
@@ -35,6 +34,11 @@ void RFQBlotterTreeView::setAppSettings(std::shared_ptr<ApplicationSettings> app
    appSettings_ = appSettings;
 }
 
+void RFQBlotterTreeView::setLimit(ApplicationSettings::Setting s, int limit)
+{
+   setLimit(findMarket(UiUtils::marketNameForLimit(s)), limit);
+}
+
 void RFQBlotterTreeView::contextMenuEvent(QContextMenuEvent *e)
 {
    auto index = currentIndex();
@@ -60,6 +64,13 @@ void RFQBlotterTreeView::contextMenuEvent(QContextMenuEvent *e)
    }
 }
 
+void RFQBlotterTreeView::setLimit(const QModelIndex &index, int limit)
+{
+   if (index.isValid()) {
+      model_->limitRfqs(index, limit);
+   }
+}
+
 void RFQBlotterTreeView::setLimit(int limit)
 {
    auto index = sortModel_->mapToSource(currentIndex());
@@ -71,6 +82,11 @@ void RFQBlotterTreeView::setLimit(int limit)
 
       appSettings_->set(UiUtils::limitRfqSetting(index.data().toString()), limit);
 
-      model_->limitRfqs(index, limit);
+      setLimit(index, limit);
    }
+}
+
+QModelIndex RFQBlotterTreeView::findMarket(const QString &name) const
+{
+   return model_->findMarketIndex(name);
 }

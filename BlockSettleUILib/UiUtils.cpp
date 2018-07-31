@@ -523,13 +523,31 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(bs::network::Asset::Type t
 
 ApplicationSettings::Setting UiUtils::limitRfqSetting(const QString &name)
 {
-   if (name == QLatin1String("Spot FX")) {
+   if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotFX))) {
       return ApplicationSettings::FxRfqLimit;
-   } else if (name == QLatin1String("Spot XBT")) {
+   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotXBT))) {
       return ApplicationSettings::XbtRfqLimit;
-   } else if (name == QLatin1String("Private Market")) {
-      return ApplicationSettings::PmRfqLimit;
+   } else if (name ==
+         QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket))) {
+            return ApplicationSettings::PmRfqLimit;
    } else {
       return ApplicationSettings::FxRfqLimit;
+   }
+}
+
+QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
+{
+   switch (s) {
+      case ApplicationSettings::FxRfqLimit :
+         return QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotFX));
+
+      case ApplicationSettings::XbtRfqLimit :
+         return QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotXBT));
+
+      case ApplicationSettings::PmRfqLimit :
+         return QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
+
+      default :
+         return QString();
    }
 }

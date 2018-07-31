@@ -3,13 +3,13 @@
 #define RFQBLOTTERTREEVIEW_H_INCLUDED
 
 #include "TreeViewWithEnterKey.h"
+#include "ApplicationSettings.h"
 
 #include <memory>
 
 
 class QuoteRequestsModel;
 class QuoteReqSortModel;
-class ApplicationSettings;
 
 //
 // RFQBlotterTreeView
@@ -28,11 +28,15 @@ public:
    void setSortModel(QuoteReqSortModel *model);
    void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
 
+   void setLimit(ApplicationSettings::Setting s, int limit);
+
 protected:
    void contextMenuEvent(QContextMenuEvent *e) override;
 
 private:
+   void setLimit(const QModelIndex &index, int limit);
    void setLimit(int limit);
+   QModelIndex findMarket(const QString &name) const;
 
 private:
    QuoteRequestsModel * model_;

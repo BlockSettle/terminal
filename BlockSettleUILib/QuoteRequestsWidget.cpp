@@ -230,11 +230,24 @@ void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
 {
    switch (static_cast<ApplicationSettings::Setting>(setting))
    {
-   case ApplicationSettings::dropQN:
-      dropQN_ = val.toBool();
-      break;
+      case ApplicationSettings::dropQN:
+         dropQN_ = val.toBool();
+         break;
 
-   default:   break;
+      case ApplicationSettings::FxRfqLimit :
+         ui_->treeViewQuoteRequests->setLimit(ApplicationSettings::FxRfqLimit, val.toInt());
+         break;
+
+      case ApplicationSettings::XbtRfqLimit :
+         ui_->treeViewQuoteRequests->setLimit(ApplicationSettings::XbtRfqLimit, val.toInt());
+         break;
+
+      case ApplicationSettings::PmRfqLimit :
+         ui_->treeViewQuoteRequests->setLimit(ApplicationSettings::PmRfqLimit, val.toInt());
+         break;
+
+      default:
+         break;
    }
 }
 

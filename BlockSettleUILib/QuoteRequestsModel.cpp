@@ -516,6 +516,17 @@ void QuoteRequestsModel::setHiddenFlag(const QModelIndex &index)
    }
 }
 
+QModelIndex QuoteRequestsModel::findMarketIndex(const QString &name) const
+{
+   auto *m = findMarket(name);
+
+   if (m) {
+      return createIndex(findMarket(&m->idx_), 0, &m->idx_);
+   } else {
+      return QModelIndex();
+   }
+}
+
 void QuoteRequestsModel::SetAssetManager(const std::shared_ptr<AssetManager>& assetManager)
 {
    assetManager_ = assetManager;

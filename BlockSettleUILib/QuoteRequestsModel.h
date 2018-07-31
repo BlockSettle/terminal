@@ -113,6 +113,7 @@ public:
    void onBestQuotePrice(const QString reqId, double price, bool own);
    void limitRfqs(const QModelIndex &index, int limit);
    void setHiddenFlag(const QModelIndex &index);
+   QModelIndex findMarketIndex(const QString &name) const;
 
 private slots:
    void ticker();
