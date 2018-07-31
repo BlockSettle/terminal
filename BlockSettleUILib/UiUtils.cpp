@@ -539,13 +539,13 @@ QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
 {
    switch (s) {
       case ApplicationSettings::FxRfqLimit :
-         return QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotFX));
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotFX));
 
       case ApplicationSettings::XbtRfqLimit :
-         return QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotXBT));
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT));
 
       case ApplicationSettings::PmRfqLimit :
-         return QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
 
       default :
          return QString();
