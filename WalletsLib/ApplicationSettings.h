@@ -81,6 +81,7 @@ public:
       FxRfqLimit,
       XbtRfqLimit,
       PmRfqLimit,
+      DisableBlueDotOnTabOfRfqBlotter,
       _last
    };
 

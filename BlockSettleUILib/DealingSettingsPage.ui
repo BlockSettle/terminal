@@ -13,7 +13,23 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3">
+  <layout class="QVBoxLayout" name="verticalLayout_4">
+   <item>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>GENERAL</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QCheckBox" name="disableBlueDot">
+        <property name="text">
+         <string>Disable notification of new RFQs on tab</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item>
     <widget class="QGroupBox" name="groupBox_3">
      <property name="title">
@@ -147,13 +163,6 @@
              </item>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>Spot XBT</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="1">
             <widget class="QComboBox" name="xbt">
              <property name="currentIndex">
@@ -223,6 +232,13 @@
                <string>All</string>
               </property>
              </item>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Spot XBT</string>
+             </property>
             </widget>
            </item>
           </layout>
