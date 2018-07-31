@@ -82,7 +82,8 @@ class NotificationTabResponder : public NotificationResponder
 {
    Q_OBJECT
 public:
-   NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi, QObject *parent = nullptr);
+   NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi,
+      std::shared_ptr<ApplicationSettings> appSettings, QObject *parent = nullptr);
 
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
 
@@ -90,12 +91,14 @@ private:
    struct TabAction {
       int   index;
       bool  checked;
+      bool  enabled;
    };
    TabAction getTabActionFor(bs::ui::NotifyType, bs::ui::NotifyMessage) const;
 
 private:
    const Ui::BSTerminalMainWindow * mainWinUi_;
    QIcon iconDot_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 class NotificationTrayIconResponder : public NotificationResponder
