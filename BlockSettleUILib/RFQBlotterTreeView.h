@@ -4,9 +4,12 @@
 
 #include "TreeViewWithEnterKey.h"
 
+#include <memory>
+
 
 class QuoteRequestsModel;
 class QuoteReqSortModel;
+class ApplicationSettings;
 
 //
 // RFQBlotterTreeView
@@ -23,6 +26,7 @@ public:
 
    void setRfqModel(QuoteRequestsModel *model);
    void setSortModel(QuoteReqSortModel *model);
+   void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
 
 protected:
    void contextMenuEvent(QContextMenuEvent *e) override;
@@ -33,6 +37,7 @@ private:
 private:
    QuoteRequestsModel * model_;
    QuoteReqSortModel *sortModel_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 }; // class RFQBlotterTreeView
 
 #endif // RFQBLOTTERTREEVIEW_H_INCLUDED

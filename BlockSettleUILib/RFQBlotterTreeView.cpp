@@ -2,6 +2,7 @@
 #include "RFQBlotterTreeView.h"
 #include "QuoteRequestsModel.h"
 #include "QuoteRequestsWidget.h"
+#include "UiUtils.h"
 
 #include <QContextMenuEvent>
 #include <QAbstractItemModel>
@@ -29,6 +30,11 @@ void RFQBlotterTreeView::setSortModel(QuoteReqSortModel *model)
    sortModel_ = model;
 }
 
+void RFQBlotterTreeView::setAppSettings(std::shared_ptr<ApplicationSettings> appSettings)
+{
+   appSettings_ = appSettings;
+}
+
 void RFQBlotterTreeView::contextMenuEvent(QContextMenuEvent *e)
 {
    auto index = currentIndex();
@@ -40,8 +46,6 @@ void RFQBlotterTreeView::contextMenuEvent(QContextMenuEvent *e)
       limit.addAction(tr("3 RFQs"), [this] () { this->setLimit(3); });
       limit.addAction(tr("5 RFQs"), [this] () { this->setLimit(5); });
       limit.addAction(tr("10 RFQs"), [this] () { this->setLimit(10); });
-      limit.addAction(tr("25 RFQs"), [this] () { this->setLimit(25); });
-      limit.addAction(tr("50 RFQs"), [this] () { this->setLimit(50); });
       menu.addMenu(&limit);
 
       if (index.data(static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() > 0) {
@@ -64,6 +68,8 @@ void RFQBlotterTreeView::setLimit(int limit)
       while (index.parent().isValid()) {
          index = index.parent();
       }
+
+      appSettings_->set(UiUtils::limitRfqSetting(index.data().toString()), limit);
 
       model_->limitRfqs(index, limit);
    }

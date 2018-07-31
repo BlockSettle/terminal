@@ -503,3 +503,33 @@ void UiUtils::setWrongState(QWidget *widget, bool wrong)
    widget->setProperty("wrongState", wrong);
    widget->style()->polish(widget);
 }
+
+ApplicationSettings::Setting UiUtils::limitRfqSetting(bs::network::Asset::Type type)
+{
+   switch (type) {
+      case bs::network::Asset::SpotFX :
+         return ApplicationSettings::FxRfqLimit;
+
+      case bs::network::Asset::SpotXBT :
+         return ApplicationSettings::XbtRfqLimit;
+
+      case bs::network::Asset::PrivateMarket :
+         return ApplicationSettings::PmRfqLimit;
+
+      default :
+         return ApplicationSettings::FxRfqLimit;
+   }
+}
+
+ApplicationSettings::Setting UiUtils::limitRfqSetting(const QString &name)
+{
+   if (name == QLatin1String("Spot FX")) {
+      return ApplicationSettings::FxRfqLimit;
+   } else if (name == QLatin1String("Spot XBT")) {
+      return ApplicationSettings::XbtRfqLimit;
+   } else if (name == QLatin1String("Private Market")) {
+      return ApplicationSettings::PmRfqLimit;
+   } else {
+      return ApplicationSettings::FxRfqLimit;
+   }
+}

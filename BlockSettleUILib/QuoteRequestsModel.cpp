@@ -8,13 +8,16 @@
 #include "UiUtils.h"
 #include "Colors.h"
 #include "CelerClient.h"
+#include "ApplicationSettings.h"
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
- , std::shared_ptr<CelerClient> celerClient, QObject* parent)
+ , std::shared_ptr<CelerClient> celerClient, std::shared_ptr<ApplicationSettings> appSettings
+ , QObject* parent)
    : QAbstractItemModel(parent)
    , secStatsCollector_(statsCollector)
    , celerClient_(celerClient)
+   , appSettings_(appSettings)
 {
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &QuoteRequestsModel::ticker);
@@ -22,6 +25,8 @@ QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCo
 
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed,
       this, &QuoteRequestsModel::clearModel);
+   connect(this, &QuoteRequestsModel::deferredUpdate,
+      this, &QuoteRequestsModel::onDeferredUpdate, Qt::QueuedConnection);
 }
 
 QuoteRequestsModel::~QuoteRequestsModel()
@@ -170,6 +175,14 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             case Qt::FontRole : {
                if (index.column() == static_cast<int>(Column::SecurityID)) {
                   return g->font_;
+               } else {
+                  return QVariant();
+               }
+            }
+
+            case Qt::DecorationRole : {
+               if (g->hasHidden_ && index.column() == static_cast<int>(Column::SecurityID)) {
+                  return QIcon(QLatin1String(":/ICON_DOT"));
                } else {
                   return QVariant();
                }
@@ -493,8 +506,12 @@ void QuoteRequestsModel::setHiddenFlag(const QModelIndex &index)
    if (idx->type_ == DataType::Group) {
       const int mRow = findMarket(idx->parent_);
 
-      if (mRow >= 0 && index.row() < data_[mRow]->groups_.size()) {
-         static_cast<Group*>(idx->data_)->hasHidden_ = true;
+      if (mRow >= 0 && index.row() < static_cast<int>(
+         data_[static_cast<std::size_t>(mRow)]->groups_.size())) {
+            if (!static_cast<Group*>(idx->data_)->hasHidden_) {
+               static_cast<Group*>(idx->data_)->hasHidden_ = true;
+               emit deferredUpdate(index);
+            }
       }
    }
 }
@@ -696,7 +713,8 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
 
    if (!market) {
       beginInsertRows(QModelIndex(), data_.size(), data_.size());
-      data_.push_back(std::unique_ptr<Market>(new Market(marketName)));
+      data_.push_back(std::unique_ptr<Market>(new Market(marketName,
+         appSettings_->get<int>(UiUtils::limitRfqSetting(qrn.assetType)))));
       market = data_.back().get();
       endInsertRows();
    }
@@ -709,7 +727,8 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
          market->groups_.size(), market->groups_.size());
       QFont font;
       font.setBold(true);
-      market->groups_.push_back(std::unique_ptr<Group>(new Group(groupNameSec, font)));
+      market->groups_.push_back(std::unique_ptr<Group>(new Group(groupNameSec,
+         market->limit_, font)));
       market->groups_.back()->idx_.parent_ = &market->idx_;
       group = market->groups_.back().get();
       endInsertRows();
@@ -779,7 +798,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
 
    if (!market) {
       beginInsertRows(QModelIndex(), data_.size(), data_.size());
-      data_.push_back(std::unique_ptr<Market>(new Market(groupNameSettlements_)));
+      data_.push_back(std::unique_ptr<Market>(new Market(groupNameSettlements_, -1)));
       market = data_.back().get();
       endInsertRows();
    }
@@ -856,6 +875,11 @@ void QuoteRequestsModel::clearHiddenFlag()
          emit dataChanged(idx, idx);
       }
    }
+}
+
+void QuoteRequestsModel::onDeferredUpdate(const QModelIndex &index)
+{
+   emit dataChanged(index, index);
 }
 
 void QuoteRequestsModel::onSettlementExpired()

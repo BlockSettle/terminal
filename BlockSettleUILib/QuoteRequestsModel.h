@@ -23,6 +23,7 @@ namespace bs {
 }
 class AssetManager;
 class CelerClient;
+class ApplicationSettings;
 
 class QuoteRequestsModel : public QAbstractItemModel
 {
@@ -31,6 +32,7 @@ class QuoteRequestsModel : public QAbstractItemModel
 signals:
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
    void invalidateFilterModel();
+   void deferredUpdate(const QModelIndex&);
 
 public:
    enum class Column {
@@ -77,6 +79,7 @@ public:
 public:
    QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
                       , std::shared_ptr<CelerClient> celerClient
+                      , std::shared_ptr<ApplicationSettings> appSettings
                       , QObject* parent);
    ~QuoteRequestsModel() override;
 
@@ -118,6 +121,7 @@ private slots:
    void onSettlementFailed();
    void clearModel();
    void clearHiddenFlag();
+   void onDeferredUpdate(const QModelIndex &index);
 
 private:
    using Prices = std::map<Role, double>;
@@ -131,6 +135,7 @@ private:
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
    std::shared_ptr<CelerClient>     celerClient_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
@@ -250,16 +255,16 @@ private:
       Group()
          : idx_(nullptr, this, DataType::Group)
          , hasHidden_(false)
-         , limit_(-1)
+         , limit_(5)
          , quotedRfqsCount_(0)
       {}
 
-      explicit Group(const QString &security, const QFont & font = QFont())
+      explicit Group(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Group)
          , hasHidden_(false)
-         , limit_(-1)
+         , limit_(limit)
          , quotedRfqsCount_(0)
       {}
    };
@@ -274,16 +279,16 @@ private:
 
       Market()
          : idx_(nullptr, this, DataType::Market)
-         , limit_(-1)
+         , limit_(5)
       {
          settl_.idx_ = idx_;
       }
 
-      explicit Market(const QString &security, const QFont & font = QFont())
+      explicit Market(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Market)
-         , limit_(-1)
+         , limit_(limit)
       {
          settl_.idx_ = idx_;
       }

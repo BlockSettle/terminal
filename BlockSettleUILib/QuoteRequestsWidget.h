@@ -1,5 +1,5 @@
-#ifndef __QUOTE_REQUESTS_WIDGET_H__
-#define __QUOTE_REQUESTS_WIDGET_H__
+#ifndef QUOTE_REQUESTS_WIDGET_H
+#define QUOTE_REQUESTS_WIDGET_H
 
 #include "ApplicationSettings.h"
 #include "QuoteRequestsModel.h"
@@ -33,9 +33,10 @@ namespace bs {
    class StatsCollector
    {
    public:
+      virtual ~StatsCollector() noexcept = default;
       virtual QColor getColorFor(const std::string &key) const = 0;
       virtual unsigned int getGradeFor(const std::string &key) const = 0;
-      virtual void saveState() {}
+      virtual void saveState();
    };
 
    class SecurityStatsCollector : public QObject, public StatsCollector
@@ -182,4 +183,4 @@ private:
    QuoteRequestsModel * model_;
 };
 
-#endif // __QUOTE_REQUESTS_WIDGET_H__
+#endif // QUOTE_REQUESTS_WIDGET_H

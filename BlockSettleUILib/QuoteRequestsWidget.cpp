@@ -16,6 +16,15 @@
 #include <QPainter>
 
 
+namespace bs {
+
+void StatsCollector::saveState()
+{
+}
+
+} /* namespace bs */
+
+
 //
 // DoNotDrawSelectionDelegate
 //
@@ -61,7 +70,8 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    collapsed_ = appSettings_->get<QStringList>(ApplicationSettings::Filter_MD_QN);
    dropQN_ = appSettings->get<bool>(ApplicationSettings::dropQN);
 
-   model_ = new QuoteRequestsModel(statsCollector, celerClient, ui_->treeViewQuoteRequests);
+   model_ = new QuoteRequestsModel(statsCollector, celerClient, appSettings_,
+      ui_->treeViewQuoteRequests);
    model_->SetAssetManager(assetManager);
 
    sortModel_ = new QuoteReqSortModel(model_, this);
@@ -70,6 +80,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    ui_->treeViewQuoteRequests->setModel(sortModel_);
    ui_->treeViewQuoteRequests->setRfqModel(model_);
    ui_->treeViewQuoteRequests->setSortModel(sortModel_);
+   ui_->treeViewQuoteRequests->setAppSettings(appSettings_);
 
    connect(ui_->treeViewQuoteRequests, &QTreeView::collapsed,
            this, &QuoteRequestsWidget::onCollapsed);
