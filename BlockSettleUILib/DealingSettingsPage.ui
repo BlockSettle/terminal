@@ -21,6 +21,13 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
+       <widget class="QCheckBox" name="checkBoxDrop">
+        <property name="text">
+         <string>Drop quote notifications for non-applicable securities</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
          <widget class="QLabel" name="label_2">
@@ -75,20 +82,13 @@
         </item>
        </layout>
       </item>
-      <item>
-       <widget class="QCheckBox" name="checkBoxDrop">
-        <property name="text">
-         <string>Drop quote notifications for non-applicable securities</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>RFQ LIMITS</string>
+      <string>RFQ DISPLAY SETTINGS</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
@@ -228,6 +228,16 @@
           </layout>
          </item>
         </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Select max number of displayed RFQs per Security</string>
+        </property>
+        <property name="statusWarningLabel" stdset="0">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
      </layout>
