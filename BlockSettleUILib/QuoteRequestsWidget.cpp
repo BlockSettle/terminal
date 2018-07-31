@@ -8,12 +8,21 @@
 #include "QuoteProvider.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
-#include "TreeViewWithEnterKey.h"
+#include "RFQBlotterTreeView.h"
 
 #include <QStyle>
 #include <QStyleOptionProgressBar>
 #include <QProgressBar>
 #include <QPainter>
+
+
+namespace bs {
+
+void StatsCollector::saveState()
+{
+}
+
+} /* namespace bs */
 
 
 //
@@ -61,19 +70,23 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    collapsed_ = appSettings_->get<QStringList>(ApplicationSettings::Filter_MD_QN);
    dropQN_ = appSettings->get<bool>(ApplicationSettings::dropQN);
 
-   model_ = new QuoteRequestsModel(statsCollector, celerClient, ui_->treeViewQuoteRequests);
+   model_ = new QuoteRequestsModel(statsCollector, celerClient, appSettings_,
+      ui_->treeViewQuoteRequests);
    model_->SetAssetManager(assetManager);
 
-   sortModel_ = new QuoteReqSortModel(this);
+   sortModel_ = new QuoteReqSortModel(model_, this);
    sortModel_->setSourceModel(model_);
 
    ui_->treeViewQuoteRequests->setModel(sortModel_);
+   ui_->treeViewQuoteRequests->setRfqModel(model_);
+   ui_->treeViewQuoteRequests->setSortModel(sortModel_);
+   ui_->treeViewQuoteRequests->setAppSettings(appSettings_);
 
    connect(ui_->treeViewQuoteRequests, &QTreeView::collapsed,
            this, &QuoteRequestsWidget::onCollapsed);
    connect(ui_->treeViewQuoteRequests, &QTreeView::expanded,
            this, &QuoteRequestsWidget::onExpanded);
-   connect(ui_->treeViewQuoteRequests, &TreeViewWithEnterKey::enterKeyPressed,
+   connect(ui_->treeViewQuoteRequests, &RFQBlotterTreeView::enterKeyPressed,
            this, &QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed);
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
@@ -145,7 +158,7 @@ void QuoteRequestsWidget::addSettlementContainer(const std::shared_ptr<bs::Settl
    }
 }
 
-TreeViewWithEnterKey* QuoteRequestsWidget::view() const
+RFQBlotterTreeView* QuoteRequestsWidget::view() const
 {
    return ui_->treeViewQuoteRequests;
 }
@@ -217,11 +230,24 @@ void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
 {
    switch (static_cast<ApplicationSettings::Setting>(setting))
    {
-   case ApplicationSettings::dropQN:
-      dropQN_ = val.toBool();
-      break;
+      case ApplicationSettings::dropQN:
+         dropQN_ = val.toBool();
+         break;
 
-   default:   break;
+      case ApplicationSettings::FxRfqLimit :
+         ui_->treeViewQuoteRequests->setLimit(ApplicationSettings::FxRfqLimit, val.toInt());
+         break;
+
+      case ApplicationSettings::XbtRfqLimit :
+         ui_->treeViewQuoteRequests->setLimit(ApplicationSettings::XbtRfqLimit, val.toInt());
+         break;
+
+      case ApplicationSettings::PmRfqLimit :
+         ui_->treeViewQuoteRequests->setLimit(ApplicationSettings::PmRfqLimit, val.toInt());
+         break;
+
+      default:
+         break;
    }
 }
 
@@ -414,6 +440,44 @@ unsigned int bs::SettlementStatsCollector::getGradeFor(const std::string &) cons
    return container_->timeLeftMs();
 }
 
+
+QuoteReqSortModel::QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent)
+   : QSortFilterProxyModel(parent)
+   , model_(model)
+{
+   connect(model_, &QuoteRequestsModel::invalidateFilterModel,
+      this, &QuoteReqSortModel::invalidate);
+}
+
+bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) const
+{
+   const auto index = sourceModel()->index(row, 0, parent);
+
+   if (index.isValid() ) {
+      if(index.data(static_cast<int>(QuoteRequestsModel::Role::Type)).toInt() ==
+         static_cast<int>(QuoteRequestsModel::DataType::RFQ)) {
+            if (parent.data(static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() > 0) {
+               if (row - parent.data(static_cast<int>(
+                     QuoteRequestsModel::Role::QuotedRfqsCount)).toInt() < parent.data(
+                     static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() &&
+                  !index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
+                     return true;
+               } else if (index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
+                  return true;
+               } else {
+                  model_->setHiddenFlag(parent);
+                  return false;
+               }
+            } else {
+               return true;
+            }
+      } else {
+         return true;
+      }
+   } else {
+      return false;
+   }
+}
 
 bool QuoteReqSortModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {

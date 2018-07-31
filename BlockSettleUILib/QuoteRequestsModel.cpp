@@ -8,13 +8,16 @@
 #include "UiUtils.h"
 #include "Colors.h"
 #include "CelerClient.h"
+#include "ApplicationSettings.h"
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
- , std::shared_ptr<CelerClient> celerClient, QObject* parent)
+ , std::shared_ptr<CelerClient> celerClient, std::shared_ptr<ApplicationSettings> appSettings
+ , QObject* parent)
    : QAbstractItemModel(parent)
    , secStatsCollector_(statsCollector)
    , celerClient_(celerClient)
+   , appSettings_(appSettings)
 {
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &QuoteRequestsModel::ticker);
@@ -22,6 +25,8 @@ QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCo
 
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed,
       this, &QuoteRequestsModel::clearModel);
+   connect(this, &QuoteRequestsModel::deferredUpdate,
+      this, &QuoteRequestsModel::onDeferredUpdate, Qt::QueuedConnection);
 }
 
 QuoteRequestsModel::~QuoteRequestsModel()
@@ -67,7 +72,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   case Column::Status : {
                      return r->status_.status_;
                   }
-                     break;
 
                   case Column::QuotedPx : {
                      return r->quotedPriceString_;
@@ -85,32 +89,42 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                      return QVariant();
                }
             }
-               break;
+
+            case static_cast<int>(Role::Type) : {
+               return static_cast<int>(DataType::RFQ);
+            }
+
+            case static_cast<int>(Role::LimitOfRfqs) : {
+               return static_cast<Group*>(r->idx_.parent_->data_)->limit_;
+            }
+
+            case static_cast<int>(Role::QuotedRfqsCount) : {
+               return -1;
+            }
+
+            case static_cast<int>(Role::Quoted) : {
+               return r->quoted_;
+            }
 
             case static_cast<int>(Role::ShowProgress) : {
                return r->status_.showProgress_;
             }
-               break;
 
             case static_cast<int>(Role::Timeout) : {
                return r->status_.timeout_;
             }
-               break;
 
             case static_cast<int>(Role::TimeLeft) : {
                return r->status_.timeleft_;
             }
-               break;
 
             case static_cast<int>(Role::BestQPrice) : {
                return r->bestQuotedPx_;
             }
-               break;
 
             case static_cast<int>(Role::QuotedPrice) : {
                return r->quotedPrice_;
             }
-               break;
 
             case static_cast<int>(Role::AllowFiltering) : {
                if (index.column() == 0) {
@@ -119,12 +133,10 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return false;
                }
             }
-               break;
 
             case static_cast<int>(Role::ReqId) : {
                return QString::fromStdString(r->reqId_);
             }
-               break;
 
             case Qt::BackgroundRole : {
                switch (static_cast<Column>(index.column())) {
@@ -141,7 +153,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                      return QVariant();
                }
             }
-               break;
 
             case Qt::TextColorRole: {
                if (secStatsCollector_ && index.column() < static_cast<int>(Column::Status)) {
@@ -151,13 +162,11 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return QVariant();
                }
             }
-                                    break;
 
             default:
                return QVariant();
          }
       }
-         break;
 
       case DataType::Group : {
          Group *g = static_cast<Group*>(idx->data_);
@@ -170,7 +179,30 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return QVariant();
                }
             }
-               break;
+
+            case Qt::DecorationRole : {
+               if (g->hasHidden_ && index.column() == static_cast<int>(Column::SecurityID)) {
+                  return QIcon(QLatin1String(":/ICON_DOT"));
+               } else {
+                  return QVariant();
+               }
+            }
+
+            case static_cast<int>(Role::Type) : {
+               return static_cast<int>(DataType::Group);
+            }
+
+            case static_cast<int>(Role::HasHiddenChildren) : {
+               return g->hasHidden_;
+            }
+
+            case static_cast<int>(Role::LimitOfRfqs) : {
+               return g->limit_;
+            }
+
+            case static_cast<int>(Role::QuotedRfqsCount) : {
+               return g->quotedRfqsCount_;
+            }
 
             case Qt::DisplayRole : {
                if (index.column() == static_cast<int>(Column::SecurityID)) {
@@ -179,7 +211,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return QVariant();
                }
             }
-               break;
 
             case Qt::TextColorRole : {
                if (secStatsCollector_) {
@@ -188,7 +219,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return QVariant();
                }
             }
-               break;
 
             case static_cast<int>(Role::Grade) : {
                if (secStatsCollector_) {
@@ -197,18 +227,15 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return QVariant();
                }
             }
-               break;
 
             case static_cast<int>(Role::AllowFiltering) : {
                return true;
             }
-               break;
 
             default :
                return QVariant();
          }
       }
-         break;
 
       case DataType::Market : {
          Market *m = static_cast<Market*>(idx->data_);
@@ -217,7 +244,18 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             case static_cast<int>(Role::Grade) : {
                return 1;
             }
-               break;
+
+            case static_cast<int>(Role::Type) : {
+               return static_cast<int>(DataType::Market);
+            }
+
+            case static_cast<int>(Role::LimitOfRfqs) : {
+               return m->limit_;
+            }
+
+            case static_cast<int>(Role::QuotedRfqsCount) : {
+               return -1;
+            }
 
             case Qt::DisplayRole : {
                switch (static_cast<Column>(index.column())) {
@@ -232,7 +270,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                         return QVariant();
                      }
                   }
-                     break;
 
                   case Column::Side : {
                      if (m->security_ == groupNameSettlements_ && settlFailed_) {
@@ -241,13 +278,11 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                         return QVariant();
                      }
                   }
-                     break;
 
                   default :
                      return QVariant();
                }
             }
-               break;
 
             case Qt::TextColorRole : {
                if (index.column() == static_cast<int>(Column::Product)) {
@@ -258,8 +293,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return QVariant();
                }
             }
-               break;
-
 
             case Qt::TextAlignmentRole : {
                if (index.column() == static_cast<int>(Column::Product)
@@ -269,21 +302,21 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   return QVariant();
                }
             }
-               break;
 
             default :
                return QVariant();
          }
       }
-         break;
 
       default :
          return QVariant();
    }
 }
 
-QModelIndex QuoteRequestsModel::index(int row, int column, const QModelIndex &parent) const
+QModelIndex QuoteRequestsModel::index(int r, int column, const QModelIndex &parent) const
 {
+   std::size_t row = static_cast<std::size_t>(r);
+
    if (parent.isValid()) {
       IndexHelper *idx = static_cast<IndexHelper*>(parent.internalPointer());
 
@@ -292,31 +325,29 @@ QModelIndex QuoteRequestsModel::index(int row, int column, const QModelIndex &pa
             Market *m = static_cast<Market*>(idx->data_);
 
             if (row < m->groups_.size()) {
-               return createIndex(row, column, &m->groups_.at(row)->idx_);
+               return createIndex(r, column, &m->groups_.at(row)->idx_);
             } else if (row < m->groups_.size() + m->settl_.rfqs_.size()){
-               return createIndex(row, column, &m->settl_.rfqs_.at(row - m->groups_.size())->idx_);
+               return createIndex(r, column, &m->settl_.rfqs_.at(row - m->groups_.size())->idx_);
             } else {
                return QModelIndex();
             }
          }
-            break;
 
          case DataType::Group : {
             Group *g = static_cast<Group*>(idx->data_);
 
             if (row < g->rfqs_.size()) {
-               return createIndex(row, column, &g->rfqs_.at(row)->idx_);
+               return createIndex(r, column, &g->rfqs_.at(row)->idx_);
             } else {
                return QModelIndex();
             }
          }
-            break;
 
          default :
             return QModelIndex();
       }
    } else if (row < data_.size()) {
-      return createIndex(row, column, &data_.at(row)->idx_);
+      return createIndex(r, column, &data_.at(row)->idx_);
    } else {
       return QModelIndex();
    }
@@ -331,7 +362,7 @@ int QuoteRequestsModel::findGroup(IndexHelper *idx) const
          [&idx](const std::unique_ptr<Group> &g) { return (&g->idx_ == idx); });
 
       if (it != market->groups_.cend()) {
-         return std::distance(market->groups_.cbegin(), it);
+         return static_cast<int>(std::distance(market->groups_.cbegin(), it));
       } else {
          return -1;
       }
@@ -360,7 +391,7 @@ int QuoteRequestsModel::findMarket(IndexHelper *idx) const
       [&idx](const std::unique_ptr<Market> &m) { return (&m->idx_ == idx); });
 
    if (it != data_.cend()) {
-      return std::distance(data_.cbegin(), it);
+      return static_cast<int>(std::distance(data_.cbegin(), it));
    } else {
       return -1;
    }
@@ -387,12 +418,10 @@ QModelIndex QuoteRequestsModel::parent(const QModelIndex &index) const
             case DataType::Group : {
                return createIndex(findGroup(idx->parent_), 0, idx->parent_);
             }
-               break;
 
             case DataType::Market : {
                return createIndex(findMarket(idx->parent_), 0, idx->parent_);
             }
-               break;
 
             default :
                return QModelIndex();
@@ -414,13 +443,11 @@ int QuoteRequestsModel::rowCount(const QModelIndex &parent) const
          case DataType::Group : {
             return static_cast<int>(static_cast<Group*>(idx->data_)->rfqs_.size());
          }
-            break;
 
          case DataType::Market : {
             auto *market = static_cast<Market*>(idx->data_);
             return static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size());
          }
-            break;
 
          default :
             return 0;
@@ -454,6 +481,52 @@ QVariant QuoteRequestsModel::headerData(int section, Qt::Orientation orientation
    }
 }
 
+void QuoteRequestsModel::limitRfqs(const QModelIndex &index, int limit)
+{
+   if (!index.parent().isValid() && index.row() < static_cast<int>(data_.size())) {
+      IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
+
+      auto *m = static_cast<Market*>(idx->data_);
+
+      m->limit_ = limit;
+
+      for (auto it = m->groups_.begin(), last = m->groups_.end(); it != last; ++it) {
+         (*it)->limit_ = limit;
+      }
+
+      clearHiddenFlag();
+      emit invalidateFilterModel();
+   }
+}
+
+void QuoteRequestsModel::setHiddenFlag(const QModelIndex &index)
+{
+   IndexHelper *idx = static_cast<IndexHelper*>(index.internalPointer());
+
+   if (idx->type_ == DataType::Group) {
+      const int mRow = findMarket(idx->parent_);
+
+      if (mRow >= 0 && index.row() < static_cast<int>(
+         data_[static_cast<std::size_t>(mRow)]->groups_.size())) {
+            if (!static_cast<Group*>(idx->data_)->hasHidden_) {
+               static_cast<Group*>(idx->data_)->hasHidden_ = true;
+               emit deferredUpdate(index);
+            }
+      }
+   }
+}
+
+QModelIndex QuoteRequestsModel::findMarketIndex(const QString &name) const
+{
+   auto *m = findMarket(name);
+
+   if (m) {
+      return createIndex(findMarket(&m->idx_), 0, &m->idx_);
+   } else {
+      return QModelIndex();
+   }
+}
+
 void QuoteRequestsModel::SetAssetManager(const std::shared_ptr<AssetManager>& assetManager)
 {
    assetManager_ = assetManager;
@@ -466,8 +539,15 @@ void QuoteRequestsModel::ticker() {
    for (const auto &id : pendingDeleteIds_) {
       forSpecificId(id, [this](Group *g, int idxItem) {
          beginRemoveRows(createIndex(findGroup(&g->idx_), 0, &g->idx_), idxItem, idxItem);
+         if (g->rfqs_[static_cast<std::size_t>(idxItem)]->quoted_) {
+            --g->quotedRfqsCount_;
+         }
          g->rfqs_.erase(g->rfqs_.begin() + idxItem);
          endRemoveRows();
+
+         clearHiddenFlag();
+
+         emit invalidateFilterModel();
       });
       deletedRows.insert(id);
    }
@@ -479,6 +559,9 @@ void QuoteRequestsModel::ticker() {
          forSpecificId(qrn.second.quoteRequestId, [this](Group *grp, int itemIndex) {
             const auto row = findGroup(&grp->idx_);
             beginRemoveRows(createIndex(row, 0, &grp->idx_), itemIndex, itemIndex);
+            if (grp->rfqs_[static_cast<std::size_t>(itemIndex)]->quoted_) {
+               --grp->quotedRfqsCount_;
+            }
             grp->rfqs_.erase(grp->rfqs_.begin() + itemIndex);
             endRemoveRows();
 
@@ -487,6 +570,10 @@ void QuoteRequestsModel::ticker() {
                beginRemoveRows(createIndex(m, 0, grp->idx_.parent_), row, row);
                data_[m]->groups_.erase(data_[m]->groups_.begin() + row);
                endRemoveRows();
+            } else {
+               clearHiddenFlag();
+
+               emit invalidateFilterModel();
             }
          });
          deletedRows.insert(qrn.second.quoteRequestId);
@@ -637,7 +724,8 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
 
    if (!market) {
       beginInsertRows(QModelIndex(), data_.size(), data_.size());
-      data_.push_back(std::unique_ptr<Market>(new Market(marketName)));
+      data_.push_back(std::unique_ptr<Market>(new Market(marketName,
+         appSettings_->get<int>(UiUtils::limitRfqSetting(qrn.assetType)))));
       market = data_.back().get();
       endInsertRows();
    }
@@ -650,7 +738,8 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
          market->groups_.size(), market->groups_.size());
       QFont font;
       font.setBold(true);
-      market->groups_.push_back(std::unique_ptr<Group>(new Group(groupNameSec, font)));
+      market->groups_.push_back(std::unique_ptr<Group>(new Group(groupNameSec,
+         market->limit_, font)));
       market->groups_.back()->idx_.parent_ = &market->idx_;
       group = market->groups_.back().get();
       endInsertRows();
@@ -720,7 +809,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
 
    if (!market) {
       beginInsertRows(QModelIndex(), data_.size(), data_.size());
-      data_.push_back(std::unique_ptr<Market>(new Market(groupNameSettlements_)));
+      data_.push_back(std::unique_ptr<Market>(new Market(groupNameSettlements_, -1)));
       market = data_.back().get();
       endInsertRows();
    }
@@ -786,6 +875,22 @@ void QuoteRequestsModel::clearModel()
    beginResetModel();
    data_.clear();
    endResetModel();
+}
+
+void QuoteRequestsModel::clearHiddenFlag()
+{
+   for (auto it = data_.begin(), last = data_.end(); it != last; ++it) {
+      for (std::size_t i = 0; i < (*it)->groups_.size(); ++i) {
+         (*it)->groups_[i]->hasHidden_ = false;
+         const auto idx = createIndex(static_cast<int>(i), 0, &(*it)->groups_[i]->idx_);
+         emit dataChanged(idx, idx);
+      }
+   }
+}
+
+void QuoteRequestsModel::onDeferredUpdate(const QModelIndex &index)
+{
+   emit dataChanged(index, index);
 }
 
 void QuoteRequestsModel::onSettlementExpired()
@@ -909,6 +1014,21 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
          }
          else {
             grp->rfqs_[index]->status_.status_ = quoteReqStatusDesc(status);
+         }
+
+         if (status == bs::network::QuoteReqNotification::Replied) {
+            grp->rfqs_[index]->quoted_ = true;
+            ++grp->quotedRfqsCount_;
+            clearHiddenFlag();
+            emit invalidateFilterModel();
+         } else {
+            grp->rfqs_[index]->quoted_ = false;
+         }
+
+         if (status == bs::network::QuoteReqNotification::Withdrawn) {
+            --grp->quotedRfqsCount_;
+            clearHiddenFlag();
+            emit invalidateFilterModel();
          }
 
          grp->rfqs_[index]->stateBrush_ = bgColorForStatus(status);

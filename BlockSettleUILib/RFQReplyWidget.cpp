@@ -21,7 +21,7 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
-#include "TreeViewWithEnterKey.h"
+#include "RFQBlotterTreeView.h"
 #include "CustomDoubleSpinBox.h"
 
 using namespace bs::ui;

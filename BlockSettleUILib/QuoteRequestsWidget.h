@@ -1,5 +1,5 @@
-#ifndef __QUOTE_REQUESTS_WIDGET_H__
-#define __QUOTE_REQUESTS_WIDGET_H__
+#ifndef QUOTE_REQUESTS_WIDGET_H
+#define QUOTE_REQUESTS_WIDGET_H
 
 #include "ApplicationSettings.h"
 #include "QuoteRequestsModel.h"
@@ -33,9 +33,10 @@ namespace bs {
    class StatsCollector
    {
    public:
+      virtual ~StatsCollector() noexcept = default;
       virtual QColor getColorFor(const std::string &key) const = 0;
       virtual unsigned int getGradeFor(const std::string &key) const = 0;
-      virtual void saveState() {}
+      virtual void saveState();
    };
 
    class SecurityStatsCollector : public QObject, public StatsCollector
@@ -108,7 +109,7 @@ class AssetManager;
 class CelerClient;
 class QuoteRequestsModel;
 class QuoteReqSortModel;
-class TreeViewWithEnterKey;
+class RFQBlotterTreeView;
 class CelerClient;
 
 class QuoteRequestsWidget : public QWidget
@@ -126,7 +127,7 @@ public:
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
 
-   TreeViewWithEnterKey* view() const;
+   RFQBlotterTreeView* view() const;
 
 signals:
    void Selected(const bs::network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -172,11 +173,14 @@ class QuoteReqSortModel : public QSortFilterProxyModel
 {
    Q_OBJECT
 public:
-   explicit QuoteReqSortModel(QObject *parent)
-      : QSortFilterProxyModel(parent) {}
+   QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent);
 
 protected:
+   bool filterAcceptsRow(int row, const QModelIndex &parent) const override;
    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
+
+private:
+   QuoteRequestsModel * model_;
 };
 
-#endif // __QUOTE_REQUESTS_WIDGET_H__
+#endif // QUOTE_REQUESTS_WIDGET_H

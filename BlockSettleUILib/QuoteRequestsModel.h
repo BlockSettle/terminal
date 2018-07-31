@@ -23,6 +23,7 @@ namespace bs {
 }
 class AssetManager;
 class CelerClient;
+class ApplicationSettings;
 
 class QuoteRequestsModel : public QAbstractItemModel
 {
@@ -30,6 +31,8 @@ class QuoteRequestsModel : public QAbstractItemModel
 
 signals:
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
+   void invalidateFilterModel();
+   void deferredUpdate(const QModelIndex&);
 
 public:
    enum class Column {
@@ -58,12 +61,25 @@ public:
       QuotedPrice,
       BestQPrice,
       Product,
-      AllowFiltering
+      AllowFiltering,
+      HasHiddenChildren,
+      Quoted,
+      Type,
+      LimitOfRfqs,
+      QuotedRfqsCount
+   };
+
+   enum class DataType {
+      RFQ = 0,
+      Group,
+      Market,
+      Unknown
    };
 
 public:
    QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
                       , std::shared_ptr<CelerClient> celerClient
+                      , std::shared_ptr<ApplicationSettings> appSettings
                       , QObject* parent);
    ~QuoteRequestsModel() override;
 
@@ -95,6 +111,9 @@ public:
    void onSecurityMDUpdated(const QString &security, const bs::network::MDFields &);
    void onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn);
    void onBestQuotePrice(const QString reqId, double price, bool own);
+   void limitRfqs(const QModelIndex &index, int limit);
+   void setHiddenFlag(const QModelIndex &index);
+   QModelIndex findMarketIndex(const QString &name) const;
 
 private slots:
    void ticker();
@@ -102,6 +121,8 @@ private slots:
    void onSettlementCompleted();
    void onSettlementFailed();
    void clearModel();
+   void clearHiddenFlag();
+   void onDeferredUpdate(const QModelIndex &index);
 
 private:
    using Prices = std::map<Role, double>;
@@ -115,16 +136,10 @@ private:
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
    std::shared_ptr<CelerClient>     celerClient_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
-
-   enum class DataType {
-      RFQ,
-      Group,
-      Market,
-      Unknown
-   };
 
    struct IndexHelper {
       IndexHelper *parent_;
@@ -187,9 +202,11 @@ private:
       QBrush indicativePxBrush_;
       QBrush stateBrush_;
       IndexHelper idx_;
+      bool quoted_;
 
       RFQ()
          : idx_(nullptr, this, DataType::RFQ)
+         , quoted_(false)
       {}
 
       RFQ(const QString &security,
@@ -223,6 +240,7 @@ private:
          , assetType_(assetType)
          , reqId_(reqId)
          , idx_(nullptr, this, DataType::RFQ)
+         , quoted_(false)
       {}
    };
 
@@ -231,15 +249,24 @@ private:
       QFont font_;
       std::vector<std::unique_ptr<RFQ>> rfqs_;
       IndexHelper idx_;
+      bool hasHidden_;
+      int limit_;
+      int quotedRfqsCount_;
 
       Group()
          : idx_(nullptr, this, DataType::Group)
+         , hasHidden_(false)
+         , limit_(5)
+         , quotedRfqsCount_(0)
       {}
 
-      explicit Group(const QString &security, const QFont & font = QFont())
+      explicit Group(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Group)
+         , hasHidden_(false)
+         , limit_(limit)
+         , quotedRfqsCount_(0)
       {}
    };
 
@@ -249,17 +276,20 @@ private:
       std::vector<std::unique_ptr<Group>> groups_;
       IndexHelper idx_;
       Group settl_;
+      int limit_;
 
       Market()
          : idx_(nullptr, this, DataType::Market)
+         , limit_(5)
       {
          settl_.idx_ = idx_;
       }
 
-      explicit Market(const QString &security, const QFont & font = QFont())
+      explicit Market(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Market)
+         , limit_(limit)
       {
          settl_.idx_ = idx_;
       }

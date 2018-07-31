@@ -78,6 +78,9 @@ public:
       ResetPassword_Url,
       GetAccount_Url,
       WalletFiltering,
+      FxRfqLimit,
+      XbtRfqLimit,
+      PmRfqLimit,
       _last
    };
 
