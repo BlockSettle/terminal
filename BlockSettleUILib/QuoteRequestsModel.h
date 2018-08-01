@@ -303,12 +303,15 @@ private:
 
    std::vector<std::unique_ptr<Market>> data_;
    std::vector<std::pair<QPersistentModelIndex, QPersistentModelIndex>> pIdxs_;
+   std::map<QString, std::pair<bs::network::MDField, bs::network::MDField>> prices_;
 
 private:
    int findGroup(IndexHelper *idx) const;
    Group* findGroup(Market *market, const QString &security) const;
    int findMarket(IndexHelper *idx) const;
    Market* findMarket(const QString &name) const;
+   void updatePrices(const QString &security, const bs::network::MDField &pxBid,
+      const bs::network::MDField &pxOffer);
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;

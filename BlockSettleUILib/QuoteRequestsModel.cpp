@@ -949,6 +949,12 @@ void QuoteRequestsModel::onPriceUpdateTimer()
       });
 
    pIdxs_.clear();
+
+   for (auto it = prices_.cbegin(), last = prices_.cend(); it != last; ++it) {
+      updatePrices(it->first, it->second.first, it->second.second);
+   }
+
+   prices_.clear();
 }
 
 void QuoteRequestsModel::onSettlementExpired()
@@ -1104,17 +1110,9 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
    }
 }
 
-void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::network::MDFields &mdFields)
+void QuoteRequestsModel::updatePrices(const QString &security, const bs::network::MDField &pxBid,
+   const bs::network::MDField &pxOffer)
 {
-   const auto pxBid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid);
-   const auto pxOffer = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer);
-   if (pxBid.type != bs::network::MDField::Unknown) {
-      mdPrices_[security.toStdString()][Role::BidPrice] = pxBid.value;
-   }
-   if (pxOffer.type != bs::network::MDField::Unknown) {
-      mdPrices_[security.toStdString()][Role::OfferPrice] = pxOffer.value;
-   }
-
    forEachSecurity(security, [security, pxBid, pxOffer, this](Group *grp, int index) {
       const CurrencyPair cp(security.toStdString());
       const bool isBuy = (grp->rfqs_[static_cast<std::size_t>(index)]->side_ == bs::network::Side::Buy)
@@ -1148,4 +1146,22 @@ void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::
          emit dataChanged(idx, idx);
       }
    });
+}
+
+void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::network::MDFields &mdFields)
+{
+   const auto pxBid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid);
+   const auto pxOffer = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer);
+   if (pxBid.type != bs::network::MDField::Unknown) {
+      mdPrices_[security.toStdString()][Role::BidPrice] = pxBid.value;
+   }
+   if (pxOffer.type != bs::network::MDField::Unknown) {
+      mdPrices_[security.toStdString()][Role::OfferPrice] = pxOffer.value;
+   }
+
+   if (priceUpdateInterval_ < 1) {
+      updatePrices(security, pxBid, pxOffer);
+   } else {
+      prices_[security] = std::make_pair(pxBid, pxOffer);
+   }
 }
