@@ -23,6 +23,10 @@ QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCo
    connect(&timer_, &QTimer::timeout, this, &QuoteRequestsModel::ticker);
    timer_.start();
 
+   connect(&priceUpdateTimer_, &QTimer::timeout, this, &QuoteRequestsModel::onPriceUpdateTimer);
+
+   setPriceUpdateInterval(appSettings_->get<int>(ApplicationSettings::PriceUpdateInterval));
+
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed,
       this, &QuoteRequestsModel::clearModel);
    connect(this, &QuoteRequestsModel::deferredUpdate,
@@ -527,6 +531,18 @@ QModelIndex QuoteRequestsModel::findMarketIndex(const QString &name) const
    }
 }
 
+void QuoteRequestsModel::setPriceUpdateInterval(int interval)
+{
+   priceUpdateInterval_ = interval;
+   priceUpdateTimer_.stop();
+
+   onPriceUpdateTimer();
+
+   if (priceUpdateInterval_ > 0) {
+      priceUpdateTimer_.start(priceUpdateInterval_);
+   }
+}
+
 void QuoteRequestsModel::SetAssetManager(const std::shared_ptr<AssetManager>& assetManager)
 {
    assetManager_ = assetManager;
@@ -581,7 +597,8 @@ void QuoteRequestsModel::ticker() {
       else if ((qrn.second.status == bs::network::QuoteReqNotification::PendingAck)
          || (qrn.second.status == bs::network::QuoteReqNotification::Replied)) {
          forSpecificId(qrn.second.quoteRequestId, [timeDiff](Group *grp, int itemIndex) {
-            grp->rfqs_[itemIndex]->status_.timeleft_ = (int) timeDiff;
+            grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
+               static_cast<int>(timeDiff);
          });
       }
    }
@@ -593,7 +610,8 @@ void QuoteRequestsModel::ticker() {
    for (const auto &settlContainer : settlContainers_) {
       forSpecificId(settlContainer.second->id(),
          [timeLeft = settlContainer.second->timeLeftMs()](Group *grp, int itemIndex) {
-         grp->rfqs_[itemIndex]->status_.timeleft_ = (int) timeLeft;
+         grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
+            static_cast<int>(timeLeft);
       });
    }
 
@@ -602,15 +620,17 @@ void QuoteRequestsModel::ticker() {
          for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
             emit dataChanged(createIndex(0, static_cast<int>(Column::Status),
                   &data_[i]->groups_[j]->rfqs_.front()->idx_),
-               createIndex(data_[i]->groups_[j]->rfqs_.size() - 1, static_cast<int>(Column::Status),
+               createIndex(static_cast<int>(data_[i]->groups_[j]->rfqs_.size() - 1),
+                  static_cast<int>(Column::Status),
                   &data_[i]->groups_[j]->rfqs_.back()->idx_));
          }
 
          if (!data_[i]->settl_.rfqs_.empty()) {
-            const int r = data_[i]->groups_.size();
+            const int r = static_cast<int>(data_[i]->groups_.size());
             emit dataChanged(createIndex(r, static_cast<int>(Column::Status),
                   &data_[i]->settl_.rfqs_.front()->idx_),
-               createIndex(r + data_[i]->settl_.rfqs_.size() - 1, static_cast<int>(Column::Status),
+               createIndex(r + static_cast<int>(data_[i]->settl_.rfqs_.size()) - 1,
+                  static_cast<int>(Column::Status),
                   &data_[i]->settl_.rfqs_.back()->idx_));
          }
       }
@@ -624,16 +644,21 @@ void QuoteRequestsModel::onQuoteNotifCancelled(const QString &reqId)
 
    forSpecificId(reqId.toStdString(), [&](Group *group, int i) {
       row = i;
-      rfq = group->rfqs_[i].get();
+      rfq = group->rfqs_[static_cast<std::size_t>(i)].get();
       rfq->quotedPriceString_ = tr("pulled");
    });
 
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::PendingAck);
 
    if (row >= 0 && rfq) {
-      static const QVector<int> roles({Qt::DisplayRole});
-      const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx), &rfq->idx_);
-      emit dataChanged(idx, idx, roles);
+      if (priceUpdateInterval_ < 1) {
+         static const QVector<int> roles({Qt::DisplayRole});
+         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx), &rfq->idx_);
+         emit dataChanged(idx, idx, roles);
+      } else {
+         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx), &rfq->idx_);
+         pIdxs_.push_back(std::make_pair(idx, idx));
+      }
    }
 }
 
@@ -659,19 +684,29 @@ void QuoteRequestsModel::onBestQuotePrice(const QString reqId, double price, boo
    forSpecificId(reqId.toStdString(), [&](Group *grp, int index) {
       row = index;
       g = grp;
-      const auto assetType = grp->rfqs_[index]->assetType_;
+      const auto assetType = grp->rfqs_[static_cast<std::size_t>(index)]->assetType_;
 
-      grp->rfqs_[index]->bestQuotedPxString_ = UiUtils::displayPriceForAssetType(price, assetType);
-      grp->rfqs_[index]->bestQuotedPx_ = price;
-      grp->rfqs_[index]->quotedPriceBrush_ = colorForQuotedPrice(
-         grp->rfqs_[index]->quotedPrice_, price, own);
+      grp->rfqs_[static_cast<std::size_t>(index)]->bestQuotedPxString_ =
+         UiUtils::displayPriceForAssetType(price, assetType);
+      grp->rfqs_[static_cast<std::size_t>(index)]->bestQuotedPx_ = price;
+      grp->rfqs_[static_cast<std::size_t>(index)]->quotedPriceBrush_ = colorForQuotedPrice(
+         grp->rfqs_[static_cast<std::size_t>(index)]->quotedPrice_, price, own);
    });
 
    if (row >= 0 && g) {
-      static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
-         static_cast<int>(Qt::BackgroundRole)});
-      emit dataChanged(createIndex(row, static_cast<int>(Column::QuotedPx), &g->rfqs_[row]->idx_),
-         createIndex(row, static_cast<int>(Column::BestPx), &g->rfqs_[row]->idx_), roles);
+      if (priceUpdateInterval_ < 1) {
+         static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
+            static_cast<int>(Qt::BackgroundRole)});
+         emit dataChanged(createIndex(row, static_cast<int>(Column::QuotedPx),
+               &g->rfqs_[static_cast<std::size_t>(row)]->idx_),
+            createIndex(row, static_cast<int>(Column::BestPx),
+               &g->rfqs_[static_cast<std::size_t>(row)]->idx_), roles);
+      } else {
+         pIdxs_.push_back(std::make_pair(createIndex(row, static_cast<int>(Column::QuotedPx),
+               &g->rfqs_[static_cast<std::size_t>(row)]->idx_),
+            createIndex(row, static_cast<int>(Column::BestPx),
+               &g->rfqs_[static_cast<std::size_t>(row)]->idx_)));
+      }
    }
 }
 
@@ -683,22 +718,28 @@ void QuoteRequestsModel::onQuoteReqNotifReplied(const bs::network::QuoteNotifica
    forSpecificId(qn.quoteRequestId, [&](Group *group, int i) {
       row = i;
       g = group;
-      const auto assetType = group->rfqs_[i]->assetType_;
+      const auto assetType = group->rfqs_[static_cast<std::size_t>(i)]->assetType_;
       const double quotedPrice = (qn.side == bs::network::Side::Buy) ? qn.bidPx : qn.offerPx;
 
-      group->rfqs_[i]->quotedPriceString_ =
+      group->rfqs_[static_cast<std::size_t>(i)]->quotedPriceString_ =
          UiUtils::displayPriceForAssetType(quotedPrice, assetType);
-      group->rfqs_[i]->quotedPrice_ = quotedPrice;
-      group->rfqs_[i]->quotedPriceBrush_ =
-         colorForQuotedPrice(quotedPrice, group->rfqs_[i]->bestQuotedPx_);
+      group->rfqs_[static_cast<std::size_t>(i)]->quotedPrice_ = quotedPrice;
+      group->rfqs_[static_cast<std::size_t>(i)]->quotedPriceBrush_ =
+         colorForQuotedPrice(quotedPrice, group->rfqs_[static_cast<std::size_t>(i)]->bestQuotedPx_);
    });
 
    if (row >= 0 && g) {
-      static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
-         static_cast<int>(Qt::BackgroundRole)});
-      const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx),
-         &g->rfqs_[row]->idx_);
-      emit dataChanged(idx, idx, roles);
+      if (priceUpdateInterval_ < 1) {
+         static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
+            static_cast<int>(Qt::BackgroundRole)});
+         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx),
+            &g->rfqs_[static_cast<std::size_t>(row)]->idx_);
+         emit dataChanged(idx, idx, roles);
+      } else {
+         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx),
+            &g->rfqs_[static_cast<std::size_t>(row)]->idx_);
+         pIdxs_.push_back(std::make_pair(idx, idx));
+      }
    }
 
    setStatus(qn.quoteRequestId, bs::network::QuoteReqNotification::Replied);
@@ -723,7 +764,8 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
    auto *market = findMarket(marketName);
 
    if (!market) {
-      beginInsertRows(QModelIndex(), data_.size(), data_.size());
+      beginInsertRows(QModelIndex(), static_cast<int>(data_.size()),
+         static_cast<int>(data_.size()));
       data_.push_back(std::unique_ptr<Market>(new Market(marketName,
          appSettings_->get<int>(UiUtils::limitRfqSetting(qrn.assetType)))));
       market = data_.back().get();
@@ -735,7 +777,8 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
 
    if (!group) {
       beginInsertRows(createIndex(findMarket(&market->idx_), 0, &market->idx_),
-         market->groups_.size(), market->groups_.size());
+         static_cast<int>(market->groups_.size()),
+         static_cast<int>(market->groups_.size()));
       QFont font;
       font.setBold(true);
       market->groups_.push_back(std::unique_ptr<Group>(new Group(groupNameSec,
@@ -808,7 +851,8 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
    auto *market = findMarket(groupNameSettlements_);
 
    if (!market) {
-      beginInsertRows(QModelIndex(), data_.size(), data_.size());
+      beginInsertRows(QModelIndex(), static_cast<int>(data_.size()),
+         static_cast<int>(data_.size()));
       data_.push_back(std::unique_ptr<Market>(new Market(groupNameSettlements_, -1)));
       market = data_.back().get();
       endInsertRows();
@@ -821,8 +865,8 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
       : UiUtils::displayQty(container->quantity(), container->product());
 
    beginInsertRows(createIndex(findMarket(&market->idx_), 0, &market->idx_),
-      market->groups_.size() + market->settl_.rfqs_.size(),
-      market->groups_.size() + market->settl_.rfqs_.size());
+      static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size()),
+      static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size()));
 
    market->settl_.rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(
       QString::fromStdString(container->security()),
@@ -846,7 +890,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
 
    connect(container.get(), &bs::SettlementContainer::timerStarted,
       [s = market->settl_.rfqs_.back().get(), &market, this,
-       row = market->groups_.size() + market->settl_.rfqs_.size() - 1](int msDuration) {
+       row = static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size() - 1)](int msDuration) {
          s->status_.timeout_ = msDuration;
          const QModelIndex idx = createIndex(row, 0, &s->idx_);
          static const QVector<int> roles({static_cast<int>(Role::Timeout)});
@@ -888,9 +932,29 @@ void QuoteRequestsModel::clearHiddenFlag()
    }
 }
 
-void QuoteRequestsModel::onDeferredUpdate(const QModelIndex &index)
+void QuoteRequestsModel::onDeferredUpdate(const QPersistentModelIndex &index)
 {
-   emit dataChanged(index, index);
+   if (index.isValid()) {
+      emit dataChanged(index, index);
+   }
+}
+
+void QuoteRequestsModel::onPriceUpdateTimer()
+{
+   std::for_each(pIdxs_.cbegin(), pIdxs_.cend(),
+      [this] (const std::pair<QPersistentModelIndex, QPersistentModelIndex> &idx) {
+         if (idx.first.isValid() && idx.second.isValid()) {
+            emit this->dataChanged(idx.first, idx.second);
+         }
+      });
+
+   pIdxs_.clear();
+
+   for (auto it = prices_.cbegin(), last = prices_.cend(); it != last; ++it) {
+      updatePrices(it->first, it->second.first, it->second.second);
+   }
+
+   prices_.clear();
 }
 
 void QuoteRequestsModel::onSettlementExpired()
@@ -926,7 +990,7 @@ void QuoteRequestsModel::forSpecificId(const std::string &reqId, const cbItem &c
       if (!data_[i]->settl_.rfqs_.empty()) {
          for (size_t k = 0; k < data_[i]->settl_.rfqs_.size(); ++k) {
             if (data_[i]->settl_.rfqs_[k]->reqId_ == reqId) {
-               cb(&data_[i]->settl_, k);
+               cb(&data_[i]->settl_, static_cast<int>(k));
                return;
             }
          }
@@ -935,7 +999,7 @@ void QuoteRequestsModel::forSpecificId(const std::string &reqId, const cbItem &c
       for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
          for (size_t k = 0; k < data_[i]->groups_[j]->rfqs_.size(); ++k) {
             if (data_[i]->groups_[j]->rfqs_[k]->reqId_ == reqId) {
-               cb(data_[i]->groups_[j].get(), k);
+               cb(data_[i]->groups_[j].get(), static_cast<int>(k));
                return;
             }
          }
@@ -950,7 +1014,7 @@ void QuoteRequestsModel::forEachSecurity(const QString &security, const cbItem &
          if (data_[i]->groups_[j]->security_ != security)
             continue;
          for (size_t k = 0; k < data_[i]->groups_[j]->rfqs_.size(); ++k) {
-            cb(data_[i]->groups_[j].get(), k);
+            cb(data_[i]->groups_[j].get(), static_cast<int>(k));
          }
       }
    }
@@ -1010,28 +1074,28 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
 
       forSpecificId(reqId, [this, status, details](Group *grp, int index) {
          if (!details.isEmpty()) {
-            grp->rfqs_[index]->status_.status_ = details;
+            grp->rfqs_[static_cast<std::size_t>(index)]->status_.status_ = details;
          }
          else {
-            grp->rfqs_[index]->status_.status_ = quoteReqStatusDesc(status);
+            grp->rfqs_[static_cast<std::size_t>(index)]->status_.status_ =
+               quoteReqStatusDesc(status);
          }
 
          if (status == bs::network::QuoteReqNotification::Replied) {
-            grp->rfqs_[index]->quoted_ = true;
+            grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = true;
             ++grp->quotedRfqsCount_;
             clearHiddenFlag();
             emit invalidateFilterModel();
-         } else {
-            grp->rfqs_[index]->quoted_ = false;
          }
 
          if (status == bs::network::QuoteReqNotification::Withdrawn) {
+            grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = false;
             --grp->quotedRfqsCount_;
             clearHiddenFlag();
             emit invalidateFilterModel();
          }
 
-         grp->rfqs_[index]->stateBrush_ = bgColorForStatus(status);
+         grp->rfqs_[static_cast<std::size_t>(index)]->stateBrush_ = bgColorForStatus(status);
 
          const bool showProgress = ((status == bs::network::QuoteReqNotification::Status::PendingAck)
             || (status == bs::network::QuoteReqNotification::Status::Replied));
@@ -1046,6 +1110,44 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
    }
 }
 
+void QuoteRequestsModel::updatePrices(const QString &security, const bs::network::MDField &pxBid,
+   const bs::network::MDField &pxOffer)
+{
+   forEachSecurity(security, [security, pxBid, pxOffer, this](Group *grp, int index) {
+      const CurrencyPair cp(security.toStdString());
+      const bool isBuy = (grp->rfqs_[static_cast<std::size_t>(index)]->side_ == bs::network::Side::Buy)
+         ^ (cp.NumCurrency() == grp->rfqs_[static_cast<std::size_t>(index)]->product_.toStdString());
+      double indicPrice = 0;
+
+      if (isBuy && (pxBid.type != bs::network::MDField::Unknown)) {
+         indicPrice = pxBid.value;
+      } else if (!isBuy && (pxOffer.type != bs::network::MDField::Unknown)) {
+         indicPrice = pxOffer.value;
+      }
+
+      if (indicPrice > 0) {
+         const auto prevPrice = grp->rfqs_[static_cast<std::size_t>(index)]->indicativePx_;
+         const auto assetType = grp->rfqs_[static_cast<std::size_t>(index)]->assetType_;
+         grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxString_ =
+            UiUtils::displayPriceForAssetType(indicPrice, assetType);
+         grp->rfqs_[static_cast<std::size_t>(index)]->indicativePx_ = indicPrice;
+
+         if (!qFuzzyIsNull(prevPrice)) {
+            if (indicPrice > prevPrice) {
+               grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxBrush_ = c_greenColor;
+            }
+            else if (indicPrice < prevPrice) {
+               grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxBrush_ = c_redColor;
+            }
+         }
+
+         const QModelIndex idx = createIndex(index, static_cast<int>(Column::IndicPx),
+            &grp->rfqs_[static_cast<std::size_t>(index)]->idx_);
+         emit dataChanged(idx, idx);
+      }
+   });
+}
+
 void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::network::MDFields &mdFields)
 {
    const auto pxBid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid);
@@ -1057,36 +1159,9 @@ void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::
       mdPrices_[security.toStdString()][Role::OfferPrice] = pxOffer.value;
    }
 
-   forEachSecurity(security, [security, pxBid, pxOffer, this](Group *grp, int index) {
-      const CurrencyPair cp(security.toStdString());
-      const bool isBuy = (grp->rfqs_[index]->side_ == bs::network::Side::Buy)
-         ^ (cp.NumCurrency() == grp->rfqs_[index]->product_.toStdString());
-      double indicPrice = 0;
-
-      if (isBuy && (pxBid.type != bs::network::MDField::Unknown)) {
-         indicPrice = pxBid.value;
-      } else if (!isBuy && (pxOffer.type != bs::network::MDField::Unknown)) {
-         indicPrice = pxOffer.value;
-      }
-
-      if (indicPrice > 0) {
-         const auto prevPrice = grp->rfqs_[index]->indicativePx_;
-         const auto assetType = grp->rfqs_[index]->assetType_;
-         grp->rfqs_[index]->indicativePxString_ = UiUtils::displayPriceForAssetType(indicPrice, assetType);
-         grp->rfqs_[index]->indicativePx_ = indicPrice;
-
-         if (!qFuzzyIsNull(prevPrice)) {
-            if (indicPrice > prevPrice) {
-               grp->rfqs_[index]->indicativePxBrush_ = c_greenColor;
-            }
-            else if (indicPrice < prevPrice) {
-               grp->rfqs_[index]->indicativePxBrush_ = c_redColor;
-            }
-         }
-
-         const QModelIndex idx = createIndex(index, static_cast<int>(Column::IndicPx),
-            &grp->rfqs_[index]->idx_);
-         emit dataChanged(idx, idx);
-      }
-   });
+   if (priceUpdateInterval_ < 1) {
+      updatePrices(security, pxBid, pxOffer);
+   } else {
+      prices_[security] = std::make_pair(pxBid, pxOffer);
+   }
 }
