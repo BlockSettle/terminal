@@ -351,6 +351,8 @@ CustomDialog {
                 lblDBFile.text = decodeURIComponent(filePath)
                 if (!seed.parseDigitalBackupFile(lblDBFile.text)) {
                     ibFailure.displayMessage(qsTr("Failed to parse digital backup from %1").arg(lblDBFile.text))
+                } else if (tfName.text.length === 0) {
+                    tfName.text = seed.walletName
                 }
             }
         }
