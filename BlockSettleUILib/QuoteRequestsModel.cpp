@@ -1080,11 +1080,10 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
             ++grp->quotedRfqsCount_;
             clearHiddenFlag();
             emit invalidateFilterModel();
-         } else {
-            grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = false;
          }
 
          if (status == bs::network::QuoteReqNotification::Withdrawn) {
+            grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = false;
             --grp->quotedRfqsCount_;
             clearHiddenFlag();
             emit invalidateFilterModel();
