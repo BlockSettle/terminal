@@ -539,6 +539,7 @@ ELSE(WIN32)
          libQt5ThemeSupport.a
          libQt5EventDispatcherSupport.a
          libQt5FontDatabaseSupport.a
+         libQt5LinuxAccessibilitySupport.a
          libQt5AccessibilitySupport.a
          libQt5EdidSupport.a )
 
