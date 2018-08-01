@@ -124,7 +124,9 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0) },
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
-      { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) }
+      { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },
+      { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
+      { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) }
    };
 }
 

@@ -246,6 +246,10 @@ void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
          ui_->treeViewQuoteRequests->setLimit(ApplicationSettings::PmRfqLimit, val.toInt());
          break;
 
+      case ApplicationSettings::PriceUpdateInterval :
+         model_->setPriceUpdateInterval(val.toInt());
+         break;
+
       default:
          break;
    }

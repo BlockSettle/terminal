@@ -5,10 +5,12 @@
 #include <QTimer>
 #include <QBrush>
 #include <QFont>
+#include <QPersistentModelIndex>
 
 #include <memory>
 #include <unordered_map>
 #include <functional>
+#include <vector>
 
 #include "CommonTypes.h"
 
@@ -32,7 +34,7 @@ class QuoteRequestsModel : public QAbstractItemModel
 signals:
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
    void invalidateFilterModel();
-   void deferredUpdate(const QModelIndex&);
+   void deferredUpdate(const QPersistentModelIndex&);
 
 public:
    enum class Column {
@@ -114,6 +116,7 @@ public:
    void limitRfqs(const QModelIndex &index, int limit);
    void setHiddenFlag(const QModelIndex &index);
    QModelIndex findMarketIndex(const QString &name) const;
+   void setPriceUpdateInterval(int interval);
 
 private slots:
    void ticker();
@@ -122,7 +125,8 @@ private slots:
    void onSettlementFailed();
    void clearModel();
    void clearHiddenFlag();
-   void onDeferredUpdate(const QModelIndex &index);
+   void onDeferredUpdate(const QPersistentModelIndex &index);
+   void onPriceUpdateTimer();
 
 private:
    using Prices = std::map<Role, double>;
@@ -132,6 +136,7 @@ private:
    std::unordered_map<std::string, bs::network::QuoteReqNotification>         notifications_;
    std::unordered_map<std::string, std::shared_ptr<bs::SettlementContainer>>  settlContainers_;
    QTimer      timer_;
+   QTimer      priceUpdateTimer_;
    MDPrices    mdPrices_;
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
@@ -140,6 +145,7 @@ private:
    std::unordered_set<std::string>  pendingDeleteIds_;
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
+   int priceUpdateInterval_;
 
    struct IndexHelper {
       IndexHelper *parent_;
@@ -296,12 +302,16 @@ private:
    };
 
    std::vector<std::unique_ptr<Market>> data_;
+   std::vector<std::pair<QPersistentModelIndex, QPersistentModelIndex>> pIdxs_;
+   std::map<QString, std::pair<bs::network::MDField, bs::network::MDField>> prices_;
 
 private:
    int findGroup(IndexHelper *idx) const;
    Group* findGroup(Market *market, const QString &security) const;
    int findMarket(IndexHelper *idx) const;
    Market* findMarket(const QString &name) const;
+   void updatePrices(const QString &security, const bs::network::MDField &pxBid,
+      const bs::network::MDField &pxOffer);
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;

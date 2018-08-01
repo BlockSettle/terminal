@@ -81,6 +81,8 @@ public:
       FxRfqLimit,
       XbtRfqLimit,
       PmRfqLimit,
+      DisableBlueDotOnTabOfRfqBlotter,
+      PriceUpdateInterval,
       _last
    };
 
