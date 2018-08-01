@@ -1,5 +1,5 @@
-#ifndef __DEALING_SETTINGS_PAGE_H__
-#define __DEALING_SETTINGS_PAGE_H__
+#ifndef DEALING_SETTINGS_PAGE_H
+#define DEALING_SETTINGS_PAGE_H
 
 #include <QWidget>
 
@@ -35,4 +35,4 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
 };
 
-#endif // __DEALING_SETTINGS_PAGE_H__
+#endif // DEALING_SETTINGS_PAGE_H
