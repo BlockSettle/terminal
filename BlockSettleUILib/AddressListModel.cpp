@@ -33,6 +33,7 @@ AddressListModel::AddressListModel(std::shared_ptr<WalletsManager> walletsManage
    : QAbstractTableModel(parent)
    , addrType_(addrType)
    , stopped_(false)
+   , processing_(false)
 {
    connect(walletsManager.get(), &WalletsManager::walletsReady, this, &AddressListModel::updateData);
    connect(walletsManager.get(), &WalletsManager::walletChanged, this, &AddressListModel::updateData);
@@ -78,12 +79,14 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
       row.comment = tr("Authentication PubKey");
       const auto rootId = (wallet == nullptr) ? BinaryData() : wallet->getRootId();
       row.displayedAddress = rootId.isNull() ? tr("empty") : QString::fromStdString(BtcUtils::base58_encode(rootId).toBinStr());
+      row.isExternal = true;
    }
    else {
       row.comment = QString::fromStdString(wallet->GetAddressComment(addr));
       row.displayedAddress = addr.display();
       row.walletName = QString::fromStdString(wallet->GetShortName());
       row.walletId = QString::fromStdString(wallet->GetWalletId());
+      row.isExternal = wallet->IsExternalAddress(addr);
    }
    row.wltType = wallet->GetType();
    return row;
@@ -106,6 +109,10 @@ void AddressListModel::updateData()
 
 void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 {
+   if (processing_) {
+      return;
+   }
+   processing_ = true;
    if (wallet->GetType() == bs::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
@@ -120,6 +127,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
          addressList = wallet->GetIntAddressList();
          break;
       case AddressType::All:
+      case AddressType::ExtAndNonEmptyInt:
       default:
          addressList = wallet->GetUsedAddressList();
          break;
@@ -136,6 +144,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 
          addressRows_.push_back(std::move(row));
       }
+      processing_ = false;
    }
 }
 
@@ -153,7 +162,39 @@ void AddressListModel::updateWalletData()
          addrRow.balance = addrRow.wallet->getAddrBalance(addrRow.address)[0];
       }
       emit dataChanged(index(0, ColumnTxCount), index(addressRows_.size() - 1, ColumnBalance));
+
+      if (addrType_ == AddressType::ExtAndNonEmptyInt) {
+         QMetaObject::invokeMethod(this, "removeEmptyIntAddresses");
+      }
    });
+}
+
+void AddressListModel::removeEmptyIntAddresses()
+{
+   if (processing_) {
+      return;
+   }
+   processing_ = true;
+   std::set<int> indicesToRemove;
+   for (size_t i = 0; i < addressRows_.size(); ++i) {
+      const auto &row = addressRows_[i];
+      if (!row.isExternal && !row.transactionCount && !row.balance) {
+         indicesToRemove.insert(i);
+      }
+   }
+   unsigned int nbRemoved = 0;
+   for (auto idx : indicesToRemove) {
+      idx -= nbRemoved;
+      if (addressRows_.size() <= idx) {
+         processing_ = false;
+         return;
+      }
+      beginRemoveRows(QModelIndex(), idx, idx);
+      addressRows_.erase(addressRows_.begin() + idx);
+      endRemoveRows();
+      ++nbRemoved;
+   }
+   processing_ = false;
 }
 
 int AddressListModel::columnCount(const QModelIndex &) const
