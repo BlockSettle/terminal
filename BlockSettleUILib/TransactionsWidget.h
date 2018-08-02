@@ -36,6 +36,7 @@ private slots:
    void walletsChanged();
    void walletsFilterChanged(int index);
    void onEnterKeyInTrxPressed(const QModelIndex &index);
+   void onDataLoaded(int count);
 
 private:
    Ui::TransactionsWidget* ui;

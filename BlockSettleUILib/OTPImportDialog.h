@@ -3,7 +3,11 @@
 
 #include <memory>
 #include <unordered_set>
+
 #include <QDialog>
+
+#include "FrejaREST.h"
+#include "EncryptionUtils.h"
 
 
 namespace Ui {
@@ -24,14 +28,21 @@ public:
    ~OTPImportDialog() override;
 
 private slots:
-   void onPasswordChanged();
    void accept() override;
    void keyTextChanged();
+   void onFrejaIdChanged(const QString &);
+   void startFrejaSign();
+   void onFrejaSucceeded(SecureBinaryData);
+   void onFrejaFailed(const QString &text);
+   void onFrejaStatusUpdated(const QString &status);
+   void updateAcceptButton();
 
 private:
    Ui::OTPImportDialog* ui_;
    std::shared_ptr<OTPManager>   otpManager_;
    std::shared_ptr<EasyCoDec>    easyCodec_;
+   FrejaSignOTP                  frejaSign_;
+   SecureBinaryData              otpPassword_;
    EasyEncValidator           *  validator_ = nullptr;
    std::string hexKey_;
    bool        keyIsValid_ = false;

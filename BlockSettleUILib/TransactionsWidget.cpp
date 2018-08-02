@@ -197,13 +197,7 @@ void TransactionsWidget::init(const std::shared_ptr<WalletsManager> &walletsMgr
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
 {
    transactionsModel_ = model;
-   connect(transactionsModel_.get(), &TransactionsViewModel::dataLoaded, [this](int count) {
-      if (count > 0) {
-         auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
-         auto dateTime = transactionsModel_->data(index).toDateTime();
-         ui->dateEditStart->setDateTime(dateTime);
-      }
-   });
+   connect(transactionsModel_.get(), &TransactionsViewModel::dataLoaded, this, &TransactionsWidget::onDataLoaded, Qt::QueuedConnection);
 
    sortFilterModel_ = new TransactionsSortFilterModel(this);
    sortFilterModel_->setSourceModel(model.get());
@@ -228,6 +222,16 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    ui->treeViewTransactions->setModel(sortFilterModel_);
    ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::RbfFlag));
 //   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
+}
+
+void TransactionsWidget::onDataLoaded(int count)
+{
+   if (count <= 0) {
+      return;
+   }
+   auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
+   auto dateTime = transactionsModel_->data(index).toDateTime();
+   ui->dateEditStart->setDateTime(dateTime);
 }
 
 void TransactionsWidget::shortcutActivated(ShortcutType s)

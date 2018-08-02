@@ -133,7 +133,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
 {
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_,
-      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, this);
+      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, this);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 

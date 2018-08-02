@@ -623,7 +623,7 @@ void AddressVerificator::RegisterAddresses()
 
    if (armory_ && (armory_->state() == ArmoryConnection::State::Ready)) {
       pendingRegAddresses_.clear();
-      armory_->registerWallet(internalWallet_, walletId_, addresses, false);
+      armory_->registerWallet(internalWallet_, walletId_, addresses, []{});
       logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses", addresses.size());
    }
    else {

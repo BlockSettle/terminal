@@ -124,8 +124,15 @@ void BlockDataViewer::registerWithDB(BinaryData magic_word)
 void BlockDataViewer::unregisterFromDB()
 {
    if (sock_->type() == SocketWS)
+   {
+      auto sockws = dynamic_pointer_cast<WebSocketClient>(sock_);
+      if(sockws == nullptr)
+         return;
+
+      sockws->shutdown();
       return;
-   
+   }
+
    auto payload = make_payload(StaticMethods::unregisterBDV);
    sock_->pushPayload(move(payload), nullptr);
 }
@@ -433,6 +440,20 @@ void LedgerDelegate::getHistoryPage(uint32_t id,
    auto read_payload = make_shared<Socket_ReadPayload>();
    read_payload->callbackReturn_ =
       make_unique<CallbackReturn_VectorLedgerEntry>(callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void LedgerDelegate::getPageCount(function<void(uint64_t)> callback) const
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getPageCountForLedgerDelegate, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+   command->set_delegateid(delegateID_);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_UINT64>(callback);
    sock_->pushPayload(move(payload), read_payload);
 }
 
@@ -937,8 +958,6 @@ void CallbackReturn_VectorUTXO::callback(
       utxo.txIndex_ = proto_utxo.txindex();
       utxo.txOutIndex_ = proto_utxo.txoutindex();
       utxo.txHash_.copyFrom(proto_utxo.txhash());
-
-      utxovec.push_back(move(utxo));
    }
 
    userCallbackLambda_(move(utxovec));

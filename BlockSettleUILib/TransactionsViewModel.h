@@ -7,6 +7,7 @@
 #include <QThreadPool>
 #include <QColor>
 #include <QFont>
+#include <QMetaType>
 #include <atomic>
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
@@ -75,11 +76,9 @@ private slots:
    void updatePage();
    void refresh();
    void onZeroConf(ArmoryConnection::ReqIdType);
-   void onRowUpdated(int index, TransactionsViewItem item, int colStart, int colEnd);
+   void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
    void onNewItems(const TransactionItems items);
    void onItemsDeleted(const TransactionItems items);
-   void onRawDataLoaded();
-   void onDataLoaded();
    void onItemConfirmed(const TransactionsViewItem item);
 
    void onArmoryStateChanged(ArmoryConnection::State);
@@ -99,7 +98,6 @@ private:
 
 signals:
    void dataChangedInThread(const QModelIndex& start, const QModelIndex& end, const QVector<int> roles = QVector<int>());
-   void rowUpdated(int index, TransactionsViewItem item, int colStart, int colEnd);
    void itemsAdded(const TransactionItems items);
    void itemsDeleted(const TransactionItems items);
    void dataLoaded(int count);
@@ -128,22 +126,18 @@ public:
    };
 
    TransactionItems                    currentPage_;
-   std::vector<ClientClasses::LedgerEntry>   rawData_;
+   std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>> rawData_;
    std::unordered_set<std::string>     currentKeys_;
    std::shared_ptr<ArmoryConnection>   armory_;
    AsyncClient::LedgerDelegate         ledgerDelegate_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::atomic_bool                    updateRunning_;
    mutable QMutex                      updateMutex_;
-   QThreadPool                         threadPool_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
    std::atomic_bool  stopped_;
    QFont             fontBold_;
    QColor            colorGray_, colorRed_, colorYellow_, colorGreen_, colorInvalid_;
-   int               updRowFirst_ = -1;
-   int               updRowLast_ = 0;
    std::atomic_bool  initialLoadCompleted_;
-   std::atomic_uint  pageId_;
 };
 
 #endif // __TRANSACTIONS_VIEW_MODEL_H__

@@ -71,7 +71,7 @@ public:
    unsigned int topBlock() const;
 
    std::string registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &, const std::string &walletId
-      , const std::vector<BinaryData> &addrVec, bool asNew = false);
+      , const std::vector<BinaryData> &addrVec, std::function<void()>, bool asNew = false);
    bool getWalletsHistory(const std::vector<std::string> &walletIDs
       , std::function<void (std::vector<ClientClasses::LedgerEntry>)>);
 
@@ -106,6 +106,7 @@ private:
    void registerBDV(NetworkType);
    void setState(State);
    ReqIdType setZC(const std::vector<ClientClasses::LedgerEntry> &);
+   void onRefresh(std::vector<BinaryData>);
 
    void stopServiceThreads();
 
@@ -130,6 +131,9 @@ private:
    mutable std::atomic_flag      zcLock_ = ATOMIC_FLAG_INIT;
    std::condition_variable       zcMaintCV_;
    mutable std::mutex            zcMaintMutex_;
+
+   std::atomic_bool              isOnline_;
+   std::unordered_map<std::string, std::function<void()>>   preOnlineRegIds_;
 };
 
 #endif // __ARMORY_CONNECTION_H__

@@ -24,6 +24,7 @@ class AssetManager;
 class SignContainer;
 class TransactionData;
 class WalletsManager;
+class CelerClient;
 
 namespace SwigClient
 {
@@ -38,7 +39,9 @@ public:
    CCSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &, QWidget* parent = nullptr);
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<CelerClient> &
+      , QWidget* parent = nullptr);
    ~CCSettlementTransactionWidget() override;
 
    void reset(const std::shared_ptr<WalletsManager> &walletsManager);

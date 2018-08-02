@@ -22,6 +22,7 @@ namespace bs {
    class SettlementContainer;
 }
 class AssetManager;
+class CelerClient;
 
 class QuoteRequestsModel : public QAbstractItemModel
 {
@@ -62,7 +63,8 @@ public:
 
 public:
    QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
-      , QObject* parent);
+                      , std::shared_ptr<CelerClient> celerClient
+                      , QObject* parent);
    ~QuoteRequestsModel() override;
 
    QuoteRequestsModel(const QuoteRequestsModel&) = delete;
@@ -99,6 +101,7 @@ private slots:
    void onSettlementExpired();
    void onSettlementCompleted();
    void onSettlementFailed();
+   void clearModel();
 
 private:
    using Prices = std::map<Role, double>;
@@ -111,6 +114,7 @@ private:
    MDPrices    mdPrices_;
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
+   std::shared_ptr<CelerClient>     celerClient_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;

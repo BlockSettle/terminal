@@ -73,6 +73,8 @@ protected:
    virtual QLabel *labelHint() const = 0;
    virtual QLabel *labelPassword() const = 0;
 
+   void setFrejaPasswordPrompt(const QString &prompt);
+
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
    SecureBinaryData  walletPassword_;
@@ -91,6 +93,7 @@ private:
    FrejaSignWallet   frejaSign_;
    bs::wallet::EncryptionType encType_ = bs::wallet::EncryptionType::Unencrypted;
    QString        userId_;
+   QString        frejaPrompt_;
 };
 
 #endif // __BASE_DEALER_SETTLEMENT_DIALOG_H__

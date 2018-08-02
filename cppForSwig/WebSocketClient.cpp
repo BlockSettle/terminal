@@ -71,7 +71,9 @@ shared_ptr<WebSocketClient> WebSocketClient::getNew(
    
    auto wsiptr = (struct lws*)newObject->wsiPtr_.load(memory_order_relaxed);
 
-   objectMap_.insert(move(make_pair(wsiptr, newObject)));
+   map<struct lws*, shared_ptr<WebSocketClient>> newmap;
+   newmap.insert(move(make_pair(wsiptr, newObject)));
+   objectMap_.update(newmap);
    return newObject;
 }
 
@@ -93,6 +95,7 @@ void WebSocketClient::setIsReady(bool status)
 void WebSocketClient::init()
 {
    run_.store(1, memory_order_relaxed);
+   currentReadMessage_.reset();
 
    //setup context
    struct lws_context_creation_info info;
@@ -195,6 +198,9 @@ void WebSocketClient::service()
 ////////////////////////////////////////////////////////////////////////////////
 void WebSocketClient::shutdown()
 {
+   if (run_.load(memory_order_relaxed) == 0)
+      return;
+
    readPackets_.clear();
 
    run_.store(0, memory_order_relaxed);
@@ -212,6 +218,13 @@ void WebSocketClient::shutdown()
    readQueue_.terminate();
    if(readThr_.joinable())
       readThr_.join();
+
+   setIsReady(false);
+
+   auto lwsPtr = (struct lws*)wsiPtr_.load(memory_order_relaxed);
+   wsiPtr_.store(nullptr, memory_order_relaxed);
+
+   destroyInstance(lwsPtr);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -227,7 +240,6 @@ int WebSocketClient::callback(struct lws *wsi,
    case LWS_CALLBACK_CLIENT_ESTABLISHED:
    {
       //ws connection established with server
-      //printf("connection established with server");
       auto instance = WebSocketClient::getInstance(wsi);
       instance->setIsReady(true);
       break;
@@ -318,6 +330,7 @@ int WebSocketClient::callback(struct lws *wsi,
 ////////////////////////////////////////////////////////////////////////////////
 void WebSocketClient::readService()
 {
+   size_t packetid = 0;
    while (1)
    {
       BinaryData payload;
@@ -331,18 +344,12 @@ void WebSocketClient::readService()
       }
 
       //deser packet
-      currentReadMessage_.packets_.push_back(move(payload));
-      auto payloadRef = currentReadMessage_.packets_.back().getRef();
-
-      auto sz = currentReadMessage_.message_.parsePacket(payloadRef);
-      if (sz == SIZE_MAX)
+      auto payloadRef = currentReadMessage_.insertDataAndGetRef(payload);
+      auto result = 
+         currentReadMessage_.message_.parsePacket(packetid++, payloadRef);
+      if (!result)
       {
          currentReadMessage_.reset();
-         continue;
-      }
-      else if (sz == SIZE_MAX -1)
-      {
-         currentReadMessage_.packets_.pop_back();
          continue;
       }
 
@@ -406,10 +413,16 @@ shared_ptr<WebSocketClient> WebSocketClient::getInstance(struct lws* ptr)
 ////////////////////////////////////////////////////////////////////////////////
 void WebSocketClient::destroyInstance(struct lws* ptr)
 {
-   auto instance = getInstance(ptr);
-   instance->setIsReady(false);
-   instance->readPackets_.clear();
-   instance->run_.store(0, memory_order_relaxed);
+   try
+   {
+      auto instance = getInstance(ptr);
+      instance->shutdown();
+   }
+   catch (LWS_Error&)
+   {
+      return;
+   }
+      
    objectMap_.erase(ptr);
 }
 

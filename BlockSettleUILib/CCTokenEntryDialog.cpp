@@ -43,7 +43,7 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
       connect(&freja_, &FrejaSignOTP::succeeded, this, &CCTokenEntryDialog::onFrejaSucceeded);
       connect(&freja_, &FrejaSign::failed, this, &CCTokenEntryDialog::onFrejaFailed);
       connect(&freja_, &FrejaSign::statusUpdated, this, &CCTokenEntryDialog::onFrejaStatusUpdated);
-      freja_.start(ccFileMgr_->GetOtpEncKey(), tr("Sign for CC Token Entry"), ccFileMgr_->GetOtpId());
+      freja_.start(ccFileMgr_->GetOtpEncKey(), tr("Equity Token Submission"), ccFileMgr_->GetOtpId());
       break;
 
    case bs::wallet::EncryptionType::Password:

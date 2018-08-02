@@ -51,14 +51,14 @@ QuoteRequestsWidget::QuoteRequestsWidget(QWidget* parent)
 
 void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
-   , const std::shared_ptr<ApplicationSettings> &appSettings)
+   , const std::shared_ptr<ApplicationSettings> &appSettings, std::shared_ptr<CelerClient> celerClient)
 {
    logger_ = logger;
    assetManager_ = assetManager;
    appSettings_ = appSettings;
    dropQN_ = appSettings->get<bool>(ApplicationSettings::dropQN);
 
-   model_ = new QuoteRequestsModel(statsCollector, ui_->treeViewQuoteRequests);
+   model_ = new QuoteRequestsModel(statsCollector, celerClient, ui_->treeViewQuoteRequests);
    model_->SetAssetManager(assetManager);
 
    sortModel_ = new QuoteReqSortModel(assetManager, this);

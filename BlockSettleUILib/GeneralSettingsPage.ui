@@ -23,7 +23,7 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
      </property>
      <property name="checkable">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="checked">
       <bool>false</bool>
@@ -50,7 +50,7 @@
            <widget class="QComboBox" name="logLevel">
             <item>
              <property name="text">
-              <string>Trace</string>
+              <string>Full Trace</string>
              </property>
             </item>
             <item>
@@ -76,6 +76,11 @@
             <item>
              <property name="text">
               <string>Critical</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>No Logging</string>
              </property>
             </item>
            </widget>
@@ -112,7 +117,7 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
      </property>
      <property name="checkable">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="checked">
       <bool>false</bool>
@@ -137,9 +142,12 @@
           </item>
           <item>
            <widget class="QComboBox" name="logLevelMsg">
+            <property name="currentIndex">
+             <number>6</number>
+            </property>
             <item>
              <property name="text">
-              <string>Trace</string>
+              <string>Full Trace</string>
              </property>
             </item>
             <item>
@@ -165,6 +173,11 @@
             <item>
              <property name="text">
               <string>Critical</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>No Logging</string>
              </property>
             </item>
            </widget>

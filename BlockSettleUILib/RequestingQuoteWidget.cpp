@@ -7,6 +7,7 @@
 #include "CurrencyPair.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
+#include "CelerClient.h"
 
 // XXX [AT] : possible concurent change of states - could lead to multiple signals emited
 // add atomic flag
@@ -43,6 +44,13 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
 RequestingQuoteWidget::~RequestingQuoteWidget()
 {
    bs::UtxoReservation::delAdapter(utxoAdapter_);
+}
+
+void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<CelerClient> celerClient) {
+   celerClient_ = celerClient;
+
+   connect(celerClient_.get(), &CelerClient::OnConnectionClosed,
+      this, &RequestingQuoteWidget::onCelerDisconnected);
 }
 
 void RequestingQuoteWidget::setupTimer(RequestingQuoteWidget::Status status, const QDateTime &expTime)
@@ -125,8 +133,6 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
          if (quote.assetType == bs::network::Asset::SpotFX) {
             ui_->pushButtonAccept->show();
             setupTimer(Tradeable, quote.expirationTime.addMSecs(quote.timeSkewMs));
-            ui_->labelHint->setText(tr("Now you can accept the reply until the timeout expires"));
-            ui_->labelHint->show();
          }
          else {
             onAccept();
@@ -182,9 +188,7 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
          balanceOk_ = (value < balance);
          ui_->pushButtonAccept->setEnabled(balanceOk_);
          if (!balanceOk_) {
-            ui_->labelHint->setText(tr("Insufficient %1 balance")
-               .arg(QString::number(balance, 'f',
-                  (currency == bs::network::XbtCurrency ? 8 : 2))));
+            ui_->labelHint->setText(tr("Insufficient balance"));
             ui_->labelHint->show();
          }
       }
@@ -224,6 +228,11 @@ void RequestingQuoteWidget::onReject(const QString &reqId, const QString &reason
       ui_->labelQuoteValue->setText(tr("Rejected: %1").arg(reason));
       ui_->labelQuoteValue->show();
    }
+}
+
+void RequestingQuoteWidget::onCelerDisconnected()
+{
+   onCancel();
 }
 
 void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq, const std::shared_ptr<TransactionData> &transactionData)

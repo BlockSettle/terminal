@@ -14,6 +14,7 @@ namespace Ui {
 }
 class AssetManager;
 class TransactionData;
+class CelerClient;
 
 class RequestingQuoteWidget : public QWidget
 {
@@ -27,6 +28,8 @@ public:
       assetManager_ = assetManager;
    }
 
+   void SetCelerClient(std::shared_ptr<CelerClient> celerClient);
+
    void populateDetails(const bs::network::RFQ& rfq, const std::shared_ptr<TransactionData> &);
 
    Q_INVOKABLE void cancel();
@@ -38,6 +41,7 @@ public slots:
    void onOrderFilled(const std::string &quoteId);
    void onOrderFailed(const std::string& quoteId, const std::string& reason);
    void onReject(const QString &reqId, const QString &reason);
+   void onCelerDisconnected();
 
 signals:
    void cancelRFQ(const QString &reqId);
@@ -72,6 +76,7 @@ private:
    bool                       balanceOk_ = true;
    std::shared_ptr<TransactionData>                transactionData_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
+   std::shared_ptr<CelerClient>                    celerClient_;
 
 private:
    void setupTimer(Status status, const QDateTime &expTime);

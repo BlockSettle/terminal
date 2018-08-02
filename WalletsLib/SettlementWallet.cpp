@@ -657,7 +657,7 @@ void bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
 {
    auto index = asset->getIndex();
    const auto walletId = BtcUtils::scrAddrToBase58(asset->prefixedHash()).toBinStr();
-   armory_->registerWallet(rtWallets_[index], walletId, asset->supportedAddrHashes(), true);
+   armory_->registerWallet(rtWallets_[index], walletId, asset->supportedAddrHashes(), [] {}, true);
    rtWalletsById_[walletId] = index;
 //      PyBlockDataManager::instance()->updateWalletsLedgerFilter({BinaryData(walletId)});
 }

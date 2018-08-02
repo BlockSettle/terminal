@@ -311,7 +311,7 @@ namespace bs {
       virtual wallet::TXSignRequest CreatePartialTXRequest(uint64_t spendVal, const std::vector<UTXO> &inputs = {}, bs::Address changeAddress = {}
          , float feePerByte = 0, const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}, const BinaryData prevPart = {});
 
-      virtual void UpdateBalanceFromDB();
+      virtual void UpdateBalanceFromDB(const std::function<void(std::vector<uint64_t>)> &cb = nullptr);
 
       virtual bool IsSegWitInput(const UTXO& input);
       virtual SecureBinaryData GetPublicKeyFor(const bs::Address &) = 0;

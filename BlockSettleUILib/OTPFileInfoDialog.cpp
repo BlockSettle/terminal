@@ -165,7 +165,7 @@ void OTPFileInfoDialog::onChangePwdClicked()
          ui_->widgetPasswordOld->hide();
          ui_->labelFrejaOld->show();
          ui_->labelPwdHint->setText(tr("Sign with Freja eID"));
-         frejaOld_.start(otpManager_->GetEncKey(), tr("Current OTP password")
+         frejaOld_.start(otpManager_->GetEncKey(), tr("Activate Freja eID Signing")
             , otpManager_->GetShortId());
          break;
 

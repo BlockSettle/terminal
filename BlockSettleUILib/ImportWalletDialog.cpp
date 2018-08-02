@@ -66,8 +66,8 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::onImportAccepted);
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ImportWalletDialog::reject);
-   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &ImportWalletDialog::updateAcceptButton);
-   connect(ui_->lineEditPasswordConfirm, &QLineEdit::textChanged, this, &ImportWalletDialog::updateAcceptButton);
+   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &ImportWalletDialog::onPasswordChanged);
+   connect(ui_->lineEditPasswordConfirm, &QLineEdit::textChanged, this, &ImportWalletDialog::onPasswordChanged);
 
    connect(ui_->radioButtonPassword, &QRadioButton::clicked, this, &ImportWalletDialog::onEncTypeChanged);
    connect(ui_->radioButtonFreja, &QRadioButton::clicked, this, &ImportWalletDialog::onEncTypeChanged);
