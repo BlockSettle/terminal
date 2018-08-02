@@ -728,6 +728,15 @@ std::string hd::Leaf::GetAddressIndex(const bs::Address &addr)
    return getPathForAddress(addr).toString(false);
 }
 
+bool hd::Leaf::IsExternalAddress(const Address &addr) const
+{
+   const auto &path = getPathForAddress(addr);
+   if (path.length() < 2) {
+      return false;
+   }
+   return (path.get(-2) == addrTypeExternal);
+}
+
 bool hd::Leaf::AddressIndexExists(const std::string &index) const
 {
    const auto path = hd::Path::fromString(index);

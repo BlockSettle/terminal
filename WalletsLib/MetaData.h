@@ -274,6 +274,7 @@ namespace bs {
       virtual std::vector<bs::Address> GetUsedAddressList() const { return usedAddresses_; }
       virtual std::vector<bs::Address> GetExtAddressList() const { return usedAddresses_; }
       virtual std::vector<bs::Address> GetIntAddressList() const { return usedAddresses_; }
+      virtual bool IsExternalAddress(const Address &) const { return true; }
       virtual size_t GetUsedAddressCount() const { return usedAddresses_.size(); }
       virtual size_t GetExtAddressCount() const { return usedAddresses_.size(); }
       virtual size_t GetIntAddressCount() const { return usedAddresses_.size(); }
