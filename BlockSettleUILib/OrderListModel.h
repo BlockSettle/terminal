@@ -45,7 +45,8 @@ public:
          Quantity,
          Price,
          Value,
-         Status
+         Status,
+         last
       };
       static QString toString(Index);
    };

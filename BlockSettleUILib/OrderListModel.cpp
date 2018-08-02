@@ -40,7 +40,7 @@ OrderListModel::OrderListModel(std::shared_ptr<QuoteProvider> quoteProvider, con
 
 int OrderListModel::columnCount(const QModelIndex &) const
 {
-   return 8;
+   return Header::last;
 }
 
 QVariant OrderListModel::data(const QModelIndex &index, int role) const
@@ -183,10 +183,10 @@ QModelIndex OrderListModel::index(int row, int column, const QModelIndex &parent
       }
    } else {
       switch (row) {
-         case 0 :
+         case StatusGroup::UnSettled :
             return createIndex(row, column, &unsettled_->idx_);
 
-         case 1 :
+         case StatusGroup::Settled :
             return createIndex(row, column, &settled_->idx_);
 
          default :
