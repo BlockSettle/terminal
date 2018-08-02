@@ -354,7 +354,8 @@ std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::networ
             [order] (const std::unique_ptr<Data> &d) { return (d->id_ == order.exchOrderId); });
 
          if (dit != (*it)->rows_.cend()) {
-            std::make_pair(it->get(), static_cast<int>(std::distance((*it)->rows_.cbegin(), dit)));
+            return std::make_pair(it->get(),
+               static_cast<int>(std::distance((*it)->rows_.cbegin(), dit)));
          } else {
             return std::make_pair(it->get(), -1);
          }
@@ -405,8 +406,16 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
             const int gdist = static_cast<int>(std::distance(tmpsg->rows_.cbegin(), it));
             beginRemoveRows(createIndex(tmpsg->row_, 0, &tmpsg->idx_), gdist, gdist);
             tmpsg->rows_.erase(it);
-            groupItem = nullptr;
             endRemoveRows();
+         }
+
+         auto git = std::find_if(sg->rows_.cbegin(), sg->rows_.cend(),
+            [assetGrpName] (const std::unique_ptr<Group> & g) { return (g->name_ == assetGrpName); });
+
+         if (git != sg->rows_.cend()) {
+            groupItem = git->get();
+         } else {
+            groupItem = nullptr;
          }
       }
    }
