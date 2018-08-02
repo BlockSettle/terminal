@@ -228,7 +228,7 @@
           </widget>
          </item>
          <item>
-          <widget class="TreeViewWithEnterKey" name="treeViewOrders">
+          <widget class="OrdersView" name="treeViewOrders">
            <property name="maximumSize">
             <size>
              <width>16777215</width>
@@ -372,11 +372,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>TreeViewWithEnterKey</class>
-   <extends>QTreeView</extends>
-   <header>TreeViewWithEnterKey.h</header>
-  </customwidget>
-  <customwidget>
    <class>QuoteRequestsWidget</class>
    <extends>QWidget</extends>
    <header>QuoteRequestsWidget.h</header>
@@ -386,6 +381,11 @@
    <class>bs::ui::RFQDealerReply</class>
    <extends>QWidget</extends>
    <header>RFQDealerReply.h</header>
+  </customwidget>
+  <customwidget>
+   <class>OrdersView</class>
+   <extends>QTreeView</extends>
+   <header>OrdersView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

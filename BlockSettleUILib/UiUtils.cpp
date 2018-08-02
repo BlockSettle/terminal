@@ -19,6 +19,7 @@
 #include <QPixmap>
 #include <QDebug>
 #include <QStyle>
+#include <QAbstractItemModel>
 
 #include <algorithm>
 
@@ -549,5 +550,23 @@ QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
 
       default :
          return QString();
+   }
+}
+
+QString UiUtils::modelPath(const QModelIndex &index, QAbstractItemModel *model)
+{
+   if (model) {
+      QModelIndex idx = model->index(index.row(), 0, index.parent());
+
+      QString res = QString::fromLatin1("/") + idx.data().toString();
+
+      while (idx.parent().isValid()) {
+         idx = idx.parent();
+         res.prepend(QString::fromLatin1("/") + idx.data().toString());
+      }
+
+      return res;
+   } else {
+      return QString();
    }
 }

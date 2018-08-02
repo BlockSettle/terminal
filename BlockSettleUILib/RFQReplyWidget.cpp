@@ -23,6 +23,7 @@
 #include "SignContainer.h"
 #include "RFQBlotterTreeView.h"
 #include "CustomDoubleSpinBox.h"
+#include "OrdersView.h"
 
 using namespace bs::ui;
 
@@ -144,10 +145,7 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    auto ordersModel = new OrderListModel(quoteProvider_, assetManager, this);
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(ordersModel);
-   connect(ordersModel, &QAbstractItemModel::rowsInserted, [this](const QModelIndex &parent, int first, int last) {
-      ui_->treeViewOrders->expand(parent);
-      ui_->treeViewOrders->selectionModel()->select(parent.child(first, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-   });
+   ui_->treeViewOrders->initWithModel(ordersModel);
 
    connect(celerClient_.get(), &CelerClient::OnConnectedToServer, ui_->pageRFQReply, &RFQDealerReply::onCelerConnected);
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQReply, &RFQDealerReply::onCelerDisconnected);

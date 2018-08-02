@@ -12,6 +12,10 @@
 #include "ApplicationSettings.h"
 #include "CommonTypes.h"
 
+QT_BEGIN_NAMESPACE
+class QAbstractItemModel;
+QT_END_NAMESPACE
+
 
 class AuthAddressManager;
 class BinaryData;
@@ -119,6 +123,8 @@ namespace UiUtils
    ApplicationSettings::Setting limitRfqSetting(bs::network::Asset::Type type);
    ApplicationSettings::Setting limitRfqSetting(const QString &name);
    QString marketNameForLimit(ApplicationSettings::Setting s);
+
+   QString modelPath(const QModelIndex &index, QAbstractItemModel *model);
 
    extern const QLatin1String XbtCurrency;
 }

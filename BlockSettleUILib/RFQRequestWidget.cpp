@@ -10,7 +10,7 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
-#include "TreeViewWithEnterKey.h"
+#include "OrdersView.h"
 
 #include <QPushButton>
 #include <QLineEdit>
@@ -113,10 +113,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    auto ordersModel = new OrderListModel(quoteProvider_, assetManager, ui_->treeViewOrders);
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(ordersModel);
-   connect(ordersModel, &QAbstractItemModel::rowsInserted, [this](const QModelIndex &parent, int first, int last) {
-      ui_->treeViewOrders->expand(parent);
-      ui_->treeViewOrders->selectionModel()->select(parent.child(first, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-   });
+   ui_->treeViewOrders->initWithModel(ordersModel);
    connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, [this](const std::string &quoteId) {
       NotificationCenter::notify(bs::ui::NotifyType::CelerOrder, {true, QString::fromStdString(quoteId)});
    });

@@ -153,7 +153,6 @@ private slots:
    void onEnterKeyInQuoteRequestsPressed(const QModelIndex &index);
 
 private:
-   QString path(const QModelIndex &index) const;
    void expandIfNeeded(const QModelIndex &index = QModelIndex());
    void saveCollapsedState();
 
