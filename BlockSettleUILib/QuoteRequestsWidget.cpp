@@ -296,7 +296,7 @@ void QuoteRequestsWidget::onRowsRemoved(const QModelIndex &, int, int)
 void QuoteRequestsWidget::onCollapsed(const QModelIndex &index)
 {
    if (index.isValid()) {
-      collapsed_.append(path(sortModel_->mapToSource(index)));
+      collapsed_.append(UiUtils::modelPath(sortModel_->mapToSource(index), model_));
       saveCollapsedState();
    }
 }
@@ -304,7 +304,7 @@ void QuoteRequestsWidget::onCollapsed(const QModelIndex &index)
 void QuoteRequestsWidget::onExpanded(const QModelIndex &index)
 {
    if (index.isValid()) {
-      collapsed_.removeOne(path(sortModel_->mapToSource(index)));
+      collapsed_.removeOne(UiUtils::modelPath(sortModel_->mapToSource(index), model_));
       saveCollapsedState();
    }
 }
@@ -319,23 +319,9 @@ void QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed(const QModelIndex &in
    onQuoteReqNotifSelected(index);
 }
 
-QString QuoteRequestsWidget::path(const QModelIndex &index) const
-{
-   QModelIndex idx = model_->index(index.row(), 0, index.parent());
-
-   QString res = QString::fromLatin1("/") + idx.data().toString();
-
-   while (idx.parent().isValid()) {
-      idx = idx.parent();
-      res.prepend(QString::fromLatin1("/") + idx.data().toString());
-   }
-
-   return res;
-}
-
 void QuoteRequestsWidget::expandIfNeeded(const QModelIndex &index)
 {
-   if (!collapsed_.contains(path(sortModel_->mapToSource(index))))
+   if (!collapsed_.contains(UiUtils::modelPath(sortModel_->mapToSource(index), model_)))
       ui_->treeViewQuoteRequests->expand(index);
 
    for (int i = 0; i < sortModel_->rowCount(index); ++i)
