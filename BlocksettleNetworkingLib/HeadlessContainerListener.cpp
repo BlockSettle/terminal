@@ -317,7 +317,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       return true;
    }
 
-   const QString prompt = tr("Signing %1transaction").arg(partial ? tr("partial ") : tr(""));
+   const QString prompt = tr("Outgoing %1Transaction").arg(partial ? tr("Partial ") : tr(""));
    return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onPassword, request.applyautosignrules());
 }
 
