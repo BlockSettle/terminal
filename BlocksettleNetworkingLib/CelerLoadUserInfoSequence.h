@@ -31,6 +31,7 @@ private:
    CelerMessage sendGetOTPIndexRequest();
    CelerMessage sendGetSubmittedCCAddressListRequest();
    CelerMessage sendGetBitcoinParticipantRequest();
+   CelerMessage sendGetBitcoinDealerRequest();
 
    CelerMessage   getPropertyRequest(const std::string& name);
    bool           processGetPropertyResponse(const CelerMessage& message);

@@ -912,7 +912,7 @@ QComboBox,
 QDateEdit {
   border: 1px solid #81888f;
   border-radius: 0;
-  padding: 1px 23px 1px 23px;
+  padding: 1px 5px 1px 7px;
   background: transparent;
   max-height: 20px;
   color: #ffffff; }
@@ -1017,7 +1017,7 @@ QTextEdit {
 
 QDoubleSpinBox,
 QSpinBox {
-  padding: 0 5px 0 5;
+  padding: 0 5px 0 5px;
   /* make room for the arrows */
   border-image: none;
   border: 1px solid #81888f;

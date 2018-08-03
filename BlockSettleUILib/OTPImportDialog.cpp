@@ -133,7 +133,7 @@ void OTPImportDialog::accept()
 
    const auto otpKey = SecureBinaryData(BinaryData::CreateFromHex(hexKey_));
    auto resultCode = otpManager_->ImportOTPForCurrentUser(otpKey,
-      otpPassword_, bs::wallet::EncryptionType::Freja);
+      otpPassword_, bs::wallet::EncryptionType::Freja, ui_->lineEditFrejaId->text().toStdString());
    if (resultCode != OTPManager::OTPImportResult::Success) {
 
       QString errorText;
