@@ -71,8 +71,6 @@ void ConfigDialog::onAcceptSettings()
 void ConfigDialog::onSelectionChanged(int currentRow)
 {
    ui_->stackedWidget->setCurrentIndex(currentRow);
-   ui_->stackedWidget->adjustSize();
-   adjustSize();
 }
 
 void ConfigDialog::illformedSettings(bool illformed)
