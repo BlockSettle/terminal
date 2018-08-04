@@ -7,13 +7,12 @@
 #include "MessageBoxCritical.h"
 #include "OTPFile.h"
 #include "OTPManager.h"
-#include <CelerClient.h>
 
 #include <spdlog/spdlog.h>
 
 
 OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
-   std::shared_ptr<CelerClient> celerClient, QWidget* parent)
+   const std::string &defaultUserName, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::OTPImportDialog())
    , otpManager_(otpManager)
@@ -40,7 +39,7 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    connect(&frejaSign_, &FrejaSign::failed, this, &OTPImportDialog::onFrejaFailed);
    connect(&frejaSign_, &FrejaSign::statusUpdated, this, &OTPImportDialog::onFrejaStatusUpdated);
 
-   ui_->lineEditFrejaId->setText(QString::fromStdString(celerClient->userName()));
+   ui_->lineEditFrejaId->setText(QString::fromStdString(defaultUserName));
 }
 
 OTPImportDialog::~OTPImportDialog()

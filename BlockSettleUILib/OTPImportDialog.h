@@ -16,7 +16,6 @@ namespace Ui {
 class OTPManager;
 class EasyCoDec;
 class EasyEncValidator;
-class CelerClient;
 
 
 class OTPImportDialog : public QDialog
@@ -25,7 +24,7 @@ Q_OBJECT
 
 public:
    OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager
-      , std::shared_ptr<CelerClient> celerClient, QWidget* parent = nullptr );
+      , const std::string &defaultUserName, QWidget* parent = nullptr );
    ~OTPImportDialog() override;
 
 private slots:
