@@ -220,7 +220,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                      .arg(QString::number(g->visibleCount_ +
                         (showQuoted_ ? g->quotedRfqsCount_ : 0)))
                      .arg(QString::number(g->rfqs_.size())) :
-                  tr("%1 row(s)").arg(QString::number(g->rfqs_.size())));
+                  tr("%1 RFQ").arg(QString::number(g->rfqs_.size())));
             }
 
             case Qt::TextColorRole : {
