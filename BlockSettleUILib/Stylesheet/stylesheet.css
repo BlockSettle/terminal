@@ -164,6 +164,10 @@ QWidget {
     color: #e7e8e9;
     text-transform: uppercase; }
 
+QWidget QGroupBox::title:disabled {
+   color: #586266;
+}
+
 QFrame:focus {
   border: 1px solid #247dac; }
 
@@ -1149,6 +1153,14 @@ QRadioButton::indicator:checked:hover {
 
 QRadioButton::indicator:checked:pressed {
   image: url(:/resources/radio-button-active.png); }
+
+QRadioButton:disabled:checked,
+QRadioButton:disabled {
+   color: #586266;
+}
+
+QRadioButton::indicator::checked:disabled {
+  image: url(:/resources/radio-button-disabled.png); }
 
 QCheckBox:disabled:checked,
 QCheckBox:disabled {
