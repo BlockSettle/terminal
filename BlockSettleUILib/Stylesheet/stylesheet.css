@@ -1159,7 +1159,7 @@ QRadioButton:disabled {
    color: #586266;
 }
 
-QRadioButton::indicator::checked:disabled {
+QRadioButton::indicator:checked:disabled {
   image: url(:/resources/radio-button-disabled.png); }
 
 QCheckBox:disabled:checked,
