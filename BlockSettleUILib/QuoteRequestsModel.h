@@ -302,7 +302,13 @@ private:
    };
 
    std::vector<std::unique_ptr<Market>> data_;
-   std::vector<std::pair<QPersistentModelIndex, QPersistentModelIndex>> pIdxs_;
+
+   struct BestQuotePrice {
+      double price_;
+      bool own_;
+   };
+
+   std::map<QString, BestQuotePrice> bestQuotePrices_;
    std::map<QString, std::pair<bs::network::MDField, bs::network::MDField>> prices_;
 
 private:
@@ -312,6 +318,7 @@ private:
    Market* findMarket(const QString &name) const;
    void updatePrices(const QString &security, const bs::network::MDField &pxBid,
       const bs::network::MDField &pxOffer);
+   void updateBestQuotePrice(const QString &reqId, double price, bool own);
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;
