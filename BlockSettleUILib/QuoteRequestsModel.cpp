@@ -167,9 +167,9 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                }
             }
 
-         case static_cast<int>(Role::Visible) : {
-            return r->visible_;
-         }
+            case static_cast<int>(Role::Visible) : {
+               return r->visible_;
+            }
 
             default:
                return QVariant();
