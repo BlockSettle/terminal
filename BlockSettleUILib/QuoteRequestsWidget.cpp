@@ -76,6 +76,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
 
    sortModel_ = new QuoteReqSortModel(model_, this);
    sortModel_->setSourceModel(model_);
+   sortModel_->showQuoted(appSettings_->get<bool>(ApplicationSettings::ShowQuoted));
 
    ui_->treeViewQuoteRequests->setModel(sortModel_);
    ui_->treeViewQuoteRequests->setRfqModel(model_);
@@ -248,6 +249,10 @@ void QuoteRequestsWidget::onSettingChanged(int setting, QVariant val)
 
       case ApplicationSettings::PriceUpdateInterval :
          model_->setPriceUpdateInterval(val.toInt());
+         break;
+
+      case ApplicationSettings::ShowQuoted :
+         sortModel_->showQuoted(val.toBool());
          break;
 
       default:
@@ -434,6 +439,7 @@ unsigned int bs::SettlementStatsCollector::getGradeFor(const std::string &) cons
 QuoteReqSortModel::QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent)
    : QSortFilterProxyModel(parent)
    , model_(model)
+   , showQuoted_(true)
 {
    connect(model_, &QuoteRequestsModel::invalidateFilterModel,
       this, &QuoteReqSortModel::invalidate);
@@ -447,15 +453,12 @@ bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) con
       if(index.data(static_cast<int>(QuoteRequestsModel::Role::Type)).toInt() ==
          static_cast<int>(QuoteRequestsModel::DataType::RFQ)) {
             if (parent.data(static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() > 0) {
-               if (row - parent.data(static_cast<int>(
-                     QuoteRequestsModel::Role::QuotedRfqsCount)).toInt() < parent.data(
-                     static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() &&
-                  !index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
-                     return true;
-               } else if (index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool()) {
+               if (index.data(static_cast<int>(QuoteRequestsModel::Role::Visible)).toBool()) {
                   return true;
+               } else if (index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool() &&
+                     showQuoted_) {
+                        return true;
                } else {
-                  model_->setHiddenFlag(parent);
                   return false;
                }
             } else {
@@ -466,6 +469,15 @@ bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) con
       }
    } else {
       return false;
+   }
+}
+
+void QuoteReqSortModel::showQuoted(bool on)
+{
+   if (showQuoted_ != on) {
+      showQuoted_ = on;
+
+      invalidateFilter();
    }
 }
 

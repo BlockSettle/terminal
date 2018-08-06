@@ -68,7 +68,8 @@ public:
       Quoted,
       Type,
       LimitOfRfqs,
-      QuotedRfqsCount
+      QuotedRfqsCount,
+      Visible
    };
 
    enum class DataType {
@@ -114,7 +115,6 @@ public:
    void onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn);
    void onBestQuotePrice(const QString reqId, double price, bool own);
    void limitRfqs(const QModelIndex &index, int limit);
-   void setHiddenFlag(const QModelIndex &index);
    QModelIndex findMarketIndex(const QString &name) const;
    void setPriceUpdateInterval(int interval);
 
@@ -124,7 +124,6 @@ private slots:
    void onSettlementCompleted();
    void onSettlementFailed();
    void clearModel();
-   void clearHiddenFlag();
    void onDeferredUpdate(const QPersistentModelIndex &index);
    void onPriceUpdateTimer();
 
@@ -209,10 +208,12 @@ private:
       QBrush stateBrush_;
       IndexHelper idx_;
       bool quoted_;
+      bool visible_;
 
       RFQ()
          : idx_(nullptr, this, DataType::RFQ)
          , quoted_(false)
+         , visible_(false)
       {}
 
       RFQ(const QString &security,
@@ -247,6 +248,7 @@ private:
          , reqId_(reqId)
          , idx_(nullptr, this, DataType::RFQ)
          , quoted_(false)
+         , visible_(false)
       {}
    };
 
@@ -255,24 +257,24 @@ private:
       QFont font_;
       std::vector<std::unique_ptr<RFQ>> rfqs_;
       IndexHelper idx_;
-      bool hasHidden_;
       int limit_;
       int quotedRfqsCount_;
+      int visibleCount_;
 
       Group()
          : idx_(nullptr, this, DataType::Group)
-         , hasHidden_(false)
          , limit_(5)
          , quotedRfqsCount_(0)
+         , visibleCount_(0)
       {}
 
       explicit Group(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Group)
-         , hasHidden_(false)
          , limit_(limit)
          , quotedRfqsCount_(0)
+         , visibleCount_(0)
       {}
    };
 
@@ -312,6 +314,9 @@ private:
    Market* findMarket(const QString &name) const;
    void updatePrices(const QString &security, const bs::network::MDField &pxBid,
       const bs::network::MDField &pxOffer);
+   void showRfqsFromBack(Group *g);
+   void showRfqsFromFront(Group *g);
+   void clearVisibleFlag(Group *g);
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;
