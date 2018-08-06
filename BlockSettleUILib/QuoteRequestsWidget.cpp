@@ -477,6 +477,8 @@ void QuoteReqSortModel::showQuoted(bool on)
    if (showQuoted_ != on) {
       showQuoted_ = on;
 
+      model_->showQuotedRfqs(on);
+
       invalidateFilter();
    }
 }

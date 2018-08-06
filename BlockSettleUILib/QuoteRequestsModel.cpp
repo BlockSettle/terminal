@@ -188,15 +188,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                }
             }
 
-            case Qt::DecorationRole : {
-               if (static_cast<std::size_t>(g->visibleCount_ + g->quotedRfqsCount_) < g->rfqs_.size()
-                  && index.column() == static_cast<int>(Column::SecurityID)) {
-                     return QIcon(QLatin1String(":/ICON_DOT"));
-               } else {
-                  return QVariant();
-               }
-            }
-
             case static_cast<int>(Role::Type) : {
                return static_cast<int>(DataType::Group);
             }
@@ -215,18 +206,35 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             }
 
             case Qt::DisplayRole : {
-               if (index.column() == static_cast<int>(Column::SecurityID)) {
-                  return g->security_;
-               } else {
-                  return QVariant();
+               switch (index.column()) {
+                  case static_cast<int>(Column::SecurityID) :
+                     return g->security_;
+
+                  default :
+                     return QVariant();
                }
             }
 
+            case static_cast<int>(Role::StatText) : {
+               return (g->limit_ > 0 ? tr("Displaying %1 of %2")
+                     .arg(QString::number(g->visibleCount_ +
+                        (showQuoted_ ? g->quotedRfqsCount_ : 0)))
+                     .arg(QString::number(g->rfqs_.size())) :
+                  tr("%1 row(s)").arg(QString::number(g->rfqs_.size())));
+            }
+
             case Qt::TextColorRole : {
-               if (secStatsCollector_) {
-                  return secStatsCollector_->getColorFor(g->security_.toStdString());
-               } else {
-                  return QVariant();
+               switch (index.column()) {
+                  case static_cast<int>(Column::SecurityID) : {
+                     if (secStatsCollector_) {
+                        return secStatsCollector_->getColorFor(g->security_.toStdString());
+                     } else {
+                        return QVariant();
+                     }
+                  }
+
+                  default :
+                     return QVariant();
                }
             }
 
@@ -530,6 +538,23 @@ void QuoteRequestsModel::setPriceUpdateInterval(int interval)
 
    if (priceUpdateInterval_ > 0) {
       priceUpdateTimer_.start(priceUpdateInterval_);
+   }
+}
+
+void QuoteRequestsModel::showQuotedRfqs(bool on)
+{
+   if (showQuoted_ != on) {
+      showQuoted_ = on;
+
+      for (auto mit = data_.cbegin(), mlast = data_.cend(); mit != mlast; ++mit) {
+         for (auto it = (*mit)->groups_.cbegin(), last = (*mit)->groups_.cend();
+            it != last; ++it) {
+               const auto idx = createIndex(
+                  static_cast<int>(std::distance((*mit)->groups_.cbegin(), it)),
+                  static_cast<int>(Column::Product), &(*it)->idx_);
+               emit dataChanged(idx, idx);
+         }
+      }
    }
 }
 

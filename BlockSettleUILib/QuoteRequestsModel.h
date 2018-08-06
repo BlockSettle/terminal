@@ -69,7 +69,8 @@ public:
       Type,
       LimitOfRfqs,
       QuotedRfqsCount,
-      Visible
+      Visible,
+      StatText
    };
 
    enum class DataType {
@@ -117,6 +118,7 @@ public:
    void limitRfqs(const QModelIndex &index, int limit);
    QModelIndex findMarketIndex(const QString &name) const;
    void setPriceUpdateInterval(int interval);
+   void showQuotedRfqs(bool on  = true);
 
 private slots:
    void ticker();
@@ -145,6 +147,7 @@ private:
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
    int priceUpdateInterval_;
+   bool showQuoted_;
 
    struct IndexHelper {
       IndexHelper *parent_;
