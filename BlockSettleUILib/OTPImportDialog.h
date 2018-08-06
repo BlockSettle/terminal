@@ -24,7 +24,7 @@ Q_OBJECT
 
 public:
    OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager
-      , QWidget* parent = nullptr );
+      , const std::string &defaultUserName, QWidget* parent = nullptr );
    ~OTPImportDialog() override;
 
 private slots:

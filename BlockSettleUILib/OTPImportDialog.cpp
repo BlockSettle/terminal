@@ -11,7 +11,8 @@
 #include <spdlog/spdlog.h>
 
 
-OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager, QWidget* parent)
+OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
+   const std::string &defaultUserName, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::OTPImportDialog())
    , otpManager_(otpManager)
@@ -37,6 +38,8 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager, 
    connect(&frejaSign_, &FrejaSignOTP::succeeded, this, &OTPImportDialog::onFrejaSucceeded);
    connect(&frejaSign_, &FrejaSign::failed, this, &OTPImportDialog::onFrejaFailed);
    connect(&frejaSign_, &FrejaSign::statusUpdated, this, &OTPImportDialog::onFrejaStatusUpdated);
+
+   ui_->lineEditFrejaId->setText(QString::fromStdString(defaultUserName));
 }
 
 OTPImportDialog::~OTPImportDialog()
@@ -71,6 +74,7 @@ void OTPImportDialog::keyTextChanged()
    try {
       hexKey_ = easyCodec_->toHex(EasyCoDec::Data{ ui_->lineEditOtp1->text().toStdString(), ui_->lineEditOtp2->text().toStdString() });
       ui_->lineEditFrejaId->setFocus();
+      updateAcceptButton();
    }
    catch (const std::exception &e) {
       ui_->labelOtpHint->setText(tr("Failed to get OTP key: %1").arg(QLatin1String(e.what())));
