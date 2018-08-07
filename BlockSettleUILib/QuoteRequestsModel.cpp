@@ -670,14 +670,9 @@ void QuoteRequestsModel::onQuoteNotifCancelled(const QString &reqId)
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::PendingAck);
 
    if (row >= 0 && rfq) {
-      if (priceUpdateInterval_ < 1) {
-         static const QVector<int> roles({Qt::DisplayRole});
-         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx), &rfq->idx_);
-         emit dataChanged(idx, idx, roles);
-      } else {
-         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx), &rfq->idx_);
-         pIdxs_.push_back(std::make_pair(idx, idx));
-      }
+      static const QVector<int> roles({Qt::DisplayRole});
+      const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx), &rfq->idx_);
+      emit dataChanged(idx, idx, roles);
    }
 }
 
@@ -695,7 +690,7 @@ void QuoteRequestsModel::onQuoteRejected(const QString &reqId, const QString &re
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::Rejected, reason);
 }
 
-void QuoteRequestsModel::onBestQuotePrice(const QString reqId, double price, bool own)
+void QuoteRequestsModel::updateBestQuotePrice(const QString &reqId, double price, bool own)
 {
    int row = -1;
    Group *g = nullptr;
@@ -713,19 +708,21 @@ void QuoteRequestsModel::onBestQuotePrice(const QString reqId, double price, boo
    });
 
    if (row >= 0 && g) {
-      if (priceUpdateInterval_ < 1) {
-         static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
-            static_cast<int>(Qt::BackgroundRole)});
-         emit dataChanged(createIndex(row, static_cast<int>(Column::QuotedPx),
-               &g->rfqs_[static_cast<std::size_t>(row)]->idx_),
-            createIndex(row, static_cast<int>(Column::BestPx),
-               &g->rfqs_[static_cast<std::size_t>(row)]->idx_), roles);
-      } else {
-         pIdxs_.push_back(std::make_pair(createIndex(row, static_cast<int>(Column::QuotedPx),
-               &g->rfqs_[static_cast<std::size_t>(row)]->idx_),
-            createIndex(row, static_cast<int>(Column::BestPx),
-               &g->rfqs_[static_cast<std::size_t>(row)]->idx_)));
-      }
+      static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
+         static_cast<int>(Qt::BackgroundRole)});
+      emit dataChanged(createIndex(row, static_cast<int>(Column::QuotedPx),
+            &g->rfqs_[static_cast<std::size_t>(row)]->idx_),
+         createIndex(row, static_cast<int>(Column::BestPx),
+            &g->rfqs_[static_cast<std::size_t>(row)]->idx_), roles);
+   }
+}
+
+void QuoteRequestsModel::onBestQuotePrice(const QString reqId, double price, bool own)
+{
+   if (priceUpdateInterval_ < 1) {
+      updateBestQuotePrice(reqId, price, own);
+   } else {
+      bestQuotePrices_[reqId] = {price, own};
    }
 }
 
@@ -748,17 +745,11 @@ void QuoteRequestsModel::onQuoteReqNotifReplied(const bs::network::QuoteNotifica
    });
 
    if (row >= 0 && g) {
-      if (priceUpdateInterval_ < 1) {
-         static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
-            static_cast<int>(Qt::BackgroundRole)});
-         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx),
-            &g->rfqs_[static_cast<std::size_t>(row)]->idx_);
-         emit dataChanged(idx, idx, roles);
-      } else {
-         const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx),
-            &g->rfqs_[static_cast<std::size_t>(row)]->idx_);
-         pIdxs_.push_back(std::make_pair(idx, idx));
-      }
+      static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
+         static_cast<int>(Qt::BackgroundRole)});
+      const QModelIndex idx = createIndex(row, static_cast<int>(Column::QuotedPx),
+         &g->rfqs_[static_cast<std::size_t>(row)]->idx_);
+      emit dataChanged(idx, idx, roles);
    }
 
    setStatus(qn.quoteRequestId, bs::network::QuoteReqNotification::Replied);
@@ -956,20 +947,17 @@ void QuoteRequestsModel::onDeferredUpdate(const QPersistentModelIndex &index)
 
 void QuoteRequestsModel::onPriceUpdateTimer()
 {
-   std::for_each(pIdxs_.cbegin(), pIdxs_.cend(),
-      [this] (const std::pair<QPersistentModelIndex, QPersistentModelIndex> &idx) {
-         if (idx.first.isValid() && idx.second.isValid()) {
-            emit this->dataChanged(idx.first, idx.second);
-         }
-      });
-
-   pIdxs_.clear();
-
    for (auto it = prices_.cbegin(), last = prices_.cend(); it != last; ++it) {
       updatePrices(it->first, it->second.first, it->second.second);
    }
 
    prices_.clear();
+
+   for (auto it = bestQuotePrices_.cbegin(), last = bestQuotePrices_.cend(); it != last; ++it) {
+      updateBestQuotePrice(it->first, it->second.price_, it->second.own_);
+   }
+
+   bestQuotePrices_.clear();
 }
 
 void QuoteRequestsModel::onSettlementExpired()
