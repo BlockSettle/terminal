@@ -310,7 +310,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Predefined environment:</string>
+         <string>Predefined environment</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -522,7 +522,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Host:</string>
+            <string>Host</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -571,7 +571,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Port:</string>
+            <string>Port</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>

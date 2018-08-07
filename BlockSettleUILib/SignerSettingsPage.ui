@@ -103,7 +103,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Remote signer hostname:</string>
+           <string>Remote signer hostname</string>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
@@ -132,7 +132,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Remote signer port:</string>
+           <string>Remote signer port</string>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
@@ -164,7 +164,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Signer password:</string>
+           <string>Signer password</string>
           </property>
          </widget>
         </item>
@@ -190,7 +190,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Signer mode:</string>
+           <string>Signer mode</string>
           </property>
          </widget>
         </item>
@@ -317,7 +317,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Offline requests dir:</string>
+              <string>Offline requests dir</string>
              </property>
              <property name="wordWrap">
               <bool>true</bool>
@@ -367,7 +367,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Spend Limit:</string>
+           <string>Spend Limit</string>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
