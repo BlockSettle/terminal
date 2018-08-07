@@ -26,7 +26,6 @@
 #include "WalletsWidget.h"
 
 #include <QSortFilterProxyModel>
-#include <QDebug>
 
 class CurrentWalletFilter : public QSortFilterProxyModel
 {
@@ -73,6 +72,9 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    walletFilter_ = new CurrentWalletFilter(wallet, this);
    walletFilter_->setSourceModel(walletsModel);
    ui_->treeViewWallets->setModel(walletFilter_);
+
+   connect(walletsModel, &WalletsViewModel::modelReset,
+      this, &RootWalletPropertiesDialog::onModelReset);
 
    ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnDescription));
@@ -343,4 +345,9 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, BinaryData pub
          startWalletScan();
       }
    }
+}
+
+void RootWalletPropertiesDialog::onModelReset()
+{
+   ui_->treeViewWallets->expandAll();
 }

@@ -43,6 +43,7 @@ private slots:
    void onWalletSelected();
    void onRescanBlockchain();
    void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void onModelReset();
 
 private:
    void copyWoWallet();
