@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <vector>
+#include <deque>
 
 
 class QuoteProvider;
@@ -104,7 +105,7 @@ private:
    };
 
    struct Group {
-      std::vector<std::unique_ptr<Data>> rows_;
+      std::deque<std::unique_ptr<Data>> rows_;
       QString name_;
       IndexHelper idx_;
       QFont font_;
