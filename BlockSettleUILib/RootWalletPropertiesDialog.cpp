@@ -265,7 +265,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::h
 
    ui_->balanceWidget->hide();
 
-   ui_->labelAddresses->setText(tr("Groups/Leaves:"));
+   ui_->labelAddresses->setText(tr("Groups/Leaves"));
    ui_->labelAddressesUsed->setText(tr("%1/%2").arg(QString::number(wallet->getNumGroups())).arg(QString::number(wallet->getNumLeaves())));
 }
 
