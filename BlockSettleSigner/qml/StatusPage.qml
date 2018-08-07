@@ -30,7 +30,7 @@ Item {
 
                 CustomHeader {
                     Layout.columnSpan: 2
-                    text:   qsTr("Controls:")
+                    text:   qsTr("Controls")
                     height: 25
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25

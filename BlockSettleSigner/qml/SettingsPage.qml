@@ -20,7 +20,7 @@ Item {
             spacing: 5
 
             CustomHeader {
-                text:   qsTr("General Settings:")
+                text:   qsTr("General Settings")
                 font.pixelSize: 14
                 height: 25
                 checkable: true
@@ -127,7 +127,7 @@ Item {
 
             CustomHeader {
                 id: btnNetwork
-                text:   qsTr("Network Settings:")
+                text:   qsTr("Network Settings")
                 checkable: true
                 checked:   true
                 down: true
