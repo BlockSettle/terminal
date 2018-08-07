@@ -651,8 +651,9 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 {
    if (authManager_->HaveAuthWallet()) {
-      authAddrDlg_->setAddressToVerify(addrToVerify);
       authAddrDlg_->show();
+      QApplication::processEvents();
+      authAddrDlg_->setAddressToVerify(addrToVerify);
    }
 }
 
