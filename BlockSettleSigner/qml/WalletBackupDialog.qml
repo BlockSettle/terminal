@@ -121,7 +121,7 @@ CustomDialog {
                     Layout.minimumWidth: 110
                     Layout.preferredWidth: 110
                     Layout.maximumWidth: 110
-                    text:   qsTr("Type of backup file:")
+                    text:   qsTr("Type of backup file")
                     verticalAlignment: Text.AlignTop
                     Layout.fillHeight: true
                 }
@@ -154,7 +154,7 @@ CustomDialog {
                     Layout.minimumWidth: 110
                     Layout.preferredWidth: 110
                     Layout.maximumWidth: 110
-                    text:   qsTr("Backup file:")
+                    text:   qsTr("Backup file")
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     verticalAlignment: Text.AlignTop
