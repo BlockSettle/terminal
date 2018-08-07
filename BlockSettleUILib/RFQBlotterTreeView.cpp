@@ -6,6 +6,8 @@
 
 #include <QContextMenuEvent>
 #include <QMenu>
+#include <QHeaderView>
+#include <QPainter>
 
 
 //
@@ -61,6 +63,32 @@ void RFQBlotterTreeView::contextMenuEvent(QContextMenuEvent *e)
       e->accept();
    } else {
       e->ignore();
+   }
+}
+
+void RFQBlotterTreeView::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
+   const QModelIndex &index) const
+{
+   QTreeView::drawRow(painter, option, index);
+
+   if(index.data(static_cast<int>(QuoteRequestsModel::Role::Type)).toInt() ==
+      static_cast<int>(QuoteRequestsModel::DataType::Group)) {
+      int left = header()->sectionViewportPosition(
+         static_cast<int>(QuoteRequestsModel::Column::Product));
+      int right = header()->sectionViewportPosition(
+            static_cast<int>(QuoteRequestsModel::Column::Empty)) +
+         header()->sectionSize(static_cast<int>(QuoteRequestsModel::Column::Empty));
+
+      QRect r = option.rect;
+      r.setX(left);
+      r.setWidth(right - left);
+
+      painter->save();
+      painter->setFont(option.font);
+      painter->setPen(QColor(0x00, 0xA9, 0xE3));
+      painter->drawText(r, 0,
+         index.data(static_cast<int>(QuoteRequestsModel::Role::StatText)).toString());
+      painter->restore();
    }
 }
 

@@ -126,7 +126,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
       { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },
       { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
-      { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) }
+      { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
+      { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) }
    };
 }
 

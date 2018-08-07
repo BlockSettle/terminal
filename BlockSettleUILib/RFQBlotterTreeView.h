@@ -32,6 +32,8 @@ public:
 
 protected:
    void contextMenuEvent(QContextMenuEvent *e) override;
+   void drawRow(QPainter *painter, const QStyleOptionViewItem &option,
+      const QModelIndex &index) const override;
 
 private:
    void setLimit(const QModelIndex &index, int limit);
