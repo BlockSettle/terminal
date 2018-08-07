@@ -432,8 +432,7 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    groups_[order.exchOrderId.toStdString()] = getStatusGroup(order);
 
    if (index < 0) {
-      beginInsertRows(createIndex(findGroup(sg, groupItem), 0, &groupItem->idx_),
-         static_cast<int>(groupItem->rows_.size()), static_cast<int>(groupItem->rows_.size()));
+      beginInsertRows(createIndex(findGroup(sg, groupItem), 0, &groupItem->idx_), 0, 0);
 
       double value = order.quantity * order.price;
       if (order.security.substr(0, order.security.find('/')) != order.product) {
@@ -441,7 +440,7 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
       }
       const auto priceAssetType = assetManager_->GetAssetTypeForSecurity(order.security);
 
-      groupItem->rows_.push_back(std::unique_ptr<Data>(new Data(
+      groupItem->rows_.push_front(std::unique_ptr<Data>(new Data(
          UiUtils::displayTimeMs(order.dateTime),
          QString::fromStdString(order.security),
          QString::fromStdString(order.product),
@@ -453,7 +452,7 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
          order.exchOrderId,
          &groupItem->idx_)));
 
-      setOrderStatus(groupItem, static_cast<int>(groupItem->rows_.size()) - 1, order);
+      setOrderStatus(groupItem, 0, order);
 
       endInsertRows();
    }
