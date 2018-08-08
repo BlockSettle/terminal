@@ -239,7 +239,7 @@
                      </size>
                     </property>
                     <property name="text">
-                     <string>Wallet:</string>
+                     <string>Wallet</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -313,7 +313,7 @@
                      </size>
                     </property>
                     <property name="text">
-                     <string>Balance:</string>
+                     <string>Balance</string>
                     </property>
                    </widget>
                   </item>
@@ -598,7 +598,7 @@
                      </size>
                     </property>
                     <property name="text">
-                     <string>Address:</string>
+                     <string>Address</string>
                     </property>
                    </widget>
                   </item>
@@ -675,7 +675,7 @@
                      </size>
                     </property>
                     <property name="text">
-                     <string>Amount:</string>
+                     <string>Amount</string>
                     </property>
                    </widget>
                   </item>
@@ -783,7 +783,7 @@
                      </size>
                     </property>
                     <property name="text">
-                     <string>Comment:</string>
+                     <string>Comment</string>
                     </property>
                     <property name="indent">
                      <number>0</number>
@@ -1183,7 +1183,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_3">
+       <widget class="QGroupBox" name="changeAddrGroupBox">
         <property name="title">
          <string>CHANGE ADDRESS</string>
         </property>
@@ -1536,7 +1536,7 @@
                         </size>
                        </property>
                        <property name="text">
-                        <string>Transaction Size:</string>
+                        <string>Transaction Size</string>
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1564,7 +1564,7 @@
                         </size>
                        </property>
                        <property name="text">
-                        <string>Transaction Inputs:</string>
+                        <string>Transaction Inputs</string>
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1854,7 +1854,7 @@
                         </size>
                        </property>
                        <property name="text">
-                        <string>Input Amount:</string>
+                        <string>Input Amount</string>
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1882,7 +1882,7 @@
                         </size>
                        </property>
                        <property name="text">
-                        <string>Return Amount:</string>
+                        <string>Return Amount</string>
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1910,7 +1910,7 @@
                         </size>
                        </property>
                        <property name="text">
-                        <string>Transaction Fee:</string>
+                        <string>Transaction Fee</string>
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -2134,7 +2134,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Transaction Amount:</string>
+               <string>Transaction Amount</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>

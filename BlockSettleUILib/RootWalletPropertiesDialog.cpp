@@ -26,7 +26,6 @@
 #include "WalletsWidget.h"
 
 #include <QSortFilterProxyModel>
-#include <QDebug>
 
 class CurrentWalletFilter : public QSortFilterProxyModel
 {
@@ -74,13 +73,15 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    walletFilter_->setSourceModel(walletsModel);
    ui_->treeViewWallets->setModel(walletFilter_);
 
+   connect(walletsModel, &WalletsViewModel::modelReset,
+      this, &RootWalletPropertiesDialog::onModelReset);
+
    ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnDescription));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnState));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnSpendableBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnUnconfirmedBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnNbAddresses));
-   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnEmpty));
 
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RootWalletPropertiesDialog::onWalletSelected);
 
@@ -267,7 +268,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::h
 
    ui_->balanceWidget->hide();
 
-   ui_->labelAddresses->setText(tr("Groups/Leaves:"));
+   ui_->labelAddresses->setText(tr("Groups/Leaves"));
    ui_->labelAddressesUsed->setText(tr("%1/%2").arg(QString::number(wallet->getNumGroups())).arg(QString::number(wallet->getNumLeaves())));
 }
 
@@ -347,4 +348,9 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, BinaryData pub
          startWalletScan();
       }
    }
+}
+
+void RootWalletPropertiesDialog::onModelReset()
+{
+   ui_->treeViewWallets->expandAll();
 }

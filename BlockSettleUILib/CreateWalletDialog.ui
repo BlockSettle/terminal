@@ -191,7 +191,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Name:</string>
+               <string>Name</string>
               </property>
              </widget>
             </item>
@@ -255,7 +255,7 @@
                <number>0</number>
               </property>
               <property name="text">
-               <string>Description:</string>
+               <string>Description</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -366,7 +366,7 @@
                <number>0</number>
               </property>
               <property name="text">
-               <string>Freja email:</string>
+               <string>Freja email</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -447,7 +447,7 @@
                <number>0</number>
               </property>
               <property name="text">
-               <string>Password:</string>
+               <string>Password</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
