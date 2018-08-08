@@ -148,7 +148,7 @@
            <item>
             <widget class="QPushButton" name="pushButtonInternal">
              <property name="toolTip">
-              <string>Hide all unsued addresses</string>
+              <string>Hide all internal and empty addresses</string>
              </property>
              <property name="text">
               <string>Hide &amp;Internal</string>
@@ -160,6 +160,9 @@
            </item>
            <item>
             <widget class="QPushButton" name="pushButtonExternal">
+             <property name="toolTip">
+              <string>Hide all external and empty addresses</string>
+             </property>
              <property name="text">
               <string>Hide E&amp;xternal</string>
              </property>
@@ -171,7 +174,7 @@
            <item>
             <widget class="QPushButton" name="pushButtonEmpty">
              <property name="toolTip">
-              <string>Hide all Empty Addresses</string>
+              <string>Hide all empty addresses</string>
              </property>
              <property name="text">
               <string>Hide &amp;Empty</string>
