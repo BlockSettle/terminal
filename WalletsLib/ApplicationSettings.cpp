@@ -121,7 +121,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("http://193.138.218.36/terminal/downloads"))},
       { ResetPassword_Url,       SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-forgot-password"))},
       { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-registration")) },
-      { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0) },
+      { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0x06) },
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
       { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },

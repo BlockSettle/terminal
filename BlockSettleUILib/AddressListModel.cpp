@@ -297,6 +297,9 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
       case AddrIndexRole:
          return static_cast<unsigned int>(row.addrIndex);
 
+      case IsExternalRole:
+         return row.isExternal;
+
       case AddressRole:
          return row.displayedAddress;
 
