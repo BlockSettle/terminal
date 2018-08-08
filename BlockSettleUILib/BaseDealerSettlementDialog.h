@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "FrejaREST.h"
+#include "HDNode.h"
 #include "MetaData.h"
 
 namespace spdlog {
@@ -47,7 +48,8 @@ protected slots:
    void onTimerStarted(int msDuration);
    void onTimerStopped();
 
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
+      , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank);
    void onFrejaSucceeded(SecureBinaryData);
    void onFrejaFailed(const QString &);
    void onFrejaStatusUpdated(const QString &);
@@ -91,8 +93,9 @@ private:
    bool           walletInfoReceived_ = false;
    bool           accepting_ = false;
    FrejaSignWallet   frejaSign_;
-   bs::wallet::EncryptionType encType_ = bs::wallet::EncryptionType::Unencrypted;
-   QString        userId_;
+   std::vector<bs::wallet::EncryptionType>   encTypes_;
+   std::vector<SecureBinaryData>             encKeys_;
+   bs::hd::KeyRank   keyRank_;
    QString        frejaPrompt_;
 };
 

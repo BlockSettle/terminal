@@ -6,6 +6,7 @@
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
 #include "FrejaREST.h"
+#include "HDNode.h"
 #include "MetaData.h"
 
 
@@ -64,6 +65,7 @@ private:
    bool              walletCreated_ = false;
    SecureBinaryData  walletPassword_;
    bs::wallet::Seed  walletSeed_;
+   std::vector<bs::hd::PasswordData> pwdData_ = { { {}, bs::wallet::EncryptionType::Unencrypted, {} } };
    std::string       walletId_;
    FrejaSignWallet   frejaSign_;
 

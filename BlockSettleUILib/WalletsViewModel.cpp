@@ -435,7 +435,8 @@ static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::hd::Wallet> &h
    return WalletNode::Type::WalletRegular;
 }
 
-void WalletsViewModel::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &)
+void WalletsViewModel::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData>
+   , bs::hd::KeyRank)
 {
    if (hdInfoReqIds_.empty() || (hdInfoReqIds_.find(id) == hdInfoReqIds_.end())) {
       return;
@@ -592,16 +593,24 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
       case NameRole:       return node->data(static_cast<int>(WalletRegColumns::ColumnName), Qt::DisplayRole);
       case DescRole:       return node->data(static_cast<int>(WalletRegColumns::ColumnDescription), Qt::DisplayRole);
       case WalletIdRole:   return QString::fromStdString(node->id());
-      case IsEncryptedRole: return hdWallet ? static_cast<int>(hdWallet->encryptionType()) : 0;
-      case EncKeyRole:     return hdWallet ? QString::fromStdString(hdWallet->encryptionKey().toBinStr()) : QString();
+      case IsEncryptedRole: return hdWallet ? static_cast<int>(hdWallet->encryptionTypes().empty() ? bs::wallet::EncryptionType::Unencrypted : hdWallet->encryptionTypes()[0]) : 0;
+      case EncKeyRole:     return hdWallet ? (hdWallet->encryptionKeys().empty() ? QString() : QString::fromStdString(hdWallet->encryptionKeys()[0].toBinStr())) : QString();
       case StateRole:
-         if ((node->type() != WalletNode::Type::Leaf)) {
+         if ((node->type() != WalletNode::Type::Leaf) || !hdWallet) {
             return {};
          }
-         switch (hdWallet ? hdWallet->encryptionType() : bs::wallet::EncryptionType::Unencrypted) {
-         case bs::wallet::EncryptionType::Password:   return tr("Password");
-         case bs::wallet::EncryptionType::Freja:   return tr("Freja eID");
-         default:    return tr("No");
+         if (hdWallet->encryptionTypes().empty()) {
+            return tr("No");
+         }
+         else if (hdWallet->encryptionRank().second <= 1) {
+            switch (hdWallet->encryptionTypes()[0]) {
+            case bs::wallet::EncryptionType::Password:   return tr("Password");
+            case bs::wallet::EncryptionType::Freja:   return tr("Freja eID");
+            default:    return tr("No");
+            }
+         }
+         else {
+            return tr("%1 of %2").arg(hdWallet->encryptionRank().first).arg(hdWallet->encryptionRank().second);
          }
       case RootWalletIdRole:  return hdWallet ? QString::fromStdString(hdWallet->getWalletId()) : QString();
       case IsHDRootRole:   return ((node->type() == WalletNode::Type::WalletPrimary)

@@ -55,17 +55,17 @@ public:
    RequestId SetUserId(const BinaryData &) override;
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override;
    RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &
-      , const SecureBinaryData &password = {}) override;
+      , const std::vector<bs::hd::PasswordData> &pwdData = {}) override;
    RequestId CreateHDWallet(const std::string &name, const std::string &desc
-      , const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed) override;
+      , bool primary, const bs::wallet::Seed &seed
+      , const std::vector<bs::hd::PasswordData> &pwdData = {}, bs::hd::KeyRank keyRank = { 0, 0 }) override;
    RequestId DeleteHD(const std::shared_ptr<bs::hd::Wallet> &) override;
    RequestId DeleteHD(const std::shared_ptr<bs::Wallet> &) override;
    RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) override;
    RequestId GetInfo(const std::shared_ptr<bs::hd::Wallet> &) override;
    void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) override;
-   RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &newPass
-      , const SecureBinaryData &oldPass = {}, bs::wallet::EncryptionType encType = bs::wallet::EncryptionType::Password
-      , const SecureBinaryData &encKey = {}) override;
+   RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::hd::PasswordData> &newPass
+      , bs::hd::KeyRank, const SecureBinaryData &oldPass = {}) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;

@@ -88,23 +88,24 @@ void BaseDealerSettlementDialog::onTimerTick(int msCurrent, int msDuration)
 
 void BaseDealerSettlementDialog::reject()
 {
-   if (walletInfoReceived_ && (encType_ == bs::wallet::EncryptionType::Freja)) {
+   if (walletInfoReceived_ && (encTypes_[0] == bs::wallet::EncryptionType::Freja)) {
       frejaSign_.stop(true);
    }
    settlContainer_->cancel();
    QDialog::reject();
 }
 
-void BaseDealerSettlementDialog::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
-   , const SecureBinaryData &encKey)
+void BaseDealerSettlementDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
+   , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank keyRank)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
    walletInfoReceived_ = true;
-   encType_ = encType;
-   userId_ = QString::fromStdString(encKey.toBinStr());
+   encTypes_ = encTypes;
+   encKeys_ = encKeys;
+   keyRank_ = keyRank;
    if (accepting_) {
       startAccepting();
    }
@@ -135,7 +136,7 @@ void BaseDealerSettlementDialog::startAccepting()
       logger_->error("[BaseDealerSettlementDialog::startAccepting] no root wallet");
       return;
    }
-   switch (encType_) {
+   switch (encTypes_[0]) {
    case bs::wallet::EncryptionType::Unencrypted:
       labelPassword()->hide();
       break;
@@ -146,7 +147,10 @@ void BaseDealerSettlementDialog::startAccepting()
    case bs::wallet::EncryptionType::Freja:
       labelPassword()->show();
       setHintText(tr("Freja sign request sent to your mobile device"));
-      frejaSign_.start(userId_, frejaPrompt_, rootWallet_->getWalletId());  // set 30s timeout (not implemented by Freja, yet)
+      {
+         const auto userId = QString::fromStdString(encKeys_[0].toBinStr());
+         frejaSign_.start(userId, frejaPrompt_, rootWallet_->getWalletId());  // set 30s timeout (not implemented by Freja, yet)
+      }
       break;
    default: break;
    }

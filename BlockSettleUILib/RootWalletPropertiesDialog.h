@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <memory>
 #include "BinaryData.h"
+#include "HDNode.h"
 #include "MetaData.h"
 
 namespace Ui {
@@ -39,7 +40,8 @@ private slots:
    void onCreateWoWallet();
    void onChangePassword();
    void onPasswordChanged(const std::string &walletId, bool ok);
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &encKey);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
+      , bs::hd::KeyRank);
    void onWalletSelected();
    void onRescanBlockchain();
    void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
@@ -60,8 +62,9 @@ private:
    std::shared_ptr<AssetManager>       assetMgr_;
    CurrentWalletFilter                 *walletFilter_;
    unsigned int                        infoReqId_ = 0;
-   bs::wallet::EncryptionType          walletEncType_ = bs::wallet::EncryptionType::Password;
-   SecureBinaryData                    walletEncKey_;
+   std::vector<bs::wallet::EncryptionType>   walletEncTypes_;
+   std::vector<SecureBinaryData>             walletEncKeys_;
+   bs::hd::KeyRank                     walletEncRank_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
 };
 

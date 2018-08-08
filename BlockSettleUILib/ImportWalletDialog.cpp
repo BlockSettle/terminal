@@ -84,7 +84,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 bool ImportWalletDialog::couldImport() const
 {
    return (!ui_->lineEditWalletName->text().isEmpty()
-         && !walletPassword_.isNull());
+         && !pwdData_[0].password.isNull());
 }
 
 void ImportWalletDialog::updateAcceptButton()
@@ -96,7 +96,7 @@ void ImportWalletDialog::onPasswordChanged(const QString &)
 {
    if (!ui_->lineEditPassword->text().isEmpty()
       && (ui_->lineEditPassword->text() == ui_->lineEditPasswordConfirm->text())) {
-      walletPassword_ = ui_->lineEditPassword->text().toStdString();
+      pwdData_[0].password = ui_->lineEditPassword->text().toStdString();
    }
    updateAcceptButton();
 }
@@ -135,13 +135,13 @@ void ImportWalletDialog::onImportAccepted()
       importedAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
 
       if (ui_->radioButtonFreja->isChecked()) {
-         walletSeed_.setEncryptionKey(ui_->lineEditFrejaId->text().toStdString());
+         pwdData_[0].encKey = ui_->lineEditFrejaId->text().toStdString();
       }
 
       ui_->pushButtonImport->setEnabled(false);
 
       walletImporter_->Import(walletName_.toStdString(), description, walletSeed_
-         , importedAsPrimary_, walletPassword_);
+         , importedAsPrimary_, pwdData_, { 1, 1 });
    }
    catch (...) {
       onError(tr("Invalid backup data"));
@@ -159,13 +159,13 @@ void ImportWalletDialog::onEncTypeChanged()
       ui_->widgetFreja->hide();
       ui_->widgetPassword->show();
       ui_->widgetPasswordConfirm->show();
-      walletSeed_.setEncryptionType(bs::wallet::EncryptionType::Password);
+      pwdData_[0].encType = bs::wallet::EncryptionType::Password;
    }
    else if (ui_->radioButtonFreja->isChecked()) {
       ui_->widgetFreja->show();
       ui_->widgetPassword->hide();
       ui_->widgetPasswordConfirm->hide();
-      walletSeed_.setEncryptionType(bs::wallet::EncryptionType::Freja);
+      pwdData_[0].encType = bs::wallet::EncryptionType::Freja;
    }
 }
 
@@ -180,7 +180,7 @@ void ImportWalletDialog::startFrejaSign()
 void ImportWalletDialog::onFrejaSucceeded(SecureBinaryData password)
 {
    ui_->labelFreja->setText(tr("Successfully signed"));
-   walletPassword_ = password;
+   pwdData_[0].password = password;
    updateAcceptButton();
 }
 

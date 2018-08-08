@@ -9,6 +9,7 @@
 #include "BinaryData.h"
 #include "CommonTypes.h"
 #include "FrejaREST.h"
+#include "HDNode.h"
 #include "MetaData.h"
 #include "SettlementWallet.h"
 #include "UtxoReservation.h"
@@ -68,7 +69,8 @@ private slots:
    void onPasswordUpdated(const QString &);
    void updateAcceptButton();
    void onGenAddrVerified(bool);
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
+      , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank);
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
 
    void onFrejaSucceeded(SecureBinaryData);
@@ -116,8 +118,9 @@ private:
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    std::shared_ptr<FrejaSignWallet> frejaSign_;
-   bs::wallet::EncryptionType       encType_ = bs::wallet::EncryptionType::Unencrypted;
-   QString           userId_;
+   std::vector<bs::wallet::EncryptionType>   encTypes_;
+   std::vector<SecureBinaryData>             encKeys_;
+   bs::hd::KeyRank   keyRank_;
    SecureBinaryData  walletPassword_;
 };
 

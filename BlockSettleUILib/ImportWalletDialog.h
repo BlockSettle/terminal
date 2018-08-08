@@ -7,6 +7,7 @@
 #include "BtcDefinitions.h"
 #include "EasyCoDec.h"
 #include "FrejaREST.h"
+#include "HDNode.h"
 #include "MetaData.h"
 
 namespace Ui {
@@ -62,7 +63,7 @@ private:
    std::shared_ptr<WalletImporter>  walletImporter_;
    FrejaSignWallet   frejaSign_;
    bs::wallet::Seed  walletSeed_;
-   SecureBinaryData  walletPassword_;
+   std::vector<bs::hd::PasswordData> pwdData_ = { { {}, bs::wallet::EncryptionType::Unencrypted,{} } };
    std::string walletId_;
    QString     walletName_;
    bool importedAsPrimary_ = false;

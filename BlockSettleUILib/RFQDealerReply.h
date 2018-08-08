@@ -11,6 +11,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "FrejaREST.h"
+#include "HDNode.h"
 #include "MetaData.h"
 #include "UserScript.h"
 
@@ -146,8 +147,9 @@ namespace bs {
          double   indicBid_;
          double   indicAsk_;
          std::atomic_bool     autoUpdatePrices_;
-         wallet::EncryptionType  walletEncType_ = wallet::EncryptionType::Password;
-         SecureBinaryData     walletEncKey_;
+         std::vector<wallet::EncryptionType> walletEncTypes_;
+         std::vector<SecureBinaryData>       walletEncKeys_;
+         bs::hd::KeyRank      walletEncRank_;
          SecureBinaryData     asPassword_;
          std::shared_ptr<FrejaSignWallet> frejaAS_;
          unsigned int         leafCreateReqId_ = 0;

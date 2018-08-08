@@ -42,7 +42,7 @@ void WalletImporter::onWalletScanComplete(bs::hd::Group *grp, bs::hd::Path::Elem
          path.append(bs::hd::purpose, true);
          path.append(grp->getIndex(), true);
          path.append(nextWallet, true);
-         const auto createNextWalletReq = signingContainer_->CreateHDLeaf(rootWallet_, path, password_);
+         const auto createNextWalletReq = signingContainer_->CreateHDLeaf(rootWallet_, path, pwdData_);
          if (createNextWalletReq) {
             createNextWalletReqs_[createNextWalletReq] = path;
          }
@@ -68,8 +68,10 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::
    rootWallet_->SetBDM(bdm_);
    walletsMgr_->AdoptNewWallet(newWallet, walletsPath_);
 
+   pwdData_.resize(keyRank_.first);
+
    if (rootWallet_->isPrimary()) {
-      authMgr_->CreateAuthWallet(password_, false);
+      authMgr_->CreateAuthWallet(pwdData_, false);
    }
    if (!rootWallet_->isPrimary() || ccList.empty()) {
       if (bdm_->GetState() == PyBlockDataManagerState::Ready) {
@@ -85,7 +87,7 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::
          path.append(bs::hd::purpose, true);
          path.append(bs::hd::CoinType::BlockSettle_CC, true);
          path.append(cc, true);
-         const auto reqId = signingContainer_->CreateHDLeaf(rootWallet_, path, password_);
+         const auto reqId = signingContainer_->CreateHDLeaf(rootWallet_, path, pwdData_);
          if (reqId) {
             createCCWalletReqs_[reqId] = cc;
          }
@@ -141,14 +143,16 @@ void WalletImporter::onHDWalletError(unsigned int id, std::string errMsg)
 }
 
 void WalletImporter::Import(const std::string &name, const std::string &description
-   , bs::wallet::Seed seed, bool primary, const SecureBinaryData &password)
+   , bs::wallet::Seed seed, bool primary, const std::vector<bs::hd::PasswordData> &pwdData
+   , bs::hd::KeyRank keyRank)
 {
    if (!signingContainer_ || signingContainer_->isOffline()) {
       emit error(tr("Can't start import with missing or offline signer"));
       return;
    }
-   password_ = password;
-   createWalletReq_ = signingContainer_->CreateHDWallet(name, description, password, primary, seed);
+   pwdData_ = pwdData;
+   keyRank_ = keyRank;
+   createWalletReq_ = signingContainer_->CreateHDWallet(name, description, primary, seed, pwdData, keyRank);
    if (!createWalletReq_) {
       emit error(tr("Failed to create HD wallet"));
    }

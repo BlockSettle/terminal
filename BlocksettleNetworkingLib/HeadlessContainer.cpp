@@ -207,8 +207,15 @@ void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
       logger_->error("[HeadlessContainer] Failed to parse PasswordRequest");
       return;
    }
-   emit PasswordRequested(request.walletid(), request.prompt()
-      , static_cast<bs::wallet::EncryptionType>(request.enctype()), request.enckey());
+   std::vector<bs::wallet::EncryptionType> encTypes;
+   for (int i = 0; i < request.enctypes_size(); ++i) {
+      encTypes.push_back(static_cast<bs::wallet::EncryptionType>(request.enctypes(i)));
+   }
+   std::vector<SecureBinaryData> encKeys;
+   for (int i = 0; i < request.enckeys_size(); ++i) {
+      encKeys.push_back(request.enckeys(i));
+   }
+   emit PasswordRequested(request.walletid(), request.prompt(), encTypes, encKeys);
 }
 
 void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std::string &data)
@@ -249,7 +256,7 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
             auto leaf = group->newLeaf();
             const auto node = std::make_shared<bs::hd::Node>(response.wallet().leaves(j).pubkey()
                , response.wallet().leaves(j).chaincode(), netType);
-            leaf->init(node, leafPath, nullptr);
+            leaf->init(node, leafPath, {});
             group->addLeaf(leaf);
          }
       }
@@ -286,8 +293,16 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
       return;
    }
    if (response.error().empty()) {
-      emit HDWalletInfo(id, static_cast<bs::wallet::EncryptionType>(response.encryption_type())
-         , response.encryption_key());
+      std::vector<bs::wallet::EncryptionType> encTypes;
+      for (int i = 0; i < response.enctypes_size(); ++i) {
+         encTypes.push_back(static_cast<bs::wallet::EncryptionType>(response.enctypes(i)));
+      }
+      std::vector<SecureBinaryData> encKeys;
+      for (int i = 0; i < response.enckeys_size(); ++i) {
+         encKeys.push_back(response.enckeys(i));
+      }
+      bs::hd::KeyRank keyRank = { response.rankm(), response.rankn() };
+      emit HDWalletInfo(id, encTypes, encKeys, keyRank);
    }
    else {
       emit Error(id, response.error());
@@ -558,7 +573,7 @@ HeadlessContainer::RequestId HeadlessContainer::SyncAddresses(
 }
 
 HeadlessContainer::RequestId HeadlessContainer::CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &root
-   , const bs::hd::Path &path, const SecureBinaryData &password)
+   , const bs::hd::Path &path, const std::vector<bs::hd::PasswordData> &pwdData)
 {
    if (!root || (path.length() != 3)) {
       logger_->error("[HeadlessContainer] Invalid input data for HD wallet creation");
@@ -568,8 +583,11 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDLeaf(const std::shared_p
    auto leaf = request.mutable_leaf();
    leaf->set_rootwalletid(root->getWalletId());
    leaf->set_path(path.toString());
-   if (!password.isNull()) {
-      request.set_password(password.toHexStr());
+   for (const auto &pwd : pwdData) {
+      auto reqPwd = request.add_password();
+      reqPwd->set_password(pwd.password.toHexStr());
+      reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
+      reqPwd->set_enckey(pwd.encKey.toBinStr());
    }
 
    headless::RequestPacket packet;
@@ -579,11 +597,19 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDLeaf(const std::shared_p
 }
 
 HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(const std::string &name
-   , const std::string &desc, const SecureBinaryData &password, bool primary, const bs::wallet::Seed &seed)
+   , const std::string &desc, bool primary, const bs::wallet::Seed &seed
+   , const std::vector<bs::hd::PasswordData> &pwdData, bs::hd::KeyRank keyRank)
 {
    headless::CreateHDWalletRequest request;
-   if (!password.isNull()) {
-      request.set_password(password.toHexStr());
+   if (!pwdData.empty()) {
+      request.set_rankm(keyRank.first);
+      request.set_rankn(keyRank.second);
+   }
+   for (const auto &pwd : pwdData) {
+      auto reqPwd = request.add_password();
+      reqPwd->set_password(pwd.password.toHexStr());
+      reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
+      reqPwd->set_enckey(pwd.encKey.toBinStr());
    }
    auto wallet = request.mutable_wallet();
    wallet->set_name(name);
@@ -598,10 +624,6 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(const std::string
       }
       else if (!seed.seed().isNull()) {
          wallet->set_seed(seed.seed().toBinStr());
-      }
-      wallet->set_enctype(static_cast<uint8_t>(seed.encryptionType()));
-      if (!seed.encryptionKey().isNull()) {
-         wallet->set_enckey(seed.encryptionKey().toBinStr());
       }
    }
 
@@ -671,8 +693,7 @@ void HeadlessContainer::SetLimits(const std::shared_ptr<bs::hd::Wallet> &wallet,
 }
 
 HeadlessContainer::RequestId HeadlessContainer::ChangePassword(const std::shared_ptr<bs::hd::Wallet> &wallet
-   , const SecureBinaryData &newPass, const SecureBinaryData &oldPass, bs::wallet::EncryptionType encType
-   , const SecureBinaryData &encKey)
+   , const std::vector<bs::hd::PasswordData> &newPass, bs::hd::KeyRank keyRank, const SecureBinaryData &oldPass)
 {
    if (!wallet) {
       logger_->error("[HeadlessContainer] no root wallet for ChangePassword");
@@ -683,11 +704,14 @@ HeadlessContainer::RequestId HeadlessContainer::ChangePassword(const std::shared
    if (!oldPass.isNull()) {
       request.set_oldpassword(oldPass.toHexStr());
    }
-   request.set_newpassword(newPass.toHexStr());
-   request.set_newenctype(static_cast<uint8_t>(encType));
-   if (!encKey.isNull()) {
-      request.set_newenckey(encKey.toBinStr());
+   for (const auto &pwd : newPass) {
+      auto reqNewPass = request.add_newpassword();
+      reqNewPass->set_password(pwd.password.toHexStr());
+      reqNewPass->set_enctype(static_cast<uint32_t>(pwd.encType));
+      reqNewPass->set_enckey(pwd.encKey.toBinStr());
    }
+   request.set_rankm(keyRank.first);
+   request.set_rankn(keyRank.second);
 
    headless::RequestPacket packet;
    packet.set_type(headless::ChangePasswordRequestType);

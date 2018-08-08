@@ -129,19 +129,20 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    QDialog::accept();
 }
 
-void WalletBackupDialog::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
-   , const SecureBinaryData &encKey)
+void WalletBackupDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
+   , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank keyRank)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
-   walletEncType_ = encType;
-   userId_ = QString::fromStdString(encKey.toBinStr());
-   ui_->groupBoxPassword->setVisible(encType != bs::wallet::EncryptionType::Unencrypted);
-   ui_->widgetPassword->setVisible(encType == bs::wallet::EncryptionType::Password);
-   ui_->widgetFreja->setVisible(encType == bs::wallet::EncryptionType::Freja);
-   ui_->pushButtonBackup->setEnabled(encType == bs::wallet::EncryptionType::Unencrypted);
+   walletEncTypes_ = encTypes;
+   walletEncKeys_ = encKeys;
+   walletEncRank_ = keyRank;
+   ui_->groupBoxPassword->setVisible(!encTypes.empty());
+   ui_->widgetPassword->setVisible(encTypes[0] == bs::wallet::EncryptionType::Password);
+   ui_->widgetFreja->setVisible(encTypes[0] == bs::wallet::EncryptionType::Freja);
+   ui_->pushButtonBackup->setEnabled(encTypes.empty());
 }
 
 void WalletBackupDialog::showError(const QString &title, const QString &text)
@@ -158,7 +159,7 @@ void WalletBackupDialog::onContainerError(unsigned int id, std::string errMsg)
    else if (id == privKeyReqId_) {
       privKeyReqId_ = 0;
       showError(tr("Private Key Error"), tr("Failed to get private key from signing process: %1").arg(QString::fromStdString(errMsg)));
-      if (walletEncType_ == bs::wallet::EncryptionType::Password) {
+      if (walletEncTypes_[0] == bs::wallet::EncryptionType::Password) {
          ui_->lineEditPassword->clear();
          onPasswordChanged();
       }
@@ -173,7 +174,8 @@ void WalletBackupDialog::onPasswordChanged()
 
 void WalletBackupDialog::startFrejaSign()
 {
-   frejaSign_.start(userId_, tr("Backup Wallet"), wallet_->getWalletId());
+   const auto userId = QString::fromStdString(walletEncKeys_[0].toBinStr());
+   frejaSign_.start(userId, tr("Backup Wallet"), wallet_->getWalletId());
    ui_->pushButtonFreja->setEnabled(false);
 }
 

@@ -106,12 +106,10 @@ void CreateWalletDialog::CreateWallet()
 
    const auto &name = ui_->lineEditWalletName->text().toStdString();
    const auto &description = ui_->lineEditDescription->text().toStdString();
-   if (ui_->radioButtonFreja->isChecked()) {
-      walletSeed_.setEncryptionKey(ui_->lineEditFrejaId->text().toStdString());
-   }
-
-   createReqId_ = signingContainer_->CreateHDWallet(name, description, walletPassword_
-      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_);
+   pwdData_[0].password = walletPassword_;
+   pwdData_[0].encKey = ui_->lineEditFrejaId->text().toStdString();
+   createReqId_ = signingContainer_->CreateHDWallet(name, description
+      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, pwdData_, { 1, 1 });
    walletPassword_.clear();
 }
 
@@ -154,13 +152,13 @@ void CreateWalletDialog::onEncTypeChanged()
       ui_->widgetFreja->hide();
       ui_->widgetPassword->show();
       ui_->widgetPasswordConfirm->show();
-      walletSeed_.setEncryptionType(bs::wallet::EncryptionType::Password);
+      pwdData_[0].encType = bs::wallet::EncryptionType::Password;
    }
    else if (ui_->radioButtonFreja->isChecked()) {
       ui_->widgetFreja->show();
       ui_->widgetPassword->hide();
       ui_->widgetPasswordConfirm->hide();
-      walletSeed_.setEncryptionType(bs::wallet::EncryptionType::Freja);
+      pwdData_[0].encType = bs::wallet::EncryptionType::Freja;
    }
 }
 

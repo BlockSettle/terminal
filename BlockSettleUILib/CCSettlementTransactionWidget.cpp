@@ -226,7 +226,7 @@ void CCSettlementTransactionWidget::onGenAddrVerified(bool result)
    } else {
       ui_->lineEditPassword->setEnabled(true);
       ui_->labelHint->setText(tr("Accept to send own signed half of CoinJoin transaction"));
-      if (encType_ == bs::wallet::EncryptionType::Freja) {
+      if (encTypes_[0] == bs::wallet::EncryptionType::Freja) {
          startFrejaSign();
       }
    }
@@ -236,11 +236,12 @@ void CCSettlementTransactionWidget::onGenAddrVerified(bool result)
 
 void CCSettlementTransactionWidget::startFrejaSign()
 {
-   if (encType_ != bs::wallet::EncryptionType::Freja) {
+   if (encTypes_[0] != bs::wallet::EncryptionType::Freja) {
       return;
    }
    const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetSigningWallet()->GetWalletId());
-   frejaSign_->start(userId_, tr("%1 %2").arg(QString::fromStdString(rfq_.security))
+   const auto userId = QString::fromStdString(encKeys_[0].toBinStr());
+   frejaSign_->start(userId, tr("%1 %2").arg(QString::fromStdString(rfq_.security))
       .arg(clientSells_ ? tr("Delivery") : tr("Payment")), rootWallet->getWalletId());
 }
 
@@ -389,16 +390,17 @@ void CCSettlementTransactionWidget::updateAcceptButton()
    ui_->pushButtonAccept->setEnabled(userKeyOk_ && !walletPassword_.isNull());
 }
 
-void CCSettlementTransactionWidget::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
-   , const SecureBinaryData &encKey)
+void CCSettlementTransactionWidget::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
+   , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank keyRank)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
-   encType_ = encType;
-   userId_ = QString::fromStdString(encKey.toBinStr());
+   encTypes_ = encTypes;
+   encKeys_ = encKeys;
+   keyRank_ = keyRank;
 
-   switch (encType_) {
+   switch (encTypes_[0]) {
    case bs::wallet::EncryptionType::Freja:
       ui_->labelPasswordHint->show();
    case bs::wallet::EncryptionType::Unencrypted:

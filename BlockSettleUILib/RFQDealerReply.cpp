@@ -107,10 +107,11 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQDealerReply::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated);
-      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, bs::wallet::EncryptionType encType
-         , const SecureBinaryData &encKey) {
-         walletEncType_ = encType;
-         walletEncKey_ = encKey;
+      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, std::vector<bs::wallet::EncryptionType> encTypes
+         , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank keyRank) {
+         walletEncTypes_ = encTypes;
+         walletEncKeys_ = encKeys;
+         walletEncRank_ = keyRank;
          updateAutoSignState();
       });
       connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged);
@@ -195,14 +196,14 @@ void RFQDealerReply::onSignerStateUpdated()
 
 void RFQDealerReply::updateAutoSignState()
 {
-   ui_->checkBoxAutoSign->setEnabled(((walletEncType_ == wallet::EncryptionType::Unencrypted)
+   ui_->checkBoxAutoSign->setEnabled(((walletEncTypes_[0] == wallet::EncryptionType::Unencrypted)
       || signingContainer_->hasUI() || (ui_->checkBoxAutoSign->checkState() != Qt::Unchecked))
       && ui_->checkBoxAutoSign->checkState() != Qt::PartiallyChecked);
    ui_->comboBoxWalletAS->setEnabled(ui_->checkBoxAutoSign->checkState() == Qt::Unchecked);
    ui_->horizontalWidgetASPassword->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked)
-      && (walletEncType_ == wallet::EncryptionType::Password) && !signingContainer_->hasUI());
+      && (walletEncTypes_[0] == wallet::EncryptionType::Password) && !signingContainer_->hasUI());
    ui_->horizontalWidgetASFreja->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked)
-      && (walletEncType_ == wallet::EncryptionType::Freja));
+      && (walletEncTypes_[0] == wallet::EncryptionType::Freja));
    ui_->labelFrejaStatus->setText(asPassword_.isNull() ? tr("Sign with Freja") : tr("Signed with Freja"));
 }
 
@@ -1268,7 +1269,7 @@ void RFQDealerReply::startFrejaSigning()
       return;
    }
    ui_->pushButtonFreja->setEnabled(false);
-   frejaAS_->start(QString::fromStdString(walletEncKey_.toBinStr())
+   frejaAS_->start(QString::fromStdString(walletEncKeys_[0].toBinStr())
       , tr("Activate Auto-Signing"), walletId);
 }
 

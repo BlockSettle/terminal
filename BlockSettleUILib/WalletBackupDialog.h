@@ -5,6 +5,7 @@
 #include <memory>
 #include "EncryptionUtils.h"
 #include "FrejaREST.h"
+#include "HDNode.h"
 #include "MetaData.h"
 
 
@@ -41,7 +42,8 @@ private slots:
    void onSelectFile();
    void onRootKeyReceived(unsigned int id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
+      , bs::hd::KeyRank);
    void onContainerError(unsigned int id, std::string errMsg);
    void showError(const QString &title, const QString &text);
 
@@ -55,9 +57,10 @@ private:
    std::shared_ptr<bs::hd::Wallet>     wallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
    SecureBinaryData                    walletPassword_;
-   bs::wallet::EncryptionType          walletEncType_ = bs::wallet::EncryptionType::Password;
-   QString                             userId_;
-   FrejaSignWallet                     frejaSign_;
+   std::vector<bs::wallet::EncryptionType>   walletEncTypes_;
+   std::vector<SecureBinaryData>             walletEncKeys_;
+   bs::hd::KeyRank   walletEncRank_;
+   FrejaSignWallet   frejaSign_;
    unsigned int   infoReqId_ = 0;
    unsigned int   privKeyReqId_ = 0;
    std::string    outputFile_;
