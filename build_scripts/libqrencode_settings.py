@@ -10,7 +10,7 @@ class LibQREncode(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = 'a50e2db8b0d223383eccf752061c8ae55497961c'
-        self._package_name = 'LibQREncode'
+        self._package_name = 'libqrencode'
 
         self._package_url = 'https://github.com/fukuchi/libqrencode/archive/' + self._version + '.zip'
 
