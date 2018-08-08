@@ -53,7 +53,7 @@ public:
       WalletIdRole,
       AddrIndexRole,
       AddressRole,
-      IsExternal
+      IsExternalRole
    };
 
    enum AddressType {

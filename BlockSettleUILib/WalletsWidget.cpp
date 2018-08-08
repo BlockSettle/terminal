@@ -59,7 +59,7 @@ public:
          source_row, AddressListModel::ColumnBalance, source_parent)).toString());
       const bool isExternal = sourceModel()->data(sourceModel()->index(
             source_row, AddressListModel::ColumnAddress, source_parent),
-         AddressListModel::IsExternal).toBool();
+         AddressListModel::IsExternalRole).toBool();
 
       if (filterMode_ & HideInternal) {
          if (txCount == 0 && qFuzzyIsNull(balance) && !isExternal) {
