@@ -193,5 +193,7 @@
         <file>resources/down-arrow-primary.png</file>
         <file>resources/down-arrow-primary@1.5x.png</file>
         <file>resources/down-arrow-primary@2x.png</file>
+        <file>resources/radio-button-disabled.png</file>
+        <file>resources/radio-button-disabled@2x.png</file>
     </qresource>
 </RCC>

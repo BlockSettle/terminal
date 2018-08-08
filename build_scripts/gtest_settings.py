@@ -18,13 +18,19 @@ class GtestSettings(Configurator):
             self._package_url = 'https://github.com/google/googletest/archive/release-' + self._version + '.tar.gz'
 
     def get_package_name(self):
-        return self._package_name
+        return self._package_name + '-' + self._version
+
+    def get_revision_string(self):
+        return self._version
 
     def get_url(self):
         return self._package_url
 
     def is_archive(self):
         return True
+
+    def get_install_dir(self):
+        return os.path.join(self._project_settings.get_common_build_dir(), 'Gtest')
 
     def get_unpacked_gtest_sources_dir(self):
         return os.path.join(self._project_settings.get_sources_dir(), 'googletest-release-' + self._version)
@@ -35,8 +41,6 @@ class GtestSettings(Configurator):
                    '-DBUILD_GTEST=ON',
                    '-G',
                    self._project_settings.get_cmake_generator()]
-
-        print('Using generator: ' + self._project_settings.get_cmake_generator())
 
         result = subprocess.call(command)
         return result == 0

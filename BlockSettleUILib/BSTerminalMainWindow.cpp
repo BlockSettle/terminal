@@ -100,6 +100,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    InitSigningContainer();
    LoadWallets(splashScreen);
+   QApplication::processEvents();
 
    InitAuthManager();
    InitAssets();
@@ -595,7 +596,7 @@ void BSTerminalMainWindow::openOTPDialog()
       OTPFileInfoDialog dialog(otpManager_, this);
       dialog.exec();
    } else {
-      OTPImportDialog(otpManager_, this).exec();
+      OTPImportDialog(otpManager_, celerConnection_->userName(), this).exec();
    }
 }
 
@@ -607,8 +608,9 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 {
    if (authManager_->HaveAuthWallet()) {
-      authAddrDlg_->setAddressToVerify(addrToVerify);
       authAddrDlg_->show();
+      QApplication::processEvents();
+      authAddrDlg_->setAddressToVerify(addrToVerify);
    }
 }
 
@@ -636,7 +638,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
             "for confirming your identity and to establish secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
-         OTPImportDialog otpDialog(otpManager_, this);
+         OTPImportDialog otpDialog(otpManager_, celerConnection_->userName(), this);
          if (otpDialog.exec() != QDialog::Accepted) {
             return;
          }
@@ -952,7 +954,7 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
             "for confirming your identity and to establish secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
-         OTPImportDialog(otpManager_, this).exec();
+         OTPImportDialog(otpManager_, celerConnection_->userName(), this).exec();
       }
    }
 }

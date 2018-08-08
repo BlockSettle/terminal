@@ -18,7 +18,7 @@ NotificationCenter::NotificationCenter(const std::shared_ptr<ApplicationSettings
    qRegisterMetaType<bs::ui::NotifyType>("NotifyType");
    qRegisterMetaType<bs::ui::NotifyMessage>("NotifyMessage");
 
-   addResponder(std::make_shared<NotificationTabResponder>(mainWinUi, this));
+   addResponder(std::make_shared<NotificationTabResponder>(mainWinUi, appSettings, this));
    addResponder(std::make_shared<NotificationTrayIconResponder>(trayIcon, appSettings, this));
 }
 
@@ -53,8 +53,10 @@ void NotificationCenter::addResponder(const std::shared_ptr<NotificationResponde
 }
 
 
-NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi, QObject *parent)
+NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi,
+   std::shared_ptr<ApplicationSettings> appSettings, QObject *parent)
    : NotificationResponder(parent), mainWinUi_(mainWinUi), iconDot_(QIcon(QLatin1String(":/ICON_DOT")))
+   , appSettings_(appSettings)
 {
    mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
    connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
@@ -66,7 +68,8 @@ void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMess
 {
    const auto tabAction = getTabActionFor(nt, msg);
    if ((tabAction.index >= 0) && (mainWinUi_->tabWidget->currentIndex() != tabAction.index)) {
-      mainWinUi_->tabWidget->setTabIcon(tabAction.index, tabAction.checked ? iconDot_ : QIcon());
+      mainWinUi_->tabWidget->setTabIcon(tabAction.index,
+         tabAction.checked && tabAction.enabled ? iconDot_ : QIcon());
    }
 }
 
@@ -75,12 +78,13 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
    switch (nt) {
    case bs::ui::NotifyType::DealerQuotes:
       if (msg.empty()) {
-         return { -1, false };
+         return { -1, false, false };
       }
-      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetRFQReply), (msg[0].toInt() > 0) };
+      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetRFQReply), (msg[0].toInt() > 0),
+         !appSettings_->get<bool>(ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter)};
 
    case bs::ui::NotifyType::BlockchainTX:
-      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true };
+      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true, true };
 
    default: break;
    }

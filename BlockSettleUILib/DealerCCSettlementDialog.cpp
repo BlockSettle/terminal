@@ -77,7 +77,6 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
 
    connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &DealerCCSettlementDialog::validateGUI);
 
-   ui_->verticalWidgetPassword->hide();
    validateGUI();
 }
 

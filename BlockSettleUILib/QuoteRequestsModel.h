@@ -5,10 +5,12 @@
 #include <QTimer>
 #include <QBrush>
 #include <QFont>
+#include <QPersistentModelIndex>
 
 #include <memory>
 #include <unordered_map>
 #include <functional>
+#include <vector>
 
 #include "CommonTypes.h"
 
@@ -23,6 +25,7 @@ namespace bs {
 }
 class AssetManager;
 class CelerClient;
+class ApplicationSettings;
 
 class QuoteRequestsModel : public QAbstractItemModel
 {
@@ -30,6 +33,8 @@ class QuoteRequestsModel : public QAbstractItemModel
 
 signals:
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
+   void invalidateFilterModel();
+   void deferredUpdate(const QPersistentModelIndex&);
 
 public:
    enum class Column {
@@ -58,12 +63,27 @@ public:
       QuotedPrice,
       BestQPrice,
       Product,
-      AllowFiltering
+      AllowFiltering,
+      HasHiddenChildren,
+      Quoted,
+      Type,
+      LimitOfRfqs,
+      QuotedRfqsCount,
+      Visible,
+      StatText
+   };
+
+   enum class DataType {
+      RFQ = 0,
+      Group,
+      Market,
+      Unknown
    };
 
 public:
    QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
                       , std::shared_ptr<CelerClient> celerClient
+                      , std::shared_ptr<ApplicationSettings> appSettings
                       , QObject* parent);
    ~QuoteRequestsModel() override;
 
@@ -95,6 +115,10 @@ public:
    void onSecurityMDUpdated(const QString &security, const bs::network::MDFields &);
    void onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn);
    void onBestQuotePrice(const QString reqId, double price, bool own);
+   void limitRfqs(const QModelIndex &index, int limit);
+   QModelIndex findMarketIndex(const QString &name) const;
+   void setPriceUpdateInterval(int interval);
+   void showQuotedRfqs(bool on  = true);
 
 private slots:
    void ticker();
@@ -102,6 +126,8 @@ private slots:
    void onSettlementCompleted();
    void onSettlementFailed();
    void clearModel();
+   void onDeferredUpdate(const QPersistentModelIndex &index);
+   void onPriceUpdateTimer();
 
 private:
    using Prices = std::map<Role, double>;
@@ -111,20 +137,17 @@ private:
    std::unordered_map<std::string, bs::network::QuoteReqNotification>         notifications_;
    std::unordered_map<std::string, std::shared_ptr<bs::SettlementContainer>>  settlContainers_;
    QTimer      timer_;
+   QTimer      priceUpdateTimer_;
    MDPrices    mdPrices_;
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
    std::shared_ptr<CelerClient>     celerClient_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
-
-   enum class DataType {
-      RFQ,
-      Group,
-      Market,
-      Unknown
-   };
+   int priceUpdateInterval_;
+   bool showQuoted_;
 
    struct IndexHelper {
       IndexHelper *parent_;
@@ -187,9 +210,13 @@ private:
       QBrush indicativePxBrush_;
       QBrush stateBrush_;
       IndexHelper idx_;
+      bool quoted_;
+      bool visible_;
 
       RFQ()
          : idx_(nullptr, this, DataType::RFQ)
+         , quoted_(false)
+         , visible_(false)
       {}
 
       RFQ(const QString &security,
@@ -223,6 +250,8 @@ private:
          , assetType_(assetType)
          , reqId_(reqId)
          , idx_(nullptr, this, DataType::RFQ)
+         , quoted_(false)
+         , visible_(false)
       {}
    };
 
@@ -231,15 +260,24 @@ private:
       QFont font_;
       std::vector<std::unique_ptr<RFQ>> rfqs_;
       IndexHelper idx_;
+      int limit_;
+      int quotedRfqsCount_;
+      int visibleCount_;
 
       Group()
          : idx_(nullptr, this, DataType::Group)
+         , limit_(5)
+         , quotedRfqsCount_(0)
+         , visibleCount_(0)
       {}
 
-      explicit Group(const QString &security, const QFont & font = QFont())
+      explicit Group(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Group)
+         , limit_(limit)
+         , quotedRfqsCount_(0)
+         , visibleCount_(0)
       {}
    };
 
@@ -249,17 +287,20 @@ private:
       std::vector<std::unique_ptr<Group>> groups_;
       IndexHelper idx_;
       Group settl_;
+      int limit_;
 
       Market()
          : idx_(nullptr, this, DataType::Market)
+         , limit_(5)
       {
          settl_.idx_ = idx_;
       }
 
-      explicit Market(const QString &security, const QFont & font = QFont())
+      explicit Market(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Market)
+         , limit_(limit)
       {
          settl_.idx_ = idx_;
       }
@@ -267,11 +308,25 @@ private:
 
    std::vector<std::unique_ptr<Market>> data_;
 
+   struct BestQuotePrice {
+      double price_;
+      bool own_;
+   };
+
+   std::map<QString, BestQuotePrice> bestQuotePrices_;
+   std::map<QString, std::pair<bs::network::MDField, bs::network::MDField>> prices_;
+
 private:
    int findGroup(IndexHelper *idx) const;
    Group* findGroup(Market *market, const QString &security) const;
    int findMarket(IndexHelper *idx) const;
    Market* findMarket(const QString &name) const;
+   void updatePrices(const QString &security, const bs::network::MDField &pxBid,
+      const bs::network::MDField &pxOffer);
+   void showRfqsFromBack(Group *g);
+   void showRfqsFromFront(Group *g);
+   void clearVisibleFlag(Group *g);
+   void updateBestQuotePrice(const QString &reqId, double price, bool own);
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;

@@ -1304,7 +1304,7 @@ void RFQDealerReply::startFrejaSigning()
    }
    ui_->pushButtonFreja->setEnabled(false);
    frejaAS_->start(QString::fromStdString(walletEncKey_.toBinStr())
-      , tr("Activate Auto-Sign"), walletId);
+      , tr("Activate Auto-Signing"), walletId);
 }
 
 void RFQDealerReply::onFrejaSignComplete(SecureBinaryData password)

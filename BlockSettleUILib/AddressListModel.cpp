@@ -32,6 +32,7 @@ AddressListModel::AddressListModel(std::shared_ptr<WalletsManager> walletsManage
    , AddressType addrType)
    : QAbstractTableModel(parent)
    , addrType_(addrType)
+   , processing_(false)
 {
    connect(walletsManager.get(), &WalletsManager::walletsReady, this, &AddressListModel::updateData);
    connect(walletsManager.get(), &WalletsManager::walletChanged, this, &AddressListModel::updateData);
@@ -59,17 +60,21 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 
    row.wallet = wallet;
    row.address = addr;
+   row.transactionCount = -1;
+   row.balance = -1;
 
    if (wallet->GetType() == bs::wallet::Type::Authentication) {
       row.comment = tr("Authentication PubKey");
       const auto rootId = (wallet == nullptr) ? BinaryData() : wallet->getRootId();
       row.displayedAddress = rootId.isNull() ? tr("empty") : QString::fromStdString(BtcUtils::base58_encode(rootId).toBinStr());
+      row.isExternal = true;
    }
    else {
       row.comment = QString::fromStdString(wallet->GetAddressComment(addr));
       row.displayedAddress = addr.display();
       row.walletName = QString::fromStdString(wallet->GetShortName());
       row.walletId = QString::fromStdString(wallet->GetWalletId());
+      row.isExternal = wallet->IsExternalAddress(addr);
    }
    row.wltType = wallet->GetType();
    return row;
@@ -91,6 +96,10 @@ void AddressListModel::updateData()
 
 void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 {
+   if (!std::atomic_compare_exchange_strong(&processing_, false, true)) {
+      return;
+   }
+
    if (wallet->GetType() == bs::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
@@ -105,6 +114,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
          addressList = wallet->GetIntAddressList();
          break;
       case AddressType::All:
+      case AddressType::ExtAndNonEmptyInt:
       default:
          addressList = wallet->GetUsedAddressList();
          break;
@@ -121,6 +131,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 
          addressRows_.push_back(std::move(row));
       }
+      processing_.store(false);
    }
 }
 
@@ -135,6 +146,7 @@ void AddressListModel::updateWalletData()
          addrRow.transactionCount = txn;
          emit dataChanged(index(i, ColumnTxCount), index(i, ColumnTxCount));
       };
+
       const auto &cbBalance = [this, &addrRow, i](std::vector<uint64_t> balances) {
          if (i >= addressRows_.size()) {
             return;
@@ -145,6 +157,40 @@ void AddressListModel::updateWalletData()
       addrRow.wallet->getAddrTxN(addrRow.address, cbTxN);
       addrRow.wallet->getAddrBalance(addrRow.address, cbBalance);
    }
+
+   // XXX when all tx counts and balance loaded
+   // when row created tx count and balance are set to -1
+   // if (addrType_ == AddressType::ExtAndNonEmptyInt) {
+   //    QMetaObject::invokeMethod(this, "removeEmptyIntAddresses");
+   // }
+}
+
+void AddressListModel::removeEmptyIntAddresses()
+{
+   if (!std::atomic_compare_exchange_strong(&processing_, false, true)) {
+      return;
+   }
+
+   std::set<int> indicesToRemove;
+   for (size_t i = 0; i < addressRows_.size(); ++i) {
+      const auto &row = addressRows_[i];
+      if (!row.isExternal && !row.transactionCount && !row.balance) {
+         indicesToRemove.insert(i);
+      }
+   }
+   unsigned int nbRemoved = 0;
+   for (auto idx : indicesToRemove) {
+      idx -= nbRemoved;
+      if (addressRows_.size() <= idx) {
+         processing_.store(false);
+         return;
+      }
+      beginRemoveRows(QModelIndex(), idx, idx);
+      addressRows_.erase(addressRows_.begin() + idx);
+      endRemoveRows();
+      ++nbRemoved;
+   }
+   processing_.store(false);
 }
 
 int AddressListModel::columnCount(const QModelIndex &) const
@@ -246,6 +292,9 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
 
       case AddrIndexRole:
          return static_cast<unsigned int>(row.addrIndex);
+
+      case IsExternalRole:
+         return row.isExternal;
 
       case AddressRole:
          return row.displayedAddress;

@@ -78,6 +78,12 @@ public:
       ResetPassword_Url,
       GetAccount_Url,
       WalletFiltering,
+      FxRfqLimit,
+      XbtRfqLimit,
+      PmRfqLimit,
+      DisableBlueDotOnTabOfRfqBlotter,
+      PriceUpdateInterval,
+      ShowQuoted,
       _last
    };
 

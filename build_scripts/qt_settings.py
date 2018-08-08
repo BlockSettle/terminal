@@ -16,6 +16,7 @@ class QtSettings(Configurator):
         self._release = '5.11'
         self._version = self._release + '.1'
         self._package_name = 'qt-everywhere-src-' + self._version
+        self._script_revision = '1'
 
         if self._project_settings.on_windows():
             self._package_url = 'http://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
@@ -24,6 +25,9 @@ class QtSettings(Configurator):
 
     def get_package_name(self):
         return self._package_name
+
+    def get_revision_string(self):
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url

@@ -45,31 +45,42 @@ public:
    {
       NoFilter = 0x00,
       HideEmpty = 0x01,
-      HideUnused = 0x02,
-      HideUsedEmpty = 0x04
+      HideInternal = 0x02,
+      HideUsedEmpty = 0x04,
+      HideExternal = 0x08
    };
    Q_DECLARE_FLAGS(Filter, FilterOption)
 
    bool filterAcceptsRow(int source_row, const QModelIndex & source_parent) const override
    {
-      if (filterMode_ & HideUnused) {
-         int txCount = sourceModel()->data(sourceModel()->index(source_row, AddressListModel::ColumnTxCount, source_parent)).toInt();
-         if (txCount == 0) {
+      const int txCount = sourceModel()->data(sourceModel()->index(
+         source_row, AddressListModel::ColumnTxCount, source_parent)).toInt();
+      const double balance = QLocale().toDouble(sourceModel()->data(sourceModel()->index(
+         source_row, AddressListModel::ColumnBalance, source_parent)).toString());
+      const bool isExternal = sourceModel()->data(sourceModel()->index(
+            source_row, AddressListModel::ColumnAddress, source_parent),
+         AddressListModel::IsExternalRole).toBool();
+
+      if (filterMode_ & HideInternal) {
+         if (txCount == 0 && qFuzzyIsNull(balance) && !isExternal) {
+            return false;
+         }
+      }
+
+      if (filterMode_ & HideExternal) {
+         if (txCount == 0 && qFuzzyIsNull(balance) && isExternal) {
             return false;
          }
       }
 
       if (filterMode_ & HideEmpty) {
-         double balance = QLocale().toDouble(sourceModel()->data(sourceModel()->index(source_row, AddressListModel::ColumnBalance, source_parent)).toString());
          if (qFuzzyIsNull(balance)) {
             return false;
          }
       }
 
       if (filterMode_ & HideUsedEmpty) {
-         int txCount = sourceModel()->data(sourceModel()->index(source_row, AddressListModel::ColumnTxCount, source_parent)).toInt();
          if (txCount != 0) {
-            double balance = QLocale().toDouble(sourceModel()->data(sourceModel()->index(source_row, AddressListModel::ColumnBalance, source_parent)).toString());
             if (qFuzzyIsNull(balance)) {
                return false;
             }
@@ -171,13 +182,15 @@ void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const s
    auto filter = appSettings_->get<int>(ApplicationSettings::WalletFiltering);
 
    ui->pushButtonEmpty->setChecked(filter & AddressSortFilterModel::HideEmpty);
-   ui->pushButtonUnused->setChecked(filter & AddressSortFilterModel::HideUnused);
+   ui->pushButtonInternal->setChecked(filter & AddressSortFilterModel::HideInternal);
+   ui->pushButtonExternal->setChecked(filter & AddressSortFilterModel::HideExternal);
    ui->pushButtonUsed->setChecked(filter & AddressSortFilterModel::HideUsedEmpty);
 
    updateAddressFilters(filter);
 
-   for (auto button : {ui->pushButtonEmpty, ui->pushButtonUnused, ui->pushButtonUsed}) {
-      connect(button, &QPushButton::toggled, this, &WalletsWidget::onFilterSettingsChanged);
+   for (auto button : {ui->pushButtonEmpty, ui->pushButtonInternal,
+      ui->pushButtonExternal, ui->pushButtonUsed}) {
+         connect(button, &QPushButton::toggled, this, &WalletsWidget::onFilterSettingsChanged);
    }
 }
 
@@ -484,8 +497,11 @@ int WalletsWidget::getUIFilterSettings() const
    if (ui->pushButtonEmpty->isChecked()) {
       filter |= AddressSortFilterModel::HideEmpty;
    }
-   if (ui->pushButtonUnused->isChecked()) {
-      filter |= AddressSortFilterModel::HideUnused;
+   if (ui->pushButtonInternal->isChecked()) {
+      filter |= AddressSortFilterModel::HideInternal;
+   }
+   if (ui->pushButtonExternal->isChecked()) {
+      filter |= AddressSortFilterModel::HideExternal;
    }
    if (ui->pushButtonUsed->isChecked()) {
       filter |= AddressSortFilterModel::HideUsedEmpty;

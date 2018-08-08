@@ -164,6 +164,10 @@ QWidget {
     color: #e7e8e9;
     text-transform: uppercase; }
 
+QWidget QGroupBox::title:disabled {
+   color: #586266;
+}
+
 QFrame:focus {
   border: 1px solid #247dac; }
 
@@ -243,18 +247,25 @@ QMenuBar {
     background: #b7bbbd; }
 
 QMenu {
-  padding: 0;
-  background-color: white; }
-  QMenu::item {
-    color: #17262b;
-    height: 25px;
-    padding: 5px;
-    border-bottom: 1px solid #f3f4f4; }
-    QMenu::item:selected {
-      background-color: #5097bd;
-      color: #ffffff; }
-  QMenu::item:first {
-    border-bottom: 0 solid #f3f4f4; }
+   padding: 0;
+   background-color: white;
+}
+
+QMenu::item {
+   color: #17262b;
+   height: 25px;
+   padding: 5px 20px;
+   border-top: 1px solid #f3f4f4;
+}
+
+QMenu::item:selected {
+   background-color: #5097bd;
+   color: #ffffff;
+}
+
+QMenu::item:first {
+   border-top: 0px;
+}
 
 *[usernameButton="true"] {
   border: none;
@@ -376,7 +387,7 @@ QTabWidget::pane {
   /* The tab widget frame */
   border-top: 0 solid #C2C7CB;
   background-color: #b7bbbd;
-  margin: 0px 1px; }
+  margin: 0px; }
 
 QTabWidget::tab-bar {
   left: 5px;
@@ -905,7 +916,7 @@ QComboBox,
 QDateEdit {
   border: 1px solid #81888f;
   border-radius: 0;
-  padding: 1px 23px 1px 5px;
+  padding: 1px 5px 1px 7px;
   background: transparent;
   max-height: 20px;
   color: #ffffff; }
@@ -917,7 +928,7 @@ QDateEdit {
   QDateEdit::item {
     color: #17262b;
     height: 25px;
-    padding: 0 5px 0 5px;
+    padding: 0 5px 0 20px;
     border-bottom: 1px solid #f3f4f4; }
     QComboBox::item:selected,
     QDateEdit::item:selected {
@@ -1010,7 +1021,7 @@ QTextEdit {
 
 QDoubleSpinBox,
 QSpinBox {
-  padding: 0 5px 0 5;
+  padding: 0 5px 0 5px;
   /* make room for the arrows */
   border-image: none;
   border: 1px solid #81888f;
@@ -1142,6 +1153,14 @@ QRadioButton::indicator:checked:hover {
 
 QRadioButton::indicator:checked:pressed {
   image: url(:/resources/radio-button-active.png); }
+
+QRadioButton:disabled:checked,
+QRadioButton:disabled {
+   color: #586266;
+}
+
+QRadioButton::indicator:checked:disabled {
+  image: url(:/resources/radio-button-disabled.png); }
 
 QCheckBox:disabled:checked,
 QCheckBox:disabled {

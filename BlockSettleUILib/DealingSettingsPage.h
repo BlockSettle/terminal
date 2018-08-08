@@ -1,5 +1,5 @@
-#ifndef __DEALING_SETTINGS_PAGE_H__
-#define __DEALING_SETTINGS_PAGE_H__
+#ifndef DEALING_SETTINGS_PAGE_H
+#define DEALING_SETTINGS_PAGE_H
 
 #include <QWidget>
 
@@ -33,7 +33,6 @@ protected slots:
 private:
    Ui::DealingSettingsPage *ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
-   SecuritiesModel                        *secModel_;
 };
 
-#endif // __DEALING_SETTINGS_PAGE_H__
+#endif // DEALING_SETTINGS_PAGE_H

@@ -66,6 +66,8 @@ void AuthAddressDialog::showEvent(QShowEvent *evt)
 
    ui_->treeViewAuthAdress->selectionModel()->clearSelection();
 
+   ui_->labelHint->clear();
+
    ui_->pushButtonCreate->setEnabled(authAddressManager_->HaveAuthWallet());
    ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
 
@@ -81,8 +83,6 @@ bool AuthAddressDialog::unsubmittedExist() const
 
 void AuthAddressDialog::updateUnsubmittedState()
 {
-   ui_->labelHint->clear();
-
    for (size_t i = 0; i < authAddressManager_->GetAddressCount(); i++) {
       switch (authAddressManager_->GetState(authAddressManager_->GetAddress(i))) {
       case AddressVerificationState::NotSubmitted:
@@ -155,7 +155,8 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
             break;
          }
       }
-      ui_->labelHint->setText(tr("Your Authentication Address can now be Verified. Please press <b>Verify</b> and enter your password to execute the address verification"));
+
+      ui_->labelHint->setText(tr("Your Authentication Address can now be Verified. Please press <b>Verify</b> and enter your password to execute the address verification."));
       ui_->treeViewAuthAdress->setFocus();
    }
 }

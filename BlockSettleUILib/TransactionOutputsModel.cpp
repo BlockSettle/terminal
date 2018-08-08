@@ -99,9 +99,9 @@ QVariant TransactionOutputsModel::headerData(int section, Qt::Orientation orient
          return QString();
       case Qt::TextAlignmentRole:
          if (section == ColumnAddress){
-            return Qt::AlignLeft;
+            return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
          }
-         return Qt::AlignRight;
+         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
       }
    }
 

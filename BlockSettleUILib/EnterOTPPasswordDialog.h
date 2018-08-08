@@ -27,11 +27,13 @@ private slots:
    void onFrejaSucceeded(SecureBinaryData);
    void onFrejaFailed(const QString &);
    void onFrejaStatusUpdated(const QString &);
+   void frejaTimer();
 
 private:
    Ui::EnterOTPPasswordDialog* ui_;
    SecureBinaryData  password_;
    FrejaSignOTP      freja_;
+   QTimer *frejaTimer_;
 };
 
 #endif // __ENTER_OTP_PASSWORD_DIALOG_H__

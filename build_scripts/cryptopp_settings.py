@@ -9,16 +9,22 @@ from component_configurator import Configurator
 class CryptoppSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = 'master'
+        self._version = '32f715f1d723e2bbb78b44fa9e167da64214e2e6'
         self._package_name = 'cryptopp'
 
         self._package_url = 'https://github.com/weidai11/cryptopp/archive/32f715f1d723e2bbb78b44fa9e167da64214e2e6.zip'
 
     def get_package_name(self):
-        return self._package_name
+        return self._package_name + '-' + self._version
+
+    def get_revision_string(self):
+        return self._version
 
     def get_url(self):
         return self._package_url
+
+    def get_install_dir(self):
+        return os.path.join(self._project_settings.get_common_build_dir(), 'cryptopp')
 
     def is_archive(self):
         return True
@@ -86,7 +92,3 @@ class CryptoppSettings(Configurator):
         self.filter_copy(include_dir, install_include_dir, '.h')
 
         return True
-
-    def get_unpacked_sources_dir(self):
-        return os.path.join(self._project_settings.get_sources_dir(),
-                            "cryptopp-32f715f1d723e2bbb78b44fa9e167da64214e2e6")
