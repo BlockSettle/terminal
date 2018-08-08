@@ -52,10 +52,11 @@ public:
       SortRole = Qt::UserRole,
       WalletIdRole,
       AddrIndexRole,
-      AddressRole
+      AddressRole,
+      IsExternal
    };
 
-   typedef enum AddressType {
+   enum AddressType {
       External = 1,
       Internal = 2,
       All = 3,
@@ -65,7 +66,7 @@ public:
    typedef std::vector<std::shared_ptr<bs::Wallet>>   Wallets;
 
    AddressListModel(std::shared_ptr<WalletsManager> walletsManager, QObject* parent
-      , AddressType addrType = AddressType::ExtAndNonEmptyInt);
+      , AddressType addrType = AddressType::All);
    ~AddressListModel() override;
 
    int rowCount(const QModelIndex & parent) const override;

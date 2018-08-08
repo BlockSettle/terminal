@@ -133,38 +133,48 @@
             <number>5</number>
            </property>
            <item>
-            <widget class="QPushButton" name="pushButtonEmpty">
-             <property name="toolTip">
-              <string>Hide all Empty Addresses</string>
-             </property>
-             <property name="text">
-              <string>Hide &amp;Empty</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushButtonUnused">
-             <property name="toolTip">
-              <string>Hide all unsued addresses</string>
-             </property>
-             <property name="text">
-              <string>Hide &amp;Unused</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="pushButtonUsed">
              <property name="toolTip">
               <string>Hide all used but empty addresses</string>
              </property>
              <property name="text">
               <string>Hide Use&amp;d</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButtonInternal">
+             <property name="toolTip">
+              <string>Hide all unsued addresses</string>
+             </property>
+             <property name="text">
+              <string>Hide &amp;Internal</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButtonExternal">
+             <property name="text">
+              <string>Hide E&amp;xternal</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButtonEmpty">
+             <property name="toolTip">
+              <string>Hide all Empty Addresses</string>
+             </property>
+             <property name="text">
+              <string>Hide &amp;Empty</string>
              </property>
              <property name="checkable">
               <bool>true</bool>
