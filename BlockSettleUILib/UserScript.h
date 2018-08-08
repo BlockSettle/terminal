@@ -2,7 +2,6 @@
 #define __USER_SCRIPT_H__
 
 #include <QQmlEngine>
-#include <QQmlContext>
 #include <memory>
 #include "CommonTypes.h"
 
