@@ -77,8 +77,8 @@ bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPas
       emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
       return false;
    }
-   if (!wallet->changePassword(BinaryData::CreateFromHex(newPass.toStdString()), BinaryData::CreateFromHex(oldPass.toStdString())
-      , mapEncType(encType), encKey.toStdString())) {
+   const bs::hd::PasswordData pwdData = { BinaryData::CreateFromHex(newPass.toStdString()), mapEncType(encType), encKey.toStdString() };
+   if (!wallet->changePassword({ pwdData }, { 1, 1 }, BinaryData::CreateFromHex(oldPass.toStdString()))) {
       emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
       return false;
    }
@@ -131,22 +131,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       emit walletError(walletId, tr("Failed to backup private key: wallet not found"));
       return false;
    }
-   std::shared_ptr<bs::hd::Node> decrypted;
-   if (wallet->encryptionType() != bs::wallet::EncryptionType::Unencrypted) {
-      decrypted = wallet->getNode()->decrypt(BinaryData::CreateFromHex(password.toStdString()));
-      if (decrypted) {
-         bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-         if (bs::hd::Node(seed).getId() != wallet->getWalletId()) {
-            logger_->error("[WalletsProxy] invalid password for {}", walletId.toStdString());
-            emit walletError(walletId, tr("Invalid password for wallet %1 (id %2)")
-               .arg(QString::fromStdString(wallet->getName())).arg(walletId));
-            return false;
-         }
-      }
-   }
-   else {
-      decrypted = wallet->getNode();
-   }
+   const auto &decrypted = wallet->getRootNode(BinaryData::CreateFromHex(password.toStdString()));
    if (!decrypted) {
       logger_->error("[WalletsProxy] failed to decrypt root node for {}", walletId.toStdString());
       emit walletError(walletId, tr("Failed to decrypt private key for wallet %1 (id %2)")
@@ -209,7 +194,6 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 WalletSeed *WalletsProxy::createWalletSeed() const
 {
    auto result = new WalletSeed(params_->netType(), (QObject *)this);
-   result->setEncType(WalletInfo::Password);
    return result;
 }
 
@@ -219,10 +203,11 @@ bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletS
       emit walletError({}, tr("Failed to get wallet seed"));
       return false;
    }
-   try {
+   try {    //!
+      const std::vector<bs::hd::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
+         , bs::wallet::EncryptionType::Password, {} } };
       walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
-         , seed->seed(), params_->getWalletsDir()
-         , BinaryData::CreateFromHex(password.toStdString()), isPrimary);
+         , seed->seed(), params_->getWalletsDir(), isPrimary, pwdData, { 1, 1 });
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
@@ -234,10 +219,11 @@ bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletS
 
 bool WalletsProxy::importWallet(bool isPrimary, WalletSeed *seed, const QString &password)
 {
-   try {
+   try { //!
+      const std::vector<bs::hd::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
+         , bs::wallet::EncryptionType::Password,{} } };
       walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
-         , seed->seed(), params_->getWalletsDir()
-         , BinaryData::CreateFromHex(password.toStdString()), isPrimary);
+         , seed->seed(), params_->getWalletsDir(), isPrimary, pwdData, { 1, 1 });
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to import wallet: {}", e.what());
