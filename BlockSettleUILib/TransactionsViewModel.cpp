@@ -21,7 +21,6 @@ TransactionsViewModel::TransactionsViewModel(std::shared_ptr<PyBlockDataManager>
    , bdm_(bdm)
    , ledgerDelegate_(ledgerDelegate)
    , walletsManager_(walletsManager)
-   , updateRunning_(false)
    , threadPool_(this)
    , defaultWallet_(defWlt)
    , stopped_(false)
@@ -277,15 +276,16 @@ bool TransactionsViewModel::txKeyExists(const std::string &key)
 
 void TransactionsViewModel::loadNewTransactions()
 {
-   if (refreshing_) {
+   bool expected = false;
+   if (!std::atomic_compare_exchange_strong(&refreshing_, &expected, true)) {
       return;
    }
-   refreshing_ = true;
+
    std::vector<LedgerEntryData> allPages = walletsManager_->getTxPage(0);
 
    insertNewTransactions(allPages);
    updateBlockHeight(allPages);
-   refreshing_ = false;
+   refreshing_.store(false);
 }
 
 void TransactionsViewModel::insertNewTransactions(const std::vector<LedgerEntryData> &page)
