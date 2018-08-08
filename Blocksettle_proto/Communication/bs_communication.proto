@@ -13,7 +13,7 @@ enum RequestType
    GenerateCCSeedRequestType            = 7;
    RevokeAuthAddressRequestType         = 8;
    ConfirmAuthAddressSubmitType         = 9;
-   FundCCGenAddrRequestType		= 10;
+   FundCCGenAddrRequestType		       = 10;
 }
 
 enum AddressNetworkType
