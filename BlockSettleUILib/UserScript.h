@@ -29,11 +29,14 @@ public:
    MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent);
    ~MarketData() noexcept override = default;
 
+   double bid(const QString &sec) const;
+   double ask(const QString &sec) const;
+
 private slots:
    void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 
 private:
-   std::map<bs::network::Asset::Type, std::map<QString, std::pair<double, double>>> data_;
+   std::map<QString, std::pair<double, double>> data_;
 }; // class MarketData
 
 

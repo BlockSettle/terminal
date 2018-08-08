@@ -67,7 +67,29 @@ MarketData::MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated);
 }
 
-void MarketData::onMDUpdated(bs::network::Asset::Type asset, const QString &security,
+double MarketData::bid(const QString &sec) const
+{
+   auto it = data_.find(sec);
+
+   if (it != data_.cend()) {
+      return it->second.first;
+   } else {
+      return 0.0;
+   }
+}
+
+double MarketData::ask(const QString &sec) const
+{
+   auto it = data_.find(sec);
+
+   if (it != data_.cend()) {
+      return it->second.second;
+   } else {
+      return 0.0;
+   }
+}
+
+void MarketData::onMDUpdated(bs::network::Asset::Type, const QString &security,
    bs::network::MDFields data)
 {
    std::pair<double, double> prices;
@@ -86,7 +108,7 @@ void MarketData::onMDUpdated(bs::network::Asset::Type asset, const QString &secu
       }
    }
 
-   data_[asset][security] = prices;
+   data_[security] = prices;
 }
 
 
