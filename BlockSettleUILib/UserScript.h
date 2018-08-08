@@ -109,6 +109,14 @@ public:
    double quantity() const    { return quantity_; }
    int assetType() const      { return assetType_; }
 
+   enum AssetType {
+      SpotFX = 1,
+      SpotXBT,
+      PrivateMarket
+   };
+
+   Q_ENUM(AssetType)
+
 private:
    QString  requestId_;
    QString  product_;
