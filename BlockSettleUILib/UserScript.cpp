@@ -12,11 +12,10 @@ UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
    : QObject(parent)
    , logger_(logger)
    , engine_(new QQmlEngine(this))
-   , ctx_(new QQmlContext(engine_, this))
    , component_(nullptr)
    , md_(new MarketData(mdProvider, this))
 {
-   ctx_->setContextProperty(QLatin1String("marketData"), md_);
+   engine_->rootContext()->setContextProperty(QLatin1String("marketData"), md_);
 }
 
 UserScript::~UserScript()
@@ -146,6 +145,8 @@ QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
       connect(qrr, &BSQuoteReqReply::pullingQuoteReply, [this](const QString &reqId) {
          emit pullingQuoteReply(reqId);
       });
+
+      qrr->start();
    }
    return rv;
 }

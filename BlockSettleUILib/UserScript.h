@@ -29,8 +29,8 @@ public:
    MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent);
    ~MarketData() noexcept override = default;
 
-   double bid(const QString &sec) const;
-   double ask(const QString &sec) const;
+   Q_INVOKABLE double bid(const QString &sec) const;
+   Q_INVOKABLE double ask(const QString &sec) const;
 
 private slots:
    void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
@@ -59,7 +59,6 @@ signals:
 private:
    std::shared_ptr<spdlog::logger> logger_;
    QQmlEngine *engine_;
-   QQmlContext *ctx_;
    QQmlComponent *component_;
    MarketData *md_;
 };
@@ -184,6 +183,7 @@ public:
    Q_INVOKABLE bool pullQuoteReply();
    Q_INVOKABLE QString product();
    Q_INVOKABLE double accountBalance(const QString &product);
+   void start() { emit started(); }
 
 signals:
    void expirationInSecChanged();
@@ -194,6 +194,7 @@ signals:
    void sendFailed(const QString &reason);
    void sendingQuoteReply(const QString &reqId, double price);
    void pullingQuoteReply(const QString &reqId);
+   void started();
 
 private:
    BSQuoteRequest *quoteReq_;
