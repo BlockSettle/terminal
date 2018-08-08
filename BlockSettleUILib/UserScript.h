@@ -2,21 +2,48 @@
 #define __USER_SCRIPT_H__
 
 #include <QQmlEngine>
+#include <QQmlContext>
 #include <memory>
 #include "CommonTypes.h"
+
+#include <map>
 
 namespace spdlog {
    class logger;
 }
 class QQmlComponent;
 class AssetManager;
+class MarketDataProvider;
+
+
+//
+// MarketData
+//
+
+//! Market data for user script.
+class MarketData : public QObject
+{
+   Q_OBJECT
+
+public:
+   MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent);
+   ~MarketData() noexcept override = default;
+
+private slots:
+   void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
+
+private:
+   std::map<bs::network::Asset::Type, std::map<QString, std::pair<double, double>>> data_;
+}; // class MarketData
+
 
 class UserScript : public QObject
 {
 Q_OBJECT
 
 public:
-   UserScript(const std::shared_ptr<spdlog::logger> logger, QObject* parent = nullptr);
+   UserScript(const std::shared_ptr<spdlog::logger> logger,
+      std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent = nullptr);
    ~UserScript() override;
 
    void load(const QString &filename);
@@ -28,8 +55,10 @@ signals:
 
 private:
    std::shared_ptr<spdlog::logger> logger_;
-   QQmlEngine engine_;
+   QQmlEngine *engine_;
+   QQmlContext *ctx_;
    QQmlComponent *component_;
+   MarketData *md_;
 };
 
 
@@ -38,8 +67,9 @@ class AutoQuoter : public QObject
 Q_OBJECT
 
 public:
-   AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename
-      , const std::shared_ptr<AssetManager> &assetManager, QObject* parent = nullptr);
+   AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename,
+      const std::shared_ptr<AssetManager> &assetManager,
+      std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);

@@ -4,13 +4,20 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include "AssetManager.h"
 #include "CurrencyPair.h"
+#include "MarketDataProvider.h"
 
 
-UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger, QObject* parent)
- : QObject(parent)
+UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
+   std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
+   : QObject(parent)
    , logger_(logger)
+   , engine_(new QQmlEngine(this))
+   , ctx_(new QQmlContext(engine_, this))
    , component_(nullptr)
-{ }
+   , md_(new MarketData(mdProvider, this))
+{
+   ctx_->setContextProperty(QLatin1String("marketData"), md_);
+}
 
 UserScript::~UserScript()
 {
@@ -21,7 +28,7 @@ UserScript::~UserScript()
 void UserScript::load(const QString &filename)
 {
    if (component_)  component_->deleteLater();
-   component_ = new QQmlComponent(&engine_, QUrl::fromLocalFile(filename), QQmlComponent::Asynchronous, this);
+   component_ = new QQmlComponent(engine_, QUrl::fromLocalFile(filename), QQmlComponent::Asynchronous, this);
    if (!component_) {
       logger_->error("Failed to load component for file {}", filename.toStdString());
       emit failed(tr("Failed to load script %1").arg(filename));
@@ -50,9 +57,43 @@ QObject *UserScript::instantiate()
 }
 
 
+//
+// MarketData
+//
+
+MarketData::MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent)
+   : QObject(parent)
+{
+   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated);
+}
+
+void MarketData::onMDUpdated(bs::network::Asset::Type asset, const QString &security,
+   bs::network::MDFields data)
+{
+   std::pair<double, double> prices;
+
+   for (const auto &field : data) {
+      switch (field.type) {
+         case bs::network::MDField::PriceBid:
+            prices.first = field.value;
+            break;
+
+         case bs::network::MDField::PriceOffer:
+            prices.second = field.value;
+            break;
+
+         default:  break;
+      }
+   }
+
+   data_[asset][security] = prices;
+}
+
+
 AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename
-   , const std::shared_ptr<AssetManager> &assetManager, QObject* parent)
-   : QObject(parent), script_(logger, this), logger_(logger), assetManager_(assetManager)
+   , const std::shared_ptr<AssetManager> &assetManager
+   , std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
+   : QObject(parent), script_(logger, mdProvider, this), logger_(logger), assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
    qmlRegisterUncreatableType<BSQuoteRequest>("bs.terminal", 1, 0, "BSQuoteRequest", tr("Can't create this type"));
