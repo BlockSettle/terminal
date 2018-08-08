@@ -108,6 +108,14 @@ void MarketData::onMDUpdated(bs::network::Asset::Type, const QString &security,
       }
    }
 
+   if (qFuzzyIsNull(prices.first)) {
+      prices.first = data_[security].first;
+   }
+
+   if (qFuzzyIsNull(prices.second)) {
+      prices.second = data_[security].second;
+   }
+
    data_[security] = prices;
 }
 
