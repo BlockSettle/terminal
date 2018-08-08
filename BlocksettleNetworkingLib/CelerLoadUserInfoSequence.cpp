@@ -32,8 +32,11 @@ CelerLoadUserInfoSequence::CelerLoadUserInfoSequence(const std::shared_ptr<spdlo
          , { false, nullptr, &CelerLoadUserInfoSequence::sendGetSubmittedCCAddressListRequest }
          , { true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr }
 
-          ,{ false, nullptr, &CelerLoadUserInfoSequence::sendGetBitcoinParticipantRequest }
-          ,{ true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr }
+         ,{ false, nullptr, &CelerLoadUserInfoSequence::sendGetBitcoinParticipantRequest }
+         ,{ true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr }
+
+         ,{ false, nullptr, &CelerLoadUserInfoSequence::sendGetBitcoinDealerRequest }
+         ,{ true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr }
        })
  , logger_(logger)
  , cb_(cb)
@@ -78,6 +81,11 @@ CelerMessage CelerLoadUserInfoSequence::sendGetSubmittedCCAddressListRequest()
 CelerMessage CelerLoadUserInfoSequence::sendGetBitcoinParticipantRequest()
 {
    return getPropertyRequest(CelerUserProperties::BitcoinParticipantPropertyName);
+}
+
+CelerMessage CelerLoadUserInfoSequence::sendGetBitcoinDealerRequest()
+{
+   return getPropertyRequest(CelerUserProperties::BitcoinDealerPropertyName);
 }
 
 CelerMessage CelerLoadUserInfoSequence::getPropertyRequest(const std::string& name)

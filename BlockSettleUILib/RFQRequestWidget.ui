@@ -153,7 +153,7 @@
             <item>
              <widget class="QLabel" name="label">
               <property name="text">
-               <string>Trade Blotter</string>
+               <string>TRADE BLOTTER</string>
               </property>
               <property name="headerLabel" stdset="0">
                <bool>true</bool>
@@ -164,7 +164,7 @@
           </widget>
          </item>
          <item>
-          <widget class="TreeViewWithEnterKey" name="treeViewOrders">
+          <widget class="OrdersView" name="treeViewOrders">
            <property name="editTriggers">
             <set>QAbstractItemView::NoEditTriggers</set>
            </property>
@@ -246,15 +246,15 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>TreeViewWithEnterKey</class>
-   <extends>QTreeView</extends>
-   <header>TreeViewWithEnterKey.h</header>
-  </customwidget>
-  <customwidget>
    <class>RFQTicketXBT</class>
    <extends>QWidget</extends>
    <header>RFQTicketXBT.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OrdersView</class>
+   <extends>QTreeView</extends>
+   <header>OrdersView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

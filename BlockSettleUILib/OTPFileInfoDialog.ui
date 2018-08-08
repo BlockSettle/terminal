@@ -135,7 +135,7 @@
                </size>
               </property>
               <property name="text">
-               <string>OTPId</string>
+               <string>OTP ID</string>
               </property>
              </widget>
             </item>
@@ -191,7 +191,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Import date:</string>
+               <string>Import Date</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -250,7 +250,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Used keys:</string>
+               <string>Key Count</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -309,7 +309,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Encrypted:</string>
+               <string>Encryption</string>
               </property>
              </widget>
             </item>
@@ -462,7 +462,7 @@
                <item>
                 <widget class="QLabel" name="label_5">
                  <property name="text">
-                  <string>New encryption:</string>
+                  <string>New encryption</string>
                  </property>
                 </widget>
                </item>
@@ -519,7 +519,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>Password:</string>
+                  <string>Password</string>
                  </property>
                 </widget>
                </item>
@@ -566,7 +566,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>Password again:</string>
+                  <string>Confirm Password</string>
                  </property>
                 </widget>
                </item>

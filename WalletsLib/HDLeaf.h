@@ -122,6 +122,7 @@ namespace bs {
          std::vector<bs::Address> GetIntAddressList() const override { return intAddresses_; }
          size_t GetExtAddressCount() const override { return extAddresses_.size(); }
          size_t GetIntAddressCount() const override { return intAddresses_.size(); }
+         bool IsExternalAddress(const Address &) const override;
          bs::Address GetNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
          bs::Address GetNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
          bs::Address GetRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
