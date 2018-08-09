@@ -8,6 +8,8 @@
 #include "MarketDataProvider.h"
 #include "WalletsManager.h"
 
+#include <algorithm>
+
 
 UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
    std::shared_ptr<MarketDataProvider> mdProvider,
@@ -147,6 +149,32 @@ int Constants::payOutTrxSize() const
 float Constants::feePerByte() const
 {
    return walletsManager_->estimatedFeePerByte(2);
+}
+
+double Constants::boughtXbt() const
+{
+   return std::accumulate(std::begin(boughtXbt_), std::end(boughtXbt_),
+      0.0,
+      [] (double value, const std::map<QString, double>::value_type& p)
+         { return value + p.second; });
+}
+
+void Constants::setBoughtXbt(double v, const QString &id)
+{
+   boughtXbt_[id] = v;
+}
+
+double Constants::soldXbt() const
+{
+   return std::accumulate(std::begin(soldXbt_), std::end(soldXbt_),
+      0.0,
+      [] (double value, const std::map<QString, double>::value_type& p)
+         { return value + p.second; });
+}
+
+void Constants::setSoldXbt(double v, const QString &id)
+{
+   soldXbt_[id] = v;
 }
 
 
