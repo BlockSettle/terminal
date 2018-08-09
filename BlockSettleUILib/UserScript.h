@@ -13,6 +13,7 @@ namespace spdlog {
 class QQmlComponent;
 class AssetManager;
 class MarketDataProvider;
+class WalletsManager;
 
 
 //
@@ -39,13 +40,40 @@ private:
 }; // class MarketData
 
 
+//
+// Constants
+//
+
+//! Useful constants for user script.
+class Constants : public QObject
+{
+   Q_OBJECT
+
+   Q_PROPERTY(int payInTrxSize READ payInTrxSize)
+   Q_PROPERTY(int payOutTrxSize READ payOutTrxSize)
+   Q_PROPERTY(float feePerByte READ feePerByte)
+
+public:
+   Constants(std::shared_ptr<WalletsManager> walletsManager, QObject *parent);
+   ~Constants() noexcept override = default;
+
+   int payInTrxSize() const;
+   int payOutTrxSize() const;
+   float feePerByte() const;
+
+private:
+   std::shared_ptr<WalletsManager> walletsManager_;
+}; // class Constants
+
+
 class UserScript : public QObject
 {
 Q_OBJECT
 
 public:
    UserScript(const std::shared_ptr<spdlog::logger> logger,
-      std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent = nullptr);
+      std::shared_ptr<MarketDataProvider> mdProvider,
+      std::shared_ptr<WalletsManager> walletsManager, QObject* parent = nullptr);
    ~UserScript() override;
 
    void load(const QString &filename);
@@ -60,6 +88,7 @@ private:
    QQmlEngine *engine_;
    QQmlComponent *component_;
    MarketData *md_;
+   Constants *const_;
 };
 
 
@@ -70,7 +99,8 @@ Q_OBJECT
 public:
    AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename,
       const std::shared_ptr<AssetManager> &assetManager,
-      std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent = nullptr);
+      std::shared_ptr<MarketDataProvider> mdProvider,
+      std::shared_ptr<WalletsManager> walletsManager, QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);

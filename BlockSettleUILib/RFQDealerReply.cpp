@@ -882,7 +882,7 @@ void RFQDealerReply::initAQ(const QString &filename)
       return;
    }
    aqLoaded_ = false;
-   aq_ = new AutoQuoter(logger_, filename, assetManager_, mdProvider_, this);
+   aq_ = new AutoQuoter(logger_, filename, assetManager_, mdProvider_, walletsManager_, this);
    connect(aq_, &AutoQuoter::loaded, [this, filename] {
       aqLoaded_ = true;
       validateGUI();

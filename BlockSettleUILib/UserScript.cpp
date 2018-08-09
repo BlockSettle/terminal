@@ -6,17 +6,21 @@
 #include "AssetManager.h"
 #include "CurrencyPair.h"
 #include "MarketDataProvider.h"
+#include "WalletsManager.h"
 
 
 UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
-   std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
+   std::shared_ptr<MarketDataProvider> mdProvider,
+   std::shared_ptr<WalletsManager> walletsManager, QObject* parent)
    : QObject(parent)
    , logger_(logger)
    , engine_(new QQmlEngine(this))
    , component_(nullptr)
    , md_(new MarketData(mdProvider, this))
+   , const_(new Constants(walletsManager, this))
 {
    engine_->rootContext()->setContextProperty(QLatin1String("marketData"), md_);
+   engine_->rootContext()->setContextProperty(QLatin1String("constants"), const_);
 }
 
 UserScript::~UserScript()
@@ -120,10 +124,38 @@ void MarketData::onMDUpdated(bs::network::Asset::Type, const QString &security,
 }
 
 
+//
+// Constants
+//
+
+Constants::Constants(std::shared_ptr<WalletsManager> walletsManager, QObject *parent)
+   : QObject(parent)
+   , walletsManager_(walletsManager)
+{
+}
+
+int Constants::payInTrxSize() const
+{
+   return 125;
+}
+
+int Constants::payOutTrxSize() const
+{
+   return 82;
+}
+
+float Constants::feePerByte() const
+{
+   return walletsManager_->estimatedFeePerByte(2);
+}
+
+
 AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename
    , const std::shared_ptr<AssetManager> &assetManager
-   , std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
-   : QObject(parent), script_(logger, mdProvider, this), logger_(logger), assetManager_(assetManager)
+   , std::shared_ptr<MarketDataProvider> mdProvider
+   , std::shared_ptr<WalletsManager> walletsManager, QObject* parent)
+   : QObject(parent), script_(logger, mdProvider, walletsManager, this)
+   , logger_(logger), assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
    qmlRegisterUncreatableType<BSQuoteRequest>("bs.terminal", 1, 0, "BSQuoteRequest", tr("Can't create this type"));
