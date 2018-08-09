@@ -12,14 +12,13 @@
 
 
 UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
-   std::shared_ptr<MarketDataProvider> mdProvider,
-   std::shared_ptr<WalletsManager> walletsManager, QObject* parent)
+   std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
    : QObject(parent)
    , logger_(logger)
    , engine_(new QQmlEngine(this))
    , component_(nullptr)
    , md_(new MarketData(mdProvider, this))
-   , const_(new Constants(walletsManager, this))
+   , const_(new Constants(this))
 {
    engine_->rootContext()->setContextProperty(QLatin1String("marketData"), md_);
    engine_->rootContext()->setContextProperty(QLatin1String("constants"), const_);
@@ -60,6 +59,11 @@ QObject *UserScript::instantiate()
    auto rv = component_->create();
    if (!rv)  emit failed(tr("Failed to instantiate: %1").arg(component_->errorString()));
    return rv;
+}
+
+void UserScript::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+{
+   const_->setWalletsManager(walletsManager);
 }
 
 
@@ -130,9 +134,9 @@ void MarketData::onMDUpdated(bs::network::Asset::Type, const QString &security,
 // Constants
 //
 
-Constants::Constants(std::shared_ptr<WalletsManager> walletsManager, QObject *parent)
+Constants::Constants(QObject *parent)
    : QObject(parent)
-   , walletsManager_(walletsManager)
+   , walletsManager_(nullptr)
 {
 }
 
@@ -148,7 +152,11 @@ int Constants::payOutTrxSize() const
 
 float Constants::feePerByte() const
 {
-   return walletsManager_->estimatedFeePerByte(2);
+   if (walletsManager_) {
+      return walletsManager_->estimatedFeePerByte(2);
+   } else {
+      return 0.0;
+   }
 }
 
 QString Constants::xbtProductName() const
@@ -182,12 +190,16 @@ void Constants::setSoldXbt(double v, const QString &id)
    soldXbt_[id] = v;
 }
 
+void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+{
+   walletsManager_ = walletsManager;
+}
+
 
 AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename
    , const std::shared_ptr<AssetManager> &assetManager
-   , std::shared_ptr<MarketDataProvider> mdProvider
-   , std::shared_ptr<WalletsManager> walletsManager, QObject* parent)
-   : QObject(parent), script_(logger, mdProvider, walletsManager, this)
+   , std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
+   : QObject(parent), script_(logger, mdProvider, this)
    , logger_(logger), assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
@@ -228,6 +240,11 @@ QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
 void AutoQuoter::destroy(QObject *o)
 {
    delete o;
+}
+
+void AutoQuoter::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+{
+   script_.setWalletsManager(walletsManager);
 }
 
 

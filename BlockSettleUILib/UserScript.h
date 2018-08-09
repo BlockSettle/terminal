@@ -57,7 +57,7 @@ class Constants : public QObject
    Q_PROPERTY(QString xbtProductName READ xbtProductName)
 
 public:
-   Constants(std::shared_ptr<WalletsManager> walletsManager, QObject *parent);
+   explicit Constants(QObject *parent);
    ~Constants() noexcept override = default;
 
    int payInTrxSize() const;
@@ -70,6 +70,8 @@ public:
 
    double soldXbt() const;
    Q_INVOKABLE void setSoldXbt(double v, const QString &id);
+
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
 
 private:
    std::shared_ptr<WalletsManager> walletsManager_;
@@ -85,11 +87,13 @@ Q_OBJECT
 public:
    UserScript(const std::shared_ptr<spdlog::logger> logger,
       std::shared_ptr<MarketDataProvider> mdProvider,
-      std::shared_ptr<WalletsManager> walletsManager, QObject* parent = nullptr);
+      QObject* parent = nullptr);
    ~UserScript() override;
 
    void load(const QString &filename);
    QObject *instantiate();
+
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
 
 signals:
    void loaded();
@@ -112,11 +116,13 @@ public:
    AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename,
       const std::shared_ptr<AssetManager> &assetManager,
       std::shared_ptr<MarketDataProvider> mdProvider,
-      std::shared_ptr<WalletsManager> walletsManager, QObject* parent = nullptr);
+      QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);
    void destroy(QObject *);
+
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
 
 signals:
    void loaded();
