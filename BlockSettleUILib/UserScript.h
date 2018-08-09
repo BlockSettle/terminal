@@ -54,6 +54,7 @@ class Constants : public QObject
    Q_PROPERTY(float feePerByte READ feePerByte)
    Q_PROPERTY(double boughtXbt READ boughtXbt)
    Q_PROPERTY(double soldXbt READ soldXbt)
+   Q_PROPERTY(QString xbtProductName READ xbtProductName)
 
 public:
    Constants(std::shared_ptr<WalletsManager> walletsManager, QObject *parent);
@@ -62,6 +63,7 @@ public:
    int payInTrxSize() const;
    int payOutTrxSize() const;
    float feePerByte() const;
+   QString xbtProductName() const;
 
    double boughtXbt() const;
    Q_INVOKABLE void setBoughtXbt(double v, const QString &id);

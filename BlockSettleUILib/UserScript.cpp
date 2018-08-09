@@ -151,6 +151,11 @@ float Constants::feePerByte() const
    return walletsManager_->estimatedFeePerByte(2);
 }
 
+QString Constants::xbtProductName() const
+{
+   return QString::fromStdString(bs::network::XbtCurrency);
+}
+
 double Constants::boughtXbt() const
 {
    return std::accumulate(std::begin(boughtXbt_), std::end(boughtXbt_),
