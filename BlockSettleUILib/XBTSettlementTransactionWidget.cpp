@@ -12,6 +12,7 @@
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
+#include <CelerClient.h>
 
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -180,8 +181,8 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged()
       text = sValid;
       if (encType_ == bs::wallet::EncryptionType::Freja) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId());
-         frejaSign_->start(userId_, tr("XBT settlement TX for %1 in wallet %2").arg(QString::fromStdString(rfq_.security))
-            .arg(QString::fromStdString(rootWallet->getName())), rootWallet->getWalletId());
+         frejaSign_->start(userId_, tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security))
+            .arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out")), rootWallet->getWalletId());
       }
       break;
    case AddressVerificationState::VerificationFailed:
@@ -413,7 +414,7 @@ void XBTSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData sign
 
 void XBTSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager>& manager
    , const std::shared_ptr<AssetManager> &assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container, std::shared_ptr<CelerClient> celerClient)
 {
    logger_ = logger;
    authAddressManager_ = manager;
@@ -423,6 +424,9 @@ void XBTSettlementTransactionWidget::init(const std::shared_ptr<spdlog::logger> 
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
+
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &XBTSettlementTransactionWidget::onCancel);
 
    frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
    connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &XBTSettlementTransactionWidget::onFrejaSucceeded);
@@ -465,6 +469,8 @@ void XBTSettlementTransactionWidget::onPasswordChanged(const QString &)
    else {
       walletPassword_ = ui_->lineEditPassword->text().toStdString();
    }
+
+   updateAcceptButton();
 }
 
 void XBTSettlementTransactionWidget::updateAcceptButton()

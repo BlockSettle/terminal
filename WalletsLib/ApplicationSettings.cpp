@@ -102,8 +102,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { notifyOnTX,              SettingDef(QLatin1String("ShowTxNotification"), true) },
       { defaultAuthAddr,         SettingDef(QLatin1String("DefaultAuthAddress")) },
       { bsPublicKey,             SettingDef(QString(), QLatin1String("042aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fafa1270ccdc2cd285b5d90ddd3ef6f39c4c43efea52d75adadd16c6132e3ef880")) },
-      { logDefault,              SettingDef(QString(), QStringList() << LogFileName) },
-      { logMessages,             SettingDef(QString(), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v")) },
+      { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String("trace")) },
+      { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QString()) },
       { otpFileName,             SettingDef(QString(), AppendToWritableDir(OTPFileName))},
       { ccFileName,              SettingDef(QString(), AppendToWritableDir(CCFileName))},
       { txCacheFileName,         SettingDef(QString(), AppendToWritableDir(TxCacheFileName)) },
@@ -121,7 +121,13 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("http://193.138.218.36/terminal/downloads"))},
       { ResetPassword_Url,       SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-forgot-password"))},
       { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-registration")) },
-      { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0) }
+      { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0x06) },
+      { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
+      { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
+      { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },
+      { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
+      { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
+      { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) }
    };
 }
 
@@ -352,6 +358,9 @@ void ApplicationSettings::SetDefaultSettings(bool toFile)
    reset(closeToTray, toFile);
    reset(notifyOnTX, toFile);
 
+   reset(logDefault);
+   reset(logMessages);
+
    if (toFile) {
       set(initialized, true);
       SaveSettings();
@@ -554,11 +563,13 @@ std::vector<std::pair<std::string, unsigned int>>  ApplicationSettings::Unfinish
    return result;
 }
 
-std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig() const
+std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig(bool getDefaultValue) const
 {
    std::vector<bs::LogConfig> result;
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault)));
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault,
+      getDefaultValue)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages,
+      getDefaultValue)));
    return result;
 }
 
@@ -566,7 +577,11 @@ bs::LogConfig ApplicationSettings::parseLogConfig(const QStringList &config) con
 {
    bs::LogConfig result;
    if (config.size() > 0) {
-      result.fileName = AppendToWritableDir(config[0]).toStdString();
+      if (QDir::toNativeSeparators(config[0]).contains(QDir::separator())) {
+         result.fileName = QDir().absoluteFilePath(config[0]).toStdString();
+      } else {
+         result.fileName = AppendToWritableDir(config[0]).toStdString();
+      }
    }
    if (config.size() > 1) {
       result.category = config[1].toStdString();
@@ -583,6 +598,9 @@ bs::LogConfig ApplicationSettings::parseLogConfig(const QStringList &config) con
 bs::LogLevel ApplicationSettings::parseLogLevel(QString level) const
 {
    level = level.toLower();
+   if (level.contains(QLatin1String("trace"))) {
+      return bs::LogLevel::trace;
+   }
    if (level.contains(QLatin1String("debug"))) {
       return bs::LogLevel::debug;
    }

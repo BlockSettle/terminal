@@ -4,12 +4,14 @@
 #include <QObject>
 #include <QStatusBar>
 #include <QLabel>
-#include <QProgressBar>
 #include <QPixmap>
 #include <QIcon>
 
 #include <memory>
+
 #include "CelerClient.h"
+#include "CircleProgressBar.h"
+
 
 class AssetManager;
 class PyBlockDataManager;
@@ -84,12 +86,12 @@ private:
 private:
    QStatusBar     *statusBar_;
 
-   QLabel         *estimateLabel_;
-   QLabel         *balanceLabel_;
-   QLabel         *celerConnectionIconLabel_;
-   QLabel         *connectionStatusLabel_;
-   QLabel         *containerStatusLabel_;
-   QProgressBar   *progressBar_;
+   QLabel            *estimateLabel_;
+   QLabel            *balanceLabel_;
+   QLabel            *celerConnectionIconLabel_;
+   QLabel            *connectionStatusLabel_;
+   QLabel            *containerStatusLabel_;
+   CircleProgressBar *progressBar_;
 
    QIcon      iconCeler_;
    QPixmap    iconOffline_;

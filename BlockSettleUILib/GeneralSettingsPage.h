@@ -14,7 +14,10 @@ class WalletsManager;
 
 class GeneralSettingsPage : public QWidget
 {
-Q_OBJECT
+   Q_OBJECT
+
+signals:
+   void illformedSettings(bool illformed);
 
 public:
    GeneralSettingsPage(QWidget* parent = nullptr);
@@ -25,6 +28,15 @@ public:
 
    void applyChanges(const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<WalletsManager>& walletsMgr);
+
+private slots:
+   void onSelectLogFile();
+   void onSelectMsgLogFile();
+   void onLogFileNameEdited(const QString &txt);
+   void onLogLevelChanged(int);
+
+private:
+   void checkSettings();
 
 private:
    Ui::GeneralSettingsPage *ui_;

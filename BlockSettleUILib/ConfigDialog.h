@@ -22,11 +22,11 @@ public:
       , const std::shared_ptr<AssetManager> &assetMgr
       , QWidget* parent = nullptr);
 
-private:
+private slots:
    void onDisplayDefault();
    void onAcceptSettings();
-
    void onSelectionChanged(int currentRow);
+   void illformedSettings(bool illformed);
 
 private:
    Ui::ConfigDialog *ui_;

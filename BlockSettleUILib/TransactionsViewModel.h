@@ -122,7 +122,8 @@ public:
 
    enum Role {
       SortRole=Qt::UserRole,
-      FilterRole
+      FilterRole,
+      WalletRole
    };
 
    TransactionItems                    currentPage_;
@@ -131,7 +132,6 @@ public:
    std::shared_ptr<PyBlockDataManager> bdm_;
    std::shared_ptr<SafeLedgerDelegate> ledgerDelegate_;
    std::shared_ptr<WalletsManager>     walletsManager_;
-   std::atomic_bool                    updateRunning_;
    mutable QMutex                      updateMutex_;
    QThreadPool                         threadPool_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;

@@ -138,6 +138,17 @@ void CelerClient::loginSuccessCallback(const std::string& userName, const std::s
             UpdateSetFromString(submittedCCAddressListProperty_.value, submittedCCAddressSet_);
          }
 
+         const bool bd = (properties[CelerUserProperties::BitcoinDealerPropertyName].value == "true");
+         const bool bp = (bitcoinParticipant_.value == "true");
+
+         if (bp && bd) {
+            userType_ = tr("Dealing Participant");
+         } else if (bp && !bd) {
+            userType_ = tr("Market Participant");
+         } else {
+            userType_ = tr("Market Data Participant");
+         }
+
          emit OnConnectedToServer();
       });
       ExecuteSequence(getUserIdSequence);
@@ -447,6 +458,11 @@ void CelerClient::onTimerRestart()
 std::string CelerClient::userId() const
 {
    return userId_.value;
+}
+
+const QString& CelerClient::userType() const
+{
+   return userType_;
 }
 
 std::string CelerClient::getUserOtpId() const

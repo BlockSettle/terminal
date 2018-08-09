@@ -64,6 +64,7 @@ public:
 
    std::string userName() const;
    std::string userId() const;
+   const QString& userType() const;
 
    bool tradingAllowed() const;
 
@@ -134,6 +135,7 @@ private:
 
    std::string sessionToken_;
    std::string userName_;
+   QString userType_;
    CelerProperty userId_;
    CelerProperty bitcoinParticipant_;
 

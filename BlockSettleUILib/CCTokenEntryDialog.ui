@@ -198,6 +198,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QLabel" name="labelFreja">
+           <property name="text">
+            <string>Freja eID</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="labelTokenHint">
            <property name="text">
             <string>Enter token you received from BlockSettle</string>

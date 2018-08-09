@@ -587,18 +587,25 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
          }
          hdWallet = parent ? parent->hdWallet() : nullptr;
       }
-      const bool encrypted = (hdWallet && (hdWallet->encryptionType() != bs::wallet::EncryptionType::Unencrypted));
 
       switch (role) {
       case NameRole:       return node->data(static_cast<int>(WalletRegColumns::ColumnName), Qt::DisplayRole);
       case DescRole:       return node->data(static_cast<int>(WalletRegColumns::ColumnDescription), Qt::DisplayRole);
-      case StateRole:      return encrypted ? tr("Yes") : ((node->type() == WalletNode::Type::Leaf) ? tr("No") : QString());
       case WalletIdRole:   return QString::fromStdString(node->id());
+      case IsEncryptedRole: return hdWallet ? static_cast<int>(hdWallet->encryptionType()) : 0;
+      case EncKeyRole:     return hdWallet ? QString::fromStdString(hdWallet->encryptionKey().toBinStr()) : QString();
+      case StateRole:
+         if ((node->type() != WalletNode::Type::Leaf)) {
+            return {};
+         }
+         switch (hdWallet ? hdWallet->encryptionType() : bs::wallet::EncryptionType::Unencrypted) {
+         case bs::wallet::EncryptionType::Password:   return tr("Password");
+         case bs::wallet::EncryptionType::Freja:   return tr("Freja eID");
+         default:    return tr("No");
+         }
+      case RootWalletIdRole:  return hdWallet ? QString::fromStdString(hdWallet->getWalletId()) : QString();
       case IsHDRootRole:   return ((node->type() == WalletNode::Type::WalletPrimary)
                                  || (node->type() == WalletNode::Type::WalletRegular));
-      case IsEncryptedRole: {
-         return encrypted;
-      }
       default:    break;
       }
    }
@@ -607,12 +614,14 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> QmlWalletsViewModel::roleNames() const
 {
-   QHash<int, QByteArray> result;
-   result.insert(NameRole, QByteArrayLiteral("name"));
-   result.insert(DescRole, QByteArrayLiteral("desc"));
-   result.insert(StateRole, QByteArrayLiteral("state"));
-   result.insert(WalletIdRole, QByteArrayLiteral("walletId"));
-   result.insert(IsHDRootRole, QByteArrayLiteral("isHdRoot"));
-   result.insert(IsHDRootRole, QByteArrayLiteral("isEncrypted"));
-   return result;
+   return QHash<int, QByteArray> {
+      { NameRole, QByteArrayLiteral("name") },
+      { DescRole, QByteArrayLiteral("desc") },
+      { StateRole, QByteArrayLiteral("state") },
+      { WalletIdRole, QByteArrayLiteral("walletId") },
+      { IsHDRootRole, QByteArrayLiteral("isHdRoot") },
+      { RootWalletIdRole, QByteArrayLiteral("rootWalletId") },
+      { IsEncryptedRole, QByteArrayLiteral("isEncrypted") },
+      { EncKeyRole, QByteArrayLiteral("encryptionKey") }
+   };
 }

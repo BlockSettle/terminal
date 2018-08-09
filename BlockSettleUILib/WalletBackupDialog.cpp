@@ -5,12 +5,11 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QStandardPaths>
-#include <QBuffer>
 
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
-#include "PDFWriter.h"
+#include "PaperBackupWriter.h"
 #include "SignContainer.h"
 #include "WalletBackupFile.h"
 #include "UiUtils.h"
@@ -110,31 +109,14 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
       f.close();
    }
    else {
-      QByteArray data;
-      QBuffer buf(&data);
-      UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2))
-         .save(&buf, "PNG");
-
-      QVariantHash vars = {
-         { QLatin1String("WalletName"), QString::fromStdString(wallet_->getName()) },
-         { QLatin1String("WalletID"), QString::fromStdString(wallet_->getWalletId()) },
-         { QLatin1String("privkey1"), QString::fromStdString(easyData.part1) },
-         { QLatin1String("privkey2"), QString::fromStdString(easyData.part2) },
-         { QLatin1String("QR"), QString::fromStdString(data.toBase64().toStdString()) }
-      };
-      if (chainCode.isNull()) {
-         vars[QLatin1String("chaincode1")] = QString();
-         vars[QLatin1String("chaincode2")] = QString();
-      }
-      else {
-         vars[QLatin1String("chaincode1")] = QString::fromStdString(edChainCode.part1);
-         vars[QLatin1String("chaincode2")] = QString::fromStdString(edChainCode.part2);
-      }
-
       try {
-         PDFWriter pdfWriter(QLatin1String(":/TEMPLATE_WALLET_BACKUP"), QString::fromStdString(":/"));
-         pdfWriter.substitute(vars);
-         if (!pdfWriter.output(filePath())) {
+         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet_->getName()),
+            QString::fromStdString(wallet_->getWalletId()),
+            QString::fromStdString(easyData.part1),
+            QString::fromStdString(easyData.part2),
+            QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png")),
+            UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2)));
+         if (!pdfWriter.write(filePath())) {
             throw std::runtime_error("write failure");
          }
       }
@@ -191,7 +173,7 @@ void WalletBackupDialog::onPasswordChanged()
 
 void WalletBackupDialog::startFrejaSign()
 {
-   frejaSign_.start(userId_, tr("Backup wallet %1").arg(QString::fromStdString(wallet_->getName())), wallet_->getWalletId());
+   frejaSign_.start(userId_, tr("Backup Wallet"), wallet_->getWalletId());
    ui_->pushButtonFreja->setEnabled(false);
 }
 

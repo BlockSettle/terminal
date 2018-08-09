@@ -19,6 +19,7 @@
 #include <QPixmap>
 #include <QDebug>
 #include <QStyle>
+#include <QAbstractItemModel>
 
 #include <algorithm>
 
@@ -502,4 +503,70 @@ void UiUtils::setWrongState(QWidget *widget, bool wrong)
    widget->style()->unpolish(widget);
    widget->setProperty("wrongState", wrong);
    widget->style()->polish(widget);
+}
+
+ApplicationSettings::Setting UiUtils::limitRfqSetting(bs::network::Asset::Type type)
+{
+   switch (type) {
+      case bs::network::Asset::SpotFX :
+         return ApplicationSettings::FxRfqLimit;
+
+      case bs::network::Asset::SpotXBT :
+         return ApplicationSettings::XbtRfqLimit;
+
+      case bs::network::Asset::PrivateMarket :
+         return ApplicationSettings::PmRfqLimit;
+
+      default :
+         return ApplicationSettings::FxRfqLimit;
+   }
+}
+
+ApplicationSettings::Setting UiUtils::limitRfqSetting(const QString &name)
+{
+   if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotFX))) {
+      return ApplicationSettings::FxRfqLimit;
+   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::SpotXBT))) {
+      return ApplicationSettings::XbtRfqLimit;
+   } else if (name ==
+         QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket))) {
+            return ApplicationSettings::PmRfqLimit;
+   } else {
+      return ApplicationSettings::FxRfqLimit;
+   }
+}
+
+QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
+{
+   switch (s) {
+      case ApplicationSettings::FxRfqLimit :
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotFX));
+
+      case ApplicationSettings::XbtRfqLimit :
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT));
+
+      case ApplicationSettings::PmRfqLimit :
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
+
+      default :
+         return QString();
+   }
+}
+
+QString UiUtils::modelPath(const QModelIndex &index, QAbstractItemModel *model)
+{
+   if (model) {
+      QModelIndex idx = model->index(index.row(), 0, index.parent());
+
+      QString res = QString::fromLatin1("/") + idx.data().toString();
+
+      while (idx.parent().isValid()) {
+         idx = idx.parent();
+         res.prepend(QString::fromLatin1("/") + idx.data().toString());
+      }
+
+      return res;
+   } else {
+      return QString();
+   }
 }

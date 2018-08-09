@@ -53,7 +53,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
       });
       connect(&frejaSignOld_, &FrejaSign::failed, [this](const QString &) { emit reject(); });
 
-      const auto title = tr("Current password for wallet %1").arg(QString::fromStdString(wallet_->getName()));
+      const auto title = tr("Activate Freja eID signing");
       frejaSignOld_.start(QString::fromStdString(encKey.toBinStr()), title, wallet_->getWalletId());
    }
 
@@ -129,7 +129,7 @@ void ChangeWalletPasswordDialog::accept()
       ui_->pushButtonOk->setEnabled(false);
       ui_->radioButtonPassword->setEnabled(false);
       ui_->radioButtonFreja->setEnabled(false);
-      const auto title = tr("New password for wallet %1").arg(QString::fromStdString(wallet_->getName()));
+      const auto title = tr("Activate Freja eID signing");
       frejaSignNew_.start(ui_->lineEditFreja->text(), title, wallet_->getWalletId());
    }
    else {

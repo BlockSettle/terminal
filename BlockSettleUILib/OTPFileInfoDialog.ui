@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>372</width>
-    <height>367</height>
+    <height>405</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -135,7 +135,7 @@
                </size>
               </property>
               <property name="text">
-               <string>OTPId</string>
+               <string>OTP ID</string>
               </property>
              </widget>
             </item>
@@ -191,7 +191,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Import date:</string>
+               <string>Import Date</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -250,7 +250,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Used keys:</string>
+               <string>Key Count</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -309,7 +309,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Encrypted:</string>
+               <string>Encryption</string>
               </property>
              </widget>
             </item>
@@ -388,7 +388,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QWidget" name="horizontalWidget4" native="true">
+             <widget class="QWidget" name="widgetPasswordOld" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_6">
                <property name="spacing">
                 <number>5</number>
@@ -435,7 +435,59 @@
              </widget>
             </item>
             <item>
-             <widget class="QWidget" name="horizontalWidget5" native="true">
+             <widget class="QLabel" name="labelFrejaOld">
+              <property name="text">
+               <string>Freja eID</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="widgetPasswordNew1_2" native="true">
+              <layout class="QHBoxLayout" name="horizontalLayout_10">
+               <property name="spacing">
+                <number>5</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="label_5">
+                 <property name="text">
+                  <string>New encryption</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radioButtonPassword">
+                 <property name="text">
+                  <string>Password</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radioButtonFreja">
+                 <property name="text">
+                  <string>Freja eID</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="widgetPasswordNew1" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_7">
                <property name="spacing">
                 <number>5</number>
@@ -467,7 +519,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>New:</string>
+                  <string>Password</string>
                  </property>
                 </widget>
                </item>
@@ -482,7 +534,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWidget" name="horizontalWidget6" native="true">
+             <widget class="QWidget" name="widgetPasswordNew2" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_8">
                <property name="spacing">
                 <number>5</number>
@@ -514,7 +566,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>New again:</string>
+                  <string>Confirm Password</string>
                  </property>
                 </widget>
                </item>
@@ -535,6 +587,41 @@
               </property>
               <property name="statusWarning" stdset="0">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widgetFreja" native="true">
+           <layout class="QHBoxLayout" name="horizontalLayout_9">
+            <property name="spacing">
+             <number>5</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLineEdit" name="lineEditFrejaId">
+              <property name="echoMode">
+               <enum>QLineEdit::Normal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonFreja">
+              <property name="text">
+               <string>Sign with Freja eID</string>
               </property>
              </widget>
             </item>

@@ -6,11 +6,12 @@
 
 #include <QObject>
 #include <QString>
+#include "MetaData.h"
+
 
 namespace spdlog {
    class logger;
-};
-
+}
 class CelerClient;
 class OTPFile;
 class SecureBinaryData;
@@ -30,7 +31,8 @@ public:
 
 public:
    using cbPassword = std::function<SecureBinaryData (void)>;
-   using cbChangePassword = std::function<bool (SecureBinaryData &oldPass, SecureBinaryData &newPass)>;
+   using cbChangePassword = std::function<bool (const std::shared_ptr<OTPFile> &, SecureBinaryData &oldPass
+      , SecureBinaryData &newPass, bs::wallet::EncryptionType &, SecureBinaryData &encKey)>;
 
    OTPManager(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings>& appSettings
@@ -56,12 +58,16 @@ public:
    QString           GetShortId() const;
    QString           GetImportDateString() const;
 
+   bs::wallet::EncryptionType GetEncType() const;
+   QString           GetEncKey() const;
+
    unsigned int      GetUsedKeysCount() const;
    bool UpdatePassword(cbChangePassword);
    bool IsEncrypted() const;
    bool IsPasswordCorrect(const SecureBinaryData &password) const;
 
-   OTPImportResult   ImportOTPForCurrentUser(const SecureBinaryData& rootKey, const SecureBinaryData &passphrase);
+   OTPImportResult   ImportOTPForCurrentUser(const SecureBinaryData& rootKey, const SecureBinaryData &passphrase
+      , bs::wallet::EncryptionType encType = bs::wallet::EncryptionType::Password, const SecureBinaryData &encKey = {});
    bool              RemoveOTPForCurrentUser();
 
    using SignedCb = std::function<void (const SecureBinaryData &signature, const std::string &otpId

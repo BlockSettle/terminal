@@ -3,8 +3,12 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "WalletsManager.h"
+#include "GeneralSettingsPage.h"
 
 #include "ui_ConfigDialog.h"
+
+#include <QPushButton>
+
 
 ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<WalletsManager>& walletsMgr
@@ -40,6 +44,8 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
    connect(ui_->pushButtonSetDefault, &QPushButton::clicked, this, &ConfigDialog::onDisplayDefault);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ConfigDialog::reject);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ConfigDialog::onAcceptSettings);
+   connect(ui_->pageGeneral, &GeneralSettingsPage::illformedSettings,
+      this, &ConfigDialog::illformedSettings);
 }
 
 void ConfigDialog::onDisplayDefault()
@@ -65,6 +71,9 @@ void ConfigDialog::onAcceptSettings()
 void ConfigDialog::onSelectionChanged(int currentRow)
 {
    ui_->stackedWidget->setCurrentIndex(currentRow);
-   ui_->stackedWidget->adjustSize();
-   adjustSize();
+}
+
+void ConfigDialog::illformedSettings(bool illformed)
+{
+   ui_->pushButtonOk->setEnabled(!illformed);
 }

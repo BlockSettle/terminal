@@ -9,6 +9,13 @@
 #include <memory>
 #include "CommonTypes.h"
 #include "BTCNumericTypes.h"
+#include "ApplicationSettings.h"
+#include "CommonTypes.h"
+
+QT_BEGIN_NAMESPACE
+class QAbstractItemModel;
+QT_END_NAMESPACE
+
 
 class AuthAddressManager;
 class BinaryData;
@@ -112,6 +119,12 @@ namespace UiUtils
    QIcon icon( const char* name, const QVariantMap& options = QVariantMap() );
 
    void setWrongState(QWidget *widget, bool wrong);
+
+   ApplicationSettings::Setting limitRfqSetting(bs::network::Asset::Type type);
+   ApplicationSettings::Setting limitRfqSetting(const QString &name);
+   QString marketNameForLimit(ApplicationSettings::Setting s);
+
+   QString modelPath(const QModelIndex &index, QAbstractItemModel *model);
 
    extern const QLatin1String XbtCurrency;
 }

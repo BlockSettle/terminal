@@ -48,7 +48,7 @@ EnterWalletPassword::EnterWalletPassword(const QString& walletName, const std::s
          ui_->label->setText(tr("Freja eID auth: %1").arg(status));
       });
 
-      const auto title = tr("Password for wallet %1").arg(walletName);
+      const auto title = tr("Outgoing Transaction");
       frejaSign_.start(QString::fromStdString(encKey.toBinStr()), title, walletId);
       timer_.start();
    }

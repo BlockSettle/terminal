@@ -58,6 +58,7 @@ void LogManager::add(const std::vector<LogConfig> &configs)
 static spdlog::level::level_enum convertLevel(LogLevel level)
 {
    switch (level) {
+   case LogLevel::trace:   return spdlog::level::trace;
    case LogLevel::debug:   return spdlog::level::debug;
    case LogLevel::info:    return spdlog::level::info;
    case LogLevel::warn:    return spdlog::level::warn;

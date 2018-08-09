@@ -1269,7 +1269,7 @@ void RFQDealerReply::startFrejaSigning()
    }
    ui_->pushButtonFreja->setEnabled(false);
    frejaAS_->start(QString::fromStdString(walletEncKey_.toBinStr())
-      , tr("Turn on auto-sign for wallet %1").arg(QString::fromStdString(wallet->getName())), walletId);
+      , tr("Activate Auto-Signing"), walletId);
 }
 
 void RFQDealerReply::onFrejaSignComplete(SecureBinaryData password)

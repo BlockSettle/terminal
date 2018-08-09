@@ -22,6 +22,8 @@ public:
    explicit TreeViewWithEnterKey(QWidget *parent = nullptr);
    ~TreeViewWithEnterKey() noexcept override = default;
 
+   QStyleOptionViewItem viewOptions() const override;
+
 public slots:
    //! Activate view, set focus, select first item if not selected.
    void activate();

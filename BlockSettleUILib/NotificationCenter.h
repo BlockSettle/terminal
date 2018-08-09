@@ -9,6 +9,12 @@
 #include <QList>
 #include <QVariant>
 #include <QIcon>
+#include <QSystemTrayIcon>
+
+#ifdef BS_USE_DBUS
+#include "DBusNotification.h"
+#endif // BS_USE_DBUS
+
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -76,7 +82,8 @@ class NotificationTabResponder : public NotificationResponder
 {
    Q_OBJECT
 public:
-   NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi, QObject *parent = nullptr);
+   NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi,
+      std::shared_ptr<ApplicationSettings> appSettings, QObject *parent = nullptr);
 
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
 
@@ -84,12 +91,14 @@ private:
    struct TabAction {
       int   index;
       bool  checked;
+      bool  enabled;
    };
    TabAction getTabActionFor(bs::ui::NotifyType, bs::ui::NotifyMessage) const;
 
 private:
    const Ui::BSTerminalMainWindow * mainWinUi_;
    QIcon iconDot_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 class NotificationTrayIconResponder : public NotificationResponder
@@ -103,11 +112,25 @@ public:
 
 private slots:
    void newVersionMessageClicked();
+#ifdef BS_USE_DBUS
+   void notificationAction(const QString &action);
+#endif // BS_USE_DBUS
 
 private:
    std::shared_ptr<QSystemTrayIcon>       trayIcon_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    bool  newVersionMessage_ = false;
+
+   enum NotificationMode {
+      QSystemTray,
+      Freedesktop
+   };
+
+   NotificationMode notifMode_;
+
+#ifdef BS_USE_DBUS
+   DBusNotification *dbus_;
+#endif // BS_USE_DBUS
 };
 
 #endif // __NOTIFICATION_CENTER_H__

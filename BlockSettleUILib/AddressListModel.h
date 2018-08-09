@@ -29,6 +29,7 @@ public:
       QString  walletId;
       size_t   addrIndex = 0;
       bs::wallet::Type wltType = bs::wallet::Type::Unknown;
+      bool     isExternal;
 
       bool isMultiLineComment() const;
       QString getComment() const;
@@ -51,13 +52,15 @@ public:
       SortRole = Qt::UserRole,
       WalletIdRole,
       AddrIndexRole,
-      AddressRole
+      AddressRole,
+      IsExternalRole
    };
 
-   typedef enum AddressType {
+   enum AddressType {
       External = 1,
       Internal = 2,
-      All = 3
+      All = 3,
+      ExtAndNonEmptyInt = 4
    };
 
    typedef std::vector<std::shared_ptr<bs::Wallet>>   Wallets;
@@ -75,6 +78,7 @@ public:
 
 private slots:
    void updateData();
+   void removeEmptyIntAddresses();
 
 private:
    Wallets                    wallets_;
@@ -83,6 +87,7 @@ private:
 
    std::thread                updateThread_;
    std::atomic_bool           stopped_;
+   std::atomic_bool           processing_;
 
 private:
    void updateWallet(const std::shared_ptr<bs::Wallet> &);

@@ -1,5 +1,5 @@
-#ifndef __QUOTE_REQUESTS_WIDGET_H__
-#define __QUOTE_REQUESTS_WIDGET_H__
+#ifndef QUOTE_REQUESTS_WIDGET_H
+#define QUOTE_REQUESTS_WIDGET_H
 
 #include "ApplicationSettings.h"
 #include "QuoteRequestsModel.h"
@@ -9,6 +9,7 @@
 #include <QSortFilterProxyModel>
 #include <QStyledItemDelegate>
 #include <QApplication>
+#include <QProgressBar>
 
 #include <memory>
 #include <unordered_map>
@@ -32,9 +33,10 @@ namespace bs {
    class StatsCollector
    {
    public:
+      virtual ~StatsCollector() noexcept = default;
       virtual QColor getColorFor(const std::string &key) const = 0;
       virtual unsigned int getGradeFor(const std::string &key) const = 0;
-      virtual void saveState() {}
+      virtual void saveState();
    };
 
    class SecurityStatsCollector : public QObject, public StatsCollector
@@ -88,9 +90,18 @@ class ProgressDelegate : public QStyledItemDelegate
    Q_OBJECT
 
 public:
-   explicit ProgressDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
+   explicit ProgressDelegate(QWidget *parent = nullptr)
+      : QStyledItemDelegate(parent)
+   {
+      pbar_.setStyleSheet(QLatin1String("QProgressBar { border: 1px solid #1c2835; "
+         "border-radius: 4px; background-color: rgba(0, 0, 0, 0); }"));
+      pbar_.hide();
+   }
 
    void paint(QPainter *painter, const QStyleOptionViewItem &opt, const QModelIndex &index) const override;
+
+private:
+   QProgressBar pbar_;
 };
 
 
@@ -98,7 +109,8 @@ class AssetManager;
 class CelerClient;
 class QuoteRequestsModel;
 class QuoteReqSortModel;
-class TreeViewWithEnterKey;
+class RFQBlotterTreeView;
+class CelerClient;
 
 class QuoteRequestsWidget : public QWidget
 {
@@ -110,11 +122,12 @@ public:
 
    void init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
-      , const std::shared_ptr<ApplicationSettings> &appSettings);
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , std::shared_ptr<CelerClient> celerClient);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
 
-   TreeViewWithEnterKey* view() const;
+   RFQBlotterTreeView* view() const;
 
 signals:
    void Selected(const bs::network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -132,7 +145,6 @@ public slots:
 private slots:
    void onSettingChanged(int setting, QVariant val);
    void onQuoteRequest(const bs::network::QuoteReqNotification &qrn);
-   void onSecuritiesReceived();
    void onRowsChanged();
    void onRowsInserted(const QModelIndex &parent, int first, int last);
    void onRowsRemoved(const QModelIndex &parent, int first, int last);   
@@ -141,8 +153,8 @@ private slots:
    void onEnterKeyInQuoteRequestsPressed(const QModelIndex &index);
 
 private:
-   QString path(const QModelIndex &index) const;
    void expandIfNeeded(const QModelIndex &index = QModelIndex());
+   void saveCollapsedState();
 
 private:
    Ui::QuoteRequestsWidget* ui_;
@@ -160,17 +172,17 @@ class QuoteReqSortModel : public QSortFilterProxyModel
 {
    Q_OBJECT
 public:
-   QuoteReqSortModel(const std::shared_ptr<AssetManager>& assetMgr, QObject *parent)
-      : QSortFilterProxyModel(parent), assetManager_(assetMgr) {}
-   void SetFilter(const QStringList &visible);
+   QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent);
+
+   void showQuoted(bool on = true);
 
 protected:
+   bool filterAcceptsRow(int row, const QModelIndex &parent) const override;
    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
-   bool filterAcceptsRow(int source_row, const QModelIndex & source_parent) const override;
 
 private:
-   std::shared_ptr<AssetManager> assetManager_;
-   std::set<QString>             visible_;
+   QuoteRequestsModel * model_;
+   bool showQuoted_;
 };
 
-#endif // __QUOTE_REQUESTS_WIDGET_H__
+#endif // QUOTE_REQUESTS_WIDGET_H

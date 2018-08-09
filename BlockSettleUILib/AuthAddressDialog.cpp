@@ -15,12 +15,13 @@
 
 
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager> &assetMgr
+   , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<OTPManager> &otpMgr
    , const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AuthAddressDialog())
    , authAddressManager_(authAddressManager)
    , assetManager_(assetMgr)
+   , otpManager_(otpMgr)
    , settings_(settings)
 {
    ui_->setupUi(this);
@@ -65,6 +66,8 @@ void AuthAddressDialog::showEvent(QShowEvent *evt)
 
    ui_->treeViewAuthAdress->selectionModel()->clearSelection();
 
+   ui_->labelHint->clear();
+
    ui_->pushButtonCreate->setEnabled(authAddressManager_->HaveAuthWallet());
    ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
 
@@ -80,8 +83,6 @@ bool AuthAddressDialog::unsubmittedExist() const
 
 void AuthAddressDialog::updateUnsubmittedState()
 {
-   ui_->labelHint->clear();
-
    for (size_t i = 0; i < authAddressManager_->GetAddressCount(); i++) {
       switch (authAddressManager_->GetState(authAddressManager_->GetAddress(i))) {
       case AddressVerificationState::NotSubmitted:
@@ -154,7 +155,8 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
             break;
          }
       }
-      ui_->labelHint->setText(tr("Your Authentication Address can now be Verified. Please press <b>Verify</b> and enter your password to execute the address verification"));
+
+      ui_->labelHint->setText(tr("Your Authentication Address can now be Verified. Please press <b>Verify</b> and enter your password to execute the address verification."));
       ui_->treeViewAuthAdress->setFocus();
    }
 }
@@ -332,13 +334,14 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
    SecureBinaryData otpPassword = {};
 
    if (authAddressManager_->needsOTPpassword()) {
-      EnterOTPPasswordDialog passwordDialog{tr("Enter password to submit Authentication Address"), this};
+      EnterOTPPasswordDialog passwordDialog(otpManager_
+         , tr("Authentication Address Submission"), this);
       if (passwordDialog.exec() != QDialog::Accepted) {
          authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
          lastSubmittedAddress_ = bs::Address{};
          return;
       }
-      otpPassword = SecureBinaryData(passwordDialog.GetPassword().toStdString());
+      otpPassword = SecureBinaryData(passwordDialog.GetPassword());
    }
 
    authAddressManager_->ConfirmSubmitForVerification(lastSubmittedAddress_, otpPassword);

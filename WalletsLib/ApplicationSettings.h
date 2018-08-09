@@ -78,6 +78,12 @@ public:
       ResetPassword_Url,
       GetAccount_Url,
       WalletFiltering,
+      FxRfqLimit,
+      XbtRfqLimit,
+      PmRfqLimit,
+      DisableBlueDotOnTabOfRfqBlotter,
+      PriceUpdateInterval,
+      ShowQuoted,
       _last
    };
 
@@ -112,7 +118,7 @@ public:
 
    ArmorySettings GetArmorySettings() const;
 
-   std::vector<bs::LogConfig> GetLogsConfig() const;
+   std::vector<bs::LogConfig> GetLogsConfig(bool getDefaultValue = false) const;
 
    unsigned int GetWalletScanIndex(const std::string &id) const;
    void SetWalletScanIndex(const std::string &id, unsigned int index);

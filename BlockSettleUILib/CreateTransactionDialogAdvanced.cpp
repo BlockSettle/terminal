@@ -427,9 +427,7 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
 
    if (!changeAddressFixed_) {
       bool changeSelectionEnabled = summary.hasChange || (summary.transactionSize == 0);
-      ui_->radioButtonNewAddrNative->setEnabled(changeSelectionEnabled);
-      ui_->radioButtonNewAddrNested->setEnabled(changeSelectionEnabled);
-      ui_->radioButtonExistingAddress->setEnabled(changeSelectionEnabled);
+      ui_->changeAddrGroupBox->setEnabled(changeSelectionEnabled);
       showExistingChangeAddress(changeSelectionEnabled);
    }
 
