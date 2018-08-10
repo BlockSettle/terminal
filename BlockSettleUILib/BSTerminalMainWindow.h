@@ -167,7 +167,7 @@ private:
 
    void setupShortcuts();
 
-   void createAdvancedTrxDialog(const std::string &selectedWalletId);
+   void createAdvancedTxDialog(const std::string &selectedWalletId);
 };
 
 Q_DECLARE_METATYPE(LedgerEntryData)

@@ -577,7 +577,7 @@ void BSTerminalMainWindow::onReceive()
    newAddressDialog->show();
 }
 
-void BSTerminalMainWindow::createAdvancedTrxDialog(const std::string &selectedWalletId)
+void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
    CreateTransactionDialogAdvanced advancedDialog{walletsManager_, signContainer_, true, this};
    advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
@@ -601,10 +601,10 @@ void BSTerminalMainWindow::onSend()
    }
 
    if (QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) {
-      createAdvancedTrxDialog(selectedWalletId);
+      createAdvancedTxDialog(selectedWalletId);
    } else {
-      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTrxDialogByDefault)) {
-         createAdvancedTrxDialog(selectedWalletId);
+      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+         createAdvancedTxDialog(selectedWalletId);
       } else {
          CreateTransactionDialogSimple dlg{walletsManager_, signContainer_, this};
          dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));

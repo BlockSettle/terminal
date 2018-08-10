@@ -128,7 +128,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
       { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
       { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) },
-      { AdvancedTrxDialogByDefault,       SettingDef(QLatin1String("AdvancedTrxDialogByDefault"), false) }
+      { AdvancedTxDialogByDefault,       SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) }
    };
 }
 
