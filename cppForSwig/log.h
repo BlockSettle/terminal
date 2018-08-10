@@ -65,6 +65,7 @@
 #include <mutex>
 #include <memory>
 #include <chrono>
+#include <atomic>
 #include "OS_TranslatePath.h"
 
 #define FILEANDLINE "(" << __FILE__ << ":" << __LINE__ << ") "
@@ -226,7 +227,7 @@ public:
    void FlushStreams(void) {}
 };
 
-
+////////////////////////////////////////////////////////////////////////////////
 class Log
 {
 public:
@@ -234,27 +235,36 @@ public:
 
    static Log & GetInstance(const char * filename=nullptr)
    {
-      static Log* theOneLog = nullptr;
-      if (theOneLog == nullptr || filename != nullptr)
+      static atomic<Log*> theOneLog = {nullptr};
+      static mutex mu;
+
+      while (true)
       {
-         // Close and delete any existing Log object
-         if (theOneLog != nullptr)
-         {
-            theOneLog->ds_.close();
-            delete theOneLog;
-         }
-   
+         //lock free check and return if instance is valid
+         auto logPtr = theOneLog.load(memory_order_acquire);
+         if (logPtr != nullptr)
+            return *logPtr;
+
+         //lock and instantiate
+         unique_lock<mutex> lock(mu, defer_lock);
+         if (!lock.try_lock())
+            continue;
+    
          // Create a Log object
-         theOneLog = new Log;
-   
+         Log* newLogPtr = new Log;
+    
          // Open the filestream if it's open
          if (filename != nullptr)
          {
-            theOneLog->ds_.setLogFile(string(filename));
-            theOneLog->isInitialized_ = true;
+            newLogPtr->ds_.setLogFile(string(filename));
+            newLogPtr->isInitialized_ = true;
          }
+
+         theOneLog.store(newLogPtr, memory_order_release);
+         lock.unlock();
+
+         return *logPtr;
       }
-      return *theOneLog;
    }
 
    ~Log(void)
@@ -337,7 +347,6 @@ public:
 class LoggerObj
 {
 private:
-   static mutex mu_;
    StreamBuffer buffer_;
 
 public:
@@ -356,15 +365,12 @@ public:
       //terminate buffer with newline
       buffer_ << "\n";
 
-      //process wide lock
-      unique_lock<mutex> lock(mu_);
-
       //push buffer to log stream
       LogStream & lg = Log::GetInstance().Get(logLevel_);
       lg << buffer_.str();
 
       //flush streams
-      Log::GetInstance().FlushStreams();
+      //Log::GetInstance().FlushStreams();
    }
 
 private:

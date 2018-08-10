@@ -831,7 +831,7 @@ BitcoinP2P::BitcoinP2P(const string& addrV4, const string& port,
    uint32_t magicword) :
    addr_(addrV4), port_(port), magic_word_(magicword)
 {
-   invBlockStack_ = make_shared<BlockingStack<vector<InvEntry>>>();
+   invBlockStack_ = make_shared<BlockingQueue<vector<InvEntry>>>();
    nodeConnected_.store(false, memory_order_relaxed);
    run_.store(true, memory_order_relaxed);
 }
@@ -887,7 +887,7 @@ void BitcoinP2P::connectLoop(void)
    while (run_.load(memory_order_relaxed))
    {
       //clean up stacks
-      dataStack_ = make_shared<BlockingStack<vector<uint8_t>>>();
+      dataStack_ = make_shared<BlockingQueue<vector<uint8_t>>>();
       socket_ = make_unique<BitcoinP2PSocket>(addr_, port_, dataStack_);
 
       verackPromise_ = make_unique<promise<bool>>();
@@ -1388,6 +1388,9 @@ void BitcoinP2P::unregisterGetTxCallback(
 ////////////////////////////////////////////////////////////////////////////////
 void BitcoinP2P::shutdown()
 {
+   if (!run_.load(memory_order_relaxed))
+      return;
+
    run_.store(false, memory_order_relaxed);
    if (socket_ != nullptr)
    {
