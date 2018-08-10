@@ -1848,9 +1848,7 @@
            </widget>
           </item>
           <item>
-           <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeysAS" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_4"/>
-           </widget>
+           <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeysAS" native="true"/>
           </item>
          </layout>
         </widget>
