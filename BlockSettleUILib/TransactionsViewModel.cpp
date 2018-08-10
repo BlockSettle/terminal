@@ -276,8 +276,9 @@ bool TransactionsViewModel::txKeyExists(const std::string &key)
 
 void TransactionsViewModel::loadNewTransactions()
 {
+   bool desired = true;
    bool expected = false;
-   if (!std::atomic_compare_exchange_strong(&refreshing_, &expected, true)) {
+   if (!std::atomic_compare_exchange_strong(&refreshing_, &expected, desired)) {
       return;
    }
 
