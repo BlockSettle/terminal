@@ -1,9 +1,10 @@
 #include "BaseDealerSettlementDialog.h"
+#include <QCoreApplication>
 #include "HDWallet.h"
 #include "SettlementContainer.h"
 #include "SignContainer.h"
+#include "WalletKeysSubmitWidget.h"
 #include <spdlog/spdlog.h>
-#include <QLineEdit>
 
 
 BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
@@ -13,7 +14,6 @@ BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spd
    , logger_(logger)
    , settlContainer_(settlContainer)
    , signContainer_(signContainer)
-   , frejaSign_(logger, 1)
 {
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStarted, this, &BaseDealerSettlementDialog::onTimerStarted);
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStopped, this, &BaseDealerSettlementDialog::onTimerStopped);
@@ -24,10 +24,6 @@ BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spd
    connect(settlContainer_.get(), &bs::SettlementContainer::info, [this](QString msg) { setHintText(msg); });
 
    connect(signContainer_.get(), &SignContainer::HDWalletInfo, this, &BaseDealerSettlementDialog::onHDWalletInfo);
-
-   connect(&frejaSign_, &FrejaSignWallet::succeeded, this, &BaseDealerSettlementDialog::onFrejaSucceeded);
-   connect(&frejaSign_, &FrejaSign::failed, this, &BaseDealerSettlementDialog::onFrejaFailed);
-   connect(&frejaSign_, &FrejaSign::statusUpdated, this, &BaseDealerSettlementDialog::onFrejaStatusUpdated);
 }
 
 void BaseDealerSettlementDialog::connectToProgressBar(QProgressBar *progressBar)
@@ -88,9 +84,7 @@ void BaseDealerSettlementDialog::onTimerTick(int msCurrent, int msDuration)
 
 void BaseDealerSettlementDialog::reject()
 {
-   if (walletInfoReceived_ && (encTypes_[0] == bs::wallet::EncryptionType::Freja)) {
-      frejaSign_.stop(true);
-   }
+   widgetWalletKeys()->cancel();
    settlContainer_->cancel();
    QDialog::reject();
 }
@@ -114,7 +108,7 @@ void BaseDealerSettlementDialog::onHDWalletInfo(unsigned int id, std::vector<bs:
 void BaseDealerSettlementDialog::setWallet(const std::shared_ptr<bs::hd::Wallet> &wallet)
 {
    widgetPassword()->hide();
-   connect(lineEditPassword(), &QLineEdit::textChanged, [this](const QString &text) { walletPassword_ = text.toStdString(); });
+   connect(widgetWalletKeys(), &WalletKeysSubmitWidget::keyChanged, [this] { validateGUI(); });
 
    rootWallet_ = wallet;
    if (signContainer_ && !signContainer_->isOffline()) {
@@ -136,40 +130,8 @@ void BaseDealerSettlementDialog::startAccepting()
       logger_->error("[BaseDealerSettlementDialog::startAccepting] no root wallet");
       return;
    }
-   switch (encTypes_[0]) {
-   case bs::wallet::EncryptionType::Unencrypted:
-      labelPassword()->hide();
-      break;
-   case bs::wallet::EncryptionType::Password:
-      widgetPassword()->show();
-      lineEditPassword()->setEnabled(true);
-      break;
-   case bs::wallet::EncryptionType::Freja:
-      labelPassword()->show();
-      setHintText(tr("Freja sign request sent to your mobile device"));
-      {
-         const auto userId = QString::fromStdString(encKeys_[0].toBinStr());
-         frejaSign_.start(userId, frejaPrompt_, rootWallet_->getWalletId());  // set 30s timeout (not implemented by Freja, yet)
-      }
-      break;
-   default: break;
-   }
-}
-
-void BaseDealerSettlementDialog::onFrejaSucceeded(SecureBinaryData password)
-{
-   labelPassword()->setText(tr("Signed successfully"));
-   walletPassword_ = password;
-   settlContainer_->accept(walletPassword_);
-}
-
-void BaseDealerSettlementDialog::onFrejaFailed(const QString &text)
-{
-   labelPassword()->setText(tr("Freja failed: %1").arg(text));
-   reject();
-}
-
-void BaseDealerSettlementDialog::onFrejaStatusUpdated(const QString &status)
-{
-   labelPassword()->setText(tr("Freja: %1").arg(status));
+   widgetWalletKeys()->init(rootWallet_->getWalletId(), keyRank_, encTypes_, encKeys_);
+   widgetWalletKeys()->setFocus();
+   QCoreApplication::processEvents();
+   adjustSize();
 }

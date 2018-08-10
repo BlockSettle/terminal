@@ -911,7 +911,8 @@ void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 }
 
 void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string prompt
-   , std::vector<bs::wallet::EncryptionType> encTypes, std::vector<SecureBinaryData> encKeys)
+   , std::vector<bs::wallet::EncryptionType> encTypes, std::vector<SecureBinaryData> encKeys
+   , bs::hd::KeyRank keyRank)
 {
    SignContainer::PasswordType password;
 
@@ -931,7 +932,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
          EnterWalletPassword passwordDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
-            , encTypes[0], encKeys.empty() ? SecureBinaryData() : encKeys[0], QString::fromStdString(prompt), this);
+            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
          } else {

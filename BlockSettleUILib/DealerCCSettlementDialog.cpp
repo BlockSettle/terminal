@@ -75,19 +75,17 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    setWallet(wallet);
    ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(QString::fromStdString(wallet->getName())));
 
-   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &DealerCCSettlementDialog::validateGUI);
-
    validateGUI();
 }
 
 QWidget *DealerCCSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
-QLineEdit *DealerCCSettlementDialog::lineEditPassword() const { return ui_->lineEditPassword; }
+WalletKeysSubmitWidget *DealerCCSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
 QLabel *DealerCCSettlementDialog::labelHint() const { return ui_->labelHint; }
 QLabel *DealerCCSettlementDialog::labelPassword() const { return ui_->labelPasswordHint; }
 
 void DealerCCSettlementDialog::validateGUI()
 {
-   ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable() && !walletPassword_.isNull());
+   ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable() && widgetWalletKeys()->isValid());
 }
 
 void DealerCCSettlementDialog::onGenAddressVerified(bool addressVerified)
@@ -97,14 +95,14 @@ void DealerCCSettlementDialog::onGenAddressVerified(bool addressVerified)
       readyToAccept();
    } else {
       ui_->labelGenesisAddress->setText(sInvalid);
-      ui_->lineEditPassword->setEnabled(false);
+      widgetWalletKeys()->setEnabled(false);
    }
    validateGUI();
 }
 
 void DealerCCSettlementDialog::onAccepted()
 {
-   if (settlContainer_->accept(walletPassword_)) {
+   if (settlContainer_->accept(widgetWalletKeys()->key())) {
       ui_->pushButtonAccept->setEnabled(false);
    }
 }

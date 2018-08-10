@@ -62,20 +62,15 @@ private:
    void acceptSpotCC();
    bool createCCUnsignedTXdata();
    bool createCCSignedTXdata();
-   void startFrejaSign();
 
 private slots:
    void ticker();
-   void onPasswordUpdated(const QString &);
+   void initSigning();
    void updateAcceptButton();
    void onGenAddrVerified(bool);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank);
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
-
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &);
-   void onFrejaStatusUpdated(const QString &);
 
 signals:
    void settlementCancelled();
@@ -117,11 +112,9 @@ private:
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
-   std::shared_ptr<FrejaSignWallet> frejaSign_;
    std::vector<bs::wallet::EncryptionType>   encTypes_;
    std::vector<SecureBinaryData>             encKeys_;
    bs::hd::KeyRank   keyRank_;
-   SecureBinaryData  walletPassword_;
 };
 
 #endif // __CC_SETTLEMENT_TRANSACTION_WIDGET_H__

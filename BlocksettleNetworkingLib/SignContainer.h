@@ -107,7 +107,7 @@ signals:
    void TXSigned(unsigned int id, BinaryData signedTX, std::string error);
 
    void PasswordRequested(std::string walletId, std::string prompt, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKey);
+      , std::vector<SecureBinaryData> encKey, bs::hd::KeyRank);
 
    void HDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
    void HDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);

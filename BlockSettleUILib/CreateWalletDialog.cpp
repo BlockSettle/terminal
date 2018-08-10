@@ -5,6 +5,7 @@
 #include "MessageBoxCritical.h"
 #include "SignContainer.h"
 #include "WalletsManager.h"
+#include "WalletKeysCreateWidget.h"
 
 #include <spdlog/spdlog.h>
 
@@ -18,7 +19,6 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , signingContainer_(container)
    , walletSeed_(netType, SecureBinaryData().GenerateRandom(32))
    , walletsPath_(walletsPath)
-   , frejaSign_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -39,8 +39,9 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    }
 
    connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::UpdateAcceptButtonState);
-   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &CreateWalletDialog::onPasswordChanged);
-   connect(ui_->lineEditPasswordConfirm, &QLineEdit::textChanged, this, &CreateWalletDialog::onPasswordChanged);
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { UpdateAcceptButtonState(); });
+   ui_->widgetCreateKeys->init(walletId_);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
@@ -48,20 +49,10 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateWalletDialog::reject);
 
-   connect(ui_->radioButtonPassword, &QRadioButton::clicked, this, &CreateWalletDialog::onEncTypeChanged);
-   connect(ui_->radioButtonFreja, &QRadioButton::clicked, this, &CreateWalletDialog::onEncTypeChanged);
-   connect(ui_->lineEditFrejaId, &QLineEdit::textChanged, this, &CreateWalletDialog::onFrejaIdChanged);
-   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &CreateWalletDialog::startFrejaSign);
-
    connect(signingContainer_.get(), &SignContainer::HDWalletCreated, this, &CreateWalletDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CreateWalletDialog::onWalletCreateError);
 
-   connect(&frejaSign_, &FrejaSignWallet::succeeded, this, &CreateWalletDialog::onFrejaSucceeded);
-   connect(&frejaSign_, &FrejaSign::failed, this, &CreateWalletDialog::onFrejaFailed);
-   connect(&frejaSign_, &FrejaSign::statusUpdated, this, &CreateWalletDialog::onFrejaStatusUpdated);
-
    UpdateAcceptButtonState();
-   onEncTypeChanged();
 }
 
 void CreateWalletDialog::showEvent(QShowEvent *event)
@@ -72,23 +63,8 @@ void CreateWalletDialog::showEvent(QShowEvent *event)
 
 bool CreateWalletDialog::couldCreateWallet() const
 {
-   return !walletPassword_.isNull()
-         && !walletsManager_->WalletNameExists(ui_->lineEditWalletName->text().toStdString());
-}
-
-void CreateWalletDialog::onPasswordChanged(const QString &)
-{
-   if (!ui_->lineEditWalletName->text().isEmpty()
-      && !ui_->lineEditPassword->text().isEmpty()
-      && (ui_->lineEditPassword->text() == ui_->lineEditPasswordConfirm->text())) {
-      walletPassword_ = ui_->lineEditPassword->text().toStdString();
-   }
-   UpdateAcceptButtonState();
-}
-
-void CreateWalletDialog::onFrejaIdChanged(const QString &)
-{
-   ui_->pushButtonFreja->setEnabled(!ui_->lineEditFrejaId->text().isEmpty());
+   return (ui_->widgetCreateKeys->isValid()
+         && !walletsManager_->WalletNameExists(ui_->lineEditWalletName->text().toStdString()));
 }
 
 void CreateWalletDialog::UpdateAcceptButtonState()
@@ -106,10 +82,9 @@ void CreateWalletDialog::CreateWallet()
 
    const auto &name = ui_->lineEditWalletName->text().toStdString();
    const auto &description = ui_->lineEditDescription->text().toStdString();
-   pwdData_[0].password = walletPassword_;
-   pwdData_[0].encKey = ui_->lineEditFrejaId->text().toStdString();
    createReqId_ = signingContainer_->CreateHDWallet(name, description
-      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, pwdData_, { 1, 1 });
+      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, ui_->widgetCreateKeys->keys()
+      , ui_->widgetCreateKeys->keyRank());
    walletPassword_.clear();
 }
 
@@ -146,43 +121,8 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
    accept();
 }
 
-void CreateWalletDialog::onEncTypeChanged()
+void CreateWalletDialog::reject()
 {
-   if (ui_->radioButtonPassword->isChecked()) {
-      ui_->widgetFreja->hide();
-      ui_->widgetPassword->show();
-      ui_->widgetPasswordConfirm->show();
-      pwdData_[0].encType = bs::wallet::EncryptionType::Password;
-   }
-   else if (ui_->radioButtonFreja->isChecked()) {
-      ui_->widgetFreja->show();
-      ui_->widgetPassword->hide();
-      ui_->widgetPasswordConfirm->hide();
-      pwdData_[0].encType = bs::wallet::EncryptionType::Freja;
-   }
-}
-
-void CreateWalletDialog::startFrejaSign()
-{
-   frejaSign_.start(ui_->lineEditFrejaId->text(), tr("Activate Freja eID signing"), walletId_);
-   ui_->pushButtonFreja->setEnabled(false);
-   ui_->lineEditFrejaId->setEnabled(false);
-}
-
-void CreateWalletDialog::onFrejaSucceeded(SecureBinaryData password)
-{
-   ui_->labelFreja->setText(tr("Successfully signed"));
-   walletPassword_ = password;
-   UpdateAcceptButtonState();
-}
-
-void CreateWalletDialog::onFrejaFailed(const QString &text)
-{
-   ui_->pushButtonFreja->setEnabled(true);
-   ui_->labelFreja->setText(tr("Freja failed: %1").arg(text));
-}
-
-void CreateWalletDialog::onFrejaStatusUpdated(const QString &status)
-{
-   ui_->labelFreja->setText(status);
+   ui_->widgetCreateKeys->cancel();
+   QDialog::reject();
 }

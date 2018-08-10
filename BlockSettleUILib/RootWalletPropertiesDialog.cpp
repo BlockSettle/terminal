@@ -177,23 +177,23 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   ChangeWalletPasswordDialog changePasswordDialog(wallet_
-      , walletEncTypes_[0], walletEncKeys_.empty() ? SecureBinaryData() : walletEncKeys_[0], this);
+   auto changePasswordDialog = new ChangeWalletPasswordDialog(wallet_
+      , walletEncTypes_, walletEncKeys_, walletEncRank_, this);
 
-   if (changePasswordDialog.exec() != QDialog::Accepted) {
+   if (changePasswordDialog->exec() != QDialog::Accepted) {
+      changePasswordDialog->deleteLater();
       return;
    }
 
-   const auto oldPassword = changePasswordDialog.GetOldPassword();
-   const bs::hd::PasswordData pwdData = { changePasswordDialog.GetNewPassword()
-      , changePasswordDialog.GetNewEncryptionType()
-      , changePasswordDialog.GetNewEncryptionKey() };
+   const auto oldPassword = changePasswordDialog->oldPassword();
 
    if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, { pwdData }, {1, 1}, oldPassword);
+      signingContainer_->ChangePassword(wallet_, changePasswordDialog->newPasswordData()
+         , changePasswordDialog->newKeyRank(), oldPassword);
    }
    else {
-      if (wallet_->changePassword({ pwdData }, { 1, 1 }, oldPassword)) {
+      if (wallet_->changePassword(changePasswordDialog->newPasswordData(), changePasswordDialog->newKeyRank()
+         , oldPassword)) {
          MessageBoxSuccess message(tr("Password change")
             , tr("Wallet password successfully changed - don't forget your new password!")
             , this);
@@ -206,6 +206,7 @@ void RootWalletPropertiesDialog::onChangePassword()
          message.exec();
       }
    }
+   changePasswordDialog->deleteLater();
 }
 
 void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, bool ok)

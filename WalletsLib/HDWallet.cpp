@@ -340,7 +340,7 @@ void hd::Wallet::initDB()
       bwKey.put_BinaryData(masterID);
 
       BinaryWriter bw;
-      bw.put_var_int(4);
+      bw.put_var_int(sizeof(uint32_t));
       bw.put_uint32_t(hd::purpose);
       putDataToDB(&dbMeta, bwKey.getData(), bw.getData());
    }
@@ -362,6 +362,7 @@ void hd::Wallet::initDB()
    if (!rootNodes_.empty()) {
       BinaryWriter bwKey, bwData;
       bwKey.put_uint32_t(MAIN_ACCOUNT_KEY);
+      bwData.put_var_int(sizeof(uint32_t) * 2);
       bwData.put_uint32_t(rootNodes_.rank().first);
       bwData.put_uint32_t(rootNodes_.rank().second);
       putDataToDB(db_, bwKey.getData(), bwData.getData());
@@ -559,6 +560,10 @@ void hd::Wallet::readFromDB()
                continue;
             }
             const auto assetRef = brrVal.get_BinaryDataRef(len);
+            if (*assetRef.getPtr() != bs::hd::purpose) {
+               dbIter.advance();
+               continue;
+            }
             const auto &node = hd::Node::deserialize(assetRef);
             rootNodes.emplace_back(node);
          }

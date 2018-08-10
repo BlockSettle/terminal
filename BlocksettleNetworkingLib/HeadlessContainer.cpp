@@ -215,7 +215,7 @@ void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
    for (int i = 0; i < request.enckeys_size(); ++i) {
       encKeys.push_back(request.enckeys(i));
    }
-   emit PasswordRequested(request.walletid(), request.prompt(), encTypes, encKeys);
+   emit PasswordRequested(request.walletid(), request.prompt(), encTypes, encKeys, { request.rankm(), 0 });
 }
 
 void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std::string &data)
