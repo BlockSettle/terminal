@@ -690,7 +690,8 @@ void QuoteRequestsModel::onQuoteRejected(const QString &reqId, const QString &re
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::Rejected, reason);
 }
 
-void QuoteRequestsModel::updateBestQuotePrice(const QString &reqId, double price, bool own)
+void QuoteRequestsModel::updateBestQuotePrice(const QString &reqId, double price, bool own,
+   std::vector<std::pair<QModelIndex, QModelIndex>> *idxs)
 {
    int row = -1;
    Group *g = nullptr;
@@ -710,10 +711,16 @@ void QuoteRequestsModel::updateBestQuotePrice(const QString &reqId, double price
    if (row >= 0 && g) {
       static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
          static_cast<int>(Qt::BackgroundRole)});
-      emit dataChanged(createIndex(row, static_cast<int>(Column::QuotedPx),
-            &g->rfqs_[static_cast<std::size_t>(row)]->idx_),
-         createIndex(row, static_cast<int>(Column::BestPx),
-            &g->rfqs_[static_cast<std::size_t>(row)]->idx_), roles);
+      const auto idx1 = createIndex(row, static_cast<int>(Column::QuotedPx),
+         &g->rfqs_[static_cast<std::size_t>(row)]->idx_);
+      const auto idx2 = createIndex(row, static_cast<int>(Column::BestPx),
+         &g->rfqs_[static_cast<std::size_t>(row)]->idx_);
+
+      if (!idxs) {
+         emit dataChanged(idx1, idx2, roles);
+      } else {
+         idxs->push_back(std::make_pair(idx1, idx2));
+      }
    }
 }
 
@@ -947,17 +954,59 @@ void QuoteRequestsModel::onDeferredUpdate(const QPersistentModelIndex &index)
 
 void QuoteRequestsModel::onPriceUpdateTimer()
 {
+   std::vector<std::pair<QModelIndex, QModelIndex>> idxs;
+
    for (auto it = prices_.cbegin(), last = prices_.cend(); it != last; ++it) {
-      updatePrices(it->first, it->second.first, it->second.second);
+      updatePrices(it->first, it->second.first, it->second.second, &idxs);
    }
 
    prices_.clear();
 
    for (auto it = bestQuotePrices_.cbegin(), last = bestQuotePrices_.cend(); it != last; ++it) {
-      updateBestQuotePrice(it->first, it->second.price_, it->second.own_);
+      updateBestQuotePrice(it->first, it->second.price_, it->second.own_, &idxs);
    }
 
    bestQuotePrices_.clear();
+
+   if (!idxs.empty()) {
+      struct Index {
+         int row_;
+         int column_;
+      };
+
+      std::map<QModelIndex, std::pair<Index, Index>> mapOfIdxs;
+
+      for (const auto &idx: idxs) {
+         auto it = mapOfIdxs.find(idx.first.parent());
+
+         if (it != mapOfIdxs.end()) {
+            if (idx.first.row() < it->second.first.row_) {
+               it->second.first.row_ = idx.first.row();
+            }
+
+            if (idx.first.column() < it->second.first.column_) {
+               it->second.first.column_ = idx.first.column();
+            }
+
+            if (idx.second.row() > it->second.second.row_) {
+               it->second.second.row_ = idx.second.row();
+            }
+
+            if (idx.second.column() > it->second.second.column_) {
+               it->second.second.column_ = idx.second.column();
+            }
+         } else {
+            mapOfIdxs[idx.first.parent()] = std::make_pair<Index, Index>(
+               {idx.first.row(), idx.first.column()},
+               {idx.second.row(), idx.second.column()});
+         }
+      }
+
+      for (auto it = mapOfIdxs.cbegin(), last = mapOfIdxs.cend(); it != last; ++it) {
+         emit dataChanged(index(it->second.first.row_, it->second.first.column_, it->first),
+            index(it->second.second.row_, it->second.second.column_, it->first));
+      }
+   }
 }
 
 void QuoteRequestsModel::onSettlementExpired()
@@ -1119,9 +1168,9 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
 }
 
 void QuoteRequestsModel::updatePrices(const QString &security, const bs::network::MDField &pxBid,
-   const bs::network::MDField &pxOffer)
+   const bs::network::MDField &pxOffer, std::vector<std::pair<QModelIndex, QModelIndex>> *idxs)
 {
-   forEachSecurity(security, [security, pxBid, pxOffer, this](Group *grp, int index) {
+   forEachSecurity(security, [security, pxBid, pxOffer, this, idxs](Group *grp, int index) {
       const CurrencyPair cp(security.toStdString());
       const bool isBuy = (grp->rfqs_[static_cast<std::size_t>(index)]->side_ == bs::network::Side::Buy)
          ^ (cp.NumCurrency() == grp->rfqs_[static_cast<std::size_t>(index)]->product_.toStdString());
@@ -1151,7 +1200,12 @@ void QuoteRequestsModel::updatePrices(const QString &security, const bs::network
 
          const QModelIndex idx = createIndex(index, static_cast<int>(Column::IndicPx),
             &grp->rfqs_[static_cast<std::size_t>(index)]->idx_);
-         emit dataChanged(idx, idx);
+
+         if (!idxs) {
+            emit dataChanged(idx, idx);
+         } else {
+            idxs->push_back(std::make_pair(idx, idx));
+         }
       }
    });
 }

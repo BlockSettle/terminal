@@ -168,6 +168,8 @@ private:
    void setLoginButtonText(const QString& text);
 
    void setupShortcuts();
+
+   void createAdvancedTxDialog(const std::string &selectedWalletId);
 };
 
 Q_DECLARE_METATYPE(LedgerEntryData)
