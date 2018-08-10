@@ -969,37 +969,42 @@ void QuoteRequestsModel::onPriceUpdateTimer()
    bestQuotePrices_.clear();
 
    if (!idxs.empty()) {
-      std::map<QModelIndex, std::pair<std::pair<int, int>, std::pair<int, int>>> mapOfIdxs;
+      struct Index {
+         int row_;
+         int column_;
+      };
+
+      std::map<QModelIndex, std::pair<Index, Index>> mapOfIdxs;
 
       for (const auto &idx: idxs) {
          auto it = mapOfIdxs.find(idx.first.parent());
 
          if (it != mapOfIdxs.end()) {
-            if (idx.first.row() < it->second.first.first) {
-               it->second.first.first = idx.first.row();
+            if (idx.first.row() < it->second.first.row_) {
+               it->second.first.row_ = idx.first.row();
             }
 
-            if (idx.first.column() < it->second.first.second) {
-               it->second.first.second = idx.first.column();
+            if (idx.first.column() < it->second.first.column_) {
+               it->second.first.column_ = idx.first.column();
             }
 
-            if (idx.second.row() > it->second.second.first) {
-               it->second.second.first = idx.second.row();
+            if (idx.second.row() > it->second.second.row_) {
+               it->second.second.row_ = idx.second.row();
             }
 
-            if (idx.second.column() > it->second.second.second) {
-               it->second.second.second = idx.second.column();
+            if (idx.second.column() > it->second.second.column_) {
+               it->second.second.column_ = idx.second.column();
             }
          } else {
-            mapOfIdxs[idx.first.parent()] = std::make_pair(
-               std::make_pair(idx.first.row(), idx.first.column()),
-               std::make_pair(idx.second.row(), idx.second.column()));
+            mapOfIdxs[idx.first.parent()] = std::make_pair<Index, Index>(
+               {idx.first.row(), idx.first.column()},
+               {idx.second.row(), idx.second.column()});
          }
       }
 
       for (auto it = mapOfIdxs.cbegin(), last = mapOfIdxs.cend(); it != last; ++it) {
-         emit dataChanged(index(it->second.first.first, it->second.first.second, it->first),
-            index(it->second.second.first, it->second.second.second, it->first));
+         emit dataChanged(index(it->second.first.row_, it->second.first.column_, it->first),
+            index(it->second.second.row_, it->second.second.column_, it->first));
       }
    }
 }
