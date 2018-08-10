@@ -84,6 +84,7 @@ public:
       DisableBlueDotOnTabOfRfqBlotter,
       PriceUpdateInterval,
       ShowQuoted,
+      AdvancedTxDialogByDefault,
       _last
    };
 
