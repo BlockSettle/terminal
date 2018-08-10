@@ -164,30 +164,30 @@ QString Constants::xbtProductName() const
    return QString::fromStdString(bs::network::XbtCurrency);
 }
 
-double Constants::boughtXbt() const
+double Constants::bought(const QString &currency)
 {
-   return std::accumulate(std::begin(boughtXbt_), std::end(boughtXbt_),
+   return std::accumulate(std::begin(bought_[currency]), std::end(bought_[currency]),
       0.0,
       [] (double value, const std::map<QString, double>::value_type& p)
          { return value + p.second; });
 }
 
-void Constants::setBoughtXbt(double v, const QString &id)
+void Constants::setBought(const QString &currency, double v, const QString &id)
 {
-   boughtXbt_[id] = v;
+   bought_[currency][id] = v;
 }
 
-double Constants::soldXbt() const
+double Constants::sold(const QString &currency)
 {
-   return std::accumulate(std::begin(soldXbt_), std::end(soldXbt_),
+   return std::accumulate(std::begin(sold_[currency]), std::end(sold_[currency]),
       0.0,
       [] (double value, const std::map<QString, double>::value_type& p)
          { return value + p.second; });
 }
 
-void Constants::setSoldXbt(double v, const QString &id)
+void Constants::setSold(const QString &currency, double v, const QString &id)
 {
-   soldXbt_[id] = v;
+   sold_[currency][id] = v;
 }
 
 void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
