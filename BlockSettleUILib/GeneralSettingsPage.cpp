@@ -43,6 +43,8 @@ void GeneralSettingsPage::displaySettings(const std::shared_ptr<ApplicationSetti
    ui_->checkBoxMinimizeToTray->setChecked(appSettings->get<bool>(ApplicationSettings::minimizeToTray, displayDefault));
    ui_->checkBoxCloseToTray->setChecked(appSettings->get<bool>(ApplicationSettings::closeToTray, displayDefault));
    ui_->checkBoxShowTxNotification->setChecked(appSettings->get<bool>(ApplicationSettings::notifyOnTX, displayDefault));
+   ui_->addvancedDialogByDefaultCheckBox->setChecked(
+      appSettings->get<bool>(ApplicationSettings::AdvancedTrxDialogByDefault, displayDefault));
 
    const auto cfg = appSettings->GetLogsConfig(displayDefault);
    ui_->logFileName->setText(QString::fromStdString(cfg.at(0).fileName));
@@ -75,6 +77,8 @@ void GeneralSettingsPage::applyChanges(const std::shared_ptr<ApplicationSettings
    appSettings->set(ApplicationSettings::minimizeToTray, ui_->checkBoxMinimizeToTray->isChecked());
    appSettings->set(ApplicationSettings::closeToTray, ui_->checkBoxCloseToTray->isChecked());
    appSettings->set(ApplicationSettings::notifyOnTX, ui_->checkBoxShowTxNotification->isChecked());
+   appSettings->set(ApplicationSettings::AdvancedTrxDialogByDefault,
+      ui_->addvancedDialogByDefaultCheckBox->isChecked());
 
    auto cfg = appSettings->GetLogsConfig();
 

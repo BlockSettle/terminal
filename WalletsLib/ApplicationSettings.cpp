@@ -127,7 +127,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },
       { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
       { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
-      { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) }
+      { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) },
+      { AdvancedTrxDialogByDefault,       SettingDef(QLatin1String("AdvancedTrxDialogByDefault"), false) }
    };
 }
 

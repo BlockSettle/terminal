@@ -577,6 +577,18 @@ void BSTerminalMainWindow::onReceive()
    newAddressDialog->show();
 }
 
+void BSTerminalMainWindow::createAdvancedTrxDialog(const std::string &selectedWalletId)
+{
+   CreateTransactionDialogAdvanced advancedDialog{walletsManager_, signContainer_, true, this};
+   advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+
+   if (!selectedWalletId.empty()) {
+      advancedDialog.SelectWallet(selectedWalletId);
+   }
+
+   advancedDialog.exec();
+}
+
 void BSTerminalMainWindow::onSend()
 {
    std::string selectedWalletId;
@@ -589,28 +601,25 @@ void BSTerminalMainWindow::onSend()
    }
 
    if (QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) {
-      CreateTransactionDialogAdvanced advancedDialog{walletsManager_, signContainer_, true, this};
-      advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
-
-      if (!selectedWalletId.empty()) {
-         advancedDialog.SelectWallet(selectedWalletId);
-      }
-
-      advancedDialog.exec();
+      createAdvancedTrxDialog(selectedWalletId);
    } else {
-      CreateTransactionDialogSimple dlg{walletsManager_, signContainer_, this};
-      dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTrxDialogByDefault)) {
+         createAdvancedTrxDialog(selectedWalletId);
+      } else {
+         CreateTransactionDialogSimple dlg{walletsManager_, signContainer_, this};
+         dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
-      if (!selectedWalletId.empty()) {
-         dlg.SelectWallet(selectedWalletId);
-      }
+         if (!selectedWalletId.empty()) {
+            dlg.SelectWallet(selectedWalletId);
+         }
 
-      dlg.exec();
+         dlg.exec();
 
-      if ((dlg.result() == QDialog::Accepted) && dlg.userRequestedAdvancedDialog()) {
-         auto advancedDialog = dlg.CreateAdvancedDialog();
+         if ((dlg.result() == QDialog::Accepted) && dlg.userRequestedAdvancedDialog()) {
+            auto advancedDialog = dlg.CreateAdvancedDialog();
 
-         advancedDialog->exec();
+            advancedDialog->exec();
+         }
       }
    }
 }
