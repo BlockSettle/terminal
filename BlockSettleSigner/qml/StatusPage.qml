@@ -5,6 +5,8 @@ import QtQuick.Dialogs 1.2
 import com.blocksettle.OfflineProc 1.0
 
 Item {
+    id: view
+
     ScrollView {
         anchors.fill: parent
         Layout.fillWidth: true
@@ -12,12 +14,14 @@ Item {
 
         ColumnLayout {
             width:  parent.parent.width
+            id: column
 
             Behavior on height {
                 NumberAnimation { duration: 500 }
             }
 
             GridLayout {
+                id: grid1
                 columns:    2
                 Layout.fillWidth: true
                 Layout.topMargin: 5
@@ -26,7 +30,7 @@ Item {
 
                 CustomHeader {
                     Layout.columnSpan: 2
-                    text:   qsTr("Controls:")
+                    text:   qsTr("Controls")
                     height: 25
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
@@ -37,7 +41,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Current Mode")
+                        text:   qsTr("Online mode")
                     }
                 }
 
@@ -56,7 +60,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Auto Sign")
+                        text:   qsTr("Auto sign")
                     }
                 }
 
@@ -77,7 +81,7 @@ Item {
             }
 
             ColumnLayout{
-                Layout.preferredHeight: 195
+                id: c1
                 Layout.fillWidth: true
 
 
@@ -98,34 +102,52 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        visible: !signerStatus.offline
                         text:   qsTr("Listen socket")
                         Layout.preferredHeight: 25
-
                     }
                     CustomLabelValue {
-                        visible: !signerStatus.offline
-                        text:   signerStatus.listenSocket
-                        color:  signerStatus.socketOk ? "white" : "red"
+                        text:   (signerStatus.offline ? qsTr("Closed") : signerStatus.listenSocket)
+                        color:  (signerStatus.offline ? "white" : (signerStatus.socketOk ? "white" : "red"))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        visible: !signerStatus.offline
-                        text:   qsTr("%1 connection[s]:").arg(Number(signerStatus.connections))
+                        text:   qsTr("Network type")
                         Layout.preferredHeight: 25
+
+                    }
+                    CustomLabelValue {
+                        text:   signerParams.testNet ? qsTr("Testnet") : qsTr("Mainnet")
+                        Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
+                    }
+
+                    CustomLabel {
+                        Layout.fillWidth: true
+                        text: qsTr("Connections")
+                        Layout.preferredHeight: 25
+                    }
+                    CustomLabel {
+                        visible: signerStatus.offline || !signerStatus.connections
+                        Layout.alignment: Qt.AlignRight
+                        text:   qsTr("None")
+                        padding: 5
+                        wrapMode: Text.NoWrap
                     }
                     ColumnLayout {
                         spacing: 0
-                        visible: !signerStatus.offline
+                        visible: !signerStatus.offline && signerStatus.connections
                         Layout.leftMargin: 0
                         Layout.rightMargin: 0
+                        Layout.alignment: Qt.AlignRight
                         Repeater {
                             model: signerStatus.connectedClients
                             CustomLabelValue {
                                 text:   modelData
                                 Layout.alignment: Qt.AlignRight
+                                wrapMode: Text.NoWrap
                             }
                         }
                     }
@@ -139,6 +161,7 @@ Item {
                         text:   Number(signerStatus.txSignedCount)
                         opacity:  signerStatus.txSignedCount > 0 ? 1 : 0.5
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
@@ -149,90 +172,68 @@ Item {
                         text:   qsTr("%1 of %2").arg(signerStatus.manualSignSpent.toFixed(8))
                         .arg(signerStatus.manualSignUnlimited ? qsTr("Unlimited") : signerStatus.manualSignLimit.toFixed(8))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
-                        visible: !signerStatus.offline
                         text:   qsTr("Auto-Sign spend limit")
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        visible: !signerStatus.offline
-                        text:   qsTr("%1 of %2").arg(signerStatus.autoSignSpent.toFixed(8))
-                        .arg(signerStatus.autoSignUnlimited ? qsTr("Unlimited") : signerStatus.autoSignLimit.toFixed(8))
+                        text:   (signerStatus.offline ? qsTr("0.00000000 of Unlimited") :
+                            qsTr("%1 of %2").arg(signerStatus.autoSignSpent.toFixed(8))
+                                .arg(signerStatus.autoSignUnlimited ? qsTr("Unlimited") :
+                                    signerStatus.autoSignLimit.toFixed(8)))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
-                        visible: !signerStatus.offline
                         text:   qsTr("Auto-Sign time limit");
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        visible: !signerStatus.offline
-                        text:   qsTr("%1 of %2")
+                        text:   (signerStatus.offline ? qsTr("None of Unlimited") : qsTr("%1 of %2")
                         .arg(signerStatus.autoSignTimeSpent ? signerStatus.autoSignTimeSpent : qsTr("None"))
-                        .arg(signerStatus.autoSignTimeLimit ? signerStatus.autoSignTimeLimit : qsTr("Unlimited"))
+                        .arg(signerStatus.autoSignTimeLimit ? signerStatus.autoSignTimeLimit : qsTr("Unlimited")))
                         Layout.alignment: Qt.AlignRight
+                        wrapMode: Text.NoWrap
                     }
                 }
             }
 
-            RowLayout {
+            Rectangle {
+                implicitHeight: view.height - grid1.height - c1.height
+                                - btns.height - column.spacing * 4
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.topMargin: 20
+                color: "#1c2835"
+            }
 
-                CustomButtonBar {
-                    Layout.fillWidth: true
+            CustomButtonBar {
+                Layout.fillWidth: true
+                implicitHeight: childrenRect.height
+                id: btns
 
-                    Flow {
-                        id: buttonRow
-                        spacing: 5
-                        padding: 5
-                        width: parent.width
-                        height: childrenRect.height + 10
+                Flow {
+                    id: buttonRow
+                    spacing: 5
+                    padding: 5
+                    width: parent.width
 
-                        CustomButton {
-                            id: btnSignOfflineTx
-                            text: (requestId == 0) ? qsTr("Sign Offline From File") : qsTr("Confirm")
-                            visible:    (requestId >= 0)
-                            property int requestId: 0
-                            onClicked: {
-                                if (requestId == 0) {
-                                    if (!ldrOfflineFileDlg.item) {
-                                        ldrOfflineFileDlg.active = true
-                                    }
-                                    ldrOfflineFileDlg.item.open();
-                                }
-                                else {
-                                    offlineProc.processRequest(requestId)
-                                    requestId = 0
-                                }
+                    CustomButton {
+                        id: btnSignOfflineTx
+                        text: qsTr("Sign Offline From File")
+                        width: parent.width - 10
+                        onClicked: {
+                            if (!ldrOfflineFileDlg.item) {
+                                ldrOfflineFileDlg.active = true
                             }
-                        }
-
-                        CustomButton {
-                            id: btnCancelSignOfflineTx
-                            text:   qsTr("Cancel")
-                            visible:    (btnSignOfflineTx.requestId)
-                            onClicked: {
-                                offlineProc.removeSignReq(btnSignOfflineTx.requestId)
-                                btnSignOfflineTx.requestId = 0
-                            }
+                            ldrOfflineFileDlg.item.open();
                         }
                     }
                 }
             }
-
-            Label {
-                id: lblParsedTx
-                Layout.fillWidth: true
-                font.pixelSize: 12
-                color:  "lightsteelblue"
-                visible:    (btnSignOfflineTx.requestId)
-            }
-
         }
     }
 
@@ -262,8 +263,7 @@ Item {
                 filePath = decodeURIComponent(filePath)
 
                 var reqId = offlineProc.parseFile(filePath)
-                btnSignOfflineTx.requestId = reqId
-                lblParsedTx.text = offlineProc.parsedText(reqId)
+                offlineProc.processRequest(reqId)
             }
         }
     }

@@ -6,12 +6,20 @@ import QtQuick.Controls 2.2
 CustomDialog {
     property int type: 0
     id: root
-    implicitWidth: parent.width * 0.7
+    implicitWidth: parent.width * 0.9
+    implicitHeight: mainLayout.implicitHeight
+
+    enum WalletType {
+        RandomSeed = 1,
+        PaperBackup = 2,
+        DigitalBackupFile = 3
+    }
 
     ColumnLayout {
         Layout.fillWidth: true
         spacing: 10
         width: parent.width
+        id: mainLayout
 
         RowLayout{
             CustomHeaderPanel{
@@ -37,9 +45,9 @@ CustomDialog {
             }
         }
 
-
         CustomButtonBar {
-            Layout.topMargin: 20
+            implicitHeight: childrenRect.height
+            implicitWidth: root.width
             id: rowButtons
 
             Flow {
@@ -57,7 +65,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     text:   qsTr("Digital backup file")
                     onClicked: {
-                        type = 3
+                        type = WalletNewDialog.WalletType.DigitalBackupFile
                         accept()
                     }
                 }
@@ -66,7 +74,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     text:   qsTr("Paper backup")
                     onClicked: {
-                        type = 2
+                        type = WalletNewDialog.WalletType.PaperBackup
                         accept()
                     }
                 }
@@ -75,7 +83,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     text:   qsTr("Random Seed")
                     onClicked: {
-                        type = 1
+                        type = WalletNewDialog.WalletType.RandomSeed
                         accept()
                     }
                 }

@@ -200,7 +200,7 @@ void OfflineProcessor::ProcessSignTX(const bs::wallet::TXSignRequest &txReq, con
    }
 
    SecureBinaryData password;
-   if (wallet->isEncrypted()) {
+   if (wallet->encryptionType() != bs::wallet::EncryptionType::Unencrypted) {
       if (cbPassword_) {
          password = cbPassword_(wallet);
          if (password.isNull()) {

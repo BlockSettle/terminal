@@ -5,7 +5,7 @@ import QtQuick.Controls.Styles 1.4
 Label {
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 10
-    color: "#757E83"
+    color: BSStyle.labelsFontColor
     wrapMode: Text.Wrap
     topPadding: 5
     bottomPadding: 5

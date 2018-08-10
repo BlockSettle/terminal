@@ -1,5 +1,5 @@
+import argparse
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -16,6 +16,7 @@ from build_scripts.zeromq_settings        import ZeroMQSettings
 from build_scripts.libqrencode_settings   import LibQREncode
 from build_scripts.mpir_settings          import MPIRSettings
 from build_scripts.libbtc_settings        import LibBTC
+from build_scripts.openssl_settings       import OpenSslSettings
 
 def generate_project(build_mode, build_server, build_test_tools):
    project_settings = Settings(build_mode)
@@ -35,6 +36,7 @@ def generate_project(build_mode, build_server, build_test_tools):
 
    required_3rdparty += [
       ProtobufSettings(project_settings),
+      OpenSslSettings(project_settings),
       QtSettings(project_settings),
       CryptoppSettings(project_settings),
       SpdlogSettings(project_settings),
@@ -105,16 +107,19 @@ def generate_project(build_mode, build_server, build_test_tools):
       return 1
 
 if __name__ == '__main__':
-   build_mode = 'release'
-   build_test_tools = False
 
-   if len(sys.argv) != 1:
-      low_args = [ a.lower() for a in sys.argv[1:] ]
-      for a in low_args:
-         if a == 'release' or a == 'debug':
-            build_mode = a
-         else:
-            print('Undefined parameter: ', a)
-            sys.exit(1)
+   input_parser = argparse.ArgumentParser()
+   input_parser.add_argument('build_mode',
+                             help='Build mode to be used by the project generator [ debug | release ]',
+                             nargs='?',
+                             action='store',
+                             default='release',
+                             choices=['debug', 'release'])
+   input_parser.add_argument('-btt',
+                             '-build-test-tools',
+                             help='Build the test tools when generating',
+                             action='store_true',
+                             dest='build_test_tools')
+   args = input_parser.parse_args()
 
-   sys.exit(generate_project(build_mode, False, build_test_tools))
+   sys.exit(generate_project(args.build_mode, False, args.build_test_tools))

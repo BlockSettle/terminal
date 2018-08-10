@@ -1,5 +1,5 @@
 import QtQuick 2.9
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.3
 import QtQuick.Controls.Styles 1.4
 
 Switch {
@@ -38,8 +38,8 @@ Switch {
 
     background: Rectangle {
         implicitWidth: 100
-        implicitHeight: 40
-        visible: control.down || control.highlighted
+        implicitHeight: 26
+        visible:  control.down
         color: "transparent"
     }
 }

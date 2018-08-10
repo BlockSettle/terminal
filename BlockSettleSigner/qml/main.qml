@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
+import QtQuick.Window 2.1
 import Qt.labs.settings 1.0
 import com.blocksettle.TXInfo 1.0
 
@@ -106,6 +107,10 @@ ApplicationWindow {
         }
     }
 
+    onClosing: {
+        settingsPage.storeSettings();
+        autoSignPage.storeSettings();
+    }
 
     signal passwordEntered(string walletId, string password)
 
@@ -114,18 +119,20 @@ ApplicationWindow {
         dlg.prompt = prompt
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
-            passwordEntered(txInfo.walletId, dlg.password)
+            passwordEntered(txInfo.wallet.id, dlg.password)
         })
         dlg.rejected.connect(function() {
-            passwordEntered(txInfo.walletId, '')
+            passwordEntered(txInfo.wallet.id, '')
         })
         mainWindow.requestActivate()
         dlg.open()
     }
 
    function raiseWindow() {
+        mainWindow.show()
         mainWindow.raise()
-        mainWindow.flags |= Qt.WindowStaysOnTopHint	// hack while raise() doesn't work properly
+        mainWindow.requestActivate()
+        mainWindow.flags |= Qt.WindowStaysOnTopHint
         mainWindow.flags &= ~Qt.WindowStaysOnTopHint
    }
 }

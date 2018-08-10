@@ -80,7 +80,7 @@ void QMLStatusUpdater::onAutoSignTick()
    autoSignTimeSpent_++;
    emit autoSignTimeSpentChanged();
 
-   if (autoSignTimeSpent_ >= params_->limitAutoSignTime()) {
+   if ((params_->limitAutoSignTime() > 0) && (autoSignTimeSpent_ >= params_->limitAutoSignTime())) {
       deactivateAutoSign();
    }
 }

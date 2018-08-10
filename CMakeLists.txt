@@ -20,10 +20,13 @@ SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
 
+set(QML_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "QML import path")
+set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "QML2 import path")
+
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
-SET(BS_VERSION_MINOR 8 )
+SET(BS_VERSION_MINOR 9 )
 SET(BS_VERSION_PATCH 0 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
@@ -52,7 +55,9 @@ SET( PROJECT_BINARY_DIR ${BLOCK_SETTLE_ROOT}/build_terminal/${CMAKE_BUILD_TYPE} 
 
 SET( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
 IF( WIN32 )
-    # output libs to same path as binaries on windows just to make life easier
+   # output libs to same path as binaries on windows just to make life easier
+   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+   SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
    SET( LIBRARY_OUTPUT_PATH ${EXECUTABLE_OUTPUT_PATH} )
 ELSE()
    SET( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/libs )
@@ -82,6 +87,22 @@ FIND_PACKAGE(Qt5Qml REQUIRED)
 FIND_PACKAGE(Qt5Quick REQUIRED)
 FIND_PACKAGE(Qt5QuickControls2 REQUIRED)
 
+IF ( UNIX AND NOT APPLE )
+   FIND_PACKAGE(Qt5DBus REQUIRED)
+   ADD_DEFINITIONS( "-DBS_USE_DBUS" )
+ELSE ()
+   FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dbus_dummy.c "")
+   ADD_LIBRARY(dbus_dummy ${CMAKE_CURRENT_BINARY_DIR}/dbus_dummy.c)
+   ADD_LIBRARY(Qt5::DBus STATIC IMPORTED)
+   IF (MSVC_IDE)
+      SET_PROPERTY(TARGET Qt5::DBus PROPERTY
+         IMPORTED_LOCATION ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${CMAKE_STATIC_LIBRARY_PREFIX}dbus_dummy${CMAKE_STATIC_LIBRARY_SUFFIX})
+   ELSE ()
+      SET_PROPERTY(TARGET Qt5::DBus PROPERTY
+         IMPORTED_LOCATION ${LIBRARY_OUTPUT_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}dbus_dummy${CMAKE_STATIC_LIBRARY_SUFFIX})
+   ENDIF ()
+ENDIF ()
+
 ADD_DEFINITIONS( -DQT_NO_CAST_TO_ASCII -DQT_NO_CAST_FROM_ASCII )
 IF(NOT WIN32)
    ADD_DEFINITIONS(-Wno-multichar -Wextra -Wall -Wformat=2)
@@ -97,9 +118,9 @@ INCLUDE_DIRECTORIES( ${ZEROMQ_INCLUDE_DIR} )
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${ZEROMQ_ROOT}/lib)
 IF( WIN32 )
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_2_3" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_2_5" )
    ELSE()
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_2_3" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_2_5" )
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE ()
    SET( ZMQ_LIB_NAME "libzmq.a" "zmq" )
@@ -109,9 +130,9 @@ FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO
 IF( NOT ZMQ_LIB )
    IF( WIN32 )
       IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_2_3" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_2_5" )
       ELSE()
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_2_3" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_2_5" )
       ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    ENDIF( WIN32 )
    FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
@@ -124,6 +145,32 @@ ENDIF( NOT ZMQ_LIB)
 #   FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Debug)
 #   FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Release)
 #ENDIF()
+
+# OpenSSL libs
+SET(OPENSSL_ROOT         ${THIRD_PARTY_COMMON_DIR}/OpenSSL)
+SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${OPENSSL_ROOT}/lib)
+
+IF( WIN32 )
+   SET(OPENSSL_LIB_NAME "libssl")
+   SET(OPENSSL_CRYPTO_LIB_NAME "libcrypto")
+ELSE()
+   SET(OPENSSL_LIB_NAME "libssl.a" "libssl" "ssl")
+   SET(OPENSSL_CRYPTO_LIB_NAME "libcrypto.a" "libcrypto" "crypto")
+ENDIF( WIN32 )
+
+FIND_LIBRARY(OPENSSL_LIB NAMES ${OPENSSL_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
+IF ( NOT OPENSSL_LIB )
+      MESSAGE(FATAL_ERROR "Could not find OpenSSL lib")
+ENDIF( NOT OPENSSL_LIB)
+
+FIND_LIBRARY(OPENSSL_CRYPTO_LIB NAMES ${OPENSSL_CRYPTO_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
+IF ( NOT OPENSSL_CRYPTO_LIB )
+      MESSAGE(FATAL_ERROR "Could not find OpenSSL crypto lib")
+ENDIF( NOT OPENSSL_CRYPTO_LIB)
+
+SET(OPENSSL_LIBS
+   ${OPENSSL_LIB}
+   ${OPENSSL_CRYPTO_LIB})
 
 # setup cryptopp
 SET(CRYPTOPP_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/cryptopp)
@@ -302,6 +349,8 @@ SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb)
 INCLUDE_DIRECTORIES( ${CRYPTOPP_EXTRA_DIR} )
 INCLUDE_DIRECTORIES( ${MDB_DIR} )
 
+SET( QT_LINUX_LIBS )
+
 IF(WIN32)
    # setup leveldb_windows_port dirs
    SET( LEVELDB_WINDOWS_PORT_DIR  ${CRYPTO_LIB_DIR}/leveldb_windows_port/win32_posix)
@@ -319,6 +368,7 @@ IF(WIN32)
       winmm
       dwmapi
       netapi32
+      crypt32
       userenv
       version
       UxTheme
@@ -333,6 +383,7 @@ IF(WIN32)
          Qt5FontDatabaseSupportd.lib
          Qt5EventDispatcherSupportd.lib
          Qt5ThemeSupportd.lib
+         Qt5WindowsUIAutomationSupportd.lib
          Qt5AccessibilitySupportd.lib )
       LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
       SET(QT_QUICK_LIBS
@@ -360,6 +411,7 @@ IF(WIN32)
          Qt5FontDatabaseSupport.lib
          Qt5EventDispatcherSupport.lib
          Qt5ThemeSupport.lib
+         Qt5WindowsUIAutomationSupport.lib
          Qt5AccessibilitySupport.lib )
       LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
       SET(QT_QUICK_LIBS
@@ -477,32 +529,67 @@ ELSE(WIN32)
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
-      SET(QT_LIBS
+      SET( QT_LIBS
          libqtharfbuzz.a
-         libqtpcre2.a
-         libQt5EventDispatcherSupport.a
-         libQt5ThemeSupport.a
-         libQt5ServiceSupport.a
-         libQt5XcbQpa.a
-         libQt5EdidSupport.a
-         )
+         libqtpcre2.a )
 
-      SET(OS_SPECIFIC_LIBS
-         dl
-         ${CMAKE_THREAD_LIBS_INIT}
-         ${ZLIB_LIBRARIES}
-         ${XCB_LIBRARIES}
-         ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
-         ${FREETYPE_LIBRARIES}
-         ${FONTCONFIG_LIBRARIES}
-         X11-xcb
-         Xrender
-         png
+      SET( TMP_LIBS
+         libQt5XcbQpa.a
+         libQt5ServiceSupport.a
+         libQt5ThemeSupport.a
+         libQt5EventDispatcherSupport.a
+         libQt5FontDatabaseSupport.a
+         libQt5LinuxAccessibilitySupport.a
+         libQt5AccessibilitySupport.a
+         libQt5EdidSupport.a )
+
+      LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+
+      IF(NOT EXISTS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+         MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a")
+      ENDIF()
+
+      FOREACH(lib_name ${TMP_LIBS})
+         IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
+            MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
+         ENDIF()
+
+         LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
+      ENDFOREACH(lib_name)
+
+      SET( OS_SPECIFIC_LIBS
          Qt5::QXcbIntegrationPlugin
          Qt5::QICOPlugin
-         ${X11_LIBRARIES}
-         ${X11_Xi_LIB}
-         )
+         fontconfig
+         freetype
+         X11-xcb
+         X11
+         Xi
+         SM
+         ICE
+         Xrender
+         xcb-xkb
+         xcb-render-util
+         xcb-sync
+         xcb-xfixes
+         xcb-xinerama
+         xcb-randr
+         xcb-render
+         xcb-image
+         xcb-shm
+         xcb-keysyms
+         xcb-icccm
+         xcb-shape
+         xcb
+         xkbcommon-x11
+         xkbcommon
+         dbus-1
+         ${ZLIB_LIBRARIES}
+         png
+         m
+         double-conversion
+         dl
+         ${CMAKE_THREAD_LIBS_INIT} )
 
       SET(QT_QUICK_LIBS
          ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
@@ -528,7 +615,7 @@ FOREACH(lib_name ${QT_LIBS})
       MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
    ENDIF()
 
-   LIST(APPEND OS_SPECIFIC_LIBS ${QT5_LIB_ROOT}/${lib_name})
+   LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
 
 ADD_SUBDIRECTORY(BlockSettleApp)

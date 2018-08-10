@@ -5,11 +5,13 @@
 #include <unordered_set>
 #include <QObject>
 #include "MetaData.h"
+#include <QSystemTrayIcon>
 
 
 namespace spdlog {
    class logger;
 }
+class FrejaProxy;
 class HeadlessContainerListener;
 class OfflineProcessor;
 class QmlWalletsViewModel;
@@ -20,6 +22,7 @@ class SignerSettings;
 class WalletsManager;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
+class DBusNotification;
 
 
 class QMLAppObj : public QObject
@@ -32,6 +35,9 @@ public:
    void Start();
    void SetRootObject(QObject *);
 
+signals:
+   void loadingComplete();
+
 private slots:
    void onPasswordAccepted(const QString &walletId, const QString &password);
    void onOfflinePassword(const bs::wallet::TXSignRequest &);
@@ -42,6 +48,7 @@ private slots:
    void onListenSocketChanged();
    void onLimitsChanged();
    void onSysTrayMsgClicked();
+   void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
 
 private:
    void OnlineProcessing();
@@ -60,9 +67,22 @@ private:
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
+   std::shared_ptr<FrejaProxy>                  frejaProxy_;
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
+
+   enum NotificationMode {
+      QSystemTray,
+      Freedesktop
+   };
+
+   NotificationMode notifMode_;
+
+#ifdef BS_USE_DBUS
+   DBusNotification *dbus_;
+#endif // BS_USE_DBUS
+
    std::unordered_set<std::string>  offlinePasswordRequests_;
 };
 

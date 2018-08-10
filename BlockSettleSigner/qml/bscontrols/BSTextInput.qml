@@ -5,12 +5,12 @@ import QtQuick.Controls.Styles 1.4
 TextField {
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 11
-    color: "white"
+    color: BSStyle.inputsFontColor
 
     background: Rectangle {
         implicitWidth: 200
         implicitHeight: 25
         color:"transparent"
-        border.color: "#757E83"
+        border.color: BSStyle.inputsBorderColor
     }
 }

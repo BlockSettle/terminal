@@ -34,6 +34,7 @@ TreeView {
         backgroundColor:    "#1C2835"
         alternateBackgroundColor: "#32000000"
         textColor: "#ffffff"
+        frame: Item {}
         headerDelegate: Rectangle {
             height: textItem.implicitHeight * 1.2
             width:  textItem.implicitWidth

@@ -22,7 +22,7 @@ Item {
 
                 CustomHeader {
                     Layout.columnSpan: 2
-                    text:   qsTr("Controls:")
+                    text:   qsTr("Controls")
                     height: 25
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
@@ -74,7 +74,6 @@ Item {
                         }
                     }
                 }
-
             }
 
             SettingsGrid {
@@ -88,30 +87,50 @@ Item {
                 }
 
                 CustomLabel {
-                    text:   qsTr("XBT spend limit:")
+                    text:   qsTr("XBT spend limit")
                 }
                 CustomTextInput {
                     Layout.fillWidth: true
                     text:   signerParams.autoSignUnlimited ? qsTr("Unlimited") : signerParams.limitAutoSignXbt
+                    selectByMouse: true
+                    id: limitAutoSignXbt
+                    validator: RegExpValidator {
+                        regExp: /^[0-9]*\.?[0-9]*$/
+                    }
                     onEditingFinished: {
-                        signerParams.limitAutoSignXbt = text
+                        if (text !== qsTr("Unlimited")) {
+                            signerParams.limitAutoSignXbt = text
+                        }
                     }
                 }
 
                 CustomLabel {
-                    text:   qsTr("Time limit:")
+                    text:   qsTr("Time limit")
                 }
                 CustomTextInput {
                     Layout.fillWidth: true
-                    placeholderText: "e.g. 1h or 15min or 600s or combined"
+                    placeholderText: "e.g. 1h or 15m or 600s or combined"
+                    selectByMouse: true
                     text:   signerParams.limitAutoSignTime ? signerParams.limitAutoSignTime : qsTr("Unlimited")
+                    id: limitAutoSignTime
+                    validator: RegExpValidator {
+                        regExp: /^(?:\d+(h|hour|m|min|minute|s|sec|second)?\s*)*$/
+                    }
                     onEditingFinished: {
                         signerParams.limitAutoSignTime = text
                     }
                 }
             }
-
-
         }
+    }
+
+    function storeSettings() {
+        if (signerParams.limitAutoSignXbt != limitAutoSignXbt.text) {
+            if (limitAutoSignXbt.text !== qsTr("Unlimited")) {
+                signerParams.limitAutoSignXbt = limitAutoSignXbt.text
+            }
+        }
+
+        signerParams.limitAutoSignTime = limitAutoSignTime.text
     }
 }

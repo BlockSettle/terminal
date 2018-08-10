@@ -23,15 +23,15 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
    const auto netType = params->testNet() ? NetworkType::TestNet : NetworkType::MainNet;
-   walletsMgr_ = std::make_shared<WalletsManager>(logger, netType, params->getWalletsDir().toStdString());
+   walletsMgr_ = std::make_shared<WalletsManager>(logger);
 }
 
 void HeadlessAppObj::Start()
 {
    logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(nullptr);
+   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
    if (!walletsMgr_->GetSettlementWallet()) {
-      if (!walletsMgr_->CreateSettlementWallet()) {
+      if (!walletsMgr_->CreateSettlementWallet(params_->netType(), params_->getWalletsDir())) {
          logger_->error("Failed to create Settlement wallet");
       }
    }
@@ -63,7 +63,8 @@ void HeadlessAppObj::OnlineProcessing()
       throw std::runtime_error("secure connection problem");
    }
 
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_, params_->pwHash().toStdString());
+   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
+      , params_->getWalletsDir().toStdString(), params_->pwHash().toStdString());
    listener_->SetLimits(params_->limits());
    if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
       logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());

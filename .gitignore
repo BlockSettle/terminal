@@ -95,29 +95,9 @@ _CppBlockUtils.*
 /*.wallet
 
 /findpass.py
-/*.txt
 /sandbox.py
 
 /lang/*.qm
-
-/webshop/orders/m*
-/webshop/orders/n*
-/webshop/orders/2*
-/webshop/orders/1*
-/webshop/orders/3*
-/webshop/refunds/m*
-/webshop/refunds/n*
-/webshop/refunds/2*
-/webshop/refunds/1*
-/webshop/refunds/3*
-
-/osxbuild/armory_*.tar.gz
-/osxbuild/build-app.log.txt
-/osxbuild/objc_armory/*.o
-/osxbuild/objc_armory/Makefile*
-/osxbuild/objc_armory/moc*
-/osxbuild/objc_armory/sip*
-/osxbuild/workspace/*
 
 /armory_*_raspbian-armhf*
 
@@ -142,8 +122,7 @@ _CppBlockUtils.*
 /cppForSwig/LMDB_Win/x64*
 /cppForSwig/x64/*.*
 
+CMakeLists.txt.user
 build_terminal/
-terminal.release/
-terminal.debug/
-
 generated_proto/
+terminal.*/

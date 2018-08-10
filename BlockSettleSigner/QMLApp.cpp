@@ -1,10 +1,11 @@
 #include <functional>
 #include <QtQml>
 #include <QQmlContext>
-#include <QSystemTrayIcon>
+#include <QGuiApplication>
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
+#include "FrejaProxy.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
 #include "HDWallet.h"
@@ -16,6 +17,12 @@
 #include "WalletsProxy.h"
 #include "WalletsViewModel.h"
 #include "ZmqSecuredServerConnection.h"
+#include "EasyEncValidator.h"
+#include "PasswordConfirmValidator.h"
+
+#ifdef BS_USE_DBUS
+#include "DBusNotification.h"
+#endif // BS_USE_DBUS
 
 Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(TXInfo)
@@ -24,6 +31,10 @@ Q_DECLARE_METATYPE(TXInfo)
 QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<SignerSettings> &params
    , QQmlContext *ctxt)
    : QObject(nullptr), logger_(logger), params_(params), ctxt_(ctxt)
+   , notifMode_(QSystemTray)
+#ifdef BS_USE_DBUS
+   , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
+#endif // BS_USE_DBUS
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
@@ -34,9 +45,16 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
+   qmlRegisterUncreatableType<FrejaProxy>("com.blocksettle.FrejaProxy", 1, 0,
+      "FrejaProxy", QStringLiteral("Cannot create a FrejaProxy instance"));
+   qmlRegisterType<FrejaSignWalletObject>("com.blocksettle.FrejaSignWalletObject", 1, 0, "FrejaSignWalletObject");
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
+   qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
+   qmlRegisterType<WalletSeed>("com.blocksettle.WalletSeed", 1, 0, "WalletSeed");
+   qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
+   qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
 
-   walletsMgr_ = std::make_shared<WalletsManager>(logger_, params_->netType(), params_->getWalletsDir().toStdString());
+   walletsMgr_ = std::make_shared<WalletsManager>(logger_);
 
    walletsModel_ = new QmlWalletsViewModel(walletsMgr_, ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -52,11 +70,30 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
    ctxt_->setContextProperty(QStringLiteral("offlineProc"), offlineProc_.get());
 
-   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_);
+   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_, params_);
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
+   connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
+      if (walletsProxy_->walletsLoaded()) {
+         emit loadingComplete();
+      }
+   });
+
+   frejaProxy_ = std::make_shared<FrejaProxy>(logger_);
+   ctxt_->setContextProperty(QStringLiteral("freja"), frejaProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+   connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
+
+#ifdef BS_USE_DBUS
+   if (dbus_->isValid()) {
+      notifMode_ = Freedesktop;
+
+      QObject::disconnect(trayIcon_, &QSystemTrayIcon::messageClicked,
+         this, &QMLAppObj::onSysTrayMsgClicked);
+      connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+   }
+#endif // BS_USE_DBUS
 }
 
 void QMLAppObj::settingsConnections()
@@ -73,12 +110,12 @@ void QMLAppObj::settingsConnections()
 void QMLAppObj::walletsLoad()
 {
    logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(nullptr);
+   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
    if (walletsMgr_->GetWalletsCount() > 0) {
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
       if (!walletsMgr_->GetSettlementWallet()) {
-         if (!walletsMgr_->CreateSettlementWallet()) {
+         if (!walletsMgr_->CreateSettlementWallet(params_->netType(), params_->getWalletsDir())) {
             logger_->error("Failed to create Settlement wallet");
          }
       }
@@ -101,8 +138,17 @@ void QMLAppObj::Start()
       }
    }
    catch (const std::exception &e) {
-      trayIcon_->showMessage(tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what()))
-         , QSystemTrayIcon::Critical, 10000);
+      if (notifMode_ == QSystemTray) {
+         trayIcon_->showMessage(tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what()))
+            , QSystemTrayIcon::Critical, 10000);
+      }
+#ifdef BS_USE_DBUS
+      else {
+         dbus_->notifyDBus(QSystemTrayIcon::Critical,
+            tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what())),
+            QIcon(), 10000);
+      }
+#endif // BS_USE_DBUS
       throw std::runtime_error("failed to open connection");
    }
 }
@@ -128,7 +174,7 @@ void QMLAppObj::onOfflineChanged()
 
 void QMLAppObj::onWalletsDirChanged()
 {
-   walletsMgr_->Reset(params_->netType(), params_->getWalletsDir().toStdString());
+   walletsMgr_->Reset();
    walletsLoad();
 }
 
@@ -163,12 +209,13 @@ void QMLAppObj::SetRootObject(QObject *obj)
 
 void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password)
 {
-   logger_->debug("Password for wallet {} was accepted", walletId.toStdString());
+   SecureBinaryData decodedPwd = BinaryData::CreateFromHex(password.toStdString());
+   logger_->debug("Password for wallet {} was accepted ({})", walletId.toStdString(), password.size());
    if (listener_) {
-      listener_->passwordReceived(walletId.toStdString(), password.toStdString());
+      listener_->passwordReceived(walletId.toStdString(), decodedPwd);
    }
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
-      offlineProc_->passwordEntered(walletId.toStdString(), password.toStdString());
+      offlineProc_->passwordEntered(walletId.toStdString(), decodedPwd);
       offlinePasswordRequests_.erase(walletId.toStdString());
    }
 }
@@ -187,14 +234,17 @@ void QMLAppObj::onPasswordRequested(const bs::wallet::TXSignRequest &txReq, cons
 void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
 {
    bs::wallet::TXSignRequest txReq;
+   QString walletName;
    txReq.walletId = walletId;
    if (txReq.walletId.empty()) {
       const auto &wallet = walletsMgr_->GetPrimaryWallet();
       if (wallet) {
          txReq.walletId = wallet->getWalletId();
+         walletName = QString::fromStdString(wallet->getName());
       }
    }
-   requestPassword(txReq, tr("Auto-Sign for %1").arg(QString::fromStdString(walletId)));
+   requestPassword(txReq, walletName.isEmpty() ? tr("Activate Auto-Signing") :
+      tr("Activate Auto-Signing for %1").arg(walletName));
 }
 
 void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
@@ -205,9 +255,19 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
    if (alert && trayIcon_) {
       QString notifPrompt = prompt;
       if (!txReq.walletId.empty()) {
-         notifPrompt = tr("Enter password for %1").arg(txInfo->sendingWallet());
+         notifPrompt = tr("Enter password for %1").arg(txInfo->wallet()->name());
       }
-      trayIcon_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
+
+      if (notifMode_ == QSystemTray) {
+         trayIcon_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
+      }
+#ifdef BS_USE_DBUS
+      else {
+         dbus_->notifyDBus(QSystemTrayIcon::Warning,
+            tr("Password request"), notifPrompt,
+            QIcon(), 30000);
+      }
+#endif // BS_USE_DBUS
    }
 
    QMetaObject::invokeMethod(rootObj_, "createPasswordDialog", Q_ARG(QVariant, prompt)
@@ -218,6 +278,17 @@ void QMLAppObj::onSysTrayMsgClicked()
 {
    logger_->debug("Systray message clicked");
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   QGuiApplication::processEvents();
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+}
+
+void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
+{
+   if (reason == QSystemTrayIcon::Trigger) {
+      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+      QGuiApplication::processEvents();
+      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   }
 }
 
 void QMLAppObj::OnlineProcessing()
@@ -233,7 +304,7 @@ void QMLAppObj::OnlineProcessing()
    }
 
    listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , params_->pwHash().toStdString(), true);
+      , params_->getWalletsDir().toStdString(), params_->pwHash().toStdString(), true);
    listener_->SetLimits(params_->limits());
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
