@@ -36,8 +36,33 @@ private slots:
    void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 
 private:
-   std::map<QString, std::pair<double, double>> data_;
+   std::map<QString, std::map<bs::network::MDField::Type, double>> data_;
 }; // class MarketData
+
+
+//
+// DataStorage
+//
+
+//! Data storage for user script.
+class DataStorage : public QObject
+{
+   Q_OBJECT
+
+public:
+   explicit DataStorage(QObject *parent);
+   ~DataStorage() noexcept override = default;
+
+   Q_INVOKABLE double bought(const QString &currency);
+   Q_INVOKABLE void setBought(const QString &currency, double v, const QString &id);
+
+   Q_INVOKABLE double sold(const QString &currency);
+   Q_INVOKABLE void setSold(const QString &currency, double v, const QString &id);
+
+private:
+   std::map<QString, std::map<QString, double>> bought_;
+   std::map<QString, std::map<QString, double>> sold_;
+}; // class DataStorage
 
 
 //
@@ -49,8 +74,8 @@ class Constants : public QObject
 {
    Q_OBJECT
 
-   Q_PROPERTY(int payInTrxSize READ payInTrxSize)
-   Q_PROPERTY(int payOutTrxSize READ payOutTrxSize)
+   Q_PROPERTY(int payInTxSize READ payInTxSize)
+   Q_PROPERTY(int payOutTxSize READ payOutTxSize)
    Q_PROPERTY(float feePerByte READ feePerByte)
    Q_PROPERTY(QString xbtProductName READ xbtProductName)
 
@@ -58,23 +83,15 @@ public:
    explicit Constants(QObject *parent);
    ~Constants() noexcept override = default;
 
-   int payInTrxSize() const;
-   int payOutTrxSize() const;
+   int payInTxSize() const;
+   int payOutTxSize() const;
    float feePerByte() const;
    QString xbtProductName() const;
-
-   Q_INVOKABLE double bought(const QString &currency);
-   Q_INVOKABLE void setBought(const QString &currency, double v, const QString &id);
-
-   Q_INVOKABLE double sold(const QString &currency);
-   Q_INVOKABLE void setSold(const QString &currency, double v, const QString &id);
 
    void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
 
 private:
    std::shared_ptr<WalletsManager> walletsManager_;
-   std::map<QString, std::map<QString, double>> bought_;
-   std::map<QString, std::map<QString, double>> sold_;
 }; // class Constants
 
 
@@ -103,6 +120,7 @@ private:
    QQmlComponent *component_;
    MarketData *md_;
    Constants *const_;
+   DataStorage *storage_;
 };
 
 

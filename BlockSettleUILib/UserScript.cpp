@@ -19,9 +19,11 @@ UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
    , component_(nullptr)
    , md_(new MarketData(mdProvider, this))
    , const_(new Constants(this))
+   , storage_(new DataStorage(this))
 {
    engine_->rootContext()->setContextProperty(QLatin1String("marketData"), md_);
    engine_->rootContext()->setContextProperty(QLatin1String("constants"), const_);
+   engine_->rootContext()->setContextProperty(QLatin1String("dataStorage"), storage_);
 }
 
 UserScript::~UserScript()
@@ -82,7 +84,13 @@ double MarketData::bid(const QString &sec) const
    auto it = data_.find(sec);
 
    if (it != data_.cend()) {
-      return it->second.first;
+      auto dit = it->second.find(bs::network::MDField::PriceBid);
+
+      if (dit != it->second.cend()) {
+         return dit->second;
+      } else {
+         return 0.0;
+      }
    } else {
       return 0.0;
    }
@@ -93,7 +101,13 @@ double MarketData::ask(const QString &sec) const
    auto it = data_.find(sec);
 
    if (it != data_.cend()) {
-      return it->second.second;
+      auto dit = it->second.find(bs::network::MDField::PriceOffer);
+
+      if (dit != it->second.cend()) {
+         return dit->second;
+      } else {
+         return 0.0;
+      }
    } else {
       return 0.0;
    }
@@ -102,31 +116,45 @@ double MarketData::ask(const QString &sec) const
 void MarketData::onMDUpdated(bs::network::Asset::Type, const QString &security,
    bs::network::MDFields data)
 {
-   std::pair<double, double> prices;
-
    for (const auto &field : data) {
-      switch (field.type) {
-         case bs::network::MDField::PriceBid:
-            prices.first = field.value;
-            break;
-
-         case bs::network::MDField::PriceOffer:
-            prices.second = field.value;
-            break;
-
-         default:  break;
-      }
+      data_[security][field.type] = field.value;
    }
+}
 
-   if (qFuzzyIsNull(prices.first)) {
-      prices.first = data_[security].first;
-   }
 
-   if (qFuzzyIsNull(prices.second)) {
-      prices.second = data_[security].second;
-   }
+//
+// DataStorage
+//
 
-   data_[security] = prices;
+DataStorage::DataStorage(QObject *parent)
+   : QObject(parent)
+{
+}
+
+double DataStorage::bought(const QString &currency)
+{
+   return std::accumulate(std::begin(bought_[currency]), std::end(bought_[currency]),
+      0.0,
+      [] (double value, const std::map<QString, double>::value_type& p)
+         { return value + p.second; });
+}
+
+void DataStorage::setBought(const QString &currency, double v, const QString &id)
+{
+   bought_[currency][id] = v;
+}
+
+double DataStorage::sold(const QString &currency)
+{
+   return std::accumulate(std::begin(sold_[currency]), std::end(sold_[currency]),
+      0.0,
+      [] (double value, const std::map<QString, double>::value_type& p)
+         { return value + p.second; });
+}
+
+void DataStorage::setSold(const QString &currency, double v, const QString &id)
+{
+   sold_[currency][id] = v;
 }
 
 
@@ -140,12 +168,12 @@ Constants::Constants(QObject *parent)
 {
 }
 
-int Constants::payInTrxSize() const
+int Constants::payInTxSize() const
 {
    return 125;
 }
 
-int Constants::payOutTrxSize() const
+int Constants::payOutTxSize() const
 {
    return 82;
 }
@@ -162,32 +190,6 @@ float Constants::feePerByte() const
 QString Constants::xbtProductName() const
 {
    return QString::fromStdString(bs::network::XbtCurrency);
-}
-
-double Constants::bought(const QString &currency)
-{
-   return std::accumulate(std::begin(bought_[currency]), std::end(bought_[currency]),
-      0.0,
-      [] (double value, const std::map<QString, double>::value_type& p)
-         { return value + p.second; });
-}
-
-void Constants::setBought(const QString &currency, double v, const QString &id)
-{
-   bought_[currency][id] = v;
-}
-
-double Constants::sold(const QString &currency)
-{
-   return std::accumulate(std::begin(sold_[currency]), std::end(sold_[currency]),
-      0.0,
-      [] (double value, const std::map<QString, double>::value_type& p)
-         { return value + p.second; });
-}
-
-void Constants::setSold(const QString &currency, double v, const QString &id)
-{
-   sold_[currency][id] = v;
 }
 
 void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
