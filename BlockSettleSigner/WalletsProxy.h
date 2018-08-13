@@ -25,8 +25,8 @@ class WalletSeed : public QObject
    Q_PROPERTY(QString walletId READ walletId NOTIFY seedChanged)
    Q_PROPERTY(QString walletName READ walletName WRITE setWalletName NOTIFY seedChanged)
    Q_PROPERTY(QString walletDesc READ walletDesc WRITE setWalletDesc NOTIFY seedChanged)
-   Q_PROPERTY(WalletInfo::EncryptionType encType READ encType WRITE setEncType NOTIFY seedChanged)
-   Q_PROPERTY(QString encKey READ encKey WRITE setEncKey NOTIFY seedChanged)
+//!   Q_PROPERTY(WalletInfo::EncryptionType encType READ encType WRITE setEncType NOTIFY seedChanged)
+//!   Q_PROPERTY(QString encKey READ encKey WRITE setEncKey NOTIFY seedChanged)
    Q_PROPERTY(bool testNet READ isTestNet WRITE setTestNet NOTIFY seedChanged)
    Q_PROPERTY(bool mainNet READ isMainNet WRITE setMainNet NOTIFY seedChanged)
 
@@ -43,11 +43,6 @@ public:
    bool isTestNet() const { return seed_.networkType() == NetworkType::TestNet; }
    void setMainNet(bool) { seed_.setNetworkType(NetworkType::MainNet); emit seedChanged(); }
    bool isMainNet() const { return seed_.networkType() == NetworkType::MainNet; }
-
-   WalletInfo::EncryptionType encType() const { return static_cast<WalletInfo::EncryptionType>(seed_.encryptionType()); }
-   void setEncType(WalletInfo::EncryptionType encType) { seed_.setEncryptionType(static_cast<bs::wallet::EncryptionType>(encType)); }
-   QString encKey() const { return QString::fromStdString(seed_.encryptionKey().toBinStr()); }
-   void setEncKey(const QString &key) { seed_.setEncryptionKey(key.toStdString()); }
 
    void setWalletName(const QString &name) { walletName_ = name; }
    void setWalletDesc(const QString &desc) { walletDesc_ = desc; }

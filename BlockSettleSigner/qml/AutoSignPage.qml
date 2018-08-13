@@ -22,7 +22,7 @@ Item {
 
                 CustomHeader {
                     Layout.columnSpan: 2
-                    text:   qsTr("Controls:")
+                    text:   qsTr("Controls")
                     height: 25
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
@@ -87,7 +87,7 @@ Item {
                 }
 
                 CustomLabel {
-                    text:   qsTr("XBT spend limit:")
+                    text:   qsTr("XBT spend limit")
                 }
                 CustomTextInput {
                     Layout.fillWidth: true
@@ -105,7 +105,7 @@ Item {
                 }
 
                 CustomLabel {
-                    text:   qsTr("Time limit:")
+                    text:   qsTr("Time limit")
                 }
                 CustomTextInput {
                     Layout.fillWidth: true

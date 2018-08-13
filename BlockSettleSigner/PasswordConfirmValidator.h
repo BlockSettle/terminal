@@ -35,14 +35,11 @@ signals:
 
 private:
     QString compareTo_;
-    QString name_ = QCoreApplication::translate("", "Password");
+    QString name_ = tr("Password");
 
-    QString dontMatchMsgTmpl_ = QString::fromStdString("%1s ") +  QCoreApplication::translate("", "do not match!");
-    QString tooLongTmpl_ =
-            QCoreApplication::translate("", "Confiramtion") +
-            QString::fromStdString(" %1 ") +
-            QCoreApplication::translate("", "too long!");
-    QString validTmpl_ = QString::fromStdString("%1s ") +  QCoreApplication::translate("", " match!");
+    QString dontMatchMsgTmpl_ = QString::fromStdString("%1s ") +  tr("do not match!");
+    QString tooLongTmpl_ = tr("Confiramtion") + QString::fromStdString(" %1 ") + tr("too long!");
+    QString validTmpl_ = QString::fromStdString("%1s ") + tr("match!");
     mutable QString statusMsg_;
 };
 

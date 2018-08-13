@@ -6,7 +6,7 @@ import QtQuick.Controls 2.2
 CustomDialog {
     property int type: 0
     id: root
-    implicitWidth: parent.width * 0.7
+    implicitWidth: parent.width * 0.9
     implicitHeight: mainLayout.implicitHeight
 
     enum WalletType {

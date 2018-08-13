@@ -102,7 +102,7 @@ CustomDialog {
                     Layout.minimumWidth: inputLabelsWidth
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
-                    text:   qsTr("Wallet Name:")
+                    text:   qsTr("Wallet Name")
                 }
                 CustomTextInput {
                     id: tfName
@@ -127,7 +127,7 @@ CustomDialog {
                     Layout.minimumWidth: inputLabelsWidth
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
-                    text:   qsTr("Wallet Description:")
+                    text:   qsTr("Wallet Description")
                 }
                 CustomTextInput {
                     id: tfDesc
@@ -224,7 +224,7 @@ CustomDialog {
                 rowSpacing: 0
                 columnSpacing: 0
                 Layout.topMargin: 5
-                sectionHeaderTxt: qsTr("Enter Root Private Key: ")
+                sectionHeaderTxt: qsTr("Enter Root Private Key ")
                 line1LabelTxt: qsTr("Root Key Line 1")
                 line2LabelTxt: qsTr("Root Key Line 2")
                 onEntryComplete: {
@@ -246,7 +246,7 @@ CustomDialog {
                     Layout.minimumWidth: inputLabelsWidth
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
-                    text: qsTr("Digital backup:")
+                    text: qsTr("Digital backup")
                 }
 
                 CustomLabel {
@@ -351,6 +351,8 @@ CustomDialog {
                 lblDBFile.text = decodeURIComponent(filePath)
                 if (!seed.parseDigitalBackupFile(lblDBFile.text)) {
                     ibFailure.displayMessage(qsTr("Failed to parse digital backup from %1").arg(lblDBFile.text))
+                } else if (tfName.text.length === 0) {
+                    tfName.text = seed.walletName
                 }
             }
         }

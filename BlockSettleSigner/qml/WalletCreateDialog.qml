@@ -96,7 +96,7 @@ CustomDialog {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     Layout.fillWidth: true
-                    text:   qsTr("Wallet Name:")
+                    text:   qsTr("Wallet Name")
                 }
                 CustomTextInput {
                     id: tfName
@@ -119,7 +119,7 @@ CustomDialog {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     Layout.fillWidth: true
-                    text:   qsTr("Wallet Description:")
+                    text:   qsTr("Wallet Description")
                 }
                 CustomTextInput {
                     id: tfDesc

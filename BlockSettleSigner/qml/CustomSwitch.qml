@@ -38,7 +38,7 @@ Switch {
 
     background: Rectangle {
         implicitWidth: 100
-        implicitHeight: 40
+        implicitHeight: 26
         visible:  control.down
         color: "transparent"
     }

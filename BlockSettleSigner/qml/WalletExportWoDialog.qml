@@ -73,7 +73,7 @@ CustomDialog {
                 CustomLabel {
                     visible:    wallet.encType === WalletInfo.Password
                     elide: Label.ElideRight
-                    text: qsTr("Password:")
+                    text: qsTr("Password")
                     Layout.minimumWidth: 110
                     Layout.preferredWidth: 110
                     Layout.maximumWidth: 110

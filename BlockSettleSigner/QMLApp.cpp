@@ -243,7 +243,8 @@ void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
          walletName = QString::fromStdString(wallet->getName());
       }
    }
-   requestPassword(txReq, walletName.isEmpty() ? tr("Auto-Sign") : tr("Auto-Sign for %1").arg(walletName));
+   requestPassword(txReq, walletName.isEmpty() ? tr("Activate Auto-Signing") :
+      tr("Activate Auto-Signing for %1").arg(walletName));
 }
 
 void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
