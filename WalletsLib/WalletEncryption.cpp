@@ -1,7 +1,7 @@
 #include "WalletEncryption.h"
 
 
-BinaryData xor(const BinaryData &a, const BinaryData &b)
+BinaryData mergeKeys(const BinaryData &a, const BinaryData &b)
 {
    BinaryData result;
    if (a.getSize() > b.getSize()) {

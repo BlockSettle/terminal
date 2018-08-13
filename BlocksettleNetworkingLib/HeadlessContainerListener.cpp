@@ -781,7 +781,7 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
 
    SecureBinaryData password;
    for (const auto &pwd : pwdData) {
-      password = xor(password, pwd.password);
+      password = mergeKeys(password, pwd.password);
    }
 
    walletsMgr_->BackupWallet(hdWallet, backupPath_);
@@ -865,7 +865,7 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
       SecureBinaryData password = pwdData.empty() ? SecureBinaryData{} : pwdData[0].password;
       if (keyRank.first > 1) {
          for (int i = 1; i < keyRank.first; ++i) {
-            password = xor(password, pwdData[i].password);
+            password = mergeKeys(password, pwdData[i].password);
          }
       }
       const auto woWallet = wallet->CreateWatchingOnly(password);

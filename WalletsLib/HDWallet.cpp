@@ -746,7 +746,7 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
          for (int i = 0; i < keyRank.first; ++i) {
             const auto &idx = combi[i];
             const auto &passData = newPass[idx];
-            xorPass = xor(xorPass, passData.password);
+            xorPass = mergeKeys(xorPass, passData.password);
             encTypes.insert(passData.encType);
             if (!passData.encKey.isNull()) {
                encKeys.insert(passData.encKey);

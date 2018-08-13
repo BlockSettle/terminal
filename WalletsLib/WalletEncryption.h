@@ -23,6 +23,6 @@ namespace bs {
    }  // wallet
 }  //namespace bs
 
-BinaryData xor(const BinaryData &, const BinaryData &);
+BinaryData mergeKeys(const BinaryData &, const BinaryData &);
 
 #endif //WALLET_ENCRYPTION_H
