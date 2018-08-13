@@ -4,11 +4,11 @@
 
 #include <spdlog/spdlog.h>
 
-#include "HDNode.h"
 #include "HDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerSettings.h"
 #include "WalletBackupFile.h"
+#include "WalletEncryption.h"
 #include "WalletsManager.h"
 #include "WalletsProxy.h"
 #include "UiUtils.h"
@@ -77,7 +77,7 @@ bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPas
       emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
       return false;
    }
-   const bs::hd::PasswordData pwdData = { BinaryData::CreateFromHex(newPass.toStdString()), mapEncType(encType), encKey.toStdString() };
+   const bs::wallet::PasswordData pwdData = { BinaryData::CreateFromHex(newPass.toStdString()), mapEncType(encType), encKey.toStdString() };
    if (!wallet->changePassword({ pwdData }, { 1, 1 }, BinaryData::CreateFromHex(oldPass.toStdString()))) {
       emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
       return false;
@@ -204,7 +204,7 @@ bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletS
       return false;
    }
    try {    //!
-      const std::vector<bs::hd::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
+      const std::vector<bs::wallet::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
          , bs::wallet::EncryptionType::Password, {} } };
       walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
          , seed->seed(), params_->getWalletsDir(), isPrimary, pwdData, { 1, 1 });
@@ -220,7 +220,7 @@ bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletS
 bool WalletsProxy::importWallet(bool isPrimary, WalletSeed *seed, const QString &password)
 {
    try { //!
-      const std::vector<bs::hd::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
+      const std::vector<bs::wallet::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
          , bs::wallet::EncryptionType::Password,{} } };
       walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
          , seed->seed(), params_->getWalletsDir(), isPrimary, pwdData, { 1, 1 });
