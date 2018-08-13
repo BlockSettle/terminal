@@ -78,7 +78,8 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container
+   , std::shared_ptr<MarketDataProvider> mdProvider)
 {
    logger_ = logger;
    assetManager_ = assetManager;
@@ -86,6 +87,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    authAddressManager_ = authAddressManager;
    appSettings_ = appSettings;
    signingContainer_ = container;
+   mdProvider_ = mdProvider;
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
@@ -154,6 +156,10 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<WalletsManager> &wa
 {
    walletsManager_ = walletsManager;
    UiUtils::fillHDWalletsComboBox(ui_->comboBoxWalletAS, walletsManager_);
+
+   if (aq_) {
+      aq_->setWalletsManager(walletsManager_);
+   }
 }
 
 bool RFQDealerReply::autoSign() const
@@ -880,7 +886,10 @@ void RFQDealerReply::initAQ(const QString &filename)
       return;
    }
    aqLoaded_ = false;
-   aq_ = new AutoQuoter(logger_, filename, assetManager_, this);
+   aq_ = new AutoQuoter(logger_, filename, assetManager_, mdProvider_, this);
+   if (walletsManager_) {
+      aq_->setWalletsManager(walletsManager_);
+   }
    connect(aq_, &AutoQuoter::loaded, [this, filename] {
       aqLoaded_ = true;
       validateGUI();
