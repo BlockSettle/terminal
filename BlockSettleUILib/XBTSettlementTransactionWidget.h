@@ -10,7 +10,6 @@
 #include "AddressVerificator.h"
 #include "BinaryData.h"
 #include "CommonTypes.h"
-#include "FrejaREST.h"
 #include "MetaData.h"
 #include "SettlementWallet.h"
 #include "UtxoReservation.h"
@@ -73,18 +72,14 @@ private slots:
    void stop();
    void retry();
    void updateAcceptButton();
-   void onPasswordChanged(const QString &);
    void onZCError(const QString &txHash, const QString &errMsg);
    void onPayInZCDetected();
    void onPayoutZCDetected(int confNum, bs::PayoutSigner::Type);
 
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
+      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
    void onDealerVerificationStateChanged();
-
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &);
-   void onFrejaStatusUpdated(const QString &);
 
 signals:
    void settlementCancelled();
@@ -125,6 +120,7 @@ private:
    unsigned int               payinSignId_ = 0;
    unsigned int               payoutSignId_ = 0;
    unsigned int               infoReqId_ = 0;
+   unsigned int               infoReqIdAuth_ = 0;
 
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
@@ -140,10 +136,9 @@ private:
    std::shared_ptr<bs::SettlementMonitor>          monitor_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
-   std::shared_ptr<FrejaSignWallet> frejaSign_;
-   bs::wallet::EncryptionType       encType_ = bs::wallet::EncryptionType::Unencrypted;
-   QString           userId_;
-   SecureBinaryData  walletPassword_;
+   std::vector<bs::wallet::EncryptionType>   encTypes_, encTypesAuth_;
+   std::vector<SecureBinaryData>             encKeys_, encKeysAuth_;
+   bs::wallet::KeyRank                       keyRank_, keyRankAuth_;
    std::string comment_;
 
    bool sellFromPrimary_;

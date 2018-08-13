@@ -46,7 +46,7 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(Path::Elem elem, const std::shar
    if (getLeaf(elem) != nullptr) {
       return nullptr;
    }
-   if (!rootNode_ && !extNode) {
+   if (rootNodes_.empty() && !extNode) {
       return nullptr;
    }
    auto pathLeaf = path_;
@@ -153,7 +153,7 @@ void hd::Group::serializeLeaves(BinaryWriter &bw) const
    }
 }
 
-std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key, BinaryDataRef value, const std::shared_ptr<Node> &rootNode
+std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key, BinaryDataRef value, Nodes rootNodes
    , const std::string &name, const std::string &desc, bool extOnlyAddresses)
 {
    BinaryRefReader brrKey(key);
@@ -167,16 +167,16 @@ std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key, BinaryDataR
 
    switch (grpType) {
    case CoinType::BlockSettle_Auth:
-      group = std::make_shared<hd::AuthGroup>(rootNode, emptyPath, name, desc, extOnlyAddresses);
+      group = std::make_shared<hd::AuthGroup>(rootNodes, emptyPath, name, desc, extOnlyAddresses);
       break;
 
    case CoinType::Bitcoin_main:
    case CoinType::Bitcoin_test:
-      group = std::make_shared<hd::Group>(rootNode, emptyPath, name, nameForType(grpType), desc, extOnlyAddresses);
+      group = std::make_shared<hd::Group>(rootNodes, emptyPath, name, nameForType(grpType), desc, extOnlyAddresses);
       break;
 
    case CoinType::BlockSettle_CC:
-      group = std::make_shared<hd::CCGroup>(rootNode, emptyPath, name, desc, extOnlyAddresses);
+      group = std::make_shared<hd::CCGroup>(rootNodes, emptyPath, name, desc, extOnlyAddresses);
       break;
 
    default:
@@ -213,7 +213,7 @@ std::shared_ptr<hd::Leaf> hd::Group::newLeaf() const
 
 void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const Path &path, const std::shared_ptr<Node> &extNode) const
 {
-   if (!rootNode_ && !extNode && !path.length()) {
+   if (rootNodes_.empty() && !extNode && !path.length()) {
       return;
    }
    std::shared_ptr<hd::Node> node;
@@ -229,12 +229,16 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const Path &path, cons
       }
    }
    else {
-      node = rootNode_->derive(path);
+      const auto &decrypted = rootNodes_.decrypt({});
+      if (!decrypted) {
+         return;
+      }
+      node = decrypted->derive(path);
    }
    if (node) {
       node->clearPrivKey();
    }
-   leaf->init(node, path, rootNode_);
+   leaf->init(node, path, rootNodes_);
 }
 
 void hd::Group::deserialize(BinaryDataRef value)
@@ -252,7 +256,7 @@ void hd::Group::deserialize(BinaryDataRef value)
       len = brrVal.get_var_int();
       const auto serLeaf = brrVal.get_BinaryData(len);
       const auto leaf = newLeaf();
-      if (leaf->deserialize(serLeaf, rootNode_)) {
+      if (leaf->deserialize(serLeaf, rootNodes_)) {
          addLeaf(leaf);
       }
    }
@@ -281,7 +285,7 @@ std::shared_ptr<hd::Group> hd::Group::CreateWatchingOnly(const std::shared_ptr<N
 
 std::shared_ptr<hd::Group> hd::Group::CreateWO() const
 {
-   return std::make_shared<hd::Group>(nullptr, path_, walletName_, name_, desc_, extOnlyAddresses_);
+   return std::make_shared<hd::Group>(Nodes(), path_, walletName_, name_, desc_, extOnlyAddresses_);
 }
 
 void hd::Group::copyLeaf(std::shared_ptr<hd::Group> &target, hd::Path::Elem leafIndex, const std::shared_ptr<hd::Leaf> &leaf
@@ -292,7 +296,7 @@ void hd::Group::copyLeaf(std::shared_ptr<hd::Group> &target, hd::Path::Elem leaf
    path.append(leafIndex, true);
    const auto node = extNode->derive(path);
    node->clearPrivKey();
-   wallet->init(node, path, nullptr);
+   wallet->init(node, path, {});
    leaf->copyTo(wallet);
    target->addLeaf(wallet);
 }
@@ -304,37 +308,30 @@ void hd::Group::FillWO(std::shared_ptr<hd::Group> &woGroup, const std::shared_pt
    }
 }
 
-void hd::Group::updateRootNode(const std::shared_ptr<hd::Node> &rootNode, const SecureBinaryData &password)
+void hd::Group::updateRootNodes(Nodes rootNodes, const std::shared_ptr<hd::Node> &decrypted)
 {
-   rootNode_ = rootNode;
-   std::shared_ptr<hd::Node> extNode;
-   if (rootNode->encType() != wallet::EncryptionType::Unencrypted) {
-      extNode = rootNode->decrypt(password);
-   }
-   else {
-      extNode = rootNode;
-   }
+   rootNodes_ = rootNodes;
 
    for (auto &leaf : leaves_) {
       auto pathLeaf = path_;
       pathLeaf.append(leaf.first, true);
-      initLeaf(leaf.second, pathLeaf, extNode);
+      initLeaf(leaf.second, pathLeaf, decrypted);
    }
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-hd::AuthGroup::AuthGroup(const std::shared_ptr<Node> &rootNode, const Path &path, const std::string &name
+hd::AuthGroup::AuthGroup(Nodes rootNodes, const Path &path, const std::string &name
    , const std::string &desc, bool extOnlyAddresses)
-   : Group(rootNode, path, name, nameForType(CoinType::BlockSettle_Auth), desc, extOnlyAddresses)
+   : Group(rootNodes, path, name, nameForType(CoinType::BlockSettle_Auth), desc, extOnlyAddresses)
 {
    scanPortion_ = 5;
 }
 
 std::shared_ptr<hd::Group> hd::AuthGroup::CreateWO() const
 {
-   auto woGroup = std::make_shared<hd::AuthGroup>(nullptr, path_, name_, desc_, extOnlyAddresses_);
+   auto woGroup = std::make_shared<hd::AuthGroup>(Nodes(), path_, name_, desc_, extOnlyAddresses_);
    woGroup->setUserID(userId_);
    return woGroup;
 }
@@ -375,21 +372,14 @@ void hd::AuthGroup::setUserID(const BinaryData &userId)
    }
 }
 
-void hd::AuthGroup::updateRootNode(const std::shared_ptr<hd::Node> &rootNode, const SecureBinaryData &password)
+void hd::AuthGroup::updateRootNodes(Nodes rootNodes, const std::shared_ptr<hd::Node> &decrypted)
 {
-   hd::Group::updateRootNode(rootNode, password);
-   std::shared_ptr<hd::Node> extNode;
-   if (rootNode->encType() != wallet::EncryptionType::Unencrypted) {
-      extNode = rootNode->decrypt(password);
-   }
-   else {
-      extNode = rootNode;
-   }
+   hd::Group::updateRootNodes(rootNodes, decrypted);
 
    for (auto &leaf : tempLeaves_) {
       auto pathLeaf = path_;
       pathLeaf.append(leaf.first, true);
-      initLeaf(leaf.second, pathLeaf, extNode);
+      initLeaf(leaf.second, pathLeaf, decrypted);
    }
 }
 
@@ -428,7 +418,7 @@ void hd::AuthGroup::serializeLeaves(BinaryWriter &bw) const
 
 std::shared_ptr<hd::Group> hd::CCGroup::CreateWO() const
 {
-   return std::make_shared<hd::CCGroup>(nullptr, path_, name_, desc_, extOnlyAddresses_);
+   return std::make_shared<hd::CCGroup>(Nodes(), path_, name_, desc_, extOnlyAddresses_);
 }
 
 std::shared_ptr<hd::Leaf> hd::CCGroup::newLeaf() const

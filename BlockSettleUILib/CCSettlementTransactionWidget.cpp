@@ -40,23 +40,17 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(const std::shared_p
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CCSettlementTransactionWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &CCSettlementTransactionWidget::onAccept);
    connect(this, &CCSettlementTransactionWidget::genAddrVerified, this, &CCSettlementTransactionWidget::onGenAddrVerified);
-   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &CCSettlementTransactionWidget::onPasswordUpdated);
+   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
-   frejaSign_ = std::make_shared<FrejaSignWallet>(logger, 1);
-   connect(frejaSign_.get(), &FrejaSignWallet::succeeded, this, &CCSettlementTransactionWidget::onFrejaSucceeded);
-   connect(frejaSign_.get(), &FrejaSign::failed, this, &CCSettlementTransactionWidget::onFrejaFailed);
-   connect(frejaSign_.get(), &FrejaSign::statusUpdated, this, &CCSettlementTransactionWidget::onFrejaStatusUpdated);
+   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+      this, &CCSettlementTransactionWidget::onCancel);
 
    connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &CCSettlementTransactionWidget::onHDWalletInfo);
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &CCSettlementTransactionWidget::onTXSigned);
 
-   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
-      this, &CCSettlementTransactionWidget::onCancel);
-
-   ui_->lineEditPassword->setEnabled(false);
    ui_->pushButtonAccept->setEnabled(false);
 }
 
@@ -84,6 +78,7 @@ void CCSettlementTransactionWidget::cancel()
    if (clientSells_) {
       utxoAdapter_->unreserve(reserveId_);
    }
+   ui_->widgetSubmitKeys->cancel();
 }
 
 void CCSettlementTransactionWidget::reset(const std::shared_ptr<WalletsManager> &walletsManager)
@@ -247,24 +242,23 @@ void CCSettlementTransactionWidget::onGenAddrVerified(bool result)
       transactionData_->SetSigningWallet(nullptr);
       ui_->labelHint->setText(tr("Failed to verify genesis address"));
    } else {
-      ui_->lineEditPassword->setEnabled(true);
       ui_->labelHint->setText(tr("Accept to send own signed half of CoinJoin transaction"));
-      if (encType_ == bs::wallet::EncryptionType::Freja) {
-         startFrejaSign();
-      }
+      initSigning();
    }
-   updateAcceptButton();
    ui_->labelGenesisAddress->setText(result ? sValid : sInvalid);
 }
 
-void CCSettlementTransactionWidget::startFrejaSign()
+void CCSettlementTransactionWidget::initSigning()
 {
-   if (encType_ != bs::wallet::EncryptionType::Freja) {
+   if (encTypes_.empty() || !keyRank_.first) {
       return;
    }
    const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetSigningWallet()->GetWalletId());
-   frejaSign_->start(userId_, tr("%1 %2").arg(QString::fromStdString(rfq_.security))
-      .arg(clientSells_ ? tr("Delivery") : tr("Payment")), rootWallet->getWalletId());
+   ui_->widgetSubmitKeys->init(rootWallet->getWalletId(), keyRank_, encTypes_, encKeys_);
+   ui_->widgetSubmitKeys->setFocus();
+   updateAcceptButton();
+   QApplication::processEvents();
+   adjustSize();
 }
 
 void CCSettlementTransactionWidget::onAccept()
@@ -273,7 +267,7 @@ void CCSettlementTransactionWidget::onAccept()
    ui_->progressBar->setValue(0);
    ui_->labelHint->clear();
    ui_->pushButtonAccept->setEnabled(false);
-   ui_->lineEditPassword->setEnabled(false);
+   ui_->widgetSubmitKeys->setEnabled(false);
 
    acceptSpotCC();
 }
@@ -362,7 +356,7 @@ bool CCSettlementTransactionWidget::createCCSignedTXdata()
       }
    }
 
-   ccSignId_ = signingContainer_->SignPartialTXRequest(ccTxData_, false, walletPassword_);
+   ccSignId_ = signingContainer_->SignPartialTXRequest(ccTxData_, false, ui_->widgetSubmitKeys->key());
    logger_->debug("[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", ccTxData_.recipients.size());
    return (ccSignId_ > 0);
 }
@@ -377,53 +371,22 @@ const std::string CCSettlementTransactionWidget::getTxSignedData() const
    return ccTxSigned_;
 }
 
-void CCSettlementTransactionWidget::onPasswordUpdated(const QString &)
-{
-   walletPassword_ = ui_->lineEditPassword->text().toStdString();
-   updateAcceptButton();
-}
-
 void CCSettlementTransactionWidget::updateAcceptButton()
 {
-   ui_->pushButtonAccept->setEnabled(userKeyOk_ && !walletPassword_.isNull());
+   ui_->pushButtonAccept->setEnabled(userKeyOk_ && ui_->widgetSubmitKeys->isValid());
 }
 
-void CCSettlementTransactionWidget::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
-   , const SecureBinaryData &encKey)
+void CCSettlementTransactionWidget::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
+   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
-   encType_ = encType;
-   userId_ = QString::fromStdString(encKey.toBinStr());
+   encTypes_ = encTypes;
+   encKeys_ = encKeys;
+   keyRank_ = keyRank;
 
-   switch (encType_) {
-   case bs::wallet::EncryptionType::Freja:
-      ui_->labelPasswordHint->show();
-   case bs::wallet::EncryptionType::Unencrypted:
-      ui_->horizontalWidget->hide();
-      break;
-   default: break;
-   }
    if (userKeyOk_) {
-      startFrejaSign();
+      initSigning();
    }
-}
-
-void CCSettlementTransactionWidget::onFrejaSucceeded(SecureBinaryData password)
-{
-   ui_->labelPasswordHint->setText(tr("Accepted by Freja signing"));
-   walletPassword_ = password;
-   onAccept();
-}
-
-void CCSettlementTransactionWidget::onFrejaFailed(const QString &text)
-{
-   ui_->labelPasswordHint->setText(tr("Freja sign failed: %1").arg(text));
-   onCancel();
-}
-
-void CCSettlementTransactionWidget::onFrejaStatusUpdated(const QString &status)
-{
-   ui_->labelPasswordHint->setText(tr("Freja sign status: %1").arg(status));
 }

@@ -131,7 +131,6 @@ public:
    std::shared_ptr<ArmoryConnection>   armory_;
    AsyncClient::LedgerDelegate         ledgerDelegate_;
    std::shared_ptr<WalletsManager>     walletsManager_;
-   std::atomic_bool                    updateRunning_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
    std::atomic_bool  stopped_;

@@ -17,7 +17,6 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    , armory_(armory)
    , walletsManager_(walletsManager)
    , ledgerDelegate_(ledgerDelegate)
-   , updateRunning_(false)
    , defaultWallet_(defWlt)
    , stopped_(false)
    , colorGray_(Qt::darkGray), colorRed_(Qt::red), colorYellow_(Qt::darkYellow), colorGreen_(Qt::darkGreen), colorInvalid_(Qt::red)

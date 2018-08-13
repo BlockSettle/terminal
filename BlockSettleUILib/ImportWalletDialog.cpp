@@ -23,7 +23,6 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    , walletsMgr_(walletsManager)
    , appSettings_(appSettings)
    , armory_(armory)
-   , frejaSign_(spdlog::get(""))
    , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
       , appSettings->get<NetworkType>(ApplicationSettings::netType)))
 {
@@ -64,42 +63,24 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &ImportWalletDialog::onImportAccepted);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::onImportAccepted);
-
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ImportWalletDialog::reject);
-   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &ImportWalletDialog::onPasswordChanged);
-   connect(ui_->lineEditPasswordConfirm, &QLineEdit::textChanged, this, &ImportWalletDialog::onPasswordChanged);
 
-   connect(ui_->radioButtonPassword, &QRadioButton::clicked, this, &ImportWalletDialog::onEncTypeChanged);
-   connect(ui_->radioButtonFreja, &QRadioButton::clicked, this, &ImportWalletDialog::onEncTypeChanged);
-   connect(ui_->lineEditFrejaId, &QLineEdit::textChanged, this, &ImportWalletDialog::onFrejaIdChanged);
-   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &ImportWalletDialog::startFrejaSign);
-
-   connect(&frejaSign_, &FrejaSignWallet::succeeded, this, &ImportWalletDialog::onFrejaSucceeded);
-   connect(&frejaSign_, &FrejaSign::failed, this, &ImportWalletDialog::onFrejaFailed);
-   connect(&frejaSign_, &FrejaSign::statusUpdated, this, &ImportWalletDialog::onFrejaStatusUpdated);
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateAcceptButton(); });
+   ui_->widgetCreateKeys->init(walletId_);
 
    updateAcceptButton();
-   onEncTypeChanged();
 }
 
 bool ImportWalletDialog::couldImport() const
 {
    return (!ui_->lineEditWalletName->text().isEmpty()
-         && !walletPassword_.isNull());
+         && ui_->widgetCreateKeys->isValid());
 }
 
 void ImportWalletDialog::updateAcceptButton()
 {
    ui_->pushButtonImport->setEnabled(couldImport());
-}
-
-void ImportWalletDialog::onPasswordChanged(const QString &)
-{
-   if (!ui_->lineEditPassword->text().isEmpty()
-      && (ui_->lineEditPassword->text() == ui_->lineEditPasswordConfirm->text())) {
-      walletPassword_ = ui_->lineEditPassword->text().toStdString();
-   }
-   updateAcceptButton();
 }
 
 void ImportWalletDialog::onError(const QString &errMsg)
@@ -135,63 +116,18 @@ void ImportWalletDialog::onImportAccepted()
       auto description = ui_->lineEditDescription->text().toStdString();
       importedAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
 
-      if (ui_->radioButtonFreja->isChecked()) {
-         walletSeed_.setEncryptionKey(ui_->lineEditFrejaId->text().toStdString());
-      }
-
       ui_->pushButtonImport->setEnabled(false);
 
       walletImporter_->Import(walletName_.toStdString(), description, walletSeed_
-         , importedAsPrimary_, walletPassword_);
+         , importedAsPrimary_, ui_->widgetCreateKeys->keys(), ui_->widgetCreateKeys->keyRank());
    }
    catch (...) {
       onError(tr("Invalid backup data"));
    }
 }
 
-void ImportWalletDialog::onFrejaIdChanged(const QString &)
+void ImportWalletDialog::reject()
 {
-   ui_->pushButtonFreja->setEnabled(!ui_->lineEditFrejaId->text().isEmpty());
-}
-
-void ImportWalletDialog::onEncTypeChanged()
-{
-   if (ui_->radioButtonPassword->isChecked()) {
-      ui_->widgetFreja->hide();
-      ui_->widgetPassword->show();
-      ui_->widgetPasswordConfirm->show();
-      walletSeed_.setEncryptionType(bs::wallet::EncryptionType::Password);
-   }
-   else if (ui_->radioButtonFreja->isChecked()) {
-      ui_->widgetFreja->show();
-      ui_->widgetPassword->hide();
-      ui_->widgetPasswordConfirm->hide();
-      walletSeed_.setEncryptionType(bs::wallet::EncryptionType::Freja);
-   }
-}
-
-void ImportWalletDialog::startFrejaSign()
-{
-   frejaSign_.start(ui_->lineEditFrejaId->text(), tr("Wallet %1 importing")
-      .arg(ui_->lineEditWalletName->text()), walletId_);
-   ui_->pushButtonFreja->setEnabled(false);
-   ui_->lineEditFrejaId->setEnabled(false);
-}
-
-void ImportWalletDialog::onFrejaSucceeded(SecureBinaryData password)
-{
-   ui_->labelFreja->setText(tr("Successfully signed"));
-   walletPassword_ = password;
-   updateAcceptButton();
-}
-
-void ImportWalletDialog::onFrejaFailed(const QString &text)
-{
-   ui_->pushButtonFreja->setEnabled(true);
-   ui_->labelFreja->setText(tr("Freja failed: %1").arg(text));
-}
-
-void ImportWalletDialog::onFrejaStatusUpdated(const QString &status)
-{
-   ui_->labelFreja->setText(status);
+   ui_->widgetCreateKeys->cancel();
+   QDialog::reject();
 }

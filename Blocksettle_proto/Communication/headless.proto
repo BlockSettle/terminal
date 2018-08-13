@@ -108,13 +108,13 @@ message SignPayoutTXRequest
    string   password = 8;
 }
 
-
 message PasswordRequest
 {
    string   walletId = 1;
    string   prompt = 2;
-   uint32   encType = 3;
-   bytes    encKey = 4;
+   repeated uint32 encTypes = 3;
+   repeated bytes  encKeys = 4;
+   uint32   rankM = 5;
 }
 
 message PasswordReply
@@ -170,8 +170,13 @@ message NewHDWallet
    bool     primary = 4;
    bytes    privateKey = 5;
    bytes    seed = 6;
-   uint32   encType = 7;
-   bytes    encKey = 8;
+}
+
+message PasswordData
+{
+   string   password = 1;
+   uint32   encType = 2;
+   bytes    encKey = 3;
 }
 
 message CreateHDWalletRequest
@@ -180,7 +185,9 @@ message CreateHDWalletRequest
       NewHDWallet wallet = 1;
       NewHDLeaf   leaf   = 2;
    }
-   string   password = 3;
+   repeated PasswordData password = 3;
+   uint32   rankM = 4;
+   uint32   rankN = 5;
 }
 
 message HDLeafWO
@@ -262,9 +269,11 @@ message GetHDWalletInfoRequest
 
 message GetHDWalletInfoResponse
 {
-   uint32	encryption_type = 1;
-   bytes	encryption_key = 2;
-   string       error = 3;
+   repeated uint32 encTypes = 1;
+   repeated bytes encKeys = 2;
+   uint32	rankM = 3;
+   uint32	rankN = 4;
+   string       error = 5;
 }
 
 
@@ -279,9 +288,9 @@ message ChangePasswordRequest
 {
    string   rootWalletId = 1;
    string   oldPassword = 2;
-   string   newPassword = 3;
-   uint32   newEncType = 4;
-   bytes    newEncKey = 5;
+   repeated PasswordData newPassword = 3;
+   uint32   rankM = 4;
+   uint32   rankN = 5;
 }
 
 message ChangePasswordResponse

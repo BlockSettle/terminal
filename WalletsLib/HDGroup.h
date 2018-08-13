@@ -18,9 +18,9 @@ namespace bs {
          friend class bs::hd::Wallet;
 
       public:
-         Group(const std::shared_ptr<Node> &rootNode, const Path &path, const std::string &walletName, const std::string &name, const std::string &desc
+         Group(Nodes rootNodes, const Path &path, const std::string &walletName, const std::string &name, const std::string &desc
             , bool extOnlyAddresses = false)
-            : QObject(nullptr), rootNode_(rootNode), path_(path), walletName_(walletName), name_(name), desc_(desc), extOnlyAddresses_(extOnlyAddresses) {}
+            : QObject(nullptr), rootNodes_(rootNodes), path_(path), walletName_(walletName), name_(name), desc_(desc), extOnlyAddresses_(extOnlyAddresses) {}
 
          std::shared_ptr<Group> CreateWatchingOnly(const std::shared_ptr<Node> &extNode) const;
 
@@ -43,7 +43,7 @@ namespace bs {
          Path::Elem getIndex() const { return static_cast<Path::Elem>(path_.get(-1)); }
          std::string getName() const { return name_; }
          std::string getDesc() const { return desc_; }
-         virtual void updateRootNode(const std::shared_ptr<Node> &, const SecureBinaryData &password);
+         virtual void updateRootNodes(Nodes, const std::shared_ptr<Node> &decrypted);
 
          bool needsCommit() const { return needsCommit_; }
          void committed() { needsCommit_ = false; }
@@ -74,7 +74,7 @@ namespace bs {
          virtual void FillWO(std::shared_ptr<hd::Group> &, const std::shared_ptr<Node> &extNode) const;
 
       protected:
-         std::shared_ptr<Node>   rootNode_;
+         Nodes       rootNodes_;
          Path        path_;
          std::string walletName_, name_, desc_;
          LMDB  *     db_ = nullptr;
@@ -86,7 +86,7 @@ namespace bs {
 
       private:
          BinaryData serialize() const;
-         static std::shared_ptr<Group> deserialize(BinaryDataRef key, BinaryDataRef val, const std::shared_ptr<Node> &rootNode
+         static std::shared_ptr<Group> deserialize(BinaryDataRef key, BinaryDataRef val, Nodes rootNodes
             , const std::string &name, const std::string &desc, bool extOnlyAddresses);
          void deserialize(BinaryDataRef value);
       };
@@ -97,13 +97,13 @@ namespace bs {
          Q_OBJECT
       
       public:
-         AuthGroup(const std::shared_ptr<Node> &rootNode, const Path &path, const std::string &name
+         AuthGroup(Nodes rootNodes, const Path &path, const std::string &name
             , const std::string &desc, bool extOnlyAddresses = false);
 
          bs::wallet::Type getType() const override { return bs::wallet::Type::Authentication; }
 
          void setUserID(const BinaryData &usedId) override;
-         void updateRootNode(const std::shared_ptr<Node> &, const SecureBinaryData &password) override;
+         void updateRootNodes(Nodes, const std::shared_ptr<Node> &decrypted) override;
 
       protected:
          void setDB(const std::shared_ptr<LMDBEnv> &env, LMDB *db) override;
@@ -125,9 +125,9 @@ namespace bs {
          Q_OBJECT
 
       public:
-         CCGroup(const std::shared_ptr<Node> &rootNode, const Path &path, const std::string &name
+         CCGroup(Nodes rootNodes, const Path &path, const std::string &name
             , const std::string &desc, bool extOnlyAddresses = false)
-            : Group(rootNode, path, name, nameForType(CoinType::BlockSettle_CC), desc, extOnlyAddresses) {}
+            : Group(rootNodes, path, name, nameForType(CoinType::BlockSettle_CC), desc, extOnlyAddresses) {}
 
          bs::wallet::Type getType() const override { return bs::wallet::Type::ColorCoin; }
 

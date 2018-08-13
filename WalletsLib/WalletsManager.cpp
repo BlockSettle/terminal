@@ -877,7 +877,8 @@ void WalletsManager::updateTxDescCache(const BinaryData &txHash, const QString &
 }
 
 WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& name, const std::string& description
-   , bs::wallet::Seed seed, const QString &walletsPath, const SecureBinaryData &password, bool primary)
+   , bs::wallet::Seed seed, const QString &walletsPath, bool primary
+   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
    if (preferWatchingOnly_) {
       throw std::runtime_error("Can't create wallets in watching-only mode");
@@ -893,8 +894,8 @@ WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& n
    if (primary) {
       newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
    }
-   if (!password.isNull()) {
-      newWallet->changePassword(password, {}, seed.encryptionType(), seed.encryptionKey());
+   if (!pwdData.empty()) {
+      newWallet->changePassword(pwdData, keyRank);
    }
    AdoptNewWallet(newWallet, walletsPath);
    return newWallet;

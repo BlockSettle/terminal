@@ -11,6 +11,7 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
+#include "Assets.h"
 #include "BtcDefinitions.h"
 #include "ClientClasses.h"
 #include "EasyCoDec.h"
@@ -19,16 +20,11 @@
 #include "Script.h"
 #include "Signer.h"
 #include "UtxoReservation.h"
+#include "WalletEncryption.h"
 
 
-#define WALLETTYPE_KEY          0x00000001
-#define ROOTASSET_KEY           0x00000007
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
-#define MASTERID_KEY            0x000000A0
-#define MAINWALLET_KEY          0x000000A1
-#define WALLETMETA_PREFIX       0xB0
-#define WALLETMETA_DBNAME       "WalletHeader"
 
 
 namespace bs {
@@ -159,13 +155,6 @@ namespace bs {
       };
 
 
-      enum class EncryptionType : uint8_t {
-         Unencrypted,
-         Password,
-         Freja
-      };
-
-
       class Seed
       {
       public:
@@ -183,10 +172,6 @@ namespace bs {
          void setSeed(const BinaryData &seed) { seed_ = seed; }
          NetworkType networkType() const { return netType_; }
          void setNetworkType(NetworkType netType) { netType_ = netType; }
-         EncryptionType encryptionType() const { return encType_; }
-         void setEncryptionType(EncryptionType encType) { encType_ = encType; }
-         SecureBinaryData encryptionKey() const { return encKey_; }
-         void setEncryptionKey(const SecureBinaryData &encKey) { encKey_ = encKey; }
 
          EasyCoDec::Data toEasyCodeChecksum(size_t ckSumSize = 2) const;
          static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
@@ -200,8 +185,6 @@ namespace bs {
          BinaryData        chainCode_;
          BinaryData        seed_;
          NetworkType       netType_ = NetworkType::Invalid;
-         SecureBinaryData  encKey_;
-         EncryptionType    encType_ = EncryptionType::Unencrypted;
       };
 
       enum class Type {
@@ -268,8 +251,9 @@ namespace bs {
       virtual void AddUnconfirmedBalance(BTCNumericTypes::balance_type delta);
       virtual bool isInitialized() const { return inited_; }
       virtual bool isWatchingOnly() const { return false; }
-      virtual wallet::EncryptionType encryptionType() const { return wallet::EncryptionType::Unencrypted; }
-      virtual SecureBinaryData encryptionKey() const { return {}; }
+      virtual std::vector<wallet::EncryptionType> encryptionTypes() const { return {}; }
+      virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
+      virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
       virtual bool hasExtOnlyAddresses() const { return false; }
       virtual std::string GetAddressComment(const bs::Address& address) const;
       virtual bool SetAddressComment(const bs::Address &addr, const std::string &comment);

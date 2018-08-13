@@ -1208,13 +1208,14 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEditPassword">
-           <property name="echoMode">
-            <enum>QLineEdit::Password</enum>
+          <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
-           <property name="signInput" stdset="0">
-            <bool>true</bool>
-           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_16"/>
           </widget>
          </item>
         </layout>
@@ -1280,13 +1281,14 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEditAuthPassword">
-           <property name="echoMode">
-            <enum>QLineEdit::Password</enum>
+          <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeysAuth" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
-           <property name="signInput" stdset="0">
-            <bool>true</bool>
-           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_17"/>
           </widget>
          </item>
         </layout>
@@ -1381,6 +1383,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>WalletKeysSubmitWidget</class>
+   <extends>QWidget</extends>
+   <header>WalletKeysSubmitWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="armory.qrc"/>
  </resources>

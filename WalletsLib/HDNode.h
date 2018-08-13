@@ -12,6 +12,7 @@
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
 #include "MetaData.h"
+#include "WalletEncryption.h"
 
 
 namespace bs {
@@ -98,13 +99,13 @@ namespace bs {
          void clearPrivKey();
          bool hasPrivateKey() const { return hasPrivKey_; }
 
-         wallet::EncryptionType encType() const { return encType_; }
-         SecureBinaryData encKey() const { return encKey_; }
+         std::vector<wallet::EncryptionType> encTypes() const { return encTypes_; }
+         std::vector<SecureBinaryData> encKeys() const { return encKeys_; }
 
          std::unique_ptr<hd::Node> decrypt(const SecureBinaryData &password);
          std::shared_ptr<hd::Node> encrypt(const SecureBinaryData &password
-            , wallet::EncryptionType encType = wallet::EncryptionType::Password
-            , const SecureBinaryData &key = {});
+            , const std::vector<wallet::EncryptionType> &encTypes = {}
+            , const std::vector<SecureBinaryData> &encKeys = {});
 
       protected:
          virtual std::shared_ptr<Node> create(const btc_hdnode &, NetworkType) const;
@@ -115,8 +116,8 @@ namespace bs {
          SecureBinaryData  iv_;
          btc_hdnode        node_ = {};
          bool              hasPrivKey_ = true;
-         SecureBinaryData  encKey_;
-         wallet::EncryptionType  encType_ = wallet::EncryptionType::Unencrypted;
+         std::vector<SecureBinaryData> encKeys_;
+         std::vector<wallet::EncryptionType> encTypes_;
          const btc_chainparams * chainParams_ = nullptr;
          NetworkType       netType_;
 
@@ -145,6 +146,30 @@ namespace bs {
 
       private:
          BinaryData  chainCode_;
+      };
+
+
+      class Nodes
+      {
+      public:
+         Nodes() {}
+         Nodes(const std::vector<std::shared_ptr<Node>> &nodes, wallet::KeyRank rank, const std::string &id)
+            : nodes_(nodes), rank_(rank), id_(id) {}
+
+         bool empty() const { return nodes_.empty(); }
+         std::vector<wallet::EncryptionType> encryptionTypes() const;
+         std::vector<SecureBinaryData> encryptionKeys() const;
+         wallet::KeyRank rank() const { return rank_; }
+
+         std::shared_ptr<hd::Node> decrypt(const SecureBinaryData &) const;
+         Nodes chained(const BinaryData &chainKey) const;
+
+         void forEach(const std::function<void(std::shared_ptr<Node>)> &) const;
+
+      private:
+         std::vector<std::shared_ptr<Node>>  nodes_;
+         wallet::KeyRank   rank_ = { 0, 0 };
+         std::string       id_;
       };
 
    }  //namespace hd

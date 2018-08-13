@@ -80,7 +80,8 @@ private slots:
    void SetOfflineUIView();
    void SignerReady();
    void onPasswordRequested(std::string walletId, std::string prompt
-      , bs::wallet::EncryptionType, SecureBinaryData encKey);
+      , std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
+      , bs::wallet::KeyRank);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
 
@@ -168,6 +169,8 @@ private:
    void setLoginButtonText(const QString& text);
 
    void setupShortcuts();
+
+   void createAdvancedTxDialog(const std::string &selectedWalletId);
 };
 
 Q_DECLARE_METATYPE(std::string)

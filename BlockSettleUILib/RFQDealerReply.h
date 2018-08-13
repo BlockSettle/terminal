@@ -88,7 +88,6 @@ namespace bs {
          void onQuoteReqRejected(const QString &reqId);
          void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
          void onBestQuotePrice(const QString reqId, double price, bool own);
-         void onAutoPassChanged();
          void onAutoSignActivated();
          void onAutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
          void onCelerConnected();
@@ -117,10 +116,8 @@ namespace bs {
          void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
-         void onFrejaSignComplete(SecureBinaryData);
-         void onFrejaSignFailed(const QString &text);
-         void onFrejaStatusUpdated(const QString &status);
-         void startFrejaSigning();
+         void startSigning();
+         void updateAutoSignState();
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -150,10 +147,9 @@ namespace bs {
          double   indicBid_;
          double   indicAsk_;
          std::atomic_bool     autoUpdatePrices_;
-         wallet::EncryptionType  walletEncType_ = wallet::EncryptionType::Password;
-         SecureBinaryData     walletEncKey_;
-         SecureBinaryData     asPassword_;
-         std::shared_ptr<FrejaSignWallet> frejaAS_;
+         std::vector<wallet::EncryptionType> walletEncTypes_;
+         std::vector<SecureBinaryData>       walletEncKeys_;
+         bs::wallet::KeyRank  walletEncRank_;
          unsigned int         leafCreateReqId_ = 0;
 
          std::string product_;
@@ -199,8 +195,7 @@ namespace bs {
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          bool submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price
-            , std::function<void(network::QuoteNotification)>);
-         void updateAutoSignState();
+            , std::function<void(bs::network::QuoteNotification)>);
       };
 
    }  //namespace ui
