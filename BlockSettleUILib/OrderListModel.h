@@ -121,7 +121,7 @@ private:
       QFont font_;
 
       Market(const QString &name, IndexHelper *parent)
-         :  name_(name)
+         : name_(name)
          , idx_(parent, this, DataType::Market)
       {
          font_.setBold(true);
