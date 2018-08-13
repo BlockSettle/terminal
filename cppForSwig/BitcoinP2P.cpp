@@ -29,19 +29,6 @@ template <typename T> uint32_t put_integer_be(uint8_t* ptr, const T& integer)
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-int get_varint_len(const int64_t& value)
-{
-   if (value < 0xFD)
-      return 1;
-   else if (value <= 0xFFFF)
-      return 3;
-   else if (value <= 0xFFFFFFFF)
-      return 5;
-
-   return 9;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 int make_varint(const uint64_t& value, vector<uint8_t>& varint)
 {
    if (value < 0xFD)
@@ -536,7 +523,7 @@ size_t Payload_Version::serialize_inner(uint8_t* dataptr) const
 {
    if (dataptr == nullptr)
    {
-      return get_varint_len(userAgent_.size()) +
+      return BtcUtils::get_varint_len(userAgent_.size()) +
          userAgent_.size() +
          VERSION_MINLENGTH;
    }
@@ -694,7 +681,7 @@ size_t Payload_Inv::serialize_inner(uint8_t* dataptr) const
    if (dataptr == nullptr)
    {
       auto invcount = invVector_.size();
-      auto varintlen = get_varint_len(invcount);
+      auto varintlen = BtcUtils::get_varint_len(invcount);
 
       return invcount * INV_ENTRY_LEN + varintlen;
    }
@@ -755,7 +742,7 @@ size_t Payload_GetData::serialize_inner(uint8_t* dataptr) const
    if (dataptr == nullptr)
    {
       auto invcount = invVector_.size();
-      auto varintlen = get_varint_len(invcount);
+      auto varintlen = BtcUtils::get_varint_len(invcount);
 
       return invcount * INV_ENTRY_LEN + varintlen;
    }

@@ -77,7 +77,6 @@ enum InvType
 
 int get_varint(uint64_t& val, uint8_t* ptr, uint32_t size);
 int make_varint(const uint64_t& value, vector<uint8_t>& varint);
-int get_varint_len(const int64_t& value);
 
 
 ////////////////////////////////////////////////////////////////////////////////

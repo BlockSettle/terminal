@@ -235,35 +235,32 @@ public:
 
    static Log & GetInstance(const char * filename=nullptr)
    {
-      static atomic<Log*> theOneLog = {nullptr};
-      static mutex mu;
-
       while (true)
       {
          //lock free check and return if instance is valid
-         auto logPtr = theOneLog.load(memory_order_acquire);
+         auto logPtr = theOneLog_.load(memory_order_acquire);
          if (logPtr != nullptr)
             return *logPtr;
 
          //lock and instantiate
-         unique_lock<mutex> lock(mu, defer_lock);
+         unique_lock<mutex> lock(mu_, defer_lock);
          if (!lock.try_lock())
             continue;
     
          // Create a Log object
          Log* newLogPtr = new Log;
     
-         // Open the filestream if it's open
+         // Open the filestream if available
          if (filename != nullptr)
          {
             newLogPtr->ds_.setLogFile(string(filename));
             newLogPtr->isInitialized_ = true;
          }
 
-         theOneLog.store(newLogPtr, memory_order_release);
+         theOneLog_.store(newLogPtr, memory_order_release);
          lock.unlock();
 
-         return *logPtr;
+         return *newLogPtr;
       }
    }
 
@@ -315,6 +312,10 @@ protected:
 private:
     Log(const Log&);
     Log& operator =(const Log&);
+    
+private:
+    static atomic<Log*> theOneLog_;
+    static mutex mu_;
 
 };
 
