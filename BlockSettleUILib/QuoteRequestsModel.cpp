@@ -1134,8 +1134,11 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
          }
 
          if (status == bs::network::QuoteReqNotification::Replied) {
-            grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = true;
-            ++grp->quotedRfqsCount_;
+
+            if (!grp->rfqs_[static_cast<std::size_t>(index)]->quoted_) {
+               grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = true;
+               ++grp->quotedRfqsCount_;
+            }
 
             if (grp->rfqs_[static_cast<std::size_t>(index)]->visible_) {
                grp->rfqs_[static_cast<std::size_t>(index)]->visible_ = false;
@@ -1147,9 +1150,11 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
          }
 
          if (status == bs::network::QuoteReqNotification::Withdrawn) {
-            grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = false;
-            --grp->quotedRfqsCount_;
-            emit invalidateFilterModel();
+            if (grp->rfqs_[static_cast<std::size_t>(index)]->quoted_) {
+               grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = false;
+               --grp->quotedRfqsCount_;
+               emit invalidateFilterModel();
+            }
          }
 
          grp->rfqs_[static_cast<std::size_t>(index)]->stateBrush_ = bgColorForStatus(status);
