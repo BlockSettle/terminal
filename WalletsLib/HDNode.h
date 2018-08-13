@@ -185,6 +185,6 @@ namespace bs {
 }  //namespace bs
 
 bool operator < (const bs::hd::Path &l, const bs::hd::Path &r);
-BinaryData operator^(const BinaryData &, const BinaryData &);
+BinaryData xor(const BinaryData &, const BinaryData &);
 
 #endif //__BS_HD_NODE_H__

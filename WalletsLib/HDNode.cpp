@@ -704,7 +704,7 @@ bool operator < (const hd::Path &l, const hd::Path &r)
    return false;
 }
 
-BinaryData operator^(const BinaryData &a, const BinaryData &b)
+BinaryData xor(const BinaryData &a, const BinaryData &b)
 {
    BinaryData result;
    if (a.getSize() > b.getSize()) {

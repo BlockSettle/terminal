@@ -148,7 +148,7 @@ SecureBinaryData WalletKeysSubmitWidget::key() const
 {
    SecureBinaryData result;
    for (const auto &pwd : pwdData_) {
-      result = result ^ pwd.password;
+      result = xor(result, pwd.password);
    }
    return result;
 }
