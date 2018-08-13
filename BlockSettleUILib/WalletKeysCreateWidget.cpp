@@ -1,5 +1,6 @@
 #include "WalletKeysCreateWidget.h"
 #include "ui_WalletKeysCreateWidget.h"
+#include <set>
 #include <QSpinBox>
 #include "WalletKeyWidget.h"
 

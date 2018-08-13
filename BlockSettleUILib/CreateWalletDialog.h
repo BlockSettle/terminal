@@ -5,7 +5,6 @@
 #include <memory>
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
-#include "HDNode.h"
 #include "MetaData.h"
 
 

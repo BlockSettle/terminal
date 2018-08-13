@@ -2,8 +2,7 @@
 #define __WALLET_KEYS_SUBMIT_WIDGET_H__
 
 #include <QWidget>
-#include "EncryptionUtils.h"
-#include "HDNode.h"
+#include "WalletEncryption.h"
 
 namespace Ui {
     class WalletKeysSubmitWidget;
@@ -18,7 +17,7 @@ public:
    WalletKeysSubmitWidget(QWidget* parent = nullptr);
    ~WalletKeysSubmitWidget() override = default;
 
-   void init(const std::string &walletId, bs::hd::KeyRank
+   void init(const std::string &walletId, bs::wallet::KeyRank
       , const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys);
    void cancel();
@@ -46,8 +45,8 @@ private:
 private:
    Ui::WalletKeysSubmitWidget *  ui_;
    std::string    walletId_;
-   std::vector<WalletKeyWidget *>      widgets_;
-   std::vector<bs::hd::PasswordData>   pwdData_;
+   std::vector<WalletKeyWidget *>         widgets_;
+   std::vector<bs::wallet::PasswordData>  pwdData_;
    std::atomic_bool  suspended_;
 };
 

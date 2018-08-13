@@ -5,7 +5,6 @@
 #include <QDialog>
 #include <QTimer>
 #include "EncryptionUtils.h"
-#include "HDNode.h"
 #include "MetaData.h"
 
 
@@ -19,7 +18,7 @@ Q_OBJECT
 
 public:
    EnterWalletPassword(const QString& walletName, const std::string &rootWalletId
-      , bs::hd::KeyRank, const std::vector<bs::wallet::EncryptionType> &
+      , bs::wallet::KeyRank, const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys = {}, const QString &prompt = {}
       , QWidget* parent = nullptr);
    ~EnterWalletPassword() override = default;

@@ -35,7 +35,7 @@ namespace bs {
          bool isWatchingOnly() const { return rootNodes_.empty(); }
          std::vector<wallet::EncryptionType> encryptionTypes() const { return rootNodes_.encryptionTypes(); }
          std::vector<SecureBinaryData> encryptionKeys() const { return rootNodes_.encryptionKeys(); }
-         KeyRank encryptionRank() const { return rootNodes_.rank(); }
+         wallet::KeyRank encryptionRank() const { return rootNodes_.rank(); }
          bool isPrimary() const;
          NetworkType networkType() const { return netType_; }
 
@@ -57,7 +57,7 @@ namespace bs {
          void setUserId(const BinaryData &usedId);
          bool eraseFile();
 
-         bool changePassword(const std::vector<PasswordData> &newPass, KeyRank, const SecureBinaryData &oldPass = {});
+         bool changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank, const SecureBinaryData &oldPass = {});
 
          void RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew = false);
          void SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm);

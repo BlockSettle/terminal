@@ -9,7 +9,6 @@
 
 #include "ApplicationSettings.h"
 #include "CelerClient.h"
-#include "HDNode.h"
 #include "PyBlockDataManager.h"
 #include "TransactionsViewModel.h"
 
@@ -83,7 +82,7 @@ private slots:
    void SignerReady();
    void onPasswordRequested(std::string walletId, std::string prompt
       , std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
-      , bs::hd::KeyRank);
+      , bs::wallet::KeyRank);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
 

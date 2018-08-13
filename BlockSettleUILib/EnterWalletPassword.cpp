@@ -4,7 +4,7 @@
 
 
 EnterWalletPassword::EnterWalletPassword(const QString& walletName, const std::string &walletId
-   , bs::hd::KeyRank keyRank, const std::vector<bs::wallet::EncryptionType> &encTypes
+   , bs::wallet::KeyRank keyRank, const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys, const QString &prompt
    , QWidget* parent)
    : QDialog(parent)

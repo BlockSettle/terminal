@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QStringList>
 #include "HDWallet.h"
+#include "WalletEncryption.h"
 
 
 class ApplicationSettings;
@@ -28,7 +29,7 @@ public:
 
    void Import(const std::string& name, const std::string& description
       , bs::wallet::Seed seed, bool primary = false
-      , const std::vector<bs::hd::PasswordData> &pwdData = {}, bs::hd::KeyRank keyRank = { 0, 0 });
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
 
 signals:
    void walletCreated(const std::string &rootWalletId);
@@ -52,8 +53,8 @@ private:
    std::shared_ptr<bs::hd::Wallet>     rootWallet_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
    unsigned int      createWalletReq_ = 0;
-   std::vector<bs::hd::PasswordData>   pwdData_;
-   bs::hd::KeyRank   keyRank_;
+   std::vector<bs::wallet::PasswordData>  pwdData_;
+   bs::wallet::KeyRank  keyRank_;
    std::unordered_map<unsigned int, bs::hd::Path>     createNextWalletReqs_;
 };
 

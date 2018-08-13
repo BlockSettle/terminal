@@ -2,8 +2,7 @@
 #define __WALLET_KEYS_CREATE_WIDGET_H__
 
 #include <QWidget>
-#include "EncryptionUtils.h"
-#include "HDNode.h"
+#include "WalletEncryption.h"
 
 namespace Ui {
     class WalletKeysCreateWidget;
@@ -24,8 +23,8 @@ public:
    void cancel();
 
    bool isValid() const;
-   std::vector<bs::hd::PasswordData> keys() const { return pwdData_; }
-   bs::hd::KeyRank keyRank() const { return keyRank_; }
+   std::vector<bs::wallet::PasswordData> keys() const { return pwdData_; }
+   bs::wallet::KeyRank keyRank() const { return keyRank_; }
 
 signals:
    void keyChanged();
@@ -46,8 +45,8 @@ private:
    Ui::WalletKeysCreateWidget *  ui_;
    std::string    walletId_;
    std::vector<WalletKeyWidget *>      widgets_;
-   std::vector<bs::hd::PasswordData>   pwdData_;
-   bs::hd::KeyRank               keyRank_ = { 0, 0 };
+   std::vector<bs::wallet::PasswordData>  pwdData_;
+   bs::wallet::KeyRank                 keyRank_ = { 0, 0 };
 };
 
 #endif // __WALLET_KEYS_CREATE_WIDGET_H__

@@ -227,7 +227,7 @@ void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, 
 }
 
 void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
-   , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank keyRank)
+   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;

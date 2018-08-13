@@ -2,8 +2,8 @@
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
 #include "ConnectionManager.h"
-#include "HDNode.h"
 #include "HDWallet.h"
+#include "WalletEncryption.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredServerConnection.h"
 
@@ -621,7 +621,7 @@ bool HeadlessContainerListener::RequestPassword(const std::string &clientId, con
          const auto &wallet = walletsMgr_->GetWalletById(txReq.walletId);
          std::vector<bs::wallet::EncryptionType> encTypes;
          std::vector<SecureBinaryData> encKeys;
-         bs::hd::KeyRank keyRank = { 0, 0 };
+         bs::wallet::KeyRank keyRank = { 0, 0 };
          if (wallet) {
             encTypes = wallet->encryptionTypes();
             encKeys = wallet->encryptionKeys();
@@ -764,7 +764,7 @@ void HeadlessContainerListener::SyncAddrResponse(const std::string &clientId, un
 }
 
 bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsigned int id, const headless::NewHDLeaf &request
-   , const std::vector<bs::hd::PasswordData> &pwdData)
+   , const std::vector<bs::wallet::PasswordData> &pwdData)
 {
    const auto hdWallet = walletsMgr_->GetHDWalletById(request.rootwalletid());
    if (!hdWallet) {
@@ -844,7 +844,7 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
 }
 
 bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsigned int id, const headless::NewHDWallet &request
-   , NetworkType netType, const std::vector<bs::hd::PasswordData> &pwdData, bs::hd::KeyRank keyRank)
+   , NetworkType netType, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
    std::shared_ptr<bs::hd::Wallet> wallet;
    try {
@@ -899,13 +899,13 @@ bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, he
       CreateHDWalletResponse(clientId, packet.id(), "failed to parse");
       return false;
    }
-   std::vector<bs::hd::PasswordData> pwdData;
+   std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.password_size(); ++i) {
       const auto &pwd = request.password(i);
       pwdData.push_back({BinaryData::CreateFromHex(pwd.password())
          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
-   bs::hd::KeyRank keyRank = { request.rankm(), request.rankn() };
+   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() };
 
    if (request.has_leaf()) {
       return CreateHDLeaf(clientId, packet.id(), request.leaf(), pwdData);
@@ -1111,7 +1111,7 @@ bool HeadlessContainerListener::onGetHDWalletInfo(const std::string &clientId, h
 
 void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clientId, unsigned int id
    , const std::vector<bs::wallet::EncryptionType> &encTypes, const std::vector<SecureBinaryData> &encKeys
-   , bs::hd::KeyRank keyRank, const std::string &error)
+   , bs::wallet::KeyRank keyRank, const std::string &error)
 {
    headless::GetHDWalletInfoResponse response;
    if (!error.empty()) {
@@ -1151,13 +1151,13 @@ bool HeadlessContainerListener::onChangePassword(const std::string &clientId, he
       ChangePasswordResponse(clientId, packet.id(), request.rootwalletid(), false);
       return false;
    }
-   std::vector<bs::hd::PasswordData> pwdData;
+   std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.newpassword_size(); ++i) {
       const auto &pwd = request.newpassword(i);
       pwdData.push_back({ BinaryData::CreateFromHex(pwd.password())
          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
-   bs::hd::KeyRank keyRank = {request.rankm(), request.rankn()};
+   bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
    if (!wallet->changePassword(pwdData, keyRank, BinaryData::CreateFromHex(request.oldpassword()))) {
       logger_->error("[HeadlessContainerListener] failed to change password for wallet {}", request.rootwalletid());
       ChangePasswordResponse(clientId, packet.id(), request.rootwalletid(), false);

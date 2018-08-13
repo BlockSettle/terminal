@@ -9,7 +9,6 @@
 #include "BinaryData.h"
 #include "CommonTypes.h"
 #include "FrejaREST.h"
-#include "HDNode.h"
 #include "MetaData.h"
 #include "SettlementWallet.h"
 #include "UtxoReservation.h"
@@ -69,7 +68,7 @@ private slots:
    void updateAcceptButton();
    void onGenAddrVerified(bool);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank);
+      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
 
 signals:
@@ -114,7 +113,7 @@ private:
 
    std::vector<bs::wallet::EncryptionType>   encTypes_;
    std::vector<SecureBinaryData>             encKeys_;
-   bs::hd::KeyRank   keyRank_;
+   bs::wallet::KeyRank                       keyRank_;
 };
 
 #endif // __CC_SETTLEMENT_TRANSACTION_WIDGET_H__

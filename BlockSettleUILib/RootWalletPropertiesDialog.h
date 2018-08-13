@@ -4,7 +4,6 @@
 #include <QDialog>
 #include <memory>
 #include "BinaryData.h"
-#include "HDNode.h"
 #include "MetaData.h"
 
 namespace Ui {
@@ -41,7 +40,7 @@ private slots:
    void onChangePassword();
    void onPasswordChanged(const std::string &walletId, bool ok);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
-      , bs::hd::KeyRank);
+      , bs::wallet::KeyRank);
    void onWalletSelected();
    void onRescanBlockchain();
    void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
@@ -65,7 +64,7 @@ private:
    unsigned int                        infoReqId_ = 0;
    std::vector<bs::wallet::EncryptionType>   walletEncTypes_;
    std::vector<SecureBinaryData>             walletEncKeys_;
-   bs::hd::KeyRank                     walletEncRank_;
+   bs::wallet::KeyRank                       walletEncRank_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
 };
 

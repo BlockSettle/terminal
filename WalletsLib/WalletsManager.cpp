@@ -829,7 +829,7 @@ QString WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::share
 
 WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& name, const std::string& description
    , bs::wallet::Seed seed, const QString &walletsPath, bool primary
-   , const std::vector<bs::hd::PasswordData> &pwdData, bs::hd::KeyRank keyRank)
+   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
    if (preferWatchingOnly_) {
       throw std::runtime_error("Can't create wallets in watching-only mode");

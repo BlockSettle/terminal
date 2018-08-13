@@ -11,8 +11,8 @@
 #include <QObject>
 #include <QThreadPool>
 #include "CommonTypes.h"
-#include "HDNode.h"
 #include "OTPManager.h"
+#include "WalletEncryption.h"
 
 #include "bs_communication.pb.h"
 
@@ -74,7 +74,7 @@ public:
    virtual bool HasAuthAddr() const;
    virtual bool HaveOTP() const;
 
-   void CreateAuthWallet(const std::vector<bs::hd::PasswordData> &pwdData = {}, bool signal = true);
+   void CreateAuthWallet(const std::vector<bs::wallet::PasswordData> &pwdData = {}, bool signal = true);
    virtual bool CreateNewAuthAddress();
 
    virtual bool SubmitForVerification(const bs::Address &address);

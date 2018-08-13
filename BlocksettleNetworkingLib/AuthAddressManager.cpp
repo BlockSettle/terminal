@@ -911,7 +911,7 @@ template <typename TVal> TVal AuthAddressManager::lookup(const bs::Address &key,
    return it->second;
 }
 
-void AuthAddressManager::CreateAuthWallet(const std::vector<bs::hd::PasswordData> &pwdData, bool signal)
+void AuthAddressManager::CreateAuthWallet(const std::vector<bs::wallet::PasswordData> &pwdData, bool signal)
 {
    if (!signingContainer_ || !walletsManager_) {
       emit Error(tr("Unable to create auth wallet"));

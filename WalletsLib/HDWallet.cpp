@@ -516,7 +516,7 @@ void hd::Wallet::readFromDB()
    }
    catch (const NoEntryInWalletException&) {}
 
-   KeyRank keyRank = { 0, 0 };
+   wallet::KeyRank keyRank = { 0, 0 };
    {
       BinaryWriter bwKey;
       bwKey.put_uint32_t(MAIN_ACCOUNT_KEY);
@@ -572,7 +572,7 @@ void hd::Wallet::readFromDB()
          }
          dbIter.advance();
       }
-      if ((keyRank == KeyRank{ 0, 0 }) && (rootNodes.size() == 1) && !rootNodes[0]->encTypes().empty()) {
+      if ((keyRank == wallet::KeyRank{ 0, 0 }) && (rootNodes.size() == 1) && !rootNodes[0]->encTypes().empty()) {
          keyRank = { 1, 1 };
       }
       rootNodes_ = hd::Nodes(rootNodes, keyRank, walletId_);
@@ -722,7 +722,7 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
    return false;
 }
 
-bool hd::Wallet::changePassword(const std::vector<PasswordData> &newPass, KeyRank keyRank, const SecureBinaryData &oldPass)
+bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank, const SecureBinaryData &oldPass)
 {
    if ((keyRank.second != newPass.size()) || (keyRank.first < 1) || (keyRank.first > keyRank.second)) {
       return false;

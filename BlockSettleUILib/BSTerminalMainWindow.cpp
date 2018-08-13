@@ -921,7 +921,7 @@ void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 
 void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string prompt
    , std::vector<bs::wallet::EncryptionType> encTypes, std::vector<SecureBinaryData> encKeys
-   , bs::hd::KeyRank keyRank)
+   , bs::wallet::KeyRank keyRank)
 {
    SignContainer::PasswordType password;
 

@@ -7,7 +7,7 @@
 ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
       , const std::vector<bs::wallet::EncryptionType> &encTypes
       , const std::vector<SecureBinaryData> &encKeys
-      , bs::hd::KeyRank keyRank
+      , bs::wallet::KeyRank keyRank
       , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::ChangeWalletPasswordDialog())
@@ -50,12 +50,12 @@ void ChangeWalletPasswordDialog::reject()
    QDialog::reject();
 }
 
-std::vector<bs::hd::PasswordData> ChangeWalletPasswordDialog::newPasswordData() const
+std::vector<bs::wallet::PasswordData> ChangeWalletPasswordDialog::newPasswordData() const
 {
    return ui_->widgetCreateKeys->keys();
 }
 
-bs::hd::KeyRank ChangeWalletPasswordDialog::newKeyRank() const
+bs::wallet::KeyRank ChangeWalletPasswordDialog::newKeyRank() const
 {
    return ui_->widgetCreateKeys->keyRank();
 }

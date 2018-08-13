@@ -79,17 +79,17 @@ public:
    virtual RequestId SetUserId(const BinaryData &) = 0;
    virtual RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) = 0;
    virtual RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &
-      , const std::vector<bs::hd::PasswordData> &pwdData = {}) = 0;
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}) = 0;
    virtual RequestId CreateHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::wallet::Seed &
-      , const std::vector<bs::hd::PasswordData> &pwdData = {}, bs::hd::KeyRank keyRank = { 0, 0 }) = 0;
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) = 0;
    virtual RequestId DeleteHD(const std::shared_ptr<bs::hd::Wallet> &) = 0;
    virtual RequestId DeleteHD(const std::shared_ptr<bs::Wallet> &) = 0;
    virtual RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) = 0;
    virtual RequestId GetInfo(const std::shared_ptr<bs::hd::Wallet> &) = 0;
    virtual void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) = 0;
-   virtual RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::hd::PasswordData> &newPass
-      , bs::hd::KeyRank, const SecureBinaryData &oldPass = {}) = 0;
+   virtual RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
+      , bs::wallet::KeyRank, const SecureBinaryData &oldPass = {}) = 0;
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }
@@ -107,14 +107,14 @@ signals:
    void TXSigned(unsigned int id, BinaryData signedTX, std::string error);
 
    void PasswordRequested(std::string walletId, std::string prompt, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKey, bs::hd::KeyRank);
+      , std::vector<SecureBinaryData> encKey, bs::wallet::KeyRank);
 
    void HDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
    void HDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void DecryptedRootKey(unsigned int id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
    void HDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> &encKeys, bs::hd::KeyRank);
+      , std::vector<SecureBinaryData> &encKeys, bs::wallet::KeyRank);
    void MissingWallets(const std::vector<std::string> &);
    void AddressSyncFailed(const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void AddressSyncComplete();

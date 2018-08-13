@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "HDNode.h"
 #include "MetaData.h"
 
 
@@ -114,7 +113,7 @@ private slots:
    void onWalletChanged();
    void onNewWalletAdded(const std::string &walletId);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank);
+      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
    void onMissingWallets(const std::vector<std::string> &);
    void onSignerAuthenticated();
 

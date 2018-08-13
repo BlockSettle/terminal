@@ -12,6 +12,7 @@
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
 #include "MetaData.h"
+#include "WalletEncryption.h"
 
 
 namespace bs {
@@ -62,9 +63,6 @@ namespace bs {
          BlockSettle_CC = 0x4253,            // "BS" in hex
          BlockSettle_Auth = 0x41757468       // "Auth" in hex
       };
-
-
-      using KeyRank = std::pair<unsigned int, unsigned int>;
 
 
       class Node
@@ -151,24 +149,17 @@ namespace bs {
       };
 
 
-      struct PasswordData {
-         SecureBinaryData        password;
-         wallet::EncryptionType  encType;
-         SecureBinaryData        encKey;
-      };
-
-
       class Nodes
       {
       public:
          Nodes() {}
-         Nodes(const std::vector<std::shared_ptr<Node>> &nodes, KeyRank rank, const std::string &id)
+         Nodes(const std::vector<std::shared_ptr<Node>> &nodes, wallet::KeyRank rank, const std::string &id)
             : nodes_(nodes), rank_(rank), id_(id) {}
 
          bool empty() const { return nodes_.empty(); }
          std::vector<wallet::EncryptionType> encryptionTypes() const;
          std::vector<SecureBinaryData> encryptionKeys() const;
-         KeyRank rank() const { return rank_; }
+         wallet::KeyRank rank() const { return rank_; }
 
          std::shared_ptr<hd::Node> decrypt(const SecureBinaryData &) const;
          Nodes chained(const BinaryData &chainKey) const;
@@ -177,14 +168,13 @@ namespace bs {
 
       private:
          std::vector<std::shared_ptr<Node>>  nodes_;
-         KeyRank        rank_ = { 0, 0 };
-         std::string    id_;
+         wallet::KeyRank   rank_ = { 0, 0 };
+         std::string       id_;
       };
 
    }  //namespace hd
 }  //namespace bs
 
 bool operator < (const bs::hd::Path &l, const bs::hd::Path &r);
-BinaryData xor(const BinaryData &, const BinaryData &);
 
 #endif //__BS_HD_NODE_H__

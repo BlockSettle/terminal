@@ -11,7 +11,6 @@
 #include <chrono>
 #include <memory>
 
-#include "HDNode.h"
 #include "MetaData.h"
 
 namespace spdlog {
@@ -48,7 +47,7 @@ protected slots:
    void onTimerStopped();
 
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank);
+      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
 
 protected:
    void reject() override;
@@ -91,7 +90,7 @@ private:
    bool           accepting_ = false;
    std::vector<bs::wallet::EncryptionType>   encTypes_;
    std::vector<SecureBinaryData>             encKeys_;
-   bs::hd::KeyRank   keyRank_;
+   bs::wallet::KeyRank                       keyRank_;
    QString        frejaPrompt_;
 };
 

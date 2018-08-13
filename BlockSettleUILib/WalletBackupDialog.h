@@ -4,7 +4,6 @@
 #include <QDialog>
 #include <memory>
 #include "EncryptionUtils.h"
-#include "HDNode.h"
 #include "MetaData.h"
 
 
@@ -41,7 +40,7 @@ private slots:
    void onRootKeyReceived(unsigned int id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
-      , bs::hd::KeyRank);
+      , bs::wallet::KeyRank);
    void onContainerError(unsigned int id, std::string errMsg);
    void showError(const QString &title, const QString &text);
    void updateState();

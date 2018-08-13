@@ -15,6 +15,7 @@
 #include "Script.h"
 #include "Signer.h"
 #include "UtxoReservation.h"
+#include "WalletEncryption.h"
 
 
 class PyBlockDataManager;
@@ -150,13 +151,6 @@ namespace bs {
          bool isValid() const noexcept;
          size_t estimateTxSize() const;
          void addInput(const UTXO &utxo, const std::shared_ptr<bs::Wallet> &wallet) { inputs[utxo] = wallet; }
-      };
-
-
-      enum class EncryptionType : uint8_t {
-         Unencrypted,
-         Password,
-         Freja
       };
 
 

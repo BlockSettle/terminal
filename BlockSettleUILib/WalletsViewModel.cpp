@@ -436,7 +436,7 @@ static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::hd::Wallet> &h
 }
 
 void WalletsViewModel::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData>
-   , bs::hd::KeyRank)
+   , bs::wallet::KeyRank)
 {
    if (hdInfoReqIds_.empty() || (hdInfoReqIds_.find(id) == hdInfoReqIds_.end())) {
       return;

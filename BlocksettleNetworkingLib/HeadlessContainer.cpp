@@ -301,7 +301,7 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
       for (int i = 0; i < response.enckeys_size(); ++i) {
          encKeys.push_back(response.enckeys(i));
       }
-      bs::hd::KeyRank keyRank = { response.rankm(), response.rankn() };
+      bs::wallet::KeyRank keyRank = { response.rankm(), response.rankn() };
       emit HDWalletInfo(id, encTypes, encKeys, keyRank);
    }
    else {
@@ -573,7 +573,7 @@ HeadlessContainer::RequestId HeadlessContainer::SyncAddresses(
 }
 
 HeadlessContainer::RequestId HeadlessContainer::CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &root
-   , const bs::hd::Path &path, const std::vector<bs::hd::PasswordData> &pwdData)
+   , const bs::hd::Path &path, const std::vector<bs::wallet::PasswordData> &pwdData)
 {
    if (!root || (path.length() != 3)) {
       logger_->error("[HeadlessContainer] Invalid input data for HD wallet creation");
@@ -598,7 +598,7 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDLeaf(const std::shared_p
 
 HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(const std::string &name
    , const std::string &desc, bool primary, const bs::wallet::Seed &seed
-   , const std::vector<bs::hd::PasswordData> &pwdData, bs::hd::KeyRank keyRank)
+   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
    headless::CreateHDWalletRequest request;
    if (!pwdData.empty()) {
@@ -693,7 +693,7 @@ void HeadlessContainer::SetLimits(const std::shared_ptr<bs::hd::Wallet> &wallet,
 }
 
 HeadlessContainer::RequestId HeadlessContainer::ChangePassword(const std::shared_ptr<bs::hd::Wallet> &wallet
-   , const std::vector<bs::hd::PasswordData> &newPass, bs::hd::KeyRank keyRank, const SecureBinaryData &oldPass)
+   , const std::vector<bs::wallet::PasswordData> &newPass, bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass)
 {
    if (!wallet) {
       logger_->error("[HeadlessContainer] no root wallet for ChangePassword");

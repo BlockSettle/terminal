@@ -1,5 +1,6 @@
 #include "WalletKeysSubmitWidget.h"
 #include "ui_WalletKeysSubmitWidget.h"
+#include <set>
 #include <QFrame>
 #include "WalletKeyWidget.h"
 
@@ -12,7 +13,7 @@ WalletKeysSubmitWidget::WalletKeysSubmitWidget(QWidget* parent)
    ui_->setupUi(this);
 }
 
-void WalletKeysSubmitWidget::init(const std::string &walletId, bs::hd::KeyRank keyRank
+void WalletKeysSubmitWidget::init(const std::string &walletId, bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys)
 {

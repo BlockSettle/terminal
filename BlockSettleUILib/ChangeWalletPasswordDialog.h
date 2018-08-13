@@ -4,7 +4,6 @@
 #include <memory>
 #include <QDialog>
 #include "EncryptionUtils.h"
-#include "HDNode.h"
 #include "MetaData.h"
 
 namespace Ui {
@@ -22,12 +21,12 @@ Q_OBJECT
 
 public:
    ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys, bs::hd::KeyRank, QWidget* parent = nullptr);
+      , const std::vector<SecureBinaryData> &encKeys, bs::wallet::KeyRank, QWidget* parent = nullptr);
    ~ChangeWalletPasswordDialog() override = default;
 
    SecureBinaryData oldPassword() const;
-   std::vector<bs::hd::PasswordData> newPasswordData() const;
-   bs::hd::KeyRank newKeyRank() const;
+   std::vector<bs::wallet::PasswordData> newPasswordData() const;
+   bs::wallet::KeyRank newKeyRank() const;
 
 private slots:
    void updateState();

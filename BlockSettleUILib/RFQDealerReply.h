@@ -11,7 +11,6 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "FrejaREST.h"
-#include "HDNode.h"
 #include "MetaData.h"
 #include "UserScript.h"
 
@@ -146,7 +145,7 @@ namespace bs {
          std::atomic_bool     autoUpdatePrices_;
          std::vector<wallet::EncryptionType> walletEncTypes_;
          std::vector<SecureBinaryData>       walletEncKeys_;
-         bs::hd::KeyRank      walletEncRank_;
+         bs::wallet::KeyRank  walletEncRank_;
          unsigned int         leafCreateReqId_ = 0;
 
          std::string product_;

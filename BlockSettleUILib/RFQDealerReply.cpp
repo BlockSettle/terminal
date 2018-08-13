@@ -103,7 +103,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQDealerReply::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated);
       connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, std::vector<bs::wallet::EncryptionType> encTypes
-         , std::vector<SecureBinaryData> encKeys, bs::hd::KeyRank keyRank) {
+         , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank) {
          walletEncTypes_ = encTypes;
          walletEncKeys_ = encKeys;
          walletEncRank_ = keyRank;
