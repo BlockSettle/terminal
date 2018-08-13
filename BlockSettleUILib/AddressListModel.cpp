@@ -96,7 +96,8 @@ void AddressListModel::updateData()
 
 void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 {
-   if (!std::atomic_compare_exchange_strong(&processing_, false, true)) {
+   bool expected = false;
+   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
       return;
    }
 
@@ -167,7 +168,8 @@ void AddressListModel::updateWalletData()
 
 void AddressListModel::removeEmptyIntAddresses()
 {
-   if (!std::atomic_compare_exchange_strong(&processing_, false, true)) {
+   bool expected = false;
+   if (!std::atomic_compare_exchange_strong(&processing_, expected, true)) {
       return;
    }
 
