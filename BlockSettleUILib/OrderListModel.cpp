@@ -1,13 +1,15 @@
+
 #include "OrderListModel.h"
 #include "AssetManager.h"
 #include "QuoteProvider.h"
 #include "UiUtils.h"
+#include "make_unique.h"
+
 
 QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
 {
    switch (h) {
    case Time:        return tr("Time");
-   case SecurityID:  return tr("SecurityID");
    case Product:     return tr("Product");
    case Side:        return tr("Side");
    case Quantity:    return tr("Quantity");
@@ -57,9 +59,6 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
                   switch (index.column()) {
                      case Header::Time :
                         return d->time_;
-
-                     case Header::SecurityID :
-                        return d->security_;
 
                      case Header::Product :
                         return d->product_;
@@ -112,6 +111,23 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
             switch (role) {
                case Qt::DisplayRole : {
                   if (index.column() == 0) {
+                     return g->security_;
+                  } else {
+                     return QVariant();
+                  }
+               }
+
+               default :
+                  return QVariant();
+            }
+         }
+
+         case DataType::Market : {
+            auto g = static_cast<Market*>(idx->data_);
+
+            switch (role) {
+               case Qt::DisplayRole : {
+                  if (index.column() == 0) {
                      return g->name_;
                   } else {
                      return QVariant();
@@ -158,6 +174,16 @@ QModelIndex OrderListModel::index(int row, int column, const QModelIndex &parent
       auto idx = static_cast<IndexHelper*>(parent.internalPointer());
 
       switch (idx->type_) {
+         case DataType::Market : {
+            auto m = static_cast<Market*>(idx->data_);
+
+            if (row < static_cast<int>(m->rows_.size())) {
+               return createIndex(row, column, &m->rows_[static_cast<std::size_t>(row)]->idx_);
+            } else {
+               return QModelIndex();
+            }
+         }
+
          case DataType::Group : {
             auto g = static_cast<Group*>(idx->data_);
 
@@ -195,10 +221,22 @@ QModelIndex OrderListModel::index(int row, int column, const QModelIndex &parent
    }
 }
 
-int OrderListModel::findGroup(StatusGroup *statusGroup, Group *group) const
+int OrderListModel::findGroup(Market *market, Group *group) const
+{
+   const auto it = std::find_if(market->rows_.cbegin(), market->rows_.cend(),
+      [group] (const std::unique_ptr<Group> &g) { return (&group->idx_ == &g->idx_); });
+
+   if (it != market->rows_.cend()) {
+      return static_cast<int> (std::distance(market->rows_.cbegin(), it));
+   } else {
+      return -1;
+   }
+}
+
+int OrderListModel::findMarket(StatusGroup *statusGroup, Market *market) const
 {
    const auto it = std::find_if(statusGroup->rows_.cbegin(), statusGroup->rows_.cend(),
-      [group] (const std::unique_ptr<Group> &g) { return (&group->idx_ == &g->idx_); });
+      [market] (const std::unique_ptr<Market> &m) { return (&market->idx_ == &m->idx_); });
 
    if (it != statusGroup->rows_.cend()) {
       return static_cast<int> (std::distance(statusGroup->rows_.cbegin(), it));
@@ -214,10 +252,17 @@ QModelIndex OrderListModel::parent(const QModelIndex &index) const
 
       if (idx->parent_) {
          switch (idx->parent_->type_) {
+            case DataType::Market : {
+               auto m = static_cast<Market*>(idx->parent_->data_);
+
+               return createIndex(findMarket(static_cast<StatusGroup*>(idx->parent_->parent_->data_),
+                  m), 0, &m->idx_);
+            }
+
             case DataType::Group : {
                auto g = static_cast<Group*>(idx->parent_->data_);
 
-               return createIndex(findGroup(static_cast<StatusGroup*>(idx->parent_->parent_->data_),
+               return createIndex(findGroup(static_cast<Market*>(idx->parent_->parent_->data_),
                   g), 0, &g->idx_);
             }
 
@@ -247,6 +292,12 @@ int OrderListModel::rowCount(const QModelIndex &parent) const
    auto idx = static_cast<IndexHelper*>(parent.internalPointer());
 
    switch (idx->type_) {
+      case DataType::Market : {
+         auto m = static_cast<Market*>(idx->data_);
+
+         return static_cast<int>(m->rows_.size());
+      }
+
       case DataType::Group : {
          auto g = static_cast<Group*>(idx->data_);
 
@@ -347,17 +398,25 @@ std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::networ
       sg = (itGroups->second == StatusGroup::UnSettled ? unsettled_.get() : settled_.get());
 
       auto it = std::find_if(sg->rows_.cbegin(), sg->rows_.cend(),
-         [assetGrpName] (const std::unique_ptr<Group> & g) { return (g->name_ == assetGrpName); });
+         [assetGrpName] (const std::unique_ptr<Market> & m) { return (m->name_ == assetGrpName); });
 
       if (it != sg->rows_.cend()) {
-         auto dit = std::find_if((*it)->rows_.cbegin(), (*it)->rows_.cend(),
-            [order] (const std::unique_ptr<Data> &d) { return (d->id_ == order.exchOrderId); });
+         auto git = std::find_if((*it)->rows_.cbegin(), (*it)->rows_.cend(),
+            [&order] (const std::unique_ptr<Group> &g)
+               { return (order.security == g->security_.toStdString()); } );
 
-         if (dit != (*it)->rows_.cend()) {
-            return std::make_pair(it->get(),
-               static_cast<int>(std::distance((*it)->rows_.cbegin(), dit)));
+         if (git != (*it)->rows_.cend()) {
+            auto dit = std::find_if((*git)->rows_.cbegin(), (*git)->rows_.cend(),
+               [&order] (const std::unique_ptr<Data> &d) { return (d->id_ == order.exchOrderId); });
+
+            if (dit != (*git)->rows_.cend()) {
+               return std::make_pair(git->get(),
+                  static_cast<int>(std::distance((*git)->rows_.cbegin(), dit)));
+            } else {
+               return std::make_pair(git->get(), -1);
+            }
          } else {
-            return std::make_pair(it->get(), -1);
+            return std::make_pair(nullptr, -1);
          }
       } else {
          return std::make_pair(nullptr, -1);
@@ -367,72 +426,145 @@ std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::networ
    sg = (getStatusGroup(order) == StatusGroup::UnSettled ? unsettled_.get() : settled_.get());
 
    auto it = std::find_if(sg->rows_.cbegin(), sg->rows_.cend(),
-      [assetGrpName] (const std::unique_ptr<Group> & g) { return (g->name_ == assetGrpName); });
+      [assetGrpName] (const std::unique_ptr<Market> & g) { return (g->name_ == assetGrpName); });
 
-   return std::make_pair((it != sg->rows_.cend() ? it->get() : nullptr), -1);
+   if (it != sg->rows_.cend()) {
+      auto git = std::find_if((*it)->rows_.cbegin(), (*it)->rows_.cend(),
+         [&order] (const std::unique_ptr<Group> &g)
+            { return (order.security == g->security_.toStdString()); } );
+
+      if (git != (*it)->rows_.cend()) {
+         return std::make_pair(git->get(), -1);
+      } else {
+         return std::make_pair(nullptr, -1);
+      }
+   } else {
+      return std::make_pair(nullptr, -1);
+   }
 }
 
-void OrderListModel::onOrderUpdated(const bs::network::Order& order)
+void OrderListModel::removeRowIfContainerChanged(const bs::network::Order &order,
+   int &oldOrderRow)
 {
-   const auto found = findItem(order);
-   auto groupItem = found.first;
-   auto index = found.second;
-   StatusGroup *sg = (getStatusGroup(order) == StatusGroup::UnSettled ? unsettled_.get() :
-      settled_.get());
-   QModelIndex sidx = (getStatusGroup(order) == StatusGroup::UnSettled ?
-      createIndex(0, 0, &unsettled_->idx_) : createIndex(1, 0, &settled_->idx_));
-
    // Remove row if container (settled/unsettled) changed.
    auto git = groups_.find(order.exchOrderId.toStdString());
 
-   if (git != groups_.end() && git->second != getStatusGroup(order) && index >= 0) {
+   if (git != groups_.end() && git->second != getStatusGroup(order) && oldOrderRow >= 0) {
       StatusGroup *tmpsg = (git->second == StatusGroup::UnSettled ? unsettled_.get() :
          settled_.get());
 
       const auto assetGrpName = tr(bs::network::Asset::toString(order.assetType));
 
-      auto it = std::find_if(tmpsg->rows_.cbegin(), tmpsg->rows_.cend(),
-         [assetGrpName] (const std::unique_ptr<Group> & g) { return (g->name_ == assetGrpName); });
+      auto mit = std::find_if(tmpsg->rows_.cbegin(), tmpsg->rows_.cend(),
+         [assetGrpName] (const std::unique_ptr<Market> & m) { return (m->name_ == assetGrpName); });
 
-      if (it != tmpsg->rows_.cend()) {
-         const auto didx = createIndex(findGroup(tmpsg, it->get()), 0, &(*it)->idx_);
+      if (mit != tmpsg->rows_.cend()) {
+         auto git = std::find_if((*mit)->rows_.cbegin(), (*mit)->rows_.cend(),
+            [&order] (const std::unique_ptr<Group> &g)
+               { return (order.security == g->security_.toStdString()); });
 
-         beginRemoveRows(didx, index, index);
-         (*it)->rows_.erase((*it)->rows_.begin() + index);
-         index = -1;
-         endRemoveRows();
+         if (git != (*mit)->rows_.cend()) {
+            const auto groupRow = findGroup(mit->get(), git->get());
+            const auto didx = createIndex(groupRow, 0, &(*git)->idx_);
 
-         if (!(*it)->rows_.size()) {
-            const int gdist = static_cast<int>(std::distance(tmpsg->rows_.cbegin(), it));
-            beginRemoveRows(createIndex(tmpsg->row_, 0, &tmpsg->idx_), gdist, gdist);
-            tmpsg->rows_.erase(it);
+            beginRemoveRows(didx, oldOrderRow, oldOrderRow);
+            (*git)->rows_.erase((*git)->rows_.begin() + oldOrderRow);
+            oldOrderRow = -1;
             endRemoveRows();
-         }
 
-         auto git = std::find_if(sg->rows_.cbegin(), sg->rows_.cend(),
-            [assetGrpName] (const std::unique_ptr<Group> & g) { return (g->name_ == assetGrpName); });
+            const auto marketRow = findMarket(tmpsg, mit->get());
 
-         if (git != sg->rows_.cend()) {
-            groupItem = git->get();
-         } else {
-            groupItem = nullptr;
+            if (!(*git)->rows_.size()) {
+               beginRemoveRows(createIndex(marketRow, 0, &(*mit)->idx_),
+                  groupRow, groupRow);
+               (*mit)->rows_.erase(git);
+               endRemoveRows();
+            }
+
+            if (!(*mit)->rows_.size()) {
+               beginRemoveRows(createIndex(tmpsg->row_, 0, &tmpsg->idx_), marketRow, marketRow);
+               tmpsg->rows_.erase(mit);
+               endRemoveRows();
+            }
          }
       }
+   }
+}
+
+void OrderListModel::findMarketAndGroup(const bs::network::Order &order, Market *&market,
+   Group *&group)
+{
+   StatusGroup *sg = (getStatusGroup(order) == StatusGroup::UnSettled ? unsettled_.get() :
+      settled_.get());
+
+   const auto assetGrpName = tr(bs::network::Asset::toString(order.assetType));
+
+   auto mit = std::find_if(sg->rows_.cbegin(), sg->rows_.cend(),
+      [assetGrpName] (const std::unique_ptr<Market> & m) { return (m->name_ == assetGrpName); });
+
+   if (mit != sg->rows_.cend()) {
+      auto git = std::find_if((*mit)->rows_.cbegin(), (*mit)->rows_.cend(),
+         [&order] (const std::unique_ptr<Group> & g)
+            { return (g->security_.toStdString() == order.security); });
+
+      if (git != (*mit)->rows_.cend()) {
+         group = git->get();
+         market = mit->get();
+      } else {
+         group = nullptr;
+         market = mit->get();
+      }
+   } else {
+      group = nullptr;
+      market = nullptr;
+   }
+}
+
+void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Market *&marketItem,
+   Group *&groupItem)
+{
+   QModelIndex sidx = (getStatusGroup(order) == StatusGroup::UnSettled ?
+      createIndex(0, 0, &unsettled_->idx_) : createIndex(1, 0, &settled_->idx_));
+   StatusGroup *sg = (getStatusGroup(order) == StatusGroup::UnSettled ? unsettled_.get() :
+      settled_.get());
+
+   // Create market if it doesn't exist.
+   if (!marketItem) {
+      beginInsertRows(sidx, static_cast<int>(sg->rows_.size()), static_cast<int>(sg->rows_.size()));
+      sg->rows_.push_back(make_unique<Market>(
+         tr(bs::network::Asset::toString(order.assetType)), &sg->idx_));
+      marketItem = sg->rows_.back().get();
+      endInsertRows();
    }
 
    // Create group if it doesn't exist.
    if (!groupItem) {
-      beginInsertRows(sidx, static_cast<int>(sg->rows_.size()), static_cast<int>(sg->rows_.size()));
-      sg->rows_.push_back(std::unique_ptr<Group>(new Group(
-         tr(bs::network::Asset::toString(order.assetType)), &sg->idx_)));
-      groupItem = sg->rows_.back().get();
+      beginInsertRows(createIndex(findMarket(sg, marketItem), 0, &marketItem->idx_),
+         static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
+      marketItem->rows_.push_back(make_unique<Group>(
+         QString::fromStdString(order.security), &marketItem->idx_));
+      groupItem = marketItem->rows_.back().get();
       endInsertRows();
    }
+}
+
+void OrderListModel::onOrderUpdated(const bs::network::Order& order)
+{
+   auto found = findItem(order);
+
+   Group *groupItem = nullptr;
+   Market *marketItem = nullptr;
+
+   removeRowIfContainerChanged(order, found.second);
+
+   findMarketAndGroup(order, marketItem, groupItem);
+
+   createGroupsIfNeeded(order, marketItem, groupItem);
 
    groups_[order.exchOrderId.toStdString()] = getStatusGroup(order);
 
-   if (index < 0) {
-      beginInsertRows(createIndex(findGroup(sg, groupItem), 0, &groupItem->idx_), 0, 0);
+   if (found.second < 0) {
+      beginInsertRows(createIndex(findGroup(marketItem, groupItem), 0, &groupItem->idx_), 0, 0);
 
       double value = order.quantity * order.price;
       if (order.security.substr(0, order.security.find('/')) != order.product) {
@@ -440,9 +572,8 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
       }
       const auto priceAssetType = assetManager_->GetAssetTypeForSecurity(order.security);
 
-      groupItem->rows_.push_front(std::unique_ptr<Data>(new Data(
+      groupItem->rows_.push_front(make_unique<Data>(
          UiUtils::displayTimeMs(order.dateTime),
-         QString::fromStdString(order.security),
          QString::fromStdString(order.product),
          tr(bs::network::Side::toString(order.side)),
          UiUtils::displayQty(order.quantity, order.security, order.product, order.assetType),
@@ -450,13 +581,13 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
          UiUtils::displayValue(value, order.security, order.product, order.assetType),
          QString(),
          order.exchOrderId,
-         &groupItem->idx_)));
+         &groupItem->idx_));
 
       setOrderStatus(groupItem, 0, order);
 
       endInsertRows();
    }
    else {
-      setOrderStatus(groupItem, index, order, true);
+      setOrderStatus(groupItem, found.second, order, true);
    }
 }
