@@ -36,8 +36,8 @@ void WalletInfo::initFromWallet(const bs::Wallet *wallet, const std::string &roo
    id_ = QString::fromStdString(wallet->GetWalletId());
    rootId_ = QString::fromStdString(rootId);
    name_ = QString::fromStdString(wallet->GetWalletName());
-   encType_ = mapEncType(wallet->encryptionType());
-   encKey_ = QString::fromStdString(wallet->encryptionKey().toBinStr());
+   encType_ = wallet->encryptionTypes().empty() ? WalletInfo::Unencrypted : mapEncType(wallet->encryptionTypes()[0]);
+   encKey_ = wallet->encryptionKeys().empty() ? QString() : QString::fromStdString(wallet->encryptionKeys()[0].toBinStr());
    emit dataChanged();
 }
 
@@ -46,8 +46,8 @@ void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootW
    id_ = QString::fromStdString(rootWallet->getWalletId());
    name_ = QString::fromStdString(rootWallet->getName());
    rootId_ = QString::fromStdString(rootWallet->getWalletId());
-   encType_ = mapEncType(rootWallet->encryptionType());
-   encKey_ = QString::fromStdString(rootWallet->encryptionKey().toBinStr());
+   encType_ = rootWallet->encryptionTypes().empty() ? WalletInfo::Unencrypted : mapEncType(rootWallet->encryptionTypes()[0]);
+   encKey_ = rootWallet->encryptionKeys().empty() ? QString() : QString::fromStdString(rootWallet->encryptionKeys()[0].toBinStr());
 }
 
 void WalletInfo::setId(const QString &id)
