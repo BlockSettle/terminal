@@ -129,7 +129,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
       { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) },
       { AdvancedTxDialogByDefault,       SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
-      {TransactionFilter,        SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0)}
+      { TransactionFilter,       SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) }
    };
 }
 
