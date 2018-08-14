@@ -44,13 +44,9 @@ private slots:
    void onImportAccepted();
    void onWalletCreated(const std::string &walletId);
    void onError(const QString &errMsg);
-   void onPasswordChanged(const QString &);
-   void onEncTypeChanged();
-   void onFrejaIdChanged(const QString &);
-   void startFrejaSign();
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &text);
-   void onFrejaStatusUpdated(const QString &status);
+
+protected:
+   void reject() override;
 
 private:
    bool couldImport() const;
@@ -60,9 +56,7 @@ private:
    std::shared_ptr<WalletsManager>  walletsMgr_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<WalletImporter>  walletImporter_;
-   FrejaSignWallet   frejaSign_;
    bs::wallet::Seed  walletSeed_;
-   SecureBinaryData  walletPassword_;
    std::string walletId_;
    QString     walletName_;
    bool importedAsPrimary_ = false;

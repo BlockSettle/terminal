@@ -38,6 +38,7 @@ signals:
    void repliedInitSignRequest(SeqNo, const QString &signRef);
    void repliedSignRequestStatus(SeqNo, const QString &status, const QByteArray &signature);
    void requestFailed(SeqNo);
+   void emptyReply();
 
 private slots:
    void requestFinished(QNetworkReply *);
@@ -101,7 +102,7 @@ class FrejaSign : public QObject
    Q_OBJECT
 public:                                                           // seconds
    FrejaSign(const std::shared_ptr<spdlog::logger> &, unsigned int pollInterval = 3);
-   ~FrejaSign() noexcept = default;
+   ~FrejaSign() noexcept;
 
    bool start(const QString &userId, const QString &title, const QString &data);
    void stop(bool cancel = false);
@@ -131,6 +132,7 @@ private:
    QString  signRef_;
    QString  status_;
    bool stopped_ = true;
+   std::atomic_bool waitForReply_;
 };
 
 class FrejaSignWallet : public FrejaSign

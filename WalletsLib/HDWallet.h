@@ -32,12 +32,14 @@ namespace bs {
          Wallet& operator = (Wallet&&) = delete;
 
          std::shared_ptr<hd::Wallet> CreateWatchingOnly(const SecureBinaryData &password) const;
-         bool isWatchingOnly() const { return (rootNode_ == nullptr); }
-         wallet::EncryptionType encryptionType() const;
-         SecureBinaryData encryptionKey() const { return rootNode_ ? rootNode_->encKey() : SecureBinaryData{}; }
+         bool isWatchingOnly() const { return rootNodes_.empty(); }
+         std::vector<wallet::EncryptionType> encryptionTypes() const { return rootNodes_.encryptionTypes(); }
+         std::vector<SecureBinaryData> encryptionKeys() const { return rootNodes_.encryptionKeys(); }
+         wallet::KeyRank encryptionRank() const { return rootNodes_.rank(); }
          bool isPrimary() const;
          NetworkType networkType() const { return netType_; }
 
+         std::shared_ptr<Node> getRootNode(const SecureBinaryData &password) const { return rootNodes_.decrypt(password); }
          std::shared_ptr<Group> getGroup(CoinType ct) const;
          std::shared_ptr<Group> createGroup(CoinType ct);
          void addGroup(const std::shared_ptr<Group> &group);
@@ -50,13 +52,12 @@ namespace bs {
          virtual std::string getWalletId() const;
          std::string getName() const { return name_; }
          std::string getDesc() const { return desc_; }
-         const std::shared_ptr<Node> &getNode() const { return rootNode_; }
 
          void createStructure();
          void setUserId(const BinaryData &usedId);
          bool eraseFile();
-         bool changePassword(const SecureBinaryData &newPass, const SecureBinaryData &oldPass = {}
-            , wallet::EncryptionType encType = wallet::EncryptionType::Password, const SecureBinaryData &encKey = {});
+
+         bool changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank, const SecureBinaryData &oldPass = {});
 
          void RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew = false);
          void SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm);
@@ -87,7 +88,7 @@ namespace bs {
          std::string    dbFilename_;
          LMDB  *        db_ = nullptr;
          shared_ptr<LMDBEnv>     dbEnv_ = nullptr;
-         std::shared_ptr<Node>   rootNode_;
+         Nodes    rootNodes_;
          std::map<Path::Elem, std::shared_ptr<Group>>                groups_;
          mutable std::map<std::string, std::shared_ptr<bs::Wallet>>  leaves_;
          mutable QMutex    mtxGroups_;

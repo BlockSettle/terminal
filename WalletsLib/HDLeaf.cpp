@@ -207,9 +207,14 @@ void hd::Leaf::SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm)
    }
 }
 
-void hd::Leaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, const std::shared_ptr<Node> &rootNode)
+void hd::Leaf::setRootNodes(Nodes rootNodes)
 {
-   setRootNode(rootNode);
+   rootNodes_ = rootNodes;
+}
+
+void hd::Leaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, Nodes rootNodes)
+{
+   setRootNodes(rootNodes);
 
    if (path != path_) {
       path_ = path;
@@ -352,14 +357,6 @@ std::string hd::Leaf::GetWalletDescription() const
    return desc_;
 }
 
-wallet::EncryptionType hd::Leaf::encryptionType() const
-{
-   if (!rootNode_) {
-      return wallet::EncryptionType::Unencrypted;
-   }
-   return rootNode_->encType();
-}
-
 bool hd::Leaf::containsAddress(const bs::Address &addr)
 {
    return (getAddressIndexForAddr(addr) != UINT32_MAX);
@@ -476,17 +473,11 @@ std::shared_ptr<hd::Node> hd::Leaf::GetPrivNodeFor(const bs::Address &addr, cons
    if (!addrPath.length()) {
       return nullptr;
    }
-   std::shared_ptr<hd::Node> leafNode;
-   if (rootNode_->encType() != wallet::EncryptionType::Unencrypted) {
-      if (password.isNull()) {
-         return nullptr;
-      }
-      const auto decrypted = rootNode_->decrypt(password);
-      leafNode = decrypted->derive(path_);
+   const auto &decrypted = rootNodes_.decrypt(password);
+   if (!decrypted) {
+      return nullptr;
    }
-   else {
-      leafNode = rootNode_->derive(path_);
-   }
+   const auto &leafNode = decrypted->derive(path_);
    return leafNode->derive(addrPath);
 }
 
@@ -865,7 +856,7 @@ BinaryData hd::Leaf::serialize() const
    return finalBW.getData();
 }
 
-bool hd::Leaf::deserialize(const BinaryData &ser, const std::shared_ptr<hd::Node> &rootNode)
+bool hd::Leaf::deserialize(const BinaryData &ser, Nodes rootNodes)
 {
    BinaryRefReader brr(ser);
    bool oldFormat = true;
@@ -878,8 +869,9 @@ bool hd::Leaf::deserialize(const BinaryData &ser, const std::shared_ptr<hd::Node
    auto path = Path::fromString(strPath);
    std::shared_ptr<hd::Node> node;
    if (oldFormat) {
-      if (rootNode) {
-         node = rootNode->derive(path);
+      const auto &decrypted = rootNodes.decrypt({});
+      if (decrypted) {
+         node = decrypted->derive(path);
       }
    }
    else {
@@ -887,7 +879,7 @@ bool hd::Leaf::deserialize(const BinaryData &ser, const std::shared_ptr<hd::Node
       BinaryData serNode = brr.get_BinaryData(len);
       node = hd::Node::deserialize(serNode);
    }
-   init(node, path, rootNode);
+   init(node, path, rootNodes);
    lastExtIdx_ = brr.get_uint32_t();
    lastIntIdx_ = brr.get_uint32_t();
 
@@ -963,9 +955,9 @@ class LeafSigningResolver : public LeafResolver
 {
 public:
    LeafSigningResolver(const BinaryDataMap &map, const SecureBinaryData &password
-      , const hd::Path &rootPath, const std::shared_ptr<hd::Node> &rootNode
+      , const hd::Path &rootPath, hd::Nodes rootNodes
       , const std::unordered_map<BinaryData, hd::Path> &pathMap)
-      : LeafResolver(map), password_(password), rootPath_(rootPath), rootNode_(rootNode), pathMap_(pathMap) {}
+      : LeafResolver(map), password_(password), rootPath_(rootPath), rootNodes_(rootNodes), pathMap_(pathMap) {}
 
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey) override {
       privKey_.clear();
@@ -973,17 +965,11 @@ public:
       if (pathIt == pathMap_.end()) {
          throw std::runtime_error("no pubkey found");
       }
-      std::shared_ptr<hd::Node> leafNode;
-      if (rootNode_->encType() != wallet::EncryptionType::Unencrypted) {
-         if (password_.isNull()) {
-            throw std::runtime_error("no password for encrypted key");
-         }
-         const auto decrypted = rootNode_->decrypt(password_);
-         leafNode = decrypted->derive(rootPath_);
+      const auto &decrypted = rootNodes_.decrypt(password_);
+      if (!decrypted) {
+         throw std::runtime_error("failed to decrypt root node[s]");
       }
-      else {
-         leafNode = rootNode_->derive(rootPath_);
-      }
+      const auto &leafNode = decrypted->derive(rootPath_);
       const auto addrNode = leafNode->derive(pathIt->second);
       privKey_ = addrNode->privChainedKey();
       return privKey_;
@@ -993,7 +979,7 @@ private:
    const SecureBinaryData  password_;
    const hd::Path          rootPath_;
    SecureBinaryData        privKey_;
-   const std::shared_ptr<hd::Node>                 rootNode_;
+   hd::Nodes               rootNodes_;
    const std::unordered_map<BinaryData, hd::Path>  pathMap_;
 };
 
@@ -1003,7 +989,7 @@ std::shared_ptr<ResolverFeed> hd::Leaf::GetResolver(const SecureBinaryData &pass
    if (isWatchingOnly()) {
       return nullptr;
    }
-   return std::make_shared<LeafSigningResolver>(hashToPubKey_, password, path_, rootNode_, pubKeyToPath_);
+   return std::make_shared<LeafSigningResolver>(hashToPubKey_, password, path_, rootNodes_, pubKeyToPath_);
 }
 
 std::shared_ptr<ResolverFeed> hd::Leaf::GetPublicKeyResolver()
@@ -1021,10 +1007,10 @@ hd::AuthLeaf::AuthLeaf(const std::string &name, const std::string &desc)
    extAddressPoolSize_ = 0;
 }
 
-void hd::AuthLeaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, const std::shared_ptr<Node> &rootNode)
+void hd::AuthLeaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, Nodes rootNodes)
 {
    const auto prevNode = node_;
-   hd::Leaf::init(node, path, rootNode);
+   hd::Leaf::init(node, path, rootNodes);
    if (unchainedNode_ != node) {
       if (node_ && !unchainedNode_) {
          unchainedNode_ = node_;
@@ -1037,9 +1023,9 @@ void hd::AuthLeaf::init(const std::shared_ptr<Node> &node, const hd::Path &path,
    inited_ = (node_ != nullptr);
 }
 
-void hd::AuthLeaf::setRootNode(const std::shared_ptr<hd::Node> &rootNode)
+void hd::AuthLeaf::setRootNodes(Nodes rootNodes)
 {
-   unchainedRootNode_ = rootNode;
+   unchainedRootNodes_ = rootNodes;
 }
 
 bs::Address hd::AuthLeaf::createAddress(const Path &path, Path::Elem index, AddressEntryType aet
@@ -1061,8 +1047,8 @@ void hd::AuthLeaf::SetUserID(const BinaryData &userId)
       return;
    }
 
-   if (unchainedRootNode_) {
-      rootNode_ = std::make_shared<bs::hd::ChainedNode>(*unchainedRootNode_, userId);
+   if (!unchainedRootNodes_.empty()) {
+      rootNodes_ = unchainedRootNodes_.chained(userId);
    }
    if (unchainedNode_) {
       node_ = std::make_shared<hd::ChainedNode>(*unchainedNode_, userId);

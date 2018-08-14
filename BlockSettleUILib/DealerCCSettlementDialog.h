@@ -34,16 +34,15 @@ public:
 
 protected:
    QWidget *widgetPassword() const override;
-   QLineEdit *lineEditPassword() const override;
+   WalletKeysSubmitWidget *widgetWalletKeys() const override;
    QLabel *labelHint() const override;
    QLabel *labelPassword() const override;
+
+   void validateGUI() override;
 
 private slots:
    void onAccepted();
    void onGenAddressVerified(bool);
-
-private:
-   void validateGUI();
 
 private:
    Ui::DealerCCSettlementDialog*   ui_;

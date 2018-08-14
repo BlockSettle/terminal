@@ -1,10 +1,12 @@
 #include "FrejaREST.h"
+#include <QCoreApplication>
 #include <QJsonDocument>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSslCertificate>
 #include <QSslKey>
 #include <QSslSocket>
+#include <QThread>
 #include <spdlog/spdlog.h>
 
 static const QByteArray caCertData = "-----BEGIN CERTIFICATE-----\n"
@@ -438,6 +440,7 @@ void FrejaREST::requestFinished(QNetworkReply *reply)
    }
    else {
       logger_->debug("[FrejaREST::requestFinished] received reply: {}", message.toStdString());
+      emit emptyReply();
    }
 
    const auto &reqType = reply->property("reqType").toString();
@@ -580,7 +583,7 @@ void FrejaAuth::onRequestFailed(FrejaREST::SeqNo)
 Q_DECLARE_METATYPE(SecureBinaryData)
 
 FrejaSign::FrejaSign(const std::shared_ptr<spdlog::logger> &logger, unsigned int pollInterval)
-   : QObject(nullptr), logger_(logger), freja_(logger)
+   : QObject(nullptr), logger_(logger), freja_(logger), waitForReply_(false)
 {
    qRegisterMetaType<SecureBinaryData>();
 
@@ -590,6 +593,15 @@ FrejaSign::FrejaSign(const std::shared_ptr<spdlog::logger> &logger, unsigned int
    connect(&freja_, &FrejaREST::repliedInitSignRequest, this, &FrejaSign::onRepliedInitSignRequest);
    connect(&freja_, &FrejaREST::repliedSignRequestStatus, this, &FrejaSign::onRepliedSignRequestStatus);
    connect(&freja_, &FrejaREST::requestFailed, this, &FrejaSign::onRequestFailed);
+   connect(&freja_, &FrejaREST::emptyReply, [this] { waitForReply_ = false; });
+}
+
+FrejaSign::~FrejaSign()
+{
+   while (waitForReply_) {
+      QCoreApplication::processEvents();
+      QThread::msleep(1);
+   }
 }
 
 bool FrejaSign::start(const QString &userId, const QString &title, const QString &data)
@@ -613,6 +625,7 @@ void FrejaSign::stop(bool cancel)
    timer_.stop();
    stopped_ = true;
    if (cancel && !signRef_.isEmpty()) {
+      waitForReply_ = true;
       freja_.cancelSignRequest(signRef_);
       logger_->debug("Freja sign cancelled for {}", signRef_.toStdString());
    }
