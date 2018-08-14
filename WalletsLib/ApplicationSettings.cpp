@@ -125,10 +125,11 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
       { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },
-      { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
+      { DisableBlueDotOnTabOfRfqBlotter, SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
       { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
       { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) },
-      { AdvancedTxDialogByDefault,       SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) }
+      { AdvancedTxDialogByDefault,       SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
+      { TransactionFilter,       SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) }
    };
 }
 
