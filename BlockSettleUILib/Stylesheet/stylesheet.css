@@ -1191,8 +1191,8 @@ QTreeView::indicator {
 QTreeView::indicator {
   width: 10px;
   height: 10px;
-  min-height: 12px;
-  max-height: 12px; }
+  min-height: 10px;
+  max-height: 10px; }
 
 QCheckBox::indicator:checked,
 QTreeView::indicator:checked {
