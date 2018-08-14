@@ -900,7 +900,7 @@
                   <string>Include Output</string>
                  </property>
                  <property name="autoDefault">
-                  <bool>false</bool>
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -2296,16 +2296,20 @@
   <tabstop>comboBoxWallets</tabstop>
   <tabstop>lineEditAddress</tabstop>
   <tabstop>lineEditAmount</tabstop>
-  <tabstop>pushButtonMax</tabstop>
   <tabstop>textEditComment</tabstop>
   <tabstop>pushButtonAddOutput</tabstop>
-  <tabstop>radioButtonNewAddrNative</tabstop>
-  <tabstop>radioButtonExistingAddress</tabstop>
   <tabstop>pushButtonCreate</tabstop>
-  <tabstop>pushButtonSelectInputs</tabstop>
-  <tabstop>treeViewInputs</tabstop>
   <tabstop>comboBoxFeeSuggestions</tabstop>
   <tabstop>checkBoxRBF</tabstop>
+  <tabstop>pushButtonCancel</tabstop>
+  <tabstop>pushButtonImport</tabstop>
+  <tabstop>pushButtonSelectInputs</tabstop>
+  <tabstop>radioButtonNewAddrNative</tabstop>
+  <tabstop>radioButtonNewAddrNested</tabstop>
+  <tabstop>radioButtonExistingAddress</tabstop>
+  <tabstop>treeViewInputs</tabstop>
+  <tabstop>treeViewOutputs</tabstop>
+  <tabstop>pushButtonMax</tabstop>
  </tabstops>
  <resources/>
  <connections/>
