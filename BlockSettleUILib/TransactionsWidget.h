@@ -10,6 +10,7 @@
 class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
+class ApplicationSettings;
 
 namespace Ui {
     class TransactionsWidget;
@@ -24,6 +25,7 @@ public:
    ~TransactionsWidget() override = default;
 
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
+   void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -39,6 +41,7 @@ private:
 
 private:
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
    TransactionsSortFilterModel            *sortFilterModel_;
 };
 

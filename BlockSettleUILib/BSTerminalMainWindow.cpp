@@ -169,6 +169,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
+   ui->widgetTransactions->setAppSettings(applicationSettings_);
+
    UpdateMainWindowAppearence();
 }
 
