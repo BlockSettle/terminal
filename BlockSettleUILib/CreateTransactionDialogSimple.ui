@@ -1424,11 +1424,14 @@
   <tabstop>comboBoxWallets</tabstop>
   <tabstop>lineEditAddress</tabstop>
   <tabstop>lineEditAmount</tabstop>
-  <tabstop>pushButtonMax</tabstop>
   <tabstop>textEditComment</tabstop>
   <tabstop>pushButtonCreate</tabstop>
   <tabstop>comboBoxFeeSuggestions</tabstop>
   <tabstop>checkBoxRBF</tabstop>
+  <tabstop>pushButtonCancel</tabstop>
+  <tabstop>pushButtonImport</tabstop>
+  <tabstop>pushButtonShowAdvanced</tabstop>
+  <tabstop>pushButtonMax</tabstop>
  </tabstops>
  <resources/>
  <connections/>
