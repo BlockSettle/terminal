@@ -59,7 +59,8 @@ namespace bs {
             , const std::shared_ptr<AssetManager>& assetManager
             , const std::shared_ptr<QuoteProvider>& quoteProvider
             , const std::shared_ptr<ApplicationSettings> &
-            , const std::shared_ptr<SignContainer> &);
+            , const std::shared_ptr<SignContainer> &
+            , std::shared_ptr<MarketDataProvider> mdProvider);
          void setWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
 
          std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
@@ -128,6 +129,7 @@ namespace bs {
          std::shared_ptr<QuoteProvider>         quoteProvider_;
          std::shared_ptr<ApplicationSettings>   appSettings_;
          std::shared_ptr<SignContainer>         signingContainer_;
+         std::shared_ptr<MarketDataProvider>    mdProvider_;
 
          std::shared_ptr<bs::Wallet>   curWallet_;
          std::shared_ptr<bs::Wallet>   prevWallet_;

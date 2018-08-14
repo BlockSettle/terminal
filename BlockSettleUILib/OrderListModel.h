@@ -40,7 +40,6 @@ public:
    struct Header {
       enum Index {
          Time = 0,
-         SecurityID,
          Product,
          Side,
          Quantity,
@@ -56,6 +55,7 @@ private:
    enum class DataType {
       Data = 0,
       Group,
+      Market,
       StatusGroup
    };
 
@@ -74,7 +74,6 @@ private:
 
    struct Data {
       QString time_;
-      QString security_;
       QString product_;
       QString side_;
       QString quantity_;
@@ -85,12 +84,11 @@ private:
       QColor statusColor_;
       IndexHelper idx_;
 
-      Data(const QString &time, const QString &sec, const QString &prod,
+      Data(const QString &time, const QString &prod,
          const QString &side, const QString &quantity, const QString &price,
          const QString &value, const QString &status, const QString &id,
          IndexHelper *parent)
          : time_(time)
-         , security_(sec)
          , product_(prod)
          , side_(side)
          , quantity_(quantity)
@@ -106,20 +104,32 @@ private:
 
    struct Group {
       std::deque<std::unique_ptr<Data>> rows_;
+      QString security_;
+      IndexHelper idx_;
+
+      Group(const QString &sec, IndexHelper *parent)
+         : security_(sec)
+         , idx_(parent, this, DataType::Group)
+      {
+      }
+   };
+
+   struct Market {
+      std::vector<std::unique_ptr<Group>> rows_;
       QString name_;
       IndexHelper idx_;
       QFont font_;
 
-      Group(const QString &name, IndexHelper *parent)
+      Market(const QString &name, IndexHelper *parent)
          : name_(name)
-         , idx_(parent, this, DataType::Group)
+         , idx_(parent, this, DataType::Market)
       {
          font_.setBold(true);
       }
    };
 
    struct StatusGroup {
-      std::vector<std::unique_ptr<Group>> rows_;
+      std::vector<std::unique_ptr<Market>> rows_;
       QString name_;
       IndexHelper idx_;
       int row_;
@@ -143,10 +153,14 @@ private:
 
    static StatusGroup::Type getStatusGroup(const bs::network::Order &);
 
-   int findGroup(StatusGroup *statusGroup, Group *group) const;
+   int findGroup(Market *market, Group *group) const;
+   int findMarket(StatusGroup *statusGroup, Market *market) const;
    std::pair<Group*, int> findItem(const bs::network::Order &order);
    void setOrderStatus(Group *group, int index, const bs::network::Order& order,
       bool emitUpdate = false);
+   void removeRowIfContainerChanged(const bs::network::Order &order, int &oldOrderRow);
+   void findMarketAndGroup(const bs::network::Order &order, Market *&market, Group *&group);
+   void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
 private:
    std::shared_ptr<QuoteProvider>   quoteProvider_;
