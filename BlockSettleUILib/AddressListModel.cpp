@@ -169,7 +169,7 @@ void AddressListModel::updateWalletData()
 void AddressListModel::removeEmptyIntAddresses()
 {
    bool expected = false;
-   if (!std::atomic_compare_exchange_strong(&processing_, expected, true)) {
+   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
       return;
    }
 

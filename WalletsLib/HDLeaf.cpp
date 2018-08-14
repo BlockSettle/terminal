@@ -1101,6 +1101,14 @@ void hd::CCLeaf::setData(const std::string &data)
    checker_ = std::make_shared<TxAddressChecker>(bs::Address(data), armory_);
 }
 
+void hd::CCLeaf::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
+{
+   hd::Leaf::SetArmory(armory);
+   if (checker_ && armory) {
+      checker_->setArmory(armory);
+   }
+}
+
 void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
 {
    {

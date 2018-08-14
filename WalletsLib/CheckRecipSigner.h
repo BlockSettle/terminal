@@ -21,6 +21,7 @@ namespace bs {
    public:
       TxAddressChecker(const bs::Address &addr, const std::shared_ptr<ArmoryConnection> &armory)
          : address_(addr), armory_(armory) {}
+      void setArmory(const std::shared_ptr<ArmoryConnection> &armory) { armory_ = armory; }
       void containsInputAddress(Tx, std::function<void(bool)>
          , uint64_t lotsize = 1, uint64_t value = 0, unsigned int inputId = 0);
 

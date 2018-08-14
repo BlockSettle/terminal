@@ -284,6 +284,8 @@ namespace bs {
          QString displaySymbol() const override;
          bool isTxValid(const BinaryData &) const override;
 
+         void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
+
       private slots:
          void onZeroConfReceived(ArmoryConnection::ReqIdType) override;
          void onRefresh(const std::vector<BinaryData> &ids) override;
