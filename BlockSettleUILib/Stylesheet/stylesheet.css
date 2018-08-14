@@ -1189,8 +1189,8 @@ QTreeView::indicator {
   padding: 0px; }
 
 QTreeView::indicator {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   min-height: 12px;
   max-height: 12px; }
 
