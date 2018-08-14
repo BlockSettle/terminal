@@ -307,8 +307,13 @@ void TransactionsWidget::walletsChanged()
          for (const auto &leaf : group->getLeaves()) {
             groupLeafIds << QString::fromStdString(leaf->GetWalletId());
             ui->walletBox->addItem(QString::fromStdString("      " + leaf->GetShortName()));
-            ui->walletBox->setItemData(index, QStringList() << QString::fromStdString(leaf->GetWalletId())
-               , UiUtils::WalletIdRole);
+            const auto id = QString::fromStdString(leaf->GetWalletId());
+            ui->walletBox->setItemData(index, QStringList() << id, UiUtils::WalletIdRole);
+
+            if (walletIds.size() == 1 && walletIds.contains(id)) {
+               currentIndex = index;
+            }
+
             index++;
          }
          if (groupLeafIds.isEmpty()) {
