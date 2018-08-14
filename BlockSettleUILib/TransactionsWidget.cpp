@@ -258,15 +258,24 @@ static inline QStringList walletLeavesIds(WalletsManager::hd_wallet_type wallet)
    return allLeafIds;
 }
 
-static inline bool anyIdInThisWallet(const QStringList &ids, const QStringList &walletIds)
+static inline bool exactlyThisLeaf(const QStringList &ids, const QStringList &walletIds)
 {
-   for (const auto &id : qAsConst(ids)) {
-      if (walletIds.contains(id)) {
-         return true;
-      }
+   if (ids.size() != walletIds.size()) {
+      return false;
    }
 
-   return false;
+   int count = 0;
+
+   count = std::accumulate(ids.cbegin(), ids.cend(), count,
+      [&](int value, const QString &id) {
+         if (walletIds.contains(id)) {
+            return ++value;
+         } else {
+            return value;
+         }
+   });
+
+   return (count == walletIds.size());
 }
 
 void TransactionsWidget::walletsChanged()
@@ -290,7 +299,7 @@ void TransactionsWidget::walletsChanged()
       ui->walletBox->addItem(QString::fromStdString(hdWallet->getName()));
       QStringList allLeafIds = walletLeavesIds(hdWallet);
 
-      if (anyIdInThisWallet(walletIds, allLeafIds)) {
+      if (exactlyThisLeaf(walletIds, allLeafIds)) {
          currentIndex = index;
       }
 
@@ -307,10 +316,14 @@ void TransactionsWidget::walletsChanged()
          for (const auto &leaf : group->getLeaves()) {
             groupLeafIds << QString::fromStdString(leaf->GetWalletId());
             ui->walletBox->addItem(QString::fromStdString("      " + leaf->GetShortName()));
-            const auto id = QString::fromStdString(leaf->GetWalletId());
-            ui->walletBox->setItemData(index, QStringList() << id, UiUtils::WalletIdRole);
 
-            if (walletIds.size() == 1 && walletIds.contains(id)) {
+            const auto id = QString::fromStdString(leaf->GetWalletId());
+            QStringList ids;
+            ids << id;
+
+            ui->walletBox->setItemData(index, ids, UiUtils::WalletIdRole);
+
+            if (exactlyThisLeaf(walletIds, ids)) {
                currentIndex = index;
             }
 
