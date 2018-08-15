@@ -66,6 +66,8 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    ui_->widgetSubmitKeysAS->suspend();
    connect(ui_->checkBoxAutoSign, &QCheckBox::clicked, this, &RFQDealerReply::onAutoSignActivated);
    connect(ui_->widgetSubmitKeysAS, &WalletKeysSubmitWidget::keyChanged, this, &RFQDealerReply::updateAutoSignState);
+
+   ui_->responseTitle->hide();
 }
 
 RFQDealerReply::~RFQDealerReply()
@@ -388,6 +390,13 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
 
    if (qrnChanged) {
       reset();
+   }
+
+   if (qrn.assetType == bs::network::Asset::SpotFX ||
+      qrn.assetType == bs::network::Asset::Undefined) {
+         ui_->responseTitle->hide();
+   } else {
+      ui_->responseTitle->show();
    }
 
    updateSubmitButton();
