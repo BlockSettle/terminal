@@ -342,6 +342,10 @@ QTreeView {
   QTreeView *[buttonWarning="true"] {
     border: none; }
 
+QHeaderView {
+   background-color: #18202b;
+}
+
 QHeaderView::section {
   background-color: #18202b;
   color: #81888f;
