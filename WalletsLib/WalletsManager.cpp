@@ -666,6 +666,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
    , std::function<void(bs::Transaction::Direction)> cb)
 {
    if (!tx.isInitialized() || !armory_ || !wallet) {
+      logger_->debug("Failed to get TX direction");
       return false;
    }
 

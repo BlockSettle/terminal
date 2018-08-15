@@ -110,6 +110,9 @@ private:
 
    void stopServiceThreads();
 
+   bool addGetTxCallback(const BinaryData &hash, const std::function<void(Tx)> &);  // returns true if hash exists
+   void callGetTxCallbacks(const BinaryData &hash, const Tx &);
+
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
@@ -134,6 +137,9 @@ private:
 
    std::atomic_bool              isOnline_;
    std::unordered_map<std::string, std::function<void()>>   preOnlineRegIds_;
+
+   mutable std::atomic_flag      txCbLock_ = ATOMIC_FLAG_INIT;
+   std::map<BinaryData, std::vector<std::function<void(Tx)>>>   txCallbacks_;
 };
 
 #endif // __ARMORY_CONNECTION_H__

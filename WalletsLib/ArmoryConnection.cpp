@@ -373,6 +373,38 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(AsyncClient::
    return true;
 }
 
+bool ArmoryConnection::addGetTxCallback(const BinaryData &hash, const std::function<void(Tx)> &cb)
+{
+   FastLock lock(txCbLock_);
+   const auto &it = txCallbacks_.find(hash);
+   if (it != txCallbacks_.end()) {
+      it->second.push_back(cb);
+      return true;
+   }
+   else {
+      txCallbacks_[hash].push_back(cb);
+   }
+   return false;
+}
+
+void ArmoryConnection::callGetTxCallbacks(const BinaryData &hash, const Tx &tx)
+{
+   std::vector<std::function<void(Tx)>> callbacks;
+   {
+      FastLock lock(txCbLock_);
+      const auto &it = txCallbacks_.find(hash);
+      if (it == txCallbacks_.end()) {
+         logger_->error("[ArmoryConnection::callGetTxCallbacks] no callbacks found for hash {}", hash.toHexStr(true));
+         return;
+      }
+      callbacks = it->second;
+      txCallbacks_.erase(it);
+   }
+   for (const auto &callback : callbacks) {
+      callback(tx);
+   }
+}
+
 bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx)> cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
@@ -384,14 +416,17 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
       cb(tx);
       return true;
    }
-   const auto &cbUpdateCache = [this, hash, cb](Tx tx) {
+   if (addGetTxCallback(hash, cb)) {
+      return true;
+   }
+   const auto &cbUpdateCache = [this, hash](Tx tx) {
       if (tx.isInitialized()) {
          txCache_.put(hash, tx);
       }
       else {
-         logger_->error("[ArmoryConnection::getTxByHash] received uninited TX");
+         logger_->warn("[ArmoryConnection::getTxByHash] received uninited TX for hash {}", hash.toHexStr(true));
       }
-      cb(tx);
+      callGetTxCallbacks(hash, tx);
    };
    bdv_->getTxByHash(hash, cbUpdateCache);
    return true;
@@ -417,12 +452,13 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
          delete result;
       }
    };
-   const auto &cbGetTx = [this, cbAppendTx](Tx tx) {
-      if (!tx.isInitialized()) {
-         logger_->error("[ArmoryConnection::getTXsByHash] received uninitialized TX");
-         return;
+   const auto &cbUpdateTx = [this, cbAppendTx](Tx tx) {
+      if (tx.isInitialized()) {
+         txCache_.put(tx.getThisHash(), tx);
       }
-      txCache_.put(tx.getThisHash(), tx);
+      else {
+         logger_->error("[ArmoryConnection::getTXsByHash] received uninitialized TX");
+      }
       cbAppendTx(tx);
    };
    for (const auto &hash : hashes) {
@@ -431,7 +467,12 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
          cbAppendTx(tx);
       }
       else {
-         bdv_->getTxByHash(hash, cbGetTx);
+         if (addGetTxCallback(hash, cbUpdateTx)) {
+            return true;
+         }
+         bdv_->getTxByHash(hash, [this, hash](Tx tx) {
+            callGetTxCallbacks(hash, tx);
+         });
       }
    }
    return true;
