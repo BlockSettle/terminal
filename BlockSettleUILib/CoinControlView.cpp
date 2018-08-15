@@ -36,7 +36,7 @@ void CoinControlView::resizeEvent(QResizeEvent *e)
 
    const int nameAndBalanceWidth = columnWidth(CoinControlModel::ColumnName) +
       columnWidth(CoinControlModel::ColumnBalance);
-   const int commentWidth = width() - nameAndBalanceWidth - CoinControlModel::ColumnsCount - 1;
+   const int commentWidth = width() - nameAndBalanceWidth - CoinControlModel::ColumnsCount + 1;
 
    header()->resizeSection(CoinControlModel::ColumnComment, commentWidth);
 }
