@@ -85,6 +85,7 @@ public:
       PriceUpdateInterval,
       ShowQuoted,
       AdvancedTxDialogByDefault,
+      TransactionFilter,
       _last
    };
 

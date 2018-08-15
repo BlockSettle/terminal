@@ -15,6 +15,7 @@ class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
 class WalletsManager;
+class ApplicationSettings;
 
 
 class TransactionsWidget : public TabWithShortcut
@@ -27,6 +28,7 @@ public:
 
    void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<ArmoryConnection> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
+   void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -45,6 +47,7 @@ private:
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
    TransactionsSortFilterModel            *sortFilterModel_;
 };
 
