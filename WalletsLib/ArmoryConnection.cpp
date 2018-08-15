@@ -388,6 +388,9 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
       if (tx.isInitialized()) {
          txCache_.put(hash, tx);
       }
+      else {
+         logger_->error("[ArmoryConnection::getTxByHash] received uninited TX");
+      }
       cb(tx);
    };
    bdv_->getTxByHash(hash, cbUpdateCache);
@@ -410,7 +413,6 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       result->emplace_back(tx);
       if (hashSet->empty()) {
          delete hashSet;
-         logger_->debug("[ArmoryConnection::getTXsByHash] collected all TX responses");
          cb(*result);
          delete result;
       }

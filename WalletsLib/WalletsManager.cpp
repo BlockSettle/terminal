@@ -846,8 +846,8 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
                   addresses.insert(addr);
                }
             }
-            cbProcessAddresses(addresses);
          }
+         cbProcessAddresses(addresses);
       };
       armory_->getTXsByHash(opTxHashes, cbProcess);
    }
