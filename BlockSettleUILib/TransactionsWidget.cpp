@@ -314,7 +314,7 @@ void TransactionsWidget::walletsChanged()
          currentIndex = index;
       }
 
-      if (hdWallet == walletsManager->GetPrimaryWallet()) {
+      if (hdWallet == walletsManager_->GetPrimaryWallet()) {
          primaryWalletIndex = index;
       }
 
@@ -361,7 +361,7 @@ void TransactionsWidget::walletsChanged()
       if (walletIds.contains(c_allWalletsId)) {
          ui->walletBox->setCurrentIndex(0);
       } else {
-         const auto primaryWallet = walletsManager->GetPrimaryWallet();
+         const auto primaryWallet = walletsManager_->GetPrimaryWallet();
 
          if (primaryWallet) {
             ui->walletBox->setCurrentIndex(primaryWalletIndex);
