@@ -134,7 +134,6 @@ void RFQDealerReply::initUi()
    ui_->comboBoxRecvAddr->hide();
    ui_->authenticationAddressLabel->hide();
    ui_->authenticationAddressComboBox->hide();
-   ui_->labelSWBalance->hide();
    ui_->pushButtonSubmit->setEnabled(false);
    ui_->pushButtonPull->setEnabled(false);
    ui_->widgetWallet->hide();
@@ -378,7 +377,6 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
 
    ui_->authenticationAddressLabel->setVisible(isXBT);
    ui_->authenticationAddressComboBox->setVisible(isXBT);
-   ui_->labelSWBalance->setVisible(isXBT || isPrivMkt);
    ui_->widgetWallet->setVisible(isXBT || isPrivMkt);
    ui_->pushButtonAdvanced->setVisible(isXBT && (qrn.side == bs::network::Side::Buy));
    ui_->labelRecvAddr->setVisible(isXBT || isPrivMkt);
@@ -865,22 +863,6 @@ void RFQDealerReply::validateGUI()
 
 void RFQDealerReply::onTransactionDataChanged()
 {
-   if ((currentQRN_.assetType == bs::network::Asset::SpotXBT)
-      || ((currentQRN_.assetType == bs::network::Asset::PrivateMarket) && (currentQRN_.side == bs::network::Side::Sell))) {
-      auto availableBalance = transactionData_->GetTransactionSummary().availableBalance;
-      ui_->labelSWBalance->setText(UiUtils::displayQuantity(availableBalance, bs::network::XbtCurrency));
-   }
-   else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
-      const auto wallet = getCCWallet(currentQRN_.product);
-      if (wallet && ccCoinSel_) {
-         ui_->labelSWBalance->setText(tr("%1 %2").arg(UiUtils::displayCCAmount(wallet->GetTxBalance(ccCoinSel_->GetBalance())))
-            .arg(QString::fromStdString(currentQRN_.product)));
-      }
-      else {
-         ui_->labelSWBalance->clear();
-      }
-   }
-
    updateSubmitButton();
 }
 
@@ -1274,8 +1256,6 @@ void RFQDealerReply::startSigning()
       return;
    }
    ui_->widgetSubmitKeysAS->init(walletId, walletEncRank_, walletEncTypes_, walletEncKeys_);
-   QApplication::processEvents();
-   adjustSize();     // tr("Activate Auto-Signing")
 }
 
 void RFQDealerReply::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)
