@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>350</width>
-    <height>745</height>
+    <height>679</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -97,9 +97,6 @@
         <property name="sizeAdjustPolicy">
          <enum>QAbstractScrollArea::AdjustToContents</enum>
         </property>
-        <property name="widgetResizable">
-         <bool>false</bool>
-        </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
         </property>
@@ -109,7 +106,7 @@
            <x>0</x>
            <y>0</y>
            <width>348</width>
-           <height>410</height>
+           <height>477</height>
           </rect>
          </property>
          <property name="sizePolicy">
@@ -1902,7 +1899,7 @@
             </size>
            </property>
            <property name="text">
-            <string>RESPONSE</string>
+            <string>ADDRESS DETAILS</string>
            </property>
            <property name="indent">
             <number>10</number>
@@ -1943,70 +1940,14 @@
              <number>10</number>
             </property>
             <property name="topMargin">
-             <number>10</number>
+             <number>5</number>
             </property>
             <property name="rightMargin">
              <number>10</number>
             </property>
             <property name="bottomMargin">
-             <number>10</number>
+             <number>5</number>
             </property>
-            <item>
-             <widget class="QWidget" name="widget" native="true">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_9">
-               <property name="spacing">
-                <number>5</number>
-               </property>
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item alignment="Qt::AlignLeft">
-                <widget class="QLabel" name="label_11">
-                 <property name="minimumSize">
-                  <size>
-                   <width>90</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>90</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>Balance</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="labelSWBalance">
-                 <property name="text">
-                  <string>0 BTC</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
             <item>
              <widget class="QWidget" name="verticalWidget8" native="true">
               <property name="minimumSize">
