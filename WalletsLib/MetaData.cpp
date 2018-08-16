@@ -629,7 +629,7 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) c
    if (!isBalanceAvailable()) {
       return false;
    }
-   const auto &cbZCList = [this, cb](std::vector<UTXO> utxos) -> void {
+   const auto &cbZCList = [cb](std::vector<UTXO> utxos) -> void {
       cb(utxos);
    };
    btcWallet_->getSpendableZCList(cbZCList);

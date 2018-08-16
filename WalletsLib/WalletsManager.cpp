@@ -36,7 +36,7 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger)
    btc_ecc_start();
 }
 
-WalletsManager::~WalletsManager()
+WalletsManager::~WalletsManager() noexcept
 {
    btc_ecc_stop();
 }
@@ -997,7 +997,7 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
       return true;
    }
 
-   const auto &cbFee = [this, blocksToWait, blocks, cb](float fee) {
+   const auto &cbFee = [this, blocks, cb](float fee) {
       fee *= BTCNumericTypes::BalanceDivider / 1000.0;
       if (fee != 0) {
          if (fee < 5) {

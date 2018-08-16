@@ -209,7 +209,7 @@ void CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
          }
       }
    };
-   const auto &cbTX = [this, result, cbTXs](Tx tx) {
+   const auto &cbTX = [this, cbTXs](Tx tx) {
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          TxIn in = tx.getTxInCopy(i);
          OutPoint op = in.getOutPoint();
@@ -268,7 +268,7 @@ void TxChecker::hasSpender(const bs::Address &addr, const std::shared_ptr<Armory
    };
    auto result = new Result;
 
-   const auto &cbTXs = [this, result, addr, cb](std::vector<Tx> txs) {
+   const auto &cbTXs = [result, addr, cb](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
          for (const auto &txOutIdx : result->txOutIdx[tx.getThisHash()]) {
             const TxOut prevOut = tx.getTxOutCopy(txOutIdx);
