@@ -145,6 +145,7 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
 
    ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnName);
    ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnBalance);
+   ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnUTXOCount);
    ui_->treeViewUTXO->setCoinsModel(coinControlModel_);
 }
 

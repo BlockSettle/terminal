@@ -36,6 +36,7 @@ public:
 
    QString getName() const { return name_; }
    QString getComment() const { return comment_; }
+   virtual QString getUtxoCount() const { return QString(); }
 
    bool hasChildren() const { return !childs_.empty(); }
    int  childrenCount() const { return childs_.count(); }
@@ -154,6 +155,7 @@ class AddressNode : public CoinControlNode
 public:
    AddressNode(const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
       : CoinControlNode(name, comment, row, parent)
+      , utxoCount_(0)
    {}
    ~AddressNode() noexcept override = default;
 
@@ -161,6 +163,7 @@ public:
       appendChildrenNode(transaction);
       NotifyChildAdded();
       AddBalance(transaction->getSelectionCount(), transaction->getTotalAmount(), transaction->getTotalAmount());
+      ++utxoCount_;
    }
 
    BTCNumericTypes::balance_type getTotalAmount() const override {
@@ -182,6 +185,11 @@ public:
    void setCheckedState(int state) override
    {
       UpdateChildsState(state);
+   }
+
+   QString getUtxoCount() const override
+   {
+      return QString::number(utxoCount_);
    }
 
 protected:
@@ -239,6 +247,7 @@ private:
    int totalSelected_ = 0;
    int totalChilds_ = 0;
    int checkedState_ = Qt::Unchecked;
+   int utxoCount_;
 };
 
 
@@ -284,6 +293,8 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
          return node->getName();
       case ColumnComment:
          return node->getComment();
+      case ColumnUTXOCount:
+         return node->getUtxoCount();
       case ColumnBalance: {
          const auto amount = (node->getSelectedAmount() <= 0) ? node->getTotalAmount() : node->getSelectedAmount();
          return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
@@ -295,8 +306,12 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
       if (index.column() == 0) {
          return node->getCheckedState();
       }
-   } else if ((role == Qt::TextAlignmentRole) && (index.column() == ColumnBalance)) {
-      return Qt::AlignRight;
+   } else if (role == Qt::TextAlignmentRole) {
+      if (index.column() == ColumnBalance) {
+         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+      } else if (index.column() == ColumnUTXOCount) {
+         return Qt::AlignCenter;
+      }
    }
    return QVariant{};
 }
@@ -326,6 +341,8 @@ QVariant CoinControlModel::headerData(int section, Qt::Orientation orientation, 
    switch (section) {
    case ColumnName:
       return tr("Address/Hash");
+   case ColumnUTXOCount:
+      return tr("#");
    case ColumnComment:
       return tr("Comment");
    case ColumnBalance:
