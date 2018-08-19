@@ -1147,7 +1147,7 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
                grp->rfqs_[static_cast<std::size_t>(index)]->visible_ = false;
                --grp->visibleCount_;
                showRfqsFromBack(grp);
-               emitUpdate  =true;
+               emitUpdate = true;
             }
 
             emit invalidateFilterModel();
