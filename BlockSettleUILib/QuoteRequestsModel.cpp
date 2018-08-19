@@ -216,7 +216,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             }
 
             case static_cast<int>(Role::StatText) : {
-               return (g->limit_ > 0 ? tr("Displaying %1 of %2")
+               return (g->limit_ > 0 ? tr("%1 of %2")
                      .arg(QString::number(g->visibleCount_ +
                         (showQuoted_ ? g->quotedRfqsCount_ : 0)))
                      .arg(QString::number(g->rfqs_.size())) :
@@ -1133,17 +1133,21 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
                quoteReqStatusDesc(status);
          }
 
+         bool emitUpdate = false;
+
          if (status == bs::network::QuoteReqNotification::Replied) {
 
             if (!grp->rfqs_[static_cast<std::size_t>(index)]->quoted_) {
                grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = true;
                ++grp->quotedRfqsCount_;
+               emitUpdate = true;
             }
 
             if (grp->rfqs_[static_cast<std::size_t>(index)]->visible_) {
                grp->rfqs_[static_cast<std::size_t>(index)]->visible_ = false;
                --grp->visibleCount_;
                showRfqsFromBack(grp);
+               emitUpdate = true;
             }
 
             emit invalidateFilterModel();
@@ -1154,6 +1158,7 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
                grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = false;
                --grp->quotedRfqsCount_;
                emit invalidateFilterModel();
+               emitUpdate = true;
             }
          }
 
@@ -1166,6 +1171,11 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
          const QModelIndex idx = createIndex(index, static_cast<int>(Column::Status),
             &grp->rfqs_[index]->idx_);
          emit dataChanged(idx, idx);
+
+         if (emitUpdate) {
+            const QModelIndex gidx = createIndex(findGroup(&grp->idx_), 0, &grp->idx_);
+            emit dataChanged(gidx, gidx);
+         }
       });
 
       emit quoteReqNotifStatusChanged(itQRN->second);
