@@ -5,22 +5,110 @@
 #include <memory>
 #include "CommonTypes.h"
 
+#include <map>
+
 namespace spdlog {
    class logger;
 }
 class QQmlComponent;
 class AssetManager;
+class MarketDataProvider;
+class WalletsManager;
+
+
+//
+// MarketData
+//
+
+//! Market data for user script.
+class MarketData : public QObject
+{
+   Q_OBJECT
+
+public:
+   MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent);
+   ~MarketData() noexcept override = default;
+
+   Q_INVOKABLE double bid(const QString &sec) const;
+   Q_INVOKABLE double ask(const QString &sec) const;
+
+private slots:
+   void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
+
+private:
+   std::map<QString, std::map<bs::network::MDField::Type, double>> data_;
+}; // class MarketData
+
+
+//
+// DataStorage
+//
+
+//! Data storage for user script.
+class DataStorage : public QObject
+{
+   Q_OBJECT
+
+public:
+   explicit DataStorage(QObject *parent);
+   ~DataStorage() noexcept override = default;
+
+   Q_INVOKABLE double bought(const QString &currency);
+   Q_INVOKABLE void setBought(const QString &currency, double v, const QString &id);
+
+   Q_INVOKABLE double sold(const QString &currency);
+   Q_INVOKABLE void setSold(const QString &currency, double v, const QString &id);
+
+private:
+   std::map<QString, std::map<QString, double>> bought_;
+   std::map<QString, std::map<QString, double>> sold_;
+}; // class DataStorage
+
+
+//
+// Constants
+//
+
+//! Useful constants for user script.
+class Constants : public QObject
+{
+   Q_OBJECT
+
+   Q_PROPERTY(int payInTxSize READ payInTxSize)
+   Q_PROPERTY(int payOutTxSize READ payOutTxSize)
+   Q_PROPERTY(float feePerByte READ feePerByte)
+   Q_PROPERTY(QString xbtProductName READ xbtProductName)
+
+public:
+   explicit Constants(QObject *parent);
+   ~Constants() noexcept override = default;
+
+   int payInTxSize() const;
+   int payOutTxSize() const;
+   float feePerByte() const;
+   QString xbtProductName() const;
+
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+
+private:
+   std::shared_ptr<WalletsManager> walletsManager_;
+}; // class Constants
+
 
 class UserScript : public QObject
 {
 Q_OBJECT
 
 public:
-   UserScript(const std::shared_ptr<spdlog::logger> logger, QObject* parent = nullptr);
+   UserScript(const std::shared_ptr<spdlog::logger> logger,
+      std::shared_ptr<MarketDataProvider> mdProvider,
+      QObject* parent = nullptr);
    ~UserScript() override;
 
    void load(const QString &filename);
    QObject *instantiate();
+
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
 
 signals:
    void loaded();
@@ -28,8 +116,11 @@ signals:
 
 private:
    std::shared_ptr<spdlog::logger> logger_;
-   QQmlEngine engine_;
+   QQmlEngine *engine_;
    QQmlComponent *component_;
+   MarketData *md_;
+   Constants *const_;
+   DataStorage *storage_;
 };
 
 
@@ -38,12 +129,16 @@ class AutoQuoter : public QObject
 Q_OBJECT
 
 public:
-   AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename
-      , const std::shared_ptr<AssetManager> &assetManager, QObject* parent = nullptr);
+   AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename,
+      const std::shared_ptr<AssetManager> &assetManager,
+      std::shared_ptr<MarketDataProvider> mdProvider,
+      QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);
    void destroy(QObject *);
+
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
 
 signals:
    void loaded();
@@ -77,6 +172,14 @@ public:
    bool isBuy() const         { return isBuy_; }
    double quantity() const    { return quantity_; }
    int assetType() const      { return assetType_; }
+
+   enum AssetType {
+      SpotFX = 1,
+      SpotXBT,
+      PrivateMarket
+   };
+
+   Q_ENUM(AssetType)
 
 private:
    QString  requestId_;
@@ -151,6 +254,7 @@ public:
    Q_INVOKABLE bool pullQuoteReply();
    Q_INVOKABLE QString product();
    Q_INVOKABLE double accountBalance(const QString &product);
+   void start() { emit started(); }
 
 signals:
    void expirationInSecChanged();
@@ -161,6 +265,7 @@ signals:
    void sendFailed(const QString &reason);
    void sendingQuoteReply(const QString &reqId, double price);
    void pullingQuoteReply(const QString &reqId);
+   void started();
 
 private:
    BSQuoteRequest *quoteReq_;

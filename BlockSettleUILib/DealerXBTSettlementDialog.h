@@ -43,13 +43,13 @@ public:
 
 protected:
    QWidget *widgetPassword() const override;
-   QLineEdit *lineEditPassword() const override;
+   WalletKeysSubmitWidget *widgetWalletKeys() const override;
    QLabel *labelHint() const override;
    QLabel *labelPassword() const override;
 
 private slots:
    void onAccepted();
-   void updateControls();
+   void validateGUI() override;
 
    void onTimerExpired();
 

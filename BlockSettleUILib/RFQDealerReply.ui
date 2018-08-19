@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>350</width>
-    <height>745</height>
+    <height>679</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -97,9 +97,6 @@
         <property name="sizeAdjustPolicy">
          <enum>QAbstractScrollArea::AdjustToContents</enum>
         </property>
-        <property name="widgetResizable">
-         <bool>false</bool>
-        </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
         </property>
@@ -109,7 +106,7 @@
            <x>0</x>
            <y>0</y>
            <width>348</width>
-           <height>410</height>
+           <height>477</height>
           </rect>
          </property>
          <property name="sizePolicy">
@@ -1841,144 +1838,14 @@
                   </layout>
                  </widget>
                 </item>
-                <item>
-                 <widget class="QWidget" name="horizontalWidgetASFreja" native="true">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>10</height>
-                   </size>
-                  </property>
-                  <layout class="QHBoxLayout" name="horizontalLayout_20">
-                   <property name="spacing">
-                    <number>5</number>
-                   </property>
-                   <property name="leftMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>0</number>
-                   </property>
-                   <item>
-                    <widget class="QLabel" name="labelFrejaStatus">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="minimumSize">
-                      <size>
-                       <width>85</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                     <property name="maximumSize">
-                      <size>
-                       <width>185</width>
-                       <height>16777215</height>
-                      </size>
-                     </property>
-                     <property name="text">
-                      <string>Freja sign status</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QPushButton" name="pushButtonFreja">
-                     <property name="text">
-                      <string>Sign with Freja eID</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QWidget" name="horizontalWidgetASPassword" native="true">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>10</height>
-                   </size>
-                  </property>
-                  <layout class="QHBoxLayout" name="horizontalLayout_4">
-                   <property name="spacing">
-                    <number>5</number>
-                   </property>
-                   <property name="leftMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>0</number>
-                   </property>
-                   <item>
-                    <widget class="QLabel" name="label_12">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="minimumSize">
-                      <size>
-                       <width>85</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                     <property name="maximumSize">
-                      <size>
-                       <width>185</width>
-                       <height>16777215</height>
-                      </size>
-                     </property>
-                     <property name="text">
-                      <string>Password</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QLineEdit" name="lineEditAutoSignPassword">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="maximumSize">
-                      <size>
-                       <width>16777215</width>
-                       <height>16777215</height>
-                      </size>
-                     </property>
-                     <property name="echoMode">
-                      <enum>QLineEdit::Password</enum>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
                </layout>
               </widget>
              </item>
             </layout>
            </widget>
+          </item>
+          <item>
+           <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeysAS" native="true"/>
           </item>
          </layout>
         </widget>
@@ -2032,7 +1899,7 @@
             </size>
            </property>
            <property name="text">
-            <string>RESPONSE</string>
+            <string>ADDRESS DETAILS</string>
            </property>
            <property name="indent">
             <number>10</number>
@@ -2073,70 +1940,14 @@
              <number>10</number>
             </property>
             <property name="topMargin">
-             <number>10</number>
+             <number>5</number>
             </property>
             <property name="rightMargin">
              <number>10</number>
             </property>
             <property name="bottomMargin">
-             <number>10</number>
+             <number>5</number>
             </property>
-            <item>
-             <widget class="QWidget" name="widget" native="true">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_9">
-               <property name="spacing">
-                <number>5</number>
-               </property>
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item alignment="Qt::AlignLeft">
-                <widget class="QLabel" name="label_11">
-                 <property name="minimumSize">
-                  <size>
-                   <width>90</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>90</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>Balance</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="labelSWBalance">
-                 <property name="text">
-                  <string>0 BTC</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
             <item>
              <widget class="QWidget" name="verticalWidget8" native="true">
               <property name="minimumSize">
@@ -2343,6 +2154,12 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>WalletKeysSubmitWidget</class>
+   <extends>QWidget</extends>
+   <header>WalletKeysSubmitWidget.h</header>
+   <container>1</container>
+  </customwidget>
   <customwidget>
    <class>CustomDoubleSpinBox</class>
    <extends>QDoubleSpinBox</extends>

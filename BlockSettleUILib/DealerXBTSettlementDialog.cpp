@@ -79,16 +79,14 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    if (!settlContainer_->weSell()) {
       // we should wait for payin from customer before accept
-      ui_->lineEditPassword->setEnabled(false);
+      widgetWalletKeys()->setEnabled(false);
    }
-
-   connect(ui_->lineEditPassword, &QLineEdit::textChanged, this, &DealerXBTSettlementDialog::updateControls);
 
    activate();
 }
 
 QWidget *DealerXBTSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
-QLineEdit *DealerXBTSettlementDialog::lineEditPassword() const { return ui_->lineEditPassword; }
+WalletKeysSubmitWidget *DealerXBTSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
 QLabel *DealerXBTSettlementDialog::labelHint() const { return ui_->labelHint; }
 QLabel *DealerXBTSettlementDialog::labelPassword() const { return ui_->labelError; }
 
@@ -142,25 +140,24 @@ void DealerXBTSettlementDialog::onRequestorAddressStateChanged(AddressVerificati
       setCriticalHintMessage(tr("Requestor auth address could not be accepted"));
       deactivate();
    } else {
-      updateControls();
+      validateGUI();
    }
 }
 
-void DealerXBTSettlementDialog::updateControls()
+void DealerXBTSettlementDialog::validateGUI()
 {
    if (settlContainer_->isAcceptable() && !acceptable_) {
       acceptable_ = true;
       readyToAccept();
    }
-   ui_->lineEditPassword->setEnabled(acceptable_);
-   ui_->pushButtonAccept->setEnabled(acceptable_ && !walletPassword_.isNull());
+   ui_->pushButtonAccept->setEnabled(acceptable_ && widgetWalletKeys()->isValid());
 }
 
 void DealerXBTSettlementDialog::onTimerExpired()
 {
    setCriticalHintMessage(tr("Timer expired"));
    deactivate();
-   updateControls();
+   validateGUI();
    reject();
 }
 
@@ -180,9 +177,9 @@ void DealerXBTSettlementDialog::payInDetected(int confirmationsNumber, const Bin
    ui_->labelTransactioAmount->setText(UiUtils::displayQuantity(settlContainer_->amount() - UiUtils::amountToBtc(settlContainer_->fee())
       , UiUtils::XbtCurrency));
 
-   ui_->lineEditPassword->setEnabled(!settlContainer_->weSell());
+   widgetWalletKeys()->setEnabled(!settlContainer_->weSell());
 
-   updateControls();
+   validateGUI();
 }
 
 void DealerXBTSettlementDialog::onInfoFromContainer(const QString &text)
@@ -193,7 +190,7 @@ void DealerXBTSettlementDialog::onInfoFromContainer(const QString &text)
 void DealerXBTSettlementDialog::onErrorFromContainer(const QString &text)
 {
    setCriticalHintMessage(text);
-   updateControls();
+   validateGUI();
 }
 
 void DealerXBTSettlementDialog::disableCancelOnOrder()
@@ -208,16 +205,15 @@ void DealerXBTSettlementDialog::onAccepted()
    disableCancelOnOrder();
    setHintText(tr("Waiting for transactions signing..."));
 
-   ui_->lineEditPassword->setEnabled(false);
-   settlContainer_->accept(walletPassword_);
+   widgetWalletKeys()->setEnabled(false);
+   settlContainer_->accept(widgetWalletKeys()->key());
 
-   updateControls();
+   validateGUI();
 }
 
 void DealerXBTSettlementDialog::onSettlementFailed()
 {
    setHintText(tr("You can retry signing with another password"));
-   ui_->lineEditPassword->clear();
    ui_->pushButtonAccept->setText(tr("Retry"));
-   updateControls();
+   validateGUI();
 }

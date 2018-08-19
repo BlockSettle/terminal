@@ -59,7 +59,8 @@ namespace bs {
             , const std::shared_ptr<AssetManager>& assetManager
             , const std::shared_ptr<QuoteProvider>& quoteProvider
             , const std::shared_ptr<ApplicationSettings> &
-            , const std::shared_ptr<SignContainer> &);
+            , const std::shared_ptr<SignContainer> &
+            , std::shared_ptr<MarketDataProvider> mdProvider);
          void setWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
 
          std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
@@ -85,7 +86,6 @@ namespace bs {
          void onQuoteReqRejected(const QString &reqId);
          void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
          void onBestQuotePrice(const QString reqId, double price, bool own);
-         void onAutoPassChanged();
          void onAutoSignActivated();
          void onAutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
          void onCelerConnected();
@@ -114,10 +114,8 @@ namespace bs {
          void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
-         void onFrejaSignComplete(SecureBinaryData);
-         void onFrejaSignFailed(const QString &text);
-         void onFrejaStatusUpdated(const QString &status);
-         void startFrejaSigning();
+         void startSigning();
+         void updateAutoSignState();
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -131,6 +129,7 @@ namespace bs {
          std::shared_ptr<QuoteProvider>         quoteProvider_;
          std::shared_ptr<ApplicationSettings>   appSettings_;
          std::shared_ptr<SignContainer>         signingContainer_;
+         std::shared_ptr<MarketDataProvider>    mdProvider_;
 
          std::shared_ptr<bs::Wallet>   curWallet_;
          std::shared_ptr<bs::Wallet>   prevWallet_;
@@ -146,10 +145,9 @@ namespace bs {
          double   indicBid_;
          double   indicAsk_;
          std::atomic_bool     autoUpdatePrices_;
-         wallet::EncryptionType  walletEncType_ = wallet::EncryptionType::Password;
-         SecureBinaryData     walletEncKey_;
-         SecureBinaryData     asPassword_;
-         std::shared_ptr<FrejaSignWallet> frejaAS_;
+         std::vector<wallet::EncryptionType> walletEncTypes_;
+         std::vector<SecureBinaryData>       walletEncKeys_;
+         bs::wallet::KeyRank  walletEncRank_;
          unsigned int         leafCreateReqId_ = 0;
 
          std::string product_;
@@ -195,7 +193,6 @@ namespace bs {
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          network::QuoteNotification submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price);
-         void updateAutoSignState();
       };
 
    }  //namespace ui

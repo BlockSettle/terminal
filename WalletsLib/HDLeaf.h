@@ -93,8 +93,7 @@ namespace bs {
          Leaf(const std::string &name, const std::string &desc
             , bs::wallet::Type type = bs::wallet::Type::Bitcoin, bool extOnlyAddresses = false);
          ~Leaf() override;
-         virtual void init(const std::shared_ptr<Node> &node, const hd::Path &
-            , const std::shared_ptr<Node> &rootNode);
+         virtual void init(const std::shared_ptr<Node> &node, const hd::Path &, Nodes rootNodes);
          virtual bool copyTo(std::shared_ptr<hd::Leaf> &) const;
          virtual void setData(const std::string &) {}
          virtual void setData(uint64_t) {}
@@ -105,9 +104,10 @@ namespace bs {
          void SetDescription(const std::string &desc) override { desc_ = desc; }
          std::string GetShortName() const override { return suffix_; }
          bs::wallet::Type GetType() const override { return type_; }
-         bool isWatchingOnly() const override { return (rootNode_ == nullptr); }
-         wallet::EncryptionType encryptionType() const override;
-         SecureBinaryData encryptionKey() const override { return rootNode_ ? rootNode_->encKey() : SecureBinaryData{}; }
+         bool isWatchingOnly() const override { return rootNodes_.empty(); }
+         std::vector<wallet::EncryptionType> encryptionTypes() const override { return rootNodes_.encryptionTypes(); }
+         std::vector<SecureBinaryData> encryptionKeys() const override { return rootNodes_.encryptionKeys(); }
+         std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
          std::vector<UTXO> getSpendableTxOutList(uint64_t val = UINT64_MAX) const override;
@@ -169,7 +169,7 @@ namespace bs {
          virtual bs::Address createAddress(const Path &path, Path::Elem index, AddressEntryType aet
             , bool signal = true);
          virtual BinaryData serializeNode() const { return node_ ? node_->serialize() : BinaryData{}; }
-         virtual void setRootNode(const std::shared_ptr<hd::Node> &rootNode) { rootNode_ = rootNode; }
+         virtual void setRootNodes(Nodes);
          void stop() override;
          void reset();
          Path getPathForAddress(const bs::Address &) const;
@@ -186,7 +186,7 @@ namespace bs {
 
          bs::wallet::Type        type_;
          std::shared_ptr<Node>   node_;
-         std::shared_ptr<Node>   rootNode_;
+         Nodes                   rootNodes_;
          hd::Path                path_;
          bool        isExtOnly_ = false;
          std::string name_, desc_;
@@ -229,7 +229,7 @@ namespace bs {
          Path::Elem getLastAddrPoolIndex(Path::Elem) const;
 
          static void serializeAddr(BinaryWriter &bw, Path::Elem index, AddressEntryType, const Path &);
-         bool deserialize(const BinaryData &ser, const std::shared_ptr<hd::Node> &rootNode);
+         bool deserialize(const BinaryData &ser, Nodes rootNodes);
       };
 
 
@@ -238,8 +238,7 @@ namespace bs {
       public:
          AuthLeaf(const std::string &name, const std::string &desc);
 
-         void init(const std::shared_ptr<Node> &node, const hd::Path &
-            , const std::shared_ptr<Node> &rootNode) override;
+         void init(const std::shared_ptr<Node> &node, const hd::Path &, Nodes rootNodes) override;
          void SetUserID(const BinaryData &) override;
 
       protected:
@@ -248,11 +247,11 @@ namespace bs {
          BinaryData serializeNode() const override {
             return unchainedNode_ ? unchainedNode_->serialize() : BinaryData{};
          }
-         void setRootNode(const std::shared_ptr<hd::Node> &rootNode) override;
+         void setRootNodes(Nodes) override;
 
       private:
          std::shared_ptr<Node>   unchainedNode_;
-         std::shared_ptr<Node>   unchainedRootNode_;
+         Nodes                   unchainedRootNodes_;
          BinaryData              userId_;
       };
 

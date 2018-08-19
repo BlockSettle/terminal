@@ -262,7 +262,6 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
    if (hdWallet != nullptr) {
       RootWalletPropertiesDialog(hdWallet, walletsManager_, signingContainer_, walletsModel_, appSettings_
          , assetManager_, this).exec();
-      return;
    }
 }
 

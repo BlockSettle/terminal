@@ -1,16 +1,30 @@
 #include "UserScript.h"
 #include <spdlog/logger.h>
 #include <QQmlComponent>
+#include <QQmlContext>
 #include <QtConcurrent/QtConcurrentRun>
 #include "AssetManager.h"
 #include "CurrencyPair.h"
+#include "MarketDataProvider.h"
+#include "WalletsManager.h"
+
+#include <algorithm>
 
 
-UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger, QObject* parent)
- : QObject(parent)
+UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
+   std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
+   : QObject(parent)
    , logger_(logger)
+   , engine_(new QQmlEngine(this))
    , component_(nullptr)
-{ }
+   , md_(new MarketData(mdProvider, this))
+   , const_(new Constants(this))
+   , storage_(new DataStorage(this))
+{
+   engine_->rootContext()->setContextProperty(QLatin1String("marketData"), md_);
+   engine_->rootContext()->setContextProperty(QLatin1String("constants"), const_);
+   engine_->rootContext()->setContextProperty(QLatin1String("dataStorage"), storage_);
+}
 
 UserScript::~UserScript()
 {
@@ -21,7 +35,7 @@ UserScript::~UserScript()
 void UserScript::load(const QString &filename)
 {
    if (component_)  component_->deleteLater();
-   component_ = new QQmlComponent(&engine_, QUrl::fromLocalFile(filename), QQmlComponent::Asynchronous, this);
+   component_ = new QQmlComponent(engine_, QUrl::fromLocalFile(filename), QQmlComponent::Asynchronous, this);
    if (!component_) {
       logger_->error("Failed to load component for file {}", filename.toStdString());
       emit failed(tr("Failed to load script %1").arg(filename));
@@ -49,10 +63,146 @@ QObject *UserScript::instantiate()
    return rv;
 }
 
+void UserScript::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+{
+   const_->setWalletsManager(walletsManager);
+}
+
+
+//
+// MarketData
+//
+
+MarketData::MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent)
+   : QObject(parent)
+{
+   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated);
+}
+
+double MarketData::bid(const QString &sec) const
+{
+   auto it = data_.find(sec);
+
+   if (it != data_.cend()) {
+      auto dit = it->second.find(bs::network::MDField::PriceBid);
+
+      if (dit != it->second.cend()) {
+         return dit->second;
+      } else {
+         return 0.0;
+      }
+   } else {
+      return 0.0;
+   }
+}
+
+double MarketData::ask(const QString &sec) const
+{
+   auto it = data_.find(sec);
+
+   if (it != data_.cend()) {
+      auto dit = it->second.find(bs::network::MDField::PriceOffer);
+
+      if (dit != it->second.cend()) {
+         return dit->second;
+      } else {
+         return 0.0;
+      }
+   } else {
+      return 0.0;
+   }
+}
+
+void MarketData::onMDUpdated(bs::network::Asset::Type, const QString &security,
+   bs::network::MDFields data)
+{
+   for (const auto &field : data) {
+      data_[security][field.type] = field.value;
+   }
+}
+
+
+//
+// DataStorage
+//
+
+DataStorage::DataStorage(QObject *parent)
+   : QObject(parent)
+{
+}
+
+double DataStorage::bought(const QString &currency)
+{
+   return std::accumulate(std::begin(bought_[currency]), std::end(bought_[currency]),
+      0.0,
+      [] (double value, const std::map<QString, double>::value_type& p)
+         { return value + p.second; });
+}
+
+void DataStorage::setBought(const QString &currency, double v, const QString &id)
+{
+   bought_[currency][id] = v;
+}
+
+double DataStorage::sold(const QString &currency)
+{
+   return std::accumulate(std::begin(sold_[currency]), std::end(sold_[currency]),
+      0.0,
+      [] (double value, const std::map<QString, double>::value_type& p)
+         { return value + p.second; });
+}
+
+void DataStorage::setSold(const QString &currency, double v, const QString &id)
+{
+   sold_[currency][id] = v;
+}
+
+
+//
+// Constants
+//
+
+Constants::Constants(QObject *parent)
+   : QObject(parent)
+   , walletsManager_(nullptr)
+{
+}
+
+int Constants::payInTxSize() const
+{
+   return 125;
+}
+
+int Constants::payOutTxSize() const
+{
+   return 82;
+}
+
+float Constants::feePerByte() const
+{
+   if (walletsManager_) {
+      return walletsManager_->estimatedFeePerByte(2);
+   } else {
+      return 0.0;
+   }
+}
+
+QString Constants::xbtProductName() const
+{
+   return QString::fromStdString(bs::network::XbtCurrency);
+}
+
+void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+{
+   walletsManager_ = walletsManager;
+}
+
 
 AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename
-   , const std::shared_ptr<AssetManager> &assetManager, QObject* parent)
-   : QObject(parent), script_(logger, this), logger_(logger), assetManager_(assetManager)
+   , const std::shared_ptr<AssetManager> &assetManager
+   , std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
+   : QObject(parent), script_(logger, mdProvider, this)
+   , logger_(logger), assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
    qmlRegisterUncreatableType<BSQuoteRequest>("bs.terminal", 1, 0, "BSQuoteRequest", tr("Can't create this type"));
@@ -83,6 +233,8 @@ QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
       connect(qrr, &BSQuoteReqReply::pullingQuoteReply, [this](const QString &reqId) {
          emit pullingQuoteReply(reqId);
       });
+
+      qrr->start();
    }
    return rv;
 }
@@ -90,6 +242,11 @@ QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
 void AutoQuoter::destroy(QObject *o)
 {
    delete o;
+}
+
+void AutoQuoter::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+{
+   script_.setWalletsManager(walletsManager);
 }
 
 

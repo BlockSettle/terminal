@@ -167,8 +167,8 @@ hd::Node::Node(const hd::Node &src)
    iv_ = src.iv_.copy();
    memcpy(&node_, &src.node_, sizeof(node_));
    hasPrivKey_ = src.hasPrivKey_;
-   encType_ = src.encType_;
-   encKey_ = src.encKey_.copy();
+   encTypes_ = src.encTypes_;
+   encKeys_ = src.encKeys_;
    chainParams_ = src.chainParams_;
    netType_ = src.netType_;
 }
@@ -290,7 +290,7 @@ std::string hd::Node::getPrivateKey() const
 
 SecureBinaryData hd::Node::privateKey() const
 {
-   if (!hasPrivKey_ || (encType() != wallet::EncryptionType::Unencrypted)) {
+   if (!hasPrivKey_ || !encTypes().empty()) {
       return {};
    }
    return SecureBinaryData(node_.private_key, sizeof(node_.private_key));
@@ -305,8 +305,6 @@ bs::wallet::Seed hd::Node::seed() const
    else {
       seed.setSeed(seed_);
    }
-   seed.setEncryptionType(encType_);
-   seed.setEncryptionKey(encKey_);
    return seed;
 }
 
@@ -351,7 +349,7 @@ std::unique_ptr<hd::Node> hd::Node::createUnique(const btc_hdnode &node, Network
 
 std::shared_ptr<hd::Node> hd::Node::derive(const Path &path, bool pubCKD) const
 {
-   if (!pubCKD && (!hasPrivKey_ || (encType() != wallet::EncryptionType::Unencrypted))) {
+   if (!pubCKD && (!hasPrivKey_ || !encTypes().empty())) {
       return nullptr;
    }
    btc_hdnode newNode;
@@ -376,11 +374,12 @@ BinaryData hd::Node::serialize() const
    bw.put_uint8_t((uint8_t)netType_);
 
    if (hasPrivKey_) {
-      uint8_t arr[1] = { static_cast<uint8_t>(encType_) };
-      BinaryData encData(arr, 1);
-      bw.put_var_int(encData.getSize() + 1);
+      bw.put_var_int(encTypes_.size() + 1);
       bw.put_uint8_t(ENCTYPE_BYTE);
-      bw.put_BinaryData(encData);
+      for (const auto &encType : encTypes_) {
+         uint8_t arr[1] = { static_cast<uint8_t>(encType) };
+         bw.put_BinaryData(BinaryData(arr, 1));
+      }
 
       BinaryData privKey(getPrivateKey());
       bw.put_var_int(privKey.getSize() + 1);
@@ -393,15 +392,15 @@ BinaryData hd::Node::serialize() const
          bw.put_BinaryData(seed_);
       }
 
-      if (encType_ != wallet::EncryptionType::Unencrypted) {
+      if (!encTypes_.empty()) {
          bw.put_var_int(iv_.getSize() + 1);
          bw.put_uint8_t(ENCRYPTIONKEY_BYTE);
          bw.put_BinaryData(iv_);
 
-         if ((encType_ == wallet::EncryptionType::Freja) && !encKey_.isNull()) {
-            bw.put_var_int(encKey_.getSize() + 1);
+         for (const auto &encKey : encKeys_) {
+            bw.put_var_int(encKey.getSize() + 1);
             bw.put_uint8_t(ENCKEY_BYTE);
-            bw.put_BinaryData(encKey_);
+            bw.put_BinaryData(encKey);
          }
       }
    }
@@ -429,18 +428,18 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
    }
    const auto netType = static_cast<NetworkType>(brrVal.get_uint8_t());
 
-   std::unordered_map<uint8_t, BinaryRefReader> values;
+   std::unordered_map<uint8_t, std::vector<BinaryRefReader>> values;
    while (brrVal.getSizeRemaining() > 0) {
       const auto len = brrVal.get_var_int();
       const auto valRef = brrVal.get_BinaryDataRef(len);
       BinaryRefReader brrData(valRef);
       const auto key = brrData.get_uint8_t();
-      values[key] = brrData;
+      values[key].emplace_back(brrData);
    }
 
    std::shared_ptr<hd::Node> result;
    if (values.find(PRIVKEY_BYTE) != values.end()) {
-      auto brrData = values[PRIVKEY_BYTE];
+      auto brrData = values[PRIVKEY_BYTE][0];
       const auto serPrivKey = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining())).toBinStr();
       result = std::make_shared<hd::Node>(serPrivKey);
       if (result->netType_ != netType) {
@@ -448,34 +447,34 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
       }
 
       if (values.find(CYPHER_BYTE) != values.end()) {
-         brrData = values[CYPHER_BYTE];
+         brrData = values[CYPHER_BYTE][0];
          result->seed_ = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
       }
 
       if (values.find(ENCTYPE_BYTE) != values.end()) {
-         brrData = values[ENCTYPE_BYTE];
+         brrData = values[ENCTYPE_BYTE][0];
          const auto encData = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
-         result->encType_ = static_cast<wallet::EncryptionType>(encData.getPtr()[0]);
-      }
-      else {
-         result->encType_ = wallet::EncryptionType::Unencrypted;
+         for (size_t i = 0; i < encData.getSize(); ++i) {
+            result->encTypes_.emplace_back(static_cast<wallet::EncryptionType>(encData.getPtr()[i]));
+         }
       }
 
       if (values.find(ENCKEY_BYTE) != values.end()) {
-         brrData = values[ENCKEY_BYTE];
-         result->encKey_ = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
+         for (auto brrData : values[ENCKEY_BYTE]) {
+            result->encKeys_.emplace_back(BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining())));
+         }
       }
 
       if (values.find(ENCRYPTIONKEY_BYTE) != values.end()) {
-         if (result->encType() == wallet::EncryptionType::Unencrypted) {
-            result->encType_ = wallet::EncryptionType::Password;
+         if (result->encTypes().empty()) {
+            result->encTypes_.push_back(wallet::EncryptionType::Password);
          }
-         brrData = values[ENCRYPTIONKEY_BYTE];
+         brrData = values[ENCRYPTIONKEY_BYTE][0];
          result->iv_ = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
       }
    }
    else if (values.find(PUBKEY_COMPRESSED_BYTE) != values.end()) {
-      auto brrData = values[PUBKEY_COMPRESSED_BYTE];
+      auto brrData = values[PUBKEY_COMPRESSED_BYTE][0];
       const auto sizeRem = brrData.getSizeRemaining();
       const auto pubKey = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
       btc_hdnode node;
@@ -486,7 +485,7 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
       memcpy(node.public_key, pubKey.getPtr(), pubKey.getSize());
 
       if (values.find(PUBKEY_UNCOMPRESSED_BYTE) != values.end()) {
-         auto brrData = values[PUBKEY_UNCOMPRESSED_BYTE];
+         auto brrData = values[PUBKEY_UNCOMPRESSED_BYTE][0];
          const auto sizeRem = brrData.getSizeRemaining();
          const auto chainCode = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
          if (!chainCode.isNull() && chainCode.getSize() != sizeof(node.chain_code)) {
@@ -519,7 +518,7 @@ static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = BTC_AE
 
 std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
 {
-   if (encType_ == wallet::EncryptionType::Unencrypted) {
+   if (encTypes_.empty()) {
       return nullptr;
    }
    auto result = createUnique(node_, netType_);
@@ -544,15 +543,16 @@ std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
    return result;
 }
 
-std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password, wallet::EncryptionType encType
-   , const SecureBinaryData &encKey)
+std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password
+   , const std::vector<wallet::EncryptionType> &encTypes
+   , const std::vector<SecureBinaryData> &encKeys)
 {
-   if (encType_ != wallet::EncryptionType::Unencrypted) {
+   if (!encTypes_.empty()) {
       return nullptr;
    }
    auto result = std::make_shared<hd::Node>(node_, netType_);
-   result->encType_ = encType;
-   result->encKey_ = encKey;
+   result->encTypes_ = encTypes;
+   result->encKeys_ = encKeys;
    result->seed_.clear();
    memset(result->node_.private_key, 0, sizeof(result->node_.private_key));
    try {
@@ -610,6 +610,82 @@ BinaryData hd::ChainedNode::pubChainedKey() const
    return BinaryData(pubKey, sizeof(pubKey));*/
    CryptoECDSA crypto;
    return crypto.CompressPoint(crypto.ComputeChainedPublicKey(crypto.UncompressPoint(pubCompressedKey()), chainCode_));
+}
+
+
+
+std::shared_ptr<hd::Node> hd::Nodes::decrypt(const SecureBinaryData &password) const
+{
+   if (nodes_.empty()) {
+      return nullptr;
+   }
+   if ((nodes_.size() == 1) && nodes_[0]->encTypes().empty()) {
+      return nodes_[0];
+   }
+   if (password.isNull()) {
+      return nullptr;
+   }
+   for (const auto &node : nodes_) {
+      auto decrypted = node->decrypt(password);
+      wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
+      if (hd::Node(seed).getId() == id_) {
+         return std::move(decrypted);
+      }
+   }
+   return nullptr;
+}
+
+std::vector<wallet::EncryptionType> hd::Nodes::encryptionTypes() const
+{
+   if (nodes_.empty()) {
+      return {};
+   }
+   std::set<wallet::EncryptionType> encTypes;
+   for (const auto &node : nodes_) {
+      const auto &nodeEncTypes = node->encTypes();
+      encTypes.insert(nodeEncTypes.begin(), nodeEncTypes.end());
+   }
+   std::vector<wallet::EncryptionType> result;
+   for (const auto &encType : encTypes) {
+      result.emplace_back(encType);
+   }
+   return result;
+}
+
+std::vector<SecureBinaryData> hd::Nodes::encryptionKeys() const
+{
+   if (nodes_.empty()) {
+      return {};
+   }
+   std::set<SecureBinaryData> encKeys;
+   for (const auto &node : nodes_) {
+      const auto &nodeEncKeys = node->encKeys();
+      encKeys.insert(nodeEncKeys.begin(), nodeEncKeys.end());
+   }
+   std::vector<SecureBinaryData> result;
+   for (const auto &encKey : encKeys) {
+      result.emplace_back(encKey);
+   }
+   return result;
+}
+
+hd::Nodes hd::Nodes::chained(const BinaryData &chainKey) const
+{
+   std::vector<std::shared_ptr<hd::Node>> chainedNodes;
+   for (const auto &node : nodes_) {
+      chainedNodes.emplace_back(std::make_shared<bs::hd::ChainedNode>(*node, chainKey));
+   }
+   return hd::Nodes(chainedNodes, rank_, id_);
+}
+
+void hd::Nodes::forEach(const std::function<void(std::shared_ptr<Node>)> &cb) const
+{
+   if (!cb) {
+      return;
+   }
+   for (const auto &node : nodes_) {
+      cb(node);
+   }
 }
 
 

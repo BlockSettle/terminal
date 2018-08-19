@@ -12,6 +12,7 @@
 #include "EncryptionUtils.h"
 #include "PyBlockDataManager.h"
 #include "SettlementWallet.h"
+#include "WalletEncryption.h"
 
 
 namespace spdlog {
@@ -98,8 +99,8 @@ public:
    QString GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &, bool isReceiving);
 
    hd_wallet_type CreateWallet(const std::string& name, const std::string& description
-      , bs::wallet::Seed, const QString &walletsPath
-      , const SecureBinaryData &password = {}, bool primary = false);
+      , bs::wallet::Seed, const QString &walletsPath, bool primary = false
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    void AdoptNewWallet(const hd_wallet_type &, const QString &walletsPath);
 
    float estimatedFeePerByte(unsigned int blocksToWait) const;

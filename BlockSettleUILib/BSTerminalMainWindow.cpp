@@ -169,6 +169,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
+   ui->widgetTransactions->setAppSettings(applicationSettings_);
+
    UpdateMainWindowAppearence();
 }
 
@@ -577,6 +579,18 @@ void BSTerminalMainWindow::onReceive()
    newAddressDialog->show();
 }
 
+void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
+{
+   CreateTransactionDialogAdvanced advancedDialog{walletsManager_, signContainer_, true, this};
+   advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+
+   if (!selectedWalletId.empty()) {
+      advancedDialog.SelectWallet(selectedWalletId);
+   }
+
+   advancedDialog.exec();
+}
+
 void BSTerminalMainWindow::onSend()
 {
    std::string selectedWalletId;
@@ -589,28 +603,25 @@ void BSTerminalMainWindow::onSend()
    }
 
    if (QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) {
-      CreateTransactionDialogAdvanced advancedDialog{walletsManager_, signContainer_, true, this};
-      advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
-
-      if (!selectedWalletId.empty()) {
-         advancedDialog.SelectWallet(selectedWalletId);
-      }
-
-      advancedDialog.exec();
+      createAdvancedTxDialog(selectedWalletId);
    } else {
-      CreateTransactionDialogSimple dlg{walletsManager_, signContainer_, this};
-      dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+         createAdvancedTxDialog(selectedWalletId);
+      } else {
+         CreateTransactionDialogSimple dlg{walletsManager_, signContainer_, this};
+         dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
-      if (!selectedWalletId.empty()) {
-         dlg.SelectWallet(selectedWalletId);
-      }
+         if (!selectedWalletId.empty()) {
+            dlg.SelectWallet(selectedWalletId);
+         }
 
-      dlg.exec();
+         dlg.exec();
 
-      if ((dlg.result() == QDialog::Accepted) && dlg.userRequestedAdvancedDialog()) {
-         auto advancedDialog = dlg.CreateAdvancedDialog();
+         if ((dlg.result() == QDialog::Accepted) && dlg.userRequestedAdvancedDialog()) {
+            auto advancedDialog = dlg.CreateAdvancedDialog();
 
-         advancedDialog->exec();
+            advancedDialog->exec();
+         }
       }
    }
 }
@@ -911,7 +922,8 @@ void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 }
 
 void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string prompt
-   , bs::wallet::EncryptionType encType, SecureBinaryData encKey)
+   , std::vector<bs::wallet::EncryptionType> encTypes, std::vector<SecureBinaryData> encKeys
+   , bs::wallet::KeyRank keyRank)
 {
    SignContainer::PasswordType password;
 
@@ -931,7 +943,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
          EnterWalletPassword passwordDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
-            , encType, encKey, QString::fromStdString(prompt), this);
+            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
          } else {

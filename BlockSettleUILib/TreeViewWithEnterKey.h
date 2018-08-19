@@ -30,6 +30,7 @@ public slots:
 
 protected:
    void keyPressEvent(QKeyEvent *event) override;
+   void mouseReleaseEvent(QMouseEvent *event) override;
 }; // class TreeViewWithENterKey
 
 #endif // _TREEVIEWWITHENTERKEY_H_INCLUDED_

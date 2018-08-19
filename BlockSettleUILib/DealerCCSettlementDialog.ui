@@ -884,13 +884,8 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEditPassword">
-           <property name="echoMode">
-            <enum>QLineEdit::Password</enum>
-           </property>
-           <property name="signInput" stdset="0">
-            <bool>true</bool>
-           </property>
+          <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
+           <layout class="QHBoxLayout" name="horizontalLayout_11"/>
           </widget>
          </item>
         </layout>
@@ -982,6 +977,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>WalletKeysSubmitWidget</class>
+   <extends>QWidget</extends>
+   <header>WalletKeysSubmitWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="armory.qrc"/>
  </resources>

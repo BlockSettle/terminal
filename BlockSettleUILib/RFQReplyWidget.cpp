@@ -115,7 +115,7 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
 
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
                                   appSettings, celerClient_);
-   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, signingContainer_);
+   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, signingContainer_, mdProvider);
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, ui_->pageRFQReply, &RFQDealerReply::setQuoteReqNotification);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, quoteProvider_.get()

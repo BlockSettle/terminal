@@ -911,7 +911,7 @@ template <typename TVal> TVal AuthAddressManager::lookup(const bs::Address &key,
    return it->second;
 }
 
-void AuthAddressManager::CreateAuthWallet(const SecureBinaryData &password, bool signal)
+void AuthAddressManager::CreateAuthWallet(const std::vector<bs::wallet::PasswordData> &pwdData, bool signal)
 {
    if (!signingContainer_ || !walletsManager_) {
       emit Error(tr("Unable to create auth wallet"));
@@ -931,7 +931,7 @@ void AuthAddressManager::CreateAuthWallet(const SecureBinaryData &password, bool
    path.append(bs::hd::purpose, true);
    path.append(bs::hd::CoinType::BlockSettle_Auth, true);
    path.append(0u, true);
-   createWalletReqId_ = { signingContainer_->CreateHDLeaf(priWallet, path, password), signal };
+   createWalletReqId_ = { signingContainer_->CreateHDLeaf(priWallet, path, pwdData), signal };
 }
 
 void AuthAddressManager::onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)

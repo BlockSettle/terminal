@@ -322,11 +322,12 @@ private:
    int findMarket(IndexHelper *idx) const;
    Market* findMarket(const QString &name) const;
    void updatePrices(const QString &security, const bs::network::MDField &pxBid,
-      const bs::network::MDField &pxOffer);
+      const bs::network::MDField &pxOffer, std::vector<std::pair<QModelIndex, QModelIndex>> *idxs = nullptr);
    void showRfqsFromBack(Group *g);
    void showRfqsFromFront(Group *g);
    void clearVisibleFlag(Group *g);
-   void updateBestQuotePrice(const QString &reqId, double price, bool own);
+   void updateBestQuotePrice(const QString &reqId, double price, bool own,
+      std::vector<std::pair<QModelIndex, QModelIndex>> *idxs = nullptr);
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;

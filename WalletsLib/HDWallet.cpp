@@ -30,8 +30,9 @@ hd::Wallet::Wallet(const std::string &walletId, NetworkType netType, bool extOnl
 
 void hd::Wallet::initNew(const bs::wallet::Seed &seed)
 {
-   rootNode_ = std::make_shared<hd::Node>(seed);
-   walletId_ = rootNode_->getId();
+   const auto &rootNode = std::make_shared<hd::Node>(seed);
+   walletId_ = rootNode->getId();
+   rootNodes_ = hd::Nodes({ rootNode }, {0, 0}, walletId_);
 }
 
 void hd::Wallet::loadFromFile(const std::string &filename)
@@ -131,15 +132,15 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(CoinType ct)
    const Path path({ purpose, ct });
    switch (ct) {
    case CoinType::BlockSettle_Auth:
-      result = std::make_shared<AuthGroup>(rootNode_, path, name_, desc_, extOnlyAddresses_);
+      result = std::make_shared<AuthGroup>(rootNodes_, path, name_, desc_, extOnlyAddresses_);
       break;
 
    case CoinType::BlockSettle_CC:
-      result = std::make_shared<CCGroup>(rootNode_, path, name_, desc_, extOnlyAddresses_);
+      result = std::make_shared<CCGroup>(rootNodes_, path, name_, desc_, extOnlyAddresses_);
       break;
 
    default:
-      result = std::make_shared<Group>(rootNode_, path, name_, hd::Group::nameForType(ct), desc_, extOnlyAddresses_);
+      result = std::make_shared<Group>(rootNodes_, path, name_, hd::Group::nameForType(ct), desc_, extOnlyAddresses_);
       break;
    }
    addGroup(result);
@@ -339,7 +340,7 @@ void hd::Wallet::initDB()
       bwKey.put_BinaryData(masterID);
 
       BinaryWriter bw;
-      bw.put_var_int(4);
+      bw.put_var_int(sizeof(uint32_t));
       bw.put_uint32_t(hd::purpose);
       putDataToDB(&dbMeta, bwKey.getData(), bw.getData());
    }
@@ -357,17 +358,29 @@ void hd::Wallet::initDB()
 
       putDataToDB(db_, bwKey.getData(), bwData.getData());
    }
-   {      // master node
+
+   if (!rootNodes_.empty()) {
+      BinaryWriter bwKey, bwData;
+      bwKey.put_uint32_t(MAIN_ACCOUNT_KEY);
+      bwData.put_var_int(sizeof(uint32_t) * 2);
+      bwData.put_uint32_t(rootNodes_.rank().first);
+      bwData.put_uint32_t(rootNodes_.rank().second);
+      putDataToDB(db_, bwKey.getData(), bwData.getData());
+   }
+
+   const auto &cbNode = [this](const std::shared_ptr<hd::Node> &node) {
       BinaryWriter bwKey;
       bwKey.put_uint32_t(ROOTASSET_KEY);
 
       BinaryWriter bwData;
-      const auto rnBin = rootNode_ ? rootNode_->serialize() : BinaryData{};
-      bwData.put_var_int(rnBin.getSize());
-      bwData.put_BinaryData(rnBin);
+      const auto &nodeSer = node->serialize();
+      bwData.put_var_int(nodeSer.getSize());
+      bwData.put_BinaryData(nodeSer);
 
       putDataToDB(db_, bwKey.getData(), bwData.getData());
-   }
+   };
+   rootNodes_.forEach(cbNode);
+
    {
       BinaryWriter bwKey;
       bwKey.put_uint32_t(WALLETNAME_KEY);
@@ -503,22 +516,66 @@ void hd::Wallet::readFromDB()
    }
    catch (const NoEntryInWalletException&) {}
 
-   {  //root node
+   wallet::KeyRank keyRank = { 0, 0 };
+   {
+      BinaryWriter bwKey;
+      bwKey.put_uint32_t(MAIN_ACCOUNT_KEY);
+      try {
+         auto assetRef = getDataRefForKey(db_, bwKey.getData());
+         if (!assetRef.isNull()) {
+            BinaryRefReader brr(assetRef);
+            keyRank.first = brr.get_uint32_t();
+            keyRank.second = brr.get_uint32_t();
+         }
+      }
+      catch (const NoEntryInWalletException &) {}
+   }
+
+   {  // root nodes
+      auto dbIter = db_->begin();
       BinaryWriter bwKey;
       bwKey.put_uint32_t(ROOTASSET_KEY);
-      auto rootAssetRef = getDataRefForKey(db_, bwKey.getData());
+      CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
+      dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
+      std::vector<std::shared_ptr<hd::Node>> rootNodes;
 
-      if (rootAssetRef.getSize()) {
+      while (dbIter.isValid()) {
+         auto iterkey = dbIter.key();
+         auto itervalue = dbIter.value();
+
+         BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
+         BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
+         BinaryRefReader brrVal(valueBDR);
+
          try {
-            rootNode_ = hd::Node::deserialize(rootAssetRef);
+            const auto &len = static_cast<uint32_t>(brrVal.get_var_int());
+            if (len == 0) {
+               break;
+            }
+            if (len != brrVal.getSizeRemaining()) {
+               break;
+            }
+            if (len < 65) {
+               dbIter.advance();
+               continue;
+            }
+            const auto assetRef = brrVal.get_BinaryDataRef(len);
+            if (*assetRef.getPtr() != bs::hd::purpose) {
+               dbIter.advance();
+               continue;
+            }
+            const auto &node = hd::Node::deserialize(assetRef);
+            rootNodes.emplace_back(node);
          }
          catch (const std::exception &e) {
-            throw WalletException("failed to deser root node: " + std::string(e.what()));
+            throw WalletException(std::string("failed to deser root node: ") + e.what());
          }
+         dbIter.advance();
       }
-      else {
-         rootNode_ = nullptr;
+      if ((keyRank == wallet::KeyRank{ 0, 0 }) && (rootNodes.size() == 1) && !rootNodes[0]->encTypes().empty()) {
+         keyRank = { 1, 1 };
       }
+      rootNodes_ = hd::Nodes(rootNodes, keyRank, walletId_);
    }
 
    {  // groups
@@ -543,7 +600,7 @@ void hd::Wallet::readFromDB()
          }
          try {
             const auto group = hd::Group::deserialize(keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
-               , rootNode_, name_, desc_, extOnlyAddresses_);
+               , rootNodes_, name_, desc_, extOnlyAddresses_);
             if (group != nullptr) {
                addGroup(group);
             }
@@ -639,61 +696,87 @@ std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
 
 std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryData &password) const
 {
-   if (!rootNode_) {    // already watching-only
+   if (rootNodes_.empty()) {    // already watching-only
       return nullptr;
    }
    auto woWallet = std::make_shared<hd::Wallet>(getWalletId(), netType_, extOnlyAddresses_, name_, desc_);
 
-   std::shared_ptr<hd::Node> extNode;
-   if (rootNode_->encType() != wallet::EncryptionType::Unencrypted) {
-      extNode = rootNode_->decrypt(password);
-      if (!extNode) {
-         return nullptr;
-      }
-      bs::wallet::Seed seed(extNode->getNetworkType(), extNode->privateKey());
-      seed.setEncryptionType(extNode->encType());
-      seed.setEncryptionKey(extNode->encKey());
-      const auto &walletId = bs::hd::Wallet(getName(), getDesc(), seed).getWalletId();
-      if (walletId != getWalletId()) {
-         return nullptr;
-      }
-   }
-   else {
-      extNode = rootNode_;
-   }
+   const auto &extNode = rootNodes_.decrypt(password);
    for (const auto &group : groups_) {
       woWallet->addGroup(group.second->CreateWatchingOnly(extNode));
    }
    return woWallet;
 }
 
-wallet::EncryptionType hd::Wallet::encryptionType() const
+static bool nextCombi(std::vector<int> &a , const int n, const int m)
 {
-   if (!rootNode_) {
-      return wallet::EncryptionType::Unencrypted;
+   for (int i = m - 1; i >= 0; --i) {
+      if (a[i] < n - m + i) {
+         ++a[i];
+         for (int j = i + 1; j < m; ++j) {
+            a[j] = a[j - 1] + 1;
+         }
+         return true;
+      }
    }
-   return rootNode_->encType();
+   return false;
 }
 
-bool hd::Wallet::changePassword(const SecureBinaryData &newPass, const SecureBinaryData &oldPass
-   , wallet::EncryptionType encType, const SecureBinaryData &encKey)
+bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank, const SecureBinaryData &oldPass)
 {
-   if (encryptionType() != wallet::EncryptionType::Unencrypted) {
-      if (oldPass.isNull()) {
-         return false;
-      }
-      const auto decrypted = rootNode_->decrypt(oldPass);
-      bs::wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (bs::hd::Wallet(getName(), getDesc(), seed).getWalletId() != getWalletId()) {
-         return false;
-      }
-      rootNode_ = decrypted->encrypt(newPass, encType, encKey);
+   if ((keyRank.second != newPass.size()) || (keyRank.first < 1) || (keyRank.first > keyRank.second)) {
+      return false;
    }
-   else {
-      rootNode_ = rootNode_->encrypt(newPass, encType, encKey);
+   const auto &decrypted = rootNodes_.decrypt(oldPass);
+   if (!decrypted) {
+      return false;
    }
+
+   std::vector<std::shared_ptr<hd::Node>> rootNodes;
+   const auto &addNode = [&rootNodes, decrypted, newPass, keyRank](const std::vector<int> &combi) {
+      if (keyRank.first == 1) {
+         const auto &passData = newPass[combi[0]];
+         rootNodes.emplace_back(decrypted->encrypt(passData.password, { passData.encType }
+            , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
+      }
+      else {
+         SecureBinaryData xorPass;
+         std::set<wallet::EncryptionType> encTypes;
+         std::set<SecureBinaryData> encKeys;
+         for (int i = 0; i < keyRank.first; ++i) {
+            const auto &idx = combi[i];
+            const auto &passData = newPass[idx];
+            xorPass = mergeKeys(xorPass, passData.password);
+            encTypes.insert(passData.encType);
+            if (!passData.encKey.isNull()) {
+               encKeys.insert(passData.encKey);
+            }
+         }
+         std::vector<wallet::EncryptionType> mergedEncTypes;
+         for (const auto &encType : encTypes) {
+            mergedEncTypes.emplace_back(encType);
+         }
+         std::vector<SecureBinaryData> mergedEncKeys;
+         for (const auto &encKey : encKeys) {
+            mergedEncKeys.emplace_back(encKey);
+         }
+         rootNodes.emplace_back(decrypted->encrypt(xorPass, mergedEncTypes, mergedEncKeys));
+      }
+   };
+
+   std::vector<int> combiIndices;
+   combiIndices.reserve(keyRank.second);
+   for (int i = 0; i < keyRank.second; ++i) {
+      combiIndices.push_back(i);
+   }
+   addNode(combiIndices);
+   while (nextCombi(combiIndices, keyRank.second, keyRank.first)) {
+      addNode(combiIndices);
+   }
+   rootNodes_ = hd::Nodes(rootNodes, keyRank, walletId_);
+
    for (const auto &group : groups_) {
-      group.second->updateRootNode(rootNode_, newPass);
+      group.second->updateRootNodes(rootNodes_, decrypted);
    }
 
    updatePersistence();
