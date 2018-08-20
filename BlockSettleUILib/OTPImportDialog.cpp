@@ -7,6 +7,7 @@
 #include "MessageBoxCritical.h"
 #include "OTPFile.h"
 #include "OTPManager.h"
+#include "UiUtils.h"
 
 #include <spdlog/spdlog.h>
 
@@ -64,6 +65,18 @@ void OTPImportDialog::keyTextChanged()
 
    if (key1valid && !key1.isEmpty() && !key2valid) {
       ui_->lineEditOtp2->setFocus();
+   }
+
+   if (!key1valid) {
+      UiUtils::setWrongState(ui_->lineEditOtp1, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditOtp1, false);
+   }
+
+   if (!key2valid) {
+      UiUtils::setWrongState(ui_->lineEditOtp2, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditOtp2, false);
    }
 
    keyIsValid_ = (key1valid && key2valid);
