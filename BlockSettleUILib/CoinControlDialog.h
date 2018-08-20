@@ -21,7 +21,7 @@ public:
 
 private slots:
    void onAccepted();
-   void onSelectionChanged(size_t nbSelected);
+   void onSelectionChanged(size_t nbSelected, bool autoSelection);
 
 private:
    Ui::CoinControlDialog*  ui_;
