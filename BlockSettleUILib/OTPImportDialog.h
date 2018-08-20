@@ -43,7 +43,7 @@ private:
    std::shared_ptr<EasyCoDec>    easyCodec_;
    FrejaSignOTP                  frejaSign_;
    SecureBinaryData              otpPassword_;
-   EasyEncValidator           *  validator_ = nullptr;
+   std::unique_ptr<EasyEncValidator>   validator_;
    std::string hexKey_;
    bool        keyIsValid_ = false;
 };

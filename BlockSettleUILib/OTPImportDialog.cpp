@@ -25,11 +25,11 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    ui_->pushButtonOk->setEnabled(false);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &OTPImportDialog::accept);
 
-   validator_ = new EasyEncValidator(easyCodec_);
-   ui_->lineEditOtp1->setValidator(validator_);
+   validator_.reset(new EasyEncValidator(easyCodec_));
+   ui_->lineEditOtp1->setValidator(validator_.get());
    connect(ui_->lineEditOtp1, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp1, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
-   ui_->lineEditOtp2->setValidator(validator_);
+   ui_->lineEditOtp2->setValidator(validator_.get());
    connect(ui_->lineEditOtp2, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp2, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
 
@@ -43,10 +43,7 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    ui_->lineEditFrejaId->setText(QString::fromStdString(defaultUserName));
 }
 
-OTPImportDialog::~OTPImportDialog()
-{
-   delete validator_;
-}
+OTPImportDialog::~OTPImportDialog() = default;
 
 void OTPImportDialog::keyTextChanged()
 {

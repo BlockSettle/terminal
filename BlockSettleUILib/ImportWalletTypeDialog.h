@@ -60,7 +60,7 @@ private:
    QString     woFileName_;
    ImportType  importType_ = Full;
    std::shared_ptr<EasyCoDec> easyCodec_;
-   EasyEncValidator         * validator_ = nullptr;
+   std::unique_ptr<EasyEncValidator> validator_;
 };
 
 
