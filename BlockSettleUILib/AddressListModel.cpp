@@ -61,7 +61,7 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
    row.wallet = wallet;
    row.address = addr;
    row.transactionCount = -1;
-   row.balance = -1;
+   row.balance = 0;
 
    if (wallet->GetType() == bs::wallet::Type::Authentication) {
       row.comment = tr("Authentication PubKey");
@@ -83,13 +83,10 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 void AddressListModel::updateData()
 {
    beginResetModel();
-
    addressRows_.clear();
-
    for (const auto &wallet : wallets_) {
       updateWallet(wallet);
    }
-
    endResetModel();
    updateWalletData();
 }
@@ -158,12 +155,6 @@ void AddressListModel::updateWalletData()
       addrRow.wallet->getAddrTxN(addrRow.address, cbTxN);
       addrRow.wallet->getAddrBalance(addrRow.address, cbBalance);
    }
-
-   // XXX when all tx counts and balance loaded
-   // when row created tx count and balance are set to -1
-   // if (addrType_ == AddressType::ExtAndNonEmptyInt) {
-   //    QMetaObject::invokeMethod(this, "removeEmptyIntAddresses");
-   // }
 }
 
 void AddressListModel::removeEmptyIntAddresses()

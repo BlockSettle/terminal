@@ -4,6 +4,7 @@
 #include "FastLock.h"
 #include "HDWallet.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QMutexLocker>
 
@@ -13,7 +14,7 @@
 
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ApplicationSettings>& appSettings
  , const std::shared_ptr<ArmoryConnection> &armory, bool preferWatchinOnly)
-   : appSettings_(appSettings)
+   : QObject(nullptr), appSettings_(appSettings)
    , logger_(logger)
    , armory_(armory)
    , preferWatchingOnly_(preferWatchinOnly)
@@ -31,7 +32,7 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
 }
 
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger)
-   : logger_(logger), preferWatchingOnly_(false)
+   : QObject(nullptr), logger_(logger), preferWatchingOnly_(false)
 {
    btc_ecc_start();
 }
@@ -167,6 +168,7 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
       emit error(errorTitle, tr("Failed to load settlement wallet: %1").arg(QLatin1String(e.what())));
    }
    emit walletsLoaded();
+//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::BackupWallet(const hd_wallet_type &wallet, const std::string &targetDir) const
@@ -257,6 +259,7 @@ void WalletsManager::AddWallet(const wallet_gen_type &wallet, bool isHDLeaf)
    connect(wallet.get(), &bs::Wallet::walletReady, this, &WalletsManager::onWalletReady);
    connect(wallet.get(), &bs::Wallet::addressAdded, [this] { emit walletChanged(); });
    connect(wallet.get(), &bs::Wallet::walletReset, [this] { emit walletChanged(); });
+   connect(wallet.get(), &bs::Wallet::balanceUpdated, [this](std::vector<uint64_t>) { emit walletBalanceUpdated(); });
 }
 
 void WalletsManager::SaveWallet(const hd_wallet_type &wallet)
@@ -312,6 +315,7 @@ void WalletsManager::onHDLeafAdded(QString id)
       emit walletChanged();
       break;
    }
+//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::onHDLeafDeleted(QString id)
@@ -319,6 +323,7 @@ void WalletsManager::onHDLeafDeleted(QString id)
    const auto &wallet = GetWalletById(id.toStdString());
    EraseWallet(wallet);
    emit walletChanged();
+//!!   QCoreApplication::processEvents();
 }
 
 WalletsManager::hd_wallet_type WalletsManager::GetPrimaryWallet() const
@@ -469,6 +474,8 @@ void WalletsManager::onRefresh()
    logger_->debug("[WalletsManager] Armory refresh");
    UpdateSavedWallets();
    emit blockchainEvent();
+   getNewTransactions();
+//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::onStateChanged(ArmoryConnection::State state)
@@ -586,6 +593,7 @@ bool WalletsManager::DeleteWalletFile(const wallet_gen_type &wallet)
       emit authWalletChanged();
    }
    emit walletChanged();
+//!!   QCoreApplication::processEvents();
    return true;
 }
 
@@ -616,6 +624,7 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
       emit authWalletChanged();
    }
    emit walletChanged();
+//!!   QCoreApplication::processEvents();
    return result;
 }
 
@@ -655,11 +664,6 @@ void WalletsManager::UpdateSavedWallets()
    if (settlementWallet_) {
       settlementWallet_->firstInit();
    }
-}
-
-bool WalletsManager::IsTransactionVerified(const ClientClasses::LedgerEntry &item)
-{
-   return (armory_ && armory_->isTransactionVerified(item));
 }
 
 bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wallet> &wallet
@@ -911,6 +915,7 @@ void WalletsManager::AdoptNewWallet(const hd_wallet_type &wallet, const QString 
    }
    emit newWalletAdded(wallet->getWalletId());
    emit walletsReady();
+//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::AddWallet(const hd_wallet_type &wallet, const QString &walletsPath)
@@ -962,16 +967,18 @@ void WalletsManager::onCCInfoLoaded()
 
 void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
-   unsigned int foundCnt = 0;
+   std::vector<bs::TXEntry> ourZCentries;
    for (const auto led : armory_->getZCentries(reqId)) {
       auto wallet = GetWalletById(led.getID());
       if (wallet != nullptr) {
-         foundCnt++;
+         ourZCentries.push_back(bs::convertTXEntry(led));
          wallet->AddUnconfirmedBalance(led.getValue() / BTCNumericTypes::BalanceDivider);
       }
    }
-   if (foundCnt) {
+   logger_->debug("ZC received, {} own entries", ourZCentries.size());
+   if (!ourZCentries.empty()) {
       emit blockchainEvent();
+      emit newTransactions(ourZCentries);
    }
 }
 
@@ -1034,21 +1041,20 @@ bool WalletsManager::getNewTransactions() const
       result->insert(result->end(), entries.begin(), entries.end());
       if (walletIds->empty()) {
          delete walletIds;
-         emit newTransactions(*result);
+         emit newTransactions(bs::convertTXEntries(*result));
+//!!         QCoreApplication::processEvents();
          delete result;
       }
    };
-   {
-      for (const auto &wallet : wallets_) {
-         if (armory_->state() != ArmoryConnection::State::Ready) {
-            return false;
-         }
-         if (wallet.second->getHistoryPage(0, cb)) {
-            walletIds->insert(wallet.second->GetWalletId());
-         }
-         else {
-            return false;
-         }
+   for (const auto &wallet : wallets_) {
+      if (armory_->state() != ArmoryConnection::State::Ready) {
+         return false;
+      }
+      if (wallet.second->getHistoryPage(0, cb)) {
+         walletIds->insert(wallet.second->GetWalletId());
+      }
+      else {
+         return false;
       }
    }
    if (settlementWallet_ && (armory_->state() == ArmoryConnection::State::Ready)) {
@@ -1107,4 +1113,20 @@ void WalletsManager::ResumeRescan()
          logger_->warn("Rescan for {} is already in progress", rootWallet.second->getName());
       }
    }
+}
+
+
+bs::TXEntry bs::convertTXEntry(const ClientClasses::LedgerEntry &entry)
+{
+   return { entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
+         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC() };
+}
+
+std::vector<bs::TXEntry> bs::convertTXEntries(std::vector<ClientClasses::LedgerEntry> entries)
+{
+   std::vector<bs::TXEntry> result;
+   for (const auto &entry : entries) {
+      result.push_back(bs::convertTXEntry(entry));
+   }
+   return result;
 }

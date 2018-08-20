@@ -68,9 +68,6 @@ private:
    void InitPortfolioView();
    void InitWalletsView();
 
-   void CompleteUIOnlineView();
-   void CompleteDBConnection();
-
    void InitOTP();
 
    void UpdateMainWindowAppearence();
@@ -84,6 +81,9 @@ private slots:
       , bs::wallet::KeyRank);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
+
+   void CompleteUIOnlineView();
+   void CompleteDBConnection();
 
    void OnOTPSyncCompleted();
 

@@ -110,7 +110,7 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 static bool isRBFEligible(const TransactionsViewItem &item)
 {
    return ((item.confirmations == 0)
-      && item.led->isOptInRBF()
+      && item.txEntry.isRBF
       && ( item.wallet != nullptr && item.wallet->GetType() != bs::wallet::Type::Settlement)
       && ( item.direction == bs::Transaction::Direction::Internal || item.direction == bs::Transaction::Direction::Sent ));
 }
@@ -155,11 +155,11 @@ void PortfolioWidget::onCreateRBFDialog()
 {
    auto txItem = model_->getItem(actionRBF_->data().toInt());
 
-   const auto &cbDialog = [this, txItem] {
+   const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
             , walletsManager_, signContainer_
-            , txItem.tx, txItem.wallet
+            , txItem->tx, txItem->wallet
             , this);
          dlg->exec();
       }
@@ -170,7 +170,7 @@ void PortfolioWidget::onCreateRBFDialog()
    };
 
    if (txItem.initialized) {
-      cbDialog();
+      cbDialog(&txItem);
    }
    else {
       txItem.initialize(armory_, walletsManager_, cbDialog);
@@ -181,11 +181,11 @@ void PortfolioWidget::onCreateCPFPDialog()
 {
    auto txItem = model_->getItem(actionCPFP_->data().toInt());
 
-   const auto &cbDialog = [this, txItem] {
+   const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
             , walletsManager_, signContainer_
-            , txItem.wallet, txItem.tx
+            , txItem->wallet, txItem->tx
             , this);
          dlg->exec();
       }
@@ -196,7 +196,7 @@ void PortfolioWidget::onCreateCPFPDialog()
    };
 
    if (txItem.initialized) {
-      cbDialog();
+      cbDialog(&txItem);
    }
    else {
       txItem.initialize(armory_, walletsManager_, cbDialog);

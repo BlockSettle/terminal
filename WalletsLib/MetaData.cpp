@@ -470,22 +470,34 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
       return false;
    }
    if (updateAddrBalance_) {
-      updateAddrBalance_ = false;
-      const auto &cbAddrBalance = [this, addr, cb](std::map<BinaryData, std::vector<uint64_t>> balanceMap) {
-         const auto &it = balanceMap.find(addr.prefixed());
-         if (it != balanceMap.end()) {
-            cb(it->second);
+      const auto &cbAddrBalance = [this](std::map<BinaryData, std::vector<uint64_t>> balanceMap) {
+         {
+            QMutexLocker lock(&addrMapsMtx_);
+            for (const auto &balance : balanceMap) {     // std::map::insert doesn't replace elements
+               addressBalanceMap_[balance.first] = std::move(balance.second);
+            }
+            updateAddrBalance_ = false;
          }
-         QMutexLocker lock(&addrMapsMtx_);
-         for (const auto &balance : balanceMap) {     // std::map::insert doesn't replace elements
-            addressBalanceMap_[balance.first] = std::move(balance.second);
+         for (const auto &queuedCb : cbBal_) {
+            const auto &it = addressBalanceMap_.find(queuedCb.first.id());
+            if (it != addressBalanceMap_.end()) {
+               queuedCb.second(it->second);
+            }
+            else {
+               queuedCb.second({ 0, 0, 0 });
+            }
          }
+         cbBal_.clear();
       };
-      btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
+      cbBal_[addr] = cb;
+      if (cbBal_.size() == 1) {
+         btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
+      }
    }
    else {
-      const auto itBal = addressBalanceMap_.find(addr.prefixed());
+      const auto itBal = addressBalanceMap_.find(addr.id());
       if (itBal == addressBalanceMap_.end()) {
+         cb({ 0, 0, 0 });
          return false;
       }
       cb(itBal->second);
@@ -495,9 +507,6 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
 
 bool bs::Wallet::getAddrBalance(const bs::Address &addr) const
 {
-   if (!isBalanceAvailable()) {
-      return false;
-   }
    const auto &cb = [this, addr](std::vector<uint64_t> balances) {
       emit addrBalanceReceived(addr, balances);
    };
@@ -510,26 +519,35 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t
       return false;
    }
    if (updateAddrTxN_) {
-      updateAddrTxN_ = false;
-      const auto &cbTxN = [this, addr, cb](std::map<BinaryData, uint32_t> txnMap) {
-         const auto &it = txnMap.find(addr.prefixed());
-         if (it != txnMap.end()) {
-            cb(it->second);
+      const auto &cbTxN = [this](std::map<BinaryData, uint32_t> txnMap) {
+         {
             QMutexLocker lock(&addrMapsMtx_);
             for (const auto &txn : txnMap) {          // std::map::insert doesn't replace elements
                addressTxNMap_[txn.first] = txn.second;
             }
+            updateAddrTxN_ = false;
          }
-         else {
-            cb(UINT32_MAX);
+         for (const auto &queuedCb : cbTxN_) {
+            const auto &it = addressTxNMap_.find(queuedCb.first.id());
+            if (it != addressTxNMap_.end()) {
+               queuedCb.second(it->second);
+            }
+            else {
+               queuedCb.second(0);
+            }
          }
+         cbTxN_.clear();
       };
-      btcWallet_->getAddrTxnCountsFromDB(cbTxN);
+      cbTxN_[addr] = cb;
+      if (cbTxN_.size() == 1) {
+         btcWallet_->getAddrTxnCountsFromDB(cbTxN);
+      }
    }
    else {
-      const auto itTxN = addressTxNMap_.find(addr.prefixed());
+      const auto itTxN = addressTxNMap_.find(addr.id());
       if (itTxN == addressTxNMap_.end()) {
-         return false;
+         cb(0);
+         return true;
       }
       cb(itTxN->second);
    }

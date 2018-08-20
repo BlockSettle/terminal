@@ -380,13 +380,13 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
    switch(newState)
    {
    case ArmoryConnection::State::Ready:
-      CompleteUIOnlineView();
+      QMetaObject::invokeMethod(this, "CompleteUIOnlineView", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Connected:
-      CompleteDBConnection();
+      QMetaObject::invokeMethod(this, "CompleteDBConnection", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Offline:
-      SetOfflineUIView();
+      QMetaObject::invokeMethod(this, "SetOfflineUIView", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Scanning:
    case ArmoryConnection::State::Error:
@@ -400,7 +400,9 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 {
    const auto &cbWalletsLD = [this](AsyncClient::LedgerDelegate delegate) {
       transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_, walletsManager_, delegate, this);
+      transactionsModel_->moveToThread(QApplication::instance()->thread());
 
+      QMetaObject::invokeMethod(transactionsModel_.get(), "init", Qt::QueuedConnection);
       QMetaObject::invokeMethod(this, "InitTransactionsView", Qt::QueuedConnection);
 
       if (walletsManager_->GetWalletsCount() != 0) {

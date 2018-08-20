@@ -27,10 +27,10 @@ public:
       setSortRole(TransactionsViewModel::SortRole);
    }
 
-   int rowCount(const QModelIndex & parent = QModelIndex()) const override
-   {
+/*   int rowCount(const QModelIndex & parent = QModelIndex()) const override
+   {     //! causes assert(last < rowCount()) to invoke when filtering by wallet
       return qMin(QSortFilterProxyModel::rowCount(parent), 500);
-   }
+   }*/
 
    int totalRowCount() const
    {

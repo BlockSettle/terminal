@@ -25,10 +25,15 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    fontBold_.setBold(true);
    qRegisterMetaType<TransactionsViewItem>();
    qRegisterMetaType<TransactionItems>();
+}
 
-   connect(this, &TransactionsViewModel::itemsAdded, this, &TransactionsViewModel::onNewItems, Qt::QueuedConnection);
-   connect(this, &TransactionsViewModel::itemsDeleted, this, &TransactionsViewModel::onItemsDeleted, Qt::QueuedConnection);
-   connect(this, &TransactionsViewModel::itemConfirmed, this, &TransactionsViewModel::onItemConfirmed, Qt::QueuedConnection);
+void TransactionsViewModel::init()
+{
+   cmdTimer_ = new QTimer(this);
+   cmdTimer_->setSingleShot(false);
+   cmdTimer_->setInterval(100);
+   connect(cmdTimer_, &QTimer::timeout, this, &TransactionsViewModel::timerCmd);
+   cmdTimer_->start();
 
    loadLedgerEntries();
 
@@ -37,7 +42,6 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
       connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
    }
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
 }
@@ -57,7 +61,7 @@ int TransactionsViewModel::rowCount(const QModelIndex &parent) const
    if (parent.isValid()) {
       return 0;
    }
-   return (int)currentPage_.size();
+   return static_cast<int>(currentPage_.size());
 }
 
 QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
@@ -97,7 +101,7 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
          return UiUtils::displayAddress(item.mainAddress);
       case Columns::RbfFlag:
          if (!item.confirmations) {
-            if (item.led->isOptInRBF()) {
+            if (item.txEntry.isRBF) {
                return tr("RBF");
             }
             else if (item.isCPFP) {
@@ -116,7 +120,7 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
    }
    else if (role == SortRole) {
       switch(col) {
-      case Columns::Date:        return item.led->getTxTime();
+      case Columns::Date:        return item.txEntry.txTime;
       case Columns::Status:      return item.confirmations;
       case Columns::Wallet:      return item.walletName;
       case Columns::SendReceive: return (int)item.direction;
@@ -169,7 +173,7 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
    else if (role == FilterRole) {
       switch (col)
       {
-         case Columns::Date:        return item.led->getTxTime();
+         case Columns::Date:        return item.txEntry.txTime;
          case Columns::Wallet:      return item.walletID;
          case Columns::SendReceive: return item.direction;
          default:    return QVariant();
@@ -211,6 +215,7 @@ void TransactionsViewModel::updatePage()
 
 void TransactionsViewModel::clear()
 {
+   stopped_ = true;
    beginResetModel();
    {
       QMutexLocker locker(&updateMutex_);
@@ -218,12 +223,12 @@ void TransactionsViewModel::clear()
       currentKeys_.clear();
    }
    endResetModel();
+   stopped_ = false;
 }
 
 void TransactionsViewModel::onZeroConf(ArmoryConnection::ReqIdType reqId)
 {
-   QtConcurrent::run(this, &TransactionsViewModel::insertNewTransactions
-      , armory_->getZCentries(reqId));
+   insertNewTransactions(bs::convertTXEntries(armory_->getZCentries(reqId)));
 }
 
 void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
@@ -233,24 +238,24 @@ void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
    }
 }
 
-TransactionsViewItem TransactionsViewModel::itemFromTransaction(const ClientClasses::LedgerEntry &led)
+TransactionsViewItem TransactionsViewModel::itemFromTransaction(const bs::TXEntry &entry)
 {
    TransactionsViewItem item;
-   item.led = std::make_shared<ClientClasses::LedgerEntry>(led);
-   item.displayDateTime = UiUtils::displayDateTime(led.getTxTime());
-   item.walletID = QString::fromStdString(led.getID());
-   item.wallet = walletsManager_->GetWalletById(led.getID());
+   item.txEntry = entry;
+   item.displayDateTime = UiUtils::displayDateTime(entry.txTime);
+   item.walletID = QString::fromStdString(entry.id);
+   item.wallet = walletsManager_->GetWalletById(entry.id);
    if (!item.wallet && defaultWallet_) {
       item.wallet = defaultWallet_;
    }
 
-   if (item.led->getBlockNum() < uint32_t(-1)) {
-      item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - item.led->getBlockNum();
+   if (entry.blockNum < uint32_t(-1)) {
+      item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - entry.blockNum;
    }
    if (item.wallet) {
       item.walletName = QString::fromStdString(item.wallet->GetWalletName());
    }
-   item.isValid = item.wallet ? item.wallet->isTxValid(item.led->getTxHash()) : false;
+   item.isValid = item.wallet ? item.wallet->isTxValid(entry.txHash) : false;
    item.initialized = false;
    return item;
 }
@@ -259,13 +264,13 @@ static std::string mkTxKey(const BinaryData &txHash, const std::string &id)
 {
    return txHash.toBinStr() + id;
 }
-static std::string mkTxKey(const ClientClasses::LedgerEntry &item)
+static std::string mkTxKey(const bs::TXEntry &item)
 {
-   return mkTxKey(item.getTxHash(), item.getID());
+   return mkTxKey(item.txHash, item.id);
 }
 static std::string mkTxKey(const TransactionsViewItem &item)
 {
-   return mkTxKey(*(item.led.get()));
+   return mkTxKey(item.txEntry);
 }
 
 bool TransactionsViewModel::txKeyExists(const std::string &key)
@@ -273,13 +278,13 @@ bool TransactionsViewModel::txKeyExists(const std::string &key)
    return (currentKeys_.find(key) != currentKeys_.end());
 }
 
-void TransactionsViewModel::onNewTransactions(std::vector<ClientClasses::LedgerEntry> allPages)
+void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> allPages)
 {
    insertNewTransactions(allPages);
    updateBlockHeight(allPages);
 }
 
-void TransactionsViewModel::insertNewTransactions(const std::vector<ClientClasses::LedgerEntry> &page)
+void TransactionsViewModel::insertNewTransactions(const std::vector<bs::TXEntry> &page)
 {
    if (!initialLoadCompleted_) {
       return;
@@ -288,14 +293,14 @@ void TransactionsViewModel::insertNewTransactions(const std::vector<ClientClasse
    newItems.reserve(page.size());
    const auto &settlWallet = walletsManager_->GetSettlementWallet();
 
-   for (const auto led : page) {
-      if (settlWallet && settlWallet->isTempWalletId(led.getID())) {
+   for (const auto entry : page) {
+      if (settlWallet && settlWallet->isTempWalletId(entry.id)) {
          continue;
       }
-      const auto item = itemFromTransaction(led);
-      if (!item.isValid) {
+      const auto item = itemFromTransaction(entry);
+/*      if (!item.isValid) {
          continue;
-      }
+      }*/
       const auto txKey = mkTxKey(item);
       {
          QMutexLocker locker(&updateMutex_);
@@ -308,15 +313,50 @@ void TransactionsViewModel::insertNewTransactions(const std::vector<ClientClasse
    }
 
    if (!newItems.empty()) {
-      emit itemsAdded(newItems);
+      addCommand({Command::Type::Add, newItems});
    }
 }
 
-void TransactionsViewModel::updateBlockHeight(const std::vector<ClientClasses::LedgerEntry> &page)
+void TransactionsViewModel::timerCmd()
 {
-   std::unordered_map<std::string, std::shared_ptr<ClientClasses::LedgerEntry>> newData;
+   CommandQueue tempQueue;
+   {
+      QMutexLocker lock(&cmdMutex_);
+      tempQueue.swap(cmdQueue_);
+   }
+   for (const auto &cmd : tempQueue) {
+      executeCommand(cmd);
+   }
+}
+
+void TransactionsViewModel::executeCommand(const Command &cmd)
+{
+   switch (cmd.type) {
+   case Command::Type::Add:
+      onNewItems(cmd.items);
+      break;
+   case Command::Type::Delete:
+      onItemsDeleted(cmd.items);
+      break;
+   case Command::Type::Confirm:
+      onItemsConfirmed(cmd.items);
+      break;
+   case Command::Type::Update:
+      break;
+   }
+}
+
+void TransactionsViewModel::addCommand(const Command &cmd)
+{
+   QMutexLocker lock(&cmdMutex_);
+   cmdQueue_.emplace_back(cmd);
+}
+
+void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &page)
+{
+   std::unordered_map<std::string, bs::TXEntry> newData;
    for (const auto &item : page) {
-      newData[mkTxKey(item)] = std::make_shared<ClientClasses::LedgerEntry>(item);
+      newData[mkTxKey(item)] = item;
    }
    int firstRow = -1, lastRow = 0;
    std::vector<TransactionsViewItem> firstConfItems;
@@ -326,15 +366,15 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<ClientClasses::L
          auto &item = currentPage_[i];
          const auto itPage = newData.find(mkTxKey(item));
          if (itPage != newData.end()) {
-            if (item.led->getValue() != itPage->second->getValue()) {
-               item.led = itPage->second;
+            if (item.txEntry.value != itPage->second.value) {
+               item.txEntry = itPage->second;
                item.amountStr.clear();
                item.calcAmount(walletsManager_);
             }
-            item.isValid = item.wallet->isTxValid(item.led->getTxHash());
+            item.isValid = item.wallet->isTxValid(item.txEntry.txHash);
 
-            if (itPage->second->getBlockNum() < uint32_t(-1)) {
-               item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - itPage->second->getBlockNum();
+            if (itPage->second.blockNum < uint32_t(-1)) {
+               item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - itPage->second.blockNum;
                if (item.confirmations == 1) {
                   firstConfItems.push_back(item);
                }
@@ -350,11 +390,9 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<ClientClasses::L
    }
    if (firstRow >= 0) {
       emit dataChanged(index(firstRow, static_cast<int>(Columns::Status))
-         , index(lastRow, static_cast<int>(Columns::Status)));
+      , index(lastRow, static_cast<int>(Columns::Status)));
    }
-   for (const auto &item : firstConfItems) {
-      emit itemConfirmed(item);
-   }
+   addCommand({Command::Type::Confirm, firstConfItems});
 }
 
 void TransactionsViewModel::loadLedgerEntries()
@@ -362,7 +400,7 @@ void TransactionsViewModel::loadLedgerEntries()
    const auto &cbPageCount = [this](uint64_t pageCnt) {
       for (uint32_t pageId = 0; pageId < pageCnt; ++pageId) {
          const auto &cbLedger = [this, pageId, pageCnt](std::vector<ClientClasses::LedgerEntry> entries) {
-            rawData_[pageId] = entries;
+            rawData_[pageId] = bs::convertTXEntries(entries);
             if (rawData_.size() >= pageCnt) {
                QtConcurrent::run(this, &TransactionsViewModel::ledgerToTxData);
             }
@@ -376,9 +414,9 @@ void TransactionsViewModel::loadLedgerEntries()
 void TransactionsViewModel::ledgerToTxData()
 {
    size_t count = 0;
+   beginResetModel();
    {
       QMutexLocker locker(&updateMutex_);
-      currentPage_.reserve(rawData_.size());
       for (const auto &le : rawData_) {
          for (const auto &led : le.second) {
             const auto item = itemFromTransaction(led);
@@ -395,14 +433,14 @@ void TransactionsViewModel::ledgerToTxData()
          }
       }
    }
+   endResetModel();
    initialLoadCompleted_ = true;
 
-   emit layoutChanged();
    loadTransactionDetails(0, count);
    emit dataLoaded(currentPage_.size());
 }
 
-void TransactionsViewModel::onNewItems(const TransactionItems items)
+void TransactionsViewModel::onNewItems(TransactionItems items)
 {
    unsigned int curLastIdx = currentPage_.size();
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + items.size() - 1);
@@ -420,14 +458,14 @@ int TransactionsViewModel::getItemIndex(const TransactionsViewItem &item) const
    QMutexLocker locker(&updateMutex_);
    for (int i = 0; i < currentPage_.size(); i++) {
       const auto &curItem = currentPage_[i];
-      if ((item.led->getTxHash() == curItem.led->getTxHash()) && (item.walletID == curItem.walletID)) {
+      if (mkTxKey(item) == mkTxKey(curItem)) {
          return i;
       }
    }
    return -1;
 }
 
-void TransactionsViewModel::onItemsDeleted(const TransactionItems items)
+void TransactionsViewModel::onItemsDeleted(TransactionItems items)
 {
    for (const auto &item : items) {
       const int idx = getItemIndex(item);
@@ -446,7 +484,6 @@ void TransactionsViewModel::onItemsDeleted(const TransactionItems items)
 void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &item, int c1, int c2)
 {
    const auto &itemKey = mkTxKey(item);
-   QMutexLocker locker(&updateMutex_);
    for (int i = qMax<int>(0, row - 5); i < qMin<int>(currentPage_.size(), row + 5); i++) {
       if (mkTxKey(currentPage_[i]) == itemKey) {
          currentPage_[i] = item;
@@ -456,28 +493,29 @@ void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &it
    }
 }
 
-void TransactionsViewModel::onItemConfirmed(const TransactionsViewItem item)
+void TransactionsViewModel::onItemsConfirmed(TransactionItems items)
 {
-   if (!item.tx.isInitialized()) {
-      return;
-   }
-
+   return;
    TransactionItems doubleSpendItems;
    {
       QMutexLocker locker(&updateMutex_);
-
       for (size_t i = 0; i < currentPage_.size(); i++) {
          const auto &curItem = currentPage_[i];
          if (curItem.confirmations) {
             continue;
          }
-         if (curItem.containsInputsFrom(item.tx)) {
-            doubleSpendItems.push_back(curItem);
+         for (const auto &item : items) {
+            if (!item.tx.isInitialized()) {
+               continue;
+            }
+            if (curItem.containsInputsFrom(item.tx)) {
+               doubleSpendItems.push_back(curItem);
+            }
          }
       }
    }
    if (!doubleSpendItems.empty()) {
-      emit itemsDeleted(doubleSpendItems);
+      addCommand({Command::Type::Delete, doubleSpendItems});
    }
 }
 
@@ -485,7 +523,7 @@ bool TransactionsViewModel::isTransactionVerified(int transactionRow) const
 {
    QMutexLocker locker(&updateMutex_);
    const auto& item = currentPage_[transactionRow];
-   return walletsManager_->IsTransactionVerified(*item.led.get());
+   return armory_->isTransactionVerified(item.txEntry.blockNum);
 }
 
 TransactionsViewItem TransactionsViewModel::getItem(int row) const
@@ -501,46 +539,40 @@ void TransactionsViewModel::loadTransactionDetails(unsigned int iStart, size_t c
 {
    const auto pageSize = currentPage_.size();
 
-   std::map<int, TransactionsViewItem> uninitedItems;
+   std::set<int> uninitedItems;
    {
       QMutexLocker locker(&updateMutex_);
       for (unsigned int i = iStart; i < qMin<unsigned int>(pageSize, iStart + count); i++) {
-         if (pageSize > currentPage_.size()) {
+         if (stopped_) {
             break;
          }
-         const TransactionsViewItem &item = currentPage_[i];
+         auto &item = currentPage_[i];
          if (!item.initialized) {
-            uninitedItems[i] = item;
+            updateTransactionDetails(item, i);
          }
       }
-   }
-   for (auto item : uninitedItems) {
-      if (stopped_) {
-         break;
-      }
-      updateTransactionDetails(item.second, item.first);
    }
 }
 
 void TransactionsViewModel::updateTransactionDetails(TransactionsViewItem &item, int index)
 {
-   const auto &cbInited = [this, index, &item] {
-      onRowUpdated(index, item, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Amount));
+   const auto &cbInited = [this, index](const TransactionsViewItem *itemPtr) {
+      onRowUpdated(index, *itemPtr, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Amount));
    };
    item.initialize(armory_, walletsManager_, cbInited);
 }
 
 
 void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<WalletsManager> &walletsMgr, std::function<void()> cb)
+   , const std::shared_ptr<WalletsManager> &walletsMgr, std::function<void(const TransactionsViewItem *)> cb)
 {
    const auto &cbInit = [this, walletsMgr, cb] {
-      if (amountStr.isEmpty()) {
+      if (amountStr.isEmpty() && txHashes.empty()) {
          calcAmount(walletsMgr);
       }
-      if (!dirStr.isEmpty() && !mainAddress.isEmpty() && !txIns.empty()) {
+      if (!dirStr.isEmpty() && !mainAddress.isEmpty() && !amountStr.isEmpty()) {
          initialized = true;
-         cb();
+         cb(this);
       }
    };
    const auto &cbTXs = [this, cbInit](std::vector<Tx> txs) {
@@ -566,21 +598,32 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       if (!newTx.isInitialized()) {
          return;
       }
-      tx = newTx;
-      std::set<BinaryData> txHashSet;
-      for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-         TxIn in = tx.getTxInCopy(i);
-         OutPoint op = in.getOutPoint();
-         if (txIns.find(op.getTxHash()) == txIns.end()) {
-            txHashSet.insert(op.getTxHash());
+      if (comment.isEmpty()) {
+         comment = wallet ? QString::fromStdString(wallet->GetTransactionComment(txEntry.txHash))
+            : QString();
+         const auto endLineIndex = comment.indexOf(QLatin1Char('\n'));
+         if (endLineIndex != -1) {
+            comment = comment.left(endLineIndex) + QLatin1String("...");
          }
       }
-      if (txHashSet.empty()) {
-         cbInit();
-      }
-      else {
-         txHashes = txHashSet;
-         armory->getTXsByHash(txHashSet, cbTXs);
+
+      if (!tx.isInitialized()) {
+         tx = std::move(newTx);
+         std::set<BinaryData> txHashSet;
+         for (size_t i = 0; i < tx.getNumTxIn(); i++) {
+            TxIn in = tx.getTxInCopy(i);
+            OutPoint op = in.getOutPoint();
+            if (txIns.find(op.getTxHash()) == txIns.end()) {
+               txHashSet.insert(op.getTxHash());
+            }
+         }
+         if (txHashSet.empty()) {
+            cbInit();
+         }
+         else {
+            txHashes = txHashSet;
+            armory->getTXsByHash(txHashSet, cbTXs);
+         }
       }
 
       if (dirStr.isEmpty()) {
@@ -589,26 +632,17 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       if (mainAddress.isEmpty()) {
          walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr);
       }
-
-      if (comment.isEmpty()) {
-         comment = wallet ? QString::fromStdString(wallet->GetTransactionComment(led->getTxHash()))
-            : QString();
-         const auto endLineIndex = comment.indexOf(QLatin1Char('\n'));
-         if (endLineIndex != -1) {
-            comment = comment.left(endLineIndex) + QLatin1String("...");
-         }
-      }
    };
 
    if (initialized) {
-      cb();
+      cb(this);
    }
    else {
       if (tx.isInitialized()) {
          cbTX(tx);
       }
       else {
-         armory->getTxByHash(led->getTxHash(), cbTX);
+         armory->getTxByHash(txEntry.txHash, cbTX);
       }
    }
 }
@@ -637,7 +671,7 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<WalletsManager> &wal
       int64_t outputVal = 0;
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
          TxOut out = tx.getTxOutCopy(i);
-         if (led->isChainedZC() && !hasSpecialAddr) {
+         if (txEntry.isChainedZC && !hasSpecialAddr) {
             const auto addr = bs::Address::fromTxOut(out);
             hasSpecialAddr = isSpecialWallet(walletsManager->GetWalletByAddress(addr.id()));
          }
@@ -652,24 +686,24 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<WalletsManager> &wal
          if (prevTx.isInitialized()) {
             TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
             inputVal += prevOut.getValue();
-            if (led->isChainedZC() && !hasSpecialAddr) {
+            if (txEntry.isChainedZC && !hasSpecialAddr) {
                const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
                hasSpecialAddr = isSpecialWallet(walletsManager->GetWalletByAddress(addr.id()));
             }
          }
       }
-      auto value = led->getValue();
+      auto value = txEntry.value;
       const auto fee = (wallet->GetType() == bs::wallet::Type::ColorCoin) || (value > 0) ? 0 : (outputVal - inputVal);
       value -= fee;
       amount = wallet->GetTxBalance(value);
       amountStr = wallet->displayTxValue(value);
 
-      if (led->isChainedZC() && (wallet->GetType() == bs::wallet::Type::Bitcoin) && !hasSpecialAddr) {
+      if (txEntry.isChainedZC && (wallet->GetType() == bs::wallet::Type::Bitcoin) && !hasSpecialAddr) {
          isCPFP = true;
       }
    }
    else {
-      amount = led->getValue() / BTCNumericTypes::BalanceDivider;
+      amount = txEntry.value / BTCNumericTypes::BalanceDivider;
       amountStr = UiUtils::displayAmount(amount);
    }
 }

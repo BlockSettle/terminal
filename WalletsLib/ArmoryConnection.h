@@ -87,8 +87,10 @@ public:
    bool estimateFee(unsigned int nbBlocks, std::function<void(float)>);
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
+   bool isTransactionVerified(uint32_t blockNum) const;
    bool isTransactionConfirmed(const ClientClasses::LedgerEntry &) const;
    unsigned int getConfirmationsNumber(const ClientClasses::LedgerEntry &item) const;
+   unsigned int getConfirmationsNumber(uint32_t blockNum) const;
 
 signals:
    void stateChanged(ArmoryConnection::State) const;
@@ -96,7 +98,7 @@ signals:
    void prepareConnection(NetworkType, std::string host, std::string port) const;
    void progress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress) const;
    void newBlock(unsigned int height) const;
-   void zeroConfReceived(ReqIdType) const;
+   void zeroConfReceived(unsigned int) const;
    void refresh(std::vector<BinaryData> ids) const;
    void nodeStatus(NodeStatus, bool segWitEnabled, RpcStatus) const;
    void txBroadcastError(QString txHash, QString error) const;
