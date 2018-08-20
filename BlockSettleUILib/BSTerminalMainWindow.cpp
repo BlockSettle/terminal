@@ -52,6 +52,7 @@
 #include "SignContainer.h"
 #include "StatusBarView.h"
 #include "UiUtils.h"
+#include "WalletKeysSubmitFrejaDialog.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
 #include "TabWithShortcut.h"
@@ -942,13 +943,24 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
 
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
-         EnterWalletPassword passwordDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
-            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
-         if (passwordDialog.exec() == QDialog::Accepted) {
-            password = passwordDialog.GetPassword();
+
+         const bool useNewDialogForFreja = true;
+
+         if (useNewDialogForFreja && encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
+           WalletKeysSubmitFrejaDialog frejaDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
+             , encKeys, QString::fromStdString(prompt), this);
+           if (frejaDialog.exec() == QDialog::Accepted) {
+             password = frejaDialog.GetPassword();
+           }
          } else {
-            logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
-               , walletId, walletName.toStdString());
+           EnterWalletPassword passwordDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
+              , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
+           if (passwordDialog.exec() == QDialog::Accepted) {
+              password = passwordDialog.GetPassword();
+           } else {
+              logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
+                 , walletId, walletName.toStdString());
+           }
          }
       } else {
          logMgr_->logger("ui")->error("[onPasswordRequested] can\'t find wallet with id {}", walletId);
