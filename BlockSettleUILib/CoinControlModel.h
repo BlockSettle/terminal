@@ -22,6 +22,7 @@ public:
    enum Column
    {
       ColumnName,
+      ColumnUTXOCount,
       ColumnComment,
       ColumnBalance,
       ColumnsCount
