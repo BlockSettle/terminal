@@ -115,6 +115,9 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    ui_->treeViewWallets->expandAll();
 }
 
+RootWalletPropertiesDialog::~RootWalletPropertiesDialog()
+{}
+
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
    WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_, this);

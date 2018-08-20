@@ -31,7 +31,7 @@ public:
    RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &, WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
-   ~RootWalletPropertiesDialog() override = default;
+   ~RootWalletPropertiesDialog() override;
 
 private slots:
    void onDeleteWallet();
@@ -54,7 +54,7 @@ private:
    void startWalletScan();
 
 private:
-   Ui::WalletPropertiesDialog    *     ui_;
+   std::unique_ptr<Ui::WalletPropertiesDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>     wallet_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;

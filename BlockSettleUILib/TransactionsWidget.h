@@ -22,7 +22,7 @@ Q_OBJECT
 
 public:
    TransactionsWidget(QWidget* parent = nullptr );
-   ~TransactionsWidget() override = default;
+   ~TransactionsWidget() override;
 
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
    void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
@@ -37,7 +37,7 @@ private slots:
    void onEnterKeyInTrxPressed(const QModelIndex &index);
 
 private:
-   Ui::TransactionsWidget* ui;
+   std::unique_ptr<Ui::TransactionsWidget> ui;
 
 private:
    std::shared_ptr<TransactionsViewModel> transactionsModel_;

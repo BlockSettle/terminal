@@ -13,7 +13,7 @@ Q_OBJECT
 
 public:
    SetOTPPasswordDialog(QWidget* parent = nullptr );
-   ~SetOTPPasswordDialog() override = default;
+   ~SetOTPPasswordDialog() override;
 
    QString GetPassword();
 
@@ -24,7 +24,7 @@ private:
    void setStatusString(const QString& status);
    void clearStatusString();
 private:
-   Ui::SetOTPPasswordDialog* ui_;
+   std::unique_ptr<Ui::SetOTPPasswordDialog> ui_;
 };
 
 #endif // __SET_OTP_PASSWORD_DIALOG_H__

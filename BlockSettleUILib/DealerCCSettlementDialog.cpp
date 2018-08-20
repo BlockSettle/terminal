@@ -78,6 +78,9 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    validateGUI();
 }
 
+DealerCCSettlementDialog::~DealerCCSettlementDialog()
+{}
+
 QWidget *DealerCCSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
 WalletKeysSubmitWidget *DealerCCSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
 QLabel *DealerCCSettlementDialog::labelHint() const { return ui_->labelHint; }

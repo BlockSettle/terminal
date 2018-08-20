@@ -38,6 +38,9 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
 }
 
+RFQReplyWidget::~RFQReplyWidget()
+{}
+
 void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
 {
    if (!walletsManager_ && walletsManager) {

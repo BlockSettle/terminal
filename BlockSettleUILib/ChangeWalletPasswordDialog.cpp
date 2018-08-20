@@ -31,6 +31,9 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    updateState();
 }
 
+ChangeWalletPasswordDialog::~ChangeWalletPasswordDialog()
+{}
+
 void ChangeWalletPasswordDialog::showEvent(QShowEvent *evt)
 {
    QApplication::processEvents();

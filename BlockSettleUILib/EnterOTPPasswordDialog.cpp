@@ -41,6 +41,9 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager>
    }
 }
 
+EnterOTPPasswordDialog::~EnterOTPPasswordDialog()
+{}
+
 void EnterOTPPasswordDialog::passwordChanged()
 {
    ui_->pushButtonOk->setEnabled(!ui_->lineEditPassword->text().isEmpty());

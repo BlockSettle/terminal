@@ -34,7 +34,7 @@ Q_OBJECT
 
 public:
    RFQRequestWidget(QWidget* parent = nullptr);
-   ~RFQRequestWidget() = default;
+   ~RFQRequestWidget();
 
    void init(std::shared_ptr<spdlog::logger> logger
          , const std::shared_ptr<CelerClient>& celerClient
@@ -53,7 +53,7 @@ public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
 
 private:
-   Ui::RFQRequestWidget* ui_;
+   std::unique_ptr<Ui::RFQRequestWidget> ui_;
 
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<CelerClient>        celerClient_;

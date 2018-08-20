@@ -27,7 +27,7 @@ Q_OBJECT
 
 public:
    PortfolioWidget(QWidget* parent = nullptr );
-   ~PortfolioWidget() override = default;
+   ~PortfolioWidget() override;
 
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model);
    void SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model);
@@ -44,7 +44,7 @@ private slots:
    void onCreateRBFDialog();
    void onCreateCPFPDialog();
 private:
-   Ui::PortfolioWidget* ui_;
+   std::unique_ptr<Ui::PortfolioWidget> ui_;
    std::shared_ptr<TransactionsViewModel> model_;
    UnconfirmedTransactionFilter* filter_;
    QMenu    contextMenu_;

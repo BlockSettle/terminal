@@ -12,3 +12,6 @@ CelerAccountInfoDialog::CelerAccountInfoDialog(std::shared_ptr<CelerClient> cele
    ui_->labelUserType->setText(celerConnection->userType());
    connect(ui_->buttonBox, &QDialogButtonBox::rejected, this, &CelerAccountInfoDialog::reject);
 }
+
+CelerAccountInfoDialog::~CelerAccountInfoDialog()
+{}

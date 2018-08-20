@@ -36,6 +36,9 @@ WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool pa
    connect(&timer_, &QTimer::timeout, this, &WalletKeyWidget::onTimer);
 }
 
+WalletKeyWidget::~WalletKeyWidget()
+{}
+
 void WalletKeyWidget::onTypeChanged()
 {
    adjustSize();

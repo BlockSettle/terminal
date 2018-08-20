@@ -22,7 +22,7 @@ Q_OBJECT
 public:
    ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys, bs::wallet::KeyRank, QWidget* parent = nullptr);
-   ~ChangeWalletPasswordDialog() override = default;
+   ~ChangeWalletPasswordDialog() override;
 
    SecureBinaryData oldPassword() const;
    std::vector<bs::wallet::PasswordData> newPasswordData() const;
@@ -36,7 +36,7 @@ protected:
    void showEvent(QShowEvent *) override;
 
 private:
-   Ui::ChangeWalletPasswordDialog * ui_;
+   std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>  wallet_;
 };
 

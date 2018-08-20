@@ -33,6 +33,9 @@ SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<WalletsManager> &wa
    onSelectionChanged();
 }
 
+SelectWalletDialog::~SelectWalletDialog()
+{}
+
 void SelectWalletDialog::onSelectionChanged()
 {
    auto selectedRows = ui_->treeViewWallets->selectionModel()->selectedRows();

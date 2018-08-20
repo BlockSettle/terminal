@@ -128,6 +128,9 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
    resize(minimumSize());
 }
 
+TransactionDetailDialog::~TransactionDetailDialog()
+{}
+
 QSize TransactionDetailDialog::minimumSize() const
 {
    int minWidth = 2 * extraTreeWidgetColumnMargin;

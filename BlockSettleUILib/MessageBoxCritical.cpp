@@ -9,8 +9,8 @@ MessageBoxCritical::MessageBoxCritical(const QString& text, const QString& descr
 MessageBoxCritical::MessageBoxCritical(const QString& text, const QString& description
   , const QString& details, QWidget* parent)
    : CommonMessageBoxDialog(parent)
+   , ui_(new Ui::MessageBoxCritical)
 {
-   ui_ = new Ui::MessageBoxCritical();
    ui_->setupUi(this);
 
    ui_->labelText->setText(text.toUpper());
@@ -26,6 +26,9 @@ MessageBoxCritical::MessageBoxCritical(const QString& text, const QString& descr
 
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &MessageBoxCritical::accept);
 }
+
+MessageBoxCritical::~MessageBoxCritical()
+{}
 
 void MessageBoxCritical::OnDetailsPressed()
 {

@@ -16,6 +16,9 @@ SetOTPPasswordDialog::SetOTPPasswordDialog(QWidget* parent)
    passwordChanged();
 }
 
+SetOTPPasswordDialog::~SetOTPPasswordDialog()
+{}
+
 void SetOTPPasswordDialog::passwordChanged()
 {
    if (ui_->lineEditPass1->text().isEmpty()) {

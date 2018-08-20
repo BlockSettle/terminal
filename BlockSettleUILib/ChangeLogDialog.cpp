@@ -31,3 +31,7 @@ ChangeLogDialog::ChangeLogDialog(const bs::VersionChecker &verChecker, QWidget* 
 
    ui_->textEditChangeLog->setText(changeLogText);
 }
+
+ChangeLogDialog::~ChangeLogDialog()
+{
+}

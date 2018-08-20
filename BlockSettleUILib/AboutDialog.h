@@ -16,7 +16,7 @@ Q_OBJECT
 
 public:
    AboutDialog(QString changeLogBaseUrl, QWidget* parent = nullptr);
-   ~AboutDialog() override = default;
+   ~AboutDialog() override;
 
    void setTab(int tab);
    static std::string version() { return terminalVersion_; }
@@ -31,7 +31,7 @@ private:
    void reset();
 
 private:
-   Ui::AboutDialog*     ui_;
+   std::unique_ptr<Ui::AboutDialog> ui_;
    static std::string   terminalVersion_;
    bs::VersionChecker   verChecker_;
 };

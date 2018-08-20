@@ -33,7 +33,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
       , QWidget* parent = nullptr);
-   ~DealerXBTSettlementDialog() noexcept override = default;
+   ~DealerXBTSettlementDialog() override;
 
    DealerXBTSettlementDialog(const DealerXBTSettlementDialog&) = delete;
    DealerXBTSettlementDialog& operator = (const DealerXBTSettlementDialog&) = delete;
@@ -69,7 +69,7 @@ private:
    void onSettlementFailed();
 
 private:
-   Ui::DealerXBTSettlementDialog*   ui_;
+   std::unique_ptr<Ui::DealerXBTSettlementDialog> ui_;
    std::shared_ptr<DealerXBTSettlementContainer>   settlContainer_;
    bool acceptable_ = false;
 };

@@ -34,7 +34,7 @@ private:
    void onError();
 
 private:
-   Ui::AddressDetailDialog *  ui_;
+   std::unique_ptr <Ui::AddressDetailDialog> ui_;
    const bs::Address          address_;
    std::shared_ptr<WalletsManager> walletsManager_;
    std::shared_ptr<bs::Wallet> wallet_;

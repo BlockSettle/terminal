@@ -69,6 +69,9 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
    ui_->stackedWidgetRFQ->setCurrentIndex(RequestingQuoteId);
 }
 
+RFQDialog::~RFQDialog()
+{}
+
 void RFQDialog::onOrderFilled(const std::string &quoteId)
 {
    if (rfq_.assetType == bs::network::Asset::SpotFX) {

@@ -24,7 +24,7 @@ Q_OBJECT
 
 public:
    MarketDataWidget(QWidget* parent = nullptr );
-   virtual ~MarketDataWidget();
+   ~MarketDataWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
       , const std::shared_ptr<MarketDataProvider>& mdProvider);
@@ -47,7 +47,7 @@ private slots:
    void onEnterKeyPressed(const QModelIndex &index);
 
 private:
-   Ui::MarketDataWidget    *              ui;
+   std::unique_ptr<Ui::MarketDataWidget> ui;
    MarketDataModel         *              marketDataModel_;
    MDSortFilterProxyModel  *              mdSortFilterModel_;
    std::shared_ptr<ApplicationSettings>   appSettings_;

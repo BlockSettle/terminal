@@ -24,6 +24,9 @@ EnterWalletPassword::EnterWalletPassword(const QString& walletName, const std::s
    updateState();
 }
 
+EnterWalletPassword::~EnterWalletPassword()
+{}
+
 void EnterWalletPassword::updateState()
 {
    ui_->pushButtonOk->setEnabled(ui_->widgetSubmitKeys->isValid());

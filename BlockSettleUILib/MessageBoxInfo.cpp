@@ -9,8 +9,8 @@ MessageBoxInfo::MessageBoxInfo(const QString& title, const QString& text, QWidge
 MessageBoxInfo::MessageBoxInfo(const QString& title, const QString& text
   , const QString& details, QWidget* parent)
    : CommonMessageBoxDialog(parent)
+   , ui_(new Ui::MessageBoxInfo)
 {
-   ui_ = new Ui::MessageBoxInfo();
    ui_->setupUi(this);
 
    setWindowTitle(title);
@@ -27,6 +27,9 @@ MessageBoxInfo::MessageBoxInfo(const QString& title, const QString& text
 
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &MessageBoxInfo::accept);
 }
+
+MessageBoxInfo::~MessageBoxInfo()
+{}
 
 void MessageBoxInfo::OnDetailsPressed()
 {

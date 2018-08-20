@@ -30,6 +30,9 @@ CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_p
    initUI();
 }
 
+CreateTransactionDialogSimple::~CreateTransactionDialogSimple()
+{}
+
 void CreateTransactionDialogSimple::initUI()
 {
    CreateTransactionDialog::init();

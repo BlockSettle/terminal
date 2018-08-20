@@ -41,7 +41,7 @@ Q_OBJECT
 
 public:
    RFQReplyWidget(QWidget* parent = nullptr);
-   ~RFQReplyWidget() = default;
+   ~RFQReplyWidget() override;
 
    void init(std::shared_ptr<spdlog::logger> logger
       , const std::shared_ptr<CelerClient>& celerClient
@@ -82,7 +82,7 @@ private:
    };
 
 private:
-   Ui::RFQReplyWidget* ui_;
+   std::unique_ptr<Ui::RFQReplyWidget> ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<CelerClient>           celerClient_;
    std::shared_ptr<QuoteProvider>         quoteProvider_;

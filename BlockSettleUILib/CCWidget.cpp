@@ -13,6 +13,9 @@ CCWidget::CCWidget(QWidget* parent)
    ui->setupUi(this);
 }
 
+CCWidget::~CCWidget()
+{}
+
 void CCWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
 {
    assetManager_ = model->assetManager();

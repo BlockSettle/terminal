@@ -9,8 +9,8 @@ MessageBoxWarning::MessageBoxWarning(const QString& text, const QString& descrip
 MessageBoxWarning::MessageBoxWarning(const QString& text, const QString& description
   , const QString& details, QWidget* parent)
    : CommonMessageBoxDialog(parent)
+   , ui_(new Ui::MessageBoxWarning)
 {
-   ui_ = new Ui::MessageBoxWarning();
    ui_->setupUi(this);
    ui_->labelDetails->setTextFormat(Qt::RichText);
    ui_->labelDetails->setOpenExternalLinks(true);
@@ -28,6 +28,9 @@ MessageBoxWarning::MessageBoxWarning(const QString& text, const QString& descrip
 
    connect(ui_->pushButtonConfirm, &QPushButton::clicked, this, &MessageBoxWarning::accept);
 }
+
+MessageBoxWarning::~MessageBoxWarning()
+{}
 
 void MessageBoxWarning::setButtonText(const QString &text)
 {
@@ -61,5 +64,3 @@ void MessageBoxWarning::ShowDetails()
    ui_->verticalWidgetDetails->show();
    UpdateSize();
 }
-
-

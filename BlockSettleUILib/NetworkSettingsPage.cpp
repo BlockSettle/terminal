@@ -68,6 +68,9 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    connect(ui_->comboBoxEnv, SIGNAL(currentIndexChanged(int)), this, SLOT(onEnvSelected(int)));
 }
 
+NetworkSettingsPage::~NetworkSettingsPage()
+{}
+
 void NetworkSettingsPage::setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings)
 {
    appSettings_ = appSettings;

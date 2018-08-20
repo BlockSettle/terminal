@@ -41,6 +41,9 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
    initUI();
 }
 
+CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced()
+{}
+
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
         const std::shared_ptr<WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container

@@ -15,6 +15,9 @@ DealingSettingsPage::DealingSettingsPage(QWidget* parent)
    connect(ui_->pushButtonResetCnt, &QPushButton::clicked, this, &DealingSettingsPage::onResetCountes);
 }
 
+DealingSettingsPage::~DealingSettingsPage()
+{}
+
 void DealingSettingsPage::setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings)
 {
    appSettings_ = appSettings;

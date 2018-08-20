@@ -80,6 +80,9 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
 
 }
 
+OTPFileInfoDialog::~OTPFileInfoDialog()
+{}
+
 bool OTPFileInfoDialog::UpdateOTPCounter()
 {
    //get password

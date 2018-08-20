@@ -95,7 +95,7 @@ private:
    QAction *action_logout_;
 
 private:
-   Ui::BSTerminalMainWindow* ui;
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
 
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;

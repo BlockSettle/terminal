@@ -31,7 +31,7 @@ public:
       , const std::shared_ptr<ApplicationSettings> &
       , const std::string &walletName = {}, const std::string &walletDesc = {}
       , bool createPrimary = false, QWidget *parent = nullptr);
-   ~ImportWalletDialog() noexcept override = default;
+   ~ImportWalletDialog() override;
 
    QString getNewWalletName() const { return walletName_; }
    std::string getWalletId() const { return walletId_; }
@@ -52,7 +52,7 @@ private:
    bool couldImport() const;
 
 private:
-   Ui::ImportWalletDialog *   ui_;
+   std::unique_ptr<Ui::ImportWalletDialog> ui_;
    std::shared_ptr<WalletsManager>  walletsMgr_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<WalletImporter>  walletImporter_;

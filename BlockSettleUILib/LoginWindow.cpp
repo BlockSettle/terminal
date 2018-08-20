@@ -45,6 +45,9 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
    connect(&frejaAuth_, &FrejaAuth::statusUpdated, this, &LoginWindow::onFrejaStatusUpdated);
 }
 
+LoginWindow::~LoginWindow()
+{}
+
 void LoginWindow::onTextChanged()
 {
    ui_->pushButtonLogin->setEnabled(!(ui_->lineEditPassword->text().isEmpty() || ui_->lineEditUsername->text().isEmpty()));

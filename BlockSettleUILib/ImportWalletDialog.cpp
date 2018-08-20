@@ -71,6 +71,9 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    updateAcceptButton();
 }
 
+ImportWalletDialog::~ImportWalletDialog()
+{}
+
 bool ImportWalletDialog::couldImport() const
 {
    return (!ui_->lineEditWalletName->text().isEmpty()

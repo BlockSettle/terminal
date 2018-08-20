@@ -111,7 +111,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    setupIcon();
    UiUtils::setupIconFont(this);
-   NotificationCenter::createInstance(applicationSettings_, ui, sysTrayIcon_, this);
+   NotificationCenter::createInstance(applicationSettings_, ui.get(), sysTrayIcon_, this);
 
    InitConnections();
 

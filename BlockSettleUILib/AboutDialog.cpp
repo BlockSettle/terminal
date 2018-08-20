@@ -23,6 +23,9 @@ AboutDialog::AboutDialog(QString changeLogBaseUrl, QWidget* parent)
    connect(ui_->pushButtonChangeLog, &QPushButton::clicked, this, &AboutDialog::viewChangleLog);
 }
 
+AboutDialog::~AboutDialog()
+{}
+
 void AboutDialog::reset()
 {
    ui_->pushButtonChangeLog->hide();

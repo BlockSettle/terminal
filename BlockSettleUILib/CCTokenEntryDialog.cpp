@@ -62,6 +62,9 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    updateOkState();
 }
 
+CCTokenEntryDialog::~CCTokenEntryDialog()
+{}
+
 void CCTokenEntryDialog::tokenChanged()
 {
    ui_->labelTokenHint->clear();

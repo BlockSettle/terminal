@@ -17,14 +17,14 @@ Q_OBJECT
 
 public:
    CoinControlDialog(const std::shared_ptr<SelectedTransactionInputs>& inputs, QWidget* parent = nullptr);
-   ~CoinControlDialog() override = default;
+   ~CoinControlDialog() override;
 
 private slots:
    void onAccepted();
    void onSelectionChanged(size_t nbSelected);
 
 private:
-   Ui::CoinControlDialog*  ui_;
+   std::unique_ptr<Ui::CoinControlDialog> ui_;
    std::shared_ptr<SelectedTransactionInputs> selectedInputs_;
 };
 
