@@ -8,6 +8,7 @@
 #include "OTPFile.h"
 #include "OTPManager.h"
 #include "UiUtils.h"
+#include "make_unique.h"
 
 #include <spdlog/spdlog.h>
 
@@ -25,7 +26,7 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    ui_->pushButtonOk->setEnabled(false);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &OTPImportDialog::accept);
 
-   validator_.reset(new EasyEncValidator(easyCodec_));
+   validator_ = make_unique<EasyEncValidator>(easyCodec_);
    ui_->lineEditOtp1->setValidator(validator_.get());
    connect(ui_->lineEditOtp1, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp1, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);

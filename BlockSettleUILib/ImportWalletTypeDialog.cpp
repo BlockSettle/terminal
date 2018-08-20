@@ -9,6 +9,7 @@
 #include "MessageBoxCritical.h"
 #include "MetaData.h"
 #include "UiUtils.h"
+#include "make_unique.h"
 
 
 ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
@@ -31,7 +32,7 @@ ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
 
    connect(ui_->lineSeed1, &QLineEdit::textChanged, this, &ImportWalletTypeDialog::updateImportButton);
    connect(ui_->lineSeed2, &QLineEdit::textChanged, this, &ImportWalletTypeDialog::updateImportButton);
-   validator_.reset(new EasyEncValidator(easyCodec_, nullptr, 9, true));
+   validator_ = make_unique<EasyEncValidator>(easyCodec_, nullptr, 9, true);
    ui_->lineSeed1->setValidator(validator_.get());
    ui_->lineSeed2->setValidator(validator_.get());
 
