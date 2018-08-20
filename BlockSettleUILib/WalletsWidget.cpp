@@ -162,8 +162,7 @@ WalletsWidget::WalletsWidget(QWidget* parent)
            this, &WalletsWidget::onEnterKeyInWalletsPressed);
 }
 
-WalletsWidget::~WalletsWidget()
-{}
+WalletsWidget::~WalletsWidget() = default;
 
 void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &applicationSettings, const std::shared_ptr<AssetManager> &assetMgr

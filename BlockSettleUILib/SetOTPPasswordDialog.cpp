@@ -16,8 +16,7 @@ SetOTPPasswordDialog::SetOTPPasswordDialog(QWidget* parent)
    passwordChanged();
 }
 
-SetOTPPasswordDialog::~SetOTPPasswordDialog()
-{}
+SetOTPPasswordDialog::~SetOTPPasswordDialog() = default;
 
 void SetOTPPasswordDialog::passwordChanged()
 {

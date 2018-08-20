@@ -87,8 +87,7 @@ CoinControlWidget::CoinControlWidget(QWidget* parent)
    ui_->treeViewUTXO->setUniformRowHeights(true);
 }
 
-CoinControlWidget::~CoinControlWidget()
-{}
+CoinControlWidget::~CoinControlWidget() = default;
 
 void CoinControlWidget::updateSelectedTotals()
 {

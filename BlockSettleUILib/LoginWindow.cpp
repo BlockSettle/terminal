@@ -45,8 +45,7 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
    connect(&frejaAuth_, &FrejaAuth::statusUpdated, this, &LoginWindow::onFrejaStatusUpdated);
 }
 
-LoginWindow::~LoginWindow()
-{}
+LoginWindow::~LoginWindow() = default;
 
 void LoginWindow::onTextChanged()
 {

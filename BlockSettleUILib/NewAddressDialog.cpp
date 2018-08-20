@@ -35,8 +35,7 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::Wallet>& wallet
    });
 }
 
-NewAddressDialog::~NewAddressDialog()
-{}
+NewAddressDialog::~NewAddressDialog() = default;
 
 void NewAddressDialog::copyToClipboard()
 {

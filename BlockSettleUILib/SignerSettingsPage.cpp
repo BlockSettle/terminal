@@ -22,8 +22,7 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    connect(ui_->spinBoxAsSpendLimit, SIGNAL(valueChanged(double)), this, SLOT(onAsSpendLimitChanged(double)));
 }
 
-SignerSettingsPage::~SignerSettingsPage()
-{}
+SignerSettingsPage::~SignerSettingsPage() = default;
 
 void SignerSettingsPage::runModeChanged(int index)
 {

@@ -41,8 +41,7 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager>
    }
 }
 
-EnterOTPPasswordDialog::~EnterOTPPasswordDialog()
-{}
+EnterOTPPasswordDialog::~EnterOTPPasswordDialog() = default;
 
 void EnterOTPPasswordDialog::passwordChanged()
 {

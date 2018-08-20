@@ -52,8 +52,7 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<AuthAddressManager> &
    connect(ui_->pushButtonDefault, &QPushButton::clicked, this, &AuthAddressDialog::setDefaultAddress);
 }
 
-AuthAddressDialog::~AuthAddressDialog()
-{}
+AuthAddressDialog::~AuthAddressDialog() = default;
 
 void AuthAddressDialog::showEvent(QShowEvent *evt)
 {

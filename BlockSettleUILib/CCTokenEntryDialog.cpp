@@ -62,8 +62,7 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    updateOkState();
 }
 
-CCTokenEntryDialog::~CCTokenEntryDialog()
-{}
+CCTokenEntryDialog::~CCTokenEntryDialog() = default;
 
 void CCTokenEntryDialog::tokenChanged()
 {

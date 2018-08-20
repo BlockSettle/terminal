@@ -128,8 +128,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
    resize(minimumSize());
 }
 
-TransactionDetailDialog::~TransactionDetailDialog()
-{}
+TransactionDetailDialog::~TransactionDetailDialog() = default;
 
 QSize TransactionDetailDialog::minimumSize() const
 {

@@ -80,8 +80,7 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
 
 }
 
-OTPFileInfoDialog::~OTPFileInfoDialog()
-{}
+OTPFileInfoDialog::~OTPFileInfoDialog() = default;
 
 bool OTPFileInfoDialog::UpdateOTPCounter()
 {

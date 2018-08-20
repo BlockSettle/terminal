@@ -13,8 +13,7 @@ CCWidget::CCWidget(QWidget* parent)
    ui->setupUi(this);
 }
 
-CCWidget::~CCWidget()
-{}
+CCWidget::~CCWidget() = default;
 
 void CCWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
 {

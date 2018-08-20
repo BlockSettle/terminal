@@ -28,8 +28,7 @@ MessageBoxSuccess::MessageBoxSuccess(const QString& title, const QString& text
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &MessageBoxSuccess::accept);
 }
 
-MessageBoxSuccess::~MessageBoxSuccess()
-{}
+MessageBoxSuccess::~MessageBoxSuccess() = default;
 
 void MessageBoxSuccess::OnDetailsPressed()
 {

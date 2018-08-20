@@ -115,8 +115,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    ui_->treeViewWallets->expandAll();
 }
 
-RootWalletPropertiesDialog::~RootWalletPropertiesDialog()
-{}
+RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {

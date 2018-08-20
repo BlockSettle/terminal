@@ -15,8 +15,7 @@ WalletCompleteDialog::WalletCompleteDialog(const QString& walletName
    connect(ui_->pushButtonFinish, &QPushButton::clicked, this, &WalletCompleteDialog::accept);
 }
 
-WalletCompleteDialog::~WalletCompleteDialog()
-{}
+WalletCompleteDialog::~WalletCompleteDialog() = default;
 
 int WalletCompleteDialog::exec()
 {

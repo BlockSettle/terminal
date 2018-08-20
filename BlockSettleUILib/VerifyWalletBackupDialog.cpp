@@ -28,9 +28,7 @@ VerifyWalletBackupDialog::VerifyWalletBackupDialog(const std::shared_ptr<bs::hd:
    connect(ui_->lineEditPrivKey2, &QLineEdit::editingFinished, this, &VerifyWalletBackupDialog::onPrivKeyChanged);
 }
 
-VerifyWalletBackupDialog::~VerifyWalletBackupDialog()
-{
-}
+VerifyWalletBackupDialog::~VerifyWalletBackupDialog() = default;
 
 void VerifyWalletBackupDialog::onPrivKeyChanged()
 {

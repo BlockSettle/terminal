@@ -20,8 +20,7 @@ BSTerminalSplashScreen::BSTerminalSplashScreen(const QPixmap& splash_image)
    SetTipText(tr("Loading"));
 }
 
-BSTerminalSplashScreen::~BSTerminalSplashScreen()
-{}
+BSTerminalSplashScreen::~BSTerminalSplashScreen() = default;
 
 void BSTerminalSplashScreen::SetTipText(const QString& tip)
 {

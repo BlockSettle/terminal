@@ -134,6 +134,8 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    ui_->labelQR->setPixmap(UiUtils::getQRCode(addressString, 128));
 }
 
+AddressDetailDialog::~AddressDetailDialog() = default;
+
 void AddressDetailDialog::onError()
 {
    ui_->labelError->show();

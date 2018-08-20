@@ -28,8 +28,7 @@ MessageBoxInfo::MessageBoxInfo(const QString& title, const QString& text
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &MessageBoxInfo::accept);
 }
 
-MessageBoxInfo::~MessageBoxInfo()
-{}
+MessageBoxInfo::~MessageBoxInfo() = default;
 
 void MessageBoxInfo::OnDetailsPressed()
 {

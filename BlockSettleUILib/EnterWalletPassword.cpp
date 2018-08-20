@@ -24,8 +24,7 @@ EnterWalletPassword::EnterWalletPassword(const QString& walletName, const std::s
    updateState();
 }
 
-EnterWalletPassword::~EnterWalletPassword()
-{}
+EnterWalletPassword::~EnterWalletPassword() = default;
 
 void EnterWalletPassword::updateState()
 {

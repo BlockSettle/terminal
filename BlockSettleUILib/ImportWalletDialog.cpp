@@ -71,8 +71,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    updateAcceptButton();
 }
 
-ImportWalletDialog::~ImportWalletDialog()
-{}
+ImportWalletDialog::~ImportWalletDialog() = default;
 
 bool ImportWalletDialog::couldImport() const
 {

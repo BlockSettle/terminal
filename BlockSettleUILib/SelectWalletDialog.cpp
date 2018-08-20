@@ -33,8 +33,7 @@ SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<WalletsManager> &wa
    onSelectionChanged();
 }
 
-SelectWalletDialog::~SelectWalletDialog()
-{}
+SelectWalletDialog::~SelectWalletDialog() = default;
 
 void SelectWalletDialog::onSelectionChanged()
 {

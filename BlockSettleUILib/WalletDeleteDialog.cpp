@@ -51,8 +51,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &wallet
    }
 }
 
-WalletDeleteDialog::~WalletDeleteDialog()
-{}
+WalletDeleteDialog::~WalletDeleteDialog() = default;
 
 void WalletDeleteDialog::init()
 {

@@ -60,8 +60,7 @@ QuoteRequestsWidget::QuoteRequestsWidget(QWidget* parent)
    connect(ui_->treeViewQuoteRequests, &QTreeView::doubleClicked, this, &QuoteRequestsWidget::onQuoteReqNotifSelected);
 }
 
-QuoteRequestsWidget::~QuoteRequestsWidget()
-{}
+QuoteRequestsWidget::~QuoteRequestsWidget() = default;
 
 void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector

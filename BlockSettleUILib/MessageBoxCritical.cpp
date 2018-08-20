@@ -27,8 +27,7 @@ MessageBoxCritical::MessageBoxCritical(const QString& text, const QString& descr
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &MessageBoxCritical::accept);
 }
 
-MessageBoxCritical::~MessageBoxCritical()
-{}
+MessageBoxCritical::~MessageBoxCritical() = default;
 
 void MessageBoxCritical::OnDetailsPressed()
 {

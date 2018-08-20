@@ -29,8 +29,7 @@ MessageBoxWarning::MessageBoxWarning(const QString& text, const QString& descrip
    connect(ui_->pushButtonConfirm, &QPushButton::clicked, this, &MessageBoxWarning::accept);
 }
 
-MessageBoxWarning::~MessageBoxWarning()
-{}
+MessageBoxWarning::~MessageBoxWarning() = default;
 
 void MessageBoxWarning::setButtonText(const QString &text)
 {

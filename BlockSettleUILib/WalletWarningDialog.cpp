@@ -11,5 +11,4 @@ WalletWarningDialog::WalletWarningDialog(QWidget* parent)
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &WalletWarningDialog::accept);
 }
 
-WalletWarningDialog::~WalletWarningDialog()
-{}
+WalletWarningDialog::~WalletWarningDialog() = default;

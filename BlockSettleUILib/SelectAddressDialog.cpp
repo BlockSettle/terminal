@@ -30,8 +30,7 @@ SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<WalletsManager>& 
    onSelectionChanged();
 }
 
-SelectAddressDialog::~SelectAddressDialog()
-{}
+SelectAddressDialog::~SelectAddressDialog() = default;
 
 bs::Address SelectAddressDialog::getAddress(const QModelIndex& index) const
 {

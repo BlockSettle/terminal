@@ -67,8 +67,7 @@ PortfolioWidget::PortfolioWidget(QWidget* parent)
    connect(actionCPFP_, &QAction::triggered, this, &PortfolioWidget::onCreateCPFPDialog);
 }
 
-PortfolioWidget::~PortfolioWidget()
-{}
+PortfolioWidget::~PortfolioWidget() = default;
 
 void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
 {

@@ -31,8 +31,7 @@ MessageBoxQuestion::MessageBoxQuestion(const QString& title, const QString& text
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &MessageBoxQuestion::reject);
 }
 
-MessageBoxQuestion::~MessageBoxQuestion()
-{}
+MessageBoxQuestion::~MessageBoxQuestion() = default;
 
 MessageBoxQuestion &MessageBoxQuestion::setExclamationIcon()
 {

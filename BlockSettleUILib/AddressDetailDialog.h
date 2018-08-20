@@ -25,7 +25,7 @@ Q_OBJECT
 public:
    AddressDetailDialog(const bs::Address &address, const std::shared_ptr<bs::Wallet> &wallet
       , const std::shared_ptr<WalletsManager>& walletsManager, QWidget* parent = nullptr );
-   ~AddressDetailDialog() override = default;
+   ~AddressDetailDialog() override;
 
 private slots:
    void onCopyClicked() const;

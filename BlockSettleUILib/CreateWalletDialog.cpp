@@ -55,8 +55,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    UpdateAcceptButtonState();
 }
 
-CreateWalletDialog::~CreateWalletDialog()
-{}
+CreateWalletDialog::~CreateWalletDialog() = default;
 
 void CreateWalletDialog::showEvent(QShowEvent *event)
 {

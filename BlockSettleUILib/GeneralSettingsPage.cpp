@@ -36,8 +36,7 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
       this, &GeneralSettingsPage::onLogLevelChanged);
 }
 
-GeneralSettingsPage::~GeneralSettingsPage()
-{}
+GeneralSettingsPage::~GeneralSettingsPage() = default;
 
 void GeneralSettingsPage::displaySettings(const std::shared_ptr<ApplicationSettings>& appSettings
    , const std::shared_ptr<WalletsManager>& walletsMgr, bool displayDefault)

@@ -13,5 +13,4 @@ CelerAccountInfoDialog::CelerAccountInfoDialog(std::shared_ptr<CelerClient> cele
    connect(ui_->buttonBox, &QDialogButtonBox::rejected, this, &CelerAccountInfoDialog::reject);
 }
 
-CelerAccountInfoDialog::~CelerAccountInfoDialog()
-{}
+CelerAccountInfoDialog::~CelerAccountInfoDialog() = default;

@@ -198,8 +198,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
    ui->labelResultCount->hide();
 }
 
-TransactionsWidget::~TransactionsWidget()
-{}
+TransactionsWidget::~TransactionsWidget() = default;
 
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
 {
