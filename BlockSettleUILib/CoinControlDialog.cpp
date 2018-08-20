@@ -21,7 +21,7 @@ void CoinControlDialog::onAccepted()
    accept();
 }
 
-void CoinControlDialog::onSelectionChanged(size_t nbSelected)
+void CoinControlDialog::onSelectionChanged(size_t nbSelected, bool autoSelection)
 {
-   ui_->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(nbSelected > 0);
+   ui_->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(nbSelected > 0 || autoSelection);
 }
