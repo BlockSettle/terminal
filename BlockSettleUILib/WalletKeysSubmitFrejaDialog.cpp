@@ -37,7 +37,7 @@ WalletKeysSubmitFrejaDialog::WalletKeysSubmitFrejaDialog(const QString& walletNa
   QString address = !encKeys.empty() ? QString::fromStdString(encKeys[0].toBinStr()) : QString();
 
   ui_->labelAction->setText(prompt);
-  ui_->labelWalletId->setText(walletName);
+  ui_->labelWalletId->setText(tr("Wallet ID: %1").arg(QString::fromStdString(walletId)));
   ui_->labelEmail->setText(address);
 
   frejaSign_.start(address, tr("Activate Freja eID signing"), walletId);
