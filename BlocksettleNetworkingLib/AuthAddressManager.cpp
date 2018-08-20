@@ -943,22 +943,16 @@ void AuthAddressManager::onWalletCreated(unsigned int id, BinaryData pubKey, Bin
    const auto &leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, priWallet->networkType());
    const auto &group = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
    auto leaf = group->getLeaf(0u);
-   // small huck for load testing tool that do not use WO wallets and signer share wallets with app
-   if (leaf == nullptr) {
-      leaf = group->createLeaf(0u, leafNode);
-   } else {
-      logger_->debug("[AuthAddressManager::onWalletCreated] auth leaf already exists");
-   }
 
    if (leaf) {
       if (createWalletReqId_.second) {
          emit AuthWalletCreated(QString::fromStdString(leaf->GetWalletId()));
       }
       emit walletsManager_->walletChanged();
-   }
-   else {
+   } else {
       emit Error(tr("Failed to create auth subwallet"));
    }
+
    createWalletReqId_ = { 0, true };
 }
 
