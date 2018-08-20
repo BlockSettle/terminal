@@ -30,22 +30,14 @@ void WebSocketClient::pushPayload(
    unique_ptr<Socket_WritePayload> write_payload,
    shared_ptr<Socket_ReadPayload> read_payload)
 {
-   unsigned id;
-   do
-   {
-      id = rand();
-   } while (id == UINT32_MAX || id == WEBSOCKET_CALLBACK_ID);
-
+   unsigned id = requestID_.fetch_add(1, memory_order_relaxed);
    if (read_payload != nullptr)
    {
       //create response object
       auto response = make_shared<WriteAndReadPacket>(id, read_payload);
 
       //set response id
-      readPackets_.insert(make_pair(response->id_, move(response)));   
-   }
-   else
-   {
+      readPackets_.insert(make_pair(id, move(response)));   
    }
 
    vector<uint8_t> data;
@@ -112,14 +104,18 @@ void WebSocketClient::init()
    if (contextptr == NULL) 
       throw LWS_Error("failed to create LWS context");
 
-   contextPtr_.store(contextptr, memory_order_relaxed);
+   contextPtr_.store(contextptr, memory_order_release);
 
    //connect to server
    struct lws_client_connect_info i;
    memset(&i, 0, sizeof(i));
    
    //i.address = ip.c_str();
-   i.port = WEBSOCKET_PORT;
+   int port = stoi(port_);
+   if (port == 0)
+      port = WEBSOCKET_PORT;
+   i.port = port;
+
    const char *prot, *p;
    char path[300];
    lws_parse_uri((char*)addr_.c_str(), &prot, &i.address, &i.port, &p);
@@ -138,7 +134,7 @@ void WebSocketClient::init()
    struct lws* wsiptr;
    i.pwsi = &wsiptr;
    wsiptr = lws_client_connect_via_info(&i); 
-   wsiPtr_.store(wsiptr, memory_order_relaxed);
+   wsiPtr_.store(wsiptr, memory_order_release);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -157,9 +153,9 @@ bool WebSocketClient::connectToRemote()
 
    auto serviceLBD = [this](void)->void
    {
-      auto wsiPtr = (struct lws*)this->wsiPtr_.load(memory_order_relaxed);
+      auto wsiPtr = (struct lws*)this->wsiPtr_.load(memory_order_acquire);
       auto contextPtr = 
-         (struct lws_context*)this->contextPtr_.load(memory_order_relaxed);
+         (struct lws_context*)this->contextPtr_.load(memory_order_acquire);
       service(this->run_, wsiPtr, contextPtr);
    };
 
