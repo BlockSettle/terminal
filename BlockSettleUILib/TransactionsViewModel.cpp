@@ -495,7 +495,6 @@ void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &it
 
 void TransactionsViewModel::onItemsConfirmed(TransactionItems items)
 {
-   return;
    TransactionItems doubleSpendItems;
    {
       QMutexLocker locker(&updateMutex_);
