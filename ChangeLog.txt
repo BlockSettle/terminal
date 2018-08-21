@@ -1,3 +1,9 @@
+Release: 0.10.0
+Bug Fixes:
+   -
+Improvements:
+   - Moved Armory connection to websockets and async
+
 Release: 0.9.1
 Bug Fixes:
    -
