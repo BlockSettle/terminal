@@ -53,7 +53,6 @@ protected:
 
 private:
    std::unique_ptr<Ui::ImportWalletTypeDialog> ui_;
-
    QString                       digitalBackupFile_;
    WalletBackupFile::WalletData  walletData_;
    bool        woFileExists_ = false;

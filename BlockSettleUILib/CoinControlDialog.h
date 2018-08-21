@@ -21,7 +21,7 @@ public:
 
 private slots:
    void onAccepted();
-   void onSelectionChanged(size_t nbSelected);
+   void onSelectionChanged(size_t nbSelected, bool autoSelection);
 
 private:
    std::unique_ptr<Ui::CoinControlDialog> ui_;

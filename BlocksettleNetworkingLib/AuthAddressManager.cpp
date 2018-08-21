@@ -942,16 +942,17 @@ void AuthAddressManager::onWalletCreated(unsigned int id, BinaryData pubKey, Bin
    const auto &priWallet = walletsManager_->GetPrimaryWallet();
    const auto &leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, priWallet->networkType());
    const auto &group = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   const auto leaf = group->createLeaf(0u, leafNode);
+   auto leaf = group->getLeaf(0u);
+
    if (leaf) {
       if (createWalletReqId_.second) {
          emit AuthWalletCreated(QString::fromStdString(leaf->GetWalletId()));
       }
       emit walletsManager_->walletChanged();
-   }
-   else {
+   } else {
       emit Error(tr("Failed to create auth subwallet"));
    }
+
    createWalletReqId_ = { 0, true };
 }
 

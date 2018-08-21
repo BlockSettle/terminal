@@ -455,6 +455,9 @@
            <property name="text">
             <string>???</string>
            </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
            <property name="whiteLabel" stdset="0">
             <bool>true</bool>
            </property>

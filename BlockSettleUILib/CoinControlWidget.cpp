@@ -94,7 +94,7 @@ void CoinControlWidget::updateSelectedTotals()
    ui_->labelTotalAmount->setText(coinControlModel_->GetSelectedBalance());
    ui_->labelTotalTransactions->setText(QString::number(coinControlModel_->GetSelectedTransactionsCount()));
    ui_->checkBoxUseAllSelected->setChecked(false);
-   emit coinSelectionChanged(coinControlModel_->GetSelectedTransactionsCount());
+   emit coinSelectionChanged(coinControlModel_->GetSelectedTransactionsCount(), false);
 }
 
 void CoinControlWidget::onAutoSelClicked(int state)
@@ -103,7 +103,7 @@ void CoinControlWidget::onAutoSelClicked(int state)
       ui_->labelTotalAmount->setText(coinControlModel_->GetTotalBalance());
       ui_->labelTotalTransactions->clear();
       coinControlModel_->clearSelection();
-      emit coinSelectionChanged(0);
+      emit coinSelectionChanged(0, true);
    }
    else {
       updateSelectedTotals();
@@ -149,6 +149,8 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
    ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnBalance);
    ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnUTXOCount);
    ui_->treeViewUTXO->setCoinsModel(coinControlModel_);
+
+   onAutoSelClicked(ui_->checkBoxUseAllSelected->isChecked());
 }
 
 void CoinControlWidget::applyChanges(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)
