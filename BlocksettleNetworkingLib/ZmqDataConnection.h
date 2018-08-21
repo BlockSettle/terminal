@@ -38,6 +38,8 @@ public:
    bool closeConnection() override;
    bool isActive() const;
 
+   bool SetZMQTransport(ZMQTransport transport);
+
 protected:
    bool sendRawData(const std::string& rawData);
 
@@ -89,6 +91,8 @@ private:
    const bool                       useMonitor_;
 
    std::vector<std::string>         sendQueue_;
+
+   ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
 };
 
 #endif // __ZEROMQ_DATA_CONNECTION_H__
