@@ -4,6 +4,13 @@ Bug Fixes:
 Improvements:
    - Moved Armory connection to websockets and async
 
+0.9.2
+Bug fixes:
+  -
+Improvements:
+ - UTXO count in coin control
+ - minor UI improvements
+
 Release: 0.9.1
 Bug Fixes:
    -
