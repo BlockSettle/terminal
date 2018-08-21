@@ -18,6 +18,7 @@
 #include "BSTerminalMainWindow.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
+#include "WalletsManager.h"
 
 
 #if defined (Q_OS_WIN)
@@ -32,6 +33,8 @@ Q_IMPORT_PLUGIN(QICOPlugin)
 
 Q_DECLARE_METATYPE(BinaryData)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
+Q_DECLARE_METATYPE(bs::TXEntry)
+Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
@@ -111,10 +114,12 @@ static int GuiApp(int argc, char** argv)
       return box.exec();
    }
 
-   qRegisterMetaType<QVector<int> >();
+   qRegisterMetaType<QVector<int>>();
    qRegisterMetaType<std::string>();
    qRegisterMetaType<BinaryData>();
    qRegisterMetaType<std::vector<BinaryData>>();
+   qRegisterMetaType<bs::TXEntry>();
+   qRegisterMetaType<std::vector<bs::TXEntry>>();
 
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
