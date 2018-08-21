@@ -5,6 +5,7 @@
 #include <QWidget>
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -26,6 +27,7 @@ namespace bs {
    class Wallet;
 }
 class ApplicationSettings;
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class QuoteProvider;
@@ -60,6 +62,7 @@ namespace bs {
             , const std::shared_ptr<QuoteProvider>& quoteProvider
             , const std::shared_ptr<ApplicationSettings> &
             , const std::shared_ptr<SignContainer> &
+            , const std::shared_ptr<ArmoryConnection> &
             , std::shared_ptr<MarketDataProvider> mdProvider);
          void setWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
 
@@ -129,6 +132,7 @@ namespace bs {
          std::shared_ptr<QuoteProvider>         quoteProvider_;
          std::shared_ptr<ApplicationSettings>   appSettings_;
          std::shared_ptr<SignContainer>         signingContainer_;
+         std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<MarketDataProvider>    mdProvider_;
 
          std::shared_ptr<bs::Wallet>   curWallet_;
@@ -191,8 +195,9 @@ namespace bs {
          bool checkBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
-         network::QuoteNotification submitReply(const std::shared_ptr<TransactionData> transData
-            , const network::QuoteReqNotification &qrn, double price);
+         bool submitReply(const std::shared_ptr<TransactionData> transData
+            , const network::QuoteReqNotification &qrn, double price
+            , std::function<void(bs::network::QuoteNotification)>);
       };
 
    }  //namespace ui

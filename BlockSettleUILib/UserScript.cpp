@@ -6,6 +6,7 @@
 #include "AssetManager.h"
 #include "CurrencyPair.h"
 #include "MarketDataProvider.h"
+#include "UiUtils.h"
 #include "WalletsManager.h"
 
 #include <algorithm>
@@ -165,8 +166,7 @@ void DataStorage::setSold(const QString &currency, double v, const QString &id)
 Constants::Constants(QObject *parent)
    : QObject(parent)
    , walletsManager_(nullptr)
-{
-}
+{}
 
 int Constants::payInTxSize() const
 {
@@ -181,20 +181,20 @@ int Constants::payOutTxSize() const
 float Constants::feePerByte() const
 {
    if (walletsManager_) {
-      return walletsManager_->estimatedFeePerByte(2);
-   } else {
-      return 0.0;
+      walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; });
    }
+   return feePerByte_;  //NB: sometimes returns previous value if previous call needs to wait for result from Armory
 }
 
 QString Constants::xbtProductName() const
 {
-   return QString::fromStdString(bs::network::XbtCurrency);
+   return UiUtils::XbtCurrency;
 }
 
 void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
 {
    walletsManager_ = walletsManager;
+   walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; });
 }
 
 

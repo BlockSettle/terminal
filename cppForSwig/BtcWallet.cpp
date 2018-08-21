@@ -21,36 +21,14 @@
 // BtcWallet Methods
 //
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-void BtcWallet::addScrAddress(const BinaryData& scrAddr)
-{
-   auto addrMap = scrAddrMap_.get();
-   if (addrMap->find(scrAddr) != addrMap->end())
-      return;
-
-   vector<BinaryData> saVec;
-   saVec.push_back(scrAddr);
-
-   {
-      auto scrAddrMap = scrAddrMap_.get();
-      for (auto& scraddr : *scrAddrMap)
-         saVec.push_back(scraddr.first);
-   }
-
-   string IDstr(walletID_.getCharPtr(), walletID_.getSize());
-
-   bdvPtr_->registerAddresses(saVec, IDstr, false);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-void BtcWallet::removeAddressBulk(vector<BinaryData> const & scrAddrBulk)
+void BtcWallet::removeAddressBulk(vector<BinaryDataRef> const & scrAddrBulk)
 {
    scrAddrMap_.erase(scrAddrBulk);
    needsRefresh(true);
 }
 
 /////////////////////////////////////////////////////////////////////////////
-bool BtcWallet::hasScrAddress(HashString const & scrAddr) const
+bool BtcWallet::hasScrAddress(const BinaryDataRef& scrAddr) const
 {
    auto addrMap = scrAddrMap_.get();
    return (addrMap->find(scrAddr) != addrMap->end());
@@ -591,7 +569,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
    struct preHistory
    {
       uint32_t txioCount_;
-      vector<const BinaryData*> scrAddrs_;
+      vector<BinaryDataRef> scrAddrs_;
 
       preHistory(void) : txioCount_(0) {}
    };
@@ -616,7 +594,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
          auto& preHistAtHeight = preHistSummary[histPair.first];
 
          preHistAtHeight.txioCount_ += histPair.second;
-         preHistAtHeight.scrAddrs_.push_back(&scrAddrPair.first);
+         preHistAtHeight.scrAddrs_.push_back(scrAddrPair.first);
       }
    }
 
@@ -627,7 +605,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
       {
          //get hgtX for height
          uint8_t dupID = bdvPtr_->getDB()->getValidDupIDForHeight(preHistAtHeight.first);
-         const BinaryData& hgtX = DBUtils::heightAndDupToHgtx(preHistAtHeight.first, dupID);
+         auto&& hgtX = DBUtils::heightAndDupToHgtx(preHistAtHeight.first, dupID);
 
          set<BinaryData> txKeys;
 
@@ -636,7 +614,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
          for (auto scrAddr : preHistAtHeight.second.scrAddrs_)
          {
             StoredSubHistory subssh;
-            if (bdvPtr_->getDB()->getStoredSubHistoryAtHgtX(subssh, *scrAddr, hgtX))
+            if (bdvPtr_->getDB()->getStoredSubHistoryAtHgtX(subssh, scrAddr, hgtX))
             {
                for (auto& txioPair : subssh.txioMap_)
                {
@@ -733,12 +711,13 @@ const ScrAddrObj* BtcWallet::getScrAddrObjByKey(const BinaryData& key) const
    auto addrMap = scrAddrMap_.get();
 
    auto saIter = addrMap->find(key);
-   if (saIter != addrMap->end())
+   if (saIter == addrMap->end())
    {
-      return saIter->second.get();
+      LOGWARN << "unknown address in btcwallet";
+      throw std::runtime_error("unknown address in btcwallet");
    }
-  
-   throw std::runtime_error("invalid address");
+      
+   return saIter->second.get();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

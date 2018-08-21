@@ -10,15 +10,18 @@ class MPIRSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '3.0.0'
-        self._package_name = 'mpir'
+        self._package_name = 'mpir-' + self._version
 
-        self._package_url = 'http://mpir.org/' + self._package_name + '-%s.zip' % self._version
+        self._package_url = 'http://mpir.org/' + self._package_name + '.zip'
 
     def get_package_name(self):
         return self._package_name
 
-    def get_unpacked_sources_dir(self):
-        return os.path.join(self._project_settings.get_sources_dir(), self._package_dir_name + '-' + self._version)
+    def get_revision_string(self):
+        return self._version
+
+    def get_install_dir(self):
+        return os.path.join(self._project_settings.get_common_build_dir(), 'mpir')
 
     def get_url(self):
         return self._package_url

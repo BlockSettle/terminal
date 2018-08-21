@@ -144,13 +144,13 @@ struct BCTX
          txPtr->usesWitness_ = true;
 
       //convert offsets to offset + size pairs
-      for (int y = 0; y < offsetIns.size() - 1; y++)
+      for (unsigned int y = 0; y < offsetIns.size() - 1; y++)
          txPtr->txins_.push_back(
          make_pair(
          offsetIns[y],
          offsetIns[y + 1] - offsetIns[y]));
 
-      for (int y = 0; y < offsetOuts.size() - 1; y++)
+      for (unsigned int y = 0; y < offsetOuts.size() - 1; y++)
          txPtr->txouts_.push_back(
          make_pair(
          offsetOuts[y],
@@ -158,7 +158,7 @@ struct BCTX
 
       if (txPtr->usesWitness_)
       {
-         for (int y = 0; y < offsetsWitness.size() - 1; y++)
+         for (unsigned int y = 0; y < offsetsWitness.size() - 1; y++)
             txPtr->witnesses_.push_back(
             make_pair(
             offsetsWitness[y],

@@ -14,9 +14,11 @@
 #include <string>
 #include <sstream>
 #include "./fcgi/include/fastcgi.h"
+#include "BinaryData.h"
 
 using namespace std;
 
+///////////////////////////////////////////////////////////////////////////////
 struct FcgiData
 {
    vector<uint8_t> data_;
@@ -32,6 +34,7 @@ struct FcgiData
    }
 };
 
+///////////////////////////////////////////////////////////////////////////////
 class FcgiPacket
 {
    friend class FcgiMessage;
@@ -46,6 +49,7 @@ public:
    void addData(const char*, size_t);
 };
 
+///////////////////////////////////////////////////////////////////////////////
 class FcgiMessage
 {
 private:
@@ -55,10 +59,9 @@ private:
    int requestID_ = -1;
 
 public:
-   static FcgiMessage makePacket(const char* msg);
+   static FcgiMessage makePacket(const BinaryDataRef&);
 
-   uint8_t* serialize(void);
-   size_t getSerializedDataLength(void) const { return serData_.size(); }
+   vector<uint8_t> serialize(void);
    
    void clear(void);
 
@@ -66,6 +69,27 @@ public:
    uint16_t beginRequest(void);
    void endRequest(void) {}
    int id(void) const { return requestID_; }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+class HttpMessage
+{
+private:
+   vector<string> headers_;
+   const string addr_;
+
+public:
+   HttpMessage(const string& addr, bool initHeaders = true) :
+      addr_(addr)
+   {
+      if(initHeaders)
+         setupHeaders();
+   }
+
+   void setupHeaders(void);
+   void addHeader(string);
+   int32_t makeHttpPayload(
+      char** payload_out, const char* payload_in, size_t len);
 };
 
 #endif

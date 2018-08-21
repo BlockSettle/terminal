@@ -179,19 +179,13 @@ public:
    ScrAddrObj() :
       db_(nullptr),
       bc_(nullptr),
-      scrAddr_(0), firstBlockNum_(0), firstTimestamp_(0),
-      lastBlockNum_(0), lastTimestamp_(0), hasMultisigEntries_(false),
       totalTxioCount_(0), utxos_(this)
    {
       relevantTxIO_.clear();
    }
 
    ScrAddrObj(LMDBBlockDatabase *db, Blockchain *bc,
-              BinaryData    addr, 
-              uint32_t      firstBlockNum  = UINT32_MAX,
-              uint32_t      firstTimestamp = UINT32_MAX,
-              uint32_t      lastBlockNum   = 0,
-              uint32_t      lastTimestamp  = 0);
+      BinaryDataRef addr);
 
    ScrAddrObj(const ScrAddrObj& rhs) : 
       utxos_(nullptr)
@@ -199,17 +193,8 @@ public:
       *this = rhs;
    }
    
-   BinaryData const &  getScrAddr(void) const    {return scrAddr_;       }
-   uint32_t       getFirstBlockNum(void) const   {return firstBlockNum_; }
-   uint32_t       getFirstTimestamp(void) const  {return firstTimestamp_;}
-   uint32_t       getLastBlockNum(void) const    {return lastBlockNum_;  }
-   uint32_t       getLastTimestamp(void) const   {return lastTimestamp_; }
-   void           setFirstBlockNum(uint32_t b)   { firstBlockNum_  = b; }
-   void           setFirstTimestamp(uint32_t t)  { firstTimestamp_ = t; }
-   void           setLastBlockNum(uint32_t b)    { lastBlockNum_   = b; }
-   void           setLastTimestamp(uint32_t t)   { lastTimestamp_  = t; }
-
-   void           setScrAddr(LMDBBlockDatabase *db, BinaryData bd) { db_ = db; scrAddr_.copyFrom(bd);}
+   const BinaryDataRef& getScrAddr(void) const { return scrAddr_; }
+//   void setScrAddr(LMDBBlockDatabase *db, BinaryData bd) { db_ = db; scrAddr_.copyFrom(bd);}
 
    // BlkNum is necessary for "unconfirmed" list, since it is dependent
    // on number of confirmations.  But for "spendable" TxOut list, it is
@@ -311,17 +296,10 @@ private:
    LMDBBlockDatabase *db_;
    Blockchain        *bc_;
    
-   BinaryData     scrAddr_; // this includes the prefix byte!
-   uint32_t       firstBlockNum_;
-   uint32_t       firstTimestamp_;
-   uint32_t       lastBlockNum_;
-   uint32_t       lastTimestamp_;
-
-   // If any multisig scripts that include this address, we'll track them
-   bool           hasMultisigEntries_=false;
+   BinaryDataRef scrAddr_; //this includes the prefix byte!
 
    // Each address will store a list of pointers to its transactions
-   map<BinaryData, TxIOPair>     relevantTxIO_;
+   map<BinaryData, TxIOPair> relevantTxIO_;
    
    mutable uint64_t totalTxioCount_=0;
    mutable uint32_t lastSeenBlock_=0;

@@ -279,10 +279,10 @@ public:
 class AssetEntry
 {
 protected:
+   AssetEntryType type_;
    const int index_;
    const BinaryData accountID_;
    BinaryData ID_;
-   AssetEntryType type_;
 
    bool needsCommit_ = true;
 
