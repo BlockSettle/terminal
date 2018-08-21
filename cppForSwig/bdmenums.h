@@ -18,9 +18,9 @@
 #define NODE_PORT_TESTNET 18333
 #define NODE_PORT_REGTEST 18444
 
-#define FCGI_PORT_MAINNET 9001
-#define FCGI_PORT_TESTNET 19001
-#define FCGI_PORT_REGTEST 19002
+#define LISTEN_PORT_MAINNET 9001
+#define LISTEN_PORT_TESTNET 19001
+#define LISTEN_PORT_REGTEST 19002
 
 #define RPC_PORT_MAINNET 8332
 #define RPC_PORT_TESTNET 18332
@@ -56,6 +56,12 @@ enum ARMORY_DB_TYPE
    ARMORY_DB_SUPER
 };
 
+enum SOCKET_SERVICE
+{
+   SERVICE_FCGI,
+   SERVICE_WEBSOCKET
+};
+
 enum BDM_INIT_MODE
 {
    INIT_RESUME,
@@ -66,9 +72,11 @@ enum BDM_INIT_MODE
 
 enum SocketType
 {
-   SocketBinary,
    SocketHttp,
-   SocketFcgi
+   SocketFcgi,
+   SocketWS,
+   SocketBitcoinP2P,
+   SocketSimple
 };
 
 enum NodeType
@@ -81,11 +89,11 @@ enum BDV_Action
 {
    BDV_Init,
    BDV_NewBlock,
-   BDV_Refresh,
    BDV_ZC,
+   BDV_Error,
    BDV_Progress,
    BDV_NodeStatus,
-   BDV_Error
+   BDV_Refresh
 };
 
 enum BDV_refresh
@@ -93,11 +101,14 @@ enum BDV_refresh
    BDV_dontRefresh,
    BDV_refreshSkipRescan,
    BDV_refreshAndRescan,
-   BDV_filterChanged
+   BDV_filterChanged,
+   BDV_registrationCompleted
 };
 
 enum BDV_ErrorType
 {
+   Error_BDM,
+   Error_BDV,
    Error_ZC
 };
 

@@ -33,7 +33,8 @@
 #include <sys/types.h>
 #endif
 
-thread_local TLS_SHARDTX tls_shardtx;
+TransactionalMap<thread::id, shared_ptr<SHARDTX>> 
+   DatabaseContainer_Sharded::txShardMap_;
 
 const set<DB_SELECT> LMDBBlockDatabase::supernodeDBs_({ SUBSSH, SPENTNESS });
 
@@ -580,7 +581,7 @@ void LMDBBlockDatabase::openSupernodeDBs()
    {
       dbPtr = getDbPtr(SUBSSH);
    }
-   catch (LMDBException& e)
+   catch (LMDBException&)
    {
       auto filterPtr = make_unique<ShardFilter_ScrAddr>(
          SHARD_FILTER_SCRADDR_STEP);
@@ -608,6 +609,8 @@ void LMDBBlockDatabase::openSupernodeDBs()
    }
 
    dbPtr->open();
+
+   DatabaseContainer_Sharded::clearThreadShardTx(this_thread::get_id());
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1159,7 +1162,7 @@ bool LMDBBlockDatabase::getStoredScriptHistory( StoredScriptHistory & ssh,
 
 ////////////////////////////////////////////////////////////////////////////////
 bool LMDBBlockDatabase::getStoredSubHistoryAtHgtX(StoredSubHistory& subssh,
-   const BinaryData& scrAddrStr, const BinaryData& hgtX) const
+   const BinaryDataRef scrAddrStr, const BinaryData& hgtX) const
 {
    BinaryWriter bw(scrAddrStr.getSize() + hgtX.getSize());
    bw.put_BinaryData(scrAddrStr);
@@ -2778,8 +2781,6 @@ void LMDBBlockDatabase::printAllDatabaseEntries(DB_SELECT db)
 map<uint32_t, uint32_t> LMDBBlockDatabase::getSSHSummary(BinaryDataRef scrAddrStr,
    uint32_t endBlock)
 {
-   SCOPED_TIMER("getSSHSummary");
-
    map<uint32_t, uint32_t> SSHsummary;
 
    auto ldbIter = getIterator(SSH);
@@ -3509,7 +3510,21 @@ void DatabaseContainer_Sharded::lockShard(unsigned shardId) const
    if (dbIter == dbMapPtr->end())
       throw DbShardedException("no shard for id");
 
-   tls_shardtx.beginShardTx(metaShard->getEnv(), dbIter->second);
+   shared_ptr<SHARDTX> txptr;
+   auto shard_map = txShardMap_.get();
+   auto iter = shard_map->find(this_thread::get_id());
+   if (iter == shard_map->end())
+   {
+      shard_map.reset();
+      txptr = make_shared<SHARDTX>();
+      txShardMap_.insert(make_pair(this_thread::get_id(), txptr));
+   }
+   else
+   {
+      txptr = iter->second;
+   }
+
+   txptr->beginShardTx(metaShard->getEnv(), dbIter->second);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3844,7 +3859,22 @@ DbTransaction_Sharded::DbTransaction_Sharded(LMDBEnv* env, LMDB::Mode mode) :
    if(env == nullptr)
       throw DbShardedException("invalid dbsharded environment");
 
-   tls_shardtx.begin(env, mode);
+   shared_ptr<SHARDTX> txptr;
+   auto shard_map = DatabaseContainer_Sharded::txShardMap_.get();
+   auto iter = shard_map->find(this_thread::get_id());
+   if (iter == shard_map->end())
+   {
+      shard_map.reset();
+      txptr = make_shared<SHARDTX>();
+      DatabaseContainer_Sharded::txShardMap_.insert(
+         make_pair(this_thread::get_id(), txptr));
+   }
+   else
+   {
+      txptr = iter->second;
+   }
+
+   txptr->begin(env, mode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3853,5 +3883,20 @@ DbTransaction_Sharded::~DbTransaction_Sharded()
    if (threadId_ != this_thread::get_id())
       throw DbShardedException("dbtx are bound to their parent thread");
 
-   tls_shardtx.end(envPtr_);
+   shared_ptr<SHARDTX> txptr;
+   auto shard_map = DatabaseContainer_Sharded::txShardMap_.get();
+   auto iter = shard_map->find(this_thread::get_id());
+   if (iter == shard_map->end())
+   {
+      shard_map.reset();
+      txptr = make_shared<SHARDTX>();
+      DatabaseContainer_Sharded::txShardMap_.insert(
+         make_pair(this_thread::get_id(), txptr));
+   }
+   else
+   {
+      txptr = iter->second;
+   }
+
+   txptr->end(envPtr_);
 }

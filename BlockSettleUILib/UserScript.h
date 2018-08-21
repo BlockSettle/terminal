@@ -74,7 +74,7 @@ class Constants : public QObject
 {
    Q_OBJECT
 
-   Q_PROPERTY(int payInTxSize READ payInTxSize)
+   Q_PROPERTY(int payInTxSize READ payInTxSize)    // TODO: turn these to payInFeeEstimate and payOutFeeEstimate
    Q_PROPERTY(int payOutTxSize READ payOutTxSize)
    Q_PROPERTY(float feePerByte READ feePerByte)
    Q_PROPERTY(QString xbtProductName READ xbtProductName)
@@ -92,6 +92,7 @@ public:
 
 private:
    std::shared_ptr<WalletsManager> walletsManager_;
+   mutable float feePerByte_ = 0.0;
 }; // class Constants
 
 

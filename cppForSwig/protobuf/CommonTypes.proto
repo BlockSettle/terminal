@@ -1,0 +1,35 @@
+syntax = "proto2";
+
+package Codec_CommonTypes;
+
+message OneUnsigned
+{
+	optional uint64 value = 1;
+}
+
+message ManyUnsigned
+{
+	repeated uint64 value = 1 [packed=true];
+}
+
+message BinaryData
+{
+	optional bytes data = 1;
+}
+
+message ManyBinaryData
+{
+	repeated BinaryData value = 1;
+}
+
+message Strings
+{
+	repeated string data = 1;
+}
+
+message TxWithMetaData
+{
+	required bytes rawTx = 1;
+	optional bool isRBF = 2;
+	optional bool isChainedZC = 3;
+}

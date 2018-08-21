@@ -15,7 +15,7 @@ namespace bs {
    }
    class Wallet;
 }
-
+class ArmoryConnection;
 class ApplicationSettings;
 class AssetManager;
 class CurrentWalletFilter;
@@ -29,7 +29,8 @@ Q_OBJECT
 
 public:
    RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<SignContainer> &
+      , WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
    ~RootWalletPropertiesDialog() override = default;
 

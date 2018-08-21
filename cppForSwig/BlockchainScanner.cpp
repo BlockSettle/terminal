@@ -1146,11 +1146,11 @@ void BlockchainScanner::updateSSH(bool force, int32_t startHeight)
 
    for (auto& scrAddr : *scrAddrMap)
    {
-      auto& ssh = sshMap[scrAddr.first.scrAddr_];
+      auto& ssh = sshMap[scrAddr.second->scrAddr_];
 
       if (!ssh.isInitialized())
       {
-         ssh.uniqueKey_ = scrAddr.first.scrAddr_;
+         ssh.uniqueKey_ = scrAddr.first;
       }
 
       BinaryData&& sshKey = ssh.getDBKey();
@@ -1387,15 +1387,15 @@ void BlockchainScanner::undo(Blockchain::ReorganizationState& reorgState)
       //go thourgh all ssh in scrAddrFilter
       for (auto& scrAddr : *scrAddrMap)
       {
-         auto& ssh = sshMap[scrAddr.first.scrAddr_];
+         auto& ssh = sshMap[scrAddr.second->scrAddr_];
          
          //if the ssh isn't in our map, pull it from DB
          if (!ssh.isInitialized())
          {
-            db_->getStoredScriptHistorySummary(ssh, scrAddr.first.scrAddr_);
+            db_->getStoredScriptHistorySummary(ssh, scrAddr.first);
             if (ssh.uniqueKey_.getSize() == 0)
             {
-               sshMap.erase(scrAddr.first.scrAddr_);
+               sshMap.erase(scrAddr.second->scrAddr_);
                continue;
             }
          }

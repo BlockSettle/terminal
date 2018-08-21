@@ -35,7 +35,6 @@ public:
    TxIOPair(const TxIOPair& txio)
    {
       *this = txio;
-      getScrAddr_ = [](void)->const BinaryData&{ return BinaryData::EmptyBinData_; };
    }
 
    // Lots of accessors
@@ -125,14 +124,14 @@ public:
    bool isUTXO(void) const { return isUTXO_; }
    void setUTXO(bool val) { isUTXO_ = val; }
 
-   void setScrAddrLambda(function < const BinaryData&(void) > func)
+   void setScrAddrRef(const BinaryDataRef& bdr)
    {
-      getScrAddr_ = func;
+      scrAddr_ = bdr;
    }
 
-   const BinaryData& getScrAddr(void) const
+   const BinaryDataRef& getScrAddr(void) const
    {
-      return getScrAddr_();
+      return scrAddr_;
    }
 
 public:
@@ -173,9 +172,7 @@ private:
    bool isUTXO_ = false;
 
    //used to get a relevant scrAddr from a txio
-   function<const BinaryData& (void)> getScrAddr_ = 
-      [](void)->const BinaryData&
-      { return BinaryData::EmptyBinData_; };
+   BinaryDataRef scrAddr_;
 };
 
 #endif

@@ -12,12 +12,12 @@
 #include <QFile>
 #include <QFileDialog>
 #include "Address.h"
+#include "ArmoryConnection.h"
 #include "CoinControlDialog.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
 #include "MessageBoxQuestion.h"
 #include "OfflineSigner.h"
-#include "PyBlockDataManager.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "TransactionOutputsModel.h"
@@ -33,9 +33,11 @@ const std::map<unsigned int, QString> feeLevels = { {2, QObject::tr("20 minutes"
    { 504, QObject::tr("3 days") }, { 1008, QObject::tr("7 days") }
 };
 
-CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<WalletsManager>& walletManager
+CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
    : QDialog(parent)
+   , armory_(armory)
    , walletsManager_(walletManager)
    , signingContainer_(container)
    , loadFeeSuggestions_(loadFeeSuggestions)
@@ -135,20 +137,35 @@ void CreateTransactionDialog::populateFeeList()
    comboBoxFeeSuggestions()->setCurrentIndex(0);
    comboBoxFeeSuggestions()->setEnabled(false);
 
-   connect(this, &CreateTransactionDialog::feeLoadingColmpleted
+   connect(this, &CreateTransactionDialog::feeLoadingCompleted
       , this, &CreateTransactionDialog::onFeeSuggestionsLoaded
       , Qt::QueuedConnection);
 
-   feeUpdatingThread_ = std::thread(&CreateTransactionDialog::feeUpdatingThreadFunction, this);
+   loadFees();
 }
 
-void CreateTransactionDialog::feeUpdatingThreadFunction()
+void CreateTransactionDialog::loadFees()
 {
-   std::map<unsigned int, float> feeValues;
+   struct Result {
+      std::map<unsigned int, float> values;
+      std::set<unsigned int>  levels;
+   };
+   auto result = new Result;
+
    for (const auto &feeLevel : feeLevels) {
-      feeValues[feeLevel.first] = walletsManager_->estimatedFeePerByte(feeLevel.first);
+      result->levels.insert(feeLevel.first);
    }
-   emit feeLoadingColmpleted(feeValues);
+   for (const auto &feeLevel : feeLevels) {
+      const auto &cbFee = [this, result, level=feeLevel.first](float fee) {
+         result->levels.erase(level);
+         result->values[level] = fee;
+         if (result->levels.empty()) {
+            emit feeLoadingCompleted(result->values);
+            delete result;
+         }
+      };
+      walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee);
+   }
 }
 
 void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)
@@ -181,7 +198,7 @@ void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
 void CreateTransactionDialog::selectedWalletChanged(int)
 {
    auto currentWallet = walletsManager_->GetWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   transactionData_->SetWallet(currentWallet);
+   transactionData_->SetWallet(currentWallet, armory_->topBlock());
 }
 
 void CreateTransactionDialog::onTransactionUpdated()
@@ -235,7 +252,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
          return;
       }
 
-      if (PyBlockDataManager::instance()->broadcastZC(signedTX)) {
+      if (armory_->broadcastZC(signedTX)) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
             transactionData_->GetWallet()->SetTransactionComment(signedTX, comment);
@@ -276,7 +293,7 @@ bool CreateTransactionDialog::BroadcastImportedTx()
       return false;
    }
    startBroadcasting();
-   if (PyBlockDataManager::instance()->broadcastZC(importedSignedTX_)) {
+   if (armory_->broadcastZC(importedSignedTX_)) {
       if (!textEditComment()->document()->isEmpty()) {
          const auto &comment = textEditComment()->document()->toPlainText().toStdString();
          transactionData_->GetWallet()->SetTransactionComment(importedSignedTX_, comment);

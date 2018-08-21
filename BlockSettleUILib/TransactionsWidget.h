@@ -7,14 +7,16 @@
 
 #include "TabWithShortcut.h"
 
+namespace Ui {
+   class TransactionsWidget;
+}
+class ArmoryConnection;
 class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
+class WalletsManager;
 class ApplicationSettings;
 
-namespace Ui {
-    class TransactionsWidget;
-};
 
 class TransactionsWidget : public TabWithShortcut
 {
@@ -24,6 +26,7 @@ public:
    TransactionsWidget(QWidget* parent = nullptr );
    ~TransactionsWidget() override = default;
 
+   void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<ArmoryConnection> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
    void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
 
@@ -35,12 +38,15 @@ private slots:
    void walletsChanged();
    void walletsFilterChanged(int index);
    void onEnterKeyInTrxPressed(const QModelIndex &index);
+   void onDataLoaded(int count);
 
 private:
    Ui::TransactionsWidget* ui;
 
 private:
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
+   std::shared_ptr<WalletsManager>        walletsManager_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    TransactionsSortFilterModel            *sortFilterModel_;
 };

@@ -22,7 +22,8 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
    , const std::shared_ptr<TransactionData>& transactionData, const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<AuthAddressManager>& authAddressManager, const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<WalletsManager> &walletsManager, const std::shared_ptr<SignContainer> &container
-   , std::shared_ptr<CelerClient> celerClient, QWidget* parent)
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<CelerClient> &celerClient, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
@@ -33,6 +34,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
    , walletsManager_(walletsManager)
    , container_(container)
    , assetMgr_(assetManager)
+   , armory_(armory)
    , celerClient_(celerClient)
 {
    ui_->setupUi(this);
@@ -91,9 +93,8 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       quoteProvider_->AcceptQuoteFX(reqId, quote);
    } else {
       if (rfq_.assetType == bs::network::Asset::SpotXBT) {
-         xbtSettlementWidget_ = new XBTSettlementTransactionWidget(this);
-         xbtSettlementWidget_->init(logger_, authAddressManager_, assetMgr_
-            , quoteProvider_, container_, celerClient_);
+         xbtSettlementWidget_ = new XBTSettlementTransactionWidget(logger_, authAddressManager_
+            , assetMgr_, quoteProvider_, container_, armory_, celerClient_, this);
 
          connect(xbtSettlementWidget_, &XBTSettlementTransactionWidget::settlementAccepted
             , this, &RFQDialog::onSettlementAccepted);
@@ -107,8 +108,8 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
          auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget_);
          ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
       } else {
-         ccSettlementWidget_ = new CCSettlementTransactionWidget(this);
-         ccSettlementWidget_->init(logger_, assetMgr_, container_, celerClient_);
+         ccSettlementWidget_ = new CCSettlementTransactionWidget(logger_, assetMgr_
+            , container_, armory_, celerClient_, this);
 
          connect(ccSettlementWidget_, &CCSettlementTransactionWidget::settlementAccepted
             , this, &RFQDialog::onSettlementAccepted);

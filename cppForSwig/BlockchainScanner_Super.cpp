@@ -188,8 +188,11 @@ void BlockchainScanner_Super::scan()
    if (serialize_tID.joinable())
       serialize_tID.join();
 
+   auto&& committhr_id = commit_tID.get_id();
    if (commit_tID.joinable())
       commit_tID.join();
+
+   DatabaseContainer_Sharded::clearThreadShardTx(committhr_id);
 
    TIMER_STOP("scan");
    if (topBlock->getBlockHeight() - scanFrom > 100)
@@ -1116,9 +1119,15 @@ void BlockchainScanner_Super::putSpentness(ParserBatch_Super* batch)
       threads.push_back(thread(putSpentnessLbd));
    putSpentnessThread(batch);
 
+   vector<thread::id> idVec;
    for (auto& thr : threads)
+   {
+      idVec.push_back(thr.get_id());
       if (thr.joinable())
          thr.join();
+   }
+
+   DatabaseContainer_Sharded::clearThreadShardTx(idVec);
 
    closeShardsById(SPENTNESS, topShardId, 5);
    batch->writeSpentnessEnd_ = chrono::system_clock::now();
@@ -1284,6 +1293,7 @@ void BlockchainScanner_Super::undo(Blockchain::ReorganizationState& reorgState)
       db_->putStoredDBInfo(SSH, sdbi, 0);
    }
 
+   DatabaseContainer_Sharded::clearThreadShardTx(this_thread::get_id());
    ShardedSshParser sshParser(db_, 0, 0, 0, false);
    sshParser.undoShards(undoneHeights);
 }

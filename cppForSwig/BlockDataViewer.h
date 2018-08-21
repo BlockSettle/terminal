@@ -25,6 +25,8 @@ using namespace std;
 #include "ZeroConf.h"
 #include "util.h"
 #include "bdmenums.h"
+#include "BtcWallet.h"
+#include "BDVCodec.h"
 
 typedef enum
 {
@@ -51,8 +53,6 @@ class BDMnotReady : public exception
 
 class BlockDataViewer
 {
-private:
-   virtual void pushNotification(shared_ptr<BDV_Notification>) = 0;
 
 public:
    BlockDataViewer(BlockDataManager* bdm);
@@ -65,21 +65,14 @@ public:
    // blockchain in RAM, each scan will take 30-120 seconds.  Registering makes 
    // sure that the intial blockchain scan picks up wallet-relevant stuff as 
    // it goes, and does a full [re-]scan of the blockchain only if necessary.
-   bool registerWallet(vector<BinaryData> const& scrAddrVec,
-                              string ID, bool wltIsNew);
-   bool registerLockbox(vector<BinaryData> const& scrAddrVec, 
-                              string ID, bool wltIsNew);
+   void registerWallet(shared_ptr<::Codec_BDVCommand::BDVCommand>);
+   void registerLockbox(shared_ptr<::Codec_BDVCommand::BDVCommand>);
+   void registerAddresses(shared_ptr<::Codec_BDVCommand::BDVCommand>);
    void       unregisterWallet(const string& ID);
    void       unregisterLockbox(const string& ID);
 
    void scanWallets(shared_ptr<BDV_Notification>);
-   
    bool hasWallet(const BinaryData& ID) const;
-
-   bool registerAddresses(const vector<BinaryData>& saVec, 
-                           const string& walletID, bool areNew);
-   void registerArbitraryAddressVec(const vector<BinaryData>& saVec,
-      const string& walletID);
 
    const shared_ptr<map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>>>
       getFullZeroConfTxIOMap() const
@@ -117,12 +110,9 @@ public:
       bool rebuildLedger,
       bool remapWallets);
 
-   void scanScrAddrVector(const map<BinaryData, ScrAddrObj>& scrAddrMap, 
-                           uint32_t startBlock, uint32_t endBlock) const;
-
-   void flagRefresh(
+   virtual void flagRefresh(
       BDV_refresh refresh, const BinaryData& refreshId,
-      unique_ptr<BDV_Notification_ZC> zcPtr);
+      unique_ptr<BDV_Notification_ZC> zcPtr) = 0;
 
    StoredHeader getMainBlockFromDB(uint32_t height) const;
    StoredHeader getBlockFromDB(uint32_t height, uint8_t dupID) const;
@@ -201,14 +191,14 @@ public:
    { return rescanZC_.load(memory_order_acquire); }
 
    bool isRBF(const BinaryData& txHash) const;
-   bool hasScrAddress(const BinaryData& sa) const;
+   bool hasScrAddress(const BinaryDataRef&) const;
 
    shared_ptr<BtcWallet> getWalletOrLockbox(const BinaryData& id) const;
 
    tuple<uint64_t, uint64_t> getAddrFullBalance(const BinaryData&);
 
    unique_ptr<BDV_Notification_ZC> createZcNotification(
-      function<bool(const BinaryData&)>);
+      function<bool(BinaryDataRef&)>);
 
    virtual const string& getID(void) const = 0;
 
@@ -258,11 +248,9 @@ public:
 
    ~WalletGroup();
 
-   bool registerWallet(
-      vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew);
+   shared_ptr<BtcWallet> getOrSetWallet(const BinaryDataRef&);
+   void registerAddresses(shared_ptr<::Codec_BDVCommand::BDVCommand>);
    void unregisterWallet(const string& IDstr);
-   bool registerAddresses(const vector<BinaryData>& saVec,
-      const string& walletID, bool areNew);
 
    bool hasID(const BinaryData& ID) const;
    shared_ptr<BtcWallet> getWalletByID(const BinaryData& ID) const;
