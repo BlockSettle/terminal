@@ -163,7 +163,6 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          try {
             registerBDV(settings.netType);
             if (!bdv_->getID().empty()) {
-               cbRemote_ = std::make_shared<ArmoryCallback>(bdv_->getRemoteCallbackSetupStruct(), this, logger_);
                logger_->debug("[ArmoryConnection::registerRoutine] got BDVid: {}", bdv_->getID());
                setState(State::Connected);
                break;
@@ -182,7 +181,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
             logger_->error("[ArmoryConnection::setup] registerBDV exception");
             emit connectionError(QString());
          }
-         std::this_thread::sleep_for(std::chrono::seconds(1));
+         std::this_thread::sleep_for(std::chrono::seconds(10));
       }
       regThreadRunning_ = false;
       logger_->debug("[ArmoryConnection::registerRoutine] completed");
@@ -204,22 +203,18 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          cbRemote_.reset();
       }
       isOnline_ = false;
-      while (!bdv_ || !bdv_->getSocketObject()) {
+      bool connected = false;
+      do {
+         cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
+         auto futConnected = cbRemote_->connFuture();
          logger_->debug("[ArmoryConnection::connectRoutine] connecting to Armory {}:{}", settings.armoryDBIp, settings.armoryDBPort);
-         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, SocketWS/*settings.socketType*/);
-         if (!bdv_ || !bdv_->getSocketObject()) {
-            logger_->warn("[ArmoryConnection::connectRoutine] BDV creation failed");
+         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_.get());
+         connected = futConnected.get();
+         if (!connected) {
+            logger_->warn("[ArmoryConnection::connectRoutine] BDV connection failed");
+            std::this_thread::sleep_for(std::chrono::seconds(30));
          }
-/*         else {    // doesn't work properly now
-            if (bdv_->getSocketObject()->connectToRemote()) {
-               connected = true;
-            }
-            else {
-               logger_->warn("[ArmoryConnection::connectRoutine] BDV connection failed");
-               std::this_thread::sleep_for(std::chrono::seconds(10));
-            }
-         }*/
-      }
+      } while (!connected);
       logger_->debug("[ArmoryConnection::connectRoutine] BDV connected");
 
       regThreadRunning_ = true;
@@ -622,4 +617,16 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
       logger_->debug("[ArmoryCallback::run] unknown BDMAction: {}", (int)action);
       break;
    }
+}
+
+void ArmoryCallback::socketStatus(bool status)
+{
+   logger_->debug("[ArmoryCallback::socketStatus] {}", status);
+   connected_.set_value(status);
+   connection_->setState(status ? ArmoryConnection::State::Connected : ArmoryConnection::State::Offline);
+}
+
+std::shared_future<bool> ArmoryCallback::connFuture()
+{
+   return connected_.get_future();
 }

@@ -24,9 +24,8 @@ class ArmoryConnection;
 class ArmoryCallback : public RemoteCallback
 {
 public:
-   ArmoryCallback(RemoteCallbackSetupStruct rcss, ArmoryConnection *conn
-      , const std::shared_ptr<spdlog::logger> &logger)
-      : RemoteCallback(rcss), connection_(conn), logger_(logger) {}
+   ArmoryCallback(ArmoryConnection *conn, const std::shared_ptr<spdlog::logger> &logger)
+      : RemoteCallback(), connection_(conn), logger_(logger) {}
    virtual ~ArmoryCallback(void) noexcept = default;
 
    void run(BDMAction action, void* ptr, int block = 0) override;
@@ -35,9 +34,13 @@ public:
       float progress, unsigned secondsRem,
       unsigned progressNumeric) override;
 
+   void socketStatus(bool status) override;
+   std::shared_future<bool> connFuture();
+
 private:
    ArmoryConnection * connection_;
    std::shared_ptr<spdlog::logger>  logger_;
+   std::promise<bool>   connected_;
 };
 
 class ArmoryConnection : public QObject
