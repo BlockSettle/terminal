@@ -223,6 +223,10 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                   tr("%1 RFQ").arg(QString::number(g->rfqs_.size())));
             }
 
+            case static_cast<int>(Role::CountOfRfqs) : {
+               return static_cast<int>(g->rfqs_.size());
+            }
+
             case Qt::TextColorRole : {
                switch (index.column()) {
                   case static_cast<int>(Column::SecurityID) : {
