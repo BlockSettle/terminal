@@ -173,7 +173,4 @@ private:
    void createAdvancedTxDialog(const std::string &selectedWalletId);
 };
 
-Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(std::vector<UTXO>)
-
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

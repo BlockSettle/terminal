@@ -4,12 +4,12 @@
 SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &wallet
    , bool swTransactionsOnly, bool confirmedOnly
    , const selectionChangedCallback &selectionChanged)
-   : wallet_(wallet)
+   : QObject(nullptr), wallet_(wallet)
    , swTransactionsOnly_(swTransactionsOnly)
    , confirmedOnly_(confirmedOnly)
    , selectionChanged_(selectionChanged)
 {
-   resetInputs([] {});
+   resetInputs(nullptr);
 }
 
 void SelectedTransactionInputs::Reload(const std::vector<UTXO> &utxos)
@@ -48,26 +48,44 @@ void SelectedTransactionInputs::resetSelection()
    }
 }
 
+void SelectedTransactionInputs::onCPFPReceived(std::vector<UTXO> inputs)
+{
+   cpfpInputs_ = inputs;
+   wallet_->getSpendableTxOutList([this](std::vector<UTXO> utxos) {
+      onUTXOsReceived(utxos);
+   }, this);
+}
+
+void SelectedTransactionInputs::onUTXOsReceived(std::vector<UTXO> inputs)
+{
+   inputs_ = inputs;
+   resetSelection();
+   for (const auto &cb : resetCallbacks_) {
+      cb();
+   }
+   resetCallbacks_.clear();
+}
+
 void SelectedTransactionInputs::resetInputs(std::function<void()> cb)
 {
    inputs_.clear();
    cpfpInputs_.clear();
 
-   const auto &cbSpendable = [this, cb](std::vector<UTXO> inputs) {
-      inputs_ = inputs;
-      resetSelection();
-      cb();
-   };
-   const auto &cbCPFP = [this, cbSpendable](std::vector<UTXO> inputs) {
-      cpfpInputs_ = inputs;
-      wallet_->getSpendableTxOutList(cbSpendable);
-   };
-
+   if (cb) {
+      resetCallbacks_.push_back(cb);
+      if (resetCallbacks_.size() > 1) {
+         return;
+      }
+   }
    if (confirmedOnly_) {
-      wallet_->getSpendableTxOutList(cbSpendable);
+      wallet_->getSpendableTxOutList([this](std::vector<UTXO> inputs) {
+         onUTXOsReceived(inputs);
+      }, this);
    }
    else {
-      wallet_->getSpendableZCList(cbCPFP);
+      wallet_->getSpendableZCList([this](std::vector<UTXO> inputs) {
+         onCPFPReceived(inputs);
+      }, this);
    }
 }
 

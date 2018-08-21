@@ -164,7 +164,7 @@ void CreateTransactionDialog::loadFees()
             delete result;
          }
       };
-      walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee);
+      walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee, this);
    }
 }
 
