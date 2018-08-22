@@ -195,5 +195,6 @@
         <file>resources/down-arrow-primary@2x.png</file>
         <file>resources/radio-button-disabled.png</file>
         <file>resources/radio-button-disabled@2x.png</file>
+        <file>resources/license.txt</file>
     </qresource>
 </RCC>
