@@ -27,7 +27,7 @@ class CreateWalletDialog : public QDialog
 public:
    CreateWalletDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , NetworkType, const QString &walletsPath, bool createPrimary = false, QWidget *parent = nullptr);
-   ~CreateWalletDialog() noexcept override = default;
+   ~CreateWalletDialog() override;
 
    bool walletCreated() const { return walletCreated_; }
    std::string getNewWalletId() const { return walletId_; }
@@ -47,7 +47,7 @@ private:
    bool couldCreateWallet() const;
 
 private:
-   Ui::CreateWalletDialog *ui_;
+   std::unique_ptr<Ui::CreateWalletDialog> ui_;
 
 private:
    std::shared_ptr<WalletsManager>  walletsManager_;

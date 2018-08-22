@@ -54,7 +54,7 @@ namespace bs {
 
       public:
          RFQDealerReply(QWidget* parent = nullptr);
-         virtual ~RFQDealerReply();
+         ~RFQDealerReply() override;
 
          void init(const std::shared_ptr<spdlog::logger> logger
             , const std::shared_ptr<AuthAddressManager> &
@@ -124,7 +124,7 @@ namespace bs {
          bool eventFilter(QObject *watched, QEvent *evt) override;
 
       private:
-         Ui::RFQDealerReply* ui_;
+         std::unique_ptr<Ui::RFQDealerReply> ui_;
          std::shared_ptr<spdlog::logger>        logger_;
          std::shared_ptr<WalletsManager>        walletsManager_;
          std::shared_ptr<AuthAddressManager>    authAddressManager_;

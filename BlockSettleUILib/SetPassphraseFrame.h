@@ -13,12 +13,12 @@ Q_OBJECT
 
 public:
    SetPassphraseFrame(QWidget* parent = nullptr );
-   virtual ~SetPassphraseFrame();
+   ~SetPassphraseFrame() override;
 
    virtual bool isComplete() const override;
 
 private:
-   Ui::SetPassphraseFrame* ui_;
+   std::unique_ptr<Ui::SetPassphraseFrame> ui_;
 };
 
 #endif // __SET_PASSPHRASE_FRAME_H__

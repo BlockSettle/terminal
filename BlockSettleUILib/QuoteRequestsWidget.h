@@ -118,7 +118,7 @@ Q_OBJECT
 
 public:
    QuoteRequestsWidget(QWidget* parent = nullptr);
-   ~QuoteRequestsWidget() override = default;
+   ~QuoteRequestsWidget() override;
 
    void init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
@@ -157,7 +157,7 @@ private:
    void saveCollapsedState();
 
 private:
-   Ui::QuoteRequestsWidget* ui_;
+   std::unique_ptr<Ui::QuoteRequestsWidget> ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;

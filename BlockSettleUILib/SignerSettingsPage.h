@@ -18,6 +18,7 @@ Q_OBJECT
 
 public:
    SignerSettingsPage(QWidget* parent = nullptr);
+   ~SignerSettingsPage() override;
 
    void setAppSettings(const std::shared_ptr<ApplicationSettings> &);
    void displaySettings(bool displayDefault = false);
@@ -38,7 +39,7 @@ private:
    void showLimits(bool);
 
 private:
-   Ui::SignerSettingsPage *ui_;
+   std::unique_ptr<Ui::SignerSettingsPage> ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
 };
 

@@ -85,6 +85,8 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
    activate();
 }
 
+DealerXBTSettlementDialog::~DealerXBTSettlementDialog() = default;
+
 QWidget *DealerXBTSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
 WalletKeysSubmitWidget *DealerXBTSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
 QLabel *DealerXBTSettlementDialog::labelHint() const { return ui_->labelHint; }

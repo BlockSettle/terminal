@@ -21,3 +21,5 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, QWidget *parent)
       accept();
    });
 }
+
+NewWalletDialog::~NewWalletDialog() = default;

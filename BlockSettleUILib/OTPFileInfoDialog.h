@@ -18,7 +18,7 @@ Q_OBJECT
 public:
    OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManager
       , QWidget* parent = nullptr );
-   ~OTPFileInfoDialog() override = default;
+   ~OTPFileInfoDialog() override;
 
 protected:
    void accept() override;
@@ -42,7 +42,7 @@ private:
    bool UpdateOTPCounter();
 
 private:
-   Ui::OTPFileInfoDialog* ui_;
+   std::unique_ptr<Ui::OTPFileInfoDialog> ui_;
    std::shared_ptr<OTPManager> otpManager_;
    FrejaSignOTP      frejaOld_, frejaNew_;
    SecureBinaryData  oldPassword_, newPassword_;

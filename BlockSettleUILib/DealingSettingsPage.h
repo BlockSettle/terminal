@@ -19,6 +19,7 @@ Q_OBJECT
 
 public:
    DealingSettingsPage(QWidget* parent = nullptr);
+   ~DealingSettingsPage() override;
 
    void setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings);
 
@@ -31,7 +32,7 @@ protected slots:
    void onResetCountes();
 
 private:
-   Ui::DealingSettingsPage *ui_;
+   std::unique_ptr<Ui::DealingSettingsPage> ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
 };
 

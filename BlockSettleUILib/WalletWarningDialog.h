@@ -14,10 +14,10 @@ Q_OBJECT
 
 public:
    WalletWarningDialog(QWidget* parent = nullptr);
-   ~WalletWarningDialog() noexcept override = default;
+   ~WalletWarningDialog() override;
 
 private:
-   Ui::WalletWarningDialog* ui_;
+   std::unique_ptr<Ui::WalletWarningDialog> ui_;
 };
 
 
