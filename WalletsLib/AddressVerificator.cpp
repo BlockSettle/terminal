@@ -260,7 +260,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
          }
       }
    };
-   const auto &cbLedgerDelegateTxOut = [this, state, cbLedgerTxOut](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegateTxOut = [state, cbLedgerTxOut](AsyncClient::LedgerDelegate delegate) {
       delegate.getHistoryPage(0, cbLedgerTxOut);
    };
    const auto &cbCollectTX = [this, state, cbCollectTXs, cbLedgerDelegateTxOut](Tx tx) {
@@ -294,7 +294,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
          }
       }
    };
-   const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegate = [state, cbLedger](AsyncClient::LedgerDelegate delegate) {
       state->nbTransactions = 0;
       delegate.getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
    };
@@ -334,7 +334,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
       }
       ReturnValidationResult(state);
    };
-   const auto &cbCollectTXs = [this, state, cbCheckState](std::vector<Tx> txs) {
+   const auto &cbCollectTXs = [state, cbCheckState](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
          state->txHashSet.erase(txHash);
@@ -361,7 +361,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
          cbCheckState();
       }
    };
-   const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegate = [state, cbLedger](AsyncClient::LedgerDelegate delegate) {
       state->entries.clear();
       delegate.getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
    };
@@ -657,7 +657,7 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
    auto result = new std::vector<UTXO>;
    const auto &cbInternal = [this, cb, result](std::vector<UTXO> utxos) {
       *result = utxos;
-      const auto &cbZC = [this, cb, result](std::vector<UTXO> zcs) {
+      const auto &cbZC = [cb, result](std::vector<UTXO> zcs) {
          result->insert(result->begin(), zcs.begin(), zcs.end());
          cb(*result);
          delete result;
@@ -669,7 +669,7 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
 
 void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
-   const auto &cbInternal = [this, cb](std::vector<UTXO> utxos) {
+   const auto &cbInternal = [cb](std::vector<UTXO> utxos) {
       std::vector<UTXO> result;
       for (const auto &utxo : utxos) {
          if ((utxo.getValue() == GetAuthAmount()) && (utxo.getTxOutIndex() == 1)) {

@@ -28,7 +28,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    connect(this, &HeadlessContainerListener::xbtSpent, this, &HeadlessContainerListener::onXbtSpent);
 }
 
-HeadlessContainerListener::~HeadlessContainerListener()
+HeadlessContainerListener::~HeadlessContainerListener() noexcept
 {
    if (!connection_) {
       return;
@@ -438,7 +438,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
 
    const auto cbOnAllPasswords = [this, txMultiReq, reqType, clientId, id=packet.id()]
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
-      const auto cbWalletPass = [walletPasswords, this](const std::shared_ptr<bs::Wallet> &wallet) -> SecureBinaryData {
+      const auto cbWalletPass = [walletPasswords](const std::shared_ptr<bs::Wallet> &wallet) -> SecureBinaryData {
          if (wallet->encryptionTypes().empty()) {
             return {};
          }

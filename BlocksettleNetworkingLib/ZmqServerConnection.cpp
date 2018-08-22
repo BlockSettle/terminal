@@ -18,7 +18,7 @@ ZmqServerConnection::ZmqServerConnection(const std::shared_ptr<spdlog::logger>& 
    assert(context_ != nullptr);
 }
 
-ZmqServerConnection::~ZmqServerConnection()
+ZmqServerConnection::~ZmqServerConnection() noexcept
 {
    stopServer();
 }

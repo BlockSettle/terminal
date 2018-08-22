@@ -596,7 +596,7 @@ FrejaSign::FrejaSign(const std::shared_ptr<spdlog::logger> &logger, unsigned int
    connect(&freja_, &FrejaREST::emptyReply, [this] { waitForReply_ = false; });
 }
 
-FrejaSign::~FrejaSign()
+FrejaSign::~FrejaSign() noexcept
 {
    while (waitForReply_) {
       QCoreApplication::processEvents();
