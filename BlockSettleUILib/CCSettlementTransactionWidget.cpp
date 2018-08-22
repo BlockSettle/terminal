@@ -339,7 +339,7 @@ bool CCSettlementTransactionWidget::createCCUnsignedTXdata()
             ui_->labelHint->setText(tr("Failed to create CC TX half"));
          }
       };
-      walletsManager_->estimatedFeePerByte(0, cbFee);
+      walletsManager_->estimatedFeePerByte(0, cbFee, this);
    }
 
    signingContainer_->SyncAddresses(transactionData_->createAddresses());

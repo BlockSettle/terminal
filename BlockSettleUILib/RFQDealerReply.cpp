@@ -287,7 +287,7 @@ void RFQDealerReply::reset()
             const auto &cbFee = [this](float feePerByte) {
                transactionData_->SetFeePerByte(feePerByte);
             };
-            walletsManager_->estimatedFeePerByte(2, cbFee);
+            walletsManager_->estimatedFeePerByte(2, cbFee, this);
          }
          if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
             transactionData_->SetWallet(curWallet_, armory_->topBlock());
@@ -782,7 +782,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
             wallet = getXbtWallet();
          }
          spendVal = qrn.quantity * price * BTCNumericTypes::BalanceDivider;
-         walletsManager_->estimatedFeePerByte(2, cbFee);
+         walletsManager_->estimatedFeePerByte(2, cbFee, this);
          return true;
       }
    }
@@ -1235,7 +1235,7 @@ void RFQDealerReply::onAQReply(const QString &reqId, double price)
          aqTxData_[itQRN->second.quoteRequestId] = transData;
          submitReply(transData, itQRN->second, price, cbSubmit);
       };
-      walletsManager_->estimatedFeePerByte(2, cbFee);
+      walletsManager_->estimatedFeePerByte(2, cbFee, this);
       return;
    }
 
