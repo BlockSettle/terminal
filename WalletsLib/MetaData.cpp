@@ -747,24 +747,46 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
 
 bool bs::Wallet::getHistoryPage(uint32_t id) const
 {
-   if (!isBalanceAvailable()) {
-      return false;
-   }
-   const auto &cb = [this, id](std::vector<ClientClasses::LedgerEntry> entries) {
+   const auto &cb = [this, id](const bs::Wallet *wallet
+      , std::vector<ClientClasses::LedgerEntry> entries) {
       emit historyPageReceived(id, entries);
    };
-   btcWallet_->getHistoryPage(id, cb);
-   return true;
+   return getHistoryPage(id, cb);
 }
 
 bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
-   , std::vector<ClientClasses::LedgerEntry>)> clientCb) const
+   , std::vector<ClientClasses::LedgerEntry>)> clientCb, bool onlyNew) const
 {
    if (!isBalanceAvailable()) {
       return false;
    }
-   const auto &cb = [this, clientCb](std::vector<ClientClasses::LedgerEntry> entries) {
-      clientCb(this, entries);
+   const auto &cb = [this, id, onlyNew, clientCb](std::vector<ClientClasses::LedgerEntry> entries) {
+      if (!onlyNew) {
+         clientCb(this, entries);
+      }
+      else {
+         if (historyCache_[id].size() == entries.size()) {
+            clientCb(this, {});
+         }
+         else {
+            std::vector<ClientClasses::LedgerEntry> diff;
+            struct comparator {
+               bool operator() (const ClientClasses::LedgerEntry &a, const ClientClasses::LedgerEntry &b) const {
+                  return (a.getTxHash() < b.getTxHash());
+               }
+            };
+            std::set<ClientClasses::LedgerEntry, comparator> diffSet;
+            diffSet.insert(entries.begin(), entries.end());
+            for (const auto &cached : historyCache_[id]) {
+               diffSet.erase(cached);
+            }
+            for (const auto &diffEntry : diffSet) {
+               diff.emplace_back(diffEntry);
+            }
+            clientCb(this, diff);
+         }
+      }
+      historyCache_[id] = entries;
    };
    btcWallet_->getHistoryPage(id, cb);
    return true;

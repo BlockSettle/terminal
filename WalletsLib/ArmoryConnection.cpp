@@ -514,8 +514,9 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
 
 unsigned int ArmoryConnection::getConfirmationsNumber(uint32_t blockNum) const
 {
-   if (blockNum < uint32_t(-1)) {
-      return topBlock() + 1 - blockNum;
+   const auto curBlock = topBlock();
+   if ((curBlock != UINT32_MAX) && (blockNum < uint32_t(-1))) {
+      return curBlock + 1 - blockNum;
    }
    return 0;
 }
@@ -580,7 +581,7 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
       break;
 
    case BDMAction_NewBlock:
-      logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock");
+      logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock {}", block);
       connection_->setState(ArmoryConnection::State::Ready);
       emit connection_->newBlock((unsigned int)block);
       break;
