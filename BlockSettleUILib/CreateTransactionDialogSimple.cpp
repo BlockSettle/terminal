@@ -91,22 +91,27 @@ QLabel *CreateTransactionDialogSimple::labelBalance() const
 
 QLabel *CreateTransactionDialogSimple::labelAmount() const
 {
-   return ui_->labelDetailsAmount;
+   return ui_->labelInputAmount;
 }
 
 QLabel *CreateTransactionDialogSimple::labelTxInputs() const
 {
-   return ui_->labelDetailsTxInputs;
+   return ui_->labelTXInputs;
 }
 
 QLabel *CreateTransactionDialogSimple::labelEstimatedFee() const
 {
-   return ui_->labelDetailsEstimatedFee;
+   return ui_->labelFee;
 }
 
 QLabel *CreateTransactionDialogSimple::labelTotalAmount() const
 {
-   return ui_->labelDetailsTotalAmount;
+   return ui_->labelTransationAmount;
+}
+
+QLabel *CreateTransactionDialogSimple::labelTxSize() const
+{
+   return ui_->labelTxSize;
 }
 
 QPushButton *CreateTransactionDialogSimple::pushButtonCreate() const
@@ -117,6 +122,16 @@ QPushButton *CreateTransactionDialogSimple::pushButtonCreate() const
 QPushButton *CreateTransactionDialogSimple::pushButtonCancel() const
 {
    return ui_->pushButtonCancel;
+}
+
+QLabel* CreateTransactionDialogSimple::feePerByteLabel() const
+{
+   return ui_->labelFeePerByte;
+}
+
+QLabel* CreateTransactionDialogSimple::changeLabel() const
+{
+   return ui_->labelReturnAmount;
 }
 
 void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressString)
