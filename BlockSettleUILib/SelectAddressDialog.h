@@ -25,7 +25,7 @@ public:
    SelectAddressDialog(const std::shared_ptr<WalletsManager>& walletsManager
       , const std::shared_ptr<bs::Wallet>& wallet, QWidget* parent = nullptr
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
-   ~SelectAddressDialog() override = default;
+   ~SelectAddressDialog() override;
 
    bs::Address getSelectedAddress() const;
 
@@ -37,7 +37,7 @@ private:
    bs::Address getAddress(const QModelIndex& index) const;
 
 private:
-   Ui::SelectAddressDialog*      ui_;
+   std::unique_ptr<Ui::SelectAddressDialog> ui_;
    std::shared_ptr<bs::Wallet>   wallet_;
    AddressListModel*             model_;
    bs::Address                   selectedAddr_;

@@ -31,6 +31,8 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
 }
 
+RFQRequestWidget::~RFQRequestWidget() = default;
+
 void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
 {
    if (walletsManager_ == nullptr) {

@@ -24,17 +24,17 @@ class VerifyWalletBackupDialog : public QDialog
 
 public:
    VerifyWalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &, QWidget *parent = nullptr);
-   ~VerifyWalletBackupDialog() noexcept override;
+   ~VerifyWalletBackupDialog() override;
 
 private slots:
    void onPrivKeyChanged();
 
 private:
-   Ui::VerifyWalletBackupDialog *ui_;
+   std::unique_ptr<Ui::VerifyWalletBackupDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>     wallet_;
    const NetworkType    netType_;
    std::shared_ptr<EasyCoDec> easyCodec_;
-   EasyEncValidator         * validator_ = nullptr;
+   std::unique_ptr<EasyEncValidator> validator_;
 };
 
 #endif // __VERIFY_WALLET_BACKUP_DIALOG_H__

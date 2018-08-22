@@ -39,7 +39,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<CelerClient> &celerClient
       , QWidget* parent = nullptr);
-   ~RFQDialog() override = default;
+   ~RFQDialog() override;
 
 protected:
    void reject() override;
@@ -57,7 +57,7 @@ private slots:
    void onSettlementOrder();
 
 private:
-   Ui::RFQDialog* ui_;
+   std::unique_ptr<Ui::RFQDialog> ui_;
    std::shared_ptr<spdlog::logger>     logger_;
    const bs::network::RFQ              rfq_;
    bs::network::Quote                  quote_;

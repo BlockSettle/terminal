@@ -48,6 +48,8 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
       this, &ConfigDialog::illformedSettings);
 }
 
+ConfigDialog::~ConfigDialog() = default;
+
 void ConfigDialog::onDisplayDefault()
 {
    ui_->pageGeneral->displaySettings(applicationSettings_, walletsMgr_, true);
