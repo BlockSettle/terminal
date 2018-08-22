@@ -7,7 +7,42 @@
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
 
+#include <QValidator>
+
 #include <spdlog/spdlog.h>
+
+
+//
+// DescriptionValidator
+//
+
+//! Validator for description of wallet.
+class DescriptionValidator final : public QValidator
+{
+public:
+   explicit DescriptionValidator(QObject *parent)
+      : QValidator(parent)
+   {
+   }
+
+
+   QValidator::State validate(QString &input, int &pos) const override
+   {
+      static const QString invalidCharacters = QLatin1String("\\/?:*<>|");
+
+      if (invalidCharacters.contains(input.at(pos - 1))) {
+         input.remove(pos - 1, 1);
+
+         if (pos > input.size()) {
+            --pos;
+         }
+
+         return QValidator::Invalid;
+      } else {
+         return QValidator::Acceptable;
+      }
+   }
+};
 
 
 CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
@@ -37,6 +72,8 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
 
       ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->GetWalletsCount() + 1));
    }
+
+   ui_->lineEditDescription->setValidator(new DescriptionValidator(this));
 
    connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::UpdateAcceptButtonState);
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
