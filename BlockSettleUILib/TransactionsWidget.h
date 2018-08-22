@@ -24,7 +24,7 @@ Q_OBJECT
 
 public:
    TransactionsWidget(QWidget* parent = nullptr );
-   ~TransactionsWidget() override = default;
+   ~TransactionsWidget() override;
 
    void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<ArmoryConnection> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
@@ -41,7 +41,7 @@ private slots:
    void onDataLoaded(int count);
 
 private:
-   Ui::TransactionsWidget* ui;
+   std::unique_ptr<Ui::TransactionsWidget> ui;
 
 private:
    std::shared_ptr<TransactionsViewModel> transactionsModel_;

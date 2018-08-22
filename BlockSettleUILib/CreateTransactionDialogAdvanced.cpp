@@ -41,6 +41,8 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
    initUI();
 }
 
+CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
+
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
         const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<WalletsManager>& walletManager

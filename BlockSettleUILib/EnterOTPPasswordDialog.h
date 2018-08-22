@@ -15,7 +15,7 @@ Q_OBJECT
 
 public:
    EnterOTPPasswordDialog(const std::shared_ptr<OTPManager> &, const QString& reason, QWidget* parent = nullptr);
-   ~EnterOTPPasswordDialog() override = default;
+   ~EnterOTPPasswordDialog() override;
 
    SecureBinaryData GetPassword() const { return password_; }
 
@@ -30,7 +30,7 @@ private slots:
    void frejaTimer();
 
 private:
-   Ui::EnterOTPPasswordDialog* ui_;
+   std::unique_ptr<Ui::EnterOTPPasswordDialog> ui_;
    SecureBinaryData  password_;
    FrejaSignOTP      freja_;
    QTimer *frejaTimer_;

@@ -80,7 +80,7 @@ signals:
    void genAddrVerified(bool result);
 
 private:
-   Ui::CCSettlementTransactionWidget* ui_;
+   std::unique_ptr<Ui::CCSettlementTransactionWidget> ui_;
    QTimer                     timer_;
    QDateTime                  expireTime_;
    bool                       clientSells_ = false;

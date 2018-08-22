@@ -17,7 +17,7 @@ public:
    MessageBoxWarning(const QString& text, const QString& description
       , const QString& details, QWidget* parent = nullptr);
 
-   ~MessageBoxWarning() noexcept override = default;
+   ~MessageBoxWarning() override;
 
    void setButtonText(const QString &);
 
@@ -31,7 +31,7 @@ private:
    void ShowDetails();
 
 private:
-   Ui::MessageBoxWarning* ui_;
+   std::unique_ptr<Ui::MessageBoxWarning> ui_;
 };
 
 

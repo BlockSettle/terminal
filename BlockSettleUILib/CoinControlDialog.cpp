@@ -15,6 +15,8 @@ CoinControlDialog::CoinControlDialog(const std::shared_ptr<SelectedTransactionIn
    ui_->widgetCoinControl->initWidget(inputs);
 }
 
+CoinControlDialog::~CoinControlDialog() = default;
+
 void CoinControlDialog::onAccepted()
 {
    ui_->widgetCoinControl->applyChanges(selectedInputs_);

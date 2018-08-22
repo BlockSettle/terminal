@@ -55,6 +55,8 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    UpdateAcceptButtonState();
 }
 
+CreateWalletDialog::~CreateWalletDialog() = default;
+
 void CreateWalletDialog::showEvent(QShowEvent *event)
 {
    ui_->labelHintPrimary->setVisible(ui_->checkBoxPrimaryWallet->isVisible());

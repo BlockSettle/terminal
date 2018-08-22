@@ -26,7 +26,7 @@ class WalletBackupDialog : public QDialog
 public:
    WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<SignContainer> &
       , QWidget *parent = nullptr);
-   ~WalletBackupDialog() noexcept override = default;
+   ~WalletBackupDialog() override;
 
    bool isDigitalBackup() const;
    QString filePath() const;
@@ -46,7 +46,7 @@ private slots:
    void updateState();
 
 private:
-   Ui::WalletBackupDialog *ui_;
+   std::unique_ptr<Ui::WalletBackupDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>     wallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
    unsigned int   infoReqId_ = 0;

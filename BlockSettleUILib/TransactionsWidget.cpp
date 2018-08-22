@@ -198,6 +198,8 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
    ui->labelResultCount->hide();
 }
 
+TransactionsWidget::~TransactionsWidget() = default;
+
 void TransactionsWidget::init(const std::shared_ptr<WalletsManager> &walletsMgr
    , const std::shared_ptr<ArmoryConnection> &armory)
 {
