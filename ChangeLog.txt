@@ -1,3 +1,9 @@
+0.10.2
+Bug Fixes:
+   -
+Improvements:
+   - Add new first start (license agreement and primary network settings)
+
 0.10.1
 Bug Fixes:
    - Fixed TX dialog crash if closed before receiving reply from Armory
