@@ -169,6 +169,8 @@ void WebSocketClient::service(shared_ptr<atomic<unsigned>> runPtr,
 void WebSocketClient::shutdown()
 {
    run_->store(0, memory_order_relaxed);
+   readQueue_.completed();
+   cleanUp();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
