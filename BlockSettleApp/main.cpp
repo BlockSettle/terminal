@@ -16,6 +16,7 @@
 #include "ApplicationSettings.h"
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
+#include "StartupDialog.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
 #include "WalletsManager.h"
@@ -71,6 +72,35 @@ protected:
 private:
    bool activationRequired_ = false;
 };
+
+static void checkFirstStart(ApplicationSettings *applicationSettings) {
+  bool wasInitialized = applicationSettings->get<bool>(ApplicationSettings::initialized);
+  if (wasInitialized)
+    return;
+
+#ifdef _WIN32
+  // Read registry value in case it was set with installer. Could be used only on Windows for now.
+  QSettings settings(QLatin1String("HKEY_CURRENT_USER\\Software\\blocksettle\\blocksettle"), QSettings::NativeFormat);
+  bool showLicense = !settings.value(QLatin1String("license_accepted"), false).toBool();
+#else
+  bool showLicense = true;
+#endif // _WIN32
+
+  StartupDialog startupDialog(showLicense);
+  int result = startupDialog.exec();
+
+  if (result == QDialog::Rejected)
+    std::exit(EXIT_FAILURE);
+
+  const bool runArmoryLocally = startupDialog.isRunArmoryLocally();
+  applicationSettings->set(ApplicationSettings::runArmoryLocally, runArmoryLocally);
+  applicationSettings->set(ApplicationSettings::netType, int(startupDialog.networkType()));
+
+  if (runArmoryLocally) {
+    applicationSettings->set(ApplicationSettings::armoryDbIp, startupDialog.armoryDbIp());
+    applicationSettings->set(ApplicationSettings::armoryDbPort, startupDialog.armoryDbPort());
+  }
+}
 
 static int GuiApp(int argc, char** argv)
 {
@@ -130,6 +160,8 @@ static int GuiApp(int argc, char** argv)
       errorMessage.exec();
       return 1;
    }
+
+   checkFirstStart(settings.get());
 
    QString logoIcon;
    if (settings->get<NetworkType>(ApplicationSettings::netType) == NetworkType::MainNet) {
