@@ -4,6 +4,8 @@
 #include <QDialog>
 #include "VersionChecker.h"
 
+#include <memory>
+
 namespace Ui {
     class ChangeLogDialog;
 };

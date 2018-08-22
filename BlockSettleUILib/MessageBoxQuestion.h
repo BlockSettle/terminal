@@ -3,6 +3,8 @@
 
 #include "CommonMessageBoxDialog.h"
 
+#include <memory>
+
 namespace Ui
 {
    class MessageBoxQuestion;
