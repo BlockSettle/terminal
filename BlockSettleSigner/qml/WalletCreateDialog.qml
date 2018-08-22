@@ -125,6 +125,9 @@ CustomDialog {
                     id: tfDesc
                     Layout.fillWidth: true
                     selectByMouse: true
+                    validator: RegExpValidator {
+                        regExp: /^[^\\\\/?:*<>|]*$/
+                    }
                     onEditingFinished: {
                         seed.walletDesc = tfDesc.text
                     }

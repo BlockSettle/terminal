@@ -1,3 +1,9 @@
+0.10.3
+Bug Fixes:
+   -
+Improvements:
+   - Disabled some special characters in wallet description.
+
 0.10.2
 Bug Fixes:
    -
