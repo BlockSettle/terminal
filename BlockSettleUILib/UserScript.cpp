@@ -178,10 +178,10 @@ int Constants::payOutTxSize() const
    return 82;
 }
 
-float Constants::feePerByte() const
+float Constants::feePerByte()
 {
    if (walletsManager_) {
-      walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; });
+      walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; }, this);
    }
    return feePerByte_;  //NB: sometimes returns previous value if previous call needs to wait for result from Armory
 }
@@ -194,7 +194,7 @@ QString Constants::xbtProductName() const
 void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
 {
    walletsManager_ = walletsManager;
-   walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; });
+   walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; }, this);
 }
 
 

@@ -588,7 +588,7 @@ void WalletsWidget::onRevokeSettlement()
             MessageBoxCritical(title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
          }
       };
-      walletsManager_->estimatedFeePerByte(2, cbFee);
+      walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };
    settlWallet->GetInputFor(ae, cbSettlInput, false);
 }

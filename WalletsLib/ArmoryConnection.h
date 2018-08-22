@@ -35,12 +35,10 @@ public:
       unsigned progressNumeric) override;
 
    void socketStatus(bool status) override;
-   std::shared_future<bool> connFuture();
 
 private:
    ArmoryConnection * connection_;
    std::shared_ptr<spdlog::logger>  logger_;
-   std::promise<bool>   connected_;
 };
 
 class ArmoryConnection : public QObject
@@ -49,6 +47,7 @@ class ArmoryConnection : public QObject
    Q_OBJECT
 public:
    enum class State : uint8_t {
+      Unknown,
       Offline,
       Connected,
       Scanning,
@@ -122,7 +121,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
    std::shared_ptr<ArmoryCallback>  cbRemote_;
-   State          state_ = State::Offline;
+   std::atomic<State>   state_ = { State::Unknown };
    TxCacheFile    txCache_;
 
    std::atomic_bool  regThreadRunning_;

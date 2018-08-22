@@ -85,7 +85,7 @@ public:
 
    int payInTxSize() const;
    int payOutTxSize() const;
-   float feePerByte() const;
+   float feePerByte();
    QString xbtProductName() const;
 
    void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);

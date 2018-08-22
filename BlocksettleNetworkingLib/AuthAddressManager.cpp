@@ -375,7 +375,7 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
          };
          wallet->getUTXOsToSpend(fee, cbFeeUTXOs);
       };
-      const float feePerByte = walletsManager_->estimatedFeePerByte(3, cbFee);
+      walletsManager_->estimatedFeePerByte(3, cbFee, this);
    };
    addressVerificator_->GetRevokeInputs(cbInputs);
    return true;

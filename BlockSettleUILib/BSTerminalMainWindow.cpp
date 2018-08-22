@@ -79,7 +79,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       setGeometry(geom);
    }
 
-   qRegisterMetaType<std::vector<UTXO> >();
    connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });

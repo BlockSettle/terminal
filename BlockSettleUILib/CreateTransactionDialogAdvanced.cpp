@@ -142,7 +142,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
 
             onTransactionUpdated();
          };
-         walletsManager_->estimatedFeePerByte(2, cbFee);
+         walletsManager_->estimatedFeePerByte(2, cbFee, this);
       }
    };
 }
