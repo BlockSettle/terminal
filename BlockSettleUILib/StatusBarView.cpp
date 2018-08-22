@@ -82,6 +82,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
 
    connect(walletsManager_.get(), &WalletsManager::walletImportStarted, this, &StatusBarView::onWalletImportStarted);
    connect(walletsManager_.get(), &WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
+   connect(walletsManager_.get(), &WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
 
    connect(celerClient.get(), &CelerClient::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
    connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);

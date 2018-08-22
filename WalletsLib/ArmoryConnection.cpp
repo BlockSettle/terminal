@@ -92,6 +92,7 @@ void PyBlockDataManager::onScheduleRPCBroadcast(const BinaryData& rawTx)
 Q_DECLARE_METATYPE(ArmoryConnection::State)
 Q_DECLARE_METATYPE(BDMPhase)
 Q_DECLARE_METATYPE(NetworkType)
+Q_DECLARE_METATYPE(NodeStatus)
 
 //==========================================================================================================
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger, const std::string &txCacheFN)
@@ -107,6 +108,7 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    qRegisterMetaType<ArmoryConnection::State>();
    qRegisterMetaType<BDMPhase>();
    qRegisterMetaType<NetworkType>();
+   qRegisterMetaType<NodeStatus>();
 
    const auto &cbZCMaintenance = [this] {
       while (maintThreadRunning_) {
@@ -127,6 +129,9 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
             if (timeDiff > zcPersistenceTimeout_) {
                zcToDelete.push_back(zc.first);
             }
+         }
+         if (!zcToDelete.empty()) {
+            logger_->debug("[ArmoryConnection] Erasing {} ZC entries");
          }
          for (const auto &reqId : zcToDelete) {
             zcData_.erase(reqId);
@@ -158,7 +163,6 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          try {
             registerBDV(settings.netType);
             if (!bdv_->getID().empty()) {
-               cbRemote_ = std::make_shared<ArmoryCallback>(bdv_->getRemoteCallbackSetupStruct(), this, logger_);
                logger_->debug("[ArmoryConnection::registerRoutine] got BDVid: {}", bdv_->getID());
                setState(State::Connected);
                break;
@@ -177,7 +181,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
             logger_->error("[ArmoryConnection::setup] registerBDV exception");
             emit connectionError(QString());
          }
-         std::this_thread::sleep_for(std::chrono::seconds(1));
+         std::this_thread::sleep_for(std::chrono::seconds(10));
       }
       regThreadRunning_ = false;
       logger_->debug("[ArmoryConnection::registerRoutine] completed");
@@ -199,8 +203,18 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          cbRemote_.reset();
       }
       isOnline_ = false;
-      bdv_ = std::make_shared<AsyncClient::BlockDataViewer>(AsyncClient::BlockDataViewer::getNewBDV(
-         settings.armoryDBIp, settings.armoryDBPort, SocketWS/*settings.socketType*/));
+      bool connected = false;
+      do {
+         cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
+         auto futConnected = cbRemote_->connFuture();
+         logger_->debug("[ArmoryConnection::connectRoutine] connecting to Armory {}:{}", settings.armoryDBIp, settings.armoryDBPort);
+         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_.get());
+         connected = futConnected.get();
+         if (!connected) {
+            logger_->warn("[ArmoryConnection::connectRoutine] BDV connection failed");
+            std::this_thread::sleep_for(std::chrono::seconds(30));
+         }
+      } while (!connected);
       logger_->debug("[ArmoryConnection::connectRoutine] BDV connected");
 
       regThreadRunning_ = true;
@@ -493,20 +507,31 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
       }
    };
    bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbProcess);
+//!!   cb(.0001);
    return true;
 }
 
-unsigned int ArmoryConnection::getConfirmationsNumber(const ClientClasses::LedgerEntry &item) const
+unsigned int ArmoryConnection::getConfirmationsNumber(uint32_t blockNum) const
 {
-   if (item.getBlockNum() < uint32_t(-1)) {
-      return topBlock() + 1 - item.getBlockNum();
+   if (blockNum < uint32_t(-1)) {
+      return topBlock() + 1 - blockNum;
    }
    return 0;
 }
 
+unsigned int ArmoryConnection::getConfirmationsNumber(const ClientClasses::LedgerEntry &item) const
+{
+   return getConfirmationsNumber(item.getBlockNum());
+}
+
 bool ArmoryConnection::isTransactionVerified(const ClientClasses::LedgerEntry &item) const
 {
-   return getConfirmationsNumber(item) >= 6;
+   return isTransactionVerified(item.getBlockNum());
+}
+
+bool ArmoryConnection::isTransactionVerified(uint32_t blockNum) const
+{
+   return getConfirmationsNumber(blockNum) >= 6;
 }
 
 bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &item) const
@@ -527,6 +552,7 @@ void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
       }
    }
    if (state_ == ArmoryConnection::State::Ready) {
+      logger_->debug("[ArmoryConnection::onRefresh]");
       emit refresh(ids);
    }
 }
@@ -591,4 +617,16 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
       logger_->debug("[ArmoryCallback::run] unknown BDMAction: {}", (int)action);
       break;
    }
+}
+
+void ArmoryCallback::socketStatus(bool status)
+{
+   logger_->debug("[ArmoryCallback::socketStatus] {}", status);
+   connected_.set_value(status);
+   connection_->setState(status ? ArmoryConnection::State::Connected : ArmoryConnection::State::Offline);
+}
+
+std::shared_future<bool> ArmoryCallback::connFuture()
+{
+   return connected_.get_future();
 }

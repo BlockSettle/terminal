@@ -96,9 +96,9 @@ class WebSocketClient : public SocketPrototype
 private:
    atomic<void*> wsiPtr_;
    atomic<void*> contextPtr_;
-   unique_ptr<promise<bool>> ctorProm_ = nullptr;
-
+   atomic<unsigned> requestID_;
    atomic<int> shutdownCount_;
+   atomic<bool> connected_ = { false };
 
    Queue<WebSocketMessage> writeQueue_;
    WebSocketMessage currentWriteMessage_;
@@ -125,11 +125,11 @@ private:
       run_ = make_shared<atomic<unsigned>>();
 
       count_.store(0, memory_order_relaxed);
+      requestID_.store(0, memory_order_relaxed);
       init();
    }
 
    void init();
-   void setIsReady(bool);
    void readService(void);
    static void service(
       shared_ptr<atomic<unsigned>>, struct lws*, struct lws_context*);

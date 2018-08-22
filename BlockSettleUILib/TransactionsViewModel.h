@@ -1,6 +1,7 @@
 #ifndef __TRANSACTIONS_VIEW_MODEL_H__
 #define __TRANSACTIONS_VIEW_MODEL_H__
 
+#include <deque>
 #include <unordered_set>
 #include <QAbstractItemModel>
 #include <QMutex>
@@ -8,10 +9,12 @@
 #include <QColor>
 #include <QFont>
 #include <QMetaType>
+#include <QTimer>
 #include <atomic>
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
 #include "MetaData.h"
+#include "WalletsManager.h"
 
 
 class SafeLedgerDelegate;
@@ -19,7 +22,7 @@ class WalletsManager;
 
 struct TransactionsViewItem
 {
-   std::shared_ptr<ClientClasses::LedgerEntry> led;
+   bs::TXEntry txEntry;
    Tx tx;
    std::map<BinaryData, Tx>   txIns;
    std::set<BinaryData>       txHashes;
@@ -39,7 +42,7 @@ struct TransactionsViewItem
    int confirmations = 0;
 
    void initialize(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<WalletsManager> &, std::function<void()>);
+      , const std::shared_ptr<WalletsManager> &, std::function<void(const TransactionsViewItem *)>);
    void calcAmount(const std::shared_ptr<WalletsManager> &);
    bool containsInputsFrom(const Tx &tx) const;
 };
@@ -62,6 +65,8 @@ public:
    TransactionsViewModel(TransactionsViewModel&&) = delete;
    TransactionsViewModel& operator = (TransactionsViewModel&&) = delete;
 
+   Q_INVOKABLE void init();
+
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -77,31 +82,47 @@ private slots:
    void refresh();
    void onZeroConf(ArmoryConnection::ReqIdType);
    void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
-   void onNewItems(const TransactionItems items);
-   void onItemsDeleted(const TransactionItems items);
-   void onItemConfirmed(const TransactionsViewItem item);
+   void onNewItems(TransactionItems items);
+   void onItemsDeleted(TransactionItems items);
+   void onItemsConfirmed(TransactionItems items);
 
    void onArmoryStateChanged(ArmoryConnection::State);
-   void onNewTransactions(std::vector<ClientClasses::LedgerEntry>);
+   void onNewTransactions(std::vector<bs::TXEntry>);
+   void timerCmd();
 
 private:
    void clear();
    void loadLedgerEntries();
    void ledgerToTxData();
-   void insertNewTransactions(const std::vector<ClientClasses::LedgerEntry> &page);
+   void insertNewTransactions(const std::vector<bs::TXEntry> &page);
    void loadTransactionDetails(unsigned int iStart, size_t count);
-   void updateBlockHeight(const std::vector<ClientClasses::LedgerEntry> &page);
+   void updateBlockHeight(const std::vector<bs::TXEntry> &page);
    void updateTransactionDetails(TransactionsViewItem &item, int index);
-   TransactionsViewItem itemFromTransaction(const ClientClasses::LedgerEntry &);
+   TransactionsViewItem itemFromTransaction(const bs::TXEntry &);
    bool txKeyExists(const std::string &key);
    int getItemIndex(const TransactionsViewItem &) const;
 
 signals:
-   void dataChangedInThread(const QModelIndex& start, const QModelIndex& end, const QVector<int> roles = QVector<int>());
-   void itemsAdded(const TransactionItems items);
-   void itemsDeleted(const TransactionItems items);
    void dataLoaded(int count);
-   void itemConfirmed(const TransactionsViewItem item);
+
+private:
+   struct Command {
+      enum class Type {
+         Add,
+         Delete,
+         Confirm,
+         Update
+      };
+      Type  type;
+      TransactionItems  items;
+   };
+   QTimer * cmdTimer_;
+   QMutex   cmdMutex_;
+   using CommandQueue = std::deque<Command>;
+   CommandQueue cmdQueue_;
+
+   void executeCommand(const Command &);
+   void addCommand(const Command &);
 
 public:
    enum class Columns
@@ -126,7 +147,7 @@ public:
    };
 
    TransactionItems                    currentPage_;
-   std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>> rawData_;
+   std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
    std::unordered_set<std::string>     currentKeys_;
    std::shared_ptr<ArmoryConnection>   armory_;
    AsyncClient::LedgerDelegate         ledgerDelegate_;

@@ -346,6 +346,8 @@ namespace bs {
       mutable std::map<BinaryData, uint32_t>                addressTxNMap_;
       mutable std::atomic_bool   updateAddrBalance_;
       mutable std::atomic_bool   updateAddrTxN_;
+      mutable std::map<bs::Address, std::function<void(std::vector<uint64_t>)>>  cbBal_;
+      mutable std::map<bs::Address, std::function<void(uint32_t)>>               cbTxN_;
 
    private:
       class UtxoFilterAdapter : public bs::UtxoReservation::Adapter
@@ -388,7 +390,7 @@ namespace bs {
             case Delivery:    return QT_TR_NOOP("Delivery");
             case Payment:     return QT_TR_NOOP("Payment");
             case Unknown:
-            default:          return "";
+            default:          return QT_TR_NOOP("Undefined");
          }
       }
       static const char *toStringDir(Direction dir) {

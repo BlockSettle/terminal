@@ -86,8 +86,16 @@ void RFQBlotterTreeView::drawRow(QPainter *painter, const QStyleOptionViewItem &
       painter->save();
       painter->setFont(option.font);
       painter->setPen(QColor(0x00, 0xA9, 0xE3));
-      painter->drawText(r, 0,
-         index.data(static_cast<int>(QuoteRequestsModel::Role::StatText)).toString());
+
+      if (isExpanded(index)) {
+         painter->drawText(r, 0,
+            index.data(static_cast<int>(QuoteRequestsModel::Role::StatText)).toString());
+      } else {
+         painter->drawText(r, 0,
+            tr("0 of %1").arg(
+               index.data(static_cast<int>(QuoteRequestsModel::Role::CountOfRfqs)).toInt()));
+      }
+
       painter->restore();
    }
 }

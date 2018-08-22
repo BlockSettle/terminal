@@ -203,6 +203,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui->treeViewWallets->setItemsExpandable(true);
    ui->treeViewWallets->setRootIsDecorated(true);
    ui->treeViewWallets->setExpandsOnDoubleClick(false);
+   ui->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
    walletsModel_->LoadWallets();
 
    connect(ui->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);

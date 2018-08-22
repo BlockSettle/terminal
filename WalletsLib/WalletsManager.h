@@ -23,6 +23,18 @@ namespace bs {
       class Wallet;
       class DummyWallet;
    }
+
+   struct TXEntry {
+      BinaryData  txHash;
+      std::string id;
+      int64_t     value;
+      uint32_t    blockNum;
+      uint32_t    txTime;
+      bool        isRBF;
+      bool        isChainedZC;
+   };
+   TXEntry convertTXEntry(const ClientClasses::LedgerEntry &);
+   std::vector<TXEntry> convertTXEntries(std::vector<ClientClasses::LedgerEntry>);
 }
 class ApplicationSettings;
 
@@ -90,7 +102,6 @@ public:
 
    void RegisterSavedWallets();
 
-   bool IsTransactionVerified(const ClientClasses::LedgerEntry &);
    bool GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &
       , std::function<void(bs::Transaction::Direction)>);
    bool GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &
@@ -111,6 +122,7 @@ signals:
    void walletChanged();
    void walletsReady();
    void walletsLoaded();
+   void walletBalanceUpdated();
    void walletReady(const QString &walletId);
    void newWalletAdded(const std::string &walletId);
    void authWalletChanged();
@@ -119,7 +131,7 @@ signals:
    void error(const QString &title, const QString &text) const;
    void walletImportStarted(const std::string &walletId);
    void walletImportFinished(const std::string &walletId);
-   void newTransactions(std::vector<ClientClasses::LedgerEntry>) const;
+   void newTransactions(std::vector<bs::TXEntry>) const;
 
 public slots:
    void onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
@@ -127,7 +139,7 @@ public slots:
    void onWalletImported(const std::string &walletId) { emit walletImportFinished(walletId); }
 
 private slots:
-   void onZeroConfReceived(ArmoryConnection::ReqIdType);
+   void onZeroConfReceived(unsigned int);
    void onBroadcastZCError(const QString &txHash, const QString &errMsg);
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);

@@ -32,7 +32,7 @@ static const EnvSettings StagingEnvSettings{
    QLatin1String("104.155.117.179"),
    16001,
    QLatin1String("193.138.218.44"),
-   9091};
+   19091};
 
 static const EnvSettings UATEnvSettings{
    QLatin1String("193.138.218.39"),

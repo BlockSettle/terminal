@@ -70,7 +70,8 @@ public:
       LimitOfRfqs,
       QuotedRfqsCount,
       Visible,
-      StatText
+      StatText,
+      CountOfRfqs
    };
 
    enum class DataType {

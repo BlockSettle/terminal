@@ -24,18 +24,19 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
 {
    ui_->setupUi(this);
 
-   const auto &cbInit = [this, item, armory] {
-      ui_->labelSize->setText(QString::number(item.tx.serializeNoWitness().getSize()));
-      ui_->labelAmount->setText(item.amountStr);
-      ui_->labelDirection->setText(tr(bs::Transaction::toString(item.direction)));
-      ui_->labelAddress->setText(item.mainAddress);
+   const auto &cbInit = [this, armory] (const TransactionsViewItem *item) {
+      ui_->labelAmount->setText(item->amountStr);
+      ui_->labelDirection->setText(tr(bs::Transaction::toString(item->direction)));
+      ui_->labelAddress->setText(item->mainAddress);
 
-      if (item.tx.isInitialized()) {
+      if (item->tx.isInitialized()) {
+         ui_->labelSize->setText(QString::number(item->tx.serializeNoWitness().getSize()));
+
          std::set<BinaryData> txHashSet;
          std::map<BinaryData, std::set<uint32_t>> txOutIndices;
 
-         for (size_t i = 0; i < item.tx.getNumTxIn(); ++i) {
-            TxIn in = item.tx.getTxInCopy(i);
+         for (size_t i = 0; i < item->tx.getNumTxIn(); ++i) {
+            TxIn in = item->tx.getTxInCopy(i);
             OutPoint op = in.getOutPoint();
             txHashSet.insert(op.getTxHash());
             txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
@@ -47,12 +48,12 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
                ui_->treeAddresses->addTopLevelItem(item);
             }
 
-            const auto &wallet = item.wallet;
+            const auto &wallet = item->wallet;
             uint64_t value = 0;
             bool initialized = true;
 
             bool isTxOutgoing = false;
-            switch (item.direction) {
+            switch (item->direction) {
             case bs::Transaction::Sent:
             case bs::Transaction::PayOut:
             case bs::Transaction::Revoke:
@@ -62,7 +63,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
             case bs::Transaction::Delivery:
             case bs::Transaction::Payment:
             case bs::Transaction::Auth:
-               isTxOutgoing = (item.amount < 0);
+               isTxOutgoing = (item->amount < 0);
                break;
 
             default:
@@ -93,12 +94,12 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
             }
 
             if (wallet) {
-               for (size_t i = 0; i < item.tx.getNumTxOut(); ++i) {
-                  TxOut out = item.tx.getTxOutCopy(i);
+               for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
+                  TxOut out = item->tx.getTxOutCopy(i);
                   value -= out.getValue();
                   addAddress(wallet, out, true, isTxOutgoing);
                }
-               ui_->labelComment->setText(QString::fromStdString(wallet->GetTransactionComment(item.tx.getThisHash())));
+               ui_->labelComment->setText(QString::fromStdString(wallet->GetTransactionComment(item->tx.getThisHash())));
             }
 
             if (initialized) {
@@ -118,13 +119,13 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
          armory->getTXsByHash(txHashSet, cbTXs);
       }
 
-      ui_->labelConfirmations->setText(QString::number(item.confirmations));
+      ui_->labelConfirmations->setText(QString::number(item->confirmations));
    };
    item.initialize(armory, walletsManager, cbInit);
 
    bool bigEndianHash = true;
-   ui_->labelHash->setText(QString::fromStdString(item.led->getTxHash().toHexStr(bigEndianHash)));
-   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(item.led->getTxTime())));
+   ui_->labelHash->setText(QString::fromStdString(item.txEntry.txHash.toHexStr(bigEndianHash)));
+   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(item.txEntry.txTime)));
 
    ui_->labelWalletName->setText(item.walletName.isEmpty() ? tr("Unknown") : item.walletName);
 

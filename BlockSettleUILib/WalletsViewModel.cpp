@@ -77,6 +77,8 @@ public:
                return getState();
             case WalletsViewModel::WalletColumns::ColumnNbAddresses:
                return nbAddr_ ? QString::number(nbAddr_) : QString();
+            case WalletsViewModel::WalletColumns::ColumnID:
+               return QString::fromStdString(id());
             default:
                return QVariant();
             }
@@ -263,6 +265,7 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<WalletsManager> &wallet
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 
    if (signContainer_) {
@@ -376,6 +379,8 @@ QVariant WalletsViewModel::headerData(int section, Qt::Orientation orientation, 
             return tr("Signer state");
          case WalletColumns::ColumnNbAddresses:
             return tr("# Used Addrs");
+         case WalletColumns::ColumnID:
+            return tr("ID");
          default:
             return QVariant();
          }

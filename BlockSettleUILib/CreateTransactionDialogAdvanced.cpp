@@ -481,7 +481,7 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    if (originalFee_) {
       SetMinimumFee(originalFee_ + minRelayFeePerByte_ * summary.transactionSize, minFeePerByte_);
    }
-   validateCreateButton();
+   QMetaObject::invokeMethod(this, "validateCreateButton");
 }
 
 void CreateTransactionDialogAdvanced::preSetAddress(const QString& address)
