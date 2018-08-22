@@ -17,13 +17,13 @@ class CoinControlWidget : public QWidget
 Q_OBJECT
 public:
    CoinControlWidget(QWidget* parent = nullptr );
-   ~CoinControlWidget() override = default;
+   ~CoinControlWidget() override;
 
    void initWidget(const std::shared_ptr<SelectedTransactionInputs> &);
    void applyChanges(const std::shared_ptr<SelectedTransactionInputs> &);
 
 signals:
-   void coinSelectionChanged(size_t currentlySelected);
+   void coinSelectionChanged(size_t currentlySelected, bool autoSelection);
 
 private slots:
    void updateSelectedTotals();
@@ -31,7 +31,7 @@ private slots:
    void rowClicked(const QModelIndex &index);
 
 private:
-   Ui::CoinControlWidget* ui_;
+   std::unique_ptr<Ui::CoinControlWidget> ui_;
 
    CoinControlModel *coinControlModel_;
 };
@@ -123,7 +123,7 @@ signals:
    void stateChanged(int);
 
 public slots:
-   void onSelectionChanged(size_t nbSelected) {
+   void onSelectionChanged(size_t nbSelected, bool) {
       if (!nbSelected) {
          state_ = Qt::Unchecked;
       }

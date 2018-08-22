@@ -14,23 +14,26 @@ Q_OBJECT
 
 public:
    static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForRBF(
-        const std::shared_ptr<WalletsManager> &
+        const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer>&
       , const Tx &
       , const std::shared_ptr<bs::Wallet>&
       , QWidget* parent = nullptr);
 
    static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(
-        const std::shared_ptr<WalletsManager>&
+        const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager>&
       , const std::shared_ptr<SignContainer>&
       , const std::shared_ptr<bs::Wallet>&
       , const Tx &
       , QWidget* parent = nullptr);
 
 public:
-   CreateTransactionDialogAdvanced(const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, bool loadFeeSuggestions, QWidget* parent);
-   ~CreateTransactionDialogAdvanced() noexcept override = default;
+   CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
+      , bool loadFeeSuggestions, QWidget* parent);
+   ~CreateTransactionDialogAdvanced() override;
 
    void preSetAddress(const QString& address);
    void preSetValue(const double value);
@@ -89,6 +92,9 @@ private:
    void clear() override;
    void initUI();
 
+   void setRBFinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
+   void setCPFPinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
+
    void validateAddOutputButton();
    void validateCreateButton();
 
@@ -113,7 +119,7 @@ private:
    void disableChangeAddressSelecting();
 
 private:
-   Ui::CreateTransactionDialogAdvanced*  ui_;
+   std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;
 
    bool     currentAddressValid_ = false;
    double   currentValue_ = 0;

@@ -3,6 +3,8 @@
 
 #include "CommonMessageBoxDialog.h"
 
+#include <memory>
+
 namespace Ui
 {
    class MessageBoxQuestion;
@@ -17,7 +19,7 @@ public:
    MessageBoxQuestion(const QString& title, const QString& text, const QString& description
       , const QString& details, QWidget* parent = nullptr);
 
-   ~MessageBoxQuestion() noexcept override = default;
+   ~MessageBoxQuestion() override;
 
    MessageBoxQuestion &setExclamationIcon();
    MessageBoxQuestion &setConfirmButtonText(const QString &);
@@ -33,7 +35,7 @@ private:
    void ShowDetails();
 
 private:
-   Ui::MessageBoxQuestion* ui_;
+   std::unique_ptr<Ui::MessageBoxQuestion> ui_;
 };
 
 

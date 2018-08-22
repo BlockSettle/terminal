@@ -4,6 +4,8 @@
 #include <QDialog>
 #include "VersionChecker.h"
 
+#include <memory>
+
 namespace Ui {
     class ChangeLogDialog;
 };
@@ -14,10 +16,10 @@ Q_OBJECT
 
 public:
    ChangeLogDialog(const bs::VersionChecker& verChecker, QWidget* parent = nullptr );
-   ~ChangeLogDialog() override = default;
+   ~ChangeLogDialog() override;
 
 private:
-   Ui::ChangeLogDialog* ui_;
+   std::unique_ptr<Ui::ChangeLogDialog> ui_;
 };
 
 #endif // __CHANGE_LOG_DIALOG_H__

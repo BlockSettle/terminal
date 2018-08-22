@@ -15,8 +15,8 @@
    #endif
 
    #ifndef ssize_t
-      #ifdef _WIN64
-         #define ssize_t LONGLONG
+      #ifdef _WIN32
+         #define ssize_t SSIZE_T
       #else
          #define ssize_t long
       #endif
@@ -197,7 +197,7 @@ public:
    void copyFrom(uint8_t const * start, uint8_t const * end) 
                   { copyFrom( start, (end-start)); }  // [start, end)
    void copyFrom(string const & str)                         
-                  { copyFrom( (uint8_t*)str.c_str(), str.size()); } 
+                  { copyFrom( (uint8_t*)str.data(), str.size()); } 
    void copyFrom(BinaryData const & bd)                      
                   { copyFrom( bd.getPtr(), bd.getSize() ); }
    void copyFrom(BinaryDataRef const & bdr);
@@ -545,45 +545,17 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   void createFromHex(string const & str)
-   {
-      static const uint8_t binLookupTable[256] = { 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0, 0, 0, 0, 0, 0, 
-         0, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-      if (str.size() % 2 != 0)
-      {
-         LOGERR << "odd hexit count";
-         throw runtime_error("odd hexit count");
-      }
-      size_t newLen = str.size() / 2;
-      alloc(newLen);
-
-      for(size_t i=0; i<newLen; i++)
-      {
-         uint8_t char1 = binLookupTable[ (uint8_t)str[2*i  ] ];
-         uint8_t char2 = binLookupTable[ (uint8_t)str[2*i+1] ];
-         data_[i] = (char1 << 4) | char2;
-      }
-   }
-
+   void createFromHex(const string& str);
+   void createFromHex(BinaryDataRef const & bdr);
 
    // For deallocating all the memory that is currently used by this BD
    void clear(void) { data_.clear(); }
+   vector<uint8_t> release(void) 
+   { 
+      auto vec = move(data_);
+      clear();
+      return vec; 
+   }
 
 public:
    static BinaryData EmptyBinData_;
@@ -663,7 +635,7 @@ public:
    void setRef(uint8_t const * start, uint8_t const * end) 
                   { setRef( start, (end-start)); }  // [start, end)
    void setRef(string const & str)                         
-                  { setRef( (uint8_t*)str.c_str(), str.size()); } 
+                  { setRef( (uint8_t*)str.data(), str.size()); } 
    void setRef(BinaryData const & bd)                      
                   { setRef( bd.getPtr(), bd.getSize() ); }
 
@@ -949,57 +921,6 @@ public:
       return string((char const *)(&(outStr[0])), 2*nBytes_);
    }
 
-
-
-/*
-#ifdef USE_CRYPTOPP
-
-   static void getHash256(uint8_t const * strToHash,
-                          uint32_t        nBytes,
-                          BinaryData    & hashOutput)
-   {
-      static CryptoPP::SHA256 sha256_;
-      if(hashOutput.getSize() != 32)
-         hashOutput.resize(32);
-
-      sha256_.CalculateDigest(hashOutput.getPtr(), strToHash, nBytes);
-      sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
-   }
-
-   static void getHash256(BinaryDataRef const & strToHash, 
-                          BinaryData          & hashOutput)
-   {
-      static CryptoPP::SHA256 sha256_;
-      if(hashOutput.getSize() != 32)
-         hashOutput.resize(32);
-
-      sha256_.CalculateDigest(hashOutput.getPtr(), strToHash.getPtr(), strToHash.getSize());
-      sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
-
-   }
-
-   static BinaryData getHash256(BinaryDataRef const & strToHash)
-   {
-      static CryptoPP::SHA256 sha256_;
-      
-      BinaryData hashOutput(32);
-      sha256_.CalculateDigest(hashOutput.getPtr(), strToHash.getPtr(), strToHash.getSize());
-      sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
-      return hashOutput;
-   }
-
-   BinaryData getHash256(void)
-   {
-      static CryptoPP::SHA256 sha256_;
-      BinaryData hashOutput(32);
-      sha256_.CalculateDigest(hashOutput.getPtr(), ptr_,                 nBytes_);
-      sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
-      return hashOutput;
-   }
-
-#endif
-*/
-
 private:
    uint8_t const * ptr_;
    size_t  nBytes_;
@@ -1007,8 +928,6 @@ private:
 private:
 
 };
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -1887,17 +1806,6 @@ private:
    size_t   fileBytesRemaining_;
 
 };
-
-
-namespace std {
-   template <> struct hash<BinaryData>
-   {
-      size_t operator()(const BinaryData& x) const
-      {
-         return hash<std::string>()(x.toBinStr());
-      }
-   };
-}
 
 struct BinaryDataHash
 {

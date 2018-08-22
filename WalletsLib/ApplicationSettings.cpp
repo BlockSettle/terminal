@@ -82,7 +82,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("193.138.218.37")) },
-      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 81) },
+      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 7681) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("193.138.218.44")) },
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
@@ -121,12 +121,15 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("http://193.138.218.36/terminal/downloads"))},
       { ResetPassword_Url,       SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-forgot-password"))},
       { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-registration")) },
-      { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0) },
+      { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0x06) },
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
       { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },
-      { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
-      { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) }
+      { DisableBlueDotOnTabOfRfqBlotter, SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
+      { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
+      { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) },
+      { AdvancedTxDialogByDefault,       SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
+      { TransactionFilter,       SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) }
    };
 }
 
@@ -480,7 +483,7 @@ int ApplicationSettings::GetDefaultArmoryPort() const
    return GetDefaultArmoryPortForNetwork(get<NetworkType>(netType));
 }
 
-int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType) const
+int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType)
 {
    switch (networkType) {
    case NetworkType::MainNet:

@@ -15,7 +15,7 @@ namespace bs {
    }
    class Wallet;
 }
-
+class ArmoryConnection;
 class ApplicationSettings;
 class AssetManager;
 class CurrentWalletFilter;
@@ -29,9 +29,10 @@ Q_OBJECT
 
 public:
    RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<SignContainer> &
+      , WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
-   ~RootWalletPropertiesDialog() override = default;
+   ~RootWalletPropertiesDialog() override;
 
 private slots:
    void onDeleteWallet();
@@ -39,10 +40,12 @@ private slots:
    void onCreateWoWallet();
    void onChangePassword();
    void onPasswordChanged(const std::string &walletId, bool ok);
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &encKey);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
+      , bs::wallet::KeyRank);
    void onWalletSelected();
    void onRescanBlockchain();
    void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void onModelReset();
 
 private:
    void copyWoWallet();
@@ -52,7 +55,7 @@ private:
    void startWalletScan();
 
 private:
-   Ui::WalletPropertiesDialog    *     ui_;
+   std::unique_ptr<Ui::WalletPropertiesDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>     wallet_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
@@ -60,8 +63,9 @@ private:
    std::shared_ptr<AssetManager>       assetMgr_;
    CurrentWalletFilter                 *walletFilter_;
    unsigned int                        infoReqId_ = 0;
-   bs::wallet::EncryptionType          walletEncType_ = bs::wallet::EncryptionType::Password;
-   SecureBinaryData                    walletEncKey_;
+   std::vector<bs::wallet::EncryptionType>   walletEncTypes_;
+   std::vector<SecureBinaryData>             walletEncKeys_;
+   bs::wallet::KeyRank                       walletEncRank_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
 };
 

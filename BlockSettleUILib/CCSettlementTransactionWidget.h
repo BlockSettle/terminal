@@ -19,7 +19,7 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
-
+class ArmoryConnection;
 class AssetManager;
 class SignContainer;
 class TransactionData;
@@ -36,13 +36,14 @@ class CCSettlementTransactionWidget : public QWidget
 Q_OBJECT
 
 public:
-   CCSettlementTransactionWidget(QWidget* parent = nullptr );
-   ~CCSettlementTransactionWidget() override;
-
-   void init(const std::shared_ptr<spdlog::logger> &
+   CCSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<SignContainer> &
-      , std::shared_ptr<CelerClient>);
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<CelerClient> &
+      , QWidget* parent = nullptr);
+   ~CCSettlementTransactionWidget() override;
+
    void reset(const std::shared_ptr<WalletsManager> &walletsManager);
    void populateDetails(const bs::network::RFQ& rfq, const bs::network::Quote& quote
       , const std::shared_ptr<TransactionData>& transactionData, const bs::Address &genesis);
@@ -61,19 +62,15 @@ private:
    void acceptSpotCC();
    bool createCCUnsignedTXdata();
    bool createCCSignedTXdata();
-   void startFrejaSign();
 
 private slots:
    void ticker();
-   void onPasswordUpdated(const QString &);
+   void initSigning();
    void updateAcceptButton();
    void onGenAddrVerified(bool);
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
+      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
-
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &);
-   void onFrejaStatusUpdated(const QString &);
 
 signals:
    void settlementCancelled();
@@ -83,7 +80,7 @@ signals:
    void genAddrVerified(bool result);
 
 private:
-   Ui::CCSettlementTransactionWidget* ui_;
+   std::unique_ptr<Ui::CCSettlementTransactionWidget> ui_;
    QTimer                     timer_;
    QDateTime                  expireTime_;
    bool                       clientSells_ = false;
@@ -112,13 +109,13 @@ private:
    std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<ArmoryConnection>   armory_;
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
-   std::shared_ptr<FrejaSignWallet> frejaSign_;
-   bs::wallet::EncryptionType       encType_ = bs::wallet::EncryptionType::Unencrypted;
-   QString           userId_;
-   SecureBinaryData  walletPassword_;
+   std::vector<bs::wallet::EncryptionType>   encTypes_;
+   std::vector<SecureBinaryData>             encKeys_;
+   bs::wallet::KeyRank                       keyRank_;
 };
 
 #endif // __CC_SETTLEMENT_TRANSACTION_WIDGET_H__

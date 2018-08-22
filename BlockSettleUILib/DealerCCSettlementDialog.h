@@ -24,7 +24,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
       , QWidget* parent = nullptr);
-   ~DealerCCSettlementDialog() noexcept override = default;
+   ~DealerCCSettlementDialog() override;
 
    DealerCCSettlementDialog(const DealerCCSettlementDialog&) = delete;
    DealerCCSettlementDialog& operator = (const DealerCCSettlementDialog&) = delete;
@@ -34,19 +34,18 @@ public:
 
 protected:
    QWidget *widgetPassword() const override;
-   QLineEdit *lineEditPassword() const override;
+   WalletKeysSubmitWidget *widgetWalletKeys() const override;
    QLabel *labelHint() const override;
    QLabel *labelPassword() const override;
+
+   void validateGUI() override;
 
 private slots:
    void onAccepted();
    void onGenAddressVerified(bool);
 
 private:
-   void validateGUI();
-
-private:
-   Ui::DealerCCSettlementDialog*   ui_;
+   std::unique_ptr<Ui::DealerCCSettlementDialog> ui_;
    std::shared_ptr<DealerCCSettlementContainer> settlContainer_;
    const QString                   sValid;
    const QString                   sInvalid;

@@ -126,6 +126,10 @@ DLLAPI void OS_SetFlags(int fd, int flags);
 
 DLLAPI void OS_ShutdownPending(void);
 
+#ifdef _WIN32
+int Win32GetFDForDescriptor(int index);
+#endif
+
 #if defined (__cplusplus) || defined (c_plusplus)
 } /* terminate extern "C" { */
 #endif

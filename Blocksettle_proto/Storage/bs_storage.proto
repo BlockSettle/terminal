@@ -75,11 +75,13 @@ message CCTokenEntry {
    required string   ccToken = 2;
    required string   ccProduct = 3;
    required uint32   amount = 4;
+   required string   request_id = 5;
 }
 
 message OTPReportEntry {
    required string user_id = 1;
    required string otp_id = 2;
+   required string request_id = 3;
 }
 
 message AuthAddressSubmitMixIn {
@@ -114,12 +116,14 @@ message CCDistributionTransaction
    required bytes    transaction = 3;
    repeated string   user_name = 4;
    repeated uint32   amount = 5;
+   repeated string   request_id = 6;
 }
 
 message AuthVerificationRejectedMessage
 {
    required string user_name = 1;
    required string reservation_id = 2;
+   required string request_id = 3;
 }
 
 message FundCCGenAddrTransaction

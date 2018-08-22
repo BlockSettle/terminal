@@ -26,7 +26,6 @@
 #include "WalletsWidget.h"
 
 #include <QSortFilterProxyModel>
-#include <QDebug>
 
 class CurrentWalletFilter : public QSortFilterProxyModel
 {
@@ -55,6 +54,7 @@ private:
 
 RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &container
    , WalletsViewModel *walletsModel
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -74,13 +74,15 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    walletFilter_->setSourceModel(walletsModel);
    ui_->treeViewWallets->setModel(walletFilter_);
 
+   connect(walletsModel, &WalletsViewModel::modelReset,
+      this, &RootWalletPropertiesDialog::onModelReset);
+
    ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnDescription));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnState));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnSpendableBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnUnconfirmedBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnNbAddresses));
-   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnEmpty));
 
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RootWalletPropertiesDialog::onWalletSelected);
 
@@ -92,11 +94,12 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
 
    updateWalletDetails(wallet_);
 
-   ui_->rescanButton->setEnabled(PyBlockDataManager::instance()->GetState() == PyBlockDataManagerState::Ready);
+   ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
    ui_->changePassphraseButton->setEnabled(false);
    if (!wallet_->isWatchingOnly()) {
-      walletEncType_ = wallet_->encryptionType();
-      walletEncKey_ = wallet_->encryptionKey();
+      walletEncTypes_ = wallet_->encryptionTypes();
+      walletEncKeys_ = wallet_->encryptionKeys();
+      walletEncRank_ = wallet_->encryptionRank();
    }
 
    if (signingContainer_) {
@@ -112,6 +115,8 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
 
    ui_->treeViewWallets->expandAll();
 }
+
+RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
@@ -175,23 +180,23 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   ChangeWalletPasswordDialog changePasswordDialog(wallet_
-      , walletEncType_, walletEncKey_, this);
+   auto changePasswordDialog = new ChangeWalletPasswordDialog(wallet_
+      , walletEncTypes_, walletEncKeys_, walletEncRank_, this);
 
-   if (changePasswordDialog.exec() != QDialog::Accepted) {
+   if (changePasswordDialog->exec() != QDialog::Accepted) {
+      changePasswordDialog->deleteLater();
       return;
    }
 
-   const auto oldPassword = changePasswordDialog.GetOldPassword();
-   const auto newPassword = changePasswordDialog.GetNewPassword();
+   const auto oldPassword = changePasswordDialog->oldPassword();
 
    if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, newPassword, oldPassword
-         , changePasswordDialog.GetNewEncryptionType(), changePasswordDialog.GetNewEncryptionKey());
+      signingContainer_->ChangePassword(wallet_, changePasswordDialog->newPasswordData()
+         , changePasswordDialog->newKeyRank(), oldPassword);
    }
    else {
-      if (wallet_->changePassword(newPassword, oldPassword, changePasswordDialog.GetNewEncryptionType()
-         , changePasswordDialog.GetNewEncryptionKey())) {
+      if (wallet_->changePassword(changePasswordDialog->newPasswordData(), changePasswordDialog->newKeyRank()
+         , oldPassword)) {
          MessageBoxSuccess message(tr("Password change")
             , tr("Wallet password successfully changed - don't forget your new password!")
             , this);
@@ -204,6 +209,7 @@ void RootWalletPropertiesDialog::onChangePassword()
          message.exec();
       }
    }
+   changePasswordDialog->deleteLater();
 }
 
 void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, bool ok)
@@ -223,16 +229,41 @@ void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, 
    }
 }
 
-void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType encType
-   , const SecureBinaryData &encKey)
+static inline QString encTypeToString(bs::wallet::EncryptionType enc)
+{
+   switch (enc) {
+      case bs::wallet::EncryptionType::Unencrypted :
+         return QObject::tr("Unencrypted");
+
+      case bs::wallet::EncryptionType::Password :
+         return QObject::tr("Password");
+
+      case bs::wallet::EncryptionType::Freja :
+         return QObject::tr("Freja");
+   };
+}
+
+void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
+   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
-   walletEncType_ = encType;
-   walletEncKey_ = encKey;
+   walletEncTypes_ = encTypes;
+   walletEncKeys_ = encKeys;
+   walletEncRank_ = keyRank;
    ui_->changePassphraseButton->setEnabled(true);
+
+   if (keyRank.first == 1 && keyRank.second == 1) {
+      if (!encTypes.empty()) {
+         ui_->labelEncRank->setText(encTypeToString(encTypes.front()));
+      } else {
+         ui_->labelEncRank->setText(tr("Unknown"));
+      }
+   } else {
+      ui_->labelEncRank->setText(tr("%1 of %2").arg(keyRank.first).arg(keyRank.second));
+   }
 }
 
 void RootWalletPropertiesDialog::onWalletSelected()
@@ -264,7 +295,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::h
 
    ui_->balanceWidget->hide();
 
-   ui_->labelAddresses->setText(tr("Groups/Leaves:"));
+   ui_->labelAddresses->setText(tr("Groups/Leaves"));
    ui_->labelAddressesUsed->setText(tr("%1/%2").arg(QString::number(wallet->getNumGroups())).arg(QString::number(wallet->getNumLeaves())));
 }
 
@@ -344,4 +375,9 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, BinaryData pub
          startWalletScan();
       }
    }
+}
+
+void RootWalletPropertiesDialog::onModelReset()
+{
+   ui_->treeViewWallets->expandAll();
 }

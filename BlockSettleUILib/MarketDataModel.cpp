@@ -390,6 +390,20 @@ bool MDSortFilterProxyModel::lessThan(const QModelIndex &left, const QModelIndex
    QVariant leftData = sourceModel()->data(left);
    QVariant rightData = sourceModel()->data(right);
 
+   static const std::map<QString, int> groups = {
+      {tr(bs::network::Asset::toString(bs::network::Asset::PrivateMarket)), 0},
+      {tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)), 1},
+      {tr(bs::network::Asset::toString(bs::network::Asset::SpotFX)), 2},
+   };
+
+   if (!left.parent().isValid() && !right.parent().isValid()) {
+      try {
+         return (groups.at(leftData.toString()) < groups.at(rightData.toString()));
+      } catch (const std::out_of_range &) {
+         return true;
+      }
+   }
+
    if ((leftData.type() == QVariant::String) && (rightData.type() == QVariant::String)) {
       if ((left.column() > 0) && (right.column() > 0)) {
          double priceLeft = toDoubleFromPriceStr(leftData.toString());

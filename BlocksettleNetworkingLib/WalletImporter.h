@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QStringList>
 #include "HDWallet.h"
+#include "WalletEncryption.h"
 
 
 class ApplicationSettings;
@@ -22,12 +23,13 @@ class WalletImporter : public QObject
 
 public:
    WalletImporter(const std::shared_ptr<SignContainer> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<PyBlockDataManager> &, const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<AuthAddressManager> &, const QString &walletsPath
       , const bs::hd::Wallet::cb_scan_read_last &, const bs::hd::Wallet::cb_scan_write_last &);
 
    void Import(const std::string& name, const std::string& description
-      , bs::wallet::Seed seed, bool primary = false, const SecureBinaryData &password = {});
+      , bs::wallet::Seed seed, bool primary = false
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
 
 signals:
    void walletCreated(const std::string &rootWalletId);
@@ -42,7 +44,7 @@ private slots:
 private:
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<WalletsManager>     walletsMgr_;
-   std::shared_ptr<PyBlockDataManager> bdm_;
+   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<AuthAddressManager> authMgr_;
    const QString  walletsPath_;
@@ -51,7 +53,8 @@ private:
    std::shared_ptr<bs::hd::Wallet>     rootWallet_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
    unsigned int      createWalletReq_ = 0;
-   SecureBinaryData  password_;
+   std::vector<bs::wallet::PasswordData>  pwdData_;
+   bs::wallet::KeyRank  keyRank_;
    std::unordered_map<unsigned int, bs::hd::Path>     createNextWalletReqs_;
 };
 

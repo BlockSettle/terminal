@@ -15,6 +15,8 @@ DealingSettingsPage::DealingSettingsPage(QWidget* parent)
    connect(ui_->pushButtonResetCnt, &QPushButton::clicked, this, &DealingSettingsPage::onResetCountes);
 }
 
+DealingSettingsPage::~DealingSettingsPage() = default;
+
 void DealingSettingsPage::setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings)
 {
    appSettings_ = appSettings;
@@ -102,7 +104,10 @@ static inline int priceUpdateTimeout(int index)
 void DealingSettingsPage::displaySettings(const std::shared_ptr<AssetManager> &assetMgr
    , bool displayDefault)
 {
-   ui_->checkBoxDrop->setChecked(appSettings_->get<bool>(ApplicationSettings::dropQN, displayDefault));
+   ui_->checkBoxDrop->setChecked(appSettings_->get<bool>(ApplicationSettings::dropQN,
+      displayDefault));
+   ui_->showQuoted->setChecked(appSettings_->get<bool>(ApplicationSettings::ShowQuoted,
+      displayDefault));
    ui_->fx->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::FxRfqLimit,
       displayDefault)));
    ui_->xbt->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::XbtRfqLimit,
@@ -118,6 +123,7 @@ void DealingSettingsPage::displaySettings(const std::shared_ptr<AssetManager> &a
 void DealingSettingsPage::applyChanges()
 {
    appSettings_->set(ApplicationSettings::dropQN, ui_->checkBoxDrop->isChecked());
+   appSettings_->set(ApplicationSettings::ShowQuoted, ui_->showQuoted->isChecked());
    appSettings_->set(ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter,
       ui_->disableBlueDot->isChecked());
    appSettings_->set(ApplicationSettings::FxRfqLimit, limit(ui_->fx->currentIndex()));

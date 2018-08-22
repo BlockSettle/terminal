@@ -25,7 +25,7 @@ public:
    AuthAddressDialog(const std::shared_ptr<AuthAddressManager>& authAddressManager
       , const std::shared_ptr<AssetManager> &, const std::shared_ptr<OTPManager> &
       , const std::shared_ptr<ApplicationSettings> &, QWidget* parent = nullptr);
-   ~AuthAddressDialog() override = default;
+   ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
 
@@ -70,7 +70,7 @@ private:
    void updateUnsubmittedState();
 
 private:
-   Ui::AuthAddressDialog*  ui_;
+   std::unique_ptr<Ui::AuthAddressDialog> ui_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<OTPManager>            otpManager_;

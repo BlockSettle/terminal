@@ -684,26 +684,14 @@ public:
    }
 };
 
-
-
 class BlockDataManager::BDM_ScrAddrFilter : public ScrAddrFilter
 {
    BlockDataManager *const bdm_;
-   //0: didn't start, 1: is initializing, 2: done initializing
    
 public:
-   BDM_ScrAddrFilter(BlockDataManager *bdm)
-      : ScrAddrFilter(bdm->getIFace(), BlockDataManagerConfig::getDbType())
-      , bdm_(bdm)
-   {
-   
-   }
-
-   virtual shared_ptr<ScrAddrFilter> copy()
-   {
-      shared_ptr<ScrAddrFilter> sca = make_shared<BDM_ScrAddrFilter>(bdm_);
-      return sca;
-   }
+   BDM_ScrAddrFilter(BlockDataManager *bdm, unsigned sdbiID = 0)
+      : ScrAddrFilter(bdm->getIFace(), sdbiID), bdm_(bdm)
+   {}
 
 protected:
    virtual bool bdmIsRunning() const
@@ -724,7 +712,7 @@ protected:
       catch (runtime_error&)
       {
          StoredDBInfo sdbi;
-         sdbi.magic_ = config().magicBytes_;
+         sdbi.magic_ = bdm_->config().magicBytes_;
          sdbi.metaHash_ = BtcUtils::EmptyHash_;
          sdbi.topBlkHgt_ = 0;
          sdbi.armoryType_ = BlockDataManagerConfig::getDbType();
@@ -740,7 +728,7 @@ protected:
       catch (runtime_error&)
       {
          StoredDBInfo sdbi;
-         sdbi.magic_ = config().magicBytes_;
+         sdbi.magic_ = bdm_->config().magicBytes_;
          sdbi.metaHash_ = BtcUtils::EmptyHash_;
          sdbi.topBlkHgt_ = 0;
          sdbi.armoryType_ = BlockDataManagerConfig::getDbType();
@@ -764,24 +752,14 @@ protected:
       return bdm_->applyBlockRangeToDB(progress, startBlock, endBlock, *this, false);
    }
    
-   virtual uint32_t currentTopBlockHeight() const
-   {
-      return bdm_->blockchain()->top()->getBlockHeight();
-   }
-   
-   virtual void wipeScrAddrsSSH(const vector<BinaryData>& saVec)
-   {
-      bdm_->getIFace()->resetHistoryForAddressVector(saVec);
-   }
-
-   virtual shared_ptr<Blockchain> blockchain(void)
+   shared_ptr<Blockchain> blockchain(void) const
    {
       return bdm_->blockchain();
    }
 
-   virtual BlockDataManagerConfig config(void)
+   shared_ptr<ScrAddrFilter> getNew(unsigned sdbiID)
    {
-      return bdm_->config();
+      return make_shared<BDM_ScrAddrFilter>(bdm_, sdbiID);
    }
 };
 
@@ -840,6 +818,7 @@ BlockDataManager::BlockDataManager(
       zeroConfCont_ = make_shared<ZeroConfContainer>(
          iface_, networkNode_, config_.zcThreadCount_);
       scrAddrData_ = make_shared<BDM_ScrAddrFilter>(this);
+      scrAddrData_->init();
    }
    catch (...)
    {
@@ -886,8 +865,6 @@ BlockDataManager::~BlockDataManager()
    if (iface_ != nullptr)
       iface_->closeDatabases();
    delete iface_;
-
-   blockchain_.reset();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -935,13 +912,10 @@ void BlockDataManager::resetDatabases(ResetDBMode mode)
       break;
    }
 
-
    if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
    {
-      //reapply scrAddrData_'s content to the db
-      scrAddrData_->putAddrMapInDB();
-
-      scrAddrData_->clear();
+      //reapply ssh map to the db
+      scrAddrData_->resetSshDB();
    }
 }
 
@@ -1034,31 +1008,6 @@ StoredHeader BlockDataManager::getMainBlockFromDB(uint32_t hgt) const
 shared_ptr<ScrAddrFilter> BlockDataManager::getScrAddrFilter(void) const
 {
    return scrAddrData_;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-shared_future<bool> BlockDataManager::registerAddressBatch(
-   const set<BinaryData>& addrSet, bool isNew)
-{
-   auto waitOnPromise = make_shared<promise<bool>>();
-   shared_future<bool> waitOnFuture = waitOnPromise->get_future();
-
-   auto callback = [waitOnPromise](bool refresh)->void
-   {
-      waitOnPromise->set_value(refresh);
-   };
-
-   shared_ptr<ScrAddrFilter::WalletInfo> wltInfo = 
-      make_shared<ScrAddrFilter::WalletInfo>();
-   wltInfo->scrAddrSet_ = addrSet;
-   wltInfo->callback_ = callback;
-
-   vector<shared_ptr<ScrAddrFilter::WalletInfo>> wltInfoVec;
-   wltInfoVec.push_back(move(wltInfo));
-
-   scrAddrData_->registerAddressBatch(move(wltInfoVec), isNew);
-
-   return waitOnFuture;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

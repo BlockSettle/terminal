@@ -68,7 +68,10 @@ public:
       Quoted,
       Type,
       LimitOfRfqs,
-      QuotedRfqsCount
+      QuotedRfqsCount,
+      Visible,
+      StatText,
+      CountOfRfqs
    };
 
    enum class DataType {
@@ -114,9 +117,9 @@ public:
    void onQuoteReqNotifReceived(const bs::network::QuoteReqNotification &qrn);
    void onBestQuotePrice(const QString reqId, double price, bool own);
    void limitRfqs(const QModelIndex &index, int limit);
-   void setHiddenFlag(const QModelIndex &index);
    QModelIndex findMarketIndex(const QString &name) const;
    void setPriceUpdateInterval(int interval);
+   void showQuotedRfqs(bool on  = true);
 
 private slots:
    void ticker();
@@ -124,7 +127,6 @@ private slots:
    void onSettlementCompleted();
    void onSettlementFailed();
    void clearModel();
-   void clearHiddenFlag();
    void onDeferredUpdate(const QPersistentModelIndex &index);
    void onPriceUpdateTimer();
 
@@ -146,6 +148,7 @@ private:
    unsigned int   settlCompleted_ = 0;
    unsigned int   settlFailed_ = 0;
    int priceUpdateInterval_;
+   bool showQuoted_;
 
    struct IndexHelper {
       IndexHelper *parent_;
@@ -209,10 +212,12 @@ private:
       QBrush stateBrush_;
       IndexHelper idx_;
       bool quoted_;
+      bool visible_;
 
       RFQ()
          : idx_(nullptr, this, DataType::RFQ)
          , quoted_(false)
+         , visible_(false)
       {}
 
       RFQ(const QString &security,
@@ -247,6 +252,7 @@ private:
          , reqId_(reqId)
          , idx_(nullptr, this, DataType::RFQ)
          , quoted_(false)
+         , visible_(false)
       {}
    };
 
@@ -255,24 +261,24 @@ private:
       QFont font_;
       std::vector<std::unique_ptr<RFQ>> rfqs_;
       IndexHelper idx_;
-      bool hasHidden_;
       int limit_;
       int quotedRfqsCount_;
+      int visibleCount_;
 
       Group()
          : idx_(nullptr, this, DataType::Group)
-         , hasHidden_(false)
          , limit_(5)
          , quotedRfqsCount_(0)
+         , visibleCount_(0)
       {}
 
       explicit Group(const QString &security, int limit, const QFont & font = QFont())
          : security_(security)
          , font_(font)
          , idx_(nullptr, this, DataType::Group)
-         , hasHidden_(false)
          , limit_(limit)
          , quotedRfqsCount_(0)
+         , visibleCount_(0)
       {}
    };
 
@@ -317,8 +323,12 @@ private:
    int findMarket(IndexHelper *idx) const;
    Market* findMarket(const QString &name) const;
    void updatePrices(const QString &security, const bs::network::MDField &pxBid,
-      const bs::network::MDField &pxOffer);
-   void updateBestQuotePrice(const QString &reqId, double price, bool own);
+      const bs::network::MDField &pxOffer, std::vector<std::pair<QModelIndex, QModelIndex>> *idxs = nullptr);
+   void showRfqsFromBack(Group *g);
+   void showRfqsFromFront(Group *g);
+   void clearVisibleFlag(Group *g);
+   void updateBestQuotePrice(const QString &reqId, double price, bool own,
+      std::vector<std::pair<QModelIndex, QModelIndex>> *idxs = nullptr);
 
 private:
    using cbItem = std::function<void(Group *g, int itemIndex)>;

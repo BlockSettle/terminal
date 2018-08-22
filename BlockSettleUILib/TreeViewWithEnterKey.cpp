@@ -1,6 +1,7 @@
 
 
 #include <QKeyEvent>
+#include <QMouseEvent>
 
 #include "TreeViewWithEnterKey.h"
 
@@ -38,4 +39,13 @@ void TreeViewWithEnterKey::keyPressEvent(QKeyEvent *event)
    }
 
    QTreeView::keyPressEvent(event);
+}
+
+void TreeViewWithEnterKey::mouseReleaseEvent(QMouseEvent *event)
+{
+   if (!indexAt(event->pos()).isValid()) {
+      selectionModel()->clear();
+   }
+
+   QTreeView::mouseReleaseEvent(event);
 }

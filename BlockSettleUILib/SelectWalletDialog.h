@@ -21,7 +21,7 @@ Q_OBJECT
 
 public:
    SelectWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager, const std::string &selWalletId, QWidget* parent = nullptr);
-   ~SelectWalletDialog() override = default;
+   ~SelectWalletDialog() override;
 
    std::shared_ptr<bs::Wallet> getSelectedWallet() const;
    bool isNestedSegWitAddress() const;
@@ -31,7 +31,7 @@ public slots:
    void onDoubleClicked(const QModelIndex& index);
 
 private:
-   Ui::SelectWalletDialog*  ui_;
+   std::unique_ptr<Ui::SelectWalletDialog> ui_;
    WalletsViewModel  *              walletsModel_;
    std::shared_ptr<bs::Wallet>      selectedWallet_;
    std::shared_ptr<WalletsManager>  walletsManager_;

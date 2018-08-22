@@ -17,7 +17,7 @@ Q_OBJECT
 
 public:
    CCWidget(QWidget* parent = nullptr );
-   ~CCWidget() override = default;
+   ~CCWidget() override;
 
    void SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model);
 
@@ -27,7 +27,7 @@ private slots:
 
 private:
    std::shared_ptr<AssetManager> assetManager_;
-   Ui::CCWidget* ui;
+   std::unique_ptr<Ui::CCWidget> ui;
 };
 
 #endif // __CC_WIDGET_H__

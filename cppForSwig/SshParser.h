@@ -10,6 +10,7 @@
 #define _SSH_PARSER_H
 
 #include "lmdb_wrapper.h"
+#include "Blockchain.h"
 #include "ScrAddrFilter.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -37,9 +38,9 @@ private:
 
    mutex mu_;
 
-   BlockingStack<unique_ptr<SshBatch>> checkpointQueue_;
-   BlockingStack<unique_ptr<SshBatch>> serializedSshQueue_;
-   BlockingStack<pair<BinaryData, BinaryData>>  sshBoundsQueue_;
+   BlockingQueue<unique_ptr<SshBatch>> checkpointQueue_;
+   BlockingQueue<unique_ptr<SshBatch>> serializedSshQueue_;
+   BlockingQueue<pair<BinaryData, BinaryData>>  sshBoundsQueue_;
 
    map<unsigned, atomic<unsigned>> shardSemaphores_;
 
@@ -77,7 +78,7 @@ typedef pair<set<BinaryData>, map<BinaryData, StoredScriptHistory>> subSshParser
 subSshParserResult parseSubSsh(
    unique_ptr<LDBIter>, int32_t scanFrom, bool,
    function<uint8_t(unsigned)>,
-   shared_ptr<map<ScrAddrFilter::AddrAndHash, int>>,
+   shared_ptr<map<BinaryDataRef, shared_ptr<AddrAndHash>>>,
    BinaryData upperBound);
 
 #endif

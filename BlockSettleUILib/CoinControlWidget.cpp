@@ -87,12 +87,14 @@ CoinControlWidget::CoinControlWidget(QWidget* parent)
    ui_->treeViewUTXO->setUniformRowHeights(true);
 }
 
+CoinControlWidget::~CoinControlWidget() = default;
+
 void CoinControlWidget::updateSelectedTotals()
 {
    ui_->labelTotalAmount->setText(coinControlModel_->GetSelectedBalance());
    ui_->labelTotalTransactions->setText(QString::number(coinControlModel_->GetSelectedTransactionsCount()));
    ui_->checkBoxUseAllSelected->setChecked(false);
-   emit coinSelectionChanged(coinControlModel_->GetSelectedTransactionsCount());
+   emit coinSelectionChanged(coinControlModel_->GetSelectedTransactionsCount(), false);
 }
 
 void CoinControlWidget::onAutoSelClicked(int state)
@@ -101,7 +103,7 @@ void CoinControlWidget::onAutoSelClicked(int state)
       ui_->labelTotalAmount->setText(coinControlModel_->GetTotalBalance());
       ui_->labelTotalTransactions->clear();
       coinControlModel_->clearSelection();
-      emit coinSelectionChanged(0);
+      emit coinSelectionChanged(0, true);
    }
    else {
       updateSelectedTotals();
@@ -129,11 +131,9 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
    ui_->treeViewUTXO->setItemDelegateForColumn(0, new DelegateForNameColumn(ui_->treeViewUTXO));
 
    auto ccHeader = new CCHeader(selectedInputs->GetTotalTransactionsCount(), Qt::Horizontal, ui_->treeViewUTXO);
-   ccHeader->setStretchLastSection(true);
    ccHeader->setSectionsClickable(true);
    ui_->treeViewUTXO->setSortingEnabled(true);
    ui_->treeViewUTXO->setHeader(ccHeader);
-   ui_->treeViewUTXO->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    connect(ccHeader, &CCHeader::stateChanged, coinControlModel_, &CoinControlModel::selectAll);
    connect(this, &CoinControlWidget::coinSelectionChanged, ccHeader, &CCHeader::onSelectionChanged);
@@ -144,6 +144,13 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
    onAutoSelClicked(selectedInputs->UseAutoSel() ? Qt::Checked : Qt::Unchecked);
 
    connect(ui_->treeViewUTXO, &QTreeView::clicked, this, &CoinControlWidget::rowClicked);
+
+   ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnName);
+   ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnBalance);
+   ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnUTXOCount);
+   ui_->treeViewUTXO->setCoinsModel(coinControlModel_);
+
+   onAutoSelClicked(ui_->checkBoxUseAllSelected->isChecked());
 }
 
 void CoinControlWidget::applyChanges(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)

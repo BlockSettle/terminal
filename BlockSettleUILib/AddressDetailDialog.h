@@ -13,9 +13,9 @@ namespace bs {
    class Wallet;
 }
 
-class WalletsManager;
-class PyBlockDataManager;
+class ArmoryConnection;
 class Tx;
+class WalletsManager;
 
 
 class AddressDetailDialog : public QDialog
@@ -24,17 +24,20 @@ Q_OBJECT
 
 public:
    AddressDetailDialog(const bs::Address &address, const std::shared_ptr<bs::Wallet> &wallet
-      , const std::shared_ptr<WalletsManager>& walletsManager, QWidget* parent = nullptr );
-   ~AddressDetailDialog() override = default;
+      , const std::shared_ptr<WalletsManager>& walletsManager, const std::shared_ptr<ArmoryConnection> &
+      , QWidget* parent = nullptr );
+   ~AddressDetailDialog() override;
 
 private slots:
    void onCopyClicked() const;
+   void onAddrBalanceReceived(const bs::Address &, std::vector<uint64_t>);
+   void onAddrTxNReceived(const bs::Address &, uint32_t);
 
 private:
    void onError();
 
 private:
-   Ui::AddressDetailDialog *  ui_;
+   std::unique_ptr <Ui::AddressDetailDialog> ui_;
    const bs::Address          address_;
    std::shared_ptr<WalletsManager> walletsManager_;
    std::shared_ptr<bs::Wallet> wallet_;

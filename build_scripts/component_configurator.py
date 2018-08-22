@@ -14,6 +14,7 @@ class Configurator:
 
     def config_component(self):
         if self.build_required():
+            print('Start building : {}'.format(self.get_package_name()))
             if self.download_package():
                 if self.is_archive():
                     self.unpack_package()
@@ -23,9 +24,34 @@ class Configurator:
                 os.makedirs(build_dir)
 
                 os.chdir(build_dir)
-                return self.config() and self.make() and self.install()
+
+                if os.path.isdir(self.get_install_dir()):
+                    self.remove_fs_object(self.get_install_dir())
+
+                if self.config() and self.make() and self.install():
+                    self.SetRevision()
+                    return True
+
+                return False
             return False
         return True
+
+    def GetRevisionFileName(self):
+        return os.path.join(self.get_install_dir(), '3rd_revision.txt')
+
+    def RevisionUpToDate(self):
+        revisionFileName = self.GetRevisionFileName()
+        if os.path.isfile(revisionFileName) :
+            with open(revisionFileName, 'r') as f:
+                revisionData = f.read()
+            return revisionData == self.get_revision_string()
+
+        return False
+
+    def SetRevision(self):
+        revisionFileName = self.GetRevisionFileName()
+        with open(revisionFileName, 'w') as f:
+            f.write(self.get_revision_string())
 
     def download_package(self):
         url = self.get_url()
@@ -34,6 +60,8 @@ class Configurator:
             ext = 'tar.gz'
         elif url.endswith('.tar.xz'):
             ext = 'tar.xz'
+
+        print('Start download : {}'.format(url))
 
         self._file_name = self.get_package_name() + '.' + ext
         self._download_path = os.path.join(self._project_settings.get_downloads_dir(), self._file_name)
@@ -88,7 +116,10 @@ class Configurator:
         return True
 
     def build_required(self):
-        return not os.path.isdir(self.get_install_dir())
+        if os.path.isdir(self.get_install_dir()):
+            return not self.RevisionUpToDate()
+
+        return True
 
     def get_install_dir(self):
         return os.path.join(self._project_settings.get_common_build_dir(), self.get_package_name())

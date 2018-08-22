@@ -12,6 +12,7 @@
 #include <QThreadPool>
 #include "CommonTypes.h"
 #include "OTPManager.h"
+#include "WalletEncryption.h"
 
 #include "bs_communication.pb.h"
 
@@ -24,9 +25,9 @@ namespace bs {
 }
 class AddressVerificator;
 class ApplicationSettings;
+class ArmoryConnection;
 class CelerClient;
 class ConnectionManager;
-class LedgerEntryData;
 class OTPManager;
 class RequestReplyCommand;
 class ResolverFeed_AuthAddress;
@@ -43,7 +44,8 @@ class AuthAddressManager : public QObject
    Q_OBJECT
 
 public:
-   AuthAddressManager(const std::shared_ptr<spdlog::logger> &);
+   AuthAddressManager(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<ArmoryConnection> &);
    ~AuthAddressManager() noexcept;
 
    AuthAddressManager(const AuthAddressManager&) = delete;
@@ -73,7 +75,7 @@ public:
    virtual bool HasAuthAddr() const;
    virtual bool HaveOTP() const;
 
-   void CreateAuthWallet(const SecureBinaryData &password = {}, bool signal = true);
+   void CreateAuthWallet(const std::vector<bs::wallet::PasswordData> &pwdData = {}, bool signal = true);
    virtual bool CreateNewAuthAddress();
 
    virtual bool SubmitForVerification(const bs::Address &address);
@@ -159,6 +161,7 @@ private:
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   settings_;
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<OTPManager>            otpManager_;

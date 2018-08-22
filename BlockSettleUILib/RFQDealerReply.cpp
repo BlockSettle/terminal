@@ -28,6 +28,7 @@
 #include "UiUtils.h"
 #include "UtxoReserveAdapters.h"
 #include "WalletsManager.h"
+#include "WalletKeysSubmitWidget.h"
 
 using namespace bs::ui;
 
@@ -62,10 +63,11 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
 
    ui_->checkBoxAutoSign->setEnabled(false);
-   ui_->horizontalWidgetASFreja->setEnabled(true);
+   ui_->widgetSubmitKeysAS->suspend();
    connect(ui_->checkBoxAutoSign, &QCheckBox::clicked, this, &RFQDealerReply::onAutoSignActivated);
-   connect(ui_->lineEditAutoSignPassword, &QLineEdit::textEdited, this, &RFQDealerReply::onAutoPassChanged);
-   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &RFQDealerReply::startFrejaSigning);
+   connect(ui_->widgetSubmitKeysAS, &WalletKeysSubmitWidget::keyChanged, this, &RFQDealerReply::updateAutoSignState);
+
+   ui_->responseTitle->hide();
 }
 
 RFQDealerReply::~RFQDealerReply()
@@ -78,7 +80,9 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , std::shared_ptr<MarketDataProvider> mdProvider)
 {
    logger_ = logger;
    assetManager_ = assetManager;
@@ -86,6 +90,8 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    authAddressManager_ = authAddressManager;
    appSettings_ = appSettings;
    signingContainer_ = container;
+   armory_ = armory;
+   mdProvider_ = mdProvider;
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
@@ -98,19 +104,16 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, this, &RFQDealerReply::onQuoteNotifCancelled);
    connect(utxoAdapter_.get(), &bs::OrderUtxoResAdapter::reservedUtxosChanged, this, &RFQDealerReply::onReservedUtxosChanged, Qt::QueuedConnection);
 
-   frejaAS_ = std::make_shared<FrejaSignWallet>(logger);
-   connect(frejaAS_.get(), &FrejaSignWallet::succeeded, this, &RFQDealerReply::onFrejaSignComplete);
-   connect(frejaAS_.get(), &FrejaSign::failed, this, &RFQDealerReply::onFrejaSignFailed);
-   connect(frejaAS_.get(), &FrejaSign::statusUpdated, this, &RFQDealerReply::onFrejaStatusUpdated);
-
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQDealerReply::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated);
-      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, bs::wallet::EncryptionType encType
-         , const SecureBinaryData &encKey) {
-         walletEncType_ = encType;
-         walletEncKey_ = encKey;
+      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, std::vector<bs::wallet::EncryptionType> encTypes
+         , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank) {
+         walletEncTypes_ = encTypes;
+         walletEncKeys_ = encKeys;
+         walletEncRank_ = keyRank;
+         startSigning();
          updateAutoSignState();
       });
       connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged);
@@ -133,7 +136,6 @@ void RFQDealerReply::initUi()
    ui_->comboBoxRecvAddr->hide();
    ui_->authenticationAddressLabel->hide();
    ui_->authenticationAddressComboBox->hide();
-   ui_->labelSWBalance->hide();
    ui_->pushButtonSubmit->setEnabled(false);
    ui_->pushButtonPull->setEnabled(false);
    ui_->widgetWallet->hide();
@@ -154,6 +156,12 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<WalletsManager> &wa
 {
    walletsManager_ = walletsManager;
    UiUtils::fillHDWalletsComboBox(ui_->comboBoxWalletAS, walletsManager_);
+
+   startSigning();
+
+   if (aq_) {
+      aq_->setWalletsManager(walletsManager_);
+   }
 }
 
 bool RFQDealerReply::autoSign() const
@@ -195,15 +203,11 @@ void RFQDealerReply::onSignerStateUpdated()
 
 void RFQDealerReply::updateAutoSignState()
 {
-   ui_->checkBoxAutoSign->setEnabled(((walletEncType_ == wallet::EncryptionType::Unencrypted)
+   ui_->checkBoxAutoSign->setEnabled((ui_->widgetSubmitKeysAS->isValid()
       || signingContainer_->hasUI() || (ui_->checkBoxAutoSign->checkState() != Qt::Unchecked))
       && ui_->checkBoxAutoSign->checkState() != Qt::PartiallyChecked);
    ui_->comboBoxWalletAS->setEnabled(ui_->checkBoxAutoSign->checkState() == Qt::Unchecked);
-   ui_->horizontalWidgetASPassword->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked)
-      && (walletEncType_ == wallet::EncryptionType::Password) && !signingContainer_->hasUI());
-   ui_->horizontalWidgetASFreja->setVisible((ui_->checkBoxAutoSign->checkState() == Qt::Unchecked)
-      && (walletEncType_ == wallet::EncryptionType::Freja));
-   ui_->labelFrejaStatus->setText(asPassword_.isNull() ? tr("Sign with Freja") : tr("Signed with Freja"));
+   ui_->widgetSubmitKeysAS->setVisible(ui_->checkBoxAutoSign->checkState() == Qt::Unchecked);
 }
 
 bs::Address RFQDealerReply::getRecvAddress() const
@@ -280,10 +284,13 @@ void RFQDealerReply::reset()
          transactionData_ = std::make_shared<TransactionData>([this]() { onTransactionDataChanged(); }
             , true, true);
          if (walletsManager_ != nullptr) {
-            transactionData_->SetFeePerByte(walletsManager_->estimatedFeePerByte(2));
+            const auto &cbFee = [this](float feePerByte) {
+               transactionData_->SetFeePerByte(feePerByte);
+            };
+            walletsManager_->estimatedFeePerByte(2, cbFee, this);
          }
          if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
-            transactionData_->SetWallet(curWallet_);
+            transactionData_->SetWallet(curWallet_, armory_->topBlock());
          }
          else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
             std::shared_ptr<bs::Wallet> wallet, xbtWallet = getXbtWallet();
@@ -297,7 +304,7 @@ void RFQDealerReply::reset()
                ccCoinSel_ = std::make_shared<SelectedTransactionInputs>(wallet, true, true);
             }
             transactionData_->SetSigningWallet(wallet);
-            transactionData_->SetWallet(xbtWallet);
+            transactionData_->SetWallet(xbtWallet, armory_->topBlock());
          }
       }
 
@@ -375,7 +382,6 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
 
    ui_->authenticationAddressLabel->setVisible(isXBT);
    ui_->authenticationAddressComboBox->setVisible(isXBT);
-   ui_->labelSWBalance->setVisible(isXBT || isPrivMkt);
    ui_->widgetWallet->setVisible(isXBT || isPrivMkt);
    ui_->pushButtonAdvanced->setVisible(isXBT && (qrn.side == bs::network::Side::Buy));
    ui_->labelRecvAddr->setVisible(isXBT || isPrivMkt);
@@ -387,6 +393,13 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
 
    if (qrnChanged) {
       reset();
+   }
+
+   if (qrn.assetType == bs::network::Asset::SpotFX ||
+      qrn.assetType == bs::network::Asset::Undefined) {
+         ui_->responseTitle->hide();
+   } else {
+      ui_->responseTitle->show();
    }
 
    updateSubmitButton();
@@ -416,7 +429,7 @@ std::shared_ptr<bs::Wallet> RFQDealerReply::getXbtWallet()
 
 void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &qrn)
 {
-   if (PyBlockDataManager::instance()->GetState() != PyBlockDataManagerState::Ready) {
+   if (armory_->state() != ArmoryConnection::State::Ready) {
       return;
    }
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
@@ -574,7 +587,7 @@ void RFQDealerReply::setCurrentWallet(const std::shared_ptr<bs::Wallet> &newWall
 
    if (newWallet != nullptr) {
       if (transactionData_ != nullptr) {
-         transactionData_->SetWallet(newWallet);
+         transactionData_->SetWallet(newWallet, armory_->topBlock());
       }
    }
 }
@@ -639,15 +652,16 @@ double RFQDealerReply::getAmount() const
    return currentQRN_.quantity;
 }
 
-bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transData
-   , const bs::network::QuoteReqNotification &qrn, double price)
+bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transData
+   , const bs::network::QuoteReqNotification &qrn, double price
+   , std::function<void(bs::network::QuoteNotification)> cb)
 {
    if (qFuzzyIsNull(price)) {
-      return {};
+      return false;
    }
    const auto itQN = sentNotifs_.find(qrn.quoteRequestId);
    if ((itQN != sentNotifs_.end()) && (itQN->second == price)) {
-      return {};
+      return false;
    }
    std::string authKey, txData;
    bool isBid = (qrn.side == bs::network::Side::Buy);
@@ -656,7 +670,7 @@ bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr
       authKey = authAddressManager_->GetPublicKey(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
       if (authKey.empty()) {
          logger_->error("[RFQDealerReply::submit] empty auth key");
-         return {};
+         return false;
       }
       logger_->debug("[RFQDealerReply::submit] using wallet {}", transData->GetWallet()->GetWalletName());
 
@@ -703,7 +717,7 @@ bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr
          }
          catch (const std::exception &e) {
             logger_->error("[RFQDealerReply::submit] failed to create pay-in transaction: {}", e.what());
-            return {};
+            return false;
          }
       }
       else {
@@ -711,61 +725,71 @@ bs::network::QuoteNotification RFQDealerReply::submitReply(const std::shared_ptr
       }
    }
 
-   bs::network::QuoteNotification qn(qrn, authKey, price, txData);
+   auto qn = new bs::network::QuoteNotification(qrn, authKey, price, txData);
 
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
-      qn.receiptAddress = getRecvAddress().display<std::string>();
-      qn.reqAuthKey = qrn.requestorRecvAddress;
+      qn->receiptAddress = getRecvAddress().display<std::string>();
+      qn->reqAuthKey = qrn.requestorRecvAddress;
 
       std::shared_ptr<bs::Wallet> wallet = transData->GetSigningWallet();
       uint64_t spendVal = 0;
       float feePerByte = 0;
       uint64_t addedFee = 0;
 
+      const auto &cbFee = [this, qrn, transData, spendVal, wallet, cb, qn](float feePerByte) {
+         const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(spendVal);
+         std::vector<UTXO> inputs = utxoAdapter_->get(qn->quoteRequestId);
+         if (inputs.empty() && ccCoinSel_) {
+            inputs = ccCoinSel_->GetSelectedTransactions();
+            if (inputs.empty()) {
+               logger_->error("[RFQDealerReply::submit] no suitable inputs for CC sell");
+               cb({});
+               return;
+            }
+         }
+         try {
+            const auto changeAddr = wallet->GetNewChangeAddress();
+            transData->createAddress(changeAddr, wallet);
+            const auto txReq = wallet->CreatePartialTXRequest(spendVal, inputs, changeAddr, feePerByte
+               , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
+            qn->transactionData = txReq.serializeState().toHexStr();
+            utxoAdapter_->reserve(txReq, qn->quoteRequestId);
+            logger_->debug("Signing wallet {} with {} input[s], spend value = {}"
+               , wallet->GetWalletName(), txReq.inputs.size(), spendVal);
+         }
+         catch (const std::exception &e) {
+            logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
+            cb({});
+            return;
+         }
+         if (!transData->GetSigningWallet()) {
+            transData->SetSigningWallet(wallet);
+         }
+         cb(*qn);
+         delete qn;
+      };
+
       if (qrn.side == bs::network::Side::Buy) {
          if (!wallet) {
             wallet = getCCWallet(qrn.product);
          }
          spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
+         cbFee(0);
+         return true;
       }
       else {
          if (!wallet) {
             wallet = getXbtWallet();
          }
          spendVal = qrn.quantity * price * BTCNumericTypes::BalanceDivider;
-         feePerByte = walletsManager_->estimatedFeePerByte(2);
-      }
-      const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(spendVal);
-      std::vector<UTXO> inputs = utxoAdapter_->get(qn.quoteRequestId);
-      if (inputs.empty() && ccCoinSel_) {
-         inputs = ccCoinSel_->GetSelectedTransactions();
-         if (inputs.empty()) {
-            logger_->error("[RFQDealerReply::submit] no suitable inputs for CC sell");
-            return {};
-         }
-      }
-      try {
-         const auto changeAddr = wallet->GetNewChangeAddress();
-         transData->createAddress(changeAddr, wallet);
-         const auto txReq = wallet->CreatePartialTXRequest(spendVal, inputs, changeAddr, feePerByte
-            , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
-         qn.transactionData = txReq.serializeState().toHexStr();
-         utxoAdapter_->reserve(txReq, qn.quoteRequestId);
-         logger_->debug("Signing wallet {} with {} input[s], spend value = {}"
-            , wallet->GetWalletName(), txReq.inputs.size(), spendVal);
-      }
-      catch (const std::exception &e) {
-         logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
-         return {};
-      }
-      if (!transData->GetSigningWallet()) {
-         transData->SetSigningWallet(wallet);
+         walletsManager_->estimatedFeePerByte(2, cbFee, this);
+         return true;
       }
    }
 
-   logger_->debug("Submitted quote reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
-   emit submitQuoteNotif(qn);
-   return qn;
+   cb(*qn);
+   delete qn;
+   return true;
 }
 
 void RFQDealerReply::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)
@@ -786,10 +810,14 @@ void RFQDealerReply::submitButtonClicked()
       return;
    }
 
-   const auto qn = submitReply(transactionData_, currentQRN_, price);
-   if (!qn.quoteRequestId.empty()) {
-      sentNotifs_[qn.quoteRequestId] = price;
-   }
+   const auto &cbSubmit = [this, price](bs::network::QuoteNotification qn) {
+      if (!qn.quoteRequestId.empty()) {
+         logger_->debug("Submitted quote reply on {}: {}/{}", currentQRN_.quoteRequestId, qn.bidPx, qn.offerPx);
+         emit submitQuoteNotif(qn);
+         sentNotifs_[qn.quoteRequestId] = price;
+      }
+   };
+   submitReply(transactionData_, currentQRN_, price, cbSubmit);
    updateSubmitButton();
 }
 
@@ -855,22 +883,6 @@ void RFQDealerReply::validateGUI()
 
 void RFQDealerReply::onTransactionDataChanged()
 {
-   if ((currentQRN_.assetType == bs::network::Asset::SpotXBT)
-      || ((currentQRN_.assetType == bs::network::Asset::PrivateMarket) && (currentQRN_.side == bs::network::Side::Sell))) {
-      auto availableBalance = transactionData_->GetTransactionSummary().availableBalance;
-      ui_->labelSWBalance->setText(UiUtils::displayQuantity(availableBalance, bs::network::XbtCurrency));
-   }
-   else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
-      const auto wallet = getCCWallet(currentQRN_.product);
-      if (wallet && ccCoinSel_) {
-         ui_->labelSWBalance->setText(tr("%1 %2").arg(UiUtils::displayCCAmount(wallet->GetTxBalance(ccCoinSel_->GetBalance())))
-            .arg(QString::fromStdString(currentQRN_.product)));
-      }
-      else {
-         ui_->labelSWBalance->clear();
-      }
-   }
-
    updateSubmitButton();
 }
 
@@ -880,7 +892,10 @@ void RFQDealerReply::initAQ(const QString &filename)
       return;
    }
    aqLoaded_ = false;
-   aq_ = new AutoQuoter(logger_, filename, assetManager_, this);
+   aq_ = new AutoQuoter(logger_, filename, assetManager_, mdProvider_, this);
+   if (walletsManager_) {
+      aq_->setWalletsManager(walletsManager_);
+   }
    connect(aq_, &AutoQuoter::loaded, [this, filename] {
       aqLoaded_ = true;
       validateGUI();
@@ -1179,6 +1194,14 @@ void RFQDealerReply::onAQReply(const QString &reqId, double price)
       logger_->warn("[RFQDealerReply::onAQReply] QuoteReqNotification with id = {} not found", reqId.toStdString());
       return;
    }
+
+   const auto &cbSubmit = [this, itQRN](bs::network::QuoteNotification qn) {
+      if (!qn.quoteRequestId.empty()) {
+         logger_->debug("Submitted AQ reply on {}: {}/{}", itQRN->second.quoteRequestId, qn.bidPx, qn.offerPx);
+         emit submitQuoteNotif(qn);
+      }
+   };
+
    std::shared_ptr<TransactionData> transData;
    if (itQRN->second.assetType != bs::network::Asset::SpotFX) {
       auto wallet = getCurrentWallet();
@@ -1186,7 +1209,7 @@ void RFQDealerReply::onAQReply(const QString &reqId, double price)
          wallet = walletsManager_->GetDefaultWallet();
       }
       transData = std::make_shared<TransactionData>();
-      transData->SetWallet(wallet);
+      transData->SetWallet(wallet, armory_->topBlock());
       if (itQRN->second.assetType == bs::network::Asset::PrivateMarket) {
          const auto &cc = itQRN->second.product;
          const auto& ccWallet = getCCWallet(cc);
@@ -1206,10 +1229,17 @@ void RFQDealerReply::onAQReply(const QString &reqId, double price)
             curWallet_ = ccWallet;
          }
       }
-      transData->SetFeePerByte(walletsManager_->estimatedFeePerByte(2));
-      aqTxData_[itQRN->second.quoteRequestId] = transData;
+
+      const auto &cbFee = [this, itQRN, price, transData, cbSubmit](float feePerByte) {
+         transData->SetFeePerByte(feePerByte);
+         aqTxData_[itQRN->second.quoteRequestId] = transData;
+         submitReply(transData, itQRN->second, price, cbSubmit);
+      };
+      walletsManager_->estimatedFeePerByte(2, cbFee, this);
+      return;
    }
-   submitReply(transData, itQRN->second, price);
+
+   submitReply(transData, itQRN->second, price, cbSubmit);
 }
 
 void RFQDealerReply::onAQPull(const QString &reqId)
@@ -1225,19 +1255,12 @@ void RFQDealerReply::onAQPull(const QString &reqId)
    }
 }
 
-void RFQDealerReply::onAutoPassChanged()
-{
-   asPassword_ = ui_->lineEditAutoSignPassword->text().toStdString();
-   ui_->checkBoxAutoSign->setEnabled(!asPassword_.isNull());
-}
-
 void RFQDealerReply::onAutoSignActivated()
 {
    if (ui_->checkBoxAutoSign->checkState() == Qt::PartiallyChecked) {
-      emit autoSignActivated(asPassword_, ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), true);
-      ui_->lineEditAutoSignPassword->clear();
-      ui_->pushButtonFreja->setEnabled(true);
-      asPassword_.clear();
+      emit autoSignActivated(ui_->widgetSubmitKeysAS->key()
+         , ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), true);
+      ui_->widgetSubmitKeysAS->setEnabled(true);
    }
    else if (ui_->checkBoxAutoSign->checkState() == Qt::Unchecked) {
       emit autoSignActivated({}, ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), false);
@@ -1256,9 +1279,9 @@ void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool ac
    }
 }
 
-void RFQDealerReply::startFrejaSigning()
+void RFQDealerReply::startSigning()
 {
-   if (!frejaAS_) {
+   if (walletEncTypes_.empty() || !walletEncRank_.first || !walletsManager_) {
       return;
    }
    const auto &walletId = ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString().toStdString();
@@ -1267,28 +1290,7 @@ void RFQDealerReply::startFrejaSigning()
       logger_->error("Failed to obtain auto-sign wallet for id {}", walletId);
       return;
    }
-   ui_->pushButtonFreja->setEnabled(false);
-   frejaAS_->start(QString::fromStdString(walletEncKey_.toBinStr())
-      , tr("Activate Auto-Signing"), walletId);
-}
-
-void RFQDealerReply::onFrejaSignComplete(SecureBinaryData password)
-{
-   asPassword_ = password;
-   ui_->pushButtonFreja->setEnabled(true);
-   updateAutoSignState();
-   ui_->checkBoxAutoSign->setEnabled(!asPassword_.isNull());
-}
-
-void RFQDealerReply::onFrejaSignFailed(const QString &text)
-{
-   ui_->labelFrejaStatus->setText(tr("Freja sign failed: %1").arg(text));
-   ui_->pushButtonFreja->setEnabled(true);
-}
-
-void RFQDealerReply::onFrejaStatusUpdated(const QString &status)
-{
-   ui_->labelFrejaStatus->setText(tr("Freja status: %1").arg(status));
+   ui_->widgetSubmitKeysAS->init(walletId, walletEncRank_, walletEncTypes_, walletEncKeys_);
 }
 
 void RFQDealerReply::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)

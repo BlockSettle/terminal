@@ -35,7 +35,8 @@ public:
       , const std::shared_ptr<WalletsManager> &walletsMgr
       , const std::string &walletsPath
       , const std::string &pwHash = {}
-      , bool hasUI = false);
+      , bool hasUI = false
+      , bool backupEnabled = true);
    ~HeadlessContainerListener() noexcept override;
 
    void SetLimits(const SignContainer::Limits &limits);
@@ -95,8 +96,8 @@ private:
       , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}, const std::shared_ptr<bs::hd::Wallet> &wallet = nullptr);
    void GetRootKeyResponse(const std::string &clientId, unsigned int id, const std::shared_ptr<bs::hd::Node> &
       , const std::string &errorOrId);
-   void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, bs::wallet::EncryptionType encType
-      , const SecureBinaryData &encKey = {}, const std::string &error = {});
+   void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::vector<bs::wallet::EncryptionType> &
+      , const std::vector<SecureBinaryData> &encKeys = {}, bs::wallet::KeyRank keyRank = {}, const std::string &error = {});
    void SyncAddrResponse(const std::string &clientId, unsigned int id, const std::set<std::string> &failedWallets
       , const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void ChangePasswordResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bool ok);
@@ -104,9 +105,9 @@ private:
       , const std::string &clientId = {}, unsigned int id = 0);
 
    bool CreateHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDLeaf &request
-      , const SecureBinaryData &password);
+      , const std::vector<bs::wallet::PasswordData> &pwdData);
    bool CreateHDWallet(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDWallet &request
-      , const SecureBinaryData &password, NetworkType);
+      , NetworkType, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::wallet::TXSignRequest &
       , const QString &prompt, const PasswordReceivedCb &cb, bool autoSign);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
@@ -139,6 +140,8 @@ private:
    };
    std::unordered_map<int, TempPasswords> tempPasswords_;
    int reqSeqNo_ = 0;
+
+   bool backupEnabled_ = true;
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__

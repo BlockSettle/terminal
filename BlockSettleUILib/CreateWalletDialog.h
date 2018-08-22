@@ -5,7 +5,6 @@
 #include <memory>
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
-#include "FrejaREST.h"
 #include "MetaData.h"
 
 
@@ -28,7 +27,7 @@ class CreateWalletDialog : public QDialog
 public:
    CreateWalletDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , NetworkType, const QString &walletsPath, bool createPrimary = false, QWidget *parent = nullptr);
-   ~CreateWalletDialog() noexcept override = default;
+   ~CreateWalletDialog() override;
 
    bool walletCreated() const { return walletCreated_; }
    std::string getNewWalletId() const { return walletId_; }
@@ -39,22 +38,16 @@ private slots:
    void CreateWallet();
    void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
-   void onPasswordChanged(const QString &);
-   void onEncTypeChanged();
-   void onFrejaIdChanged(const QString &);
-   void startFrejaSign();
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &text);
-   void onFrejaStatusUpdated(const QString &status);
 
 protected:
    void showEvent(QShowEvent *event) override;
+   void reject() override;
 
 private:
    bool couldCreateWallet() const;
 
 private:
-   Ui::CreateWalletDialog *ui_;
+   std::unique_ptr<Ui::CreateWalletDialog> ui_;
 
 private:
    std::shared_ptr<WalletsManager>  walletsManager_;
@@ -65,8 +58,6 @@ private:
    SecureBinaryData  walletPassword_;
    bs::wallet::Seed  walletSeed_;
    std::string       walletId_;
-   FrejaSignWallet   frejaSign_;
-
    bool              createdAsPrimary_ = false;
 };
 

@@ -1,6 +1,7 @@
 #ifndef __BS_WALLET_METADATA_H__
 #define __BS_WALLET_METADATA_H__
 
+#include <atomic>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -8,26 +9,22 @@
 #include <QMutex>
 #include <QThreadPool>
 #include "Address.h"
+#include "ArmoryConnection.h"
+#include "AsyncClient.h"
+#include "Assets.h"
 #include "BtcDefinitions.h"
+#include "ClientClasses.h"
 #include "EasyCoDec.h"
+#include "LedgerEntry.h"
 #include "lmdbpp.h"
 #include "Script.h"
 #include "Signer.h"
 #include "UtxoReservation.h"
+#include "WalletEncryption.h"
 
 
-class PyBlockDataManager;
-class SafeBtcWallet;
-
-
-#define WALLETTYPE_KEY          0x00000001
-#define ROOTASSET_KEY           0x00000007
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
-#define MASTERID_KEY            0x000000A0
-#define MAINWALLET_KEY          0x000000A1
-#define WALLETMETA_PREFIX       0xB0
-#define WALLETMETA_DBNAME       "WalletHeader"
 
 
 namespace bs {
@@ -79,7 +76,7 @@ namespace bs {
 
       class MetaData
       {
-         std::unordered_map<BinaryData, shared_ptr<AssetEntryMeta>>   data_;
+         std::map<BinaryData, shared_ptr<AssetEntryMeta>>   data_;
 
       protected:
          unsigned int      nbMetaData_;
@@ -158,13 +155,6 @@ namespace bs {
       };
 
 
-      enum class EncryptionType : uint8_t {
-         Unencrypted,
-         Password,
-         Freja
-      };
-
-
       class Seed
       {
       public:
@@ -182,10 +172,6 @@ namespace bs {
          void setSeed(const BinaryData &seed) { seed_ = seed; }
          NetworkType networkType() const { return netType_; }
          void setNetworkType(NetworkType netType) { netType_ = netType; }
-         EncryptionType encryptionType() const { return encType_; }
-         void setEncryptionType(EncryptionType encType) { encType_ = encType; }
-         SecureBinaryData encryptionKey() const { return encKey_; }
-         void setEncryptionKey(const SecureBinaryData &encKey) { encKey_ = encKey; }
 
          EasyCoDec::Data toEasyCodeChecksum(size_t ckSumSize = 2) const;
          static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
@@ -199,8 +185,6 @@ namespace bs {
          BinaryData        chainCode_;
          BinaryData        seed_;
          NetworkType       netType_ = NetworkType::Invalid;
-         SecureBinaryData  encKey_;
-         EncryptionType    encType_ = EncryptionType::Unencrypted;
       };
 
       enum class Type {
@@ -242,17 +226,21 @@ namespace bs {
 
       virtual bool containsAddress(const bs::Address &addr) = 0;
       virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
-      virtual std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
-      virtual uint32_t getAddrTxN(const bs::Address &addr) const;
+      virtual bool getAddrBalance(const bs::Address &addr) const;
+      virtual bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const;
+      virtual bool getAddrTxN(const bs::Address &addr) const;
+      virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
       virtual BinaryData getRootId() const = 0;
-      virtual std::vector<UTXO> getSpendableTxOutList(uint64_t val = UINT64_MAX) const;
-      virtual std::vector<UTXO> getUTXOsToSpend(uint64_t val) const;
-      virtual std::vector<UTXO> getSpendableZCList() const;
-      virtual std::vector<UTXO> getRBFTxOutList() const;
-      virtual void RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm = nullptr, bool asNew = false);
-      virtual void SetBDM(const std::shared_ptr<PyBlockDataManager>& bdm);
+      virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX);
+      virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
+      virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
+      virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
+      virtual void RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
+      virtual void SetArmory(const std::shared_ptr<ArmoryConnection> &);
       virtual void SetUserID(const BinaryData &) {}
-      virtual std::vector<LedgerEntryData> getHistoryPage(uint32_t id) const;
+      virtual bool getHistoryPage(uint32_t id) const;
+      virtual bool getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
+         , std::vector<ClientClasses::LedgerEntry>)>) const;
 
       virtual bool isBalanceAvailable() const;
       virtual BTCNumericTypes::balance_type GetSpendableBalance() const;
@@ -263,8 +251,9 @@ namespace bs {
       virtual void AddUnconfirmedBalance(BTCNumericTypes::balance_type delta);
       virtual bool isInitialized() const { return inited_; }
       virtual bool isWatchingOnly() const { return false; }
-      virtual wallet::EncryptionType encryptionType() const { return wallet::EncryptionType::Unencrypted; }
-      virtual SecureBinaryData encryptionKey() const { return {}; }
+      virtual std::vector<wallet::EncryptionType> encryptionTypes() const { return {}; }
+      virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
+      virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
       virtual bool hasExtOnlyAddresses() const { return false; }
       virtual std::string GetAddressComment(const bs::Address& address) const;
       virtual bool SetAddressComment(const bs::Address &addr, const std::string &comment);
@@ -307,7 +296,7 @@ namespace bs {
       virtual wallet::TXSignRequest CreatePartialTXRequest(uint64_t spendVal, const std::vector<UTXO> &inputs = {}, bs::Address changeAddress = {}
          , float feePerByte = 0, const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}, const BinaryData prevPart = {});
 
-      virtual void UpdateBalanceFromDB();
+      virtual void UpdateBalanceFromDB(const std::function<void(std::vector<uint64_t>)> &cb = nullptr);
 
       virtual bool IsSegWitInput(const UTXO& input);
       virtual SecureBinaryData GetPublicKeyFor(const bs::Address &) = 0;
@@ -321,6 +310,11 @@ namespace bs {
       void walletReset();
       void walletReady(const QString &id);
 
+      void addrBalanceReceived(const bs::Address &, std::vector<uint64_t>) const;
+      void addrTxNReceived(const bs::Address &, uint32_t) const;
+      void balanceUpdated(std::vector<uint64_t>) const;
+      void historyPageReceived(int id, std::vector<ClientClasses::LedgerEntry>) const;
+
    protected:
       virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;
       virtual LMDB *getDB() = 0;
@@ -331,7 +325,6 @@ namespace bs {
 
    private:
       bool isSegWitScript(const BinaryData &script);
-      void doRegister(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew);
       Signer getSigner(const wallet::TXSignRequest &, const SecureBinaryData &password,
                        bool keepDuplicatedRecipients = false);
 
@@ -341,8 +334,8 @@ namespace bs {
       BTCNumericTypes::balance_type unconfirmedBalance_;
       BTCNumericTypes::balance_type totalBalance_;
       bool inited_ = false;
-      std::shared_ptr<PyBlockDataManager>    bdm_;
-      std::shared_ptr<SafeBtcWallet>         btcWallet_;
+      std::shared_ptr<ArmoryConnection>      armory_;
+      std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
       mutable std::vector<bs::Address>       usedAddresses_;
       mutable std::set<BinaryData>           addrPrefixedHashes_, addressHashes_;
       mutable QMutex    addrMapsMtx_;
@@ -353,7 +346,8 @@ namespace bs {
       mutable std::map<BinaryData, uint32_t>                addressTxNMap_;
       mutable std::atomic_bool   updateAddrBalance_;
       mutable std::atomic_bool   updateAddrTxN_;
-      std::atomic_bool           registered_;
+      mutable std::map<bs::Address, std::function<void(std::vector<uint64_t>)>>  cbBal_;
+      mutable std::map<bs::Address, std::function<void(uint32_t)>>               cbTxN_;
 
    private:
       class UtxoFilterAdapter : public bs::UtxoReservation::Adapter
@@ -365,6 +359,13 @@ namespace bs {
          const std::string walletId_;
       };
       std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
+
+      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
+      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
+
+   private slots:
+      void onZCListObjDestroyed();
+      void onSpendableObjDestroyed();
    };
 
 
@@ -396,7 +397,7 @@ namespace bs {
             case Delivery:    return QT_TR_NOOP("Delivery");
             case Payment:     return QT_TR_NOOP("Payment");
             case Unknown:
-            default:          return "";
+            default:          return QT_TR_NOOP("Undefined");
          }
       }
       static const char *toStringDir(Direction dir) {

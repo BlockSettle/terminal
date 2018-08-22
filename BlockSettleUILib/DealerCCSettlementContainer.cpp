@@ -11,8 +11,8 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
       , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
       , const bs::Address &genAddr, const std::string &ownRecvAddr
       , const std::shared_ptr<TransactionData> &txData, const std::shared_ptr<SignContainer> &container
-      , bool autoSign)
-   : bs::SettlementContainer()
+      , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
+   : bs::SettlementContainer(armory)
    , logger_(logger)
    , order_(order)
    , quoteReqId_(quoteReqId)
@@ -44,7 +44,7 @@ DealerCCSettlementContainer::~DealerCCSettlementContainer()
 
 void DealerCCSettlementContainer::activate()
 {
-   bs::CheckRecipSigner signer;
+   bs::CheckRecipSigner signer(armory_);
    try {
       signer.deserializeState(txReqData_);
       foundRecipAddr_ = signer.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
@@ -67,10 +67,10 @@ void DealerCCSettlementContainer::activate()
    }
    else if (order_.side == bs::network::Side::Buy) {
       emit info(tr("Waiting for genesis address verification to complete..."));
-      QtConcurrent::run([this, signer] {
-         const auto hasGenAddress = signer.hasInputAddress(genesisAddr_, lotSize_);
-         emit genAddressVerified(hasGenAddress);
-      });
+      const auto &cbHasInput = [this](bool has) {
+         emit genAddressVerified(has);
+      };
+      signer.hasInputAddress(genesisAddr_, cbHasInput, lotSize_);
    }
    else {
       emit genAddressVerified(true);

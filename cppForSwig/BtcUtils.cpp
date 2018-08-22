@@ -7,9 +7,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "BtcUtils.h"
-#include "hmac.h"
-#include "sha.h"
-#include "base64.h"
+#include "cryptopp/hmac.h"
+#include "cryptopp/sha.h"
+#include "cryptopp/base64.h"
 #include "EncryptionUtils.h"
 #include "BlockDataManagerConfig.h"
 #include "bech32/ref/c++/segwit_addr.h"
@@ -484,4 +484,17 @@ BinaryData BtcUtils::segWitAddressToScrAddr(const BinaryData& swAddr)
 
    BinaryData scrAddr(&result.second[0], result.second.size());
    return scrAddr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+int BtcUtils::get_varint_len(const int64_t& value)
+{
+   if (value < 0xFD)
+      return 1;
+   else if (value <= 0xFFFF)
+      return 3;
+   else if (value <= 0xFFFFFFFF)
+      return 5;
+
+   return 9;
 }

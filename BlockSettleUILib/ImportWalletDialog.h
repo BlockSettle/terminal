@@ -13,6 +13,7 @@ namespace Ui {
    class ImportWalletDialog;
 }
 class ApplicationSettings;
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class SignContainer;
@@ -26,12 +27,12 @@ Q_OBJECT
 public:
    ImportWalletDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<AssetManager> &, const std::shared_ptr<AuthAddressManager> &
-      , const EasyCoDec::Data& walletData
-      , const EasyCoDec::Data& chainCodeData
+      , const std::shared_ptr<ArmoryConnection> &
+      , const EasyCoDec::Data& walletData, const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &
       , const std::string &walletName = {}, const std::string &walletDesc = {}
       , bool createPrimary = false, QWidget *parent = nullptr);
-   ~ImportWalletDialog() noexcept override = default;
+   ~ImportWalletDialog() override;
 
    QString getNewWalletName() const { return walletName_; }
    std::string getWalletId() const { return walletId_; }
@@ -44,25 +45,20 @@ private slots:
    void onImportAccepted();
    void onWalletCreated(const std::string &walletId);
    void onError(const QString &errMsg);
-   void onPasswordChanged(const QString &);
-   void onEncTypeChanged();
-   void onFrejaIdChanged(const QString &);
-   void startFrejaSign();
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &text);
-   void onFrejaStatusUpdated(const QString &status);
+
+protected:
+   void reject() override;
 
 private:
    bool couldImport() const;
 
 private:
-   Ui::ImportWalletDialog *   ui_;
+   std::unique_ptr<Ui::ImportWalletDialog> ui_;
    std::shared_ptr<WalletsManager>  walletsMgr_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<WalletImporter>  walletImporter_;
-   FrejaSignWallet   frejaSign_;
    bs::wallet::Seed  walletSeed_;
-   SecureBinaryData  walletPassword_;
    std::string walletId_;
    QString     walletName_;
    bool importedAsPrimary_ = false;

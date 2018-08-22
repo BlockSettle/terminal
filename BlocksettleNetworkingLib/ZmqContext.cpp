@@ -67,3 +67,19 @@ ZmqContext::sock_ptr ZmqContext::CreateSubscribeSocket()
    FastLock lock(lockerFlag_);
    return { zmq_socket(context_.get(), ZMQ_SUB), zmq_close };
 }
+
+std::string ZmqContext::CreateConnectionEndpoint(ZMQTransport transport, const std::string& host, const std::string& port)
+{
+   std::string transportString;
+   switch (transport) {
+   case ZMQTransport::TCPTransport:
+      transportString = "tcp";
+      break;
+   case ZMQTransport::InprocTransport:
+      transportString = "inproc";
+      break;
+   default:
+      return std::string{};
+   }
+   return transportString + "://" + host + ":" + port;
+}

@@ -11,7 +11,6 @@
 #include <chrono>
 #include <memory>
 
-#include "FrejaREST.h"
 #include "MetaData.h"
 
 namespace spdlog {
@@ -23,8 +22,8 @@ namespace bs {
    }
    class SettlementContainer;
 }
-class QLineEdit;
 class SignContainer;
+class WalletKeysSubmitWidget;
 
 class BaseDealerSettlementDialog : public QDialog
 {
@@ -47,10 +46,8 @@ protected slots:
    void onTimerStarted(int msDuration);
    void onTimerStopped();
 
-   void onHDWalletInfo(unsigned int id, bs::wallet::EncryptionType, const SecureBinaryData &);
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &);
-   void onFrejaStatusUpdated(const QString &);
+   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
+      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
 
 protected:
    void reject() override;
@@ -69,15 +66,16 @@ protected:
    bool isMessageCritical() const { return hintSetToCritical_; }
 
    virtual QWidget *widgetPassword() const = 0;
-   virtual QLineEdit *lineEditPassword() const = 0;
+   virtual WalletKeysSubmitWidget *widgetWalletKeys() const = 0;
    virtual QLabel *labelHint() const = 0;
    virtual QLabel *labelPassword() const = 0;
+
+   virtual void validateGUI() = 0;
 
    void setFrejaPasswordPrompt(const QString &prompt);
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
-   SecureBinaryData  walletPassword_;
 
 private:
    std::shared_ptr<bs::SettlementContainer>  settlContainer_;
@@ -90,9 +88,9 @@ private:
    unsigned int   infoReqId_ = 0;
    bool           walletInfoReceived_ = false;
    bool           accepting_ = false;
-   FrejaSignWallet   frejaSign_;
-   bs::wallet::EncryptionType encType_ = bs::wallet::EncryptionType::Unencrypted;
-   QString        userId_;
+   std::vector<bs::wallet::EncryptionType>   encTypes_;
+   std::vector<SecureBinaryData>             encKeys_;
+   bs::wallet::KeyRank                       keyRank_;
    QString        frejaPrompt_;
 };
 

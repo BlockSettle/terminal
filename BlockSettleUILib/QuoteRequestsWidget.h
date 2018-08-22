@@ -118,7 +118,7 @@ Q_OBJECT
 
 public:
    QuoteRequestsWidget(QWidget* parent = nullptr);
-   ~QuoteRequestsWidget() override = default;
+   ~QuoteRequestsWidget() override;
 
    void init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
@@ -157,7 +157,7 @@ private:
    void saveCollapsedState();
 
 private:
-   Ui::QuoteRequestsWidget* ui_;
+   std::unique_ptr<Ui::QuoteRequestsWidget> ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
@@ -174,12 +174,15 @@ class QuoteReqSortModel : public QSortFilterProxyModel
 public:
    QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent);
 
+   void showQuoted(bool on = true);
+
 protected:
    bool filterAcceptsRow(int row, const QModelIndex &parent) const override;
    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
 
 private:
    QuoteRequestsModel * model_;
+   bool showQuoted_;
 };
 
 #endif // QUOTE_REQUESTS_WIDGET_H

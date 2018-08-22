@@ -93,38 +93,31 @@ void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
    QFont bold = font;
    bold.setBold(true);
 
-   QStaticText wNameDesc(QLatin1String("Wallet Name"));
    QStaticText wIdDesc(QLatin1String("Wallet ID"));
    QStaticText keyLine1Desc(QLatin1String("Line 1"));
    QStaticText keyLine2Desc(QLatin1String("Line 2"));
 
-   QStaticText wName(walletName_);
    QStaticText wId(walletId_);
    QStaticText keyLine1(keyLine1_);
    QStaticText keyLine2(keyLine2_);
 
-   wNameDesc.prepare(QTransform(), italic);
    wIdDesc.prepare(QTransform(), italic);
    keyLine1Desc.prepare(QTransform(), italic);
    keyLine2Desc.prepare(QTransform(), italic);
 
-   wName.prepare(QTransform(), bold);
    wId.prepare(QTransform(), bold);
    keyLine1.prepare(QTransform(), bold);
    keyLine2.prepare(QTransform(), bold);
 
-   const qreal wDescWidth = qMax(wNameDesc.size().width(), wIdDesc.size().width());
-   const qreal wWidth = qMax(wName.size().width(), wId.size().width());
+   const qreal wDescWidth = wIdDesc.size().width();
+   const qreal wWidth = wId.size().width();
    const qreal keyDescWidth = qMax(keyLine1Desc.size().width(), keyLine2Desc.size().width());
    const qreal keyWidth = qMax(keyLine1.size().width(), keyLine2.size().width());
    const qreal space = 100.0;
 
    p.setFont(italic);
-   p.drawStaticText(QPointF(0.0, y), wNameDesc);
-   y += wNameDesc.size().height() + m;
-   const qreal wIdY = y;
    p.drawStaticText(QPointF(0.0, y), wIdDesc);
-   y += wIdDesc.size().height() + m;
+   y += (wIdDesc.size().height() + m) * 2;
 
    p.setFont(bold);
 
@@ -148,9 +141,7 @@ void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
    const qreal offset = 50.0;
 
    p.drawRect(wDescWidth + space - offset, qrY - m / 2.0 + offset,
-              wWidth + offset * 2, wName.size().height() + m - offset * 2);
-   p.drawRect(wDescWidth + space - offset, wIdY - m / 2.0 + offset,
-              wWidth + offset * 2, wName.size().height() + m - offset * 2);
+              wWidth + offset * 2, wId.size().height() + m - offset * 2);
 
    p.drawRect(keyDescWidth + space - offset, key1Y - m / 2.0 + offset,
               keyWidth + offset * 2, keyLine1.size().height() + m - offset * 2);
@@ -159,8 +150,7 @@ void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
    p.restore();
 
    p.setFont(bold);
-   p.drawStaticText(QPointF(wDescWidth + space, qrY), wName);
-   p.drawStaticText(QPointF(wDescWidth + space, wIdY), wId);
+   p.drawStaticText(QPointF(wDescWidth + space, qrY), wId);
    p.drawStaticText(QPointF(keyDescWidth + space, key1Y), keyLine1);
    p.drawStaticText(QPointF(keyDescWidth + space, key2Y), keyLine2);
 
