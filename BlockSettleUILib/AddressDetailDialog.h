@@ -26,7 +26,7 @@ public:
    AddressDetailDialog(const bs::Address &address, const std::shared_ptr<bs::Wallet> &wallet
       , const std::shared_ptr<WalletsManager>& walletsManager, const std::shared_ptr<ArmoryConnection> &
       , QWidget* parent = nullptr );
-   ~AddressDetailDialog() override = default;
+   ~AddressDetailDialog() override;
 
 private slots:
    void onCopyClicked() const;
@@ -37,7 +37,7 @@ private:
    void onError();
 
 private:
-   Ui::AddressDetailDialog *  ui_;
+   std::unique_ptr <Ui::AddressDetailDialog> ui_;
    const bs::Address          address_;
    std::shared_ptr<WalletsManager> walletsManager_;
    std::shared_ptr<bs::Wallet> wallet_;

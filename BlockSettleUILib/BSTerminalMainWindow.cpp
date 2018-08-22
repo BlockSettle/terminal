@@ -79,7 +79,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       setGeometry(geom);
    }
 
-   qRegisterMetaType<std::vector<UTXO> >();
    connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });
@@ -89,7 +88,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    setupIcon();
    UiUtils::setupIconFont(this);
-   NotificationCenter::createInstance(applicationSettings_, ui, sysTrayIcon_, this);
+   NotificationCenter::createInstance(applicationSettings_, ui.get(), sysTrayIcon_, this);
 
    InitConnections();
 

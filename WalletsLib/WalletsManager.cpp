@@ -987,7 +987,36 @@ void WalletsManager::onBroadcastZCError(const QString &txHash, const QString &er
    logger_->error("broadcastZC({}) error: {}", txHash.toStdString(), errMsg.toStdString());
 }
 
-bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::function<void(float)> cb) const
+void WalletsManager::invokeFeeCallbacks(unsigned int blocks, float fee)
+{
+   std::vector<QObject *> objsToDelete;
+   for (auto &cbByObj : feeCallbacks_) {
+      const auto &it = cbByObj.second.find(blocks);
+      if (it == cbByObj.second.end()) {
+         continue;
+      }
+      it->second(fee);
+      cbByObj.second.erase(it);
+      if (cbByObj.second.empty()) {
+         objsToDelete.push_back(cbByObj.first);
+      }
+   }
+   for (const auto &obj : objsToDelete) {
+      disconnect(obj, SIGNAL(destroyed()), this, SLOT(onFeeObjDestroyed()));
+      feeCallbacks_.erase(obj);
+   }
+}
+
+void WalletsManager::onFeeObjDestroyed()
+{
+   const auto &it = feeCallbacks_.find(sender());
+   if (it == feeCallbacks_.end()) {
+      return;
+   }
+   feeCallbacks_.erase(it);
+}
+
+bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::function<void(float)> cb, QObject *obj)
 {
    if (!armory_) {
       return false;
@@ -1004,7 +1033,21 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
       return true;
    }
 
-   const auto &cbFee = [this, blocks, cb](float fee) {
+   bool callbackRegistered = false;
+   for (const auto &cbByObj : feeCallbacks_) {
+      if (cbByObj.second.find(blocks) != cbByObj.second.end()) {
+         callbackRegistered = true;
+         break;
+      }
+   }
+   feeCallbacks_[obj][blocks] = cb;
+   if (obj != nullptr) {
+      connect(obj, SIGNAL(destroyed()), this, SLOT(onFeeObjDestroyed()));
+   }
+   if (callbackRegistered) {
+      return true;
+   }
+   const auto &cbFee = [this, blocks](float fee) {
       fee *= BTCNumericTypes::BalanceDivider / 1000.0;
       if (fee != 0) {
          if (fee < 5) {
@@ -1012,7 +1055,7 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
          }
          feePerByte_[blocks] = fee;
          lastFeePerByte_[blocks] = QDateTime::currentDateTime();
-         cb(fee);
+         invokeFeeCallbacks(blocks, fee);
          return;
       }
 
@@ -1022,7 +1065,7 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
       else if (blocks >= 2) {
          feePerByte_[blocks] = 100;
       }
-      cb(feePerByte_[blocks]);
+      invokeFeeCallbacks(blocks, feePerByte_[blocks]);
    };
    armory_->estimateFee(blocks, cbFee);
    return true;

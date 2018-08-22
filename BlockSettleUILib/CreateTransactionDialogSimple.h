@@ -18,7 +18,7 @@ public:
    CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &, QWidget* parent = nullptr);
-   ~CreateTransactionDialogSimple() override = default;
+   ~CreateTransactionDialogSimple() override;
 
    bool userRequestedAdvancedDialog() const;
    std::shared_ptr<CreateTransactionDialogAdvanced> CreateAdvancedDialog();
@@ -36,9 +36,11 @@ protected:
    QLabel *labelTxInputs() const override;
    QLabel *labelEstimatedFee() const override;
    QLabel *labelTotalAmount() const override;
-   QLabel *labelTxSize() const override { return nullptr; }
+   QLabel *labelTxSize() const override;
    QPushButton *pushButtonCreate() const override;
    QPushButton *pushButtonCancel() const override;
+   QLabel *feePerByteLabel() const override;
+   QLabel *changeLabel() const override;
 
    bs::Address getChangeAddress() const override;
 
@@ -62,7 +64,7 @@ private:
    void onTransactionUpdated() override;
 
 private:
-   Ui::CreateTransactionDialogSimple*  ui_;
+   std::unique_ptr<Ui::CreateTransactionDialogSimple> ui_;
    unsigned int   recipientId_ = 0;
    bool  advancedDialogRequested_ = false;
 

@@ -10,8 +10,8 @@ MessageBoxQuestion::MessageBoxQuestion(const QString& title, const QString& text
 MessageBoxQuestion::MessageBoxQuestion(const QString& title, const QString& text, const QString& description
   , const QString& details, QWidget* parent)
    : CommonMessageBoxDialog(parent)
+   , ui_(new Ui::MessageBoxQuestion)
 {
-   ui_ = new Ui::MessageBoxQuestion();
    ui_->setupUi(this);
 
    setWindowTitle(title);
@@ -30,6 +30,8 @@ MessageBoxQuestion::MessageBoxQuestion(const QString& title, const QString& text
    connect(ui_->pushButtonConfirm, &QPushButton::clicked, this, &MessageBoxQuestion::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &MessageBoxQuestion::reject);
 }
+
+MessageBoxQuestion::~MessageBoxQuestion() = default;
 
 MessageBoxQuestion &MessageBoxQuestion::setExclamationIcon()
 {

@@ -175,7 +175,7 @@ private:
    void productSelectionChanged();
 
 private:
-   Ui::RFQTicketXBT* ui_;
+   std::unique_ptr<Ui::RFQTicketXBT> ui_;
 
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;

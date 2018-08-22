@@ -110,7 +110,7 @@ namespace bs {
          std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
-         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, uint64_t val = UINT64_MAX) const override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX) override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -270,8 +270,8 @@ namespace bs {
          void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
          void firstInit() override;
 
-         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, uint64_t val = UINT64_MAX) const override;
-         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>) const override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *, uint64_t val = UINT64_MAX) override;
+         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *) override;
          bool isBalanceAvailable() const override;
          BTCNumericTypes::balance_type GetSpendableBalance() const override;
          BTCNumericTypes::balance_type GetUnconfirmedBalance() const override;

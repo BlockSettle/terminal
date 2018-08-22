@@ -930,7 +930,7 @@ bs::KeyPair bs::SettlementWallet::GetKeyPairFor(const bs::Address &addr, const S
    return {};
 }
 
-bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
+bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, QObject *obj)
 {
    auto result = new std::vector<UTXO>;
    auto walletSet = new std::unordered_set<int>;
@@ -953,7 +953,7 @@ bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTX
          rtWallet.second->getSpendableZCList(cbRTWlist);
       }
    };
-   return bs::Wallet::getSpendableZCList(cbZCList);
+   return bs::Wallet::getSpendableZCList(cbZCList, obj);
 }
 
 bool bs::SettlementWallet::EraseFile()

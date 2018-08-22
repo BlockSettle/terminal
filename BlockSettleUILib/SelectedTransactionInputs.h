@@ -1,18 +1,20 @@
 #ifndef __SELECTED_TRANSACTION_INPUTS_H__
 #define __SELECTED_TRANSACTION_INPUTS_H__
 
-#include <vector>
-#include <memory>
+#include <deque>
 #include <functional>
-
+#include <memory>
+#include <vector>
+#include <QObject>
 #include "TxClasses.h"
 
 namespace bs {
    class Wallet;
 }
 
-class SelectedTransactionInputs
+class SelectedTransactionInputs : public QObject
 {
+   Q_OBJECT
 public:
    using selectionChangedCallback = std::function<void()>;
 
@@ -60,6 +62,10 @@ private:
    void resetInputs(std::function<void()>);
    void resetSelection();
 
+private slots:
+   void onCPFPReceived(std::vector<UTXO>);
+   void onUTXOsReceived(std::vector<UTXO>);
+
 private:
    std::shared_ptr<bs::Wallet>   wallet_;
    const bool                    swTransactionsOnly_;
@@ -68,6 +74,7 @@ private:
    std::vector<UTXO>             cpfpInputs_;
    std::vector<bool>             selection_;
    const selectionChangedCallback   selectionChanged_;
+   std::vector<std::function<void()>>  resetCallbacks_;
 
    size_t   totalSelected_ = 0;
    uint64_t selectedBalance_ = 0;

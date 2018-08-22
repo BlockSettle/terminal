@@ -16,7 +16,7 @@ class WalletKeyWidget : public QWidget
    Q_OBJECT
 public:
    WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent = nullptr);
-   ~WalletKeyWidget() override = default;
+   ~WalletKeyWidget() override;
 
    void cancel();
    void start();
@@ -44,7 +44,7 @@ private:
    void stop();
 
 private:
-   Ui::WalletKeyWidget* ui_;
+   std::unique_ptr<Ui::WalletKeyWidget> ui_;
    std::string walletId_;
    int         index_;
    bool        password_;

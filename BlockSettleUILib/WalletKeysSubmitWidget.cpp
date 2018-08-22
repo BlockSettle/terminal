@@ -13,6 +13,8 @@ WalletKeysSubmitWidget::WalletKeysSubmitWidget(QWidget* parent)
    ui_->setupUi(this);
 }
 
+WalletKeysSubmitWidget::~WalletKeysSubmitWidget() = default;
+
 void WalletKeysSubmitWidget::init(const std::string &walletId, bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys)

@@ -112,7 +112,7 @@ public:
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    void AdoptNewWallet(const hd_wallet_type &, const QString &walletsPath);
 
-   bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>) const;
+   bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
 
    bool getNewTransactions() const;
 
@@ -146,6 +146,7 @@ private slots:
    void onHDLeafDeleted(QString id);
    void onRefresh();
    void onStateChanged(ArmoryConnection::State);
+   void onFeeObjDestroyed();
 
 private:
    bool empty() const { return (wallets_.empty() && !settlementWallet_); }
@@ -164,6 +165,8 @@ private:
    void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
       , std::function<void(bs::Transaction::Direction)>);
    void updateTxDescCache(const BinaryData &txHash, const QString &, std::function<void(QString)>);
+
+   void invokeFeeCallbacks(unsigned int blocks, float fee);
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
@@ -195,6 +198,7 @@ private:
 
    mutable std::map<unsigned int, float>     feePerByte_;
    mutable std::map<unsigned int, QDateTime> lastFeePerByte_;
+   std::map<QObject *, std::map<unsigned int, std::function<void(float)>>> feeCallbacks_;
 };
 
 #endif // __WALLETS_MANAGER_H__

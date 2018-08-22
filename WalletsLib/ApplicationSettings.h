@@ -109,7 +109,7 @@ public:
 
    int GetDefaultArmoryPort() const;
 
-   int GetDefaultArmoryPortForNetwork(NetworkType networkType) const;
+   static int GetDefaultArmoryPortForNetwork(NetworkType networkType);
 
    QString GetSettingsPath() const;
 

@@ -15,10 +15,10 @@ Q_OBJECT
 
 public:
    CelerAccountInfoDialog(std::shared_ptr<CelerClient> celerConnection, QWidget* parent = nullptr );
-   ~CelerAccountInfoDialog() override = default;
+   ~CelerAccountInfoDialog() override;
 
 private:
-   Ui::CelerAccountInfoDialog* ui_;
+   std::unique_ptr<Ui::CelerAccountInfoDialog> ui_;
 };
 
 #endif // __CELER_ACCOUNT_INFO_DIALOG_H__

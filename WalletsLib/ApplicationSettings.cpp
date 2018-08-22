@@ -483,7 +483,7 @@ int ApplicationSettings::GetDefaultArmoryPort() const
    return GetDefaultArmoryPortForNetwork(get<NetworkType>(netType));
 }
 
-int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType) const
+int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType)
 {
    switch (networkType) {
    case NetworkType::MainNet:

@@ -172,7 +172,7 @@ namespace bs {
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
 
       BinaryData getRootId() const override { return BinaryData(); }   // stub
-      bool getSpendableZCList(std::function<void(std::vector<UTXO>)>) const override;
+      bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj=nullptr) override;
 
       std::shared_ptr<ResolverFeed> GetResolver(const SecureBinaryData &) override { return nullptr; }   // stub
       std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override { return nullptr; }   //stub

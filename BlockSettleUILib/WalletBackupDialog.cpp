@@ -48,6 +48,8 @@ WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wa
    TextFileClicked();
 }
 
+WalletBackupDialog::~WalletBackupDialog() = default;
+
 bool WalletBackupDialog::isDigitalBackup() const
 {
    return ui_->radioButtonTextFile->isChecked();

@@ -88,10 +88,13 @@ void RFQTicketXBT::setTransactionData()
 
    if (walletsManager_ != nullptr) {
       const auto &cbFee = [this](float feePerByte) {
+         if (!transactionData_) {
+            return;
+         }
          transactionData_->SetFeePerByte(feePerByte);
          setWallets();
       };
-      walletsManager_->estimatedFeePerByte(2, cbFee);
+      walletsManager_->estimatedFeePerByte(2, cbFee, this);
    }
 }
 

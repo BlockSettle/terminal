@@ -94,7 +94,7 @@ private:
    QAction *action_logout_;
 
 private:
-   Ui::BSTerminalMainWindow* ui;
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
 
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
@@ -172,8 +172,5 @@ private:
 
    void createAdvancedTxDialog(const std::string &selectedWalletId);
 };
-
-Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(std::vector<UTXO>)
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

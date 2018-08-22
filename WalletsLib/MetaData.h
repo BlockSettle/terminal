@@ -231,8 +231,8 @@ namespace bs {
       virtual bool getAddrTxN(const bs::Address &addr) const;
       virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
       virtual BinaryData getRootId() const = 0;
-      virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, uint64_t val = UINT64_MAX) const;
-      virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>) const;
+      virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX);
+      virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
       virtual void RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
@@ -359,6 +359,13 @@ namespace bs {
          const std::string walletId_;
       };
       std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
+
+      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
+      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
+
+   private slots:
+      void onZCListObjDestroyed();
+      void onSpendableObjDestroyed();
    };
 
 
