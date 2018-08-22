@@ -126,6 +126,8 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    ui_->labelQR->setPixmap(UiUtils::getQRCode(addressString, 128));
 }
 
+AddressDetailDialog::~AddressDetailDialog() = default;
+
 void AddressDetailDialog::onAddrBalanceReceived(const bs::Address &addr, std::vector<uint64_t> balance)
 {
    if (addr != address_) {

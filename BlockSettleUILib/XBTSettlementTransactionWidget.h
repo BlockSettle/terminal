@@ -89,7 +89,7 @@ signals:
    void DealerVerificationStateChanged();
 
 private:
-   Ui::XBTSettlementTransactionWidget* ui_;
+   std::unique_ptr<Ui::XBTSettlementTransactionWidget> ui_;
    QTimer                     timer_;
    QDateTime                  expireTime_;
    bool                       clientSells_ = false;

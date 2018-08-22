@@ -33,7 +33,7 @@ public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , bool loadFeeSuggestions, QWidget* parent);
-   ~CreateTransactionDialogAdvanced() noexcept override = default;
+   ~CreateTransactionDialogAdvanced() override;
 
    void preSetAddress(const QString& address);
    void preSetValue(const double value);
@@ -119,7 +119,7 @@ private:
    void disableChangeAddressSelecting();
 
 private:
-   Ui::CreateTransactionDialogAdvanced*  ui_;
+   std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;
 
    bool     currentAddressValid_ = false;
    double   currentValue_ = 0;

@@ -26,7 +26,7 @@ Q_OBJECT
 public:
    CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<CCFileManager> &
       , const std::shared_ptr<SignContainer> &, QWidget *parent);
-   ~CCTokenEntryDialog() override = default;
+   ~CCTokenEntryDialog() override;
 
 protected:
    void accept() override;
@@ -44,7 +44,7 @@ private slots:
    void onFrejaStatusUpdated(const QString &);
 
 private:
-   Ui::CCTokenEntryDialog* ui_;
+   std::unique_ptr<Ui::CCTokenEntryDialog> ui_;
    std::shared_ptr<CCFileManager>   ccFileMgr_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<WalletsManager>  walletsMgr_;

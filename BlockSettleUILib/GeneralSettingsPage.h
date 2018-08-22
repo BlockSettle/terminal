@@ -21,6 +21,7 @@ signals:
 
 public:
    GeneralSettingsPage(QWidget* parent = nullptr);
+   ~GeneralSettingsPage() override;
 
    void displaySettings(const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<WalletsManager>& walletsMgr
@@ -39,7 +40,7 @@ private:
    void checkSettings();
 
 private:
-   Ui::GeneralSettingsPage *ui_;
+   std::unique_ptr<Ui::GeneralSettingsPage> ui_;
 };
 
 #endif // __GENERAL_SETTINGS_PAGE_H__

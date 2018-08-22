@@ -34,7 +34,7 @@ Q_OBJECT
 
 public:
    WalletsWidget(QWidget* parent = nullptr );
-   ~WalletsWidget() override = default;
+   ~WalletsWidget() override;
 
    void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<AssetManager> &
@@ -79,7 +79,7 @@ private slots:
    void onShowContextMenu(QMenu *, QPoint);
 
 private:
-   Ui::WalletsWidget* ui;
+   std::unique_ptr<Ui::WalletsWidget> ui;
 
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;

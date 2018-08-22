@@ -28,7 +28,7 @@ public:
       , const std::shared_ptr<SignContainer> &, QWidget *parent = nullptr);
    WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &, const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &, QWidget *parent = nullptr);
-   ~WalletDeleteDialog() noexcept override = default;
+   ~WalletDeleteDialog() override;
 
 private slots:
    void doDelete();
@@ -40,7 +40,7 @@ private:
    void deleteWallet();
 
 private:
-   Ui::WalletDeleteDialog *ui_;
+   std::unique_ptr<Ui::WalletDeleteDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>  hdWallet_;
    std::shared_ptr<bs::Wallet>      wallet_;
    std::shared_ptr<WalletsManager>  walletsManager_;

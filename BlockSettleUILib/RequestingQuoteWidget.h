@@ -67,7 +67,7 @@ private:
    void SetQuoteDetailsState(QuoteDetailsState state);
 
 private:
-   Ui::RequestingQuoteWidget* ui_;
+   std::unique_ptr<Ui::RequestingQuoteWidget> ui_;
    QTimer                     requestTimer_;
    QDateTime                  timeoutReply_;
    bs::network::RFQ           rfq_;

@@ -14,7 +14,7 @@ Q_OBJECT
 
 public:
    WalletCompleteDialog(const QString& walletName, bool asPrimary, QWidget* parent = nullptr);
-   ~WalletCompleteDialog() noexcept override = default;
+   ~WalletCompleteDialog() override;
 
    int exec();
 
@@ -27,7 +27,7 @@ protected:
    const QString  primaryPrefix_;
 
 private:
-   Ui::WalletCompleteDialog * ui_;
+   std::unique_ptr<Ui::WalletCompleteDialog> ui_;
 };
 
 

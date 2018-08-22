@@ -17,13 +17,13 @@ class NewWalletDialog : public QDialog
 
 public:
    NewWalletDialog(bool noWalletsFound, QWidget *parent = nullptr);
-   ~NewWalletDialog() noexcept override = default;
+   ~NewWalletDialog() override;
 
    bool isCreate() const { return isCreate_; }
    bool isImport() const { return isImport_; }
 
 private:
-   Ui::NewWalletDialog *ui_;
+   std::unique_ptr<Ui::NewWalletDialog> ui_;
    bool  isCreate_ = false;
    bool  isImport_ = false;
 };
