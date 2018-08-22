@@ -66,6 +66,7 @@ namespace bs {
          std::shared_ptr<ArmoryConnection>   armoryConn_;
          std::string             walletId_;
          std::string             rescanWalletId_;
+         std::string             rescanRegId_;
          unsigned int            portionSize_ = 100;
          const cb_save_to_wallet cbSaveToWallet_;
          const cb_completed      cbCompleted_;
