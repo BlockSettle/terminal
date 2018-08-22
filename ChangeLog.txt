@@ -1,3 +1,10 @@
+0.10.1
+Bug Fixes:
+   - Fixed TX dialog crash if closed before receiving reply from Armory
+Improvements:
+   - Ability to cancel UTXO and estimateFee requests on caller obj destruction
+   - Keep-alive for Armory connection
+
 Release: 0.10.0
 Bug Fixes:
    -
