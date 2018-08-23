@@ -133,15 +133,11 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
 
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQReplyWidget::onOrder);
    connect(quoteProvider_.get(), &QuoteProvider::quoteCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteReqCancelled);
-   connect(quoteProvider_.get(), &QuoteProvider::quoteCancelled, ui_->pageRFQReply, &RFQDealerReply::onQuoteReqCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::bestQuotePrice, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onBestQuotePrice, Qt::QueuedConnection);
    connect(quoteProvider_.get(), &QuoteProvider::bestQuotePrice, ui_->pageRFQReply, &RFQDealerReply::onBestQuotePrice, Qt::QueuedConnection);
 
    connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteRejected);
-   connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, ui_->pageRFQReply, &RFQDealerReply::onQuoteReqRejected);
 
-   connect(quoteProvider_.get(), &QuoteProvider::quoteReqNotifReceived, ui_->pageRFQReply
-      , &RFQDealerReply::onQuoteReqNotification);
    connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, ui_->widgetQuoteRequests
       , &QuoteRequestsWidget::onQuoteNotifCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQReplyWidget::onSignTxRequested);
