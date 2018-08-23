@@ -126,20 +126,24 @@ bool AddressVerificator::StartAddressVerification(const std::shared_ptr<AuthAddr
 
    if (AddressWasRegistered(addressCopy)) {
       logger_->debug("[AddressVerificator::StartAddressVerification] adding verification command to queue: {}"
-         , address->GetChainedAddress().display<std::string>());
-      return AddCommandToQueue(CreateAddressValidationCommand(addressCopy));
+         , addressCopy->GetChainedAddress().display<std::string>());
+      if (registered_) {
+         AddCommandToQueue(CreateAddressValidationCommand(addressCopy));
+      }
+      else {
+         AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(addressCopy));
+      }
+      return true;
    }
 
    return RegisterUserAddress(addressCopy);
 }
 
-bool AddressVerificator::AddCommandToQueue(ExecutionCommand&& command)
+void AddressVerificator::AddCommandToQueue(ExecutionCommand&& command)
 {
    std::unique_lock<std::mutex> locker(dataMutex_);
    commandsQueue_.emplace(std::move(command));
    dataAvailable_.notify_all();
-
-   return true;
 }
 
 void AddressVerificator::AddCommandToWaitingUpdateQueue(ExecutionCommand&& command)
@@ -260,7 +264,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
          }
       }
    };
-   const auto &cbLedgerDelegateTxOut = [this, state, cbLedgerTxOut](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegateTxOut = [state, cbLedgerTxOut](AsyncClient::LedgerDelegate delegate) {
       delegate.getHistoryPage(0, cbLedgerTxOut);
    };
    const auto &cbCollectTX = [this, state, cbCollectTXs, cbLedgerDelegateTxOut](Tx tx) {
@@ -281,6 +285,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
       armory_->getTXsByHash(state->txHashSet, cbCollectTXs);
    };
    const auto &cbLedger = [this, state, cbCollectTX](std::vector<ClientClasses::LedgerEntry> entries) {
+      logger_->debug("cbLedger");
       state->nbTransactions += entries.size();
       state->entries = entries;
       for (const auto &entry : entries) {
@@ -295,9 +300,11 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
       }
    };
    const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+      logger_->debug("cbLedgerDelegate");
       state->nbTransactions = 0;
       delegate.getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
    };
+   logger_->debug("Validating addr {}", state->address->GetChainedAddress().display<std::string>());
    if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
       const auto &prefixedAddress = state->address->GetChainedAddress().prefixed();
       if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < MaxAadressValidationErrorCount)) {
@@ -334,7 +341,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
       }
       ReturnValidationResult(state);
    };
-   const auto &cbCollectTXs = [this, state, cbCheckState](std::vector<Tx> txs) {
+   const auto &cbCollectTXs = [state, cbCheckState](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
          state->txHashSet.erase(txHash);
@@ -361,7 +368,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
          cbCheckState();
       }
    };
-   const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegate = [state, cbLedger](AsyncClient::LedgerDelegate delegate) {
       state->entries.clear();
       delegate.getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
    };
@@ -623,16 +630,21 @@ void AddressVerificator::RegisterAddresses()
 
    if (armory_ && (armory_->state() == ArmoryConnection::State::Ready)) {
       pendingRegAddresses_.clear();
-      armory_->registerWallet(internalWallet_, walletId_, addresses, []{});
-      logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses", addresses.size());
+      regId_ = armory_->registerWallet(internalWallet_, walletId_, addresses, [] {}, true);
+      logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses in {} with {}", addresses.size(), walletId_, regId_);
    }
    else {
       logger_->error("[AddressVerificator::RegisterAddresses] failed to get BDM");
    }
 }
 
-void AddressVerificator::OnRefresh()
+void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
 {
+   const auto &it = std::find(ids.begin(), ids.end(), regId_);
+   if (it == ids.end()) {
+      return;
+   }
+   registered_ = true;
    logger_->debug("[AddressVerificator::OnRefresh] get refresh command");
 
    ExecutionCommand command;
@@ -657,7 +669,7 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
    auto result = new std::vector<UTXO>;
    const auto &cbInternal = [this, cb, result](std::vector<UTXO> utxos) {
       *result = utxos;
-      const auto &cbZC = [this, cb, result](std::vector<UTXO> zcs) {
+      const auto &cbZC = [cb, result](std::vector<UTXO> zcs) {
          result->insert(result->begin(), zcs.begin(), zcs.end());
          cb(*result);
          delete result;
@@ -669,7 +681,7 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
 
 void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
-   const auto &cbInternal = [this, cb](std::vector<UTXO> utxos) {
+   const auto &cbInternal = [cb](std::vector<UTXO> utxos) {
       std::vector<UTXO> result;
       for (const auto &utxo : utxos) {
          if ((utxo.getValue() == GetAuthAmount()) && (utxo.getTxOutIndex() == 1)) {
