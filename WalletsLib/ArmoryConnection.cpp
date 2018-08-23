@@ -199,7 +199,6 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          bdv_.reset();
       }
       if (cbRemote_) {
-         cbRemote_->shutdown();
          cbRemote_.reset();
       }
       isOnline_ = false;
@@ -208,7 +207,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          state_ = State::Unknown;
          cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
          logger_->debug("[ArmoryConnection::connectRoutine] connecting to Armory {}:{}", settings.armoryDBIp, settings.armoryDBPort);
-         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_.get());
+         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_);
          while (state_ == State::Unknown) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
          }
@@ -554,7 +553,11 @@ void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
       }
    }
    if (state_ == ArmoryConnection::State::Ready) {
-      logger_->debug("[ArmoryConnection::onRefresh]");
+      std::string idString;
+      for (const auto &id : ids) {
+         idString += id.toBinStr() + " ";
+      }
+      logger_->debug("[ArmoryConnection::onRefresh] {}", idString);
       emit refresh(ids);
    }
 }
