@@ -766,7 +766,11 @@ bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet
          clientCb(this, entries);
       }
       else {
-         if (historyCache_[id].size() == entries.size()) {
+         const auto &histPage = historyCache_.find(id);
+         if (histPage == historyCache_.end()) {
+            clientCb(this, entries);
+         }
+         else if (histPage->second.size() == entries.size()) {
             clientCb(this, {});
          }
          else {
@@ -778,8 +782,8 @@ bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet
             };
             std::set<ClientClasses::LedgerEntry, comparator> diffSet;
             diffSet.insert(entries.begin(), entries.end());
-            for (const auto &cached : historyCache_[id]) {
-               diffSet.erase(cached);
+            for (const auto &entry : histPage->second) {
+               diffSet.erase(entry);
             }
             for (const auto &diffEntry : diffSet) {
                diff.emplace_back(diffEntry);
