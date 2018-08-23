@@ -18,6 +18,12 @@ QT_END_NAMESPACE
 
 class UserScriptRunner;
 
+namespace bs {
+   class DealerUtxoResAdapter;
+}
+
+class SignContainer;
+
 
 //
 // UserScriptHandler
@@ -28,22 +34,65 @@ class UserScriptHandler : public QObject
 {
    Q_OBJECT
 
+signals:
+   void aqScriptLoaded(const QString &fileName);
+   void failedToLoad(const QString &error);
+   void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+   void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
+
 public:
    explicit UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvider,
+      std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
+      std::shared_ptr<SignContainer> signingContainer,
+      std::shared_ptr<MarketDataProvider> mdProvider,
+      std::shared_ptr<AssetManager> assetManager,
+      std::shared_ptr<spdlog::logger> logger,
       UserScriptRunner *runner);
    ~UserScriptHandler() noexcept override = default;
 
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+
+   std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
+
+   void setTxData(const std::string &id, std::shared_ptr<TransactionData> txData);
+
 private slots:
    void onQuoteReqNotification(const bs::network::QuoteReqNotification &qrn);
-   void onQuoteReqCancelled(const QString &reqId, bool byUser);
+   void onQuoteReqCancelled(const QString &reqId, bool userCancelled);
+   void onQuoteNotifCancelled(const QString &reqId);
+   void onQuoteReqRejected(const QString &reqId, const QString &);
    void initAQ(const QString &fileName);
    void deinitAQ();
+   void onMDUpdate(bs::network::Asset::Type, const QString &security,
+      bs::network::MDFields mdFields);
+   void onBestQuotePrice(const QString reqId, double price, bool own);
+   void onAQReply(const QString &reqId, double price);
+   void onAQPull(const QString &reqId);
+   void aqTick();
 
 private:
    AutoQuoter *aq_;
+   std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter_;
+   std::shared_ptr<SignContainer> signingContainer_;
+   std::shared_ptr<WalletsManager> walletsManager_;
+   std::shared_ptr<MarketDataProvider> mdProvider_;
+   std::shared_ptr<AssetManager> assetManager_;
+   std::shared_ptr<spdlog::logger> logger_;
+
    std::unordered_map<std::string, QObject*> aqObjs_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification> aqQuoteReqs_;
    std::unordered_map<std::string, std::shared_ptr<TransactionData>> aqTxData_;
+   std::unordered_map<std::string, double>   bestQPrices_;
+
+   struct MDInfo {
+      double   bidPrice;
+      double   askPrice;
+      double   lastPrice;
+   };
+   std::unordered_map<std::string, MDInfo>  mdInfo_;
+
+   bool aqEnabled_;
+   QTimer *aqTimer_;
 }; // class UserScriptHandler
 
 
@@ -60,16 +109,35 @@ signals:
    void initAQ(const QString &fileName);
    void deinitAQ();
    void stateChanged(bool enabled);
+   void aqScriptLoaded(const QString &fileName);
+   void failedToLoad(const QString &error);
+   void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+   void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
 public:
-   UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider, QObject *parent);
-   ~UserScriptRunner() noexcept override = default;
+   UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
+      std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
+      std::shared_ptr<SignContainer> signingContainer,
+      std::shared_ptr<MarketDataProvider> mdProvider,
+      std::shared_ptr<AssetManager> assetManager,
+      std::shared_ptr<spdlog::logger> logger,
+      QObject *parent);
+   ~UserScriptRunner() noexcept override;
 
    bool isEnabled() const;
+
+   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+
+   std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
+
+   void setTxData(const std::string &id, std::shared_ptr<TransactionData> txData);
 
 public slots:
    void enableAQ(const QString &fileName);
    void disableAQ();
+
+private slots:
+   void failedToLoadScript();
 
 private:
    QThread *thread_;

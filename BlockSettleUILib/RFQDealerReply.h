@@ -13,7 +13,6 @@
 #include "EncryptionUtils.h"
 #include "FrejaREST.h"
 #include "MetaData.h"
-#include "UserScript.h"
 
 namespace Ui {
     class RFQDealerReply;
@@ -36,11 +35,14 @@ class SignContainer;
 class TransactionData;
 class WalletsManager;
 class CustomDoubleSpinBox;
+class MarketDataProvider;
 
 QT_BEGIN_NAMESPACE
 class QDoubleSpinBox;
 class QPushButton;
 QT_END_NAMESPACE
+
+class UserScriptRunner;
 
 namespace bs {
    namespace network {
@@ -84,9 +86,6 @@ namespace bs {
       public slots:
          void setQuoteReqNotification(const network::QuoteReqNotification &, double indicBid, double indicAsk);
          void quoteReqNotifStatusChanged(const network::QuoteReqNotification &);
-         void onQuoteReqNotification(const network::QuoteReqNotification &);
-         void onQuoteReqCancelled(const QString &reqId, bool byUser);
-         void onQuoteReqRejected(const QString &reqId);
          void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
          void onBestQuotePrice(const QString reqId, double price, bool own);
          void onAutoSignActivated();
@@ -107,12 +106,9 @@ namespace bs {
          void walletSelected(int index);
          void onTransactionDataChanged();
          void aqStateChanged(int state);
-         void aqTick();
-         void onAQReply(const QString &reqId, double price);
-         void onAQPull(const QString &reqId);
+         void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
          void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
          void onQuoteReceived(const bs::network::Quote &);
-         void onQuoteNotifCancelled(const QString &reqId);
          void onOrderUpdated(const bs::network::Order &);
          void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
          void onCreateHDWalletError(unsigned int id, std::string error);
@@ -157,24 +153,21 @@ namespace bs {
          std::string product_;
          std::string baseProduct_;
 
-         AutoQuoter *   aq_;
-         bool           aqLoaded_ = false;
-         bool           aqEnabled_ = false;
-         bool           celerConnected_ = false;
-         std::unordered_map<std::string, QObject *>   aqObjs_;
-         std::unordered_map<std::string, bs::network::QuoteReqNotification>   aqQuoteReqs_;
-         std::unordered_map<std::string, std::shared_ptr<TransactionData> >   aqTxData_;
-         QTimer         aqTimer_;
+         UserScriptRunner *aq_;
 
-         std::shared_ptr<DealerUtxoResAdapter>  utxoAdapter_;
+         bool           aqLoaded_ = false;
+         bool           celerConnected_ = false;
 
          std::unordered_map<std::string, double>   bestQPrices_;
+
          struct MDInfo {
             double   bidPrice;
             double   askPrice;
             double   lastPrice;
          };
          std::unordered_map<std::string, MDInfo>  mdInfo_;
+
+         std::shared_ptr<DealerUtxoResAdapter>  utxoAdapter_;
 
       private:
          void reset();
