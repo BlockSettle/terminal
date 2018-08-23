@@ -677,6 +677,7 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
    if (!isBalanceAvailable()) {
       return false;
    }
+
    zcListCallbacks_[obj].push_back(cb);
    if (obj != nullptr) {
       connect(obj, SIGNAL(destroyed()), this, SLOT(onZCListObjDestroyed()));

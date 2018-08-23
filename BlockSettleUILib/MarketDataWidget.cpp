@@ -33,7 +33,6 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
 
    ui->treeViewMarketData->setModel(mdSortFilterModel_);
    ui->treeViewMarketData->setSortingEnabled(true);
-   ui->treeViewMarketData->sortByColumn(0, Qt::AscendingOrder);
 
    if (appSettings != nullptr) {
       mdHeader_ = std::make_shared<MDHeader>(Qt::Horizontal, ui->treeViewMarketData);
@@ -46,6 +45,8 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    }
 
    ui->treeViewMarketData->setHeader(mdHeader_.get());
+   ui->treeViewMarketData->header()->setSortIndicator(
+      static_cast<int>(MarketDataModel::MarketDataColumns::First), Qt::AscendingOrder);
 
    connect(marketDataModel_, &QAbstractItemModel::rowsInserted, [this]() {
       if (mdHeader_ != nullptr) {

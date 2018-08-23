@@ -3,6 +3,8 @@
 
 #include <QWizardPage>
 
+#include <memory>
+
 namespace Ui {
     class SetPassphraseFrame;
 };

@@ -50,7 +50,7 @@ namespace bs {
       std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }
       std::vector<shared_ptr<ScriptRecipient>> recipients() const { return recipients_; }
 
-      void GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger, std::function<void(std::vector<bs::Address>)>);
+      bool GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger, std::function<void(std::vector<bs::Address>)>);
 
       void removeDupRecipients();
 
