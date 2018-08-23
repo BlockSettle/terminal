@@ -790,13 +790,16 @@ bool RemoteSigner::Start()
       connection_->SetZMQTransport(ZMQTransport::InprocTransport);
    }
 
-   listener_ = std::make_shared<HeadlessListener>(logger_, connection_);
-   connect(listener_.get(), &HeadlessListener::connected, this, &RemoteSigner::onConnected, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::authenticated, this, &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::authFailed, [this] { authPending_ = false; });
-   connect(listener_.get(), &HeadlessListener::disconnected, this, &RemoteSigner::onDisconnected, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::error, this, &RemoteSigner::onConnError, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::PacketReceived, this, &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
+   {
+      std::lock_guard<std::mutex> lock(mutex_);
+      listener_ = std::make_shared<HeadlessListener>(logger_, connection_);
+      connect(listener_.get(), &HeadlessListener::connected, this, &RemoteSigner::onConnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authenticated, this, &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authFailed, [this] { authPending_ = false; });
+      connect(listener_.get(), &HeadlessListener::disconnected, this, &RemoteSigner::onDisconnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::error, this, &RemoteSigner::onConnError, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::PacketReceived, this, &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
+   }
 
    return Connect();
 }
@@ -841,13 +844,20 @@ bool RemoteSigner::Disconnect()
 
 void RemoteSigner::Authenticate()
 {
+   mutex_.lock();
+
    if (!listener_) {
+      mutex_.unlock();
       emit connectionError();
       return;
    }
    if (listener_->isAuthenticated() || authPending_) {
+      mutex_.unlock();
       return;
    }
+
+   mutex_.unlock();
+
    authPending_ = true;
    headless::AuthenticationRequest request;
    request.set_password(pwHash_.toStdString());
@@ -860,6 +870,8 @@ void RemoteSigner::Authenticate()
 
 bool RemoteSigner::isOffline() const
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    if (!listener_) {
       return true;
    }
@@ -868,6 +880,8 @@ bool RemoteSigner::isOffline() const
 
 bool RemoteSigner::hasUI() const
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    return listener_ ? listener_->hasUI() : false;
 }
 
@@ -886,9 +900,15 @@ void RemoteSigner::onAuthenticated()
 void RemoteSigner::onDisconnected()
 {
    missingWallets_.clear();
-   if (listener_) {
-      listener_->resetAuthTicket();
+
+   {
+      std::lock_guard<std::mutex> lock(mutex_);
+
+      if (listener_) {
+         listener_->resetAuthTicket();
+      }
    }
+
    emit disconnected();
    emit ready();
 }
