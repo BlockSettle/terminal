@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include <mutex>
 
 #include "UserScript.h"
 #include "TransactionData.h"
@@ -48,7 +49,7 @@ public:
       std::shared_ptr<AssetManager> assetManager,
       std::shared_ptr<spdlog::logger> logger,
       UserScriptRunner *runner);
-   ~UserScriptHandler() noexcept override = default;
+   ~UserScriptHandler() noexcept override;
 
    void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
 
@@ -93,6 +94,7 @@ private:
 
    bool aqEnabled_;
    QTimer *aqTimer_;
+   mutable std::mutex mutex_;
 }; // class UserScriptHandler
 
 

@@ -21,7 +21,7 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    std::shared_ptr<AssetManager> assetManager,
    std::shared_ptr<spdlog::logger> logger,
    UserScriptRunner *runner)
-   :  utxoAdapter_(utxoAdapter)
+   : utxoAdapter_(utxoAdapter)
    , signingContainer_(signingContainer)
    , mdProvider_(mdProvider)
    , assetManager_(assetManager)
@@ -51,6 +51,11 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    connect(aqTimer_, &QTimer::timeout, this, &UserScriptHandler::aqTick);
    aqTimer_->start();
 
+}
+
+UserScriptHandler::~UserScriptHandler() noexcept
+{
+   deinitAQ();
 }
 
 void UserScriptHandler::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
@@ -93,8 +98,10 @@ void UserScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifi
       if (itAQObj != aqObjs_.end()) {
          aq_->destroy(itAQObj->second);
          aqObjs_.erase(qrn.quoteRequestId);
-         aqTxData_.erase(qrn.quoteRequestId);
          bestQPrices_.erase(qrn.quoteRequestId);
+
+         std::lock_guard<std::mutex> lock(mutex_);
+         aqTxData_.erase(qrn.quoteRequestId);
       }
    }
 }
@@ -230,6 +237,7 @@ void UserScriptHandler::onAQPull(const QString &reqId)
    }
    emit pullQuoteNotif(QString::fromStdString(itQRN->second.quoteRequestId), QString::fromStdString(itQRN->second.sessionToken));
    if (itQRN->second.assetType != bs::network::Asset::SpotFX) {
+      std::lock_guard<std::mutex> lock(mutex_);
       aqTxData_.erase(itQRN->second.quoteRequestId);
    }
 }
@@ -262,6 +270,8 @@ void UserScriptHandler::aqTick()
 
 std::shared_ptr<TransactionData> UserScriptHandler::getTransactionData(const std::string &reqId) const
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    const auto itAQtxD = aqTxData_.find(reqId);
    if (itAQtxD == aqTxData_.end()) {
       return nullptr;
@@ -271,6 +281,8 @@ std::shared_ptr<TransactionData> UserScriptHandler::getTransactionData(const std
 
 void UserScriptHandler::setTxData(const std::string &id, std::shared_ptr<TransactionData> txData)
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    aqTxData_[id] = txData;
 }
 
@@ -292,7 +304,7 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
          mdProvider, assetManager, logger, this))
    , enabled_(false)
 {
-   //script_->moveToThread(thread_);
+   script_->moveToThread(thread_);
 
    connect(script_, &UserScriptHandler::aqScriptLoaded, this, &UserScriptRunner::aqScriptLoaded,
       Qt::QueuedConnection);
@@ -304,6 +316,8 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
       Qt::QueuedConnection);
    connect(script_, &UserScriptHandler::sendQuote, this, &UserScriptRunner::sendQuote,
       Qt::QueuedConnection);
+
+   thread_->start();
 }
 
 UserScriptRunner::~UserScriptRunner() noexcept

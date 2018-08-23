@@ -10,6 +10,8 @@
 
 #include "headless.pb.h"
 
+#include <mutex>
+
 namespace spdlog {
    class logger;
 }
@@ -128,6 +130,7 @@ protected:
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
+   mutable std::mutex mutex_;
 };
 
 class LocalSigner : public RemoteSigner
