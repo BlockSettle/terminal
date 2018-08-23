@@ -96,7 +96,7 @@ private:
    void setCPFPinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
 
    void validateAddOutputButton();
-   void validateCreateButton();
+   Q_INVOKABLE void validateCreateButton();
 
    void AddRecipient(const bs::Address &, double amount, bool isMax = false);
 

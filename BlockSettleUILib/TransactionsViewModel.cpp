@@ -204,7 +204,6 @@ QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientat
 
 void TransactionsViewModel::refresh()
 {
-   clear();
    updatePage();
 }
 
@@ -235,6 +234,9 @@ void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
 {
    if (state == ArmoryConnection::State::Offline) {
       clear();
+   }
+   else if ((state == ArmoryConnection::State::Ready) && currentPage_.empty()) {
+      loadLedgerEntries();
    }
 }
 
