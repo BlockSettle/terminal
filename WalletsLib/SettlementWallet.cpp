@@ -787,7 +787,7 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
    const auto &cbSpendable = [this, cb, allowZC, rtWallet](std::vector<UTXO> inputs) {
       if (inputs.empty()) {
          if (allowZC) {
-            const auto &cbZC = [this, cb](std::vector<UTXO> zcs) {
+            const auto &cbZC = [cb](std::vector<UTXO> zcs) {
                if (zcs.size() == 1) {
                   cb(zcs[0]);
                }
@@ -941,7 +941,7 @@ bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTX
       result->insert(result->end(), utxos.begin(), utxos.end());
 
       for (const auto &rtWallet : rtWallets_) {
-         const auto &cbRTWlist = [this, result, walletSet, id=rtWallet.first, cb](std::vector<UTXO> utxos) {
+         const auto &cbRTWlist = [result, walletSet, id=rtWallet.first, cb](std::vector<UTXO> utxos) {
             result->insert(result->end(), utxos.begin(), utxos.end());
             walletSet->erase(id);
             if (walletSet->empty()) {
@@ -1289,7 +1289,7 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
    const auto tx = armory_->getTxByHash(entry.getTxHash(), cbTX);
 }
 
-bs::SettlementMonitor::~SettlementMonitor()
+bs::SettlementMonitor::~SettlementMonitor() noexcept
 {
    FastLock locker(walletLock_);
    rtWallet_ = nullptr;

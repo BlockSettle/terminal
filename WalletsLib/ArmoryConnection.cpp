@@ -141,7 +141,7 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    std::thread(cbZCMaintenance).detach();
 }
 
-ArmoryConnection::~ArmoryConnection()
+ArmoryConnection::~ArmoryConnection() noexcept
 {
    stopServiceThreads();
 }
@@ -365,7 +365,7 @@ bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletI
    auto result = new std::map<bs::Address, AsyncClient::LedgerDelegate>;
    for (const auto &addr : addresses) {
       addrSet->insert(addr);
-      const auto &cbProcess = [this, addrSet, result, addr, cb](AsyncClient::LedgerDelegate delegate) {
+      const auto &cbProcess = [addrSet, result, addr, cb](AsyncClient::LedgerDelegate delegate) {
          addrSet->erase(addr);
          (*result)[addr] = delegate;
          if (addrSet->empty()) {
@@ -458,7 +458,7 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
    auto hashSet = new std::set<BinaryData>(hashes);
    auto result = new std::vector<Tx>;
 
-   const auto &cbAppendTx = [this, hashSet, result, cb](Tx tx) {
+   const auto &cbAppendTx = [hashSet, result, cb](Tx tx) {
       const auto &txHash = tx.getThisHash();
       hashSet->erase(txHash);
       result->emplace_back(tx);

@@ -18,7 +18,7 @@ ZmqDataConnection::ZmqDataConnection(const std::shared_ptr<spdlog::logger>& logg
    assert(logger_);
 }
 
-ZmqDataConnection::~ZmqDataConnection()
+ZmqDataConnection::~ZmqDataConnection() noexcept
 {
    closeConnection();
 }

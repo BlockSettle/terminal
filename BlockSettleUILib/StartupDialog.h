@@ -4,6 +4,8 @@
 #include <QDialog>
 #include <QLatin1String>
 
+#include <memory>
+
 #include "BtcDefinitions.h"
 
 namespace Ui {

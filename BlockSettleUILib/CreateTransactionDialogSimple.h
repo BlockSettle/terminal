@@ -36,9 +36,11 @@ protected:
    QLabel *labelTxInputs() const override;
    QLabel *labelEstimatedFee() const override;
    QLabel *labelTotalAmount() const override;
-   QLabel *labelTxSize() const override { return nullptr; }
+   QLabel *labelTxSize() const override;
    QPushButton *pushButtonCreate() const override;
    QPushButton *pushButtonCancel() const override;
+   QLabel *feePerByteLabel() const override;
+   QLabel *changeLabel() const override;
 
    bs::Address getChangeAddress() const override;
 
