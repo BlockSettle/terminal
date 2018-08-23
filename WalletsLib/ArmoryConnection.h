@@ -20,6 +20,7 @@
 
 
 class ArmoryConnection;
+class QProcess;
 
 class ArmoryCallback : public RemoteCallback
 {
@@ -113,6 +114,7 @@ private:
    void onRefresh(std::vector<BinaryData>);
 
    void stopServiceThreads();
+   bool startLocalArmoryProcess(const ArmorySettings &settings);
 
    bool addGetTxCallback(const BinaryData &hash, const std::function<void(Tx)> &);  // returns true if hash exists
    void callGetTxCallbacks(const BinaryData &hash, const Tx &);
@@ -128,6 +130,8 @@ private:
    std::atomic_bool  connThreadRunning_;
    std::atomic_bool  maintThreadRunning_;
    std::atomic<ReqIdType>  reqIdSeq_;
+
+   std::shared_ptr<QProcess>  armoryProcess_;
 
    const std::chrono::duration<double> zcPersistenceTimeout_;
    struct ZCData {
