@@ -56,7 +56,7 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
 
 UserScriptHandler::~UserScriptHandler() noexcept
 {
-   deinitAQ();
+   deinitAQ(false);
 }
 
 void UserScriptHandler::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
@@ -162,14 +162,17 @@ void UserScriptHandler::initAQ(const QString &fileName)
    connect(aq_, &AutoQuoter::pullingQuoteReply, this, &UserScriptHandler::onAQPull);
 }
 
-void UserScriptHandler::deinitAQ()
+void UserScriptHandler::deinitAQ(bool deleteAq)
 {
    for (auto aqObj : aqObjs_) {
       aq_->destroy(aqObj.second);
    }
    aqObjs_.clear();
    aqEnabled_ = false;
-   aq_->deleteLater();
+
+   if (deleteAq) {
+      aq_->deleteLater();
+   }
 }
 
 void UserScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &security,
@@ -347,7 +350,7 @@ void UserScriptRunner::enableAQ(const QString &fileName)
 
 void UserScriptRunner::disableAQ()
 {
-   emit deinitAQ();
+   emit deinitAQ(true);
 
    enabled_ = false;
 }

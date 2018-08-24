@@ -973,7 +973,7 @@ void RFQDealerReply::onAqScriptLoaded(const QString &filename)
 void RFQDealerReply::aqStateChanged(int state)
 {
    if (state == Qt::Unchecked) {
-      aq_->deinitAQ();
+      aq_->disableAQ();
    }
    else {
       const auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
