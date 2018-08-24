@@ -875,6 +875,7 @@ void bs::Wallet::UnregisterWallet()
    }
    spendableCallbacks_.clear();
    zcListCallbacks_.clear();
+   historyCache_.clear();
 }
 
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs
