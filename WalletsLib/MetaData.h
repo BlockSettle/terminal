@@ -236,6 +236,7 @@ namespace bs {
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
       virtual void RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
+      void UnregisterWallet();
       virtual void SetArmory(const std::shared_ptr<ArmoryConnection> &);
       virtual void SetUserID(const BinaryData &) {}
       virtual bool getHistoryPage(uint32_t id) const;

@@ -198,7 +198,7 @@ void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
 void CreateTransactionDialog::selectedWalletChanged(int)
 {
    auto currentWallet = walletsManager_->GetWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   transactionData_->SetWallet(currentWallet, armory_->topBlock());
+   transactionData_->SetWallet(currentWallet);
 }
 
 void CreateTransactionDialog::onTransactionUpdated()

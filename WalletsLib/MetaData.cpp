@@ -865,6 +865,18 @@ void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory,
    }
 }
 
+void bs::Wallet::UnregisterWallet()
+{
+   btcWallet_.reset();
+   {
+      QMutexLocker lock(&addrMapsMtx_);
+      cbBal_.clear();
+      cbTxN_.clear();
+   }
+   spendableCallbacks_.clear();
+   zcListCallbacks_.clear();
+}
+
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
    , bool isRBF, bs::Address changeAddress)
@@ -1029,8 +1041,7 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal, 
       }
 
       const auto coinSelection = std::make_shared<CoinSelection>([utxos](uint64_t) { return utxos; }
-         , std::vector<AddressBookEntry>{}, armory_->topBlock()
-         , GetTotalBalance() * BTCNumericTypes::BalanceDivider);
+         , std::vector<AddressBookEntry>{}, GetSpendableBalance() * BTCNumericTypes::BalanceDivider);
 
       try {
          const auto selection = coinSelection->getUtxoSelectionForRecipients(payment, utxos);

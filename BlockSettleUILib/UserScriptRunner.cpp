@@ -21,7 +21,8 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    std::shared_ptr<AssetManager> assetManager,
    std::shared_ptr<spdlog::logger> logger,
    UserScriptRunner *runner)
-   : utxoAdapter_(utxoAdapter)
+   : aq_(nullptr)
+   , utxoAdapter_(utxoAdapter)
    , signingContainer_(signingContainer)
    , mdProvider_(mdProvider)
    , assetManager_(assetManager)
@@ -50,12 +51,11 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    aqTimer_->setInterval(500);
    connect(aqTimer_, &QTimer::timeout, this, &UserScriptHandler::aqTick);
    aqTimer_->start();
-
 }
 
 UserScriptHandler::~UserScriptHandler() noexcept
 {
-   deinitAQ();
+   deinitAQ(false);
 }
 
 void UserScriptHandler::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
@@ -161,14 +161,17 @@ void UserScriptHandler::initAQ(const QString &fileName)
    connect(aq_, &AutoQuoter::pullingQuoteReply, this, &UserScriptHandler::onAQPull);
 }
 
-void UserScriptHandler::deinitAQ()
+void UserScriptHandler::deinitAQ(bool deleteAq)
 {
    for (auto aqObj : aqObjs_) {
       aq_->destroy(aqObj.second);
    }
    aqObjs_.clear();
    aqEnabled_ = false;
-   aq_->deleteLater();
+
+   if (deleteAq) {
+      aq_->deleteLater();
+   }
 }
 
 void UserScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &security,
@@ -324,6 +327,7 @@ UserScriptRunner::~UserScriptRunner() noexcept
 {
    script_->deleteLater();
    thread_->quit();
+   thread_->wait();
 }
 
 bool UserScriptRunner::isEnabled() const
@@ -345,7 +349,7 @@ void UserScriptRunner::enableAQ(const QString &fileName)
 
 void UserScriptRunner::disableAQ()
 {
-   emit deinitAQ();
+   emit deinitAQ(true);
 
    enabled_ = false;
 }

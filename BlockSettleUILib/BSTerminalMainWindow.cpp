@@ -152,6 +152,7 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
    NotificationCenter::destroyInstance();
    if (signContainer_) {
       signContainer_->Stop();
+      signContainer_ = nullptr;
    }
    walletsManager_ = nullptr;
    assetManager_ = nullptr;
@@ -385,7 +386,7 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
       QMetaObject::invokeMethod(this, "CompleteDBConnection", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Offline:
-      QMetaObject::invokeMethod(this, "SetOfflineUIView", Qt::QueuedConnection);
+      QMetaObject::invokeMethod(this, "ArmoryIsOffline", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Scanning:
    case ArmoryConnection::State::Error:
@@ -453,9 +454,12 @@ void BSTerminalMainWindow::UpdateMainWindowAppearence()
    }
 }
 
-void BSTerminalMainWindow::SetOfflineUIView()
+void BSTerminalMainWindow::ArmoryIsOffline()
 {
+   logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
+   walletsManager_->UnregisterSavedWallets();
    action_send_->setEnabled(false);
+   connectArmory();
 }
 
 void BSTerminalMainWindow::initArmory()

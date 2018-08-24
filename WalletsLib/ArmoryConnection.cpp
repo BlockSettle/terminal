@@ -192,7 +192,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          return;
       }
       connThreadRunning_ = true;
-      setState(State::Offline);
+      setState(State::Unknown);
       stopServiceThreads();
       if (bdv_) {
          bdv_->unregisterFromDB();
@@ -204,14 +204,15 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
       isOnline_ = false;
       bool connected = false;
       do {
-         state_ = State::Unknown;
          cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
          logger_->debug("[ArmoryConnection::connectRoutine] connecting to Armory {}:{}", settings.armoryDBIp, settings.armoryDBPort);
          bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_);
-         while (state_ == State::Unknown) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+         if (!bdv_) {
+            logger_->error("[ArmoryConnection::connectRoutine] failed to create BDV");
+            std::this_thread::sleep_for(std::chrono::seconds(10));
+            continue;
          }
-         connected = (state_ == State::Connected) ? true : false;
+         connected = bdv_->connectToRemote();
          if (!connected) {
             logger_->warn("[ArmoryConnection::connectRoutine] BDV connection failed");
             std::this_thread::sleep_for(std::chrono::seconds(30));
@@ -235,15 +236,6 @@ bool ArmoryConnection::goOnline()
    bdv_->goOnline();
    isOnline_ = true;
    return true;
-}
-
-unsigned int ArmoryConnection::topBlock() const
-{
-   if (!bdv_ || (state_ != State::Ready)) {
-      logger_->error("[ArmoryConnection::topBlock] invalid state: {}", (int)state_.load());
-      return 0;
-   }
-   return bdv_->getTopBlock();
 }
 
 void ArmoryConnection::registerBDV(NetworkType netType)
@@ -574,6 +566,9 @@ void ArmoryCallback::progress(BDMPhase phase, const vector<string> &walletIdVec,
 
 void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 {
+   if (block > 0) {
+      connection_->setTopBlock(static_cast<unsigned int>(block));
+   }
    switch (action) {
    case BDMAction_Ready:
       logger_->debug("[ArmoryCallback::run] BDMAction_Ready");
@@ -625,8 +620,9 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
    }
 }
 
-void ArmoryCallback::socketStatus(bool status)
+void ArmoryCallback::disconnected()
 {
-   logger_->debug("[ArmoryCallback::socketStatus] {}", status);
-   connection_->setState(status ? ArmoryConnection::State::Connected : ArmoryConnection::State::Offline);
+   logger_->debug("[ArmoryCallback::disconnected]");
+   connection_->regThreadRunning_ = false;
+   connection_->setState(ArmoryConnection::State::Offline);
 }
