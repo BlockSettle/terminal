@@ -63,7 +63,7 @@ private slots:
    void onQuoteNotifCancelled(const QString &reqId);
    void onQuoteReqRejected(const QString &reqId, const QString &);
    void initAQ(const QString &fileName);
-   void deinitAQ();
+   void deinitAQ(bool deleteAq = true);
    void onMDUpdate(bs::network::Asset::Type, const QString &security,
       bs::network::MDFields mdFields);
    void onBestQuotePrice(const QString reqId, double price, bool own);
@@ -109,7 +109,7 @@ class UserScriptRunner : public QObject
 
 signals:
    void initAQ(const QString &fileName);
-   void deinitAQ();
+   void deinitAQ(bool deleteAq);
    void stateChanged(bool enabled);
    void aqScriptLoaded(const QString &fileName);
    void failedToLoad(const QString &error);

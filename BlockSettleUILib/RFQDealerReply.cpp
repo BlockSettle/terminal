@@ -97,7 +97,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
    });
 
-   utxoAdapter_ = std::make_shared<bs::DealerUtxoResAdapter>(logger_, this);
+   utxoAdapter_ = std::make_shared<bs::DealerUtxoResAdapter>(logger_, nullptr);
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, utxoAdapter_.get(), &bs::OrderUtxoResAdapter::onOrder);
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDealerReply::onOrderUpdated);
    connect(quoteProvider_.get(), &QuoteProvider::quoteReceived, this, &RFQDealerReply::onQuoteReceived);
@@ -105,6 +105,10 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
 
    aq_ = new UserScriptRunner(quoteProvider_, utxoAdapter_, signingContainer_,
       mdProvider, assetManager_, logger_, this);
+
+   if (walletsManager_) {
+      aq_->setWalletsManager(walletsManager_);
+   }
 
    connect(aq_, &UserScriptRunner::aqScriptLoaded, [this] (const QString &fileName) {
       aqLoaded_ = true;
@@ -969,7 +973,7 @@ void RFQDealerReply::onAqScriptLoaded(const QString &filename)
 void RFQDealerReply::aqStateChanged(int state)
 {
    if (state == Qt::Unchecked) {
-      aq_->deinitAQ();
+      aq_->disableAQ();
    }
    else {
       const auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
