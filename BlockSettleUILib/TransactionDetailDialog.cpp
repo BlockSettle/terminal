@@ -15,6 +15,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <limits>
+
 
 TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, const std::shared_ptr<WalletsManager>& walletsManager
    , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
@@ -30,6 +32,9 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
       ui_->labelAddress->setText(item->mainAddress);
 
       if (item->tx.isInitialized()) {
+         if (item->tx.getBlockHeight() != std::numeric_limits<uint32_t>::max()) {
+            ui_->labelHeight->setText(QString::number(item->tx.getBlockHeight()));
+         }
          ui_->labelSize->setText(QString::number(item->tx.serializeNoWitness().getSize()));
 
          std::set<BinaryData> txHashSet;
@@ -104,6 +109,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
 
             if (initialized) {
                ui_->labelFee->setText(UiUtils::displayAmount(value));
+               ui_->labelSb->setText(QString::number(value / item->tx.serializeNoWitness().getSize()));
             }
 
             ui_->treeAddresses->expandItem(itemSender);
