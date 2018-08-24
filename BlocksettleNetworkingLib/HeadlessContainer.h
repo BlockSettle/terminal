@@ -87,6 +87,7 @@ protected:
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
+   std::vector<RequestId>              signRequests_;
 };
 
 bool KillHeadlessProcess();
