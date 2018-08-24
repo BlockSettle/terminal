@@ -1,3 +1,9 @@
+0.10.4
+Bug Fixes:
+   -
+Improvements:
+   - Added input amount into transaction sign dialog.
+   
 0.10.3
 Bug Fixes:
    -
