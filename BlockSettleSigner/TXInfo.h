@@ -74,6 +74,7 @@ class TXInfo : public QObject
    Q_PROPERTY(double total READ total NOTIFY dataChanged)
    Q_PROPERTY(double fee READ fee NOTIFY dataChanged)
    Q_PROPERTY(double changeAmount READ changeAmount NOTIFY dataChanged)
+   Q_PROPERTY(double inputAmount READ inputAmount NOTIFY dataChanged)
    Q_PROPERTY(bool hasChange READ hasChange NOTIFY dataChanged)
    Q_PROPERTY(WalletInfo *wallet READ wallet NOTIFY dataChanged)
 
@@ -92,6 +93,7 @@ public:
    bool hasChange() const { return (txReq_.change.value > 0); }
    double changeAmount() const { return txReq_.change.value / BTCNumericTypes::BalanceDivider; }
    WalletInfo *wallet() const { return walletInfo_; }
+   double inputAmount() const;
 
 signals:
    void dataChanged();
