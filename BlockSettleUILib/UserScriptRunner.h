@@ -72,7 +72,7 @@ private slots:
    void aqTick();
 
 private:
-   AutoQuoter *aq_;
+   AutoQuoter *aq_ = nullptr;
    std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter_;
    std::shared_ptr<SignContainer> signingContainer_;
    std::shared_ptr<WalletsManager> walletsManager_;
