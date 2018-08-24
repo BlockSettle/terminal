@@ -9,6 +9,7 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015 or VS2017 15.7.3 or up.
 * Install YASM from https://yasm.tortall.net/Download.html (download Win64 ZIP archive and unpack it to c:\Program Files\yasm)
 * Install ActiveState Perl (https://www.activestate.com/ActivePerl)
 * Install NASM (http://www.nasm.us) and add it to global PATH variable
+* Execute `SET CL=/D_ENABLE_EXTENDED_ALIGNED_STORAGE` in the console
 
 ## Ubuntu
 * Install python-pip package (it will install Python)
