@@ -21,7 +21,8 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    std::shared_ptr<AssetManager> assetManager,
    std::shared_ptr<spdlog::logger> logger,
    UserScriptRunner *runner)
-   : utxoAdapter_(utxoAdapter)
+   : aq_(nullptr)
+   , utxoAdapter_(utxoAdapter)
    , signingContainer_(signingContainer)
    , mdProvider_(mdProvider)
    , assetManager_(assetManager)
@@ -324,6 +325,7 @@ UserScriptRunner::~UserScriptRunner() noexcept
 {
    script_->deleteLater();
    thread_->quit();
+   thread_->wait();
 }
 
 bool UserScriptRunner::isEnabled() const

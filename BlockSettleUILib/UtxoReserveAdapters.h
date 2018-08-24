@@ -21,6 +21,7 @@ namespace bs {
       Q_OBJECT
    public:
       OrderUtxoResAdapter(const std::shared_ptr<spdlog::logger> &, QObject *parent);
+      ~OrderUtxoResAdapter() noexcept override = default;
 
       void reserve(const bs::wallet::TXSignRequest &, const std::string &reserveId);
 
@@ -44,6 +45,7 @@ namespace bs {
    public:
       DealerUtxoResAdapter(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
          : OrderUtxoResAdapter(logger, parent) {}
+      ~DealerUtxoResAdapter() noexcept override = default;
    private:
       std::vector<std::string> reserveKeys(const bs::network::Order &) const override;
    };
@@ -53,6 +55,7 @@ namespace bs {
    public:
       RequesterUtxoResAdapter(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
          : OrderUtxoResAdapter(logger, parent) {}
+      ~RequesterUtxoResAdapter() noexcept override = default;
    private:
       std::vector<std::string> reserveKeys(const bs::network::Order &) const override;
    };
