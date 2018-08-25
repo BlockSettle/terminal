@@ -25,6 +25,8 @@ public:
    void setFixedType(bool on = true);
    void setFocus();
 
+   void hideFrejaConnect();
+
 signals:
    void keyChanged(int index, SecureBinaryData);
    void encKeyChanged(int index, SecureBinaryData);

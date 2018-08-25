@@ -40,16 +40,20 @@ WalletKeyWidget::~WalletKeyWidget() = default;
 
 void WalletKeyWidget::onTypeChanged()
 {
-   adjustSize();
+   //adjustSize();
    if (ui_->radioButtonPassword->isChecked()) {
       ui_->widgetFrejaLayout->hide();
-      ui_->widgetPassword->show();
-      ui_->widgetPasswordConfirm->show();
+      ui_->labelPassword->show();
+      ui_->labelPasswordConfirm->show();
+      ui_->lineEditPassword->show();
+      ui_->lineEditPasswordConfirm->show();
    }
    else {
       ui_->widgetFrejaLayout->show();
-      ui_->widgetPassword->hide();
-      ui_->widgetPasswordConfirm->hide();
+      ui_->labelPassword->hide();
+      ui_->labelPasswordConfirm->hide();
+      ui_->lineEditPassword->hide();
+      ui_->lineEditPasswordConfirm->hide();
    }
 
    if (password_ != ui_->radioButtonPassword->isChecked()) {
@@ -62,7 +66,7 @@ void WalletKeyWidget::onTypeChanged()
 void WalletKeyWidget::onPasswordChanged()
 {
    ui_->labelPassword->setEnabled(false);
-   if ((ui_->lineEditPassword->text() == ui_->lineEditPasswordConfirm->text()) || !ui_->widgetPasswordConfirm->isVisible()) {
+   if ((ui_->lineEditPassword->text() == ui_->lineEditPasswordConfirm->text()) || !ui_->lineEditPasswordConfirm->isVisible()) {
       if (!ui_->lineEditPassword->text().isEmpty()) {
          ui_->labelPassword->setEnabled(true);
       }
@@ -89,7 +93,7 @@ void WalletKeyWidget::onFrejaSignClicked()
    timeLeft_ = 120;
    ui_->progressBar->setMaximum(timeLeft_ * 100);
    ui_->progressBar->show();
-   adjustSize();
+   //adjustSize();
    timer_.start();
    frejaRunning_ = true;
    frejaSign_.start(ui_->comboBoxFrejaId->currentText(), tr("Activate Freja eID signing"), walletId_);
@@ -135,7 +139,7 @@ void WalletKeyWidget::stop()
    timer_.stop();
    ui_->progressBar->hide();
    ui_->comboBoxFrejaId->setEnabled(true);
-   adjustSize();
+   //adjustSize();
 }
 
 void WalletKeyWidget::cancel()
@@ -157,7 +161,8 @@ void WalletKeyWidget::start()
 void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &encKeys, int index)
 {
    if (password_) {
-      ui_->widgetPasswordConfirm->hide();
+      ui_->labelPasswordConfirm->hide();
+      ui_->lineEditPasswordConfirm->hide();
    }
    if (encKeys.empty()) {
       return;
@@ -188,4 +193,9 @@ void WalletKeyWidget::setFocus()
    else {
       ui_->comboBoxFrejaId->setFocus();
    }
+}
+
+void WalletKeyWidget::hideFrejaConnect()
+{
+   ui_->pushButtonFreja->hide();
 }

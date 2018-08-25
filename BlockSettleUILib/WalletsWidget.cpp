@@ -19,9 +19,11 @@
 #include "ImportWalletDialog.h"
 #include "ImportWalletTypeDialog.h"
 #include "MessageBoxCritical.h"
+#include "MessageBoxInfo.h"
 #include "MessageBoxQuestion.h"
 #include "MessageBoxSuccess.h"
 #include "NewWalletDialog.h"
+#include "NewWalletSeedDialog.h"
 #include "RootWalletPropertiesDialog.h"
 #include "SelectAddressDialog.h"
 #include "SignContainer.h"
@@ -356,13 +358,29 @@ void WalletsWidget::onNewWallet()
 
 bool WalletsWidget::CreateNewWallet(bool primary, bool report)
 {
+   NetworkType netType = appSettings_->get<NetworkType>(ApplicationSettings::netType);
+   
+   bs::wallet::Seed walletSeed(netType, SecureBinaryData().GenerateRandom(32));
+   
+   EasyCoDec::Data easyData = walletSeed.toEasyCodeChecksum();
+
+   std::string walletId = bs::hd::Node(walletSeed).getId();
+
+#if !defined(QT_DEBUG) || 0
+   NewWalletSeedDialog newWalletSeedDialog(QString::fromStdString(walletId)
+      , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2));
+
+   int result = newWalletSeedDialog.exec();
+   if (!result)
+      return false;
+#endif
+
    std::shared_ptr<bs::hd::Wallet> newWallet;
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-      , appSettings_->get<NetworkType>(ApplicationSettings::netType)
-      , appSettings_->GetHomeDir(), primary, this);
+      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
-         newWallet = walletsManager_->GetHDWalletById(createWalletDialog.getNewWalletId());
+         newWallet = walletsManager_->GetHDWalletById(walletId);
          if (!newWallet) {
             showError(tr("Failed to find newly created wallet"));
             return false;
@@ -374,7 +392,7 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
             completedDialog.exec();
          }
 
-         return WalletBackupAndVerify(newWallet, signingContainer_, this);
+         return true;
       } else {
          showError(tr("Failed to create wallet"));
          return false;

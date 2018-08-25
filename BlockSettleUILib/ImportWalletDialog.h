@@ -6,7 +6,6 @@
 
 #include "BtcDefinitions.h"
 #include "EasyCoDec.h"
-#include "FrejaREST.h"
 #include "MetaData.h"
 
 namespace Ui {

@@ -1,8 +1,10 @@
 
 #include "PaperBackupWriter.h"
 
-#include <QPdfWriter>
+#include <QFile>
 #include <QPainter>
+#include <QPdfWriter>
+#include <QPrinter>
 #include <QStaticText>
 
 
@@ -10,11 +12,20 @@
 // WalletBackupPdfWriter
 //
 
-WalletBackupPdfWriter::WalletBackupPdfWriter(const QString &walletName,
-   const QString &walletId, const QString &keyLine1, const QString &keyLine2,
-   const QPixmap &logo, const QPixmap &qr)
-   : walletName_(walletName)
-   , walletId_(walletId)
+namespace {
+
+const int kResolution = 1200;
+
+const qreal kTotalWidthInches = 8.27;
+const qreal kTotalHeightInches = 11.69;
+const qreal kMarginInches = 1.0;
+
+}
+
+WalletBackupPdfWriter::WalletBackupPdfWriter(const QString &walletId
+   , const QString &keyLine1, const QString &keyLine2
+   , const QPixmap &logo, const QPixmap &qr)
+   : walletId_(walletId)
    , keyLine1_(keyLine1)
    , keyLine2_(keyLine2)
    , logo_(logo)
@@ -24,25 +35,80 @@ WalletBackupPdfWriter::WalletBackupPdfWriter(const QString &walletName,
 
 bool WalletBackupPdfWriter::write(const QString &fileName)
 {
-   const int resolution = 1200;
-   const qreal margin = 1.0;
-   const qreal width = (8.26 - margin * 2.0) * resolution;
-   const qreal height = (11.69 - margin * 2.0) * resolution;
+   QFile f(fileName);
+   bool success = f.open(QIODevice::WriteOnly);
+
+   if (!success)
+      return false;
 
    QPdfWriter pdf(fileName);
+
    pdf.setPageSize(QPagedPaintDevice::A4);
-   pdf.setResolution(resolution);
+   pdf.setResolution(kResolution);
+
+   qreal width = (kTotalWidthInches - kMarginInches * 2.0) * kResolution;
+   qreal height = (kTotalHeightInches - kMarginInches * 2.0) * kResolution;
 
    QPageLayout layout = pdf.pageLayout();
    layout.setUnits(QPageLayout::Inch);
-   layout.setMargins(QMarginsF(margin, margin, margin, margin));
+   layout.setMargins(QMarginsF(kMarginInches, kMarginInches, kMarginInches, kMarginInches));
    pdf.setPageLayout(layout);
 
    QPainter p(&pdf);
    draw(p, width, height);
    p.end();
 
-   return true;
+   f.close();
+   success = (f.error() == QFileDevice::NoError && f.size() > 0);
+
+   return success;
+}
+
+QPixmap WalletBackupPdfWriter::getPreview(int width, double marginScale)
+{
+   int viewportWidth = width;
+   int viewportHeight = qRound(viewportWidth * kTotalHeightInches / kTotalWidthInches);
+
+   int windowWidth = qRound((kTotalWidthInches - kMarginInches * 2.0) * kResolution);
+   int windowHeight = qRound((kTotalHeightInches - kMarginInches * 2.0) * kResolution);
+
+   int viewportMargin = qRound(kMarginInches / kTotalWidthInches * viewportWidth * marginScale);
+
+   QPixmap image(viewportWidth, viewportHeight);
+   image.fill(Qt::white);
+
+   QPainter painter(&image);
+
+   painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+   painter.setViewport(viewportMargin, viewportMargin
+     , viewportWidth - 2 * viewportMargin
+     , viewportHeight - 2 * viewportMargin);
+
+   painter.setWindow(0, 0, windowWidth, windowHeight);
+
+   // The code in draw does not work correctly with other sizes than A4 and 1200 DPI.
+   // So we keep logical sizes and use viewport an window instead.
+   draw(painter, windowWidth, windowHeight);
+
+   painter.end();
+
+   return image;
+}
+
+void WalletBackupPdfWriter::print(QPrinter *printer)
+{
+   qreal width = (kTotalWidthInches - kMarginInches * 2.0) * kResolution;
+   qreal height = (kTotalHeightInches - kMarginInches * 2.0) * kResolution;
+
+   QPageLayout layout = printer->pageLayout();
+   layout.setUnits(QPageLayout::Inch);
+   layout.setMargins(QMarginsF(kMarginInches, kMarginInches, kMarginInches, kMarginInches));
+   printer->setResolution(kResolution);
+   printer->setPageLayout(layout);
+
+   QPainter painter(printer);
+   draw(painter, width, height);
 }
 
 void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
