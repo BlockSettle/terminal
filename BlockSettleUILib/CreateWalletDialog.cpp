@@ -5,6 +5,7 @@
 #include "MessageBoxCritical.h"
 #include "NewWalletPasswordVerifyDialog.h"
 #include "SignContainer.h"
+#include "WalletKeysSubmitFrejaDialog.h"
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
 
@@ -108,19 +109,38 @@ CreateWalletDialog::~CreateWalletDialog() = default;
 //   QDialog::showEvent(event);
 //}
 
-bool CreateWalletDialog::couldCreateWallet() const
-{
-   return (ui_->widgetCreateKeys->isValid()
-         && !walletsManager_->WalletNameExists(ui_->lineEditWalletName->text().toStdString()));
-}
-
 void CreateWalletDialog::CreateWallet()
 {
-   if (!couldCreateWallet()) {
+   if (walletsManager_->WalletNameExists(ui_->lineEditWalletName->text().toStdString())) {
+      MessageBoxCritical messageBox(tr("Invalid wallet name"), tr("Wallet with this name already exists"), this);
+      messageBox.exec();
       return;
    }
 
-   NewWalletPasswordVerifyDialog verifyDialog(ui_->widgetCreateKeys->keys());
+   std::vector<bs::wallet::PasswordData> keys = ui_->widgetCreateKeys->keys();
+
+   if (!keys.empty() && keys.at(0).encType == bs::wallet::EncryptionType::Freja) {
+      std::vector<bs::wallet::EncryptionType> encTypes;
+      std::vector<SecureBinaryData> encKeys;
+      for (const bs::wallet::PasswordData& key : keys) {
+         encTypes.push_back(key.encType);
+         encKeys.push_back(key.encKey);
+      }
+
+      WalletKeysSubmitFrejaDialog dialog(walletId_, ui_->widgetCreateKeys->keyRank(), encTypes, encKeys
+         , tr("Activate Freja eID signing"), this);
+      int result = dialog.exec();
+      if (!result) {
+         return;
+      }
+
+      keys.at(0).password = dialog.GetPassword();
+
+   } else if (!ui_->widgetCreateKeys->isValid()) {
+      return;
+   }
+
+   NewWalletPasswordVerifyDialog verifyDialog(walletId_, keys, ui_->widgetCreateKeys->keyRank(), this);
    int result = verifyDialog.exec();
    if (!result) {
       return;
@@ -131,7 +151,7 @@ void CreateWalletDialog::CreateWallet()
    const auto &name = ui_->lineEditWalletName->text().toStdString();
    const auto &description = ui_->lineEditDescription->text().toStdString();
    createReqId_ = signingContainer_->CreateHDWallet(name, description
-      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, ui_->widgetCreateKeys->keys()
+      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, keys
       , ui_->widgetCreateKeys->keyRank());
    walletPassword_.clear();
 }

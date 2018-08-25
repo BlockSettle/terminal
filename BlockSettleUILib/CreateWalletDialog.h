@@ -44,9 +44,6 @@ protected:
    void reject() override;
 
 private:
-   bool couldCreateWallet() const;
-
-private:
    std::unique_ptr<Ui::CreateWalletDialog> ui_;
 
 private:

@@ -19,7 +19,9 @@ public:
       Check,
    };
 
-   NewWalletPasswordVerifyDialog(const std::vector<bs::wallet::PasswordData>& keys, QWidget *parent = nullptr);
+   NewWalletPasswordVerifyDialog(const std::string& walletId
+      , const std::vector<bs::wallet::PasswordData>& keys, bs::wallet::KeyRank keyRank
+      , QWidget *parent = nullptr);
    ~NewWalletPasswordVerifyDialog();
 
 private slots:
@@ -30,8 +32,9 @@ private:
    void initFreja(const QString& frejaId);
 
    std::unique_ptr<Ui::NewWalletPasswordVerifyDialog> ui_;
-   bs::wallet::EncryptionType encryptionType_{bs::wallet::EncryptionType::Unencrypted};
-   SecureBinaryData password_;
+   const std::string& walletId_;
+   const std::vector<bs::wallet::PasswordData> keys_;
+   const bs::wallet::KeyRank keyRank_;
 };
 
 #endif // __NEWWALLETPASSWORDVERIFYDIALOG_H__
