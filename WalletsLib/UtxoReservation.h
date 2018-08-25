@@ -16,6 +16,7 @@ namespace bs {
       class Adapter {
          friend class UtxoReservation;
       public:
+         virtual ~Adapter() noexcept = default;
          bool reserve(const std::string &walletId, const std::string &reserveId, const std::vector<UTXO> &);
          std::string unreserve(const std::string &reserveId);
          std::vector<UTXO> get(const std::string &reserveId) const;

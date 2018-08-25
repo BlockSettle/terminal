@@ -407,48 +407,6 @@ void Tx::unserialize(uint8_t const * ptr, size_t size)
 }
 
 /////////////////////////////////////////////////////////////////////////////
-BinaryData Tx::serializeWithMetaData() const
-{
-   if (txRefObj_.dbKey6B_.getSize() != 6)
-      return BinaryData();
-
-   BinaryWriter bw;
-   BitPacker<uint8_t> bitpack;
-   bitpack.putBit(isRBF_);
-   bitpack.putBit(isChainedZc_);
-
-   bw.put_BitPacker(bitpack);
-   bw.put_BinaryData(txRefObj_.dbKey6B_);
-
-   bw.put_BinaryData(dataCopy_);
-   return bw.getData();
-}
-
-/////////////////////////////////////////////////////////////////////////////
-void Tx::unserializeWithMetaData(const BinaryData& rawTx)
-{
-   isInitialized_ = false;
-
-   auto size = rawTx.getSize();
-   if (size < 7)
-      return;
-
-   BinaryRefReader brr(rawTx.getRef());
-   BitUnpacker<uint8_t> bitunpack(brr);
-   isRBF_ = bitunpack.getBit();
-   isChainedZc_ = bitunpack.getBit();
-   
-   txRefObj_.dbKey6B_ = brr.get_BinaryData(6);
-
-   try
-   {
-      unserialize(brr);
-   }
-   catch (...)
-   { }
-}
-
-/////////////////////////////////////////////////////////////////////////////
 BinaryData Tx::serializeNoWitness(void) const
 {
    if (!isInitialized())

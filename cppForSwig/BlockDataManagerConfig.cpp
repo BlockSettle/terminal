@@ -25,6 +25,7 @@
 uint8_t BlockDataManagerConfig::pubkeyHashPrefix_;
 uint8_t BlockDataManagerConfig::scriptHashPrefix_;
 ARMORY_DB_TYPE BlockDataManagerConfig::armoryDbType_ = ARMORY_DB_FULL;
+SOCKET_SERVICE BlockDataManagerConfig::service_ = SERVICE_FCGI;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,7 +106,7 @@ void BlockDataManagerConfig::selectNetwork(const string &netname)
       scriptHashPrefix_ = SCRIPT_PREFIX_P2SH;
       
       if (!customFcgiPort_)
-         fcgiPort_ = portToString(FCGI_PORT_MAINNET);
+         listenPort_ = portToString(LISTEN_PORT_MAINNET);
    }
    else if (netname == "Test")
    {
@@ -120,7 +121,7 @@ void BlockDataManagerConfig::selectNetwork(const string &netname)
       testnet_ = true;
       
       if (!customFcgiPort_)
-         fcgiPort_ = portToString(FCGI_PORT_TESTNET);
+         listenPort_ = portToString(LISTEN_PORT_TESTNET);
    }
    else if (netname == "Regtest")
    {
@@ -135,7 +136,7 @@ void BlockDataManagerConfig::selectNetwork(const string &netname)
       regtest_ = true;
       
       if (!customFcgiPort_)
-         fcgiPort_ = portToString(FCGI_PORT_REGTEST);
+         listenPort_ = portToString(LISTEN_PORT_REGTEST);
    }
 }
 
@@ -190,7 +191,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 
    --satoshi-datadir: path to blockchain data folder (blkXXXXX.dat files)
 
-   --ram_usage: defines the ram use during scan operations. 1 level averages
+   --ram-usage: defines the ram use during scan operations. 1 level averages
    128MB of ram (without accounting the base amount, ~400MB). Defaults at 50.
    Can't be lower than 1. Can be changed in between processes
 
@@ -215,13 +216,11 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
    --cookie: create a cookie file holding a random authentication key to allow
    local clients to make use of elevated commands, like shutdown.
 
-   --fcgi-port: sets the DB listening port.
+   --listen-port: sets the DB listening port.
 
    --clear-mempool: delete all zero confirmation transactions from the DB.
 
    --satoshirpc-port: set node rpc port
-
-   --listen-all: listen to all incoming IPs (not just localhost)
 
    ***/
 
@@ -364,7 +363,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 
             if (!testConnection("127.0.0.1", portss.str()))
             {
-               fcgiPort_ = portss.str();
+               listenPort_ = portss.str();
                break;
             }
          }
@@ -381,29 +380,23 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
    bool onlyDetectNetwork)
 {
    //server networking
-   auto iter = args.find("fcgi-port");
+   auto iter = args.find("listen-port");
    if (iter != args.end())
    {
-      fcgiPort_ = stripQuotes(iter->second);
+      listenPort_ = stripQuotes(iter->second);
       int portInt = 0;
-      stringstream portSS(fcgiPort_);
+      stringstream portSS(listenPort_);
       portSS >> portInt;
 
       if (portInt < 1 || portInt > 65535)
       {
-         cout << "Invalid fcgi port, falling back to default" << endl;
-         fcgiPort_ = "";
+         cout << "Invalid listen port, falling back to default" << endl;
+         listenPort_ = "";
       }
       else
       {
          customFcgiPort_ = true;
       }
-   }
-
-   iter = args.find("listen-all");
-   if (iter != args.end())
-   {
-      listen_all_ = true;
    }
 
    //network type
@@ -682,14 +675,14 @@ void BlockDataManagerConfig::createCookie() const
    appendPath(cookiePath, ".cookie_");
    fstream fs(cookiePath, ios_base::out | ios_base::trunc);
    fs << cookie_ << endl;
-   fs << fcgiPort_;
+   fs << listenPort_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool BlockDataManagerConfig::testConnection(
    const string& ip, const string& port)
 {
-   BinarySocket testSock(ip, port);
+   SimpleSocket testSock(ip, port);
    return testSock.testConnection();
 }
 
@@ -702,8 +695,8 @@ string BlockDataManagerConfig::hasLocalDB(
       return port;
 
    //check db on default port
-   if (testConnection("127.0.0.1", portToString(FCGI_PORT_MAINNET)))
-      return portToString(FCGI_PORT_MAINNET);
+   if (testConnection("127.0.0.1", portToString(LISTEN_PORT_MAINNET)))
+      return portToString(LISTEN_PORT_MAINNET);
 
    //check for cookie file
    auto&& cookie_port = getPortFromCookie(datadir);
@@ -852,181 +845,6 @@ vector<BinaryData> ConfigFile::fleshOutArgs(
    }
 
    return fleshedOutArgs;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// NodeStatusStruct
-//
-////////////////////////////////////////////////////////////////////////////////
-BinaryData NodeStatusStruct::serialize(void) const
-{
-   BinaryWriter bw;
-   bw.put_uint8_t(uint8_t(status_));
-   bw.put_uint8_t(uint8_t(SegWitEnabled_));
-   bw.put_uint8_t(uint8_t(rpcStatus_));
-
-   bw.put_BinaryData(chainState_.serialize());
-
-   return bw.getData();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void NodeStatusStruct::deserialize(const BinaryData& data)
-{
-   BinaryRefReader brr(data.getRef());
-
-   status_ = NodeStatus(brr.get_uint8_t());
-   SegWitEnabled_ = bool(brr.get_uint8_t());
-   rpcStatus_ = RpcStatus(brr.get_uint8_t());
-
-   chainState_.unserialize(brr.get_BinaryData(brr.getSizeRemaining()));
-}
-
-////////////////////////////////////////////////////////////////////////////////
-NodeStatusStruct NodeStatusStruct::cast_to_NodeStatusStruct(void* ptr)
-{
-   NodeStatusStruct nss = *(NodeStatusStruct*)ptr;
-   return nss;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// NodeChainState
-//
-////////////////////////////////////////////////////////////////////////////////
-bool NodeChainState::processState(
-   shared_ptr<JSON_object> const getblockchaininfo_obj)
-{
-   if (state_ == ChainStatus_Ready)
-      return false;
-
-   //progress status
-   auto pct_obj = getblockchaininfo_obj->getValForKey("verificationprogress");
-   auto pct_val = dynamic_pointer_cast<JSON_number>(pct_obj);
-   if (pct_val == nullptr)
-      return false;
-
-   pct_ = min(pct_val->val_, 1.0);
-   auto pct_int = unsigned(pct_ * 10000.0);
-   
-   if (pct_int != prev_pct_int_)
-   {
-      LOGINFO << "waiting on node sync: " << float(pct_ * 100.0) << "%";
-      prev_pct_int_ = pct_int;
-   }
-
-   if (pct_ >= 0.9995)
-   {
-      state_ = ChainStatus_Ready;
-      return true;
-   }
-
-   //compare top block timestamp to now
-   if (heightTimeVec_.size() == 0)
-      return false;
-
-   uint64_t now = time(0);
-   uint64_t diff = 0;
-
-   auto blocktime = get<1>(heightTimeVec_.back());
-   if (now > blocktime)
-      diff = now - blocktime;
-
-   //we got this far, node is still syncing, let's compute progress and eta
-   state_ = ChainStatus_Syncing;
-
-   //average amount of blocks left to sync based on timestamp diff
-   auto blocksLeft = diff / 600;
-
-   //compute block syncing speed based off of the last 20 top blocks
-   auto iterend = heightTimeVec_.rbegin();
-   auto time_end = get<2>(*iterend);
-
-   auto iterbegin = heightTimeVec_.begin();
-   auto time_begin = get<2>(*iterbegin);
-
-   if (time_end <= time_begin)
-      return false;
-
-   auto blockdiff = get<0>(*iterend) - get<0>(*iterbegin);
-   if (blockdiff == 0)
-      return false;
-
-   auto timediff = time_end - time_begin;
-   blockSpeed_ = float(blockdiff) / float(timediff);
-   eta_ = uint64_t(float(blocksLeft) * blockSpeed_);
-   
-   blocksLeft_ = blocksLeft;
-
-   return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-unsigned NodeChainState::getTopBlock() const
-{
-   if (heightTimeVec_.size() == 0)
-      throw runtime_error("");
-
-   return get<0>(heightTimeVec_.back());
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void NodeChainState::appendHeightAndTime(unsigned height, uint64_t timestamp)
-{
-   try
-   {
-      if (getTopBlock() == height)
-         return;
-   }
-   catch (...)
-   {
-   }
-
-   heightTimeVec_.push_back(make_tuple(height, timestamp, time(0)));
-
-   //force the list at 20 max entries
-   while (heightTimeVec_.size() > 20)
-      heightTimeVec_.pop_front();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void NodeChainState::reset()
-{
-   heightTimeVec_.clear();
-   state_ = ChainStatus_Unknown;
-   blockSpeed_ = 0.0f;
-   eta_ = 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-BinaryData NodeChainState::serialize() const
-{
-   BinaryWriter bw;
-
-   bw.put_uint8_t(state_);
-   bw.put_double(blockSpeed_);
-   bw.put_uint64_t(eta_);
-   bw.put_double(pct_);
-   bw.put_uint32_t(blocksLeft_);
-
-   return bw.getData();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void NodeChainState::unserialize(const BinaryData& bd)
-{
-   heightTimeVec_.clear();
-
-   BinaryRefReader brr(bd.getRef());
-
-   state_ = ChainStatus(brr.get_uint8_t());
-   blockSpeed_ = float(brr.get_double());
-   eta_ = brr.get_uint64_t();
-   pct_ = brr.get_double();
-
-   if (brr.getSizeRemaining() >= 4)
-      blocksLeft_ = brr.get_uint32_t();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

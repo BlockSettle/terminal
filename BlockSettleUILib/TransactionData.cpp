@@ -1,5 +1,6 @@
 #include "TransactionData.h"
 
+#include "ArmoryConnection.h"
 #include "BTCNumericTypes.h"
 #include "CoinSelection.h"
 #include "SwigClient.h"
@@ -7,7 +8,6 @@
 #include "ScriptRecipient.h"
 #include "SettlementWallet.h"
 #include "RecipientContainer.h"
-#include "PyBlockDataManager.h"
 #include "UiUtils.h"
 
 #include <vector>
@@ -31,7 +31,7 @@ TransactionData::~TransactionData()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet)
+bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, unsigned int topHeight)
 {
    if (wallet == nullptr) {
       return false;
@@ -42,11 +42,10 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet)
          , swTransactionsOnly_, confirmedInputs_
          , [this]{InvalidateTransactionData();});
 
-      coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
+      coinSelection_ = std::make_shared<CoinSelection>([this, topHeight](uint64_t) {
             return this->selectedInputs_->GetSelectedTransactions();
          }
-         , std::vector<AddressBookEntry>{}
-         , static_cast<unsigned int>(PyBlockDataManager::instance()->GetTopBlockHeight())
+         , std::vector<AddressBookEntry>{}, topHeight
          , static_cast<uint64_t>(wallet_->GetTotalBalance() * BTCNumericTypes::BalanceDivider));
       InvalidateTransactionData();
    }

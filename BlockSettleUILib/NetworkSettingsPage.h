@@ -17,6 +17,7 @@ Q_OBJECT
 
 public:
    NetworkSettingsPage(QWidget* parent = nullptr);
+   ~NetworkSettingsPage() override;
 
    void setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings);
 
@@ -37,7 +38,7 @@ private:
    void DetectEnvironmentSettings();
 
 private:
-   Ui::NetworkSettingsPage *ui_;
+   std::unique_ptr<Ui::NetworkSettingsPage> ui_;
 
    std::shared_ptr<ApplicationSettings> appSettings_;
 };

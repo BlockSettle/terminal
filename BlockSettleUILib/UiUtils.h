@@ -19,7 +19,6 @@ QT_END_NAMESPACE
 
 class AuthAddressManager;
 class BinaryData;
-class LedgerEntryData;
 class PyBlockDataManager;
 class QComboBox;
 class QDateTime;

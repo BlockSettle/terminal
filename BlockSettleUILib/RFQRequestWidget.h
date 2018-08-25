@@ -10,8 +10,8 @@
 namespace Ui {
     class RFQRequestWidget;
 }
-
 class ApplicationSettings;
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class CelerClient;
@@ -22,9 +22,7 @@ class SignContainer;
 class WalletsManager;
 class WalletsManager;
 
-
-namespace spdlog
-{
+namespace spdlog {
    class logger;
 }
 
@@ -34,7 +32,7 @@ Q_OBJECT
 
 public:
    RFQRequestWidget(QWidget* parent = nullptr);
-   ~RFQRequestWidget() = default;
+   ~RFQRequestWidget();
 
    void init(std::shared_ptr<spdlog::logger> logger
          , const std::shared_ptr<CelerClient>& celerClient
@@ -44,7 +42,8 @@ public:
          , const std::shared_ptr<AssetManager>& assetManager
          , const std::shared_ptr<ApplicationSettings> &appSettings
          , const std::shared_ptr<DialogManager> &dialogManager
-         , const std::shared_ptr<SignContainer> &);
+         , const std::shared_ptr<SignContainer> &
+         , const std::shared_ptr<ArmoryConnection> &);
    void SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
 
    void shortcutActivated(ShortcutType s) override;
@@ -53,7 +52,7 @@ public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
 
 private:
-   Ui::RFQRequestWidget* ui_;
+   std::unique_ptr<Ui::RFQRequestWidget> ui_;
 
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<CelerClient>        celerClient_;
@@ -64,6 +63,7 @@ private:
 
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<ArmoryConnection>   armory_;
 };
 
 #endif // __RFQ_REQUEST_WIDGET_H__

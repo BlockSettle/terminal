@@ -15,7 +15,7 @@ class WalletKeysSubmitWidget : public QWidget
    Q_OBJECT
 public:
    WalletKeysSubmitWidget(QWidget* parent = nullptr);
-   ~WalletKeysSubmitWidget() override = default;
+   ~WalletKeysSubmitWidget() override;
 
    void init(const std::string &walletId, bs::wallet::KeyRank
       , const std::vector<bs::wallet::EncryptionType> &
@@ -43,7 +43,7 @@ private:
       , int encKeyIndex = 0, bool isFixed = false);
 
 private:
-   Ui::WalletKeysSubmitWidget *  ui_;
+   std::unique_ptr<Ui::WalletKeysSubmitWidget> ui_;
    std::string    walletId_;
    std::vector<WalletKeyWidget *>         widgets_;
    std::vector<bs::wallet::PasswordData>  pwdData_;

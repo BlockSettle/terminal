@@ -19,9 +19,9 @@ namespace bs {
       class Wallet;
    }
 }
-class ApplicationSettings;
-class WalletsManager;
 
+class ApplicationSettings;
+class ConnectionManager;
 
 class SignContainer : public QObject
 {
@@ -30,7 +30,10 @@ public:
    enum class OpMode {
       Local = 1,
       Remote,
-      Offline
+      Offline,
+      // RemoteInproc - should be used for testing only, when you need to have signer and listener
+      // running in same process and could not use TCP for any reason
+      RemoteInproc
    };
    enum class TXSignMode {
       Full,
@@ -103,15 +106,15 @@ signals:
    void authenticated();
    void connectionError();
    void ready();
-   void Error(unsigned int id, std::string error);
-   void TXSigned(unsigned int id, BinaryData signedTX, std::string error);
+   void Error(RequestId id, std::string error);
+   void TXSigned(RequestId id, BinaryData signedTX, std::string error);
 
    void PasswordRequested(std::string walletId, std::string prompt, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKey, bs::wallet::KeyRank);
 
-   void HDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
-   void HDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
-   void DecryptedRootKey(unsigned int id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
+   void HDLeafCreated(RequestId id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void HDWalletCreated(RequestId id, std::shared_ptr<bs::hd::Wallet>);
+   void DecryptedRootKey(RequestId id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
    void HDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> &encKeys, bs::wallet::KeyRank);
@@ -129,7 +132,8 @@ protected:
 
 
 std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger> &
-   , const std::shared_ptr<ApplicationSettings> &);
+   , const std::shared_ptr<ApplicationSettings> &
+   , const std::shared_ptr<ConnectionManager>& );
 
 
 #endif // __SIGN_CONTAINER_H__

@@ -255,7 +255,7 @@ private:
 
    //stacks inv tx packets from node
    shared_ptr<BitcoinP2P> networkNode_;
-   BlockingStack<ZeroConfInvPacket> newInvTxStack_;
+   BlockingQueue<ZeroConfInvPacket> newInvTxStack_;
 
    mutex parserMutex_;
 
@@ -263,7 +263,7 @@ private:
    atomic<bool> zcEnabled_;
    const unsigned maxZcThreadCount_;
 
-   shared_ptr<TransactionalMap<ScrAddrFilter::AddrAndHash, int>> scrAddrMap_;
+   shared_ptr<TransactionalMap<BinaryDataRef, shared_ptr<AddrAndHash>>> scrAddrMap_;
 
    unsigned parserThreadCount_ = 0;
    mutex parserThreadMutex_;
@@ -290,7 +290,7 @@ private:
 public:
    //stacks new zc Tx objects from node
    BinaryData getNewZCkey(void);
-   BlockingStack<ZcActionStruct> newZcStack_;
+   BlockingQueue<ZcActionStruct> newZcStack_;
 
 public:
    ZeroConfContainer(LMDBBlockDatabase* db,
@@ -347,7 +347,7 @@ public:
       const string& bdvId, uint32_t timeout_ms);
 
    bool isEnabled(void) const { return zcEnabled_.load(memory_order_relaxed); }
-   void pushZcToParser(const BinaryData& rawTx);
+   void pushZcToParser(const BinaryDataRef& rawTx);
 
    shared_ptr<map<BinaryData, TxIOPair>> getTxioMapForScrAddr(const BinaryData&) const;
 };

@@ -87,8 +87,14 @@ void RFQTicketXBT::setTransactionData()
    }
 
    if (walletsManager_ != nullptr) {
-      transactionData_->SetFeePerByte(walletsManager_->estimatedFeePerByte(2));
-      setWallets();
+      const auto &cbFee = [this](float feePerByte) {
+         if (!transactionData_) {
+            return;
+         }
+         transactionData_->SetFeePerByte(feePerByte);
+         setWallets();
+      };
+      walletsManager_->estimatedFeePerByte(2, cbFee, this);
    }
 }
 
@@ -113,7 +119,7 @@ void RFQTicketXBT::setWallets()
       recvWallet_ = curWallet_;
    }
 
-  transactionData_->SetWallet(curWallet_);
+  transactionData_->SetWallet(curWallet_, armory_->topBlock());
   if (prevRecvWallet != recvWallet_) {
      fillRecvAddresses();
   }
@@ -143,11 +149,12 @@ void RFQTicketXBT::resetTicket()
 
 void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory)
 {
    authAddressManager_ = authAddressManager;
    assetManager_ = assetManager;
    signingContainer_ = container;
+   armory_ = armory;
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
@@ -163,10 +170,7 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQTicketXBT::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::AddressSyncComplete, this, &RFQTicketXBT::walletsLoaded);
-      connect(signingContainer_.get(), &SignContainer::ready, [this] {
-         updateSubmitButton();
-         ui_->receivingWalletWidget->setEnabled(!signingContainer_->isOffline());
-      });
+      connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
 
    updateSubmitButton();
@@ -368,6 +372,12 @@ void RFQTicketXBT::walletsLoaded()
       ui_->comboBoxXBTWallets->setEnabled(true);
       walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWallets, walletsManager_, signingContainer_));
    }
+}
+
+void RFQTicketXBT::onSignerReady()
+{
+   updateSubmitButton();
+   ui_->receivingWalletWidget->setEnabled(!signingContainer_->isOffline());
 }
 
 void RFQTicketXBT::fillRecvAddresses()
@@ -706,8 +716,11 @@ void RFQTicketXBT::submitButtonClicked()
       if (rfq.side == bs::network::Side::Sell) {
          const auto wallet = transactionData_->GetSigningWallet();
          const uint64_t spendVal = rfq.quantity * assetManager_->getCCLotSize(rfq.product);
-         const auto &inputs = ccCoinSel_ ? ccCoinSel_->GetSelectedTransactions() : std::vector<UTXO>{};
          try {
+            if (!ccCoinSel_) {
+               throw std::runtime_error("CC coin selection is missing");
+            }
+            const auto &inputs = ccCoinSel_->GetSelectedTransactions();
             const auto &changeAddr = wallet->GetNewChangeAddress();
             transactionData_->createAddress(changeAddr, wallet);
             const auto txReq = wallet->CreatePartialTXRequest(spendVal, inputs, changeAddr);
@@ -963,7 +976,7 @@ void RFQTicketXBT::productSelectionChanged()
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
       ui_->lineEditAmount->setEnabled(true);
    } else {
-      bool canTradeXBT = (PyBlockDataManager::instance()->GetState() == PyBlockDataManagerState::Ready)
+      bool canTradeXBT = (armory_->state() == ArmoryConnection::State::Ready)
          && signingContainer_
          && !signingContainer_->isOffline();
 

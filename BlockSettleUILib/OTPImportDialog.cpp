@@ -7,6 +7,8 @@
 #include "MessageBoxCritical.h"
 #include "OTPFile.h"
 #include "OTPManager.h"
+#include "UiUtils.h"
+#include "make_unique.h"
 
 #include <spdlog/spdlog.h>
 
@@ -24,11 +26,11 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    ui_->pushButtonOk->setEnabled(false);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &OTPImportDialog::accept);
 
-   validator_ = new EasyEncValidator(easyCodec_);
-   ui_->lineEditOtp1->setValidator(validator_);
+   validator_ = make_unique<EasyEncValidator>(easyCodec_);
+   ui_->lineEditOtp1->setValidator(validator_.get());
    connect(ui_->lineEditOtp1, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp1, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
-   ui_->lineEditOtp2->setValidator(validator_);
+   ui_->lineEditOtp2->setValidator(validator_.get());
    connect(ui_->lineEditOtp2, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp2, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
 
@@ -42,10 +44,7 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    ui_->lineEditFrejaId->setText(QString::fromStdString(defaultUserName));
 }
 
-OTPImportDialog::~OTPImportDialog()
-{
-   delete validator_;
-}
+OTPImportDialog::~OTPImportDialog() = default;
 
 void OTPImportDialog::keyTextChanged()
 {
@@ -64,6 +63,18 @@ void OTPImportDialog::keyTextChanged()
 
    if (key1valid && !key1.isEmpty() && !key2valid) {
       ui_->lineEditOtp2->setFocus();
+   }
+
+   if (!key1valid) {
+      UiUtils::setWrongState(ui_->lineEditOtp1, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditOtp1, false);
+   }
+
+   if (!key2valid) {
+      UiUtils::setWrongState(ui_->lineEditOtp2, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditOtp2, false);
    }
 
    keyIsValid_ = (key1valid && key2valid);

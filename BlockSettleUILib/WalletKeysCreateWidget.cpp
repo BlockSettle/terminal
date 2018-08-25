@@ -18,6 +18,8 @@ WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
    connect(ui_->spinBoxRankM, SIGNAL(valueChanged(int)), this, SLOT(updateKeyRank(int)));
 }
 
+WalletKeysCreateWidget::~WalletKeysCreateWidget() = default;
+
 void WalletKeysCreateWidget::init(const std::string &walletId)
 {
    walletId_ = walletId;

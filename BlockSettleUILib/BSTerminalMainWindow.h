@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "ApplicationSettings.h"
+#include "ArmoryConnection.h"
 #include "CelerClient.h"
-#include "PyBlockDataManager.h"
 #include "TransactionsViewModel.h"
 
 namespace Ui {
@@ -29,7 +29,6 @@ class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
 class HeadlessAddressSyncer;
-class MainBlockListener;
 class MarketDataProvider;
 class OTPManager;
 class QSystemTrayIcon;
@@ -49,7 +48,6 @@ public:
 
 private:
    void setupToolbar();
-   void setupStatusBar();
    void setupMenu();
    void setupIcon();
 
@@ -57,7 +55,8 @@ private:
    void setupTransactionsView();
 
    void InitConnections();
-   void setupBDM();
+   void initArmory();
+   void connectArmory();
 
    void setTabStyle();
 
@@ -68,9 +67,6 @@ private:
 
    void InitPortfolioView();
    void InitWalletsView();
-
-   void CompleteUIOnlineView();
-   void CompleteDBConnection();
 
    void InitOTP();
 
@@ -86,6 +82,9 @@ private slots:
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
 
+   void CompleteUIOnlineView();
+   void CompleteDBConnection();
+
    void OnOTPSyncCompleted();
 
 private:
@@ -95,20 +94,18 @@ private:
    QAction *action_logout_;
 
 private:
-   Ui::BSTerminalMainWindow* ui;
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
 
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<AuthAddressManager>    authManager_;
-   std::shared_ptr<PyBlockDataManager>    bdm_;
+   std::shared_ptr<ArmoryConnection>      armory_;
 
-   StatusBarView                          *statusBarView_;
-
+   std::shared_ptr<StatusBarView>         statusBarView_;
    std::shared_ptr<QSystemTrayIcon>       sysTrayIcon_;
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
    std::shared_ptr<CCPortfolioModel>      portfolioModel_;
-   std::shared_ptr<MainBlockListener>     bdmListener_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<CelerClient>           celerConnection_;
    std::shared_ptr<MarketDataProvider>    mdProvider_;
@@ -124,14 +121,19 @@ private:
 
    bool  widgetsInited_ = false;
 
-signals:
-   void onBDMStateChanged(PyBlockDataManagerState newState);
+   struct TxInfo {
+      Tx       tx;
+      uint32_t txTime;
+      int64_t  value;
+      std::shared_ptr<bs::Wallet>   wallet;
+      bs::Transaction::Direction    direction;
+      QString  mainAddress;
+   };
 
 public slots:
    void onReactivate();
 
 private slots:
-
    void onSend();
    void onReceive();
 
@@ -141,7 +143,9 @@ private slots:
    void openAccountInfoDialog();
    void openOTPDialog();
    void openCCTokenDialog();
-   void showZcNotification(const std::vector<LedgerEntryData>& entries);
+   void showZcNotification(const TxInfo &);
+   void onZCreceived(ArmoryConnection::ReqIdType);
+   void onArmoryStateChanged(ArmoryConnection::State);
 
    void onLogin();
    void onLogout();
@@ -158,8 +162,6 @@ protected:
    void changeEvent(QEvent* e) override;
 
 private:
-   void BDMStateChanged(PyBlockDataManagerState newState);
-
    void onUserLoggedIn();
    void onUserLoggedOut();
 
@@ -170,10 +172,5 @@ private:
 
    void createAdvancedTxDialog(const std::string &selectedWalletId);
 };
-
-Q_DECLARE_METATYPE(LedgerEntryData)
-Q_DECLARE_METATYPE(std::vector<LedgerEntryData>)
-Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(std::vector<UTXO>)
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

@@ -7,10 +7,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <QThreadPool>
+#include "ArmoryConnection.h"
 #include "HDNode.h"
 #include "MetaData.h"
-#include "PyBlockDataManager.h"
 
 
 namespace bs {
@@ -43,15 +42,15 @@ namespace bs {
 
       protected:
          BlockchainScanner(const cb_save_to_wallet &, const cb_completed &);
-         ~BlockchainScanner();
+         ~BlockchainScanner() noexcept = default;
 
          void init(const std::shared_ptr<Node> &node, const std::string &walletId);
-         void stop();
+         void setArmory(const std::shared_ptr<ArmoryConnection> &armory) { armoryConn_ = armory; }
 
          std::vector<PooledAddress> generateAddresses(hd::Path::Elem prefix, hd::Path::Elem start
             , size_t nb, AddressEntryType aet);
          void scanAddresses(unsigned int startIdx, unsigned int portionSize = 100, const cb_write_last &cbw = nullptr);
-         void onRefresh(const BinaryDataVector &ids);
+         void onRefresh(const std::vector<BinaryData> &ids);
 
       private:
          struct Portion {
@@ -59,10 +58,12 @@ namespace bs {
             Path::Elem        start;
             Path::Elem        end;
             std::atomic_bool  registered;
+            std::vector<PooledAddress> activeAddresses;
             Portion() : start(0), end(0), registered(false) {}
          };
 
          std::shared_ptr<Node>   node_;
+         std::shared_ptr<ArmoryConnection>   armoryConn_;
          std::string             walletId_;
          std::string             rescanWalletId_;
          unsigned int            portionSize_ = 100;
@@ -72,7 +73,6 @@ namespace bs {
          Portion                 currentPortion_;
          std::atomic_int         processing_;
          std::atomic_bool        stopped_;
-         QThreadPool             threadPool_;
 
       private:
          bs::Address newAddress(const Path &path, AddressEntryType aet);
@@ -110,7 +110,7 @@ namespace bs {
          std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
-         std::vector<UTXO> getSpendableTxOutList(uint64_t val = UINT64_MAX) const override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX) override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -143,7 +143,7 @@ namespace bs {
          BinaryData serialize() const;
          void setDB(const std::shared_ptr<LMDBEnv> &env, LMDB *db);
 
-         void SetBDM(const std::shared_ptr<PyBlockDataManager> &) override;
+         void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
          std::shared_ptr<LMDBEnv> getDBEnv() override { return dbEnv_; }
          LMDB *getDB() override { return db_; }
@@ -162,8 +162,8 @@ namespace bs {
          void scanComplete(const std::string &walletId);
 
       protected slots:
-         virtual void onZeroConfReceived(const std::vector<LedgerEntryData> &);
-         virtual void onRefresh(const BinaryDataVector &ids);
+         virtual void onZeroConfReceived(ArmoryConnection::ReqIdType);
+         virtual void onRefresh(const std::vector<BinaryData> &ids);
 
       protected:
          virtual bs::Address createAddress(const Path &path, Path::Elem index, AddressEntryType aet
@@ -175,7 +175,7 @@ namespace bs {
          Path getPathForAddress(const bs::Address &) const;
          std::shared_ptr<Node> getNodeForAddr(const bs::Address &) const;
          std::shared_ptr<hd::Node> GetPrivNodeFor(const bs::Address &, const SecureBinaryData &password);
-         void activateAddressesFromLedger(const std::vector<LedgerEntryData> &);
+         void activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &);
          void activateHiddenAddress(const bs::Address &);
          bs::Address createAddressWithPath(const hd::Path &, AddressEntryType, bool signal = true);
 
@@ -199,8 +199,8 @@ namespace bs {
          size_t extAddressPoolSize_ = 100;
          const std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
 
-         std::unordered_map<BinaryData, BinaryData> hashToPubKey_;
-         std::unordered_map<BinaryData, hd::Path>   pubKeyToPath_;
+         std::map<BinaryData, BinaryData> hashToPubKey_;
+         std::map<BinaryData, hd::Path>   pubKeyToPath_;
          using TempAddress = std::pair<Path, AddressEntryType>;
          std::unordered_map<Path::Elem, TempAddress>  tempAddresses_;
          std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressPool_;
@@ -213,7 +213,7 @@ namespace bs {
          std::unordered_map<Path::Elem, AddressTuple> addressMap_;
          std::vector<bs::Address>                     intAddresses_;
          std::vector<bs::Address>                     extAddresses_;
-         std::unordered_map<BinaryData, Path::Elem>   addrToIndex_;
+         std::map<BinaryData, Path::Elem>             addrToIndex_;
          cb_complete_notify                           cbScanNotify_ = nullptr;
          volatile bool activateAddressesInvoked_ = false;
 
@@ -270,27 +270,30 @@ namespace bs {
          void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
          void firstInit() override;
 
-         std::vector<UTXO> getSpendableTxOutList(uint64_t val = UINT64_MAX) const override;
-         std::vector<UTXO> getSpendableZCList() const override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *, uint64_t val = UINT64_MAX) override;
+         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *) override;
          bool isBalanceAvailable() const override;
-         void UpdateBalanceFromDB() override;
          BTCNumericTypes::balance_type GetSpendableBalance() const override;
          BTCNumericTypes::balance_type GetUnconfirmedBalance() const override;
          BTCNumericTypes::balance_type GetTotalBalance() const override;
-         std::vector<uint64_t> getAddrBalance(const bs::Address &) const override;
+         bool getAddrBalance(const bs::Address &) const override;
+         bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
 
          BTCNumericTypes::balance_type GetTxBalance(int64_t) const override;
          QString displayTxValue(int64_t val) const override;
          QString displaySymbol() const override;
          bool isTxValid(const BinaryData &) const override;
 
+         void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
+
       private slots:
-         void onZeroConfReceived(const std::vector<LedgerEntryData> &) override;
-         void onRefresh(const BinaryDataVector &ids) override;
+         void onZeroConfReceived(ArmoryConnection::ReqIdType) override;
+         void onRefresh(const std::vector<BinaryData> &ids) override;
 
       private:
          void validationProc();
-         void findInvalidUTXOs(const std::vector<UTXO> &);
+         void findInvalidUTXOs(const std::vector<UTXO> &, std::function<void (const std::vector<UTXO> &)>);
+         void refreshInvalidUTXOs(bool ZConly = false);
          BTCNumericTypes::balance_type correctBalance(BTCNumericTypes::balance_type
             , bool applyCorrection = true) const;
          std::vector<UTXO> filterUTXOs(const std::vector<UTXO> &) const;
@@ -301,8 +304,7 @@ namespace bs {
          volatile bool  validationStarted_, validationEnded_;
          double         balanceCorrection_ = 0;
          std::set<UTXO> invalidTx_;
-         std::unordered_set<BinaryData> invalidTxHash_;
-         QThreadPool    threadPool_;
+         std::set<BinaryData> invalidTxHash_;
       };
 
    }  //namespace hd

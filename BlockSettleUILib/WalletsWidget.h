@@ -18,9 +18,11 @@ namespace bs {
 class AddressListModel;
 class AddressSortFilterModel;
 class ApplicationSettings;
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class QAction;
+class QMenu;
 class SignContainer;
 class WalletImporter;
 class WalletsViewModel;
@@ -32,11 +34,11 @@ Q_OBJECT
 
 public:
    WalletsWidget(QWidget* parent = nullptr );
-   ~WalletsWidget() override = default;
+   ~WalletsWidget() override;
 
    void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<AuthAddressManager> &);
+      , const std::shared_ptr<AuthAddressManager> &, const std::shared_ptr<ArmoryConnection> &);
 
    std::vector<WalletsManager::wallet_gen_type> GetSelectedWallets() const;
 
@@ -53,6 +55,9 @@ private:
 
    int getUIFilterSettings() const;
    void updateAddressFilters(int filterSettings);
+
+signals:
+   void showContextMenu(QMenu *, QPoint);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);
@@ -71,15 +76,17 @@ private slots:
    void onFilterSettingsChanged();
    void onEnterKeyInAddressesPressed(const QModelIndex &index);
    void onEnterKeyInWalletsPressed(const QModelIndex &index);
+   void onShowContextMenu(QMenu *, QPoint);
 
 private:
-   Ui::WalletsWidget* ui;
+   std::unique_ptr<Ui::WalletsWidget> ui;
 
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<AuthAddressManager>    authMgr_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    WalletsViewModel        *  walletsModel_;
    AddressListModel        *  addressModel_;
    AddressSortFilterModel  *  addressSortFilterModel_;

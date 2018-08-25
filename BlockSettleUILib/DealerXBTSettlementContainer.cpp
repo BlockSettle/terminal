@@ -11,8 +11,8 @@ Q_DECLARE_METATYPE(AddressVerificationState)
 DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &logger, const bs::network::Order &order
    , const std::shared_ptr<WalletsManager> &walletsMgr, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<TransactionData> &txData, const std::unordered_set<std::string> &bsAddresses
-   , const std::shared_ptr<SignContainer> &container, bool autoSign)
-   : bs::SettlementContainer(), order_(order)
+   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
+   : bs::SettlementContainer(armory), order_(order)
    , weSell_((order.side == bs::network::Side::Buy) ^ (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
    , autoSign_(autoSign), logger_(logger), transactionData_(txData), signingContainer_(container)
@@ -78,7 +78,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::runtime_error("failed to create Settlement monitor");
    }
 
-   addrVerificator_ = std::make_shared<AddressVerificator>(logger, settlIdStr_
+   addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory_, settlIdStr_
       , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
       logger->info("Counterparty's address verification {} for {}"
@@ -128,19 +128,22 @@ bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
          return false;
       }
       signingContainer_->SyncAddresses({ { txWallet, receivingAddress } });
-      try {
-         const auto txReq = settlWallet_->CreatePayoutTXRequest(settlWallet_->GetInputFor(settlAddr_)
-            , receivingAddress, transactionData_->FeePerByte());
-         const auto authAddr = bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH);
-         payoutSignId_ = signingContainer_->SignPayoutTXRequest(txReq, authAddr, settlAddr_
-            , autoSign_, password);
-      }
-      catch (const std::exception &e) {
-         logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
-         emit error(tr("Failed to sign pay-out"));
-         emit failed();
-         return false;
-      }
+
+      const auto &cbSettlInput = [this, receivingAddress, password](UTXO input) {
+         try {
+            const auto txReq = settlWallet_->CreatePayoutTXRequest(input
+               , receivingAddress, transactionData_->FeePerByte());
+            const auto authAddr = bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH);
+            payoutSignId_ = signingContainer_->SignPayoutTXRequest(txReq, authAddr, settlAddr_
+               , autoSign_, password);
+         }
+         catch (const std::exception &e) {
+            logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
+            emit error(tr("Failed to sign pay-out"));
+            emit failed();
+         }
+      };
+      return settlWallet_->GetInputFor(settlAddr_, cbSettlInput);
    }
    return true;
 }
@@ -188,33 +191,33 @@ void DealerXBTSettlementContainer::onPayInDetected(int confirmationsNumber, cons
    logger_->debug("[XbtSettlementContainer] Pay-in detected: {}", txHash.toHexStr(true));
 
    if (!weSell_) {
-      const auto tx = PyBlockDataManager::instance()->getTxByHash(txHash);
-      bool foundAddr = false, amountValid = false;
-      if (tx.isInitialized()) {
-         for (int i = 0; i < tx.getNumTxOut(); i++) {
-            auto txOut = tx.getTxOutCopy(i);
-            const auto addr = bs::Address::fromTxOutScript(txOut.getScript());
-            if (settlAddr_->getPrefixedHash() == addr.prefixed()) {
-               foundAddr = true;
-               if (std::abs(txOut.getValue() - amount_ * BTCNumericTypes::BalanceDivider) < 3) {
-                  amountValid = true;
+      const auto &cbTX = [this](Tx tx) {
+         bool foundAddr = false, amountValid = false;
+         if (tx.isInitialized()) {
+            for (int i = 0; i < tx.getNumTxOut(); i++) {
+               auto txOut = tx.getTxOutCopy(i);
+               const auto addr = bs::Address::fromTxOutScript(txOut.getScript());
+               if (settlAddr_->getPrefixedHash() == addr.prefixed()) {
+                  foundAddr = true;
+                  if (std::abs(txOut.getValue() - amount_ * BTCNumericTypes::BalanceDivider) < 3) {
+                     amountValid = true;
+                  }
+                  break;
                }
-               break;
             }
          }
-      }
-      if (!foundAddr || !amountValid) {
-         emit error(tr("Invalid pay-in transaction from requester"));
-         return;
-      }
+         if (!foundAddr || !amountValid) {
+            emit error(tr("Invalid pay-in transaction from requester"));
+            return;
+         }
 
-      try {
-         fee_ = settlWallet_->GetEstimatedFeeFor(settlWallet_->GetInputFor(settlAddr_), transactionData_->GetFallbackRecvAddress()
-            , transactionData_->FeePerByte());
-      }
-      catch (const std::exception &e) {
-         throw std::runtime_error(std::string("Settlement input retrieval failed: ") + e.what());
-      }
+         const auto &cbInput = [this](UTXO input) {
+            fee_ = settlWallet_->GetEstimatedFeeFor(input, transactionData_->GetFallbackRecvAddress()
+               , transactionData_->FeePerByte());
+         };
+         settlWallet_->GetInputFor(settlAddr_, cbInput);
+      };
+      armory_->getTxByHash(txHash, cbTX);
    }
 
    payInDetected_ = true;
@@ -269,7 +272,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          emit failed();
          return;
       }
-      if (!PyBlockDataManager::instance()->broadcastZC(signedTX)) {
+      if (!armory_->broadcastZC(signedTX)) {
          logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to broadcast pay-out");
          emit error(tr("Failed to broadcast pay-out transaction"));
          emit failed();
@@ -292,7 +295,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          emit failed();
          return;
       }
-      if (!PyBlockDataManager::instance()->broadcastZC(signedTX)) {
+      if (!armory_->broadcastZC(signedTX)) {
          logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to broadcast pay-in");
          emit error(tr("Failed to broadcast transaction"));
          emit failed();
@@ -340,7 +343,7 @@ void DealerXBTSettlementContainer::sendBuyReqPayout()
 
    logger_->debug("[DealerXBTSettlementContainer::sendBuyReqPayout] sending tx with hash {}"
       , BtcUtils::hash256(payoutTx).toHexStr());
-   if (!PyBlockDataManager::instance()->broadcastZC(payoutTx)) {
+   if (!armory_->broadcastZC(payoutTx)) {
       emit error(tr("Failed to broadcast pay-out transaction"));
       logger_->error("[DealerXBTSettlementContainer::sendBuyReqPayout] Failed to broadcast pay-out transaction");
       return;

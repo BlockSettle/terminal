@@ -568,7 +568,6 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
          }
       }
 
-      scrAddrFilter_->lastScannedHash_ = bcs.getTopScannedBlockHash();
       return bcs.getTopScannedBlockHash();
    }
    else

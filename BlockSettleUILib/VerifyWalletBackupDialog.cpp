@@ -17,9 +17,9 @@ VerifyWalletBackupDialog::VerifyWalletBackupDialog(const std::shared_ptr<bs::hd:
 {
    ui_->setupUi(this);
 
-   validator_ = new EasyEncValidator(easyCodec_, nullptr, 9, true);
-   ui_->lineEditPrivKey1->setValidator(validator_);
-   ui_->lineEditPrivKey2->setValidator(validator_);
+   validator_.reset(new EasyEncValidator(easyCodec_, nullptr, 9, true));
+   ui_->lineEditPrivKey1->setValidator(validator_.get());
+   ui_->lineEditPrivKey2->setValidator(validator_.get());
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, &QDialog::accept);
    connect(ui_->lineEditPrivKey1, &QLineEdit::textEdited, this, &VerifyWalletBackupDialog::onPrivKeyChanged);
@@ -28,10 +28,7 @@ VerifyWalletBackupDialog::VerifyWalletBackupDialog(const std::shared_ptr<bs::hd:
    connect(ui_->lineEditPrivKey2, &QLineEdit::editingFinished, this, &VerifyWalletBackupDialog::onPrivKeyChanged);
 }
 
-VerifyWalletBackupDialog::~VerifyWalletBackupDialog()
-{
-   delete validator_;
-}
+VerifyWalletBackupDialog::~VerifyWalletBackupDialog() = default;
 
 void VerifyWalletBackupDialog::onPrivKeyChanged()
 {

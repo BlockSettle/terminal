@@ -8,6 +8,8 @@
 #include "EasyEncValidator.h"
 #include "MessageBoxCritical.h"
 #include "MetaData.h"
+#include "UiUtils.h"
+#include "make_unique.h"
 
 
 ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
@@ -30,9 +32,9 @@ ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
 
    connect(ui_->lineSeed1, &QLineEdit::textChanged, this, &ImportWalletTypeDialog::updateImportButton);
    connect(ui_->lineSeed2, &QLineEdit::textChanged, this, &ImportWalletTypeDialog::updateImportButton);
-   validator_ = new EasyEncValidator(easyCodec_, nullptr, 9, true);
-   ui_->lineSeed1->setValidator(validator_);
-   ui_->lineSeed2->setValidator(validator_);
+   validator_ = make_unique<EasyEncValidator>(easyCodec_, nullptr, 9, true);
+   ui_->lineSeed1->setValidator(validator_.get());
+   ui_->lineSeed2->setValidator(validator_.get());
 
    connect(ui_->pushButtonBrowseForFile, &QPushButton::clicked, this, &ImportWalletTypeDialog::OnSelectFilePressed);
    connect(ui_->pushButtonSelWoFile, &QPushButton::clicked, this, &ImportWalletTypeDialog::OnSelectWoFilePressed);
@@ -44,10 +46,7 @@ ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
    ui_->labelWoFilePath->clear();
 }
 
-ImportWalletTypeDialog::~ImportWalletTypeDialog()
-{
-   delete validator_;
-}
+ImportWalletTypeDialog::~ImportWalletTypeDialog() = default;
 
 EasyCoDec::Data ImportWalletTypeDialog::GetSeedData() const
 {
@@ -112,6 +111,23 @@ void ImportWalletTypeDialog::updateImportButton()
    if (ui_->tabWidget->currentWidget() == ui_->tabFull) {
       if (ui_->stackedWidgetInputs->currentIndex() == 0) {
          ui_->pushButtonImport->setEnabled(PaperImportOk());
+
+         const auto seed1 = ui_->lineSeed1->text();
+         const auto seed2 = ui_->lineSeed2->text();
+         const bool seed1valid = (validator_->validateKey(seed1) == EasyEncValidator::Valid);
+         const bool seed2valid = (validator_->validateKey(seed2) == EasyEncValidator::Valid);
+
+         if (!seed1valid) {
+            UiUtils::setWrongState(ui_->lineSeed1, true);
+         } else {
+            UiUtils::setWrongState(ui_->lineSeed1, false);
+         }
+
+         if (!seed2valid) {
+            UiUtils::setWrongState(ui_->lineSeed2, true);
+         } else {
+            UiUtils::setWrongState(ui_->lineSeed2, false);
+         }
       }
       else {
          ui_->pushButtonImport->setEnabled(DigitalImportOk());

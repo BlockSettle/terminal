@@ -7,11 +7,11 @@
 
 
 WalletImporter::WalletImporter(const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<WalletsManager> &walletsMgr, const std::shared_ptr<PyBlockDataManager> &bdm
+   , const std::shared_ptr<WalletsManager> &walletsMgr, const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<AuthAddressManager> &authMgr
    , const QString &walletsPath
    , const bs::hd::Wallet::cb_scan_read_last &cbr, const bs::hd::Wallet::cb_scan_write_last &cbw)
-   : QObject(nullptr), signingContainer_(container), walletsMgr_(walletsMgr), bdm_(bdm)
+   : QObject(nullptr), signingContainer_(container), walletsMgr_(walletsMgr), armory_(armory)
    , assetMgr_(assetMgr), authMgr_(authMgr), walletsPath_(walletsPath)
    , cbReadLast_(cbr), cbWriteLast_(cbw)
 {
@@ -65,7 +65,7 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::
 
    const auto &ccList = assetMgr_->privateShares();
    rootWallet_ = newWallet;
-   rootWallet_->SetBDM(bdm_);
+   rootWallet_->SetArmory(armory_);
    walletsMgr_->AdoptNewWallet(newWallet, walletsPath_);
 
    pwdData_.resize(keyRank_.first);
@@ -74,7 +74,7 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::
       authMgr_->CreateAuthWallet(pwdData_, false);
    }
    if (!rootWallet_->isPrimary() || ccList.empty()) {
-      if (bdm_->GetState() == PyBlockDataManagerState::Ready) {
+      if (armory_->state() == ArmoryConnection::State::Ready) {
          rootWallet_->startRescan([this](bs::hd::Group *grp, bs::hd::Path::Elem wallet, bool isValid) {
             onWalletScanComplete(grp, wallet, isValid);
          }, cbReadLast_, cbWriteLast_);
@@ -106,7 +106,7 @@ void WalletImporter::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryD
       group->createLeaf(bs::hd::Path::keyToElem(cc), leafNode);
 
       if (createCCWalletReqs_.empty()) {
-         if (bdm_->GetState() == PyBlockDataManagerState::Ready) {
+         if (armory_->state() == ArmoryConnection::State::Ready) {
             rootWallet_->startRescan([this](bs::hd::Group *grp, bs::hd::Path::Elem wallet, bool isValid) {
                onWalletScanComplete(grp, wallet, isValid);
             }, cbReadLast_, cbWriteLast_);
@@ -124,7 +124,7 @@ void WalletImporter::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryD
       if (!leaf) {
          return;
       }
-      if (bdm_->GetState() == PyBlockDataManagerState::Ready) {
+      if (armory_->state() == ArmoryConnection::State::Ready) {
          leaf->setScanCompleteCb([this, group](bs::hd::Path::Elem wlt, bool status) {
             onWalletScanComplete(group.get(), wlt, status);
          });

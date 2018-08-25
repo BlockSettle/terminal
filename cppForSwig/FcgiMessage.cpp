@@ -106,21 +106,22 @@ void FcgiPacket::addData(const char* msg, size_t length)
 // FcgiMessage
 //
 ///////////////////////////////////////////////////////////////////////////////
-uint8_t* FcgiMessage::serialize(void)
+vector<uint8_t> FcgiMessage::serialize(void)
 {
+   vector<uint8_t> result;
    for (auto& packet : packets_)
    {
-      serData_.data_.insert(serData_.data_.end(),
+      result.insert(result.end(),
          packet.header_.data_.begin(), packet.header_.data_.end());
 
       for (auto& data : packet.data_)
       {
-         serData_.data_.insert(serData_.data_.end(),
+         result.insert(result.end(),
             data.data_.begin(), data.data_.end());
       }
    }
 
-   return &serData_.data_[0];
+   return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -154,19 +155,20 @@ uint16_t FcgiMessage::beginRequest(void)
 
    memset(msg, 0, 8);
    msg[1] = FCGI_RESPONDER; //request role B0
+   msg[2] = FCGI_KEEP_CONN; //keep alive
 
    packet.buildHeader(FCGI_BEGIN_REQUEST, requestID_);
 
    return requestID_;
 }
 ///////////////////////////////////////////////////////////////////////////////
-FcgiMessage FcgiMessage::makePacket(const char *msg)
+FcgiMessage FcgiMessage::makePacket(const BinaryDataRef& payload)
 {
    FcgiMessage fcgiMsg;
    auto requestID = fcgiMsg.beginRequest();
 
    stringstream msglength;
-   msglength << strlen(msg);
+   msglength << payload.getSize();
 
    //params
    auto& params = fcgiMsg.getNewPacket();
@@ -179,14 +181,14 @@ FcgiMessage FcgiMessage::makePacket(const char *msg)
    paramterminator.buildHeader(FCGI_PARAMS, requestID);
 
    //data
-   auto msglen = strlen(msg);
+   auto msglen = payload.getSize();
    size_t offset = 0;
    size_t uint16max = UINT16_MAX;
    while (msglen > offset)
    {
       size_t currentlen = min(msglen - offset, uint16max);
       auto& data = fcgiMsg.getNewPacket();
-      data.addData(msg + offset, currentlen);
+      data.addData((char*)payload.getPtr() + offset, currentlen);
       data.buildHeader(FCGI_STDIN, requestID);
 
       offset += currentlen;
@@ -197,4 +199,64 @@ FcgiMessage FcgiMessage::makePacket(const char *msg)
    dataterminator.buildHeader(FCGI_STDIN, requestID);
 
    return fcgiMsg;
+}
+///////////////////////////////////////////////////////////////////////////////
+//
+// HttpMessage
+//
+///////////////////////////////////////////////////////////////////////////////
+void HttpMessage::setupHeaders()
+{
+   addHeader("POST / HTTP/1.1");
+   stringstream addrHeader;
+   addrHeader << "Host: " << addr_;
+   addHeader(addrHeader.str());
+   addHeader("Content-type: text/html; charset=UTF-8");
+   addHeader("Connection: Keep-Alive");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void HttpMessage::addHeader(string header)
+{
+   //headers should not have the termination CRLF
+   header.append("\r\n");
+   headers_.push_back(move(header));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+int32_t HttpMessage::makeHttpPayload(
+   char** payload_out, const char* payload_in, size_t len)
+{
+   if (payload_out == nullptr)
+      return -1;
+
+   stringstream ss;
+   ss << "Content-Length: ";
+   ss << strlen(payload_in);
+   ss << "\r\n\r\n";
+
+   size_t httpHeaderSize = 0;
+   for (auto& header : headers_)
+      httpHeaderSize += header.size();
+
+   *payload_out = new char[strlen(payload_in) +
+      ss.str().size() +
+      httpHeaderSize +
+      1];
+
+   int32_t pos = 0;
+   for (auto& header : headers_)
+   {
+      memcpy(*payload_out + pos, header.c_str(), header.size());
+      pos += header.size();
+   }
+
+   memcpy(*payload_out + pos, ss.str().c_str(), ss.str().size());
+   pos += ss.str().size();
+
+   memcpy(*payload_out + pos, payload_in, len);
+   pos += len;
+
+   memset(*payload_out + pos, 0, 1);
+   return pos;
 }

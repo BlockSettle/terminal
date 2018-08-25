@@ -14,6 +14,7 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class CCSettlementTransactionWidget;
@@ -35,9 +36,10 @@ public:
       , const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
-      , std::shared_ptr<CelerClient> celerClient
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<CelerClient> &celerClient
       , QWidget* parent = nullptr);
-   ~RFQDialog() override = default;
+   ~RFQDialog() override;
 
 protected:
    void reject() override;
@@ -55,7 +57,7 @@ private slots:
    void onSettlementOrder();
 
 private:
-   Ui::RFQDialog* ui_;
+   std::unique_ptr<Ui::RFQDialog> ui_;
    std::shared_ptr<spdlog::logger>     logger_;
    const bs::network::RFQ              rfq_;
    bs::network::Quote                  quote_;
@@ -65,6 +67,7 @@ private:
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      container_;
    std::shared_ptr<AssetManager>       assetMgr_;
+   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<CelerClient>        celerClient_;
    std::unordered_map<std::string, std::string> ccTxMap_;
    std::map<QString, QString>          ccReqIdToOrder_;

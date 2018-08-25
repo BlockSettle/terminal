@@ -21,7 +21,7 @@ public:
       , bs::wallet::KeyRank, const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys = {}, const QString &prompt = {}
       , QWidget* parent = nullptr);
-   ~EnterWalletPassword() override = default;
+   ~EnterWalletPassword() override;
 
    SecureBinaryData GetPassword() const;
 
@@ -33,7 +33,7 @@ protected:
    void showEvent(QShowEvent *) override;
 
 private:
-   Ui::EnterWalletPassword* ui_;
+   std::unique_ptr<Ui::EnterWalletPassword> ui_;
 };
 
 #endif // __ENTER_WALLET_PASSWORD_H__

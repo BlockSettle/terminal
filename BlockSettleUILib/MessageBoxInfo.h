@@ -3,6 +3,8 @@
 
 #include "CommonMessageBoxDialog.h"
 
+#include <memory>
+
 namespace Ui
 {
    class MessageBoxInfo;
@@ -17,7 +19,7 @@ public:
    MessageBoxInfo(const QString& title, const QString& text
       , const QString& details, QWidget* parent = nullptr);
 
-   ~MessageBoxInfo() noexcept override = default;
+   ~MessageBoxInfo() override;
 
 private slots:
    void OnDetailsPressed();
@@ -29,7 +31,7 @@ private:
    void ShowDetails();
 
 private:
-   Ui::MessageBoxInfo* ui_;
+   std::unique_ptr<Ui::MessageBoxInfo> ui_;
 };
 
 

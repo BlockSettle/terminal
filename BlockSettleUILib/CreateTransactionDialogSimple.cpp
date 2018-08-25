@@ -3,11 +3,11 @@
 #include "ui_CreateTransactionDialogSimple.h"
 
 #include "Address.h"
+#include "ArmoryConnection.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
 #include "OfflineSigner.h"
-#include "PyBlockDataManager.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
@@ -21,14 +21,17 @@ constexpr int highPriorityBlocksNumber = 0;
 constexpr int normalPriorityBlocksNumber = 3;
 constexpr int lowPriorityBlocksNumber = 6;
 
-CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<WalletsManager>& walletManager
+CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, QWidget* parent)
- : CreateTransactionDialog(walletManager, container, true, parent)
+ : CreateTransactionDialog(armory, walletManager, container, true, parent)
  , ui_(new Ui::CreateTransactionDialogSimple)
 {
    ui_->setupUi(this);
    initUI();
 }
+
+CreateTransactionDialogSimple::~CreateTransactionDialogSimple() = default;
 
 void CreateTransactionDialogSimple::initUI()
 {
@@ -90,22 +93,27 @@ QLabel *CreateTransactionDialogSimple::labelBalance() const
 
 QLabel *CreateTransactionDialogSimple::labelAmount() const
 {
-   return ui_->labelDetailsAmount;
+   return ui_->labelInputAmount;
 }
 
 QLabel *CreateTransactionDialogSimple::labelTxInputs() const
 {
-   return ui_->labelDetailsTxInputs;
+   return ui_->labelTXInputs;
 }
 
 QLabel *CreateTransactionDialogSimple::labelEstimatedFee() const
 {
-   return ui_->labelDetailsEstimatedFee;
+   return ui_->labelFee;
 }
 
 QLabel *CreateTransactionDialogSimple::labelTotalAmount() const
 {
-   return ui_->labelDetailsTotalAmount;
+   return ui_->labelTransationAmount;
+}
+
+QLabel *CreateTransactionDialogSimple::labelTxSize() const
+{
+   return ui_->labelTxSize;
 }
 
 QPushButton *CreateTransactionDialogSimple::pushButtonCreate() const
@@ -116,6 +124,16 @@ QPushButton *CreateTransactionDialogSimple::pushButtonCreate() const
 QPushButton *CreateTransactionDialogSimple::pushButtonCancel() const
 {
    return ui_->pushButtonCancel;
+}
+
+QLabel* CreateTransactionDialogSimple::feePerByteLabel() const
+{
+   return ui_->labelFeePerByte;
+}
+
+QLabel* CreateTransactionDialogSimple::changeLabel() const
+{
+   return ui_->labelReturnAmount;
 }
 
 void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressString)
@@ -198,7 +216,7 @@ bool CreateTransactionDialogSimple::userRequestedAdvancedDialog() const
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogSimple::CreateAdvancedDialog()
 {
-   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(walletsManager_
+   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
       , signingContainer_, true, parentWidget());
 
    if (!offlineTransactions_.empty()) {

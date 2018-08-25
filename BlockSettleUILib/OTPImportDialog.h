@@ -38,12 +38,12 @@ private slots:
    void updateAcceptButton();
 
 private:
-   Ui::OTPImportDialog* ui_;
+   std::unique_ptr<Ui::OTPImportDialog> ui_;
    std::shared_ptr<OTPManager>   otpManager_;
    std::shared_ptr<EasyCoDec>    easyCodec_;
    FrejaSignOTP                  frejaSign_;
    SecureBinaryData              otpPassword_;
-   EasyEncValidator           *  validator_ = nullptr;
+   std::unique_ptr<EasyEncValidator>   validator_;
    std::string hexKey_;
    bool        keyIsValid_ = false;
 };

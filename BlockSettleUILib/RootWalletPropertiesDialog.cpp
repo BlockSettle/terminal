@@ -54,6 +54,7 @@ private:
 
 RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &container
    , WalletsViewModel *walletsModel
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -93,7 +94,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
 
    updateWalletDetails(wallet_);
 
-   ui_->rescanButton->setEnabled(PyBlockDataManager::instance()->GetState() == PyBlockDataManagerState::Ready);
+   ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
    ui_->changePassphraseButton->setEnabled(false);
    if (!wallet_->isWatchingOnly()) {
       walletEncTypes_ = wallet_->encryptionTypes();
@@ -114,6 +115,8 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
 
    ui_->treeViewWallets->expandAll();
 }
+
+RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
@@ -226,6 +229,20 @@ void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, 
    }
 }
 
+static inline QString encTypeToString(bs::wallet::EncryptionType enc)
+{
+   switch (enc) {
+      case bs::wallet::EncryptionType::Unencrypted :
+         return QObject::tr("Unencrypted");
+
+      case bs::wallet::EncryptionType::Password :
+         return QObject::tr("Password");
+
+      case bs::wallet::EncryptionType::Freja :
+         return QObject::tr("Freja");
+   };
+}
+
 void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
    , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
 {
@@ -237,7 +254,16 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs:
    walletEncKeys_ = encKeys;
    walletEncRank_ = keyRank;
    ui_->changePassphraseButton->setEnabled(true);
-   ui_->labelEncRank->setText(tr("%1 of %2").arg(keyRank.first).arg(keyRank.second));
+
+   if (keyRank.first == 1 && keyRank.second == 1) {
+      if (!encTypes.empty()) {
+         ui_->labelEncRank->setText(encTypeToString(encTypes.front()));
+      } else {
+         ui_->labelEncRank->setText(tr("Unknown"));
+      }
+   } else {
+      ui_->labelEncRank->setText(tr("%1 of %2").arg(keyRank.first).arg(keyRank.second));
+   }
 }
 
 void RootWalletPropertiesDialog::onWalletSelected()
