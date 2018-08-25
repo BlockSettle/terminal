@@ -920,8 +920,8 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
          const bool useNewDialogForFreja = true;
 
          if (useNewDialogForFreja && encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
-           WalletKeysSubmitFrejaDialog frejaDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
-             , encKeys, QString::fromStdString(prompt), this);
+           WalletKeysSubmitFrejaDialog frejaDialog(rootWallet ? rootWallet->getWalletId() : walletId
+             , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
            if (frejaDialog.exec() == QDialog::Accepted) {
              password = frejaDialog.GetPassword();
            }

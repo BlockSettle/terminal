@@ -16,8 +16,8 @@ class WalletKeysCreateWidget : public QWidget
 public:
    enum Flag {
       NoFlag = 0x00,
-      HideWidgetContol = 0x01,
-      HideFrejaConnectButton = 0x02,
+      HideFrejaConnectButton = 0x01,
+      HideWidgetContol = 0x02,
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

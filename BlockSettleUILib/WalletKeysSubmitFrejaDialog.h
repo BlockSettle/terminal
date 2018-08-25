@@ -11,35 +11,30 @@
 class QPropertyAnimation;
 
 namespace Ui {
-class WalletKeysSubmitFrejaDialog;
+   class WalletKeysSubmitFrejaDialog;
 }
 
 class WalletKeysSubmitFrejaDialog : public QDialog
 {
-  Q_OBJECT
+   Q_OBJECT
 
 public:
-  WalletKeysSubmitFrejaDialog(const QString& walletName, const std::string &walletId
-    , const std::vector<SecureBinaryData> &encKeys, const QString &prompt, QWidget* parent = nullptr);
-  ~WalletKeysSubmitFrejaDialog() override;
+   WalletKeysSubmitFrejaDialog(const std::string &walletId
+      , bs::wallet::KeyRank keyRank, const std::vector<bs::wallet::EncryptionType> &encTypes
+      , const std::vector<SecureBinaryData> &encKeys, const QString &prompt, QWidget* parent = nullptr);
+   ~WalletKeysSubmitFrejaDialog() override;
 
-  SecureBinaryData GetPassword() const;
+   SecureBinaryData GetPassword() const;
 
 private slots:
-  void cancel();
+   void cancel();
+   void onSucceeded();
+   void onFailed();
 
 private:
-  void onFrejaSucceeded(SecureBinaryData password);
-  void onFrejaFailed(const QString &text);
-  void onTimer();
-  QPropertyAnimation* startAnimation(bool success);
+   QPropertyAnimation* startAnimation(bool success);
 
-  Ui::WalletKeysSubmitFrejaDialog *ui_;
-
-  QElapsedTimer timeout_;
-  FrejaSignWallet frejaSign_;
-  QTimer timer_;
-  SecureBinaryData password_;
+   std::unique_ptr<Ui::WalletKeysSubmitFrejaDialog> ui_;
 };
 
 #endif // __WALLETKEYSSUBMITFREJADIALOG_H__

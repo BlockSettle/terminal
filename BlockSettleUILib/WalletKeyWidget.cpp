@@ -111,6 +111,7 @@ void WalletKeyWidget::onFrejaSucceeded(SecureBinaryData password)
 
 void WalletKeyWidget::onFrejaFailed(const QString &text)
 {
+   emit failed();
    stop();
    ui_->pushButtonFreja->setEnabled(true);
    ui_->pushButtonFreja->setText(tr("Freja failed: %1 - retry").arg(text));
@@ -123,6 +124,7 @@ void WalletKeyWidget::onTimer()
 {
    timeLeft_ -= 0.5;
    if (timeLeft_ <= 0) {
+      emit failed();
       cancel();
    }
    else {
@@ -198,4 +200,9 @@ void WalletKeyWidget::setFocus()
 void WalletKeyWidget::hideFrejaConnect()
 {
    ui_->pushButtonFreja->hide();
+}
+
+void WalletKeyWidget::hideFrejaCombobox()
+{
+   ui_->comboBoxFrejaId->hide();
 }

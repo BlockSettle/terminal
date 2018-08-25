@@ -15,10 +15,19 @@ WalletKeysSubmitWidget::WalletKeysSubmitWidget(QWidget* parent)
 
 WalletKeysSubmitWidget::~WalletKeysSubmitWidget() = default;
 
+void WalletKeysSubmitWidget::setFlags(Flags flags)
+{
+   flags_ = flags;
+}
+
 void WalletKeysSubmitWidget::init(const std::string &walletId, bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys)
 {
+   if (flags_ & HideGroupboxCaption) {
+      ui_->groupBox->setTitle(QString());
+   }
+
    walletId_ = walletId;
    if (encTypes.empty()) {
       return;
@@ -69,6 +78,15 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysSubmitWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysSubmitWidget::onKeyChanged);
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysSubmitWidget::onEncKeyChanged);
+   connect(widget, &WalletKeyWidget::failed, this, &WalletKeysSubmitWidget::failed);
+
+   if (flags_ & HideFrejaConnectButton) {
+      widget->hideFrejaConnect();
+   }
+   if (flags_ & HideFrejaCombobox) {
+      widget->hideFrejaCombobox();
+   }
+
    ui_->groupBox->layout()->addWidget(widget);
 
    widgets_.push_back(widget);

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>461</width>
-    <height>185</height>
+    <height>147</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,8 +20,20 @@
    <string>Coin Control</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>7</number>
+   </property>
+   <property name="topMargin">
+    <number>3</number>
+   </property>
+   <property name="bottomMargin">
+    <number>3</number>
+   </property>
    <item>
     <layout class="QHBoxLayout" name="widgetTypeSelection">
+     <property name="spacing">
+      <number>7</number>
+     </property>
      <item>
       <widget class="QRadioButton" name="radioButtonPassword">
        <property name="text">
@@ -101,6 +113,12 @@
    <item>
     <widget class="QWidget" name="widgetFrejaLayout" native="true">
      <layout class="QHBoxLayout" name="widgetFreja">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QComboBox" name="comboBoxFrejaId">
         <property name="sizePolicy">

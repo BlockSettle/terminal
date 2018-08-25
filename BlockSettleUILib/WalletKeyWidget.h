@@ -26,11 +26,14 @@ public:
    void setFocus();
 
    void hideFrejaConnect();
+   void hideFrejaCombobox();
 
 signals:
    void keyChanged(int index, SecureBinaryData);
    void encKeyChanged(int index, SecureBinaryData);
    void keyTypeChanged(int index, bool password);
+   // Signals that Freja was denied or timed out
+   void failed();
 
 private slots:
    void onTypeChanged();
