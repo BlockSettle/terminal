@@ -198,6 +198,11 @@ void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const s
    }
 }
 
+void WalletsWidget::setUsername(const QString& username)
+{
+   username_ = username;
+}
+
 void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 {
    walletsModel_ = new WalletsViewModel(walletsManager_, defaultWalletId, signingContainer_, ui->treeViewWallets);
@@ -366,18 +371,17 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
 
    std::string walletId = bs::hd::Node(walletSeed).getId();
 
-#if !defined(QT_DEBUG) || 0
    NewWalletSeedDialog newWalletSeedDialog(QString::fromStdString(walletId)
       , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2));
 
    int result = newWalletSeedDialog.exec();
-   if (!result)
+   if (!result) {
       return false;
-#endif
+   }
 
    std::shared_ptr<bs::hd::Wallet> newWallet;
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, this);
+      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
          newWallet = walletsManager_->GetHDWalletById(walletId);
@@ -419,7 +423,7 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
          ImportWalletDialog createImportedWallet(walletsManager_, signingContainer_
             , assetManager_, authMgr_, armory_, importWalletDialog.GetSeedData()
             , importWalletDialog.GetChainCodeData(), appSettings_
-            , importWalletDialog.GetName(), importWalletDialog.GetDescription()
+            , username_, importWalletDialog.GetName(), importWalletDialog.GetDescription()
             , primary, this);
 
          if (createImportedWallet.exec() == QDialog::Accepted) {

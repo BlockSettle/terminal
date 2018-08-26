@@ -16,6 +16,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       , const EasyCoDec::Data& seedData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const QString& username
       , const std::string &walletName, const std::string &walletDesc
       , bool createPrimary, QWidget *parent)
    : QDialog(parent)
@@ -67,7 +68,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateAcceptButton(); });
-   ui_->widgetCreateKeys->init(walletId_);
+   ui_->widgetCreateKeys->init(walletId_, username);
 
    updateAcceptButton();
 }

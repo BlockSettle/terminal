@@ -105,15 +105,10 @@ void NewWalletSeedDialog::onSaveClicked()
 
 void NewWalletSeedDialog::reject()
 {
-   MessageBoxQuestion messageBox(tr("Warning"), tr("ABORT WALLET CREATION?")
-      , tr("The Wallet will not be created if you don't complete the procedure.\n"
-         "Are you sure you want to abort the Wallet Creation process?"), this);
-   messageBox.setConfirmButtonText(tr("Abort Wallet Creation")).setCancelButtonText(tr("Back"));
-
-   if (messageBox.exec() == QDialog::Rejected)
-      return;
-
-   QDialog::reject();
+   bool result = abortWalletCreationQuestionDialog(this);
+   if (result) {
+      QDialog::reject();
+   }
 }
 
 void NewWalletSeedDialog::onPrintClicked()
@@ -170,4 +165,15 @@ void NewWalletSeedDialog::validateKeys()
    }
 
    accept();
+}
+
+bool abortWalletCreationQuestionDialog(QWidget* parent)
+{
+   MessageBoxQuestion messageBox(QObject::tr("Warning"), QObject::tr("ABORT WALLET CREATION?")
+      , QObject::tr("The Wallet will not be created if you don't complete the procedure.\n"
+         "Are you sure you want to abort the Wallet Creation process?"), parent);
+   messageBox.setConfirmButtonText(QObject::tr("Abort Wallet Creation")).setCancelButtonText(QObject::tr("Back"));
+
+   int result = messageBox.exec();
+   return (result == QDialog::Accepted);
 }

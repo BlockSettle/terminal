@@ -492,6 +492,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       }
       return false;
    }
+
    NewWalletDialog newWalletDialog(true, this);
    if (!newWalletDialog.exec()) {
       return false;
@@ -679,6 +680,7 @@ void BSTerminalMainWindow::onLogin()
       if (!celerConnection_->LoginToServer(host, port, username, password)) {
          logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
       } else {
+         ui->widgetWallets->setUsername(QString::fromStdString(username));
          action_logout_->setVisible(false);
          action_login_->setEnabled(false);
       }
@@ -687,6 +689,7 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onLogout()
 {
+   ui->widgetWallets->setUsername(QString());
    celerConnection_->CloseConnection();
 }
 

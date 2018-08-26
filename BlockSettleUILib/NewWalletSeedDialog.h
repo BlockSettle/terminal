@@ -46,4 +46,6 @@ private:
    const QString keyLine2_;
 };
 
+bool abortWalletCreationQuestionDialog(QWidget* parent);
+
 #endif // __NEWWALLETSEEDDIALOG_H__

@@ -25,7 +25,7 @@ public:
    ~WalletKeysCreateWidget() override;
 
    void setFlags(Flags flags);
-   void init(const std::string &walletId);
+   void init(const std::string &walletId, const QString& username);
    void addPasswordKey() { addKey(true); }
    void addFrejaKey() { addKey(false); }
    void cancel();

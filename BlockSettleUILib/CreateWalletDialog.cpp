@@ -4,6 +4,7 @@
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
 #include "NewWalletPasswordVerifyDialog.h"
+#include "NewWalletSeedDialog.h"
 #include "SignContainer.h"
 #include "WalletKeysSubmitFrejaDialog.h"
 #include "WalletsManager.h"
@@ -52,8 +53,9 @@ public:
 
 
 CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
-      , const std::shared_ptr<SignContainer> &container, const QString &walletsPath
-      , const bs::wallet::Seed& walletSeed, const std::string& walletId, bool createPrimary, QWidget *parent)
+   , const std::shared_ptr<SignContainer> &container, const QString &walletsPath
+   , const bs::wallet::Seed& walletSeed, const std::string& walletId, bool createPrimary, const QString& username
+   , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::CreateWalletDialog)
    , walletsManager_(walletsManager)
@@ -87,7 +89,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { UpdateAcceptButtonState(); });
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideFrejaConnectButton);
-   ui_->widgetCreateKeys->init(walletId_);
+   ui_->widgetCreateKeys->init(walletId_, username);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
@@ -137,6 +139,8 @@ void CreateWalletDialog::CreateWallet()
       keys.at(0).password = dialog.GetPassword();
 
    } else if (!ui_->widgetCreateKeys->isValid()) {
+      MessageBoxCritical messageBox(tr("Invalid password"), tr("Please check passwords"), this);
+      messageBox.exec();
       return;
    }
 
@@ -191,6 +195,11 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
 
 void CreateWalletDialog::reject()
 {
+   bool result = abortWalletCreationQuestionDialog(this);
+   if (!result) {
+      return;
+   }
+
    ui_->widgetCreateKeys->cancel();
    QDialog::reject();
 }

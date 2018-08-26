@@ -25,7 +25,7 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysCreateWidget::init(const std::string &walletId)
+void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username)
 {
    walletId_ = walletId;
    
@@ -33,6 +33,10 @@ void WalletKeysCreateWidget::init(const std::string &walletId)
 
    if (flags_ & HideWidgetContol) {
       ui_->widgetControl->hide();
+   }
+
+   for (WalletKeyWidget *widget : widgets_) {
+      widget->setCreateUsername(username);
    }
 }
 

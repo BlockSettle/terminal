@@ -27,6 +27,7 @@ public:
 
    void hideFrejaConnect();
    void hideFrejaCombobox();
+   void setCreateUsername(const QString& username);
 
 signals:
    void keyChanged(int index, SecureBinaryData);

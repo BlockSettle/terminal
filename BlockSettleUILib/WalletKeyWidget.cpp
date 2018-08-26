@@ -206,3 +206,9 @@ void WalletKeyWidget::hideFrejaCombobox()
 {
    ui_->comboBoxFrejaId->hide();
 }
+
+void WalletKeyWidget::setCreateUsername(const QString& username)
+{
+   ui_->comboBoxFrejaId->setEditText(username);
+}
+

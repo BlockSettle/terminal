@@ -181,7 +181,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
 void RootWalletPropertiesDialog::onChangePassword()
 {
    auto changePasswordDialog = new ChangeWalletPasswordDialog(wallet_
-      , walletEncTypes_, walletEncKeys_, walletEncRank_, this);
+      , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), this);
 
    if (changePasswordDialog->exec() != QDialog::Accepted) {
       changePasswordDialog->deleteLater();
