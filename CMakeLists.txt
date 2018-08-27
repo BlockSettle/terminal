@@ -489,7 +489,7 @@ ELSE(WIN32)
          Qt5::QCocoaIntegrationPlugin
          Qt5::PrintSupport
          Qt5::QICOPlugin
-         Qt5::QCupsPrinterSupportPlugin
+         Qt5::QCocoaPrinterSupportPlugin
          ${ZLIB_LIBRARIES}
          ${CUPS_LIBRARIES})
 

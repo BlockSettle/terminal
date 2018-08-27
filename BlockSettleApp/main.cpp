@@ -27,7 +27,7 @@ Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
 #elif defined (Q_OS_MAC)
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
-Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
+Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
 #elif defined (Q_OS_LINUX)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
@@ -81,8 +81,9 @@ private:
 
 static void checkFirstStart(ApplicationSettings *applicationSettings) {
   bool wasInitialized = applicationSettings->get<bool>(ApplicationSettings::initialized);
-  if (wasInitialized)
+  if (wasInitialized) {
     return;
+  }
 
 #ifdef _WIN32
   // Read registry value in case it was set with installer. Could be used only on Windows for now.
@@ -95,8 +96,9 @@ static void checkFirstStart(ApplicationSettings *applicationSettings) {
   StartupDialog startupDialog(showLicense);
   int result = startupDialog.exec();
 
-  if (result == QDialog::Rejected)
+  if (result == QDialog::Rejected) {
     std::exit(EXIT_FAILURE);
+  }
 
   const bool runArmoryLocally = startupDialog.isRunArmoryLocally();
   applicationSettings->set(ApplicationSettings::runArmoryLocally, runArmoryLocally);
