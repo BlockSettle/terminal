@@ -18,8 +18,10 @@ void QMLStatusUpdater::SetListener(const std::shared_ptr<HeadlessContainerListen
 {
    listener_ = listener;
    if (listener_) {
-      connect(listener_.get(), &HeadlessContainerListener::clientAuthenticated, this, &QMLStatusUpdater::connected);
-      connect(listener_.get(), &HeadlessContainerListener::clientDisconnected, this, &QMLStatusUpdater::disconnected);
+      connect(listener_.get(), &HeadlessContainerListener::peerConnected,
+         this, &QMLStatusUpdater::onPeerConnected);
+      connect(listener_.get(), &HeadlessContainerListener::peerDisconnected,
+         this, &QMLStatusUpdater::onPeerDisconnected);
       connect(listener_.get(), &HeadlessContainerListener::txSigned, this, &QMLStatusUpdater::txSigned);
       connect(listener_.get(), &HeadlessContainerListener::xbtSpent, this, &QMLStatusUpdater::xbtSpent);
       connect(listener_.get(), &HeadlessContainerListener::autoSignActivated, this, &QMLStatusUpdater::onAutoSignActivated);
