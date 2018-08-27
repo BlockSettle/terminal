@@ -35,7 +35,7 @@ int bs::network::get_monitor_event(void *monitor)
    return event;
 }
 
-int get_monitor_event(void *monitor, int *value)
+int bs::network::get_monitor_event(void *monitor, int *value)
 {
    // First frame in message contains event number and value
    zmq_msg_t msg;
@@ -59,7 +59,7 @@ int get_monitor_event(void *monitor, int *value)
    return event;
 }
 
-std::string peerIp(int socket)
+std::string bs::network::peerAddressString(int socket)
 {
 #ifdef WIN32
    SOCKET sock = socket;
@@ -70,8 +70,6 @@ std::string peerIp(int socket)
    sockaddr_in peerInfo = { 0 };
    socklen_t peerLen = sizeof(peerInfo);
 #endif
-
-   size_t sockSize = sizeof(sock);
 
    const auto rc = getpeername(sock, (sockaddr*)&peerInfo, &peerLen);
    if (rc == 0) {

@@ -115,7 +115,7 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    }
 
    result = zmq_socket_monitor(tempDataSocket.get(), ("inproc://monitor-" + tempConnectionName).c_str(),
-      ZMQ_EVENT_CONNECTED | ZMQ_EVENT_DISCONNECTED | ZMQ_EVENT_CLOSED);
+      ZMQ_EVENT_ALL);
    if (result != 0) {
       logger_->error("[ZmqServerConnection::openConnection] failed to create monitor {}"
          , tempConnectionName);
@@ -216,7 +216,8 @@ void ZmqServerConnection::listenFunction()
       if (poll_items[ZmqServerConnection::MonitorSocketIndex].revents & ZMQ_POLLIN) {
          int sock = 0;
          switch (bs::network::get_monitor_event(monSocket_.get(), &sock)) {
-            case ZMQ_EVENT_CONNECTED : {
+            case ZMQ_EVENT_ACCEPTED :
+            {
                connectedPeers_[sock] = bs::network::peerAddressString(sock);
                listener_->OnPeerConnected(connectedPeers_[sock]);
             }
