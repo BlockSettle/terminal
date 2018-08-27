@@ -85,15 +85,15 @@ void QMLStatusUpdater::onAutoSignTick()
    }
 }
 
-void QMLStatusUpdater::connected(const std::string &clientId, const std::string &clientInfo)
+void QMLStatusUpdater::onPeerConnected(const QString &ip)
 {
-   connectedClients_[clientId] = QString::fromStdString(clientInfo);
+   connectedClients_.insert(ip);
    emit connectionsChanged();
 }
 
-void QMLStatusUpdater::disconnected(const std::string &clientId)
+void QMLStatusUpdater::onPeerDisconnected(const QString &ip)
 {
-   connectedClients_.erase(clientId);
+   connectedClients_.erase(ip);
    emit connectionsChanged();
 }
 
@@ -107,7 +107,7 @@ QStringList QMLStatusUpdater::connectedClients() const
 {
    QStringList result;
    for (const auto &client : connectedClients_) {
-      result.push_back(client.second);
+      result.push_back(client);
    }
    return result;
 }
