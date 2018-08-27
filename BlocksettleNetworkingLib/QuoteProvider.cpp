@@ -723,6 +723,7 @@ bool QuoteProvider::onQuoteReqNotification(const std::string& data)
    qrn.reason = response.reason();
    qrn.account = response.account();
    qrn.expirationTime = QDateTime::fromMSecsSinceEpoch(response.expiretimeinutcinmillis());
+   qrn.celerTimestamp = response.timestampinutcinmillis();
    qrn.timeSkewMs = QDateTime::fromMSecsSinceEpoch(response.timestampinutcinmillis()).msecsTo(QDateTime::currentDateTime());
 
    qrn.side = bs::network::Side::fromCeler(respgrp.side());

@@ -229,6 +229,7 @@ namespace bs {
 
          QDateTime   expirationTime;
          int         timeSkewMs;
+         uint64_t    celerTimestamp;
 
          bool empty() const { return quoteRequestId.empty(); }
       };
