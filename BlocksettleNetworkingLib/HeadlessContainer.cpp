@@ -923,7 +923,6 @@ void RemoteSigner::onDisconnected()
    }
 
    emit disconnected();
-   emit ready();
 }
 
 void RemoteSigner::onConnError()

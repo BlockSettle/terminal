@@ -74,7 +74,7 @@ private:
 
 private slots:
    void InitTransactionsView();
-   void SetOfflineUIView();
+   void ArmoryIsOffline();
    void SignerReady();
    void onPasswordRequested(std::string walletId, std::string prompt
       , std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys

@@ -135,7 +135,8 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQDealerReply::onCreateHDWalletError);
-      connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated);
+      connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
+      connect(signingContainer_.get(), &SignContainer::disconnected, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::HDWalletInfo, [this](unsigned int, std::vector<bs::wallet::EncryptionType> encTypes
          , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank) {
          walletEncTypes_ = encTypes;
@@ -314,7 +315,7 @@ void RFQDealerReply::reset()
             walletsManager_->estimatedFeePerByte(2, cbFee, this);
          }
          if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
-            transactionData_->SetWallet(curWallet_, armory_->topBlock());
+            transactionData_->SetWallet(curWallet_);
          }
          else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
             std::shared_ptr<bs::Wallet> wallet, xbtWallet = getXbtWallet();
@@ -328,7 +329,7 @@ void RFQDealerReply::reset()
                ccCoinSel_ = std::make_shared<SelectedTransactionInputs>(wallet, true, true);
             }
             transactionData_->SetSigningWallet(wallet);
-            transactionData_->SetWallet(xbtWallet, armory_->topBlock());
+            transactionData_->SetWallet(xbtWallet);
          }
       }
 
@@ -611,7 +612,7 @@ void RFQDealerReply::setCurrentWallet(const std::shared_ptr<bs::Wallet> &newWall
 
    if (newWallet != nullptr) {
       if (transactionData_ != nullptr) {
-         transactionData_->SetWallet(newWallet, armory_->topBlock());
+         transactionData_->SetWallet(newWallet);
       }
    }
 }
@@ -1068,7 +1069,7 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          wallet = walletsManager_->GetDefaultWallet();
       }
       transData = std::make_shared<TransactionData>();
-      transData->SetWallet(wallet, armory_->topBlock());
+      transData->SetWallet(wallet);
       if (qrn.assetType == bs::network::Asset::PrivateMarket) {
          const auto &cc = qrn.product;
          const auto& ccWallet = getCCWallet(cc);
