@@ -24,6 +24,7 @@
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
+Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
 #elif defined (Q_OS_MAC)
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 #elif defined (Q_OS_LINUX)

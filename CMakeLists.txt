@@ -402,7 +402,8 @@ IF(WIN32)
       version
       UxTheme
       Qt5::QWindowsIntegrationPlugin
-      Qt5::QICOPlugin)
+      Qt5::QICOPlugin
+      Qt5::QWindowsPrinterSupportPlugin)
 
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
       SET(QT_LIBS
