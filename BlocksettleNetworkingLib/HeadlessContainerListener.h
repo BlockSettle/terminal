@@ -52,6 +52,8 @@ signals:
    void autoSignActivated(const std::string &walletId);
    void autoSignDeactivated(const std::string &walletId);
    void autoSignRequiresPwd(const std::string &walletId);
+   void peerConnected(const QString &ip);
+   void peerDisconnected(const QString &ip);
 
 public slots:
    void passwordReceived(const std::string &walletId, const SecureBinaryData &password);
@@ -67,6 +69,8 @@ protected:
    void OnClientConnected(const std::string &clientId) override;
    void OnClientDisconnected(const std::string &clientId) override;
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
+   void OnPeerConnected(const std::string &ip) override;
+   void OnPeerDisconnected(const std::string &ip) override;
 
 private:
    using PasswordReceivedCb = std::function<void(const SecureBinaryData &password)>;
