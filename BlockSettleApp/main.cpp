@@ -39,6 +39,7 @@ Q_DECLARE_METATYPE(bs::TXEntry)
 Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
 Q_DECLARE_METATYPE(UTXO)
 Q_DECLARE_METATYPE(std::vector<UTXO>)
+Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
@@ -155,6 +156,7 @@ static int GuiApp(int argc, char** argv)
    qRegisterMetaType<std::vector<bs::TXEntry>>();
    qRegisterMetaType<UTXO>();
    qRegisterMetaType<std::vector<UTXO>>();
+   qRegisterMetaType<AsyncClient::LedgerDelegate>();
 
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
