@@ -88,7 +88,7 @@ class QtSettings(Configurator):
             command.append('-fontconfig')
 
             command.append('-no-glib')
-            command.append('-no-cups')
+            command.append('-cups')
             command.append('-no-icu')
             command.append('-nomake')
             command.append('tools')

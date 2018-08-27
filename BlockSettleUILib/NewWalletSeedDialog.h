@@ -1,6 +1,7 @@
 #ifndef __NEWWALLETSEEDDIALOG_H__
 #define __NEWWALLETSEEDDIALOG_H__
 
+#include <memory>
 #include <QDialog>
 
 namespace Ui {
