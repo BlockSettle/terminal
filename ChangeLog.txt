@@ -3,6 +3,7 @@ Bug Fixes:
    - Various UI fixes for address list and details, TX list, Create TX advanced
 Improvements:
    - UI speed improvements for TX list
+   - Added input amount into transaction sign dialog.
 
 0.10.3
 Bug Fixes:

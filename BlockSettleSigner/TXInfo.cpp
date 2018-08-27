@@ -134,3 +134,12 @@ double TXInfo::amount() const
    }
    return result / BTCNumericTypes::BalanceDivider;
 }
+
+double TXInfo::inputAmount() const
+{
+   uint64_t result = 0;
+   for (const auto &utxo: txReq_.inputs) {
+      result += utxo.getValue();
+   }
+   return result / BTCNumericTypes::BalanceDivider;
+}
