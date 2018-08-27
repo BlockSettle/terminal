@@ -35,7 +35,7 @@ public:
       float progress, unsigned secondsRem,
       unsigned progressNumeric) override;
 
-   void socketStatus(bool status) override;
+   void disconnected() override;
 
 private:
    ArmoryConnection * connection_;
@@ -71,7 +71,7 @@ public:
 
    bool broadcastZC(const BinaryData& rawTx);
 
-   unsigned int topBlock() const;
+   unsigned int topBlock() const { return topBlock_; }
 
    std::string registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &, const std::string &walletId
       , const std::vector<BinaryData> &addrVec, std::function<void()>, bool asNew = false);
@@ -111,6 +111,7 @@ private:
    void registerBDV(NetworkType);
    void setState(State);
    ReqIdType setZC(const std::vector<ClientClasses::LedgerEntry> &);
+   void setTopBlock(unsigned int topBlock) { topBlock_ = topBlock; }
    void onRefresh(std::vector<BinaryData>);
 
    void stopServiceThreads();
@@ -124,6 +125,7 @@ private:
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<State>   state_ = { State::Unknown };
+   std::atomic_uint     topBlock_ = { 0 };
    TxCacheFile    txCache_;
 
    std::atomic_bool  regThreadRunning_;

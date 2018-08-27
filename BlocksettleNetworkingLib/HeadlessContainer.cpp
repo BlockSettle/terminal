@@ -424,7 +424,9 @@ HeadlessContainer::RequestId HeadlessContainer::SignTXRequest(const bs::wallet::
    default:    break;
    }
    packet.set_data(request.SerializeAsString());
-   return Send(packet);
+   RequestId id = Send(packet);
+   signRequests_.insert(id);
+   return id;
 }
 
 unsigned int HeadlessContainer::SignPartialTXRequest(const bs::wallet::TXSignRequest &req
@@ -459,7 +461,9 @@ HeadlessContainer::RequestId HeadlessContainer::SignPayoutTXRequest(const bs::wa
    headless::RequestPacket packet;
    packet.set_type(headless::SignPayoutTXRequestType);
    packet.set_data(request.SerializeAsString());
-   return Send(packet);
+   RequestId id = Send(packet);
+   signRequests_.insert(id);
+   return id;
 }
 
 HeadlessContainer::RequestId HeadlessContainer::SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &txMultiReq)
@@ -485,7 +489,9 @@ HeadlessContainer::RequestId HeadlessContainer::SignMultiTXRequest(const bs::wal
    headless::RequestPacket packet;
    packet.set_type(headless::SignTXMultiRequestType);
    packet.set_data(request.SerializeAsString());
-   return Send(packet);
+   RequestId id = Send(packet);
+   signRequests_.insert(id);
+   return id;
 }
 
 void HeadlessContainer::SendPassword(const std::string &walletId, const PasswordType &password)
@@ -790,13 +796,16 @@ bool RemoteSigner::Start()
       connection_->SetZMQTransport(ZMQTransport::InprocTransport);
    }
 
-   listener_ = std::make_shared<HeadlessListener>(logger_, connection_);
-   connect(listener_.get(), &HeadlessListener::connected, this, &RemoteSigner::onConnected, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::authenticated, this, &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::authFailed, [this] { authPending_ = false; });
-   connect(listener_.get(), &HeadlessListener::disconnected, this, &RemoteSigner::onDisconnected, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::error, this, &RemoteSigner::onConnError, Qt::QueuedConnection);
-   connect(listener_.get(), &HeadlessListener::PacketReceived, this, &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
+   {
+      std::lock_guard<std::mutex> lock(mutex_);
+      listener_ = std::make_shared<HeadlessListener>(logger_, connection_);
+      connect(listener_.get(), &HeadlessListener::connected, this, &RemoteSigner::onConnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authenticated, this, &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authFailed, [this] { authPending_ = false; });
+      connect(listener_.get(), &HeadlessListener::disconnected, this, &RemoteSigner::onDisconnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::error, this, &RemoteSigner::onConnError, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::PacketReceived, this, &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
+   }
 
    return Connect();
 }
@@ -841,13 +850,20 @@ bool RemoteSigner::Disconnect()
 
 void RemoteSigner::Authenticate()
 {
+   mutex_.lock();
+
    if (!listener_) {
+      mutex_.unlock();
       emit connectionError();
       return;
    }
    if (listener_->isAuthenticated() || authPending_) {
+      mutex_.unlock();
       return;
    }
+
+   mutex_.unlock();
+
    authPending_ = true;
    headless::AuthenticationRequest request;
    request.set_password(pwHash_.toStdString());
@@ -860,6 +876,8 @@ void RemoteSigner::Authenticate()
 
 bool RemoteSigner::isOffline() const
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    if (!listener_) {
       return true;
    }
@@ -868,6 +886,8 @@ bool RemoteSigner::isOffline() const
 
 bool RemoteSigner::hasUI() const
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    return listener_ ? listener_->hasUI() : false;
 }
 
@@ -886,11 +906,23 @@ void RemoteSigner::onAuthenticated()
 void RemoteSigner::onDisconnected()
 {
    missingWallets_.clear();
-   if (listener_) {
-      listener_->resetAuthTicket();
+
+   {
+      std::lock_guard<std::mutex> lock(mutex_);
+
+      if (listener_) {
+         listener_->resetAuthTicket();
+      }
    }
+
+   std::set<RequestId> tmpReqs = signRequests_;
+   signRequests_.clear();
+
+   for (const auto &id : tmpReqs) {
+      emit TXSigned(id, {}, "signer disconnected");
+   }
+
    emit disconnected();
-   emit ready();
 }
 
 void RemoteSigner::onConnError()
@@ -900,6 +932,8 @@ void RemoteSigner::onConnError()
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 {
+   signRequests_.erase(packet.id());
+
    switch (packet.type()) {
    case headless::HeartbeatType:
       break;

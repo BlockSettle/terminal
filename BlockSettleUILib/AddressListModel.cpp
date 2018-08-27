@@ -101,7 +101,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
    if (wallet->GetType() == bs::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
-      addressRows_.emplace_back(row);
+      addressRows_.emplace_back(std::move(row));
    } else {
       std::vector<bs::Address> addressList;
       switch (addrType_) {
@@ -127,7 +127,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
          row.addrIndex = i;
          row.comment = QString::fromStdString(wallet->GetAddressComment(addr));
 
-         addressRows_.emplace_back(row);
+         addressRows_.emplace_back(std::move(row));
       }
    }
 }
