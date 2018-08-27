@@ -27,8 +27,10 @@ Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
 #elif defined (Q_OS_MAC)
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
+Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #elif defined (Q_OS_LINUX)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
+Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #endif
 
 Q_IMPORT_PLUGIN(QICOPlugin)
