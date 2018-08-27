@@ -51,7 +51,6 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    aqTimer_->setInterval(500);
    connect(aqTimer_, &QTimer::timeout, this, &UserScriptHandler::aqTick);
    aqTimer_->start();
-
 }
 
 UserScriptHandler::~UserScriptHandler() noexcept

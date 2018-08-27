@@ -646,13 +646,21 @@ void WalletsManager::RegisterSavedWallets()
       armory_->goOnline();
       return;
    }
-   {
-      for (auto &it : wallets_) {
-         it.second->RegisterWallet(armory_);
-      }
+   for (auto &it : wallets_) {
+      it.second->RegisterWallet(armory_);
    }
    if (settlementWallet_) {
        settlementWallet_->RegisterWallet(armory_);
+   }
+}
+
+void WalletsManager::UnregisterSavedWallets()
+{
+   for (auto &it : wallets_) {
+      it.second->UnregisterWallet();
+   }
+   if (settlementWallet_) {
+      settlementWallet_->UnregisterWallet();
    }
 }
 

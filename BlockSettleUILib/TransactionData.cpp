@@ -31,7 +31,7 @@ TransactionData::~TransactionData()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, unsigned int topHeight)
+bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet)
 {
    if (wallet == nullptr) {
       return false;
@@ -42,11 +42,11 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, unsig
          , swTransactionsOnly_, confirmedInputs_
          , [this]{InvalidateTransactionData();});
 
-      coinSelection_ = std::make_shared<CoinSelection>([this, topHeight](uint64_t) {
+      coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
             return this->selectedInputs_->GetSelectedTransactions();
          }
-         , std::vector<AddressBookEntry>{}, topHeight
-         , static_cast<uint64_t>(wallet_->GetTotalBalance() * BTCNumericTypes::BalanceDivider));
+         , std::vector<AddressBookEntry>{}
+         , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider));
       InvalidateTransactionData();
    }
 
