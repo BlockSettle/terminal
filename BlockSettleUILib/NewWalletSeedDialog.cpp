@@ -115,14 +115,27 @@ void NewWalletSeedDialog::onPrintClicked()
 {
    QPrinter printer(QPrinter::PrinterResolution);
 
+   printer.setOutputFormat(QPrinter::NativeFormat);
+
+   // Check if printers installed because QPrintDialog won't work otherwise.
+   // See https://bugreports.qt.io/browse/QTBUG-36112
+   // Happens on macOS with Qt 5.11.11
+   if (printer.outputFormat() != QPrinter::NativeFormat) {
+      MessageBoxCritical messageBox(tr("Printing Error")
+         , tr("Please make sure that you have printer connected."), this);
+      messageBox.exec();
+      return;
+   }
+
    QPrintDialog dialog(&printer, this);
    dialog.setWindowTitle(tr("Print Wallet Seed"));
    dialog.setPrintRange(QAbstractPrintDialog::CurrentPage);
    dialog.setMinMax(1, 1);
 
    int result = dialog.exec();
-   if (result != QDialog::Accepted)
+   if (result != QDialog::Accepted) {
       return;
+   }
 
    pdfWriter_->print(&printer);
 

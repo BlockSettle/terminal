@@ -2,11 +2,11 @@
 #include "PaperBackupWriter.h"
 
 #include <QFile>
+#include <QPagedPaintDevice>
 #include <QPainter>
 #include <QPdfWriter>
 #include <QPrinter>
 #include <QStaticText>
-
 
 //
 // WalletBackupPdfWriter
@@ -98,17 +98,25 @@ QPixmap WalletBackupPdfWriter::getPreview(int width, double marginScale)
 
 void WalletBackupPdfWriter::print(QPrinter *printer)
 {
-   qreal width = (kTotalWidthInches - kMarginInches * 2.0) * kResolution;
-   qreal height = (kTotalHeightInches - kMarginInches * 2.0) * kResolution;
+   int printerResolution = printer->resolution();
 
-   QPageLayout layout = printer->pageLayout();
-   layout.setUnits(QPageLayout::Inch);
-   layout.setMargins(QMarginsF(kMarginInches, kMarginInches, kMarginInches, kMarginInches));
-   printer->setResolution(kResolution);
-   printer->setPageLayout(layout);
+   int viewportWidth = qRound((kTotalWidthInches - kMarginInches * 2.0) * printerResolution);
+   int viewportHeight = qRound((kTotalHeightInches - kMarginInches * 2.0) * printerResolution);
+
+   printer->setPageMargins(QMarginsF(kMarginInches, kMarginInches, kMarginInches, kMarginInches), QPageLayout::Inch);
+
+   int windowWidth = qRound((kTotalWidthInches - kMarginInches * 2.0) * kResolution);
+   int windowHeight = qRound((kTotalHeightInches - kMarginInches * 2.0) * kResolution);
 
    QPainter painter(printer);
-   draw(painter, width, height);
+
+   painter.setRenderHint(QPainter::SmoothPixmapTransform);
+   painter.setViewport(0, 0, viewportWidth, viewportHeight);
+   painter.setWindow(0, 0, windowWidth, windowHeight);
+
+   // The code in draw does not work correctly with sizes other than A4/Letter and 1200 DPI.
+   // So we keep logical sizes and use viewport an window instead.
+   draw(painter, windowWidth, windowHeight);
 }
 
 void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
