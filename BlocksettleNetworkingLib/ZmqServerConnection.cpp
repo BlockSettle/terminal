@@ -149,7 +149,7 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
 
 void ZmqServerConnection::listenFunction()
 {
-   zmq_pollitem_t  poll_items[2];
+   zmq_pollitem_t  poll_items[3];
 
    poll_items[ZmqServerConnection::ControlSocketIndex].socket = threadSlaveSocket_.get();
    poll_items[ZmqServerConnection::ControlSocketIndex].events = ZMQ_POLLIN;
