@@ -1,15 +1,15 @@
-#ifndef __NEWWALLETPASSWORDVERIFYDIALOG_H__
-#define __NEWWALLETPASSWORDVERIFYDIALOG_H__
+#ifndef __WALLETPASSWORDVERIFYDIALOG_H__
+#define __WALLETPASSWORDVERIFYDIALOG_H__
 
 #include <memory>
 #include <QDialog>
 #include "WalletEncryption.h"
 
 namespace Ui {
-   class NewWalletPasswordVerifyDialog;
+   class WalletPasswordVerifyDialog;
 }
 
-class NewWalletPasswordVerifyDialog : public QDialog
+class WalletPasswordVerifyDialog : public QDialog
 {
    Q_OBJECT
 
@@ -19,10 +19,10 @@ public:
       Check,
    };
 
-   NewWalletPasswordVerifyDialog(const std::string& walletId
+   WalletPasswordVerifyDialog(const std::string& walletId
       , const std::vector<bs::wallet::PasswordData>& keys, bs::wallet::KeyRank keyRank
       , QWidget *parent = nullptr);
-   ~NewWalletPasswordVerifyDialog();
+   ~WalletPasswordVerifyDialog();
 
 private slots:
    void onContinueClicked();
@@ -31,10 +31,10 @@ private:
    void initPassword();
    void initFreja(const QString& frejaId);
 
-   std::unique_ptr<Ui::NewWalletPasswordVerifyDialog> ui_;
+   std::unique_ptr<Ui::WalletPasswordVerifyDialog> ui_;
    const std::string& walletId_;
    const std::vector<bs::wallet::PasswordData> keys_;
    const bs::wallet::KeyRank keyRank_;
 };
 
-#endif // __NEWWALLETPASSWORDVERIFYDIALOG_H__
+#endif // __WALLETPASSWORDVERIFYDIALOG_H__

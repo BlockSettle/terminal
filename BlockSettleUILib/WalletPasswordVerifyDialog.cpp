@@ -1,21 +1,21 @@
-#include "NewWalletPasswordVerifyDialog.h"
+#include "WalletPasswordVerifyDialog.h"
 
+#include "EnterWalletPassword.h"
 #include "MessageBoxCritical.h"
-#include "WalletKeysSubmitFrejaDialog.h"
-#include "ui_NewWalletPasswordVerifyDialog.h"
+#include "ui_WalletPasswordVerifyDialog.h"
 
-NewWalletPasswordVerifyDialog::NewWalletPasswordVerifyDialog(const std::string& walletId
+WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::string& walletId
    , const std::vector<bs::wallet::PasswordData>& keys, bs::wallet::KeyRank keyRank
    , QWidget *parent)
    : QDialog(parent)
-   , ui_(new Ui::NewWalletPasswordVerifyDialog)
+   , ui_(new Ui::WalletPasswordVerifyDialog)
    , walletId_(walletId)
    , keys_(keys)
    , keyRank_(keyRank)
 {
    ui_->setupUi(this);
 
-   connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &NewWalletPasswordVerifyDialog::onContinueClicked);
+   connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &WalletPasswordVerifyDialog::onContinueClicked);
 
    const bs::wallet::PasswordData &key = keys.at(0);
 
@@ -26,9 +26,9 @@ NewWalletPasswordVerifyDialog::NewWalletPasswordVerifyDialog(const std::string& 
    }
 }
 
-NewWalletPasswordVerifyDialog::~NewWalletPasswordVerifyDialog() = default;
+WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
 
-void NewWalletPasswordVerifyDialog::initPassword()
+void WalletPasswordVerifyDialog::initPassword()
 {
    ui_->stackedWidget->setCurrentIndex(Pages::Check);
    ui_->lineEditFrejaId->hide();
@@ -36,7 +36,7 @@ void NewWalletPasswordVerifyDialog::initPassword()
    adjustSize();
 }
 
-void NewWalletPasswordVerifyDialog::initFreja(const QString& frejaId)
+void WalletPasswordVerifyDialog::initFreja(const QString& frejaId)
 {
    ui_->stackedWidget->setCurrentIndex(Pages::FrejaInfo);
    ui_->lineEditFrejaId->setText(frejaId);
@@ -45,7 +45,7 @@ void NewWalletPasswordVerifyDialog::initFreja(const QString& frejaId)
    adjustSize();
 }
 
-void NewWalletPasswordVerifyDialog::onContinueClicked()
+void WalletPasswordVerifyDialog::onContinueClicked()
 {
    Pages currentPage = Pages(ui_->stackedWidget->currentIndex());
    
@@ -72,7 +72,7 @@ void NewWalletPasswordVerifyDialog::onContinueClicked()
          encKeys.push_back(key.encKey);
       }
 
-      WalletKeysSubmitFrejaDialog dialog(walletId_, keyRank_, encTypes, encKeys
+      EnterWalletPassword dialog(walletId_, keyRank_, encTypes, encKeys
          , tr("Activate Freja eID signing"), this);
       int result = dialog.exec();
       if (!result) {

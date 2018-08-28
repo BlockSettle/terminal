@@ -62,7 +62,8 @@ private:
    int         index_;
    bool        password_;
    bool        frejaRunning_ = false;
-  
+   bool        encryptionKeysSet_ = false;
+
    FrejaSignWallet frejaSign_;
    QTimer      timer_;
    float       timeLeft_;

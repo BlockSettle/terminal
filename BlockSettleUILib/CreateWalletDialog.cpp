@@ -3,10 +3,10 @@
 
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
-#include "NewWalletPasswordVerifyDialog.h"
+#include "WalletPasswordVerifyDialog.h"
 #include "NewWalletSeedDialog.h"
 #include "SignContainer.h"
-#include "WalletKeysSubmitFrejaDialog.h"
+#include "EnterWalletPassword.h"
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
 
@@ -135,7 +135,7 @@ void CreateWalletDialog::CreateWallet()
          encKeys.push_back(key.encKey);
       }
 
-      WalletKeysSubmitFrejaDialog dialog(walletId_, ui_->widgetCreateKeys->keyRank(), encTypes, encKeys
+      EnterWalletPassword dialog(walletId_, ui_->widgetCreateKeys->keyRank(), encTypes, encKeys
          , tr("Activate Freja eID signing"), this);
       int result = dialog.exec();
       if (!result) {
@@ -150,7 +150,7 @@ void CreateWalletDialog::CreateWallet()
       return;
    }
 
-   NewWalletPasswordVerifyDialog verifyDialog(walletId_, keys, ui_->widgetCreateKeys->keyRank(), this);
+   WalletPasswordVerifyDialog verifyDialog(walletId_, keys, ui_->widgetCreateKeys->keyRank(), this);
    int result = verifyDialog.exec();
    if (!result) {
       return;

@@ -63,8 +63,8 @@ void WalletKeyWidget::onTypeChanged()
 
    ui_->labelPassword->setVisible(password_);
    ui_->lineEditPassword->setVisible(password_);
-   ui_->labelPasswordConfirm->setVisible(password_);
-   ui_->lineEditPasswordConfirm->setVisible(password_);
+   ui_->labelPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
+   ui_->lineEditPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
 
    ui_->labelFrejeId->setVisible(!password_ && showFrejaId_);
    ui_->widgetFrejaLayout->setVisible(!password_);
@@ -183,6 +183,7 @@ void WalletKeyWidget::start()
 
 void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &encKeys, int index)
 {
+   encryptionKeysSet_ = true;
    if (password_) {
       ui_->labelPasswordConfirm->hide();
       ui_->lineEditPasswordConfirm->hide();
