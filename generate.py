@@ -3,7 +3,9 @@ import os
 import shutil
 import subprocess
 import sys
+
 sys.path.insert(0, 'common')
+sys.path.insert(0, os.path.join('common', 'build_scripts'))
 
 from build_scripts.settings               import Settings
 from build_scripts.protobuf_settings      import ProtobufSettings
