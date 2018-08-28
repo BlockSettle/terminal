@@ -6,7 +6,6 @@
 
 #include "BtcDefinitions.h"
 #include "EasyCoDec.h"
-#include "FrejaREST.h"
 #include "MetaData.h"
 
 namespace Ui {
@@ -30,6 +29,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const EasyCoDec::Data& walletData, const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &
+      , const QString& username
       , const std::string &walletName = {}, const std::string &walletDesc = {}
       , bool createPrimary = false, QWidget *parent = nullptr);
    ~ImportWalletDialog() override;

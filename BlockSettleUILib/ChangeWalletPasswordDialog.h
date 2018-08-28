@@ -21,7 +21,8 @@ Q_OBJECT
 
 public:
    ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys, bs::wallet::KeyRank, QWidget* parent = nullptr);
+      , const std::vector<SecureBinaryData> &encKeys, bs::wallet::KeyRank
+      , const QString& username, QWidget* parent = nullptr);
    ~ChangeWalletPasswordDialog() override;
 
    SecureBinaryData oldPassword() const;

@@ -495,6 +495,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       }
       return false;
    }
+
    NewWalletDialog newWalletDialog(true, this);
    if (!newWalletDialog.exec()) {
       return false;
@@ -684,6 +685,7 @@ void BSTerminalMainWindow::onLogin()
       if (!celerConnection_->LoginToServer(host, port, username, password)) {
          logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
       } else {
+         ui->widgetWallets->setUsername(QString::fromStdString(username));
          action_logout_->setVisible(false);
          action_login_->setEnabled(false);
       }
@@ -692,6 +694,7 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onLogout()
 {
+   ui->widgetWallets->setUsername(QString());
    celerConnection_->CloseConnection();
 }
 
@@ -926,11 +929,13 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
 
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
-         EnterWalletPassword passwordDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
+
+         EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
             , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
-         } else {
+         }
+         else {
             logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
                , walletId, walletName.toStdString());
          }

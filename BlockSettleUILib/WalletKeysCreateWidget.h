@@ -14,10 +14,18 @@ class WalletKeysCreateWidget : public QWidget
 {
    Q_OBJECT
 public:
+   enum Flag {
+      NoFlag = 0x00,
+      HideFrejaConnectButton = 0x01,
+      HideWidgetContol = 0x02,
+   };
+   Q_DECLARE_FLAGS(Flags, Flag)
+
    WalletKeysCreateWidget(QWidget* parent = nullptr);
    ~WalletKeysCreateWidget() override;
 
-   void init(const std::string &walletId);
+   void setFlags(Flags flags);
+   void init(const std::string &walletId, const QString& username);
    void addPasswordKey() { addKey(true); }
    void addFrejaKey() { addKey(false); }
    void cancel();
@@ -47,6 +55,9 @@ private:
    std::vector<WalletKeyWidget *>      widgets_;
    std::vector<bs::wallet::PasswordData>  pwdData_;
    bs::wallet::KeyRank                 keyRank_ = { 0, 0 };
+   Flags flags_{NoFlag};
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysCreateWidget::Flags)
 
 #endif // __WALLET_KEYS_CREATE_WIDGET_H__

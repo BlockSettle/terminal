@@ -3,7 +3,10 @@
 
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
+#include "WalletPasswordVerifyDialog.h"
+#include "NewWalletSeedDialog.h"
 #include "SignContainer.h"
+#include "EnterWalletPassword.h"
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
 
@@ -30,6 +33,10 @@ public:
    {
       static const QString invalidCharacters = QLatin1String("\\/?:*<>|");
 
+      if (input.isEmpty()) {
+         return QValidator::Acceptable;
+      }
+
       if (invalidCharacters.contains(input.at(pos - 1))) {
          input.remove(pos - 1, 1);
 
@@ -46,18 +53,18 @@ public:
 
 
 CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
-      , const std::shared_ptr<SignContainer> &container, NetworkType netType, const QString &walletsPath
-      , bool createPrimary, QWidget *parent)
+   , const std::shared_ptr<SignContainer> &container, const QString &walletsPath
+   , const bs::wallet::Seed& walletSeed, const std::string& walletId, bool createPrimary, const QString& username
+   , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::CreateWalletDialog)
    , walletsManager_(walletsManager)
    , signingContainer_(container)
-   , walletSeed_(netType, SecureBinaryData().GenerateRandom(32))
+   , walletSeed_(walletSeed)
+   , walletId_(walletId)
    , walletsPath_(walletsPath)
 {
    ui_->setupUi(this);
-
-   walletId_ = bs::hd::Node(walletSeed_).getId();
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
 
@@ -75,54 +82,86 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
 
    ui_->lineEditDescription->setValidator(new DescriptionValidator(this));
 
-   connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::UpdateAcceptButtonState);
+   ui_->labelWalletId->setText(QString::fromStdString(walletId_));
+
+   //connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::UpdateAcceptButtonState);
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { UpdateAcceptButtonState(); });
-   ui_->widgetCreateKeys->init(walletId_);
+   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { UpdateAcceptButtonState(); });
+
+   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideFrejaConnectButton);
+   ui_->widgetCreateKeys->init(walletId_, username);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
 
-   connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &CreateWalletDialog::CreateWallet);
-   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateWalletDialog::reject);
+   connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &CreateWalletDialog::CreateWallet);
+   //connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateWalletDialog::reject);
 
    connect(signingContainer_.get(), &SignContainer::HDWalletCreated, this, &CreateWalletDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CreateWalletDialog::onWalletCreateError);
 
-   UpdateAcceptButtonState();
+   //UpdateAcceptButtonState();
 }
 
 CreateWalletDialog::~CreateWalletDialog() = default;
 
-void CreateWalletDialog::showEvent(QShowEvent *event)
-{
-   ui_->labelHintPrimary->setVisible(ui_->checkBoxPrimaryWallet->isVisible());
-   QDialog::showEvent(event);
-}
-
-bool CreateWalletDialog::couldCreateWallet() const
-{
-   return (ui_->widgetCreateKeys->isValid()
-         && !walletsManager_->WalletNameExists(ui_->lineEditWalletName->text().toStdString()));
-}
-
-void CreateWalletDialog::UpdateAcceptButtonState()
-{
-   ui_->pushButtonCreate->setEnabled(couldCreateWallet());
-}
+//void CreateWalletDialog::showEvent(QShowEvent *event)
+//{
+//   ui_->labelHintPrimary->setVisible(ui_->checkBoxPrimaryWallet->isVisible());
+//   QDialog::showEvent(event);
+//}
 
 void CreateWalletDialog::CreateWallet()
 {
-   if (!couldCreateWallet()) {
+   if (walletsManager_->WalletNameExists(ui_->lineEditWalletName->text().toStdString())) {
+      MessageBoxCritical messageBox(tr("Invalid wallet name"), tr("Wallet with this name already exists"), this);
+      messageBox.exec();
       return;
    }
 
-   ui_->pushButtonCreate->setEnabled(false);
+   std::vector<bs::wallet::PasswordData> keys = ui_->widgetCreateKeys->keys();
+
+   if (!keys.empty() && keys.at(0).encType == bs::wallet::EncryptionType::Freja) {
+      if (keys.at(0).encKey.isNull()) {
+         MessageBoxCritical messageBox(tr("Invalid Freja eID"), tr("Please check Freja eID Email"), this);
+         messageBox.exec();
+         return;
+      }
+
+      std::vector<bs::wallet::EncryptionType> encTypes;
+      std::vector<SecureBinaryData> encKeys;
+      for (const bs::wallet::PasswordData& key : keys) {
+         encTypes.push_back(key.encType);
+         encKeys.push_back(key.encKey);
+      }
+
+      EnterWalletPassword dialog(walletId_, ui_->widgetCreateKeys->keyRank(), encTypes, encKeys
+         , tr("Activate Freja eID signing"), this);
+      int result = dialog.exec();
+      if (!result) {
+         return;
+      }
+
+      keys.at(0).password = dialog.GetPassword();
+
+   } else if (!ui_->widgetCreateKeys->isValid()) {
+      MessageBoxCritical messageBox(tr("Invalid password"), tr("Please check passwords"), this);
+      messageBox.exec();
+      return;
+   }
+
+   WalletPasswordVerifyDialog verifyDialog(walletId_, keys, ui_->widgetCreateKeys->keyRank(), this);
+   int result = verifyDialog.exec();
+   if (!result) {
+      return;
+   }
+
+   ui_->pushButtonContinue->setEnabled(false);
 
    const auto &name = ui_->lineEditWalletName->text().toStdString();
    const auto &description = ui_->lineEditDescription->text().toStdString();
    createReqId_ = signingContainer_->CreateHDWallet(name, description
-      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, ui_->widgetCreateKeys->keys()
+      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, keys
       , ui_->widgetCreateKeys->keyRank());
    walletPassword_.clear();
 }
@@ -162,6 +201,11 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
 
 void CreateWalletDialog::reject()
 {
+   bool result = abortWalletCreationQuestionDialog(this);
+   if (!result) {
+      return;
+   }
+
    ui_->widgetCreateKeys->cancel();
    QDialog::reject();
 }
