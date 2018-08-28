@@ -489,6 +489,7 @@ ELSE(WIN32)
          Qt5::QCocoaIntegrationPlugin
          Qt5::PrintSupport
          Qt5::QICOPlugin
+         Qt5::QCocoaPrinterSupportPlugin
          ${ZLIB_LIBRARIES}
          ${CUPS_LIBRARIES})
 
@@ -590,6 +591,7 @@ ELSE(WIN32)
       SET( OS_SPECIFIC_LIBS
          Qt5::QXcbIntegrationPlugin
          Qt5::QICOPlugin
+         Qt5::QCupsPrinterSupportPlugin
          fontconfig
          freetype
          X11-xcb
@@ -619,6 +621,7 @@ ELSE(WIN32)
          m
          double-conversion
          dl
+         cups
          ${CMAKE_THREAD_LIBS_INIT} )
 
       SET(QT_QUICK_LIBS
