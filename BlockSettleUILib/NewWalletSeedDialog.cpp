@@ -64,8 +64,9 @@ void NewWalletSeedDialog::setCurrentPage(Pages page)
    ui_->labelPreview->setVisible(page == Pages::PrintPreview);
 
    if (page == Pages::PrintPreview) {
-      if (sizePreview_.isValid())
+      if (sizePreview_.isValid()) {
          resize(sizePreview_);
+      }
    }
    else {
       sizePreview_ = size();
@@ -87,8 +88,9 @@ void NewWalletSeedDialog::onSaveClicked()
    dlg.setFileMode(QFileDialog::AnyFile);
    filePath = dlg.getSaveFileName(this, tr("Select file for backup"), filePath, QLatin1String("*.pdf"));
 
-   if (filePath.isEmpty())
+   if (filePath.isEmpty()) {
       return;
+   }
 
    bool result = pdfWriter_->write(filePath);
 

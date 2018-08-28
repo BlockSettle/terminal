@@ -2,9 +2,11 @@
 #include "ui_ImportWalletDialog.h"
 
 #include "ApplicationSettings.h"
+#include "EnterWalletPassword.h"
 #include "MessageBoxCritical.h"
 #include "SignContainer.h"
 #include "WalletImporter.h"
+#include "WalletPasswordVerifyDialog.h"
 #include "WalletsManager.h"
 
 #include <spdlog/spdlog.h>
@@ -30,6 +32,8 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    walletId_ = bs::hd::Node(walletSeed_).getId();
 
    ui_->setupUi(this);
+   
+   ui_->labelWalletId->setText(QString::fromStdString(walletId_));
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
 
@@ -60,31 +64,20 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);
    connect(walletImporter_.get(), &WalletImporter::error, this, &ImportWalletDialog::onError);
 
-   connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &ImportWalletDialog::updateAcceptButton);
-
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &ImportWalletDialog::onImportAccepted);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::onImportAccepted);
-   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ImportWalletDialog::reject);
 
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateAcceptButton(); });
+   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
+
+   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
+      | WalletKeysCreateWidget::HideFrejaConnectButton);
    ui_->widgetCreateKeys->init(walletId_, username);
 
-   updateAcceptButton();
+   adjustSize();
+   setMinimumSize(size());
 }
 
 ImportWalletDialog::~ImportWalletDialog() = default;
-
-bool ImportWalletDialog::couldImport() const
-{
-   return (!ui_->lineEditWalletName->text().isEmpty()
-         && ui_->widgetCreateKeys->isValid());
-}
-
-void ImportWalletDialog::updateAcceptButton()
-{
-   ui_->pushButtonImport->setEnabled(couldImport());
-}
 
 void ImportWalletDialog::onError(const QString &errMsg)
 {
@@ -110,7 +103,47 @@ void ImportWalletDialog::onWalletCreated(const std::string &walletId)
 
 void ImportWalletDialog::onImportAccepted()
 {
-   if (!couldImport()) {
+   if (walletsMgr_->WalletNameExists(ui_->lineEditWalletName->text().toStdString())) {
+      MessageBoxCritical messageBox(tr("Invalid wallet name"), tr("Wallet with this name already exists"), this);
+      messageBox.exec();
+      return;
+   }
+
+   std::vector<bs::wallet::PasswordData> keys = ui_->widgetCreateKeys->keys();
+
+   if (!keys.empty() && keys.at(0).encType == bs::wallet::EncryptionType::Freja) {
+      if (keys.at(0).encKey.isNull()) {
+         MessageBoxCritical messageBox(tr("Invalid Freja eID"), tr("Please check Freja eID Email"), this);
+         messageBox.exec();
+         return;
+      }
+
+      std::vector<bs::wallet::EncryptionType> encTypes;
+      std::vector<SecureBinaryData> encKeys;
+      for (const bs::wallet::PasswordData& key : keys) {
+         encTypes.push_back(key.encType);
+         encKeys.push_back(key.encKey);
+      }
+
+      EnterWalletPassword dialog(walletId_, ui_->widgetCreateKeys->keyRank(), encTypes, encKeys
+         , tr("Activate Freja eID signing"), this);
+      int result = dialog.exec();
+      if (!result) {
+         return;
+      }
+
+      keys.at(0).password = dialog.GetPassword();
+
+   }
+   else if (!ui_->widgetCreateKeys->isValid()) {
+      MessageBoxCritical messageBox(tr("Invalid password"), tr("Please check passwords"), this);
+      messageBox.exec();
+      return;
+   }
+
+   WalletPasswordVerifyDialog verifyDialog(walletId_, keys, ui_->widgetCreateKeys->keyRank(), this);
+   int result = verifyDialog.exec();
+   if (!result) {
       return;
    }
 
@@ -122,7 +155,7 @@ void ImportWalletDialog::onImportAccepted()
       ui_->pushButtonImport->setEnabled(false);
 
       walletImporter_->Import(walletName_.toStdString(), description, walletSeed_
-         , importedAsPrimary_, ui_->widgetCreateKeys->keys(), ui_->widgetCreateKeys->keyRank());
+         , importedAsPrimary_, keys, ui_->widgetCreateKeys->keyRank());
    }
    catch (...) {
       onError(tr("Invalid backup data"));

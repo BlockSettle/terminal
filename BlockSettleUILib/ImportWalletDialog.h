@@ -41,16 +41,12 @@ public:
    bool ImportedAsPrimary() const { return importedAsPrimary_; }
 
 private slots:
-   void updateAcceptButton();
    void onImportAccepted();
    void onWalletCreated(const std::string &walletId);
    void onError(const QString &errMsg);
 
 protected:
    void reject() override;
-
-private:
-   bool couldImport() const;
 
 private:
    std::unique_ptr<Ui::ImportWalletDialog> ui_;

@@ -85,7 +85,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    ui_->labelWalletId->setText(QString::fromStdString(walletId_));
 
    //connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::UpdateAcceptButtonState);
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
+   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { UpdateAcceptButtonState(); });
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideFrejaConnectButton);
@@ -101,6 +101,8 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    connect(signingContainer_.get(), &SignContainer::Error, this, &CreateWalletDialog::onWalletCreateError);
 
    //UpdateAcceptButtonState();
+   adjustSize();
+   setMinimumSize(size());
 }
 
 CreateWalletDialog::~CreateWalletDialog() = default;
