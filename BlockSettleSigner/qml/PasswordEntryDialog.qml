@@ -281,6 +281,10 @@ CustomDialog {
                         enabled: tfPassword.text.length || acceptable
 
                         onClicked: {
+                            if (txInfo.wallet.encType === WalletInfo.Password) {
+                                password = toHex(tfPassword.text)
+                            }
+
                             passwordDialog.accept()
                         }
                     }
@@ -310,11 +314,5 @@ CustomDialog {
             hex += ''+str.charCodeAt(i).toString(16);
         }
         return hex;
-    }
-
-    onAccepted: {
-        if (txInfo.wallet.encType === WalletInfo.Password) {
-            password = toHex(tfPassword.text)
-        }
     }
 }
