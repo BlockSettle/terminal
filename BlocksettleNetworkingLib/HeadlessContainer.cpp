@@ -424,7 +424,9 @@ HeadlessContainer::RequestId HeadlessContainer::SignTXRequest(const bs::wallet::
    default:    break;
    }
    packet.set_data(request.SerializeAsString());
-   return Send(packet);
+   RequestId id = Send(packet);
+   signRequests_.insert(id);
+   return id;
 }
 
 unsigned int HeadlessContainer::SignPartialTXRequest(const bs::wallet::TXSignRequest &req
@@ -459,7 +461,9 @@ HeadlessContainer::RequestId HeadlessContainer::SignPayoutTXRequest(const bs::wa
    headless::RequestPacket packet;
    packet.set_type(headless::SignPayoutTXRequestType);
    packet.set_data(request.SerializeAsString());
-   return Send(packet);
+   RequestId id = Send(packet);
+   signRequests_.insert(id);
+   return id;
 }
 
 HeadlessContainer::RequestId HeadlessContainer::SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &txMultiReq)
@@ -485,7 +489,9 @@ HeadlessContainer::RequestId HeadlessContainer::SignMultiTXRequest(const bs::wal
    headless::RequestPacket packet;
    packet.set_type(headless::SignTXMultiRequestType);
    packet.set_data(request.SerializeAsString());
-   return Send(packet);
+   RequestId id = Send(packet);
+   signRequests_.insert(id);
+   return id;
 }
 
 void HeadlessContainer::SendPassword(const std::string &walletId, const PasswordType &password)
@@ -909,6 +915,13 @@ void RemoteSigner::onDisconnected()
       }
    }
 
+   std::set<RequestId> tmpReqs = signRequests_;
+   signRequests_.clear();
+
+   for (const auto &id : tmpReqs) {
+      emit TXSigned(id, {}, "signer disconnected");
+   }
+
    emit disconnected();
 }
 
@@ -919,6 +932,8 @@ void RemoteSigner::onConnError()
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 {
+   signRequests_.erase(packet.id());
+
    switch (packet.type()) {
    case headless::HeartbeatType:
       break;
