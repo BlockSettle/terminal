@@ -627,6 +627,8 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
       authAddrDlg_->show();
       QApplication::processEvents();
       authAddrDlg_->setAddressToVerify(addrToVerify);
+   } else {
+      createAuthWallet();
    }
 }
 
@@ -760,6 +762,19 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    }
 }
 
+void BSTerminalMainWindow::createAuthWallet()
+{
+   if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
+      MessageBoxQuestion createAuthReq(tr("Authentication Wallet")
+         , tr("Create Authentication Wallet")
+         , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
+         , this);
+      if (createAuthReq.exec() == QDialog::Accepted) {
+         authManager_->CreateAuthWallet();
+      }
+   }
+}
+
 void BSTerminalMainWindow::onAuthMgrConnComplete()
 {
    if (celerConnection_->tradingAllowed()) {
@@ -786,15 +801,7 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
          }
       }
 
-      if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
-         MessageBoxQuestion createAuthReq(tr("Authentication Wallet")
-            , tr("Create Authentication Wallet")
-            , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
-            , this);
-         if (createAuthReq.exec() == QDialog::Accepted) {
-            authManager_->CreateAuthWallet();
-         }
-      }
+      createAuthWallet();
    }
    else {
       logMgr_->logger("ui")->debug("Trading not allowed");
