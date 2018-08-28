@@ -136,15 +136,6 @@ CustomDialog {
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text:   qsTr("Transaction Amount")
-                }
-                CustomLabelValue {
-                    text:   txInfo.amount.toFixed(8)
-                    Layout.alignment: Qt.AlignRight
-                }
-
-                CustomLabel {
-                    Layout.fillWidth: true
                     text:   qsTr("Input Amount")
                 }
                 CustomLabelValue {
@@ -165,7 +156,7 @@ CustomDialog {
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text:   qsTr("Network Fee")
+                    text:   qsTr("Transaction Fee")
                 }
                 CustomLabelValue {
                     text:   txInfo.fee.toFixed(8)
@@ -174,7 +165,7 @@ CustomDialog {
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text:   qsTr("Total")
+                    text:   qsTr("Transaction Amount")
                 }
                 CustomLabelValue {
                     text:   txInfo.total.toFixed(8)
