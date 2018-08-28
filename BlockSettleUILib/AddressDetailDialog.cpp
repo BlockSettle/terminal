@@ -66,6 +66,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    , ui_(new Ui::AddressDetailDialog())
    , address_(address)
    , walletsManager_(walletsManager)
+   , armory_(armory)
    , wallet_(wallet)
 {
    setAttribute(Qt::WA_DeleteOnClose);
@@ -95,38 +96,50 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    const auto comment = wallet_->GetAddressComment(address);
    ui_->labelComment->setText(QString::fromStdString(comment));
 
-   const auto &cbLedgerDelegate = [this, armory](AsyncClient::LedgerDelegate delegate) {
-      // XXX - if armory is offline we need to reflect this in current dialog
-      TransactionsViewModel* model = new TransactionsViewModel(armory, walletsManager_, delegate, this, wallet_);
+   ui_->inputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->outputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-      IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
-      incomingFilter->address = address_.display();
-      incomingFilter->setSourceModel(model);
-      AddressTransactionFilter* inFilter = new AddressTransactionFilter(this);
-      inFilter->setSourceModel(incomingFilter);
-      ui_->inputAddressesWidget->setModel(inFilter);
-      ui_->inputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
-
-      OutgoingTransactionFilter* outgoingFilter = new OutgoingTransactionFilter(this);
-      outgoingFilter->address = address_.display();
-      outgoingFilter->setSourceModel(model);
-      AddressTransactionFilter* outFilter = new AddressTransactionFilter(this);
-      outFilter->setSourceModel(outgoingFilter);
-      ui_->outputAddressesWidget->setModel(outFilter);
-      ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
-
-      ui_->inputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-      ui_->outputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   };
-   if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate)) {
-      ui_->labelError->setText(tr("Error loading address info"));
+   if (armory_->state() != ArmoryConnection::State::Ready) {
+      ui_->labelError->setText(tr("Armory is not connected"));
       onError();
+   }
+   else {
+      const auto &cbLedgerDelegate = [this, armory](AsyncClient::LedgerDelegate delegate) {
+         QMetaObject::invokeMethod(this, "initModels", Qt::QueuedConnection
+            , Q_ARG(AsyncClient::LedgerDelegate, delegate));
+      };
+      if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate)) {
+         ui_->labelError->setText(tr("Error loading address info"));
+         onError();
+      }
    }
 
    ui_->labelQR->setPixmap(UiUtils::getQRCode(addressString, 128));
 }
 
 AddressDetailDialog::~AddressDetailDialog() = default;
+
+void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
+{
+   TransactionsViewModel* model = new TransactionsViewModel(armory_, walletsManager_, delegate, this, wallet_);
+   model->init();
+
+   IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
+   incomingFilter->address = address_.display();
+   incomingFilter->setSourceModel(model);
+   AddressTransactionFilter* inFilter = new AddressTransactionFilter(this);
+   inFilter->setSourceModel(incomingFilter);
+   ui_->inputAddressesWidget->setModel(inFilter);
+   ui_->inputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
+
+   OutgoingTransactionFilter* outgoingFilter = new OutgoingTransactionFilter(this);
+   outgoingFilter->address = address_.display();
+   outgoingFilter->setSourceModel(model);
+   AddressTransactionFilter* outFilter = new AddressTransactionFilter(this);
+   outFilter->setSourceModel(outgoingFilter);
+   ui_->outputAddressesWidget->setModel(outFilter);
+   ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
+}
 
 void AddressDetailDialog::onAddrBalanceReceived(const bs::Address &addr, std::vector<uint64_t> balance)
 {

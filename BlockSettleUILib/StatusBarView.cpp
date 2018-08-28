@@ -151,7 +151,7 @@ void StatusBarView::onArmoryStateChanged(ArmoryConnection::State state)
       break;
 
    case ArmoryConnection::State::Ready:
-      connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(walletsManager_->GetTopBlockHeight()));
+      connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(armory_->topBlock()));
       connectionStatusLabel_->setPixmap(iconOnline_);
       balanceLabel_->setVisible(true);
       updateBalances();

@@ -82,6 +82,10 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 
 void AddressListModel::updateData()
 {
+   bool expected = false;
+   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
+      return;
+   }
    beginResetModel();
    addressRows_.clear();
    for (const auto &wallet : wallets_) {
@@ -89,19 +93,15 @@ void AddressListModel::updateData()
    }
    endResetModel();
    updateWalletData();
+   processing_.store(false);
 }
 
 void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 {
-   bool expected = false;
-   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
-      return;
-   }
-
    if (wallet->GetType() == bs::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
-      addressRows_.push_back(std::move(row));
+      addressRows_.emplace_back(std::move(row));
    } else {
       std::vector<bs::Address> addressList;
       switch (addrType_) {
@@ -127,9 +127,8 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
          row.addrIndex = i;
          row.comment = QString::fromStdString(wallet->GetAddressComment(addr));
 
-         addressRows_.push_back(std::move(row));
+         addressRows_.emplace_back(std::move(row));
       }
-      processing_.store(false);
    }
 }
 

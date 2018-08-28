@@ -204,7 +204,6 @@ QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientat
 
 void TransactionsViewModel::refresh()
 {
-   clear();
    updatePage();
 }
 
@@ -236,6 +235,9 @@ void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
    if (state == ArmoryConnection::State::Offline) {
       clear();
    }
+   else if ((state == ArmoryConnection::State::Ready) && currentPage_.empty()) {
+      loadLedgerEntries();
+   }
 }
 
 TransactionsViewItem TransactionsViewModel::itemFromTransaction(const bs::TXEntry &entry)
@@ -249,9 +251,7 @@ TransactionsViewItem TransactionsViewModel::itemFromTransaction(const bs::TXEntr
       item.wallet = defaultWallet_;
    }
 
-   if (entry.blockNum < uint32_t(-1)) {
-      item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - entry.blockNum;
-   }
+   item.confirmations = armory_->getConfirmationsNumber(entry.blockNum);
    if (item.wallet) {
       item.walletName = QString::fromStdString(item.wallet->GetWalletName());
    }
@@ -358,10 +358,12 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &pa
    for (const auto &item : page) {
       newData[mkTxKey(item)] = item;
    }
-   int firstRow = -1, lastRow = 0;
-   std::vector<TransactionsViewItem> firstConfItems;
+   TransactionItems firstConfItems;
    {
       QMutexLocker locker(&updateMutex_);
+      if (currentPage_.empty()) {
+         return;
+      }
       for (size_t i = 0; i < currentPage_.size(); i++) {
          auto &item = currentPage_[i];
          const auto itPage = newData.find(mkTxKey(item));
@@ -372,27 +374,19 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &pa
                item.calcAmount(walletsManager_);
             }
             item.isValid = item.wallet->isTxValid(item.txEntry.txHash);
-
-            if (itPage->second.blockNum < uint32_t(-1)) {
-               item.confirmations = walletsManager_->GetTopBlockHeight() + 1 - itPage->second.blockNum;
-               if (item.confirmations == 1) {
-                  firstConfItems.push_back(item);
-               }
-            }
-            if (firstRow < 0) {
-               firstRow = i;
-            }
-            if (lastRow < (int)i) {
-               lastRow = i;
-            }
+         }
+         item.confirmations = armory_->getConfirmationsNumber(item.txEntry.blockNum);
+         if (item.confirmations == 1) {
+            firstConfItems.push_back(item);
          }
       }
    }
-   if (firstRow >= 0) {
-      emit dataChanged(index(firstRow, static_cast<int>(Columns::Status))
-      , index(lastRow, static_cast<int>(Columns::Status)));
+   emit dataChanged(index(0, static_cast<int>(Columns::Amount))
+   , index(currentPage_.size() - 1, static_cast<int>(Columns::Status)));
+
+   if (!firstConfItems.empty()) {
+      addCommand({ Command::Type::Confirm, firstConfItems });
    }
-   addCommand({Command::Type::Confirm, firstConfItems});
 }
 
 void TransactionsViewModel::loadLedgerEntries()
@@ -420,9 +414,9 @@ void TransactionsViewModel::ledgerToTxData()
       for (const auto &le : rawData_) {
          for (const auto &led : le.second) {
             const auto item = itemFromTransaction(led);
-            if (!item.isValid) {
+/*            if (!item.isValid) {
                continue;
-            }
+            }*/
             const auto txKey = mkTxKey(item);
             if (txKeyExists(txKey)) {
                continue;
@@ -436,8 +430,8 @@ void TransactionsViewModel::ledgerToTxData()
    endResetModel();
    initialLoadCompleted_ = true;
 
-   loadTransactionDetails(0, count);
    emit dataLoaded(currentPage_.size());
+   loadTransactionDetails(0, count);
 }
 
 void TransactionsViewModel::onNewItems(TransactionItems items)

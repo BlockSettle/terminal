@@ -17,78 +17,6 @@
 
 const int DefaultArmoryDBStartTimeoutMsec = 500;
 
-#if 0    // Disabled code below is kept for re-implementing it in ArmoryConnection
-bool PyBlockDataManager::StartLocalArmoryDB()
-{
-   const QString armoryDBPath = settings_.armoryExecutablePath;
-   if (QFile::exists(armoryDBPath)) {
-      armoryProcess_ = std::make_shared<QProcess>();
-
-      QStringList args;
-      switch (settings_.netType) {
-      case NetworkType::TestNet:
-         args.append(QString::fromStdString("--testnet"));
-         break;
-      case NetworkType::RegTest:
-         args.append(QString::fromStdString("--regtest"));
-         break;
-      default: break;
-      }
-
-      std::string spawnID = SecureBinaryData().GenerateRandom(32).toHexStr();
-      args.append(QLatin1String("--spawnId=\"") + QString::fromStdString(spawnID) + QLatin1String("\""));
-      args.append(QLatin1String("--satoshi-datadir=\"") + settings_.bitcoinBlocksDir + QLatin1String("\""));
-      args.append(QLatin1String("--dbdir=\"") + settings_.dbDir + QLatin1String("\""));
-
-      armoryProcess_->start(settings_.armoryExecutablePath, args);
-      if (armoryProcess_->waitForStarted(DefaultArmoryDBStartTimeoutMsec)) {
-         return true;
-      }
-      armoryProcess_.reset();
-   }
-   return false;
-}
-
-void PyBlockDataManager::onZCReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
-{
-   {
-      FastLock lock(bdvLock_);
-      for (const auto &entry : entries) {
-         pendingBroadcasts_.erase(entry.getTxHash());
-      }
-   }
-   emit zeroConfReceived(entries);
-}
-
-void PyBlockDataManager::onScheduleRPCBroadcast(const BinaryData& rawTx)
-{
-   Tx tx(rawTx);
-
-   if (tx.getThisHash().isNull()) {
-      qDebug() << "[PyBlockDataManager::onScheduleRPCBroadcast] TX hash null";
-   }
-
-   QTimer::singleShot(30000, [this, tx, rawTx] {
-      {
-         FastLock lock(bdvLock_);
-         if (pendingBroadcasts_.find(tx.getThisHash()) == pendingBroadcasts_.end()) {
-            return;
-         }
-         pendingBroadcasts_.erase(tx.getThisHash());
-      }
-
-      const auto &result = bdv_->broadcastThroughRPC(rawTx);
-      if (result != "success") {
-         qDebug() << "[PyBlockDataManager::onScheduleRPCBroadcast] broadcast error";
-         emit txBroadcastError(QString::fromStdString(tx.getThisHash().toHexStr(true))
-            , QString::fromStdString(result));
-      } else {
-         qDebug() << "[PyBlockDataManager::onScheduleRPCBroadcast] broadcasted through RPC";
-      }
-   });
-}
-#endif //0
-
 Q_DECLARE_METATYPE(ArmoryConnection::State)
 Q_DECLARE_METATYPE(BDMPhase)
 Q_DECLARE_METATYPE(NetworkType)
@@ -153,9 +81,53 @@ void ArmoryConnection::stopServiceThreads()
    zcMaintCV_.notify_one();
 }
 
+bool ArmoryConnection::startLocalArmoryProcess(const ArmorySettings &settings)
+{
+   if (armoryProcess_ && (armoryProcess_->state() == QProcess::Running)) {
+      logger_->info("Armory process {} is already running with PID {}"
+         , settings.armoryExecutablePath.toStdString(), armoryProcess_->processId());
+      return true;
+   }
+   const QString armoryDBPath = settings.armoryExecutablePath;
+   if (QFile::exists(armoryDBPath)) {
+      armoryProcess_ = std::make_shared<QProcess>();
+
+      QStringList args;
+      switch (settings.netType) {
+      case NetworkType::TestNet:
+         args.append(QString::fromStdString("--testnet"));
+         break;
+      case NetworkType::RegTest:
+         args.append(QString::fromStdString("--regtest"));
+         break;
+      default: break;
+      }
+
+      std::string spawnID = SecureBinaryData().GenerateRandom(32).toHexStr();
+      args.append(QLatin1String("--spawnId=\"") + QString::fromStdString(spawnID) + QLatin1String("\""));
+      args.append(QLatin1String("--satoshi-datadir=\"") + settings.bitcoinBlocksDir + QLatin1String("\""));
+      args.append(QLatin1String("--dbdir=\"") + settings.dbDir + QLatin1String("\""));
+
+      armoryProcess_->start(settings.armoryExecutablePath, args);
+      if (armoryProcess_->waitForStarted(DefaultArmoryDBStartTimeoutMsec)) {
+         return true;
+      }
+      armoryProcess_.reset();
+   }
+   return false;
+}
+
 void ArmoryConnection::setupConnection(const ArmorySettings &settings)
 {
    emit prepareConnection(settings.netType, settings.armoryDBIp, settings.armoryDBPort);
+
+   if (settings.runLocally) {
+      if (!startLocalArmoryProcess(settings)) {
+         logger_->error("Failed to start Armory from {}", settings.armoryExecutablePath.toStdString());
+         setState(State::Offline);
+         return;
+      }
+   }
 
    const auto &registerRoutine = [this, settings] {
       logger_->debug("[ArmoryConnection::registerRoutine] started");
@@ -506,8 +478,9 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
 
 unsigned int ArmoryConnection::getConfirmationsNumber(uint32_t blockNum) const
 {
-   if (blockNum < uint32_t(-1)) {
-      return topBlock() + 1 - blockNum;
+   const auto curBlock = topBlock();
+   if ((curBlock != UINT32_MAX) && (blockNum < uint32_t(-1))) {
+      return curBlock + 1 - blockNum;
    }
    return 0;
 }
@@ -575,7 +548,7 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
       break;
 
    case BDMAction_NewBlock:
-      logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock");
+      logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock {}", block);
       connection_->setState(ArmoryConnection::State::Ready);
       emit connection_->newBlock((unsigned int)block);
       break;
