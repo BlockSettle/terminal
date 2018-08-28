@@ -421,6 +421,7 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
    unsigned int cbCount = 0;
    auto hashSet = new std::set<BinaryData>(hashes);
    auto result = new std::vector<Tx>;
+   const auto origHashes = hashes;
 
    const auto &cbAppendTx = [hashSet, result, cb](Tx tx) {
       const auto &txHash = tx.getThisHash();
@@ -441,7 +442,7 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       }
       cbAppendTx(tx);
    };
-   for (const auto &hash : hashes) {
+   for (const auto &hash : origHashes) {
       const auto &tx = txCache_.get(hash);
       if (tx.isInitialized()) {
          cbAppendTx(tx);

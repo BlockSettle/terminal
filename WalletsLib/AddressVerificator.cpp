@@ -42,6 +42,7 @@ struct AddressVerificationData
    std::vector<ClientClasses::LedgerEntry>   txOutEntries;
    std::map<BinaryData, Tx>   txs;
    std::set<BinaryData>       txHashSet;
+   bool           completed = false;
 };
 
 AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &armory
@@ -115,6 +116,7 @@ bool AddressVerificator::SetBSAddressList(const std::unordered_set<std::string>&
 {
    for (const auto &addr : addressList) {
       bs::Address address(addr);
+      logger_->debug("BS address: {}", address.display<std::string>());
       bsAddressList_.emplace(address.prefixed());
    }
    return true;
@@ -215,6 +217,7 @@ void AddressVerificator::doValidateAddress(const std::shared_ptr<AddressVerifica
 
    addressRetries_.erase(state->address->GetChainedAddress().prefixed());
    ReturnValidationResult(state);
+   state->completed = true;
 }
 
 void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificationData>& state)
@@ -247,47 +250,33 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
          }
       }
    };
-   const auto &cbTxOutTX = [this, state](Tx tx) {
-      state->txHashSet.erase(tx.getThisHash());
-      state->txs[tx.getThisHash()] = tx;
-      if (state->txHashSet.empty()) {
-         doValidateAddress(state);
-      }
-   };
-   const auto &cbLedgerTxOut = [this, state, cbTxOutTX](std::vector<ClientClasses::LedgerEntry> entries) {
-      state->txOutEntries = entries;
-      for (const auto &entry : entries) {
-         const auto &itTX = state->txs.find(entry.getTxHash());
-         if (itTX == state->txs.end()) {
-            state->txHashSet.insert(entry.getTxHash());
-            armory_->getTxByHash(entry.getTxHash(), cbTxOutTX);
-         }
-      }
-   };
-   const auto &cbLedgerDelegateTxOut = [state, cbLedgerTxOut](AsyncClient::LedgerDelegate delegate) {
-      delegate.getHistoryPage(0, cbLedgerTxOut);
-   };
-   const auto &cbCollectTX = [this, state, cbCollectTXs, cbLedgerDelegateTxOut](Tx tx) {
+   const auto &cbCollectTX = [this, state, cbCollectTXs](Tx tx) {
       state->txs[tx.getThisHash()] = tx;
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          TxIn in = tx.getTxInCopy(i);
          OutPoint op = in.getOutPoint();
-         state->txHashSet.insert(op.getTxHash());
-      }
-      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-         auto txOut = tx.getTxOutCopy((int)i);
-         const auto addr = bs::Address::fromTxOutScript(txOut.getScript());
-         if (addr.prefixed() == state->address->GetChainedAddress().prefixed()) {
-            continue;
+         if (state->txs.find(op.getTxHash()) == state->txs.end()) {
+            state->txHashSet.insert(op.getTxHash());
          }
-         armory_->getLedgerDelegateForAddress(walletId_, addr, cbLedgerDelegateTxOut);
       }
-      armory_->getTXsByHash(state->txHashSet, cbCollectTXs);
+      if (state->txHashSet.empty()) {
+         doValidateAddress(state);
+      }
+      else {
+         armory_->getTXsByHash(state->txHashSet, cbCollectTXs);
+      }
    };
    const auto &cbLedger = [this, state, cbCollectTX](std::vector<ClientClasses::LedgerEntry> entries) {
-      logger_->debug("cbLedger");
+      if (entries.empty()) {
+         state->currentState = AddressVerificationState::NotSubmitted;
+         state->completed = true;
+         addressRetries_.erase(state->address->GetChainedAddress().prefixed());
+         ReturnValidationResult(state);
+         return;
+      }
       state->nbTransactions += entries.size();
       state->entries = entries;
+      state->txs = bsTXs_;
       for (const auto &entry : entries) {
          state->value += entry.getValue();
          const auto &itTX = state->txs.find(entry.getTxHash());
@@ -297,14 +286,15 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
          else {
             cbCollectTX(itTX->second);
          }
+         if (state->completed) {
+            break;
+         }
       }
    };
    const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
-      logger_->debug("cbLedgerDelegate");
       state->nbTransactions = 0;
-      delegate.getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
+      delegate.getHistoryPage(0, cbLedger);
    };
-   logger_->debug("Validating addr {}", state->address->GetChainedAddress().display<std::string>());
    if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
       const auto &prefixedAddress = state->address->GetChainedAddress().prefixed();
       if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < MaxAadressValidationErrorCount)) {
@@ -540,6 +530,7 @@ bool AddressVerificator::IsRevokeTransaction(const ClientClasses::LedgerEntry &e
 {
    const auto &tx = state->txs[entry.getTxHash()];
    if (!tx.isInitialized()) {
+      logger_->error("Revoke TX is not inited ({})", entry.getTxHash().toHexStr(true));
       return false;
    }
 
@@ -565,6 +556,7 @@ bool AddressVerificator::IsBSRevokeTranscation(const ClientClasses::LedgerEntry 
 {
    auto tx = state->txs[entry.getTxHash()];
    if (!tx.isInitialized()) {
+      logger_->error("BS revoke TX is not inited ({})", entry.getTxHash().toHexStr(true));
       return false;
    }
 
@@ -644,24 +636,65 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
    if (it == ids.end()) {
       return;
    }
-   registered_ = true;
    logger_->debug("[AddressVerificator::OnRefresh] get refresh command");
 
-   ExecutionCommand command;
-   {
-      FastLock locker(waitingForUpdateQueueFlag_);
-      if (waitingForUpdateQueue_.empty()) {
-         logger_->debug("[AddressVerificator::OnRefresh] no pending commands for update");
-         return;
-      }
-
-      // move all pending commands to processing queue
-      while (!waitingForUpdateQueue_.empty()) {
-         command = waitingForUpdateQueue_.front();
-         waitingForUpdateQueue_.pop();
-         AddCommandToQueue(std::move(command));
-      }
+   if (bsAddressList_.empty()) {
+      logger_->error("[AddressVerificator::OnRefresh] BS address list is empty");
+      return;
    }
+
+   const auto &cbTXs = [this](std::vector<Tx> txs) {
+      for (const auto &tx : txs) {
+         bsTXs_[tx.getThisHash()] = tx;
+      }
+      registered_ = true;
+      logger_->debug("[AddressVerificator::OnRefresh] received {} BS TXs", txs.size());
+
+      {
+         FastLock locker(waitingForUpdateQueueFlag_);
+         while (!waitingForUpdateQueue_.empty()) {
+            auto command = waitingForUpdateQueue_.front();
+            waitingForUpdateQueue_.pop();
+            AddCommandToQueue(std::move(command));
+         }
+      }
+   };
+   std::vector<bs::Address> bsAddrs;
+   for (const auto &bsAddr : bsAddressList_) {
+      bsAddrs.emplace_back(bsAddr);
+   }
+   const auto &cbDelegates = [this, cbTXs](std::map<bs::Address, AsyncClient::LedgerDelegate> delegates) {
+      auto pages = new std::map<bs::Address, uint64_t>;
+      auto txHashSet = new std::set<BinaryData>;
+      for (const auto &delegate : delegates) {
+         auto addr = delegate.first;
+         auto delegatePtr = new AsyncClient::LedgerDelegate(delegate.second);
+         const auto &cbPageCnt = [this, pages, addr, delegatePtr, txHashSet, cbTXs](uint64_t pageCnt) {
+            (*pages)[addr] = pageCnt;
+            for (int i = 0; i < pageCnt; ++i) {
+               const auto &cbLedger = [this, pages, addr, txHashSet, cbTXs]
+               (std::vector<ClientClasses::LedgerEntry> entries) {
+                  for (const auto &entry : entries) {
+                     txHashSet->insert(entry.getTxHash());
+                  }
+                  (*pages)[addr]--;
+                  if (!(*pages)[addr]) {
+                     pages->erase(addr);
+                     if (pages->empty()) {
+                        delete pages;
+                        armory_->getTXsByHash(*txHashSet, cbTXs);
+                        delete txHashSet;
+                     }
+                  }
+               };
+               delegatePtr->getHistoryPage(i, cbLedger);
+               delete delegatePtr;
+            }
+         };
+         delegate.second.getPageCount(cbPageCnt);
+      }
+   };
+   armory_->getLedgerDelegatesForAddresses(walletId_, bsAddrs, cbDelegates);
 }
 
 void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UTXO>)> cb) const

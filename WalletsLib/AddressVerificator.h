@@ -107,7 +107,8 @@ private:
    verification_callback   userCallback_;
 
    //bsAddressList_ - list received from public bridge
-   std::set<BinaryData>    bsAddressList_;
+   std::set<BinaryData>       bsAddressList_;
+   std::map<BinaryData, Tx>   bsTXs_;
 
    // addresses that were added to a wallet
    // user auth address list
