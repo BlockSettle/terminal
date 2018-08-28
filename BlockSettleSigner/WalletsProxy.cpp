@@ -161,8 +161,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 
    if (isPrintable) {
       try {
-         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet->getName()),
-            QString::fromStdString(wallet->getWalletId()),
+         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet->getWalletId()),
             QString::fromStdString(easyData.part1),
             QString::fromStdString(easyData.part2),
             QPixmap(QLatin1String(":/FULL_LOGO")),
