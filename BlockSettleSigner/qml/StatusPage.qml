@@ -126,7 +126,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text: qsTr("Connections")
+                        text: qsTr("Connection[s]")
                         Layout.preferredHeight: 25
                     }
                     CustomLabel {
