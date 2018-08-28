@@ -81,10 +81,16 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    connect(widget, &WalletKeyWidget::failed, this, &WalletKeysSubmitWidget::failed);
 
    if (flags_ & HideFrejaConnectButton) {
-      widget->hideFrejaConnect();
+      widget->setHideFrejaConnect(true);
    }
    if (flags_ & HideFrejaCombobox) {
-      widget->hideFrejaCombobox();
+      widget->setHideFrejaCombobox(true);
+   }
+   if (flags_ & FrejaProgressBarFixed) {
+      widget->setProgressBarFixed(true);
+   }
+   if (flags_ & FrejaIdVisible) {
+      widget->setShowFrejaId(true);
    }
 
    ui_->groupBox->layout()->addWidget(widget);

@@ -32,7 +32,6 @@ private slots:
    void onFailed();
 
 private:
-   QPropertyAnimation* startAnimation(bool success);
 
    std::unique_ptr<Ui::WalletKeysSubmitFrejaDialog> ui_;
 };

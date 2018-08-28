@@ -122,6 +122,12 @@ void CreateWalletDialog::CreateWallet()
    std::vector<bs::wallet::PasswordData> keys = ui_->widgetCreateKeys->keys();
 
    if (!keys.empty() && keys.at(0).encType == bs::wallet::EncryptionType::Freja) {
+      if (keys.at(0).encKey.isNull()) {
+         MessageBoxCritical messageBox(tr("Invalid Freja eID"), tr("Please check Freja eID Email"), this);
+         messageBox.exec();
+         return;
+      }
+
       std::vector<bs::wallet::EncryptionType> encTypes;
       std::vector<SecureBinaryData> encKeys;
       for (const bs::wallet::PasswordData& key : keys) {

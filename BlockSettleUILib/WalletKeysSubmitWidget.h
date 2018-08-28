@@ -19,6 +19,8 @@ public:
       HideFrejaConnectButton = 0x01,
       HideFrejaCombobox = 0x02,
       HideGroupboxCaption = 0x04,
+      FrejaProgressBarFixed = 0x08,
+      FrejaIdVisible = 0x10,
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

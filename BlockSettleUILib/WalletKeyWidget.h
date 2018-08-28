@@ -10,6 +10,8 @@ namespace Ui {
     class WalletKeyWidget;
 }
 
+class QPropertyAnimation;
+
 
 class WalletKeyWidget : public QWidget
 {
@@ -25,8 +27,12 @@ public:
    void setFixedType(bool on = true);
    void setFocus();
 
-   void hideFrejaConnect();
-   void hideFrejaCombobox();
+   void setHideFrejaConnect(bool value);
+   void setHideFrejaCombobox(bool value);
+   void setProgressBarFixed(bool value);
+   void setShowFrejaId(bool value);
+   void setShowFrejaIdLabel(bool value);
+
    void setCreateUsername(const QString& username);
 
 signals:
@@ -48,6 +54,7 @@ private slots:
 
 private:
    void stop();
+   QPropertyAnimation* startFrejaAnimation(bool success);
 
 private:
    std::unique_ptr<Ui::WalletKeyWidget> ui_;
@@ -55,9 +62,15 @@ private:
    int         index_;
    bool        password_;
    bool        frejaRunning_ = false;
-   FrejaSignWallet   frejaSign_;
+  
+   FrejaSignWallet frejaSign_;
    QTimer      timer_;
    float       timeLeft_;
+
+   bool        hideFrejaConnect_ = false;
+   bool        hideFrejaCombobox_ = false;
+   bool        progressBarFixed_ = false;
+   bool        showFrejaId_ = false;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

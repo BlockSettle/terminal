@@ -922,6 +922,7 @@ QDateEdit {
   border-radius: 0;
   padding: 1px 5px 1px 7px;
   background: transparent;
+  height: 18px;
   max-height: 20px;
   color: #ffffff; }
   QComboBox QAbstractItemView,
@@ -981,8 +982,12 @@ QDateEdit::drop-down {
   border-bottom-right-radius: 0;
   color: #0b1619; }
 
-QComboBox::down-arrow {
-  image: url(":/resources/dropdown-arrow.png"); }
+QComboBox#comboBoxFrejaId::drop-down {
+  width: 0px;
+  border-width: 0px; }
+
+QComboBox#comboBoxFrejaId::down-arrow {
+  image: none; }
 
 QDateEdit::down-arrow {
   image: url(":/resources/calendar.png"); }

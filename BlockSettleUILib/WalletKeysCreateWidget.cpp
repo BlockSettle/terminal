@@ -45,7 +45,7 @@ void WalletKeysCreateWidget::addKey(bool password)
    assert(!walletId_.empty());
    auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, this);
    if (flags_ & HideFrejaConnectButton) {
-      widget->hideFrejaConnect();
+      widget->setHideFrejaConnect(true);
    }
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);
