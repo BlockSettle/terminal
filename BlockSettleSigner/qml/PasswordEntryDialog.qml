@@ -41,7 +41,7 @@ CustomDialog {
         Keys.onPressed: {
             if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
                 if (tfPassword.text.length) {
-                    passwordDialog.accept();
+                    confirmClicked();
                 }
 
                 event.accepted = true;
@@ -279,9 +279,10 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("CONFIRM")
                         enabled: tfPassword.text.length || acceptable
+                        id: confirmButton
 
                         onClicked: {
-                            passwordDialog.accept()
+                            confirmClicked();
                         }
                     }
                 }
@@ -312,9 +313,11 @@ CustomDialog {
         return hex;
     }
 
-    onAccepted: {
+    function confirmClicked() {
         if (txInfo.wallet.encType === WalletInfo.Password) {
             password = toHex(tfPassword.text)
         }
+
+        passwordDialog.accept()
     }
 }
