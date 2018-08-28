@@ -1,6 +1,7 @@
 0.10.4
 Bug Fixes:
    - Various UI fixes for address list and details, TX list, Create TX advanced
+   - Fixed termination of transaction signing.
 Improvements:
    - UI speed improvements for TX list
    - Added input amount into transaction sign dialog.
