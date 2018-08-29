@@ -17,7 +17,7 @@ class EnterWalletPassword : public QDialog
 Q_OBJECT
 
 public:
-   EnterWalletPassword(const QString& walletName, const std::string &rootWalletId
+   EnterWalletPassword(const std::string &rootWalletId
       , bs::wallet::KeyRank, const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys = {}, const QString &prompt = {}
       , QWidget* parent = nullptr);
@@ -30,7 +30,6 @@ private slots:
 
 protected:
    void reject() override;
-   void showEvent(QShowEvent *) override;
 
 private:
    std::unique_ptr<Ui::EnterWalletPassword> ui_;

@@ -2,9 +2,12 @@
 #include "ui_ImportWalletDialog.h"
 
 #include "ApplicationSettings.h"
+#include "CreateWalletDialog.h"
+#include "EnterWalletPassword.h"
 #include "MessageBoxCritical.h"
 #include "SignContainer.h"
 #include "WalletImporter.h"
+#include "WalletPasswordVerifyDialog.h"
 #include "WalletsManager.h"
 
 #include <spdlog/spdlog.h>
@@ -16,6 +19,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       , const EasyCoDec::Data& seedData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const QString& username
       , const std::string &walletName, const std::string &walletDesc
       , bool createPrimary, QWidget *parent)
    : QDialog(parent)
@@ -29,6 +33,10 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    walletId_ = bs::hd::Node(walletSeed_).getId();
 
    ui_->setupUi(this);
+
+   ui_->lineEditDescription->setValidator(new WalletDescriptionValidator(this));
+   
+   ui_->labelWalletId->setText(QString::fromStdString(walletId_));
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
 
@@ -59,31 +67,20 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);
    connect(walletImporter_.get(), &WalletImporter::error, this, &ImportWalletDialog::onError);
 
-   connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &ImportWalletDialog::updateAcceptButton);
-
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &ImportWalletDialog::onImportAccepted);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::onImportAccepted);
-   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ImportWalletDialog::reject);
 
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateAcceptButton(); });
-   ui_->widgetCreateKeys->init(walletId_);
+   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
 
-   updateAcceptButton();
+   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
+      | WalletKeysCreateWidget::HideFrejaConnectButton);
+   ui_->widgetCreateKeys->init(walletId_, username);
+
+   adjustSize();
+   setMinimumSize(size());
 }
 
 ImportWalletDialog::~ImportWalletDialog() = default;
-
-bool ImportWalletDialog::couldImport() const
-{
-   return (!ui_->lineEditWalletName->text().isEmpty()
-         && ui_->widgetCreateKeys->isValid());
-}
-
-void ImportWalletDialog::updateAcceptButton()
-{
-   ui_->pushButtonImport->setEnabled(couldImport());
-}
 
 void ImportWalletDialog::onError(const QString &errMsg)
 {
@@ -109,19 +106,23 @@ void ImportWalletDialog::onWalletCreated(const std::string &walletId)
 
 void ImportWalletDialog::onImportAccepted()
 {
-   if (!couldImport()) {
+   walletName_ = ui_->lineEditWalletName->text();
+   const QString &walletDescription = ui_->lineEditDescription->text();
+   std::vector<bs::wallet::PasswordData> keys;
+
+   bool result = checkNewWalletValidity(walletsMgr_.get(), walletName_, walletId_
+      , ui_->widgetCreateKeys, &keys, this);
+   if (!result) {
       return;
    }
 
    try {
-      walletName_ = ui_->lineEditWalletName->text();
-      auto description = ui_->lineEditDescription->text().toStdString();
       importedAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
 
       ui_->pushButtonImport->setEnabled(false);
 
-      walletImporter_->Import(walletName_.toStdString(), description, walletSeed_
-         , importedAsPrimary_, ui_->widgetCreateKeys->keys(), ui_->widgetCreateKeys->keyRank());
+      walletImporter_->Import(walletName_.toStdString(), walletDescription.toStdString(), walletSeed_
+         , importedAsPrimary_, keys, ui_->widgetCreateKeys->keyRank());
    }
    catch (...) {
       onError(tr("Invalid backup data"));
