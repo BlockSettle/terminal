@@ -24,13 +24,13 @@
     <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>1</number>
+    <number>0</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>1</number>
+    <number>0</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -52,9 +52,12 @@
      <property name="tabBarAutoHide">
       <bool>false</bool>
      </property>
+     <property name="classicTabs" stdset="0">
+      <bool>true</bool>
+     </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
-       <string>About BlockSettle</string>
+       <string> About BlockSettle </string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <property name="spacing">
@@ -171,7 +174,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
      </widget>
      <widget class="QWidget" name="tab_1">
       <attribute name="title">
-       <string>About the Terminal</string>
+       <string> About the Terminal </string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <property name="spacing">
@@ -278,7 +281,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
      </widget>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
-       <string>Contact</string>
+       <string> Contact </string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <property name="spacing">
@@ -576,7 +579,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
      </widget>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
-       <string>Version</string>
+       <string> Version </string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_6">
        <property name="spacing">
