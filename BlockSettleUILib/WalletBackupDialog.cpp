@@ -103,12 +103,12 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    }
    else {
       try {
-         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet_->getName()),
-            QString::fromStdString(wallet_->getWalletId()),
+         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet_->getWalletId()),
             QString::fromStdString(easyData.part1),
             QString::fromStdString(easyData.part2),
             QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png")),
             UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2)));
+
          if (!pdfWriter.write(filePath())) {
             throw std::runtime_error("write failure");
          }

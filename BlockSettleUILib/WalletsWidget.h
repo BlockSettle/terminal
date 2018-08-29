@@ -40,6 +40,8 @@ public:
       , const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<AuthAddressManager> &, const std::shared_ptr<ArmoryConnection> &);
 
+   void setUsername(const QString& username);
+
    std::vector<WalletsManager::wallet_gen_type> GetSelectedWallets() const;
 
    bool CreateNewWallet(bool primary, bool report = true);
@@ -98,6 +100,7 @@ private:
    bs::Address curAddress_;
    std::shared_ptr<bs::Wallet>   curWallet_;
    unsigned int   revokeReqId_ = 0;
+   QString username_;
 };
 
 bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<SignContainer> &

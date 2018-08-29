@@ -1,10 +1,23 @@
 #include "WalletKeyWidget.h"
+
 #include "ui_WalletKeyWidget.h"
 #include <QComboBox>
+#include <QGraphicsColorizeEffect>
 #include <QLineEdit>
+#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QRadioButton>
 #include <spdlog/spdlog.h>
+
+
+namespace {
+
+const int kAnimationDurationMs = 500;
+
+const QColor kSuccessColor = Qt::green;
+const QColor kFailColor = Qt::red;
+
+}
 
 
 WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent)
@@ -18,6 +31,8 @@ WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool pa
    ui_->radioButtonFreja->setChecked(!password);
    ui_->pushButtonFreja->setEnabled(false);
    ui_->progressBar->hide();
+   ui_->progressBar->setValue(0);
+
    onTypeChanged();
 
    connect(ui_->radioButtonPassword, &QRadioButton::clicked, this, &WalletKeyWidget::onTypeChanged);
@@ -40,29 +55,29 @@ WalletKeyWidget::~WalletKeyWidget() = default;
 
 void WalletKeyWidget::onTypeChanged()
 {
-   adjustSize();
-   if (ui_->radioButtonPassword->isChecked()) {
-      ui_->widgetFrejaLayout->hide();
-      ui_->widgetPassword->show();
-      ui_->widgetPasswordConfirm->show();
-   }
-   else {
-      ui_->widgetFrejaLayout->show();
-      ui_->widgetPassword->hide();
-      ui_->widgetPasswordConfirm->hide();
-   }
-
    if (password_ != ui_->radioButtonPassword->isChecked()) {
       password_ = ui_->radioButtonPassword->isChecked();
       stop();
       emit keyTypeChanged(index_, password_);
    }
+
+   ui_->labelPassword->setVisible(password_);
+   ui_->lineEditPassword->setVisible(password_);
+   ui_->labelPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
+   ui_->lineEditPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
+
+   ui_->labelFrejeId->setVisible(!password_ && showFrejaId_);
+   ui_->widgetFrejaLayout->setVisible(!password_);
+   
+   ui_->labelFrejaInfo->setVisible(!password_ && !hideFrejaCombobox_);
+   ui_->pushButtonFreja->setVisible(!hideFrejaConnect_);
+   ui_->comboBoxFrejaId->setVisible(!hideFrejaCombobox_);
 }
 
 void WalletKeyWidget::onPasswordChanged()
 {
    ui_->labelPassword->setEnabled(false);
-   if ((ui_->lineEditPassword->text() == ui_->lineEditPasswordConfirm->text()) || !ui_->widgetPasswordConfirm->isVisible()) {
+   if ((ui_->lineEditPassword->text() == ui_->lineEditPasswordConfirm->text()) || !ui_->lineEditPasswordConfirm->isVisible()) {
       if (!ui_->lineEditPassword->text().isEmpty()) {
          ui_->labelPassword->setEnabled(true);
       }
@@ -75,6 +90,7 @@ void WalletKeyWidget::onPasswordChanged()
 
 void WalletKeyWidget::onFrejaIdChanged(const QString &text)
 {
+   ui_->labelFrejeId->setText(text);
    emit encKeyChanged(index_, text.toStdString());
    ui_->pushButtonFreja->setEnabled(!text.isNull());
 }
@@ -89,7 +105,6 @@ void WalletKeyWidget::onFrejaSignClicked()
    timeLeft_ = 120;
    ui_->progressBar->setMaximum(timeLeft_ * 100);
    ui_->progressBar->show();
-   adjustSize();
    timer_.start();
    frejaRunning_ = true;
    frejaSign_.start(ui_->comboBoxFrejaId->currentText(), tr("Activate Freja eID signing"), walletId_);
@@ -102,14 +117,24 @@ void WalletKeyWidget::onFrejaSucceeded(SecureBinaryData password)
    stop();
    ui_->pushButtonFreja->setText(tr("Successfully signed"));
    ui_->pushButtonFreja->setEnabled(false);
-   emit keyChanged(index_, password);
+
+   QPropertyAnimation *a = startFrejaAnimation(true);
+   connect(a, &QPropertyAnimation::finished, [this, password]() {
+      emit keyChanged(index_, password);
+   });
 }
 
 void WalletKeyWidget::onFrejaFailed(const QString &text)
 {
+   
    stop();
    ui_->pushButtonFreja->setEnabled(true);
    ui_->pushButtonFreja->setText(tr("Freja failed: %1 - retry").arg(text));
+   
+   QPropertyAnimation *a = startFrejaAnimation(false);
+   connect(a, &QPropertyAnimation::finished, [this]() {
+      emit failed();
+   });
 }
 
 void WalletKeyWidget::onFrejaStatusUpdated(const QString &)
@@ -119,7 +144,8 @@ void WalletKeyWidget::onTimer()
 {
    timeLeft_ -= 0.5;
    if (timeLeft_ <= 0) {
-      cancel();
+      frejaSign_.stop(true);
+      onFrejaFailed(tr("Timeout"));
    }
    else {
       ui_->progressBar->setFormat(tr("%1 seconds left").arg((int)timeLeft_));
@@ -133,9 +159,10 @@ void WalletKeyWidget::stop()
    ui_->lineEditPasswordConfirm->clear();
    frejaRunning_ = false;
    timer_.stop();
-   ui_->progressBar->hide();
+   if (!progressBarFixed_) {
+      ui_->progressBar->hide();
+   }
    ui_->comboBoxFrejaId->setEnabled(true);
-   adjustSize();
 }
 
 void WalletKeyWidget::cancel()
@@ -156,8 +183,10 @@ void WalletKeyWidget::start()
 
 void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &encKeys, int index)
 {
+   encryptionKeysSet_ = true;
    if (password_) {
-      ui_->widgetPasswordConfirm->hide();
+      ui_->labelPasswordConfirm->hide();
+      ui_->lineEditPasswordConfirm->hide();
    }
    if (encKeys.empty()) {
       return;
@@ -178,6 +207,7 @@ void WalletKeyWidget::setFixedType(bool on)
    }
    ui_->radioButtonPassword->setVisible(!on);
    ui_->radioButtonFreja->setVisible(!on);
+   ui_->labelPadding->setVisible(!on);
 }
 
 void WalletKeyWidget::setFocus()
@@ -188,4 +218,49 @@ void WalletKeyWidget::setFocus()
    else {
       ui_->comboBoxFrejaId->setFocus();
    }
+}
+
+void WalletKeyWidget::setHideFrejaConnect(bool value)
+{
+   hideFrejaConnect_ = value;
+   onTypeChanged();
+}
+
+void WalletKeyWidget::setHideFrejaCombobox(bool value)
+{
+   hideFrejaCombobox_ = value;
+   onTypeChanged();
+}
+
+void WalletKeyWidget::setProgressBarFixed(bool value)
+{
+   progressBarFixed_ = value;
+   onTypeChanged();
+}
+
+void WalletKeyWidget::setShowFrejaId(bool value)
+{
+   showFrejaId_ = value;
+   onTypeChanged();
+}
+
+void WalletKeyWidget::setCreateUsername(const QString& username)
+{
+   ui_->comboBoxFrejaId->setEditText(username);
+}
+
+QPropertyAnimation* WalletKeyWidget::startFrejaAnimation(bool success)
+{
+   QGraphicsColorizeEffect *eff = new QGraphicsColorizeEffect(this);
+   eff->setColor(success ? kSuccessColor : kFailColor);
+   ui_->labelFrejeId->setGraphicsEffect(eff);
+
+   QPropertyAnimation *a = new QPropertyAnimation(eff, "strength");
+   a->setDuration(kAnimationDurationMs);
+   a->setStartValue(0.0);
+   a->setEndValue(1.0);
+   a->setEasingCurve(QEasingCurve::Linear);
+   a->start(QPropertyAnimation::DeleteWhenStopped);
+
+   return a;
 }

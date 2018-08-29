@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 
 
-EnterWalletPassword::EnterWalletPassword(const QString& walletName, const std::string &walletId
+EnterWalletPassword::EnterWalletPassword(const std::string &walletId
    , bs::wallet::KeyRank keyRank, const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys, const QString &prompt
    , QWidget* parent)
@@ -12,16 +12,36 @@ EnterWalletPassword::EnterWalletPassword(const QString& walletName, const std::s
 {
    ui_->setupUi(this);
 
-   ui_->labelWalletName->setText(walletName);
-
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &EnterWalletPassword::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &EnterWalletPassword::reject);
 
    connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateState(); });
+
+   ui_->labelAction->setText(prompt);
+   ui_->labelWalletId->setText(tr("Wallet ID: %1").arg(QString::fromStdString(walletId)));
+
+   if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
+      setWindowTitle(tr("Sign With Freja eID"));
+
+      ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideFrejaConnectButton
+         | WalletKeysSubmitWidget::HideFrejaCombobox
+         | WalletKeysSubmitWidget::HideGroupboxCaption
+         | WalletKeysSubmitWidget::FrejaProgressBarFixed
+         | WalletKeysSubmitWidget::FrejaIdVisible);
+
+      connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &EnterWalletPassword::accept);
+      connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::failed, this, &EnterWalletPassword::reject);
+
+      ui_->pushButtonOk->hide();
+   }
+
    ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys);
    ui_->widgetSubmitKeys->setFocus();
 
    updateState();
+   
+   adjustSize();
+   setMinimumSize(size());
 }
 
 EnterWalletPassword::~EnterWalletPassword() = default;
@@ -29,13 +49,6 @@ EnterWalletPassword::~EnterWalletPassword() = default;
 void EnterWalletPassword::updateState()
 {
    ui_->pushButtonOk->setEnabled(ui_->widgetSubmitKeys->isValid());
-}
-
-void EnterWalletPassword::showEvent(QShowEvent *evt)
-{
-   QApplication::processEvents();
-   adjustSize();
-   QDialog::showEvent(evt);
 }
 
 void EnterWalletPassword::reject()

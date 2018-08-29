@@ -45,6 +45,7 @@ protected:
    virtual void init();
    virtual void clear();
    void reject() override;
+   void closeEvent(QCloseEvent *e) override;
 
    virtual QComboBox *comboBoxWallets() const = 0;
    virtual QComboBox *comboBoxFeeSuggestions() const = 0;

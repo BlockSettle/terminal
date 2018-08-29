@@ -21,6 +21,9 @@ public:
 
    virtual void OnClientConnected(const std::string& clientId) = 0;
    virtual void OnClientDisconnected(const std::string& clientId) = 0;
+
+   virtual void OnPeerConnected(const std::string &ip) = 0;
+   virtual void OnPeerDisconnected(const std::string &ip) = 0;
 };
 
 #endif // __SERVER_CONNECTION_LISTENER_H__

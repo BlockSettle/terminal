@@ -132,6 +132,16 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
    }
 }
 
+void HeadlessContainerListener::OnPeerConnected(const std::string &ip)
+{
+   emit peerConnected(QString::fromStdString(ip));
+}
+
+void HeadlessContainerListener::OnPeerDisconnected(const std::string &ip)
+{
+   emit peerDisconnected(QString::fromStdString(ip));
+}
+
 void HeadlessContainerListener::AuthResponse(const std::string &clientId, headless::RequestPacket packet
    , const std::string &errMsg)
 {

@@ -406,7 +406,8 @@ QTabBar::tab {
   padding: 20px 15px 5px 15px;
   font-family: 'Open Sans';
   background-color: transparent;
-  subcontrol-origin: content; }
+  subcontrol-origin: content;
+}
 
 QTabBar::tab:first {
   padding: 20px 15px 5px 5px; }
@@ -436,7 +437,7 @@ QStatusBar {
     border-top: 0 solid #C2C7CB;
     border-width: 0px;
     background-color: #1c2835;
-    padding: 0 -1px; }
+    margin: 1px }
   *[classicTabs="true"] QTabWidget::tab-bar {
     left: 0px;
     alignment: left;
@@ -446,7 +447,8 @@ QStatusBar {
     background-color: transparent;
     color: #6f787c;
     padding: 7px 5px;
-    margin: 10px 2px 1px; }
+    margin: 10px 2px 1px;
+  }
   *[classicTabs="true"] QTabBar::tab:selected {
     subcontrol-origin: content;
     background: transparent;
@@ -922,6 +924,7 @@ QDateEdit {
   border-radius: 0;
   padding: 1px 5px 1px 7px;
   background: transparent;
+  height: 18px;
   max-height: 20px;
   color: #ffffff; }
   QComboBox QAbstractItemView,
@@ -981,8 +984,12 @@ QDateEdit::drop-down {
   border-bottom-right-radius: 0;
   color: #0b1619; }
 
-QComboBox::down-arrow {
-  image: url(":/resources/dropdown-arrow.png"); }
+QComboBox#comboBoxFrejaId::drop-down {
+  width: 0px;
+  border-width: 0px; }
+
+QComboBox#comboBoxFrejaId::down-arrow {
+  image: none; }
 
 QDateEdit::down-arrow {
   image: url(":/resources/calendar.png"); }

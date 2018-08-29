@@ -13,6 +13,7 @@ namespace bs {
          Freja
       };
 
+      //! first - required number of keys, second - total number of keys
       using KeyRank = std::pair<unsigned int, unsigned int>;
 
       struct PasswordData {
