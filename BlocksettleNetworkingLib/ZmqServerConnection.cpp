@@ -227,8 +227,12 @@ void ZmqServerConnection::listenFunction()
             case ZMQ_EVENT_DISCONNECTED :
             case ZMQ_EVENT_CLOSED :
             {
-               listener_->OnPeerDisconnected(connectedPeers_[sock]);
-               connectedPeers_.erase(sock);
+               const auto it = connectedPeers_.find(sock);
+
+               if (it != connectedPeers_.cend()) {
+                  listener_->OnPeerDisconnected(it->second);
+                  connectedPeers_.erase(it);
+               }
             }
                break;
          }
