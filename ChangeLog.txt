@@ -1,3 +1,11 @@
+0.10.5
+Bug Fixes:
+   - Coin control UI fix ( autoselection )
+   - Fixed IP detection of connected client in Signer
+Improvements:
+   - Label with count of transactions is always shown
+   - About dialog tabs
+
 0.10.4
 Bug Fixes:
    - Various UI fixes for address list and details, TX list, Create TX advanced
