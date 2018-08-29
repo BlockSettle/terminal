@@ -4,6 +4,7 @@
 #include "CelerSubscribeToMDSequence.h"
 #include "CelerSubscribeToSecurities.h"
 #include "CommonTypes.h"
+#include "ConnectionManager.h"
 #include "CurrencyPair.h"
 
 #include <spdlog/spdlog.h>
@@ -16,32 +17,73 @@ using namespace com::celertech::marketmerchant::api::marketdata;
 using namespace com::celertech::marketmerchant::api::marketstatistic;
 
 
-MarketDataProvider::MarketDataProvider(const std::shared_ptr<spdlog::logger>& logger)
+MarketDataProvider::MarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
+      , const std::string& host, const std::string& port
+      , const std::shared_ptr<spdlog::logger>& logger)
  : logger_(logger)
+ , mdHost_{host}
+ , mdPort_{port}
+ , connectionManager_{connectionManager}
  , filterUsdProducts_(true)
 {
+   celerClient_ = nullptr;
 }
 
-void MarketDataProvider::ConnectToCelerClient(const std::shared_ptr<CelerClient>& celerClient, bool filterUsdProducts)
+bool MarketDataProvider::SubscribeToMD(bool filterUsdProducts)
 {
-   celerClient_ = celerClient;
+   if (celerClient_ != nullptr) {
+      logger_->error("[MarketDataProvider::SubscribeToMD] already connected.");
+      return false;
+   }
+
+   celerClient_ = std::make_shared<CelerClient>(connectionManager_, false);
    filterUsdProducts_ = filterUsdProducts;
 
-   celerClient->RegisterHandler(CelerAPI::MarketDataFullSnapshotDownstreamEventType, [this](const std::string& data) {
+   ConnectToCelerClient();
+
+   // login password could be any string
+   if (!celerClient_->LoginToServer(mdHost_, mdPort_, "pb_uat", "pb_uat")) {
+      logger_->error("[MarketDataProvider::SubscribeToMD] failed to connect to MD source");
+      celerClient_ = nullptr;
+      return false;
+   }
+
+   return true;
+}
+
+bool MarketDataProvider::DisconnectFromMDSource()
+{
+   if (celerClient_ == nullptr) {
+      logger_->debug("[MarketDataProvider::DisconnectFromMDSource] already disconnected");
+      return true;
+   }
+
+   emit Disconnecting();
+   celerClient_->CloseConnection();
+}
+
+bool MarketDataProvider::IsConnectionActive() const
+{
+   return celerClient_ != nullptr;
+}
+
+void MarketDataProvider::ConnectToCelerClient()
+{
+   celerClient_->RegisterHandler(CelerAPI::MarketDataFullSnapshotDownstreamEventType, [this](const std::string& data) {
       return this->onMDUpdate(data);
    });
-   celerClient->RegisterHandler(CelerAPI::MarketDataIncrementalDownstreamEventType, [this](const std::string& data) {
+   celerClient_->RegisterHandler(CelerAPI::MarketDataIncrementalDownstreamEventType, [this](const std::string& data) {
       return onMDUpdate(data);
    });
-   celerClient->RegisterHandler(CelerAPI::MarketStatsSnapshotEventType, [this](const std::string& data) {
+   celerClient_->RegisterHandler(CelerAPI::MarketStatsSnapshotEventType, [this](const std::string& data) {
       return onMDStats(data);
    });
-   celerClient->RegisterHandler(CelerAPI::MarketDataRequestRejectType, [this](const std::string& data) {
+   celerClient_->RegisterHandler(CelerAPI::MarketDataRequestRejectType, [this](const std::string& data) {
       return this->onReqRejected(data);
    });
 
-   connect(celerClient.get(), &CelerClient::OnConnectedToServer, this, &MarketDataProvider::OnConnectedToCeler);
-   connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &MarketDataProvider::OnDisconnectedFromCeler);
+   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &MarketDataProvider::OnConnectedToCeler);
+   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &MarketDataProvider::OnDisconnectedFromCeler);
 }
 
 void MarketDataProvider::OnConnectedToCeler()
@@ -81,6 +123,9 @@ void MarketDataProvider::OnConnectedToCeler()
 void MarketDataProvider::OnDisconnectedFromCeler()
 {
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
+
+   celerClient_ = nullptr;
+   emit Disconnected();
 }
 
 bool MarketDataProvider::isPriceValid(double val)
