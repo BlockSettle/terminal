@@ -61,6 +61,7 @@ private:
    void SetLoggedOutStatus();
    void SetCelerConnectingStatus();
    QWidget *CreateSeparator();
+   void setBalances();
 
 private:
    void updateProgress(float progress, unsigned secondsRem);
@@ -77,6 +78,7 @@ private:
    CircleProgressBar *progressBar_;
 
    const QSize iconSize_;
+   ArmoryConnection::State armoryConnState_;
    QIcon       iconCeler_;
    QPixmap     iconOffline_;
    QPixmap     iconError_;
