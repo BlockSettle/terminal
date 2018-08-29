@@ -2,6 +2,7 @@
 #include "ui_ImportWalletDialog.h"
 
 #include "ApplicationSettings.h"
+#include "CreateWalletDialog.h"
 #include "EnterWalletPassword.h"
 #include "MessageBoxCritical.h"
 #include "SignContainer.h"
@@ -32,6 +33,8 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    walletId_ = bs::hd::Node(walletSeed_).getId();
 
    ui_->setupUi(this);
+
+   ui_->lineEditDescription->setValidator(new WalletDescriptionValidator(this));
    
    ui_->labelWalletId->setText(QString::fromStdString(walletId_));
 
@@ -103,58 +106,22 @@ void ImportWalletDialog::onWalletCreated(const std::string &walletId)
 
 void ImportWalletDialog::onImportAccepted()
 {
-   if (walletsMgr_->WalletNameExists(ui_->lineEditWalletName->text().toStdString())) {
-      MessageBoxCritical messageBox(tr("Invalid wallet name"), tr("Wallet with this name already exists"), this);
-      messageBox.exec();
-      return;
-   }
+   walletName_ = ui_->lineEditWalletName->text();
+   const QString &walletDescription = ui_->lineEditDescription->text();
+   std::vector<bs::wallet::PasswordData> keys;
 
-   std::vector<bs::wallet::PasswordData> keys = ui_->widgetCreateKeys->keys();
-
-   if (!keys.empty() && keys.at(0).encType == bs::wallet::EncryptionType::Freja) {
-      if (keys.at(0).encKey.isNull()) {
-         MessageBoxCritical messageBox(tr("Invalid Freja eID"), tr("Please check Freja eID Email"), this);
-         messageBox.exec();
-         return;
-      }
-
-      std::vector<bs::wallet::EncryptionType> encTypes;
-      std::vector<SecureBinaryData> encKeys;
-      for (const bs::wallet::PasswordData& key : keys) {
-         encTypes.push_back(key.encType);
-         encKeys.push_back(key.encKey);
-      }
-
-      EnterWalletPassword dialog(walletId_, ui_->widgetCreateKeys->keyRank(), encTypes, encKeys
-         , tr("Activate Freja eID signing"), this);
-      int result = dialog.exec();
-      if (!result) {
-         return;
-      }
-
-      keys.at(0).password = dialog.GetPassword();
-
-   }
-   else if (!ui_->widgetCreateKeys->isValid()) {
-      MessageBoxCritical messageBox(tr("Invalid password"), tr("Please check passwords"), this);
-      messageBox.exec();
-      return;
-   }
-
-   WalletPasswordVerifyDialog verifyDialog(walletId_, keys, ui_->widgetCreateKeys->keyRank(), this);
-   int result = verifyDialog.exec();
+   bool result = checkNewWalletValidity(walletsMgr_.get(), walletName_, walletId_
+      , ui_->widgetCreateKeys, &keys, this);
    if (!result) {
       return;
    }
 
    try {
-      walletName_ = ui_->lineEditWalletName->text();
-      auto description = ui_->lineEditDescription->text().toStdString();
       importedAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
 
       ui_->pushButtonImport->setEnabled(false);
 
-      walletImporter_->Import(walletName_.toStdString(), description, walletSeed_
+      walletImporter_->Import(walletName_.toStdString(), walletDescription.toStdString(), walletSeed_
          , importedAsPrimary_, keys, ui_->widgetCreateKeys->keyRank());
    }
    catch (...) {
