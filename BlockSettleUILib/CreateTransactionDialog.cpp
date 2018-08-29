@@ -1,6 +1,8 @@
 #include "CreateTransactionDialog.h"
+
 #include <stdexcept>
 #include <thread>
+
 #include <QDebug>
 #include <QCheckBox>
 #include <QComboBox>
@@ -11,6 +13,8 @@
 #include <QIntValidator>
 #include <QFile>
 #include <QFileDialog>
+#include <QCloseEvent>
+
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "CoinControlDialog.h"
@@ -36,7 +40,7 @@ const std::map<unsigned int, QString> feeLevels = { {2, QObject::tr("20 minutes"
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
-   : QDialog(parent)
+   : QDialog(parent, Qt::CustomizeWindowHint | Qt::WindowTitleHint | Qt::WindowMinMaxButtonsHint)
    , armory_(armory)
    , walletsManager_(walletManager)
    , signingContainer_(container)
@@ -118,6 +122,11 @@ void CreateTransactionDialog::reject()
       }
    }
    QDialog::reject();
+}
+
+void CreateTransactionDialog::closeEvent(QCloseEvent *e)
+{
+   e->ignore();
 }
 
 void CreateTransactionDialog::SelectWallet(const std::string& walletId)
