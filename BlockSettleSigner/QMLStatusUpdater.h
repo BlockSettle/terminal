@@ -90,7 +90,7 @@ private:
    int      autoSignTimeSpent_ = 0;
    bool     autoSignActive_ = false;
    bool     socketOk_ = true;
-   std::set<QString> connectedClients_;
+   std::multiset<QString> connectedClients_;
 };
 
 #endif // __QML_STATUS_UPDATER_H__
