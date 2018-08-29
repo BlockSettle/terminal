@@ -48,9 +48,6 @@ private:
    bool DigitalImportOk();
    bool WoImportOk() const { return woFileExists_; }
 
-protected:
-   void resizeEvent(QResizeEvent* event) override;
-
 private:
    std::unique_ptr<Ui::ImportWalletTypeDialog> ui_;
    QString                       digitalBackupFile_;

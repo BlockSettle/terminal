@@ -165,12 +165,6 @@ bool ImportWalletTypeDialog::DigitalImportOk()
    return !walletData_.id.empty();
 }
 
-void ImportWalletTypeDialog::resizeEvent(QResizeEvent *event)
-{
-   ui_->horizontalWidgetHeader->setMinimumWidth(event->size().width());
-   ui_->labelHeader->setMinimumWidth(event->size().width());
-}
-
 void ImportWalletTypeDialog::OnSelectFilePressed()
 {
    auto fileToOpen = QFileDialog::getOpenFileName(this
