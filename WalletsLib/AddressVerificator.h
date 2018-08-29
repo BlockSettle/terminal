@@ -64,7 +64,7 @@ public:
    void GetRevokeInputs(std::function<void(std::vector<UTXO>)>) const;
 
 private slots:
-   void OnRefresh();
+   void OnRefresh(std::vector<BinaryData> ids);
 
 private:
    bool startCommandQueue();
@@ -72,7 +72,7 @@ private:
 
    void commandQueueThreadFunction();
 
-   bool AddCommandToQueue(ExecutionCommand&& command);
+   void AddCommandToQueue(ExecutionCommand&& command);
    void AddCommandToWaitingUpdateQueue(ExecutionCommand&& command);
 
    ExecutionCommand CreateAddressValidationCommand(const std::shared_ptr<AuthAddress>& address);
@@ -102,10 +102,13 @@ private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::string       walletId_;
+   std::string       regId_;
+   std::atomic_bool  registered_ = { false };
    verification_callback   userCallback_;
 
    //bsAddressList_ - list received from public bridge
-   std::set<BinaryData>    bsAddressList_;
+   std::set<BinaryData>       bsAddressList_;
+   std::map<BinaryData, Tx>   bsTXs_;
 
    // addresses that were added to a wallet
    // user auth address list

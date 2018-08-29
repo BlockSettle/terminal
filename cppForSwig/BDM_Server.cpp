@@ -1821,7 +1821,20 @@ void Clients::messageParserThread(void)
       }
 
       //grabbed the thread lock, time to process the payload
-      auto result = processCommand(payloadPtr);
+      shared_ptr<Message> result;
+      try
+      {
+         result = processCommand(payloadPtr);
+      }
+      catch (exception &e)
+      {
+         auto errMsg = make_shared<::Codec_NodeStatus::BDV_Error>();
+         errMsg->set_type(1);
+         errMsg->set_error(e.what());
+
+         result = errMsg;
+      }
+
       if (bdvPtr->packetToReinject_ != nullptr)
       {
          bdvPtr->packetToReinject_->bdvPtr_ = bdvPtr;

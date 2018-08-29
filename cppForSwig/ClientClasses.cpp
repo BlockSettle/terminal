@@ -175,6 +175,18 @@ bool LedgerEntry::isWitness() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+bool LedgerEntry::operator==(const LedgerEntry& rhs)
+{
+   if (getTxHash() != rhs.getTxHash())
+      return false;
+
+   if (getIndex() != rhs.getIndex())
+      return false;
+
+   return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // RemoteCallback
 //
