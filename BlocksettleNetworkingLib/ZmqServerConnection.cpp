@@ -218,8 +218,9 @@ void ZmqServerConnection::listenFunction()
          switch (bs::network::get_monitor_event(monSocket_.get(), &sock)) {
             case ZMQ_EVENT_ACCEPTED :
             {
-               connectedPeers_[sock] = bs::network::peerAddressString(sock);
-               listener_->OnPeerConnected(connectedPeers_[sock]);
+               const auto ip = bs::network::peerAddressString(sock);
+               connectedPeers_.emplace(std::make_pair(sock, ip));
+               listener_->OnPeerConnected(ip);
             }
                break;
 
