@@ -55,13 +55,13 @@ signals:
    void autoSignRequiresPwd(const std::string &walletId);
 
 private slots:
-   void connected(const std::string &clientId, const std::string &clientInfo);
-   void disconnected(const std::string &clientId);
    void txSigned();
    void xbtSpent(const qint64 value, bool autoSign);
    void onAutoSignActivated(const std::string &walletId);
    void onAutoSignDeactivated(const std::string &walletId);
    void onAutoSignTick();
+   void onPeerConnected(const QString &ip);
+   void onPeerDisconnected(const QString &ip);
 
 private:
    bool offline() const { return params_->offline(); }
@@ -90,7 +90,7 @@ private:
    int      autoSignTimeSpent_ = 0;
    bool     autoSignActive_ = false;
    bool     socketOk_ = true;
-   std::unordered_map<std::string, QString>  connectedClients_;
+   std::multiset<QString> connectedClients_;
 };
 
 #endif // __QML_STATUS_UPDATER_H__

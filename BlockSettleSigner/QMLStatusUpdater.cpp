@@ -18,8 +18,10 @@ void QMLStatusUpdater::SetListener(const std::shared_ptr<HeadlessContainerListen
 {
    listener_ = listener;
    if (listener_) {
-      connect(listener_.get(), &HeadlessContainerListener::clientAuthenticated, this, &QMLStatusUpdater::connected);
-      connect(listener_.get(), &HeadlessContainerListener::clientDisconnected, this, &QMLStatusUpdater::disconnected);
+      connect(listener_.get(), &HeadlessContainerListener::peerConnected,
+         this, &QMLStatusUpdater::onPeerConnected);
+      connect(listener_.get(), &HeadlessContainerListener::peerDisconnected,
+         this, &QMLStatusUpdater::onPeerDisconnected);
       connect(listener_.get(), &HeadlessContainerListener::txSigned, this, &QMLStatusUpdater::txSigned);
       connect(listener_.get(), &HeadlessContainerListener::xbtSpent, this, &QMLStatusUpdater::xbtSpent);
       connect(listener_.get(), &HeadlessContainerListener::autoSignActivated, this, &QMLStatusUpdater::onAutoSignActivated);
@@ -85,15 +87,15 @@ void QMLStatusUpdater::onAutoSignTick()
    }
 }
 
-void QMLStatusUpdater::connected(const std::string &clientId, const std::string &clientInfo)
+void QMLStatusUpdater::onPeerConnected(const QString &ip)
 {
-   connectedClients_[clientId] = QString::fromStdString(clientInfo);
+   connectedClients_.insert(ip);
    emit connectionsChanged();
 }
 
-void QMLStatusUpdater::disconnected(const std::string &clientId)
+void QMLStatusUpdater::onPeerDisconnected(const QString &ip)
 {
-   connectedClients_.erase(clientId);
+   connectedClients_.erase(ip);
    emit connectionsChanged();
 }
 
@@ -107,7 +109,7 @@ QStringList QMLStatusUpdater::connectedClients() const
 {
    QStringList result;
    for (const auto &client : connectedClients_) {
-      result.push_back(client.second);
+      result.push_back(client);
    }
    return result;
 }
