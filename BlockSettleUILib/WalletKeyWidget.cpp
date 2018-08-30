@@ -203,7 +203,8 @@ void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &enc
 void WalletKeyWidget::setFixedType(bool on)
 {
    if (ui_->comboBoxFrejaId->count() > 0) {
-      ui_->comboBoxFrejaId->setEnabled(!on);
+      //ui_->comboBoxFrejaId->setEnabled(!on);
+      ui_->comboBoxFrejaId->setEditable(!on);
    }
    ui_->radioButtonPassword->setVisible(!on);
    ui_->radioButtonFreja->setVisible(!on);

@@ -31,7 +31,6 @@ public:
 
 private slots:
    void onContinueClicked();
-   //void updateState();
 
 protected:
    void reject() override;
@@ -39,7 +38,10 @@ protected:
 private:
    std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>  wallet_;
+   const bs::wallet::KeyRank oldKeyRank_;
+   std::vector<bs::wallet::PasswordData> oldPasswordData_;
    std::vector<bs::wallet::PasswordData> newPasswordData_;
+   SecureBinaryData oldKey_;
 };
 
 #endif // __CHANGE_WALLET_PASSWORD_DIALOG_H__
