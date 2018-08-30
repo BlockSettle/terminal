@@ -31,7 +31,7 @@ TransactionData::~TransactionData()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet)
+bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint32_t topBlock)
 {
    if (wallet == nullptr) {
       return false;
@@ -46,7 +46,8 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet)
             return this->selectedInputs_->GetSelectedTransactions();
          }
          , std::vector<AddressBookEntry>{}
-         , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider));
+         , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider)
+         , topBlock);
       InvalidateTransactionData();
    }
 

@@ -1047,7 +1047,8 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal, 
       }
 
       const auto coinSelection = std::make_shared<CoinSelection>([utxos](uint64_t) { return utxos; }
-         , std::vector<AddressBookEntry>{}, GetSpendableBalance() * BTCNumericTypes::BalanceDivider);
+         , std::vector<AddressBookEntry>{}, GetSpendableBalance() * BTCNumericTypes::BalanceDivider
+         , armory_ ? armory_->topBlock() : UINT32_MAX);
 
       try {
          const auto selection = coinSelection->getUtxoSelectionForRecipients(payment, utxos);

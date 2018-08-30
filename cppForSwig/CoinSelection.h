@@ -191,8 +191,9 @@ protected:
 
 public:
    CoinSelection(function<vector<UTXO>(uint64_t val)> func, 
-      const vector<AddressBookEntry>& addrBook, uint64_t spendableValue) :
-      getUTXOsForVal_(func), spendableValue_(spendableValue)
+      const vector<AddressBookEntry>& addrBook, uint64_t spendableValue, 
+      uint32_t topHeight) :
+      getUTXOsForVal_(func), spendableValue_(spendableValue), topHeight_(topHeight)
    {
       //for random shuffling
       srand(time(0));

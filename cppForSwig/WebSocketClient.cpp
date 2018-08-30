@@ -70,6 +70,11 @@ struct lws_context* WebSocketClient::init()
    info.gid = -1;
    info.uid = -1;
 
+   //TCP keep-alive
+   info.ka_time = 600;
+   info.ka_interval = 100;
+   info.ka_probes = 3;
+
    auto contextptr = lws_create_context(&info);
    if (contextptr == NULL) 
       throw LWS_Error("failed to create LWS context");
