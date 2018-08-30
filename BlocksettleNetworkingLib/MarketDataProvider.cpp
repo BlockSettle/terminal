@@ -36,13 +36,15 @@ bool MarketDataProvider::SubscribeToMD(bool filterUsdProducts)
       return false;
    }
 
+   emit StartConnecting();
+
    celerClient_ = std::make_shared<CelerClient>(connectionManager_, false);
    filterUsdProducts_ = filterUsdProducts;
 
    ConnectToCelerClient();
 
    // login password could be any string
-   if (!celerClient_->LoginToServer(mdHost_, mdPort_, "pb_uat", "pb_uat")) {
+   if (!celerClient_->LoginToServer(mdHost_, mdPort_, "pb_uat", "pb_uatpb_uat")) {
       logger_->error("[MarketDataProvider::SubscribeToMD] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;
@@ -109,6 +111,7 @@ void MarketDataProvider::OnConnectedToCeler()
          emit MDUpdate(security.second.assetType, QString::fromStdString(security.first), {});
       }
       emit MDSecuritiesReceived();
+      emit Connected();
    };
 
    auto dicoReq = std::make_shared<bs::network::CelerSubscribeToSecurities>(logger_, onSecuritiesReceived);
@@ -122,6 +125,7 @@ void MarketDataProvider::OnConnectedToCeler()
 
 void MarketDataProvider::OnDisconnectedFromCeler()
 {
+   emit Disconnecting();
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
 
    celerClient_ = nullptr;
