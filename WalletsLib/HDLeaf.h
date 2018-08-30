@@ -164,7 +164,7 @@ namespace bs {
 
       protected slots:
          virtual void onZeroConfReceived(ArmoryConnection::ReqIdType);
-         virtual void onRefresh(const std::vector<BinaryData> &ids);
+         virtual void onRefresh(std::vector<BinaryData> ids);
 
       protected:
          virtual bs::Address createAddress(const Path &path, Path::Elem index, AddressEntryType aet
@@ -289,7 +289,7 @@ namespace bs {
 
       private slots:
          void onZeroConfReceived(ArmoryConnection::ReqIdType) override;
-         void onRefresh(const std::vector<BinaryData> &ids) override;
+         void onStateChanged(ArmoryConnection::State);
 
       private:
          void validationProc();

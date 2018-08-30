@@ -865,7 +865,7 @@ void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory,
       const auto &cbRegister = [this] {
          emit walletReady(QString::fromStdString(GetWalletId()));
       };
-      armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
+      walletRegId_ = armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
    }
 }
 
