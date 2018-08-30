@@ -100,7 +100,17 @@ public:
 
    void addGroups(const std::vector<std::shared_ptr<bs::hd::Group>> &groups);
 
-   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override { return wallets_; }
+   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override
+   {
+      std::vector<std::shared_ptr<bs::Wallet>> ret = wallets_;
+
+      for (const auto * g : qAsConst(children_)) {
+         const auto tmp = g->wallets();
+         ret.insert(ret.end(), tmp.cbegin(), tmp.cend());
+      }
+
+      return ret;
+   }
    BTCNumericTypes::balance_type getBalanceTotal() const { return balTotal_; }
    BTCNumericTypes::balance_type getBalanceUnconf() const { return balUnconf_; }
    BTCNumericTypes::balance_type getBalanceSpend() const { return balSpend_; }
@@ -222,6 +232,8 @@ public:
          child->setState(state);
       }
    }
+
+   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override { return wallets_; }
 
    void addLeaves(const std::vector<std::shared_ptr<bs::Wallet>> &leaves) {
       for (const auto &leaf : leaves) {

@@ -525,9 +525,15 @@ void BSTerminalMainWindow::onReceive()
    const auto &defWallet = walletsManager_->GetDefaultWallet();
    std::string selWalletId = defWallet ? defWallet->GetWalletId() : std::string{};
    if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
-      const auto &wallets = ui->widgetWallets->GetSelectedWallets();
-      if (wallets.size() == 1) {
+      auto wallets = ui->widgetWallets->GetSelectedWallets();
+      if (!wallets.empty()) {
          selWalletId = wallets[0]->GetWalletId();
+      } else {
+         wallets = ui->widgetWallets->GetFirstWallets();
+
+         if (!wallets.empty()) {
+            selWalletId = wallets[0]->GetWalletId();
+         }
       }
    }
    SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(walletsManager_, selWalletId, this);
