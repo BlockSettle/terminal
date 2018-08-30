@@ -104,6 +104,7 @@ namespace bs {
          void aqScriptChanged(int curIndex);
          void onAqScriptLoaded(const QString &filename);
          void walletSelected(int index);
+         void autoSignWalletSelected(int index);
          void onTransactionDataChanged();
          void aqStateChanged(int state);
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
@@ -145,9 +146,24 @@ namespace bs {
          double   indicBid_;
          double   indicAsk_;
          std::atomic_bool     autoUpdatePrices_;
-         std::vector<wallet::EncryptionType> walletEncTypes_;
-         std::vector<SecureBinaryData>       walletEncKeys_;
-         bs::wallet::KeyRank  walletEncRank_;
+
+         struct WalletEncOpts {
+            std::vector<wallet::EncryptionType> walletEncTypes_;
+            std::vector<SecureBinaryData> walletEncKeys_;
+            bs::wallet::KeyRank walletEncRank_;
+
+            WalletEncOpts(const std::vector<wallet::EncryptionType> &walletEncTypes,
+               const std::vector<SecureBinaryData> &walletEncKeys,
+               const bs::wallet::KeyRank &walletEncRank)
+               : walletEncTypes_(walletEncTypes)
+               , walletEncKeys_(walletEncKeys)
+               , walletEncRank_(walletEncRank)
+            {}
+         };
+
+         std::map<std::string, WalletEncOpts> encOpts_;
+         std::map<unsigned int, std::string> encOptsRequests_;
+
          unsigned int         leafCreateReqId_ = 0;
 
          std::string product_;
