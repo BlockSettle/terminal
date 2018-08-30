@@ -65,15 +65,8 @@ void WalletPasswordVerifyDialog::onContinueClicked()
    }
    
    if (key.encType == bs::wallet::EncryptionType::Freja) {
-      std::vector<bs::wallet::EncryptionType> encTypes;
-      std::vector<SecureBinaryData> encKeys;
-      for (const bs::wallet::PasswordData& key : keys_) {
-         encTypes.push_back(key.encType);
-         encKeys.push_back(key.encKey);
-      }
-
-      EnterWalletPassword dialog(walletId_, keyRank_, encTypes, encKeys
-         , tr("Activate Freja eID signing"), this);
+      EnterWalletPassword dialog(this);
+      dialog.init(walletId_, keyRank_, keys_, tr("Activate Freja eID signing"));
       int result = dialog.exec();
       if (!result) {
          return;

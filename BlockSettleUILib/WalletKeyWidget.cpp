@@ -207,7 +207,7 @@ void WalletKeyWidget::setFixedType(bool on)
    }
    ui_->radioButtonPassword->setVisible(!on);
    ui_->radioButtonFreja->setVisible(!on);
-   ui_->labelPadding->setVisible(!on);
+   //ui_->labelPadding->setVisible(!on);
 }
 
 void WalletKeyWidget::setFocus()
@@ -242,6 +242,16 @@ void WalletKeyWidget::setShowFrejaId(bool value)
 {
    showFrejaId_ = value;
    onTypeChanged();
+}
+
+void WalletKeyWidget::setPasswordLabelAsNew()
+{
+   ui_->labelPassword->setText(tr("New Password"));
+}
+
+void WalletKeyWidget::setPasswordLabelAsOld()
+{
+   ui_->labelPassword->setText(tr("Old Password"));
 }
 
 void WalletKeyWidget::setCreateUsername(const QString& username)

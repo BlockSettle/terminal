@@ -21,6 +21,7 @@ public:
       HideGroupboxCaption = 0x04,
       FrejaProgressBarFixed = 0x08,
       FrejaIdVisible = 0x10,
+      SetPasswordLabelAsOld = 0x20,
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

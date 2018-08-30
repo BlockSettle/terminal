@@ -187,15 +187,9 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
          return false;
       }
 
-      std::vector<bs::wallet::EncryptionType> encTypes;
-      std::vector<SecureBinaryData> encKeys;
-      for (const bs::wallet::PasswordData& key : *keys) {
-         encTypes.push_back(key.encType);
-         encKeys.push_back(key.encKey);
-      }
-
-      EnterWalletPassword dialog(walletId, widgetCreateKeys->keyRank(), encTypes, encKeys
-         , QObject::tr("Activate Freja eID signing"), parent);
+      EnterWalletPassword dialog(parent);
+      dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
+         , QObject::tr("Activate Freja eID signing"));
       int result = dialog.exec();
       if (!result) {
          return false;

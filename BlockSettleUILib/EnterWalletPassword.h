@@ -17,11 +17,14 @@ class EnterWalletPassword : public QDialog
 Q_OBJECT
 
 public:
-   EnterWalletPassword(const std::string &rootWalletId
-      , bs::wallet::KeyRank, const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys = {}, const QString &prompt = {}
-      , QWidget* parent = nullptr);
+   explicit EnterWalletPassword(QWidget* parent = nullptr);
    ~EnterWalletPassword() override;
+
+   void init(const std::string &walletId, bs::wallet::KeyRank keyRank
+      , const std::vector<bs::wallet::EncryptionType> &encTypes
+      , const std::vector<SecureBinaryData> &encKeys, const QString &prompt);
+   void init(const std::string &walletId, bs::wallet::KeyRank keyRank
+      , const std::vector<bs::wallet::PasswordData> &keys, const QString &prompt);
 
    SecureBinaryData GetPassword() const;
 

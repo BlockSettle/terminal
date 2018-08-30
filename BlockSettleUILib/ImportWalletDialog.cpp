@@ -3,7 +3,6 @@
 
 #include "ApplicationSettings.h"
 #include "CreateWalletDialog.h"
-#include "EnterWalletPassword.h"
 #include "MessageBoxCritical.h"
 #include "SignContainer.h"
 #include "WalletImporter.h"

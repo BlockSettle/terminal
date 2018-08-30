@@ -18,6 +18,8 @@ public:
       NoFlag = 0x00,
       HideFrejaConnectButton = 0x01,
       HideWidgetContol = 0x02,
+      HideGroupboxCaption = 0x04,
+      SetPasswordLabelAsNew = 0x08,
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

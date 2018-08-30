@@ -27,6 +27,10 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
 
 void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username)
 {
+   if (flags_ & HideGroupboxCaption) {
+      ui_->groupBox->setTitle(QString());
+   }
+
    walletId_ = walletId;
    
    addPasswordKey();
@@ -46,6 +50,9 @@ void WalletKeysCreateWidget::addKey(bool password)
    auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, this);
    if (flags_ & HideFrejaConnectButton) {
       widget->setHideFrejaConnect(true);
+   }
+   if (flags_ & SetPasswordLabelAsNew) {
+      widget->setPasswordLabelAsNew();
    }
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);

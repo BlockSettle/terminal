@@ -31,7 +31,8 @@ public:
    void setHideFrejaCombobox(bool value);
    void setProgressBarFixed(bool value);
    void setShowFrejaId(bool value);
-   void setShowFrejaIdLabel(bool value);
+   void setPasswordLabelAsNew();
+   void setPasswordLabelAsOld();
 
    void setCreateUsername(const QString& username);
 

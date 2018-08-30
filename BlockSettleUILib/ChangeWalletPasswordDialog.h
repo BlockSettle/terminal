@@ -30,15 +30,16 @@ public:
    bs::wallet::KeyRank newKeyRank() const;
 
 private slots:
-   void updateState();
+   void onContinueClicked();
+   //void updateState();
 
 protected:
    void reject() override;
-   void showEvent(QShowEvent *) override;
 
 private:
    std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>  wallet_;
+   std::vector<bs::wallet::PasswordData> newPasswordData_;
 };
 
 #endif // __CHANGE_WALLET_PASSWORD_DIALOG_H__

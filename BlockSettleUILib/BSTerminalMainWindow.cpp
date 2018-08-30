@@ -930,8 +930,9 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
-         EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
-            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
+         EnterWalletPassword passwordDialog(this);
+         passwordDialog.init(rootWallet ? rootWallet->getWalletId() : walletId
+            , keyRank, encTypes, encKeys, QString::fromStdString(prompt));
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
          }

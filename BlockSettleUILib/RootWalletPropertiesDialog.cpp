@@ -12,7 +12,6 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "ChangeWalletPasswordDialog.h"
-#include "EnterWalletPassword.h"
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
@@ -182,22 +181,21 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   auto changePasswordDialog = new ChangeWalletPasswordDialog(wallet_
+   ChangeWalletPasswordDialog changePasswordDialog(wallet_
       , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), this);
 
-   if (changePasswordDialog->exec() != QDialog::Accepted) {
-      changePasswordDialog->deleteLater();
+   if (changePasswordDialog.exec() != QDialog::Accepted) {
       return;
    }
 
-   const auto oldPassword = changePasswordDialog->oldPassword();
+   const auto oldPassword = changePasswordDialog.oldPassword();
 
    if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, changePasswordDialog->newPasswordData()
-         , changePasswordDialog->newKeyRank(), oldPassword);
+      signingContainer_->ChangePassword(wallet_, changePasswordDialog.newPasswordData()
+         , changePasswordDialog.newKeyRank(), oldPassword);
    }
    else {
-      if (wallet_->changePassword(changePasswordDialog->newPasswordData(), changePasswordDialog->newKeyRank()
+      if (wallet_->changePassword(changePasswordDialog.newPasswordData(), changePasswordDialog.newKeyRank()
          , oldPassword)) {
          MessageBoxSuccess message(tr("Password change")
             , tr("Wallet password successfully changed - don't forget your new password!")
@@ -211,7 +209,6 @@ void RootWalletPropertiesDialog::onChangePassword()
          message.exec();
       }
    }
-   changePasswordDialog->deleteLater();
 }
 
 void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, bool ok)

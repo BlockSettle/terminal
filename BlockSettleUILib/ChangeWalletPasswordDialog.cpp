@@ -1,7 +1,9 @@
 #include "ChangeWalletPasswordDialog.h"
 #include "ui_ChangeWalletPasswordDialog.h"
+
 #include <spdlog/spdlog.h>
 #include "HDWallet.h"
+#include "EnterWalletPassword.h"
 
 
 ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
@@ -16,35 +18,36 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
 {
    ui_->setupUi(this);
 
-   ui_->labelWalletName->setText(QString::fromStdString(wallet->getName()));
+   ui_->labelWalletId->setText(QString::fromStdString(wallet->getWalletId()));
 
-   connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::reject);
+   connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::onContinueClicked);
 
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { QApplication::processEvents(); adjustSize(); });
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateState(); });
+   //connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateState(); });
+   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
+   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateState(); });
+
+   ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideGroupboxCaption 
+      | WalletKeysSubmitWidget::SetPasswordLabelAsOld);
+   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys);
+
+   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideFrejaConnectButton 
+      | WalletKeysCreateWidget::HideWidgetContol
+      | WalletKeysCreateWidget::HideGroupboxCaption
+      | WalletKeysCreateWidget::SetPasswordLabelAsNew);
    ui_->widgetCreateKeys->init(wallet_->getWalletId(), username);
 
-   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateState(); });
-   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys);
    ui_->widgetSubmitKeys->setFocus();
 
-   updateState();
+   //updateState();
 }
 
 ChangeWalletPasswordDialog::~ChangeWalletPasswordDialog() = default;
 
-void ChangeWalletPasswordDialog::showEvent(QShowEvent *evt)
-{
-   QApplication::processEvents();
-   adjustSize();
-   QDialog::showEvent(evt);
-}
-
-void ChangeWalletPasswordDialog::updateState()
-{
-   ui_->pushButtonOk->setEnabled(ui_->widgetSubmitKeys->isValid() && ui_->widgetCreateKeys->isValid());
-}
+//void ChangeWalletPasswordDialog::updateState()
+//{
+//   ui_->pushButtonOk->setEnabled(ui_->widgetSubmitKeys->isValid() && ui_->widgetCreateKeys->isValid());
+//}
 
 void ChangeWalletPasswordDialog::reject()
 {
@@ -53,9 +56,29 @@ void ChangeWalletPasswordDialog::reject()
    QDialog::reject();
 }
 
+void ChangeWalletPasswordDialog::onContinueClicked()
+{
+   std::vector<bs::wallet::PasswordData> keys = ui_->widgetCreateKeys->keys();
+   
+   if (!keys.empty() && keys.at(0).encType == bs::wallet::EncryptionType::Freja) {
+      EnterWalletPassword enterWalletPassword(this);
+      enterWalletPassword.init(wallet_->getWalletId(), ui_->widgetCreateKeys->keyRank()
+         , keys, tr("Activate Freja eID signing"));
+      int result = enterWalletPassword.exec();
+      if (result != QDialog::Accepted) {
+         return;
+      }
+
+      keys[0].password = enterWalletPassword.GetPassword();
+   }
+
+   newPasswordData_ = keys;
+   accept();
+}
+
 std::vector<bs::wallet::PasswordData> ChangeWalletPasswordDialog::newPasswordData() const
 {
-   return ui_->widgetCreateKeys->keys();
+   return newPasswordData_;
 }
 
 bs::wallet::KeyRank ChangeWalletPasswordDialog::newKeyRank() const

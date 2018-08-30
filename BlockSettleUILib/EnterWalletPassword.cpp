@@ -3,10 +3,8 @@
 #include <spdlog/spdlog.h>
 
 
-EnterWalletPassword::EnterWalletPassword(const std::string &walletId
-   , bs::wallet::KeyRank keyRank, const std::vector<bs::wallet::EncryptionType> &encTypes
-   , const std::vector<SecureBinaryData> &encKeys, const QString &prompt
-   , QWidget* parent)
+
+EnterWalletPassword::EnterWalletPassword(QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterWalletPassword())
 {
@@ -16,7 +14,14 @@ EnterWalletPassword::EnterWalletPassword(const std::string &walletId
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &EnterWalletPassword::reject);
 
    connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateState(); });
+}
 
+EnterWalletPassword::~EnterWalletPassword() = default;
+
+void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank keyRank
+   , const std::vector<bs::wallet::EncryptionType> &encTypes
+   , const std::vector<SecureBinaryData> &encKeys, const QString &prompt)
+{
    ui_->labelAction->setText(prompt);
    ui_->labelWalletId->setText(tr("Wallet ID: %1").arg(QString::fromStdString(walletId)));
 
@@ -39,12 +44,23 @@ EnterWalletPassword::EnterWalletPassword(const std::string &walletId
    ui_->widgetSubmitKeys->setFocus();
 
    updateState();
-   
+
    adjustSize();
    setMinimumSize(size());
 }
 
-EnterWalletPassword::~EnterWalletPassword() = default;
+void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank keyRank
+   , const std::vector<bs::wallet::PasswordData> &keys, const QString &prompt)
+{
+   std::vector<bs::wallet::EncryptionType> encTypes;
+   std::vector<SecureBinaryData> encKeys;
+   for (const bs::wallet::PasswordData& key : keys) {
+      encTypes.push_back(key.encType);
+      encKeys.push_back(key.encKey);
+   }
+
+   init(walletId, keyRank, encTypes, encKeys, prompt);
+}
 
 void EnterWalletPassword::updateState()
 {
