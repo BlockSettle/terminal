@@ -39,7 +39,18 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    , walletsManager_(nullptr)
    , authAddressManager_(nullptr)
    , assetManager_(nullptr)
+   , quoteProvider_(nullptr)
+   , appSettings_(nullptr)
+   , signingContainer_(nullptr)
+   , armory_(nullptr)
+   , mdProvider_(nullptr)
+   , curWallet_(nullptr)
+   , prevWallet_(nullptr)
+   , ccWallet_(nullptr)
+   , xbtWallet_(nullptr)
+   , transactionData_(nullptr)
    , dealerSellXBT_(false)
+   , ccCoinSel_(nullptr)
    , autoUpdatePrices_(true)
    , aq_(nullptr)
    , aqLoaded_(false)
@@ -95,6 +106,10 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    appSettings_ = appSettings;
    signingContainer_ = container;
    armory_ = armory;
+
+   if (walletsManager_) {
+      requestEncOpts();
+   }
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
@@ -191,15 +206,8 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<WalletsManager> &wa
    walletsManager_ = walletsManager;
    UiUtils::fillHDWalletsComboBox(ui_->comboBoxWalletAS, walletsManager_);
 
-   for (int i = 0; i < ui_->comboBoxWalletAS->count(); ++i) {
-      const auto id = ui_->comboBoxWalletAS->model()->data(
-         ui_->comboBoxWalletAS->model()->index(i, 0),
-         UiUtils::WalletIdRole).toString().toStdString();
-      const auto wallet = walletsManager_->GetHDWalletById(id);
-
-      const auto reqId = signingContainer_->GetInfo(wallet);
-
-      encOptsRequests_.emplace(std::make_pair(reqId, id));
+   if (signingContainer_) {
+      requestEncOpts();
    }
 
    if (aq_) {
@@ -835,6 +843,20 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    cb(*qn);
    delete qn;
    return true;
+}
+
+void RFQDealerReply::requestEncOpts()
+{
+   for (int i = 0; i < ui_->comboBoxWalletAS->count(); ++i) {
+      const auto id = ui_->comboBoxWalletAS->model()->data(
+         ui_->comboBoxWalletAS->model()->index(i, 0),
+         UiUtils::WalletIdRole).toString().toStdString();
+      const auto wallet = walletsManager_->GetHDWalletById(id);
+
+      const auto reqId = signingContainer_->GetInfo(wallet);
+
+      encOptsRequests_.emplace(std::make_pair(reqId, id));
+   }
 }
 
 void RFQDealerReply::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)

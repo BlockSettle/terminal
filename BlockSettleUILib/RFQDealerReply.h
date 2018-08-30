@@ -207,6 +207,7 @@ namespace bs {
          bool submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price
             , std::function<void(bs::network::QuoteNotification)>);
+         void requestEncOpts();
       };
 
    }  //namespace ui
