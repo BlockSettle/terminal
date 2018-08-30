@@ -250,6 +250,15 @@ std::vector<WalletsManager::wallet_gen_type> WalletsWidget::GetSelectedWallets()
    return {};
 }
 
+std::vector<WalletsManager::wallet_gen_type> WalletsWidget::GetFirstWallets() const
+{
+   if (walletsModel_->rowCount()) {
+      return walletsModel_->getWallets(walletsModel_->index(0, 0));
+   } else {
+      return {};
+   }
+}
+
 void WalletsWidget::showSelectedWalletProperties()
 {
    auto indexes = ui->treeViewWallets->selectionModel()->selectedIndexes();
