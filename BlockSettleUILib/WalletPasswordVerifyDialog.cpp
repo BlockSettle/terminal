@@ -4,29 +4,37 @@
 #include "MessageBoxCritical.h"
 #include "ui_WalletPasswordVerifyDialog.h"
 
-WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::string& walletId
-   , const std::vector<bs::wallet::PasswordData>& keys, bs::wallet::KeyRank keyRank
-   , QWidget *parent)
+WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletPasswordVerifyDialog)
-   , walletId_(walletId)
-   , keys_(keys)
-   , keyRank_(keyRank)
 {
    ui_->setupUi(this);
 
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &WalletPasswordVerifyDialog::onContinueClicked);
 
+   ui_->stackedWidget->setCurrentIndex(Pages::FrejaInfo);
+}
+
+WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
+
+void WalletPasswordVerifyDialog::init(const std::string& walletId, const std::vector<bs::wallet::PasswordData>& keys
+   , bs::wallet::KeyRank keyRank)
+{
+   walletId_ = walletId;
+   keys_ = keys;
+   keyRank_ = keyRank;
+      
    const bs::wallet::PasswordData &key = keys.at(0);
 
    if (key.encType == bs::wallet::EncryptionType::Freja) {
       initFreja(QString::fromStdString(key.encKey.toBinStr()));
-   } else {
+   }
+   else {
       initPassword();
    }
-}
 
-WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
+   runPasswordCheck_ = true;
+}
 
 void WalletPasswordVerifyDialog::initPassword()
 {
@@ -47,6 +55,11 @@ void WalletPasswordVerifyDialog::initFreja(const QString& frejaId)
 
 void WalletPasswordVerifyDialog::onContinueClicked()
 {
+   if (!runPasswordCheck_) {
+      accept();
+      return;
+   }
+
    Pages currentPage = Pages(ui_->stackedWidget->currentIndex());
    
    if (currentPage == FrejaInfo) {

@@ -204,7 +204,8 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
       return false;
    }
 
-   WalletPasswordVerifyDialog verifyDialog(walletId, *keys, widgetCreateKeys->keyRank(), parent);
+   WalletPasswordVerifyDialog verifyDialog(parent);
+   verifyDialog.init(walletId, *keys, widgetCreateKeys->keyRank());
    int result = verifyDialog.exec();
    if (!result) {
       return false;

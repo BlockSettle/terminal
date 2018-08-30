@@ -1,9 +1,10 @@
 #include "ChangeWalletPasswordDialog.h"
 #include "ui_ChangeWalletPasswordDialog.h"
 
-#include <spdlog/spdlog.h>
 #include "HDWallet.h"
 #include "EnterWalletPassword.h"
+#include "WalletPasswordVerifyDialog.h"
+#include <spdlog/spdlog.h>
 
 
 ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
@@ -61,10 +62,16 @@ void ChangeWalletPasswordDialog::onContinueClicked()
    std::vector<bs::wallet::PasswordData> keys = ui_->widgetCreateKeys->keys();
    
    if (!keys.empty() && keys.at(0).encType == bs::wallet::EncryptionType::Freja) {
+      WalletPasswordVerifyDialog walletPasswordVerifyDialog(this);
+      int result = walletPasswordVerifyDialog.exec();
+      if (result != QDialog::Accepted) {
+         return;
+      }
+
       EnterWalletPassword enterWalletPassword(this);
       enterWalletPassword.init(wallet_->getWalletId(), ui_->widgetCreateKeys->keyRank()
          , keys, tr("Activate Freja eID signing"));
-      int result = enterWalletPassword.exec();
+      result = enterWalletPassword.exec();
       if (result != QDialog::Accepted) {
          return;
       }
