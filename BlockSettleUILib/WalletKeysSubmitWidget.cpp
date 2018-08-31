@@ -96,6 +96,12 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    if (flags_ & FrejaIdVisible) {
       widget->setShowFrejaId(true);
    }
+   if (flags_ & HideFrejaEmailLabel) {
+      widget->setHideFrejaEmailLabel(true);
+   }
+   if (flags_ & HideFrejaControlsOnSignClicked) {
+      widget->setHideFrejaControlsOnSignClicked(true);
+   }
 
    ui_->groupBox->layout()->addWidget(widget);
 

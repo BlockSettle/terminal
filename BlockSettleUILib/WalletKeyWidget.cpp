@@ -72,6 +72,7 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelFrejaInfo->setVisible(!password_ && !hideFrejaCombobox_);
    ui_->pushButtonFreja->setVisible(!hideFrejaConnect_);
    ui_->comboBoxFrejaId->setVisible(!hideFrejaCombobox_);
+   ui_->labelFrejaInfo->setVisible(!hideFrejaEmailLabel_);
 }
 
 void WalletKeyWidget::onPasswordChanged()
@@ -110,6 +111,10 @@ void WalletKeyWidget::onFrejaSignClicked()
    frejaSign_.start(ui_->comboBoxFrejaId->currentText(), tr("Activate Freja eID signing"), walletId_);
    ui_->pushButtonFreja->setText(tr("Cancel Freja request"));
    ui_->comboBoxFrejaId->setEnabled(false);
+
+   if (hideFrejaControlsOnSignClicked_) {
+      ui_->widgetFrejaLayout->hide();
+   }
 }
 
 void WalletKeyWidget::onFrejaSucceeded(SecureBinaryData password)
@@ -117,6 +122,7 @@ void WalletKeyWidget::onFrejaSucceeded(SecureBinaryData password)
    stop();
    ui_->pushButtonFreja->setText(tr("Successfully signed"));
    ui_->pushButtonFreja->setEnabled(false);
+   ui_->widgetFrejaLayout->show();
 
    QPropertyAnimation *a = startFrejaAnimation(true);
    connect(a, &QPropertyAnimation::finished, [this, password]() {
@@ -130,6 +136,7 @@ void WalletKeyWidget::onFrejaFailed(const QString &text)
    stop();
    ui_->pushButtonFreja->setEnabled(true);
    ui_->pushButtonFreja->setText(tr("Freja failed: %1 - retry").arg(text));
+   ui_->widgetFrejaLayout->show();
    
    QPropertyAnimation *a = startFrejaAnimation(false);
    connect(a, &QPropertyAnimation::finished, [this]() {
@@ -163,6 +170,7 @@ void WalletKeyWidget::stop()
       ui_->progressBar->hide();
    }
    ui_->comboBoxFrejaId->setEnabled(true);
+   ui_->widgetFrejaLayout->show();
 }
 
 void WalletKeyWidget::cancel()
@@ -242,6 +250,17 @@ void WalletKeyWidget::setShowFrejaId(bool value)
 {
    showFrejaId_ = value;
    onTypeChanged();
+}
+
+void WalletKeyWidget::setHideFrejaEmailLabel(bool value)
+{
+   hideFrejaEmailLabel_ = value;
+   onTypeChanged();
+}
+
+void WalletKeyWidget::setHideFrejaControlsOnSignClicked(bool value)
+{
+   hideFrejaControlsOnSignClicked_ = value;
 }
 
 void WalletKeyWidget::setCreateUsername(const QString& username)

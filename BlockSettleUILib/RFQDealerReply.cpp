@@ -77,7 +77,9 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
 
    ui_->checkBoxAutoSign->setEnabled(false);
-   ui_->widgetSubmitKeysAS->setFlags(WalletKeysSubmitWidget::HideGroupboxCaption);
+   ui_->widgetSubmitKeysAS->setFlags(WalletKeysSubmitWidget::HideGroupboxCaption |
+      WalletKeysSubmitWidget::HideFrejaEmailLabel |
+      WalletKeysSubmitWidget::HideFrejaControlsOnSignClicked);
    ui_->widgetSubmitKeysAS->suspend();
    connect(ui_->checkBoxAutoSign, &QCheckBox::clicked, this, &RFQDealerReply::onAutoSignActivated);
    connect(ui_->widgetSubmitKeysAS, &WalletKeysSubmitWidget::keyChanged, this, &RFQDealerReply::updateAutoSignState);
