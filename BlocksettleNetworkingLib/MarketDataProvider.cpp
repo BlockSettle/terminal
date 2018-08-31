@@ -10,7 +10,6 @@
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
 
-
 MarketDataProvider::MarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::string& host, const std::string& port
       , const std::shared_ptr<spdlog::logger>& logger)

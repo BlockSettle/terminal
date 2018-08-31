@@ -4,6 +4,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "com/celertech/marketdata/api/price/UpstreamPriceProto.pb.h"
+
 CelerSubscribeToMDSequence::CelerSubscribeToMDSequence(const std::string& currencyPair, bs::network::Asset::Type at, const std::shared_ptr<spdlog::logger>& logger)
  : CelerCommandSequence("CelerSubscribeToMDSequence",
       {
@@ -21,26 +23,29 @@ bool CelerSubscribeToMDSequence::FinishSequence()
 
 CelerMessage CelerSubscribeToMDSequence::subscribeToMD()
 {
-   // MarketDataRequest request;
-   // reqId_ = GetUniqueId();
+   com::celertech::marketdata::api::price::MarketDataSubscriptionRequest request;
 
-   // request.set_marketdatarequestid(reqId_);
-   // request.set_marketdatarequesttype(SNAPSHOT_PLUS_UPDATES);
-   // request.set_marketdataupdatetype(FULL_SNAPSHOT);
-   // request.set_marketdepth(0);
-   // request.set_securitycode(currencyPair_);
-   // request.set_securityid(currencyPair_);
-   // request.set_streamid("BLK_STANDARD");
-   // request.set_assettype(bs::network::Asset::toCeler(assetType_));
-   // request.set_producttype(bs::network::Asset::toCelerProductType(assetType_));
+   reqId_ = GetUniqueId();
 
-   // if (assetType_ == bs::network::Asset::SpotFX) {
-   //    request.set_settlementtype("SP");
-   // }
+   request.set_marketdatarequestid(reqId_);
+   request.set_marketdatarequesttype(com::celertech::marketdata::api::enums::marketdatarequesttype::SNAPSHOT_PLUS_UPDATES);
+   request.set_marketdataupdatetype(com::celertech::marketdata::api::enums::marketdataupdatetype::FULL_SNAPSHOT);
+   request.set_securitycode(currencyPair_);
+   request.set_securityid(currencyPair_);
+   request.set_marketdatabooktype(com::celertech::marketdata::api::enums::marketdatabooktype::FULL_BOOK);
+   request.set_exchangecode("XCEL");
+
+   //request.set_producttype(com::celertech::marketdata::api::enums::producttype::ProductType::SPOT);
+   request.set_producttype(bs::network::Asset::toCelerMDProductType(assetType_));
+   request.set_assettype(bs::network::Asset::toCelerMDAssetType(assetType_));
+
+   if (assetType_ == bs::network::Asset::SpotFX) {
+      request.set_settlementtype("SP");
+   }
 
    CelerMessage message;
-   // message.messageType = CelerAPI::MarketDataRequestType;
-   // message.messageData = request.SerializeAsString();
+   message.messageType = CelerAPI::MarketDataSubscriptionRequestType;
+   message.messageData = request.SerializeAsString();
 
    return message;
 }

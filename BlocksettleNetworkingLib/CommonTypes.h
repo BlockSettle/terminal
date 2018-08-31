@@ -10,6 +10,9 @@
 #include "com/celertech/marketmerchant/api/enums/ProductTypeProto.pb.h"
 #include "com/celertech/marketmerchant/api/enums/MarketDataEntryTypeProto.pb.h"
 
+#include "com/celertech/marketdata/api/enums/AssetTypeProto.pb.h"
+#include "com/celertech/marketdata/api/enums/ProductTypeProto.pb.h"
+
 namespace bs {
    namespace network {
 
@@ -84,12 +87,26 @@ namespace bs {
                default:             return com::celertech::marketmerchant::api::enums::assettype::STRUCTURED_PRODUCT;
             }
          }
+         static com::celertech::marketdata::api::enums::assettype::AssetType toCelerMDAssetType(Type at) {
+            switch (at) {
+               case SpotFX:         return com::celertech::marketdata::api::enums::assettype::FX;
+               case SpotXBT:        return com::celertech::marketdata::api::enums::assettype::CRYPTO;
+               case PrivateMarket:  return com::celertech::marketdata::api::enums::assettype::CRYPTO;
+            }
+         }
          static com::celertech::marketmerchant::api::enums::producttype::ProductType toCelerProductType(Type at) {
             switch (at) {
                case SpotFX:         return com::celertech::marketmerchant::api::enums::producttype::SPOT;
                case SpotXBT:        return com::celertech::marketmerchant::api::enums::producttype::BITCOIN;
                case PrivateMarket:  return com::celertech::marketmerchant::api::enums::producttype::PRIVATE_SHARE;
                default:             return com::celertech::marketmerchant::api::enums::producttype::SPOT;
+            }
+         }
+         static com::celertech::marketdata::api::enums::producttype::ProductType toCelerMDProductType(Type at) {
+            switch (at) {
+               case SpotFX:         return com::celertech::marketdata::api::enums::producttype::SPOT;
+               case SpotXBT:        return com::celertech::marketdata::api::enums::producttype::BITCOIN;
+               default:             return com::celertech::marketdata::api::enums::producttype::SPOT;
             }
          }
          static const char *toCelerSettlementType(Type at) {

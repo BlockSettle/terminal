@@ -112,6 +112,8 @@ enum CelerMessageType
    MarketDataFullSnapshotDownstreamEventType,
    MarketDataIncrementalDownstreamEventType,
 
+   MarketDataSubscriptionRequestType,
+
    CelerMessageTypeLast,
    UndefinedType = CelerMessageTypeLast
 };
