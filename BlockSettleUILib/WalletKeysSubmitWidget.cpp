@@ -24,6 +24,10 @@ void WalletKeysSubmitWidget::init(const std::string &walletId, bs::wallet::KeyRa
    , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys)
 {
+   qDeleteAll(widgets_.cbegin(), widgets_.cend());
+   widgets_.clear();
+   pwdData_.clear();
+
    if (flags_ & HideGroupboxCaption) {
       ui_->groupBox->setTitle(QString());
    }
@@ -91,6 +95,12 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    }
    if (flags_ & FrejaIdVisible) {
       widget->setShowFrejaId(true);
+   }
+   if (flags_ & HideFrejaEmailLabel) {
+      widget->setHideFrejaEmailLabel(true);
+   }
+   if (flags_ & HideFrejaControlsOnSignClicked) {
+      widget->setHideFrejaControlsOnSignClicked(true);
    }
 
    ui_->groupBox->layout()->addWidget(widget);
