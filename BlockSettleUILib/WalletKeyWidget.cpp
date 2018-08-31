@@ -69,10 +69,9 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelFrejeId->setVisible(!password_ && showFrejaId_);
    ui_->widgetFrejaLayout->setVisible(!password_);
    
-   ui_->labelFrejaInfo->setVisible(!password_ && !hideFrejaCombobox_);
    ui_->pushButtonFreja->setVisible(!hideFrejaConnect_);
    ui_->comboBoxFrejaId->setVisible(!hideFrejaCombobox_);
-   ui_->labelFrejaInfo->setVisible(!hideFrejaEmailLabel_ && !password_);
+   ui_->labelFrejaInfo->setVisible(!hideFrejaEmailLabel_ && !password_ && !hideFrejaCombobox_);
 }
 
 void WalletKeyWidget::onPasswordChanged()
