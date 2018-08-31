@@ -575,11 +575,6 @@ void WebSocketServer::webSocketService(int port)
    info.ip_limit_ah = 24; /* for testing */
    info.ip_limit_wsi = 105; /* for testing */
    
-   //TCP keep-alive
-   info.ka_time = 600;
-   info.ka_interval = 10;
-   info.ka_probes = 10;
-
    auto context = lws_create_context(&info);
    if (context == nullptr) 
       throw LWS_Error("failed to create LWS context");

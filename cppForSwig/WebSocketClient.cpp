@@ -66,14 +66,11 @@ struct lws_context* WebSocketClient::init()
    
    info.port = CONTEXT_PORT_NO_LISTEN;
    info.protocols = protocols;
-   info.ws_ping_pong_interval = 0;
    info.gid = -1;
    info.uid = -1;
 
-   //TCP keep-alive
-   info.ka_time = 600;
-   info.ka_interval = 100;
-   info.ka_probes = 3;
+   //1 min ping/pong
+   info.ws_ping_pong_interval = 60;
 
    auto contextptr = lws_create_context(&info);
    if (contextptr == NULL) 

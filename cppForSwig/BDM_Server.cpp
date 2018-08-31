@@ -1357,7 +1357,24 @@ bool BDV_Server_Object::processPayload(shared_ptr<BDV_Payload>& packet,
       return false;
    }
 
-   result = processCommand(message);
+   try
+   {
+      result = processCommand(message);
+   }
+   catch (exception &e)
+   {
+      auto errMsg = make_shared<::Codec_NodeStatus::BDV_Error>();
+      errMsg->set_type(1);
+      stringstream ss;
+      ss << "Error processing command: " << (int)message->method() << endl;
+      errMsg->set_error(ss.str());
+      
+      string errStr(e.what());
+      if (errStr.size() > 0)
+         errMsg->set_extra(e.what());
+
+      result = errMsg;
+   }
 
    //reset the current message as it resulted in a full payload
    resetCurrentMessage();
@@ -1821,19 +1838,7 @@ void Clients::messageParserThread(void)
       }
 
       //grabbed the thread lock, time to process the payload
-      shared_ptr<Message> result;
-      try
-      {
-         result = processCommand(payloadPtr);
-      }
-      catch (exception &e)
-      {
-         auto errMsg = make_shared<::Codec_NodeStatus::BDV_Error>();
-         errMsg->set_type(1);
-         errMsg->set_error(e.what());
-
-         result = errMsg;
-      }
+      auto result = processCommand(payloadPtr);
 
       if (bdvPtr->packetToReinject_ != nullptr)
       {

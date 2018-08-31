@@ -835,16 +835,6 @@ void bs::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
    if (!armory_ && (armory != nullptr)) {
       armory_ = armory;
    }
-   std::thread([this] {    // Temporary workaround for websockets connection keep-alive
-      heartbeatRunning_ = true;
-      while (heartbeatRunning_) {
-         std::this_thread::sleep_for(std::chrono::seconds(230));
-         if (!heartbeatRunning_) {
-            return;
-         }
-         UpdateBalanceFromDB();
-      }
-   }).detach();
 }
 
 void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
