@@ -148,9 +148,9 @@ namespace bs {
          std::atomic_bool     autoUpdatePrices_;
 
          struct WalletEncOpts {
-            std::vector<wallet::EncryptionType> walletEncTypes_;
-            std::vector<SecureBinaryData> walletEncKeys_;
-            bs::wallet::KeyRank walletEncRank_;
+            const std::vector<wallet::EncryptionType> walletEncTypes_;
+            const std::vector<SecureBinaryData> walletEncKeys_;
+            const bs::wallet::KeyRank walletEncRank_;
 
             WalletEncOpts(const std::vector<wallet::EncryptionType> &walletEncTypes,
                const std::vector<SecureBinaryData> &walletEncKeys,
