@@ -87,7 +87,10 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.blocksettle.private_bridge.eod.UpstreamEoDProto$EndOfDayPriceReport", EndOfDayPriceReportType},
    { "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$XBTTradeStatusRequest", XBTTradeStatusRequestType},
    { "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$ColouredCoinTradeStatusRequest", ColouredCoinTradeStatusRequestType},
-   { "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException", PersistenceException}
+   { "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException", PersistenceExceptionType},
+   { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent", MarketDataRequestRejectDownstreamEventType},
+   { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent", MarketDataFullSnapshotDownstreamEventType},
+   { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataIncrementalDownstreamEvent", MarketDataIncrementalDownstreamEventType}
 };
 
 static const std::unordered_map<int, std::string> typeToName = {
@@ -173,7 +176,10 @@ static const std::unordered_map<int, std::string> typeToName = {
    { EndOfDayPriceReportType, "com.blocksettle.private_bridge.eod.UpstreamEoDProto$EndOfDayPriceReport"},
    { XBTTradeStatusRequestType, "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$XBTTradeStatusRequest"},
    { ColouredCoinTradeStatusRequestType, "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$ColouredCoinTradeStatusRequest"},
-   { PersistenceException, "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException"}
+   { PersistenceExceptionType, "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException"},
+   { MarketDataRequestRejectDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent"},
+   { MarketDataFullSnapshotDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent"},
+   { MarketDataIncrementalDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataIncrementalDownstreamEvent"}
 };
 
 std::string GetMessageClass(CelerMessageType messageType)

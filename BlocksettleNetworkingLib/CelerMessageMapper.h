@@ -106,7 +106,11 @@ enum CelerMessageType
    XBTTradeStatusRequestType,
    ColouredCoinTradeStatusRequestType,
 
-   PersistenceException,
+   PersistenceExceptionType,
+
+   MarketDataRequestRejectDownstreamEventType,
+   MarketDataFullSnapshotDownstreamEventType,
+   MarketDataIncrementalDownstreamEventType,
 
    CelerMessageTypeLast,
    UndefinedType = CelerMessageTypeLast

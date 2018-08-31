@@ -8,9 +8,8 @@
 
 #include <spdlog/spdlog.h>
 
-// #include "DownstreamMarketDataProto.pb.h"
+#include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
 
-// using namespace com::celertech::marketmerchant::api::marketdata;
 
 MarketDataProvider::MarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::string& host, const std::string& port
@@ -66,15 +65,15 @@ bool MarketDataProvider::IsConnectionActive() const
 
 void MarketDataProvider::ConnectToCelerClient()
 {
-   // celerClient_->RegisterHandler(CelerAPI::MarketDataFullSnapshotDownstreamEventType, [this](const std::string& data) {
-   //    return this->onMDUpdate(data);
-   // });
-   // celerClient_->RegisterHandler(CelerAPI::MarketDataIncrementalDownstreamEventType, [this](const std::string& data) {
-   //    return onMDUpdate(data);
-   // });
-   // celerClient_->RegisterHandler(CelerAPI::MarketDataRequestRejectType, [this](const std::string& data) {
-   //    return this->onReqRejected(data);
-   // });
+   celerClient_->RegisterHandler(CelerAPI::MarketDataFullSnapshotDownstreamEventType, [this](const std::string& data) {
+      return this->onFullSnapshot(data);
+   });
+   celerClient_->RegisterHandler(CelerAPI::MarketDataIncrementalDownstreamEventType, [this](const std::string& data) {
+      return onIncrementalUpdate(data);
+   });
+   celerClient_->RegisterHandler(CelerAPI::MarketDataRequestRejectDownstreamEventType, [this](const std::string& data) {
+      return this->onReqRejected(data);
+   });
 
    connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &MarketDataProvider::OnConnectedToCeler);
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &MarketDataProvider::OnDisconnectedFromCeler);
@@ -139,9 +138,16 @@ bool MarketDataProvider::isPriceValid(double val)
    return false;
 }
 
-bool MarketDataProvider::onMDUpdate(const std::string& data)
+bool MarketDataProvider::onIncrementalUpdate(const std::string& data)
 {
-   // MarketDataFullSnapshotDownstreamEvent response;
+   com::celertech::marketdata::api::price::MarketDataIncrementalDownstreamEvent response;
+
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MarketDataProvider::onIncrementalUpdate] Failed to parse MarketDataIncrementalDownstreamEvent");
+      return false;
+   }
+
+   logger_->debug("[MarketDataProvider::onIncrementalUpdate] {}", response.DebugString());
 
    // if (!response.ParseFromString(data)) {
    //       logger_->error("[MarketDataProvider::onMDUpdate] Failed to parse MarketDataFullSnapshotDownstreamEvent");
@@ -173,13 +179,52 @@ bool MarketDataProvider::onMDUpdate(const std::string& data)
    return true;
 }
 
+bool MarketDataProvider::onFullSnapshot(const std::string& data)
+{
+   com::celertech::marketdata::api::price::MarketDataFullSnapshotDownstreamEvent response;
+
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MarketDataProvider::onFullSnapshot] Failed to parse MarketDataFullSnapshotDownstreamEvent");
+      return false;
+   }
+
+   logger_->debug("[MarketDataProvider::onFullSnapshot] {}", response.DebugString());
+
+   // auto security = QString::fromStdString(response.securitycode());
+   // if (security.isEmpty()) {
+   //    security = QString::fromStdString(response.securityid());
+   // }
+
+   // bs::network::MDFields fields;
+
+   // for (int i=0; i < response.marketdatapricesnapshotlevel_size(); ++i) {
+   //    const auto& levelPrice = response.marketdatapricesnapshotlevel(i);
+   //    if (levelPrice.entryposition() == 1) {
+   //       if (isPriceValid(levelPrice.entryprice())) {
+   //          fields.push_back({bs::network::MDField::fromCeler(levelPrice.marketdataentrytype())
+   //             , levelPrice.entryprice(), QString()});
+   //       }
+   //    }
+   // }
+
+   // const auto itSecDef = secDefs_.find(security.toStdString());
+   // const auto assetType = (itSecDef == secDefs_.end()) ? bs::network::Asset::fromCelerProductType(response.producttype())
+   //    : itSecDef->second.assetType;
+   // emit MDUpdate(assetType, security, fields);
+
+   return true;
+}
+
 bool MarketDataProvider::onReqRejected(const std::string& data)
 {
-   // MarketDataRequestRejectDownstreamEvent response;
-   // if (!response.ParseFromString(data)) {
-   //    logger_->error("[MarketDataProvider::onReqRejected] Failed to parse MarketDataRequestRejectDownstreamEvent");
-   //    return false;
-   // }
+   com::celertech::marketdata::api::price::MarketDataRequestRejectDownstreamEvent response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MarketDataProvider::onReqRejected] Failed to parse MarketDataRequestRejectDownstreamEvent");
+      return false;
+   }
+
+   logger_->debug("[MarketDataProvider::onReqRejected] {}", response.DebugString());
+
    // emit MDReqRejected(requests_[response.marketdatarequestid()], response.text());
    // logger_->warn("[MDReject] {}", response.DebugString());
    return true;
