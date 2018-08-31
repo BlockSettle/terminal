@@ -240,6 +240,7 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
 
    quote.expirationTime = QDateTime::fromMSecsSinceEpoch(response.validuntiltimeutcinmillis());
    quote.timeSkewMs = QDateTime::fromMSecsSinceEpoch(response.quotetimestamputcinmillis()).msecsTo(QDateTime::currentDateTime());
+   quote.celerTimestamp = response.quotetimestamputcinmillis();
 
    logger_->debug("[QuoteProvider::onQuoteResponse] timeSkew = {}", quote.timeSkewMs);
    CurrencyPair cp(quote.security);
