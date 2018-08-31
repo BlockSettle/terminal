@@ -2,7 +2,9 @@
 #define __CELER_SUBSCRIBE_TO_MD_H__
 
 #include "CelerCommandSequence.h"
+
 #include "CommonTypes.h"
+
 #include <string>
 #include <functional>
 #include <memory>
@@ -29,7 +31,6 @@ public:
 
 private:
    CelerMessage subscribeToMD();
-   CelerMessage subscribeToMDStat();
 
    std::string currencyPair_;
    bs::network::Asset::Type assetType_;
