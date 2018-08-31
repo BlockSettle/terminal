@@ -43,6 +43,7 @@ public:
    void setUsername(const QString& username);
 
    std::vector<WalletsManager::wallet_gen_type> GetSelectedWallets() const;
+   std::vector<WalletsManager::wallet_gen_type> GetFirstWallets() const;
 
    bool CreateNewWallet(bool primary, bool report = true);
    bool ImportNewWallet(bool primary, bool report = true);

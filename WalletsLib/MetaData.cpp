@@ -836,8 +836,12 @@ void bs::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
       armory_ = armory;
    }
    std::thread([this] {    // Temporary workaround for websockets connection keep-alive
-      while (true) {
+      heartbeatRunning_ = true;
+      while (heartbeatRunning_) {
          std::this_thread::sleep_for(std::chrono::seconds(230));
+         if (!heartbeatRunning_) {
+            return;
+         }
          UpdateBalanceFromDB();
       }
    }).detach();
@@ -867,6 +871,7 @@ void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory,
 
 void bs::Wallet::UnregisterWallet()
 {
+   heartbeatRunning_ = false;
    btcWallet_.reset();
    {
       QMutexLocker lock(&addrMapsMtx_);
@@ -875,6 +880,7 @@ void bs::Wallet::UnregisterWallet()
    }
    spendableCallbacks_.clear();
    zcListCallbacks_.clear();
+   historyCache_.clear();
 }
 
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs
