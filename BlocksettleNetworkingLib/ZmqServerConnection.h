@@ -60,6 +60,7 @@ protected:
 
    // should be accessed only from overloaded ReadFromDataSocket.
    ZmqContext::sock_ptr             dataSocket_;
+   ZmqContext::sock_ptr             monSocket_;
 
    std::unordered_map<std::string, std::string> clientInfo_;
 
@@ -71,7 +72,8 @@ private:
 
    enum SocketIndex {
       ControlSocketIndex = 0,
-      DataSocketIndex
+      DataSocketIndex,
+      MonitorSocketIndex
    };
 
    enum InternalCommandCode {
@@ -103,6 +105,7 @@ private:
    std::deque<DataToSend>           dataQueue_;
 
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
+   std::unordered_map<int, std::string> connectedPeers_;
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__

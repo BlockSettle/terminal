@@ -398,18 +398,9 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 
 void TransactionsWidget::updateResultCount()
 {
-   auto all = sortFilterModel_->totalRowCount();
    auto shown = sortFilterModel_->rowCount();
    auto total = transactionsModel_->rowCount();
-   if (shown < total) {
-      ui->labelResultCount->setText(tr("Showing %L1 of %L2 results (of %L3 total). To see other transactions, change the filters and/or date range above. ").arg(shown).arg(all).arg(total));
-      ui->labelResultCount->show();
-   }
-   else if (all == 0 && total != 0) {
-      ui->labelResultCount->setText(tr("None of the %L1 transactions match the filter criteria. To see other transactions, change the filters and/or date range above. ").arg(total));
-      ui->labelResultCount->show();
-   }
-   else {
-      ui->labelResultCount->hide();
-   }
+   ui->labelResultCount->setText(tr("Displaying %L1 transactions (of %L2 total).")
+      .arg(shown).arg(total));
+   ui->labelResultCount->show();
 }

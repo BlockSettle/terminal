@@ -31,10 +31,11 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
       ui_->labelDirection->setText(tr(bs::Transaction::toString(item->direction)));
       ui_->labelAddress->setText(item->mainAddress);
 
+      if (item->txEntry.blockNum != std::numeric_limits<uint32_t>::max()) {
+         ui_->labelHeight->setText(QString::number(item->txEntry.blockNum));
+      }
+
       if (item->tx.isInitialized()) {
-         if (item->tx.getBlockHeight() != std::numeric_limits<uint32_t>::max()) {
-            ui_->labelHeight->setText(QString::number(item->tx.getBlockHeight()));
-         }
          ui_->labelSize->setText(QString::number(item->tx.serializeNoWitness().getSize()));
 
          std::set<BinaryData> txHashSet;

@@ -365,6 +365,7 @@ namespace bs {
       std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
 
       mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
+      std::atomic_bool  heartbeatRunning_ = { false };
 
    private slots:
       void onZCListObjDestroyed();

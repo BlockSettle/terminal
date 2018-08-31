@@ -164,6 +164,8 @@ namespace ClientClasses
       bool                isWitness(void) const;
 
       vector<BinaryDataRef> getScrAddrList(void) const;
+
+      bool operator==(const LedgerEntry& rhs);
    };
 
    ////////////////////////////////////////////////////////////////////////////
