@@ -87,37 +87,30 @@ void MarketDataProvider::OnConnectedToCeler()
       fxPairs.emplace_back("EUR/USD");
    }
 
-   // auto onSecuritiesReceived = [this](const bs::network::CelerSubscribeToSecurities::Securities &securities) {
-   //    for (auto security : securities) {
-   //       if (filterUsdProducts_) {
-   //          CurrencyPair pair{security.first};
-   //          if ((pair.NumCurrency() == "USD") || (pair.DenomCurrency() == "USD")) {
-   //             continue;
-   //          }
-   //       }
+   for (const auto& ccyPair : fxPairs) {
+      auto subscribeCommand = std::make_shared<CelerSubscribeToMDSequence>(ccyPair, bs::network::Asset::Type::SpotFX, logger_);
+      if (!celerClient_->ExecuteSequence(subscribeCommand)) {
+         logger_->error("[MarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
+            , ccyPair);
+      } else {
+         emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotFX});
+         emit MDUpdate(bs::network::Asset::Type::SpotFX, QString::fromStdString(ccyPair), {});
+      }
+   }
 
-   //       auto mdReq = std::make_shared<CelerSubscribeToMDSequence>(security.first, security.second.assetType, logger_);
-   //       if (!celerClient_->ExecuteSequence(mdReq)) {
-   //          logger_->error("[MarketDataProvider::OnConnectedToCeler] failed to execut MD request to {}", security.first);
-   //       }
-   //       else {
-   //          requests_[mdReq->getReqId()] = security.first;
-   //          secDefs_[security.first] = security.second;
-   //       }
-   //       emit MDSecurityReceived(security.first, security.second);
-   //       emit MDUpdate(security.second.assetType, QString::fromStdString(security.first), {});
-   //    }
-   //    emit MDSecuritiesReceived();
-   //    emit Connected();
-   // };
+   for (const auto& ccyPair : xbtPairs) {
+      auto subscribeCommand = std::make_shared<CelerSubscribeToMDSequence>(ccyPair, bs::network::Asset::Type::SpotXBT, logger_);
+      if (!celerClient_->ExecuteSequence(subscribeCommand)) {
+         logger_->error("[MarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
+            , ccyPair);
+      } else {
+         emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotXBT});
+         emit MDUpdate(bs::network::Asset::Type::SpotXBT, QString::fromStdString(ccyPair), {});
+      }
+   }
 
-   // auto dicoReq = std::make_shared<bs::network::CelerSubscribeToSecurities>(logger_, onSecuritiesReceived);
-   // if (!celerClient_->ExecuteSequence(dicoReq)) {
-   //    logger_->error("[MarketDataProvider::OnConnectedToCeler] failed to execute CelerSubscribeToSecurities");
-   // }
-   // else {
-   //    logger_->debug("[MarketDataProvider::OnConnectedToCeler] requested securities");
-   // }
+   emit MDSecuritiesReceived();
+   emit Connected();
 }
 
 void MarketDataProvider::OnDisconnectedFromCeler()
@@ -224,7 +217,8 @@ bool MarketDataProvider::onReqRejected(const std::string& data)
 
    logger_->debug("[MarketDataProvider::onReqRejected] {}", response.DebugString());
 
-   // emit MDReqRejected(requests_[response.marketdatarequestid()], response.text());
-   // logger_->warn("[MDReject] {}", response.DebugString());
+   // text field contain rejected ccy pair
+   emit MDReqRejected(response.text(), "rejected");
+
    return true;
 }
