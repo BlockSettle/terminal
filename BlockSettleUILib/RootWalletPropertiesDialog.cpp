@@ -188,6 +188,8 @@ void RootWalletPropertiesDialog::onChangePassword()
       return;
    }
 
+   isLatestPasswordChangeAddDevice_ = changePasswordDialog.isLatestChangeAddDevice();
+
    const auto oldPassword = changePasswordDialog.oldPassword();
 
    if (wallet_->isWatchingOnly()) {
@@ -195,19 +197,9 @@ void RootWalletPropertiesDialog::onChangePassword()
          , changePasswordDialog.newKeyRank(), oldPassword);
    }
    else {
-      if (wallet_->changePassword(changePasswordDialog.newPasswordData(), changePasswordDialog.newKeyRank()
-         , oldPassword)) {
-         MessageBoxSuccess message(tr("Password change")
-            , tr("Wallet password successfully changed - don't forget your new password!")
-            , this);
-         message.exec();
-      }
-      else {
-         MessageBoxCritical message(tr("Password change failure")
-            , tr("A problem occured when changing wallet password")
-            , this);
-         message.exec();
-      }
+      bool result = wallet_->changePassword(changePasswordDialog.newPasswordData(), changePasswordDialog.newKeyRank()
+         , oldPassword);
+      onPasswordChanged(wallet_->getWalletId(), result);
    }
 }
 
@@ -216,6 +208,22 @@ void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, 
    if (walletId != wallet_->getWalletId()) {
       return;
    }
+
+   if (isLatestPasswordChangeAddDevice_) {
+      if (ok) {
+         MessageBoxSuccess(tr("Wallet Password")
+            , tr("Device successfully added")
+            , this).exec();
+      }
+      else {
+         MessageBoxCritical(tr("Wallet Password")
+            , tr("Device adding failed")
+            , this).exec();
+      }
+
+      return;
+   }
+
    if (ok) {
       MessageBoxSuccess(tr("Password change")
          , tr("Wallet password successfully changed - don't forget your new password!")

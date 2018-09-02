@@ -221,6 +221,7 @@ void ChangeWalletPasswordDialog::onCreateKeysKeyChanged2(int, SecureBinaryData p
    newKeyRank_ = oldKeyRank_;
    newKeyRank_.second = newPasswordData_.size();
 
+   isLatestChangeAddDevice_ = true;
    accept();
 }
 
@@ -257,6 +258,7 @@ void ChangeWalletPasswordDialog::updateState()
 
    if (currentPage == Pages::Basic) {
       ui_->pushButtonOk->setText(tr("Continue"));
+      ui_->pushButtonOk->setEnabled(true);
    } else {
       ui_->pushButtonOk->setText(tr("Add Device"));
       bool isOldFreja = !oldPasswordData_.empty() && oldPasswordData_[0].encType == bs::wallet::EncryptionType::Freja;

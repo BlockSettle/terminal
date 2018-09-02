@@ -67,6 +67,7 @@ private:
    std::vector<SecureBinaryData>             walletEncKeys_;
    bs::wallet::KeyRank                       walletEncRank_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
+   bool isLatestPasswordChangeAddDevice_ = false;
 };
 
 #endif // __WALLET_PROPERTIES_DIALOG_H__

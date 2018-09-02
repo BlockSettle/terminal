@@ -42,6 +42,8 @@ public:
    std::vector<bs::wallet::PasswordData> newPasswordData() const;
    bs::wallet::KeyRank newKeyRank() const;
 
+   bool isLatestChangeAddDevice() const { return isLatestChangeAddDevice_; }
+
 private slots:
    void onContinueClicked();
    void onTabChanged(int index);
@@ -70,6 +72,7 @@ private:
    WalletKeyWidget *deviceKeyNew_ = nullptr;
    bool deviceKeyOldValid_ = false;
    bool deviceKeyNewValid_ = false;
+   bool isLatestChangeAddDevice_ = false;
 };
 
 #endif // __CHANGE_WALLET_PASSWORD_DIALOG_H__
