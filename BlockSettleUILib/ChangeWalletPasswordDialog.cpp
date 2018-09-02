@@ -180,6 +180,13 @@ void ChangeWalletPasswordDialog::continueAddDevice()
       return;
    }
 
+   if (oldPasswordData_.empty() || oldPasswordData_[0].encType != bs::wallet::EncryptionType::Freja) {
+      MessageBoxCritical messageBox(tr("Add Device error")
+         , tr("Please switch to Freja encryption first"), this);
+      messageBox.exec();
+      return;
+   }
+
    if (!deviceKeyOldValid_) {
       deviceKeyOld_->start();
       state_ = State::AddDeviceWaitOld;
@@ -258,11 +265,8 @@ void ChangeWalletPasswordDialog::updateState()
 
    if (currentPage == Pages::Basic) {
       ui_->pushButtonOk->setText(tr("Continue"));
-      ui_->pushButtonOk->setEnabled(true);
    } else {
       ui_->pushButtonOk->setText(tr("Add Device"));
-      bool isOldFreja = !oldPasswordData_.empty() && oldPasswordData_[0].encType == bs::wallet::EncryptionType::Freja;
-      ui_->pushButtonOk->setEnabled(isOldFreja && state_ == State::Idle);
    }
 
    ui_->labelAddDeviceInfo->setVisible(state_ == State::Idle);

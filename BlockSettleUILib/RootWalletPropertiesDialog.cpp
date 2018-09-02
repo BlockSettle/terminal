@@ -209,6 +209,11 @@ void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, 
       return;
    }
 
+   if (ok) {
+      // Update wallet info
+      infoReqId_ = signingContainer_->GetInfo(wallet_);
+   }
+
    if (isLatestPasswordChangeAddDevice_) {
       if (ok) {
          MessageBoxSuccess(tr("Wallet Password")
