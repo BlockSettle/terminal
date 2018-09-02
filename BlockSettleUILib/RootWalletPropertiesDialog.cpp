@@ -230,12 +230,12 @@ void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, 
    }
 
    if (ok) {
-      MessageBoxSuccess(tr("Password change")
-         , tr("Wallet password successfully changed - don't forget your new password!")
+      MessageBoxSuccess(tr("Wallet Password")
+         , tr("Wallet password successfully changed")
          , this).exec();
    }
    else {
-      MessageBoxCritical(tr("Password change failure")
+      MessageBoxCritical(tr("Wallet Password")
          , tr("A problem occured when changing wallet password")
          , this).exec();
    }
