@@ -23,6 +23,9 @@
    <property name="spacing">
     <number>7</number>
    </property>
+   <property name="sizeConstraint">
+    <enum>QLayout::SetMinimumSize</enum>
+   </property>
    <property name="leftMargin">
     <number>7</number>
    </property>

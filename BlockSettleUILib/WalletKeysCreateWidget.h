@@ -39,6 +39,7 @@ public:
 signals:
    void keyChanged();
    void keyCountChanged();
+   void failed();
 
 private slots:
    void onAddClicked();
@@ -53,10 +54,10 @@ private:
 
 private:
    std::unique_ptr<Ui::WalletKeysCreateWidget> ui_;
-   std::string    walletId_;
-   std::vector<WalletKeyWidget *>      widgets_;
-   std::vector<bs::wallet::PasswordData>  pwdData_;
-   bs::wallet::KeyRank                 keyRank_ = { 0, 0 };
+   std::string walletId_;
+   std::vector<std::unique_ptr<WalletKeyWidget>> widgets_;
+   std::vector<bs::wallet::PasswordData> pwdData_;
+   bs::wallet::KeyRank keyRank_ = { 0, 0 };
    Flags flags_{NoFlag};
 };
 

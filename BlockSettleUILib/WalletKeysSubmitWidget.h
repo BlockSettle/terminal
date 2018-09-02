@@ -57,10 +57,10 @@ private:
 
 private:
    std::unique_ptr<Ui::WalletKeysSubmitWidget> ui_;
-   std::string    walletId_;
-   std::vector<WalletKeyWidget *>         widgets_;
-   std::vector<bs::wallet::PasswordData>  pwdData_;
-   std::atomic_bool  suspended_;
+   std::string walletId_;
+   std::vector<WalletKeyWidget *> widgets_;
+   std::vector<bs::wallet::PasswordData> pwdData_;
+   std::atomic_bool suspended_;
    Flags flags_{NoFlag};
 };
 

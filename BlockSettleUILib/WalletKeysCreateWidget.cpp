@@ -27,6 +27,9 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
 
 void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username)
 {
+   widgets_.clear();
+   pwdData_.clear();
+
    if (flags_ & HideGroupboxCaption) {
       ui_->groupBox->setTitle(QString());
    }
@@ -39,7 +42,7 @@ void WalletKeysCreateWidget::init(const std::string &walletId, const QString& us
       ui_->widgetControl->hide();
    }
 
-   for (WalletKeyWidget *widget : widgets_) {
+   for (auto& widget : widgets_) {
       widget->setCreateUsername(username);
    }
 }
@@ -57,9 +60,10 @@ void WalletKeysCreateWidget::addKey(bool password)
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysCreateWidget::onEncKeyChanged);
+   connect(widget, &WalletKeyWidget::failed, this, &WalletKeysCreateWidget::failed);
    ui_->groupBox->layout()->addWidget(widget);
    ui_->pushButtonDelKey->setEnabled(true);
-   widgets_.push_back(widget);
+   widgets_.emplace_back(widget);
    pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja, {} });
    ui_->spinBoxRankM->setMaximum(pwdData_.size());
    ui_->spinBoxRankM->setMinimum(1);
@@ -74,9 +78,10 @@ void WalletKeysCreateWidget::onAddClicked()
 
 void WalletKeysCreateWidget::onDelClicked()
 {
-   ui_->groupBox->layout()->removeWidget(widgets_.back());
-   widgets_.back()->deleteLater();
-   widgets_.resize(widgets_.size() - 1);
+   if (widgets_.empty()) {
+      return;
+   }
+   widgets_.pop_back();
    pwdData_.resize(widgets_.size());
    if (pwdData_.empty()) {
       ui_->spinBoxRankM->setMinimum(0);

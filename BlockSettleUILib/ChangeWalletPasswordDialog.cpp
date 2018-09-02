@@ -5,6 +5,7 @@
 #include "EnterWalletPassword.h"
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
+#include "WalletKeyWidget.h"
 #include "WalletPasswordVerifyDialog.h"
 
 
@@ -23,12 +24,32 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
 
    ui_->labelWalletId->setText(QString::fromStdString(wallet->getWalletId()));
 
+   connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &ChangeWalletPasswordDialog::onTabChanged);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::reject);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::onContinueClicked);
+
+   deviceKeyOld_ = new WalletKeyWidget(wallet->getWalletId(), 0, false, this);
+   deviceKeyOld_->setFixedType(true);
+   deviceKeyOld_->setEncryptionKeys(encKeys);
+   deviceKeyOld_->setHideFrejaConnect(true);
+   deviceKeyOld_->setHideFrejaCombobox(true);
+   deviceKeyNew_ = new WalletKeyWidget(wallet->getWalletId(), 0, false, this);
+   deviceKeyNew_->setFixedType(true);
+   deviceKeyNew_->setEncryptionKeys(encKeys);
+   deviceKeyNew_->setHideFrejaConnect(true);
+   deviceKeyNew_->setHideFrejaCombobox(true);
+
+   QBoxLayout *deviceLayout = dynamic_cast<QBoxLayout*>(ui_->tabAddDevice->layout());
+   deviceLayout->insertWidget(deviceLayout->indexOf(ui_->labelDeviceOldInfo) + 1, deviceKeyOld_);
+   deviceLayout->insertWidget(deviceLayout->indexOf(ui_->labelDeviceNewInfo) + 1, deviceKeyNew_);
 
    //connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateState(); });
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateState(); });
+   connect(deviceKeyOld_, &WalletKeyWidget::keyChanged, this, &ChangeWalletPasswordDialog::onSubmitKeysKeyChanged2);
+   connect(deviceKeyOld_, &WalletKeyWidget::failed, this, &ChangeWalletPasswordDialog::onSubmitKeysFailed2);
+   connect(deviceKeyNew_, &WalletKeyWidget::keyChanged, this, &ChangeWalletPasswordDialog::onCreateKeysKeyChanged2);
+   connect(deviceKeyNew_, &WalletKeyWidget::failed, this, &ChangeWalletPasswordDialog::onCreateKeysFailed2);
 
    auto encTypesIt = encTypes.begin();
    auto encKeysIt = encKeys.begin();
@@ -47,13 +68,17 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    ui_->widgetSubmitKeys->suspend();
    ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys);
 
-   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideFrejaConnectButton 
-      | WalletKeysCreateWidget::HideWidgetContol
-      | WalletKeysCreateWidget::HideGroupboxCaption
-      | WalletKeysCreateWidget::SetPasswordLabelAsNew);
+   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideGroupboxCaption
+      | WalletKeysCreateWidget::SetPasswordLabelAsNew
+      | WalletKeysCreateWidget::HideFrejaConnectButton
+      | WalletKeysCreateWidget::HideWidgetContol);
    ui_->widgetCreateKeys->init(wallet_->getWalletId(), username);
 
    ui_->widgetSubmitKeys->setFocus();
+
+   ui_->tabWidget->setCurrentIndex(int(Pages::Basic));
+
+   updateState();
 }
 
 ChangeWalletPasswordDialog::~ChangeWalletPasswordDialog() = default;
@@ -62,10 +87,21 @@ void ChangeWalletPasswordDialog::reject()
 {
    ui_->widgetSubmitKeys->cancel();
    ui_->widgetCreateKeys->cancel();
+   deviceKeyOld_->cancel();
+   deviceKeyNew_->cancel();
    QDialog::reject();
 }
 
 void ChangeWalletPasswordDialog::onContinueClicked()
+{
+   if (ui_->tabWidget->currentIndex() == int(Pages::Basic)) {
+      continueBasic();
+   } else {
+      continueAddDevice();
+   }
+}
+
+void ChangeWalletPasswordDialog::continueBasic()
 {
    std::vector<bs::wallet::PasswordData> newKeys = ui_->widgetCreateKeys->keys();
 
@@ -84,8 +120,15 @@ void ChangeWalletPasswordDialog::onContinueClicked()
       return;
    }
 
+   if (isOldFreja && isNewFreja && oldPasswordData_[0].encKey == newKeys[0].encKey) {
+      MessageBoxCritical messageBox(tr("Invalid new Freja eID")
+         , tr("Please use different Freja eID. New Freje eID is already used."), this);
+      messageBox.exec();
+      return;
+   }
+
    bool showFrejaUsageInfo = true;
-   
+
    if (isOldFreja)
    {
       showFrejaUsageInfo = false;
@@ -101,10 +144,11 @@ void ChangeWalletPasswordDialog::onContinueClicked()
 
          oldKey_ = enterWalletPassword.GetPassword();
       }
-   } else {
+   }
+   else {
       oldKey_ = ui_->widgetSubmitKeys->key();
    }
-   
+
    if (isNewFreja) {
       if (showFrejaUsageInfo) {
          WalletPasswordVerifyDialog walletPasswordVerifyDialog(this);
@@ -126,7 +170,70 @@ void ChangeWalletPasswordDialog::onContinueClicked()
    }
 
    newPasswordData_ = newKeys;
+   newKeyRank_ = ui_->widgetCreateKeys->keyRank();
    accept();
+}
+
+void ChangeWalletPasswordDialog::continueAddDevice()
+{
+   if (state_ != State::Idle) {
+      return;
+   }
+
+   if (!deviceKeyOldValid_) {
+      deviceKeyOld_->start();
+      state_ = State::AddDeviceWaitOld;
+   } else {
+      deviceKeyNew_->start();
+      state_ = State::AddDeviceWaitNew;
+   }
+
+   updateState();
+}
+
+void ChangeWalletPasswordDialog::onSubmitKeysKeyChanged2(int, SecureBinaryData password)
+{
+   deviceKeyOldValid_ = true;
+   state_ = State::AddDeviceWaitNew;
+   deviceKeyNew_->start();
+   oldKey_ = password;
+   updateState();
+}
+
+void ChangeWalletPasswordDialog::onSubmitKeysFailed2()
+{
+   state_ = State::Idle;
+   updateState();
+}
+
+void ChangeWalletPasswordDialog::onCreateKeysKeyChanged2(int, SecureBinaryData password)
+{
+   newPasswordData_ = oldPasswordData_;
+   
+   newPasswordData_.at(0).password = oldKey_;
+
+   bs::wallet::PasswordData newPassword{};
+   newPassword.encType = bs::wallet::EncryptionType::Freja;
+   newPassword.encKey = newPasswordData_.at(0).encKey;
+   newPassword.password = password;
+   newPasswordData_.push_back(newPassword);
+
+   newKeyRank_ = oldKeyRank_;
+   newKeyRank_.second = newPasswordData_.size();
+
+   accept();
+}
+
+void ChangeWalletPasswordDialog::onCreateKeysFailed2()
+{
+   state_ = State::Idle;
+   updateState();
+}
+
+void ChangeWalletPasswordDialog::onTabChanged(int index)
+{
+   state_ = State::Idle;
+   updateState();
 }
 
 std::vector<bs::wallet::PasswordData> ChangeWalletPasswordDialog::newPasswordData() const
@@ -136,10 +243,31 @@ std::vector<bs::wallet::PasswordData> ChangeWalletPasswordDialog::newPasswordDat
 
 bs::wallet::KeyRank ChangeWalletPasswordDialog::newKeyRank() const
 {
-   return ui_->widgetCreateKeys->keyRank();
+   return newKeyRank_;
 }
 
 SecureBinaryData ChangeWalletPasswordDialog::oldPassword() const
 {
    return oldKey_;
+}
+
+void ChangeWalletPasswordDialog::updateState()
+{
+   Pages currentPage = Pages(ui_->tabWidget->currentIndex());
+
+   if (currentPage == Pages::Basic) {
+      ui_->pushButtonOk->setText(tr("Continue"));
+   } else {
+      ui_->pushButtonOk->setText(tr("Add Device"));
+      bool isOldFreja = !oldPasswordData_.empty() && oldPasswordData_[0].encType == bs::wallet::EncryptionType::Freja;
+      ui_->pushButtonOk->setEnabled(isOldFreja && state_ == State::Idle);
+   }
+
+   ui_->labelAddDeviceInfo->setVisible(state_ == State::Idle);
+   ui_->labelDeviceOldInfo->setVisible(state_ == State::AddDeviceWaitOld || state_ == State::AddDeviceWaitNew);
+   ui_->labelAddDeviceSuccess->setVisible(state_ == State::AddDeviceWaitNew);
+   ui_->labelDeviceNewInfo->setVisible(state_ == State::AddDeviceWaitNew);
+   ui_->lineAddDevice->setVisible(state_ == State::AddDeviceWaitNew);
+   deviceKeyOld_->setVisible(state_ == State::AddDeviceWaitOld);
+   deviceKeyNew_->setVisible(state_ == State::AddDeviceWaitNew);
 }

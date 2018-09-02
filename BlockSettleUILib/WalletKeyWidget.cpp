@@ -72,6 +72,7 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelFrejaInfo->setVisible(!password_ && !hideFrejaCombobox_);
    ui_->pushButtonFreja->setVisible(!hideFrejaConnect_);
    ui_->comboBoxFrejaId->setVisible(!hideFrejaCombobox_);
+   ui_->widgetSpacing->setVisible(!progressBarFixed_);
 }
 
 void WalletKeyWidget::onPasswordChanged()
@@ -177,6 +178,7 @@ void WalletKeyWidget::start()
 {
    if (!password_ && !frejaRunning_ && !ui_->comboBoxFrejaId->currentText().isEmpty()) {
       onFrejaSignClicked();
+      ui_->progressBar->setValue(0);
       ui_->pushButtonFreja->setEnabled(true);
    }
 }
@@ -208,7 +210,6 @@ void WalletKeyWidget::setFixedType(bool on)
    }
    ui_->radioButtonPassword->setVisible(!on);
    ui_->radioButtonFreja->setVisible(!on);
-   //ui_->labelPadding->setVisible(!on);
 }
 
 void WalletKeyWidget::setFocus()
