@@ -146,10 +146,8 @@ CustomDialog {
                 CustomLabel {
                     Layout.fillWidth: true
                     text:   qsTr("Return Amount")
-                    visible:    txInfo.hasChange
                 }
                 CustomLabelValue {
-                    visible:    txInfo.hasChange
                     text:   txInfo.changeAmount.toFixed(8)
                     Layout.alignment: Qt.AlignRight
                 }
