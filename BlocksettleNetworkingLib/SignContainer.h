@@ -77,6 +77,8 @@ public:
 
    virtual RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) = 0;
 
+   virtual RequestId CancelSignTx(const BinaryData &txId) = 0;
+
    virtual void SendPassword(const std::string &walletId, const PasswordType &password) = 0;
 
    virtual RequestId SetUserId(const BinaryData &) = 0;

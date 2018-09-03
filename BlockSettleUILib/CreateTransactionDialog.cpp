@@ -40,7 +40,7 @@ const std::map<unsigned int, QString> feeLevels = { {2, QObject::tr("20 minutes"
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
-   : QDialog(parent, Qt::CustomizeWindowHint | Qt::WindowTitleHint | Qt::WindowMinMaxButtonsHint)
+   : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
    , signingContainer_(container)
@@ -120,12 +120,21 @@ void CreateTransactionDialog::reject()
       if (confirmExit.exec() != QDialog::Accepted) {
          return;
       }
+
+      if (txReq_.isValid()) {
+         if (signingContainer_) {
+            signingContainer_->CancelSignTx(txReq_.txId());
+         }
+      }
    }
+
    QDialog::reject();
 }
 
 void CreateTransactionDialog::closeEvent(QCloseEvent *e)
 {
+   reject();
+
    e->ignore();
 }
 
@@ -283,7 +292,6 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
 void CreateTransactionDialog::startBroadcasting()
 {
    broadcasting_ = true;
-   pushButtonCancel()->setEnabled(false);
    pushButtonCreate()->setEnabled(false);
    pushButtonCreate()->setText(tr("Waiting for TX signing..."));
 }
@@ -291,7 +299,6 @@ void CreateTransactionDialog::startBroadcasting()
 void CreateTransactionDialog::stopBroadcasting()
 {
    broadcasting_ = false;
-   pushButtonCancel()->setEnabled(true);
    pushButtonCreate()->setEnabled(true);
    updateCreateButtonText();
 }
@@ -325,19 +332,19 @@ bool CreateTransactionDialog::CreateTransaction()
    try {
       signingContainer_->SyncAddresses(transactionData_->createAddresses());
 
-      auto txReq = transactionData_->CreateTXRequest(checkBoxRBF()->checkState() == Qt::Checked
+      txReq_ = transactionData_->CreateTXRequest(checkBoxRBF()->checkState() == Qt::Checked
          , changeAddress);
-      txReq.comment = textEditComment()->document()->toPlainText().toStdString();
+      txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
-      if (txReq.fee <= originalFee_) {
+      if (txReq_.fee <= originalFee_) {
          MessageBoxCritical(tr("Fee is low"),
             tr("Your current fee (%1) should exceed the fee from the original transaction (%2)")
-            .arg(UiUtils::displayAmount(txReq.fee)).arg(UiUtils::displayAmount(originalFee_))).exec();
+            .arg(UiUtils::displayAmount(txReq_.fee)).arg(UiUtils::displayAmount(originalFee_))).exec();
          stopBroadcasting();
          return true;
       }
 
-      pendingTXSignId_ = signingContainer_->SignTXRequest(txReq, false,
+      pendingTXSignId_ = signingContainer_->SignTXRequest(txReq_, false,
          SignContainer::TXSignMode::Full, {}, true);
       if (!pendingTXSignId_) {
          throw std::logic_error("Signer failed to send request");
