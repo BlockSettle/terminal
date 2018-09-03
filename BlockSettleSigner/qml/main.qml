@@ -112,17 +112,17 @@ ApplicationWindow {
         autoSignPage.storeSettings();
     }
 
-    signal passwordEntered(string walletId, string password)
+    signal passwordEntered(string walletId, string password, bool cancelledByUser)
 
     function createPasswordDialog(prompt, txInfo) {
         var dlg = Qt.createQmlObject("PasswordEntryDialog {}", mainWindow, "passwordDlg")
         dlg.prompt = prompt
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
-            passwordEntered(txInfo.wallet.id, dlg.password)
+            passwordEntered(txInfo.wallet.id, dlg.password, false)
         })
         dlg.rejected.connect(function() {
-            passwordEntered(txInfo.wallet.id, '')
+            passwordEntered(txInfo.wallet.id, '', dlg.cancelledByUser)
         })
         mainWindow.requestActivate()
         dlg.open()
