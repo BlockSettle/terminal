@@ -335,6 +335,7 @@ namespace bs {
       BTCNumericTypes::balance_type unconfirmedBalance_;
       BTCNumericTypes::balance_type totalBalance_;
       bool inited_ = false;
+      std::string    walletRegId_;
       std::shared_ptr<ArmoryConnection>      armory_;
       std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
       mutable std::vector<bs::Address>       usedAddresses_;

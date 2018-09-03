@@ -127,6 +127,11 @@ public:
       invalidate();
    }
 
+public slots:
+   void onUpdated() {
+      invalidate();
+   }
+
 private:
    Filter filterMode_ = NoFilter;
 };
@@ -231,6 +236,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    addressSortFilterModel_ = new AddressSortFilterModel(this);
    addressSortFilterModel_->setSourceModel(addressModel_);
    addressSortFilterModel_->setSortRole(AddressListModel::SortRole);
+   connect(addressModel_, &AddressListModel::updated, addressSortFilterModel_, &AddressSortFilterModel::onUpdated);
 
    ui->treeViewAddresses->setUniformRowHeights(true);
    ui->treeViewAddresses->setModel(addressSortFilterModel_);
