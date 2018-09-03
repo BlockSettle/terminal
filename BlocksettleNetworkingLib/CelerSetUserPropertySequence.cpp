@@ -78,7 +78,7 @@ bool CelerSetUserPropertySequence::processSetPropertyResponse( const CelerMessag
       logger_->error("[CelerSetUserPropertySequence::processSetPropertyResponse] wrong response payload type: {}. UserPropertyDownstreamEventType Expected"
          , response.payload().classname());
 
-      if (payloadMessageType == CelerAPI::PersistenceException) {
+      if (payloadMessageType == CelerAPI::PersistenceExceptionType) {
          com::celertech::baseserver::api::exception::PersistenceException exceptionMessage;
          if (!exceptionMessage.ParseFromString(response.payload().contents())) {
             logger_->error("[CelerClient::OnDataReceived] failed to parse PersistenceException");
