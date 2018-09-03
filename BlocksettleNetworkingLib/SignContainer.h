@@ -79,6 +79,7 @@ public:
 
    virtual void SendPassword(const std::string &walletId, const PasswordType &password,
       bool cancelledByUser) = 0;
+   virtual RequestId CancelSignTx(const BinaryData &txId) = 0;
 
    virtual RequestId SetUserId(const BinaryData &) = 0;
    virtual RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) = 0;

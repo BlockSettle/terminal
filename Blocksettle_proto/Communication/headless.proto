@@ -21,6 +21,7 @@ enum RequestType
    DisconnectionRequestType    = 13;
    SignTXMultiRequestType      = 14;
    ChangePasswordRequestType   = 15;
+   CancelSignTxType            = 16;
 }
 
 message RequestPacket
@@ -95,6 +96,11 @@ message SignTXReply
    }
    Change   change = 3;
    bool     cancelledByUser = 4;
+}
+
+message CancelSignTx
+{
+   bytes txId = 1;
 }
 
 message SignPayoutTXRequest

@@ -56,6 +56,9 @@ public:
    void SendPassword(const std::string &walletId, const PasswordType &password, bool) override
    {}
 
+   RequestId CancelSignTx(const BinaryData &txId) override
+   { return 0; }
+
    RequestId SetUserId(const BinaryData &) override { return 0; }
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override { return 0; }
    RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &, const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }

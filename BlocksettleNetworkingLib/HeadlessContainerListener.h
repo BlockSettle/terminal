@@ -54,6 +54,7 @@ signals:
    void autoSignRequiresPwd(const std::string &walletId);
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
+   void cancelSignTx(const BinaryData &txId);
 
 public slots:
    void passwordReceived(const std::string &walletId, const SecureBinaryData &password,
@@ -92,6 +93,7 @@ private:
    bool onGetRootKey(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onGetHDWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onChangePassword(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
+   bool onCancelSignTx(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
    void AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet
       , const std::string &errMsg = {});

@@ -494,6 +494,17 @@ HeadlessContainer::RequestId HeadlessContainer::SignMultiTXRequest(const bs::wal
    return id;
 }
 
+HeadlessContainer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txId)
+{
+   headless::CancelSignTx request;
+   request.set_txid(txId.toBinStr());
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::CancelSignTxType);
+   packet.set_data(request.SerializeAsString());
+   return Send(packet);
+}
+
 void HeadlessContainer::SendPassword(const std::string &walletId, const PasswordType &password,
    bool cancelledByUser)
 {
