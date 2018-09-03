@@ -63,6 +63,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
 
+   ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
+
    ctxt_->setContextProperty(QStringLiteral("signerParams"), params_.get());
    settingsConnections();
 
@@ -291,6 +293,11 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
    }
 }
 
+void QMLAppObj::onCancelSignTx(const BinaryData &txId)
+{
+   emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
+}
+
 void QMLAppObj::OnlineProcessing()
 {
    logger_->debug("Going online with socket {}:{}, network {}", params_->listenAddress().toStdString()
@@ -309,6 +316,8 @@ void QMLAppObj::OnlineProcessing()
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
    connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
+   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx,
+      this, &QMLAppObj::onCancelSignTx);
 
    if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
       logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());

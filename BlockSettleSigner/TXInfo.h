@@ -77,6 +77,7 @@ class TXInfo : public QObject
    Q_PROPERTY(double inputAmount READ inputAmount NOTIFY dataChanged)
    Q_PROPERTY(bool hasChange READ hasChange NOTIFY dataChanged)
    Q_PROPERTY(WalletInfo *wallet READ wallet NOTIFY dataChanged)
+   Q_PROPERTY(QString txId READ txId NOTIFY dataChanged)
 
 public:
    TXInfo() : QObject(), txReq_() {}
@@ -94,6 +95,7 @@ public:
    double changeAmount() const { return txReq_.change.value / BTCNumericTypes::BalanceDivider; }
    WalletInfo *wallet() const { return walletInfo_; }
    double inputAmount() const;
+   QString txId() const { return QString::fromStdString(txReq_.txId().toBinStr()); }
 
 signals:
    void dataChanged();

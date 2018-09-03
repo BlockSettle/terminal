@@ -34,6 +34,16 @@ CustomDialog {
         }
     }
 
+    Connections {
+        target: qmlAppObj
+
+        onCancelSignTx: {
+            if (txId === txInfo.txId) {
+                passwordDialog.reject();
+            }
+        }
+    }
+
     FocusScope {
         anchors.fill: parent
         focus: true
