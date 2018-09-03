@@ -53,7 +53,7 @@ public:
    RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) override
    { return 0; }
 
-   void SendPassword(const std::string &walletId, const PasswordType &password) override
+   void SendPassword(const std::string &walletId, const PasswordType &password, bool) override
    {}
 
    RequestId SetUserId(const BinaryData &) override { return 0; }

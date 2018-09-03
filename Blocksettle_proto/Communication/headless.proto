@@ -94,6 +94,7 @@ message SignTXReply
       string   error = 2;
    }
    Change   change = 3;
+   bool     cancelledByUser = 4;
 }
 
 message SignPayoutTXRequest
@@ -121,6 +122,7 @@ message PasswordReply
 {
    string   walletId = 1;
    string   password = 2;
+   bool     cancelledByUser = 3;
 }
 
 

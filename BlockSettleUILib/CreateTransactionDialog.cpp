@@ -40,7 +40,7 @@ const std::map<unsigned int, QString> feeLevels = { {2, QObject::tr("20 minutes"
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
-   : QDialog(parent, Qt::CustomizeWindowHint | Qt::WindowTitleHint | Qt::WindowMinMaxButtonsHint)
+   : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
    , signingContainer_(container)
@@ -243,7 +243,8 @@ void CreateTransactionDialog::onMaxPressed()
    lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
 }
 
-void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
+   bool cancelledByUser)
 {
    if (!pendingTXSignId_ || (pendingTXSignId_ != id)) {
       return;
@@ -276,7 +277,10 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
       detailedText = QString::fromStdString(error);
    }
 
-   MessageBoxBroadcastError(detailedText, this).exec();
+   if (!cancelledByUser) {
+      MessageBoxBroadcastError(detailedText, this).exec();
+   }
+
    stopBroadcasting();
 }
 

@@ -198,10 +198,10 @@ void HeadlessContainer::ProcessSignTXResponse(unsigned int id, const std::string
    headless::SignTXReply response;
    if (!response.ParseFromString(data)) {
       logger_->error("[HeadlessContainer] Failed to parse SignTXReply");
-      emit TXSigned(id, {}, "failed to parse");
+      emit TXSigned(id, {}, "failed to parse", false);
       return;
    }
-   emit TXSigned(id, response.signedtx(), response.error());
+   emit TXSigned(id, response.signedtx(), response.error(), response.cancelledbyuser());
 }
 
 void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
@@ -494,7 +494,8 @@ HeadlessContainer::RequestId HeadlessContainer::SignMultiTXRequest(const bs::wal
    return id;
 }
 
-void HeadlessContainer::SendPassword(const std::string &walletId, const PasswordType &password)
+void HeadlessContainer::SendPassword(const std::string &walletId, const PasswordType &password,
+   bool cancelledByUser)
 {
    headless::RequestPacket packet;
    packet.set_type(headless::PasswordRequestType);
@@ -506,6 +507,7 @@ void HeadlessContainer::SendPassword(const std::string &walletId, const Password
    if (!password.isNull()) {
       response.set_password(password.toHexStr());
    }
+   response.set_cancelledbyuser(cancelledByUser);
    packet.set_data(response.SerializeAsString());
    Send(packet, false);
 }
@@ -919,7 +921,7 @@ void RemoteSigner::onDisconnected()
    signRequests_.clear();
 
    for (const auto &id : tmpReqs) {
-      emit TXSigned(id, {}, "signer disconnected");
+      emit TXSigned(id, {}, "signer disconnected", false);
    }
 
    emit disconnected();

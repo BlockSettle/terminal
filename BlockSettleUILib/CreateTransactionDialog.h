@@ -88,7 +88,7 @@ protected slots:
    virtual void feeSelectionChanged(int);
    virtual void selectedWalletChanged(int);
    virtual void onMaxPressed();
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
 
 private:
    void populateFeeList();

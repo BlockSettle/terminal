@@ -189,7 +189,8 @@ bool AuthAddressManager::CreateNewAuthAddress()
    return true;
 }
 
-void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
+   bool cancelledByUser)
 {
    const auto &itVerify = signIdsVerify_.find(id);
    const auto &itRevoke = signIdsRevoke_.find(id);

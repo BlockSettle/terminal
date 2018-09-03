@@ -21,8 +21,6 @@ EnterWalletPassword::EnterWalletPassword(const std::string &walletId
    ui_->labelWalletId->setText(tr("Wallet ID: %1").arg(QString::fromStdString(walletId)));
 
    if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
-      setWindowTitle(tr("Sign With Freja eID"));
-
       ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideFrejaConnectButton
          | WalletKeysSubmitWidget::HideFrejaCombobox
          | WalletKeysSubmitWidget::HideGroupboxCaption
