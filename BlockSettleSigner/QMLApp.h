@@ -37,6 +37,7 @@ public:
 
 signals:
    void loadingComplete();
+   void cancelSignTx(const QString &txId);
 
 private slots:
    void onPasswordAccepted(const QString &walletId, const QString &password, bool cancelledByUser);
@@ -49,6 +50,7 @@ private slots:
    void onLimitsChanged();
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
+   void onCancelSignTx(const BinaryData &txId);
 
 private:
    void OnlineProcessing();
