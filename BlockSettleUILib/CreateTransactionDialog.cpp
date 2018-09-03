@@ -126,6 +126,8 @@ void CreateTransactionDialog::reject()
 
 void CreateTransactionDialog::closeEvent(QCloseEvent *e)
 {
+   reject();
+
    e->ignore();
 }
 
