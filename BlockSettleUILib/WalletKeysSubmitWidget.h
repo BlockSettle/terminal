@@ -21,6 +21,8 @@ public:
       HideGroupboxCaption = 0x04,
       FrejaProgressBarFixed = 0x08,
       FrejaIdVisible = 0x10,
+      HideFrejaEmailLabel = 0x20,
+      HideFrejaControlsOnSignClicked = 0x40
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

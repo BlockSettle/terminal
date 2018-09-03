@@ -31,7 +31,8 @@ public:
    void setHideFrejaCombobox(bool value);
    void setProgressBarFixed(bool value);
    void setShowFrejaId(bool value);
-   void setShowFrejaIdLabel(bool value);
+   void setHideFrejaEmailLabel(bool value);
+   void setHideFrejaControlsOnSignClicked(bool value);
 
    void setCreateUsername(const QString& username);
 
@@ -72,6 +73,8 @@ private:
    bool        hideFrejaCombobox_ = false;
    bool        progressBarFixed_ = false;
    bool        showFrejaId_ = false;
+   bool        hideFrejaEmailLabel_ = false;
+   bool        hideFrejaControlsOnSignClicked_ = false;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

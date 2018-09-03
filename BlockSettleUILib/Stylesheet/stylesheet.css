@@ -991,6 +991,9 @@ QComboBox#comboBoxFrejaId::drop-down {
 QComboBox#comboBoxFrejaId::down-arrow {
   image: none; }
 
+QComboBox::down-arrow {
+  image: url(":/resources/dropdown-arrow.png"); }
+
 QDateEdit::down-arrow {
   image: url(":/resources/calendar.png"); }
 

@@ -958,7 +958,7 @@ void AuthAddressManager::onWalletCreated(unsigned int id, BinaryData pubKey, Bin
    const auto &priWallet = walletsManager_->GetPrimaryWallet();
    const auto &leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, priWallet->networkType());
    const auto &group = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   auto leaf = group->getLeaf(0u);
+   auto leaf = group->createLeaf(0u, leafNode);
 
    if (leaf) {
       if (createWalletReqId_.second) {
