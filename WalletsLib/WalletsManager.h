@@ -75,7 +75,7 @@ public:
    wallet_gen_type GetDefaultWallet() const;
    wallet_gen_type GetCCWallet(const std::string &cc);
 
-   bool CreateSettlementWallet(NetworkType, const QString &walletsPath);
+   bool CreateSettlementWallet(const QString &walletsPath);
 
    size_t GetHDWalletsCount() const { return hdWalletsId_.size(); }
    const hd_wallet_type GetHDWallet(const unsigned int index) const;

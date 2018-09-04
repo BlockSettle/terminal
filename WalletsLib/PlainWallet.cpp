@@ -11,7 +11,7 @@ using namespace bs;
 
 
 PlainWallet::PlainWallet(const std::string &name, const std::string &desc)
-   : Wallet(), desc_(desc), needsCommit_(true)
+   : Wallet(), desc_(desc)
 {
    walletName_ = name;
    walletId_ = BtcUtils::computeID(SecureBinaryData().GenerateRandom(32)).toBinStr();
@@ -69,75 +69,80 @@ void PlainWallet::putDataToDB(const std::shared_ptr<LMDB> &db, const BinaryData 
    db->insert(keyRef, dataRef);
 }
 
-void PlainWallet::initDB()
+void PlainWallet::writeDB()
 {
-   BinaryData masterID(GetWalletId());
-   if (masterID.isNull()) {
-      throw std::invalid_argument("master ID is empty");
-   }
+   if (!db_) {
+      BinaryData masterID(GetWalletId());
+      if (masterID.isNull()) {
+         throw std::invalid_argument("master ID is empty");
+      }
 
-   auto dbMeta = std::make_shared<LMDB>();
-   dbMeta->open(dbEnv_.get(), WALLETMETA_DBNAME);
-   {
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(MASTERID_KEY);
-      BinaryWriter bwData;
-      bwData.put_var_int(masterID.getSize());
+      auto dbMeta = std::make_shared<LMDB>();
+      dbMeta->open(dbEnv_.get(), WALLETMETA_DBNAME);
+      {
+         BinaryWriter bwKey;
+         bwKey.put_uint32_t(MASTERID_KEY);
+         BinaryWriter bwData;
+         bwData.put_var_int(masterID.getSize());
 
-      BinaryDataRef idRef;
-      idRef.setRef(masterID);
-      bwData.put_BinaryDataRef(idRef);
+         BinaryDataRef idRef;
+         idRef.setRef(masterID);
+         bwData.put_BinaryDataRef(idRef);
 
-      putDataToDB(dbMeta, bwKey.getData(), bwData.getData());
-   }
+         putDataToDB(dbMeta, bwKey.getData(), bwData.getData());
+      }
 
-   {
-      BinaryWriter bwKey;
-      bwKey.put_uint8_t(WALLETMETA_PREFIX);
-      bwKey.put_BinaryData(masterID);
+      {
+         BinaryWriter bwKey;
+         bwKey.put_uint8_t(WALLETMETA_PREFIX);
+         bwKey.put_BinaryData(masterID);
 
-      BinaryWriter bw;
-      bw.put_var_int(sizeof(uint8_t));
-      bw.put_uint8_t(WALLET_PREFIX_BYTE);
-      putDataToDB(dbMeta, bwKey.getData(), bw.getData());
-   }
-   dbMeta->close();
+         BinaryWriter bw;
+         bw.put_var_int(sizeof(uint8_t));
+         bw.put_uint8_t(WALLET_PREFIX_BYTE);
+         putDataToDB(dbMeta, bwKey.getData(), bw.getData());
+      }
+      dbMeta->close();
 
-   db_ = std::make_shared<LMDB>(dbEnv_.get(), masterID.toBinStr());
+      db_ = std::make_shared<LMDB>(dbEnv_.get(), masterID.toBinStr());
 
-   {
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(WALLETNAME_KEY);
+      {
+         BinaryWriter bwKey;
+         bwKey.put_uint32_t(WALLETNAME_KEY);
 
-      BinaryData walletNameData = walletName_;
-      BinaryWriter bwName;
-      bwName.put_var_int(walletNameData.getSize());
-      bwName.put_BinaryData(walletNameData);
-      putDataToDB(db_, bwKey.getData(), bwName.getData());
-   }
-   {
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(WALLETDESCRIPTION_KEY);
+         BinaryData walletNameData = walletName_;
+         BinaryWriter bwName;
+         bwName.put_var_int(walletNameData.getSize());
+         bwName.put_BinaryData(walletNameData);
+         putDataToDB(db_, bwKey.getData(), bwName.getData());
+      }
+      {
+         BinaryWriter bwKey;
+         bwKey.put_uint32_t(WALLETDESCRIPTION_KEY);
 
-      BinaryData walletDescriptionData = desc_;
-      BinaryWriter bwDesc;
-      bwDesc.put_var_int(walletDescriptionData.getSize());
-      bwDesc.put_BinaryData(walletDescriptionData);
-      putDataToDB(db_, bwKey.getData(), bwDesc.getData());
-   }
+         BinaryData walletDescriptionData = desc_;
+         BinaryWriter bwDesc;
+         bwDesc.put_var_int(walletDescriptionData.getSize());
+         bwDesc.put_BinaryData(walletDescriptionData);
+         putDataToDB(db_, bwKey.getData(), bwDesc.getData());
+      }
 
-   {  // asset count
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(ROOTASSET_KEY);
+      {  // asset count
+         BinaryWriter bwKey;
+         bwKey.put_uint32_t(ROOTASSET_KEY);
 
-      BinaryWriter bwData;
-      bwData.put_var_int(4);
-      bwData.put_int32_t(lastAssetIndex_);
+         BinaryWriter bwData;
+         bwData.put_var_int(4);
+         bwData.put_int32_t(lastAssetIndex_);
 
-      putDataToDB(db_, bwKey.getData(), bwData.getData());
+         putDataToDB(db_, bwKey.getData(), bwData.getData());
+      }
    }
 
    for (const auto &asset : assets_) {
+      if (!asset.second->needsCommit()) {
+         continue;
+      }
       BinaryWriter bwKey;
       bwKey.put_uint8_t(ASSETENTRY_PREFIX);
 
@@ -147,6 +152,7 @@ void PlainWallet::initDB()
       bwData.put_BinaryData(assetSer);
 
       putDataToDB(db_, bwKey.getData(), bwData.getData());
+      asset.second->doNotCommit();
    }
 }
 
@@ -290,13 +296,15 @@ void PlainWallet::readFromDB()
          dbIter.advance();
       }
    }
-   needsCommit_ = false;
 }
 
 void PlainWallet::loadFromFile(const std::string &filename)
 {
+   if (filename.empty()) {
+      throw std::invalid_argument("no file name provided");
+   }
    if (!SystemFileUtils::IsValidFilePath(filename)) {
-      throw std::invalid_argument(std::string("Invalid file path: ") + filename);
+      throw std::invalid_argument("Invalid file path: " + filename);
    }
 
    if (!SystemFileUtils::FileExist(filename)) {
@@ -310,12 +318,8 @@ void PlainWallet::loadFromFile(const std::string &filename)
 
 void PlainWallet::saveToFile(const std::string &filename)
 {
-   if (!needsCommit_) {
-      return;
-   }
    openDBEnv(filename);
-   initDB();
-   needsCommit_ = false;
+   writeDB();
 }
 
 std::string PlainWallet::getFileName(const std::string &dir) const
@@ -329,7 +333,7 @@ void PlainWallet::saveToDir(const std::string &targetDir)
    saveToFile(getFileName(targetDir));
 }
 
-void PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAsset> asset)
+int PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAsset> asset)
 {
    int id = 0;
    if (asset) {
@@ -345,14 +349,20 @@ void PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAss
    assets_[id] = asset;
    assetByAddr_[addr] = asset;
    usedAddresses_.push_back(addr);
-   needsCommit_ = true;
+   addrPrefixedHashes_.insert(addr.id());
+   addressHashes_.insert(addr.unprefixed());
+   return id;
 }
 
 std::set<BinaryData> PlainWallet::getAddrHashSet()
 {
-   std::set<BinaryData> result;
-   result.insert(usedAddresses_.begin(), usedAddresses_.end());
-   return result;
+   if (addrPrefixedHashes_.empty() || addressHashes_.empty()) {
+      for (const auto &addr : usedAddresses_) {
+         addrPrefixedHashes_.insert(addr.prefixed());
+         addressHashes_.insert(addr.unprefixed());
+      }
+   }
+   return addrPrefixedHashes_;
 }
 
 std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryData &addr)
@@ -591,7 +601,10 @@ std::pair<bs::Address, std::shared_ptr<PlainAsset>> PlainAsset::deserialize(Bina
       auto brrData = values[PRIVKEY_BYTE];
       privKey = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining())).toBinStr();
    }
-   return { addr, std::make_shared<PlainAsset>(id, addr, privKey) };
+
+   auto asset = std::make_shared<PlainAsset>(id, addr, privKey);
+   asset->doNotCommit();
+   return { addr, asset };
 }
 
 BinaryData PlainAsset::serialize(void) const

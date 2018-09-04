@@ -183,13 +183,7 @@ hd::Leaf::Leaf(const std::string &name, const std::string &desc, bs::wallet::Typ
 
 hd::Leaf::~Leaf()
 {
-   stop();
    inited_ = false;
-}
-
-void hd::Leaf::stop()
-{
-   bs::Wallet::stop();
 }
 
 void hd::Leaf::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)

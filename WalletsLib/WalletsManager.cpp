@@ -87,10 +87,23 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
    const auto errorTitle = tr("Load wallet error");
 
    for (const auto& file : fileList) {
+      QFileInfo fileInfo(walletsDir.absoluteFilePath(file));
+      if (file.startsWith(QString::fromStdString(bs::SettlementWallet::fileNamePrefix()))) {
+         if (settlementWallet_) {
+            logger_->warn("Can't load more than 1 settlement wallet from {}", file.toStdString());
+            continue;
+         }
+         logger_->debug("Loading settlement wallet from {}", file.toStdString());
+         try {
+            settlementWallet_ = std::make_shared<bs::SettlementWallet>(fileInfo.absoluteFilePath().toStdString());
+         }
+         catch (const std::exception &e) {
+            logger_->error("Failed to load settlement wallet: {}", e.what());
+         }
+      }
       if (!IsWalletFile(file)) {
          continue;
       }
-      QFileInfo fileInfo(walletsDir.absoluteFilePath(file));
       try {
          logger_->debug("Loading BIP44 wallet from {}", file.toStdString());
          const auto &wallet = std::make_shared<bs::hd::Wallet>(fileInfo.absoluteFilePath().toStdString());
@@ -157,18 +170,6 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
       }
    }
 
-   try {
-      if (bs::SettlementWallet::exists(walletsPath.toStdString(), netType)) {
-         logger_->debug("Loading settlement wallet");
-         settlementWallet_ = bs::SettlementWallet::loadFromFolder(walletsPath.toStdString(), netType);
-         connect(settlementWallet_.get(), &bs::SettlementWallet::walletReady, this, &WalletsManager::onWalletReady);
-      }
-   }
-   catch (const WalletException &e) {
-      logger_->error("Failed to load settlement wallet: {}", e.what());
-      emit error(errorTitle, tr("Failed to load settlement wallet: %1").arg(QLatin1String(e.what())));
-   }
-
    emit walletsLoaded();
 }
 
@@ -219,11 +220,14 @@ bool WalletsManager::IsReadyForTrading() const
    return (HasPrimaryWallet() && HasSettlementWallet());
 }
 
-bool WalletsManager::CreateSettlementWallet(NetworkType netType, const QString &walletsPath)
+bool WalletsManager::CreateSettlementWallet(const QString &walletsPath)
 {
    logger_->debug("Creating settlement wallet");
    try {
-      settlementWallet_ = bs::SettlementWallet::create(walletsPath.toStdString(), netType);
+      settlementWallet_ = std::make_shared<bs::SettlementWallet>();
+      if (!walletsPath.isEmpty()) {
+         settlementWallet_->saveToDir(walletsPath.toStdString());
+      }
    }
    catch (const std::exception &e) {
       logger_->error("Failed to create Settlement wallet: {}", e.what());

@@ -357,20 +357,11 @@ bs::Wallet::Wallet()
    : QObject(nullptr), wallet::MetaData()
    , spendableBalance_(0), unconfirmedBalance_(0), totalBalance_(0)
    , updateAddrBalance_(false), updateAddrTxN_(false)
-{
-   threadPool_.setMaxThreadCount(1);
-}
+{}
 
 bs::Wallet::~Wallet()
 {
-   stop();
    UtxoReservation::delAdapter(utxoAdapter_);
-}
-
-void bs::Wallet::stop()
-{
-   threadPool_.clear();
-   threadPool_.waitForDone();
 }
 
 std::string bs::Wallet::GetAddressComment(const bs::Address &address) const
@@ -837,7 +828,7 @@ void bs::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::string bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    SetArmory(armory);
 
@@ -856,7 +847,9 @@ void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory,
          emit walletReady(QString::fromStdString(GetWalletId()));
       };
       walletRegId_ = armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
+      return walletRegId_;
    }
+   return {};
 }
 
 void bs::Wallet::UnregisterWallet()

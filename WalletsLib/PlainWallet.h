@@ -75,7 +75,7 @@ namespace bs {
       void saveToDir(const std::string &targetDir);
       void saveToFile(const std::string &filename);
 
-      virtual void addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset = nullptr);
+      virtual int addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset = nullptr);
       bool containsAddress(const bs::Address &addr) override;
 
       std::string GetWalletId() const override { return walletId_; }
@@ -108,9 +108,9 @@ namespace bs {
       void loadFromFile(const std::string &filename);
       void openDBEnv(const std::string &filename);
       void openDB();
-      void initDB();
+      void writeDB();
       void readFromDB();
-      std::string getFileName(const std::string &dir) const;
+      virtual std::string getFileName(const std::string &dir) const;
 
       virtual std::pair<bs::Address, std::shared_ptr<GenericAsset>> deserializeAsset(BinaryDataRef ref) {
          return PlainAsset::deserialize(ref);
@@ -123,19 +123,20 @@ namespace bs {
       std::set<BinaryData> getAddrHashSet() override;
       AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
 
+   protected:
+      std::map<bs::Address, std::shared_ptr<GenericAsset>>  assetByAddr_;
+      std::unordered_map<int, std::shared_ptr<GenericAsset>>   assets_;
+      std::atomic_int   lastAssetIndex_ = { 0 };
+
    private:
       int getAddressIndex(const bs::Address &) const;
 
    private:
       std::string    walletId_;
       std::string    desc_;
-      std::unordered_map<int, std::shared_ptr<GenericAsset>>   assets_;
-      std::map<bs::Address, std::shared_ptr<GenericAsset>>     assetByAddr_;
-      std::atomic_int            lastAssetIndex_ = { 0 };
       std::shared_ptr<LMDBEnv>   dbEnv_;
       std::shared_ptr<LMDB>      db_;
       std::string                dbFilename_;
-      std::atomic_bool           needsCommit_ = { false };
    };
 
 }  //namespace bs
