@@ -45,6 +45,8 @@ public:
 
          return QValidator::Invalid;
       } else {
+         splitInput(key, input, pos);
+
          return QValidator::Acceptable;
       }
    }
@@ -65,6 +67,29 @@ private:
             return;
          }
       }
+   }
+
+   void splitInput(const QString &key, QString &input, int &pos) const
+   {
+      QString splitted;
+      int i = 0;
+
+      for (const auto &ch : qAsConst(key)) {
+         if (i == 4) {
+            splitted.append(QChar::Space);
+            i = 0;
+         }
+
+         ++i;
+
+         splitted.append(ch);
+      }
+
+      if (input.length() == pos) {
+         pos = splitted.length();
+      }
+
+      input = splitted;
    }
 
 private:
