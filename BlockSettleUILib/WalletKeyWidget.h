@@ -17,7 +17,8 @@ class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent = nullptr);
+   WalletKeyWidget(const std::string &walletId, int index, bool password, const QString &prompt,
+      QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
    void cancel();
@@ -68,6 +69,7 @@ private:
    FrejaSignWallet frejaSign_;
    QTimer      timer_;
    float       timeLeft_;
+   QString     prompt_;
 
    bool        hideFrejaConnect_ = false;
    bool        hideFrejaCombobox_ = false;
