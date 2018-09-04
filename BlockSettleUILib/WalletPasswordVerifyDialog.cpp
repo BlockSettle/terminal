@@ -31,7 +31,6 @@ WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
 void WalletPasswordVerifyDialog::initPassword()
 {
    ui_->stackedWidget->setCurrentIndex(Pages::Check);
-   ui_->lineEditFrejaId->hide();
    ui_->labelFrejaHint->hide();
    adjustSize();
 }
@@ -39,7 +38,6 @@ void WalletPasswordVerifyDialog::initPassword()
 void WalletPasswordVerifyDialog::initFreja(const QString& frejaId)
 {
    ui_->stackedWidget->setCurrentIndex(Pages::FrejaInfo);
-   ui_->lineEditFrejaId->setText(frejaId);
    ui_->lineEditPassword->hide();
    ui_->labelPasswordHint->hide();
    adjustSize();
@@ -73,7 +71,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
       }
 
       EnterWalletPassword dialog(walletId_, keyRank_, encTypes, encKeys
-         , tr("Activate Freja eID signing"), this);
+         , tr("Confirm Freja eID signing"), this);
       int result = dialog.exec();
       if (!result) {
          return;

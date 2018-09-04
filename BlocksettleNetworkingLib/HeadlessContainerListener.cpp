@@ -176,6 +176,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
       }
       break;
 
+   case headless::CancelSignTxType:
+      return onCancelSignTx(clientId, packet);
+
    case headless::SignTXRequestType:
       return onSignTXRequest(clientId, packet);
 
@@ -330,6 +333,19 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
 
    const QString prompt = tr("Outgoing %1Transaction").arg(partial ? tr("Partial ") : tr(""));
    return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onPassword, request.applyautosignrules());
+}
+
+bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::RequestPacket packet)
+{
+   headless::CancelSignTx request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[HeadlessContainerListener] failed to parse CancelSignTx");
+      return false;
+   }
+
+   emit cancelSignTx(request.txid());
+
+   return true;
 }
 
 bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientId, const headless::RequestPacket &packet)

@@ -114,6 +114,9 @@ protected:
 
    QString        offlineDir_;
    BinaryData     importedSignedTX_;
+
+private:
+   bs::wallet::TXSignRequest txReq_;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_H__
