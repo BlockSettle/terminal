@@ -49,13 +49,12 @@ public:
    bool isNewWalletPrimary() const { return createdAsPrimary_; }
 
 private slots:
-   //void UpdateAcceptButtonState();
+   void updateAcceptButtonState();
    void CreateWallet();
    void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
 
 protected:
-   //void showEvent(QShowEvent *event) override;
    void reject() override;
 
 private:
