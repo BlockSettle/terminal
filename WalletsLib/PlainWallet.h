@@ -64,6 +64,7 @@ namespace bs {
    public:
       PlainWallet(const std::string &name, const std::string &desc);
       PlainWallet(const std::string &filename);
+      PlainWallet() {}
       ~PlainWallet() override;
 
       PlainWallet(const PlainWallet&) = delete;

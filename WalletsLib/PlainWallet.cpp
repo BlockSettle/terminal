@@ -71,6 +71,9 @@ void PlainWallet::putDataToDB(const std::shared_ptr<LMDB> &db, const BinaryData 
 
 void PlainWallet::writeDB()
 {
+   if (!dbEnv_) {
+      return;     // diskless operation
+   }
    if (!db_) {
       BinaryData masterID(GetWalletId());
       if (masterID.isNull()) {
@@ -266,6 +269,10 @@ void PlainWallet::readFromDB()
 
          BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
          BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
+         if (keyBDR.getSize() != 1) {
+            dbIter.advance();
+            continue;
+         }
          BinaryRefReader brrKey(keyBDR);
          BinaryRefReader brrVal(valueBDR);
 
@@ -296,6 +303,7 @@ void PlainWallet::readFromDB()
          dbIter.advance();
       }
    }
+   MetaData::readFromDB(dbEnv_, db_.get());
 }
 
 void PlainWallet::loadFromFile(const std::string &filename)

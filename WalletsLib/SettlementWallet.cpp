@@ -275,8 +275,10 @@ bs::SettlementWallet::SettlementWallet()
 {}
 
 bs::SettlementWallet::SettlementWallet(const std::string &filename)
-   : PlainWallet(filename)
-{}
+   : PlainWallet()
+{
+   loadFromFile(filename);
+}
 
 std::string bs::SettlementWallet::getFileName(const std::string &dir) const
 {
