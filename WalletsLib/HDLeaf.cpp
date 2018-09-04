@@ -641,7 +641,7 @@ std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAsset(std::shared_ptr<
       ae_type = defaultAET_;
    }
 
-   shared_ptr<AddressEntry> aePtr = nullptr;
+   std::shared_ptr<AddressEntry> aePtr = nullptr;
    switch (ae_type)
    {
    case AddressEntryType_P2PKH:

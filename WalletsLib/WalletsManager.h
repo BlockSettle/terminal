@@ -155,7 +155,7 @@ private:
    void UpdateSavedWallets();
 
    bool IsWalletFile(const QString& fileName) const;
-   void SaveWallet(const wallet_gen_type& newWallet);
+   void SaveWallet(const wallet_gen_type& newWallet, NetworkType);
    void SaveWallet(const hd_wallet_type& wallet);
    void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
    void EraseWallet(const wallet_gen_type &wallet);

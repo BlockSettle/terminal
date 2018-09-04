@@ -16,8 +16,6 @@
 #include "Wallets.h"
 
 
-class PyBlockDataManager;
-
 namespace spdlog {
    class logger;
 };

@@ -3,6 +3,7 @@
 #include "ApplicationSettings.h"
 #include "FastLock.h"
 #include "HDWallet.h"
+#include "PlainWallet.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -167,6 +168,7 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
       logger_->error("Failed to load settlement wallet: {}", e.what());
       emit error(errorTitle, tr("Failed to load settlement wallet: %1").arg(QLatin1String(e.what())));
    }
+
    emit walletsLoaded();
 }
 
@@ -205,7 +207,8 @@ void WalletsManager::BackupWallet(const hd_wallet_type &wallet, const std::strin
 
 bool WalletsManager::IsWalletFile(const QString& fileName) const
 {
-   if (fileName.startsWith(QString::fromStdString(bs::SettlementWallet::fileNamePrefix()))) {
+   if (fileName.startsWith(QString::fromStdString(bs::SettlementWallet::fileNamePrefix()))
+      || fileName.startsWith(QString::fromStdString(bs::PlainWallet::fileNamePrefix(false)))) {
       return false;
    }
    return true;
@@ -235,10 +238,10 @@ bool WalletsManager::CreateSettlementWallet(NetworkType netType, const QString &
    return (settlementWallet_ != nullptr);
 }
 
-void WalletsManager::SaveWallet(const wallet_gen_type& newWallet)
+void WalletsManager::SaveWallet(const wallet_gen_type& newWallet, NetworkType netType)
 {
    if (hdDummyWallet_ == nullptr) {
-      hdDummyWallet_ = std::make_shared<bs::hd::DummyWallet>();
+      hdDummyWallet_ = std::make_shared<bs::hd::DummyWallet>(netType);
       hdWalletsId_.emplace_back(hdDummyWallet_->getWalletId());
       hdWallets_[hdDummyWallet_->getWalletId()] = hdDummyWallet_;
    }
