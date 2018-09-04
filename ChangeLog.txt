@@ -1,3 +1,9 @@
+0.10.6
+Bug Fixes:
+   -
+Improvements:
+   - Diskless settlement wallet in signer
+
 0.10.5
 Bug Fixes:
    - Coin control UI fix ( autoselection )

@@ -115,7 +115,7 @@ void QMLAppObj::walletsLoad()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
       if (!walletsMgr_->GetSettlementWallet()) {
-         if (!walletsMgr_->CreateSettlementWallet(params_->netType(), params_->getWalletsDir())) {
+         if (!walletsMgr_->CreateSettlementWallet(QString())) {
             logger_->error("Failed to create Settlement wallet");
          }
       }
