@@ -179,6 +179,7 @@ namespace bs {
       std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override { return nullptr; }   //stub
 
       bs::Address GetNewExtAddress(AddressEntryType) override { return {}; }  // stub
+      bs::Address GetNewIntAddress(AddressEntryType) override { return {}; }  // stub
       const SecureBinaryData& getDecryptedValue(shared_ptr<Asset_PrivateKey>) override { return {}; }
 
       size_t GetUsedAddressCount() const override { return addresses_.size(); }
