@@ -12,6 +12,7 @@
 
 #include "com/celertech/marketdata/api/enums/AssetTypeProto.pb.h"
 #include "com/celertech/marketdata/api/enums/ProductTypeProto.pb.h"
+#include "com/celertech/marketdata/api/enums/MarketDataEntryTypeProto.pb.h"
 
 namespace bs {
    namespace network {
@@ -71,6 +72,14 @@ namespace bs {
             last
          };
 
+         static Type fromCelerProductType(com::celertech::marketdata::api::enums::producttype::ProductType pt) {
+            switch (pt) {
+            case com::celertech::marketdata::api::enums::producttype::SPOT:           return SpotFX;
+            case com::celertech::marketdata::api::enums::producttype::BITCOIN:            return SpotXBT;
+            // case com::celertech::marketdata::api::enums::producttype::PRIVATE_SHARE:  return PrivateMarket;
+            default: return Undefined;
+            }
+         }
          static Type fromCelerProductType(com::celertech::marketmerchant::api::enums::producttype::ProductType pt) {
             switch (pt) {
             case com::celertech::marketmerchant::api::enums::producttype::SPOT:           return SpotFX;
@@ -310,20 +319,20 @@ namespace bs {
          double   value;
          QString  desc;
 
-         static Type fromCeler(com::celertech::marketmerchant::api::enums::marketdataentrytype::MarketDataEntryType mdType) {
+         static Type fromCeler(com::celertech::marketdata::api::enums::marketdataentrytype::MarketDataEntryType mdType) {
             switch (mdType)
             {
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::BID:       return PriceBid;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::OFFER:     return PriceOffer;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::MID_PRICE: return PriceMid;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::TRADE:     return PriceLast;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::OPEN:      return PriceOpen;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::CLOSE:     return PriceClose;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::HIGH:      return PriceHigh;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::LOW:       return PriceLow;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::TOTALTRADEDVOL:  return TurnOverQty;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::SETTLEMENT:return PriceSettlement;
-            case com::celertech::marketmerchant::api::enums::marketdataentrytype::VWAP:      return VWAP;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::BID:       return PriceBid;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::OFFER:     return PriceOffer;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::MID_PRICE: return PriceMid;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::TRADE:     return PriceLast;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::OPEN:      return PriceOpen;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::CLOSE:     return PriceClose;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::HIGH:      return PriceHigh;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::LOW:       return PriceLow;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::TOTALTRADEDVOL:  return TurnOverQty;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::SETTLEMENT:return PriceSettlement;
+            case com::celertech::marketdata::api::enums::marketdataentrytype::VWAP:      return VWAP;
             default:       return Unknown;
             }
          }

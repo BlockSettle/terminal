@@ -80,8 +80,8 @@ void MarketDataProvider::ConnectToCelerClient()
 
 void MarketDataProvider::OnConnectedToCeler()
 {
-   std::vector<std::string> fxPairs{"EUR/SEK", "EUR/GBP", "GBP/SEK"};
-   const std::vector<std::string> xbtPairs{"XBT/SEK", "XBT/GBP", "XBT/EUR"};
+   std::vector<std::string> fxPairs{"EUR/GBP", "EUR/SEK", "GBP/SEK", "EUR/JPY", "GBP/JPY", "JPY/SEK"};
+   const std::vector<std::string> xbtPairs{"XBT/GBP", "XBT/EUR", "XBT/SEK", "XBT/JPY"};
 
    if (!filterUsdProducts_) {
       fxPairs.emplace_back("EUR/USD");
@@ -182,27 +182,27 @@ bool MarketDataProvider::onFullSnapshot(const std::string& data)
 
    logger_->debug("[MarketDataProvider::onFullSnapshot] {}", response.DebugString());
 
-   // auto security = QString::fromStdString(response.securitycode());
-   // if (security.isEmpty()) {
-   //    security = QString::fromStdString(response.securityid());
-   // }
+   auto security = QString::fromStdString(response.securitycode());
+   if (security.isEmpty()) {
+      security = QString::fromStdString(response.securityid());
+   }
 
-   // bs::network::MDFields fields;
+   bs::network::MDFields fields;
 
-   // for (int i=0; i < response.marketdatapricesnapshotlevel_size(); ++i) {
-   //    const auto& levelPrice = response.marketdatapricesnapshotlevel(i);
-   //    if (levelPrice.entryposition() == 1) {
-   //       if (isPriceValid(levelPrice.entryprice())) {
-   //          fields.push_back({bs::network::MDField::fromCeler(levelPrice.marketdataentrytype())
-   //             , levelPrice.entryprice(), QString()});
-   //       }
-   //    }
-   // }
+   for (int i=0; i < response.marketdatapricesnapshotlevel_size(); ++i) {
+      const auto& levelPrice = response.marketdatapricesnapshotlevel(i);
+      if (levelPrice.priceposition() == 1) {
+         if (isPriceValid(levelPrice.entryprice())) {
+            fields.push_back({bs::network::MDField::fromCeler(levelPrice.marketdataentrytype())
+               , levelPrice.entryprice(), QString()});
+         }
+      }
+   }
 
-   // const auto itSecDef = secDefs_.find(security.toStdString());
-   // const auto assetType = (itSecDef == secDefs_.end()) ? bs::network::Asset::fromCelerProductType(response.producttype())
-   //    : itSecDef->second.assetType;
-   // emit MDUpdate(assetType, security, fields);
+   const auto itSecDef = secDefs_.find(security.toStdString());
+   const auto assetType = (itSecDef == secDefs_.end()) ? bs::network::Asset::fromCelerProductType(response.producttype())
+      : itSecDef->second.assetType;
+   emit MDUpdate(assetType, security, fields);
 
    return true;
 }
@@ -218,7 +218,7 @@ bool MarketDataProvider::onReqRejected(const std::string& data)
    logger_->debug("[MarketDataProvider::onReqRejected] {}", response.DebugString());
 
    // text field contain rejected ccy pair
-   emit MDReqRejected(response.text(), "rejected");
+   emit MDReqRejected(response.text(), response.text());
 
    return true;
 }
