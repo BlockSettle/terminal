@@ -406,10 +406,12 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       QMetaObject::invokeMethod(this, "InitTransactionsView", Qt::QueuedConnection);
 
       if (walletsManager_->GetWalletsCount() != 0) {
-         QMetaObject::invokeMethod(action_send_, "setEnabled", Q_ARG(bool, true));
+         QMetaObject::invokeMethod(action_send_, "setEnabled", Qt::QueuedConnection,
+            Q_ARG(bool, true));
       }
       else {
-         QTimer::singleShot(1234, [this] { createWallet(!walletsManager_->HasPrimaryWallet()); });
+         QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection,
+            Q_ARG(bool, !walletsManager_->HasPrimaryWallet()), Q_ARG(bool, true));
       }
    };
    if (!armory_->getWalletsLedgerDelegate(cbWalletsLD)) {

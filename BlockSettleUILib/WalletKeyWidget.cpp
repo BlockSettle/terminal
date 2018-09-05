@@ -20,11 +20,13 @@ const QColor kFailColor = Qt::red;
 }
 
 
-WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent)
+WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password,
+   const QString &prompt, QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::WalletKeyWidget())
    , walletId_(walletId), index_(index), password_(password)
    , frejaSign_(spdlog::get(""), 1)
+   , prompt_(prompt)
 {
    ui_->setupUi(this);
    ui_->radioButtonPassword->setChecked(password);
@@ -107,7 +109,8 @@ void WalletKeyWidget::onFrejaSignClicked()
    ui_->progressBar->show();
    timer_.start();
    frejaRunning_ = true;
-   frejaSign_.start(ui_->comboBoxFrejaId->currentText(), tr("Activate Freja eID signing"), walletId_);
+   frejaSign_.start(ui_->comboBoxFrejaId->currentText(),
+      prompt_.isEmpty() ? tr("Activate Freja eID signing") : prompt_, walletId_);
    ui_->pushButtonFreja->setText(tr("Cancel Freja request"));
    ui_->comboBoxFrejaId->setEnabled(false);
 

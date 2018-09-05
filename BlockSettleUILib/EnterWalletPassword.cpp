@@ -33,7 +33,7 @@ EnterWalletPassword::EnterWalletPassword(const std::string &walletId
       ui_->pushButtonOk->hide();
    }
 
-   ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys);
+   ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys, prompt);
    ui_->widgetSubmitKeys->setFocus();
 
    updateState();
