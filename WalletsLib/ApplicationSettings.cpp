@@ -89,6 +89,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { pubBridgePubKey,         SettingDef(QString(), QLatin1String("AEJL[u[3-i>v#4D?v3Te!B}S0nO7cG!QOsmI*--g")) },
       { celerHost,               SettingDef(QLatin1String("MatchSystemHost"), QLatin1String("104.155.117.179")) },
       { celerPort,               SettingDef(QLatin1String("MatchSystemPort"), 16001) },
+      { mdServerHost,            SettingDef(QLatin1String("MDServerHost"), QLatin1String("193.138.218.44")) },
+      { mdServerPort,            SettingDef(QLatin1String("MDServerPort"), 16005) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
       { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },

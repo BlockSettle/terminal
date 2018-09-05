@@ -18,6 +18,9 @@ struct EnvSettings
 
    QString  pubHost;
    int      pubPort;
+
+   QString  mdHost;
+   int      mdPort;
 };
 
 bool operator == (const EnvSettings& l, const EnvSettings& r)
@@ -32,13 +35,17 @@ static const EnvSettings StagingEnvSettings{
    QLatin1String("104.155.117.179"),
    16001,
    QLatin1String("193.138.218.44"),
-   19091};
+   19091,
+   QLatin1String("193.138.218.44"),
+   16005};
 
 static const EnvSettings UATEnvSettings{
    QLatin1String("193.138.218.39"),
    16001,
    QLatin1String("193.138.218.36"),
-   9091};
+   9091,
+   QLatin1String("193.138.218.44"),
+   16005};
 
 NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    : QWidget{parent}
@@ -125,7 +132,9 @@ void NetworkSettingsPage::DetectEnvironmentSettings()
       ui_->celerHostLineEdit->text(),
       ui_->celerPortSpinBox->value(),
       ui_->lineEditPublicBridgeHost->text(),
-      ui_->spinBoxPublicBridgePort->value()
+      ui_->spinBoxPublicBridgePort->value(),
+      ui_->lineEditMDHost->text(),
+      ui_->spinBoxMDPort->value()
    };
 
    if (currentConfiguration == StagingEnvSettings) {
