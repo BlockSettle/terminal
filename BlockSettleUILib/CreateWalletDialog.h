@@ -49,13 +49,13 @@ public:
    bool isNewWalletPrimary() const { return createdAsPrimary_; }
 
 private slots:
-   //void UpdateAcceptButtonState();
+   void updateAcceptButtonState();
    void CreateWallet();
    void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
+   void onKeyTypeChanged(bool password);
 
 protected:
-   //void showEvent(QShowEvent *event) override;
    void reject() override;
 
 private:
@@ -71,6 +71,7 @@ private:
    bool              walletCreated_ = false;
    SecureBinaryData  walletPassword_;
    bool              createdAsPrimary_ = false;
+   bool              frejaNoticeWasShown_ = false;
 };
 
 // Common function for CreateWalletDialog and ImportWalletDialog.

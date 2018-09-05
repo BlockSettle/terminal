@@ -6,6 +6,9 @@
 #include <QPrintDialog>
 #include <QPrinter>
 #include <QStandardPaths>
+#include <QValidator>
+#include <QResizeEvent>
+
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
 #include "PaperBackupWriter.h"
@@ -19,6 +22,81 @@ namespace {
    const int kTotalClientPadding = 50;
 
 }
+
+//
+// SeedValidator
+//
+
+//! Simplest validator for key that just checks count of characters.
+class SeedValidator : public QValidator
+{
+public:
+   explicit SeedValidator(QObject *parent)
+      : QValidator(parent)
+   {
+   }
+
+   QValidator::State validate(QString &input, int &pos) const override
+   {
+      QString key = input.trimmed();
+      key.remove(QChar::Space);
+
+      if (key.length() > maxLength_) {
+         cutInput(input, pos);
+
+         return QValidator::Invalid;
+      } else {
+         splitInput(key, input, pos);
+
+         return QValidator::Acceptable;
+      }
+   }
+
+private:
+   void cutInput(QString &input, int &pos) const
+   {
+      int i = 0;
+
+      for (const auto &ch : qAsConst(input)) {
+         if (ch != QChar::Space) {
+            ++i;
+         }
+
+         if (i == maxLength_) {
+            pos = i;
+            input.remove(i, input.length() - i);
+            return;
+         }
+      }
+   }
+
+   void splitInput(const QString &key, QString &input, int &pos) const
+   {
+      QString splitted;
+      int i = 0;
+
+      for (const auto &ch : qAsConst(key)) {
+         if (i == 4) {
+            splitted.append(QChar::Space);
+            i = 0;
+         }
+
+         ++i;
+
+         splitted.append(ch);
+      }
+
+      if (input.length() == pos) {
+         pos = splitted.length();
+      }
+
+      input = splitted;
+   }
+
+private:
+   static const int maxLength_ = 9 * 4;
+}; // class SeedValidator
+
 
 NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    , const QString &keyLine1, const QString &keyLine2, QWidget *parent) :
@@ -34,7 +112,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
       , QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png"))
       , UiUtils::getQRCode(keyLine1 + QLatin1Literal("\n") + keyLine2)));
 
-   QPixmap pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
+   const auto pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
 
    ui_->labelPreview->setPixmap(pdfPreview);
 
@@ -42,12 +120,28 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    connect(ui_->pushButtonPrint, &QPushButton::clicked, this, &NewWalletSeedDialog::onPrintClicked);
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &NewWalletSeedDialog::onContinueClicked);
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &NewWalletSeedDialog::onBackClicked);
+   connect(ui_->lineEditLine1, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
+   connect(ui_->lineEditLine2, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &NewWalletSeedDialog::reject);
+
+   auto * validator = new SeedValidator(this);
+   ui_->lineEditLine1->setValidator(validator);
+   ui_->lineEditLine2->setValidator(validator);
 
    setCurrentPage(Pages::PrintPreview);
    updateState();
 }
 
 NewWalletSeedDialog::~NewWalletSeedDialog() = default;
+
+void NewWalletSeedDialog::resizeEvent(QResizeEvent *e)
+{
+   const auto pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
+
+   ui_->labelPreview->setPixmap(pdfPreview);
+
+   e->accept();
+}
 
 void NewWalletSeedDialog::setCurrentPage(Pages page)
 {
@@ -58,7 +152,7 @@ void NewWalletSeedDialog::setCurrentPage(Pages page)
    ui_->pushButtonPrint->setVisible(page == Pages::PrintPreview);
    ui_->pushButtonBack->setVisible(page == Pages::Confirm);
 
-   ui_->pushButtonContinue->setEnabled(wasSaved_);
+   updateState();
 
    // Hide to allow adjust to smaller size
    ui_->labelPreview->setVisible(page == Pages::PrintPreview);
@@ -76,7 +170,11 @@ void NewWalletSeedDialog::setCurrentPage(Pages page)
 
 void NewWalletSeedDialog::updateState()
 {
-   ui_->pushButtonContinue->setEnabled(wasSaved_);
+   if (currentPage_ == Pages::PrintPreview) {
+      ui_->pushButtonContinue->setEnabled(true);
+   } else {
+      ui_->pushButtonContinue->setEnabled(keysAreCorrect_);
+   }
 }
 
 void NewWalletSeedDialog::onSaveClicked()
@@ -101,7 +199,6 @@ void NewWalletSeedDialog::onSaveClicked()
       return;
    }
 
-   wasSaved_ = true;
    updateState();
 }
 
@@ -141,7 +238,6 @@ void NewWalletSeedDialog::onPrintClicked()
 
    pdfWriter_->print(&printer);
 
-   wasSaved_ = true;
    updateState();
 }
 
@@ -161,8 +257,20 @@ void NewWalletSeedDialog::onContinueClicked()
 
 void NewWalletSeedDialog::validateKeys()
 {
-   QString inputLine1 = ui_->lineEditLine1->text();
-   QString inputLine2 = ui_->lineEditLine2->text();
+   if (!keysAreCorrect_) {
+      MessageBoxCritical messageBox(tr("Check failed!")
+         , tr("Input values do not match with the original keys. Please make sure the input lines are correct."));
+      messageBox.exec();
+      return;
+   }
+
+   accept();
+}
+
+void NewWalletSeedDialog::onKeyChanged(const QString &)
+{
+   QString inputLine1 = ui_->lineEditLine1->text().trimmed();
+   QString inputLine2 = ui_->lineEditLine2->text().trimmed();
    QString keyLine1 = keyLine1_;
    QString keyLine2 = keyLine2_;
 
@@ -173,13 +281,24 @@ void NewWalletSeedDialog::validateKeys()
    keyLine2.remove(QChar::Space);
 
    if (inputLine1 != keyLine1 || inputLine2 != keyLine2) {
-      MessageBoxCritical messageBox(tr("Check failed!")
-         , tr("Input values do not match with the original keys. Please make sure the input lines are correct."));
-      messageBox.exec();
-      return;
+      keysAreCorrect_ = false;
+   } else {
+      keysAreCorrect_ = true;
    }
 
-   accept();
+   if (inputLine1 != keyLine1) {
+      UiUtils::setWrongState(ui_->lineEditLine1, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditLine1, false);
+   }
+
+   if (inputLine2 != keyLine2) {
+      UiUtils::setWrongState(ui_->lineEditLine2, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditLine2, false);
+   }
+
+   updateState();
 }
 
 bool abortWalletCreationQuestionDialog(QWidget* parent)

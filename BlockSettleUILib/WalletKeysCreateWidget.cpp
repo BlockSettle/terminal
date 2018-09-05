@@ -99,6 +99,7 @@ void WalletKeysCreateWidget::onKeyTypeChanged(int index, bool password)
    pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja;
    pwdData_[index].password.clear();
    emit keyChanged();
+   emit keyTypeChanged(password);
 }
 
 void WalletKeysCreateWidget::onEncKeyChanged(int index, SecureBinaryData encKey)
@@ -129,9 +130,6 @@ bool WalletKeysCreateWidget::isValid() const
    }
    std::set<SecureBinaryData> encKeys;
    for (const auto &pwd : pwdData_) {
-      if (pwd.password.isNull()) {
-         return false;
-      }
       if (pwd.encType == bs::wallet::EncryptionType::Freja) {
          if (pwd.encKey.isNull()) {
             return false;
@@ -140,6 +138,8 @@ bool WalletKeysCreateWidget::isValid() const
             return false;
          }
          encKeys.insert(pwd.encKey);
+      } else if (pwd.password.isNull()) {
+         return false;
       }
    }
    return true;

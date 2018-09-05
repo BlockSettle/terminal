@@ -74,7 +74,7 @@ private slots:
    void onCopyAddress();
    void onEditAddrComment();
    void onRevokeSettlement();
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
    void onDeleteWallet();
    void onFilterSettingsChanged();
    void onEnterKeyInAddressesPressed(const QModelIndex &index);

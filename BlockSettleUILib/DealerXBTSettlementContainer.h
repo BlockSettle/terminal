@@ -60,7 +60,7 @@ private slots:
    void onPayInDetected(int confirmationsNumber, const BinaryData &txHash);
    void onPayOutDetected(int confirmationsNumber, bs::PayoutSigner::Type signedBy);
 
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
 
 private:
    void onCptyVerified();
