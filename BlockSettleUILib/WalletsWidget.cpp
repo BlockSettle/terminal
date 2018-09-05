@@ -630,7 +630,8 @@ void WalletsWidget::onRevokeSettlement()
    settlWallet->GetInputFor(ae, cbSettlInput, false);
 }
 
-void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
+   std::string error, bool cancelledByUser)
 {
    if (!revokeReqId_ || (revokeReqId_ != id)) {
       return;

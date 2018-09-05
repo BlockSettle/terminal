@@ -77,7 +77,9 @@ public:
 
    virtual RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) = 0;
 
-   virtual void SendPassword(const std::string &walletId, const PasswordType &password) = 0;
+   virtual void SendPassword(const std::string &walletId, const PasswordType &password,
+      bool cancelledByUser) = 0;
+   virtual RequestId CancelSignTx(const BinaryData &txId) = 0;
 
    virtual RequestId SetUserId(const BinaryData &) = 0;
    virtual RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) = 0;
@@ -107,7 +109,7 @@ signals:
    void connectionError();
    void ready();
    void Error(RequestId id, std::string error);
-   void TXSigned(RequestId id, BinaryData signedTX, std::string error);
+   void TXSigned(RequestId id, BinaryData signedTX, std::string error, bool cancelledByUser);
 
    void PasswordRequested(std::string walletId, std::string prompt, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKey, bs::wallet::KeyRank);

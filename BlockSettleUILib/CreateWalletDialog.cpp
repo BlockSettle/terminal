@@ -54,6 +54,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    ui_->setupUi(this);
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
+   ui_->checkBoxPrimaryWallet->setChecked(!walletsManager->HasPrimaryWallet());
 
    if (createPrimary && !walletsManager->HasPrimaryWallet()) {
       setWindowTitle(tr("Create Primary Wallet"));
@@ -71,9 +72,9 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
 
    ui_->labelWalletId->setText(QString::fromStdString(walletId_));
 
-   //connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::UpdateAcceptButtonState);
+   connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::updateAcceptButtonState);
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
-   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { UpdateAcceptButtonState(); });
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateAcceptButtonState(); });
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideFrejaConnectButton);
    ui_->widgetCreateKeys->init(walletId_, username);
@@ -82,23 +83,22 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
 
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &CreateWalletDialog::CreateWallet);
-   //connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateWalletDialog::reject);
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateWalletDialog::reject);
 
    connect(signingContainer_.get(), &SignContainer::HDWalletCreated, this, &CreateWalletDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CreateWalletDialog::onWalletCreateError);
 
-   //UpdateAcceptButtonState();
    adjustSize();
    setMinimumSize(size());
 }
 
 CreateWalletDialog::~CreateWalletDialog() = default;
 
-//void CreateWalletDialog::showEvent(QShowEvent *event)
-//{
-//   ui_->labelHintPrimary->setVisible(ui_->checkBoxPrimaryWallet->isVisible());
-//   QDialog::showEvent(event);
-//}
+void CreateWalletDialog::updateAcceptButtonState()
+{
+   ui_->pushButtonContinue->setEnabled(ui_->widgetCreateKeys->isValid() &&
+      !ui_->lineEditWalletName->text().isEmpty());
+}
 
 void CreateWalletDialog::CreateWallet()
 {
@@ -195,7 +195,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
       }
 
       EnterWalletPassword dialog(walletId, widgetCreateKeys->keyRank(), encTypes, encKeys
-         , QObject::tr("Activate Freja eID signing"), parent);
+         , QObject::tr("Activate Freja eID signing"), QObject::tr("Sign Wallet"), parent);
       int result = dialog.exec();
       if (!result) {
          return false;

@@ -272,7 +272,8 @@ void CCSettlementTransactionWidget::onAccept()
    acceptSpotCC();
 }
 
-void CCSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void CCSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
+   bool cancelledByUser)
 {
    if (ccSignId_ && (ccSignId_ == id)) {
       ccSignId_ = 0;
