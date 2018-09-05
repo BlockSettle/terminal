@@ -67,9 +67,6 @@ void MarketDataProvider::ConnectToCelerClient()
    celerClient_->RegisterHandler(CelerAPI::MarketDataFullSnapshotDownstreamEventType, [this](const std::string& data) {
       return this->onFullSnapshot(data);
    });
-   celerClient_->RegisterHandler(CelerAPI::MarketDataIncrementalDownstreamEventType, [this](const std::string& data) {
-      return onIncrementalUpdate(data);
-   });
    celerClient_->RegisterHandler(CelerAPI::MarketDataRequestRejectDownstreamEventType, [this](const std::string& data) {
       return this->onReqRejected(data);
    });
@@ -128,47 +125,6 @@ bool MarketDataProvider::isPriceValid(double val)
       return true;
    }
    return false;
-}
-
-bool MarketDataProvider::onIncrementalUpdate(const std::string& data)
-{
-   com::celertech::marketdata::api::price::MarketDataIncrementalDownstreamEvent response;
-
-   if (!response.ParseFromString(data)) {
-      logger_->error("[MarketDataProvider::onIncrementalUpdate] Failed to parse MarketDataIncrementalDownstreamEvent");
-      return false;
-   }
-
-   logger_->debug("[MarketDataProvider::onIncrementalUpdate] {}", response.DebugString());
-
-   // if (!response.ParseFromString(data)) {
-   //       logger_->error("[MarketDataProvider::onMDUpdate] Failed to parse MarketDataFullSnapshotDownstreamEvent");
-   //       return false;
-   // }
-
-   // auto security = QString::fromStdString(response.securitycode());
-   // if (security.isEmpty()) {
-   //    security = QString::fromStdString(response.securityid());
-   // }
-
-   // bs::network::MDFields fields;
-
-   // for (int i=0; i < response.marketdatapricesnapshotlevel_size(); ++i) {
-   //    const auto& levelPrice = response.marketdatapricesnapshotlevel(i);
-   //    if (levelPrice.entryposition() == 1) {
-   //       if (isPriceValid(levelPrice.entryprice())) {
-   //          fields.push_back({bs::network::MDField::fromCeler(levelPrice.marketdataentrytype())
-   //             , levelPrice.entryprice(), QString()});
-   //       }
-   //    }
-   // }
-
-   // const auto itSecDef = secDefs_.find(security.toStdString());
-   // const auto assetType = (itSecDef == secDefs_.end()) ? bs::network::Asset::fromCelerProductType(response.producttype())
-   //    : itSecDef->second.assetType;
-   // emit MDUpdate(assetType, security, fields);
-
-   return true;
 }
 
 bool MarketDataProvider::onFullSnapshot(const std::string& data)

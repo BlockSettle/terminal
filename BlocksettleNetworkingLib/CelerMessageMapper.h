@@ -110,7 +110,6 @@ enum CelerMessageType
 
    MarketDataRequestRejectDownstreamEventType,
    MarketDataFullSnapshotDownstreamEventType,
-   MarketDataIncrementalDownstreamEventType,
 
    MarketDataSubscriptionRequestType,
 

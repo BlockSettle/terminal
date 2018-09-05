@@ -90,7 +90,6 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException", PersistenceExceptionType},
    { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent", MarketDataRequestRejectDownstreamEventType},
    { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent", MarketDataFullSnapshotDownstreamEventType},
-   { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataIncrementalDownstreamEvent", MarketDataIncrementalDownstreamEventType},
    { "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest", MarketDataSubscriptionRequestType}
 };
 
@@ -180,7 +179,6 @@ static const std::unordered_map<int, std::string> typeToName = {
    { PersistenceExceptionType, "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException"},
    { MarketDataRequestRejectDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent"},
    { MarketDataFullSnapshotDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent"},
-   { MarketDataIncrementalDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataIncrementalDownstreamEvent"},
    { MarketDataSubscriptionRequestType, "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest"}
 };
 
