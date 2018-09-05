@@ -36,12 +36,14 @@ private:
    void setCurrentPage(Pages page);
    void updateState();
    void validateKeys();
+   void onKeyChanged(const QString &);
 
    std::unique_ptr<Ui::NewWalletSeedDialog> ui_;
    std::unique_ptr<WalletBackupPdfWriter> pdfWriter_;
    Pages currentPage_;
    QSize sizePreview_;
    bool wasSaved_{false};
+   bool keysAreCorrect_ = false;
    const QString walletId_;
    const QString keyLine1_;
    const QString keyLine2_;
