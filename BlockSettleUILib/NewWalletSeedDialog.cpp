@@ -7,6 +7,7 @@
 #include <QPrinter>
 #include <QStandardPaths>
 #include <QValidator>
+#include <QResizeEvent>
 
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
@@ -111,7 +112,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
       , QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png"))
       , UiUtils::getQRCode(keyLine1 + QLatin1Literal("\n") + keyLine2)));
 
-   QPixmap pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
+   const auto pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
 
    ui_->labelPreview->setPixmap(pdfPreview);
 
@@ -121,6 +122,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &NewWalletSeedDialog::onBackClicked);
    connect(ui_->lineEditLine1, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
    connect(ui_->lineEditLine2, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &NewWalletSeedDialog::reject);
 
    auto * validator = new SeedValidator(this);
    ui_->lineEditLine1->setValidator(validator);
@@ -131,6 +133,15 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
 }
 
 NewWalletSeedDialog::~NewWalletSeedDialog() = default;
+
+void NewWalletSeedDialog::resizeEvent(QResizeEvent *e)
+{
+   const auto pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
+
+   ui_->labelPreview->setPixmap(pdfPreview);
+
+   e->accept();
+}
 
 void NewWalletSeedDialog::setCurrentPage(Pages page)
 {
@@ -160,7 +171,7 @@ void NewWalletSeedDialog::setCurrentPage(Pages page)
 void NewWalletSeedDialog::updateState()
 {
    if (currentPage_ == Pages::PrintPreview) {
-      ui_->pushButtonContinue->setEnabled(wasSaved_);
+      ui_->pushButtonContinue->setEnabled(true);
    } else {
       ui_->pushButtonContinue->setEnabled(keysAreCorrect_);
    }
@@ -188,7 +199,6 @@ void NewWalletSeedDialog::onSaveClicked()
       return;
    }
 
-   wasSaved_ = true;
    updateState();
 }
 
@@ -228,7 +238,6 @@ void NewWalletSeedDialog::onPrintClicked()
 
    pdfWriter_->print(&printer);
 
-   wasSaved_ = true;
    updateState();
 }
 

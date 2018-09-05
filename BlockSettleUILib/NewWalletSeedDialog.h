@@ -24,6 +24,9 @@ public:
       , const QString &keyLine1, const QString &keyLine2, QWidget *parent = nullptr);
    ~NewWalletSeedDialog() override;
 
+protected:
+   void resizeEvent(QResizeEvent *e) override;
+
 private slots:
    void reject() override;
 
@@ -42,7 +45,6 @@ private:
    std::unique_ptr<WalletBackupPdfWriter> pdfWriter_;
    Pages currentPage_;
    QSize sizePreview_;
-   bool wasSaved_{false};
    bool keysAreCorrect_ = false;
    const QString walletId_;
    const QString keyLine1_;
