@@ -37,6 +37,7 @@ public:
 signals:
    void keyChanged();
    void keyCountChanged();
+   void keyTypeChanged(bool password);
 
 private slots:
    void onAddClicked();

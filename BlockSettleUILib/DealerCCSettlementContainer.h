@@ -58,7 +58,7 @@ signals:
    void genAddressVerified(bool result);
 
 private slots:
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
    void onGenAddressVerified(bool result);
 
 private:

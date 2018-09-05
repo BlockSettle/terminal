@@ -129,7 +129,8 @@ bool DealerCCSettlementContainer::cancel()
    return true;
 }
 
-void DealerCCSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg)
+void DealerCCSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
+   std::string errMsg, bool cancelledByUser)
 {
    if (signId_ && (signId_ == id)) {
       signId_ = 0;

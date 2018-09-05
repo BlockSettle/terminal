@@ -401,7 +401,8 @@ void XBTSettlementTransactionWidget::acceptSpotXBT()
    }
 }
 
-void XBTSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void XBTSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData signedTX,
+   std::string error, bool cancelledByUser)
 {
    if (payinSignId_ && (payinSignId_ == id)) {
       payinSignId_ = 0;

@@ -99,6 +99,7 @@ void WalletKeysCreateWidget::onKeyTypeChanged(int index, bool password)
    pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja;
    pwdData_[index].password.clear();
    emit keyChanged();
+   emit keyTypeChanged(password);
 }
 
 void WalletKeysCreateWidget::onEncKeyChanged(int index, SecureBinaryData encKey)

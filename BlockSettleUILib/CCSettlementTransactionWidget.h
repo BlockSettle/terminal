@@ -70,7 +70,7 @@ private slots:
    void onGenAddrVerified(bool);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
 
 signals:
    void settlementCancelled();

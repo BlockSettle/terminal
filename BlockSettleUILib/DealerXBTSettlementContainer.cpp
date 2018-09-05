@@ -262,7 +262,8 @@ void DealerXBTSettlementContainer::onPayOutDetected(int confirmationsNumber, bs:
    }
 }
 
-void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg)
+void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
+   std::string errMsg, bool cancelledByUser)
 {
    if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;

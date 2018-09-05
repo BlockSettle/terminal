@@ -252,7 +252,8 @@ void CreateTransactionDialog::onMaxPressed()
    lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
 }
 
-void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
+   bool cancelledByUser)
 {
    if (!pendingTXSignId_ || (pendingTXSignId_ != id)) {
       return;
@@ -285,7 +286,10 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
       detailedText = QString::fromStdString(error);
    }
 
-   MessageBoxBroadcastError(detailedText, this).exec();
+   if (!cancelledByUser) {
+      MessageBoxBroadcastError(detailedText, this).exec();
+   }
+
    stopBroadcasting();
 }
 

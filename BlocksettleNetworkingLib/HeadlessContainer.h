@@ -53,9 +53,10 @@ public:
 
    RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) override;
 
-   RequestId CancelSignTx(const BinaryData &txId) override;
+   void SendPassword(const std::string &walletId, const PasswordType &password,
+      bool cancelledByUser) override;
 
-   void SendPassword(const std::string &walletId, const PasswordType &password) override;
+   RequestId CancelSignTx(const BinaryData &txId) override;
 
    RequestId SetUserId(const BinaryData &) override;
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override;

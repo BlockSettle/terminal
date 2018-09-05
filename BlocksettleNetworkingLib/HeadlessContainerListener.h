@@ -57,7 +57,8 @@ signals:
    void cancelSignTx(const BinaryData &txId);
 
 public slots:
-   void passwordReceived(const std::string &walletId, const SecureBinaryData &password);
+   void passwordReceived(const std::string &walletId, const SecureBinaryData &password,
+      bool cancelledByUser);
    void activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
    void deactivateAutoSign(const std::string &walleteId, const std::string &reason = {});
    void addPendingAutoSignReq(const std::string &walletId);
@@ -74,7 +75,7 @@ protected:
    void OnPeerDisconnected(const std::string &ip) override;
 
 private:
-   using PasswordReceivedCb = std::function<void(const SecureBinaryData &password)>;
+   using PasswordReceivedCb = std::function<void(const SecureBinaryData &password, bool cancelledByUser)>;
    using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
 
    bool sendData(const std::string &data, const std::string &clientId = {});
@@ -97,7 +98,7 @@ private:
    void AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet
       , const std::string &errMsg = {});
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
-      , const std::string &error, const BinaryData &tx = {});
+      , const std::string &error, const BinaryData &tx = {}, bool cancelledByUser = false);
    void CreateHDWalletResponse(const std::string &clientId, unsigned int id, const std::string &errorOrWalletId
       , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}, const std::shared_ptr<bs::hd::Wallet> &wallet = nullptr);
    void GetRootKeyResponse(const std::string &clientId, unsigned int id, const std::shared_ptr<bs::hd::Node> &
