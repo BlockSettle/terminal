@@ -32,7 +32,7 @@
    <item>
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="pagePreview">
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -54,23 +54,23 @@
        <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
-          <string>Save your Root Private Key</string>
+          <string>SAVE YOUR PRIVATE ROOT KEY</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="spacing">
-           <number>7</number>
+           <number>18</number>
           </property>
           <property name="leftMargin">
-           <number>3</number>
+           <number>9</number>
           </property>
           <property name="topMargin">
-           <number>3</number>
+           <number>9</number>
           </property>
           <property name="rightMargin">
-           <number>3</number>
+           <number>9</number>
           </property>
           <property name="bottomMargin">
-           <number>3</number>
+           <number>9</number>
           </property>
           <item>
            <widget class="QLabel" name="label">
@@ -97,8 +97,8 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>699</width>
-               <height>533</height>
+               <width>687</width>
+               <height>510</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
@@ -227,6 +227,19 @@ To make sure that you have properly saved your seed, please retype it here.</str
       <property name="bottomMargin">
        <number>10</number>
       </property>
+      <item>
+       <widget class="QPushButton" name="pushButtonCancel">
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Cancel</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
