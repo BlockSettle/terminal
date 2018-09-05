@@ -30,14 +30,12 @@ WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
 
 void WalletPasswordVerifyDialog::initPassword()
 {
-   ui_->stackedWidget->setCurrentIndex(Pages::Check);
    ui_->labelFrejaHint->hide();
    adjustSize();
 }
 
-void WalletPasswordVerifyDialog::initFreja(const QString& frejaId)
+void WalletPasswordVerifyDialog::initFreja(const QString&)
 {
-   ui_->stackedWidget->setCurrentIndex(Pages::FrejaInfo);
    ui_->lineEditPassword->hide();
    ui_->labelPasswordHint->hide();
    adjustSize();
@@ -45,13 +43,6 @@ void WalletPasswordVerifyDialog::initFreja(const QString& frejaId)
 
 void WalletPasswordVerifyDialog::onContinueClicked()
 {
-   Pages currentPage = Pages(ui_->stackedWidget->currentIndex());
-   
-   if (currentPage == FrejaInfo) {
-      ui_->stackedWidget->setCurrentIndex(Pages::Check);
-      return;
-   }
-
    const bs::wallet::PasswordData &key = keys_.at(0);
 
    if (key.encType == bs::wallet::EncryptionType::Password) {

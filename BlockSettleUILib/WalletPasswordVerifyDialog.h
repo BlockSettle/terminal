@@ -14,11 +14,6 @@ class WalletPasswordVerifyDialog : public QDialog
    Q_OBJECT
 
 public:
-   enum Pages {
-      FrejaInfo,
-      Check,
-   };
-
    WalletPasswordVerifyDialog(const std::string& walletId
       , const std::vector<bs::wallet::PasswordData>& keys, bs::wallet::KeyRank keyRank
       , QWidget *parent = nullptr);
