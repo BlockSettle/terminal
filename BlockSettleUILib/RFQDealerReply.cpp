@@ -259,7 +259,7 @@ bs::Address RFQDealerReply::getRecvAddress() const
    const auto index = ui_->comboBoxRecvAddr->currentIndex();
    logger_->debug("[RFQDealerReply::getRecvAddress] obtaining addr #{} from wallet {}", index, curWallet_->GetWalletName());
    if (index <= 0) {
-      const auto recvAddr = curWallet_->GetNewExtAddress();
+      const auto recvAddr = curWallet_->GetNewIntAddress();
       if (transactionData_) {
          transactionData_->createAddress(recvAddr, curWallet_);
       }

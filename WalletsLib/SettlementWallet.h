@@ -172,6 +172,7 @@ namespace bs {
       std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override { return nullptr; }   // no public keys are stored
 
       bs::Address GetNewExtAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
+      bs::Address GetNewIntAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
 
       std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
       std::string GetAddressIndex(const bs::Address &) override;

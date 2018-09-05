@@ -125,6 +125,7 @@ namespace bs {
          size_t GetIntAddressCount() const override { return intAddresses_.size(); }
          bool IsExternalAddress(const Address &) const override;
          bs::Address GetNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
+         bs::Address GetNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
          bs::Address GetNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
          bs::Address GetRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
          std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
