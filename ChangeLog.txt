@@ -1,3 +1,10 @@
+0.10.6
+Bug Fixes:
+   -
+Improvements:
+   - Aded possibility to cancel transaction from terminal with remote Signer
+   - No warning messages in Terminal if transaction was just cancelled
+   
 0.10.5
 Bug Fixes:
    - Coin control UI fix ( autoselection )
