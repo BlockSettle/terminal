@@ -12,6 +12,7 @@ CustomDialog {
     property TXInfo txInfo
     property string password
     property bool   acceptable: false
+    property bool   cancelledByUser: false
     property FrejaSignWalletObject  frejaSign
     closePolicy: Popup.NoAutoClose
     id: passwordDialog
@@ -305,7 +306,8 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: passwordDialog.reject();
+                            cancelledByUser = true
+                            passwordDialog.reject();
                         }
                     }
                 }

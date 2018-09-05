@@ -206,15 +206,17 @@ void QMLAppObj::SetRootObject(QObject *obj)
          QMetaObject::invokeMethod(walletsView, "expandAll");
       }
    });
-   connect(rootObj_, SIGNAL(passwordEntered(QString, QString)), this, SLOT(onPasswordAccepted(QString, QString)));
+   connect(rootObj_, SIGNAL(passwordEntered(QString, QString, bool)),
+      this, SLOT(onPasswordAccepted(QString, QString, bool)));
 }
 
-void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password)
+void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password,
+   bool cancelledByUser)
 {
    SecureBinaryData decodedPwd = BinaryData::CreateFromHex(password.toStdString());
    logger_->debug("Password for wallet {} was accepted ({})", walletId.toStdString(), password.size());
    if (listener_) {
-      listener_->passwordReceived(walletId.toStdString(), decodedPwd);
+      listener_->passwordReceived(walletId.toStdString(), decodedPwd, cancelledByUser);
    }
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
       offlineProc_->passwordEntered(walletId.toStdString(), decodedPwd);
