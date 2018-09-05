@@ -40,7 +40,7 @@ signals:
    void cancelSignTx(const QString &txId);
 
 private slots:
-   void onPasswordAccepted(const QString &walletId, const QString &password);
+   void onPasswordAccepted(const QString &walletId, const QString &password, bool cancelledByUser);
    void onOfflinePassword(const bs::wallet::TXSignRequest &);
    void onPasswordRequested(const bs::wallet::TXSignRequest &, const QString &prompt);
    void onAutoSignPwdRequested(const std::string &walletId);
