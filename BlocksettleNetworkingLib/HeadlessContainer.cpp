@@ -500,7 +500,7 @@ HeadlessContainer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &t
    request.set_txid(txId.toBinStr());
 
    headless::RequestPacket packet;
-   packet.set_type(headless::CancelSignTxType);
+   packet.set_type(headless::CancelSignTxRequestType);
    packet.set_data(request.SerializeAsString());
    return Send(packet);
 }

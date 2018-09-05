@@ -176,7 +176,7 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
       }
       break;
 
-   case headless::CancelSignTxType:
+   case headless::CancelSignTxRequestType:
       return onCancelSignTx(clientId, packet);
 
    case headless::SignTXRequestType:
