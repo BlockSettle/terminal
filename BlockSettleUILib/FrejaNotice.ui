@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>WalletPasswordVerifyDialog</class>
- <widget class="QDialog" name="WalletPasswordVerifyDialog">
+ <class>FrejaNotice</class>
+ <widget class="QDialog" name="FrejaNotice">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>750</width>
-    <height>280</height>
+    <width>680</width>
+    <height>260</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Notice!</string>
+   <string>Dialog</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="leftMargin">
@@ -41,73 +41,54 @@
       <number>9</number>
      </property>
      <item>
-      <widget class="QGroupBox" name="groupBox">
+      <widget class="QGroupBox" name="groupBox_2">
        <property name="title">
-        <string>Please take care of your assets!</string>
+        <string>Signing with Freja eID</string>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
-        <property name="spacing">
-         <number>5</number>
-        </property>
-        <property name="leftMargin">
-         <number>8</number>
-        </property>
-        <property name="topMargin">
-         <number>8</number>
-        </property>
-        <property name="rightMargin">
-         <number>8</number>
-        </property>
-        <property name="bottomMargin">
-         <number>8</number>
-        </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QLabel" name="label_2">
+         <widget class="QLabel" name="label_3">
+          <property name="minimumSize">
+           <size>
+            <width>40</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="text">
-           <string>No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! Your Wallet and any backups are useless if you lose them.
+           <string/>
+          </property>
+          <property name="pixmap">
+           <pixmap>://resources/notification_info.png</pixmap>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_4">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Once you set Freja eID as signing the signing will be set locally on your mobile device.
 
-A backup protects your wallet forever against hard drive loss and losing your passphrase. It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it.
-Please make a backup and keep it in a safe place.</string>
+If you lose your phone or uninstall the app you will lose your ability to sign wallet requests.
+
+This also implies that your Freja eID cannot be hacked as it's only stored on your mobile device.
+
+Keep your backup secure as it protects your wallet forever against hard drive loss and if you lose your mobile device which is connected to Freja eID.
+
+For more information please consult with the Getting Started with Freja eID guide.</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelPasswordHint">
-          <property name="text">
-           <string>Please enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelFrejaHint">
-          <property name="text">
-           <string>Please activate Freja eID request one more time to indicate that you are aware of the risks of losing your passphrase!</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEditPassword">
-          <property name="echoMode">
-           <enum>QLineEdit::Password</enum>
-          </property>
-          <property name="placeholderText">
-           <string>Password</string>
           </property>
          </widget>
         </item>
@@ -122,7 +103,7 @@ Please make a backup and keep it in a safe place.</string>
        <property name="sizeHint" stdset="0">
         <size>
          <width>20</width>
-         <height>1</height>
+         <height>4</height>
         </size>
        </property>
       </spacer>
@@ -172,7 +153,7 @@ Please make a backup and keep it in a safe place.</string>
          </size>
         </property>
         <property name="text">
-         <string>Continue</string>
+         <string>OK</string>
         </property>
         <property name="default">
          <bool>true</bool>
@@ -188,5 +169,22 @@ Please make a backup and keep it in a safe place.</string>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pushButtonContinue</sender>
+   <signal>clicked()</signal>
+   <receiver>FrejaNotice</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>621</x>
+     <y>223</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>340</x>
+     <y>122</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
