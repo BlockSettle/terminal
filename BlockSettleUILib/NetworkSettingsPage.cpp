@@ -28,7 +28,9 @@ bool operator == (const EnvSettings& l, const EnvSettings& r)
    return l.celerHost == r.celerHost
          && l.celerPort == r.celerPort
          && l.pubHost == r.pubHost
-         && l.pubPort == r.pubPort;
+         && l.pubPort == r.pubPort
+         && l.mdHost == r.mdHost
+         && l.mdPort == r.mdPort;
 }
 
 static const EnvSettings StagingEnvSettings{
@@ -72,6 +74,9 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    connect(ui_->lineEditPublicBridgeHost, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
    connect(ui_->spinBoxPublicBridgePort, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
 
+   connect(ui_->lineEditMDHost, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
+   connect(ui_->spinBoxMDPort, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
+
    connect(ui_->comboBoxEnv, SIGNAL(currentIndexChanged(int)), this, SLOT(onEnvSelected(int)));
 }
 
@@ -99,6 +104,9 @@ void NetworkSettingsPage::displaySettings(bool displayDefault)
 
    ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost, displayDefault));
    ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort, displayDefault));
+
+   ui_->lineEditMDHost->setText(appSettings_->get<QString>(ApplicationSettings::mdServerHost, displayDefault));
+   ui_->spinBoxMDPort->setValue(appSettings_->get<int>(ApplicationSettings::mdServerPort, displayDefault));
 
    ui_->comboBoxEnv->setEnabled(true);
    DetectEnvironmentSettings();
@@ -163,6 +171,9 @@ void NetworkSettingsPage::applyChanges()
 
    appSettings_->set(ApplicationSettings::pubBridgeHost, ui_->lineEditPublicBridgeHost->text());
    appSettings_->set(ApplicationSettings::pubBridgePort, ui_->spinBoxPublicBridgePort->value());
+
+   appSettings_->set(ApplicationSettings::mdServerHost, ui_->lineEditMDHost->text());
+   appSettings_->set(ApplicationSettings::mdServerPort, ui_->spinBoxMDPort->value());
 }
 
 void NetworkSettingsPage::onRunArmoryLocallyChecked(bool checked)
@@ -196,5 +207,8 @@ void NetworkSettingsPage::onEnvSelected(int index)
       ui_->celerPortSpinBox->setValue(settings->celerPort);
       ui_->lineEditPublicBridgeHost->setText(settings->pubHost);
       ui_->spinBoxPublicBridgePort->setValue(settings->pubPort);
+
+      ui_->lineEditMDHost->setText(settings->mdHost);
+      ui_->spinBoxMDPort->setValue(settings->mdPort);
    }
 }
