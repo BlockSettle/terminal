@@ -5,7 +5,7 @@
 
 EnterWalletPassword::EnterWalletPassword(const std::string &walletId
    , bs::wallet::KeyRank keyRank, const std::vector<bs::wallet::EncryptionType> &encTypes
-   , const std::vector<SecureBinaryData> &encKeys, const QString &prompt
+   , const std::vector<SecureBinaryData> &encKeys, const QString &prompt, const QString &title
    , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterWalletPassword())
@@ -19,6 +19,10 @@ EnterWalletPassword::EnterWalletPassword(const std::string &walletId
 
    ui_->labelAction->setText(prompt);
    ui_->labelWalletId->setText(tr("Wallet ID: %1").arg(QString::fromStdString(walletId)));
+
+   if (!title.isEmpty()) {
+      setWindowTitle(title);
+   }
 
    if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
       ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideFrejaConnectButton

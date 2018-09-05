@@ -71,7 +71,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
       }
 
       EnterWalletPassword dialog(walletId_, keyRank_, encTypes, encKeys
-         , tr("Confirm Freja eID signing"), this);
+         , tr("Confirm Freja eID signing"), tr("Confirm Wallet"), this);
       int result = dialog.exec();
       if (!result) {
          return;
