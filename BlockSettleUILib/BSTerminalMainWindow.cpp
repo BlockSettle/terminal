@@ -406,10 +406,12 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       QMetaObject::invokeMethod(this, "InitTransactionsView", Qt::QueuedConnection);
 
       if (walletsManager_->GetWalletsCount() != 0) {
-         QMetaObject::invokeMethod(action_send_, "setEnabled", Q_ARG(bool, true));
+         QMetaObject::invokeMethod(action_send_, "setEnabled", Qt::QueuedConnection,
+            Q_ARG(bool, true));
       }
       else {
-         QTimer::singleShot(1234, [this] { createWallet(!walletsManager_->HasPrimaryWallet()); });
+         QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection,
+            Q_ARG(bool, !walletsManager_->HasPrimaryWallet()), Q_ARG(bool, true));
       }
    };
    if (!armory_->getWalletsLedgerDelegate(cbWalletsLD)) {
@@ -944,7 +946,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
          EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
-            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
+            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), QString(), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
             cancelledByUser = false;

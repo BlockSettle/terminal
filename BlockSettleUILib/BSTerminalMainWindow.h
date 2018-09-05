@@ -87,6 +87,8 @@ private slots:
 
    void OnOTPSyncCompleted();
 
+   bool createWallet(bool primary, bool reportSuccess = true);
+
 private:
    QAction *action_send_;
    QAction *action_receive_;
@@ -165,7 +167,6 @@ private:
    void onUserLoggedIn();
    void onUserLoggedOut();
 
-   bool createWallet(bool primary, bool reportSuccess = true);
    void setLoginButtonText(const QString& text);
 
    void setupShortcuts();
