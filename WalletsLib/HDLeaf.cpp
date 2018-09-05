@@ -375,11 +375,22 @@ BinaryData hd::Leaf::getRootId() const
    return node_->pubCompressedKey();
 }
 
+// Return an external-facing address.
 bs::Address hd::Leaf::GetNewExtAddress(AddressEntryType aet)
 {
    return createAddress(aet, false);
 }
 
+// Return an internal-facing address.
+bs::Address hd::Leaf::GetNewIntAddress(AddressEntryType aet)
+{
+   if (isExtOnly_) {
+      return {};
+   }
+   return createAddress(aet, true);
+}
+
+// Return a change address.
 bs::Address hd::Leaf::GetNewChangeAddress(AddressEntryType aet)
 {
    return createAddress(aet, isExtOnly_ ? false : true);
