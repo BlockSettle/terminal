@@ -927,6 +927,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
    , bs::wallet::KeyRank keyRank)
 {
    SignContainer::PasswordType password;
+   bool cancelledByUser = true;
 
    if (walletId.empty()) {
       logMgr_->logger("ui")->error("[onPasswordRequested] can\'t ask password for empty wallet id");
@@ -945,9 +946,10 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
          EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
-            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
+            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), QString(), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
+            cancelledByUser = false;
          }
          else {
             logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
@@ -958,7 +960,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       }
    }
 
-   signContainer_->SendPassword(walletId, password);
+   signContainer_->SendPassword(walletId, password, cancelledByUser);
 }
 
 void BSTerminalMainWindow::OnOTPSyncCompleted()

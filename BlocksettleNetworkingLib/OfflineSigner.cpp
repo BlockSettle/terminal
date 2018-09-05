@@ -74,25 +74,25 @@ SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRe
    QFile f(QString::fromStdString(fileName));
    if (f.exists()) {
       QTimer::singleShot(0, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "request file " + fileName + " already exists");
+         emit TXSigned(reqId, {}, "request file " + fileName + " already exists", false);
       });
       return reqId;
    }
    if (!f.open(QIODevice::WriteOnly)) {
       QTimer::singleShot(0, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "failed to open " + fileName + " for writing");
+         emit TXSigned(reqId, {}, "failed to open " + fileName + " for writing", false);
       });
       return reqId;
    }
 
    const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
    if (f.write(data) != data.size()) {
-      QTimer::singleShot(0, [this, reqId, fileName] { emit TXSigned(reqId, {}, "failed to write to " + fileName); });
+      QTimer::singleShot(0, [this, reqId, fileName] { emit TXSigned(reqId, {}, "failed to write to " + fileName, false); });
       return reqId;
    }
    f.close();
 
-   QTimer::singleShot(0, [this, reqId, fileName] { emit TXSigned(reqId, fileName, {}); });
+   QTimer::singleShot(0, [this, reqId, fileName] { emit TXSigned(reqId, fileName, {}, false); });
    return reqId;
 }
 

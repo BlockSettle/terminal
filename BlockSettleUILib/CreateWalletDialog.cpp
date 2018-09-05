@@ -195,7 +195,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
       }
 
       EnterWalletPassword dialog(walletId, widgetCreateKeys->keyRank(), encTypes, encKeys
-         , QObject::tr("Activate Freja eID signing"), parent);
+         , QObject::tr("Activate Freja eID signing"), QObject::tr("Sign Wallet"), parent);
       int result = dialog.exec();
       if (!result) {
          return false;
