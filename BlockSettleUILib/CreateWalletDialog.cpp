@@ -54,6 +54,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    ui_->setupUi(this);
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
+   ui_->checkBoxPrimaryWallet->setChecked(!walletsManager->HasPrimaryWallet());
 
    if (createPrimary && !walletsManager->HasPrimaryWallet()) {
       setWindowTitle(tr("Create Primary Wallet"));
