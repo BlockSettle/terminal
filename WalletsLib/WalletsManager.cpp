@@ -96,6 +96,7 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
          logger_->debug("Loading settlement wallet from {}", file.toStdString());
          try {
             settlementWallet_ = std::make_shared<bs::SettlementWallet>(fileInfo.absoluteFilePath().toStdString());
+            RegisterSettlementWallet();
          }
          catch (const std::exception &e) {
             logger_->error("Failed to load settlement wallet: {}", e.what());
@@ -220,6 +221,17 @@ bool WalletsManager::IsReadyForTrading() const
    return (HasPrimaryWallet() && HasSettlementWallet());
 }
 
+void WalletsManager::RegisterSettlementWallet()
+{
+   if (!settlementWallet_) {
+      return;
+   }
+   connect(settlementWallet_.get(), &bs::SettlementWallet::walletReady, this, &WalletsManager::onWalletReady);
+   if (armory_) {
+      settlementWallet_->RegisterWallet(armory_);
+   }
+}
+
 bool WalletsManager::CreateSettlementWallet(const QString &walletsPath)
 {
    logger_->debug("Creating settlement wallet");
@@ -232,13 +244,8 @@ bool WalletsManager::CreateSettlementWallet(const QString &walletsPath)
    catch (const std::exception &e) {
       logger_->error("Failed to create Settlement wallet: {}", e.what());
    }
-   if (settlementWallet_ != nullptr) {
-      connect(settlementWallet_.get(), &bs::SettlementWallet::walletReady, this, &WalletsManager::onWalletReady);
-      if (armory_) {
-         settlementWallet_->RegisterWallet(armory_);
-      }
-      emit walletChanged();
-   }
+   RegisterSettlementWallet();
+   emit walletChanged();
    return (settlementWallet_ != nullptr);
 }
 

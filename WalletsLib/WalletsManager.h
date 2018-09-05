@@ -153,6 +153,7 @@ private:
    // notification from block data manager listener ( WalletsManagerBlockListener )
    void ResumeRescan();
    void UpdateSavedWallets();
+   void RegisterSettlementWallet();
 
    bool IsWalletFile(const QString& fileName) const;
    void SaveWallet(const wallet_gen_type& newWallet, NetworkType);
