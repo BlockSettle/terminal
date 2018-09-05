@@ -942,7 +942,7 @@ void RFQDealerReply::validateGUI()
 
 void RFQDealerReply::onTransactionDataChanged()
 {
-   updateSubmitButton();
+   QMetaObject::invokeMethod(this, "updateSubmitButton");
 }
 
 void RFQDealerReply::initAQ(const QString &filename)
