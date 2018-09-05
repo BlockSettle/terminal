@@ -90,7 +90,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QTreeView" name="treeViewWallets">
+          <widget class="TreeViewWithEqualColumnsWidth" name="treeViewWallets">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -103,6 +103,9 @@
            <property name="rootIsDecorated">
             <bool>true</bool>
            </property>
+           <attribute name="headerStretchLastSection">
+            <bool>true</bool>
+           </attribute>
           </widget>
          </item>
         </layout>
@@ -954,6 +957,13 @@ Wallet</string>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TreeViewWithEqualColumnsWidth</class>
+   <extends>QTreeView</extends>
+   <header>TreeViewWithEqualColumnsWidth.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
