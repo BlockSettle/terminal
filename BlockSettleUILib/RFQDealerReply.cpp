@@ -776,30 +776,29 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
       qn->reqAuthKey = qrn.requestorRecvAddress;
 
       std::shared_ptr<bs::Wallet> wallet = transData->GetSigningWallet();
-      uint64_t spendVal = 0;
-      float feePerByte = 0;
-      uint64_t addedFee = 0;
+      auto spendVal = new uint64_t;
+      *spendVal = 0;
 
       const auto &cbFee = [this, qrn, transData, spendVal, wallet, cb, qn](float feePerByte) {
-         const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(spendVal);
+         const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(*spendVal);
          std::vector<UTXO> inputs = utxoAdapter_->get(qn->quoteRequestId);
          if (inputs.empty() && ccCoinSel_) {
             inputs = ccCoinSel_->GetSelectedTransactions();
             if (inputs.empty()) {
                logger_->error("[RFQDealerReply::submit] no suitable inputs for CC sell");
                cb({});
+               delete spendVal;
                return;
             }
          }
          try {
             const auto changeAddr = wallet->GetNewChangeAddress();
             transData->createAddress(changeAddr, wallet);
-            const auto txReq = wallet->CreatePartialTXRequest(spendVal, inputs, changeAddr, feePerByte
+            const auto txReq = wallet->CreatePartialTXRequest(*spendVal, inputs, changeAddr, feePerByte
                , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
             qn->transactionData = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, qn->quoteRequestId);
-            logger_->debug("Signing wallet {} with {} input[s], spend value = {}"
-               , wallet->GetWalletName(), txReq.inputs.size(), spendVal);
+            delete spendVal;
          }
          catch (const std::exception &e) {
             logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
@@ -817,7 +816,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          if (!wallet) {
             wallet = getCCWallet(qrn.product);
          }
-         spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
+         *spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
          cbFee(0);
          return true;
       }
@@ -825,7 +824,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          if (!wallet) {
             wallet = getXbtWallet();
          }
-         spendVal = qrn.quantity * price * BTCNumericTypes::BalanceDivider;
+         *spendVal = qrn.quantity * price * BTCNumericTypes::BalanceDivider;
          walletsManager_->estimatedFeePerByte(2, cbFee, this);
          return true;
       }
