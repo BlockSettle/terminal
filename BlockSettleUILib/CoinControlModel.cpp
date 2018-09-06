@@ -163,7 +163,20 @@ public:
       appendChildrenNode(transaction);
       NotifyChildAdded();
       AddBalance(transaction->getSelectionCount(), transaction->getTotalAmount(), transaction->getTotalAmount());
+      incrementUtxoCount();
+   }
+
+   void incrementUtxoCount()
+   {
       ++utxoCount_;
+
+      if (getParent()) {
+         auto a = dynamic_cast<AddressNode*>(getParent());
+
+         if (a) {
+            a->incrementUtxoCount();
+         }
+      }
    }
 
    BTCNumericTypes::balance_type getTotalAmount() const override {
