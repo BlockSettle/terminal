@@ -7,6 +7,8 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QSortFilterProxyModel>
+#include <QMenu>
+#include <QAction>
 
 #include "ArmoryConnection.h"
 #include "MetaData.h"
@@ -50,7 +52,6 @@ public:
       Q_UNUSED(source_parent);
       TransactionsViewModel::Columns col = static_cast<TransactionsViewModel::Columns>(source_column);
       return col != TransactionsViewModel::Columns::Wallet
-         && col != TransactionsViewModel::Columns::Address
          && col != TransactionsViewModel::Columns::Comment
          && col != TransactionsViewModel::Columns::SendReceive
          && col != TransactionsViewModel::Columns::RbfFlag
@@ -115,6 +116,14 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    }
 
    ui_->labelQR->setPixmap(UiUtils::getQRCode(addressString, 128));
+
+   ui_->inputAddressesWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+   ui_->outputAddressesWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+
+   connect(ui_->inputAddressesWidget, &QTreeView::customContextMenuRequested,
+      this, &AddressDetailDialog::onInputAddrContextMenu);
+   connect(ui_->outputAddressesWidget, &QTreeView::customContextMenuRequested,
+      this, &AddressDetailDialog::onOutputAddrContextMenu);
 }
 
 AddressDetailDialog::~AddressDetailDialog() = default;
@@ -139,6 +148,9 @@ void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
    outFilter->setSourceModel(outgoingFilter);
    ui_->outputAddressesWidget->setModel(outFilter);
    ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
+
+   ui_->inputAddressesWidget->header()->moveSection(1, 3);
+   ui_->outputAddressesWidget->header()->moveSection(1, 3);
 }
 
 void AddressDetailDialog::onAddrBalanceReceived(const bs::Address &addr, std::vector<uint64_t> balance)
@@ -168,4 +180,36 @@ void AddressDetailDialog::onError()
 void AddressDetailDialog::onCopyClicked() const
 {
    QApplication::clipboard()->setText(address_.display());
+}
+
+void AddressDetailDialog::onInputAddrContextMenu(const QPoint &pos)
+{
+   QMenu menu(ui_->inputAddressesWidget);
+
+   menu.addAction(tr("Copy Address"), [this] () {
+      const auto current = ui_->inputAddressesWidget->currentIndex();
+      if (current.isValid() && ui_->inputAddressesWidget->model()) {
+         QApplication::clipboard()->setText(ui_->inputAddressesWidget->model()->data(
+            ui_->inputAddressesWidget->model()->index(current.row(), 1,
+               current.parent())).toString());
+      }
+   });
+
+   menu.exec(ui_->inputAddressesWidget->mapToGlobal(pos));
+}
+
+void AddressDetailDialog::onOutputAddrContextMenu(const QPoint &pos)
+{
+   QMenu menu(ui_->outputAddressesWidget);
+
+   menu.addAction(tr("Copy Address"), [this] () {
+      const auto current = ui_->outputAddressesWidget->currentIndex();
+      if (current.isValid() && ui_->outputAddressesWidget->model()) {
+         QApplication::clipboard()->setText(ui_->outputAddressesWidget->model()->data(
+            ui_->outputAddressesWidget->model()->index(current.row(), 1,
+               current.parent())).toString());
+      }
+   });
+
+   menu.exec(ui_->outputAddressesWidget->mapToGlobal(pos));
 }
