@@ -801,6 +801,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
             delete spendVal;
          }
          catch (const std::exception &e) {
+            delete spendVal;
             logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
             cb({});
             return;

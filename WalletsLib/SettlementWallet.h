@@ -136,7 +136,7 @@ namespace bs {
       Q_OBJECT
 
    public:
-      explicit SettlementWallet();
+      SettlementWallet();
       SettlementWallet(const std::string &filename);
       ~SettlementWallet() override = default;
 

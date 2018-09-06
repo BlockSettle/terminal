@@ -388,10 +388,9 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
       , make_unique<Cypher_AES>(BinaryData{}, BinaryData{}));
    SecureBinaryData pubKey = plainAsset->publicKey();
    const auto assetEntry = std::make_shared<AssetEntry_Single>(plainAsset->id(), BinaryData{}, pubKey, privKey);
-//   return std::make_shared<AssetEntry_Single>(aes);
 
    std::shared_ptr<AddressEntry> result;
-   switch (plainAsset->getType()) {
+   switch (plainAsset->address().getType()) {
    case AddressEntryType_P2PKH:
       result = std::make_shared<AddressEntry_P2PKH>(assetEntry, true);
       break;
@@ -539,7 +538,7 @@ private:
 class PlainSigningResolver : public PlainResolver
 {
 public:
-   PlainSigningResolver(const std::map<bs::Address, std::shared_ptr<GenericAsset>> &map, const SecureBinaryData &password)
+   PlainSigningResolver(const std::map<bs::Address, std::shared_ptr<GenericAsset>> &map)
       : PlainResolver(map) {
       for (const auto &addrPair : map) {
          const auto plainAsset = dynamic_pointer_cast<PlainAsset>(addrPair.second);
@@ -562,12 +561,12 @@ private:
    std::map<SecureBinaryData, SecureBinaryData>   pubToPriv_;
 };
 
-std::shared_ptr<ResolverFeed> PlainWallet::GetResolver(const SecureBinaryData &password)
+std::shared_ptr<ResolverFeed> PlainWallet::GetResolver(const SecureBinaryData &)
 {
    if (isWatchingOnly()) {
       return nullptr;
    }
-   return std::make_shared<PlainSigningResolver>(assetByAddr_, password);
+   return std::make_shared<PlainSigningResolver>(assetByAddr_);
 }
 
 std::shared_ptr<ResolverFeed> PlainWallet::GetPublicKeyResolver()
