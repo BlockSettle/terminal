@@ -98,9 +98,8 @@ public:
    BTCNumericTypes::balance_type GetUnconfirmedBalance() const;
    BTCNumericTypes::balance_type GetTotalBalance() const;
 
-   uint32_t GetTopBlockHeight() const;
-
    void RegisterSavedWallets();
+   void UnregisterSavedWallets();
 
    bool GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &
       , std::function<void(bs::Transaction::Direction)>);

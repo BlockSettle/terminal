@@ -748,24 +748,50 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
 
 bool bs::Wallet::getHistoryPage(uint32_t id) const
 {
-   if (!isBalanceAvailable()) {
-      return false;
-   }
-   const auto &cb = [this, id](std::vector<ClientClasses::LedgerEntry> entries) {
+   const auto &cb = [this, id](const bs::Wallet *wallet
+      , std::vector<ClientClasses::LedgerEntry> entries) {
       emit historyPageReceived(id, entries);
    };
-   btcWallet_->getHistoryPage(id, cb);
-   return true;
+   return getHistoryPage(id, cb);
 }
 
 bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
-   , std::vector<ClientClasses::LedgerEntry>)> clientCb) const
+   , std::vector<ClientClasses::LedgerEntry>)> clientCb, bool onlyNew) const
 {
    if (!isBalanceAvailable()) {
       return false;
    }
-   const auto &cb = [this, clientCb](std::vector<ClientClasses::LedgerEntry> entries) {
-      clientCb(this, entries);
+   const auto &cb = [this, id, onlyNew, clientCb](std::vector<ClientClasses::LedgerEntry> entries) {
+      if (!onlyNew) {
+         clientCb(this, entries);
+      }
+      else {
+         const auto &histPage = historyCache_.find(id);
+         if (histPage == historyCache_.end()) {
+            clientCb(this, entries);
+         }
+         else if (histPage->second.size() == entries.size()) {
+            clientCb(this, {});
+         }
+         else {
+            std::vector<ClientClasses::LedgerEntry> diff;
+            struct comparator {
+               bool operator() (const ClientClasses::LedgerEntry &a, const ClientClasses::LedgerEntry &b) const {
+                  return (a.getTxHash() < b.getTxHash());
+               }
+            };
+            std::set<ClientClasses::LedgerEntry, comparator> diffSet;
+            diffSet.insert(entries.begin(), entries.end());
+            for (const auto &entry : histPage->second) {
+               diffSet.erase(entry);
+            }
+            for (const auto &diffEntry : diffSet) {
+               diff.emplace_back(diffEntry);
+            }
+            clientCb(this, diff);
+         }
+      }
+      historyCache_[id] = entries;
    };
    btcWallet_->getHistoryPage(id, cb);
    return true;
@@ -810,8 +836,12 @@ void bs::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
       armory_ = armory;
    }
    std::thread([this] {    // Temporary workaround for websockets connection keep-alive
-      while (true) {
+      heartbeatRunning_ = true;
+      while (heartbeatRunning_) {
          std::this_thread::sleep_for(std::chrono::seconds(230));
+         if (!heartbeatRunning_) {
+            return;
+         }
          UpdateBalanceFromDB();
       }
    }).detach();
@@ -837,6 +867,20 @@ void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory,
       };
       armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
    }
+}
+
+void bs::Wallet::UnregisterWallet()
+{
+   heartbeatRunning_ = false;
+   btcWallet_.reset();
+   {
+      QMutexLocker lock(&addrMapsMtx_);
+      cbBal_.clear();
+      cbTxN_.clear();
+   }
+   spendableCallbacks_.clear();
+   zcListCallbacks_.clear();
+   historyCache_.clear();
 }
 
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs
@@ -1003,8 +1047,7 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal, 
       }
 
       const auto coinSelection = std::make_shared<CoinSelection>([utxos](uint64_t) { return utxos; }
-         , std::vector<AddressBookEntry>{}, armory_->topBlock()
-         , GetTotalBalance() * BTCNumericTypes::BalanceDivider);
+         , std::vector<AddressBookEntry>{}, GetSpendableBalance() * BTCNumericTypes::BalanceDivider);
 
       try {
          const auto selection = coinSelection->getUtxoSelectionForRecipients(payment, utxos);

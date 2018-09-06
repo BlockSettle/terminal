@@ -20,16 +20,33 @@ WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
 
 WalletKeysCreateWidget::~WalletKeysCreateWidget() = default;
 
-void WalletKeysCreateWidget::init(const std::string &walletId)
+void WalletKeysCreateWidget::setFlags(Flags flags)
+{
+   flags_ = flags;
+}
+
+void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username)
 {
    walletId_ = walletId;
+   
    addPasswordKey();
+
+   if (flags_ & HideWidgetContol) {
+      ui_->widgetControl->hide();
+   }
+
+   for (WalletKeyWidget *widget : widgets_) {
+      widget->setCreateUsername(username);
+   }
 }
 
 void WalletKeysCreateWidget::addKey(bool password)
 {
    assert(!walletId_.empty());
    auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, this);
+   if (flags_ & HideFrejaConnectButton) {
+      widget->setHideFrejaConnect(true);
+   }
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysCreateWidget::onEncKeyChanged);

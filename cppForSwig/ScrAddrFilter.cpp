@@ -221,8 +221,12 @@ set<BinaryDataRef> ScrAddrFilter::updateAddrMap(
 
    for (auto& sa : addrSet)
    {
-      if (scraddrmap->find(sa) != scraddrmap->end())
+      auto iter = scraddrmap->find(sa);
+      if (iter != scraddrmap->end())
+      {
+         addrRefSet.insert(iter->first);
          continue;
+      }
 
       auto aah = make_shared<AddrAndHash>(sa);
       aah->scannedHeight_ = height;
@@ -259,14 +263,13 @@ void ScrAddrFilter::registrationThread()
       if (BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER)
       {
          //no scanning required in supernode, just update the address map
-         auto&& addrSet = updateAddrMap(batch->scrAddrSet_, 0);
-         batch->callback_(addrSet);
+         auto&& scaSet = updateAddrMap(batch->scrAddrSet_, 0);
+         batch->callback_(scaSet);
          continue;
       }
 
       //filter out collisions
       set<BinaryDataRef> addrSet;
-      set<BinaryDataRef> collisions;
       {
          auto scraddrmap = scrAddrMap_->get();
          for (auto& sa : batch->scrAddrSet_)
@@ -274,27 +277,18 @@ void ScrAddrFilter::registrationThread()
             BinaryData sabd(sa);
             auto iter = scraddrmap->find(sa);
             if (iter != scraddrmap->end())
-            {
-               collisions.insert(iter->first);
                continue;
-            }
 
             addrSet.insert(sa);
          }
       }
 
-      if (addrSet.size() == 0)
+      if (addrSet.size() == 0 || !bdmIsRunning())
       {
-         //all addresses are already registered, trigger the callback
-         batch->callback_(collisions);
-         continue;
-      }
-
-      if (!bdmIsRunning())
-      {
-         //db isn't running yet, just update the addr map
-         auto&& newAddrSet = updateAddrMap(addrSet, 0);
-         batch->callback_(newAddrSet);
+         //all addresses are already registered
+         //or db isn't running yet
+         auto&& scaSet = updateAddrMap(batch->scrAddrSet_, 0);
+         batch->callback_(scaSet);
          continue;
       }
 
@@ -307,9 +301,9 @@ void ScrAddrFilter::registrationThread()
       {
          //batch is flagged as new, all addresses within it are assumed
          //clean of history. Update the map and continue
-         auto&& newAddrSet = updateAddrMap(addrSet, topBlockHeight);
+         auto&& scaSet = updateAddrMap(batch->scrAddrSet_, 0);
          setSSHLastScanned(addrSet, topBlockHeight);
-         batch->callback_(newAddrSet);
+         batch->callback_(scaSet);
          continue;
       }
 
@@ -340,7 +334,8 @@ void ScrAddrFilter::registrationThread()
       for (const auto& wID : walletIDs)
          LOGINFO << "Completed scan of wallet " << wID;
 
-      batch->callback_(newAddrSet);
+      auto&& scaSet = updateAddrMap(batch->scrAddrSet_, 0);
+      batch->callback_(scaSet);
    }
 
    DatabaseContainer_Sharded::clearThreadShardTx(this_thread::get_id());

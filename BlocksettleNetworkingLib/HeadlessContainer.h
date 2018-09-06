@@ -10,6 +10,9 @@
 
 #include "headless.pb.h"
 
+#include <mutex>
+#include <set>
+
 namespace spdlog {
    class logger;
 }
@@ -85,6 +88,7 @@ protected:
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
+   std::set<RequestId>                 signRequests_;
 };
 
 bool KillHeadlessProcess();
@@ -128,6 +132,7 @@ protected:
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
+   mutable std::mutex mutex_;
 };
 
 class LocalSigner : public RemoteSigner

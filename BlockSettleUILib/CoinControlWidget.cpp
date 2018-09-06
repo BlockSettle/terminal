@@ -106,7 +106,9 @@ void CoinControlWidget::onAutoSelClicked(int state)
       emit coinSelectionChanged(0, true);
    }
    else {
-      updateSelectedTotals();
+      ui_->labelTotalAmount->setText(coinControlModel_->GetSelectedBalance());
+      ui_->labelTotalTransactions->setText(QString::number(coinControlModel_->GetSelectedTransactionsCount()));
+      emit coinSelectionChanged(coinControlModel_->GetSelectedTransactionsCount(), false);
    }
 }
 
@@ -123,7 +125,6 @@ void CoinControlWidget::rowClicked(const QModelIndex &index)
 void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)
 {
    assert(selectedInputs != nullptr);
-   ui_->checkBoxUseAllSelected->setChecked(selectedInputs->UseAutoSel());
 
    coinControlModel_ = new CoinControlModel(selectedInputs);
    ui_->treeViewUTXO->setModel(coinControlModel_);
@@ -141,7 +142,6 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
 
    connect(coinControlModel_, &CoinControlModel::selectionChanged, this, &CoinControlWidget::updateSelectedTotals);
    connect(ui_->checkBoxUseAllSelected, &QCheckBox::stateChanged, this, &CoinControlWidget::onAutoSelClicked);
-   onAutoSelClicked(selectedInputs->UseAutoSel() ? Qt::Checked : Qt::Unchecked);
 
    connect(ui_->treeViewUTXO, &QTreeView::clicked, this, &CoinControlWidget::rowClicked);
 
@@ -150,7 +150,8 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
    ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnUTXOCount);
    ui_->treeViewUTXO->setCoinsModel(coinControlModel_);
 
-   onAutoSelClicked(ui_->checkBoxUseAllSelected->isChecked());
+   ui_->checkBoxUseAllSelected->setChecked(selectedInputs->UseAutoSel());
+   onAutoSelClicked(selectedInputs->UseAutoSel() ? Qt::Checked : Qt::Unchecked);
 }
 
 void CoinControlWidget::applyChanges(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)

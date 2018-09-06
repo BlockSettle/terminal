@@ -236,11 +236,12 @@ namespace bs {
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
       virtual void RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
+      void UnregisterWallet();
       virtual void SetArmory(const std::shared_ptr<ArmoryConnection> &);
       virtual void SetUserID(const BinaryData &) {}
       virtual bool getHistoryPage(uint32_t id) const;
       virtual bool getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
-         , std::vector<ClientClasses::LedgerEntry>)>) const;
+         , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
       virtual bool isBalanceAvailable() const;
       virtual BTCNumericTypes::balance_type GetSpendableBalance() const;
@@ -362,6 +363,9 @@ namespace bs {
 
       std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
       std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
+
+      mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
+      std::atomic_bool  heartbeatRunning_ = { false };
 
    private slots:
       void onZCListObjDestroyed();

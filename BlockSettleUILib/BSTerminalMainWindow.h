@@ -74,7 +74,7 @@ private:
 
 private slots:
    void InitTransactionsView();
-   void SetOfflineUIView();
+   void ArmoryIsOffline();
    void SignerReady();
    void onPasswordRequested(std::string walletId, std::string prompt
       , std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
@@ -171,6 +171,7 @@ private:
    void setupShortcuts();
 
    void createAdvancedTxDialog(const std::string &selectedWalletId);
+   void createAuthWallet();
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

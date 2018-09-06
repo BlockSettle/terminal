@@ -77,7 +77,8 @@ void UserScript::setWalletsManager(std::shared_ptr<WalletsManager> walletsManage
 MarketData::MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent)
    : QObject(parent)
 {
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated);
+   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated,
+      Qt::QueuedConnection);
 }
 
 double MarketData::bid(const QString &sec) const

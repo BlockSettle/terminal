@@ -1,8 +1,10 @@
 #ifndef __CREATE_WALLET_DIALOG_H__
 #define __CREATE_WALLET_DIALOG_H__
 
-#include <QDialog>
 #include <memory>
+#include <vector>
+#include <QDialog>
+#include <QValidator>
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
 #include "MetaData.h"
@@ -18,6 +20,16 @@ namespace bs {
 }
 class SignContainer;
 class WalletsManager;
+class WalletKeysCreateWidget;
+
+//! Validator for description of wallet.
+class WalletDescriptionValidator final : public QValidator
+{
+public:
+   explicit WalletDescriptionValidator(QObject *parent);
+
+   QValidator::State validate(QString &input, int &pos) const override;
+};
 
 
 class CreateWalletDialog : public QDialog
@@ -25,26 +37,26 @@ class CreateWalletDialog : public QDialog
    Q_OBJECT
 
 public:
+
+
+   // Username is used to init Freja ID when available
    CreateWalletDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
-      , NetworkType, const QString &walletsPath, bool createPrimary = false, QWidget *parent = nullptr);
+      , const QString &walletsPath, const bs::wallet::Seed& walletSeed, const std::string& walletId
+      , bool createPrimary, const QString& username, QWidget *parent = nullptr);
    ~CreateWalletDialog() override;
 
    bool walletCreated() const { return walletCreated_; }
-   std::string getNewWalletId() const { return walletId_; }
    bool isNewWalletPrimary() const { return createdAsPrimary_; }
 
 private slots:
-   void UpdateAcceptButtonState();
+   //void UpdateAcceptButtonState();
    void CreateWallet();
    void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
 
 protected:
-   void showEvent(QShowEvent *event) override;
+   //void showEvent(QShowEvent *event) override;
    void reject() override;
-
-private:
-   bool couldCreateWallet() const;
 
 private:
    std::unique_ptr<Ui::CreateWalletDialog> ui_;
@@ -53,12 +65,21 @@ private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    const QString     walletsPath_;
+   const bs::wallet::Seed walletSeed_;
+   const std::string walletId_;
    unsigned int      createReqId_ = 0;
    bool              walletCreated_ = false;
    SecureBinaryData  walletPassword_;
-   bs::wallet::Seed  walletSeed_;
-   std::string       walletId_;
    bool              createdAsPrimary_ = false;
 };
+
+// Common function for CreateWalletDialog and ImportWalletDialog.
+// Checks validity and returns updated keys in keys output argument if succeeds.
+// Shows error messages if needed.
+bool checkNewWalletValidity(WalletsManager* walletsManager
+   , const QString& walletName, const std::string& walletId
+   , WalletKeysCreateWidget* widgetCreateKeys
+   , std::vector<bs::wallet::PasswordData>* keys
+   , QWidget* parent);
 
 #endif // __CREATE_WALLET_DIALOG_H__

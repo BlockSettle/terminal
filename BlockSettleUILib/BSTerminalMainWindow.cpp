@@ -152,6 +152,7 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
    NotificationCenter::destroyInstance();
    if (signContainer_) {
       signContainer_->Stop();
+      signContainer_ = nullptr;
    }
    walletsManager_ = nullptr;
    assetManager_ = nullptr;
@@ -385,7 +386,7 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
       QMetaObject::invokeMethod(this, "CompleteDBConnection", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Offline:
-      QMetaObject::invokeMethod(this, "SetOfflineUIView", Qt::QueuedConnection);
+      QMetaObject::invokeMethod(this, "ArmoryIsOffline", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Scanning:
    case ArmoryConnection::State::Error:
@@ -453,9 +454,12 @@ void BSTerminalMainWindow::UpdateMainWindowAppearence()
    }
 }
 
-void BSTerminalMainWindow::SetOfflineUIView()
+void BSTerminalMainWindow::ArmoryIsOffline()
 {
+   logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
+   walletsManager_->UnregisterSavedWallets();
    action_send_->setEnabled(false);
+   connectArmory();
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -491,6 +495,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       }
       return false;
    }
+
    NewWalletDialog newWalletDialog(true, this);
    if (!newWalletDialog.exec()) {
       return false;
@@ -520,9 +525,15 @@ void BSTerminalMainWindow::onReceive()
    const auto &defWallet = walletsManager_->GetDefaultWallet();
    std::string selWalletId = defWallet ? defWallet->GetWalletId() : std::string{};
    if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
-      const auto &wallets = ui->widgetWallets->GetSelectedWallets();
-      if (wallets.size() == 1) {
+      auto wallets = ui->widgetWallets->GetSelectedWallets();
+      if (!wallets.empty()) {
          selWalletId = wallets[0]->GetWalletId();
+      } else {
+         wallets = ui->widgetWallets->GetFirstWallets();
+
+         if (!wallets.empty()) {
+            selWalletId = wallets[0]->GetWalletId();
+         }
       }
    }
    SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(walletsManager_, selWalletId, this);
@@ -623,6 +634,8 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
       authAddrDlg_->show();
       QApplication::processEvents();
       authAddrDlg_->setAddressToVerify(addrToVerify);
+   } else {
+      createAuthWallet();
    }
 }
 
@@ -678,6 +691,7 @@ void BSTerminalMainWindow::onLogin()
       if (!celerConnection_->LoginToServer(host, port, username, password)) {
          logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
       } else {
+         ui->widgetWallets->setUsername(QString::fromStdString(username));
          action_logout_->setVisible(false);
          action_login_->setEnabled(false);
       }
@@ -686,6 +700,7 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onLogout()
 {
+   ui->widgetWallets->setUsername(QString());
    celerConnection_->CloseConnection();
 }
 
@@ -756,6 +771,19 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    }
 }
 
+void BSTerminalMainWindow::createAuthWallet()
+{
+   if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
+      MessageBoxQuestion createAuthReq(tr("Authentication Wallet")
+         , tr("Create Authentication Wallet")
+         , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
+         , this);
+      if (createAuthReq.exec() == QDialog::Accepted) {
+         authManager_->CreateAuthWallet();
+      }
+   }
+}
+
 void BSTerminalMainWindow::onAuthMgrConnComplete()
 {
    if (celerConnection_->tradingAllowed()) {
@@ -782,15 +810,7 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
          }
       }
 
-      if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
-         MessageBoxQuestion createAuthReq(tr("Authentication Wallet")
-            , tr("Create Authentication Wallet")
-            , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
-            , this);
-         if (createAuthReq.exec() == QDialog::Accepted) {
-            authManager_->CreateAuthWallet();
-         }
-      }
+      createAuthWallet();
    }
    else {
       logMgr_->logger("ui")->debug("Trading not allowed");
@@ -915,11 +935,13 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
 
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
-         EnterWalletPassword passwordDialog(walletName, rootWallet ? rootWallet->getWalletId() : walletId
+
+         EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
             , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
-         } else {
+         }
+         else {
             logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
                , walletId, walletName.toStdString());
          }

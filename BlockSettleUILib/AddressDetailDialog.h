@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <memory>
 #include "Address.h"
+#include "AsyncClient.h"
 
 
 namespace Ui {
@@ -35,11 +36,13 @@ private slots:
 
 private:
    void onError();
+   Q_INVOKABLE void initModels(AsyncClient::LedgerDelegate);
 
 private:
    std::unique_ptr <Ui::AddressDetailDialog> ui_;
    const bs::Address          address_;
-   std::shared_ptr<WalletsManager> walletsManager_;
+   std::shared_ptr<WalletsManager>     walletsManager_;
+   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::Wallet> wallet_;
 };
 

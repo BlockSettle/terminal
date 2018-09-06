@@ -168,7 +168,6 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
       emit error(errorTitle, tr("Failed to load settlement wallet: %1").arg(QLatin1String(e.what())));
    }
    emit walletsLoaded();
-//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::BackupWallet(const hd_wallet_type &wallet, const std::string &targetDir) const
@@ -315,7 +314,6 @@ void WalletsManager::onHDLeafAdded(QString id)
       emit walletChanged();
       break;
    }
-//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::onHDLeafDeleted(QString id)
@@ -323,7 +321,6 @@ void WalletsManager::onHDLeafDeleted(QString id)
    const auto &wallet = GetWalletById(id.toStdString());
    EraseWallet(wallet);
    emit walletChanged();
-//!!   QCoreApplication::processEvents();
 }
 
 WalletsManager::hd_wallet_type WalletsManager::GetPrimaryWallet() const
@@ -475,7 +472,6 @@ void WalletsManager::onRefresh()
    UpdateSavedWallets();
    emit blockchainEvent();
    getNewTransactions();
-//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::onStateChanged(ArmoryConnection::State state)
@@ -593,7 +589,6 @@ bool WalletsManager::DeleteWalletFile(const wallet_gen_type &wallet)
       emit authWalletChanged();
    }
    emit walletChanged();
-//!!   QCoreApplication::processEvents();
    return true;
 }
 
@@ -624,16 +619,7 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
       emit authWalletChanged();
    }
    emit walletChanged();
-//!!   QCoreApplication::processEvents();
    return result;
-}
-
-uint32_t WalletsManager::GetTopBlockHeight() const
-{
-   if (!armory_) {
-      return UINT32_MAX;
-   }
-   return armory_->topBlock();
 }
 
 void WalletsManager::RegisterSavedWallets()
@@ -646,13 +632,21 @@ void WalletsManager::RegisterSavedWallets()
       armory_->goOnline();
       return;
    }
-   {
-      for (auto &it : wallets_) {
-         it.second->RegisterWallet(armory_);
-      }
+   for (auto &it : wallets_) {
+      it.second->RegisterWallet(armory_);
    }
    if (settlementWallet_) {
        settlementWallet_->RegisterWallet(armory_);
+   }
+}
+
+void WalletsManager::UnregisterSavedWallets()
+{
+   for (auto &it : wallets_) {
+      it.second->UnregisterWallet();
+   }
+   if (settlementWallet_) {
+      settlementWallet_->UnregisterWallet();
    }
 }
 
@@ -915,7 +909,6 @@ void WalletsManager::AdoptNewWallet(const hd_wallet_type &wallet, const QString 
    }
    emit newWalletAdded(wallet->getWalletId());
    emit walletsReady();
-//!!   QCoreApplication::processEvents();
 }
 
 void WalletsManager::AddWallet(const hd_wallet_type &wallet, const QString &walletsPath)
@@ -1085,7 +1078,6 @@ bool WalletsManager::getNewTransactions() const
       if (walletIds->empty()) {
          delete walletIds;
          emit newTransactions(bs::convertTXEntries(*result));
-//!!         QCoreApplication::processEvents();
          delete result;
       }
    };
@@ -1093,7 +1085,7 @@ bool WalletsManager::getNewTransactions() const
       if (armory_->state() != ArmoryConnection::State::Ready) {
          return false;
       }
-      if (wallet.second->getHistoryPage(0, cb)) {
+      if (wallet.second->getHistoryPage(0, cb, true)) {
          walletIds->insert(wallet.second->GetWalletId());
       }
       else {
@@ -1101,7 +1093,7 @@ bool WalletsManager::getNewTransactions() const
       }
    }
    if (settlementWallet_ && (armory_->state() == ArmoryConnection::State::Ready)) {
-      if (settlementWallet_->getHistoryPage(0, cb)) {
+      if (settlementWallet_->getHistoryPage(0, cb, true)) {
          walletIds->insert(settlementWallet_->GetWalletId());
       }
       else {

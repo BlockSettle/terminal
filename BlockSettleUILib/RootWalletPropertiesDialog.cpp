@@ -78,11 +78,13 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
       this, &RootWalletPropertiesDialog::onModelReset);
 
    ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewWallets->header()->setStretchLastSection(true);
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnDescription));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnState));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnSpendableBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnUnconfirmedBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnNbAddresses));
+   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnEmpty));
 
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RootWalletPropertiesDialog::onWalletSelected);
 
@@ -181,7 +183,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
 void RootWalletPropertiesDialog::onChangePassword()
 {
    auto changePasswordDialog = new ChangeWalletPasswordDialog(wallet_
-      , walletEncTypes_, walletEncKeys_, walletEncRank_, this);
+      , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), this);
 
    if (changePasswordDialog->exec() != QDialog::Accepted) {
       changePasswordDialog->deleteLater();

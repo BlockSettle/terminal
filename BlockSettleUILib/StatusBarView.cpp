@@ -12,6 +12,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    : QObject(nullptr)
    , iconSize_(16, 16)
    , statusBar_(parent)
+   , armoryConnState_(ArmoryConnection::State::Offline)
    , armory_(armory)
    , walletsManager_(walletsManager)
    , assetManager_(assetManager)
@@ -39,7 +40,6 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    iconContainerConnecting_ = contIconYellow.pixmap(iconSize_);
 
    balanceLabel_ = new QLabel(statusBar_);
-   balanceLabel_->setVisible(false);
 
    progressBar_ = new CircleProgressBar(statusBar_);
    progressBar_->setMinimum(0);
@@ -92,6 +92,8 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    connect(container.get(), &SignContainer::disconnected, this, &StatusBarView::onContainerDisconnected);
    connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
    connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
+
+   setBalances();
 }
 
 void StatusBarView::setupBtcIcon(NetworkType netType)
@@ -137,6 +139,10 @@ void StatusBarView::onArmoryStateChanged(ArmoryConnection::State state)
    estimateLabel_->setVisible(false);
    connectionStatusLabel_->show();
 
+   armoryConnState_ = state;
+
+   setBalances();
+
    switch (state) {
    case ArmoryConnection::State::Scanning:
    case ArmoryConnection::State::Connected:
@@ -151,9 +157,8 @@ void StatusBarView::onArmoryStateChanged(ArmoryConnection::State state)
       break;
 
    case ArmoryConnection::State::Ready:
-      connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(walletsManager_->GetTopBlockHeight()));
+      connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(armory_->topBlock()));
       connectionStatusLabel_->setPixmap(iconOnline_);
-      balanceLabel_->setVisible(true);
       updateBalances();
       break;
 
@@ -193,15 +198,43 @@ void StatusBarView::onArmoryError(QString errorMessage)
    connectionStatusLabel_->setPixmap(iconError_);
 }
 
-void StatusBarView::updateBalances()
+void StatusBarView::setBalances()
 {
-   QString text = tr("   XBT: <b>%1</b> ").arg(UiUtils::displayAmount(walletsManager_->GetSpendableBalance()));
+   QString xbt;
+
+   switch (armoryConnState_) {
+      case ArmoryConnection::State::Ready :
+         xbt = UiUtils::displayAmount(walletsManager_->GetSpendableBalance());
+      break;
+
+      case ArmoryConnection::State::Scanning :
+      case ArmoryConnection::State::Connected :
+         xbt = tr("Loading...");
+      break;
+
+      case ArmoryConnection::State::Closing :
+      case ArmoryConnection::State::Offline :
+         xbt = tr("...");
+      break;
+
+      default :
+         xbt = tr("...");
+   }
+
+   QString text = tr("   XBT: <b>%1</b> ").arg(xbt);
+
    for (const auto& currency : assetManager_->currencies()) {
       text += tr("| %1: <b>%2</b> ")
          .arg(QString::fromStdString(currency))
          .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency)));
    }
+
    balanceLabel_->setText(text);
+}
+
+void StatusBarView::updateBalances()
+{
+   setBalances();
 
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
