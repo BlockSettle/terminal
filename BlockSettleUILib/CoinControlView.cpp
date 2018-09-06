@@ -49,9 +49,16 @@ void CoinControlView::resizeEvent(QResizeEvent *e)
       header()->sectionSize(CoinControlModel::ColumnBalance) +
       header()->sectionSize(CoinControlModel::ColumnUTXOCount) +
       (header_ ? header_->checkboxSizeHint().width() + 4 : 0);
-   const int commentWidth = width() - nameBalanceUtxoWidth - CoinControlModel::ColumnsCount + 1;
+   const int commentWidth = header()->width() - nameBalanceUtxoWidth -
+      CoinControlModel::ColumnsCount + 1;
 
    header()->resizeSection(CoinControlModel::ColumnComment, commentWidth);
+
+   if (header()->length() < header()->width()) {
+      header()->resizeSection(CoinControlModel::ColumnBalance,
+         header()->sectionSize(CoinControlModel::ColumnBalance) +
+         header()->width() - header()->length());
+   }
 }
 
 void CoinControlView::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
