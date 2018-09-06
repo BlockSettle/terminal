@@ -46,6 +46,14 @@ public:
 class AddressTransactionFilter : public QSortFilterProxyModel
 {
 public:
+   enum class Columns {
+      Date = 0,
+      Address,
+      Amount,
+      Status,
+      last = Status
+   };
+
    AddressTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
    bool filterAcceptsColumn(int source_column, const QModelIndex & source_parent) const override
    {
@@ -149,8 +157,12 @@ void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
    ui_->outputAddressesWidget->setModel(outFilter);
    ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
 
-   ui_->inputAddressesWidget->header()->moveSection(1, 3);
-   ui_->outputAddressesWidget->header()->moveSection(1, 3);
+   ui_->inputAddressesWidget->header()->moveSection(
+      static_cast<int>(AddressTransactionFilter::Columns::Address),
+      static_cast<int>(AddressTransactionFilter::Columns::last));
+   ui_->outputAddressesWidget->header()->moveSection(
+      static_cast<int>(AddressTransactionFilter::Columns::Address),
+      static_cast<int>(AddressTransactionFilter::Columns::last));
 }
 
 void AddressDetailDialog::onAddrBalanceReceived(const bs::Address &addr, std::vector<uint64_t> balance)
@@ -190,7 +202,8 @@ void AddressDetailDialog::onInputAddrContextMenu(const QPoint &pos)
       const auto current = ui_->inputAddressesWidget->currentIndex();
       if (current.isValid() && ui_->inputAddressesWidget->model()) {
          QApplication::clipboard()->setText(ui_->inputAddressesWidget->model()->data(
-            ui_->inputAddressesWidget->model()->index(current.row(), 1,
+            ui_->inputAddressesWidget->model()->index(current.row(),
+               static_cast<int>(AddressTransactionFilter::Columns::Address),
                current.parent())).toString());
       }
    });
@@ -206,7 +219,8 @@ void AddressDetailDialog::onOutputAddrContextMenu(const QPoint &pos)
       const auto current = ui_->outputAddressesWidget->currentIndex();
       if (current.isValid() && ui_->outputAddressesWidget->model()) {
          QApplication::clipboard()->setText(ui_->outputAddressesWidget->model()->data(
-            ui_->outputAddressesWidget->model()->index(current.row(), 1,
+            ui_->outputAddressesWidget->model()->index(current.row(),
+               static_cast<int>(AddressTransactionFilter::Columns::Address),
                current.parent())).toString());
       }
    });
