@@ -8,6 +8,12 @@
 #include <QSslSocket>
 #include <QThread>
 #include <spdlog/spdlog.h>
+#include "ConnectionManager.h"
+#include "RequestReplyCommand.h"
+#include "ZmqSecuredDataConnection.h"
+#include "bs_communication.pb.h"
+
+using namespace Blocksettle::Communication;
 
 static const QByteArray caCertData = "-----BEGIN CERTIFICATE-----\n"
    "MIIGMzCCBBugAwIBAgIUPB4rUqFFiG6g67a+cLCBCuTkxGQwDQYJKoZIhvcNAQEL\n"
@@ -690,19 +696,91 @@ void FrejaSign::onRequestFailed(FrejaREST::SeqNo)
 }
 
 
+FrejaSignWallet::FrejaSignWallet(const std::shared_ptr<spdlog::logger> &logger, unsigned int pollInterval)
+   : logger_(logger)
+{
+   connectionManager_.reset(new ConnectionManager(logger));
+
+   const auto connection = connectionManager_->CreateSecuredDataConnection();
+
+   // FIXME: Use from application setting
+   connection->SetServerPublicKey("AEJL[u[3-i>v#4D?v3Te!B}S0nO7cG!QOsmI*--g");
+
+   command_ = std::make_shared<RequestReplyCommand>("freja_sign", connection, logger);
+
+   command_->SetReplyCallback([this](const std::string& data) {
+      ResponsePacket response;
+      bool result = response.ParseFromString(data);
+      if (!result) {
+         logger_->error("Invalid ResponsePacket packet data");
+         emit failed(tr("Invalid Freja proxy packet data"));
+         return false;
+      }
+
+      if (response.responsetype() != FrejaSignResponseType) {
+         logger_->error("Invalid Freja proxy packet type");
+         emit failed(tr("Invalid Freja proxy packet type"));
+         return false;
+      }
+
+      FrejaSignResponse signResponse;
+      result = signResponse.ParseFromString(response.responsedata());
+      if (!result) {
+         logger_->error("Invalid FrejaSignResponse packet data");
+         emit failed(tr("Invalid Freja proxy packet type"));
+         return false;
+      }
+
+      if (signResponse.success()) {
+         logger_->debug("Got success response from Freja proxy");
+         emit succeeded(signResponse.signature());
+      } else {
+         logger_->debug("Got failed response from Freja proxy ({})", signResponse.status());
+         emit failed(QString::fromStdString(signResponse.status()));
+      }
+      return true;
+   });
+
+   command_->SetErrorCallback([this](const std::string& message) {
+      logger_->debug("Received error response from the proxy");
+      return true;
+   });
+}
+
+FrejaSignWallet::~FrejaSignWallet() = default;
+
 bool FrejaSignWallet::start(const QString &userId, const QString &title, const std::string &walletId)
 {
    const auto data = QString::fromStdString("Wallet ID: " + walletId);
-   return FrejaSign::start(userId, title, data);
+
+   uint64_t id = BinaryData::StrToIntLE<uint64_t>(SecureBinaryData().GenerateRandom(sizeof(uint64_t)));
+
+   FrejaSignRequest signRequest;
+   signRequest.set_id(id);
+   signRequest.set_email(userId.toStdString());
+   signRequest.set_title(title.toStdString());
+   signRequest.set_data(data.toStdString());
+
+   RequestPacket requestPacket;
+   requestPacket.set_requesttype(RequestType::FrejaSignRequestType);
+   requestPacket.set_requestdata(signRequest.SerializeAsString());
+
+   // FIXME: Use from application setting
+   command_->ExecuteRequest("localhost", "9091", requestPacket.SerializeAsString());
+   return true;
 }
 
-void FrejaSignWallet::onReceivedSignature(const QByteArray &signature)
+void FrejaSignWallet::stop(bool cancel)
 {
-   const auto secureSig = SecureBinaryData(signature.toStdString());
-   const auto password = secureSig.getSliceCopy(64, 32);
-   assert(password.getSize() == 32);
-   emit succeeded(password);
 }
+
+//void FrejaSignWallet::onReceivedSignature(const QByteArray &signature)
+//{
+//   const auto secureSig = SecureBinaryData(signature.toStdString());
+//   const auto password = secureSig.getSliceCopy(64, 32);
+//   assert(password.getSize() == 32);
+//   emit succeeded(password);
+//}
 
 
 bool FrejaSignOTP::start(const QString &userId, const QString &title, const QString &otpId)

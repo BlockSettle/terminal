@@ -44,8 +44,8 @@ WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool pa
    connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &WalletKeyWidget::onFrejaSignClicked);
 
    connect(&frejaSign_, &FrejaSignWallet::succeeded, this, &WalletKeyWidget::onFrejaSucceeded);
-   connect(&frejaSign_, &FrejaSign::failed, this, &WalletKeyWidget::onFrejaFailed);
-   connect(&frejaSign_, &FrejaSign::statusUpdated, this, &WalletKeyWidget::onFrejaStatusUpdated);
+   connect(&frejaSign_, &FrejaSignWallet::failed, this, &WalletKeyWidget::onFrejaFailed);
+   connect(&frejaSign_, &FrejaSignWallet::statusUpdated, this, &WalletKeyWidget::onFrejaStatusUpdated);
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &WalletKeyWidget::onTimer);
