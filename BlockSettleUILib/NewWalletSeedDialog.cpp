@@ -14,6 +14,8 @@
 #include "PaperBackupWriter.h"
 #include "UiUtils.h"
 #include "ui_NewWalletSeedDialog.h"
+#include "make_unique.h"
+#include "EasyEncValidator.h"
 
 namespace {
 
@@ -23,80 +25,6 @@ namespace {
 
 }
 
-//
-// SeedValidator
-//
-
-//! Simplest validator for key that just checks count of characters.
-class SeedValidator : public QValidator
-{
-public:
-   explicit SeedValidator(QObject *parent)
-      : QValidator(parent)
-   {
-   }
-
-   QValidator::State validate(QString &input, int &pos) const override
-   {
-      QString key = input.trimmed();
-      key.remove(QChar::Space);
-
-      if (key.length() > maxLength_) {
-         cutInput(input, pos);
-
-         return QValidator::Invalid;
-      } else {
-         splitInput(key, input, pos);
-
-         return QValidator::Acceptable;
-      }
-   }
-
-private:
-   void cutInput(QString &input, int &pos) const
-   {
-      int i = 0;
-
-      for (const auto &ch : qAsConst(input)) {
-         if (ch != QChar::Space) {
-            ++i;
-         }
-
-         if (i == maxLength_) {
-            pos = i;
-            input.remove(i, input.length() - i);
-            return;
-         }
-      }
-   }
-
-   void splitInput(const QString &key, QString &input, int &pos) const
-   {
-      QString splitted;
-      int i = 0;
-
-      for (const auto &ch : qAsConst(key)) {
-         if (i == 4) {
-            splitted.append(QChar::Space);
-            i = 0;
-         }
-
-         ++i;
-
-         splitted.append(ch);
-      }
-
-      if (input.length() == pos) {
-         pos = splitted.length();
-      }
-
-      input = splitted;
-   }
-
-private:
-   static const int maxLength_ = 9 * 4;
-}; // class SeedValidator
-
 
 NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    , const QString &keyLine1, const QString &keyLine2, QWidget *parent) :
@@ -105,6 +33,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    , walletId_(walletId)
    , keyLine1_(keyLine1)
    , keyLine2_(keyLine2)
+   , easyCodec_(std::make_shared<EasyCoDec>())
 {
    ui_->setupUi(this);
 
@@ -124,9 +53,9 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    connect(ui_->lineEditLine2, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &NewWalletSeedDialog::reject);
 
-   auto * validator = new SeedValidator(this);
-   ui_->lineEditLine1->setValidator(validator);
-   ui_->lineEditLine2->setValidator(validator);
+   validator_ = make_unique<EasyEncValidator>(easyCodec_, nullptr, 9, true);
+   ui_->lineEditLine1->setValidator(validator_.get());
+   ui_->lineEditLine2->setValidator(validator_.get());
 
    setCurrentPage(Pages::PrintPreview);
    updateState();

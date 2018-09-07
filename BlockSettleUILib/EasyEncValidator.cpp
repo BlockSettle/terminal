@@ -8,32 +8,38 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
       setStatusMsg({});
       return QValidator::State::Intermediate;
    }
-   input = input.toLower();
+   bool lastPos = (pos == input.length());
+   QString tmpInput = input.trimmed().toLower().remove(QChar::Space);
+   QString newInput;
+   int newPos = 0;
    const auto &allowedChars = codec_->allowedChars();
-   for (int i = 0; i < input.length(); i++) {
-      const char c = input.at(i).toLatin1();
-      if ((allowedChars.find(c) == allowedChars.end()) && (c != ' ')) {
-         pos = i;
+   for (int i = 0; i < tmpInput.length(); i++) {
+      if ( i && i % wordSize_ == 0) {
+         newInput.append(QChar::Space);
+         ++newPos;
+      }
+      const char c = tmpInput.at(i).toLatin1();
+      if ((allowedChars.find(c) == allowedChars.end())) {
+         input = newInput;
+         pos = newPos;
          setStatusMsg(invalidMsgTmpl_.arg(name_));
          return QValidator::State::Invalid;
       }
-
-      if (((i % (wordSize_ + 1)) == (wordSize_ - 1)) && ((i + 1) < maxLen())) {
-         if (((i + 1) >= input.length()) && (pos == (i + 1) && (prevPos_ <= pos))) {
-            input.append(QLatin1Char(' '));
-            ++pos;
-         }
-      }
+      newInput.append(QChar::fromLatin1(c));
+      ++newPos;
+   }
+   input = newInput;
+   if (lastPos) {
+      pos = newPos;
    }
    if (!isValidKeyFormat(input)) {
       setStatusMsg(invalidMsgTmpl_.arg(name_));
       return QValidator::State::Intermediate;
    }
-   if ((input.length() > maxLen()) && (prevPos_ == (pos - 1))) {
+   if ((input.length() > maxLen())) {
       input = input.left(maxLen());
       pos = maxLen();
    }
-   prevPos_ = pos;
    if (input.length() == maxLen()) {
        if (validateKey(input) == Valid) {
            setStatusMsg(validMsgTmpl_.arg(name_));

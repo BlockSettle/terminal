@@ -22,15 +22,6 @@ class SignContainer;
 class WalletsManager;
 class WalletKeysCreateWidget;
 
-//! Validator for description of wallet.
-class WalletDescriptionValidator final : public QValidator
-{
-public:
-   explicit WalletDescriptionValidator(QObject *parent);
-
-   QValidator::State validate(QString &input, int &pos) const override;
-};
-
 
 class CreateWalletDialog : public QDialog
 {
