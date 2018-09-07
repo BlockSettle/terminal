@@ -8,6 +8,9 @@
 #include <QStandardPaths>
 #include <QValidator>
 #include <QResizeEvent>
+#include <QScrollArea>
+#include <QEvent>
+#include <QScrollBar>
 
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
@@ -18,8 +21,6 @@
 namespace {
 
    const double kMarginScale = 0.5;
-
-   const int kTotalClientPadding = 50;
 
 }
 
@@ -112,9 +113,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
       , QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png"))
       , UiUtils::getQRCode(keyLine1 + QLatin1Literal("\n") + keyLine2)));
 
-   const auto pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
-
-   ui_->labelPreview->setPixmap(pdfPreview);
+   ui_->scrollArea->viewport()->installEventFilter(this);
 
    connect(ui_->pushButtonSave, &QPushButton::clicked, this, &NewWalletSeedDialog::onSaveClicked);
    connect(ui_->pushButtonPrint, &QPushButton::clicked, this, &NewWalletSeedDialog::onPrintClicked);
@@ -134,13 +133,21 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
 
 NewWalletSeedDialog::~NewWalletSeedDialog() = default;
 
-void NewWalletSeedDialog::resizeEvent(QResizeEvent *e)
+bool NewWalletSeedDialog::eventFilter(QObject *obj, QEvent *event)
 {
-   const auto pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
+   if (obj == ui_->scrollArea->viewport() && event->type() == QEvent::Resize) {
+      QResizeEvent *e = static_cast<QResizeEvent*>(event);
 
-   ui_->labelPreview->setPixmap(pdfPreview);
+      const int w = e->size().width();
 
-   e->accept();
+      const auto pdfPreview = pdfWriter_->getPreview(w, kMarginScale);
+
+      ui_->labelPreview->setPixmap(pdfPreview);
+
+      return false;
+   } else {
+      return QDialog::eventFilter(obj, event);
+   }
 }
 
 void NewWalletSeedDialog::setCurrentPage(Pages page)

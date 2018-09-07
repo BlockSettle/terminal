@@ -25,7 +25,7 @@ public:
    ~NewWalletSeedDialog() override;
 
 protected:
-   void resizeEvent(QResizeEvent *e) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
    void reject() override;
