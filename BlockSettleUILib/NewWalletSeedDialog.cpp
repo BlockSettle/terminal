@@ -10,7 +10,6 @@
 #include <QResizeEvent>
 #include <QScrollArea>
 #include <QEvent>
-#include <QScrollBar>
 
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
