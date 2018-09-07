@@ -106,6 +106,8 @@ private:
 
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
    std::unordered_map<int, std::string> connectedPeers_;
+
+   std::string                      monitorConnectionName_;
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__
