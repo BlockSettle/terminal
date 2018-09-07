@@ -5,6 +5,7 @@
 #include "CommonTypes.h"
 #include "ConnectionManager.h"
 #include "CurrencyPair.h"
+#include "EncryptionUtils.h"
 
 #include <spdlog/spdlog.h>
 
@@ -36,8 +37,10 @@ bool MarketDataProvider::SubscribeToMD(bool filterUsdProducts)
 
    ConnectToCelerClient();
 
+   const std::string credentials = SecureBinaryData().GenerateRandom(32).toHexStr();
+
    // login password could be any string
-   if (!celerClient_->LoginToServer(mdHost_, mdPort_, "pb_uat", "pb_uatpb_uat")) {
+   if (!celerClient_->LoginToServer(mdHost_, mdPort_, credentials, credentials)) {
       logger_->error("[MarketDataProvider::SubscribeToMD] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;
