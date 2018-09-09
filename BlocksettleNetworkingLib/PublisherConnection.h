@@ -18,6 +18,9 @@ public:
    PublisherConnection(PublisherConnection&&) = delete;
    PublisherConnection& operator = (PublisherConnection&&) = delete;
 
+   bool InitConnection();
+   bool SetWelcomeMessage(const std::string& data);
+
    bool BindPublishingConnection(const std::string& host, const std::string& port);
 
    bool PublishData(const std::string& data);
