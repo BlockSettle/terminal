@@ -27,13 +27,18 @@ message UpdateHeader
    bytes data = 2;
 };
 
+message VolumeInfo
+{
+   double volume = 1;
+}
+
 message ProductHistoryInfo
 {
    string name = 1;
    PriceInfo sell_price = 2;
    PriceInfo buy_price = 3;
    PriceInfo last_price = 4;
-   double    volume = 5;
+   VolumeInfo    volume = 5;
 };
 
 message FullSnapshot
