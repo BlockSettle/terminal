@@ -6,6 +6,33 @@
 #include <zmq.h>
 #include <spdlog/spdlog.h>
 
+SubscriberConnectionListenerCB::SubscriberConnectionListenerCB(const dataReceivedCB& onDataReceived
+   , const connectedCB& onConnected
+   , const disconnectedCB& onDisconnected)
+ : onDataReceived_{onDataReceived}
+ , onConnected_{onConnected}
+ , onDisconnected_{onDisconnected}
+{}
+
+void SubscriberConnectionListenerCB::OnDataReceived(const std::string& data)
+{
+   if (onDataReceived_) {
+      onDataReceived_(data);
+   }
+}
+void SubscriberConnectionListenerCB::OnConnected()
+{
+   if (onConnected_) {
+      onConnected_();
+   }
+}
+void SubscriberConnectionListenerCB::OnDisconnected()
+{
+   if (onDisconnected_) {
+      onDisconnected_();
+   }
+}
+
 SubscriberConnection::SubscriberConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context)
  : logger_{logger}
@@ -29,6 +56,7 @@ bool SubscriberConnection::isActive() const
 bool SubscriberConnection::ConnectToPublisher(const std::string& host, const std::string& port, SubscriberConnectionListener* listener)
 {
    if (listener == nullptr) {
+      logger_->error("[SubscriberConnection::ConnectToPublisher] empty listener not allowed");
       return false;
    }
 

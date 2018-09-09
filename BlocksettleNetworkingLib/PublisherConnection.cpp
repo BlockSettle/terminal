@@ -63,7 +63,7 @@ bool PublisherConnection::SetWelcomeMessage(const std::string& data)
       return false;
    }
 
-   int result = zmq_setsockopt(tempDataSocket.get(), ZMQ_XPUB_WELCOME_MSG, data.c_str(), data.size());
+   int result = zmq_setsockopt(dataSocket_.get(), ZMQ_XPUB_WELCOME_MSG, data.c_str(), data.size());
    if (result != 0) {
       logger_->error("[PublisherConnection::SetWelcomeMessage] failed to set no welcome message: {}"
          , zmq_strerror(zmq_errno()));
