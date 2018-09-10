@@ -242,6 +242,7 @@ void SubscriberConnection::listenFunction()
    if (isConnected_) {
       listener_->OnDisconnected();
    }
+   listener_ = nullptr;
 }
 
 bool SubscriberConnection::recvData()

@@ -20,6 +20,7 @@
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
+#include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"

@@ -68,9 +68,9 @@ public:
 
    bool ConnectToPublisher(const std::string& host, const std::string& port, SubscriberConnectionListener* listener);
 
-private:
    void stopListen();
 
+private:
    void listenFunction();
 
    enum SocketIndex {

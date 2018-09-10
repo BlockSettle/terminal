@@ -152,7 +152,7 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
       const auto& levelPrice = response.marketdatapricesnapshotlevel(i);
       if (levelPrice.priceposition() == 1) {
          if (isPriceValid(levelPrice.entryprice())) {
-            fields.push_back({bs::network::MDField::fromCeler(levelPrice.marketdataentrytype())
+            fields.emplace_back(bs::network::MDField{bs::network::MDField::fromCeler(levelPrice.marketdataentrytype())
                , levelPrice.entryprice(), QString()});
          }
       }
