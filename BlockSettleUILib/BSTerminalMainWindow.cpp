@@ -25,7 +25,7 @@
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
 #include "CelerAccountInfoDialog.h"
-#include "CelerClient.h"
+#include "CelerMarketDataProvider.h"
 #include "ConfigDialog.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
@@ -51,10 +51,10 @@
 #include "SelectWalletDialog.h"
 #include "SignContainer.h"
 #include "StatusBarView.h"
+#include "TabWithShortcut.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
-#include "TabWithShortcut.h"
 
 #include <spdlog/spdlog.h>
 
@@ -337,9 +337,9 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   mdProvider_ = std::make_shared<MarketDataProvider>(connectionManager_
+   mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"));
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
 }
 
 void BSTerminalMainWindow::InitAssets()

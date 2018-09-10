@@ -1,4 +1,4 @@
-#include "MarketDataProvider.h"
+#include "CelerMarketDataProvider.h"
 
 #include "CelerClient.h"
 #include "CelerSubscribeToMDSequence.h"
@@ -11,29 +11,29 @@
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
 
-MarketDataProvider::MarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
+CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::string& host, const std::string& port
-      , const std::shared_ptr<spdlog::logger>& logger)
+      , const std::shared_ptr<spdlog::logger>& logger
+      , bool filterUsdProducts)
  : logger_(logger)
  , mdHost_{host}
  , mdPort_{port}
  , connectionManager_{connectionManager}
- , filterUsdProducts_(true)
+ , filterUsdProducts_{filterUsdProducts}
 {
    celerClient_ = nullptr;
 }
 
-bool MarketDataProvider::SubscribeToMD(bool filterUsdProducts)
+bool CelerMarketDataProvider::SubscribeToMD()
 {
    if (celerClient_ != nullptr) {
-      logger_->error("[MarketDataProvider::SubscribeToMD] already connected.");
+      logger_->error("[CelerMarketDataProvider::SubscribeToMD] already connected.");
       return false;
    }
 
    emit StartConnecting();
 
    celerClient_ = std::make_shared<CelerClient>(connectionManager_, false);
-   filterUsdProducts_ = filterUsdProducts;
 
    ConnectToCelerClient();
 
@@ -41,7 +41,7 @@ bool MarketDataProvider::SubscribeToMD(bool filterUsdProducts)
 
    // login password could be any string
    if (!celerClient_->LoginToServer(mdHost_, mdPort_, credentials, credentials)) {
-      logger_->error("[MarketDataProvider::SubscribeToMD] failed to connect to MD source");
+      logger_->error("[CelerMarketDataProvider::SubscribeToMD] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;
    }
@@ -49,10 +49,10 @@ bool MarketDataProvider::SubscribeToMD(bool filterUsdProducts)
    return true;
 }
 
-bool MarketDataProvider::DisconnectFromMDSource()
+bool CelerMarketDataProvider::DisconnectFromMDSource()
 {
    if (celerClient_ == nullptr) {
-      logger_->debug("[MarketDataProvider::DisconnectFromMDSource] already disconnected");
+      logger_->debug("[CelerMarketDataProvider::DisconnectFromMDSource] already disconnected");
       return true;
    }
 
@@ -60,12 +60,12 @@ bool MarketDataProvider::DisconnectFromMDSource()
    celerClient_->CloseConnection();
 }
 
-bool MarketDataProvider::IsConnectionActive() const
+bool CelerMarketDataProvider::IsConnectionActive() const
 {
    return celerClient_ != nullptr;
 }
 
-void MarketDataProvider::ConnectToCelerClient()
+void CelerMarketDataProvider::ConnectToCelerClient()
 {
    celerClient_->RegisterHandler(CelerAPI::MarketDataFullSnapshotDownstreamEventType, [this](const std::string& data) {
       return this->onFullSnapshot(data);
@@ -74,11 +74,11 @@ void MarketDataProvider::ConnectToCelerClient()
       return this->onReqRejected(data);
    });
 
-   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &MarketDataProvider::OnConnectedToCeler);
-   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &MarketDataProvider::OnDisconnectedFromCeler);
+   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &CelerMarketDataProvider::OnConnectedToCeler);
+   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &CelerMarketDataProvider::OnDisconnectedFromCeler);
 }
 
-void MarketDataProvider::OnConnectedToCeler()
+void CelerMarketDataProvider::OnConnectedToCeler()
 {
    std::vector<std::string> fxPairs{"EUR/GBP", "EUR/SEK", "GBP/SEK", "EUR/JPY", "GBP/JPY", "JPY/SEK"};
    const std::vector<std::string> xbtPairs{"XBT/GBP", "XBT/EUR", "XBT/SEK", "XBT/JPY"};
@@ -90,7 +90,7 @@ void MarketDataProvider::OnConnectedToCeler()
    for (const auto& ccyPair : fxPairs) {
       auto subscribeCommand = std::make_shared<CelerSubscribeToMDSequence>(ccyPair, bs::network::Asset::Type::SpotFX, logger_);
       if (!celerClient_->ExecuteSequence(subscribeCommand)) {
-         logger_->error("[MarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
+         logger_->error("[CelerMarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
             , ccyPair);
       } else {
          emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotFX});
@@ -101,7 +101,7 @@ void MarketDataProvider::OnConnectedToCeler()
    for (const auto& ccyPair : xbtPairs) {
       auto subscribeCommand = std::make_shared<CelerSubscribeToMDSequence>(ccyPair, bs::network::Asset::Type::SpotXBT, logger_);
       if (!celerClient_->ExecuteSequence(subscribeCommand)) {
-         logger_->error("[MarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
+         logger_->error("[CelerMarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
             , ccyPair);
       } else {
          emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotXBT});
@@ -113,7 +113,7 @@ void MarketDataProvider::OnConnectedToCeler()
    emit Connected();
 }
 
-void MarketDataProvider::OnDisconnectedFromCeler()
+void CelerMarketDataProvider::OnDisconnectedFromCeler()
 {
    emit Disconnecting();
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
@@ -122,7 +122,7 @@ void MarketDataProvider::OnDisconnectedFromCeler()
    emit Disconnected();
 }
 
-bool MarketDataProvider::isPriceValid(double val)
+bool CelerMarketDataProvider::isPriceValid(double val)
 {
    if ((val > 0) && (val == val)) {
       return true;
@@ -130,16 +130,16 @@ bool MarketDataProvider::isPriceValid(double val)
    return false;
 }
 
-bool MarketDataProvider::onFullSnapshot(const std::string& data)
+bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
 {
    com::celertech::marketdata::api::price::MarketDataFullSnapshotDownstreamEvent response;
 
    if (!response.ParseFromString(data)) {
-      logger_->error("[MarketDataProvider::onFullSnapshot] Failed to parse MarketDataFullSnapshotDownstreamEvent");
+      logger_->error("[CelerMarketDataProvider::onFullSnapshot] Failed to parse MarketDataFullSnapshotDownstreamEvent");
       return false;
    }
 
-   logger_->debug("[MarketDataProvider::onFullSnapshot] {}", response.DebugString());
+   logger_->debug("[CelerMarketDataProvider::onFullSnapshot] {}", response.DebugString());
 
    auto security = QString::fromStdString(response.securitycode());
    if (security.isEmpty()) {
@@ -166,15 +166,15 @@ bool MarketDataProvider::onFullSnapshot(const std::string& data)
    return true;
 }
 
-bool MarketDataProvider::onReqRejected(const std::string& data)
+bool CelerMarketDataProvider::onReqRejected(const std::string& data)
 {
    com::celertech::marketdata::api::price::MarketDataRequestRejectDownstreamEvent response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[MarketDataProvider::onReqRejected] Failed to parse MarketDataRequestRejectDownstreamEvent");
+      logger_->error("[CelerMarketDataProvider::onReqRejected] Failed to parse MarketDataRequestRejectDownstreamEvent");
       return false;
    }
 
-   logger_->debug("[MarketDataProvider::onReqRejected] {}", response.DebugString());
+   logger_->debug("[CelerMarketDataProvider::onReqRejected] {}", response.DebugString());
 
    // text field contain rejected ccy pair
    emit MDReqRejected(response.text(), response.text());
