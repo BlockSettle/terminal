@@ -126,6 +126,20 @@ namespace UiUtils
    QString modelPath(const QModelIndex &index, QAbstractItemModel *model);
 
    extern const QLatin1String XbtCurrency;
+
+
+   //
+   // WalletDescriptionValidator
+   //
+
+   //! Validator for description of wallet.
+   class WalletDescriptionValidator final : public QValidator
+   {
+   public:
+      explicit WalletDescriptionValidator(QObject *parent);
+
+      QValidator::State validate(QString &input, int &pos) const override;
+   };
 }
 
 #endif // __UI_UTILS_H__
