@@ -171,7 +171,6 @@ namespace bs {
             , bool signal = true);
          virtual BinaryData serializeNode() const { return node_ ? node_->serialize() : BinaryData{}; }
          virtual void setRootNodes(Nodes);
-         void stop() override;
          void reset();
          Path getPathForAddress(const bs::Address &) const;
          std::shared_ptr<Node> getNodeForAddr(const bs::Address &) const;

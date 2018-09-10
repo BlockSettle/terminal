@@ -235,7 +235,8 @@ namespace bs {
       virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
-      virtual void RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
+      virtual std::string RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+         , bool asNew = false);
       void UnregisterWallet();
       virtual void SetArmory(const std::shared_ptr<ArmoryConnection> &);
       virtual void SetUserID(const BinaryData &) {}
@@ -322,7 +323,6 @@ namespace bs {
 
       virtual AddressEntryType getAddrTypeForAddr(const BinaryData &) = 0;
       virtual std::set<BinaryData> getAddrHashSet() = 0;
-      virtual void stop();
 
    private:
       bool isSegWitScript(const BinaryData &script);
@@ -341,7 +341,6 @@ namespace bs {
       mutable std::vector<bs::Address>       usedAddresses_;
       mutable std::set<BinaryData>           addrPrefixedHashes_, addressHashes_;
       mutable QMutex    addrMapsMtx_;
-      QThreadPool       threadPool_;
       size_t            addrCount_ = 0;
 
       mutable std::map<BinaryData, std::vector<uint64_t> >  addressBalanceMap_;
