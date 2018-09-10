@@ -1,6 +1,7 @@
 #include "PublisherConnection.h"
 
 #include "FastLock.h"
+#include "MessageHolder.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
@@ -10,9 +11,16 @@ PublisherConnection::PublisherConnection(const std::shared_ptr<spdlog::logger>& 
    : logger_{logger}
    , context_{context}
    , dataSocket_{ZmqContext::CreateNullSocket()}
+   , threadMasterSocket_{ZmqContext::CreateNullSocket()}
+   , threadSlaveSocket_{ZmqContext::CreateNullSocket()}
 {
    assert(logger_ != nullptr);
    assert(context_ != nullptr);
+}
+
+PublisherConnection::~PublisherConnection() noexcept
+{
+   stopServer();
 }
 
 bool PublisherConnection::InitConnection()
@@ -90,29 +98,202 @@ bool PublisherConnection::BindPublishingConnection(const std::string& host, cons
    std::string endpoint = std::string("tcp://") + host + ":" + port;
    int result = zmq_bind(dataSocket_.get(), endpoint.c_str());
    if (result != 0) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to bind socket to {} : {}"
+      logger_->error("[PublisherConnection::BindPublishingConnection] failed to bind socket to {} : {}"
          , endpoint, zmq_strerror(zmq_errno()));
       return false;
    }
 
+   std::string tempConnectionName = context_->GenerateConnectionName(host, port);
+   std::string controlEndpoint = std::string("inproc://server_") + tempConnectionName;
+
+   // create master and slave paired sockets to control connection and resend data
+   ZmqContext::sock_ptr tempThreadMasterSocket = context_->CreateInternalControlSocket();
+   if (tempThreadMasterSocket == nullptr) {
+      logger_->error("[PublisherConnection::BindPublishingConnection] failed to create ThreadMasterSocket socket {}"
+         , tempConnectionName);
+      return false;
+   }
+
+   result = zmq_bind(tempThreadMasterSocket.get(), controlEndpoint.c_str());
+   if (result != 0) {
+      logger_->error("[PublisherConnection::BindPublishingConnection] failed to bind ThreadMasterSocket socket {}"
+         , tempConnectionName);
+      return false;
+   }
+
+   ZmqContext::sock_ptr tempThreadSlaveSocket = context_->CreateInternalControlSocket();
+   if (tempThreadSlaveSocket == nullptr) {
+      logger_->error("[PublisherConnection::BindPublishingConnection] failed to create ThreadSlaveSocket socket {}"
+         , tempConnectionName);
+      return false;
+   }
+
+   result = zmq_connect(tempThreadSlaveSocket.get(), controlEndpoint.c_str());
+   if (result != 0) {
+      logger_->error("[PublisherConnection::BindPublishingConnection] failed to connect ThreadSlaveSocket socket {}"
+         , tempConnectionName);
+      return false;
+   }
+
+   // ok, move temp data to members
+   connectionName_ = std::move(tempConnectionName);
+   threadMasterSocket_ = std::move(tempThreadMasterSocket);
+   threadSlaveSocket_ = std::move(tempThreadSlaveSocket);
+
+   // and start thread
+   listenThread_ = std::thread(&PublisherConnection::listenFunction, this);
+
+   logger_->debug("[PublisherConnection::BindPublishingConnection] starting connection for {}"
+      , connectionName_);
+
    return true;
+}
+
+void PublisherConnection::listenFunction()
+{
+   zmq_pollitem_t  poll_items[2];
+
+   poll_items[PublisherConnection::ControlSocketIndex].socket = threadSlaveSocket_.get();
+   poll_items[PublisherConnection::ControlSocketIndex].events = ZMQ_POLLIN;
+
+   poll_items[PublisherConnection::DataSocketIndex].socket = dataSocket_.get();
+   poll_items[PublisherConnection::DataSocketIndex].events = ZMQ_POLLIN;
+
+
+   logger_->debug("[PublisherConnection::listenFunction] poll thread started for {}"
+      , connectionName_);
+
+   int result;
+
+   int errorCount = 0;
+
+   while(true) {
+      result = zmq_poll(poll_items, 2, -1);
+      if (result == -1) {
+         errorCount++;
+         if ((zmq_errno() != EINTR) || (errorCount > 10)) {
+            logger_->error("[PublisherConnection::listenFunction] poll failed for {} : {}"
+               , connectionName_, zmq_strerror(zmq_errno()));
+            break;
+         } else {
+            logger_->debug("[PublisherConnection::listenFunction] interrupted");
+            continue;
+         }
+      }
+
+      errorCount = 0;
+
+      if (poll_items[PublisherConnection::ControlSocketIndex].revents & ZMQ_POLLIN) {
+         MessageHolder   command;
+
+         int recv_result = zmq_msg_recv(&command, poll_items[PublisherConnection::ControlSocketIndex].socket, ZMQ_DONTWAIT);
+         if (recv_result == -1) {
+            logger_->error("[PublisherConnection::listenFunction] failed to recv command on {} : {}"
+               , connectionName_, zmq_strerror(zmq_errno()));
+            break;
+         }
+
+         auto command_code = command.ToInt();
+         if (command_code == PublisherConnection::CommandSend) {
+            BroadcastPendingData();
+         } else if (command_code == PublisherConnection::CommandStop) {
+            break;
+         } else {
+            logger_->error("[PublisherConnection::listenFunction] unexpected command code {} for {}"
+               , command_code, connectionName_);
+            break;
+         }
+      }
+
+      if (poll_items[PublisherConnection::DataSocketIndex].revents & ZMQ_POLLIN) {
+         ReadReceivedData();
+      }
+   }
+
+   dataSocket_ = context_->CreateNullSocket();
+
+   logger_->debug("[PublisherConnection::listenFunction] poll thread stopped for {}", connectionName_);
+}
+
+void PublisherConnection::ReadReceivedData()
+{
+   while (true) {
+      MessageHolder msg;
+      int result = zmq_msg_recv(&msg, dataSocket_.get(), ZMQ_DONTWAIT);
+      if (result == - 1 ) {
+         logger_->error("[PublisherConnection::ReadReceivedData] failed to receive");
+         return;
+      }
+
+      logger_->debug("[PublisherConnection::ReadReceivedData] received {} bytes: {}. ( {} )"
+         , result, msg.ToString(), (msg.IsLast() ? "last message" : "there is more") );
+
+      if (msg.IsLast()) {
+         break;
+      }
+   }
+}
+
+void PublisherConnection::stopServer()
+{
+   if (listenThread_.joinable()) {
+      logger_->error("[PublisherConnection::stopServer] not running");
+      return;
+   }
+   logger_->debug("[PublisherConnection::stopServer] stopping {}", connectionName_);
+
+   int command = PublisherConnection::CommandStop;
+   int result = 0;
+
+   {
+      FastLock locker{controlSocketLockFlag_};
+      result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+   }
+
+   if (result == -1) {
+      logger_->error("[PublisherConnection::stopServer] failed to send stop comamnd for {} : {}"
+         , connectionName_, zmq_strerror(zmq_errno()));
+      return;
+   }
+
+   listenThread_.join();
+}
+
+void PublisherConnection::BroadcastPendingData()
+{
+   std::deque<std::string> pendingData;
+
+   {
+      FastLock locker{dataQueueLock_};
+      pendingData.swap(dataQueue_);
+   }
+
+   for (const auto &data : pendingData) {
+      int result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
+      if (result != data.size()) {
+         logger_->error("[PublisherConnection::SendDataToDataSocket] {} failed to send client id {}. {} packets dropped"
+            , connectionName_, zmq_strerror(zmq_errno())
+            , pendingData.size());
+         break;
+      }
+   }
 }
 
 bool PublisherConnection::PublishData(const std::string& data)
 {
    assert(dataSocket_ != nullptr);
-   int sentResult = 0;
+   {
+      FastLock locker{dataQueueLock_};
+      dataQueue_.emplace_back( data );
+   }
+
+   int command = PublisherConnection::CommandSend;
+   int result = 0;
 
    {
-      FastLock locker{dataSocketLock_};
-      sentResult = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
+      FastLock locker{controlSocketLockFlag_};
+      result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
    }
 
-   if (sentResult != data.size()) {
-      logger_->error("[PublisherConnection::PublishData] publish failed: {}"
-         , zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   return true;
+   return result != -1;
 }
