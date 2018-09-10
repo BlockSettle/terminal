@@ -2,6 +2,8 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+//BinaryData - for debug purpose only
+#include "BinaryData.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
@@ -226,7 +228,7 @@ void PublisherConnection::ReadReceivedData()
       }
 
       logger_->debug("[PublisherConnection::ReadReceivedData] received {} bytes: {}. ( {} )"
-         , result, msg.ToString(), (msg.IsLast() ? "last message" : "there is more") );
+         , result, BinaryData(msg.ToString()).toHexStr(), (msg.IsLast() ? "last message" : "there is more") );
 
       if (msg.IsLast()) {
          break;
