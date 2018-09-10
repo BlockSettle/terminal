@@ -37,19 +37,19 @@
      <widget class="QWidget" name="pagePreview">
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <property name="spacing">
-        <number>4</number>
+        <number>6</number>
        </property>
        <property name="leftMargin">
-        <number>4</number>
+        <number>9</number>
        </property>
        <property name="topMargin">
-        <number>4</number>
+        <number>9</number>
        </property>
        <property name="rightMargin">
-        <number>4</number>
+        <number>9</number>
        </property>
        <property name="bottomMargin">
-        <number>0</number>
+        <number>9</number>
        </property>
        <item>
         <widget class="QGroupBox" name="groupBox">
@@ -58,19 +58,19 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="spacing">
-           <number>18</number>
+           <number>9</number>
           </property>
           <property name="leftMargin">
-           <number>9</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
-           <number>9</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>9</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
-           <number>9</number>
+           <number>0</number>
           </property>
           <item>
            <widget class="QLabel" name="label">
@@ -97,8 +97,8 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>687</width>
-               <height>510</height>
+               <width>695</width>
+               <height>523</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
@@ -141,6 +141,18 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
           <string>CONFIRM ROOT PRIVATE KEY</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
           <item>
            <widget class="QLabel" name="label_2">
             <property name="text">
