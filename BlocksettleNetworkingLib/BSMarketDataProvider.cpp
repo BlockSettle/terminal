@@ -152,4 +152,20 @@ void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
       logger_->error("[BSMarketDataProvider::OnIncrementalUpdate] failed to parse update");
       return ;
    }
+
+   bs::network::Asset::Type assetType;
+   switch(update.group()) {
+   case Blocksettle::BS_MD::TradeHistoryServer::FXProductGroup:
+      assetType = bs::network::Asset::Type::SpotFX;
+      break;
+   case Blocksettle::BS_MD::TradeHistoryServer::XBTProductGroup:
+      assetType = bs::network::Asset::Type::SpotXBT;
+      break;
+   case Blocksettle::BS_MD::TradeHistoryServer::CCProductGroup:
+      assetType = bs::network::Asset::Type::PrivateMarket;
+      break;
+   }
+
+   const auto& productInfo = update.update_info();
+   emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
 }

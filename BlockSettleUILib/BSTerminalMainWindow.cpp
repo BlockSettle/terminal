@@ -338,9 +338,12 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
+   // mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
+   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
+   mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"));
 }
 
 void BSTerminalMainWindow::InitAssets()
