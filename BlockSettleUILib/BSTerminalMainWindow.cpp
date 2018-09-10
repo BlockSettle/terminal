@@ -338,8 +338,8 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
    mdProvider_ = std::make_shared<MarketDataProvider>(connectionManager_
-      , appSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , appSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"));
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"));
 }
 
 void BSTerminalMainWindow::InitAssets()
