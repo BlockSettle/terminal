@@ -64,7 +64,7 @@ void StartupDialog::onNext()
 
 void StartupDialog::updateStatus()
 {
-   ui_->armoryGroupBox->setEnabled(ui_->radioButtonArmoryLocal->isChecked());
+   ui_->armoryGroupBox->setVisible(ui_->radioButtonArmoryLocal->isChecked());
 
    int currentPage = ui_->stackedWidget->currentIndex();
 
