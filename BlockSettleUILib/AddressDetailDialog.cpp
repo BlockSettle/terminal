@@ -50,8 +50,8 @@ public:
       Date = 0,
       Amount,
       Status,
-      TxId,
-      last = TxId
+      TxHash,
+      last = TxHash
    };
 
    AddressTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
@@ -197,7 +197,7 @@ void AddressDetailDialog::onInputAddrContextMenu(const QPoint &pos)
       if (current.isValid() && ui_->inputAddressesWidget->model()) {
          QApplication::clipboard()->setText(ui_->inputAddressesWidget->model()->data(
             ui_->inputAddressesWidget->model()->index(current.row(),
-               static_cast<int>(AddressTransactionFilter::Columns::TxId),
+               static_cast<int>(AddressTransactionFilter::Columns::TxHash),
                current.parent())).toString());
       }
    });
@@ -214,7 +214,7 @@ void AddressDetailDialog::onOutputAddrContextMenu(const QPoint &pos)
       if (current.isValid() && ui_->outputAddressesWidget->model()) {
          QApplication::clipboard()->setText(ui_->outputAddressesWidget->model()->data(
             ui_->outputAddressesWidget->model()->index(current.row(),
-               static_cast<int>(AddressTransactionFilter::Columns::TxId),
+               static_cast<int>(AddressTransactionFilter::Columns::TxHash),
                current.parent())).toString());
       }
    });
