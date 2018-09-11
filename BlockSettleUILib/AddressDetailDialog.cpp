@@ -48,10 +48,10 @@ class AddressTransactionFilter : public QSortFilterProxyModel
 public:
    enum class Columns {
       Date = 0,
-      Address,
       Amount,
       Status,
-      last = Status
+      TxId,
+      last = TxId
    };
 
    AddressTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
@@ -60,6 +60,7 @@ public:
       Q_UNUSED(source_parent);
       TransactionsViewModel::Columns col = static_cast<TransactionsViewModel::Columns>(source_column);
       return col != TransactionsViewModel::Columns::Wallet
+         && col != TransactionsViewModel::Columns::Address
          && col != TransactionsViewModel::Columns::Comment
          && col != TransactionsViewModel::Columns::SendReceive
          && col != TransactionsViewModel::Columns::RbfFlag
@@ -156,13 +157,6 @@ void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
    outFilter->setSourceModel(outgoingFilter);
    ui_->outputAddressesWidget->setModel(outFilter);
    ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
-
-   ui_->inputAddressesWidget->header()->moveSection(
-      static_cast<int>(AddressTransactionFilter::Columns::Address),
-      static_cast<int>(AddressTransactionFilter::Columns::last));
-   ui_->outputAddressesWidget->header()->moveSection(
-      static_cast<int>(AddressTransactionFilter::Columns::Address),
-      static_cast<int>(AddressTransactionFilter::Columns::last));
 }
 
 void AddressDetailDialog::onAddrBalanceReceived(const bs::Address &addr, std::vector<uint64_t> balance)
@@ -198,12 +192,12 @@ void AddressDetailDialog::onInputAddrContextMenu(const QPoint &pos)
 {
    QMenu menu(ui_->inputAddressesWidget);
 
-   menu.addAction(tr("Copy Address"), [this] () {
+   menu.addAction(tr("Copy Hash"), [this] () {
       const auto current = ui_->inputAddressesWidget->currentIndex();
       if (current.isValid() && ui_->inputAddressesWidget->model()) {
          QApplication::clipboard()->setText(ui_->inputAddressesWidget->model()->data(
             ui_->inputAddressesWidget->model()->index(current.row(),
-               static_cast<int>(AddressTransactionFilter::Columns::Address),
+               static_cast<int>(AddressTransactionFilter::Columns::TxId),
                current.parent())).toString());
       }
    });
@@ -215,12 +209,12 @@ void AddressDetailDialog::onOutputAddrContextMenu(const QPoint &pos)
 {
    QMenu menu(ui_->outputAddressesWidget);
 
-   menu.addAction(tr("Copy Address"), [this] () {
+   menu.addAction(tr("Copy Hash"), [this] () {
       const auto current = ui_->outputAddressesWidget->currentIndex();
       if (current.isValid() && ui_->outputAddressesWidget->model()) {
          QApplication::clipboard()->setText(ui_->outputAddressesWidget->model()->data(
             ui_->outputAddressesWidget->model()->index(current.row(),
-               static_cast<int>(AddressTransactionFilter::Columns::Address),
+               static_cast<int>(AddressTransactionFilter::Columns::TxId),
                current.parent())).toString());
       }
    });
