@@ -243,6 +243,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
    ui->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 
    updateAddresses();
 }
@@ -360,6 +361,7 @@ void WalletsWidget::onWalletContextMenu(const QPoint &p)
 void WalletsWidget::updateAddresses()
 {
    addressModel_->setWallets(GetSelectedWallets());
+   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 }
 
 void WalletsWidget::onNewWallet()
