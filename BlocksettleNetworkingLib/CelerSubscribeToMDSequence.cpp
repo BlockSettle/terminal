@@ -39,9 +39,7 @@ CelerMessage CelerSubscribeToMDSequence::subscribeToMD()
    request.set_producttype(bs::network::Asset::toCelerMDProductType(assetType_));
    request.set_assettype(bs::network::Asset::toCelerMDAssetType(assetType_));
 
-   if (assetType_ == bs::network::Asset::SpotFX) {
-      request.set_settlementtype("SP");
-   }
+   request.set_settlementtype("SP");
 
    logger_->debug("[CelerSubscribeToMDSequence::subscribeToMD] sending MarketDataSubscriptionRequest\n{}"
       , request.DebugString());
