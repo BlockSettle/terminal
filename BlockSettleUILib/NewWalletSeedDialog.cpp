@@ -7,94 +7,23 @@
 #include <QPrinter>
 #include <QStandardPaths>
 #include <QValidator>
+#include <QResizeEvent>
+#include <QScrollArea>
+#include <QEvent>
 
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
 #include "PaperBackupWriter.h"
 #include "UiUtils.h"
 #include "ui_NewWalletSeedDialog.h"
+#include "make_unique.h"
+#include "EasyEncValidator.h"
 
 namespace {
 
    const double kMarginScale = 0.5;
 
-   const int kTotalClientPadding = 50;
-
 }
-
-//
-// SeedValidator
-//
-
-//! Simplest validator for key that just checks count of characters.
-class SeedValidator : public QValidator
-{
-public:
-   explicit SeedValidator(QObject *parent)
-      : QValidator(parent)
-   {
-   }
-
-   QValidator::State validate(QString &input, int &pos) const override
-   {
-      QString key = input.trimmed();
-      key.remove(QChar::Space);
-
-      if (key.length() > maxLength_) {
-         cutInput(input, pos);
-
-         return QValidator::Invalid;
-      } else {
-         splitInput(key, input, pos);
-
-         return QValidator::Acceptable;
-      }
-   }
-
-private:
-   void cutInput(QString &input, int &pos) const
-   {
-      int i = 0;
-
-      for (const auto &ch : qAsConst(input)) {
-         if (ch != QChar::Space) {
-            ++i;
-         }
-
-         if (i == maxLength_) {
-            pos = i;
-            input.remove(i, input.length() - i);
-            return;
-         }
-      }
-   }
-
-   void splitInput(const QString &key, QString &input, int &pos) const
-   {
-      QString splitted;
-      int i = 0;
-
-      for (const auto &ch : qAsConst(key)) {
-         if (i == 4) {
-            splitted.append(QChar::Space);
-            i = 0;
-         }
-
-         ++i;
-
-         splitted.append(ch);
-      }
-
-      if (input.length() == pos) {
-         pos = splitted.length();
-      }
-
-      input = splitted;
-   }
-
-private:
-   static const int maxLength_ = 9 * 4;
-}; // class SeedValidator
 
 
 NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
@@ -104,6 +33,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    , walletId_(walletId)
    , keyLine1_(keyLine1)
    , keyLine2_(keyLine2)
+   , easyCodec_(std::make_shared<EasyCoDec>())
 {
    ui_->setupUi(this);
 
@@ -111,9 +41,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
       , QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png"))
       , UiUtils::getQRCode(keyLine1 + QLatin1Literal("\n") + keyLine2)));
 
-   QPixmap pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
-
-   ui_->labelPreview->setPixmap(pdfPreview);
+   ui_->scrollArea->viewport()->installEventFilter(this);
 
    connect(ui_->pushButtonSave, &QPushButton::clicked, this, &NewWalletSeedDialog::onSaveClicked);
    connect(ui_->pushButtonPrint, &QPushButton::clicked, this, &NewWalletSeedDialog::onPrintClicked);
@@ -121,16 +49,34 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &NewWalletSeedDialog::onBackClicked);
    connect(ui_->lineEditLine1, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
    connect(ui_->lineEditLine2, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &NewWalletSeedDialog::reject);
 
-   auto * validator = new SeedValidator(this);
-   ui_->lineEditLine1->setValidator(validator);
-   ui_->lineEditLine2->setValidator(validator);
+   validator_ = make_unique<EasyEncValidator>(easyCodec_, nullptr, 9, true);
+   ui_->lineEditLine1->setValidator(validator_.get());
+   ui_->lineEditLine2->setValidator(validator_.get());
 
    setCurrentPage(Pages::PrintPreview);
    updateState();
 }
 
 NewWalletSeedDialog::~NewWalletSeedDialog() = default;
+
+bool NewWalletSeedDialog::eventFilter(QObject *obj, QEvent *event)
+{
+   if (obj == ui_->scrollArea->viewport() && event->type() == QEvent::Resize) {
+      QResizeEvent *e = static_cast<QResizeEvent*>(event);
+
+      const int w = e->size().width();
+
+      const auto pdfPreview = pdfWriter_->getPreview(w, kMarginScale);
+
+      ui_->labelPreview->setPixmap(pdfPreview);
+
+      return false;
+   } else {
+      return QDialog::eventFilter(obj, event);
+   }
+}
 
 void NewWalletSeedDialog::setCurrentPage(Pages page)
 {
@@ -160,7 +106,7 @@ void NewWalletSeedDialog::setCurrentPage(Pages page)
 void NewWalletSeedDialog::updateState()
 {
    if (currentPage_ == Pages::PrintPreview) {
-      ui_->pushButtonContinue->setEnabled(wasSaved_);
+      ui_->pushButtonContinue->setEnabled(true);
    } else {
       ui_->pushButtonContinue->setEnabled(keysAreCorrect_);
    }
@@ -188,7 +134,6 @@ void NewWalletSeedDialog::onSaveClicked()
       return;
    }
 
-   wasSaved_ = true;
    updateState();
 }
 
@@ -228,7 +173,6 @@ void NewWalletSeedDialog::onPrintClicked()
 
    pdfWriter_->print(&printer);
 
-   wasSaved_ = true;
    updateState();
 }
 

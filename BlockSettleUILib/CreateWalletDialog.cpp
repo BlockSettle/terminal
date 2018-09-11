@@ -10,34 +10,9 @@
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
 #include "FrejaNotice.h"
+#include "UiUtils.h"
 
 #include <spdlog/spdlog.h>
-
-
-WalletDescriptionValidator::WalletDescriptionValidator(QObject *parent) : QValidator(parent)
-{}
-
-QValidator::State WalletDescriptionValidator::validate(QString &input, int &pos) const
-{
-   static const QString invalidCharacters = QLatin1String("\\/?:*<>|");
-
-   if (input.isEmpty()) {
-      return QValidator::Acceptable;
-   }
-
-   if (invalidCharacters.contains(input.at(pos - 1))) {
-      input.remove(pos - 1, 1);
-
-      if (pos > input.size()) {
-         --pos;
-      }
-
-      return QValidator::Invalid;
-   }
-   else {
-      return QValidator::Acceptable;
-   }
-}
 
 
 CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
@@ -69,7 +44,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
       ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->GetWalletsCount() + 1));
    }
 
-   ui_->lineEditDescription->setValidator(new WalletDescriptionValidator(this));
+   ui_->lineEditDescription->setValidator(new UiUtils::WalletDescriptionValidator(this));
 
    ui_->labelWalletId->setText(QString::fromStdString(walletId_));
 

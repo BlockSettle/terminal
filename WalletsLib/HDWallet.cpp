@@ -368,9 +368,11 @@ void hd::Wallet::initDB()
       putDataToDB(db_, bwKey.getData(), bwData.getData());
    }
 
-   const auto &cbNode = [this](const std::shared_ptr<hd::Node> &node) {
+   uint16_t nodeCounter = 0;
+   const auto &cbNode = [this, &nodeCounter](const std::shared_ptr<hd::Node> &node) {
       BinaryWriter bwKey;
       bwKey.put_uint32_t(ROOTASSET_KEY);
+      bwKey.put_uint16_t(nodeCounter++);
 
       BinaryWriter bwData;
       const auto &nodeSer = node->serialize();

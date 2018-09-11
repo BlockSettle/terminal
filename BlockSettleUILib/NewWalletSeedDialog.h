@@ -2,12 +2,16 @@
 #define __NEWWALLETSEEDDIALOG_H__
 
 #include <memory>
+
 #include <QDialog>
+
+#include "EasyCoDec.h"
 
 namespace Ui {
    class NewWalletSeedDialog;
 }
 
+class EasyEncValidator;
 class WalletBackupPdfWriter;
 
 class NewWalletSeedDialog : public QDialog
@@ -23,6 +27,9 @@ public:
    NewWalletSeedDialog(const QString& walletId
       , const QString &keyLine1, const QString &keyLine2, QWidget *parent = nullptr);
    ~NewWalletSeedDialog() override;
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
    void reject() override;
@@ -42,11 +49,12 @@ private:
    std::unique_ptr<WalletBackupPdfWriter> pdfWriter_;
    Pages currentPage_;
    QSize sizePreview_;
-   bool wasSaved_{false};
    bool keysAreCorrect_ = false;
    const QString walletId_;
    const QString keyLine1_;
    const QString keyLine2_;
+   std::shared_ptr<EasyCoDec> easyCodec_;
+   std::unique_ptr<EasyEncValidator> validator_;
 };
 
 bool abortWalletCreationQuestionDialog(QWidget* parent);

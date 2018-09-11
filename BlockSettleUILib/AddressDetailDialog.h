@@ -33,6 +33,8 @@ private slots:
    void onCopyClicked() const;
    void onAddrBalanceReceived(const bs::Address &, std::vector<uint64_t>);
    void onAddrTxNReceived(const bs::Address &, uint32_t);
+   void onInputAddrContextMenu(const QPoint &pos);
+   void onOutputAddrContextMenu(const QPoint &pos);
 
 private:
    void onError();

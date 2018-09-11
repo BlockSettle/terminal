@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>423</width>
-    <height>183</height>
+    <height>194</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -193,6 +193,14 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>radioButtonPassword</tabstop>
+  <tabstop>radioButtonFreja</tabstop>
+  <tabstop>lineEditPassword</tabstop>
+  <tabstop>lineEditPasswordConfirm</tabstop>
+  <tabstop>comboBoxFrejaId</tabstop>
+  <tabstop>pushButtonFreja</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
