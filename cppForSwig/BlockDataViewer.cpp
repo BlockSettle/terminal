@@ -15,6 +15,7 @@ BlockDataViewer::BlockDataViewer(BlockDataManager* bdm) :
    db_ = bdm->getIFace();
    bc_ = bdm->blockchain();
    saf_ = bdm->getScrAddrFilter().get();
+   zc_ = bdm->zeroConfCont().get();
 
    bdmPtr_ = bdm;
 
@@ -124,7 +125,8 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       scanData.saStruct_.zcMap_ = 
          move(zcAction->packet_.txioMap_);
 
-      scanData.saStruct_.newZcKeys_ = zcAction->packet_.newZcKeys_;
+      scanData.saStruct_.newKeysAndScrAddr_ = 
+         zcAction->packet_.newKeysAndScrAddr_;
 
       if (zcAction->packet_.purgePacket_ != nullptr)
       {
@@ -409,7 +411,7 @@ vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
       {
          auto zcIter = zcTxioMap.find(utxoPair.first);
          if (zcIter != zcTxioMap.end())
-            if (zcIter->second.hasTxInZC())
+            if (zcIter->second->hasTxInZC())
                continue;
 
          UTXOs.push_back(utxoPair.second);
@@ -420,13 +422,13 @@ vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
 
       for (const auto& zcTxio : zcTxioMap)
       {
-         if (!zcTxio.second.hasTxOutZC())
+         if (!zcTxio.second->hasTxOutZC())
             continue;
          
-         if (zcTxio.second.hasTxInZC())
+         if (zcTxio.second->hasTxInZC())
             continue;
 
-         TxOut txout = zcTxio.second.getTxOutCopy(db_);
+         TxOut txout = zcTxio.second->getTxOutCopy(db_);
          UnspentTxOut UTXO = UnspentTxOut(db_, txout, UINT32_MAX);
 
          UTXOs.push_back(UTXO);
@@ -595,15 +597,22 @@ uint32_t BlockDataViewer::getClosestBlockHeightForTime(uint32_t timestamp)
 TxOut BlockDataViewer::getTxOutCopy(
    const BinaryData& txHash, uint16_t index) const
 {
-   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
-      
+   TxOut txOut;
+   
+   {
+      auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
+      BinaryData bdkey = db_->getDBKeyForHash(txHash);
+      if (bdkey.getSize() != 0)
+         txOut = move(db_->getTxOutCopy(bdkey, index));
+   }
 
-   BinaryData bdkey = db_->getDBKeyForHash(txHash);
+   if (!txOut.isInitialized())
+   {
+      auto&& zcKey = zeroConfCont_->getKeyForHash(txHash);
+      txOut = move(zeroConfCont_->getTxOutCopy(zcKey, index));
+   }
 
-   if (bdkey.getSize() == 0)
-      return TxOut();
-
-   return db_->getTxOutCopy(bdkey, index);
+   return txOut;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -617,7 +626,11 @@ TxOut BlockDataViewer::getTxOutCopy(const BinaryData& dbKey) const
    auto&& bdkey = dbKey.getSliceRef(0, 6);
    auto index = READ_UINT16_BE(dbKey.getSliceRef(6, 2));
 
-   return db_->getTxOutCopy(bdkey, index);
+   auto&& txOut = db_->getTxOutCopy(bdkey, index);
+   if (!txOut.isInitialized())
+      txOut = move(zeroConfCont_->getTxOutCopy(bdkey, index));
+
+   return txOut;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -692,15 +705,19 @@ unique_ptr<BDV_Notification_ZC> BlockDataViewer::createZcNotification(
    ZeroConfContainer::NotificationPacket packet(getID());
 
    //grab zc map
-   auto txiomap = zeroConfCont_->getFullTxioMap();
-
-   for (auto& txiopair : *txiomap)
+   auto ss = zeroConfCont_->getSnapshot();
+   if (ss != nullptr)
    {
-      auto&& bdref = txiopair.first.getRef();
-      if (!filter(bdref))
-         continue;
+      auto& txiomap = ss->txioMap_;
 
-      packet.txioMap_.insert(txiopair);
+      for (auto& txiopair : txiomap)
+      {
+         auto&& bdref = txiopair.first.getRef();
+         if (!filter(bdref))
+            continue;
+
+         packet.txioMap_.insert(txiopair);
+      }
    }
 
    auto notifPtr = make_unique<BDV_Notification_ZC>(packet);
@@ -804,6 +821,7 @@ void WalletGroup::registerAddresses(
       auto bdvPtr = theWallet->bdvPtr_;
       auto dbPtr = theWallet->bdvPtr_->getDB();
       auto bcPtr = &theWallet->bdvPtr_->blockchain();
+      auto zcPtr = theWallet->bdvPtr_->zcContainer();
 
       map<BinaryDataRef, shared_ptr<ScrAddrObj>> saMap;
       {
@@ -814,7 +832,7 @@ void WalletGroup::registerAddresses(
                continue;
 
             auto scrAddrPtr = make_shared<ScrAddrObj>(
-               dbPtr, bcPtr, addr);
+               dbPtr, bcPtr, zcPtr, addr);
 
             saMap.insert(make_pair(addr, scrAddrPtr));
          }

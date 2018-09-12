@@ -534,7 +534,7 @@ void WebSocketServer::shutdown()
    {
       shutdownPromise_.set_value(true);
    }
-   catch (future_error& e)
+   catch (future_error)
    {}
 }
 

@@ -819,6 +819,29 @@ public:
 		count_.store(map_->size(), memory_order_relaxed);
    }
 
+   void erase(const deque<T>& idVec)
+   {
+      if (idVec.size() == 0)
+         return;
+
+      auto newMap = make_shared<map<T, U>>();
+
+      unique_lock<mutex> lock(mu_);
+      newMap->insert(map_->begin(), map_->end());
+
+      bool erased = false;
+      for (auto& id : idVec)
+      {
+         if (newMap->erase(id) != 0)
+            erased = true;
+      }
+
+      if (erased)
+         atomic_store(&map_, newMap);
+
+      count_.store(map_->size(), memory_order_relaxed);
+   }
+
    shared_ptr<map<T, U>> pop_all(void)
    {
 		auto newMap = make_shared<map<T, U>>();
@@ -953,6 +976,29 @@ public:
 			atomic_store(&set_, newSet);
 
 		count_.store(set_->size(), memory_order_relaxed);
+   }
+
+   void erase(const deque<T>& idVec)
+   {
+      if (idVec.size() == 0)
+         return;
+
+      auto newSet = make_shared<set<T>>();
+
+      unique_lock<mutex> lock(mu_);
+      newSet->insert(set_->begin(), set_->end());
+
+      bool erased = false;
+      for (auto& id : idVec)
+      {
+         if (newSet->erase(id) != 0)
+            erased = true;
+      }
+
+      if (erased)
+         atomic_store(&set_, newSet);
+
+      count_.store(set_->size(), memory_order_relaxed);
    }
 
    shared_ptr<set<T>> pop_all(void)
