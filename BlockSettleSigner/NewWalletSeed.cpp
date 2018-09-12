@@ -78,3 +78,8 @@ void NewWalletSeed::print()
 
    pdfWriter_->print(&printer);
 }
+
+void NewWalletSeed::save(const QString &fileName)
+{
+   pdfWriter_->write(fileName.mid(7));
+}

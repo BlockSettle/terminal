@@ -46,8 +46,6 @@ void QmlPdfBackup::paint(QPainter *painter)
    // The code in draw does not work correctly with other sizes than A4 and 1200 DPI.
    // So we keep logical sizes and use viewport an window instead.
    pdf_->draw(*painter, windowWidth, windowHeight);
-
-   painter->end();
 }
 
 qreal QmlPdfBackup::preferedHeight() const

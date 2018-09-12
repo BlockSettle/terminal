@@ -1,6 +1,7 @@
 #include <QFile>
 #include <QVariant>
 #include <QPixmap>
+#include <QStandardPaths>
 
 #include <spdlog/spdlog.h>
 
@@ -194,6 +195,12 @@ WalletSeed *WalletsProxy::createWalletSeed() const
 {
    auto result = new WalletSeed(params_->netType(), (QObject *)this);
    return result;
+}
+
+QString WalletsProxy::defaultBackupLocation() const
+{
+   return QString::fromLatin1("file://") +
+      QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
 bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletSeed *seed)

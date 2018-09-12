@@ -40,6 +40,7 @@ public:
 public slots:
    void generate();
    void print();
+   void save(const QString &fileName);
 
 private:
    QString walletId_;

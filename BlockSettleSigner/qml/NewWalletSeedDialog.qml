@@ -3,11 +3,38 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.QmlPdfBackup 1.0
+import QtQuick.Dialogs 1.3
 
 CustomDialog {
     implicitWidth: mainWindow.width
     implicitHeight: mainWindow.height
     id: root
+
+    FileDialog {
+        folder: walletsProxy.defaultBackupLocation
+        defaultSuffix: "pdf"
+        title: qsTr("Save Backup")
+        id: saveDialog
+        selectExisting: false
+        nameFilters: [ "PDF files (*.pdf)" ]
+        selectMultiple: false
+        onAccepted: {
+            newWalletSeed.save(fileUrl)
+        }
+    }
+
+    InfoBanner {
+        id: noPrinter
+        bgColor:    "darkred"
+    }
+
+    Connections {
+        target: newWalletSeed
+
+        onUnableToPrint: {
+            noPrinter.displayMessage(qsTr("No one printer is installed."))
+        }
+    }
 
     FocusScope {
         anchors.fill: parent
@@ -83,6 +110,7 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Print")
                         onClicked: {
+                            newWalletSeed.print();
                         }
                     }
 
@@ -90,6 +118,8 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Save")
                         onClicked: {
+                            console.log(walletsProxy.defaultBackupLocation)
+                            saveDialog.open();
                         }
                     }
                 }
