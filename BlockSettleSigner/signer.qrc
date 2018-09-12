@@ -44,5 +44,6 @@
         <file>qml/bscontrols/BSTextInput.qml</file>
         <file>qml/bscontrols/BSStyle.qml</file>
         <file>qml/bscontrols/BSEasyCodeInput.qml</file>
+        <file>qml/NewWalletSeedDialog.qml</file>
     </qresource>
 </RCC>

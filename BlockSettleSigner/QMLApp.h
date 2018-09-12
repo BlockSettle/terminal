@@ -23,6 +23,7 @@ class WalletsManager;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
 class DBusNotification;
+class NewWalletSeed;
 
 
 class QMLAppObj : public QObject
@@ -73,6 +74,7 @@ private:
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
+   NewWalletSeed *newWalletSeed_ = nullptr;
 
    enum NotificationMode {
       QSystemTray,

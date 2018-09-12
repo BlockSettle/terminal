@@ -94,14 +94,13 @@ Item {
                             var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "walletNewDlg")
                             dlgNew.accepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.RandomSeed) {
-                                    var dlg = Qt.createQmlObject("WalletCreateDialog {}", mainWindow, "walletCreateDlg")
-                                    dlg.primaryWalletExists = walletsProxy.primaryWalletExists
-                                    dlg.seed = walletsProxy.createWalletSeed()
+                                    newWalletSeed.generate();
+                                    var dlg = Qt.createQmlObject("NewWalletSeedDialog {}", mainWindow, "walletCreateDlg")
                                     dlg.accepted.connect(function() {
-                                        if (walletsProxy.createWallet(dlg.isPrimary, dlg.password, dlg.seed)) {
-                                            ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created")
-                                                                     .arg(dlg.seed.walletName))
-                                        }
+//                                        if (walletsProxy.createWallet(dlg.isPrimary, dlg.password, dlg.seed)) {
+//                                            ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created")
+//                                                                     .arg(dlg.seed.walletName))
+//                                        }
                                     })
                                     dlg.open()
                                 }
