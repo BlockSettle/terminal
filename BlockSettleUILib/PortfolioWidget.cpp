@@ -78,6 +78,8 @@ void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsVie
    ui_->treeViewUnconfirmedTransactions->setSortingEnabled(true);
    ui_->treeViewUnconfirmedTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date)
       , Qt::SortOrder::DescendingOrder);
+   ui_->treeViewUnconfirmedTransactions->hideColumn(
+      static_cast<int>(TransactionsViewModel::Columns::TxHash));
 }
 
 void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
