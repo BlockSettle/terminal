@@ -1,10 +1,14 @@
 #include "HDLeaf.h"
-#include <QMutexLocker>
-#include <QtConcurrent/QtConcurrentRun>
+
+
 #include "CheckRecipSigner.h"
 #include "HDNode.h"
 #include "Wallets.h"
 
+#include <unordered_map>
+
+#include <QMutexLocker>
+#include <QtConcurrent/QtConcurrentRun>
 
 #define ADDR_KEY     0x00002002
 
@@ -1172,9 +1176,10 @@ void hd::CCLeaf::validationProc()
       return;
    }
 
-   auto addressesToCheck = new std::set<bs::Address>;
+   auto addressesToCheck = std::make_shared< std::map<bs::Address, int> >();
+
    for (const auto &addr : GetUsedAddressList()) {
-      addressesToCheck->insert(addr);
+      addressesToCheck->emplace(addr, -1);
    }
 
    const auto &cbLedgers = [this, addressesToCheck](std::map<bs::Address, AsyncClient::LedgerDelegate> ledgers) {
@@ -1190,13 +1195,29 @@ void hd::CCLeaf::validationProc()
             };
             checker_->containsInputAddress(tx, cbResult, lotSizeInSatoshis_);
 
-            addressesToCheck->erase(addr);
-            if (addressesToCheck->empty()) {
-               delete addressesToCheck;
+            auto it = addressesToCheck->find(addr);
+            if (it != addressesToCheck->end()) {
+               it->second = it->second - 1;
+               if (it->second <= 0) {
+                  addressesToCheck->erase(it);
+               }
+            }
+
+            bool empty = true;
+            for (const auto& it : *addressesToCheck) {
+               if (it.second > 0) {
+                  empty = false;
+                  break;
+               }
+            }
+
+            if (empty) {
                emit walletReset();
             }
          };
-         const auto &cbHistory = [this, cbCheck](std::vector<ClientClasses::LedgerEntry> entries) {
+         const auto &cbHistory = [this, cbCheck, addr=ledger.first, addressesToCheck](std::vector<ClientClasses::LedgerEntry> entries) {
+            (*addressesToCheck)[addr] = entries.size();
+
             for (const auto &entry : entries) {
                armory_->getTxByHash(entry.getTxHash(), cbCheck);
             }
