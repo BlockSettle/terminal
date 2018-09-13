@@ -25,6 +25,7 @@ class NewWalletSeed : public QObject
 
 signals:
    void unableToPrint();
+   void failedToSave(const QString &filePath);
    void walletIdChanged();
    void part1Changed();
    void part2Changed();
@@ -40,7 +41,7 @@ public:
 public slots:
    void generate();
    void print();
-   void save(const QString &fileName);
+   void save();
 
 private:
    QString walletId_;

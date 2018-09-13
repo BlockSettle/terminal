@@ -7,7 +7,9 @@
 
 #include <QPrinter>
 #include <QPrintDialog>
-#include <QBuffer>
+#include <QDir>
+#include <QStandardPaths>
+#include <QFileDialog>
 
 
 //
@@ -79,7 +81,23 @@ void NewWalletSeed::print()
    pdfWriter_->print(&printer);
 }
 
-void NewWalletSeed::save(const QString &fileName)
+void NewWalletSeed::save()
 {
-   pdfWriter_->write(fileName.mid(7));
+   QDir documentsDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+   QString filePath = documentsDir.filePath(QString::fromLatin1("backup_wallet_%1.pdf").arg(walletId_));
+
+   QFileDialog dlg;
+   dlg.setFileMode(QFileDialog::AnyFile);
+   filePath = dlg.getSaveFileName(nullptr,
+      tr("Select file for backup"), filePath, QLatin1String("*.pdf"));
+
+   if (filePath.isEmpty()) {
+      return;
+   }
+
+   bool result = pdfWriter_->write(filePath);
+
+   if (!result) {
+      emit failedToSave(filePath);
+   }
 }
