@@ -51,6 +51,10 @@ public:
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
 
+private slots:
+   void onConnectedToCeler();
+   void onDisconnectedFromCeler();
+
 private:
    std::unique_ptr<Ui::RFQRequestWidget> ui_;
 

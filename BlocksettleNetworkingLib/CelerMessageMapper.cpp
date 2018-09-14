@@ -36,12 +36,6 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$SingleResponseMessage", SingleResponseMessageType },
    { "com.celertech.clearing.api.tradecapturereport.processed.DownstreamProcessedTradeCaptureProto$ProcessedFxTradeCaptureReportDownstreamEvent", ProcessedFxTradeCaptureReportDownstreamEventType},
    { "com.celertech.clearing.api.tradecapturereport.processed.DownstreamProcessedTradeCaptureProto$ProcessedTradeCaptureReportAck", ProcessedTradeCaptureReportAckType},
-   { "com.celertech.marketmerchant.api.marketdata.DownstreamMarketDataProto$MarketDataFullSnapshotDownstreamEvent", MarketDataFullSnapshotDownstreamEventType },
-   { "com.celertech.marketmerchant.api.marketdata.DownstreamMarketDataProto$MarketDataIncrementalDownstreamEvent", MarketDataIncrementalDownstreamEventType },
-   { "com.celertech.marketmerchant.api.marketdata.UpstreamMarketDataProto$MarketDataRequest", MarketDataRequestType },
-   { "com.celertech.marketmerchant.api.marketdata.DownstreamMarketDataProto$MarketDataRequestRejectDownstreamEvent", MarketDataRequestRejectType },
-   { "com.celertech.marketmerchant.api.marketstatistic.UpstreamMarketStatisticProto$MarketStatisticRequest", MarketStatsRequestType },
-   { "com.celertech.marketmerchant.api.marketstatistic.DownstreamMarketStatisticProto$MarketStatisticSnapshotDownstreamEvent", MarketStatsSnapshotEventType },
    { "com.celertech.marketmerchant.api.quote.UpstreamQuoteProto$QuoteNotification", QuoteNotificationType },
    { "com.celertech.marketmerchant.api.order.DownstreamOrderProto$BitcoinOrderSnapshotDownstreamEvent", BitcoinOrderSnapshotDownstreamEventType },
    { "com.celertech.marketmerchant.api.order.UpstreamOrderProto$CreateBitcoinOrderRequest", CreateBitcoinOrderRequestType },
@@ -59,8 +53,6 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.marketmerchant.api.quote.UpstreamQuoteProto$QuoteCancelNotification", QuoteCancelNotificationType },
    { "com.celertech.marketwarehouse.api.quote.DownstreamQuoteProto$QuoteCancelDownstreamEvent", QuoteCancelNotifReplyType },
    { "com.celertech.marketmerchant.api.quote.DownstreamQuoteProto$QuoteAcknowledgementDownstreamEvent", QuoteAckDownstreamEventType },
-   { "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent", SecurityDefinitionDownstreamEventType },
-   { "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions", FindAllSecurityDefinitionsType },
    { "com.celertech.marketmerchant.api.order.bitcoin.DownstreamBitcoinTransactionSigningProto$SignTransactionNotification", SignTransactionNotificationType },
    { "com.celertech.marketmerchant.api.order.bitcoin.UpstreamBitcoinTransactionSigningProto$SignTransactionRequest", SignTransactionRequestType },
    { "com.celertech.piggybank.api.generalledger.DownstreamGeneralLedgerProto$TransactionDownstreamEvent", TransactionDownstreamEventType },
@@ -95,7 +87,10 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.blocksettle.private_bridge.eod.UpstreamEoDProto$EndOfDayPriceReport", EndOfDayPriceReportType},
    { "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$XBTTradeStatusRequest", XBTTradeStatusRequestType},
    { "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$ColouredCoinTradeStatusRequest", ColouredCoinTradeStatusRequestType},
-   { "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException", PersistenceException}
+   { "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException", PersistenceExceptionType},
+   { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent", MarketDataRequestRejectDownstreamEventType},
+   { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent", MarketDataFullSnapshotDownstreamEventType},
+   { "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest", MarketDataSubscriptionRequestType}
 };
 
 static const std::unordered_map<int, std::string> typeToName = {
@@ -119,15 +114,7 @@ static const std::unordered_map<int, std::string> typeToName = {
    { ReconnectionFailedMessageType, "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ReconnectionFailedMessage" },
    { ReconnectionRequestType, "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ReconnectionRequest" },
    { SingleResponseMessageType, "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$SingleResponseMessage" },
-   { MarketDataFullSnapshotDownstreamEventType, "com.celertech.marketmerchant.api.marketdata.DownstreamMarketDataProto$MarketDataFullSnapshotDownstreamEvent" },
-   { MarketDataIncrementalDownstreamEventType, "com.celertech.marketmerchant.api.marketdata.DownstreamMarketDataProto$MarketDataIncrementalDownstreamEvent" },
-   { MarketDataRequestType, "com.celertech.marketmerchant.api.marketdata.UpstreamMarketDataProto$MarketDataRequest" },
-   { MarketDataRequestRejectType, "com.celertech.marketmerchant.api.marketdata.DownstreamMarketDataProto$MarketDataRequestRejectDownstreamEvent" },
-   { SecurityDefinitionDownstreamEventType, "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent" },
-   { FindAllSecurityDefinitionsType, "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions" },
    { FindAllOrdersType, "com.celertech.marketmerchant.api.order.UpstreamOrderProto$FindAllOrderSnapshotsBySessionKey" },
-   { MarketStatsRequestType, "com.celertech.marketmerchant.api.marketstatistic.UpstreamMarketStatisticProto$MarketStatisticRequest" },
-   { MarketStatsSnapshotEventType, "com.celertech.marketmerchant.api.marketstatistic.DownstreamMarketStatisticProto$MarketStatisticSnapshotDownstreamEvent" },
    { CreateUserPropertyRequestType, "com.celertech.staticdata.api.user.property.UpstreamUserPropertyProto$CreateUserPropertyRequest"},
    { UpdateUserPropertyRequestType, "com.celertech.staticdata.api.user.property.UpstreamUserPropertyProto$UpdateUserPropertyRequest"},
    { ResetUserPasswordTokenType, "com.celertech.baseserver.api.user.DownstreamAuthenticationUserProto$ResetUserPasswordToken" },
@@ -189,7 +176,10 @@ static const std::unordered_map<int, std::string> typeToName = {
    { EndOfDayPriceReportType, "com.blocksettle.private_bridge.eod.UpstreamEoDProto$EndOfDayPriceReport"},
    { XBTTradeStatusRequestType, "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$XBTTradeStatusRequest"},
    { ColouredCoinTradeStatusRequestType, "com.blocksettle.private_bridge.spotxbt.UpstreamSpotXBTProto$ColouredCoinTradeStatusRequest"},
-   { PersistenceException, "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException"}
+   { PersistenceExceptionType, "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException"},
+   { MarketDataRequestRejectDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent"},
+   { MarketDataFullSnapshotDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent"},
+   { MarketDataSubscriptionRequestType, "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest"}
 };
 
 std::string GetMessageClass(CelerMessageType messageType)

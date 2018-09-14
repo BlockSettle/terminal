@@ -2,26 +2,35 @@
 
 #include <cassert>
 
+void DataConnection::detachFromListener()
+{
+   listener_ = nullptr;
+}
+
 void DataConnection::notifyOnData(const std::string& data)
 {
-   assert(listener_ != nullptr);
-   listener_->OnDataReceived(data);
+   if (listener_) {
+      listener_->OnDataReceived(data);
+   }
 }
 
 void DataConnection::notifyOnConnected()
 {
-   assert(listener_ != nullptr);
-   listener_->OnConnected();
+   if (listener_) {
+      listener_->OnConnected();
+   }
 }
 
 void DataConnection::notifyOnDisconnected()
 {
-   assert(listener_ != nullptr);
-   listener_->OnDisconnected();
+   if (listener_) {
+      listener_->OnDisconnected();
+   }
 }
 
 void DataConnection::notifyOnError(DataConnectionListener::DataConnectionError errorCode)
 {
-   assert(listener_ != nullptr);
-   listener_->OnError(errorCode);
+   if (listener_) {
+      listener_->OnError(errorCode);
+   }
 }

@@ -86,7 +86,6 @@ private slots:
    void showCoinControl();
    void walletSelected(int index);
 
-   void securitiesReceived();
    void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
 
    void updateSubmitButton();
