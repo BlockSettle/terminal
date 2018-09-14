@@ -112,7 +112,7 @@
       <item>
        <widget class="QPushButton" name="pushButtonMDConnection">
         <property name="text">
-         <string>PushButton</string>
+         <string>Subscribe</string>
         </property>
        </widget>
       </item>
