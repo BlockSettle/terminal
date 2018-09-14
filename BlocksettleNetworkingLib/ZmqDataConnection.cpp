@@ -20,6 +20,7 @@ ZmqDataConnection::ZmqDataConnection(const std::shared_ptr<spdlog::logger>& logg
 
 ZmqDataConnection::~ZmqDataConnection() noexcept
 {
+   detachFromListener();
    closeConnection();
 }
 

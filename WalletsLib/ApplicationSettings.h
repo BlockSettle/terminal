@@ -45,6 +45,8 @@ public:
       pubBridgePubKey,
       celerHost,
       celerPort,
+      mdServerHost,
+      mdServerPort,
       celerUsername,
       signerHost,
       signerPort,
