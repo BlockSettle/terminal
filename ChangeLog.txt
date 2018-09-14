@@ -1,3 +1,10 @@
+0.10.7
+Bug Fixes:
+   -
+Improvements:
+   - subscribe to new MD server without login
+   - minor UI improvements and fixes
+
 0.10.6
 Bug Fixes:
    -
@@ -5,7 +12,7 @@ Improvements:
    - Aded possibility to cancel transaction from terminal with remote Signer
    - No warning messages in Terminal if transaction was just cancelled
    - Diskless settlement wallet in signer
-   
+
 0.10.5
 Bug Fixes:
    - Coin control UI fix ( autoselection )
