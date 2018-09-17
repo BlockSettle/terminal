@@ -18,7 +18,6 @@
 LedgerEntry LedgerEntry::EmptyLedger_;
 map<BinaryData, LedgerEntry> LedgerEntry::EmptyLedgerMap_;
 BinaryData LedgerEntry::EmptyID_ = BinaryData(0);
-BinaryData LedgerEntry::ZCheader_ = WRITE_UINT16_BE(0xFFFF);
 
 ////////////////////////////////////////////////////////////////////////////////
 BinaryData const & LedgerEntry::getScrAddr(void) const
@@ -154,15 +153,14 @@ void LedgerEntry::purgeLedgerVectorFromHeight(
 //////////////////////////////////////////////////////////////////////////////
 map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
    const map<BinaryData, TxIOPair>& txioMap,
-   uint32_t startBlock, uint32_t endBlock,
-   const BinaryDataRef ID,
-   const LMDBBlockDatabase* db,
-   const Blockchain* bc)
+   uint32_t startBlock, uint32_t endBlock, const BinaryDataRef ID,
+   const LMDBBlockDatabase* db, const Blockchain* bc, 
+   const ZeroConfContainer* zc)
 {
    map<BinaryData, LedgerEntry> leMap;
 
    //arrange txios by transaction
-   map<BinaryData, vector<const TxIOPair*>> TxnTxIOMap;
+   map<BinaryData, deque<const TxIOPair*>> TxnTxIOMap;
 
    for (const auto& txio : txioMap)
    {
@@ -200,7 +198,7 @@ map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
       auto txioIter = txioVec.second.cbegin();
 
       //get txhash, block, txIndex and txtime
-      if (!txioVec.first.startsWith(ZCheader_))
+      if (!txioVec.first.startsWith(DBUtils::ZeroConfHeader_))
       {
          blockNum = DBUtils::hgtxToHeight(txioVec.first.getSliceRef(0, 4));
          txIndex = READ_UINT16_BE(txioVec.first.getSliceRef(4, 2));
@@ -214,10 +212,7 @@ map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
          txIndex = READ_UINT16_BE(txioVec.first.getSliceRef(4, 2));
          txTime = (*txioIter)->getTxTime();
 
-         if ((*txioIter)->getDBKeyOfOutput().startsWith(txioVec.first))
-            txHash = (*txioIter)->getTxHashOfOutput(db);
-         else if ((*txioIter)->getDBKeyOfInput().startsWith(txioVec.first))
-            txHash = (*txioIter)->getTxHashOfInput(db);
+         txHash = zc->getHashForKey(txioVec.first);
       }
 
       if (blockNum < startBlock || blockNum > endBlock)
@@ -272,7 +267,17 @@ map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
          //if some of the txins AND some of the txouts are ours, this could be an STS
          //pull the txn and compare the txin and txout counts
 
-         uint32_t nTxOutInTx = db->getStxoCountForTx(txioVec.first.getSliceRef(0, 6));
+         uint32_t nTxOutInTx = UINT32_MAX;
+         if (!txioVec.first.startsWith(DBUtils::ZeroConfHeader_))
+         {
+            nTxOutInTx = db->getStxoCountForTx(txioVec.first.getSliceRef(0, 6));
+         }
+         else
+         {
+            auto ptx = zc->getTxByKey(txioVec.first);
+            nTxOutInTx = ptx->outputs_.size();
+         }
+
          if (nTxOutInTx == nTxOutAreOurs)
          {
             value = valIn;
@@ -323,17 +328,15 @@ map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
          }
          catch (exception&)
          {
-            auto&& zctx = db->beginTransaction(ZERO_CONF, LMDB::ReadOnly);
-
-            StoredTx stx;
-            if (!db->getStoredZcTx(stx, txioVec.first))
+            auto ptx = zc->getTxByKey(txioVec.first);
+            if (ptx == nullptr)
             {
                LOGWARN << "failed to get tx for ledger parsing";
             }
             else
             {
-               for (auto& txout : stx.stxoMap_)
-                  scrAddrSet.insert(txout.second.getScrAddress());
+               for (auto& txout : ptx->outputs_)
+                  scrAddrSet.insert(txout.scrAddr_);
             }
          }
       }

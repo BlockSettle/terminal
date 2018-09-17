@@ -26,6 +26,7 @@ using namespace std;
 #include "util.h"
 #include "bdmenums.h"
 #include "BtcWallet.h"
+#include "ZeroConf.h"
 #include "BDVCodec.h"
 
 typedef enum
@@ -74,10 +75,6 @@ public:
    void scanWallets(shared_ptr<BDV_Notification>);
    bool hasWallet(const BinaryData& ID) const;
 
-   const shared_ptr<map<BinaryData, shared_ptr<map<BinaryData, TxIOPair>>>>
-      getFullZeroConfTxIOMap() const
-   { return zeroConfCont_->getFullTxioMap(); }
-
    Tx                getTxByHash(BinaryData const & txHash) const;
    TxOut             getPrevTxOut(TxIn & txin) const;
    Tx                getPrevTx(TxIn & txin) const;
@@ -93,6 +90,7 @@ public:
    LMDBBlockDatabase* getDB(void) const;
    const Blockchain& blockchain() const  { return *bc_; }
    Blockchain& blockchain() { return *bc_; }
+   ZeroConfContainer* zcContainer() { return zc_; }
    uint32_t getTopBlockHeight(void) const;
    const shared_ptr<BlockHeader> getTopBlockHeader(void) const
    { return bc_->top(); }
@@ -130,7 +128,7 @@ public:
       if (bdmPtr_ == nullptr)
          return false;
       return bdmPtr_->isRunning(); 
-   }
+   } 
 
    void blockUntilBDMisReady(void) const
    {
@@ -142,11 +140,11 @@ public:
    bool isTxOutSpentByZC(const BinaryData& dbKey) const
    { return zeroConfCont_->isTxOutSpentByZC(dbKey); }
 
-   map<BinaryData, TxIOPair> getUnspentZCForScrAddr(
+   map<BinaryData, shared_ptr<TxIOPair>> getUnspentZCForScrAddr(
       const BinaryData& scrAddr) const
    { return zeroConfCont_->getUnspentZCforScrAddr(scrAddr); }
 
-   map<BinaryData, TxIOPair> getRBFTxIOsforScrAddr(
+   map<BinaryData, shared_ptr<TxIOPair>> getRBFTxIOsforScrAddr(
       const BinaryData& scrAddr) const
    {
       return zeroConfCont_->getRBFTxIOsforScrAddr(scrAddr);
@@ -156,9 +154,6 @@ public:
    {
       return zeroConfCont_->getZcTxOutsForKey(keys);
    }
-
-   const set<BinaryData>& getSpentSAforZCKey(const BinaryData& zcKey) const
-   { return zeroConfCont_->getSpentSAforZCKey(zcKey); }
 
    ScrAddrFilter* getSAF(void) { return saf_; }
    const BlockDataManagerConfig& config() const { return bdmPtr_->config(); }
@@ -208,6 +203,7 @@ protected:
    BlockDataManager* bdmPtr_ = nullptr;
    LMDBBlockDatabase*        db_;
    shared_ptr<Blockchain>    bc_;
+   ZeroConfContainer*        zc_;
    ScrAddrFilter*            saf_;
 
    //Wanna keep the BtcWallet non copyable so the only existing object for
