@@ -1,6 +1,6 @@
 0.10.7
 Bug Fixes:
-   -
+   - fix crash on initial CC validation
 Improvements:
    - subscribe to new MD server without login
    - minor UI improvements and fixes
