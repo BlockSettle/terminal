@@ -1080,13 +1080,6 @@ public:
    // Sometimes we already know where the Tx is, but we don't know its hash
    BinaryData getTxHashForLdbKey(BinaryDataRef ldbKey6B) const;
 
-   BinaryData getTxHashForHeightAndIndex(uint32_t height,
-      uint16_t txIndex);
-
-   BinaryData getTxHashForHeightAndIndex(uint32_t height,
-      uint8_t  dup,
-      uint16_t txIndex);
-
    ////////////////////////////////////////////////////////////////////////////
    bool markBlockHeaderValid(BinaryDataRef headHash);
    bool markBlockHeaderValid(uint32_t height, uint8_t dup);
@@ -1190,13 +1183,8 @@ private:
    // just a 25-byte script.  But this generically captures all types
    // of addresses including pubkey-only, P2SH, 
    map<BinaryData, StoredScriptHistory>   registeredSSHs_;
-
-   const BinaryData ZCprefix_ = BinaryData(2);
-
    string blkFolder_;
-
    const shared_ptr<Blockchain> blockchainPtr_;
-
    const static set<DB_SELECT> supernodeDBs_;
 };
 

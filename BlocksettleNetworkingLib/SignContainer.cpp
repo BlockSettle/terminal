@@ -28,12 +28,20 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    switch (static_cast<SignContainer::OpMode>(runMode))
    {
    case SignContainer::OpMode::Local:
+      if (connectionManager == nullptr) {
+         logger->error("[CreateSigner] need connection manager to create local signer");
+         return nullptr;
+      }
       return std::make_shared<LocalSigner>(logger, appSettings->GetHomeDir()
          , appSettings->get<NetworkType>(ApplicationSettings::netType), port
          , connectionManager, pwHash
          , appSettings->get<double>(ApplicationSettings::autoSignSpendLimit));
 
    case SignContainer::OpMode::Remote:
+      if (connectionManager == nullptr) {
+         logger->error("[CreateSigner] need connection manager to create remote signer");
+         return nullptr;
+      }
       return std::make_shared<RemoteSigner>(logger
          , appSettings->get<QString>(ApplicationSettings::signerHost), port, connectionManager, pwHash);
 

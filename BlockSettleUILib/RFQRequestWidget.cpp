@@ -25,10 +25,6 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    ui_->setupUi(this);
 
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
-
-   connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
-   connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
-   connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
 }
 
 RFQRequestWidget::~RFQRequestWidget() = default;
@@ -126,7 +122,28 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });
 
-   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQTicket, &RFQTicketXBT::disablePanel);
+   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
+   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
+
+   ui_->pageRFQTicket->disablePanel();
+}
+
+void RFQRequestWidget::onConnectedToCeler()
+{
+   connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
+   connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
+   connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
+
+   ui_->pageRFQTicket->enablePanel();
+}
+
+void RFQRequestWidget::onDisconnectedFromCeler()
+{
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
+
+   ui_->pageRFQTicket->disablePanel();
 }
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)

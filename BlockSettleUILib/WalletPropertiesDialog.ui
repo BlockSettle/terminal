@@ -103,6 +103,9 @@
            <property name="rootIsDecorated">
             <bool>true</bool>
            </property>
+           <attribute name="headerStretchLastSection">
+            <bool>true</bool>
+           </attribute>
           </widget>
          </item>
         </layout>

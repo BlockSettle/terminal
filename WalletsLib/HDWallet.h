@@ -116,7 +116,7 @@ namespace bs {
       class DummyWallet : public bs::hd::Wallet    // Just a container for old-style wallets
       {
       public:
-         explicit DummyWallet() : bs::hd::Wallet(tr("Armory Wallets").toStdString(), "") {}
+         DummyWallet(NetworkType netType) : hd::Wallet(tr("Armory Wallets").toStdString(), "", wallet::Seed(netType)) {}
 
          size_t getNumLeaves() const override { return leaves_.size(); }
          void add(const std::shared_ptr<bs::Wallet> wallet) { leaves_[wallet->GetWalletId()] = wallet; }

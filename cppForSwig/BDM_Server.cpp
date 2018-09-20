@@ -1272,7 +1272,7 @@ void BDV_Server_Object::populateWallets(map<string, walletRegStruct>& wltMap)
             throw runtime_error("address missing from saf");
 
          auto addrObj = make_shared<ScrAddrObj>(
-            db_, &blockchain(), iter->first);
+            db_, &blockchain(), zeroConfCont_.get(), iter->first);
          newAddrMap.insert(move(make_pair(iter->first, addrObj)));
       }
 

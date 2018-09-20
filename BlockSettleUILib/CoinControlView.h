@@ -8,6 +8,7 @@
 
 
 class CoinControlModel;
+class CCHeader;
 
 
 //
@@ -24,6 +25,7 @@ public:
    ~CoinControlView() noexcept override = default;
 
    void setCoinsModel(CoinControlModel *model);
+   void setCCHeader(CCHeader *header);
 
 protected:
    void resizeEvent(QResizeEvent *e) override;
@@ -45,6 +47,7 @@ private slots:
 private:
    std::map<QPersistentModelIndex, int> visible_;
    CoinControlModel *model_;
+   CCHeader *header_;
    mutable int currentPainted_;
 }; // class CoinControlView
 

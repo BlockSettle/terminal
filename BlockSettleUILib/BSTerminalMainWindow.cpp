@@ -810,8 +810,7 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
             , this);
          if (createSettlReq.exec() == QDialog::Accepted) {
             const auto title = tr("Settlement wallet");
-            if (walletsManager_->CreateSettlementWallet(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
-               , applicationSettings_->GetHomeDir())) {
+            if (walletsManager_->CreateSettlementWallet(applicationSettings_->GetHomeDir())) {
                MessageBoxSuccess(title, tr("Settlement wallet successfully created")).exec();
             } else {
                showError(title, tr("Failed to create"));
