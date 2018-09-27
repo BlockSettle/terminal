@@ -532,7 +532,7 @@ bs::Address RFQTicketXBT::recvAddress() const
    }
 
    if (index == 0) {
-      const auto &addr = recvWallet_->GetNewExtAddress();
+      const auto &addr = recvWallet_->GetNewIntAddress();
       if (transactionData_) {
          transactionData_->createAddress(addr, recvWallet_);
       }
