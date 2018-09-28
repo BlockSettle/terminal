@@ -11,7 +11,7 @@ class LibBTC(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self.mpir = MPIRSettings(settings)
-        self._version = '4caf71291ed1e7533c0162c4ed658d2aa6c72ea5'
+        self._version = '0d4e140f15554757d8e77ffa3d2ccc0d49c7ad2d'
         self._package_name = 'libbtc'
 
         self._package_url = 'https://github.com/sergey-chernikov/' + self._package_name + '/archive/%s.zip' % self._version

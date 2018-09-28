@@ -14,7 +14,7 @@ class LibChaCha20Poly1305Settings(Configurator):
         self._version = '1132bf31c48e214adb296e3de1f96497bc15a1c0'
         self._package_name = 'chacha20poly1305'
 
-        self._package_url = 'https://github.com/droark/chacha20poly1305/archive/1132bf31c48e214adb296e3de1f96497bc15a1c0.zip'
+        self._package_url = 'https://github.com/droark/chacha20poly1305/archive/' + self._version + '.zip'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
@@ -51,7 +51,7 @@ class LibChaCha20Poly1305Settings(Configurator):
                    '/build',
                    self.get_win_build_configuration(),
                    '/project',
-                   self._package_name]
+                   'lib' + self._package_name]
 
         print(' '.join(command))
 
