@@ -36,12 +36,12 @@ public:
    void deactivate() override { stopTimer(); }
 
    std::string id() const override { return quoteReqId_; }
-   bs::network::Asset::Type assetType() const { return order_.assetType; }
+   bs::network::Asset::Type assetType() const override { return order_.assetType; }
    std::string security() const override { return order_.security; }
    std::string product() const override { return order_.product; }
    bs::network::Side::Type side() const override { return order_.side; }
    double quantity() const override { return order_.quantity; }
-   double price() const { return order_.price; }
+   double price() const override { return order_.price; }
    double amount() const override { return quantity(); }
 
    bool foundRecipAddr() const { return foundRecipAddr_; }

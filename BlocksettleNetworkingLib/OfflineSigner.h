@@ -72,7 +72,7 @@ public:
    RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass = {}) override { return 0; }
 
-   bool isReady() const { return true; }
+   bool isReady() const override { return true; }
 
 private:
    const QString  targetDir_;
