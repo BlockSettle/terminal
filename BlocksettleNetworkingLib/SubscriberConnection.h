@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <thread>
+#include <functional>
 
 class SubscriberConnectionListener
 {
@@ -23,6 +24,35 @@ public:
    virtual void OnDisconnected() = 0;
 };
 
+class SubscriberConnectionListenerCB : public SubscriberConnectionListener
+{
+public:
+   using connectedCB = std::function<void()>;
+   using disconnectedCB = std::function<void()>;
+   using dataReceivedCB = std::function<void(const std::string& data)>;
+
+public:
+   SubscriberConnectionListenerCB(const dataReceivedCB& onDataReceived
+      , const connectedCB& onConnected
+      , const disconnectedCB& onDisconnected);
+   ~SubscriberConnectionListenerCB() noexcept override = default;
+
+   SubscriberConnectionListenerCB(const SubscriberConnectionListenerCB&) = delete;
+   SubscriberConnectionListenerCB& operator = (const SubscriberConnectionListenerCB&) = delete;
+
+   SubscriberConnectionListenerCB(SubscriberConnectionListenerCB&&) = delete;
+   SubscriberConnectionListenerCB& operator = (SubscriberConnectionListenerCB&&) = delete;
+
+   void OnDataReceived(const std::string& data) override;
+   void OnConnected() override;
+   void OnDisconnected() override;
+
+private:
+   dataReceivedCB onDataReceived_;
+   connectedCB    onConnected_;
+   disconnectedCB onDisconnected_;
+};
+
 class SubscriberConnection
 {
 public:
@@ -38,9 +68,9 @@ public:
 
    bool ConnectToPublisher(const std::string& host, const std::string& port, SubscriberConnectionListener* listener);
 
-private:
    void stopListen();
 
+private:
    void listenFunction();
 
    enum SocketIndex {

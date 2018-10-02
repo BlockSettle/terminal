@@ -59,7 +59,7 @@ std::string ZmqContext::GenerateConnectionName(const std::string& host, const st
 ZmqContext::sock_ptr ZmqContext::CreatePublishSocket()
 {
    FastLock lock(lockerFlag_);
-   return { zmq_socket(context_.get(), ZMQ_PUB), zmq_close };
+   return { zmq_socket(context_.get(), ZMQ_XPUB), zmq_close };
 }
 
 ZmqContext::sock_ptr ZmqContext::CreateSubscribeSocket()
