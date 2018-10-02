@@ -27,6 +27,7 @@ public:
    }
 
    T getValue() const {
+      assert(isValid_);
       return value_;
    }
 
