@@ -606,6 +606,16 @@ void BSTerminalMainWindow::onSend()
 
 void BSTerminalMainWindow::setupMenu()
 {
+   // menu role erquired for OSX only, to place it to first menu item
+   action_login_->setMenuRole(QAction::ApplicationSpecificRole);
+   action_logout_->setMenuRole(QAction::ApplicationSpecificRole);
+
+   ui->menuFile->insertAction(ui->actionSettings, action_login_);
+   ui->menuFile->insertAction(ui->actionSettings, action_logout_);
+
+   ui->menuFile->insertSeparator(action_login_);
+   ui->menuFile->insertSeparator(ui->actionSettings);
+
    connect(ui->action_Create_New_Wallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(false); });
    connect(ui->actionAuthentication_Addresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui->action_One_time_Password, &QAction::triggered, this, &BSTerminalMainWindow::openOTPDialog);
