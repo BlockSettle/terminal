@@ -273,7 +273,7 @@ QMenu::item:first {
   text-align: right;
   background-color: transparent;
   padding: 0 5px 0 0;
-  color: #81888f;
+  color: #247dac;
   height: 25px; }
   *[usernameButton="true"]:hover {
     background-color: transparent;
