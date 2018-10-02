@@ -742,6 +742,10 @@ void BSTerminalMainWindow::onUserLoggedIn()
    walletsManager_->SetUserId(userId);
 
    setLoginButtonText(QString::fromStdString(celerConnection_->userName()));
+
+   if (!mdProvider_->IsConnectionActive()) {
+      mdProvider_->SubscribeToMD();
+   }
 }
 
 void BSTerminalMainWindow::onUserLoggedOut()
