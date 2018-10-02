@@ -4,17 +4,17 @@ import shutil
 import subprocess
 
 from component_configurator import Configurator
-from build_scripts.mpir_settings import MPIRSettings
 
-
-class LibBTC(Configurator):
+# NB: This is a placeholder of sorts. It allows compilation on MacOS and *NIX
+# but there are no inherent files for building Windows. It may be necessary to
+# establish a fork, and maybe submit CMake files upstream.
+class LibChaCha20Poly1305Settings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self.mpir = MPIRSettings(settings)
-        self._version = '2f95296c1ab651a9381b7838dc6d6be3338d7fad'
-        self._package_name = 'libbtc'
+        self._version = '2e8241cbcd607f4ed90e7fc932869daa7239d2a0'
+        self._package_name = 'chacha20poly1305'
 
-        self._package_url = 'https://github.com/sergey-chernikov/' + self._package_name + '/archive/%s.zip' % self._version
+        self._package_url = 'https://github.com/sergey-chernikov/chacha20poly1305/archive/' + self._version + '.zip'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
@@ -22,11 +22,11 @@ class LibBTC(Configurator):
     def get_revision_string(self):
         return self._version
 
-    def get_install_dir(self):
-        return os.path.join(self._project_settings.get_common_build_dir(), 'libbtc')
-
     def get_url(self):
         return self._package_url
+
+    def get_install_dir(self):
+        return os.path.join(self._project_settings.get_common_build_dir(), 'libchacha20poly1305')
 
     def is_archive(self):
         return True
@@ -34,7 +34,6 @@ class LibBTC(Configurator):
     def config(self):
         command = ['cmake',
                    self.get_unpacked_sources_dir(),
-                   '-DGMP_INSTALL_DIR=' + self.mpir.get_install_dir(),
                    '-G',
                    self._project_settings.get_cmake_generator()]
 
@@ -52,7 +51,7 @@ class LibBTC(Configurator):
                    '/build',
                    self.get_win_build_configuration(),
                    '/project',
-                   self._package_name]
+                   'lib' + self._package_name]
 
         print(' '.join(command))
 
@@ -60,7 +59,7 @@ class LibBTC(Configurator):
         return result == 0
 
     def get_solution_file(self):
-        return 'libbtc.sln'
+        return 'libchacha20poly1305.sln'
 
     def get_win_build_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
@@ -68,30 +67,17 @@ class LibBTC(Configurator):
         else:
             return 'Debug'
 
-    def install_headers(self):
-        include_dir = os.path.join(self.get_unpacked_sources_dir(), 'include')
-        secp256k1_include_dir = os.path.join(self.get_unpacked_sources_dir(), 'src', 'secp256k1', 'include')
-        install_include_dir = os.path.join(self.get_install_dir(), 'include')
-
-        self.filter_copy(include_dir, install_include_dir, '.h')
-
-        for name in os.listdir(secp256k1_include_dir):
-            src_name = os.path.join(secp256k1_include_dir, name)
-            dst_name = os.path.join(install_include_dir, name)
-
-            if os.path.isfile(src_name):
-                 shutil.copy(src_name, dst_name)
-
-        return True
-
     def install_win(self):
         lib_dir = os.path.join(self.get_build_dir(), self.get_win_build_configuration())
+        include_dir = self.get_unpacked_sources_dir()
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
         self.filter_copy(lib_dir, install_lib_dir, '.lib')
+        self.filter_copy(include_dir, install_include_dir, '.h')
 
-        return self.install_headers()
+        return True
 
     def make_x(self):
         command = ['make', '-j', str(multiprocessing.cpu_count())]
@@ -101,9 +87,12 @@ class LibBTC(Configurator):
 
     def install_x(self):
         lib_dir = self.get_build_dir()
+        include_dir = self.get_unpacked_sources_dir()
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
         self.filter_copy(lib_dir, install_lib_dir, '.a')
+        self.filter_copy(include_dir, install_include_dir, '.h')
 
-        return self.install_headers()
+        return True
