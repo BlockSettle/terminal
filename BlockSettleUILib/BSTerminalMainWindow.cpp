@@ -22,6 +22,7 @@
 #include "AuthAddressManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
+#include "ButtonMenu.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -191,7 +192,8 @@ void BSTerminalMainWindow::setupToolbar()
    action_send_->setEnabled(false);
    action_logout_->setVisible(false);
 
-   QMenu* userMenu = new QMenu(this);
+   ButtonMenu *userMenu = new ButtonMenu(ui->pushButtonUser);
+
    userMenu->addAction(action_login_);
    userMenu->addAction(action_logout_);
    ui->pushButtonUser->setMenu(userMenu);
