@@ -8,8 +8,11 @@
 
 #include <cassert>
 #include <fstream>
+#ifdef WIN32
+#include <Ws2tcpip.h>
+#else
 #include <arpa/inet.h>
-
+#endif
 #include "hkdf.h"
 #include "btc/ecc.h"
 #include "btc/hash.h"
@@ -1311,9 +1314,15 @@ void startupBIP150CTX(const uint32_t& ipVer, const string& dataDir)
       // If an add fails, just keep going.
       std::array<uint8_t, 16> binaryIP; // Dummy buffer - Ignore
       string rawIP = ipPort.substr(0, ipPort.rfind(':'));
-      if(ipVer == 4 && inet_pton(AF_INET,
+#ifdef WIN32
+      if(ipVer == 4 && InetPton(AF_INET,
                                  rawIP.c_str(),
                                  binaryIP.data()) == 0)
+#else
+      if (ipVer == 4 && inet_pton(AF_INET,
+         rawIP.c_str(),
+         binaryIP.data()) == 0)
+#endif
       {
 /*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
             << "to the known users DB. Armory will skip the entry.";*/
@@ -2042,7 +2051,7 @@ void BIP150StateMachine::resetSM()
 // RET: None
 const int BIP150StateMachine::errorSM(const int& outVal)
 {
-   curState_ = BIP150State::ERROR;
+   curState_ = BIP150State::ERR_STATE;
    std::memset(chosenAuthPeerKey.pubkey, 0, BIP151PUBKEYSIZE);
    chosenAuthPeerKey.compressed = false;
    std::memset(chosenChallengeKey.pubkey, 0, BIP151PUBKEYSIZE);

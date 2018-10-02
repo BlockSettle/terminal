@@ -30,6 +30,7 @@
 #ifndef BIP150_151_H
 #define BIP150_151_H
 
+#include <array>
 #include <cstdint>
 #include <unordered_set>
 #include <unordered_map>
@@ -63,7 +64,7 @@ enum class BIP150State : uint8_t {INACTIVE = 0x00,
                                   CHALLENGE2,
                                   REPLY2,
                                   SUCCESS,
-                                  ERROR};
+                                  ERR_STATE};
 
 // Global functions needed to deal with a global libsecp256k1 context.
 // libbtc doesn't export its libsecp256k1 context (which, by the way, is set up
