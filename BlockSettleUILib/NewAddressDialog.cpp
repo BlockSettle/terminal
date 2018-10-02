@@ -63,8 +63,6 @@ void NewAddressDialog::UpdateSizeToAddress()
    }
 
    ui_->lineEditNewAddress->setMinimumWidth(textWidth);
-   auto leftMargin = ui_->lineEditNewAddress->textMargins().left();
-   auto rightMargin = ui_->lineEditNewAddress->textMargins().right();
 
    layout()->activate();
 }

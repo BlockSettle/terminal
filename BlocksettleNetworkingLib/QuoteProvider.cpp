@@ -402,7 +402,6 @@ bool QuoteProvider::onQuoteAck(const std::string& data)
       return false;
    }
 
-   const auto rejReason = response.quoterejectreason();
    if (debugTraffic_) {
       logger_->debug("[QuoteProvider::onQuoteAck] {}", response.DebugString());
    }

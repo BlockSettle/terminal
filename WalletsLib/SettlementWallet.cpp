@@ -929,7 +929,10 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
    const auto &cbTX = [this, value, cb](Tx tx) {
       bs::PayoutSigner::WhichSignature(tx, value, addressEntry_, logger_, armory_, cb);
    };
-   const auto tx = armory_->getTxByHash(entry.getTxHash(), cbTX);
+
+   if (!armory_->getTxByHash(entry.getTxHash(), cbTX)) {
+      logger_->error("[SettlementMonitor::CheckPayoutSignature] failed to get TX by hash");
+   }
 }
 
 bs::SettlementMonitor::~SettlementMonitor() noexcept

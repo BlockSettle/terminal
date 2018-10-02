@@ -490,7 +490,8 @@ QValidator::State UiUtils::ValidateDoubleString(QString &input, int &pos, const 
    }
 
    bool converted = false;
-   double newValue = QLocale().toDouble(tempCopy, &converted);
+   // don't need result, just check if could convert
+   QLocale().toDouble(tempCopy, &converted);
    if (!converted) {
       return QValidator::Invalid;
    }

@@ -376,7 +376,7 @@ QString StatusBarView::getImportingText() const
    else {
       QStringList walletNames;
       for (const auto &walletId : importingWallets_) {
-         walletNames << QString::fromStdString(walletsManager_->GetHDWalletById(*(importingWallets_.begin()))->getName());
+         walletNames << QString::fromStdString(walletsManager_->GetHDWalletById(walletId)->getName());
       }
       return tr("Rescanning blockchain for wallets %1...").arg(walletNames.join(QLatin1Char(',')));
    }

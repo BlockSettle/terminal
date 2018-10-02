@@ -1346,7 +1346,7 @@ bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
    const auto &cbZCList = [this, cb](std::vector<UTXO> txOutList) {
       cb(filterUTXOs(txOutList));
    };
-   return hd::Leaf::getSpendableZCList(cb, obj);
+   return hd::Leaf::getSpendableZCList(cbZCList, obj);
 }
 
 bool hd::CCLeaf::isBalanceAvailable() const
