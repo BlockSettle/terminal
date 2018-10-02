@@ -11,10 +11,10 @@ from component_configurator import Configurator
 class LibChaCha20Poly1305Settings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '1132bf31c48e214adb296e3de1f96497bc15a1c0'
+        self._version = '2e8241cbcd607f4ed90e7fc932869daa7239d2a0'
         self._package_name = 'chacha20poly1305'
 
-        self._package_url = 'https://github.com/droark/chacha20poly1305/archive/' + self._version + '.zip'
+        self._package_url = 'https://github.com/sergey-chernikov/chacha20poly1305/archive/' + self._version + '.zip'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
