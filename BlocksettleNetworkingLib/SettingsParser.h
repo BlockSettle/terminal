@@ -4,7 +4,6 @@
 #include <memory>
 #include <vector>
 #include <QString>
-#include "NonCopyable.h"
 
 namespace spdlog
 {
@@ -17,7 +16,7 @@ class logger;
 // It will be checked for unknown parameters.
 // --help is generated and processed as exptected.
 // See MobileAppServerSettings for usage example.
-class SettingsParser : public NonCopyable
+class SettingsParser
 {
 public:
    class SettingsParam {
