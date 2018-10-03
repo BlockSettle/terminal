@@ -36,17 +36,17 @@ bool operator == (const EnvSettings& l, const EnvSettings& r)
 static const EnvSettings StagingEnvSettings{
    QLatin1String("104.155.117.179"),
    16001,
-   QLatin1String("193.138.218.44"),
-   19091,
-   QLatin1String("193.138.218.44"),
+   QLatin1String("185.213.153.45"),
+   9091,
+   QLatin1String("185.213.153.46"),
    16005};
 
 static const EnvSettings UATEnvSettings{
-   QLatin1String("193.138.218.39"),
+   QLatin1String("185.213.153.39"),
    16001,
-   QLatin1String("193.138.218.36"),
+   QLatin1String("185.213.153.44"),
    9091,
-   QLatin1String("193.138.218.44"),
+   QLatin1String("185.213.153.46"),
    16005};
 
 NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
