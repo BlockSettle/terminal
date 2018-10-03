@@ -17,10 +17,6 @@
 #include <QFileDialog>
 #include <QDebug>
 
-constexpr int highPriorityBlocksNumber = 0;
-constexpr int normalPriorityBlocksNumber = 3;
-constexpr int lowPriorityBlocksNumber = 6;
-
 CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, QWidget* parent)

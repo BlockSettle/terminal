@@ -723,7 +723,6 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          isBid = !isBid;
       }
       const double quantity = reversed ? qrn.quantity / price : qrn.quantity;
-      bool rcUpdateAddr = false;
 
       if (isBid) {
          const std::string &comment = std::string(bs::network::Side::toString(bs::network::Side::invert(qrn.side)))

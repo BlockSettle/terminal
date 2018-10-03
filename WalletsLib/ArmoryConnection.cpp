@@ -418,7 +418,7 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       logger_->error("[ArmoryConnection::getTXsByHash] invalid state: {}", (int)state_.load());
       return false;
    }
-   unsigned int cbCount = 0;
+
    auto hashSet = new std::set<BinaryData>(hashes);
    auto result = new std::vector<Tx>;
    const auto origHashes = hashes;

@@ -587,7 +587,7 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    if (feeChangeDisabled_) {
       return;
    }
-   
+
    CreateTransactionDialog::onFeeSuggestionsLoaded(feeValues);
 
    AddManualFeeEntries((minFeePerByte_ > 0) ? minFeePerByte_ : feeValues.begin()->second

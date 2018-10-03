@@ -42,7 +42,7 @@ public:
    std::string product() const override { return order_.product; }
    bs::network::Side::Type side() const override { return order_.side; }
    double quantity() const override { return order_.quantity; }
-   double price() const { return order_.price; }
+   double price() const override { return order_.price; }
    double amount() const override { return amount_; }
 
    bool weSell() const { return weSell_; }

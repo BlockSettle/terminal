@@ -18,7 +18,7 @@ public:
    WalletCompleteDialog(const QString& walletName, bool asPrimary, QWidget* parent = nullptr);
    ~WalletCompleteDialog() override;
 
-   int exec();
+   int exec() override;
 
 protected:
    virtual QString infoText() const = 0;

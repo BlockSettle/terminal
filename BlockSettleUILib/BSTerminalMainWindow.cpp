@@ -22,6 +22,7 @@
 #include "AuthAddressManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
+#include "ButtonMenu.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -191,7 +192,8 @@ void BSTerminalMainWindow::setupToolbar()
    action_send_->setEnabled(false);
    action_logout_->setVisible(false);
 
-   QMenu* userMenu = new QMenu(this);
+   ButtonMenu *userMenu = new ButtonMenu(ui->pushButtonUser);
+
    userMenu->addAction(action_login_);
    userMenu->addAction(action_logout_);
    ui->pushButtonUser->setMenu(userMenu);
@@ -604,6 +606,16 @@ void BSTerminalMainWindow::onSend()
 
 void BSTerminalMainWindow::setupMenu()
 {
+   // menu role erquired for OSX only, to place it to first menu item
+   action_login_->setMenuRole(QAction::ApplicationSpecificRole);
+   action_logout_->setMenuRole(QAction::ApplicationSpecificRole);
+
+   ui->menuFile->insertAction(ui->actionSettings, action_login_);
+   ui->menuFile->insertAction(ui->actionSettings, action_logout_);
+
+   ui->menuFile->insertSeparator(action_login_);
+   ui->menuFile->insertSeparator(ui->actionSettings);
+
    connect(ui->action_Create_New_Wallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(false); });
    connect(ui->actionAuthentication_Addresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui->action_One_time_Password, &QAction::triggered, this, &BSTerminalMainWindow::openOTPDialog);
@@ -730,6 +742,10 @@ void BSTerminalMainWindow::onUserLoggedIn()
    walletsManager_->SetUserId(userId);
 
    setLoginButtonText(QString::fromStdString(celerConnection_->userName()));
+
+   if (!mdProvider_->IsConnectionActive()) {
+      mdProvider_->SubscribeToMD();
+   }
 }
 
 void BSTerminalMainWindow::onUserLoggedOut()

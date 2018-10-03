@@ -149,7 +149,7 @@ bool CheckRecipSigner::hasReceiver() const
 uint64_t CheckRecipSigner::estimateFee(float feePerByte) const
 {
    size_t txSize = 0;
-   unsigned int idMap = 0;
+
    if (!hasReceiver()) {
       txSize += 35;
    }
