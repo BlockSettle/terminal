@@ -38,6 +38,8 @@ protected:
 
    bool haveListener() const { return listener_ != nullptr; }
 
+   void detachFromListener();
+
    virtual void onRawDataReceived(const std::string& rawData) = 0;
 
    void notifyOnData(const std::string& data);

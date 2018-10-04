@@ -71,7 +71,7 @@
    <item>
     <widget class="QGroupBox" name="groupBox_2">
      <property name="title">
-      <string>Connection parameters</string>
+      <string>CONNECTION PARAMETERS</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <property name="leftMargin">
@@ -335,7 +335,7 @@
    <item>
     <widget class="QGroupBox" name="groupBoxAutoSign">
      <property name="title">
-      <string>Auto-Sign</string>
+      <string>AUTO-SIGN</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_4">
       <property name="leftMargin">

@@ -325,10 +325,10 @@ vector<UnspentTxOut> BtcWallet::getRBFTxOutList()
 
          for (auto& zcTxio : zcTxioMap)
          {
-            if (zcTxio.second.hasTxOutZC())
-               zcKeys.insert(zcTxio.second.getDBKeyOfOutput());
+            if (zcTxio.second->hasTxOutZC())
+               zcKeys.insert(zcTxio.second->getDBKeyOfOutput());
             else
-               txoutKeys.insert(zcTxio.second.getDBKeyOfOutput());
+               txoutKeys.insert(zcTxio.second->getDBKeyOfOutput());
          }
       }
    }
@@ -471,11 +471,17 @@ void BtcWallet::scanWalletZeroConf(const ScanWalletStruct& scanInfo,
    Scanning ZC will update the scrAddr ledger with the ZC txio. Ledgers require
    a block height, which should be the current top block.
    ***/
-   auto isZcFromWallet = [this](const BinaryDataRef zcKey)->bool
+   auto isZcFromWallet = [&scanInfo, this](const BinaryDataRef zcKey)->bool
    {
-      const auto& spentSAforZCKey = bdvPtr_->getSpentSAforZCKey(zcKey);
+      if (scanInfo.saStruct_.newKeysAndScrAddr_ == nullptr)
+         return false;
 
-      for (const auto& spentSA : spentSAforZCKey)
+      auto iter = scanInfo.saStruct_.newKeysAndScrAddr_->find(zcKey);
+      if (iter == scanInfo.saStruct_.newKeysAndScrAddr_->end() ||
+         iter->second == nullptr)
+         return false;
+
+      for (const auto& spentSA : *iter->second)
       {
          if (this->hasScrAddress(spentSA))
             return true;
@@ -525,7 +531,7 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
       {
          scanWalletZeroConf(scanInfo, updateID);
 
-         if (scanInfo.saStruct_.newZcKeys_.size() != 0)
+         if (scanInfo.saStruct_.newKeysAndScrAddr_ != nullptr)
          {
             //compute zc ledgers
             auto&& txioMap =
@@ -534,9 +540,9 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
             auto&& ledgerMap = updateWalletLedgersFromTxio(
                txioMap, scanInfo.endBlock_ + 1, UINT32_MAX);
 
-            for (auto& zckey : scanInfo.saStruct_.newZcKeys_)
+            for (auto& zckey : *scanInfo.saStruct_.newKeysAndScrAddr_)
             {
-               auto iter = ledgerMap.find(zckey);
+               auto iter = ledgerMap.find(zckey.first);
                if (iter == ledgerMap.end())
                   continue;
 
@@ -702,7 +708,7 @@ map<BinaryData, LedgerEntry> BtcWallet::updateWalletLedgersFromTxio(
    uint32_t startBlock, uint32_t endBlock) const
 {
    return LedgerEntry::computeLedgerMap(txioMap, startBlock, endBlock, 
-      walletID_, bdvPtr_->getDB(), &bdvPtr_->blockchain());
+      walletID_, bdvPtr_->getDB(), &bdvPtr_->blockchain(), bdvPtr_->zcContainer());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

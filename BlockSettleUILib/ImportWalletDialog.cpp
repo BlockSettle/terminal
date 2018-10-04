@@ -9,6 +9,9 @@
 #include "WalletImporter.h"
 #include "WalletPasswordVerifyDialog.h"
 #include "WalletsManager.h"
+#include "UiUtils.h"
+#include "FrejaNotice.h"
+#include "MessageBoxQuestion.h"
 
 #include <spdlog/spdlog.h>
 
@@ -34,7 +37,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    ui_->setupUi(this);
 
-   ui_->lineEditDescription->setValidator(new WalletDescriptionValidator(this));
+   ui_->lineEditDescription->setValidator(new UiUtils::WalletDescriptionValidator(this));
    
    ui_->labelWalletId->setText(QString::fromStdString(walletId_));
 
@@ -70,6 +73,13 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &ImportWalletDialog::onImportAccepted);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::onImportAccepted);
 
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyTypeChanged,
+      this, &ImportWalletDialog::onKeyTypeChanged);
+   connect(ui_->lineEditWalletName, &QLineEdit::textChanged,
+      this, &ImportWalletDialog::updateAcceptButtonState);
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged,
+      [this] { updateAcceptButtonState(); });
+
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
@@ -86,6 +96,23 @@ void ImportWalletDialog::onError(const QString &errMsg)
 {
    MessageBoxCritical(tr("Import wallet error"), errMsg).exec();
    reject();
+}
+
+void ImportWalletDialog::updateAcceptButtonState()
+{
+   ui_->pushButtonImport->setEnabled(ui_->widgetCreateKeys->isValid() &&
+      !ui_->lineEditWalletName->text().isEmpty());
+}
+
+void ImportWalletDialog::onKeyTypeChanged(bool password)
+{
+   if (!password && !frejaNoticeWasShown_) {
+      FrejaNotice dlg(this);
+
+      if (dlg.exec() == QDialog::Accepted) {
+         frejaNoticeWasShown_ = true;
+      }
+   }
 }
 
 void ImportWalletDialog::onWalletCreated(const std::string &walletId)
@@ -129,8 +156,24 @@ void ImportWalletDialog::onImportAccepted()
    }
 }
 
+bool abortWalletImportQuestionDialog(QWidget* parent)
+{
+   MessageBoxQuestion messageBox(QObject::tr("Warning"), QObject::tr("ABORT WALLET IMPORT?")
+      , QObject::tr("The Wallet will not be imported if you don't complete the procedure.\n"
+         "Are you sure you want to abort the Wallet Import process?"), parent);
+   messageBox.setConfirmButtonText(QObject::tr("Abort Wallet Import")).setCancelButtonText(QObject::tr("Back"));
+
+   int result = messageBox.exec();
+   return (result == QDialog::Accepted);
+}
+
 void ImportWalletDialog::reject()
 {
+   bool result = abortWalletImportQuestionDialog(this);
+   if (!result) {
+      return;
+   }
+
    ui_->widgetCreateKeys->cancel();
    QDialog::reject();
 }

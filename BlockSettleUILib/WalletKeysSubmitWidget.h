@@ -21,6 +21,8 @@ public:
       HideGroupboxCaption = 0x04,
       FrejaProgressBarFixed = 0x08,
       FrejaIdVisible = 0x10,
+      HideFrejaEmailLabel = 0x20,
+      HideFrejaControlsOnSignClicked = 0x40
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 
@@ -30,7 +32,8 @@ public:
    void setFlags(Flags flags);
    void init(const std::string &walletId, bs::wallet::KeyRank
       , const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys);
+      , const std::vector<SecureBinaryData> &encKeys
+      , const QString &prompt = QString());
    void cancel();
 
    bool isValid() const;
@@ -52,7 +55,7 @@ private slots:
 
 private:
    void addKey(bool password, const std::vector<SecureBinaryData> &encKeys
-      , int encKeyIndex = 0, bool isFixed = false);
+      , int encKeyIndex = 0, bool isFixed = false, const QString &prompt = QString());
 
 private:
    std::unique_ptr<Ui::WalletKeysSubmitWidget> ui_;

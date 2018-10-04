@@ -235,7 +235,8 @@ namespace bs {
       virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
-      virtual void RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
+      virtual std::string RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+         , bool asNew = false);
       void UnregisterWallet();
       virtual void SetArmory(const std::shared_ptr<ArmoryConnection> &);
       virtual void SetUserID(const BinaryData &) {}
@@ -270,6 +271,7 @@ namespace bs {
       virtual size_t GetIntAddressCount() const { return usedAddresses_.size(); }
       virtual size_t GetWalletAddressCount() const { return addrCount_; }
       virtual bs::Address GetNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
+      virtual bs::Address GetNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
       virtual bs::Address GetNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return GetNewExtAddress(aet); }
       virtual bs::Address GetRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default);
       virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
@@ -322,7 +324,6 @@ namespace bs {
 
       virtual AddressEntryType getAddrTypeForAddr(const BinaryData &) = 0;
       virtual std::set<BinaryData> getAddrHashSet() = 0;
-      virtual void stop();
 
    private:
       bool isSegWitScript(const BinaryData &script);
@@ -335,12 +336,12 @@ namespace bs {
       BTCNumericTypes::balance_type unconfirmedBalance_;
       BTCNumericTypes::balance_type totalBalance_;
       bool inited_ = false;
+      std::string    walletRegId_;
       std::shared_ptr<ArmoryConnection>      armory_;
       std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
       mutable std::vector<bs::Address>       usedAddresses_;
       mutable std::set<BinaryData>           addrPrefixedHashes_, addressHashes_;
       mutable QMutex    addrMapsMtx_;
-      QThreadPool       threadPool_;
       size_t            addrCount_ = 0;
 
       mutable std::map<BinaryData, std::vector<uint64_t> >  addressBalanceMap_;

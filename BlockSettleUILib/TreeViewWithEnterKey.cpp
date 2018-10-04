@@ -24,8 +24,11 @@ void TreeViewWithEnterKey::activate()
 {
    setFocus();
 
-   selectionModel()->select(currentIndex(),
-      QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+   auto selModel = selectionModel();
+   if (selModel != nullptr) {
+      selModel->select(currentIndex(),
+         QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+   }
 }
 
 void TreeViewWithEnterKey::keyPressEvent(QKeyEvent *event)
@@ -44,7 +47,10 @@ void TreeViewWithEnterKey::keyPressEvent(QKeyEvent *event)
 void TreeViewWithEnterKey::mouseReleaseEvent(QMouseEvent *event)
 {
    if (!indexAt(event->pos()).isValid()) {
-      selectionModel()->clear();
+      auto selModel = selectionModel();
+      if (selModel != nullptr) {
+         selModel->clear();
+      }
    }
 
    QTreeView::mouseReleaseEvent(event);

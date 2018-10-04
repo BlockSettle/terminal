@@ -236,6 +236,7 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    ui->treeViewTransactions->setSortingEnabled(true);
    ui->treeViewTransactions->setModel(sortFilterModel_);
    ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::RbfFlag));
+   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
 //   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
 }
 

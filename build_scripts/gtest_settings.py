@@ -9,7 +9,7 @@ from component_configurator import Configurator
 class GtestSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '1.8.0'
+        self._version = '1.8.1'
         self._package_name = 'Gtest'
 
         if settings.on_windows():

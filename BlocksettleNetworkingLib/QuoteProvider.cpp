@@ -240,6 +240,7 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
 
    quote.expirationTime = QDateTime::fromMSecsSinceEpoch(response.validuntiltimeutcinmillis());
    quote.timeSkewMs = QDateTime::fromMSecsSinceEpoch(response.quotetimestamputcinmillis()).msecsTo(QDateTime::currentDateTime());
+   quote.celerTimestamp = response.quotetimestamputcinmillis();
 
    logger_->debug("[QuoteProvider::onQuoteResponse] timeSkew = {}", quote.timeSkewMs);
    CurrencyPair cp(quote.security);
@@ -401,7 +402,6 @@ bool QuoteProvider::onQuoteAck(const std::string& data)
       return false;
    }
 
-   const auto rejReason = response.quoterejectreason();
    if (debugTraffic_) {
       logger_->debug("[QuoteProvider::onQuoteAck] {}", response.DebugString());
    }
@@ -723,6 +723,7 @@ bool QuoteProvider::onQuoteReqNotification(const std::string& data)
    qrn.reason = response.reason();
    qrn.account = response.account();
    qrn.expirationTime = QDateTime::fromMSecsSinceEpoch(response.expiretimeinutcinmillis());
+   qrn.celerTimestamp = response.timestampinutcinmillis();
    qrn.timeSkewMs = QDateTime::fromMSecsSinceEpoch(response.timestampinutcinmillis()).msecsTo(QDateTime::currentDateTime());
 
    qrn.side = bs::network::Side::fromCeler(respgrp.side());

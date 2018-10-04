@@ -14,6 +14,7 @@
 #include "Blockchain.h"
 #include "StoredBlockObj.h"
 #include "BDVCodec.h"
+#include "ZeroConf.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -136,7 +137,8 @@ public:
                                 uint32_t startBlock, uint32_t endBlock,
                                 const BinaryDataRef ID,
                                 const LMDBBlockDatabase* db,
-                                const Blockchain* bc);
+                                const Blockchain* bc,
+                                const ZeroConfContainer* zc);
    
    const set<BinaryData>& getScrAddrList(void) const
    { return scrAddrSet_; }
@@ -147,7 +149,6 @@ public:
 
    static LedgerEntry EmptyLedger_;
    static map<BinaryData, LedgerEntry> EmptyLedgerMap_;
-   static BinaryData ZCheader_;
    static BinaryData EmptyID_;
 
 private:

@@ -65,9 +65,9 @@ private:
    void selectUTXOs(vector<UTXO>&, uint64_t fee, float fee_byte, unsigned flags);
 public:
    CoinSelectionInstance(WalletContainer* const walletContainer,
-      const vector<AddressBookEntry>& addrBook);
+      const vector<AddressBookEntry>& addrBook, unsigned topHeight);
    CoinSelectionInstance(SwigClient::Lockbox* const, 
-      unsigned M, unsigned N, uint64_t balance);
+      unsigned M, unsigned N, uint64_t balance, unsigned topHeight);
 
    unsigned addRecipient(const BinaryData&, uint64_t);
    void updateRecipient(unsigned, const BinaryData&, uint64_t);
@@ -336,10 +336,10 @@ public:
 
    int detectHighestUsedIndex(void);
 
-   CoinSelectionInstance getCoinSelectionInstance(void)
+   CoinSelectionInstance getCoinSelectionInstance(unsigned topHeight)
    {
       auto&& addrBookVector = createAddressBook();
-      return CoinSelectionInstance(this, addrBookVector);
+      return CoinSelectionInstance(this, addrBookVector, topHeight);
    }
 };
 

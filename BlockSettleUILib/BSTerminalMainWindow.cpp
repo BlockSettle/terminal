@@ -20,12 +20,14 @@
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
+#include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
+#include "ButtonMenu.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
 #include "CelerAccountInfoDialog.h"
-#include "CelerClient.h"
+#include "CelerMarketDataProvider.h"
 #include "ConfigDialog.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
@@ -51,10 +53,10 @@
 #include "SelectWalletDialog.h"
 #include "SignContainer.h"
 #include "StatusBarView.h"
+#include "TabWithShortcut.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
-#include "TabWithShortcut.h"
 
 #include <spdlog/spdlog.h>
 
@@ -190,7 +192,8 @@ void BSTerminalMainWindow::setupToolbar()
    action_send_->setEnabled(false);
    action_logout_->setVisible(false);
 
-   QMenu* userMenu = new QMenu(this);
+   ButtonMenu *userMenu = new ButtonMenu(ui->pushButtonUser);
+
    userMenu->addAction(action_login_);
    userMenu->addAction(action_logout_);
    ui->pushButtonUser->setMenu(userMenu);
@@ -337,8 +340,12 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   mdProvider_ = std::make_shared<MarketDataProvider>(logMgr_->logger("message"));
-   mdProvider_->ConnectToCelerClient(celerConnection_, true);
+   // mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
+   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
+   mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"));
 }
 
 void BSTerminalMainWindow::InitAssets()
@@ -406,10 +413,12 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       QMetaObject::invokeMethod(this, "InitTransactionsView", Qt::QueuedConnection);
 
       if (walletsManager_->GetWalletsCount() != 0) {
-         QMetaObject::invokeMethod(action_send_, "setEnabled", Q_ARG(bool, true));
+         QMetaObject::invokeMethod(action_send_, "setEnabled", Qt::QueuedConnection,
+            Q_ARG(bool, true));
       }
       else {
-         QTimer::singleShot(1234, [this] { createWallet(!walletsManager_->HasPrimaryWallet()); });
+         QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection,
+            Q_ARG(bool, !walletsManager_->HasPrimaryWallet()), Q_ARG(bool, true));
       }
    };
    if (!armory_->getWalletsLedgerDelegate(cbWalletsLD)) {
@@ -597,6 +606,16 @@ void BSTerminalMainWindow::onSend()
 
 void BSTerminalMainWindow::setupMenu()
 {
+   // menu role erquired for OSX only, to place it to first menu item
+   action_login_->setMenuRole(QAction::ApplicationSpecificRole);
+   action_logout_->setMenuRole(QAction::ApplicationSpecificRole);
+
+   ui->menuFile->insertAction(ui->actionSettings, action_login_);
+   ui->menuFile->insertAction(ui->actionSettings, action_logout_);
+
+   ui->menuFile->insertSeparator(action_login_);
+   ui->menuFile->insertSeparator(ui->actionSettings);
+
    connect(ui->action_Create_New_Wallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(false); });
    connect(ui->actionAuthentication_Addresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui->action_One_time_Password, &QAction::triggered, this, &BSTerminalMainWindow::openOTPDialog);
@@ -723,6 +742,10 @@ void BSTerminalMainWindow::onUserLoggedIn()
    walletsManager_->SetUserId(userId);
 
    setLoginButtonText(QString::fromStdString(celerConnection_->userName()));
+
+   if (!mdProvider_->IsConnectionActive()) {
+      mdProvider_->SubscribeToMD();
+   }
 }
 
 void BSTerminalMainWindow::onUserLoggedOut()
@@ -773,13 +796,19 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
 
 void BSTerminalMainWindow::createAuthWallet()
 {
-   if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
-      MessageBoxQuestion createAuthReq(tr("Authentication Wallet")
-         , tr("Create Authentication Wallet")
-         , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
-         , this);
-      if (createAuthReq.exec() == QDialog::Accepted) {
-         authManager_->CreateAuthWallet();
+   if (celerConnection_->tradingAllowed()) {
+      if (!walletsManager_->HasPrimaryWallet() && !createWallet(true)) {
+         return;
+      }
+
+      if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
+         MessageBoxQuestion createAuthReq(tr("Authentication Wallet")
+            , tr("Create Authentication Wallet")
+            , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
+            , this);
+         if (createAuthReq.exec() == QDialog::Accepted) {
+            authManager_->CreateAuthWallet();
+         }
       }
    }
 }
@@ -797,8 +826,7 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
             , this);
          if (createSettlReq.exec() == QDialog::Accepted) {
             const auto title = tr("Settlement wallet");
-            if (walletsManager_->CreateSettlementWallet(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
-               , applicationSettings_->GetHomeDir())) {
+            if (walletsManager_->CreateSettlementWallet(applicationSettings_->GetHomeDir())) {
                MessageBoxSuccess(title, tr("Settlement wallet successfully created")).exec();
             } else {
                showError(title, tr("Failed to create"));
@@ -919,6 +947,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
    , bs::wallet::KeyRank keyRank)
 {
    SignContainer::PasswordType password;
+   bool cancelledByUser = true;
 
    if (walletId.empty()) {
       logMgr_->logger("ui")->error("[onPasswordRequested] can\'t ask password for empty wallet id");
@@ -937,9 +966,10 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
          EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
-            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), this);
+            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), QString(), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
+            cancelledByUser = false;
          }
          else {
             logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
@@ -950,7 +980,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       }
    }
 
-   signContainer_->SendPassword(walletId, password);
+   signContainer_->SendPassword(walletId, password, cancelledByUser);
 }
 
 void BSTerminalMainWindow::OnOTPSyncCompleted()

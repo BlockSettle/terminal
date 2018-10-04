@@ -53,8 +53,11 @@ public:
    RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) override
    { return 0; }
 
-   void SendPassword(const std::string &walletId, const PasswordType &password) override
+   void SendPassword(const std::string &walletId, const PasswordType &password, bool) override
    {}
+
+   RequestId CancelSignTx(const BinaryData &txId) override
+   { return 0; }
 
    RequestId SetUserId(const BinaryData &) override { return 0; }
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override { return 0; }
@@ -69,7 +72,7 @@ public:
    RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass = {}) override { return 0; }
 
-   bool isReady() const { return true; }
+   bool isReady() const override { return true; }
 
 private:
    const QString  targetDir_;

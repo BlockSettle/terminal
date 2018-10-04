@@ -77,14 +77,12 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    connect(walletsModel, &WalletsViewModel::modelReset,
       this, &RootWalletPropertiesDialog::onModelReset);
 
-   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->treeViewWallets->header()->setStretchLastSection(true);
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnDescription));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnState));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnSpendableBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnUnconfirmedBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnNbAddresses));
-   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnEmpty));
+   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RootWalletPropertiesDialog::onWalletSelected);
 

@@ -137,6 +137,7 @@ public:
       RbfFlag,
 //      MissedBlocks,
       Comment,
+      TxHash,
       last
    };
 

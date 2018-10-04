@@ -127,6 +127,11 @@ public:
       invalidate();
    }
 
+public slots:
+   void onUpdated() {
+      invalidate();
+   }
+
 private:
    Filter filterMode_ = NoFilter;
 };
@@ -231,12 +236,14 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    addressSortFilterModel_ = new AddressSortFilterModel(this);
    addressSortFilterModel_->setSourceModel(addressModel_);
    addressSortFilterModel_->setSortRole(AddressListModel::SortRole);
+   connect(addressModel_, &AddressListModel::updated, addressSortFilterModel_, &AddressSortFilterModel::onUpdated);
 
    ui->treeViewAddresses->setUniformRowHeights(true);
    ui->treeViewAddresses->setModel(addressSortFilterModel_);
    ui->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
    ui->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 
    updateAddresses();
 }
@@ -354,6 +361,7 @@ void WalletsWidget::onWalletContextMenu(const QPoint &p)
 void WalletsWidget::updateAddresses()
 {
    addressModel_->setWallets(GetSelectedWallets());
+   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 }
 
 void WalletsWidget::onNewWallet()
@@ -624,7 +632,8 @@ void WalletsWidget::onRevokeSettlement()
    settlWallet->GetInputFor(ae, cbSettlInput, false);
 }
 
-void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
+   std::string error, bool cancelledByUser)
 {
    if (!revokeReqId_ || (revokeReqId_ != id)) {
       return;

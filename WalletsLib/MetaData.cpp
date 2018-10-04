@@ -357,20 +357,11 @@ bs::Wallet::Wallet()
    : QObject(nullptr), wallet::MetaData()
    , spendableBalance_(0), unconfirmedBalance_(0), totalBalance_(0)
    , updateAddrBalance_(false), updateAddrTxN_(false)
-{
-   threadPool_.setMaxThreadCount(1);
-}
+{}
 
 bs::Wallet::~Wallet()
 {
-   stop();
    UtxoReservation::delAdapter(utxoAdapter_);
-}
-
-void bs::Wallet::stop()
-{
-   threadPool_.clear();
-   threadPool_.waitForDone();
 }
 
 std::string bs::Wallet::GetAddressComment(const bs::Address &address) const
@@ -835,19 +826,9 @@ void bs::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
    if (!armory_ && (armory != nullptr)) {
       armory_ = armory;
    }
-   std::thread([this] {    // Temporary workaround for websockets connection keep-alive
-      heartbeatRunning_ = true;
-      while (heartbeatRunning_) {
-         std::this_thread::sleep_for(std::chrono::seconds(230));
-         if (!heartbeatRunning_) {
-            return;
-         }
-         UpdateBalanceFromDB();
-      }
-   }).detach();
 }
 
-void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::string bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    SetArmory(armory);
 
@@ -865,8 +846,10 @@ void bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory,
       const auto &cbRegister = [this] {
          emit walletReady(QString::fromStdString(GetWalletId()));
       };
-      armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
+      walletRegId_ = armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
+      return walletRegId_;
    }
+   return {};
 }
 
 void bs::Wallet::UnregisterWallet()
@@ -1047,7 +1030,8 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal, 
       }
 
       const auto coinSelection = std::make_shared<CoinSelection>([utxos](uint64_t) { return utxos; }
-         , std::vector<AddressBookEntry>{}, GetSpendableBalance() * BTCNumericTypes::BalanceDivider);
+         , std::vector<AddressBookEntry>{}, GetSpendableBalance() * BTCNumericTypes::BalanceDivider
+         , armory_ ? armory_->topBlock() : UINT32_MAX);
 
       try {
          const auto selection = coinSelection->getUtxoSelectionForRecipients(payment, utxos);

@@ -205,9 +205,8 @@ bool WebSocketMessagePartial::parsePacket(
       packets_.insert(make_pair(id, packetRef));
       pos_ = remaining;
 
-      if (brr.getSizeRemaining() > len_) {
+      if (brr.getSizeRemaining() > len_)
          LOGWARN << "payload has left over data";
-      }
 
       return true;
    }
@@ -215,14 +214,12 @@ bool WebSocketMessagePartial::parsePacket(
    {
       //fill message
       auto remaining = len_ - pos_;
-      if (remaining == 0) {
+      if (remaining == 0)
          return false;
-      }
 
       auto iter = packets_.rbegin();
-      if (iter->first + 1 != id) {
+      if (iter->first + 1 != id)
          return false;
-      }
 
       auto read_size = min(remaining, dataRef.getSize());
       auto&& slice = dataRef.getSliceRef(0, read_size);

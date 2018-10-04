@@ -145,10 +145,8 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
 
    connect(ui_->treeViewUTXO, &QTreeView::clicked, this, &CoinControlWidget::rowClicked);
 
-   ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnName);
-   ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnBalance);
-   ui_->treeViewUTXO->resizeColumnToContents(CoinControlModel::ColumnUTXOCount);
    ui_->treeViewUTXO->setCoinsModel(coinControlModel_);
+   ui_->treeViewUTXO->setCCHeader(ccHeader);
 
    ui_->checkBoxUseAllSelected->setChecked(selectedInputs->UseAutoSel());
    onAutoSelClicked(selectedInputs->UseAutoSel() ? Qt::Checked : Qt::Unchecked);

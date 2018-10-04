@@ -1,6 +1,7 @@
 
 #include "CoinControlView.h"
 #include "CoinControlModel.h"
+#include "CoinControlWidget.h"
 
 #include <QHeaderView>
 #include <QStyle>
@@ -14,6 +15,7 @@
 CoinControlView::CoinControlView(QWidget *parent)
    : QTreeView(parent)
    , model_(nullptr)
+   , header_(nullptr)
    , currentPainted_(0)
 {
    connect(this, &CoinControlView::expanded, this, &CoinControlView::onExpanded);
@@ -28,17 +30,35 @@ void CoinControlView::setCoinsModel(CoinControlModel *model)
    model_ = model;
 
    calcCountOfVisibleRows();
+
+   resizeColumnToContents(CoinControlModel::ColumnName);
+   resizeColumnToContents(CoinControlModel::ColumnBalance);
+   resizeColumnToContents(CoinControlModel::ColumnUTXOCount);
+}
+
+void CoinControlView::setCCHeader(CCHeader *header)
+{
+   header_ = header;
 }
 
 void CoinControlView::resizeEvent(QResizeEvent *e)
 {
    QTreeView::resizeEvent(e);
 
-   const int nameBalanceUtxoWidth = columnWidth(CoinControlModel::ColumnName) +
-      columnWidth(CoinControlModel::ColumnBalance) + columnWidth(CoinControlModel::ColumnUTXOCount);
-   const int commentWidth = width() - nameBalanceUtxoWidth - CoinControlModel::ColumnsCount + 1;
+   const int nameBalanceUtxoWidth = header()->sectionSize(CoinControlModel::ColumnName) +
+      header()->sectionSize(CoinControlModel::ColumnBalance) +
+      header()->sectionSize(CoinControlModel::ColumnUTXOCount) +
+      (header_ ? header_->checkboxSizeHint().width() + 4 : 0);
+   const int commentWidth = header()->width() - nameBalanceUtxoWidth -
+      CoinControlModel::ColumnsCount + 1;
 
    header()->resizeSection(CoinControlModel::ColumnComment, commentWidth);
+
+   if (header()->length() < header()->width()) {
+      header()->resizeSection(CoinControlModel::ColumnBalance,
+         header()->sectionSize(CoinControlModel::ColumnBalance) +
+         header()->width() - header()->length());
+   }
 }
 
 void CoinControlView::drawRow(QPainter *painter, const QStyleOptionViewItem &option,

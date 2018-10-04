@@ -20,11 +20,13 @@ const QColor kFailColor = Qt::red;
 }
 
 
-WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent)
+WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password,
+   const QString &prompt, QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::WalletKeyWidget())
    , walletId_(walletId), index_(index), password_(password)
    , frejaSign_(spdlog::get(""), 1)
+   , prompt_(prompt)
 {
    ui_->setupUi(this);
    ui_->radioButtonPassword->setChecked(password);
@@ -69,9 +71,9 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelFrejeId->setVisible(!password_ && showFrejaId_);
    ui_->widgetFrejaLayout->setVisible(!password_);
    
-   ui_->labelFrejaInfo->setVisible(!password_ && !hideFrejaCombobox_);
    ui_->pushButtonFreja->setVisible(!hideFrejaConnect_);
    ui_->comboBoxFrejaId->setVisible(!hideFrejaCombobox_);
+   ui_->labelFrejaInfo->setVisible(!hideFrejaEmailLabel_ && !password_ && !hideFrejaCombobox_);
 }
 
 void WalletKeyWidget::onPasswordChanged()
@@ -107,9 +109,14 @@ void WalletKeyWidget::onFrejaSignClicked()
    ui_->progressBar->show();
    timer_.start();
    frejaRunning_ = true;
-   frejaSign_.start(ui_->comboBoxFrejaId->currentText(), tr("Activate Freja eID signing"), walletId_);
+   frejaSign_.start(ui_->comboBoxFrejaId->currentText(),
+      prompt_.isEmpty() ? tr("Activate Freja eID signing") : prompt_, walletId_);
    ui_->pushButtonFreja->setText(tr("Cancel Freja request"));
    ui_->comboBoxFrejaId->setEnabled(false);
+
+   if (hideFrejaControlsOnSignClicked_) {
+      ui_->widgetFrejaLayout->hide();
+   }
 }
 
 void WalletKeyWidget::onFrejaSucceeded(SecureBinaryData password)
@@ -117,6 +124,7 @@ void WalletKeyWidget::onFrejaSucceeded(SecureBinaryData password)
    stop();
    ui_->pushButtonFreja->setText(tr("Successfully signed"));
    ui_->pushButtonFreja->setEnabled(false);
+   ui_->widgetFrejaLayout->show();
 
    QPropertyAnimation *a = startFrejaAnimation(true);
    connect(a, &QPropertyAnimation::finished, [this, password]() {
@@ -130,6 +138,7 @@ void WalletKeyWidget::onFrejaFailed(const QString &text)
    stop();
    ui_->pushButtonFreja->setEnabled(true);
    ui_->pushButtonFreja->setText(tr("Freja failed: %1 - retry").arg(text));
+   ui_->widgetFrejaLayout->show();
    
    QPropertyAnimation *a = startFrejaAnimation(false);
    connect(a, &QPropertyAnimation::finished, [this]() {
@@ -163,6 +172,7 @@ void WalletKeyWidget::stop()
       ui_->progressBar->hide();
    }
    ui_->comboBoxFrejaId->setEnabled(true);
+   ui_->widgetFrejaLayout->show();
 }
 
 void WalletKeyWidget::cancel()
@@ -242,6 +252,17 @@ void WalletKeyWidget::setShowFrejaId(bool value)
 {
    showFrejaId_ = value;
    onTypeChanged();
+}
+
+void WalletKeyWidget::setHideFrejaEmailLabel(bool value)
+{
+   hideFrejaEmailLabel_ = value;
+   onTypeChanged();
+}
+
+void WalletKeyWidget::setHideFrejaControlsOnSignClicked(bool value)
+{
+   hideFrejaControlsOnSignClicked_ = value;
 }
 
 void WalletKeyWidget::setCreateUsername(const QString& username)

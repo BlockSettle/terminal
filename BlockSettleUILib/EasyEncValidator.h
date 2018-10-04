@@ -63,7 +63,6 @@ private:
    const size_t   numWords_;
    const bool     hasChecksum_;
    std::shared_ptr<EasyCoDec> codec_;
-   mutable int    prevPos_ = 0;
    mutable QString statusMsg_;
    QString name_ = QString::fromStdString("Line");
 

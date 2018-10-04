@@ -63,19 +63,21 @@ message AdminCommandStartTrading
 
 enum CustomerUpdateType
 {
-   AppReadyStatus = 1;
-   CelerStatusUpdateType = 2;
-   ArmoryStatusUpdateType = 3;
-   BalanceUpdateType = 4;
-   RFQSentUpdateType = 5;
-   RFQReceivedUpdateType = 6;
-   RFQCancelledUpdateType = 7;
-   TradingStoppedUpdateType = 8;
-   XBTBalanceUpdateType = 9;
-   ErrorNotificationType = 10;
-   XBTAddressType = 11;
-   OTPUpdateAddressType = 12;
-   AuthAddressStateType = 13;
+   AppReadyStatus             = 1;
+   CelerStatusUpdateType      = 2;
+   ArmoryStatusUpdateType     = 3;
+   BalanceUpdateType          = 4;
+   RFQSentUpdateType          = 5;
+   RFQReceivedUpdateType      = 6;
+   RFQCancelledUpdateType     = 7;
+   ReceivedQuoteUpdateType    = 8;
+   AcceptedQuoteUpdateType    = 9;
+   TradingStoppedUpdateType   = 10;
+   XBTBalanceUpdateType       = 11;
+   ErrorNotificationType      = 12;
+   XBTAddressType             = 13;
+   OTPUpdateAddressType       = 14;
+   AuthAddressStateType       = 15;
 }
 
 enum RFQProductGroup
@@ -96,7 +98,8 @@ message CustomerUpdateHeader
 message CelerStatusUpdate
 {
    required bool     connected = 1;
-   optional uint64   login_time = 2;
+   optional uint64   login_timestamp = 2;
+   optional uint64   login_time = 3;
 }
 
 message ArmoryStatusUpdate
@@ -122,6 +125,7 @@ message RFQReceivedUpdate
    required string            rfq_id = 1;
    required RFQProductGroup   group_type = 2;
    required uint64            timestamp = 3;
+   required uint64            celer_timestamp = 4;
 }
 
 message RFQCancelledUpdate
@@ -129,6 +133,24 @@ message RFQCancelledUpdate
    required string            rfq_id = 1;
    required RFQProductGroup   group_type = 2;
    required uint64            timestamp = 3;
+}
+
+message ReceivedQuoteUpdate
+{
+   required string rfq_id              = 1;
+   required string quote_id            = 2;
+   required bool   tradeable           = 3;
+   required RFQProductGroup group_type = 4;
+   required uint64 timestamp           = 5;
+   required uint64 celer_timestamp     = 6;
+}
+
+message AcceptedQuoteUpdate
+{
+   required string rfq_id     = 1;
+   required string quote_id   = 2;
+   required RFQProductGroup group_type = 3;
+   required uint64 timestamp  = 4;
 }
 
 message XBTBalanceUpdate

@@ -134,22 +134,34 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 
 void AddressListModel::updateWalletData()
 {
+   auto nbTxNs = new int(addressRows_.size());
+   auto nbBalances = new int(addressRows_.size());
    for (size_t i = 0; i < addressRows_.size(); ++i) {
       auto &addrRow = addressRows_[i];
-      const auto &cbTxN = [this, &addrRow, i](uint32_t txn) {
+      const auto &cbTxN = [this, &addrRow, i, nbTxNs](uint32_t txn) {
+         --(*nbTxNs);
          if (i >= addressRows_.size()) {
             return;
          }
          addrRow.transactionCount = txn;
-         emit dataChanged(index(i, ColumnTxCount), index(i, ColumnTxCount));
+         if (*nbTxNs <= 0) {
+            delete nbTxNs;
+            emit dataChanged(index(0, ColumnTxCount), index(addressRows_.size()-1, ColumnTxCount));
+            emit updated();
+         }
       };
 
-      const auto &cbBalance = [this, &addrRow, i](std::vector<uint64_t> balances) {
+      const auto &cbBalance = [this, &addrRow, i, nbBalances](std::vector<uint64_t> balances) {
+         --(*nbBalances);
          if (i >= addressRows_.size()) {
             return;
          }
          addrRow.balance = balances[0];
-         emit dataChanged(index(i, ColumnBalance), index(i, ColumnBalance));
+         if (*nbBalances <= 0) {
+            delete nbBalances;
+            emit dataChanged(index(0, ColumnBalance), index(addressRows_.size() - 1, ColumnBalance));
+            emit updated();
+         }
       };
       addrRow.wallet->getAddrTxN(addrRow.address, cbTxN);
       addrRow.wallet->getAddrBalance(addrRow.address, cbBalance);
