@@ -12,6 +12,7 @@ CustomDialog {
     property TXInfo txInfo
     property string password
     property bool   acceptable: false
+    property bool   cancelledByUser: false
     property FrejaSignWalletObject  frejaSign
     closePolicy: Popup.NoAutoClose
     id: passwordDialog
@@ -31,6 +32,16 @@ CustomDialog {
             frejaSign.error.connect(function(text) {
                 passwordDialog.reject()
             })
+        }
+    }
+
+    Connections {
+        target: qmlAppObj
+
+        onCancelSignTx: {
+            if (txId === txInfo.txId) {
+                passwordDialog.reject();
+            }
         }
     }
 
@@ -146,10 +157,8 @@ CustomDialog {
                 CustomLabel {
                     Layout.fillWidth: true
                     text:   qsTr("Return Amount")
-                    visible:    txInfo.hasChange
                 }
                 CustomLabelValue {
-                    visible:    txInfo.hasChange
                     text:   txInfo.changeAmount.toFixed(8)
                     Layout.alignment: Qt.AlignRight
                 }
@@ -297,7 +306,8 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: passwordDialog.reject();
+                            cancelledByUser = true
+                            passwordDialog.reject();
                         }
                     }
                 }

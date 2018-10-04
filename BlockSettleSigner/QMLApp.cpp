@@ -63,6 +63,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
 
+   ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
+
    ctxt_->setContextProperty(QStringLiteral("signerParams"), params_.get());
    settingsConnections();
 
@@ -115,7 +117,7 @@ void QMLAppObj::walletsLoad()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
       if (!walletsMgr_->GetSettlementWallet()) {
-         if (!walletsMgr_->CreateSettlementWallet(params_->netType(), params_->getWalletsDir())) {
+         if (!walletsMgr_->CreateSettlementWallet(QString())) {
             logger_->error("Failed to create Settlement wallet");
          }
       }
@@ -204,15 +206,17 @@ void QMLAppObj::SetRootObject(QObject *obj)
          QMetaObject::invokeMethod(walletsView, "expandAll");
       }
    });
-   connect(rootObj_, SIGNAL(passwordEntered(QString, QString)), this, SLOT(onPasswordAccepted(QString, QString)));
+   connect(rootObj_, SIGNAL(passwordEntered(QString, QString, bool)),
+      this, SLOT(onPasswordAccepted(QString, QString, bool)));
 }
 
-void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password)
+void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password,
+   bool cancelledByUser)
 {
    SecureBinaryData decodedPwd = BinaryData::CreateFromHex(password.toStdString());
    logger_->debug("Password for wallet {} was accepted ({})", walletId.toStdString(), password.size());
    if (listener_) {
-      listener_->passwordReceived(walletId.toStdString(), decodedPwd);
+      listener_->passwordReceived(walletId.toStdString(), decodedPwd, cancelledByUser);
    }
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
       offlineProc_->passwordEntered(walletId.toStdString(), decodedPwd);
@@ -291,6 +295,11 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
    }
 }
 
+void QMLAppObj::onCancelSignTx(const BinaryData &txId)
+{
+   emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
+}
+
 void QMLAppObj::OnlineProcessing()
 {
    logger_->debug("Going online with socket {}:{}, network {}", params_->listenAddress().toStdString()
@@ -309,6 +318,8 @@ void QMLAppObj::OnlineProcessing()
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
    connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
+   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx,
+      this, &QMLAppObj::onCancelSignTx);
 
    if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
       logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());

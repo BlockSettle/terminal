@@ -27,7 +27,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 10 )
-SET(BS_VERSION_PATCH 5 )
+SET(BS_VERSION_PATCH 7 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -253,7 +253,24 @@ FIND_LIBRARY( LIBBTC_LIB NAMES ${LIBBTC_LIB_NAME} PATHS ${LIBBTC_LIB_DIR} NO_DEF
 IF( NOT LIBBTC_LIB)
    MESSAGE( FATAL_ERROR "Could not find libbtc in ${LIBBTC_LIB_DIR}")
 ENDIF()
-INCLUDE_DIRECTORIES( ${LIBBTC_INCLUDE_DIR}/include )
+INCLUDE_DIRECTORIES( ${LIBBTC_INCLUDE_DIR} )
+
+# setup libchacha20poly1305
+SET(LIBCP_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libchacha20poly1305)
+SET(LIBCP_LIB_DIR ${LIBCP_PACKAGE_ROOT}/lib)
+SET(LIBCP_INCLUDE_DIR ${LIBCP_PACKAGE_ROOT}/include)
+
+IF (WIN32)
+   SET(LIBCP_LIB_NAME libchacha20poly1305)
+ELSE(WIN32)
+   SET(LIBCP_LIB_NAME libchacha20poly1305.a)
+ENDIF(WIN32)
+
+FIND_LIBRARY(LIBCP_LIB NAMES ${LIBCP_LIB_NAME} PATHS ${LIBCP_LIB_DIR} NO_DEFAULT_PATH )
+IF( NOT LIBCP_LIB)
+   MESSAGE( FATAL_ERROR "Could not find libchacha20poly1305 in ${LIBCP_LIB_DIR}")
+ENDIF()
+INCLUDE_DIRECTORIES( ${LIBCP_INCLUDE_DIR} )
 
 SET(MPIR_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/mpir)
 SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
@@ -307,6 +324,18 @@ SET( BS_STORAGE_INCLUDE_DIR ${BS_STORAGE_GENERATED_PATH} )
 FILE( GLOB BS_STORAGE_PROTO_SOURCES ${BS_STORAGE_GENERATED_PATH}/*.cc )
 FILE( GLOB BS_STORAGE_PROTO_HEADERS ${BS_STORAGE_GENERATED_PATH}/*.h )
 
+# setup Blocksettle communication proto files
+SET( BS_MD_GENERATED_PATH ${PATH_TO_GENERATED}/BS/BS_MD/TradeHistoryServer)
+FILE( MAKE_DIRECTORY ${BS_MD_GENERATED_PATH} )
+
+SET(BS_MD_PROTO_FILES_DIR ${BLOCK_SETTLE_ROOT}/common/Blocksettle_proto/BS_MD/TradeHistoryServer)
+FILE(GLOB BS_MD_PROTO_FILES ${BS_MD_PROTO_FILES_DIR}/*.proto)
+EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${BS_MD_PROTO_FILES} --cpp_out=${BS_MD_GENERATED_PATH} --proto_path=${BS_MD_PROTO_FILES_DIR})
+
+SET( BS_MD_INCLUDE_DIR ${BS_MD_GENERATED_PATH} )
+FILE( GLOB BS_MD_PROTO_SOURCES ${BS_MD_GENERATED_PATH}/*.cc )
+FILE( GLOB BS_MD_PROTO_HEADERS ${BS_MD_GENERATED_PATH}/*.h )
+
 # setup CELER proto files
 SET(PROTO_BASE_PATH ${BLOCK_SETTLE_ROOT}/Celer/)
 
@@ -332,11 +361,11 @@ ADD_PROTO_DIR(API_USER                      com/celertech/baseserver/api/user)
 ADD_PROTO_DIR(API_SESSION                   com/celertech/baseserver/api/session)
 ADD_PROTO_DIR(API_SOCKET                    com/celertech/baseserver/api/socket)
 ADD_PROTO_DIR(CELER_BASESERVER_EXCEPTION    com/celertech/baseserver/api/exception)
+ADD_PROTO_DIR(CELER_BASESERVER_PERFORMANCE  com/celertech/baseserver/api/performance)
 
 ADD_PROTO_DIR(MARKET_ENUMS                  com/celertech/marketmerchant/api/enums)
-ADD_PROTO_DIR(MARKET_SECURITY_DEFINITION    com/celertech/marketmerchant/api/securitydefinition)
-ADD_PROTO_DIR(MARKET_DATA                   com/celertech/marketmerchant/api/marketdata)
-ADD_PROTO_DIR(MARKET_STATS                  com/celertech/marketmerchant/api/marketstatistic)
+ADD_PROTO_DIR(MARKET_DATA_ENUMS             com/celertech/marketdata/api/enums)
+ADD_PROTO_DIR(MARKET_DATA_PRICE             com/celertech/marketdata/api/price)
 ADD_PROTO_DIR(STATIC_USER_PROPERTY          com/celertech/staticdata/api/user/property)
 
 ADD_PROTO_DIR(BS_COMMON_ENUMS               com/blocksettle/enums)
