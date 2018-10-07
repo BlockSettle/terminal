@@ -103,8 +103,6 @@ bool ArmoryConnection::startLocalArmoryProcess(const ArmorySettings &settings)
       default: break;
       }
 
-      std::string spawnID = SecureBinaryData().GenerateRandom(32).toHexStr();
-      args.append(QLatin1String("--spawnId=\"") + QString::fromStdString(spawnID) + QLatin1String("\""));
       args.append(QLatin1String("--satoshi-datadir=\"") + settings.bitcoinBlocksDir + QLatin1String("\""));
       args.append(QLatin1String("--dbdir=\"") + settings.dbDir + QLatin1String("\""));
 
