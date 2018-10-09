@@ -13,13 +13,7 @@ enum RequestType
    GenerateCCSeedRequestType            = 7;
    RevokeAuthAddressRequestType         = 8;
    ConfirmAuthAddressSubmitType         = 9;
-   FundCCGenAddrRequestType             = 10;
-   FrejaAuthRequestType                 = 11;
-   FrejaSignRequestType                 = 12;
-   FrejaCancelSignRequestType           = 13;
-   FrejaAckResponseType                 = 14;
-   FrejaAuthResponseType                = 15;
-   FrejaSignResponseType                = 16;
+   FundCCGenAddrRequestType		       = 10;
 }
 
 enum AddressNetworkType
@@ -199,50 +193,4 @@ message FundCCGenAddrRequest
    required uint32   amount = 2;
    required uint32   lot_size = 3;
    optional string   reference = 4;
-}
-
-// Id is unique key generated on a client (64 bit)
-// Ack response will be sent after initial request to make sure original request is not lost.
-// It's possible that there will be multiple requests with the same id.
-// Both server and client should be able handle multiple Ack packets.
-
-message FrejaAckResponse
-{
-   required fixed64 id = 1;
-}
-
-message FrejaAuthRequest
-{
-   required fixed64 id = 1;
-   required string email = 2;
-}
-
-message FrejaAuthResponse
-{
-   required fixed64 id = 1;
-   required bool success = 2;
-   required string status = 3;
-   required string details = 4;
-}
-
-message FrejaSignRequest
-{
-   required fixed64 id = 1;
-   required string email = 2;
-   required string title = 3;
-   required string data = 4;
-}
-
-message FrejaCancelSignRequest
-{
-   required fixed64 id = 1;
-   required string email = 2;
-}
-
-message FrejaSignResponse
-{
-   required fixed64 id = 1;
-   required bool success = 2;
-   required string status = 3;
-   optional bytes signature = 4;
 }

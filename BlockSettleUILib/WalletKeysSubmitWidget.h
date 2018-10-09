@@ -8,7 +8,7 @@ namespace Ui {
     class WalletKeysSubmitWidget;
 }
 class WalletKeyWidget;
-
+class ApplicationSettings;
 
 class WalletKeysSubmitWidget : public QWidget
 {
@@ -30,9 +30,11 @@ public:
    ~WalletKeysSubmitWidget() override;
 
    void setFlags(Flags flags);
-   void init(const std::string &walletId, bs::wallet::KeyRank
+   void init(const std::string &walletId
+      , bs::wallet::KeyRank
       , const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , const QString &prompt = QString());
    void cancel();
 
@@ -64,6 +66,7 @@ private:
    std::vector<bs::wallet::PasswordData>  pwdData_;
    std::atomic_bool  suspended_;
    Flags flags_{NoFlag};
+   std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysSubmitWidget::Flags)

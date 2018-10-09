@@ -135,27 +135,20 @@ private:
    std::atomic_bool waitForReply_;
 };
 
-class ConnectionManager;
-class RequestReplyCommand;
-class FrejaSignWallet : public QObject
+class FrejaSignWallet : public FrejaSign
 {
    Q_OBJECT
 public:
-   FrejaSignWallet(const std::shared_ptr<spdlog::logger> &logger, unsigned int pollInterval = 3);
-   ~FrejaSignWallet() override;
+   FrejaSignWallet(const std::shared_ptr<spdlog::logger> &logger, unsigned int pollInterval = 3)
+      : FrejaSign(logger, pollInterval) {}
 
    bool start(const QString &userId, const QString &title, const std::string &walletId);
-   void stop(bool cancel = false);
 
 signals:
    void succeeded(SecureBinaryData password);
-   void failed(const QString &text);
-   void statusUpdated(const QString &status);
 
-private:
-   std::unique_ptr<ConnectionManager> connectionManager_;
-   std::shared_ptr<RequestReplyCommand> command_;
-   std::shared_ptr<spdlog::logger> logger_;
+protected:
+   void onReceivedSignature(const QByteArray &) override;
 };
 
 class FrejaSignOTP : public FrejaSign

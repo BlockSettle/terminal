@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package Blocksettle.AuthServer;
+
+enum PacketType
+{
+   Invalid = 0;
+   GetKeyRequestType = 1;
+   GetKeyResponseType = 2;
+   GetKeyCancelMessageType = 3;
+}
+
+message Packet
+{
+   PacketType type = 1;
+   bytes data = 2;
+}
+
+message GetKeyRequest
+{
+   fixed64 tag = 1;
+   string email = 2;
+   string walletId = 3;
+   bytes publicKey = 4;
+   bool newWallet = 5;
+}
+
+message GetKeyResponse
+{
+   fixed64 tag = 1;
+   bytes encryptedKey = 2;
+}
+
+message GetKeyCancelMessage
+{
+   fixed64 tag = 1;
+   string email = 2;
+   string walletId = 3;
+}

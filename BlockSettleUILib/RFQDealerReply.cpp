@@ -1173,7 +1173,7 @@ void RFQDealerReply::startSigning()
       return;
    }
    ui_->widgetSubmitKeysAS->init(walletId, it->second.walletEncRank_,
-      it->second.walletEncTypes_, it->second.walletEncKeys_);
+      it->second.walletEncTypes_, it->second.walletEncKeys_, appSettings_);
 }
 
 void RFQDealerReply::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)

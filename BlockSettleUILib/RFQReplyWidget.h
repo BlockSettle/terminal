@@ -25,6 +25,7 @@ class MarketDataProvider;
 class QuoteProvider;
 class SignContainer;
 class WalletsManager;
+class ApplicationSettings;
 
 namespace spdlog
 {
@@ -93,6 +94,7 @@ private:
    std::shared_ptr<DialogManager>         dialogManager_;
    std::shared_ptr<SignContainer>         signingContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
 
    std::unordered_map<std::string, transaction_data_ptr>   sentXbtTransactionData_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;

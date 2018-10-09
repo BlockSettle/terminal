@@ -8,12 +8,15 @@
 
 
 BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::SettlementContainer> &settlContainer, const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<bs::SettlementContainer> &settlContainer
+      , const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent)
    : QDialog(parent)
    , logger_(logger)
    , settlContainer_(settlContainer)
    , signContainer_(signContainer)
+   , appSettings_(appSettings)
 {
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStarted, this, &BaseDealerSettlementDialog::onTimerStarted);
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStopped, this, &BaseDealerSettlementDialog::onTimerStopped);
@@ -130,7 +133,7 @@ void BaseDealerSettlementDialog::startAccepting()
       logger_->error("[BaseDealerSettlementDialog::startAccepting] no root wallet");
       return;
    }
-   widgetWalletKeys()->init(rootWallet_->getWalletId(), keyRank_, encTypes_, encKeys_);
+   widgetWalletKeys()->init(rootWallet_->getWalletId(), keyRank_, encTypes_, encKeys_, appSettings_);
    widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();
    adjustSize();

@@ -9,9 +9,9 @@
 namespace Ui {
     class WalletKeyWidget;
 }
-
 class QPropertyAnimation;
-
+class MobileClient;
+class ApplicationSettings;
 
 class WalletKeyWidget : public QWidget
 {
@@ -21,6 +21,7 @@ public:
       QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
+   void init(const std::shared_ptr<ApplicationSettings>& appSettings, const QString& username);
    void cancel();
    void start();
 
@@ -35,8 +36,6 @@ public:
    void setHideFrejaEmailLabel(bool value);
    void setHideFrejaControlsOnSignClicked(bool value);
 
-   void setCreateUsername(const QString& username);
-
 signals:
    void keyChanged(int index, SecureBinaryData);
    void encKeyChanged(int index, SecureBinaryData);
@@ -49,7 +48,7 @@ private slots:
    void onPasswordChanged();
    void onFrejaIdChanged(const QString &);
    void onFrejaSignClicked();
-   void onFrejaSucceeded(SecureBinaryData);
+   void onFrejaSucceeded(const SecureBinaryData &password);
    void onFrejaFailed(const QString &text);
    void onFrejaStatusUpdated(const QString &status);
    void onTimer();
@@ -66,10 +65,11 @@ private:
    bool        frejaRunning_ = false;
    bool        encryptionKeysSet_ = false;
 
-   FrejaSignWallet frejaSign_;
+//   FrejaSignWallet frejaSign_;
    QTimer      timer_;
    float       timeLeft_;
    QString     prompt_;
+   MobileClient *mobileClient_{};
 
    bool        hideFrejaConnect_ = false;
    bool        hideFrejaCombobox_ = false;

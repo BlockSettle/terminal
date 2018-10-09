@@ -4,8 +4,12 @@
 
 
 EnterWalletPassword::EnterWalletPassword(const std::string &walletId
-   , bs::wallet::KeyRank keyRank, const std::vector<bs::wallet::EncryptionType> &encTypes
-   , const std::vector<SecureBinaryData> &encKeys, const QString &prompt, const QString &title
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , bs::wallet::KeyRank keyRank
+   , const std::vector<bs::wallet::EncryptionType> &encTypes
+   , const std::vector<SecureBinaryData> &encKeys
+   , const QString &prompt
+   , const QString &title
    , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterWalletPassword())
@@ -37,7 +41,7 @@ EnterWalletPassword::EnterWalletPassword(const std::string &walletId
       ui_->pushButtonOk->hide();
    }
 
-   ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys, prompt);
+   ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys, appSettings, prompt);
    ui_->widgetSubmitKeys->setFocus();
 
    updateState();

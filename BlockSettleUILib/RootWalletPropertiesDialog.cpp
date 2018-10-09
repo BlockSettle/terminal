@@ -120,7 +120,7 @@ RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
-   WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_, this);
+   WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_, appSettings_, this);
    if (delDlg.exec() == QDialog::Accepted) {
       close();
    }
@@ -128,7 +128,7 @@ void RootWalletPropertiesDialog::onDeleteWallet()
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   WalletBackupAndVerify(wallet_, signingContainer_, this);
+   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, this);
 }
 
 void RootWalletPropertiesDialog::onCreateWoWallet()
@@ -181,7 +181,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
 void RootWalletPropertiesDialog::onChangePassword()
 {
    auto changePasswordDialog = new ChangeWalletPasswordDialog(wallet_
-      , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), this);
+      , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), appSettings_, this);
 
    if (changePasswordDialog->exec() != QDialog::Accepted) {
       changePasswordDialog->deleteLater();

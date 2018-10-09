@@ -9,6 +9,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
       , const std::vector<SecureBinaryData> &encKeys
       , bs::wallet::KeyRank keyRank
       , const QString& username
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::ChangeWalletPasswordDialog())
@@ -23,10 +24,10 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
 
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { QApplication::processEvents(); adjustSize(); });
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateState(); });
-   ui_->widgetCreateKeys->init(wallet_->getWalletId(), username);
+   ui_->widgetCreateKeys->init(wallet_->getWalletId(), username, appSettings);
 
    connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateState(); });
-   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys);
+   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
    ui_->widgetSubmitKeys->setFocus();
 
    updateState();
