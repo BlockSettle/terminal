@@ -16,6 +16,7 @@
 #include "ApplicationSettings.h"
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
+#include "EncryptionUtils.h"
 #include "StartupDialog.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
@@ -37,6 +38,7 @@ Q_IMPORT_PLUGIN(QICOPlugin)
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(BinaryData)
+Q_DECLARE_METATYPE(SecureBinaryData)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(bs::TXEntry)
 Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
@@ -156,6 +158,7 @@ static int GuiApp(int argc, char** argv)
    qRegisterMetaType<QVector<int>>();
    qRegisterMetaType<std::string>();
    qRegisterMetaType<BinaryData>();
+   qRegisterMetaType<SecureBinaryData>();
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<bs::TXEntry>();
    qRegisterMetaType<std::vector<bs::TXEntry>>();
