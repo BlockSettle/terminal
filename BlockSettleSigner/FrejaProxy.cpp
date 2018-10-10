@@ -39,8 +39,8 @@ FrejaSignWalletObject::FrejaSignWalletObject(const std::shared_ptr<spdlog::logge
    connect(&freja_, &FrejaSignWallet::succeeded, [this](SecureBinaryData password) {
       emit success(QString::fromStdString(password.toHexStr()));
    });
-   connect(&freja_, &FrejaSign::failed, [this](const QString &text) { emit error(text); });
-   connect(&freja_, &FrejaSign::statusUpdated, [this](const QString &status) { setStatus(status); });
+   connect(&freja_, &FrejaSignWallet::failed, [this](const QString &text) { emit error(text); });
+   connect(&freja_, &FrejaSignWallet::statusUpdated, [this](const QString &status) { setStatus(status); });
 
    freja_.start(userId, title, walletId.toStdString());
 }
