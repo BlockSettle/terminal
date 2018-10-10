@@ -1,3 +1,9 @@
+0.10.8
+Bug Fixes:
+Improvements:
+   - switch to private auth server
+   - minor UI improvements and fixes
+
 0.10.7
 Bug Fixes:
    - fix crash on initial CC validation
