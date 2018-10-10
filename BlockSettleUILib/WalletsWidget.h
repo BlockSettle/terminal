@@ -104,7 +104,9 @@ private:
    QString username_;
 };
 
-bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<SignContainer> &
+bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &
+   , const std::shared_ptr<SignContainer> &
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget *parent);
 
 #endif // __WALLETS_WIDGET_H__

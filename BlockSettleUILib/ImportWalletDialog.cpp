@@ -84,7 +84,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
       | WalletKeysCreateWidget::HideFrejaConnectButton);
-   ui_->widgetCreateKeys->init(walletId_, username);
+   ui_->widgetCreateKeys->init(walletId_, username, appSettings);
 
    adjustSize();
    setMinimumSize(size());
@@ -138,7 +138,7 @@ void ImportWalletDialog::onImportAccepted()
    std::vector<bs::wallet::PasswordData> keys;
 
    bool result = checkNewWalletValidity(walletsMgr_.get(), walletName_, walletId_
-      , ui_->widgetCreateKeys, &keys, this);
+      , ui_->widgetCreateKeys, &keys, appSettings_, this);
    if (!result) {
       return;
    }

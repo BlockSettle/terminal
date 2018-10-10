@@ -20,11 +20,15 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysSubmitWidget::init(const std::string &walletId, bs::wallet::KeyRank keyRank
+void WalletKeysSubmitWidget::init(const std::string &walletId
+   , bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , const QString &prompt)
 {
+   appSettings_ = appSettings;
+
    qDeleteAll(widgets_.cbegin(), widgets_.cend());
    widgets_.clear();
    pwdData_.clear();
@@ -80,6 +84,7 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    }
 
    auto widget = new WalletKeyWidget(walletId_, pwdData_.size(), password, prompt, this);
+   widget->init(appSettings_, QString());
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysSubmitWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysSubmitWidget::onKeyChanged);
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysSubmitWidget::onEncKeyChanged);

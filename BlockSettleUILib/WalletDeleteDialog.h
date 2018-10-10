@@ -17,17 +17,23 @@ namespace bs {
 }
 class SignContainer;
 class WalletsManager;
-
+class ApplicationSettings;
 
 class WalletDeleteDialog : public QDialog
 {
    Q_OBJECT
 
 public:
-   WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, QWidget *parent = nullptr);
-   WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, QWidget *parent = nullptr);
+   WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &
+      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<SignContainer> &
+      , std::shared_ptr<ApplicationSettings> &appSettings
+      , QWidget *parent = nullptr);
+   WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &
+      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<SignContainer> &
+      , std::shared_ptr<ApplicationSettings> &appSettings
+      , QWidget *parent = nullptr);
    ~WalletDeleteDialog() override;
 
 private slots:
@@ -45,6 +51,7 @@ private:
    std::shared_ptr<bs::Wallet>      wallet_;
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 #endif // __WALLET_DELETE_DIALOG_H__

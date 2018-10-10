@@ -11,6 +11,7 @@
 namespace Ui {
     class EnterWalletPassword;
 };
+class ApplicationSettings;
 
 class EnterWalletPassword : public QDialog
 {
@@ -18,8 +19,11 @@ Q_OBJECT
 
 public:
    EnterWalletPassword(const std::string &rootWalletId
-      , bs::wallet::KeyRank, const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys = {}, const QString &prompt = {}
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , bs::wallet::KeyRank
+      , const std::vector<bs::wallet::EncryptionType> &
+      , const std::vector<SecureBinaryData> &encKeys = {}
+      , const QString &prompt = {}
       , const QString &title = {}
       , QWidget* parent = nullptr);
    ~EnterWalletPassword() override;

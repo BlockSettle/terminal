@@ -398,7 +398,7 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
 
    std::shared_ptr<bs::hd::Wallet> newWallet;
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, this);
+      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, appSettings_, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
          newWallet = walletsManager_->GetHDWalletById(walletId);
@@ -666,17 +666,19 @@ void WalletsWidget::onDeleteWallet()
       MessageBoxCritical(tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
       return;
    }
-   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, this).exec();
+   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, this).exec();
 }
 
 
-bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet, const std::shared_ptr<SignContainer> &container
+bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget *parent)
 {
    if (!wallet) {
       return false;
    }
-   WalletBackupDialog walletBackupDialog(wallet, container, parent);
+   WalletBackupDialog walletBackupDialog(wallet, container, appSettings, parent);
    if (walletBackupDialog.exec() == QDialog::Accepted) {
       MessageBoxSuccess(QObject::tr("Backup"), QObject::tr("%1 Backup successfully created")
          .arg(walletBackupDialog.isDigitalBackup() ? QObject::tr("Digital") : QObject::tr("Paper"))

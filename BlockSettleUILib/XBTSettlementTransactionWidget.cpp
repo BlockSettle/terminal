@@ -21,9 +21,13 @@
 const unsigned int WaitTimeoutInSec = 30;
 
 XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<AuthAddressManager>& manager, const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<QuoteProvider> &quoteProvider, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<AuthAddressManager>& manager
+   , const std::shared_ptr<AssetManager> &assetManager
+   , const std::shared_ptr<QuoteProvider> &quoteProvider
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::XBTSettlementTransactionWidget())
@@ -33,6 +37,7 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared
    , quoteProvider_(quoteProvider)
    , signingContainer_(container)
    , armory_(armory)
+   , appSettings_(appSettings)
    , timer_(this)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
@@ -202,14 +207,14 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged()
    case AddressVerificationState::Verified: {
          text = sValid;
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId());
-         ui_->widgetSubmitKeys->init(rootWallet->getWalletId(), keyRank_, encTypes_, encKeys_);
+         ui_->widgetSubmitKeys->init(rootWallet->getWalletId(), keyRank_, encTypes_, encKeys_, appSettings_);
          ui_->widgetSubmitKeys->setFocus();
          // tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security)).arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out"))
 
          if (clientSells_ && !sellFromPrimary_) {
             auto authWallet = walletsManager_->GetAuthWallet();
             auto rootAuthWallet = walletsManager_->GetHDRootForLeaf(authWallet->GetWalletId());
-            ui_->widgetSubmitKeysAuth->init(rootAuthWallet->getWalletId(), keyRankAuth_, encTypesAuth_, encKeysAuth_);
+            ui_->widgetSubmitKeysAuth->init(rootAuthWallet->getWalletId(), keyRankAuth_, encTypesAuth_, encKeysAuth_, appSettings_);
          }
          QApplication::processEvents();
          adjustSize();

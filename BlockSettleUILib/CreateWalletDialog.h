@@ -21,19 +21,23 @@ namespace bs {
 class SignContainer;
 class WalletsManager;
 class WalletKeysCreateWidget;
-
+class ApplicationSettings;
 
 class CreateWalletDialog : public QDialog
 {
    Q_OBJECT
 
 public:
-
-
    // Username is used to init Freja ID when available
-   CreateWalletDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
-      , const QString &walletsPath, const bs::wallet::Seed& walletSeed, const std::string& walletId
-      , bool createPrimary, const QString& username, QWidget *parent = nullptr);
+   CreateWalletDialog(const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<SignContainer> &
+      , const QString &walletsPath
+      , const bs::wallet::Seed& walletSeed
+      , const std::string& walletId
+      , bool createPrimary
+      , const QString& username
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , QWidget *parent = nullptr);
    ~CreateWalletDialog() override;
 
    bool walletCreated() const { return walletCreated_; }
@@ -55,6 +59,7 @@ private:
 private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
+   const std::shared_ptr<ApplicationSettings> appSettings_;
    const QString     walletsPath_;
    const bs::wallet::Seed walletSeed_;
    const std::string walletId_;
@@ -69,9 +74,11 @@ private:
 // Checks validity and returns updated keys in keys output argument if succeeds.
 // Shows error messages if needed.
 bool checkNewWalletValidity(WalletsManager* walletsManager
-   , const QString& walletName, const std::string& walletId
+   , const QString& walletName
+   , const std::string& walletId
    , WalletKeysCreateWidget* widgetCreateKeys
    , std::vector<bs::wallet::PasswordData>* keys
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget* parent);
 
 #endif // __CREATE_WALLET_DIALOG_H__

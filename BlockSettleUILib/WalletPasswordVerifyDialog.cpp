@@ -5,13 +5,16 @@
 #include "ui_WalletPasswordVerifyDialog.h"
 
 WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::string& walletId
-   , const std::vector<bs::wallet::PasswordData>& keys, bs::wallet::KeyRank keyRank
+   , const std::vector<bs::wallet::PasswordData>& keys
+   , bs::wallet::KeyRank keyRank
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletPasswordVerifyDialog)
    , walletId_(walletId)
    , keys_(keys)
    , keyRank_(keyRank)
+   , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
@@ -61,7 +64,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
          encKeys.push_back(key.encKey);
       }
 
-      EnterWalletPassword dialog(walletId_, keyRank_, encTypes, encKeys
+      EnterWalletPassword dialog(walletId_, appSettings_, keyRank_, encTypes, encKeys
          , tr("Confirm Freja eID signing"), tr("Confirm Wallet"), this);
       int result = dialog.exec();
       if (!result) {

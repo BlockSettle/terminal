@@ -20,7 +20,7 @@ class DealerXBTSettlementContainer;
 class SignContainer;
 class WalletsManager;
 class CelerClient;
-
+class ApplicationSettings;
 
 class DealerXBTSettlementDialog : public BaseDealerSettlementDialog
 {
@@ -32,6 +32,7 @@ public:
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent = nullptr);
    ~DealerXBTSettlementDialog() override;
 

@@ -16,12 +16,15 @@
 
 
 WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
-   , const std::shared_ptr<SignContainer> &container, QWidget *parent)
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletBackupDialog)
    , wallet_(wallet)
    , signingContainer_(container)
    , outputDir_(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).toStdString())
+   , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
@@ -130,7 +133,7 @@ void WalletBackupDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet:
    }
    infoReqId_ = 0;
 
-   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys);
+   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings_);
    ui_->widgetSubmitKeys->setFocus();
    updateState();
 

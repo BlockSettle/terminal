@@ -23,6 +23,7 @@ public:
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent = nullptr);
    ~DealerCCSettlementDialog() override;
 

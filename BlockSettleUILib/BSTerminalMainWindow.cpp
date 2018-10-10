@@ -966,7 +966,8 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
          EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
-            , keyRank, encTypes, encKeys, QString::fromStdString(prompt), QString(), this);
+            , applicationSettings_, keyRank, encTypes, encKeys
+            , QString::fromStdString(prompt), QString(), this);
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
             cancelledByUser = false;

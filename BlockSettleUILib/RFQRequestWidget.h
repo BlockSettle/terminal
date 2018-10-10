@@ -68,6 +68,7 @@ private:
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 #endif // __RFQ_REQUEST_WIDGET_H__

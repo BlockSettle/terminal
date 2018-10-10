@@ -3,6 +3,7 @@
 #include <set>
 #include <QSpinBox>
 #include "WalletKeyWidget.h"
+#include "ApplicationSettings.h"
 
 
 WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
@@ -25,9 +26,12 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username)
+void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username
+   , const std::shared_ptr<ApplicationSettings>& appSettings)
 {
    walletId_ = walletId;
+   username_ = username;
+   appSettings_ = appSettings;
    
    addPasswordKey();
 
@@ -36,7 +40,7 @@ void WalletKeysCreateWidget::init(const std::string &walletId, const QString& us
    }
 
    for (WalletKeyWidget *widget : widgets_) {
-      widget->setCreateUsername(username);
+      widget->init(appSettings, username);
    }
 }
 
@@ -44,6 +48,7 @@ void WalletKeysCreateWidget::addKey(bool password)
 {
    assert(!walletId_.empty());
    auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, QString(), this);
+   widget->init(appSettings_, username_);
    if (flags_ & HideFrejaConnectButton) {
       widget->setHideFrejaConnect(true);
    }
