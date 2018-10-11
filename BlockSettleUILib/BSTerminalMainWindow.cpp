@@ -146,6 +146,13 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UpdateMainWindowAppearence();
 }
 
+void BSTerminalMainWindow::subscribeToMDonStartup()
+{
+   if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
+      mdProvider_->SubscribeToMD();
+   }
+}
+
 BSTerminalMainWindow::~BSTerminalMainWindow()
 {
    applicationSettings_->set(ApplicationSettings::GUI_main_geometry, geometry());
