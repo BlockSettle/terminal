@@ -11,7 +11,7 @@
 BSMarketDataProvider::BSMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::string& host, const std::string& port
       , const std::shared_ptr<spdlog::logger>& logger)
- : logger_(logger)
+ : MarketDataProvider(logger)
  , mdHost_{host}
  , mdPort_{port}
  , connectionManager_{connectionManager}
@@ -19,10 +19,10 @@ BSMarketDataProvider::BSMarketDataProvider(const std::shared_ptr<ConnectionManag
 {
 }
 
-bool BSMarketDataProvider::SubscribeToMD()
+bool BSMarketDataProvider::StartMDConnection()
 {
    if (mdConnection_ != nullptr) {
-      logger_->error("[BSMarketDataProvider::SubscribeToMD] already connected");
+      logger_->error("[BSMarketDataProvider::StartMDConnection] already connected");
       return false;
    }
 
@@ -35,11 +35,11 @@ bool BSMarketDataProvider::SubscribeToMD()
    listener_ = std::make_shared<SubscriberConnectionListenerCB>(onDataReceived
       , onConnectedToPb, onDisconnectedFromPB);
 
-   logger_->debug("[TradeHistoryServer::startConnectionToPB] start connecting to PB updates");
+   logger_->debug("[BSMarketDataProvider::StartMDConnection] start connecting to PB updates");
 
    emit StartConnecting();
    if (!mdConnection_->ConnectToPublisher(mdHost_, mdPort_, listener_.get())) {
-      logger_->error("[TradeHistoryServer::startConnectionToPB] failed to start connection");
+      logger_->error("[BSMarketDataProvider::StartMDConnection] failed to start connection");
       emit Disconnected();
       return false;
    }

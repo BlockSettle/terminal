@@ -34,10 +34,12 @@ public:
    BSMarketDataProvider(BSMarketDataProvider&&) = delete;
    BSMarketDataProvider& operator = (BSMarketDataProvider&&) = delete;
 
-   bool SubscribeToMD() override;
    bool DisconnectFromMDSource() override;
 
    bool IsConnectionActive() const override;
+
+protected:
+   bool StartMDConnection() override;
 
 private:
    void onDataFromMD(const std::string& data);
@@ -48,8 +50,6 @@ private:
    void OnIncrementalUpdate(const std::string& data);
 
 private:
-   std::shared_ptr<spdlog::logger>     logger_;
-
    // connection details for MD source
    std::string mdHost_;
    std::string mdPort_;

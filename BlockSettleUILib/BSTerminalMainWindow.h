@@ -72,6 +72,9 @@ private:
 
    void UpdateMainWindowAppearence();
 
+   bool isMDLicenseAccepted() const;
+   void saveUserAcceptedMDLicense();
+
 private slots:
    void InitTransactionsView();
    void ArmoryIsOffline();
@@ -88,6 +91,8 @@ private slots:
    void OnOTPSyncCompleted();
 
    bool createWallet(bool primary, bool reportSuccess = true);
+
+   void acceptMDAgreement();
 
 private:
    QAction *action_send_;

@@ -38,6 +38,7 @@
 #include "HeadlessContainer.h"
 #include "LoginWindow.h"
 #include "MarketDataProvider.h"
+#include "MDAgreementDialog.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
 #include "MessageBoxQuestion.h"
@@ -343,7 +344,31 @@ void BSTerminalMainWindow::InitConnections()
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
+
+   connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
 }
+
+void BSTerminalMainWindow::acceptMDAgreement()
+{
+   if (!isMDLicenseAccepted()) {
+      MDAgreementDialog dlg{this};
+      if (dlg.exec() != QDialog::Accepted) {
+         return;
+      }
+
+      saveUserAcceptedMDLicense();
+   }
+
+   mdProvider_->MDLicenseAccepted();
+}
+
+bool BSTerminalMainWindow::isMDLicenseAccepted() const
+{
+   return false;
+}
+
+void BSTerminalMainWindow::saveUserAcceptedMDLicense()
+{}
 
 void BSTerminalMainWindow::InitAssets()
 {

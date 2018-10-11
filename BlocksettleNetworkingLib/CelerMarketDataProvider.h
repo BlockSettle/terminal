@@ -33,10 +33,12 @@ public:
    CelerMarketDataProvider(CelerMarketDataProvider&&) = delete;
    CelerMarketDataProvider& operator = (CelerMarketDataProvider&&) = delete;
 
-   bool SubscribeToMD() override;
    bool DisconnectFromMDSource() override;
 
    bool IsConnectionActive() const override;
+
+protected:
+   bool StartMDConnection() override;
 
 private slots:
    void OnConnectedToCeler();
@@ -51,8 +53,6 @@ private:
    static bool isPriceValid(double val);
 
 private:
-   std::shared_ptr<spdlog::logger>     logger_;
-
    // connection details for MD source
    std::string mdHost_;
    std::string mdPort_;

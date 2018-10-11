@@ -15,7 +15,7 @@ CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<Connectio
       , const std::string& host, const std::string& port
       , const std::shared_ptr<spdlog::logger>& logger
       , bool filterUsdProducts)
- : logger_(logger)
+ : MarketDataProvider(logger)
  , mdHost_{host}
  , mdPort_{port}
  , connectionManager_{connectionManager}
@@ -24,10 +24,10 @@ CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<Connectio
    celerClient_ = nullptr;
 }
 
-bool CelerMarketDataProvider::SubscribeToMD()
+bool CelerMarketDataProvider::StartMDConnection()
 {
    if (celerClient_ != nullptr) {
-      logger_->error("[CelerMarketDataProvider::SubscribeToMD] already connected.");
+      logger_->error("[CelerMarketDataProvider::StartMDConnection] already connected.");
       return false;
    }
 
@@ -41,7 +41,7 @@ bool CelerMarketDataProvider::SubscribeToMD()
 
    // login password could be any string
    if (!celerClient_->LoginToServer(mdHost_, mdPort_, credentials, credentials)) {
-      logger_->error("[CelerMarketDataProvider::SubscribeToMD] failed to connect to MD source");
+      logger_->error("[CelerMarketDataProvider::StartMDConnection] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;
    }
