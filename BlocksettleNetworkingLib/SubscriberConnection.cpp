@@ -167,6 +167,13 @@ void SubscriberConnection::stopListen()
    }
 
    listenThread_.join();
+
+   auto tempListener = listener_;
+   listener_ = nullptr;
+   if (isConnected_) {
+      tempListener->OnDisconnected();
+   }
+
    return;
 }
 
@@ -238,11 +245,6 @@ void SubscriberConnection::listenFunction()
          }
       }
    }
-
-   if (isConnected_) {
-      listener_->OnDisconnected();
-   }
-   listener_ = nullptr;
 }
 
 bool SubscriberConnection::recvData()
