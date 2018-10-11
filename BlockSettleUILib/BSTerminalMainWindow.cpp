@@ -343,9 +343,6 @@ void BSTerminalMainWindow::InitConnections()
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
-   // mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
-   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"));
 }
 
 void BSTerminalMainWindow::InitAssets()

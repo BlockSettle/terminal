@@ -57,6 +57,13 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="checkBox_subscribeToMdOnStart">
+        <property name="text">
+         <string>Activate Market Data at launch</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -355,6 +362,20 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>addvancedDialogByDefaultCheckBox</tabstop>
+  <tabstop>checkBox_subscribeToMdOnStart</tabstop>
+  <tabstop>logFileName</tabstop>
+  <tabstop>chooseLogFileBtn</tabstop>
+  <tabstop>logLevel</tabstop>
+  <tabstop>logMsgFileName</tabstop>
+  <tabstop>chooseLogFileMsgBtn</tabstop>
+  <tabstop>logLevelMsg</tabstop>
+  <tabstop>checkBoxMinimizeToTray</tabstop>
+  <tabstop>checkBoxCloseToTray</tabstop>
+  <tabstop>checkBoxLaunchToTray</tabstop>
+  <tabstop>checkBoxShowTxNotification</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
