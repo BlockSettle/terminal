@@ -135,7 +135,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
       { AdvancedTxDialogByDefault,        SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
       { TransactionFilter,                SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) },
-      { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) }
+      { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
+      { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) }
    };
 }
 

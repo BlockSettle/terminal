@@ -371,11 +371,13 @@ void BSTerminalMainWindow::acceptMDAgreement()
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
 {
-   return false;
+   return applicationSettings_->get<bool>(ApplicationSettings::MDLicenseAccepted);
 }
 
 void BSTerminalMainWindow::saveUserAcceptedMDLicense()
-{}
+{
+   applicationSettings_->set(ApplicationSettings::MDLicenseAccepted, true);
+}
 
 void BSTerminalMainWindow::InitAssets()
 {

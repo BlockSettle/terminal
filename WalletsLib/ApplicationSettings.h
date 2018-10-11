@@ -92,6 +92,7 @@ public:
       AdvancedTxDialogByDefault,
       TransactionFilter,
       SubscribeToMDOnStart,
+      MDLicenseAccepted,
       _last
    };
 
