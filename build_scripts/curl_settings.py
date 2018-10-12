@@ -53,15 +53,19 @@ class CurlSettings(Configurator):
     def config_x(self):
         cwd = os.getcwd()
         os.chdir(self.get_unpacked_sources_dir())
-        command = ['./autogen.sh']
+        command = ['./buildconf']
         result = subprocess.call(command)
         if result != 0:
             return False
 
         os.chdir(cwd)
         command = [os.path.join(self.get_unpacked_sources_dir(), 'configure'),
-                   '--prefix',
-                   self.get_install_dir()]
+                   '--prefix', self.get_install_dir(), 
+		   '--disable-ftp', '--disable-file', '--disable-ldap',
+		   '--disable-ldaps', '--disable-rtsp', '--disable-dict',
+		   '--disable-telnet', '--disable-tftp', '--disable-pop3',
+		   '--disable-imap', '--disable-smb', '--disable-gopher',
+		   '--disable-manual']
 
         result = subprocess.call(command)
         return result == 0
