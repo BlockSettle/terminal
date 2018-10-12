@@ -99,7 +99,8 @@ class Configurator:
         else:
             raise ValueError('Could not get extraction path for ' + self._file_name)
 
-        self._package_dir_name = self._file_name[:-(len(extension))]
+        if not self._package_dir_name:
+           self._package_dir_name = self._file_name[:-(len(extension))]
         if not os.path.isdir(self.get_unpacked_sources_dir()):
             print('Start unpacking: ' + self.get_package_name())
             try:
