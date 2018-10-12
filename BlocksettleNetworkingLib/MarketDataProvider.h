@@ -7,12 +7,17 @@
 #include <unordered_map>
 #include "CommonTypes.h"
 
+namespace spdlog
+{
+   class logger;
+}
+
 class MarketDataProvider : public QObject
 {
 Q_OBJECT
 
 public:
-   MarketDataProvider() = default;
+   MarketDataProvider(const std::shared_ptr<spdlog::logger>& logger);
    ~MarketDataProvider() noexcept override = default;
 
    MarketDataProvider(const MarketDataProvider&) = delete;
@@ -21,12 +26,20 @@ public:
    MarketDataProvider(MarketDataProvider&&) = delete;
    MarketDataProvider& operator = (MarketDataProvider&&) = delete;
 
-   virtual bool SubscribeToMD() = 0;
+   void SubscribeToMD();
    virtual bool DisconnectFromMDSource() = 0;
 
    virtual bool IsConnectionActive() const = 0;
 
+protected:
+   virtual bool StartMDConnection() = 0;
+
+public slots:
+   void MDLicenseAccepted();
+
 signals:
+   void UserWantToConnectToMD();
+
    void StartConnecting();
    void Connected();
 
@@ -37,6 +50,9 @@ signals:
    void MDSecurityReceived(const std::string &security, const bs::network::SecurityDef &sd);
    void MDSecuritiesReceived();
    void MDReqRejected(const std::string &security, const std::string &reqson);
+
+protected:
+   std::shared_ptr<spdlog::logger>  logger_ = nullptr;
 };
 
 #endif // __MARKET_DATA_PROVIDER_H__

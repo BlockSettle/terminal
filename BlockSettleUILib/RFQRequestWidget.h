@@ -34,13 +34,14 @@ public:
    RFQRequestWidget(QWidget* parent = nullptr);
    ~RFQRequestWidget();
 
+   void initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
+      , const std::shared_ptr<ApplicationSettings> &appSettings);
+
    void init(std::shared_ptr<spdlog::logger> logger
          , const std::shared_ptr<CelerClient>& celerClient
          , const std::shared_ptr<AuthAddressManager> &
          , std::shared_ptr<QuoteProvider> quoteProvider
-         , const std::shared_ptr<MarketDataProvider>& mdProvider
          , const std::shared_ptr<AssetManager>& assetManager
-         , const std::shared_ptr<ApplicationSettings> &appSettings
          , const std::shared_ptr<DialogManager> &dialogManager
          , const std::shared_ptr<SignContainer> &
          , const std::shared_ptr<ArmoryConnection> &);

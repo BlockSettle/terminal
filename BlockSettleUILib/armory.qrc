@@ -196,5 +196,6 @@
         <file>resources/radio-button-disabled.png</file>
         <file>resources/radio-button-disabled@2x.png</file>
         <file>resources/license.txt</file>
+        <file>resources/md_license.html</file>
     </qresource>
 </RCC>

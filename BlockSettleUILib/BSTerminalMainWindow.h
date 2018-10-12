@@ -46,6 +46,8 @@ public:
    BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings, BSTerminalSplashScreen& splashScreen, QWidget* parent = nullptr);
    ~BSTerminalMainWindow() override;
 
+   void postSplashscreenActions();
+
 private:
    void setupToolbar();
    void setupMenu();
@@ -72,6 +74,9 @@ private:
 
    void UpdateMainWindowAppearence();
 
+   bool isMDLicenseAccepted() const;
+   void saveUserAcceptedMDLicense();
+
 private slots:
    void InitTransactionsView();
    void ArmoryIsOffline();
@@ -88,6 +93,8 @@ private slots:
    void OnOTPSyncCompleted();
 
    bool createWallet(bool primary, bool reportSuccess = true);
+
+   void acceptMDAgreement();
 
 private:
    QAction *action_send_;
