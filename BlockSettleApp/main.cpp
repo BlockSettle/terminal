@@ -201,11 +201,13 @@ static int GuiApp(int argc, char** argv)
 
       if (settings->get<bool>(ApplicationSettings::launchToTray)) {
          splashScreen.close();
-      }
-      else {
+      } else {
          mainWindow.show();
          splashScreen.finish(&mainWindow);
       }
+
+      mainWindow.postSplashscreenActions();
+
       return app.exec();
    }
    catch (const std::exception &e) {
