@@ -139,8 +139,6 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::onFullSnapshot] {}", response.DebugString());
-
    auto security = QString::fromStdString(response.securitycode());
    if (security.isEmpty()) {
       security = QString::fromStdString(response.securityid());
@@ -161,6 +159,7 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
    const auto itSecDef = secDefs_.find(security.toStdString());
    const auto assetType = (itSecDef == secDefs_.end()) ? bs::network::Asset::fromCelerProductType(response.producttype())
       : itSecDef->second.assetType;
+
    emit MDUpdate(assetType, security, fields);
 
    return true;
