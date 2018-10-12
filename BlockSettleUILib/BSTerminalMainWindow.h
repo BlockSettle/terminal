@@ -46,7 +46,7 @@ public:
    BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings, BSTerminalSplashScreen& splashScreen, QWidget* parent = nullptr);
    ~BSTerminalMainWindow() override;
 
-   void subscribeToMDonStartup();
+   void postSplashscreenActions();
 
 private:
    void setupToolbar();

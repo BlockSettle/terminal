@@ -148,7 +148,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UpdateMainWindowAppearence();
 }
 
-void BSTerminalMainWindow::subscribeToMDonStartup()
+void BSTerminalMainWindow::postSplashscreenActions()
 {
    if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
       mdProvider_->SubscribeToMD();
