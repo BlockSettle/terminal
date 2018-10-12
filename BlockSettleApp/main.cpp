@@ -206,7 +206,7 @@ static int GuiApp(int argc, char** argv)
          splashScreen.finish(&mainWindow);
       }
 
-      mainWindow.subscribeToMDonStartup();
+      mainWindow.postSplashscreenActions();
 
       return app.exec();
    }
