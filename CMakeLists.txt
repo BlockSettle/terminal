@@ -293,93 +293,11 @@ ELSE ( APPLE )
 ENDIF ( APPLE )
 
 
-SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto/ )
+SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
 
-# setup Blocksettle communication proto files
-SET( BS_COMMUNICATION_GENERATED_PATH ${PATH_TO_GENERATED}/BS/Communication)
-FILE( MAKE_DIRECTORY ${BS_COMMUNICATION_GENERATED_PATH} )
-
-SET(BS_COMMUNICATION_PROTO_FILES_DIR ${BLOCK_SETTLE_ROOT}/common/Blocksettle_proto/Communication)
-FILE(GLOB BS_COMMUNICATION_PROTO_FILES ${BS_COMMUNICATION_PROTO_FILES_DIR}/*.proto)
-EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${BS_COMMUNICATION_PROTO_FILES} --cpp_out=${BS_COMMUNICATION_GENERATED_PATH} --proto_path=${BS_COMMUNICATION_PROTO_FILES_DIR})
-
-SET( BS_COMMUNICATION_INCLUDE_DIR ${BS_COMMUNICATION_GENERATED_PATH} )
-FILE( GLOB BS_COMMUNICATION_PROTO_SOURCES ${BS_COMMUNICATION_GENERATED_PATH}/*.cc )
-FILE( GLOB BS_COMMUNICATION_PROTO_HEADERS ${BS_COMMUNICATION_GENERATED_PATH}/*.h )
-
-# setup Blocksettle storage proto files
-SET( BS_STORAGE_GENERATED_PATH ${PATH_TO_GENERATED}/BS/Storage)
-FILE( MAKE_DIRECTORY ${BS_STORAGE_GENERATED_PATH} )
-
-SET(BS_STORAGE_PROTO_FILES_DIR ${BLOCK_SETTLE_ROOT}/common/Blocksettle_proto/Storage)
-FILE(GLOB BS_STORAGE_PROTO_FILES ${BS_STORAGE_PROTO_FILES_DIR}/*.proto)
-EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${BS_STORAGE_PROTO_FILES} --cpp_out=${BS_STORAGE_GENERATED_PATH} --proto_path=${BS_STORAGE_PROTO_FILES_DIR})
-
-SET( BS_STORAGE_INCLUDE_DIR ${BS_STORAGE_GENERATED_PATH} )
-FILE( GLOB BS_STORAGE_PROTO_SOURCES ${BS_STORAGE_GENERATED_PATH}/*.cc )
-FILE( GLOB BS_STORAGE_PROTO_HEADERS ${BS_STORAGE_GENERATED_PATH}/*.h )
-
-# setup Blocksettle communication proto files
-SET( BS_MD_GENERATED_PATH ${PATH_TO_GENERATED}/BS/BS_MD/TradeHistoryServer)
-FILE( MAKE_DIRECTORY ${BS_MD_GENERATED_PATH} )
-
-SET(BS_MD_PROTO_FILES_DIR ${BLOCK_SETTLE_ROOT}/common/Blocksettle_proto/BS_MD/TradeHistoryServer)
-FILE(GLOB BS_MD_PROTO_FILES ${BS_MD_PROTO_FILES_DIR}/*.proto)
-EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${BS_MD_PROTO_FILES} --cpp_out=${BS_MD_GENERATED_PATH} --proto_path=${BS_MD_PROTO_FILES_DIR})
-
-SET( BS_MD_INCLUDE_DIR ${BS_MD_GENERATED_PATH} )
-FILE( GLOB BS_MD_PROTO_SOURCES ${BS_MD_GENERATED_PATH}/*.cc )
-FILE( GLOB BS_MD_PROTO_HEADERS ${BS_MD_GENERATED_PATH}/*.h )
-
-# setup CELER proto files
-SET(PROTO_BASE_PATH ${BLOCK_SETTLE_ROOT}/Celer/)
-
-FUNCTION( ADD_PROTO_DIR NAME PATH )
-   SET( PROTO_FILES_PATH ${PROTO_BASE_PATH}/${PATH} )
-   FILE( GLOB PROTO_FILES_LIST ${PROTO_FILES_PATH}/*.proto )
-
-   EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTO_FILES_LIST} --cpp_out=${PATH_TO_GENERATED} --proto_path=${PROTO_BASE_PATH})
-
-   FILE( GLOB GENERATED_PROTO_SOURCES ${PATH_TO_GENERATED}/${PATH}/*.cc)
-   FILE( GLOB GENERATED_PROTO_HEADERS ${PATH_TO_GENERATED}/${PATH}/*.h)
-
-   SET( ${NAME}_INCLUDE_DIR ${PATH_TO_GENERATED}/${PATH} PARENT_SCOPE)
-   SET( ${NAME}_PROTO_SOURCES ${GENERATED_PROTO_SOURCES} PARENT_SCOPE )
-   SET( ${NAME}_PROTO_HEADERS ${GENERATED_PROTO_HEADERS} PARENT_SCOPE )
-
-ENDFUNCTION(ADD_PROTO_DIR)
-
-ADD_PROTO_DIR(LOGIN                         com/celertech/baseserver/communication/login)
-ADD_PROTO_DIR(NETTY                         com/celertech/baseserver/communication/protobuf)
-ADD_PROTO_DIR(ENUMS                         com/celertech/baseserver/api/enums)
-ADD_PROTO_DIR(API_USER                      com/celertech/baseserver/api/user)
-ADD_PROTO_DIR(API_SESSION                   com/celertech/baseserver/api/session)
-ADD_PROTO_DIR(API_SOCKET                    com/celertech/baseserver/api/socket)
-ADD_PROTO_DIR(CELER_BASESERVER_EXCEPTION    com/celertech/baseserver/api/exception)
-ADD_PROTO_DIR(CELER_BASESERVER_PERFORMANCE  com/celertech/baseserver/api/performance)
-
-ADD_PROTO_DIR(MARKET_ENUMS                  com/celertech/marketmerchant/api/enums)
-ADD_PROTO_DIR(MARKET_DATA_ENUMS             com/celertech/marketdata/api/enums)
-ADD_PROTO_DIR(MARKET_DATA_PRICE             com/celertech/marketdata/api/price)
-ADD_PROTO_DIR(STATIC_USER_PROPERTY          com/celertech/staticdata/api/user/property)
-
-ADD_PROTO_DIR(BS_COMMON_ENUMS               com/blocksettle/enums)
-ADD_PROTO_DIR(BS_TERMINAL_API               com/blocksettle/terminal)
-
-ADD_PROTO_DIR(QUOTE                         com/celertech/marketmerchant/api/quote)
-ADD_PROTO_DIR(ORDER                         com/celertech/marketmerchant/api/order)
-ADD_PROTO_DIR(SIGN                          com/celertech/marketmerchant/api/order/bitcoin)
-ADD_PROTO_DIR(CELER_API_ACCOUNTS            com/celertech/staticdata/api/account)
-ADD_PROTO_DIR(CELER_API_USER_ACCOUNT        com/celertech/staticdata/api/user/account)
-ADD_PROTO_DIR(CELER_PIGGYBANK_API_ENUMS     com/celertech/piggybank/api/enums)
-ADD_PROTO_DIR(CELER_PIGGYBANK_API_SUBLEDGER com/celertech/piggybank/api/subledger)
-
-SET(ARMORY_PROTO_FILES_DIR ${BLOCK_SETTLE_ROOT}/common/cppForSwig/protobuf)
-FILE(GLOB ARMORY_PROTO_FILES ${ARMORY_PROTO_FILES_DIR}/*.proto)
-EXECUTE_PROCESS(COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${ARMORY_PROTO_FILES} --cpp_out=${ARMORY_PROTO_FILES_DIR} --proto_path=${ARMORY_PROTO_FILES_DIR})
-
-
+SET( BS_PROTO_LIB_NAME                 BsProtoLib )
+SET( CELER_PROTO_LIB_NAME              CelerProtoLib )
 SET( BLOCKSETTLE_APP_NAME              blocksettle )
 SET( SIGNER_APP_NAME                   blocksettle_signer )
 SET( BLOCKSETTLE_UI_LIBRARY_NAME       bsuilib )
@@ -675,6 +593,9 @@ FOREACH(lib_name ${QT_LIBS})
 
    LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
+
+ADD_SUBDIRECTORY( Celer )
+ADD_SUBDIRECTORY( common/Blocksettle_proto )
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)
