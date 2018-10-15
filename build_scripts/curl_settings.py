@@ -35,14 +35,22 @@ class CurlSettings(Configurator):
         print('Generating curl solution')
 
         command = ['cmake',
-                   '-G',
-                   self._project_settings.get_cmake_generator(),
-                   '-DCURL_DISABLE_FTP=ON', '-DCURL_DISABLE_LDAP=ON',
-		   '-DCURL_DISABLE_LDAPS=ON', '-DCURL_DISABLE_TELNET=ON',
-		   '-DCURL_DISABLE_DICT=ON', '-DCURL_DISABLE_FILE=ON',
-		   '-DCURL_DISABLE_TFTP=ON', '-DCURL_DISABLE_RTSP=ON',
-		   '-DCURL_DISABLE_POP3=ON', '-DCURL_DISABLE_IMAP=ON',
-		   '-DCURL_DISABLE_GOPHER=ON', '-DCMAKE_USE_OPENSSL=ON']
+           '-G',
+           self._project_settings.get_cmake_generator(),
+           '-DCURL_DISABLE_FTP=ON',
+           '-DCURL_DISABLE_LDAP=ON',
+		   '-DCURL_DISABLE_LDAPS=ON',
+           '-DCURL_DISABLE_TELNET=ON',
+		   '-DCURL_DISABLE_DICT=ON',
+           '-DCURL_DISABLE_FILE=ON',
+		   '-DCURL_DISABLE_TFTP=ON',
+           '-DCURL_DISABLE_RTSP=ON',
+		   '-DCURL_DISABLE_POP3=ON',
+           '-DCURL_DISABLE_IMAP=ON',
+		   '-DCURL_DISABLE_GOPHER=ON',
+           '-DCMAKE_USE_OPENSSL=ON',
+           '-DOPENSSL_ROOT_DIR=' + os.path.join(self._project_settings.get_common_build_dir(), 'OpenSSL')
+        ]
 
         result = subprocess.call(command)
         return result == 0
@@ -60,7 +68,7 @@ class CurlSettings(Configurator):
 
         os.chdir(cwd)
         command = [os.path.join(self.get_unpacked_sources_dir(), 'configure'),
-                   '--prefix', self.get_install_dir(), 
+                   '--prefix', self.get_install_dir(),
 		   '--disable-ftp', '--disable-file', '--disable-ldap',
 		   '--disable-ldaps', '--disable-rtsp', '--disable-dict',
 		   '--disable-telnet', '--disable-tftp', '--disable-pop3',
