@@ -20,7 +20,9 @@ EnterWalletPassword::~EnterWalletPassword() = default;
 
 void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
-   , const std::vector<SecureBinaryData> &encKeys, const QString &prompt)
+   , const std::vector<SecureBinaryData> &encKeys
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const QString &prompt, const QString &title)
 {
    ui_->labelAction->setText(prompt);
    ui_->labelWalletId->setText(tr("Wallet ID: %1").arg(QString::fromStdString(walletId)));
@@ -52,7 +54,9 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
 }
 
 void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank keyRank
-   , const std::vector<bs::wallet::PasswordData> &keys, const QString &prompt)
+   , const std::vector<bs::wallet::PasswordData> &keys
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const QString &prompt, const QString &title)
 {
    std::vector<bs::wallet::EncryptionType> encTypes;
    std::vector<SecureBinaryData> encKeys;
@@ -61,7 +65,7 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
       encKeys.push_back(key.encKey);
    }
 
-   init(walletId, keyRank, encTypes, encKeys, prompt);
+   init(walletId, keyRank, encTypes, encKeys, appSettings, prompt, title);
 }
 
 void EnterWalletPassword::updateState()

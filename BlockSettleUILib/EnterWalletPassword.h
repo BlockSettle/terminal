@@ -1,6 +1,7 @@
 #ifndef __ENTER_WALLET_PASSWORD_H__
 #define __ENTER_WALLET_PASSWORD_H__
 
+#include <memory>
 #include <string>
 #include <QDialog>
 #include <QTimer>
@@ -23,9 +24,13 @@ public:
 
    void init(const std::string &walletId, bs::wallet::KeyRank keyRank
       , const std::vector<bs::wallet::EncryptionType> &encTypes
-      , const std::vector<SecureBinaryData> &encKeys, const QString &prompt);
+      , const std::vector<SecureBinaryData> &encKeys
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const QString &prompt, const QString &title = QString());
    void init(const std::string &walletId, bs::wallet::KeyRank keyRank
-      , const std::vector<bs::wallet::PasswordData> &keys, const QString &prompt);
+      , const std::vector<bs::wallet::PasswordData> &keys
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const QString &prompt, const QString &title = QString());
 
    SecureBinaryData GetPassword() const;
 

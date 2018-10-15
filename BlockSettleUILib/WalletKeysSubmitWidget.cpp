@@ -83,7 +83,7 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
       ui_->groupBox->layout()->addWidget(separator);
    }
 
-   auto widget = new WalletKeyWidget(walletId_, pwdData_.size(), password, prompt, this);
+   auto widget = new WalletKeyWidget(walletId_, pwdData_.size(), password, this);
    widget->init(appSettings_, QString());
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysSubmitWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysSubmitWidget::onKeyChanged);
@@ -104,6 +104,7 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    }
    if (flags_ & SetPasswordLabelAsOld) {
       widget->setPasswordLabelAsOld();
+   }
    if (flags_ & HideFrejaEmailLabel) {
       widget->setHideFrejaEmailLabel(true);
    }

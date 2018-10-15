@@ -15,7 +15,8 @@ class WalletPasswordVerifyDialog : public QDialog
    Q_OBJECT
 
 public:
-   explicit WalletPasswordVerifyDialog(QWidget *parent = nullptr);
+   explicit WalletPasswordVerifyDialog(const std::shared_ptr<ApplicationSettings> &appSettings
+      , QWidget *parent = nullptr);
    ~WalletPasswordVerifyDialog() override;
 
    // By default the dialog will show only Freja usage info page.

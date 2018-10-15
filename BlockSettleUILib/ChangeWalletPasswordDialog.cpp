@@ -6,7 +6,7 @@
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
 #include "WalletKeyWidget.h"
-#include "WalletPasswordVerifyDialog.h"
+#include "FrejaNotice.h"
 
 
 ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
@@ -20,6 +20,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    , ui_(new Ui::ChangeWalletPasswordDialog())
    , wallet_(wallet)
    , oldKeyRank_(keyRank)
+   , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
@@ -40,8 +41,6 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    deviceKeyNew_->setHideFrejaConnect(true);
    deviceKeyNew_->setHideFrejaCombobox(true);
    
-   ui_->widgetCreateKeys->init(wallet_->getWalletId(), username, appSettings);
-
    QBoxLayout *deviceLayout = dynamic_cast<QBoxLayout*>(ui_->tabAddDevice->layout());
    deviceLayout->insertWidget(deviceLayout->indexOf(ui_->labelDeviceOldInfo) + 1, deviceKeyOld_);
    deviceLayout->insertWidget(deviceLayout->indexOf(ui_->labelDeviceNewInfo) + 1, deviceKeyNew_);
@@ -54,27 +53,40 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    connect(deviceKeyNew_, &WalletKeyWidget::keyChanged, this, &ChangeWalletPasswordDialog::onCreateKeysKeyChanged2);
    connect(deviceKeyNew_, &WalletKeyWidget::failed, this, &ChangeWalletPasswordDialog::onCreateKeysFailed2);
 
+   QString usernameAuthApp;
+
    auto encTypesIt = encTypes.begin();
    auto encKeysIt = encKeys.begin();
    while (encTypesIt != encTypes.end() && encKeysIt != encKeys.end()) {
       bs::wallet::PasswordData passwordData{};
       passwordData.encType = *encTypesIt;
       passwordData.encKey = *encKeysIt;
+
+      if (passwordData.encType == bs::wallet::EncryptionType::Freja) {
+         usernameAuthApp = QString::fromStdString(passwordData.encKey.toBinStr());
+      }
+
       oldPasswordData_.push_back(passwordData);
       ++encTypesIt;
       ++encKeysIt;
+   }
+
+   if (!usernameAuthApp.isEmpty()) {
+      deviceKeyOld_->init(appSettings, usernameAuthApp);
+      deviceKeyNew_->init(appSettings, usernameAuthApp);
    }
 
    ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideGroupboxCaption 
       | WalletKeysSubmitWidget::SetPasswordLabelAsOld
       | WalletKeysSubmitWidget::HideFrejaConnectButton);
    ui_->widgetSubmitKeys->suspend();
-   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys);
+   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideGroupboxCaption
       | WalletKeysCreateWidget::SetPasswordLabelAsNew
       | WalletKeysCreateWidget::HideFrejaConnectButton
       | WalletKeysCreateWidget::HideWidgetContol);
+   ui_->widgetCreateKeys->init(wallet_->getWalletId(), username, appSettings);
 
    ui_->widgetSubmitKeys->setFocus();
 
@@ -138,7 +150,7 @@ void ChangeWalletPasswordDialog::continueBasic()
       if (oldPasswordData_[0].password.isNull()) {
          EnterWalletPassword enterWalletPassword(this);
          enterWalletPassword.init(wallet_->getWalletId(), oldKeyRank_
-            , oldPasswordData_, tr("Change Password"));
+            , oldPasswordData_, appSettings_, tr("Change Password"));
          int result = enterWalletPassword.exec();
          if (result != QDialog::Accepted) {
             return;
@@ -153,8 +165,8 @@ void ChangeWalletPasswordDialog::continueBasic()
 
    if (isNewFreja) {
       if (showFrejaUsageInfo) {
-         WalletPasswordVerifyDialog walletPasswordVerifyDialog(this);
-         int result = walletPasswordVerifyDialog.exec();
+         FrejaNotice frejaNotice(this);
+         int result = frejaNotice.exec();
          if (result != QDialog::Accepted) {
             return;
          }
@@ -162,7 +174,7 @@ void ChangeWalletPasswordDialog::continueBasic()
 
       EnterWalletPassword enterWalletPassword(this);
       enterWalletPassword.init(wallet_->getWalletId(), ui_->widgetCreateKeys->keyRank()
-         , newKeys, tr("Activate Freja eID signing"));
+         , newKeys, appSettings_, tr("Activate Freja eID signing"));
       int result = enterWalletPassword.exec();
       if (result != QDialog::Accepted) {
          return;

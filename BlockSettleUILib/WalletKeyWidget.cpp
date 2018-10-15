@@ -21,13 +21,12 @@ const QColor kFailColor = Qt::red;
 }
 
 
-WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password,
-   const QString &prompt, QWidget* parent)
+WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::WalletKeyWidget())
    , walletId_(walletId), index_(index), password_(password)
 //   , frejaSign_(spdlog::get(""), 1)
-   , prompt_(prompt)
+//   , prompt_(prompt)
    , mobileClient_(new MobileClient(spdlog::get(""), this))
 {
    ui_->setupUi(this);
@@ -286,12 +285,6 @@ void WalletKeyWidget::setPasswordLabelAsOld()
    ui_->labelPassword->setText(tr("Old Password"));
 }
 
-
-void WalletKeyWidget::setCreateUsername(const QString& username)
-{
-   ui_->comboBoxFrejaId->setEditText(username);
-}
-
 void WalletKeyWidget::setHideFrejaEmailLabel(bool value)
 {
    hideFrejaEmailLabel_ = value;
@@ -303,7 +296,8 @@ void WalletKeyWidget::setHideFrejaControlsOnSignClicked(bool value)
    hideFrejaControlsOnSignClicked_ = value;
 }
 
- 
+
+
 
 
 QPropertyAnimation* WalletKeyWidget::startFrejaAnimation(bool success)

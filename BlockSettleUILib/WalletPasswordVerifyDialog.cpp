@@ -4,7 +4,8 @@
 #include "MessageBoxCritical.h"
 #include "ui_WalletPasswordVerifyDialog.h"
 
-WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(QWidget *parent)
+WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletPasswordVerifyDialog)
    , appSettings_(appSettings)
@@ -12,13 +13,12 @@ WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(QWidget *parent)
    ui_->setupUi(this);
 
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &WalletPasswordVerifyDialog::onContinueClicked);
-
-   ui_->stackedWidget->setCurrentIndex(Pages::FrejaInfo);
 }
 
 WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
 
-void WalletPasswordVerifyDialog::init(const std::string& walletId, const std::vector<bs::wallet::PasswordData>& keys
+void WalletPasswordVerifyDialog::init(const std::string& walletId
+   , const std::vector<bs::wallet::PasswordData>& keys
    , bs::wallet::KeyRank keyRank)
 {
    walletId_ = walletId;
@@ -64,7 +64,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
    
    if (key.encType == bs::wallet::EncryptionType::Freja) {
       EnterWalletPassword dialog(this);
-      dialog.init(walletId_, keyRank_, keys_, tr("Activate Freja eID signing"));
+      dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Activate Freja eID signing"));
       int result = dialog.exec();
       if (!result) {
          return;

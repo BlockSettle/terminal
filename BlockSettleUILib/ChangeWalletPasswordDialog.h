@@ -77,6 +77,7 @@ private:
    bool deviceKeyOldValid_ = false;
    bool deviceKeyNewValid_ = false;
    bool isLatestChangeAddDevice_ = false;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 #endif // __CHANGE_WALLET_PASSWORD_DIALOG_H__
