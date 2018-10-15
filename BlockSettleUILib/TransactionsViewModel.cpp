@@ -109,6 +109,8 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
             }
          }
          break;
+      case Columns::TxHash:
+         return QString::fromStdString(item.txEntry.txHash.toHexStr(true));
 /*      case Columns::MissedBlocks:
          return item.confirmations < 6 ? 0 : QVariant();*/
       default:
@@ -195,6 +197,7 @@ QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientat
       case Columns::Address:        return tr("Address");
       case Columns::Amount:         return tr("Amount");
       case Columns::RbfFlag:        return tr("Flag");
+      case Columns::TxHash:           return tr("Hash");
 //      case Columns::MissedBlocks:   return tr("Missed Blocks");
       default:    return QVariant();
       }

@@ -52,8 +52,14 @@ public:
    CCHeader(size_t totalTxCount, Qt::Orientation orient, QWidget *parent = nullptr)
       : QHeaderView(orient, parent), totalTxCount_(totalTxCount) {}
 
+   QSize checkboxSizeHint() const
+   {
+      QStyleOptionButton opt;
+      return style()->subElementRect(QStyle::SE_CheckBoxIndicator, &opt).size();
+   }
+
 protected:
-   void paintSection(QPainter *painter, const QRect &rect, int logIndex) const {
+   void paintSection(QPainter *painter, const QRect &rect, int logIndex) const override {
       painter->save();
       QHeaderView::paintSection(painter, rect, logIndex);
       painter->restore();
@@ -93,7 +99,7 @@ protected:
       }
    }
 
-   void mousePressEvent(QMouseEvent *event) {
+   void mousePressEvent(QMouseEvent *event) override {
       if (QRect(0, 0, checkboxSizeHint().width() + 4, height()).contains(event->x(), event->y())) {
          if (state_ == Qt::Unchecked) {
             state_ = Qt::Checked;
@@ -106,13 +112,6 @@ protected:
       } else {
          QHeaderView::mousePressEvent(event);
       }
-   }
-
-private:
-   QSize checkboxSizeHint() const
-   {
-      QStyleOptionButton opt;
-      return style()->subElementRect(QStyle::SE_CheckBoxIndicator, &opt).size();
    }
 
 private:

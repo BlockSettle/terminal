@@ -25,6 +25,7 @@ class SignContainer;
 class TransactionData;
 class WalletsManager;
 class CelerClient;
+class ApplicationSettings;
 
 namespace SwigClient
 {
@@ -41,6 +42,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<CelerClient> &
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent = nullptr);
    ~CCSettlementTransactionWidget() override;
 
@@ -70,7 +72,7 @@ private slots:
    void onGenAddrVerified(bool);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
 
 signals:
    void settlementCancelled();
@@ -116,6 +118,7 @@ private:
    std::vector<bs::wallet::EncryptionType>   encTypes_;
    std::vector<SecureBinaryData>             encKeys_;
    bs::wallet::KeyRank                       keyRank_;
+   const std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 #endif // __CC_SETTLEMENT_TRANSACTION_WIDGET_H__

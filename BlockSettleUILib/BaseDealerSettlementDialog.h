@@ -24,6 +24,7 @@ namespace bs {
 }
 class SignContainer;
 class WalletKeysSubmitWidget;
+class ApplicationSettings;
 
 class BaseDealerSettlementDialog : public QDialog
 {
@@ -31,7 +32,9 @@ Q_OBJECT
 
 public:
    BaseDealerSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::SettlementContainer> &, const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<bs::SettlementContainer> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent = nullptr);
    ~BaseDealerSettlementDialog() noexcept override = default;
 
@@ -92,6 +95,7 @@ private:
    std::vector<SecureBinaryData>             encKeys_;
    bs::wallet::KeyRank                       keyRank_;
    QString        frejaPrompt_;
+   const std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 #endif // __BASE_DEALER_SETTLEMENT_DIALOG_H__

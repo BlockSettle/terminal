@@ -9,17 +9,19 @@
 namespace Ui {
     class WalletKeyWidget;
 }
-
 class QPropertyAnimation;
-
+class MobileClient;
+class ApplicationSettings;
 
 class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent = nullptr);
+   WalletKeyWidget(const std::string &walletId, int index, bool password, const QString &prompt,
+      QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
+   void init(const std::shared_ptr<ApplicationSettings>& appSettings, const QString& username);
    void cancel();
    void start();
 
@@ -31,10 +33,11 @@ public:
    void setHideFrejaCombobox(bool value);
    void setProgressBarFixed(bool value);
    void setShowFrejaId(bool value);
+   void setShowFrejaIdLabel(bool value);
    void setPasswordLabelAsNew();
    void setPasswordLabelAsOld();
-
-   void setCreateUsername(const QString& username);
+   void setHideFrejaEmailLabel(bool value);
+   void setHideFrejaControlsOnSignClicked(bool value);
 
 signals:
    void keyChanged(int index, SecureBinaryData);
@@ -48,7 +51,7 @@ private slots:
    void onPasswordChanged();
    void onFrejaIdChanged(const QString &);
    void onFrejaSignClicked();
-   void onFrejaSucceeded(SecureBinaryData);
+   void onFrejaSucceeded(const SecureBinaryData &password);
    void onFrejaFailed(const QString &text);
    void onFrejaStatusUpdated(const QString &status);
    void onTimer();
@@ -65,14 +68,18 @@ private:
    bool        frejaRunning_ = false;
    bool        encryptionKeysSet_ = false;
 
-   FrejaSignWallet frejaSign_;
+//   FrejaSignWallet frejaSign_;
    QTimer      timer_;
    float       timeLeft_;
+   QString     prompt_;
+   MobileClient *mobileClient_{};
 
    bool        hideFrejaConnect_ = false;
    bool        hideFrejaCombobox_ = false;
    bool        progressBarFixed_ = false;
    bool        showFrejaId_ = false;
+   bool        hideFrejaEmailLabel_ = false;
+   bool        hideFrejaControlsOnSignClicked_ = false;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

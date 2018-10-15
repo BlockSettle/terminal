@@ -174,8 +174,8 @@ public:
 
    int getCheckedState() const override { return Qt::Unchecked; }
 
-   virtual bool hasChildren() const { return !groupNodes_.empty(); }
-   virtual size_t childrenCount() const { return groupNodes_.size(); }
+   bool hasChildren() const override { return !groupNodes_.empty(); }
+   size_t childrenCount() const override { return groupNodes_.size(); }
    BaseSecurityNode* getParent() const override { return nullptr; }
    BaseSecurityNode* getChild(int row) const override
    {

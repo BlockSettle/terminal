@@ -29,6 +29,7 @@ class QuoteProvider;
 class TransactionData;
 class WalletsManager;
 class CelerClient;
+class ApplicationSettings;
 
 namespace SwigClient
 {
@@ -40,10 +41,15 @@ class XBTSettlementTransactionWidget : public QWidget
 Q_OBJECT
 
 public:
-   XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<AssetManager> &, const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<CelerClient> &, QWidget* parent = nullptr);
+   XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<CelerClient> &
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , QWidget* parent = nullptr);
    ~XBTSettlementTransactionWidget() override;
 
    void reset(const std::shared_ptr<WalletsManager> &walletsManager);
@@ -78,7 +84,7 @@ private slots:
 
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
    void onDealerVerificationStateChanged();
 
 signals:
@@ -132,6 +138,7 @@ private:
    std::shared_ptr<AddressVerificator>    addrVerificator_;
    std::shared_ptr<SignContainer>         signingContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
 
    std::shared_ptr<bs::SettlementMonitor>          monitor_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;

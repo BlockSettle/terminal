@@ -8,17 +8,13 @@
 namespace Ui {
    class WalletPasswordVerifyDialog;
 }
+class ApplicationSettings;
 
 class WalletPasswordVerifyDialog : public QDialog
 {
    Q_OBJECT
 
 public:
-   enum Pages {
-      FrejaInfo,
-      Check,
-   };
-
    explicit WalletPasswordVerifyDialog(QWidget *parent = nullptr);
    ~WalletPasswordVerifyDialog() override;
 
@@ -39,6 +35,7 @@ private:
    std::vector<bs::wallet::PasswordData> keys_;
    bs::wallet::KeyRank keyRank_;
    bool runPasswordCheck_ = false;
+   const std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 #endif // __WALLETPASSWORDVERIFYDIALOG_H__

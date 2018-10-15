@@ -36,7 +36,7 @@ public:
 
    QString getName() const { return name_; }
    QString getComment() const { return comment_; }
-   virtual QString getUtxoCount() const { return QString(); }
+   virtual int getUtxoCount() const { return 0; }
 
    bool hasChildren() const { return !childs_.empty(); }
    int  childrenCount() const { return childs_.count(); }
@@ -163,7 +163,20 @@ public:
       appendChildrenNode(transaction);
       NotifyChildAdded();
       AddBalance(transaction->getSelectionCount(), transaction->getTotalAmount(), transaction->getTotalAmount());
+      incrementUtxoCount();
+   }
+
+   void incrementUtxoCount()
+   {
       ++utxoCount_;
+
+      if (getParent()) {
+         auto a = dynamic_cast<AddressNode*>(getParent());
+
+         if (a) {
+            a->incrementUtxoCount();
+         }
+      }
    }
 
    BTCNumericTypes::balance_type getTotalAmount() const override {
@@ -187,9 +200,9 @@ public:
       UpdateChildsState(state);
    }
 
-   QString getUtxoCount() const override
+   int getUtxoCount() const override
    {
-      return QString::number(utxoCount_);
+      return utxoCount_;
    }
 
 protected:
@@ -260,6 +273,9 @@ void CoinControlNode::sort(int column, Qt::SortOrder order) {
          res = left->getName().compare(right->getName()) < 0;
          break;
       case 1:
+         res = left->getUtxoCount() < right->getUtxoCount();
+         break;
+      case 2:
          res = left->getComment().compare(right->getComment()) < 0;
          break;
       default:

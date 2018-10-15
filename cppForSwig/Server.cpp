@@ -534,7 +534,7 @@ void WebSocketServer::shutdown()
    {
       shutdownPromise_.set_value(true);
    }
-   catch (future_error& e)
+   catch (future_error)
    {}
 }
 
@@ -574,7 +574,7 @@ void WebSocketServer::webSocketService(int port)
    info.timeout_secs = 0;
    info.ip_limit_ah = 24; /* for testing */
    info.ip_limit_wsi = 105; /* for testing */
-
+   
    auto context = lws_create_context(&info);
    if (context == nullptr) 
       throw LWS_Error("failed to create LWS context");

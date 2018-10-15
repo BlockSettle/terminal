@@ -8,7 +8,7 @@ namespace Ui {
     class WalletKeysCreateWidget;
 }
 class WalletKeyWidget;
-
+class ApplicationSettings;
 
 class WalletKeysCreateWidget : public QWidget
 {
@@ -27,7 +27,8 @@ public:
    ~WalletKeysCreateWidget() override;
 
    void setFlags(Flags flags);
-   void init(const std::string &walletId, const QString& username);
+   void init(const std::string &walletId, const QString& username
+      , const std::shared_ptr<ApplicationSettings>& appSettings);
    void addPasswordKey() { addKey(true); }
    void addFrejaKey() { addKey(false); }
    void cancel();
@@ -40,6 +41,7 @@ signals:
    void keyChanged();
    void keyCountChanged();
    void failed();
+   void keyTypeChanged(bool password);
 
 private slots:
    void onAddClicked();
@@ -59,6 +61,8 @@ private:
    std::vector<bs::wallet::PasswordData> pwdData_;
    bs::wallet::KeyRank keyRank_ = { 0, 0 };
    Flags flags_{NoFlag};
+   std::shared_ptr<ApplicationSettings> appSettings_;
+   QString username_;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysCreateWidget::Flags)

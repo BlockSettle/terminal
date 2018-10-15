@@ -127,6 +127,11 @@ public:
       invalidate();
    }
 
+public slots:
+   void onUpdated() {
+      invalidate();
+   }
+
 private:
    Filter filterMode_ = NoFilter;
 };
@@ -231,12 +236,14 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    addressSortFilterModel_ = new AddressSortFilterModel(this);
    addressSortFilterModel_->setSourceModel(addressModel_);
    addressSortFilterModel_->setSortRole(AddressListModel::SortRole);
+   connect(addressModel_, &AddressListModel::updated, addressSortFilterModel_, &AddressSortFilterModel::onUpdated);
 
    ui->treeViewAddresses->setUniformRowHeights(true);
    ui->treeViewAddresses->setModel(addressSortFilterModel_);
    ui->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
    ui->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 
    updateAddresses();
 }
@@ -354,6 +361,7 @@ void WalletsWidget::onWalletContextMenu(const QPoint &p)
 void WalletsWidget::updateAddresses()
 {
    addressModel_->setWallets(GetSelectedWallets());
+   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 }
 
 void WalletsWidget::onNewWallet()
@@ -390,7 +398,7 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
 
    std::shared_ptr<bs::hd::Wallet> newWallet;
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, this);
+      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, appSettings_, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
          newWallet = walletsManager_->GetHDWalletById(walletId);
@@ -624,7 +632,8 @@ void WalletsWidget::onRevokeSettlement()
    settlWallet->GetInputFor(ae, cbSettlInput, false);
 }
 
-void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
+   std::string error, bool cancelledByUser)
 {
    if (!revokeReqId_ || (revokeReqId_ != id)) {
       return;
@@ -657,17 +666,19 @@ void WalletsWidget::onDeleteWallet()
       MessageBoxCritical(tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
       return;
    }
-   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, this).exec();
+   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, this).exec();
 }
 
 
-bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet, const std::shared_ptr<SignContainer> &container
+bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget *parent)
 {
    if (!wallet) {
       return false;
    }
-   WalletBackupDialog walletBackupDialog(wallet, container, parent);
+   WalletBackupDialog walletBackupDialog(wallet, container, appSettings, parent);
    if (walletBackupDialog.exec() == QDialog::Accepted) {
       MessageBoxSuccess(QObject::tr("Backup"), QObject::tr("%1 Backup successfully created")
          .arg(walletBackupDialog.isDigitalBackup() ? QObject::tr("Digital") : QObject::tr("Paper"))

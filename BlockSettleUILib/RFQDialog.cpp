@@ -18,12 +18,18 @@ enum StackWidgetId
    SettlementTransactionId
 };
 
-RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::network::RFQ& rfq
-   , const std::shared_ptr<TransactionData>& transactionData, const std::shared_ptr<QuoteProvider>& quoteProvider
-   , const std::shared_ptr<AuthAddressManager>& authAddressManager, const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<WalletsManager> &walletsManager, const std::shared_ptr<SignContainer> &container
+RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const bs::network::RFQ& rfq
+   , const std::shared_ptr<TransactionData>& transactionData
+   , const std::shared_ptr<QuoteProvider>& quoteProvider
+   , const std::shared_ptr<AuthAddressManager>& authAddressManager
+   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<CelerClient> &celerClient, QWidget* parent)
+   , const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
@@ -36,6 +42,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
    , assetMgr_(assetManager)
    , armory_(armory)
    , celerClient_(celerClient)
+   , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
@@ -96,7 +103,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    } else {
       if (rfq_.assetType == bs::network::Asset::SpotXBT) {
          xbtSettlementWidget_ = new XBTSettlementTransactionWidget(logger_, authAddressManager_
-            , assetMgr_, quoteProvider_, container_, armory_, celerClient_, this);
+            , assetMgr_, quoteProvider_, container_, armory_, celerClient_, appSettings_, this);
 
          connect(xbtSettlementWidget_, &XBTSettlementTransactionWidget::settlementAccepted
             , this, &RFQDialog::onSettlementAccepted);
@@ -111,7 +118,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
          ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
       } else {
          ccSettlementWidget_ = new CCSettlementTransactionWidget(logger_, assetMgr_
-            , container_, armory_, celerClient_, this);
+            , container_, armory_, celerClient_, appSettings_, this);
 
          connect(ccSettlementWidget_, &CCSettlementTransactionWidget::settlementAccepted
             , this, &RFQDialog::onSettlementAccepted);

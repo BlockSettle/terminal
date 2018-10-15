@@ -11,6 +11,7 @@
 namespace Ui {
     class EnterWalletPassword;
 };
+class ApplicationSettings;
 
 class EnterWalletPassword : public QDialog
 {

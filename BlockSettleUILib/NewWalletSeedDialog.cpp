@@ -6,19 +6,25 @@
 #include <QPrintDialog>
 #include <QPrinter>
 #include <QStandardPaths>
+#include <QValidator>
+#include <QResizeEvent>
+#include <QScrollArea>
+#include <QEvent>
+
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
 #include "PaperBackupWriter.h"
 #include "UiUtils.h"
 #include "ui_NewWalletSeedDialog.h"
+#include "make_unique.h"
+#include "EasyEncValidator.h"
 
 namespace {
 
    const double kMarginScale = 0.5;
 
-   const int kTotalClientPadding = 50;
-
 }
+
 
 NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    , const QString &keyLine1, const QString &keyLine2, QWidget *parent) :
@@ -27,6 +33,7 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    , walletId_(walletId)
    , keyLine1_(keyLine1)
    , keyLine2_(keyLine2)
+   , easyCodec_(std::make_shared<EasyCoDec>())
 {
    ui_->setupUi(this);
 
@@ -34,20 +41,42 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
       , QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png"))
       , UiUtils::getQRCode(keyLine1 + QLatin1Literal("\n") + keyLine2)));
 
-   QPixmap pdfPreview = pdfWriter_->getPreview(width() - kTotalClientPadding, kMarginScale);
-
-   ui_->labelPreview->setPixmap(pdfPreview);
+   ui_->scrollArea->viewport()->installEventFilter(this);
 
    connect(ui_->pushButtonSave, &QPushButton::clicked, this, &NewWalletSeedDialog::onSaveClicked);
    connect(ui_->pushButtonPrint, &QPushButton::clicked, this, &NewWalletSeedDialog::onPrintClicked);
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &NewWalletSeedDialog::onContinueClicked);
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &NewWalletSeedDialog::onBackClicked);
+   connect(ui_->lineEditLine1, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
+   connect(ui_->lineEditLine2, &QLineEdit::textChanged, this, &NewWalletSeedDialog::onKeyChanged);
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &NewWalletSeedDialog::reject);
+
+   validator_ = make_unique<EasyEncValidator>(easyCodec_, nullptr, 9, true);
+   ui_->lineEditLine1->setValidator(validator_.get());
+   ui_->lineEditLine2->setValidator(validator_.get());
 
    setCurrentPage(Pages::PrintPreview);
    updateState();
 }
 
 NewWalletSeedDialog::~NewWalletSeedDialog() = default;
+
+bool NewWalletSeedDialog::eventFilter(QObject *obj, QEvent *event)
+{
+   if (obj == ui_->scrollArea->viewport() && event->type() == QEvent::Resize) {
+      QResizeEvent *e = static_cast<QResizeEvent*>(event);
+
+      const int w = e->size().width();
+
+      const auto pdfPreview = pdfWriter_->getPreview(w, kMarginScale);
+
+      ui_->labelPreview->setPixmap(pdfPreview);
+
+      return false;
+   } else {
+      return QDialog::eventFilter(obj, event);
+   }
+}
 
 void NewWalletSeedDialog::setCurrentPage(Pages page)
 {
@@ -58,7 +87,7 @@ void NewWalletSeedDialog::setCurrentPage(Pages page)
    ui_->pushButtonPrint->setVisible(page == Pages::PrintPreview);
    ui_->pushButtonBack->setVisible(page == Pages::Confirm);
 
-   ui_->pushButtonContinue->setEnabled(wasSaved_);
+   updateState();
 
    // Hide to allow adjust to smaller size
    ui_->labelPreview->setVisible(page == Pages::PrintPreview);
@@ -76,7 +105,11 @@ void NewWalletSeedDialog::setCurrentPage(Pages page)
 
 void NewWalletSeedDialog::updateState()
 {
-   ui_->pushButtonContinue->setEnabled(wasSaved_);
+   if (currentPage_ == Pages::PrintPreview) {
+      ui_->pushButtonContinue->setEnabled(true);
+   } else {
+      ui_->pushButtonContinue->setEnabled(keysAreCorrect_);
+   }
 }
 
 void NewWalletSeedDialog::onSaveClicked()
@@ -101,7 +134,6 @@ void NewWalletSeedDialog::onSaveClicked()
       return;
    }
 
-   wasSaved_ = true;
    updateState();
 }
 
@@ -141,7 +173,6 @@ void NewWalletSeedDialog::onPrintClicked()
 
    pdfWriter_->print(&printer);
 
-   wasSaved_ = true;
    updateState();
 }
 
@@ -161,8 +192,20 @@ void NewWalletSeedDialog::onContinueClicked()
 
 void NewWalletSeedDialog::validateKeys()
 {
-   QString inputLine1 = ui_->lineEditLine1->text();
-   QString inputLine2 = ui_->lineEditLine2->text();
+   if (!keysAreCorrect_) {
+      MessageBoxCritical messageBox(tr("Check failed!")
+         , tr("Input values do not match with the original keys. Please make sure the input lines are correct."));
+      messageBox.exec();
+      return;
+   }
+
+   accept();
+}
+
+void NewWalletSeedDialog::onKeyChanged(const QString &)
+{
+   QString inputLine1 = ui_->lineEditLine1->text().trimmed();
+   QString inputLine2 = ui_->lineEditLine2->text().trimmed();
    QString keyLine1 = keyLine1_;
    QString keyLine2 = keyLine2_;
 
@@ -173,13 +216,24 @@ void NewWalletSeedDialog::validateKeys()
    keyLine2.remove(QChar::Space);
 
    if (inputLine1 != keyLine1 || inputLine2 != keyLine2) {
-      MessageBoxCritical messageBox(tr("Check failed!")
-         , tr("Input values do not match with the original keys. Please make sure the input lines are correct."));
-      messageBox.exec();
-      return;
+      keysAreCorrect_ = false;
+   } else {
+      keysAreCorrect_ = true;
    }
 
-   accept();
+   if (inputLine1 != keyLine1) {
+      UiUtils::setWrongState(ui_->lineEditLine1, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditLine1, false);
+   }
+
+   if (inputLine2 != keyLine2) {
+      UiUtils::setWrongState(ui_->lineEditLine2, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditLine2, false);
+   }
+
+   updateState();
 }
 
 bool abortWalletCreationQuestionDialog(QWidget* parent)

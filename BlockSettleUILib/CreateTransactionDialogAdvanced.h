@@ -79,7 +79,7 @@ protected slots:
    void onCreatePressed();
    void onImportPressed();
 
-   void feeSelectionChanged(int currentIndex);
+   void feeSelectionChanged(int currentIndex) override;
    void onManualFeeChanged(int fee);
 
    void onNewAddressSelectedForChange();

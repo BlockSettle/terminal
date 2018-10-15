@@ -119,7 +119,7 @@ void RFQTicketXBT::setWallets()
       recvWallet_ = curWallet_;
    }
 
-  transactionData_->SetWallet(curWallet_);
+  transactionData_->SetWallet(curWallet_, armory_->topBlock());
   if (prevRecvWallet != recvWallet_) {
      fillRecvAddresses();
   }
@@ -159,7 +159,6 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
    });
-   connect(assetManager_.get(), &AssetManager::securitiesReceived, this, &RFQTicketXBT::securitiesReceived);
 
    utxoAdapter_ = std::make_shared<bs::RequesterUtxoResAdapter>(nullptr, this);
    connect(quoteProvider.get(), &QuoteProvider::orderUpdated, utxoAdapter_.get(), &bs::OrderUtxoResAdapter::onOrder);
@@ -174,11 +173,6 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
    }
 
    updateSubmitButton();
-}
-
-void RFQTicketXBT::securitiesReceived()
-{
-   enablePanel();
 }
 
 void RFQTicketXBT::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)
@@ -538,7 +532,7 @@ bs::Address RFQTicketXBT::recvAddress() const
    }
 
    if (index == 0) {
-      const auto &addr = recvWallet_->GetNewExtAddress();
+      const auto &addr = recvWallet_->GetNewIntAddress();
       if (transactionData_) {
          transactionData_->createAddress(addr, recvWallet_);
       }
@@ -815,6 +809,7 @@ void RFQTicketXBT::disablePanel()
 void RFQTicketXBT::enablePanel()
 {
    resetTicket();
+   clearHelp();
 }
 
 void RFQTicketXBT::HideRFQControls()

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Wallet Seed</string>
+   <string>Root Private Key</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <property name="spacing">
@@ -37,40 +37,40 @@
      <widget class="QWidget" name="pagePreview">
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <property name="spacing">
-        <number>4</number>
+        <number>6</number>
        </property>
        <property name="leftMargin">
-        <number>4</number>
+        <number>9</number>
        </property>
        <property name="topMargin">
-        <number>4</number>
+        <number>9</number>
        </property>
        <property name="rightMargin">
-        <number>4</number>
+        <number>9</number>
        </property>
        <property name="bottomMargin">
-        <number>0</number>
+        <number>9</number>
        </property>
        <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
-          <string>Save your Root Private Key</string>
+          <string>SAVE YOUR PRIVATE ROOT KEY</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="spacing">
-           <number>7</number>
+           <number>9</number>
           </property>
           <property name="leftMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <item>
            <widget class="QLabel" name="label">
@@ -97,7 +97,7 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>703</width>
+               <width>695</width>
                <height>523</height>
               </rect>
              </property>
@@ -138,46 +138,75 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
        <item>
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
-          <string>Confirm Seed</string>
+          <string>CONFIRM ROOT PRIVATE KEY</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Line 1:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="lineEditLine1"/>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEditLine2"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>Line 2:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0" colspan="2">
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>Your seed is important! If you lose your seed, your bitcoin assets will be permanently lost.
+             <string>Your seed is important! If you lose your seed, your bitcoin will be permanently lost.
 To make sure that you have properly saved your seed, please retype it here.</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item>
+           <spacer name="verticalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>10</width>
+              <height>10</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Line 1:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lineEditLine1"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Line 2:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="lineEditLine2"/>
+            </item>
+           </layout>
+          </item>
+          <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
-              <width>20</width>
-              <height>40</height>
+              <width>10</width>
+              <height>10</height>
              </size>
             </property>
            </spacer>
@@ -210,6 +239,19 @@ To make sure that you have properly saved your seed, please retype it here.</str
       <property name="bottomMargin">
        <number>10</number>
       </property>
+      <item>
+       <widget class="QPushButton" name="pushButtonCancel">
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Cancel</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">

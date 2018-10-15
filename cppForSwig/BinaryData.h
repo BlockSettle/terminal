@@ -96,8 +96,6 @@ enum ENDIAN
 #define LE ENDIAN_LITTLE
 #define BE ENDIAN_BIG
 
-using namespace std;
-
 class BinaryDataRef;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -114,7 +112,7 @@ public:
                                                { copyFrom(inData, sz);   }
    BinaryData(uint8_t const * dstart, uint8_t const * dend ) 
                                                { copyFrom(dstart, dend); }
-   BinaryData(string const & str)              { copyFrom(str);          }
+   BinaryData(std::string const & str)              { copyFrom(str);          }
    BinaryData(BinaryData const & bd)           { copyFrom(bd);           }
 
    BinaryData(BinaryData && copy)
@@ -184,7 +182,7 @@ public:
    }  
 
    /////////////////////////////////////////////////////////////////////////////
-   const vector<uint8_t>& getDataVector(void) const
+   const std::vector<uint8_t>& getDataVector(void) const
    {
       return data_;
    }
@@ -196,7 +194,7 @@ public:
    // We allocate space as necesssary
    void copyFrom(uint8_t const * start, uint8_t const * end) 
                   { copyFrom( start, (end-start)); }  // [start, end)
-   void copyFrom(string const & str)                         
+   void copyFrom(std::string const & str)                         
                   { copyFrom( (uint8_t*)str.data(), str.size()); } 
    void copyFrom(BinaryData const & bd)                      
                   { copyFrom( bd.getPtr(), bd.getSize() ); }
@@ -364,7 +362,7 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // These are always memory-safe
-   void copyTo(string & str) { 
+   void copyTo(std::string & str) { 
 #ifdef _MSC_VER
 	if(getSize())
 #endif
@@ -372,18 +370,18 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   string toBinStr(bool bigEndian=false) const 
+   std::string toBinStr(bool bigEndian=false) const 
    { 
       if(getSize()==0)
-         return string("");
+         return std::string("");
 
       if(bigEndian)
       {
          BinaryData out = copySwapEndian();
-         return string((char const *)(out.getPtr()), getSize());
+         return std::string((char const *)(out.getPtr()), getSize());
       }
       else
-         return string((char const *)(getPtr()), getSize());
+         return std::string((char const *)(getPtr()), getSize());
    }
 
    char* toCharPtr(void) const  { return  (char*)(&(data_[0])); }
@@ -422,10 +420,10 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   string toHexStr(bool bigEndian=false) const
+   std::string toHexStr(bool bigEndian=false) const
    {
       if(getSize()==0)
-         return string("");
+         return std::string("");
 
       static char hexLookupTable[16] = {'0','1','2','3',
                                         '4','5','6','7',
@@ -435,7 +433,7 @@ public:
       if(bigEndian)
          bdToHex.swapEndian();
 
-      vector<int8_t> outStr(2*getSize());
+      std::vector<int8_t> outStr(2*getSize());
       for( size_t i=0; i<getSize(); i++)
       {
          uint8_t nextByte = bdToHex.data_[i];
@@ -443,11 +441,11 @@ public:
          outStr[2*i+1] = hexLookupTable[ (nextByte     ) & 0x0F ];
       }
          
-      return string((char const *)(&(outStr[0])), 2*getSize());
+      return std::string((char const *)(&(outStr[0])), 2*getSize());
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   static BinaryData CreateFromHex(string const & str)
+   static BinaryData CreateFromHex(std::string const & str)
    {
       BinaryData out;
       out.createFromHex(str);
@@ -545,12 +543,12 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   void createFromHex(const string& str);
+   void createFromHex(const std::string& str);
    void createFromHex(BinaryDataRef const & bdr);
 
    // For deallocating all the memory that is currently used by this BD
    void clear(void) { data_.clear(); }
-   vector<uint8_t> release(void) 
+   std::vector<uint8_t> release(void) 
    { 
       auto vec = move(data_);
       clear();
@@ -561,7 +559,7 @@ public:
    static BinaryData EmptyBinData_;
 
 protected:
-   vector<uint8_t> data_;
+   std::vector<uint8_t> data_;
 
 private:
    void alloc(size_t sz) 
@@ -634,7 +632,7 @@ public:
    }
    void setRef(uint8_t const * start, uint8_t const * end) 
                   { setRef( start, (end-start)); }  // [start, end)
-   void setRef(string const & str)                         
+   void setRef(std::string const & str)                         
                   { setRef( (uint8_t*)str.data(), str.size()); } 
    void setRef(BinaryData const & bd)                      
                   { setRef( bd.getPtr(), bd.getSize() ); }
@@ -661,7 +659,7 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // These are always memory-safe
-   void copyTo(string & str) { str.assign( (char const *)(ptr_), nBytes_); }
+   void copyTo(std::string & str) { str.assign( (char const *)(ptr_), nBytes_); }
 
    /////////////////////////////////////////////////////////////////////////////
    friend ostream& operator<<(ostream& os, BinaryDataRef const & bd)
@@ -671,18 +669,18 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   string toBinStr(bool bigEndian=false) const 
+   std::string toBinStr(bool bigEndian=false) const 
    { 
       if(getSize()==0)
-         return string("");
+         return std::string("");
 
       if(bigEndian)
       {
          BinaryData out = copy();
-         return string((char const *)(out.swapEndian().getPtr()), nBytes_); 
+         return std::string((char const *)(out.swapEndian().getPtr()), nBytes_); 
       }
       else
-         return string((char const *)(ptr_), nBytes_); 
+         return std::string((char const *)(ptr_), nBytes_); 
    }
 
    
@@ -898,10 +896,10 @@ public:
 
 
    /////////////////////////////////////////////////////////////////////////////
-   string toHexStr(bool bigEndian=false) const
+   std::string toHexStr(bool bigEndian=false) const
    {
       if(getSize() == 0)
-         return string("");
+         return std::string("");
 
       static char hexLookupTable[16] = {'0','1','2','3',
                                         '4','5','6','7',
@@ -911,14 +909,14 @@ public:
       if(bigEndian)
          bdToHex.swapEndian();
 
-      vector<int8_t> outStr(2*nBytes_);
+      std::vector<int8_t> outStr(2*nBytes_);
       for(size_t i=0; i<nBytes_; i++)
       {
          uint8_t nextByte = *(bdToHex.getPtr()+i);
          outStr[2*i  ] = hexLookupTable[ (nextByte >> 4) & 0x0F ];
          outStr[2*i+1] = hexLookupTable[ (nextByte     ) & 0x0F ];
       }
-      return string((char const *)(&(outStr[0])), 2*nBytes_);
+      return std::string((char const *)(&(outStr[0])), 2*nBytes_);
    }
 
 private:
@@ -1678,7 +1676,7 @@ class BinaryStreamBuffer
 public:
 
    /////////////////////////////////////////////////////////////////////////////
-   BinaryStreamBuffer(string filename="", uint32_t bufSize=DEFAULT_BUFFER_SIZE) :
+   BinaryStreamBuffer(std::string filename="", uint32_t bufSize=DEFAULT_BUFFER_SIZE) :
       binReader_(bufSize),
       streamPtr_(NULL),
       weOwnTheStream_(false),

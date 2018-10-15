@@ -189,7 +189,8 @@ bool AuthAddressManager::CreateNewAuthAddress()
    return true;
 }
 
-void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
+   bool cancelledByUser)
 {
    const auto &itVerify = signIdsVerify_.find(id);
    const auto &itRevoke = signIdsRevoke_.find(id);
@@ -958,7 +959,7 @@ void AuthAddressManager::onWalletCreated(unsigned int id, BinaryData pubKey, Bin
    const auto &priWallet = walletsManager_->GetPrimaryWallet();
    const auto &leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, priWallet->networkType());
    const auto &group = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   auto leaf = group->getLeaf(0u);
+   auto leaf = group->createLeaf(0u, leafNode);
 
    if (leaf) {
       if (createWalletReqId_.second) {

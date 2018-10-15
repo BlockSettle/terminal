@@ -44,7 +44,7 @@ public:
    QSize sizeHint() const override;
 
 protected:
-   void paintEvent(QPaintEvent*);
+   void paintEvent(QPaintEvent*) override;
 
 private:
    Q_DISABLE_COPY(CircleProgressBar)

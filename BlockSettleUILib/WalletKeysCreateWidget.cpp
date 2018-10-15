@@ -3,6 +3,7 @@
 #include <set>
 #include <QSpinBox>
 #include "WalletKeyWidget.h"
+#include "ApplicationSettings.h"
 
 
 WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
@@ -25,7 +26,8 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username)
+void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username
+   , const std::shared_ptr<ApplicationSettings>& appSettings)
 {
    widgets_.clear();
    pwdData_.clear();
@@ -35,6 +37,8 @@ void WalletKeysCreateWidget::init(const std::string &walletId, const QString& us
    }
 
    walletId_ = walletId;
+   username_ = username;
+   appSettings_ = appSettings;
    
    addPasswordKey();
 
@@ -43,14 +47,15 @@ void WalletKeysCreateWidget::init(const std::string &walletId, const QString& us
    }
 
    for (auto& widget : widgets_) {
-      widget->setCreateUsername(username);
+      widget->init(appSettings, username);
    }
 }
 
 void WalletKeysCreateWidget::addKey(bool password)
 {
    assert(!walletId_.empty());
-   auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, this);
+   auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, QString(), this);
+   widget->init(appSettings_, username_);
    if (flags_ & HideFrejaConnectButton) {
       widget->setHideFrejaConnect(true);
    }
@@ -111,6 +116,7 @@ void WalletKeysCreateWidget::onKeyTypeChanged(int index, bool password)
    pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja;
    pwdData_[index].password.clear();
    emit keyChanged();
+   emit keyTypeChanged(password);
 }
 
 void WalletKeysCreateWidget::onEncKeyChanged(int index, SecureBinaryData encKey)
@@ -141,9 +147,6 @@ bool WalletKeysCreateWidget::isValid() const
    }
    std::set<SecureBinaryData> encKeys;
    for (const auto &pwd : pwdData_) {
-      if (pwd.password.isNull()) {
-         return false;
-      }
       if (pwd.encType == bs::wallet::EncryptionType::Freja) {
          if (pwd.encKey.isNull()) {
             return false;
@@ -152,6 +155,8 @@ bool WalletKeysCreateWidget::isValid() const
             return false;
          }
          encKeys.insert(pwd.encKey);
+      } else if (pwd.password.isNull()) {
+         return false;
       }
    }
    return true;

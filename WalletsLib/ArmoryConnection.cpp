@@ -103,8 +103,6 @@ bool ArmoryConnection::startLocalArmoryProcess(const ArmorySettings &settings)
       default: break;
       }
 
-      std::string spawnID = SecureBinaryData().GenerateRandom(32).toHexStr();
-      args.append(QLatin1String("--spawnId=\"") + QString::fromStdString(spawnID) + QLatin1String("\""));
       args.append(QLatin1String("--satoshi-datadir=\"") + settings.bitcoinBlocksDir + QLatin1String("\""));
       args.append(QLatin1String("--dbdir=\"") + settings.dbDir + QLatin1String("\""));
 
@@ -418,7 +416,7 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       logger_->error("[ArmoryConnection::getTXsByHash] invalid state: {}", (int)state_.load());
       return false;
    }
-   unsigned int cbCount = 0;
+
    auto hashSet = new std::set<BinaryData>(hashes);
    auto result = new std::vector<Tx>;
    const auto origHashes = hashes;

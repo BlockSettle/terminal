@@ -152,7 +152,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
    auto selInputs = transactionData_->GetSelectedInputs();
    selInputs->SetUseAutoSel(false);
 
-   const auto &cbRBFInputs = [this, &selInputs](std::vector<UTXO> utxos) {
+   const auto &cbRBFInputs = [this, selInputs](std::vector<UTXO> utxos) {
       selInputs->SetFixedInputs(utxos);
    };
    if (!wallet->getRBFTxOutList(cbRBFInputs)) {
@@ -587,7 +587,7 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    if (feeChangeDisabled_) {
       return;
    }
-   
+
    CreateTransactionDialog::onFeeSuggestionsLoaded(feeValues);
 
    AddManualFeeEntries((minFeePerByte_ > 0) ? minFeePerByte_ : feeValues.begin()->second

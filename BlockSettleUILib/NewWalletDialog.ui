@@ -134,7 +134,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;For guidance, please consult the &lt;a href=&quot;http://193.138.218.35/PDF/BlockSettle%20Getting%20Started.pdf&quot;&gt;&lt;span style=&quot; padding-left: 5px; text-decoration: none; color:#ffffff;&quot;&gt;Getting Started Guide&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;For guidance, please consult the &lt;a href=&quot;http://pubb.blocksettle.com/PDF/BlockSettle%20Getting%20Started.pdf&quot;&gt;&lt;span style=&quot; padding-left: 5px; text-decoration: none; color:#ffffff;&quot;&gt;Getting Started Guide&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="textFormat">
          <enum>Qt::RichText</enum>

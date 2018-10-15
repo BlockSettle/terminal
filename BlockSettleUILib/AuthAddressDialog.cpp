@@ -215,6 +215,7 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
             ui_->pushButtonVerify->setEnabled(false);
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(authAddressManager_->HaveOTP() && lastSubmittedAddress_.isNull());
+            ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::VerificationFailed:
          case AddressVerificationState::Submitted:
@@ -223,6 +224,7 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
             ui_->pushButtonVerify->setEnabled(false);
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
+            ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::PendingVerification:
             ui_->pushButtonCreate->setFlat(false);
@@ -231,17 +233,17 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
             ui_->pushButtonRevoke->setEnabled(authAddressManager_->IsReady());
             ui_->pushButtonVerify->setEnabled(authAddressManager_->IsReady());
             ui_->pushButtonSubmit->setEnabled(false);
+            ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::Verified:
             ui_->pushButtonVerify->setEnabled(false);
             ui_->pushButtonRevoke->setEnabled(authAddressManager_->IsReady());
             ui_->pushButtonSubmit->setEnabled(false);
+            ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
             break;
          default:
             break;
       }
-
-      ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
    }
    else {
       ui_->pushButtonVerify->setEnabled(false);

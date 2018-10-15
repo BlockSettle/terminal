@@ -1,10 +1,14 @@
 #include "HDLeaf.h"
-#include <QMutexLocker>
-#include <QtConcurrent/QtConcurrentRun>
+
+
 #include "CheckRecipSigner.h"
 #include "HDNode.h"
 #include "Wallets.h"
 
+#include <unordered_map>
+
+#include <QMutexLocker>
+#include <QtConcurrent/QtConcurrentRun>
 
 #define ADDR_KEY     0x00002002
 
@@ -183,13 +187,7 @@ hd::Leaf::Leaf(const std::string &name, const std::string &desc, bs::wallet::Typ
 
 hd::Leaf::~Leaf()
 {
-   stop();
    inited_ = false;
-}
-
-void hd::Leaf::stop()
-{
-   bs::Wallet::stop();
 }
 
 void hd::Leaf::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
@@ -245,7 +243,7 @@ void hd::Leaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
    activateAddressesFromLedger(armory_->getZCentries(reqId));
 }
 
-void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids)
+void hd::Leaf::onRefresh(std::vector<BinaryData> ids)
 {
    hd::BlockchainScanner::onRefresh(ids);
 }
@@ -392,11 +390,22 @@ BinaryData hd::Leaf::getRootId() const
    return node_->pubCompressedKey();
 }
 
+// Return an external-facing address.
 bs::Address hd::Leaf::GetNewExtAddress(AddressEntryType aet)
 {
    return createAddress(aet, false);
 }
 
+// Return an internal-facing address.
+bs::Address hd::Leaf::GetNewIntAddress(AddressEntryType aet)
+{
+   if (isExtOnly_) {
+      return {};
+   }
+   return createAddress(aet, true);
+}
+
+// Return a change address.
 bs::Address hd::Leaf::GetNewChangeAddress(AddressEntryType aet)
 {
    return createAddress(aet, isExtOnly_ ? false : true);
@@ -641,7 +650,7 @@ std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAsset(std::shared_ptr<
       ae_type = defaultAET_;
    }
 
-   shared_ptr<AddressEntry> aePtr = nullptr;
+   std::shared_ptr<AddressEntry> aePtr = nullptr;
    switch (ae_type)
    {
    case AddressEntryType_P2PKH:
@@ -1106,8 +1115,15 @@ void hd::CCLeaf::setData(const std::string &data)
 void hd::CCLeaf::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    hd::Leaf::SetArmory(armory);
+   if (armory_) {
+      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
+   }
    if (checker_ && armory) {
       checker_->setArmory(armory);
+   }
+   if (checker_ && !validationStarted_) {
+      validationEnded_ = false;
+      validationProc();
    }
 }
 
@@ -1133,7 +1149,6 @@ void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
                balanceVec[1] += utxo.getValue();
             }
          };
-
          findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
       };
       hd::Leaf::getSpendableTxOutList(cbRefresh, this);
@@ -1151,7 +1166,6 @@ void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
             balanceVec[0] = balanceVec[1] + balanceVec[2];
          }
       };
-
       findInvalidUTXOs(utxos, cbUpdateZcBalance);
    };
    hd::Leaf::getSpendableZCList(cbRefreshZC);
@@ -1164,8 +1178,8 @@ void hd::CCLeaf::validationProc()
       validationStarted_ = false;
       return;
    }
-   refreshInvalidUTXOs();
    validationEnded_ = true;
+   refreshInvalidUTXOs();
    hd::Leaf::firstInit();
    emit addressAdded();
 
@@ -1173,9 +1187,10 @@ void hd::CCLeaf::validationProc()
       return;
    }
 
-   auto addressesToCheck = new std::set<bs::Address>;
+   auto addressesToCheck = std::make_shared< std::map<bs::Address, int> >();
+
    for (const auto &addr : GetUsedAddressList()) {
-      addressesToCheck->insert(addr);
+      addressesToCheck->emplace(addr, -1);
    }
 
    const auto &cbLedgers = [this, addressesToCheck](std::map<bs::Address, AsyncClient::LedgerDelegate> ledgers) {
@@ -1191,13 +1206,29 @@ void hd::CCLeaf::validationProc()
             };
             checker_->containsInputAddress(tx, cbResult, lotSizeInSatoshis_);
 
-            addressesToCheck->erase(addr);
-            if (addressesToCheck->empty()) {
-               delete addressesToCheck;
+            auto it = addressesToCheck->find(addr);
+            if (it != addressesToCheck->end()) {
+               it->second = it->second - 1;
+               if (it->second <= 0) {
+                  addressesToCheck->erase(it);
+               }
+            }
+
+            bool empty = true;
+            for (const auto& it : *addressesToCheck) {
+               if (it.second > 0) {
+                  empty = false;
+                  break;
+               }
+            }
+
+            if (empty) {
                emit walletReset();
             }
          };
-         const auto &cbHistory = [this, cbCheck](std::vector<ClientClasses::LedgerEntry> entries) {
+         const auto &cbHistory = [this, cbCheck, addr=ledger.first, addressesToCheck](std::vector<ClientClasses::LedgerEntry> entries) {
+            (*addressesToCheck)[addr] = entries.size();
+
             for (const auto &entry : entries) {
                armory_->getTxByHash(entry.getTxHash(), cbCheck);
             }
@@ -1221,32 +1252,43 @@ void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<
       utxoMap[hash] = utxo;
    }
    const auto &cbProcess = [this, utxoMap, cb, utxos](std::vector<Tx> txs) {
+      struct TxResultData {
+         Tx    tx;
+         UTXO  utxo;
+      };
       struct Result {
          uint64_t invalidBalance = 0;
-         std::set<BinaryData> txHashSet;
+         std::map<BinaryData, TxResultData> txHashMap;
       };
       auto result = new Result;
 
       for (const auto &tx : txs) {
-         const auto &itUtxo = utxoMap.find(tx.getThisHash());
+         const auto &txHash = tx.getThisHash();
+         const auto &itUtxo = utxoMap.find(txHash);
          if (itUtxo == utxoMap.end()) {
             continue;
          }
-         const auto &cbResult = [this, tx, itUtxo, result, cb, utxos](bool contained) {
+         result->txHashMap[txHash] = { tx, itUtxo->second };
+      }
+
+      const auto txHashMap = result->txHashMap;
+      for (const auto &txPair : txHashMap) {
+         const auto &txHash = txPair.first;
+         const auto &txData = txPair.second;
+         const auto &cbResult = [this, txHash, txData, result, cb, utxos](bool contained) {
             if (!contained) {
-               invalidTx_.insert(itUtxo->second);
-               invalidTxHash_.insert(tx.getThisHash());
-               result->invalidBalance += itUtxo->second.getValue();
+               invalidTx_.insert(txData.utxo);
+               invalidTxHash_.insert(txHash);
+               result->invalidBalance += txData.utxo.getValue();
             }
-            result->txHashSet.erase(tx.getThisHash());
-            if (result->txHashSet.empty()) {
+            result->txHashMap.erase(txHash);
+            if (result->txHashMap.empty()) {
                balanceCorrection_ += result->invalidBalance / BTCNumericTypes::BalanceDivider;
                cb(filterUTXOs(utxos));
                delete result;
             }
          };
-         result->txHashSet.insert(tx.getThisHash());
-         checker_->containsInputAddress(tx, cbResult, lotSizeInSatoshis_, itUtxo->second.getValue());
+         checker_->containsInputAddress(txData.tx, cbResult, lotSizeInSatoshis_, txData.utxo.getValue());
       }
    };
    armory_->getTXsByHash(txHashes, cbProcess);
@@ -1260,14 +1302,11 @@ void hd::CCLeaf::firstInit()
    }
 }
 
-void hd::CCLeaf::onRefresh(const std::vector<BinaryData> &ids)
+void hd::CCLeaf::onStateChanged(ArmoryConnection::State state)
 {
-   hd::Leaf::onRefresh(ids);
-   const auto it = std::find(ids.begin(), ids.end(), GetWalletId());
-   if (it == ids.end()) {
-      return;
+   if (state == ArmoryConnection::State::Ready) {
+      firstInit();
    }
-   firstInit();
 }
 
 void hd::CCLeaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
@@ -1307,7 +1346,7 @@ bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
    const auto &cbZCList = [this, cb](std::vector<UTXO> txOutList) {
       cb(filterUTXOs(txOutList));
    };
-   return hd::Leaf::getSpendableZCList(cb, obj);
+   return hd::Leaf::getSpendableZCList(cbZCList, obj);
 }
 
 bool hd::CCLeaf::isBalanceAvailable() const

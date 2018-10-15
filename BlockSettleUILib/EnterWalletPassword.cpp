@@ -25,9 +25,11 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
    ui_->labelAction->setText(prompt);
    ui_->labelWalletId->setText(tr("Wallet ID: %1").arg(QString::fromStdString(walletId)));
 
-   if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
-      setWindowTitle(tr("Sign With Freja eID"));
+   if (!title.isEmpty()) {
+      setWindowTitle(title);
+   }
 
+   if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
       ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideFrejaConnectButton
          | WalletKeysSubmitWidget::HideFrejaCombobox
          | WalletKeysSubmitWidget::HideGroupboxCaption
@@ -40,7 +42,7 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
       ui_->pushButtonOk->hide();
    }
 
-   ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys);
+   ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys, appSettings, prompt);
    ui_->widgetSubmitKeys->setFocus();
 
    updateState();

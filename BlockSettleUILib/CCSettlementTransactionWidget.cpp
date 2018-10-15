@@ -20,8 +20,11 @@
 const unsigned int WaitTimeoutInSec = 30;
 
 CCSettlementTransactionWidget::CCSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<AssetManager> &assetManager, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<AssetManager> &assetManager
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CCSettlementTransactionWidget())
@@ -32,6 +35,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(const std::shared_p
    , timer_(this)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
+   , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
@@ -254,7 +258,7 @@ void CCSettlementTransactionWidget::initSigning()
       return;
    }
    const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetSigningWallet()->GetWalletId());
-   ui_->widgetSubmitKeys->init(rootWallet->getWalletId(), keyRank_, encTypes_, encKeys_);
+   ui_->widgetSubmitKeys->init(rootWallet->getWalletId(), keyRank_, encTypes_, encKeys_, appSettings_);
    ui_->widgetSubmitKeys->setFocus();
    updateAcceptButton();
    QApplication::processEvents();
@@ -272,7 +276,8 @@ void CCSettlementTransactionWidget::onAccept()
    acceptSpotCC();
 }
 
-void CCSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void CCSettlementTransactionWidget::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
+   bool cancelledByUser)
 {
    if (ccSignId_ && (ccSignId_ == id)) {
       ccSignId_ = 0;

@@ -8,7 +8,8 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <spdlog/spdlog.h>
-
+#include "ApplicationSettings.h"
+#include "MobileClient.h"
 
 namespace {
 
@@ -20,11 +21,14 @@ const QColor kFailColor = Qt::red;
 }
 
 
-WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent)
+WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool password,
+   const QString &prompt, QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::WalletKeyWidget())
    , walletId_(walletId), index_(index), password_(password)
-   , frejaSign_(spdlog::get(""), 1)
+//   , frejaSign_(spdlog::get(""), 1)
+   , prompt_(prompt)
+   , mobileClient_(new MobileClient(spdlog::get(""), this))
 {
    ui_->setupUi(this);
    ui_->radioButtonPassword->setChecked(password);
@@ -43,12 +47,28 @@ WalletKeyWidget::WalletKeyWidget(const std::string &walletId, int index, bool pa
    connect(ui_->comboBoxFrejaId, SIGNAL(currentIndexChanged(QString)), this, SLOT(onFrejaIdChanged(QString)));
    connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &WalletKeyWidget::onFrejaSignClicked);
 
-   connect(&frejaSign_, &FrejaSignWallet::succeeded, this, &WalletKeyWidget::onFrejaSucceeded);
-   connect(&frejaSign_, &FrejaSign::failed, this, &WalletKeyWidget::onFrejaFailed);
-   connect(&frejaSign_, &FrejaSign::statusUpdated, this, &WalletKeyWidget::onFrejaStatusUpdated);
+//   connect(&frejaSign_, &FrejaSignWallet::succeeded, this, &WalletKeyWidget::onFrejaSucceeded);
+//   connect(&frejaSign_, &FrejaSignWallet::failed, this, &WalletKeyWidget::onFrejaFailed);
+//   connect(&frejaSign_, &FrejaSignWallet::statusUpdated, this, &WalletKeyWidget::onFrejaStatusUpdated);
+
+   connect(mobileClient_, &MobileClient::succeeded, this, &WalletKeyWidget::onFrejaSucceeded);
+   connect(mobileClient_, &MobileClient::failed, this, &WalletKeyWidget::onFrejaFailed);
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &WalletKeyWidget::onTimer);
+
+
+}
+
+void WalletKeyWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings, const QString& username)
+{
+   std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+
+   mobileClient_->init(serverPubKey, serverHost, serverPort);
+
+   ui_->comboBoxFrejaId->setEditText(username);
 }
 
 WalletKeyWidget::~WalletKeyWidget() = default;
@@ -69,10 +89,10 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelFrejeId->setVisible(!password_ && showFrejaId_);
    ui_->widgetFrejaLayout->setVisible(!password_);
    
-   ui_->labelFrejaInfo->setVisible(!password_ && !hideFrejaCombobox_);
    ui_->pushButtonFreja->setVisible(!hideFrejaConnect_);
    ui_->comboBoxFrejaId->setVisible(!hideFrejaCombobox_);
    ui_->widgetSpacing->setVisible(!progressBarFixed_);
+   ui_->labelFrejaInfo->setVisible(!hideFrejaEmailLabel_ && !password_ && !hideFrejaCombobox_);
 }
 
 void WalletKeyWidget::onPasswordChanged()
@@ -108,16 +128,23 @@ void WalletKeyWidget::onFrejaSignClicked()
    ui_->progressBar->show();
    timer_.start();
    frejaRunning_ = true;
-   frejaSign_.start(ui_->comboBoxFrejaId->currentText(), tr("Activate Freja eID signing"), walletId_);
+//   frejaSign_.start(ui_->comboBoxFrejaId->currentText(),
+//      prompt_.isEmpty() ? tr("Activate Freja eID signing") : prompt_, walletId_);
+   mobileClient_->start(ui_->comboBoxFrejaId->currentText().toStdString(), walletId_);
    ui_->pushButtonFreja->setText(tr("Cancel Freja request"));
    ui_->comboBoxFrejaId->setEnabled(false);
+
+   if (hideFrejaControlsOnSignClicked_) {
+      ui_->widgetFrejaLayout->hide();
+   }
 }
 
-void WalletKeyWidget::onFrejaSucceeded(SecureBinaryData password)
+void WalletKeyWidget::onFrejaSucceeded(const SecureBinaryData &password)
 {
    stop();
    ui_->pushButtonFreja->setText(tr("Successfully signed"));
    ui_->pushButtonFreja->setEnabled(false);
+   ui_->widgetFrejaLayout->show();
 
    QPropertyAnimation *a = startFrejaAnimation(true);
    connect(a, &QPropertyAnimation::finished, [this, password]() {
@@ -131,6 +158,7 @@ void WalletKeyWidget::onFrejaFailed(const QString &text)
    stop();
    ui_->pushButtonFreja->setEnabled(true);
    ui_->pushButtonFreja->setText(tr("Freja failed: %1 - retry").arg(text));
+   ui_->widgetFrejaLayout->show();
    
    QPropertyAnimation *a = startFrejaAnimation(false);
    connect(a, &QPropertyAnimation::finished, [this]() {
@@ -145,7 +173,7 @@ void WalletKeyWidget::onTimer()
 {
    timeLeft_ -= 0.5;
    if (timeLeft_ <= 0) {
-      frejaSign_.stop(true);
+//      frejaSign_.stop(true);
       onFrejaFailed(tr("Timeout"));
    }
    else {
@@ -164,12 +192,14 @@ void WalletKeyWidget::stop()
       ui_->progressBar->hide();
    }
    ui_->comboBoxFrejaId->setEnabled(true);
+   ui_->widgetFrejaLayout->show();
 }
 
 void WalletKeyWidget::cancel()
 {
    if (!password_) {
-      frejaSign_.stop(true);
+      //frejaSign_.stop(true);
+      mobileClient_->cancel();
       stop();
    }
 }
@@ -256,10 +286,25 @@ void WalletKeyWidget::setPasswordLabelAsOld()
    ui_->labelPassword->setText(tr("Old Password"));
 }
 
+
 void WalletKeyWidget::setCreateUsername(const QString& username)
 {
    ui_->comboBoxFrejaId->setEditText(username);
 }
+
+void WalletKeyWidget::setHideFrejaEmailLabel(bool value)
+{
+   hideFrejaEmailLabel_ = value;
+   onTypeChanged();
+}
+
+void WalletKeyWidget::setHideFrejaControlsOnSignClicked(bool value)
+{
+   hideFrejaControlsOnSignClicked_ = value;
+}
+
+ 
+
 
 QPropertyAnimation* WalletKeyWidget::startFrejaAnimation(bool success)
 {

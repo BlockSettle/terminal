@@ -490,7 +490,8 @@ QValidator::State UiUtils::ValidateDoubleString(QString &input, int &pos, const 
    }
 
    bool converted = false;
-   double newValue = QLocale().toDouble(tempCopy, &converted);
+   // don't need result, just check if could convert
+   QLocale().toDouble(tempCopy, &converted);
    if (!converted) {
       return QValidator::Invalid;
    }
@@ -568,5 +569,35 @@ QString UiUtils::modelPath(const QModelIndex &index, QAbstractItemModel *model)
       return res;
    } else {
       return QString();
+   }
+}
+
+
+//
+// WalletDescriptionValidator
+//
+
+UiUtils::WalletDescriptionValidator::WalletDescriptionValidator(QObject *parent) : QValidator(parent)
+{}
+
+QValidator::State UiUtils::WalletDescriptionValidator::validate(QString &input, int &pos) const
+{
+   static const QString invalidCharacters = QLatin1String("\\/?:*<>|");
+
+   if (input.isEmpty()) {
+      return QValidator::Acceptable;
+   }
+
+   if (invalidCharacters.contains(input.at(pos - 1))) {
+      input.remove(pos - 1, 1);
+
+      if (pos > input.size()) {
+         --pos;
+      }
+
+      return QValidator::Invalid;
+   }
+   else {
+      return QValidator::Acceptable;
    }
 }

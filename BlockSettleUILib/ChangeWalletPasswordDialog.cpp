@@ -14,6 +14,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
       , const std::vector<SecureBinaryData> &encKeys
       , bs::wallet::KeyRank keyRank
       , const QString& username
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::ChangeWalletPasswordDialog())
@@ -38,6 +39,8 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    deviceKeyNew_->setEncryptionKeys(encKeys);
    deviceKeyNew_->setHideFrejaConnect(true);
    deviceKeyNew_->setHideFrejaCombobox(true);
+   
+   ui_->widgetCreateKeys->init(wallet_->getWalletId(), username, appSettings);
 
    QBoxLayout *deviceLayout = dynamic_cast<QBoxLayout*>(ui_->tabAddDevice->layout());
    deviceLayout->insertWidget(deviceLayout->indexOf(ui_->labelDeviceOldInfo) + 1, deviceKeyOld_);
@@ -72,7 +75,6 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
       | WalletKeysCreateWidget::SetPasswordLabelAsNew
       | WalletKeysCreateWidget::HideFrejaConnectButton
       | WalletKeysCreateWidget::HideWidgetContol);
-   ui_->widgetCreateKeys->init(wallet_->getWalletId(), username);
 
    ui_->widgetSubmitKeys->setFocus();
 

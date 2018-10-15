@@ -44,6 +44,8 @@ private slots:
    void onImportAccepted();
    void onWalletCreated(const std::string &walletId);
    void onError(const QString &errMsg);
+   void onKeyTypeChanged(bool password);
+   void updateAcceptButtonState();
 
 protected:
    void reject() override;
@@ -58,6 +60,7 @@ private:
    std::string walletId_;
    QString     walletName_;
    bool importedAsPrimary_ = false;
+   bool frejaNoticeWasShown_ = false;
 };
 
 #endif // __IMPORT_WALLET_DIALOG_H__

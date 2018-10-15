@@ -226,6 +226,14 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>radioButtonPassword</tabstop>
+  <tabstop>radioButtonFreja</tabstop>
+  <tabstop>lineEditPassword</tabstop>
+  <tabstop>lineEditPasswordConfirm</tabstop>
+  <tabstop>comboBoxFrejaId</tabstop>
+  <tabstop>pushButtonFreja</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
