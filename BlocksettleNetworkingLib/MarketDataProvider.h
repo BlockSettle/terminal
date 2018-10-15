@@ -2,10 +2,12 @@
 #define __MARKET_DATA_PROVIDER_H__
 
 #include <QObject>
+
+#include "CommonTypes.h"
+
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "CommonTypes.h"
 
 namespace spdlog
 {

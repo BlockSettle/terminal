@@ -33,11 +33,14 @@ void CCFileManager::LoadData()
    }
 }
 
-void CCFileManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr
-   , const std::shared_ptr<CelerClient> &celerClient)
+void CCFileManager::ConnectToCelerClient(const std::shared_ptr<CelerClient> &celerClient)
+{
+   celerClient_ = celerClient;
+}
+
+void CCFileManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr)
 {
    connectionManager_ = connMgr;
-   celerClient_ = celerClient;
 
    QtConcurrent::run(this, &CCFileManager::RequestFromPuB);
 }
@@ -275,6 +278,7 @@ bool CCFileManager::LoadFromFile(const std::string &path)
 {
    QFile f(QString::fromStdString(path));
    if (!f.exists()) {
+      logger_->debug("[CCFileManager::LoadFromFile] no cc file to load at {}", path);
       return true;
    }
    if (!f.open(QIODevice::ReadOnly)) {

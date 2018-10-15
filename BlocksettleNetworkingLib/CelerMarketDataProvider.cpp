@@ -6,6 +6,7 @@
 #include "ConnectionManager.h"
 #include "CurrencyPair.h"
 #include "EncryptionUtils.h"
+#include "FastLock.h"
 
 #include <spdlog/spdlog.h>
 
@@ -109,12 +110,31 @@ void CelerMarketDataProvider::OnConnectedToCeler()
       }
    }
 
+   std::set<std::string> ccSymbols;
+   {
+      FastLock locker{ccSymbolsListLocker_};
+      ccSymbols = loadedSymbols_;
+   }
+
+   for (const auto& ccSymbol : ccSymbols) {
+      SubscribeToCCProduct(ccSymbol);
+   }
+
+   connectionToCelerCompleted_ = true;
+
    emit MDSecuritiesReceived();
    emit Connected();
 }
 
 void CelerMarketDataProvider::OnDisconnectedFromCeler()
 {
+   connectionToCelerCompleted_ = false;
+
+   {
+      FastLock locker{ccSymbolsListLocker_};
+      subscribedSymbols_.clear();
+   }
+
    emit Disconnecting();
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
 
@@ -177,6 +197,55 @@ bool CelerMarketDataProvider::onReqRejected(const std::string& data)
 
    // text field contain rejected ccy pair
    emit MDReqRejected(response.text(), response.text());
+
+   return true;
+}
+
+void CelerMarketDataProvider::onCCSecurityReceived(const bs::network::CCSecurityDef& ccDef)
+{
+   logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] loaded CC symbol {}"
+      , ccDef.securityId);
+
+   {
+      FastLock locker{ccSymbolsListLocker_};
+      loadedSymbols_.emplace(ccDef.securityId);
+   }
+
+   if (IsConnectedToCeler()) {
+      SubscribeToCCProduct(ccDef.securityId);
+      emit MDSecuritiesReceived();
+   }
+}
+
+bool CelerMarketDataProvider::IsConnectedToCeler() const
+{
+   return connectionToCelerCompleted_;
+}
+
+bool CelerMarketDataProvider::SubscribeToCCProduct(const std::string& ccProduct)
+{
+   {
+      FastLock locker{ccSymbolsListLocker_};
+      if (subscribedSymbols_.find(ccProduct) != subscribedSymbols_.end()) {
+         logger_->debug("[CelerMarketDataProvider::SubscribeToCCProduct] already subscribed to {}"
+            , ccProduct);
+         return true;
+      }
+
+      subscribedSymbols_.emplace(ccProduct);
+   }
+
+   auto subscribeCommand = std::make_shared<CelerSubscribeToMDSequence>(ccProduct
+      , bs::network::Asset::Type::PrivateMarket, logger_);
+
+   if (!celerClient_->ExecuteSequence(subscribeCommand)) {
+      logger_->error("[CelerMarketDataProvider::SubscribeToCCProduct] failed to send subscribe to {}"
+         , ccProduct);
+      return false;
+   }
+
+   emit MDSecurityReceived(ccProduct, {bs::network::Asset::Type::PrivateMarket});
+   emit MDUpdate(bs::network::Asset::Type::PrivateMarket, QString::fromStdString(ccProduct), {});
 
    return true;
 }

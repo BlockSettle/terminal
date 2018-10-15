@@ -39,8 +39,8 @@ public:
    CCSecurities ccSecurities() const { return ccSecurities_; }
 
    void LoadData();
-   void ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<CelerClient> &);
+   void ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &);
+   void ConnectToCelerClient(const std::shared_ptr<CelerClient> &);
 
    bool SubmitAddressToPuB(const bs::Address &, uint32_t seed, OTPManager::cbPassword);
    bool wasAddressSubmitted(const bs::Address &);
