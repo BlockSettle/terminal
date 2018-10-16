@@ -271,3 +271,8 @@ std::string CCFileManager::GetPuBKey() const
 {
    return appSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey);
 }
+
+bool CCFileManager::IsTestNet() const
+{
+   return appSettings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet;
+}

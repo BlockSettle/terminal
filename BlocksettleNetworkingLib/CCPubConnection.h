@@ -40,7 +40,6 @@ protected:
    virtual std::string GetPuBPort() const = 0;
    virtual std::string GetPuBKey() const = 0;
 
-
    virtual bool IsTestNet() const = 0;
 
    virtual bool VerifySignature(const std::string& data, const std::string& signature) const = 0;

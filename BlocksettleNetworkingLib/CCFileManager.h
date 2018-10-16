@@ -58,6 +58,8 @@ protected:
 
    bool VerifySignature(const std::string& data, const std::string& signature) const override;
 
+   bool IsTestNet() const override;
+
    std::string GetPuBHost() const override;
    std::string GetPuBPort() const override;
    std::string GetPuBKey() const override;
