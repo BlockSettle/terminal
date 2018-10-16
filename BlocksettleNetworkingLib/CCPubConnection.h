@@ -31,10 +31,6 @@ public:
 
    bool LoadCCDefinitionsFromPub();
 
-signals:
-   void CCSecurityDef(bs::network::CCSecurityDef);
-   void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
-
 protected:
    virtual std::string GetPuBHost() const = 0;
    virtual std::string GetPuBPort() const = 0;

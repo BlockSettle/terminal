@@ -48,6 +48,9 @@ public:
    QString GetOtpId() const { return otpManager_->GetShortId(); }
 
 signals:
+   void CCSecurityDef(bs::network::CCSecurityDef);
+   void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
+
    void CCAddressSubmitted(const QString);
    void Loaded();
    void LoadingFailed();
