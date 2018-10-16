@@ -196,7 +196,7 @@ bool CelerMarketDataProvider::onReqRejected(const std::string& data)
    logger_->debug("[CelerMarketDataProvider::onReqRejected] {}", response.DebugString());
 
    // text field contain rejected ccy pair
-   emit MDReqRejected(response.text(), response.text());
+   emit MDReqRejected(response.securityid(), response.text());
 
    return true;
 }
