@@ -1,30 +1,33 @@
-#include <cassert>
-#include <spdlog/spdlog.h>
-#include <QtConcurrent/QtConcurrentRun>
-#include <QFile>
 #include "CCFileManager.h"
+
 #include "ApplicationSettings.h"
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "EncryptionUtils.h"
 #include "OTPManager.h"
-#include "RequestReplyCommand.h"
-#include "ZmqSecuredDataConnection.h"
+
+#include <spdlog/spdlog.h>
+
+#include <cassert>
+
+#include <QFile>
+#include <QtConcurrent/QtConcurrentRun>
 
 #include "bs_communication.pb.h"
 
 using namespace Blocksettle::Communication;
 
-
-CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<OTPManager> &otpMgr)
-   : logger_(logger)
+CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<OTPManager> &otpMgr
+   , const std::shared_ptr<ConnectionManager>& connectionManager)
+   : CCPubConnection(logger, connectionManager)
    , appSettings_(appSettings)
    , otpManager_(otpMgr)
 {
 }
 
-void CCFileManager::LoadData()
+void CCFileManager::LoadSavedCCDefinitions()
 {
    const auto &path = appSettings_->get<std::string>(ApplicationSettings::ccFileName);
    if (!LoadFromFile(path)) {
@@ -38,54 +41,6 @@ void CCFileManager::ConnectToCelerClient(const std::shared_ptr<CelerClient> &cel
    celerClient_ = celerClient;
 }
 
-void CCFileManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr)
-{
-   connectionManager_ = connMgr;
-
-   QtConcurrent::run(this, &CCFileManager::RequestFromPuB);
-}
-
-bool CCFileManager::RequestFromPuB()
-{
-   GetCCGenesisAddressesRequest genAddrReq;
-   RequestPacket  request;
-
-   genAddrReq.set_networktype((appSettings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
-      ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
-   if (currentRev_ > 0) {
-      genAddrReq.set_hasrevision(currentRev_);
-   }
-
-   request.set_requesttype(GetCCGenesisAddressesType);
-   request.set_requestdata(genAddrReq.SerializeAsString());
-   return SubmitRequestToPB("get_cc_gen_list", request.SerializeAsString());
-}
-
-bool CCFileManager::SubmitRequestToPB(const std::string& name, const std::string& data)
-{
-   const auto connection = connectionManager_->CreateSecuredDataConnection();
-   connection->SetServerPublicKey(appSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
-   auto command = std::make_shared<RequestReplyCommand>(name, connection, logger_);
-
-   command->SetReplyCallback([command, this](const std::string& data) {
-      OnDataReceived(data);
-      command->SetReplyCallback(nullptr);
-      return true;
-   });
-
-   command->SetErrorCallback([command, this](const std::string& message) {
-      logger_->error("[CCFileManager::{}] error callback: {}", command->GetName(), message);
-      command->SetReplyCallback(nullptr);
-   });
-
-   if (!command->ExecuteRequest(appSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
-      , appSettings_->get<std::string>(ApplicationSettings::pubBridgePort), data)) {
-      logger_->error("[CCFileManager::SubmitRequestToPB] failed to send request {}", name);
-      return false;
-   }
-   return true;
-}
-
 bool CCFileManager::wasAddressSubmitted(const bs::Address &addr)
 {
    return celerClient_->IsCCAddressSubmitted(addr.display<std::string>());
@@ -94,49 +49,6 @@ bool CCFileManager::wasAddressSubmitted(const bs::Address &addr)
 bool CCFileManager::needsOTPpassword() const
 {
    return otpManager_->IsEncrypted();
-}
-
-void CCFileManager::OnDataReceived(const std::string& data)
-{
-   if (data.empty()) {
-      return;
-   }
-   ResponsePacket response;
-
-   if (!response.ParseFromString(data)) {
-      logger_->error("[CCFileManager::OnDataReceived] failed to parse response from public bridge");
-      return;
-   }
-
-   bool sigVerified = false;
-   if (!response.has_datasignature()) {
-      logger_->warn("[CCFileManager::OnDataReceived] Public bridge response of type {} has no signature!"
-         , static_cast<int>(response.responsetype()));
-   }
-   else {
-      BinaryData publicKey = BinaryData::CreateFromHex(appSettings_->get<std::string>(ApplicationSettings::bsPublicKey));
-      sigVerified = CryptoECDSA().VerifyData(response.responsedata(), response.datasignature(), publicKey);
-      if (!sigVerified) {
-         logger_->error("[CCFileManager::OnDataReceived] Response signature verification failed - response {} dropped"
-            , static_cast<int>(response.responsetype()));
-         return;
-      }
-   }
-
-   switch (response.responsetype()) {
-   case RequestType::GetCCGenesisAddressesType:
-      ProcessGenAddressesResponse(response.responsedata(), sigVerified, response.datasignature());
-      break;
-   case RequestType::SubmitCCAddrInitialDistribType:
-      ProcessSubmitAddrResponse(response.responsedata(), sigVerified);
-      break;
-   case RequestType::ErrorMessageResponseType:
-      ProcessErrorResponse(response.responsedata());
-      break;
-   default:
-      logger_->error("[CCFileManager::OnDataReceived] unrecognized response type from public bridge: {}", response.responsetype());
-      break;
-   }
 }
 
 void CCFileManager::FillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *resp)
@@ -199,17 +111,6 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
    SaveToFile(appSettings_->get<std::string>(ApplicationSettings::ccFileName), sig);
 }
 
-void CCFileManager::ProcessErrorResponse(const std::string& responseString) const
-{
-   ErrorMessageResponse response;
-   if (!response.ParseFromString(responseString)) {
-      logger_->error("[CCFileManager::ProcessErrorResponse] failed to parse error message response");
-      return;
-   }
-
-   logger_->error("[CCFileManager::ProcessErrorResponse] error message from public bridge: {}", response.errormessage());
-}
-
 bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed, OTPManager::cbPassword cb)
 {
    if (!celerClient_) {
@@ -241,9 +142,8 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
    return SubmitRequestToPB("submit_cc_addr", request.SerializeAsString());
 }
 
-void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString, bool sigVerified)
+void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)
 {
-   Q_UNUSED(sigVerified);
    SubmitAddrForInitialDistributionResponse response;
    if (!response.ParseFromString(responseString)) {
       logger_->error("[CCFileManager::ProcessSubmitAddrResponse] failed to parse response");
@@ -271,6 +171,7 @@ void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString,
    }
 
    logger_->debug("[CCFileManager::ProcessSubmitAddrResponse] {} succeeded", addr.display<std::string>());
+
    emit CCAddressSubmitted(addr.display());
 }
 
@@ -308,8 +209,7 @@ bool CCFileManager::LoadFromFile(const std::string &path)
    const auto signature = resp.signature();
    resp.clear_signature();
 
-   BinaryData publicKey = BinaryData::CreateFromHex(appSettings_->get<std::string>(ApplicationSettings::bsPublicKey));
-   if (!CryptoECDSA().VerifyData(resp.SerializeAsString(), signature, publicKey)) {
+   if (!VerifySignature(resp.SerializeAsString(), signature)) {
       logger_->error("[CCFileManager::LoadFromFile] signature verification failed for {}", path);
       return false;
    }
@@ -348,4 +248,26 @@ bool CCFileManager::SaveToFile(const std::string &path, const std::string &sig)
       return false;
    }
    return true;
+}
+
+bool CCFileManager::VerifySignature(const std::string& data, const std::string& signature) const
+{
+   const BinaryData publicKey = BinaryData::CreateFromHex(appSettings_->get<std::string>(ApplicationSettings::bsPublicKey));
+
+   return CryptoECDSA().VerifyData(data, signature, publicKey);
+}
+
+std::string CCFileManager::GetPuBHost() const
+{
+   return appSettings_->get<std::string>(ApplicationSettings::pubBridgeHost);
+}
+
+std::string CCFileManager::GetPuBPort() const
+{
+   return appSettings_->get<std::string>(ApplicationSettings::pubBridgePort);
+}
+
+std::string CCFileManager::GetPuBKey() const
+{
+   return appSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey);
 }

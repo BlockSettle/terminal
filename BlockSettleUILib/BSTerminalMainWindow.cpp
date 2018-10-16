@@ -383,7 +383,8 @@ void BSTerminalMainWindow::saveUserAcceptedMDLicense()
 
 void BSTerminalMainWindow::InitAssets()
 {
-   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_, otpManager_);
+   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
+      , otpManager_, connectionManager_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsManager_, mdProvider_, celerConnection_);
    assetManager_->init();
 
@@ -395,8 +396,8 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, mdProvider_.get(), &CelerMarketDataProvider::onCCSecurityReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
-   ccFileManager_->LoadData();
-   ccFileManager_->ConnectToPublicBridge(connectionManager_);
+   ccFileManager_->LoadSavedCCDefinitions();
+   ccFileManager_->LoadCCDefinitionsFromPub();
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
