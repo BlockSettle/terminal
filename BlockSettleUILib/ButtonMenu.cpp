@@ -10,8 +10,13 @@ ButtonMenu::ButtonMenu(QPushButton* button)
 
 void ButtonMenu::showEvent(QShowEvent* event)
 {
-   QPoint currentPosition = pos();
-   QRect buttonGeometry = parentButton_->geometry();
+   const auto currentPosition = pos();
+   const auto buttonGeometry = parentButton_->geometry();
 
+#if defined (Q_OS_WIN)
+   const auto buttonPosition = parentButton_->pos();
+   move(buttonPosition.x() + buttonGeometry.width() - geometry().width(), currentPosition.y());
+#else
    move(currentPosition.x() + buttonGeometry.width() - geometry().width(), currentPosition.y());
+#endif
 }
