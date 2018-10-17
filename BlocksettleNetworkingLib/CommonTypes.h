@@ -115,6 +115,7 @@ namespace bs {
             switch (at) {
                case SpotFX:         return com::celertech::marketdata::api::enums::producttype::SPOT;
                case SpotXBT:        return com::celertech::marketdata::api::enums::producttype::BITCOIN;
+               case PrivateMarket:  return com::celertech::marketdata::api::enums::producttype::PRIVATE_SHARE;
                default:             return com::celertech::marketdata::api::enums::producttype::SPOT;
             }
          }

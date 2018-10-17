@@ -2,10 +2,12 @@
 #define __MARKET_DATA_PROVIDER_H__
 
 #include <QObject>
+
+#include "CommonTypes.h"
+
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "CommonTypes.h"
 
 namespace spdlog
 {
@@ -49,7 +51,7 @@ signals:
    void MDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void MDSecurityReceived(const std::string &security, const bs::network::SecurityDef &sd);
    void MDSecuritiesReceived();
-   void MDReqRejected(const std::string &security, const std::string &reqson);
+   void MDReqRejected(const std::string &security, const std::string &reason);
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_ = nullptr;

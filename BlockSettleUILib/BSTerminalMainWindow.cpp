@@ -383,7 +383,8 @@ void BSTerminalMainWindow::saveUserAcceptedMDLicense()
 
 void BSTerminalMainWindow::InitAssets()
 {
-   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_, otpManager_);
+   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
+      , otpManager_, connectionManager_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsManager_, mdProvider_, celerConnection_);
    assetManager_->init();
 
@@ -391,8 +392,12 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsManager_.get(), &WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, walletsManager_.get(), &WalletsManager::onCCInfoLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
+
+   connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, mdProvider_.get(), &CelerMarketDataProvider::onCCSecurityReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
-   ccFileManager_->LoadData();
+
+   ccFileManager_->LoadSavedCCDefinitions();
+   ccFileManager_->LoadCCDefinitionsFromPub();
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
@@ -768,7 +773,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui->actionLink_Additional_Bank_Account->setEnabled(true);
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
-   ccFileManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
+   ccFileManager_->ConnectToCelerClient(celerConnection_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    signContainer_->SetUserId(userId);
