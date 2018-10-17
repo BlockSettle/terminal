@@ -29,12 +29,12 @@ public:
    MarketDataProvider& operator = (MarketDataProvider&&) = delete;
 
    void SubscribeToMD();
-   virtual bool DisconnectFromMDSource() = 0;
+   virtual bool DisconnectFromMDSource() { return true; }
 
-   virtual bool IsConnectionActive() const = 0;
+   virtual bool IsConnectionActive() const { return false; }
 
 protected:
-   virtual bool StartMDConnection() = 0;
+   virtual bool StartMDConnection() { return true; }
 
 public slots:
    void MDLicenseAccepted();
