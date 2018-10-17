@@ -342,7 +342,7 @@
       <item>
        <widget class="QLabel" name="label_5">
         <property name="text">
-         <string>Select max number of displayed RFQs per Security</string>
+         <string>Number of RFQs per product</string>
         </property>
         <property name="statusWarningLabel" stdset="0">
          <bool>true</bool>
