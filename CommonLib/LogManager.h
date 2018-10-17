@@ -35,8 +35,12 @@ namespace bs {
       LogLevel    level;
       bool        truncate;
 
-      explicit LogConfig()
-         : pattern("%C/%m/%d %H:%M:%S.%e [%L](%t)%n: %v"), level(LogLevel::debug), truncate(false) {}
+      LogConfig()
+         : pattern("%C/%m/%d %H:%M:%S.%e [%L](%t)%n: %v"), level(LogLevel::debug), truncate(false)
+      {}
+      LogConfig(const std::string &fn, const std::string &ptn, const std::string &cat
+         , const LogLevel lvl = LogLevel::debug, bool trunc = false)
+         : fileName(fn), pattern(ptn), category(cat), level(lvl), truncate(trunc) {}
    };
 
    class LogManager
