@@ -6,26 +6,28 @@
 #include "ConnectionManager.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
-#include "auth_server.pb.h"
 
-using namespace Blocksettle::AuthServer;
+using namespace AutheID::RP;
 
 namespace
 {
-
-const int kKeySize = 32;
-
+   const int kKeySize = 32;
+   const std::string kServerApiKey = "2526f47d4b3925b2"; // Obtained from http://185.213.153.44:8181/key
+   const std::string kPrivateKey = "QHBb3KtxO1nF07cIQ77JYvAG5G6K/GuEgjakNa9y1yg=";
+   const std::string kServerPubKey = "ArtQBOQrA2z7oIrCHwqq/yh/0F8rozWTGWvk3RL92fbu";
 }
 
 MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
    : QObject(parent)
    , logger_(logger)
+   , ownPrivKey_(QByteArray::fromBase64(QByteArray::fromStdString(kPrivateKey)).toStdString())
+   , serverPubKey_(CryptoECDSA().UncompressPoint(QByteArray::fromBase64(QByteArray::fromStdString(kServerPubKey)).toStdString()))
 {
    connectionManager_.reset(new ConnectionManager(logger));
 
    CryptoPP::AutoSeededRandomPool rng;
 
-   // NOTE: Don't forgot to change AuthApp code!
+   // NOTE: Don't forget to change AuthApp code!
    CryptoPP::InvertibleRSAFunction parameters;
    parameters.GenerateRandomWithKeySize(rng, 2048);
    privateKey_ = CryptoPP::RSA::PrivateKey(parameters);
@@ -49,6 +51,25 @@ void MobileClient::init(const std::string &serverPubKey
 
 MobileClient::~MobileClient() = default;
 
+
+bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType type)
+{
+   RequestEnvelope envelope;
+   envelope.set_type(type);
+   envelope.set_publickey(publicKey_);
+   envelope.set_userid(email_);
+   envelope.set_usertag(tag_);
+   envelope.set_apikey(kServerApiKey);
+
+   envelope.set_payload(payload);
+   const auto signature = CryptoECDSA().SignData(payload, ownPrivKey_);
+   envelope.set_signature(QByteArray::fromStdString(signature.toBinStr()).toBase64().toStdString());
+
+   //TODO: add payload encryption with server's pubKey
+
+   return connection_->send(envelope.SerializeAsString());
+}
+
 bool MobileClient::start(const std::string &email, const std::string &walletId)
 {
    if (!connection_) {
@@ -61,19 +82,12 @@ bool MobileClient::start(const std::string &email, const std::string &walletId)
    email_ = email;
    walletId_ = walletId;
 
-   GetKeyRequest request;
-   request.set_tag(tag_);
-   request.set_email(email_);
-   request.set_publickey(publicKey_);
-   request.set_walletid(walletId_);
+   GetDeviceKeyRequest request;
+   request.set_keyid(walletId_);
+   request.set_expiration(60);
+   request.set_title("Unlock wallet " + walletId);
 
-   Packet packet;
-   packet.set_type(PacketType::GetKeyRequestType);
-   packet.set_data(request.SerializeAsString());
-
-   connection_->send(packet.SerializeAsString());
-
-   return true;
+   return sendToAuthServer(request.SerializeAsString(), GetDeviceKeyType);
 }
 
 void MobileClient::cancel()
@@ -86,49 +100,42 @@ void MobileClient::cancel()
       return;
    }
 
-   GetKeyCancelMessage request;
-   request.set_tag(tag_);
-   request.set_email(email_);
-   request.set_walletid(walletId_);
+   CancelDeviceKeyRequest request;
+   request.set_keyid(walletId_);
 
-   Packet packet;
-   packet.set_type(PacketType::GetKeyCancelMessageType);
-   packet.set_data(request.SerializeAsString());
-
-   connection_->send(packet.SerializeAsString());
+   sendToAuthServer(request.SerializeAsString(), CancelDeviceKeyType);
 
    tag_ = 0;
 }
 
 // Called from background thread!
-void MobileClient::processGetKeyResponse(const Packet &packet)
+void MobileClient::processGetKeyResponse(const std::string &payload, uint64_t tag)
 {
-   GetKeyResponse response;
-   bool result = response.ParseFromString(packet.data());
-   if (!result) {
+   GetDeviceKeyReply response;
+   if (!response.ParseFromString(payload)) {
       logger_->error("Can't decode MobileAppGetKeyResponse packet");
       emit failed(tr("Can't decode packet from AuthServer"));
       return;
    }
 
-   if (response.tag() != tag_) {
-      logger_->info("Skip AuthApp response with unknown tag");
+   if (tag != tag_) {
+      logger_->warn("Skip AuthApp response with unknown tag");
       return;
    }
 
-   if (response.encryptedkey().empty()) {
+   if (response.key().empty() || response.deviceid().empty()) {
       emit failed(tr("Canceled"));
       return;
    }
 
-   // NOTE: Don't forgot to change AuthApp code if algorithm or parameters is changed!
+   // NOTE: Don't forget to change AuthApp code if algorithm or parameters is changed!
 
    CryptoPP::SecByteBlock key(kKeySize);
    try {
       CryptoPP::RSAES_PKCS1v15_Decryptor d(privateKey_);
       CryptoPP::AutoSeededRandomPool rng;
 
-      std::string encryptedKey = response.encryptedkey();
+      const auto &encryptedKey = response.key();
 
       // CryptoPP takes ownership of raw pointers
       auto sink = new CryptoPP::ArraySink(key.begin(), key.size());
@@ -153,22 +160,44 @@ void MobileClient::processGetKeyResponse(const Packet &packet)
 
 void MobileClient::OnDataReceived(const string &data)
 {
-   Packet packet;
-   bool result = packet.ParseFromString(data);
-   if (!result) {
+   ReplyEnvelope envelope;
+   if (!envelope.ParseFromString(data)) {
       logger_->error("Invalid packet data from AuthServer");
       emit failed(tr("Invalid packet data from AuthServer"));
       return;
    }
 
-   switch (packet.type()) {
-   case GetKeyResponseType:
-      processGetKeyResponse(packet);
+   if (envelope.payload().empty()) {
+      if (envelope.type() == HeartbeatType) {
+         //TODO: handle heartbeat
+      }
+      else {
+         logger_->error("No payload received from AuthServer");
+         emit failed(tr("Missing payload from AuthServer"));
+         return;
+      }
+   }
+   else {
+      const SecureBinaryData signature = QByteArray::fromBase64(QByteArray::fromStdString(envelope.signature())).toStdString();
+      if (signature.isNull()) {
+         logger_->error("No payload signature from AuthServer");
+         emit failed(tr("Missing payload signature from AuthServer"));
+         return;
+      }
+      if (!CryptoECDSA().VerifyData(envelope.payload(), signature, serverPubKey_)) {
+         logger_->error("failed to verify server reply");
+         emit failed(tr("server signature not verified"));
+         return;
+      }
+   }
+
+   switch (envelope.type()) {
+   case GetDeviceKeyType:
+      processGetKeyResponse(envelope.payload(), envelope.usertag());
       break;
    default:
-      logger_->error("Got unknown packet type from AuthServer {}", packet.type());
+      logger_->warn("Got unknown packet type from AuthServer {}", envelope.type());
       emit failed(tr("Got unknown packet type from AuthServer"));
-      return;
    }
 }
 

@@ -6,14 +6,11 @@
 #include "DataConnectionListener.h"
 #include "EncryptionUtils.h"
 #include "ZmqSecuredDataConnection.h"
+#include "rp_api.pb.h"
 
 namespace spdlog {
    class logger;
 }
-
-namespace Blocksettle { namespace AuthServer {
-class Packet;
-} }
 
 class ConnectionManager;
 class RequestReplyCommand;
@@ -40,7 +37,8 @@ private:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   void processGetKeyResponse(const Blocksettle::AuthServer::Packet &packet);
+   void processGetKeyResponse(const std::string &payload, uint64_t tag);
+   bool sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType);
 
    std::unique_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
@@ -52,6 +50,8 @@ private:
 
    CryptoPP::RSA::PrivateKey privateKey_;
    std::string publicKey_;
+   const SecureBinaryData ownPrivKey_;
+   const SecureBinaryData serverPubKey_;
 };
 
 #endif // __MOBILE_CLIENT_H__
