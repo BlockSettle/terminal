@@ -91,6 +91,8 @@ public:
       ShowQuoted,
       AdvancedTxDialogByDefault,
       TransactionFilter,
+      SubscribeToMDOnStart,
+      MDLicenseAccepted,
       _last
    };
 

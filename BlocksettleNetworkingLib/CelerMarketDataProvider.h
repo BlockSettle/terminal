@@ -3,9 +3,12 @@
 
 #include "MarketDataProvider.h"
 
+#include <atomic>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
+
 #include "CommonTypes.h"
 
 namespace spdlog
@@ -33,10 +36,15 @@ public:
    CelerMarketDataProvider(CelerMarketDataProvider&&) = delete;
    CelerMarketDataProvider& operator = (CelerMarketDataProvider&&) = delete;
 
-   bool SubscribeToMD() override;
    bool DisconnectFromMDSource() override;
 
    bool IsConnectionActive() const override;
+
+protected:
+   bool StartMDConnection() override;
+
+public slots:
+   void onCCSecurityReceived(const bs::network::CCSecurityDef& ccDef);
 
 private slots:
    void OnConnectedToCeler();
@@ -50,9 +58,11 @@ private:
 
    static bool isPriceValid(double val);
 
-private:
-   std::shared_ptr<spdlog::logger>     logger_;
+   bool IsConnectedToCeler() const;
 
+   bool SubscribeToCCProduct(const std::string& ccProduct);
+
+private:
    // connection details for MD source
    std::string mdHost_;
    std::string mdPort_;
@@ -63,6 +73,12 @@ private:
    std::unordered_map<std::string, std::string>    requests_;
    std::unordered_map<std::string, bs::network::SecurityDef>   secDefs_;
    bool filterUsdProducts_;
+
+   bool connectionToCelerCompleted_ = false;
+
+   std::atomic_flag        ccSymbolsListLocker_ = ATOMIC_FLAG_INIT;
+   std::set<std::string>   loadedSymbols_;
+   std::set<std::string>   subscribedSymbols_;
 };
 
 #endif // __CELER_MARKET_DATA_PROCIDER_H__

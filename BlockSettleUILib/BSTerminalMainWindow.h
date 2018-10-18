@@ -29,7 +29,7 @@ class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
 class HeadlessAddressSyncer;
-class MarketDataProvider;
+class CelerMarketDataProvider;
 class OTPManager;
 class QSystemTrayIcon;
 class SignContainer;
@@ -45,6 +45,8 @@ Q_OBJECT
 public:
    BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings, BSTerminalSplashScreen& splashScreen, QWidget* parent = nullptr);
    ~BSTerminalMainWindow() override;
+
+   void postSplashscreenActions();
 
 private:
    void setupToolbar();
@@ -72,6 +74,9 @@ private:
 
    void UpdateMainWindowAppearence();
 
+   bool isMDLicenseAccepted() const;
+   void saveUserAcceptedMDLicense();
+
 private slots:
    void InitTransactionsView();
    void ArmoryIsOffline();
@@ -89,6 +94,8 @@ private slots:
 
    bool createWallet(bool primary, bool reportSuccess = true);
 
+   void acceptMDAgreement();
+
 private:
    QAction *action_send_;
    QAction *action_receive_;
@@ -104,20 +111,20 @@ private:
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
 
-   std::shared_ptr<StatusBarView>         statusBarView_;
-   std::shared_ptr<QSystemTrayIcon>       sysTrayIcon_;
-   std::shared_ptr<TransactionsViewModel> transactionsModel_;
-   std::shared_ptr<CCPortfolioModel>      portfolioModel_;
-   std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<CelerClient>           celerConnection_;
-   std::shared_ptr<MarketDataProvider>    mdProvider_;
-   std::shared_ptr<AssetManager>          assetManager_;
-   std::shared_ptr<OTPManager>            otpManager_;
-   std::shared_ptr<CCFileManager>         ccFileManager_;
-   std::shared_ptr<AuthAddressDialog>     authAddrDlg_;
-   std::shared_ptr<AboutDialog>           aboutDlg_;
-   std::shared_ptr<SignContainer>         signContainer_;
-   std::shared_ptr<HeadlessAddressSyncer> addrSyncer_;
+   std::shared_ptr<StatusBarView>            statusBarView_;
+   std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
+   std::shared_ptr<TransactionsViewModel>    transactionsModel_;
+   std::shared_ptr<CCPortfolioModel>         portfolioModel_;
+   std::shared_ptr<ConnectionManager>        connectionManager_;
+   std::shared_ptr<CelerClient>              celerConnection_;
+   std::shared_ptr<CelerMarketDataProvider>  mdProvider_;
+   std::shared_ptr<AssetManager>             assetManager_;
+   std::shared_ptr<OTPManager>               otpManager_;
+   std::shared_ptr<CCFileManager>            ccFileManager_;
+   std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
+   std::shared_ptr<AboutDialog>              aboutDlg_;
+   std::shared_ptr<SignContainer>            signContainer_;
+   std::shared_ptr<HeadlessAddressSyncer>    addrSyncer_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 

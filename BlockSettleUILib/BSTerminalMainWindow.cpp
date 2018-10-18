@@ -38,6 +38,7 @@
 #include "HeadlessContainer.h"
 #include "LoginWindow.h"
 #include "MarketDataProvider.h"
+#include "MDAgreementDialog.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
 #include "MessageBoxQuestion.h"
@@ -126,6 +127,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    InitPortfolioView();
 
+   ui->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
+
    aboutDlg_ = std::make_shared<AboutDialog>(applicationSettings_->get<QString>(ApplicationSettings::ChangeLog_Base_Url), this);
    auto aboutDlgCb = [this] (int tab) {
       return [this, tab]() {
@@ -143,6 +146,13 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    ui->widgetTransactions->setAppSettings(applicationSettings_);
 
    UpdateMainWindowAppearence();
+}
+
+void BSTerminalMainWindow::postSplashscreenActions()
+{
+   if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
+      mdProvider_->SubscribeToMD();
+   }
 }
 
 BSTerminalMainWindow::~BSTerminalMainWindow()
@@ -321,8 +331,8 @@ void BSTerminalMainWindow::SignerReady()
 
       auto dialogManager = std::make_shared<DialogManager>(geometry());
 
-      ui->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
-         , applicationSettings_, dialogManager, signContainer_, armory_);
+      ui->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
+         , dialogManager, signContainer_, armory_);
       ui->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
          , applicationSettings_, dialogManager, signContainer_, armory_);
       widgetsInited_ = true;
@@ -340,17 +350,41 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   // mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
-   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-   //    , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
-   mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
+   mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"));
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
+
+   connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
+}
+
+void BSTerminalMainWindow::acceptMDAgreement()
+{
+   if (!isMDLicenseAccepted()) {
+      MDAgreementDialog dlg{this};
+      if (dlg.exec() != QDialog::Accepted) {
+         return;
+      }
+
+      saveUserAcceptedMDLicense();
+   }
+
+   mdProvider_->MDLicenseAccepted();
+}
+
+bool BSTerminalMainWindow::isMDLicenseAccepted() const
+{
+   return applicationSettings_->get<bool>(ApplicationSettings::MDLicenseAccepted);
+}
+
+void BSTerminalMainWindow::saveUserAcceptedMDLicense()
+{
+   applicationSettings_->set(ApplicationSettings::MDLicenseAccepted, true);
 }
 
 void BSTerminalMainWindow::InitAssets()
 {
-   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_, otpManager_);
+   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
+      , otpManager_, connectionManager_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsManager_, mdProvider_, celerConnection_);
    assetManager_->init();
 
@@ -358,8 +392,12 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsManager_.get(), &WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, walletsManager_.get(), &WalletsManager::onCCInfoLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
+
+   connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, mdProvider_.get(), &CelerMarketDataProvider::onCCSecurityReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
-   ccFileManager_->LoadData();
+
+   ccFileManager_->LoadSavedCCDefinitions();
+   ccFileManager_->LoadCCDefinitionsFromPub();
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
@@ -735,7 +773,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui->actionLink_Additional_Bank_Account->setEnabled(true);
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
-   ccFileManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
+   ccFileManager_->ConnectToCelerClient(celerConnection_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    signContainer_->SetUserId(userId);

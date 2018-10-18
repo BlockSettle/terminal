@@ -87,13 +87,18 @@ void RFQRequestWidget::shortcutActivated(ShortcutType s)
    }
 }
 
+void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<ApplicationSettings> &appSettings)
+{
+   appSettings_ = appSettings;
+   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ, mdProvider);
+}
+
 void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<CelerClient>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , std::shared_ptr<QuoteProvider> quoteProvider
-   , const std::shared_ptr<MarketDataProvider>& mdProvider
    , const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory)
@@ -106,9 +111,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    dialogManager_ = dialogManager;
    signingContainer_ = container;
    armory_ = armory;
-   appSettings_ = appSettings;
 
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ, mdProvider);
    ui_->pageRFQTicket->init(authAddressManager, assetManager, quoteProvider, container, armory);
 
    auto ordersModel = new OrderListModel(quoteProvider_, assetManager, ui_->treeViewOrders);
