@@ -30,15 +30,16 @@ class BotanSettings(Configurator):
         return True
 
     def config(self):
-        command = [self.get_unpacked_sources_dir() + '/configure.py',
+        command = ['python',
+                   self.get_unpacked_sources_dir() + '/configure.py',
                    '--disable-modules=pkcs11',
                    '--without-documentation',
                    '--disable-shared-library',
-                   '--prefix=' + self.get_install_dir()
+                   '--prefix=' + self.get_install_dir(),
         ]
 
         if self._project_settings.on_windows():
-            self._build_tool = ['jom']
+            self._build_tool = [os.path.join(self._project_settings.get_common_build_dir(), 'Jom/bin/jom.exe')]
             if self._project_settings.get_build_mode() == 'release':
                 command.append('--msvc-runtime=MT')
             else:
