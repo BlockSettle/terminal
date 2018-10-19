@@ -59,6 +59,13 @@ void MobileClient::init(const std::string &serverPubKey
 
 MobileClient::~MobileClient() = default;
 
+static void PadData(SecureBinaryData &data)
+{
+   const auto rem = data.getSize() % BTC_AES::BLOCKSIZE;
+   if (rem) {
+      data.resize(data.getSize() - rem + BTC_AES::BLOCKSIZE);
+   }
+}
 
 bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType type)
 {
@@ -80,7 +87,14 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
       , new CryptoPP::PK_EncryptorFilter(rng_, encryptor, new CryptoPP::StringSink(encPass)));
 
    SecureBinaryData iv(BTC_AES::BLOCKSIZE);
+   SecureBinaryData data = payload;
+   PadData(data);
    const auto encPayload = CryptoAES().EncryptCBC(payload, password, iv);
+   if (encPayload.isNull()) {
+      logger_->error("failed to encrypt payload");
+      emit failed(tr("failed to encrypt payload"));
+      return;
+   }
 
    envelope.set_encryptedpass(toBase64(encPass));
    envelope.set_payload(toBase64(encPayload.toBinStr()));
