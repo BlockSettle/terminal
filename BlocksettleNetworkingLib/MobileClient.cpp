@@ -93,7 +93,7 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
    if (encPayload.isNull()) {
       logger_->error("failed to encrypt payload");
       emit failed(tr("failed to encrypt payload"));
-      return;
+      return false;
    }
 
    envelope.set_encryptedpass(toBase64(encPass));
