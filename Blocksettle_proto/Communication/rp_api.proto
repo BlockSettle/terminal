@@ -1,0 +1,182 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package AutheID.RP;
+
+
+enum EnvelopeRequestType
+{
+   HeartbeatType = 0;
+   GetDeviceKeyType = 1;
+   CancelDeviceKeyType = 2;
+   GetUserPasswordType = 3;
+   CancelUserPasswordType = 4;
+   GetGroupPasswordType = 5;
+   CancelGroupPasswordType = 6;
+   AuthenticateType = 7;
+   CancelAuthenticateType = 8;
+   SignatureType = 9;
+   CancelSignatureType = 10;
+   GetUserDetailsType = 11;
+}
+
+message RequestEnvelope
+{
+   EnvelopeRequestType type = 1;
+   bytes  publicKey = 2;
+   bytes  encryptedPass = 3;
+   string userId = 4;
+   uint64 userTag = 5;
+   string apiKey = 6;
+   bytes  payload = 7;
+   bytes  signature = 8;
+}
+
+message ReplyEnvelope
+{
+   EnvelopeRequestType type = 1;
+   bytes  encryptedPass = 2;
+   uint64 userTag = 3;
+   uint64 serverTag = 4;
+   bytes  encPayload = 5;
+   bytes  payload = 6;
+   bytes  signature = 7;
+}
+
+
+message GetDeviceKeyRequest
+{
+   string keyId = 1;
+   bool   collectFirst = 2;
+   uint32 expiration = 3;
+   string title = 4;
+   string description = 5;
+}
+
+message GetDeviceKeyReply
+{
+   bytes  key = 1;
+   string deviceId = 2;
+}
+
+message CancelDeviceKeyRequest
+{
+  string keyId = 1;
+}
+
+
+message GetUserPasswordRequest
+{
+   string keyId = 1;
+   uint32 expiration = 2;
+   string title = 3;
+   string description = 4;
+}
+
+message GetUserPasswordReply
+{
+   string password = 1;
+}
+
+message CancelUserPasswordRequest
+{
+   string keyId = 1;
+}
+
+
+message GetGroupPasswordRequest
+{
+   string groupId = 1;
+   string keyId = 2;
+   uint32 expiration = 3;
+   string title = 4;
+   string description = 5;
+}
+
+message GetGroupPasswordReply
+{
+   string password = 1;
+}
+
+message CancelGroupPasswordRequest
+{
+   string groupId = 1;
+   string keyId = 2;
+}
+
+
+message AuthenticateRequest
+{
+   uint32 expiration = 1;
+   string title = 2;
+   string description = 3;
+}
+
+message AuthenticateReply
+{
+   bool   result = 1;
+   string deviceId = 2;
+}
+
+message CancelAuthenticateRequest
+{
+   string title = 1;
+}
+
+
+message SignatureRequest
+{
+   string docTitle = 1;
+   bytes  document = 2;
+   uint32 expiration = 3;
+   string title = 4;
+   string description = 5;
+}
+
+message SignaturePollRequest
+{
+   uint64 serverTag = 1;
+}
+
+message SignatureReply
+{
+   bytes  signature = 1;
+   string deviceId = 2;
+}
+
+message CancelSignatureRequest
+{
+   string docTitle = 1;
+   string title = 2;
+}
+
+
+enum UserDetailsType
+{
+   Invalid = 0;
+   FullNameType = 1;
+   ResidentialAddressType = 2;
+   SelfieType = 3;
+   PassportScanType = 4;
+   PassportNFChashType = 5;
+}
+
+message GetUserDetailsRequest
+{
+   repeated UserDetailsType reqTypes = 1;
+}
+
+message GetUserDetailsReply
+{
+   message DetailsData
+   {
+      UserDetailsType type = 1;
+      oneof data {
+         string text = 2;
+         bytes  document = 3;
+      }
+      bytes  signature = 4;
+   }
+   repeated DetailsData details = 1;
+   string deviceId = 2;
+}
