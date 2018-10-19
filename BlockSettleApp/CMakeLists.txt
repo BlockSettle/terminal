@@ -50,6 +50,7 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    Qt5::Network
    Qt5::PrintSupport
    Qt5::Core
+   #${BOTAN_LIB}
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
    )
