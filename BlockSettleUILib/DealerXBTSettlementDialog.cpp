@@ -53,12 +53,12 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
    if (settlContainer_->weSell()) {
       ui_->labelTransactionDescription->setText(tr("Deliver"));
       ui_->labelTransactioAmount->setText(UiUtils::displayQuantity(settlContainer_->amount(), UiUtils::XbtCurrency));
-      setFrejaPasswordPrompt(tr("%1 Settlement %2")
+      setAuthPasswordPrompt(tr("%1 Settlement %2")
          .arg(QString::fromStdString(settlContainer_->security())).arg(tr("Pay-In")));
    } else {
       ui_->labelTransactionDescription->setText(tr("Receive"));
       ui_->labelTransactioAmount->setText(tr("Waiting for pay-in TX"));
-      setFrejaPasswordPrompt(tr("%1 Settlement %2")
+      setAuthPasswordPrompt(tr("%1 Settlement %2")
          .arg(QString::fromStdString(settlContainer_->security())).arg(tr("Pay-Out")));
    }
 

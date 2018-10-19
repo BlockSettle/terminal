@@ -17,14 +17,14 @@ class WalletKeysSubmitWidget : public QWidget
 public:
    enum Flag {
       NoFlag = 0x00,
-      HideFrejaConnectButton = 0x01,
-      HideFrejaCombobox = 0x02,
+      HideAuthConnectButton = 0x01,
+      HideAuthCombobox = 0x02,
       HideGroupboxCaption = 0x04,
-      FrejaProgressBarFixed = 0x08,
-      FrejaIdVisible = 0x10,
+      AuthProgressBarFixed = 0x08,
+      AuthIdVisible = 0x10,
       SetPasswordLabelAsOld = 0x20,
-      HideFrejaEmailLabel = 0x40,
-      HideFrejaControlsOnSignClicked = 0x80
+      HideAuthEmailLabel = 0x40,
+      HideAuthControlsOnSignClicked = 0x80
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

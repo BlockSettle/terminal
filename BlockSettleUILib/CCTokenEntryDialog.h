@@ -4,7 +4,7 @@
 #include <memory>
 #include <QDialog>
 #include "BinaryData.h"
-#include "FrejaREST.h"
+#include "AuthREST.h"
 
 
 namespace Ui {
@@ -39,9 +39,9 @@ private slots:
    void onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
    void onWalletFailed(unsigned int id, std::string errMsg);
    void onCCAddrSubmitted(const QString addr);
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &);
-   void onFrejaStatusUpdated(const QString &);
+   void onAuthSucceeded(SecureBinaryData);
+   void onAuthFailed(const QString &);
+   void onAuthStatusUpdated(const QString &);
 
 private:
    std::unique_ptr<Ui::CCTokenEntryDialog> ui_;
@@ -54,7 +54,7 @@ private:
    unsigned int   createWalletReqId_ = 0;
    std::shared_ptr<bs::Wallet>      ccWallet_;
    SecureBinaryData  otpPassword_;
-   FrejaSignOTP      freja_;
+   AuthSignOTP      auth_;
    bool  walletOk_ = false;
    bool  passwordOk_ = false;
 };

@@ -435,9 +435,9 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="labelFrejaOld">
+             <widget class="QLabel" name="labelAuthOld">
               <property name="text">
-               <string>Freja eID</string>
+               <string>Auth eID</string>
               </property>
              </widget>
             </item>
@@ -477,9 +477,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QRadioButton" name="radioButtonFreja">
+                <widget class="QRadioButton" name="radioButtonAuth">
                  <property name="text">
-                  <string>Freja eID</string>
+                  <string>Auth eID</string>
                  </property>
                 </widget>
                </item>
@@ -594,7 +594,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="widgetFreja" native="true">
+          <widget class="QWidget" name="widgetAuth" native="true">
            <layout class="QHBoxLayout" name="horizontalLayout_9">
             <property name="spacing">
              <number>5</number>
@@ -612,16 +612,16 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLineEdit" name="lineEditFrejaId">
+             <widget class="QLineEdit" name="lineEditAuthId">
               <property name="echoMode">
                <enum>QLineEdit::Normal</enum>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButtonFreja">
+             <widget class="QPushButton" name="pushButtonAuth">
               <property name="text">
-               <string>Sign with Freja eID</string>
+               <string>Sign with Auth eID</string>
               </property>
              </widget>
             </item>

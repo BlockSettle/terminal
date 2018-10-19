@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
 #include "EnterWalletPassword.h"
-#include "FrejaNotice.h"
+#include "AuthNotice.h"
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxSuccess.h"
@@ -46,15 +46,15 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
       , wallet->getWalletId(), 0, false, this);
    deviceKeyOld_->setFixedType(true);
    deviceKeyOld_->setEncryptionKeys(encKeys);
-   deviceKeyOld_->setHideFrejaConnect(true);
-   deviceKeyOld_->setHideFrejaCombobox(true);
+   deviceKeyOld_->setHideAuthConnect(true);
+   deviceKeyOld_->setHideAuthCombobox(true);
 
    deviceKeyNew_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletNewDevice
       , wallet->getWalletId(), 0, false, this);
    deviceKeyNew_->setFixedType(true);
    deviceKeyNew_->setEncryptionKeys(encKeys);
-   deviceKeyNew_->setHideFrejaConnect(true);
-   deviceKeyNew_->setHideFrejaCombobox(true);
+   deviceKeyNew_->setHideAuthConnect(true);
+   deviceKeyNew_->setHideAuthCombobox(true);
    
    QBoxLayout *deviceLayout = dynamic_cast<QBoxLayout*>(ui_->tabAddDevice->layout());
    deviceLayout->insertWidget(deviceLayout->indexOf(ui_->labelDeviceOldInfo) + 1, deviceKeyOld_);
@@ -77,7 +77,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
       passwordData.encType = *encTypesIt;
       passwordData.encKey = *encKeysIt;
 
-      if (passwordData.encType == bs::wallet::EncryptionType::Freja) {
+      if (passwordData.encType == bs::wallet::EncryptionType::Auth) {
          usernameAuthApp = QString::fromStdString(passwordData.encKey.toBinStr());
       }
 
@@ -93,13 +93,13 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
 
    ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideGroupboxCaption 
       | WalletKeysSubmitWidget::SetPasswordLabelAsOld
-      | WalletKeysSubmitWidget::HideFrejaConnectButton);
+      | WalletKeysSubmitWidget::HideAuthConnectButton);
    ui_->widgetSubmitKeys->suspend();
    ui_->widgetSubmitKeys->init(MobileClientRequest::DeactivateWallet, wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideGroupboxCaption
       | WalletKeysCreateWidget::SetPasswordLabelAsNew
-      | WalletKeysCreateWidget::HideFrejaConnectButton
+      | WalletKeysCreateWidget::HideAuthConnectButton
       | WalletKeysCreateWidget::HideWidgetContol);
    ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet, wallet_->getWalletId(), username, appSettings);
 
@@ -149,33 +149,33 @@ void ChangeWalletPasswordDialog::continueBasic()
 {
    std::vector<bs::wallet::PasswordData> newKeys = ui_->widgetCreateKeys->keys();
 
-   bool isOldFreja = !oldPasswordData_.empty() && oldPasswordData_[0].encType == bs::wallet::EncryptionType::Freja;
-   bool isNewFreja = !newKeys.empty() && newKeys[0].encType == bs::wallet::EncryptionType::Freja;
+   bool isOldAuth = !oldPasswordData_.empty() && oldPasswordData_[0].encType == bs::wallet::EncryptionType::Auth;
+   bool isNewAuth = !newKeys.empty() && newKeys[0].encType == bs::wallet::EncryptionType::Auth;
 
-   if (!ui_->widgetSubmitKeys->isValid() && !isOldFreja) {
+   if (!ui_->widgetSubmitKeys->isValid() && !isOldAuth) {
       MessageBoxCritical messageBox(tr("Invalid password"), tr("Please check old password"), this);
       messageBox.exec();
       return;
    }
 
-   if (!ui_->widgetCreateKeys->isValid() && !isNewFreja) {
+   if (!ui_->widgetCreateKeys->isValid() && !isNewAuth) {
       MessageBoxCritical messageBox(tr("Invalid passwords"), tr("Please check new passwords"), this);
       messageBox.exec();
       return;
    }
 
-   if (isOldFreja && isNewFreja && oldPasswordData_[0].encKey == newKeys[0].encKey) {
-      MessageBoxCritical messageBox(tr("Invalid new Freja eID")
-         , tr("Please use different Freja eID. New Freje eID is already used."), this);
+   if (isOldAuth && isNewAuth && oldPasswordData_[0].encKey == newKeys[0].encKey) {
+      MessageBoxCritical messageBox(tr("Invalid new Auth eID")
+         , tr("Please use different Auth eID. New Freje eID is already used."), this);
       messageBox.exec();
       return;
    }
 
-   bool showFrejaUsageInfo = true;
+   bool showAuthUsageInfo = true;
 
-   if (isOldFreja)
+   if (isOldAuth)
    {
-      showFrejaUsageInfo = false;
+      showAuthUsageInfo = false;
 
       if (oldPasswordData_[0].password.isNull()) {
          EnterWalletPassword enterWalletPassword(MobileClientRequest::DeactivateWallet, this);
@@ -196,10 +196,10 @@ void ChangeWalletPasswordDialog::continueBasic()
       oldKey_ = ui_->widgetSubmitKeys->key();
    }
 
-   if (isNewFreja) {
-      if (showFrejaUsageInfo) {
-         FrejaNotice frejaNotice(this);
-         int result = frejaNotice.exec();
+   if (isNewAuth) {
+      if (showAuthUsageInfo) {
+         AuthNotice authNotice(this);
+         int result = authNotice.exec();
          if (result != QDialog::Accepted) {
             return;
          }
@@ -207,7 +207,7 @@ void ChangeWalletPasswordDialog::continueBasic()
 
       EnterWalletPassword enterWalletPassword(MobileClientRequest::ActivateWallet, this);
       enterWalletPassword.init(wallet_->getWalletId(), ui_->widgetCreateKeys->keyRank()
-         , newKeys, appSettings_, tr("Activate Freja eID signing"));
+         , newKeys, appSettings_, tr("Activate Auth eID signing"));
       int result = enterWalletPassword.exec();
       if (result != QDialog::Accepted) {
          return;
@@ -236,9 +236,9 @@ void ChangeWalletPasswordDialog::continueAddDevice()
       return;
    }
 
-   if (oldPasswordData_.empty() || oldPasswordData_[0].encType != bs::wallet::EncryptionType::Freja) {
+   if (oldPasswordData_.empty() || oldPasswordData_[0].encType != bs::wallet::EncryptionType::Auth) {
       MessageBoxCritical messageBox(tr("Add Device error")
-         , tr("Please switch to Freja encryption first"), this);
+         , tr("Please switch to Auth encryption first"), this);
       messageBox.exec();
       return;
    }
@@ -319,7 +319,7 @@ void ChangeWalletPasswordDialog::onSubmitKeysFailed2()
 void ChangeWalletPasswordDialog::onCreateKeysKeyChanged2(int, SecureBinaryData password)
 {
    bs::wallet::PasswordData newPassword{};
-   newPassword.encType = bs::wallet::EncryptionType::Freja;
+   newPassword.encType = bs::wallet::EncryptionType::Auth;
    newPassword.encKey = oldPasswordData_.at(0).encKey;
    newPassword.password = password;
    newPasswordData_.clear();

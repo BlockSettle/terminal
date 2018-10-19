@@ -75,7 +75,7 @@ protected:
 
    virtual void validateGUI() = 0;
 
-   void setFrejaPasswordPrompt(const QString &prompt);
+   void setAuthPasswordPrompt(const QString &prompt);
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -94,7 +94,7 @@ private:
    std::vector<bs::wallet::EncryptionType>   encTypes_;
    std::vector<SecureBinaryData>             encKeys_;
    bs::wallet::KeyRank                       keyRank_;
-   QString        frejaPrompt_;
+   QString        authPrompt_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
 };
 

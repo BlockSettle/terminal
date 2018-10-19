@@ -700,12 +700,12 @@ text-decoration: underline;</string>
           <number>0</number>
          </property>
          <item>
-          <widget class="QPushButton" name="pushButtonFreja">
+          <widget class="QPushButton" name="pushButtonAuth">
            <property name="enabled">
             <bool>false</bool>
            </property>
            <property name="text">
-            <string>Freja eID auth test</string>
+            <string>Auth eID auth test</string>
            </property>
            <property name="autoDefault">
             <bool>false</bool>

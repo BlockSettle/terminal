@@ -14,8 +14,8 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
   : QDialog(parent)
   , ui_(new Ui::OTPFileInfoDialog())
   , otpManager_(otpManager)
-  , frejaOld_(spdlog::get(""))
-  , frejaNew_(spdlog::get(""))
+  , authOld_(spdlog::get(""))
+  , authNew_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -31,16 +31,16 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
    connect(ui_->lineEditPwdNew2, &QLineEdit::editingFinished, this, &OTPFileInfoDialog::onPasswordChanged);
 
    connect(ui_->radioButtonPassword, &QRadioButton::clicked, this, &OTPFileInfoDialog::onEncTypeClicked);
-   connect(ui_->radioButtonFreja, &QRadioButton::clicked, this, &OTPFileInfoDialog::onEncTypeClicked);
-   connect(ui_->lineEditFrejaId, &QLineEdit::textEdited, this, &OTPFileInfoDialog::onFrejaIdChanged);
-   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &OTPFileInfoDialog::onFrejaClicked);
+   connect(ui_->radioButtonAuth, &QRadioButton::clicked, this, &OTPFileInfoDialog::onEncTypeClicked);
+   connect(ui_->lineEditAuthId, &QLineEdit::textEdited, this, &OTPFileInfoDialog::onAuthIdChanged);
+   connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &OTPFileInfoDialog::onAuthClicked);
 
-   connect(&frejaOld_, &FrejaSignOTP::succeeded, this, &OTPFileInfoDialog::onFrejaOldSucceeded);
-   connect(&frejaOld_, &FrejaSign::failed, this, &OTPFileInfoDialog::onFrejaOldFailed);
-   connect(&frejaOld_, &FrejaSign::statusUpdated, this, &OTPFileInfoDialog::onFrejaOldStatusUpdated);
-   connect(&frejaNew_, &FrejaSignOTP::succeeded, this, &OTPFileInfoDialog::onFrejaNewSucceeded);
-   connect(&frejaNew_, &FrejaSign::failed, this, &OTPFileInfoDialog::onFrejaNewFailed);
-   connect(&frejaNew_, &FrejaSign::statusUpdated, this, &OTPFileInfoDialog::onFrejaNewStatusUpdated);
+   connect(&authOld_, &AuthSignOTP::succeeded, this, &OTPFileInfoDialog::onAuthOldSucceeded);
+   connect(&authOld_, &AuthSign::failed, this, &OTPFileInfoDialog::onAuthOldFailed);
+   connect(&authOld_, &AuthSign::statusUpdated, this, &OTPFileInfoDialog::onAuthOldStatusUpdated);
+   connect(&authNew_, &AuthSignOTP::succeeded, this, &OTPFileInfoDialog::onAuthNewSucceeded);
+   connect(&authNew_, &AuthSign::failed, this, &OTPFileInfoDialog::onAuthNewFailed);
+   connect(&authNew_, &AuthSign::statusUpdated, this, &OTPFileInfoDialog::onAuthNewStatusUpdated);
 
    ui_->labelWarning->setVisible(false);
 
@@ -63,8 +63,8 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
    case bs::wallet::EncryptionType::Password:
       encType = tr("Password");
       break;
-   case bs::wallet::EncryptionType::Freja:
-      encType = tr("Freja eID");
+   case bs::wallet::EncryptionType::Auth:
+      encType = tr("Auth eID");
       break;
    default:
       encType = tr("Unknown");
@@ -73,8 +73,8 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
    ui_->labelEncrypted->setText(encType);
 
    ui_->groupBoxPassword->hide();
-   ui_->widgetFreja->hide();
-   ui_->pushButtonFreja->setEnabled(false);
+   ui_->widgetAuth->hide();
+   ui_->pushButtonAuth->setEnabled(false);
    ui_->labelPwdOld->setVisible(otpManager_->IsEncrypted());
    ui_->lineEditPwdOld->setVisible(otpManager_->IsEncrypted());
 
@@ -158,31 +158,31 @@ void OTPFileInfoDialog::onChangePwdClicked()
       switch (otpManager_->GetEncType()) {
       case bs::wallet::EncryptionType::Password:
          ui_->widgetPasswordOld->show();
-         ui_->labelFrejaOld->hide();
+         ui_->labelAuthOld->hide();
          ui_->lineEditPwdOld->setFocus();
          ui_->labelPwdHint->setText(tr("Enter old password"));
          break;
 
-      case bs::wallet::EncryptionType::Freja:
+      case bs::wallet::EncryptionType::Auth:
          ui_->widgetPasswordOld->hide();
-         ui_->labelFrejaOld->show();
-         ui_->labelPwdHint->setText(tr("Sign with Freja eID"));
-         frejaOld_.start(otpManager_->GetEncKey(), tr("Activate Freja eID signing")
+         ui_->labelAuthOld->show();
+         ui_->labelPwdHint->setText(tr("Sign with Auth eID"));
+         authOld_.start(otpManager_->GetEncKey(), tr("Activate Auth eID signing")
             , otpManager_->GetShortId());
          break;
 
       case bs::wallet::EncryptionType::Unencrypted:
       default:
          ui_->widgetPasswordOld->hide();
-         ui_->labelFrejaOld->hide();
+         ui_->labelAuthOld->hide();
          ui_->lineEditPwdNew1->setFocus();
          break;
       }
    }
    else {
       ui_->groupBoxPassword->setVisible(false);
-      frejaOld_.stop(true);
-      frejaNew_.stop(true);
+      authOld_.stop(true);
+      authNew_.stop(true);
    }
 }
 
@@ -190,60 +190,60 @@ void OTPFileInfoDialog::onEncTypeClicked()
 {
    ui_->widgetPasswordNew1->setVisible(ui_->radioButtonPassword->isChecked());
    ui_->widgetPasswordNew2->setVisible(ui_->radioButtonPassword->isChecked());
-   ui_->widgetFreja->setVisible(ui_->radioButtonFreja->isChecked());
+   ui_->widgetAuth->setVisible(ui_->radioButtonAuth->isChecked());
 }
 
-void OTPFileInfoDialog::onFrejaIdChanged()
+void OTPFileInfoDialog::onAuthIdChanged()
 {
-   ui_->pushButtonFreja->setEnabled(!ui_->lineEditFrejaId->text().isEmpty());
+   ui_->pushButtonAuth->setEnabled(!ui_->lineEditAuthId->text().isEmpty());
 }
 
-void OTPFileInfoDialog::onFrejaClicked()
+void OTPFileInfoDialog::onAuthClicked()
 {
-   ui_->pushButtonFreja->setEnabled(false);
-   frejaNew_.start(ui_->lineEditFrejaId->text(), tr("New OTP password")
+   ui_->pushButtonAuth->setEnabled(false);
+   authNew_.start(ui_->lineEditAuthId->text(), tr("New OTP password")
       , otpManager_->GetShortId());
 }
 
-void OTPFileInfoDialog::onFrejaOldSucceeded(SecureBinaryData password)
+void OTPFileInfoDialog::onAuthOldSucceeded(SecureBinaryData password)
 {
    oldPassword_ = password;
-   ui_->labelFrejaOld->setText(tr("Freja signed ok"));
+   ui_->labelAuthOld->setText(tr("Auth signed ok"));
    ui_->labelPwdHint->setText(tr("Enter new encryption credentials"));
 }
 
-void OTPFileInfoDialog::onFrejaOldFailed(const QString &text)
+void OTPFileInfoDialog::onAuthOldFailed(const QString &text)
 {
    ui_->pushButtonChangePassword->setChecked(false);
    onChangePwdClicked();
 }
 
-void OTPFileInfoDialog::onFrejaOldStatusUpdated(const QString &status)
+void OTPFileInfoDialog::onAuthOldStatusUpdated(const QString &status)
 {
-   ui_->labelFrejaOld->setText(tr("Freja sign status: %1").arg(status));
+   ui_->labelAuthOld->setText(tr("Auth sign status: %1").arg(status));
 }
 
-void OTPFileInfoDialog::onFrejaNewSucceeded(SecureBinaryData password)
+void OTPFileInfoDialog::onAuthNewSucceeded(SecureBinaryData password)
 {
    newPassword_ = password;
-   ui_->pushButtonFreja->setText(tr("Freja signed ok"));
+   ui_->pushButtonAuth->setText(tr("Auth signed ok"));
    ui_->pushButtonOk->setEnabled(true);
 }
 
-void OTPFileInfoDialog::onFrejaNewFailed(const QString &text)
+void OTPFileInfoDialog::onAuthNewFailed(const QString &text)
 {
    reject();
 }
 
-void OTPFileInfoDialog::onFrejaNewStatusUpdated(const QString &status)
+void OTPFileInfoDialog::onAuthNewStatusUpdated(const QString &status)
 {
-   ui_->pushButtonFreja->setText(status);
+   ui_->pushButtonAuth->setText(status);
 }
 
 void OTPFileInfoDialog::reject()
 {
-   frejaOld_.stop(true);
-   frejaNew_.stop(true);
+   authOld_.stop(true);
+   authNew_.stop(true);
    QDialog::reject();
 }
 
@@ -266,9 +266,9 @@ void OTPFileInfoDialog::accept()
       if (ui_->radioButtonPassword->isChecked()) {
          encType = bs::wallet::EncryptionType::Password;
       }
-      else if (ui_->radioButtonFreja->isChecked()) {
-         encType = bs::wallet::EncryptionType::Freja;
-         encKey = ui_->lineEditFrejaId->text().toStdString();
+      else if (ui_->radioButtonAuth->isChecked()) {
+         encType = bs::wallet::EncryptionType::Auth;
+         encKey = ui_->lineEditAuthId->text().toStdString();
       }
       return true;
    };

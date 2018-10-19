@@ -208,7 +208,7 @@ bool OTPFile::SyncToFile()
    protoFile.set_encryptiontype(static_cast<uint8_t>(encType_));
    if (encType_ != bs::wallet::EncryptionType::Unencrypted) {
       protoFile.set_hash(hash_.toBinStr());
-      if (encType_ == bs::wallet::EncryptionType::Freja) {
+      if (encType_ == bs::wallet::EncryptionType::Auth) {
          protoFile.set_encryptionkey(encKey_.toBinStr());
       }
    }

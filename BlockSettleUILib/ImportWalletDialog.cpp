@@ -9,7 +9,7 @@
 #include "WalletPasswordVerifyDialog.h"
 #include "WalletsManager.h"
 #include "UiUtils.h"
-#include "FrejaNotice.h"
+#include "AuthNotice.h"
 #include "MessageBoxQuestion.h"
 
 #include <spdlog/spdlog.h>
@@ -82,7 +82,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
-      | WalletKeysCreateWidget::HideFrejaConnectButton);
+      | WalletKeysCreateWidget::HideAuthConnectButton);
    ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet, walletId_, username, appSettings);
 
    adjustSize();
@@ -105,11 +105,11 @@ void ImportWalletDialog::updateAcceptButtonState()
 
 void ImportWalletDialog::onKeyTypeChanged(bool password)
 {
-   if (!password && !frejaNoticeWasShown_) {
-      FrejaNotice dlg(this);
+   if (!password && !authNoticeWasShown_) {
+      AuthNotice dlg(this);
 
       if (dlg.exec() == QDialog::Accepted) {
-         frejaNoticeWasShown_ = true;
+         authNoticeWasShown_ = true;
       }
    }
 }

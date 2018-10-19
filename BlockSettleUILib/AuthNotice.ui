@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FrejaNotice</class>
- <widget class="QDialog" name="FrejaNotice">
+ <class>AuthNotice</class>
+ <widget class="QDialog" name="AuthNotice">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Freja eID</string>
+   <string>Auth eID</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="leftMargin">
@@ -43,7 +43,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_2">
        <property name="title">
-        <string>SIGNING WITH FREJA eID</string>
+        <string>SIGNING WITH AUTH eID</string>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <property name="spacing">
@@ -89,15 +89,15 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Once you set Freja eID as signing the signing will be set locally on your mobile device.
+           <string>Once you set Auth eID as signing the signing will be set locally on your mobile device.
 
 If you lose your phone or uninstall the app you will lose your ability to sign wallet requests.
 
-This also implies that your Freja eID cannot be hacked as it's only stored on your mobile device.
+This also implies that your Auth eID cannot be hacked as it's only stored on your mobile device.
 
-Keep your backup secure as it protects your wallet forever against hard drive loss and if you lose your mobile device which is connected to Freja eID.
+Keep your backup secure as it protects your wallet forever against hard drive loss and if you lose your mobile device which is connected to Auth eID.
 
-For more information please consult with the Getting Started with Freja eID guide.</string>
+For more information please consult with the Getting Started with Auth eID guide.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -188,7 +188,7 @@ For more information please consult with the Getting Started with Freja eID guid
   <connection>
    <sender>pushButtonContinue</sender>
    <signal>clicked()</signal>
-   <receiver>FrejaNotice</receiver>
+   <receiver>AuthNotice</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">

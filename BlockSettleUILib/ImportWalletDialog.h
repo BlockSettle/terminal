@@ -60,7 +60,7 @@ private:
    std::string walletId_;
    QString     walletName_;
    bool importedAsPrimary_ = false;
-   bool frejaNoticeWasShown_ = false;
+   bool authNoticeWasShown_ = false;
 };
 
 #endif // __IMPORT_WALLET_DIALOG_H__

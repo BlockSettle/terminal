@@ -19,8 +19,8 @@ public:
       , QWidget *parent = nullptr);
    ~WalletPasswordVerifyDialog() override;
 
-   // By default the dialog will show only Freja usage info page.
-   // If init called then password/Freja check will be used too.
+   // By default the dialog will show only Auth usage info page.
+   // If init called then password/Auth check will be used too.
    void init(const std::string& walletId, const std::vector<bs::wallet::PasswordData>& keys
       , bs::wallet::KeyRank keyRank);
 
@@ -29,7 +29,7 @@ private slots:
 
 private:
    void initPassword();
-   void initFreja(const QString& frejaId);
+   void initAuth(const QString& authId);
 
    std::unique_ptr<Ui::WalletPasswordVerifyDialog> ui_;
    std::string walletId_;

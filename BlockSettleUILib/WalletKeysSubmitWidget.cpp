@@ -55,7 +55,7 @@ void WalletKeysSubmitWidget::init(MobileClientRequest requestType
          addKey(true, encKeys, 0, false, prompt);
       }
       else {
-         if ((encTypes.size() == 1) && (encTypes[0] == bs::wallet::EncryptionType::Freja) && (encKeys.size() == keyRank.first)) {
+         if ((encTypes.size() == 1) && (encTypes[0] == bs::wallet::EncryptionType::Auth) && (encKeys.size() == keyRank.first)) {
             for (unsigned int i = 0; i < keyRank.first; ++i) {
                addKey(false, encKeys, encKeyIndex++, true, prompt);
             }
@@ -92,32 +92,32 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysSubmitWidget::onEncKeyChanged);
    connect(widget, &WalletKeyWidget::failed, this, &WalletKeysSubmitWidget::failed);
 
-   if (flags_ & HideFrejaConnectButton) {
-      widget->setHideFrejaConnect(true);
+   if (flags_ & HideAuthConnectButton) {
+      widget->setHideAuthConnect(true);
    }
-   if (flags_ & HideFrejaCombobox) {
-      widget->setHideFrejaCombobox(true);
+   if (flags_ & HideAuthCombobox) {
+      widget->setHideAuthCombobox(true);
    }
-   if (flags_ & FrejaProgressBarFixed) {
+   if (flags_ & AuthProgressBarFixed) {
       widget->setProgressBarFixed(true);
    }
-   if (flags_ & FrejaIdVisible) {
-      widget->setShowFrejaId(true);
+   if (flags_ & AuthIdVisible) {
+      widget->setShowAuthId(true);
    }
    if (flags_ & SetPasswordLabelAsOld) {
       widget->setPasswordLabelAsOld();
    }
-   if (flags_ & HideFrejaEmailLabel) {
-      widget->setHideFrejaEmailLabel(true);
+   if (flags_ & HideAuthEmailLabel) {
+      widget->setHideAuthEmailLabel(true);
    }
-   if (flags_ & HideFrejaControlsOnSignClicked) {
-      widget->setHideFrejaControlsOnSignClicked(true);
+   if (flags_ & HideAuthControlsOnSignClicked) {
+      widget->setHideAuthControlsOnSignClicked(true);
    }
 
    ui_->groupBox->layout()->addWidget(widget);
 
    widgets_.push_back(widget);
-   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja, {} });
+   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth, {} });
    emit keyCountChanged();
    widget->setEncryptionKeys(encKeys, encKeyIndex);
    widget->setFixedType(isFixed);
@@ -148,7 +148,7 @@ void WalletKeysSubmitWidget::onKeyTypeChanged(int index, bool password)
    if ((index < 0) || (index >= pwdData_.size())) {
       return;
    }
-   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja;
+   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth;
    pwdData_[index].password.clear();
    emit keyChanged();
 }
@@ -182,7 +182,7 @@ bool WalletKeysSubmitWidget::isValid() const
       if (pwd.password.isNull()) {
          return false;
       }
-      if (pwd.encType == bs::wallet::EncryptionType::Freja) {
+      if (pwd.encType == bs::wallet::EncryptionType::Auth) {
          if (pwd.encKey.isNull()) {
             return false;
          }

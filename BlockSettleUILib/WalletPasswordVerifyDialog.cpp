@@ -27,8 +27,8 @@ void WalletPasswordVerifyDialog::init(const std::string& walletId
       
    const bs::wallet::PasswordData &key = keys.at(0);
 
-   if (key.encType == bs::wallet::EncryptionType::Freja) {
-      initFreja(QString::fromStdString(key.encKey.toBinStr()));
+   if (key.encType == bs::wallet::EncryptionType::Auth) {
+      initAuth(QString::fromStdString(key.encKey.toBinStr()));
    }
    else {
       initPassword();
@@ -39,11 +39,11 @@ void WalletPasswordVerifyDialog::init(const std::string& walletId
 
 void WalletPasswordVerifyDialog::initPassword()
 {
-   ui_->labelFrejaHint->hide();
+   ui_->labelAuthHint->hide();
    adjustSize();
 }
 
-void WalletPasswordVerifyDialog::initFreja(const QString&)
+void WalletPasswordVerifyDialog::initAuth(const QString&)
 {
    ui_->lineEditPassword->hide();
    ui_->labelPasswordHint->hide();
@@ -62,9 +62,9 @@ void WalletPasswordVerifyDialog::onContinueClicked()
       }
    }
    
-   if (key.encType == bs::wallet::EncryptionType::Freja) {
+   if (key.encType == bs::wallet::EncryptionType::Auth) {
       EnterWalletPassword dialog(MobileClientRequest::VerifyWalletKey, this);
-      dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Activate Freja eID signing"));
+      dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Activate Auth eID signing"));
       int result = dialog.exec();
       if (!result) {
          return;

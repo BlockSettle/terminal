@@ -24,7 +24,7 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    , ccFileMgr_(ccFileMgr)
    , signingContainer_(container)
    , walletsMgr_(walletsMgr)
-   , freja_(spdlog::get(""))
+   , auth_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -37,24 +37,24 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    connect(signingContainer_.get(), &SignContainer::Error, this, &CCTokenEntryDialog::onWalletFailed);
 
    switch (ccFileMgr_->GetOtpEncType()) {
-   case bs::wallet::EncryptionType::Freja:
+   case bs::wallet::EncryptionType::Auth:
       ui_->groupBoxOtpPassword->hide();
-      ui_->labelFreja->show();
-      connect(&freja_, &FrejaSignOTP::succeeded, this, &CCTokenEntryDialog::onFrejaSucceeded);
-      connect(&freja_, &FrejaSign::failed, this, &CCTokenEntryDialog::onFrejaFailed);
-      connect(&freja_, &FrejaSign::statusUpdated, this, &CCTokenEntryDialog::onFrejaStatusUpdated);
-      freja_.start(ccFileMgr_->GetOtpEncKey(), tr("Equity Token Submission"), ccFileMgr_->GetOtpId());
+      ui_->labelAuth->show();
+      connect(&auth_, &AuthSignOTP::succeeded, this, &CCTokenEntryDialog::onAuthSucceeded);
+      connect(&auth_, &AuthSign::failed, this, &CCTokenEntryDialog::onAuthFailed);
+      connect(&auth_, &AuthSign::statusUpdated, this, &CCTokenEntryDialog::onAuthStatusUpdated);
+      auth_.start(ccFileMgr_->GetOtpEncKey(), tr("Equity Token Submission"), ccFileMgr_->GetOtpId());
       break;
 
    case bs::wallet::EncryptionType::Password:
-      ui_->labelFreja->hide();
+      ui_->labelAuth->hide();
       ui_->groupBoxOtpPassword->show();
       connect(ui_->lineEditOtpPassword, &QLineEdit::textEdited, this, &CCTokenEntryDialog::passwordChanged);
       break;
 
    case bs::wallet::EncryptionType::Unencrypted:
    default:
-      ui_->labelFreja->hide();
+      ui_->labelAuth->hide();
       ui_->groupBoxOtpPassword->hide();
       passwordOk_ = true;
       break;
@@ -176,7 +176,7 @@ void CCTokenEntryDialog::accept()
 
 void CCTokenEntryDialog::reject()
 {
-   freja_.stop(true);
+   auth_.stop(true);
    QDialog::reject();
 }
 
@@ -188,21 +188,21 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
          " transaction is broadcasted in the Terminal")).exec();
 }
 
-void CCTokenEntryDialog::onFrejaSucceeded(SecureBinaryData password)
+void CCTokenEntryDialog::onAuthSucceeded(SecureBinaryData password)
 {
    otpPassword_ = password;
    passwordOk_ = true;
-   ui_->labelFreja->setText(tr("OTP signed with Freja"));
+   ui_->labelAuth->setText(tr("OTP signed with Auth"));
    updateOkState();
 }
 
-void CCTokenEntryDialog::onFrejaFailed(const QString &)
+void CCTokenEntryDialog::onAuthFailed(const QString &)
 {
    passwordOk_ = false;
    QDialog::reject();
 }
 
-void CCTokenEntryDialog::onFrejaStatusUpdated(const QString &status)
+void CCTokenEntryDialog::onAuthStatusUpdated(const QString &status)
 {
-   ui_->labelFreja->setText(tr("Freja status: %1").arg(status));
+   ui_->labelAuth->setText(tr("Auth status: %1").arg(status));
 }

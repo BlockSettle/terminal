@@ -10,7 +10,7 @@ namespace bs {
       enum class EncryptionType : uint8_t {
          Unencrypted,
          Password,
-         Freja
+         Auth
       };
 
       //! first - required number of keys, second - total number of keys
