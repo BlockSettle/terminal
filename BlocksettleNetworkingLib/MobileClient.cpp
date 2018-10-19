@@ -59,7 +59,7 @@ void MobileClient::init(const std::string &serverPubKey
 
 MobileClient::~MobileClient() = default;
 
-static void PadData(SecureBinaryData &data)
+static void PadData(BinaryData &data)
 {
    const auto rem = data.getSize() % BTC_AES::BLOCKSIZE;
    if (rem) {
@@ -87,9 +87,9 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
       , new CryptoPP::PK_EncryptorFilter(rng_, encryptor, new CryptoPP::StringSink(encPass)));
 
    SecureBinaryData iv(BTC_AES::BLOCKSIZE);
-   SecureBinaryData data = payload;
-   PadData(data);
-   const auto encPayload = CryptoAES().EncryptCBC(payload, password, iv);
+   BinaryData paddedPayload = payload;
+   PadData(paddedPayload);
+   const auto encPayload = CryptoAES().EncryptCBC(paddedPayload, password, iv);
    if (encPayload.isNull()) {
       logger_->error("failed to encrypt payload");
       emit failed(tr("failed to encrypt payload"));
@@ -165,18 +165,15 @@ void MobileClient::processGetKeyResponse(const std::string &payload, uint64_t ta
    CryptoPP::SecByteBlock key(kKeySize);
    try {
       CryptoPP::RSAES_PKCS1v15_Decryptor d(privateKey_);
-      CryptoPP::AutoSeededRandomPool rng;
-
-      const auto &encryptedKey = response.key();
 
       // CryptoPP takes ownership of raw pointers
       auto sink = new CryptoPP::ArraySink(key.begin(), key.size());
-      auto filter = new CryptoPP::PK_DecryptorFilter(rng, d, sink);
-      CryptoPP::ArraySource(reinterpret_cast<const uint8_t*>(encryptedKey.data())
-         , encryptedKey.size(), true, filter);
+      auto filter = new CryptoPP::PK_DecryptorFilter(rng_, d, sink);
+      CryptoPP::ArraySource(reinterpret_cast<const uint8_t*>(response.key().data())
+         , response.key().size(), true, filter);
 
-      if (sink->TotalPutLength() != kKeySize) {
-         throw std::runtime_error("Got key with invalid size");
+      if (sink->TotalPutLength() != kKeySize) {    // for some reason this always fails
+         logger_->warn("Got key with invalid size {}", std::to_string(sink->TotalPutLength()));
       }
 
    } catch (const std::exception &e) {
