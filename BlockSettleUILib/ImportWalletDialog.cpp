@@ -83,7 +83,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
       | WalletKeysCreateWidget::HideFrejaConnectButton);
-   ui_->widgetCreateKeys->init(walletId_, username, appSettings);
+   ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet, walletId_, username, appSettings);
 
    adjustSize();
    setMinimumSize(size());

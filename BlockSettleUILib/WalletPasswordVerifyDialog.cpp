@@ -63,7 +63,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
    }
    
    if (key.encType == bs::wallet::EncryptionType::Freja) {
-      EnterWalletPassword dialog(this);
+      EnterWalletPassword dialog(MobileClientRequest::VerifyWalletKey, this);
       dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Activate Freja eID signing"));
       int result = dialog.exec();
       if (!result) {

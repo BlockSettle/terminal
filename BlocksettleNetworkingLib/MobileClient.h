@@ -5,6 +5,7 @@
 #include <QObject>
 #include "DataConnectionListener.h"
 #include "EncryptionUtils.h"
+#include "MobileClientRequestType.h"
 #include "ZmqSecuredDataConnection.h"
 #include "rp_api.pb.h"
 
@@ -24,7 +25,7 @@ public:
 
    void init(const std::string &serverPubKey
       , const std::string &serverHost, const std::string &serverPort);
-   bool start(const std::string &email, const std::string &walletId);
+   bool start(MobileClientRequest requestType, const std::string &email, const std::string &walletId);
    void cancel();
 
 signals:

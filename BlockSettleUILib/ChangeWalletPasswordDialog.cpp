@@ -30,12 +30,15 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::reject);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::onContinueClicked);
 
-   deviceKeyOld_ = new WalletKeyWidget(wallet->getWalletId(), 0, false, this);
+   deviceKeyOld_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletOldDevice
+      , wallet->getWalletId(), 0, false, this);
    deviceKeyOld_->setFixedType(true);
    deviceKeyOld_->setEncryptionKeys(encKeys);
    deviceKeyOld_->setHideFrejaConnect(true);
    deviceKeyOld_->setHideFrejaCombobox(true);
-   deviceKeyNew_ = new WalletKeyWidget(wallet->getWalletId(), 0, false, this);
+
+   deviceKeyNew_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletNewDevice
+      , wallet->getWalletId(), 0, false, this);
    deviceKeyNew_->setFixedType(true);
    deviceKeyNew_->setEncryptionKeys(encKeys);
    deviceKeyNew_->setHideFrejaConnect(true);
@@ -80,13 +83,13 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
       | WalletKeysSubmitWidget::SetPasswordLabelAsOld
       | WalletKeysSubmitWidget::HideFrejaConnectButton);
    ui_->widgetSubmitKeys->suspend();
-   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
+   ui_->widgetSubmitKeys->init(MobileClientRequest::DectivateWallet, wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideGroupboxCaption
       | WalletKeysCreateWidget::SetPasswordLabelAsNew
       | WalletKeysCreateWidget::HideFrejaConnectButton
       | WalletKeysCreateWidget::HideWidgetContol);
-   ui_->widgetCreateKeys->init(wallet_->getWalletId(), username, appSettings);
+   ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet, wallet_->getWalletId(), username, appSettings);
 
    ui_->widgetSubmitKeys->setFocus();
 
@@ -148,7 +151,7 @@ void ChangeWalletPasswordDialog::continueBasic()
       showFrejaUsageInfo = false;
 
       if (oldPasswordData_[0].password.isNull()) {
-         EnterWalletPassword enterWalletPassword(this);
+         EnterWalletPassword enterWalletPassword(MobileClientRequest::DectivateWallet, this);
          enterWalletPassword.init(wallet_->getWalletId(), oldKeyRank_
             , oldPasswordData_, appSettings_, tr("Change Password"));
          int result = enterWalletPassword.exec();
@@ -172,7 +175,7 @@ void ChangeWalletPasswordDialog::continueBasic()
          }
       }
 
-      EnterWalletPassword enterWalletPassword(this);
+      EnterWalletPassword enterWalletPassword(MobileClientRequest::ActivateWallet, this);
       enterWalletPassword.init(wallet_->getWalletId(), ui_->widgetCreateKeys->keyRank()
          , newKeys, appSettings_, tr("Activate Freja eID signing"));
       int result = enterWalletPassword.exec();

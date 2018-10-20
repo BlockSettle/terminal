@@ -7,7 +7,7 @@
 #include <QTimer>
 #include "EncryptionUtils.h"
 #include "MetaData.h"
-
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class EnterWalletPassword;
@@ -19,7 +19,7 @@ class EnterWalletPassword : public QDialog
 Q_OBJECT
 
 public:
-   explicit EnterWalletPassword(QWidget* parent = nullptr);
+   explicit EnterWalletPassword(MobileClientRequest requestType, QWidget* parent = nullptr);
    ~EnterWalletPassword() override;
 
    void init(const std::string &walletId, bs::wallet::KeyRank keyRank
@@ -27,6 +27,7 @@ public:
       , const std::vector<SecureBinaryData> &encKeys
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const QString &prompt, const QString &title = QString());
+
    void init(const std::string &walletId, bs::wallet::KeyRank keyRank
       , const std::vector<bs::wallet::PasswordData> &keys
       , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -42,6 +43,7 @@ protected:
 
 private:
    std::unique_ptr<Ui::EnterWalletPassword> ui_;
+   MobileClientRequest requestType_{};
 };
 
 #endif // __ENTER_WALLET_PASSWORD_H__

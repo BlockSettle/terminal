@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "WalletEncryption.h"
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class WalletKeysCreateWidget;
@@ -27,7 +28,8 @@ public:
    ~WalletKeysCreateWidget() override;
 
    void setFlags(Flags flags);
-   void init(const std::string &walletId, const QString& username
+   void init(MobileClientRequest requestType
+      , const std::string &walletId, const QString& username
       , const std::shared_ptr<ApplicationSettings>& appSettings);
    void addPasswordKey() { addKey(true); }
    void addFrejaKey() { addKey(false); }
@@ -63,6 +65,7 @@ private:
    Flags flags_{NoFlag};
    std::shared_ptr<ApplicationSettings> appSettings_;
    QString username_;
+   MobileClientRequest requestType_{};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysCreateWidget::Flags)

@@ -4,9 +4,10 @@
 
 
 
-EnterWalletPassword::EnterWalletPassword(QWidget* parent)
+EnterWalletPassword::EnterWalletPassword(MobileClientRequest requestType, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterWalletPassword())
+   , requestType_(requestType)
 {
    ui_->setupUi(this);
 
@@ -44,7 +45,7 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
       ui_->pushButtonOk->hide();
    }
 
-   ui_->widgetSubmitKeys->init(walletId, keyRank, encTypes, encKeys, appSettings, prompt);
+   ui_->widgetSubmitKeys->init(requestType_, walletId, keyRank, encTypes, encKeys, appSettings, prompt);
    ui_->widgetSubmitKeys->setFocus();
 
    updateState();

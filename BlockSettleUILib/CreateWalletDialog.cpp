@@ -62,7 +62,8 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
       this, &CreateWalletDialog::onKeyTypeChanged);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideFrejaConnectButton);
-   ui_->widgetCreateKeys->init(walletId_, username, appSettings);
+   ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet
+      , walletId_, username, appSettings);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
@@ -185,7 +186,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
          return false;
       }
 
-      EnterWalletPassword dialog(parent);
+      EnterWalletPassword dialog(MobileClientRequest::ActivateWallet, parent);
       dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
          , appSettings, QObject::tr("Activate Freja eID signing"));
       int result = dialog.exec();

@@ -1172,7 +1172,7 @@ void RFQDealerReply::startSigning()
       logger_->error("Failed to obtain auto-sign wallet for id {}", walletId);
       return;
    }
-   ui_->widgetSubmitKeysAS->init(walletId, it->second.walletEncRank_,
+   ui_->widgetSubmitKeysAS->init(MobileClientRequest::SignWallet, walletId, it->second.walletEncRank_,
       it->second.walletEncTypes_, it->second.walletEncKeys_, appSettings_);
 }
 

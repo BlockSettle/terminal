@@ -26,9 +26,12 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username
+void WalletKeysCreateWidget::init(MobileClientRequest requestType
+   , const std::string &walletId, const QString& username
    , const std::shared_ptr<ApplicationSettings>& appSettings)
 {
+   requestType_ = requestType;
+
    widgets_.clear();
    pwdData_.clear();
 
@@ -54,7 +57,7 @@ void WalletKeysCreateWidget::init(const std::string &walletId, const QString& us
 void WalletKeysCreateWidget::addKey(bool password)
 {
    assert(!walletId_.empty());
-   auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, this);
+   auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password, this);
    widget->init(appSettings_, username_);
    if (flags_ & HideFrejaConnectButton) {
       widget->setHideFrejaConnect(true);

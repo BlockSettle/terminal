@@ -4,7 +4,7 @@
 #include <QTimer>
 #include <QWidget>
 #include "EncryptionUtils.h"
-#include "FrejaREST.h"
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class WalletKeyWidget;
@@ -17,7 +17,8 @@ class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(const std::string &walletId, int index, bool password, QWidget* parent = nullptr);
+   WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
+      , int index, bool password, QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings>& appSettings, const QString& username);
@@ -79,6 +80,7 @@ private:
    bool        showFrejaId_ = false;
    bool        hideFrejaEmailLabel_ = false;
    bool        hideFrejaControlsOnSignClicked_ = false;
+   MobileClientRequest requestType_{};
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

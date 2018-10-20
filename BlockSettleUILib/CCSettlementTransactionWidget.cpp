@@ -258,7 +258,8 @@ void CCSettlementTransactionWidget::initSigning()
       return;
    }
    const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetSigningWallet()->GetWalletId());
-   ui_->widgetSubmitKeys->init(rootWallet->getWalletId(), keyRank_, encTypes_, encKeys_, appSettings_);
+   ui_->widgetSubmitKeys->init(MobileClientRequest::SignWallet, rootWallet->getWalletId()
+      , keyRank_, encTypes_, encKeys_, appSettings_);
    ui_->widgetSubmitKeys->setFocus();
    updateAcceptButton();
    QApplication::processEvents();

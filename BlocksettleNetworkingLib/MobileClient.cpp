@@ -70,7 +70,8 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
    return connection_->send(envelope.SerializeAsString());
 }
 
-bool MobileClient::start(const std::string &email, const std::string &walletId)
+bool MobileClient::start(MobileClientRequest requestType
+   , const std::string &email, const std::string &walletId)
 {
    if (!connection_) {
       return false;
@@ -85,7 +86,10 @@ bool MobileClient::start(const std::string &email, const std::string &walletId)
    GetDeviceKeyRequest request;
    request.set_keyid(walletId_);
    request.set_expiration(60);
-   request.set_title("Unlock wallet " + walletId);
+
+   QString action = getMobileClientRequestText(requestType);
+
+   request.set_title(action.toStdString() + " " + walletId);
 
    return sendToAuthServer(request.SerializeAsString(), GetDeviceKeyType);
 }
