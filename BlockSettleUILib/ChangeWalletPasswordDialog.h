@@ -44,10 +44,6 @@ public:
       , QWidget* parent = nullptr);
    ~ChangeWalletPasswordDialog() override;
 
-   SecureBinaryData oldPassword() const;
-   std::vector<bs::wallet::PasswordData> newPasswordData() const;
-   bs::wallet::KeyRank newKeyRank() const;
-
 private slots:
    void onContinueClicked();
    void onTabChanged(int index);
@@ -65,6 +61,7 @@ private:
    void updateState();
    void continueBasic();
    void continueAddDevice();
+   void checkOldPassword();
 
    std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
    std::shared_ptr<SignContainer> signingContainer_;
@@ -73,6 +70,7 @@ private:
    bs::wallet::KeyRank newKeyRank_;
    std::vector<bs::wallet::PasswordData> oldPasswordData_;
    std::vector<bs::wallet::PasswordData> newPasswordData_;
+   bool addNew_ = false;
    SecureBinaryData oldKey_;
    State state_ = State::Idle;
    WalletKeyWidget *deviceKeyOld_ = nullptr;

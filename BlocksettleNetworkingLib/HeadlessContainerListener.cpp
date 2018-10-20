@@ -1174,7 +1174,8 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
    }
 }
 
-bool HeadlessContainerListener::onChangePassword(const std::string &clientId, headless::RequestPacket &packet)
+bool HeadlessContainerListener::onChangePassword(const std::string &clientId
+   , headless::RequestPacket &packet)
 {
    headless::ChangePasswordRequest request;
    if (!request.ParseFromString(packet.data())) {
@@ -1195,7 +1196,12 @@ bool HeadlessContainerListener::onChangePassword(const std::string &clientId, he
          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
    bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
-   if (!wallet->changePassword(pwdData, keyRank, BinaryData::CreateFromHex(request.oldpassword()))) {
+
+   bool result = wallet->changePassword(pwdData, keyRank
+      , BinaryData::CreateFromHex(request.oldpassword())
+      , request.addnew(), request.dryrun());
+
+   if (!result) {
       logger_->error("[HeadlessContainerListener] failed to change password for wallet {}", request.rootwalletid());
       ChangePasswordResponse(clientId, packet.id(), request.rootwalletid(), false);
       return false;

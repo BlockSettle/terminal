@@ -108,11 +108,15 @@ ChangeWalletPasswordDialog::~ChangeWalletPasswordDialog() = default;
 
 void ChangeWalletPasswordDialog::accept()
 {
+   bool dryRun = false;
+
    if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, newPasswordData(), newKeyRank(), oldPassword());
+      signingContainer_->ChangePassword(wallet_, newPasswordData_, newKeyRank_, oldKey_
+         , addNew_, dryRun);
    }
    else {
-      bool result = wallet_->changePassword(newPasswordData(), newKeyRank(), oldPassword());
+      bool result = wallet_->changePassword(newPasswordData_, newKeyRank_, oldKey_
+         , addNew_, dryRun);
       onPasswordChanged(wallet_->getWalletId(), result);
    }
 }
@@ -233,6 +237,11 @@ void ChangeWalletPasswordDialog::continueAddDevice()
    updateState();
 }
 
+void ChangeWalletPasswordDialog::checkOldPassword()
+{
+
+}
+
 void ChangeWalletPasswordDialog::onSubmitKeysKeyChanged2(int, SecureBinaryData password)
 {
    deviceKeyOldValid_ = true;
@@ -316,21 +325,6 @@ void ChangeWalletPasswordDialog::onTabChanged(int index)
 {
    state_ = State::Idle;
    updateState();
-}
-
-std::vector<bs::wallet::PasswordData> ChangeWalletPasswordDialog::newPasswordData() const
-{
-   return newPasswordData_;
-}
-
-bs::wallet::KeyRank ChangeWalletPasswordDialog::newKeyRank() const
-{
-   return newKeyRank_;
-}
-
-SecureBinaryData ChangeWalletPasswordDialog::oldPassword() const
-{
-   return oldKey_;
 }
 
 void ChangeWalletPasswordDialog::updateState()
