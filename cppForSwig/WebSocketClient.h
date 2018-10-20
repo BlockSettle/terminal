@@ -131,6 +131,9 @@ public:
    {
       shutdown();
 
+      if (readThr_.joinable())
+         readThr_.join();
+
       if (serviceThr_.joinable())
          serviceThr_.join();
    }
