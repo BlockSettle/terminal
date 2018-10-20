@@ -3,13 +3,16 @@
 
 #include <spdlog/spdlog.h>
 #include "EnterWalletPassword.h"
+#include "FrejaNotice.h"
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
+#include "MessageBoxSuccess.h"
+#include "SignContainer.h"
 #include "WalletKeyWidget.h"
-#include "FrejaNotice.h"
 
 
-ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
+ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(std::shared_ptr<SignContainer> signingContainer
+      , const std::shared_ptr<bs::hd::Wallet> &wallet
       , const std::vector<bs::wallet::EncryptionType> &encTypes
       , const std::vector<SecureBinaryData> &encKeys
       , bs::wallet::KeyRank keyRank
@@ -18,6 +21,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
       , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::ChangeWalletPasswordDialog())
+   , signingContainer_(signingContainer)
    , wallet_(wallet)
    , oldKeyRank_(keyRank)
    , appSettings_(appSettings)
@@ -29,6 +33,8 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
    connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &ChangeWalletPasswordDialog::onTabChanged);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::reject);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ChangeWalletPasswordDialog::onContinueClicked);
+
+   connect(signingContainer_.get(), &SignContainer::PasswordChanged, this, &ChangeWalletPasswordDialog::onPasswordChanged);
 
    deviceKeyOld_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletOldDevice
       , wallet->getWalletId(), 0, false, this);
@@ -100,12 +106,24 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<bs:
 
 ChangeWalletPasswordDialog::~ChangeWalletPasswordDialog() = default;
 
+void ChangeWalletPasswordDialog::accept()
+{
+   if (wallet_->isWatchingOnly()) {
+      signingContainer_->ChangePassword(wallet_, newPasswordData(), newKeyRank(), oldPassword());
+   }
+   else {
+      bool result = wallet_->changePassword(newPasswordData(), newKeyRank(), oldPassword());
+      onPasswordChanged(wallet_->getWalletId(), result);
+   }
+}
+
 void ChangeWalletPasswordDialog::reject()
 {
    ui_->widgetSubmitKeys->cancel();
    ui_->widgetCreateKeys->cancel();
    deviceKeyOld_->cancel();
    deviceKeyNew_->cancel();
+
    QDialog::reject();
 }
 
@@ -253,6 +271,45 @@ void ChangeWalletPasswordDialog::onCreateKeysFailed2()
 {
    state_ = State::Idle;
    updateState();
+}
+
+void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool ok)
+{
+   if (walletId != wallet_->getWalletId()) {
+      return;
+   }
+
+   if (isLatestChangeAddDevice_) {
+      if (ok) {
+         MessageBoxSuccess(tr("Wallet Password")
+            , tr("Device successfully added")
+            , this).exec();
+      }
+      else {
+         MessageBoxCritical(tr("Wallet Password")
+            , tr("Device adding failed")
+            , this).exec();
+      }
+
+      return;
+   }
+
+   if (ok) {
+      MessageBoxSuccess(tr("Wallet Password")
+         , tr("Wallet password successfully changed")
+         , this).exec();
+   }
+   else {
+      MessageBoxCritical(tr("Wallet Password")
+         , tr("A problem occured when changing wallet password")
+         , this).exec();
+   }
+
+   if (ok) {
+      QDialog::accept();
+   } else {
+      QDialog::reject();
+   }
 }
 
 void ChangeWalletPasswordDialog::onTabChanged(int index)

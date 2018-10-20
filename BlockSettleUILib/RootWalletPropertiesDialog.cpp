@@ -107,7 +107,6 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
          ui_->changePassphraseButton->setEnabled(false);
       }
       connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
-      connect(signingContainer_.get(), &SignContainer::PasswordChanged, this, &RootWalletPropertiesDialog::onPasswordChanged);
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RootWalletPropertiesDialog::onHDLeafCreated);
       infoReqId_ = signingContainer_->GetInfo(wallet_);
    }
@@ -179,63 +178,14 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   ChangeWalletPasswordDialog changePasswordDialog(wallet_
+   ChangeWalletPasswordDialog changePasswordDialog(signingContainer_, wallet_
       , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), appSettings_, this);
 
-   if (changePasswordDialog.exec() != QDialog::Accepted) {
-      return;
-   }
+   int result = changePasswordDialog.exec();
 
-   isLatestPasswordChangeAddDevice_ = changePasswordDialog.isLatestChangeAddDevice();
-
-   const auto oldPassword = changePasswordDialog.oldPassword();
-
-   if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, changePasswordDialog.newPasswordData()
-         , changePasswordDialog.newKeyRank(), oldPassword);
-   }
-   else {
-      bool result = wallet_->changePassword(changePasswordDialog.newPasswordData(), changePasswordDialog.newKeyRank()
-         , oldPassword);
-      onPasswordChanged(wallet_->getWalletId(), result);
-   }
-}
-
-void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, bool ok)
-{
-   if (walletId != wallet_->getWalletId()) {
-      return;
-   }
-
-   if (ok) {
-      // Update wallet info
+   if (result == QDialog::Accepted) {
+      // Update wallet encryption type
       infoReqId_ = signingContainer_->GetInfo(wallet_);
-   }
-
-   if (isLatestPasswordChangeAddDevice_) {
-      if (ok) {
-         MessageBoxSuccess(tr("Wallet Password")
-            , tr("Device successfully added")
-            , this).exec();
-      }
-      else {
-         MessageBoxCritical(tr("Wallet Password")
-            , tr("Device adding failed")
-            , this).exec();
-      }
-
-      return;
-   }
-
-   if (ok) {
-      MessageBoxSuccess(tr("Wallet Password")
-         , tr("Wallet password successfully changed")
-         , this).exec();
-   }
-   else {
-      MessageBoxCritical(tr("Wallet Password")
-         , tr("A problem occured when changing wallet password")
-         , this).exec();
    }
 }
 

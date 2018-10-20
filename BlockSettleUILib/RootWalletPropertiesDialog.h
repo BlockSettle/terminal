@@ -39,7 +39,6 @@ private slots:
    void onBackupWallet();
    void onCreateWoWallet();
    void onChangePassword();
-   void onPasswordChanged(const std::string &walletId, bool ok);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
       , bs::wallet::KeyRank);
    void onWalletSelected();
@@ -67,7 +66,6 @@ private:
    std::vector<SecureBinaryData>             walletEncKeys_;
    bs::wallet::KeyRank                       walletEncRank_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
-   bool isLatestPasswordChangeAddDevice_ = false;
 };
 
 #endif // __WALLET_PROPERTIES_DIALOG_H__

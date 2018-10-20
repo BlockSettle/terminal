@@ -17,6 +17,7 @@ namespace bs {
 
 class WalletKeyWidget;
 class ApplicationSettings;
+class SignContainer;
 
 class ChangeWalletPasswordDialog : public QDialog
 {
@@ -34,7 +35,8 @@ public:
       AddDeviceWaitNew,
    };
 
-   ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
+   ChangeWalletPasswordDialog(std::shared_ptr<SignContainer> signingContainer
+      , const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys
       , bs::wallet::KeyRank
       , const QString &username
@@ -46,8 +48,6 @@ public:
    std::vector<bs::wallet::PasswordData> newPasswordData() const;
    bs::wallet::KeyRank newKeyRank() const;
 
-   bool isLatestChangeAddDevice() const { return isLatestChangeAddDevice_; }
-
 private slots:
    void onContinueClicked();
    void onTabChanged(int index);
@@ -55,8 +55,10 @@ private slots:
    void onSubmitKeysFailed2();
    void onCreateKeysKeyChanged2(int, SecureBinaryData);
    void onCreateKeysFailed2();
+   void onPasswordChanged(const std::string &walletId, bool ok);
 
 protected:
+   void accept() override;
    void reject() override;
 
 private:
@@ -65,6 +67,7 @@ private:
    void continueAddDevice();
 
    std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
+   std::shared_ptr<SignContainer> signingContainer_;
    std::shared_ptr<bs::hd::Wallet>  wallet_;
    const bs::wallet::KeyRank oldKeyRank_;
    bs::wallet::KeyRank newKeyRank_;
