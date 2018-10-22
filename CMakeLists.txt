@@ -17,6 +17,7 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
+SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
 
@@ -313,6 +314,9 @@ ENDIF ( APPLE )
 SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
 
+FILE(MAKE_DIRECTORY ${PATH_TO_GENERATED}/Auth)
+
+SET( AUTH_PROTO_LIB_NAME               AuthProtoLib )
 SET( BS_PROTO_LIB_NAME                 BsProtoLib )
 SET( CELER_PROTO_LIB_NAME              CelerProtoLib )
 SET( BLOCKSETTLE_APP_NAME              blocksettle )
@@ -611,6 +615,7 @@ FOREACH(lib_name ${QT_LIBS})
    LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
 
+ADD_SUBDIRECTORY(AuthCommon)
 ADD_SUBDIRECTORY( Celer )
 ADD_SUBDIRECTORY( common/Blocksettle_proto )
 
