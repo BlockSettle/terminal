@@ -95,7 +95,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
       | WalletKeysSubmitWidget::SetPasswordLabelAsOld
       | WalletKeysSubmitWidget::HideFrejaConnectButton);
    ui_->widgetSubmitKeys->suspend();
-   ui_->widgetSubmitKeys->init(MobileClientRequest::DectivateWallet, wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
+   ui_->widgetSubmitKeys->init(MobileClientRequest::DeactivateWallet, wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideGroupboxCaption
       | WalletKeysCreateWidget::SetPasswordLabelAsNew
@@ -178,7 +178,7 @@ void ChangeWalletPasswordDialog::continueBasic()
       showFrejaUsageInfo = false;
 
       if (oldPasswordData_[0].password.isNull()) {
-         EnterWalletPassword enterWalletPassword(MobileClientRequest::DectivateWallet, this);
+         EnterWalletPassword enterWalletPassword(MobileClientRequest::DeactivateWallet, this);
          enterWalletPassword.init(wallet_->getWalletId(), oldKeyRank_
             , oldPasswordData_, appSettings_, tr("Change Password"));
          int result = enterWalletPassword.exec();

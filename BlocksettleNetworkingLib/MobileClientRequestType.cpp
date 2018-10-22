@@ -10,7 +10,7 @@ QString getMobileClientRequestText(MobileClientRequest requestType)
    switch (requestType) {
    case MobileClientRequest::ActivateWallet:
       return app->tr("Activate wallet");
-   case MobileClientRequest::DectivateWallet:
+   case MobileClientRequest::DeactivateWallet:
       return app->tr("Deactivate wallet");
    case MobileClientRequest::SignWallet:
       return app->tr("Sign transaction");

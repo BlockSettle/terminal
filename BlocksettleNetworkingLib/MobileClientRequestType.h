@@ -7,7 +7,7 @@ enum class MobileClientRequest
 {
    Unknown,
    ActivateWallet,
-   DectivateWallet,
+   DeactivateWallet,
    SignWallet,
    BackupWallet,
    ActivateWalletOldDevice,
