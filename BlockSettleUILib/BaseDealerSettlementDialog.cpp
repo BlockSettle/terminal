@@ -133,7 +133,8 @@ void BaseDealerSettlementDialog::startAccepting()
       logger_->error("[BaseDealerSettlementDialog::startAccepting] no root wallet");
       return;
    }
-   widgetWalletKeys()->init(rootWallet_->getWalletId(), keyRank_, encTypes_, encKeys_, appSettings_);
+   widgetWalletKeys()->init(MobileClientRequest::SignWallet, rootWallet_->getWalletId()
+      , keyRank_, encTypes_, encKeys_, appSettings_);
    widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();
    adjustSize();

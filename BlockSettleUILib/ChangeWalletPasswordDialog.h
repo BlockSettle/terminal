@@ -5,6 +5,7 @@
 #include <QDialog>
 #include "EncryptionUtils.h"
 #include "MetaData.h"
+#include "MobileClient.h"
 
 namespace Ui {
     class ChangeWalletPasswordDialog;
@@ -15,14 +16,29 @@ namespace bs {
    }
 }
 
+class WalletKeyWidget;
 class ApplicationSettings;
+class SignContainer;
 
 class ChangeWalletPasswordDialog : public QDialog
 {
 Q_OBJECT
 
 public:
-   ChangeWalletPasswordDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
+   enum class Pages {
+      Basic,
+      AddDevice,
+   };
+
+   enum class State {
+      Idle,
+      AddDeviceWaitOld,
+      AddDeviceWaitNew,
+   };
+
+   ChangeWalletPasswordDialog(const std::shared_ptr<spdlog::logger> &logger
+      , std::shared_ptr<SignContainer> signingContainer
+      , const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys
       , bs::wallet::KeyRank
       , const QString &username
@@ -30,20 +46,50 @@ public:
       , QWidget* parent = nullptr);
    ~ChangeWalletPasswordDialog() override;
 
-   SecureBinaryData oldPassword() const;
-   std::vector<bs::wallet::PasswordData> newPasswordData() const;
-   bs::wallet::KeyRank newKeyRank() const;
-
 private slots:
-   void updateState();
+   void onContinueClicked();
+   void onTabChanged(int index);
+   void onSubmitKeysKeyChanged2(int, SecureBinaryData);
+   void onSubmitKeysFailed2();
+   void onCreateKeysKeyChanged2(int, SecureBinaryData);
+   void onCreateKeysFailed2();
+   void onPasswordChanged(const std::string &walletId, bool ok);
+   void onUpdateServerFinished(bool success);
 
 protected:
+   void accept() override;
    void reject() override;
-   void showEvent(QShowEvent *) override;
 
 private:
+   void updateState();
+   void continueBasic();
+   void continueAddDevice();
+   void changePassword();
+   void resetKeys();
+   void updateServer();
+
    std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
+   std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<SignContainer> signingContainer_;
    std::shared_ptr<bs::hd::Wallet>  wallet_;
+   const bs::wallet::KeyRank oldKeyRank_;
+   bs::wallet::KeyRank newKeyRank_;
+   std::vector<bs::wallet::PasswordData> oldPasswordData_;
+   std::vector<bs::wallet::PasswordData> newPasswordData_;
+   // Init variables in resetKeys method so they always valid when we restart process
+   bool addNew_;
+   bool dryRun_;
+   std::string newDeviceId_;
+   std::string deleteAllDeviceId_;
+   SecureBinaryData oldKey_;
+   State state_ = State::Idle;
+   WalletKeyWidget *deviceKeyOld_ = nullptr;
+   WalletKeyWidget *deviceKeyNew_ = nullptr;
+   bool deviceKeyOldValid_;
+   bool deviceKeyNewValid_;
+   bool isLatestChangeAddDevice_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
+   MobileClient updateServerClient_;
 };
 
 #endif // __CHANGE_WALLET_PASSWORD_DIALOG_H__

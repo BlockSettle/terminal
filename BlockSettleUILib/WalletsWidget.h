@@ -36,7 +36,8 @@ public:
    WalletsWidget(QWidget* parent = nullptr );
    ~WalletsWidget() override;
 
-   void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
+   void init(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<AuthAddressManager> &, const std::shared_ptr<ArmoryConnection> &);
 
@@ -84,6 +85,7 @@ private slots:
 private:
    std::unique_ptr<Ui::WalletsWidget> ui;
 
+   std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;

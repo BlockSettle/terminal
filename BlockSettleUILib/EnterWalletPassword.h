@@ -1,12 +1,13 @@
 #ifndef __ENTER_WALLET_PASSWORD_H__
 #define __ENTER_WALLET_PASSWORD_H__
 
+#include <memory>
 #include <string>
 #include <QDialog>
 #include <QTimer>
 #include "EncryptionUtils.h"
 #include "MetaData.h"
-
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class EnterWalletPassword;
@@ -18,17 +19,22 @@ class EnterWalletPassword : public QDialog
 Q_OBJECT
 
 public:
-   EnterWalletPassword(const std::string &rootWalletId
-      , const std::shared_ptr<ApplicationSettings> &appSettings
-      , bs::wallet::KeyRank
-      , const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys = {}
-      , const QString &prompt = {}
-      , const QString &title = {}
-      , QWidget* parent = nullptr);
+   explicit EnterWalletPassword(MobileClientRequest requestType, QWidget* parent = nullptr);
    ~EnterWalletPassword() override;
 
+   void init(const std::string &walletId, bs::wallet::KeyRank keyRank
+      , const std::vector<bs::wallet::EncryptionType> &encTypes
+      , const std::vector<SecureBinaryData> &encKeys
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const QString &prompt, const QString &title = QString());
+
+   void init(const std::string &walletId, bs::wallet::KeyRank keyRank
+      , const std::vector<bs::wallet::PasswordData> &keys
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const QString &prompt, const QString &title = QString());
+
    SecureBinaryData GetPassword() const;
+   std::string getDeviceId() const;
 
 private slots:
    void updateState();
@@ -38,6 +44,7 @@ protected:
 
 private:
    std::unique_ptr<Ui::EnterWalletPassword> ui_;
+   MobileClientRequest requestType_{};
 };
 
 #endif // __ENTER_WALLET_PASSWORD_H__

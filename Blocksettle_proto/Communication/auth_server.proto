@@ -29,6 +29,7 @@ message GetKeyResponse
 {
    fixed64 tag = 1;
    bytes encryptedKey = 2;
+   int32 deviceId = 3;
 }
 
 message GetKeyCancelMessage

@@ -4,7 +4,7 @@
 #include <QTimer>
 #include <QWidget>
 #include "EncryptionUtils.h"
-#include "FrejaREST.h"
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class WalletKeyWidget;
@@ -17,8 +17,8 @@ class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(const std::string &walletId, int index, bool password, const QString &prompt,
-      QWidget* parent = nullptr);
+   WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
+      , int index, bool password, QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings>& appSettings, const QString& username);
@@ -33,8 +33,12 @@ public:
    void setHideFrejaCombobox(bool value);
    void setProgressBarFixed(bool value);
    void setShowFrejaId(bool value);
+   void setShowFrejaIdLabel(bool value);
+   void setPasswordLabelAsNew();
+   void setPasswordLabelAsOld();
    void setHideFrejaEmailLabel(bool value);
    void setHideFrejaControlsOnSignClicked(bool value);
+   const std::string &deviceId() const;
 
 signals:
    void keyChanged(int index, SecureBinaryData);
@@ -48,7 +52,7 @@ private slots:
    void onPasswordChanged();
    void onFrejaIdChanged(const QString &);
    void onFrejaSignClicked();
-   void onFrejaSucceeded(const SecureBinaryData &password);
+   void onFrejaSucceeded(const std::string &deviceId, const SecureBinaryData &password);
    void onFrejaFailed(const QString &text);
    void onFrejaStatusUpdated(const QString &status);
    void onTimer();
@@ -68,7 +72,7 @@ private:
 //   FrejaSignWallet frejaSign_;
    QTimer      timer_;
    float       timeLeft_;
-   QString     prompt_;
+//   QString     prompt_;
    MobileClient *mobileClient_{};
 
    bool        hideFrejaConnect_ = false;
@@ -77,6 +81,8 @@ private:
    bool        showFrejaId_ = false;
    bool        hideFrejaEmailLabel_ = false;
    bool        hideFrejaControlsOnSignClicked_ = false;
+   MobileClientRequest requestType_{};
+   std::string deviceId_;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

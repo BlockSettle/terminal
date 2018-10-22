@@ -172,10 +172,12 @@ WalletsWidget::WalletsWidget(QWidget* parent)
 
 WalletsWidget::~WalletsWidget() = default;
 
-void WalletsWidget::init(const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
+void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &applicationSettings, const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryConnection> &armory)
 {
+   logger_ = logger;
    walletsManager_ = manager;
    signingContainer_ = container;
    appSettings_ = applicationSettings;
@@ -288,8 +290,8 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
 
    const auto &hdWallet = node->hdWallet();
    if (hdWallet != nullptr) {
-      RootWalletPropertiesDialog(hdWallet, walletsManager_, armory_, signingContainer_, walletsModel_, appSettings_
-         , assetManager_, this).exec();
+      RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
+         , walletsModel_, appSettings_, assetManager_, this).exec();
    }
 }
 

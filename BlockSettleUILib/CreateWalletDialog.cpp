@@ -62,7 +62,8 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
       this, &CreateWalletDialog::onKeyTypeChanged);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideFrejaConnectButton);
-   ui_->widgetCreateKeys->init(walletId_, username, appSettings);
+   ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet
+      , walletId_, username, appSettings);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
@@ -185,15 +186,9 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
          return false;
       }
 
-      std::vector<bs::wallet::EncryptionType> encTypes;
-      std::vector<SecureBinaryData> encKeys;
-      for (const bs::wallet::PasswordData& key : *keys) {
-         encTypes.push_back(key.encType);
-         encKeys.push_back(key.encKey);
-      }
-
-      EnterWalletPassword dialog(walletId, appSettings, widgetCreateKeys->keyRank(), encTypes, encKeys
-         , QObject::tr("Activate Freja eID signing"), QObject::tr("Sign Wallet"), parent);
+      EnterWalletPassword dialog(MobileClientRequest::ActivateWallet, parent);
+      dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
+         , appSettings, QObject::tr("Activate Freja eID signing"));
       int result = dialog.exec();
       if (!result) {
          return false;
@@ -208,8 +203,8 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
       return false;
    }
 
-   WalletPasswordVerifyDialog verifyDialog(walletId, *keys, widgetCreateKeys->keyRank()
-      , appSettings, parent);
+   WalletPasswordVerifyDialog verifyDialog(appSettings, parent);
+   verifyDialog.init(walletId, *keys, widgetCreateKeys->keyRank());
    int result = verifyDialog.exec();
    if (!result) {
       return false;

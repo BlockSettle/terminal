@@ -20,13 +20,15 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysSubmitWidget::init(const std::string &walletId
+void WalletKeysSubmitWidget::init(MobileClientRequest requestType
+   , const std::string &walletId
    , bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const QString &prompt)
 {
+   requestType_ = requestType;
    appSettings_ = appSettings;
 
    qDeleteAll(widgets_.cbegin(), widgets_.cend());
@@ -83,7 +85,7 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
       ui_->groupBox->layout()->addWidget(separator);
    }
 
-   auto widget = new WalletKeyWidget(walletId_, pwdData_.size(), password, prompt, this);
+   auto widget = new WalletKeyWidget(requestType_, walletId_, pwdData_.size(), password, this);
    widget->init(appSettings_, QString());
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysSubmitWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysSubmitWidget::onKeyChanged);
@@ -101,6 +103,9 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    }
    if (flags_ & FrejaIdVisible) {
       widget->setShowFrejaId(true);
+   }
+   if (flags_ & SetPasswordLabelAsOld) {
+      widget->setPasswordLabelAsOld();
    }
    if (flags_ & HideFrejaEmailLabel) {
       widget->setHideFrejaEmailLabel(true);
@@ -155,6 +160,16 @@ void WalletKeysSubmitWidget::onEncKeyChanged(int index, SecureBinaryData encKey)
    }
    pwdData_[index].encKey = encKey;
    emit keyChanged();
+}
+
+std::string WalletKeysSubmitWidget::getDeviceId() const
+{
+   for (const auto &keyWidget : widgets_) {
+      if (!keyWidget->deviceId().empty()) {
+         return keyWidget->deviceId();
+      }
+   }
+   return {};
 }
 
 bool WalletKeysSubmitWidget::isValid() const
