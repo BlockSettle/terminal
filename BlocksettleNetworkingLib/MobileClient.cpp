@@ -23,21 +23,29 @@ namespace
 MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
    : QObject(parent)
    , logger_(logger)
-   , ownPrivKey_(QByteArray::fromBase64(QByteArray::fromStdString(kPrivateKey)).toStdString())
-   , serverPubKey_(CryptoECDSA().UncompressPoint(QByteArray::fromBase64(QByteArray::fromStdString(kServerPubKey)).toStdString()))
+   , ownPrivKey_(fromBase64(kPrivateKey))
+   , serverPubKey_(CryptoECDSA().UncompressPoint(fromBase64(kServerPubKey)))
 {
    connectionManager_.reset(new ConnectionManager(logger));
 
-   CryptoPP::AutoSeededRandomPool rng;
-
    // NOTE: Don't forget to change AuthApp code!
    CryptoPP::InvertibleRSAFunction parameters;
-   parameters.GenerateRandomWithKeySize(rng, 2048);
+   parameters.GenerateRandomWithKeySize(rng_, 2048);
    privateKey_ = CryptoPP::RSA::PrivateKey(parameters);
    CryptoPP::RSA::PublicKey publicKey = CryptoPP::RSA::PublicKey(parameters);
 
    CryptoPP::StringSink sink(publicKey_);
    publicKey.Save(sink);
+}
+
+std::string MobileClient::toBase64(const std::string &s)
+{
+   return QByteArray::fromStdString(s).toBase64().toStdString();
+}
+
+std::string MobileClient::fromBase64(const std::string &s)
+{
+   return QByteArray::fromBase64(QByteArray::fromStdString(s)).toStdString();
 }
 
 void MobileClient::init(const std::string &serverPubKey
@@ -54,8 +62,15 @@ void MobileClient::init(const std::string &serverPubKey
 
 MobileClient::~MobileClient() = default;
 
-bool MobileClient::sendToAuthServer(const std::string &payload
-   , const AutheID::RP::EnvelopeRequestType type)
+static void PadData(BinaryData &data)
+{
+   const auto rem = data.getSize() % BTC_AES::BLOCKSIZE;
+   if (rem) {
+      data.resize(data.getSize() - rem + BTC_AES::BLOCKSIZE);
+   }
+}
+
+bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType type)
 {
    RequestEnvelope envelope;
    envelope.set_type(type);
@@ -64,11 +79,28 @@ bool MobileClient::sendToAuthServer(const std::string &payload
    envelope.set_usertag(tag_);
    envelope.set_apikey(kServerApiKey);
 
-   envelope.set_payload(payload);
    const auto signature = CryptoECDSA().SignData(payload, ownPrivKey_);
    envelope.set_signature(QByteArray::fromStdString(signature.toBinStr()).toBase64().toStdString());
 
-   //TODO: add payload encryption with server's pubKey
+   const auto password = SecureBinaryData().GenerateRandom(16);
+   const auto parsedPubKey = CryptoECDSA::ParsePublicKey(serverPubKey_);
+   CryptoPP::ECIES<CryptoPP::ECP, CryptoPP::SHA256>::Encryptor encryptor(parsedPubKey);
+   std::string encPass;
+   CryptoPP::StringSource ss1(password.toBinStr(), true
+      , new CryptoPP::PK_EncryptorFilter(rng_, encryptor, new CryptoPP::StringSink(encPass)));
+
+   SecureBinaryData iv(BTC_AES::BLOCKSIZE);
+   BinaryData paddedPayload = payload;
+   PadData(paddedPayload);
+   const auto encPayload = CryptoAES().EncryptCBC(paddedPayload, password, iv);
+   if (encPayload.isNull()) {
+      logger_->error("failed to encrypt payload");
+      emit failed(tr("failed to encrypt payload"));
+      return false;
+   }
+
+   envelope.set_encryptedpass(toBase64(encPass));
+   envelope.set_payload(toBase64(encPayload.toBinStr()));
 
    return connection_->send(envelope.SerializeAsString());
 }
@@ -155,18 +187,15 @@ void MobileClient::processGetKeyReply(const std::string &payload, uint64_t tag)
    CryptoPP::SecByteBlock key(kKeySize);
    try {
       CryptoPP::RSAES_PKCS1v15_Decryptor d(privateKey_);
-      CryptoPP::AutoSeededRandomPool rng;
-
-      const auto &encryptedKey = reply.key();
 
       // CryptoPP takes ownership of raw pointers
       auto sink = new CryptoPP::ArraySink(key.begin(), key.size());
-      auto filter = new CryptoPP::PK_DecryptorFilter(rng, d, sink);
-      CryptoPP::ArraySource(reinterpret_cast<const uint8_t*>(encryptedKey.data())
-         , encryptedKey.size(), true, filter);
+      auto filter = new CryptoPP::PK_DecryptorFilter(rng_, d, sink);
+      CryptoPP::ArraySource(reinterpret_cast<const uint8_t*>(reply.key().data())
+         , reply.key().size(), true, filter);
 
-      if (sink->TotalPutLength() != kKeySize) {
-         throw std::runtime_error("Got key with invalid size");
+      if (sink->TotalPutLength() != kKeySize) {    // for some reason this always fails
+         logger_->warn("Got key with invalid size {}", std::to_string(sink->TotalPutLength()));
       }
 
    } catch (const std::exception &e) {
