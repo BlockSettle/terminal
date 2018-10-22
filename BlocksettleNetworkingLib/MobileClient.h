@@ -40,13 +40,16 @@ private:
    void processGetKeyResponse(const std::string &payload, uint64_t tag);
    bool sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType);
 
+   static std::string toBase64(const std::string &);
+   static std::string fromBase64(const std::string &);
+
    std::unique_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    std::shared_ptr<spdlog::logger> logger_;
    uint64_t tag_{};
    std::string email_;
    std::string walletId_;
-   std::string data_;
+   CryptoPP::AutoSeededRandomPool rng_;
 
    CryptoPP::RSA::PrivateKey privateKey_;
    std::string publicKey_;
