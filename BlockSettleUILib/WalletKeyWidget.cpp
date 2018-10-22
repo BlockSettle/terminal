@@ -142,8 +142,10 @@ void WalletKeyWidget::onFrejaSignClicked()
    }
 }
 
-void WalletKeyWidget::onFrejaSucceeded(const SecureBinaryData &password)
+void WalletKeyWidget::onFrejaSucceeded(const std::string &deviceId, const SecureBinaryData &password)
 {
+   deviceId_ = deviceId;
+
    stop();
    ui_->pushButtonFreja->setText(tr("Successfully signed"));
    ui_->pushButtonFreja->setEnabled(false);
@@ -300,9 +302,10 @@ void WalletKeyWidget::setHideFrejaControlsOnSignClicked(bool value)
    hideFrejaControlsOnSignClicked_ = value;
 }
 
-
-
-
+const string &WalletKeyWidget::deviceId() const
+{
+   return deviceId_;
+}
 
 QPropertyAnimation* WalletKeyWidget::startFrejaAnimation(bool success)
 {

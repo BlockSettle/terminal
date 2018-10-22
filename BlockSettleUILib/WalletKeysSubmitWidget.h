@@ -48,6 +48,8 @@ public:
    void suspend() { suspended_ = true; }
    void resume();
 
+   std::string getDeviceId() const;
+
 signals:
    void keyChanged();
    void keyCountChanged();

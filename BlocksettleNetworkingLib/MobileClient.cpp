@@ -51,8 +51,8 @@ void MobileClient::init(const std::string &serverPubKey
 
 MobileClient::~MobileClient() = default;
 
-
-bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType type)
+bool MobileClient::sendToAuthServer(const std::string &payload
+   , const AutheID::RP::EnvelopeRequestType type)
 {
    RequestEnvelope envelope;
    envelope.set_type(type);
@@ -88,8 +88,10 @@ bool MobileClient::start(MobileClientRequest requestType
    request.set_expiration(60);
 
    QString action = getMobileClientRequestText(requestType);
+   bool newDevice = isMobileClientNewDeviceNeeded(requestType);
 
    request.set_title(action.toStdString() + " " + walletId);
+   request.set_usenewdevices(newDevice);
 
    return sendToAuthServer(request.SerializeAsString(), GetDeviceKeyType);
 }
@@ -112,11 +114,24 @@ void MobileClient::cancel()
    tag_ = 0;
 }
 
-// Called from background thread!
-void MobileClient::processGetKeyResponse(const std::string &payload, uint64_t tag)
+void MobileClient::updateServer(const string &deviceId, const string &walletId, bool isPaired, bool deleteAll)
 {
-   GetDeviceKeyReply response;
-   if (!response.ParseFromString(payload)) {
+   UpdateDeviceWalletRequest request;
+   request.set_deviceid(deviceId);
+   request.set_walletid(walletId);
+   request.set_ispaired(isPaired);
+   request.set_deleteall(deleteAll);
+
+   tag_ = BinaryData::StrToIntLE<uint64_t>(SecureBinaryData().GenerateRandom(sizeof(tag_)));
+
+   sendToAuthServer(request.SerializeAsString(), UpdateDeviceWalletType);
+}
+
+// Called from background thread!
+void MobileClient::processGetKeyReply(const std::string &payload, uint64_t tag)
+{
+   GetDeviceKeyReply reply;
+   if (!reply.ParseFromString(payload)) {
       logger_->error("Can't decode MobileAppGetKeyResponse packet");
       emit failed(tr("Can't decode packet from AuthServer"));
       return;
@@ -127,7 +142,7 @@ void MobileClient::processGetKeyResponse(const std::string &payload, uint64_t ta
       return;
    }
 
-   if (response.key().empty() || response.deviceid().empty()) {
+   if (reply.key().empty() || reply.deviceid().empty()) {
       emit failed(tr("Canceled"));
       return;
    }
@@ -139,7 +154,7 @@ void MobileClient::processGetKeyResponse(const std::string &payload, uint64_t ta
       CryptoPP::RSAES_PKCS1v15_Decryptor d(privateKey_);
       CryptoPP::AutoSeededRandomPool rng;
 
-      const auto &encryptedKey = response.key();
+      const auto &encryptedKey = reply.key();
 
       // CryptoPP takes ownership of raw pointers
       auto sink = new CryptoPP::ArraySink(key.begin(), key.size());
@@ -159,7 +174,26 @@ void MobileClient::processGetKeyResponse(const std::string &payload, uint64_t ta
 
    SecureBinaryData keyCopy(key.data(), key.size());
 
-   emit succeeded(keyCopy);
+   emit succeeded(reply.deviceid(), keyCopy);
+}
+
+void MobileClient::processUpdateDeviceWalletReply(const string &payload, uint64_t tag)
+{
+   logger_->info("Process UpdateDeviceWallet reply");
+   UpdateDeviceWalletReply reply;
+
+   if (tag != tag_) {
+      logger_->warn("Skip AuthApp response with unknown tag");
+      return;
+   }
+
+   if (!reply.ParseFromString(payload)) {
+      logger_->error("Can't decode UpdateDeviceWalletReply packet");
+      emit updateServerFinished(false);
+      return;
+   }
+
+   emit updateServerFinished(reply.success());
 }
 
 void MobileClient::OnDataReceived(const string &data)
@@ -197,7 +231,10 @@ void MobileClient::OnDataReceived(const string &data)
 
    switch (envelope.type()) {
    case GetDeviceKeyType:
-      processGetKeyResponse(envelope.payload(), envelope.usertag());
+      processGetKeyReply(envelope.payload(), envelope.usertag());
+      break;
+   case UpdateDeviceWalletType:
+      processUpdateDeviceWalletReply(envelope.payload(), envelope.usertag());
       break;
    default:
       logger_->warn("Got unknown packet type from AuthServer {}", envelope.type());

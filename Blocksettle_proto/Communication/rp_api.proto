@@ -18,6 +18,7 @@ enum EnvelopeRequestType
    SignatureType = 9;
    CancelSignatureType = 10;
    GetUserDetailsType = 11;
+   UpdateDeviceWalletType = 12;
 }
 
 message RequestEnvelope
@@ -51,12 +52,26 @@ message GetDeviceKeyRequest
    uint32 expiration = 3;
    string title = 4;
    string description = 5;
+   bool useNewDevices = 6;
 }
 
 message GetDeviceKeyReply
 {
    bytes  key = 1;
    string deviceId = 2;
+}
+
+message UpdateDeviceWalletRequest
+{
+   string deviceId = 1;
+   string walletId = 2;
+   bool isPaired = 3;
+   bool deleteAll = 4;
+}
+
+message UpdateDeviceWalletReply
+{
+   bool success = 1;
 }
 
 message CancelDeviceKeyRequest
@@ -122,7 +137,6 @@ message CancelAuthenticateRequest
 {
    string title = 1;
 }
-
 
 message SignatureRequest
 {

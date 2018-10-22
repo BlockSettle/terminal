@@ -84,3 +84,8 @@ SecureBinaryData EnterWalletPassword::GetPassword() const
 {
    return ui_->widgetSubmitKeys->key();
 }
+
+string EnterWalletPassword::getDeviceId() const
+{
+   return ui_->widgetSubmitKeys->getDeviceId();
+}

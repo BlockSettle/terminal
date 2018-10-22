@@ -19,4 +19,6 @@ enum class MobileClientRequest
 
 QString getMobileClientRequestText(MobileClientRequest requestType);
 
+bool isMobileClientNewDeviceNeeded(MobileClientRequest requestType);
+
 #endif // __MOBILE_CLIENT_REQUEST_TYPE_H__

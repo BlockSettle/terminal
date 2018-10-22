@@ -162,6 +162,16 @@ void WalletKeysSubmitWidget::onEncKeyChanged(int index, SecureBinaryData encKey)
    emit keyChanged();
 }
 
+std::string WalletKeysSubmitWidget::getDeviceId() const
+{
+   for (const auto &keyWidget : widgets_) {
+      if (!keyWidget->deviceId().empty()) {
+         return keyWidget->deviceId();
+      }
+   }
+   return {};
+}
+
 bool WalletKeysSubmitWidget::isValid() const
 {
    if (pwdData_.empty()) {

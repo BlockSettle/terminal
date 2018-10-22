@@ -6,6 +6,7 @@
 QString getMobileClientRequestText(MobileClientRequest requestType)
 {
    auto app = QCoreApplication::instance();
+
    switch (requestType) {
    case MobileClientRequest::ActivateWallet:
       return app->tr("Activate wallet");
@@ -24,4 +25,15 @@ QString getMobileClientRequestText(MobileClientRequest requestType)
    default:
       throw std::logic_error("Invalid MobileClientRequest value");
    }
+}
+
+bool isMobileClientNewDeviceNeeded(MobileClientRequest requestType)
+{
+   switch (requestType) {
+   case MobileClientRequest::ActivateWallet:
+   case MobileClientRequest::ActivateWalletNewDevice:
+      return true;
+   }
+
+   return false;
 }

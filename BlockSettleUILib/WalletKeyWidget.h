@@ -38,6 +38,7 @@ public:
    void setPasswordLabelAsOld();
    void setHideFrejaEmailLabel(bool value);
    void setHideFrejaControlsOnSignClicked(bool value);
+   const std::string &deviceId() const;
 
 signals:
    void keyChanged(int index, SecureBinaryData);
@@ -51,7 +52,7 @@ private slots:
    void onPasswordChanged();
    void onFrejaIdChanged(const QString &);
    void onFrejaSignClicked();
-   void onFrejaSucceeded(const SecureBinaryData &password);
+   void onFrejaSucceeded(const std::string &deviceId, const SecureBinaryData &password);
    void onFrejaFailed(const QString &text);
    void onFrejaStatusUpdated(const QString &status);
    void onTimer();
@@ -81,6 +82,7 @@ private:
    bool        hideFrejaEmailLabel_ = false;
    bool        hideFrejaControlsOnSignClicked_ = false;
    MobileClientRequest requestType_{};
+   std::string deviceId_;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

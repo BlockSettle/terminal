@@ -165,6 +165,16 @@ bool WalletKeysCreateWidget::isValid() const
    return true;
 }
 
+std::string WalletKeysCreateWidget::getDeviceId() const
+{
+   for (const auto &keyWidget : widgets_) {
+      if (!keyWidget->deviceId().empty()) {
+         return keyWidget->deviceId();
+      }
+   }
+   return {};
+}
+
 void WalletKeysCreateWidget::cancel()
 {
    for (const auto &keyWidget : widgets_) {

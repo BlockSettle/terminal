@@ -34,6 +34,7 @@ public:
       , const QString &prompt, const QString &title = QString());
 
    SecureBinaryData GetPassword() const;
+   std::string getDeviceId() const;
 
 private slots:
    void updateState();

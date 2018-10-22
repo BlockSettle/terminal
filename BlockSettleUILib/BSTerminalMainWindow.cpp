@@ -408,7 +408,8 @@ void BSTerminalMainWindow::InitPortfolioView()
 
 void BSTerminalMainWindow::InitWalletsView()
 {
-   ui->widgetWallets->init(walletsManager_, signContainer_, applicationSettings_, assetManager_, authManager_, armory_);
+   ui->widgetWallets->init(logMgr_->logger("ui"), walletsManager_, signContainer_
+      , applicationSettings_, assetManager_, authManager_, armory_);
 }
 
 void BSTerminalMainWindow::InitTransactionsView()

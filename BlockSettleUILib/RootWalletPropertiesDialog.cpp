@@ -51,7 +51,8 @@ private:
    std::shared_ptr<bs::hd::Wallet> wallet_;
 };
 
-RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
+RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<WalletsManager> &walletsManager
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &container
@@ -66,6 +67,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
   , signingContainer_(container)
   , appSettings_(appSettings)
   , assetMgr_(assetMgr)
+  , logger_(logger)
 {
    ui_->setupUi(this);
 
@@ -178,7 +180,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   ChangeWalletPasswordDialog changePasswordDialog(signingContainer_, wallet_
+   ChangeWalletPasswordDialog changePasswordDialog(logger_, signingContainer_, wallet_
       , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), appSettings_, this);
 
    int result = changePasswordDialog.exec();

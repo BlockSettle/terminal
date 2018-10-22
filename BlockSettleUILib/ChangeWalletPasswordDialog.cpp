@@ -2,6 +2,7 @@
 #include "ui_ChangeWalletPasswordDialog.h"
 
 #include <spdlog/spdlog.h>
+#include "ApplicationSettings.h"
 #include "EnterWalletPassword.h"
 #include "FrejaNotice.h"
 #include "HDWallet.h"
@@ -11,7 +12,8 @@
 #include "WalletKeyWidget.h"
 
 
-ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(std::shared_ptr<SignContainer> signingContainer
+ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spdlog::logger> &logger
+      , std::shared_ptr<SignContainer> signingContainer
       , const std::shared_ptr<bs::hd::Wallet> &wallet
       , const std::vector<bs::wallet::EncryptionType> &encTypes
       , const std::vector<SecureBinaryData> &encKeys
@@ -20,13 +22,17 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(std::shared_ptr<SignConta
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent)
    : QDialog(parent)
+   , logger_(logger)
    , ui_(new Ui::ChangeWalletPasswordDialog())
    , signingContainer_(signingContainer)
    , wallet_(wallet)
    , oldKeyRank_(keyRank)
    , appSettings_(appSettings)
+   , updateServerClient_(logger)
 {
    ui_->setupUi(this);
+
+   resetKeys();
 
    ui_->labelWalletId->setText(QString::fromStdString(wallet->getWalletId()));
 
@@ -101,6 +107,13 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(std::shared_ptr<SignConta
 
    ui_->tabWidget->setCurrentIndex(int(Pages::Basic));
 
+   std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+   updateServerClient_.init(serverPubKey, serverHost, serverPort);
+   connect(&updateServerClient_, &MobileClient::updateServerFinished
+      , this, &ChangeWalletPasswordDialog::onUpdateServerFinished);
+
    updateState();
 }
 
@@ -108,17 +121,7 @@ ChangeWalletPasswordDialog::~ChangeWalletPasswordDialog() = default;
 
 void ChangeWalletPasswordDialog::accept()
 {
-   bool dryRun = false;
-
-   if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, newPasswordData_, newKeyRank_, oldKey_
-         , addNew_, dryRun);
-   }
-   else {
-      bool result = wallet_->changePassword(newPasswordData_, newKeyRank_, oldKey_
-         , addNew_, dryRun);
-      onPasswordChanged(wallet_->getWalletId(), result);
-   }
+   onContinueClicked();
 }
 
 void ChangeWalletPasswordDialog::reject()
@@ -133,6 +136,8 @@ void ChangeWalletPasswordDialog::reject()
 
 void ChangeWalletPasswordDialog::onContinueClicked()
 {
+   resetKeys();
+
    if (ui_->tabWidget->currentIndex() == int(Pages::Basic)) {
       continueBasic();
    } else {
@@ -182,6 +187,9 @@ void ChangeWalletPasswordDialog::continueBasic()
          }
 
          oldKey_ = enterWalletPassword.GetPassword();
+         // Switch to password or different AuthApp id here so need to remove
+         // wallet registrations on all devices
+         deleteAllDeviceId_ = enterWalletPassword.getDeviceId();
       }
    }
    else {
@@ -206,11 +214,13 @@ void ChangeWalletPasswordDialog::continueBasic()
       }
 
       newKeys[0].password = enterWalletPassword.GetPassword();
+      newDeviceId_ = enterWalletPassword.getDeviceId();
    }
 
    newPasswordData_ = newKeys;
    newKeyRank_ = ui_->widgetCreateKeys->keyRank();
-   accept();
+   dryRun_ = true;
+   changePassword();
 }
 
 void ChangeWalletPasswordDialog::continueAddDevice()
@@ -237,9 +247,47 @@ void ChangeWalletPasswordDialog::continueAddDevice()
    updateState();
 }
 
-void ChangeWalletPasswordDialog::checkOldPassword()
+void ChangeWalletPasswordDialog::changePassword()
 {
+   if (wallet_->isWatchingOnly()) {
+      signingContainer_->ChangePassword(wallet_, newPasswordData_, newKeyRank_, oldKey_
+         , addNew_, dryRun_);
+   }
+   else {
+      bool result = wallet_->changePassword(newPasswordData_, newKeyRank_, oldKey_
+         , addNew_, dryRun_);
+      onPasswordChanged(wallet_->getWalletId(), result);
+   }
+}
 
+void ChangeWalletPasswordDialog::resetKeys()
+{
+   newDeviceId_.clear();
+   deleteAllDeviceId_.clear();
+   oldKey_.clear();
+   deviceKeyOldValid_ = false;
+   deviceKeyNewValid_ = false;
+   isLatestChangeAddDevice_ = false;
+   addNew_ = false;
+   dryRun_ = true;
+}
+
+void ChangeWalletPasswordDialog::updateServer()
+{
+   if (!newDeviceId_.empty()) {
+      updateServerClient_.updateServer(newDeviceId_, wallet_->getWalletId(), true, false);
+      newDeviceId_.clear();
+      return;
+   }
+
+   if (!deleteAllDeviceId_.empty()) {
+      updateServerClient_.updateServer(deleteAllDeviceId_, wallet_->getWalletId(), false, true);
+      deleteAllDeviceId_.clear();
+      return;
+   }
+
+   dryRun_ = false;
+   changePassword();
 }
 
 void ChangeWalletPasswordDialog::onSubmitKeysKeyChanged2(int, SecureBinaryData password)
@@ -255,6 +303,10 @@ void ChangeWalletPasswordDialog::onSubmitKeysFailed2()
 {
    state_ = State::Idle;
    updateState();
+
+   MessageBoxCritical(tr("Wallet Password")
+      , tr("A problem occured requesting old device key")
+      , this).exec();
 }
 
 void ChangeWalletPasswordDialog::onCreateKeysKeyChanged2(int, SecureBinaryData password)
@@ -271,54 +323,76 @@ void ChangeWalletPasswordDialog::onCreateKeysKeyChanged2(int, SecureBinaryData p
 
    newKeyRank_ = oldKeyRank_;
    newKeyRank_.second = newPasswordData_.size();
+   newDeviceId_ = deviceKeyNew_->deviceId();
 
    isLatestChangeAddDevice_ = true;
-   accept();
+   dryRun_ = true;
+   changePassword();
 }
 
 void ChangeWalletPasswordDialog::onCreateKeysFailed2()
 {
    state_ = State::Idle;
    updateState();
+
+   MessageBoxCritical(tr("Wallet Password")
+      , tr("A problem occured requesting new device key")
+      , this).exec();
 }
 
 void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool ok)
 {
    if (walletId != wallet_->getWalletId()) {
+      logger_->error("ChangeWalletPasswordDialog::onPasswordChanged: unknown walletId {}, expected: {}"
+         , walletId, wallet_->getWalletId());
+      return;
+   }
+
+   if (!ok) {
+      logger_->error("ChangeWalletPassword failed for {}", walletId);
+
+      if (isLatestChangeAddDevice_) {
+         MessageBoxCritical(tr("Wallet Password")
+            , tr("Device adding failed")
+            , this).exec();
+      } else {
+         MessageBoxCritical(tr("Wallet Password")
+            , tr("A problem occured when changing wallet password")
+            , this).exec();
+      }
+
+      return;
+   }
+
+   if (dryRun_) {
+      dryRun_ = false;
+      updateServer();
       return;
    }
 
    if (isLatestChangeAddDevice_) {
-      if (ok) {
-         MessageBoxSuccess(tr("Wallet Password")
-            , tr("Device successfully added")
-            , this).exec();
-      }
-      else {
-         MessageBoxCritical(tr("Wallet Password")
-            , tr("Device adding failed")
-            , this).exec();
-      }
-
-      return;
-   }
-
-   if (ok) {
+      MessageBoxSuccess(tr("Wallet Password")
+         , tr("Device successfully added")
+         , this).exec();
+   } else {
       MessageBoxSuccess(tr("Wallet Password")
          , tr("Wallet password successfully changed")
          , this).exec();
    }
-   else {
+
+   QDialog::accept();
+}
+
+void ChangeWalletPasswordDialog::onUpdateServerFinished(bool success)
+{
+   if (!success) {
       MessageBoxCritical(tr("Wallet Password")
-         , tr("A problem occured when changing wallet password")
+         , tr("Updating server failed. Please try again later.")
          , this).exec();
+      return;
    }
 
-   if (ok) {
-      QDialog::accept();
-   } else {
-      QDialog::reject();
-   }
+   updateServer();
 }
 
 void ChangeWalletPasswordDialog::onTabChanged(int index)
