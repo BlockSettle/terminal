@@ -724,7 +724,8 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
    return false;
 }
 
-bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank
+bool hd::Wallet::changePassword(const std::shared_ptr<spdlog::logger> &logger
+   , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank
    , const SecureBinaryData &oldPass, bool addNew, bool dryRun)
 {
    int newPassSize = newPass.size();
@@ -732,17 +733,26 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
       newPassSize += rootNodes_.rank().second;
 
       if (keyRank.first != 1) {
-         // We can add new keys only in 1 of N scheme
+         logger->error("Wallet::changePassword: adding new keys is supported only for 1-of-N scheme");
          return false;
       }
    }
 
-   if ((keyRank.second != newPassSize) || (keyRank.first < 1) || (keyRank.first > keyRank.second)) {
+   if (keyRank.second != newPassSize) {
+      logger->error("Wallet::changePassword: keyRank.second != newPassSize ({} != {}), rootNodes_: {} items, newPass: {} items"
+         , keyRank.second, newPassSize, rootNodes_.rank().second, newPass.size());
+      return false;
+   }
+
+   if ((keyRank.first < 1) || (keyRank.first > keyRank.second)) {
+      logger->error("Wallet::changePassword: keyRank.first > keyRank.second ({} > {})"
+         , keyRank.first, keyRank.second);
       return false;
    }
 
    const auto &decrypted = rootNodes_.decrypt(oldPass);
    if (!decrypted) {
+      logger->error("Wallet::changePassword: decrypt failed");
       return false;
    }
 
@@ -804,8 +814,8 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
             , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
       }
 
-      // Something went wrong
       if (keyRank.second != rootNodes.size()) {
+         logger->error("Wallet::changePassword: keyRank.second != rootNodes.size() after adding keys");
          return false;
       }
    }
@@ -817,6 +827,7 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
    }
 
    updatePersistence();
+   logger->info("Wallet::changePassword: success");
    return true;
 }
 

@@ -11,7 +11,10 @@ using namespace AutheID::RP;
 
 namespace
 {
+   const int kTimeoutSeconds = 120;
+
    const int kKeySize = 32;
+
    const std::string kServerApiKey = "2526f47d4b3925b2"; // Obtained from http://185.213.153.44:8181/key
    const std::string kPrivateKey = "QHBb3KtxO1nF07cIQ77JYvAG5G6K/GuEgjakNa9y1yg=";
    const std::string kServerPubKey = "ArtQBOQrA2z7oIrCHwqq/yh/0F8rozWTGWvk3RL92fbu";
@@ -85,7 +88,7 @@ bool MobileClient::start(MobileClientRequest requestType
 
    GetDeviceKeyRequest request;
    request.set_keyid(walletId_);
-   request.set_expiration(60);
+   request.set_expiration(kTimeoutSeconds);
 
    QString action = getMobileClientRequestText(requestType);
    bool newDevice = isMobileClientNewDeviceNeeded(requestType);

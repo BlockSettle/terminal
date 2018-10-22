@@ -60,8 +60,9 @@ namespace bs {
          // addNew - is used when we add third AuthApp device (without asking for BOTH old devices).
          // dryRun - is used to check that old password valid before notifying
          // the server about added devices. No password change is happened.
-         bool changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank, const SecureBinaryData &oldPass
-            , bool addNew, bool dryRun);
+         bool changePassword(const std::shared_ptr<spdlog::logger> &logger
+            , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank
+            , const SecureBinaryData &oldPass, bool addNew, bool dryRun);
 
          void RegisterWallet(const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
          void SetArmory(const std::shared_ptr<ArmoryConnection> &);

@@ -1197,7 +1197,7 @@ bool HeadlessContainerListener::onChangePassword(const std::string &clientId
    }
    bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
 
-   bool result = wallet->changePassword(pwdData, keyRank
+   bool result = wallet->changePassword(logger_, pwdData, keyRank
       , BinaryData::CreateFromHex(request.oldpassword())
       , request.addnew(), request.dryrun());
 

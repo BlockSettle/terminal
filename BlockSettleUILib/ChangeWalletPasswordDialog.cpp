@@ -229,6 +229,13 @@ void ChangeWalletPasswordDialog::continueAddDevice()
       return;
    }
 
+   if (oldKeyRank_.first != 1) {
+      MessageBoxCritical messageBox(tr("Add Device error")
+         , tr("Only 1-of-N AuthApp encryption supported"), this);
+      messageBox.exec();
+      return;
+   }
+
    if (oldPasswordData_.empty() || oldPasswordData_[0].encType != bs::wallet::EncryptionType::Freja) {
       MessageBoxCritical messageBox(tr("Add Device error")
          , tr("Please switch to Freja encryption first"), this);
@@ -254,7 +261,7 @@ void ChangeWalletPasswordDialog::changePassword()
          , addNew_, dryRun_);
    }
    else {
-      bool result = wallet_->changePassword(newPasswordData_, newKeyRank_, oldKey_
+      bool result = wallet_->changePassword(logger_, newPasswordData_, newKeyRank_, oldKey_
          , addNew_, dryRun_);
       onPasswordChanged(wallet_->getWalletId(), result);
    }
@@ -311,22 +318,20 @@ void ChangeWalletPasswordDialog::onSubmitKeysFailed2()
 
 void ChangeWalletPasswordDialog::onCreateKeysKeyChanged2(int, SecureBinaryData password)
 {
-   newPasswordData_ = oldPasswordData_;
-   
-   newPasswordData_.at(0).password = oldKey_;
-
    bs::wallet::PasswordData newPassword{};
    newPassword.encType = bs::wallet::EncryptionType::Freja;
-   newPassword.encKey = newPasswordData_.at(0).encKey;
+   newPassword.encKey = oldPasswordData_.at(0).encKey;
    newPassword.password = password;
+   newPasswordData_.clear();
    newPasswordData_.push_back(newPassword);
 
    newKeyRank_ = oldKeyRank_;
-   newKeyRank_.second = newPasswordData_.size();
+   newKeyRank_.second += 1;
    newDeviceId_ = deviceKeyNew_->deviceId();
 
    isLatestChangeAddDevice_ = true;
    dryRun_ = true;
+   addNew_ = true;
    changePassword();
 }
 
@@ -361,6 +366,8 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
             , this).exec();
       }
 
+      state_ = State::Idle;
+      updateState();
       return;
    }
 
