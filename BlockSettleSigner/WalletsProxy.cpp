@@ -78,7 +78,11 @@ bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPas
       return false;
    }
    const bs::wallet::PasswordData pwdData = { BinaryData::CreateFromHex(newPass.toStdString()), mapEncType(encType), encKey.toStdString() };
-   if (!wallet->changePassword({ pwdData }, { 1, 1 }, BinaryData::CreateFromHex(oldPass.toStdString()))) {
+
+   bool result = wallet->changePassword(logger_, { pwdData }, { 1, 1 }
+      , BinaryData::CreateFromHex(oldPass.toStdString()), false, false);
+
+   if (!result) {
       emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
       return false;
    }
