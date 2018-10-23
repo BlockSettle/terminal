@@ -113,6 +113,10 @@ enum CelerMessageType
 
    MarketDataSubscriptionRequestType,
 
+   CreateSecurityDefinitionRequestType,
+   CreateWarehouseConfigurationRequestType,
+   WarehouseConfigurationDownstreamEventType,
+
    CelerMessageTypeLast,
    UndefinedType = CelerMessageTypeLast
 };

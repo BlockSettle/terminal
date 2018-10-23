@@ -90,7 +90,10 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException", PersistenceExceptionType},
    { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent", MarketDataRequestRejectDownstreamEventType},
    { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent", MarketDataFullSnapshotDownstreamEventType},
-   { "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest", MarketDataSubscriptionRequestType}
+   { "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest", MarketDataSubscriptionRequestType},
+   { "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$CreateSecurityDefinition", CreateSecurityDefinitionRequestType},
+   { "com.celertech.marketwarehouse.api.configuration.UpstreamWarehouseConfigurationProto$CreateWarehouseConfigurationRequest", CreateWarehouseConfigurationRequestType},
+   { "com.celertech.marketwarehouse.api.configuration.DownstreamWarehouseConfigurationProto$WarehouseConfigurationDownstreamEvent", WarehouseConfigurationDownstreamEventType}
 };
 
 static const std::unordered_map<int, std::string> typeToName = {
@@ -179,7 +182,10 @@ static const std::unordered_map<int, std::string> typeToName = {
    { PersistenceExceptionType, "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException"},
    { MarketDataRequestRejectDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent"},
    { MarketDataFullSnapshotDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent"},
-   { MarketDataSubscriptionRequestType, "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest"}
+   { MarketDataSubscriptionRequestType, "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest"},
+   { CreateSecurityDefinitionRequestType, "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$CreateSecurityDefinition"},
+   { CreateWarehouseConfigurationRequestType , "com.celertech.marketwarehouse.api.configuration.UpstreamWarehouseConfigurationProto$CreateWarehouseConfigurationRequest"},
+   { WarehouseConfigurationDownstreamEventType, "com.celertech.marketwarehouse.api.configuration.DownstreamWarehouseConfigurationProto$WarehouseConfigurationDownstreamEvent"}
 };
 
 std::string GetMessageClass(CelerMessageType messageType)
