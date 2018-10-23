@@ -4,8 +4,7 @@
 #include <memory>
 #include <QDialog>
 #include "BinaryData.h"
-#include "AuthREST.h"
-
+#include "EncryptionUtils.h"
 
 namespace Ui {
     class CCTokenEntryDialog;
@@ -54,7 +53,6 @@ private:
    unsigned int   createWalletReqId_ = 0;
    std::shared_ptr<bs::Wallet>      ccWallet_;
    SecureBinaryData  otpPassword_;
-   AuthSignOTP      auth_;
    bool  walletOk_ = false;
    bool  passwordOk_ = false;
 };

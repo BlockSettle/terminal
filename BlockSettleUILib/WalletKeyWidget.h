@@ -69,7 +69,6 @@ private:
    bool        authRunning_ = false;
    bool        encryptionKeysSet_ = false;
 
-//   AuthSignWallet authSign_;
    QTimer      timer_;
    float       timeLeft_;
 //   QString     prompt_;

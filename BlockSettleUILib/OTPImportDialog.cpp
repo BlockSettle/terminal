@@ -19,7 +19,6 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    , ui_(new Ui::OTPImportDialog())
    , otpManager_(otpManager)
    , easyCodec_(std::make_shared<EasyCoDec>())
-   , authSign_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -36,10 +35,6 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
 
    connect(ui_->lineEditAuthId, &QLineEdit::textChanged, this, &OTPImportDialog::onAuthIdChanged);
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &OTPImportDialog::startAuthSign);
-
-   connect(&authSign_, &AuthSignOTP::succeeded, this, &OTPImportDialog::onAuthSucceeded);
-   connect(&authSign_, &AuthSign::failed, this, &OTPImportDialog::onAuthFailed);
-   connect(&authSign_, &AuthSign::statusUpdated, this, &OTPImportDialog::onAuthStatusUpdated);
 
    ui_->lineEditAuthId->setText(QString::fromStdString(defaultUserName));
 }
@@ -101,10 +96,6 @@ void OTPImportDialog::onAuthIdChanged(const QString &)
 
 void OTPImportDialog::startAuthSign()
 {
-   authSign_.start(ui_->lineEditAuthId->text(), tr("Activate Auth eID signing"),
-      OTPFile::CreateFromPrivateKey(spdlog::get(""), QString(),
-         SecureBinaryData(BinaryData::CreateFromHex(hexKey_)),
-         bs::wallet::EncryptionType::Unencrypted)->GetShortId());
    ui_->pushButtonAuth->setEnabled(false);
    ui_->lineEditAuthId->setEnabled(false);
 }

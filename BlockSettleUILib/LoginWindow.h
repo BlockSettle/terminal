@@ -3,7 +3,6 @@
 
 #include <QDialog>
 #include <memory>
-#include "AuthREST.h"
 
 namespace Ui {
     class LoginWindow;
@@ -34,7 +33,6 @@ private slots:
 private:
    std::unique_ptr<Ui::LoginWindow> ui_;
    std::shared_ptr<ApplicationSettings> settings_;
-   AuthAuth   authAuth_;
 };
 
 #endif // __LOGIN_WINDOW_H__

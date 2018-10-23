@@ -289,7 +289,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       // addDetailRow(tr("Number of inputs"), tr("<b>%L1</b>")
       //    .arg(QString::number(transactionData_->GetTransactionSummary().usedTransactions)));
 
-      ui_->labelHintPassword->setText(tr("Enter Password and Accept to send Pay-In"));
+      ui_->labelHintPassword->setText(tr("Enter Password and press \"Accept\" to send Pay-In"));
 
       if (!transactionData_->IsTransactionValid()) {
          userKeyOk_ = false;
@@ -303,7 +303,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       //    .arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletId())));
       // addDetailRow(tr("Receiving address"), tr("<b>%1</b>").arg(recvAddr_.display()));
 
-      ui_->labelHintPassword->setText(tr("Enter Password and Accept to send Pay-Out to dealer"));
+      ui_->labelHintPassword->setText(tr("Enter Password and press \"Accept\" to send Pay-Out to dealer"));
 
       dealerTx_ = BinaryData::CreateFromHex(quote.dealerTransaction);
    }

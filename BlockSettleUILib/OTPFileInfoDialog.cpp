@@ -14,8 +14,6 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
   : QDialog(parent)
   , ui_(new Ui::OTPFileInfoDialog())
   , otpManager_(otpManager)
-  , authOld_(spdlog::get(""))
-  , authNew_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -34,13 +32,6 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManag
    connect(ui_->radioButtonAuth, &QRadioButton::clicked, this, &OTPFileInfoDialog::onEncTypeClicked);
    connect(ui_->lineEditAuthId, &QLineEdit::textEdited, this, &OTPFileInfoDialog::onAuthIdChanged);
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &OTPFileInfoDialog::onAuthClicked);
-
-   connect(&authOld_, &AuthSignOTP::succeeded, this, &OTPFileInfoDialog::onAuthOldSucceeded);
-   connect(&authOld_, &AuthSign::failed, this, &OTPFileInfoDialog::onAuthOldFailed);
-   connect(&authOld_, &AuthSign::statusUpdated, this, &OTPFileInfoDialog::onAuthOldStatusUpdated);
-   connect(&authNew_, &AuthSignOTP::succeeded, this, &OTPFileInfoDialog::onAuthNewSucceeded);
-   connect(&authNew_, &AuthSign::failed, this, &OTPFileInfoDialog::onAuthNewFailed);
-   connect(&authNew_, &AuthSign::statusUpdated, this, &OTPFileInfoDialog::onAuthNewStatusUpdated);
 
    ui_->labelWarning->setVisible(false);
 
@@ -167,8 +158,6 @@ void OTPFileInfoDialog::onChangePwdClicked()
          ui_->widgetPasswordOld->hide();
          ui_->labelAuthOld->show();
          ui_->labelPwdHint->setText(tr("Sign with Auth eID"));
-         authOld_.start(otpManager_->GetEncKey(), tr("Activate Auth eID signing")
-            , otpManager_->GetShortId());
          break;
 
       case bs::wallet::EncryptionType::Unencrypted:
@@ -181,8 +170,6 @@ void OTPFileInfoDialog::onChangePwdClicked()
    }
    else {
       ui_->groupBoxPassword->setVisible(false);
-      authOld_.stop(true);
-      authNew_.stop(true);
    }
 }
 
@@ -201,8 +188,6 @@ void OTPFileInfoDialog::onAuthIdChanged()
 void OTPFileInfoDialog::onAuthClicked()
 {
    ui_->pushButtonAuth->setEnabled(false);
-   authNew_.start(ui_->lineEditAuthId->text(), tr("New OTP password")
-      , otpManager_->GetShortId());
 }
 
 void OTPFileInfoDialog::onAuthOldSucceeded(SecureBinaryData password)
@@ -242,8 +227,6 @@ void OTPFileInfoDialog::onAuthNewStatusUpdated(const QString &status)
 
 void OTPFileInfoDialog::reject()
 {
-   authOld_.stop(true);
-   authNew_.stop(true);
    QDialog::reject();
 }
 

@@ -8,7 +8,6 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager>
    , const QString& reason, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterOTPPasswordDialog())
-   , auth_(spdlog::get(""))
    , authTimer_(nullptr)
 {
    ui_->setupUi(this);
@@ -27,10 +26,6 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager>
       ui_->authTimer->setFormat(tr("%n second(s) remaining", "", 120));
       authTimer_ = new QTimer(this);
       connect(authTimer_, &QTimer::timeout, this, &EnterOTPPasswordDialog::authTimer);
-      connect(&auth_, &AuthSignOTP::succeeded, this, &EnterOTPPasswordDialog::onAuthSucceeded);
-      connect(&auth_, &AuthSign::failed, this, &EnterOTPPasswordDialog::onAuthFailed);
-      connect(&auth_, &AuthSign::statusUpdated, this, &EnterOTPPasswordDialog::onAuthStatusUpdated);
-      auth_.start(otpMgr->GetEncKey(), reason, otpMgr->GetShortId());
       authTimer_->start(1000);
    }
    else {
@@ -51,7 +46,6 @@ void EnterOTPPasswordDialog::passwordChanged()
 
 void EnterOTPPasswordDialog::reject()
 {
-   auth_.stop(true);
    QDialog::reject();
 }
 

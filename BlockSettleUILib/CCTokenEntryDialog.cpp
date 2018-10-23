@@ -24,7 +24,6 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    , ccFileMgr_(ccFileMgr)
    , signingContainer_(container)
    , walletsMgr_(walletsMgr)
-   , auth_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -40,10 +39,6 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    case bs::wallet::EncryptionType::Auth:
       ui_->groupBoxOtpPassword->hide();
       ui_->labelAuth->show();
-      connect(&auth_, &AuthSignOTP::succeeded, this, &CCTokenEntryDialog::onAuthSucceeded);
-      connect(&auth_, &AuthSign::failed, this, &CCTokenEntryDialog::onAuthFailed);
-      connect(&auth_, &AuthSign::statusUpdated, this, &CCTokenEntryDialog::onAuthStatusUpdated);
-      auth_.start(ccFileMgr_->GetOtpEncKey(), tr("Equity Token Submission"), ccFileMgr_->GetOtpId());
       break;
 
    case bs::wallet::EncryptionType::Password:
@@ -176,7 +171,6 @@ void CCTokenEntryDialog::accept()
 
 void CCTokenEntryDialog::reject()
 {
-   auth_.stop(true);
    QDialog::reject();
 }
 

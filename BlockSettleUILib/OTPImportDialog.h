@@ -6,7 +6,6 @@
 
 #include <QDialog>
 
-#include "AuthREST.h"
 #include "EncryptionUtils.h"
 
 
@@ -41,7 +40,6 @@ private:
    std::unique_ptr<Ui::OTPImportDialog> ui_;
    std::shared_ptr<OTPManager>   otpManager_;
    std::shared_ptr<EasyCoDec>    easyCodec_;
-   AuthSignOTP                   authSign_;
    SecureBinaryData              otpPassword_;
    std::unique_ptr<EasyEncValidator>   validator_;
    std::string hexKey_;

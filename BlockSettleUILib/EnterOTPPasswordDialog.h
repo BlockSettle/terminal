@@ -2,7 +2,8 @@
 #define __ENTER_OTP_PASSWORD_DIALOG_H__
 
 #include <QDialog>
-#include "AuthREST.h"
+
+#include "EncryptionUtils.h"
 
 namespace Ui {
     class EnterOTPPasswordDialog;
@@ -32,7 +33,6 @@ private slots:
 private:
    std::unique_ptr<Ui::EnterOTPPasswordDialog> ui_;
    SecureBinaryData  password_;
-   AuthSignOTP      auth_;
    QTimer *authTimer_;
 };
 

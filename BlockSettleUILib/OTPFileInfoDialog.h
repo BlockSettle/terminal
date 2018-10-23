@@ -3,7 +3,8 @@
 
 #include <QDialog>
 #include <memory>
-#include "AuthREST.h"
+
+#include "EncryptionUtils.h"
 
 namespace Ui {
     class OTPFileInfoDialog;
@@ -44,7 +45,6 @@ private:
 private:
    std::unique_ptr<Ui::OTPFileInfoDialog> ui_;
    std::shared_ptr<OTPManager> otpManager_;
-   AuthSignOTP       authOld_, authNew_;
    SecureBinaryData  oldPassword_, newPassword_;
 };
 

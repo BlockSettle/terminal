@@ -12,7 +12,8 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
    : QDialog(parent)
    , ui_(new Ui::LoginWindow())
    , settings_(settings)
-   , authAuth_(spdlog::get(""))
+// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
+//   , frejaAuth_(spdlog::get(""))
 {
    ui_->setupUi(this);
    ui_->loginVersionLabel->setText(tr("Version %1").arg(QString::fromStdString(AboutDialog::version())));
@@ -40,9 +41,10 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
    }
 
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &LoginWindow::onAuthPressed);
-   connect(&authAuth_, &AuthAuth::succeeded, this, &LoginWindow::onAuthSucceeded);
-   connect(&authAuth_, &AuthAuth::failed, this, &LoginWindow::onAuthFailed);
-   connect(&authAuth_, &AuthAuth::statusUpdated, this, &LoginWindow::onAuthStatusUpdated);
+// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
+//   connect(&frejaAuth_, &FrejaAuth::succeeded, this, &LoginWindow::onAuthSucceeded);
+//   connect(&frejaAuth_, &FrejaAuth::failed, this, &LoginWindow::onAuthFailed);
+//   connect(&frejaAuth_, &FrejaAuth::statusUpdated, this, &LoginWindow::onAuthStatusUpdated);
 }
 
 LoginWindow::~LoginWindow() = default;
@@ -74,9 +76,10 @@ QString LoginWindow::getPassword() const
 void LoginWindow::onAuthPressed()
 {
    ui_->pushButtonAuth->setEnabled(false);
-   if (!authAuth_.start(ui_->lineEditUsername->text().toLower())) {
-      ui_->pushButtonAuth->setEnabled(true);
-   }
+// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
+//   if (!frejaAuth_.start(ui_->lineEditUsername->text().toLower())) {
+//      ui_->pushButtonAuth->setEnabled(true);
+//   }
 }
 
 void LoginWindow::onAuthSucceeded(const QString &userId, const QString &details)

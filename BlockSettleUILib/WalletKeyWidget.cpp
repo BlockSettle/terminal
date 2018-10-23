@@ -28,7 +28,6 @@ WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::str
    , ui_(new Ui::WalletKeyWidget())
    , walletId_(walletId), index_(index)
    , password_(password)
-//   , authSign_(spdlog::get(""), 1)
 //   , prompt_(prompt)
    , mobileClient_(new MobileClient(spdlog::get(""), this))
    , requestType_(requestType)
@@ -49,10 +48,6 @@ WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::str
    connect(ui_->comboBoxAuthId, &QComboBox::editTextChanged, this, &WalletKeyWidget::onAuthIdChanged);
    connect(ui_->comboBoxAuthId, SIGNAL(currentIndexChanged(QString)), this, SLOT(onAuthIdChanged(QString)));
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &WalletKeyWidget::onAuthSignClicked);
-
-//   connect(&authSign_, &AuthSignWallet::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
-//   connect(&authSign_, &AuthSignWallet::failed, this, &WalletKeyWidget::onAuthFailed);
-//   connect(&authSign_, &AuthSignWallet::statusUpdated, this, &WalletKeyWidget::onAuthStatusUpdated);
 
    connect(mobileClient_, &MobileClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
    connect(mobileClient_, &MobileClient::failed, this, &WalletKeyWidget::onAuthFailed);
@@ -89,7 +84,7 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
    ui_->lineEditPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
 
-   ui_->labelFrejeId->setVisible(!password_ && showAuthId_);
+   ui_->labelAuthId->setVisible(!password_ && showAuthId_);
    ui_->widgetAuthLayout->setVisible(!password_);
    
    ui_->pushButtonAuth->setVisible(!hideAuthConnect_);
@@ -114,7 +109,7 @@ void WalletKeyWidget::onPasswordChanged()
 
 void WalletKeyWidget::onAuthIdChanged(const QString &text)
 {
-   ui_->labelFrejeId->setText(text);
+   ui_->labelAuthId->setText(text);
    emit encKeyChanged(index_, text.toStdString());
    ui_->pushButtonAuth->setEnabled(!text.isNull());
 }
@@ -131,7 +126,6 @@ void WalletKeyWidget::onAuthSignClicked()
    ui_->progressBar->show();
    timer_.start();
    authRunning_ = true;
-//   authSign_.start(ui_->comboBoxAuthId->currentText(),
 //      prompt_.isEmpty() ? tr("Activate Auth eID signing") : prompt_, walletId_);
    mobileClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString(), walletId_);
    ui_->pushButtonAuth->setText(tr("Cancel Auth request"));
@@ -178,7 +172,6 @@ void WalletKeyWidget::onTimer()
 {
    timeLeft_ -= 0.5;
    if (timeLeft_ <= 0) {
-//      authSign_.stop(true);
       onAuthFailed(tr("Timeout"));
    }
    else {
@@ -203,7 +196,6 @@ void WalletKeyWidget::stop()
 void WalletKeyWidget::cancel()
 {
    if (!password_) {
-      //authSign_.stop(true);
       mobileClient_->cancel();
       stop();
    }
@@ -311,7 +303,7 @@ QPropertyAnimation* WalletKeyWidget::startAuthAnimation(bool success)
 {
    QGraphicsColorizeEffect *eff = new QGraphicsColorizeEffect(this);
    eff->setColor(success ? kSuccessColor : kFailColor);
-   ui_->labelFrejeId->setGraphicsEffect(eff);
+   ui_->labelAuthId->setGraphicsEffect(eff);
 
    QPropertyAnimation *a = new QPropertyAnimation(eff, "strength");
    a->setDuration(kAnimationDurationMs);
