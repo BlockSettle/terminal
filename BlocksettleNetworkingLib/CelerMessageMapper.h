@@ -117,6 +117,9 @@ enum CelerMessageType
    CreateWarehouseConfigurationRequestType,
    WarehouseConfigurationDownstreamEventType,
 
+   CreateSecurityListingRequestType,
+   SecurityListingDownstreamEventType,
+
    CelerMessageTypeLast,
    UndefinedType = CelerMessageTypeLast
 };
