@@ -324,7 +324,7 @@ void DealerXBTSettlementContainer::onCptyVerified()
    }
    else {
       if (weSell_) {
-         emit info(tr("Accept to send own pay-in transaction"));
+         emit info(tr("Accept offer to send your own pay-in transaction"));
          emit readyToAccept();
       }
       else {

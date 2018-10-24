@@ -59,8 +59,8 @@ void WalletKeysCreateWidget::addKey(bool password)
    assert(!walletId_.empty());
    auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password, this);
    widget->init(appSettings_, username_);
-   if (flags_ & HideFrejaConnectButton) {
-      widget->setHideFrejaConnect(true);
+   if (flags_ & HideAuthConnectButton) {
+      widget->setHideAuthConnect(true);
    }
    if (flags_ & SetPasswordLabelAsNew) {
       widget->setPasswordLabelAsNew();
@@ -72,7 +72,7 @@ void WalletKeysCreateWidget::addKey(bool password)
    ui_->groupBox->layout()->addWidget(widget);
    ui_->pushButtonDelKey->setEnabled(true);
    widgets_.emplace_back(widget);
-   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja, {} });
+   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth, {} });
    ui_->spinBoxRankM->setMaximum(pwdData_.size());
    ui_->spinBoxRankM->setMinimum(1);
    updateKeyRank(0);
@@ -116,7 +116,7 @@ void WalletKeysCreateWidget::onKeyTypeChanged(int index, bool password)
    if ((index < 0) || (index >= pwdData_.size())) {
       return;
    }
-   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja;
+   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth;
    pwdData_[index].password.clear();
    emit keyChanged();
    emit keyTypeChanged(password);
@@ -150,7 +150,7 @@ bool WalletKeysCreateWidget::isValid() const
    }
    std::set<SecureBinaryData> encKeys;
    for (const auto &pwd : pwdData_) {
-      if (pwd.encType == bs::wallet::EncryptionType::Freja) {
+      if (pwd.encType == bs::wallet::EncryptionType::Auth) {
          if (pwd.encKey.isNull()) {
             return false;
          }

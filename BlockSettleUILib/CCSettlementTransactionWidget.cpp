@@ -246,7 +246,7 @@ void CCSettlementTransactionWidget::onGenAddrVerified(bool result)
       transactionData_->SetSigningWallet(nullptr);
       ui_->labelHint->setText(tr("Failed to verify genesis address"));
    } else {
-      ui_->labelHint->setText(tr("Accept to send own signed half of CoinJoin transaction"));
+      ui_->labelHint->setText(tr("Accept offer to send your own signed half of the CoinJoin transaction"));
       initSigning();
    }
    ui_->labelGenesisAddress->setText(result ? sValid : sInvalid);

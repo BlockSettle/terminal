@@ -11,7 +11,6 @@
 #include <unordered_set>
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
-#include "FrejaREST.h"
 #include "MetaData.h"
 
 namespace Ui {

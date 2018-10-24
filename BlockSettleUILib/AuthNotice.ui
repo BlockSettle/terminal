@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FrejaNotice</class>
- <widget class="QDialog" name="FrejaNotice">
+ <class>AuthNotice</class>
+ <widget class="QDialog" name="AuthNotice">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Freja eID</string>
+   <string>Auth eID</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="leftMargin">
@@ -43,7 +43,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_2">
        <property name="title">
-        <string>SIGNING WITH FREJA eID</string>
+        <string>SIGNING WITH AUTH eID</string>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <property name="spacing">
@@ -89,15 +89,15 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Once you set Freja eID as signing the signing will be set locally on your mobile device.
+           <string>Auth eID is a convenient alternative to passwords. Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s).
 
-If you lose your phone or uninstall the app you will lose your ability to sign wallet requests.
+You may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. Auth eID requires the user to be vigilant with devices using Auth eID. If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable.
 
-This also implies that your Freja eID cannot be hacked as it's only stored on your mobile device.
+Auth eID is not a wallet backup! No wallet data is stored with Auth eID. Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate wallet. You may then attach a password or your Auth eID account to the wallet.
 
-Keep your backup secure as it protects your wallet forever against hard drive loss and if you lose your mobile device which is connected to Freja eID.
+Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store. 
 
-For more information please consult with the Getting Started with Freja eID guide.</string>
+For more information, please consult the “Getting Started With Auth eID" guide.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -188,7 +188,7 @@ For more information please consult with the Getting Started with Freja eID guid
   <connection>
    <sender>pushButtonContinue</sender>
    <signal>clicked()</signal>
-   <receiver>FrejaNotice</receiver>
+   <receiver>AuthNotice</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">

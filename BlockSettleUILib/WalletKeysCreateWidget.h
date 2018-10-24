@@ -17,7 +17,7 @@ class WalletKeysCreateWidget : public QWidget
 public:
    enum Flag {
       NoFlag = 0x00,
-      HideFrejaConnectButton = 0x01,
+      HideAuthConnectButton = 0x01,
       HideWidgetContol = 0x02,
       HideGroupboxCaption = 0x04,
       SetPasswordLabelAsNew = 0x08,
@@ -32,7 +32,7 @@ public:
       , const std::string &walletId, const QString& username
       , const std::shared_ptr<ApplicationSettings>& appSettings);
    void addPasswordKey() { addKey(true); }
-   void addFrejaKey() { addKey(false); }
+   void addAuthKey() { addKey(false); }
    void cancel();
 
    bool isValid() const;

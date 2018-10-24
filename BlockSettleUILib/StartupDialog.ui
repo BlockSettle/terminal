@@ -98,7 +98,7 @@
           <item>
            <widget class="QLabel" name="label">
             <property name="text">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;By default, the network settings will connect your Terminal to a Supernode hosted by BlockSettle.&lt;/p&gt;&lt;p&gt;Should you wish to connect to an ArmoryDB of your own choosing (BlockSettle encourages users to rely on their own infrastructure for network access), you may configure the IP address under the network settings.&lt;/p&gt;&lt;p&gt;* If you are interested in running your own network node, please consult the following guide:&lt;br&gt;&lt;a href=&quot;https://github.com/BlockSettle/packages&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;https://github.com/BlockSettle/packages&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>By default, the network settings will connect your Terminal to a Bitcoin "supernode" hosted by BlockSettle. Should you wish to connect to Bitcoin infrastructure of your own choosing (BlockSettle encourages users to rely on their own infrastructure for network access), you may configure the IP address of your "ArmoryDB" instance under the network settings. If you are interested in running your own network node, please consult the "Running a Bitcoin Node" document for further instructions on setting up ArmoryDB.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>

@@ -986,11 +986,11 @@ QDateEdit::drop-down {
   border-bottom-right-radius: 0;
   color: #0b1619; }
 
-QComboBox#comboBoxFrejaId::drop-down {
+QComboBox#comboBoxAuthId::drop-down {
   width: 0px;
   border-width: 0px; }
 
-QComboBox#comboBoxFrejaId::down-arrow {
+QComboBox#comboBoxAuthId::down-arrow {
   image: none; }
 
 QComboBox::down-arrow {

@@ -32,12 +32,12 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
       setWindowTitle(title);
    }
 
-   if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Freja) {
-      ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideFrejaConnectButton
-         | WalletKeysSubmitWidget::HideFrejaCombobox
+   if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Auth) {
+      ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideAuthConnectButton
+         | WalletKeysSubmitWidget::HideAuthCombobox
          | WalletKeysSubmitWidget::HideGroupboxCaption
-         | WalletKeysSubmitWidget::FrejaProgressBarFixed
-         | WalletKeysSubmitWidget::FrejaIdVisible);
+         | WalletKeysSubmitWidget::AuthProgressBarFixed
+         | WalletKeysSubmitWidget::AuthIdVisible);
 
       connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &EnterWalletPassword::accept);
       connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::failed, this, &EnterWalletPassword::reject);

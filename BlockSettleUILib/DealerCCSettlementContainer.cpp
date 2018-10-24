@@ -85,7 +85,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 {
    genAddrVerified_ = addressVerified;
    if (addressVerified) {
-      emit info(tr("Accept to send own signed half of CoinJoin transaction"));
+      emit info(tr("Accept offer to send your own signed half of the CoinJoin transaction"));
       emit readyToAccept();
    }
    else {

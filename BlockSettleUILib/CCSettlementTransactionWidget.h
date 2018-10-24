@@ -8,7 +8,6 @@
 
 #include "BinaryData.h"
 #include "CommonTypes.h"
-#include "FrejaREST.h"
 #include "MetaData.h"
 #include "SettlementWallet.h"
 #include "UtxoReservation.h"

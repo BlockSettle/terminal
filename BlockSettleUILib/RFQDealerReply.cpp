@@ -67,8 +67,8 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
 
    ui_->checkBoxAutoSign->setEnabled(false);
    ui_->widgetSubmitKeysAS->setFlags(WalletKeysSubmitWidget::HideGroupboxCaption |
-      WalletKeysSubmitWidget::HideFrejaEmailLabel |
-      WalletKeysSubmitWidget::HideFrejaControlsOnSignClicked);
+      WalletKeysSubmitWidget::HideAuthEmailLabel |
+      WalletKeysSubmitWidget::HideAuthControlsOnSignClicked);
    ui_->widgetSubmitKeysAS->suspend();
    connect(ui_->checkBoxAutoSign, &QCheckBox::clicked, this, &RFQDealerReply::onAutoSignActivated);
    connect(ui_->widgetSubmitKeysAS, &WalletKeysSubmitWidget::keyChanged, this, &RFQDealerReply::updateAutoSignState);

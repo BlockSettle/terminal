@@ -28,7 +28,7 @@ class CreateWalletDialog : public QDialog
    Q_OBJECT
 
 public:
-   // Username is used to init Freja ID when available
+   // Username is used to init Auth ID when available
    CreateWalletDialog(const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , const QString &walletsPath
@@ -67,7 +67,7 @@ private:
    bool              walletCreated_ = false;
    SecureBinaryData  walletPassword_;
    bool              createdAsPrimary_ = false;
-   bool              frejaNoticeWasShown_ = false;
+   bool              authNoticeWasShown_ = false;
 };
 
 // Common function for CreateWalletDialog and ImportWalletDialog.

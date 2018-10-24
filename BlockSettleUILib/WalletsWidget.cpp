@@ -429,9 +429,12 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
 {
    if (primary && assetManager_->privateShares(true).empty()) {
       MessageBoxQuestion q(tr("Private Market Import"), tr("Private Market data is missing")
-         , tr("If you want to import all available Private Market wallets now, you need to abort the process"
-            " and login to Celer to receive this data first. Otherwise you can do it later on manual rescan"
-            " of the imported wallet. Abort importing now?"), this);
+         , tr("You do not have Private Market data available in the BlockSettle Terminal. You must first log "
+            "into your Celer account from the main menu. A successful login will cause the proper data to be "
+            "automatically downloaded. Without this data, you will be unable to receive your Private Market "
+            "balances. Are you absolutely certain that you wish to proceed an import that doesn't include "
+            "Private Market data? (Upon receiving the data, you will have to re-import the wallet in order to "
+            "use the data.)"), this);
       if (q.exec() == QDialog::Accepted) {
          return false;
       }

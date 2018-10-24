@@ -3,7 +3,8 @@
 
 #include <QDialog>
 #include <memory>
-#include "FrejaREST.h"
+
+#include "EncryptionUtils.h"
 
 namespace Ui {
     class OTPFileInfoDialog;
@@ -29,14 +30,14 @@ private slots:
    void onChangePwdClicked();
    void onPasswordChanged();
    void onEncTypeClicked();
-   void onFrejaIdChanged();
-   void onFrejaClicked();
-   void onFrejaOldSucceeded(SecureBinaryData);
-   void onFrejaOldFailed(const QString &text);
-   void onFrejaOldStatusUpdated(const QString &status);
-   void onFrejaNewSucceeded(SecureBinaryData);
-   void onFrejaNewFailed(const QString &text);
-   void onFrejaNewStatusUpdated(const QString &status);
+   void onAuthIdChanged();
+   void onAuthClicked();
+   void onAuthOldSucceeded(SecureBinaryData);
+   void onAuthOldFailed(const QString &text);
+   void onAuthOldStatusUpdated(const QString &status);
+   void onAuthNewSucceeded(SecureBinaryData);
+   void onAuthNewFailed(const QString &text);
+   void onAuthNewStatusUpdated(const QString &status);
 
 private:
    bool UpdateOTPCounter();
@@ -44,7 +45,6 @@ private:
 private:
    std::unique_ptr<Ui::OTPFileInfoDialog> ui_;
    std::shared_ptr<OTPManager> otpManager_;
-   FrejaSignOTP      frejaOld_, frejaNew_;
    SecureBinaryData  oldPassword_, newPassword_;
 };
 

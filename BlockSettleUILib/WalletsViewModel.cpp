@@ -622,7 +622,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
          else if (hdWallet->encryptionRank().second <= 1) {
             switch (hdWallet->encryptionTypes()[0]) {
             case bs::wallet::EncryptionType::Password:   return tr("Password");
-            case bs::wallet::EncryptionType::Freja:   return tr("Freja eID");
+            case bs::wallet::EncryptionType::Auth:   return tr("Auth eID");
             default:    return tr("No");
             }
          }

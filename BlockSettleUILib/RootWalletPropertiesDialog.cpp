@@ -200,8 +200,8 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
       case bs::wallet::EncryptionType::Password :
          return QObject::tr("Password");
 
-      case bs::wallet::EncryptionType::Freja :
-         return QObject::tr("Freja");
+      case bs::wallet::EncryptionType::Auth :
+         return QObject::tr("Auth");
    };
 }
 
