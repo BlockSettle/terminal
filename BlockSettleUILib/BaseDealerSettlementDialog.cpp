@@ -60,9 +60,9 @@ void BaseDealerSettlementDialog::setCriticalHintMessage(const QString& hint)
    QMetaObject::invokeMethod(errorLabel_, "setText", Q_ARG(QString, text));
 }
 
-void BaseDealerSettlementDialog::setFrejaPasswordPrompt(const QString &prompt)
+void BaseDealerSettlementDialog::setAuthPasswordPrompt(const QString &prompt)
 {
-   frejaPrompt_ = prompt;
+   authPrompt_ = prompt;
 }
 
 void BaseDealerSettlementDialog::onTimerStarted(int msDuration)
@@ -133,7 +133,8 @@ void BaseDealerSettlementDialog::startAccepting()
       logger_->error("[BaseDealerSettlementDialog::startAccepting] no root wallet");
       return;
    }
-   widgetWalletKeys()->init(rootWallet_->getWalletId(), keyRank_, encTypes_, encKeys_, appSettings_);
+   widgetWalletKeys()->init(MobileClientRequest::SignWallet, rootWallet_->getWalletId()
+      , keyRank_, encTypes_, encKeys_, appSettings_);
    widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();
    adjustSize();

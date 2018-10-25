@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "WalletEncryption.h"
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class WalletKeysSubmitWidget;
@@ -16,13 +17,14 @@ class WalletKeysSubmitWidget : public QWidget
 public:
    enum Flag {
       NoFlag = 0x00,
-      HideFrejaConnectButton = 0x01,
-      HideFrejaCombobox = 0x02,
+      HideAuthConnectButton = 0x01,
+      HideAuthCombobox = 0x02,
       HideGroupboxCaption = 0x04,
-      FrejaProgressBarFixed = 0x08,
-      FrejaIdVisible = 0x10,
-      HideFrejaEmailLabel = 0x20,
-      HideFrejaControlsOnSignClicked = 0x40
+      AuthProgressBarFixed = 0x08,
+      AuthIdVisible = 0x10,
+      SetPasswordLabelAsOld = 0x20,
+      HideAuthEmailLabel = 0x40,
+      HideAuthControlsOnSignClicked = 0x80
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 
@@ -30,7 +32,8 @@ public:
    ~WalletKeysSubmitWidget() override;
 
    void setFlags(Flags flags);
-   void init(const std::string &walletId
+   void init(MobileClientRequest requestType
+      , const std::string &walletId
       , bs::wallet::KeyRank
       , const std::vector<bs::wallet::EncryptionType> &
       , const std::vector<SecureBinaryData> &encKeys
@@ -44,6 +47,8 @@ public:
    void setFocus();
    void suspend() { suspended_ = true; }
    void resume();
+
+   std::string getDeviceId() const;
 
 signals:
    void keyChanged();
@@ -61,12 +66,13 @@ private:
 
 private:
    std::unique_ptr<Ui::WalletKeysSubmitWidget> ui_;
-   std::string    walletId_;
-   std::vector<WalletKeyWidget *>         widgets_;
-   std::vector<bs::wallet::PasswordData>  pwdData_;
-   std::atomic_bool  suspended_;
+   std::string walletId_;
+   std::vector<WalletKeyWidget *> widgets_;
+   std::vector<bs::wallet::PasswordData> pwdData_;
+   std::atomic_bool suspended_;
    Flags flags_{NoFlag};
    std::shared_ptr<ApplicationSettings> appSettings_;
+   MobileClientRequest requestType_{};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysSubmitWidget::Flags)

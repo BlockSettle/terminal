@@ -4,7 +4,7 @@
 #include <QTimer>
 #include <QWidget>
 #include "EncryptionUtils.h"
-#include "FrejaREST.h"
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class WalletKeyWidget;
@@ -17,8 +17,8 @@ class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(const std::string &walletId, int index, bool password, const QString &prompt,
-      QWidget* parent = nullptr);
+   WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
+      , int index, bool password, QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings>& appSettings, const QString& username);
@@ -29,54 +29,59 @@ public:
    void setFixedType(bool on = true);
    void setFocus();
 
-   void setHideFrejaConnect(bool value);
-   void setHideFrejaCombobox(bool value);
+   void setHideAuthConnect(bool value);
+   void setHideAuthCombobox(bool value);
    void setProgressBarFixed(bool value);
-   void setShowFrejaId(bool value);
-   void setHideFrejaEmailLabel(bool value);
-   void setHideFrejaControlsOnSignClicked(bool value);
+   void setShowAuthId(bool value);
+   void setShowAuthIdLabel(bool value);
+   void setPasswordLabelAsNew();
+   void setPasswordLabelAsOld();
+   void setHideAuthEmailLabel(bool value);
+   void setHideAuthControlsOnSignClicked(bool value);
+   const std::string &deviceId() const;
 
 signals:
    void keyChanged(int index, SecureBinaryData);
    void encKeyChanged(int index, SecureBinaryData);
    void keyTypeChanged(int index, bool password);
-   // Signals that Freja was denied or timed out
+   // Signals that Auth was denied or timed out
    void failed();
 
 private slots:
    void onTypeChanged();
    void onPasswordChanged();
-   void onFrejaIdChanged(const QString &);
-   void onFrejaSignClicked();
-   void onFrejaSucceeded(const SecureBinaryData &password);
-   void onFrejaFailed(const QString &text);
-   void onFrejaStatusUpdated(const QString &status);
+   void onAuthIdChanged(const QString &);
+   void onAuthSignClicked();
+   void onAuthSucceeded(const std::string &deviceId, const SecureBinaryData &password);
+   void onAuthFailed(const QString &text);
+   void onAuthStatusUpdated(const QString &status);
    void onTimer();
 
 private:
    void stop();
-   QPropertyAnimation* startFrejaAnimation(bool success);
+   QPropertyAnimation* startAuthAnimation(bool success);
 
 private:
    std::unique_ptr<Ui::WalletKeyWidget> ui_;
    std::string walletId_;
    int         index_;
    bool        password_;
-   bool        frejaRunning_ = false;
+   bool        authRunning_ = false;
    bool        encryptionKeysSet_ = false;
 
-//   FrejaSignWallet frejaSign_;
    QTimer      timer_;
    float       timeLeft_;
-   QString     prompt_;
+//   QString     prompt_;
    MobileClient *mobileClient_{};
 
-   bool        hideFrejaConnect_ = false;
-   bool        hideFrejaCombobox_ = false;
+   bool        hideAuthConnect_ = false;
+   bool        hideAuthCombobox_ = false;
    bool        progressBarFixed_ = false;
-   bool        showFrejaId_ = false;
-   bool        hideFrejaEmailLabel_ = false;
-   bool        hideFrejaControlsOnSignClicked_ = false;
+   bool        showAuthId_ = false;
+   bool        hideAuthEmailLabel_ = false;
+   bool        hideAuthControlsOnSignClicked_ = false;
+   MobileClientRequest requestType_{};
+   std::string deviceId_;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

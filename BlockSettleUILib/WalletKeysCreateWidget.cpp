@@ -26,9 +26,19 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysCreateWidget::init(const std::string &walletId, const QString& username
+void WalletKeysCreateWidget::init(MobileClientRequest requestType
+   , const std::string &walletId, const QString& username
    , const std::shared_ptr<ApplicationSettings>& appSettings)
 {
+   requestType_ = requestType;
+
+   widgets_.clear();
+   pwdData_.clear();
+
+   if (flags_ & HideGroupboxCaption) {
+      ui_->groupBox->setTitle(QString());
+   }
+
    walletId_ = walletId;
    username_ = username;
    appSettings_ = appSettings;
@@ -39,7 +49,7 @@ void WalletKeysCreateWidget::init(const std::string &walletId, const QString& us
       ui_->widgetControl->hide();
    }
 
-   for (WalletKeyWidget *widget : widgets_) {
+   for (auto& widget : widgets_) {
       widget->init(appSettings, username);
    }
 }
@@ -47,18 +57,22 @@ void WalletKeysCreateWidget::init(const std::string &walletId, const QString& us
 void WalletKeysCreateWidget::addKey(bool password)
 {
    assert(!walletId_.empty());
-   auto widget = new WalletKeyWidget(walletId_, widgets_.size(), password, QString(), this);
+   auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password, this);
    widget->init(appSettings_, username_);
-   if (flags_ & HideFrejaConnectButton) {
-      widget->setHideFrejaConnect(true);
+   if (flags_ & HideAuthConnectButton) {
+      widget->setHideAuthConnect(true);
+   }
+   if (flags_ & SetPasswordLabelAsNew) {
+      widget->setPasswordLabelAsNew();
    }
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysCreateWidget::onEncKeyChanged);
+   connect(widget, &WalletKeyWidget::failed, this, &WalletKeysCreateWidget::failed);
    ui_->groupBox->layout()->addWidget(widget);
    ui_->pushButtonDelKey->setEnabled(true);
-   widgets_.push_back(widget);
-   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja, {} });
+   widgets_.emplace_back(widget);
+   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth, {} });
    ui_->spinBoxRankM->setMaximum(pwdData_.size());
    ui_->spinBoxRankM->setMinimum(1);
    updateKeyRank(0);
@@ -72,9 +86,10 @@ void WalletKeysCreateWidget::onAddClicked()
 
 void WalletKeysCreateWidget::onDelClicked()
 {
-   ui_->groupBox->layout()->removeWidget(widgets_.back());
-   widgets_.back()->deleteLater();
-   widgets_.resize(widgets_.size() - 1);
+   if (widgets_.empty()) {
+      return;
+   }
+   widgets_.pop_back();
    pwdData_.resize(widgets_.size());
    if (pwdData_.empty()) {
       ui_->spinBoxRankM->setMinimum(0);
@@ -101,7 +116,7 @@ void WalletKeysCreateWidget::onKeyTypeChanged(int index, bool password)
    if ((index < 0) || (index >= pwdData_.size())) {
       return;
    }
-   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Freja;
+   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth;
    pwdData_[index].password.clear();
    emit keyChanged();
    emit keyTypeChanged(password);
@@ -135,7 +150,7 @@ bool WalletKeysCreateWidget::isValid() const
    }
    std::set<SecureBinaryData> encKeys;
    for (const auto &pwd : pwdData_) {
-      if (pwd.encType == bs::wallet::EncryptionType::Freja) {
+      if (pwd.encType == bs::wallet::EncryptionType::Auth) {
          if (pwd.encKey.isNull()) {
             return false;
          }
@@ -148,6 +163,16 @@ bool WalletKeysCreateWidget::isValid() const
       }
    }
    return true;
+}
+
+std::string WalletKeysCreateWidget::getDeviceId() const
+{
+   for (const auto &keyWidget : widgets_) {
+      if (!keyWidget->deviceId().empty()) {
+         return keyWidget->deviceId();
+      }
+   }
+   return {};
 }
 
 void WalletKeysCreateWidget::cancel()

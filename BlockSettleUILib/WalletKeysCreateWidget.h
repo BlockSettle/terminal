@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "WalletEncryption.h"
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class WalletKeysCreateWidget;
@@ -16,8 +17,10 @@ class WalletKeysCreateWidget : public QWidget
 public:
    enum Flag {
       NoFlag = 0x00,
-      HideFrejaConnectButton = 0x01,
+      HideAuthConnectButton = 0x01,
       HideWidgetContol = 0x02,
+      HideGroupboxCaption = 0x04,
+      SetPasswordLabelAsNew = 0x08,
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 
@@ -25,19 +28,22 @@ public:
    ~WalletKeysCreateWidget() override;
 
    void setFlags(Flags flags);
-   void init(const std::string &walletId, const QString& username
+   void init(MobileClientRequest requestType
+      , const std::string &walletId, const QString& username
       , const std::shared_ptr<ApplicationSettings>& appSettings);
    void addPasswordKey() { addKey(true); }
-   void addFrejaKey() { addKey(false); }
+   void addAuthKey() { addKey(false); }
    void cancel();
 
    bool isValid() const;
    std::vector<bs::wallet::PasswordData> keys() const { return pwdData_; }
    bs::wallet::KeyRank keyRank() const { return keyRank_; }
+   std::string getDeviceId() const;
 
 signals:
    void keyChanged();
    void keyCountChanged();
+   void failed();
    void keyTypeChanged(bool password);
 
 private slots:
@@ -53,13 +59,14 @@ private:
 
 private:
    std::unique_ptr<Ui::WalletKeysCreateWidget> ui_;
-   std::string    walletId_;
-   std::vector<WalletKeyWidget *>      widgets_;
-   std::vector<bs::wallet::PasswordData>  pwdData_;
-   bs::wallet::KeyRank                 keyRank_ = { 0, 0 };
+   std::string walletId_;
+   std::vector<std::unique_ptr<WalletKeyWidget>> widgets_;
+   std::vector<bs::wallet::PasswordData> pwdData_;
+   bs::wallet::KeyRank keyRank_ = { 0, 0 };
    Flags flags_{NoFlag};
    std::shared_ptr<ApplicationSettings> appSettings_;
    QString username_;
+   MobileClientRequest requestType_{};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysCreateWidget::Flags)

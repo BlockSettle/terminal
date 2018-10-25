@@ -5,6 +5,7 @@
 #include <QObject>
 #include "DataConnectionListener.h"
 #include "EncryptionUtils.h"
+#include "MobileClientRequestType.h"
 #include "ZmqSecuredDataConnection.h"
 #include "rp_api.pb.h"
 
@@ -24,12 +25,16 @@ public:
 
    void init(const std::string &serverPubKey
       , const std::string &serverHost, const std::string &serverPort);
-   bool start(const std::string &email, const std::string &walletId);
+   bool start(MobileClientRequest requestType, const std::string &email, const std::string &walletId);
    void cancel();
 
+   void updateServer(const std::string &deviceId, const std::string &walletId
+      , bool isPaired, bool deleteAll);
+
 signals:
-   void succeeded(const SecureBinaryData &password);
+   void succeeded(const std::string& deviceId, const SecureBinaryData &password);
    void failed(const QString &text);
+   void updateServerFinished(bool success);
 
 private:
    void OnDataReceived(const std::string& data) override;
@@ -37,8 +42,9 @@ private:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   void processGetKeyResponse(const std::string &payload, uint64_t tag);
    bool sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType);
+   void processGetKeyReply(const std::string &payload, uint64_t tag);
+   void processUpdateDeviceWalletReply(const std::string &payload, uint64_t tag);
 
    static std::string toBase64(const std::string &);
    static std::string fromBase64(const std::string &);

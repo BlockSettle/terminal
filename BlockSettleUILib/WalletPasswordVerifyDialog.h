@@ -15,24 +15,27 @@ class WalletPasswordVerifyDialog : public QDialog
    Q_OBJECT
 
 public:
-   WalletPasswordVerifyDialog(const std::string& walletId
-      , const std::vector<bs::wallet::PasswordData>& keys
-      , bs::wallet::KeyRank keyRank
-      , const std::shared_ptr<ApplicationSettings> &appSettings
+   explicit WalletPasswordVerifyDialog(const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget *parent = nullptr);
-   ~WalletPasswordVerifyDialog();
+   ~WalletPasswordVerifyDialog() override;
+
+   // By default the dialog will show only Auth usage info page.
+   // If init called then password/Auth check will be used too.
+   void init(const std::string& walletId, const std::vector<bs::wallet::PasswordData>& keys
+      , bs::wallet::KeyRank keyRank);
 
 private slots:
    void onContinueClicked();
 
 private:
    void initPassword();
-   void initFreja(const QString& frejaId);
+   void initAuth(const QString& authId);
 
    std::unique_ptr<Ui::WalletPasswordVerifyDialog> ui_;
-   const std::string& walletId_;
-   const std::vector<bs::wallet::PasswordData> keys_;
-   const bs::wallet::KeyRank keyRank_;
+   std::string walletId_;
+   std::vector<bs::wallet::PasswordData> keys_;
+   bs::wallet::KeyRank keyRank_;
+   bool runPasswordCheck_ = false;
    const std::shared_ptr<ApplicationSettings> appSettings_;
 };
 

@@ -19,7 +19,6 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    , ui_(new Ui::OTPImportDialog())
    , otpManager_(otpManager)
    , easyCodec_(std::make_shared<EasyCoDec>())
-   , frejaSign_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
@@ -34,14 +33,10 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    connect(ui_->lineEditOtp2, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp2, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
 
-   connect(ui_->lineEditFrejaId, &QLineEdit::textChanged, this, &OTPImportDialog::onFrejaIdChanged);
-   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &OTPImportDialog::startFrejaSign);
+   connect(ui_->lineEditAuthId, &QLineEdit::textChanged, this, &OTPImportDialog::onAuthIdChanged);
+   connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &OTPImportDialog::startAuthSign);
 
-   connect(&frejaSign_, &FrejaSignOTP::succeeded, this, &OTPImportDialog::onFrejaSucceeded);
-   connect(&frejaSign_, &FrejaSign::failed, this, &OTPImportDialog::onFrejaFailed);
-   connect(&frejaSign_, &FrejaSign::statusUpdated, this, &OTPImportDialog::onFrejaStatusUpdated);
-
-   ui_->lineEditFrejaId->setText(QString::fromStdString(defaultUserName));
+   ui_->lineEditAuthId->setText(QString::fromStdString(defaultUserName));
 }
 
 OTPImportDialog::~OTPImportDialog() = default;
@@ -84,7 +79,7 @@ void OTPImportDialog::keyTextChanged()
 
    try {
       hexKey_ = easyCodec_->toHex(EasyCoDec::Data{ ui_->lineEditOtp1->text().toStdString(), ui_->lineEditOtp2->text().toStdString() });
-      ui_->lineEditFrejaId->setFocus();
+      ui_->lineEditAuthId->setFocus();
       updateAcceptButton();
    }
    catch (const std::exception &e) {
@@ -94,35 +89,31 @@ void OTPImportDialog::keyTextChanged()
    }
 }
 
-void OTPImportDialog::onFrejaIdChanged(const QString &)
+void OTPImportDialog::onAuthIdChanged(const QString &)
 {
    updateAcceptButton();
 }
 
-void OTPImportDialog::startFrejaSign()
+void OTPImportDialog::startAuthSign()
 {
-   frejaSign_.start(ui_->lineEditFrejaId->text(), tr("Activate Freja eID signing"),
-      OTPFile::CreateFromPrivateKey(spdlog::get(""), QString(),
-         SecureBinaryData(BinaryData::CreateFromHex(hexKey_)),
-         bs::wallet::EncryptionType::Unencrypted)->GetShortId());
-   ui_->pushButtonFreja->setEnabled(false);
-   ui_->lineEditFrejaId->setEnabled(false);
+   ui_->pushButtonAuth->setEnabled(false);
+   ui_->lineEditAuthId->setEnabled(false);
 }
 
-void OTPImportDialog::onFrejaSucceeded(SecureBinaryData password)
+void OTPImportDialog::onAuthSucceeded(SecureBinaryData password)
 {
    ui_->labelPwdHint->setText(tr("Successfully signed"));
    otpPassword_ = password;
    updateAcceptButton();
 }
 
-void OTPImportDialog::onFrejaFailed(const QString &text)
+void OTPImportDialog::onAuthFailed(const QString &text)
 {
-   ui_->pushButtonFreja->setEnabled(true);
-   ui_->labelPwdHint->setText(tr("Freja failed: %1").arg(text));
+   ui_->pushButtonAuth->setEnabled(true);
+   ui_->labelPwdHint->setText(tr("Auth failed: %1").arg(text));
 }
 
-void OTPImportDialog::onFrejaStatusUpdated(const QString &status)
+void OTPImportDialog::onAuthStatusUpdated(const QString &status)
 {
    ui_->labelPwdHint->setText(status);
 }
@@ -134,7 +125,7 @@ void OTPImportDialog::updateAcceptButton()
    if (keyIsValid_ && !otpPassword_.isNull())
       enable = true;
 
-   ui_->pushButtonFreja->setEnabled(!ui_->lineEditFrejaId->text().isEmpty() && keyIsValid_);
+   ui_->pushButtonAuth->setEnabled(!ui_->lineEditAuthId->text().isEmpty() && keyIsValid_);
 
    ui_->pushButtonOk->setEnabled(enable);
 }
@@ -148,7 +139,7 @@ void OTPImportDialog::accept()
 
    const auto otpKey = SecureBinaryData(BinaryData::CreateFromHex(hexKey_));
    auto resultCode = otpManager_->ImportOTPForCurrentUser(otpKey,
-      otpPassword_, bs::wallet::EncryptionType::Freja, ui_->lineEditFrejaId->text().toStdString());
+      otpPassword_, bs::wallet::EncryptionType::Auth, ui_->lineEditAuthId->text().toStdString());
    if (resultCode != OTPManager::OTPImportResult::Success) {
 
       QString errorText;

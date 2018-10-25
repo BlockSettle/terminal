@@ -133,7 +133,8 @@ void WalletBackupDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet:
    }
    infoReqId_ = 0;
 
-   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings_);
+   ui_->widgetSubmitKeys->init(MobileClientRequest::BackupWallet, wallet_->getWalletId()
+      , keyRank, encTypes, encKeys, appSettings_);
    ui_->widgetSubmitKeys->setFocus();
    updateState();
 

@@ -299,6 +299,8 @@ message ChangePasswordRequest
    repeated PasswordData newPassword = 3;
    uint32   rankM = 4;
    uint32   rankN = 5;
+   bool     addNew = 6;
+   bool     dryRun = 7;
 }
 
 message ChangePasswordResponse

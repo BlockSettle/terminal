@@ -408,7 +408,8 @@ void BSTerminalMainWindow::InitPortfolioView()
 
 void BSTerminalMainWindow::InitWalletsView()
 {
-   ui->widgetWallets->init(walletsManager_, signContainer_, applicationSettings_, assetManager_, authManager_, armory_);
+   ui->widgetWallets->init(logMgr_->logger("ui"), walletsManager_, signContainer_
+      , applicationSettings_, assetManager_, authManager_, armory_);
 }
 
 void BSTerminalMainWindow::InitTransactionsView()
@@ -1003,9 +1004,9 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
-         EnterWalletPassword passwordDialog(rootWallet ? rootWallet->getWalletId() : walletId
-            , applicationSettings_, keyRank, encTypes, encKeys
-            , QString::fromStdString(prompt), QString(), this);
+         EnterWalletPassword passwordDialog(MobileClientRequest::SignWallet, this);
+         passwordDialog.init(rootWallet ? rootWallet->getWalletId() : walletId
+            , keyRank, encTypes, encKeys, applicationSettings_, QString::fromStdString(prompt));
          if (passwordDialog.exec() == QDialog::Accepted) {
             password = passwordDialog.GetPassword();
             cancelledByUser = false;

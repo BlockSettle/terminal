@@ -2,7 +2,8 @@
 #define __ENTER_OTP_PASSWORD_DIALOG_H__
 
 #include <QDialog>
-#include "FrejaREST.h"
+
+#include "EncryptionUtils.h"
 
 namespace Ui {
     class EnterOTPPasswordDialog;
@@ -24,16 +25,15 @@ protected:
 
 private slots:
    void passwordChanged();
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &);
-   void onFrejaStatusUpdated(const QString &);
-   void frejaTimer();
+   void onAuthSucceeded(SecureBinaryData);
+   void onAuthFailed(const QString &);
+   void onAuthStatusUpdated(const QString &);
+   void authTimer();
 
 private:
    std::unique_ptr<Ui::EnterOTPPasswordDialog> ui_;
    SecureBinaryData  password_;
-   FrejaSignOTP      freja_;
-   QTimer *frejaTimer_;
+   QTimer *authTimer_;
 };
 
 #endif // __ENTER_OTP_PASSWORD_DIALOG_H__

@@ -6,7 +6,6 @@
 
 #include <QDialog>
 
-#include "FrejaREST.h"
 #include "EncryptionUtils.h"
 
 
@@ -30,18 +29,17 @@ public:
 private slots:
    void accept() override;
    void keyTextChanged();
-   void onFrejaIdChanged(const QString &);
-   void startFrejaSign();
-   void onFrejaSucceeded(SecureBinaryData);
-   void onFrejaFailed(const QString &text);
-   void onFrejaStatusUpdated(const QString &status);
+   void onAuthIdChanged(const QString &);
+   void startAuthSign();
+   void onAuthSucceeded(SecureBinaryData);
+   void onAuthFailed(const QString &text);
+   void onAuthStatusUpdated(const QString &status);
    void updateAcceptButton();
 
 private:
    std::unique_ptr<Ui::OTPImportDialog> ui_;
    std::shared_ptr<OTPManager>   otpManager_;
    std::shared_ptr<EasyCoDec>    easyCodec_;
-   FrejaSignOTP                  frejaSign_;
    SecureBinaryData              otpPassword_;
    std::unique_ptr<EasyEncValidator>   validator_;
    std::string hexKey_;

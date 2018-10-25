@@ -207,14 +207,16 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged()
    case AddressVerificationState::Verified: {
          text = sValid;
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId());
-         ui_->widgetSubmitKeys->init(rootWallet->getWalletId(), keyRank_, encTypes_, encKeys_, appSettings_);
+         ui_->widgetSubmitKeys->init(MobileClientRequest::SignWallet, rootWallet->getWalletId()
+            , keyRank_, encTypes_, encKeys_, appSettings_);
          ui_->widgetSubmitKeys->setFocus();
          // tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security)).arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out"))
 
          if (clientSells_ && !sellFromPrimary_) {
             auto authWallet = walletsManager_->GetAuthWallet();
             auto rootAuthWallet = walletsManager_->GetHDRootForLeaf(authWallet->GetWalletId());
-            ui_->widgetSubmitKeysAuth->init(rootAuthWallet->getWalletId(), keyRankAuth_, encTypesAuth_, encKeysAuth_, appSettings_);
+            ui_->widgetSubmitKeysAuth->init(MobileClientRequest::SignWallet
+               , rootAuthWallet->getWalletId(), keyRankAuth_, encTypesAuth_, encKeysAuth_, appSettings_);
          }
          QApplication::processEvents();
          adjustSize();
@@ -287,7 +289,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       // addDetailRow(tr("Number of inputs"), tr("<b>%L1</b>")
       //    .arg(QString::number(transactionData_->GetTransactionSummary().usedTransactions)));
 
-      ui_->labelHintPassword->setText(tr("Enter Password and Accept to send Pay-In"));
+      ui_->labelHintPassword->setText(tr("Enter Password and press \"Accept\" to send Pay-In"));
 
       if (!transactionData_->IsTransactionValid()) {
          userKeyOk_ = false;
@@ -301,7 +303,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       //    .arg(QString::fromStdString(transactionData_->GetWallet()->GetWalletId())));
       // addDetailRow(tr("Receiving address"), tr("<b>%1</b>").arg(recvAddr_.display()));
 
-      ui_->labelHintPassword->setText(tr("Enter Password and Accept to send Pay-Out to dealer"));
+      ui_->labelHintPassword->setText(tr("Enter Password and press \"Accept\" to send Pay-Out to dealer"));
 
       dealerTx_ = BinaryData::CreateFromHex(quote.dealerTransaction);
    }

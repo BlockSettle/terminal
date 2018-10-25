@@ -105,7 +105,9 @@ QMainWindow {
 
 *[titlePaneSecondary="true"] {
   background-color: #1c2835;
-  color: #247dac; }
+  color: #247dac;
+  /* resize dialog's title label so its background is almost always visible (because we don't use layout in title)*/
+  min-width: 2000px; }
 
 *[titlePaneImportant="true"] {
   background-color: #1c2835;
@@ -984,11 +986,11 @@ QDateEdit::drop-down {
   border-bottom-right-radius: 0;
   color: #0b1619; }
 
-QComboBox#comboBoxFrejaId::drop-down {
+QComboBox#comboBoxAuthId::drop-down {
   width: 0px;
   border-width: 0px; }
 
-QComboBox#comboBoxFrejaId::down-arrow {
+QComboBox#comboBoxAuthId::down-arrow {
   image: none; }
 
 QComboBox::down-arrow {
