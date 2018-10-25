@@ -9,6 +9,9 @@ Linux x64 (Ubuntu), MacOS X, Windows x64 with VS2015 or VS2017 15.7.3 or up.
 * Install YASM from https://yasm.tortall.net/Download.html (download Win64 ZIP archive and unpack it to c:\Program Files\yasm)
 * Install ActiveState Perl (https://www.activestate.com/ActivePerl)
 * Install NASM (http://www.nasm.us) and add it to global PATH variable
+* Install Visual Studio 2017 with 'Desktop development with C++', C++/CLI Support
+* Create an environment variable called DEV_3RD_ROOT and set it to a path where you want to place all the 3rd party libraries. Make the path short and without spaces. eg. c:\BlockSettle\external
+* Use 'x64 Native Tools Command Prompt for VS 2017' for executing SET CL and python scripts
 * Execute `SET CL=/D_ENABLE_EXTENDED_ALIGNED_STORAGE` in the console
 
 ## Ubuntu
