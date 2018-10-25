@@ -94,6 +94,8 @@ void CelerMarketDataProvider::OnConnectedToCeler()
          logger_->error("[CelerMarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
             , ccyPair);
       } else {
+         logger_->debug("[CelerMarketDataProvider::OnConnectedToCeler] add FX pair: {}", ccyPair);
+
          emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotFX});
          emit MDUpdate(bs::network::Asset::Type::SpotFX, QString::fromStdString(ccyPair), {});
       }
@@ -105,6 +107,8 @@ void CelerMarketDataProvider::OnConnectedToCeler()
          logger_->error("[CelerMarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
             , ccyPair);
       } else {
+         logger_->debug("[CelerMarketDataProvider::OnConnectedToCeler] add XBT pair: {}", ccyPair);
+
          emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotXBT});
          emit MDUpdate(bs::network::Asset::Type::SpotXBT, QString::fromStdString(ccyPair), {});
       }
