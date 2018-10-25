@@ -1,6 +1,7 @@
 #include "ApplicationSettings.h"
 
 #include "BlockDataManagerConfig.h"
+#include "EncryptionUtils.h"
 #include "FastLock.h"
 
 #include <QCommandLineParser>
@@ -68,6 +69,9 @@ static const int ArmoryDefaultTestPort = 19001;
 ApplicationSettings::ApplicationSettings(const QString &appName
    , const QString& rootDir)
    : settings_(QSettings::IniFormat, QSettings::UserScope, SettingsCompanyName, appName)
+   , domain_("secp256k1")
+   , authPrivKey_(rng_, domain_, Botan::BigInt{})
+   , authPubKey_(domain_, Botan::PointGFp{})
 {
    if (rootDir.isEmpty()) {
       commonRoot_ = AppendToWritableDir(QLatin1String(".."));
@@ -136,7 +140,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { AdvancedTxDialogByDefault,        SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
       { TransactionFilter,                SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) },
       { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
-      { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) }
+      { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
+      { authPrivKey,             SettingDef(QLatin1String("AuthPrivKey")) }
    };
 }
 
@@ -626,4 +631,21 @@ bs::LogLevel ApplicationSettings::parseLogLevel(QString level) const
       return bs::LogLevel::crit;
    }
    return bs::LogLevel::off;
+}
+
+std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> ApplicationSettings::GetAuthKeys()
+{
+   if ((authPrivKey_.key_length() == 32) && authPubKey_.key_length()) {
+      return { authPrivKey_, authPubKey_ };
+   }
+   SecureBinaryData privKey = BinaryData::CreateFromHex(get<std::string>(authPrivKey));
+   if (privKey.isNull()) {
+      privKey = SecureBinaryData().GenerateRandom(32);
+      set(authPrivKey, QString::fromStdString(privKey.toHexStr()));
+   }
+   const Botan::BigInt privKeyValue(privKey.getPtr(), privKey.getSize());
+   authPrivKey_ = Botan::ECDH_PrivateKey(rng_, domain_, privKeyValue);
+   const auto publicKeyValue = authPrivKey_.public_point().encode(Botan::PointGFp::COMPRESSED);
+   authPubKey_ = Botan::ECDH_PublicKey(domain_, Botan::OS2ECP(publicKeyValue, domain_.get_curve()));
+   return { authPrivKey_, authPubKey_ };
 }

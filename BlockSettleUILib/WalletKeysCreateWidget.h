@@ -21,6 +21,7 @@ public:
       HideWidgetContol = 0x02,
       HideGroupboxCaption = 0x04,
       SetPasswordLabelAsNew = 0x08,
+      HidePubKeyFingerprint = 0x10
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

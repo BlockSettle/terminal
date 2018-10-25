@@ -2,6 +2,7 @@
 #include "ui_WalletKeysCreateWidget.h"
 #include <set>
 #include <QSpinBox>
+#include <botan/hash.h>
 #include "WalletKeyWidget.h"
 #include "ApplicationSettings.h"
 
@@ -57,7 +58,9 @@ void WalletKeysCreateWidget::init(MobileClientRequest requestType
 void WalletKeysCreateWidget::addKey(bool password)
 {
    assert(!walletId_.empty());
-   auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password, this);
+   const auto &authKeys = appSettings_->GetAuthKeys();
+   auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password
+      , authKeys, this);
    widget->init(appSettings_, username_);
    if (flags_ & HideAuthConnectButton) {
       widget->setHideAuthConnect(true);
@@ -65,6 +68,18 @@ void WalletKeysCreateWidget::addKey(bool password)
    if (flags_ & SetPasswordLabelAsNew) {
       widget->setPasswordLabelAsNew();
    }
+
+   if (flags_ & HidePubKeyFingerprint) {
+      ui_->labelPubKeyFP->hide();
+   }
+   else {
+      std::unique_ptr<Botan::HashFunction> hash(Botan::HashFunction::create("SHA-256"));
+      hash->update(authKeys.second.public_value());
+      const auto &hashVal = hash->final();
+      std::string strHash(hashVal.begin(), hashVal.end());
+      ui_->labelPubKeyFP->setText(QString::fromStdString(BinaryData(strHash).toHexStr()));
+   }
+
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysCreateWidget::onEncKeyChanged);

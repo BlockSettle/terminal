@@ -2,6 +2,8 @@
 #include "ui_WalletKeysSubmitWidget.h"
 #include <set>
 #include <QFrame>
+#include <botan/hash.h>
+#include "ApplicationSettings.h"
 #include "WalletKeyWidget.h"
 
 
@@ -85,7 +87,8 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
       ui_->groupBox->layout()->addWidget(separator);
    }
 
-   auto widget = new WalletKeyWidget(requestType_, walletId_, pwdData_.size(), password, this);
+   const auto &authKeys = appSettings_->GetAuthKeys();
+   auto widget = new WalletKeyWidget(requestType_, walletId_, pwdData_.size(), password, authKeys, this);
    widget->init(appSettings_, QString());
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysSubmitWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysSubmitWidget::onKeyChanged);
@@ -112,6 +115,17 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    }
    if (flags_ & HideAuthControlsOnSignClicked) {
       widget->setHideAuthControlsOnSignClicked(true);
+   }
+
+   if (flags_ & HidePubKeyFingerprint) {
+      ui_->labelPubKeyFP->hide();
+   }
+   else {
+      std::unique_ptr<Botan::HashFunction> hash(Botan::HashFunction::create("SHA-256"));
+      hash->update(authKeys.second.public_value());
+      const auto &hashVal = hash->final();
+      std::string strHash(hashVal.begin(), hashVal.end());
+      ui_->labelPubKeyFP->setText(QString::fromStdString(BinaryData(strHash).toHexStr()));
    }
 
    ui_->groupBox->layout()->addWidget(widget);
