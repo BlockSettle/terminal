@@ -24,7 +24,8 @@ public:
       AuthIdVisible = 0x10,
       SetPasswordLabelAsOld = 0x20,
       HideAuthEmailLabel = 0x40,
-      HideAuthControlsOnSignClicked = 0x80
+      HideAuthControlsOnSignClicked = 0x80,
+      HidePubKeyFingerprint = 0x100
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

@@ -1,8 +1,7 @@
 #include "MobileClient.h"
-
+#include <botan/point_gfp.h>
 #include <spdlog/spdlog.h>
 #include <QDebug>
-#include <cryptopp/osrng.h>
 #include "ConnectionManager.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
@@ -20,22 +19,19 @@ namespace
    const std::string kServerPubKey = "ArtQBOQrA2z7oIrCHwqq/yh/0F8rozWTGWvk3RL92fbu";
 }
 
-MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
+MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
+   , const std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> &authKeys
+   , QObject *parent)
    : QObject(parent)
    , logger_(logger)
-   , ownPrivKey_(fromBase64(kPrivateKey))
-   , serverPubKey_(CryptoECDSA().UncompressPoint(fromBase64(kServerPubKey)))
+   , authKeys_(authKeys)
+   , domain_("secp256k1")
+   , eciesParams_(domain_, "KDF2(SHA-256)", "ChaCha(20)", 32, "HMAC(SHA-256)", 20,
+      Botan::PointGFp::COMPRESSED, Botan::ECIES_Flags::NONE)
+   , serverPubKey_(domain_, Botan::OS2ECP(fromBase64(kServerPubKey), domain_.get_curve()))
 {
    connectionManager_.reset(new ConnectionManager(logger));
 
-   // NOTE: Don't forget to change AuthApp code!
-   CryptoPP::InvertibleRSAFunction parameters;
-   parameters.GenerateRandomWithKeySize(rng_, 2048);
-   privateKey_ = CryptoPP::RSA::PrivateKey(parameters);
-   CryptoPP::RSA::PublicKey publicKey = CryptoPP::RSA::PublicKey(parameters);
-
-   CryptoPP::StringSink sink(publicKey_);
-   publicKey.Save(sink);
 }
 
 std::string MobileClient::toBase64(const std::string &s)
@@ -43,9 +39,10 @@ std::string MobileClient::toBase64(const std::string &s)
    return QByteArray::fromStdString(s).toBase64().toStdString();
 }
 
-std::string MobileClient::fromBase64(const std::string &s)
+std::vector<uint8_t> MobileClient::fromBase64(const std::string &s)
 {
-   return QByteArray::fromBase64(QByteArray::fromStdString(s)).toStdString();
+   const auto &str = QByteArray::fromBase64(QByteArray::fromStdString(s)).toStdString();
+   return std::vector<uint8_t>(str.begin(), str.end());
 }
 
 void MobileClient::init(const std::string &serverPubKey
@@ -74,33 +71,28 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
 {
    RequestEnvelope envelope;
    envelope.set_type(type);
-   envelope.set_publickey(publicKey_);
+   const auto &vPubKey = authKeys_.second.public_value();
+   envelope.set_publickey(std::string(vPubKey.begin(), vPubKey.end()));
    envelope.set_userid(email_);
    envelope.set_usertag(tag_);
    envelope.set_apikey(kServerApiKey);
 
-   const auto signature = CryptoECDSA().SignData(payload, ownPrivKey_);
-   envelope.set_signature(QByteArray::fromStdString(signature.toBinStr()).toBase64().toStdString());
+   Botan::ECIES_Encryptor encryptor(rng_, eciesParams_);
+   encryptor.set_other_key(serverPubKey_.public_point());
+   const auto iv = std::vector<uint8_t>(0, 0);
+   encryptor.set_initialization_vector(iv);
 
-   const auto password = SecureBinaryData().GenerateRandom(16);
-   const auto parsedPubKey = CryptoECDSA::ParsePublicKey(serverPubKey_);
-   CryptoPP::ECIES<CryptoPP::ECP, CryptoPP::SHA256>::Encryptor encryptor(parsedPubKey);
-   std::string encPass;
-   CryptoPP::StringSource ss1(password.toBinStr(), true
-      , new CryptoPP::PK_EncryptorFilter(rng_, encryptor, new CryptoPP::StringSink(encPass)));
+   Botan::secure_vector<uint8_t> payloadData(payload.begin(), payload.end());
+   const auto &encData = encryptor.encrypt(payloadData, rng_);
 
-   SecureBinaryData iv(BTC_AES::BLOCKSIZE);
-   BinaryData paddedPayload = payload;
-   PadData(paddedPayload);
-   const auto encPayload = CryptoAES().EncryptCBC(paddedPayload, password, iv);
-   if (encPayload.isNull()) {
+   if (encData.empty()) {
       logger_->error("failed to encrypt payload");
       emit failed(tr("failed to encrypt payload"));
       return false;
    }
-
-   envelope.set_encryptedpass(toBase64(encPass));
-   envelope.set_payload(toBase64(encPayload.toBinStr()));
+   const std::string encPayload(encData.begin(), encData.end());
+//   envelope.set_payload(encPayload);   // toBase64?
+   envelope.set_payload(payload);
 
    return connection_->send(envelope.SerializeAsString());
 }
@@ -165,48 +157,31 @@ void MobileClient::updateServer(const string &deviceId, const string &walletId, 
 // Called from background thread!
 void MobileClient::processGetKeyReply(const std::string &payload, uint64_t tag)
 {
-   GetDeviceKeyReply reply;
-   if (!reply.ParseFromString(payload)) {
-      logger_->error("Can't decode MobileAppGetKeyResponse packet");
-      emit failed(tr("Can't decode packet from AuthServer"));
-      return;
-   }
-
    if (tag != tag_) {
       logger_->warn("Skip AuthApp response with unknown tag");
       return;
    }
 
+   Botan::ECIES_Decryptor decryptor(authKeys_.first, eciesParams_, rng_);
+   const auto iv = std::vector<uint8_t>(0, 0);
+   decryptor.set_initialization_vector(iv);
+
+   const BinaryData encData(payload);
+   const auto &decrypted = decryptor.decrypt(encData.getPtr(), encData.getSize());
+   const std::string decPayload(decrypted.begin(), decrypted.end());
+
+   GetDeviceKeyReply reply;
+   if (!reply.ParseFromString(decPayload)) {
+      logger_->error("Can't decode MobileAppGetKeyResponse packet");
+      emit failed(tr("Can't decode packet from AuthServer"));
+      return;
+   }
    if (reply.key().empty() || reply.deviceid().empty()) {
-      emit failed(tr("Canceled"));
+      emit failed(tr("Cancelled"));
       return;
    }
 
-   // NOTE: Don't forget to change AuthApp code if algorithm or parameters is changed!
-
-   CryptoPP::SecByteBlock key(kKeySize);
-   try {
-      CryptoPP::RSAES_PKCS1v15_Decryptor d(privateKey_);
-
-      // CryptoPP takes ownership of raw pointers
-      auto sink = new CryptoPP::ArraySink(key.begin(), key.size());
-      auto filter = new CryptoPP::PK_DecryptorFilter(rng_, d, sink);
-      CryptoPP::ArraySource(reinterpret_cast<const uint8_t*>(reply.key().data())
-         , reply.key().size(), true, filter);
-
-      if (sink->TotalPutLength() != kKeySize) {    // for some reason this always fails
-         logger_->warn("Got key with invalid size {}", std::to_string(sink->TotalPutLength()));
-      }
-
-   } catch (const std::exception &e) {
-      logger_->error("CryptoPP decrypt error: {}", e.what());
-      emit failed(tr("CryptoPP decrypt error"));
-      return;
-   }
-
-   SecureBinaryData keyCopy(key.data(), key.size());
-
-   emit succeeded(reply.deviceid(), keyCopy);
+   emit succeeded(reply.deviceid(), reply.key());
 }
 
 void MobileClient::processUpdateDeviceWalletReply(const string &payload, uint64_t tag)
@@ -244,19 +219,6 @@ void MobileClient::OnDataReceived(const string &data)
       else {
          logger_->error("No payload received from AuthServer");
          emit failed(tr("Missing payload from AuthServer"));
-         return;
-      }
-   }
-   else {
-      const SecureBinaryData signature = QByteArray::fromBase64(QByteArray::fromStdString(envelope.signature())).toStdString();
-      if (signature.isNull()) {
-         logger_->error("No payload signature from AuthServer");
-         emit failed(tr("Missing payload signature from AuthServer"));
-         return;
-      }
-      if (!CryptoECDSA().VerifyData(envelope.payload(), signature, serverPubKey_)) {
-         logger_->error("failed to verify server reply");
-         emit failed(tr("server signature not verified"));
          return;
       }
    }

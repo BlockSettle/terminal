@@ -28,7 +28,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
    , wallet_(wallet)
    , oldKeyRank_(keyRank)
    , appSettings_(appSettings)
-   , updateServerClient_(logger)
+   , updateServerClient_(logger, appSettings->GetAuthKeys())
 {
    ui_->setupUi(this);
 
@@ -43,14 +43,14 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
    connect(signingContainer_.get(), &SignContainer::PasswordChanged, this, &ChangeWalletPasswordDialog::onPasswordChanged);
 
    deviceKeyOld_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletOldDevice
-      , wallet->getWalletId(), 0, false, this);
+      , wallet->getWalletId(), 0, false, appSettings->GetAuthKeys(), this);
    deviceKeyOld_->setFixedType(true);
    deviceKeyOld_->setEncryptionKeys(encKeys);
    deviceKeyOld_->setHideAuthConnect(true);
    deviceKeyOld_->setHideAuthCombobox(true);
 
    deviceKeyNew_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletNewDevice
-      , wallet->getWalletId(), 0, false, this);
+      , wallet->getWalletId(), 0, false, appSettings->GetAuthKeys(), this);
    deviceKeyNew_->setFixedType(true);
    deviceKeyNew_->setEncryptionKeys(encKeys);
    deviceKeyNew_->setHideAuthConnect(true);

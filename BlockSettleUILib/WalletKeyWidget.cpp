@@ -23,13 +23,14 @@ const QColor kFailColor = Qt::red;
 
 
 WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
-   , int index, bool password, QWidget* parent)
+   , int index, bool password, const std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> &authKeys
+   , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::WalletKeyWidget())
    , walletId_(walletId), index_(index)
    , password_(password)
 //   , prompt_(prompt)
-   , mobileClient_(new MobileClient(spdlog::get(""), this))
+   , mobileClient_(new MobileClient(spdlog::get(""), authKeys, this))
    , requestType_(requestType)
 {
    ui_->setupUi(this);
