@@ -123,6 +123,8 @@ enum CelerMessageType
    FindAllSecurityDefinitionsType,
    SecurityDefinitionDownstreamEventType,
 
+   FindAllSecurityListingsRequestType,
+
    CelerMessageTypeLast,
    UndefinedType = CelerMessageTypeLast
 };

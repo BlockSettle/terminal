@@ -97,7 +97,8 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.staticdata.api.security.UpstreamSecurityProto$CreateSecurityListingRequest", CreateSecurityListingRequestType},
    { "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent", SecurityListingDownstreamEventType},
    { "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions", FindAllSecurityDefinitionsType},
-   { "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent", SecurityDefinitionDownstreamEventType}
+   { "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent", SecurityDefinitionDownstreamEventType},
+   { "com.celertech.staticdata.api.security.UpstreamSecurityProto$FindAllSecurityListingsRequest", FindAllSecurityListingsRequestType}
 };
 
 static const std::unordered_map<int, std::string> typeToName = {
@@ -193,7 +194,8 @@ static const std::unordered_map<int, std::string> typeToName = {
    { CreateSecurityListingRequestType, "com.celertech.staticdata.api.security.UpstreamSecurityProto$CreateSecurityListingRequest"},
    { SecurityListingDownstreamEventType, "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent"},
    { FindAllSecurityDefinitionsType, "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions"},
-   { SecurityDefinitionDownstreamEventType, "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent"}
+   { SecurityDefinitionDownstreamEventType, "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent"},
+   { FindAllSecurityListingsRequestType, "com.celertech.staticdata.api.security.UpstreamSecurityProto$FindAllSecurityListingsRequest"}
 };
 
 std::string GetMessageClass(CelerMessageType messageType)

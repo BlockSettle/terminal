@@ -1,6 +1,7 @@
 #include "CelerMarketDataProvider.h"
 
 #include "CelerClient.h"
+#include "CelerLoadMDDefinitionsSequence.h"
 #include "CelerSubscribeToMDSequence.h"
 #include "CommonTypes.h"
 #include "ConnectionManager.h"
@@ -81,6 +82,12 @@ void CelerMarketDataProvider::ConnectToCelerClient()
 
 void CelerMarketDataProvider::OnConnectedToCeler()
 {
+   // load definitions for debug purpose
+   auto loadDefinitions = std::make_shared<CelerLoadMDDefinitionsSequence>(logger_);
+   if (!celerClient_->ExecuteSequence(loadDefinitions)) {
+      logger_->debug("[CelerMarketDataProvider::OnConnectedToCeler] failed to send find request");
+   }
+
    std::vector<std::string> fxPairs{"EUR/GBP", "EUR/SEK", "GBP/SEK", "EUR/JPY", "GBP/JPY", "JPY/SEK"};
    const std::vector<std::string> xbtPairs{"XBT/GBP", "XBT/EUR", "XBT/SEK", "XBT/JPY"};
 
