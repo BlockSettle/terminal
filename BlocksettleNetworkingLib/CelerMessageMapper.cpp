@@ -95,7 +95,9 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.marketwarehouse.api.configuration.UpstreamWarehouseConfigurationProto$CreateWarehouseConfigurationRequest", CreateWarehouseConfigurationRequestType},
    { "com.celertech.marketwarehouse.api.configuration.DownstreamWarehouseConfigurationProto$WarehouseConfigurationDownstreamEvent", WarehouseConfigurationDownstreamEventType},
    { "com.celertech.staticdata.api.security.UpstreamSecurityProto$CreateSecurityListingRequest", CreateSecurityListingRequestType},
-   { "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent", SecurityListingDownstreamEventType}
+   { "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent", SecurityListingDownstreamEventType},
+   { "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions", FindAllSecurityDefinitionsType},
+   { "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent", SecurityDefinitionDownstreamEventType}
 };
 
 static const std::unordered_map<int, std::string> typeToName = {
@@ -189,7 +191,9 @@ static const std::unordered_map<int, std::string> typeToName = {
    { CreateWarehouseConfigurationRequestType , "com.celertech.marketwarehouse.api.configuration.UpstreamWarehouseConfigurationProto$CreateWarehouseConfigurationRequest"},
    { WarehouseConfigurationDownstreamEventType, "com.celertech.marketwarehouse.api.configuration.DownstreamWarehouseConfigurationProto$WarehouseConfigurationDownstreamEvent"},
    { CreateSecurityListingRequestType, "com.celertech.staticdata.api.security.UpstreamSecurityProto$CreateSecurityListingRequest"},
-   { SecurityListingDownstreamEventType, "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent"}
+   { SecurityListingDownstreamEventType, "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent"},
+   { FindAllSecurityDefinitionsType, "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions"},
+   { SecurityDefinitionDownstreamEventType, "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent"}
 };
 
 std::string GetMessageClass(CelerMessageType messageType)
