@@ -7,7 +7,7 @@ static WalletInfo::EncryptionType mapEncType(bs::wallet::EncryptionType encType)
 {
    switch (encType) {
    case bs::wallet::EncryptionType::Password:      return WalletInfo::Password;
-   case bs::wallet::EncryptionType::Freja:         return WalletInfo::Freja;
+   case bs::wallet::EncryptionType::Auth:          return WalletInfo::Auth;
    case bs::wallet::EncryptionType::Unencrypted:
    default:    return WalletInfo::Unencrypted;
    }

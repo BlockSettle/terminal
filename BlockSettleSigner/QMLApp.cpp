@@ -5,7 +5,7 @@
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
-#include "FrejaProxy.h"
+#include "AuthProxy.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
 #include "HDWallet.h"
@@ -45,9 +45,9 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
-   qmlRegisterUncreatableType<FrejaProxy>("com.blocksettle.FrejaProxy", 1, 0,
-      "FrejaProxy", QStringLiteral("Cannot create a FrejaProxy instance"));
-   qmlRegisterType<FrejaSignWalletObject>("com.blocksettle.FrejaSignWalletObject", 1, 0, "FrejaSignWalletObject");
+   qmlRegisterUncreatableType<AuthProxy>("com.blocksettle.AuthProxy", 1, 0,
+      "AuthProxy", QStringLiteral("Cannot create a AuthProxy instance"));
+   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
    qmlRegisterType<WalletSeed>("com.blocksettle.WalletSeed", 1, 0, "WalletSeed");
@@ -80,8 +80,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       }
    });
 
-   frejaProxy_ = std::make_shared<FrejaProxy>(logger_);
-   ctxt_->setContextProperty(QStringLiteral("freja"), frejaProxy_.get());
+   authProxy_ = std::make_shared<AuthProxy>(logger_);
+   ctxt_->setContextProperty(QStringLiteral("auth"), authProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
