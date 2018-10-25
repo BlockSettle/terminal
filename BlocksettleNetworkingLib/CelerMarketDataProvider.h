@@ -71,7 +71,6 @@ private:
    std::shared_ptr<CelerClient>        celerClient_;
 
    std::unordered_map<std::string, std::string>    requests_;
-   std::unordered_map<std::string, bs::network::SecurityDef>   secDefs_;
    bool filterUsdProducts_;
 
    bool connectionToCelerCompleted_ = false;

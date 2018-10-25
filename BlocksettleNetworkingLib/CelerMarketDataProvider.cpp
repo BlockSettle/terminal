@@ -175,6 +175,13 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
       security = QString::fromStdString(response.securityid());
    }
 
+   if (!response.has_producttype()) {
+      logger_->error("[CelerMarketDataProvider::onFullSnapshot] update do not have product type: {}"
+         , response.DebugString());
+      // we do not reject message, we just ignore illformed updated
+      return true;
+   }
+
    bs::network::MDFields fields;
 
    for (int i=0; i < response.marketdatapricesnapshotlevel_size(); ++i) {
@@ -187,9 +194,7 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
       }
    }
 
-   const auto itSecDef = secDefs_.find(security.toStdString());
-   const auto assetType = (itSecDef == secDefs_.end()) ? bs::network::Asset::fromCelerProductType(response.producttype())
-      : itSecDef->second.assetType;
+   const auto assetType = bs::network::Asset::fromCelerProductType(response.producttype());
 
    emit MDUpdate(assetType, security, fields);
 

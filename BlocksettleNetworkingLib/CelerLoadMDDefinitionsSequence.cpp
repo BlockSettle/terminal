@@ -48,6 +48,9 @@ bool CelerLoadMDDefinitionsSequence::processResponse(const CelerMessage &message
       return false;
    }
 
+   logger_->debug("[CelerLoadMDDefinitionsSequence::processResponse] get {} payloads"
+      , response.payload_size());
+
    for (int i = 0; i < response.payload_size(); i++) {
       const auto& payload = response.payload(i);
 
