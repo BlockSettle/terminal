@@ -11,6 +11,8 @@
 
 #include "CommonTypes.h"
 
+#include "CelerCreateCCSecurityOnMDSequence.h"
+
 namespace spdlog
 {
    class logger;
@@ -39,6 +41,10 @@ public:
    bool DisconnectFromMDSource() override;
 
    bool IsConnectionActive() const override;
+
+   bool RegisterCCOnCeler(const std::string& securityId
+      , const std::string& serverExchangeId
+      , const CelerCreateCCSecurityOnMDSequence::callback_function& cb);
 
 protected:
    bool StartMDConnection() override;
