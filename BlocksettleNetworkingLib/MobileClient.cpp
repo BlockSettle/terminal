@@ -20,15 +20,12 @@ namespace
 }
 
 MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
-   , const std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> &authKeys
+   , const std::pair<autheid::PrivateKey, autheid::PublicKey> &authKeys
    , QObject *parent)
    : QObject(parent)
    , logger_(logger)
    , authKeys_(authKeys)
-   , domain_("secp256k1")
-   , eciesParams_(domain_, "KDF2(SHA-256)", "ChaCha(20)", 32, "HMAC(SHA-256)", 20,
-      Botan::PointGFp::COMPRESSED, Botan::ECIES_Flags::NONE)
-   , serverPubKey_(domain_, Botan::OS2ECP(fromBase64(kServerPubKey), domain_.get_curve()))
+   , serverPubKey_(autheid::publicKeyFromString(kServerPubKey))
 {
    connectionManager_.reset(new ConnectionManager(logger));
 
@@ -71,28 +68,16 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
 {
    RequestEnvelope envelope;
    envelope.set_type(type);
-   const auto &vPubKey = authKeys_.second.public_value();
-   envelope.set_publickey(std::string(vPubKey.begin(), vPubKey.end()));
+   envelope.set_rapubkey(autheid::publicKeyToString(authKeys_.second));
    envelope.set_userid(email_);
    envelope.set_usertag(tag_);
    envelope.set_apikey(kServerApiKey);
 
-   Botan::ECIES_Encryptor encryptor(rng_, eciesParams_);
-   encryptor.set_other_key(serverPubKey_.public_point());
-   const auto iv = std::vector<uint8_t>(0, 0);
-   encryptor.set_initialization_vector(iv);
+   const auto signature = autheid::signData(payload, authKeys_.first);
+   envelope.set_rasign(autheid::bytesToString(signature));
 
-   Botan::secure_vector<uint8_t> payloadData(payload.begin(), payload.end());
-   const auto &encData = encryptor.encrypt(payloadData, rng_);
-
-   if (encData.empty()) {
-      logger_->error("failed to encrypt payload");
-      emit failed(tr("failed to encrypt payload"));
-      return false;
-   }
-   const std::string encPayload(encData.begin(), encData.end());
-//   envelope.set_payload(encPayload);   // toBase64?
-   envelope.set_payload(payload);
+   const auto encPayload = autheid::encryptData(payload, serverPubKey_);
+   envelope.set_payload(autheid::bytesToString(encPayload));
 
    return connection_->send(envelope.SerializeAsString());
 }
@@ -162,16 +147,8 @@ void MobileClient::processGetKeyReply(const std::string &payload, uint64_t tag)
       return;
    }
 
-   Botan::ECIES_Decryptor decryptor(authKeys_.first, eciesParams_, rng_);
-   const auto iv = std::vector<uint8_t>(0, 0);
-   decryptor.set_initialization_vector(iv);
-
-   const BinaryData encData(payload);
-   const auto &decrypted = decryptor.decrypt(encData.getPtr(), encData.getSize());
-   const std::string decPayload(decrypted.begin(), decrypted.end());
-
    GetDeviceKeyReply reply;
-   if (!reply.ParseFromString(decPayload)) {
+   if (!reply.ParseFromString(payload)) {
       logger_->error("Can't decode MobileAppGetKeyResponse packet");
       emit failed(tr("Can't decode packet from AuthServer"));
       return;
@@ -212,7 +189,7 @@ void MobileClient::OnDataReceived(const string &data)
       return;
    }
 
-   if (envelope.payload().empty()) {
+   if (envelope.encpayload().empty()) {
       if (envelope.type() == HeartbeatType) {
          //TODO: handle heartbeat
       }
@@ -223,12 +200,15 @@ void MobileClient::OnDataReceived(const string &data)
       }
    }
 
+   const auto &decrypted = autheid::decryptData(envelope.encpayload(), authKeys_.first);
+   const std::string decPayload(decrypted.begin(), decrypted.end());
+
    switch (envelope.type()) {
    case GetDeviceKeyType:
-      processGetKeyReply(envelope.payload(), envelope.usertag());
+      processGetKeyReply(decPayload, envelope.usertag());
       break;
    case UpdateDeviceWalletType:
-      processUpdateDeviceWalletReply(envelope.payload(), envelope.usertag());
+      processUpdateDeviceWalletReply(decPayload, envelope.usertag());
       break;
    default:
       logger_->warn("Got unknown packet type from AuthServer {}", envelope.type());

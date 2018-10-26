@@ -8,6 +8,7 @@
 #include "EncryptionUtils.h"
 #include "MobileClientRequestType.h"
 #include "ZmqSecuredDataConnection.h"
+#include "EncryptUtils.h"
 #include "rp_api.pb.h"
 
 namespace spdlog {
@@ -22,7 +23,7 @@ class MobileClient : public QObject, public DataConnectionListener
    Q_OBJECT
 public:
    MobileClient(const std::shared_ptr<spdlog::logger> &
-      , const std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> &
+      , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
       , QObject *parent = nullptr);
    ~MobileClient() override;
 
@@ -59,11 +60,8 @@ private:
    std::string email_;
    std::string walletId_;
 
-   std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> authKeys_;
-   const Botan::EC_Group            domain_;
-   Botan::AutoSeeded_RNG            rng_;
-   const Botan::ECIES_System_Params eciesParams_;
-   const Botan::ECDH_PublicKey      serverPubKey_;
+   std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
+   const autheid::PublicKey   serverPubKey_;
 };
 
 #endif // __MOBILE_CLIENT_H__

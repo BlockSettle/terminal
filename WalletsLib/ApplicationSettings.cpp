@@ -69,9 +69,6 @@ static const int ArmoryDefaultTestPort = 19001;
 ApplicationSettings::ApplicationSettings(const QString &appName
    , const QString& rootDir)
    : settings_(QSettings::IniFormat, QSettings::UserScope, SettingsCompanyName, appName)
-   , domain_("secp256k1")
-   , authPrivKey_(rng_, domain_, Botan::BigInt{})
-   , authPubKey_(domain_, Botan::PointGFp{})
 {
    if (rootDir.isEmpty()) {
       commonRoot_ = AppendToWritableDir(QLatin1String(".."));
@@ -633,19 +630,22 @@ bs::LogLevel ApplicationSettings::parseLogLevel(QString level) const
    return bs::LogLevel::off;
 }
 
-std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> ApplicationSettings::GetAuthKeys()
+std::pair<autheid::PrivateKey, autheid::PublicKey> ApplicationSettings::GetAuthKeys()
 {
-   if ((authPrivKey_.key_length() == 32) && authPubKey_.key_length()) {
+   if (!authPrivKey_.empty() && !authPubKey_.empty()) {
       return { authPrivKey_, authPubKey_ };
    }
+
    SecureBinaryData privKey = BinaryData::CreateFromHex(get<std::string>(authPrivKey));
-   if (privKey.isNull()) {
-      privKey = SecureBinaryData().GenerateRandom(32);
-      set(authPrivKey, QString::fromStdString(privKey.toHexStr()));
+   if (privKey.getSize() == autheid::kPrivateKeySize) {
+      const auto sPrivKey = privKey.toBinStr();
+      authPrivKey_ = autheid::SecureBytes(sPrivKey.begin(), sPrivKey.end());
    }
-   const Botan::BigInt privKeyValue(privKey.getPtr(), privKey.getSize());
-   authPrivKey_ = Botan::ECDH_PrivateKey(rng_, domain_, privKeyValue);
-   const auto publicKeyValue = authPrivKey_.public_point().encode(Botan::PointGFp::COMPRESSED);
-   authPubKey_ = Botan::ECDH_PublicKey(domain_, Botan::OS2ECP(publicKeyValue, domain_.get_curve()));
+   else {
+      authPrivKey_ = autheid::generateSecureRandom(autheid::kPrivateKeySize);
+      const std::string sPrivKey(authPrivKey_.begin(), authPrivKey_.end());
+      set(authPrivKey, QString::fromStdString(BinaryData(sPrivKey).toHexStr()));
+   }
+   authPubKey_ = autheid::getPublicKey(authPrivKey_);
    return { authPrivKey_, authPubKey_ };
 }

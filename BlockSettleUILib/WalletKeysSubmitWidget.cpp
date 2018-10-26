@@ -2,8 +2,9 @@
 #include "ui_WalletKeysSubmitWidget.h"
 #include <set>
 #include <QFrame>
-#include <botan/hash.h>
+#include <QtConcurrent/QtConcurrentRun>
 #include "ApplicationSettings.h"
+#include "MobileUtils.h"
 #include "WalletKeyWidget.h"
 
 
@@ -45,6 +46,29 @@ void WalletKeysSubmitWidget::init(MobileClientRequest requestType
    if (encTypes.empty()) {
       return;
    }
+
+   bool hasAuth = false;
+   for (const auto &encType : encTypes) {
+      if (encType == bs::wallet::EncryptionType::Auth) {
+         hasAuth = true;
+         break;
+      }
+   }
+   if ((flags_ & HidePubKeyFingerprint) || !hasAuth) {
+      ui_->labelPubKeyFP->hide();
+   }
+   else {
+      ui_->labelPubKeyFP->show();
+      QtConcurrent::run([this] {
+         const auto &authKeys = appSettings_->GetAuthKeys();
+         const auto &pubKeyFP = autheid::getPublicKeyFingerprint(authKeys.second);
+         const auto &sPubKeyFP = QString::fromStdString(autheid::toHexWithSeparators(pubKeyFP));
+         QMetaObject::invokeMethod(this, [this, sPubKeyFP] {
+            ui_->labelPubKeyFP->setText(sPubKeyFP);
+         });
+      });
+   }
+
    int encKeyIndex = 0;
    if (encTypes.size() == keyRank.first) {
       for (const auto &encType : encTypes) {
@@ -115,17 +139,6 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    }
    if (flags_ & HideAuthControlsOnSignClicked) {
       widget->setHideAuthControlsOnSignClicked(true);
-   }
-
-   if (flags_ & HidePubKeyFingerprint) {
-      ui_->labelPubKeyFP->hide();
-   }
-   else {
-      std::unique_ptr<Botan::HashFunction> hash(Botan::HashFunction::create("SHA-256"));
-      hash->update(authKeys.second.public_value());
-      const auto &hashVal = hash->final();
-      std::string strHash(hashVal.begin(), hashVal.end());
-      ui_->labelPubKeyFP->setText(QString::fromStdString(BinaryData(strHash).toHexStr()));
    }
 
    ui_->groupBox->layout()->addWidget(widget);
