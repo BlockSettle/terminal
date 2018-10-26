@@ -256,7 +256,8 @@ void CelerMarketDataProvider::onCCSecurityReceived(const bs::network::CCSecurity
    {
       FastLock locker{ccSymbolsListLocker_};
       if (loadedSymbols_.find(ccDef.securityId) != loadedSymbols_.end()) {
-         logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] already loaded. ignore");
+         logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] {} already loaded. ignore"
+            , ccDef.securityId);
          return;
       }
 
