@@ -67,8 +67,8 @@
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
-        <property name="headerPanel" stdset="0">
-         <bool>false</bool>
+        <property name="darkFrame" stdset="0">
+         <bool>true</bool>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <property name="spacing">
@@ -78,13 +78,13 @@
           <number>0</number>
          </property>
          <property name="topMargin">
-          <number>5</number>
+          <number>2</number>
          </property>
          <property name="rightMargin">
           <number>0</number>
          </property>
          <property name="bottomMargin">
-          <number>5</number>
+          <number>2</number>
          </property>
          <item>
           <spacer name="horizontalSpacer">
@@ -103,7 +103,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit"/>
+          <widget class="QLineEdit" name="searchBox"/>
          </item>
          <item>
           <spacer name="horizontalSpacer_2">
@@ -127,7 +127,7 @@
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <widget class="BlockDetailsWidget" name="Block"/>
         <widget class="TransactionDetailsWidget" name="Transaction"/>

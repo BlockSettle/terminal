@@ -32,46 +32,365 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Transaction Details</string>
+      <widget class="QFrame" name="gridFrame">
+       <property name="darkFrame" stdset="0">
+        <bool>true</bool>
        </property>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_2" columnstretch="2,8">
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>Inputs #</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="0">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>Fee per byte</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="1">
+           <widget class="QLabel" name="tranFeePerByte">
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLabel" name="tranConfirmations">
+            <property name="text">
+             <string>5</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Confirmations</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QLabel" name="tranHeight">
+            <property name="text">
+             <string>537014</string>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="0">
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>Size (kB)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>Height</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QLabel" name="tranNumInputs">
+            <property name="text">
+             <string>3</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>Date</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>Transaction ID</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="label_15">
+            <property name="text">
+             <string>Output</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Outputs #</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QLabel" name="tranOutput">
+            <property name="text">
+             <string>0.36742580</string>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="1">
+           <widget class="QLabel" name="tranSize">
+            <property name="text">
+             <string>0.253</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1">
+           <widget class="QLabel" name="tranFees">
+            <property name="text">
+             <string>0.00000000</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QLabel" name="tranNumOutputs">
+            <property name="text">
+             <string>2</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLabel" name="tranDate">
+            <property name="text">
+             <string>16-Aug-2018 10:26:53</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLabel" name="tranID">
+            <property name="text">
+             <string>58db13edb59702d70e82bd8ffdf185e86c38bf4f8759872a395fa7ade03fbdca</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_14">
+            <property name="text">
+             <string>Fees</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Transaction Details</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
-      <widget class="QTableView" name="tableTranDetails"/>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <layout class="QVBoxLayout" name="verticalLayout_4">
-         <item>
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Input</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTableView" name="tableTranInput"/>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <item>
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>Output</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTableView" name="tableTranOutput"/>
-         </item>
-        </layout>
-       </item>
-      </layout>
+      <widget class="QFrame" name="horizontalFrame">
+       <property name="darkFrame" stdset="0">
+        <bool>true</bool>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <property name="spacing">
+         <number>2</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Input</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTreeWidget" name="treeInput">
+            <property name="alternatingRowColors">
+             <bool>true</bool>
+            </property>
+            <column>
+             <property name="text">
+              <string>Type</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Address</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Amount</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Wallet</string>
+             </property>
+            </column>
+            <item>
+             <property name="text">
+              <string>Input</string>
+             </property>
+             <property name="text">
+              <string>1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr</string>
+             </property>
+             <property name="text">
+              <string>-0.00850000</string>
+             </property>
+             <property name="text">
+              <string>Settlement</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Input</string>
+             </property>
+             <property name="text">
+              <string>1Jmq3zuHAvEZwVhvZ2BxtncHjqV1wQzZb4</string>
+             </property>
+             <property name="text">
+              <string>0.28950000</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Input</string>
+             </property>
+             <property name="text">
+              <string>1At6NzBCpwMy6CvT4Z21jci91VYHgsCDED</string>
+             </property>
+             <property name="text">
+              <string>-0.07000000</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <item>
+              <property name="text">
+               <string>p2wsh</string>
+              </property>
+              <property name="text">
+               <string>83665705d49c8b231580c0c7b5f063fd9ea267a692b5674648f8ae827f262191</string>
+              </property>
+              <property name="text">
+               <string>700000</string>
+              </property>
+             </item>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Output</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTreeWidget" name="treeOutput">
+            <property name="alternatingRowColors">
+             <bool>true</bool>
+            </property>
+            <column>
+             <property name="text">
+              <string>Type</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Address</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Amount</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Wallet</string>
+             </property>
+            </column>
+            <item>
+             <property name="text">
+              <string>Output</string>
+             </property>
+             <property name="text">
+              <string>1GAjD7aZHDDohqN1toP4iB2WQtqHc43Cis</string>
+             </property>
+             <property name="text">
+              <string>+0.00942580</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Output</string>
+             </property>
+             <property name="text">
+              <string>1NqPXqDTeqaTiZJo1ZmJwb8fsHA9gW2Gch</string>
+             </property>
+             <property name="text">
+              <string>+0.35800000</string>
+             </property>
+             <item>
+              <property name="text">
+               <string>p2wsh</string>
+              </property>
+              <property name="text">
+               <string>bd22f5d19688233d1137005585e01a84c0e0bcb218a6ab3f3dab01f702ea6151</string>
+              </property>
+              <property name="text">
+               <string>358000</string>
+              </property>
+             </item>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
      </item>
     </layout>
    </item>

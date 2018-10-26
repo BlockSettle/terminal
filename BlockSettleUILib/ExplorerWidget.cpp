@@ -8,10 +8,8 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-	//m_testModel = new QStringListModel();
-	//QStringList list;
-	//list << "a" << "b" << "c";
-	//model->setStringList(list);
+	connect(ui->searchBox, &QLineEdit::returnPressed, this, &ExplorerWidget::onSearchStarted);
+	
 }
 
 ExplorerWidget::~ExplorerWidget() = default;
@@ -19,17 +17,20 @@ ExplorerWidget::~ExplorerWidget() = default;
 void ExplorerWidget::shortcutActivated(ShortcutType s)
 {
 	switch (s) {
-	case ShortcutType::Alt_1: {
-
-	}
-							  break;
-
-	case ShortcutType::Alt_2: {
-
-	}
-							  break;
 
 	default:
 		break;
+	}
+}
+
+void ExplorerWidget::onSearchStarted()
+{
+	ui->stackedWidget->count();
+	int index = ui->stackedWidget->currentIndex();
+	if (index < ui->stackedWidget->count() - 1)	{
+		ui->stackedWidget->setCurrentIndex(++index);
+	}
+	else {
+		ui->stackedWidget->setCurrentIndex(0);
 	}
 }

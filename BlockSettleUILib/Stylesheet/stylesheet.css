@@ -1157,6 +1157,10 @@ QFrame[frameShape="5"] {
     height: 1px;
     background: #247dac; }
 
+QFrame[darkFrame="true"] {
+    background-color: #1c2835;
+}
+
 QRadioButton::indicator {
   width: 16px;
   height: 16px; }

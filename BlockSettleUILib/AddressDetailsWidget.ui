@@ -15,34 +15,218 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0">
    <property name="spacing">
-    <number>2</number>
+    <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>2</number>
+    <number>0</number>
    </property>
    <property name="topMargin">
-    <number>2</number>
+    <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>2</number>
+    <number>0</number>
    </property>
    <property name="bottomMargin">
-    <number>2</number>
+    <number>0</number>
    </property>
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="topMargin">
+      <number>2</number>
+     </property>
      <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Address Details</string>
+      <widget class="QFrame" name="gridFrame">
+       <property name="darkFrame" stdset="0">
+        <bool>true</bool>
+       </property>
+       <layout class="QGridLayout" name="gridLayout" columnstretch="2,8">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <item row="1" column="1">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>0.00000000</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Balance</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Address</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="label_9">
+          <property name="text">
+           <string>0.00850000</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>0.00850000</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Total Received</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_8">
+          <property name="text">
+           <string>Total Sent</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="Line" name="line_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QTableView" name="tableAddressDetails"/>
-     </item>
-     <item>
-      <widget class="QTableView" name="tableAddressTransactions"/>
+      <widget class="QTreeWidget" name="treeAddressTransactions">
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+       <column>
+        <property name="text">
+         <string>Date</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Transaction ID</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Confirmations</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Inputs #</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Outputs #</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Output</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Fees</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Fee per byte</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Size (kB)</string>
+        </property>
+       </column>
+       <item>
+        <property name="text">
+         <string>16-Aug-2018 10:26:53</string>
+        </property>
+        <property name="text">
+         <string>58db13edb59702d70e82bd8ffdf185e86c38bf4f8759872a395fa7ade03fbdca</string>
+        </property>
+        <property name="text">
+         <string>8</string>
+        </property>
+        <property name="text">
+         <string>3</string>
+        </property>
+        <property name="text">
+         <string>2</string>
+        </property>
+        <property name="text">
+         <string>0.36742580</string>
+        </property>
+        <property name="text">
+         <string>-0.00850000</string>
+        </property>
+        <property name="text">
+         <string>110.21</string>
+        </property>
+        <property name="text">
+         <string>0.521</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>31-May-2018 18:48:10</string>
+        </property>
+        <property name="text">
+         <string>7107283169c2554472a5198311626b26987af4f785c9727ad6a31c0fbda8ee2e</string>
+        </property>
+        <property name="text">
+         <string>11710</string>
+        </property>
+        <property name="text">
+         <string>1</string>
+        </property>
+        <property name="text">
+         <string>15</string>
+        </property>
+        <property name="text">
+         <string>+0.00850000</string>
+        </property>
+        <property name="text">
+         <string>+0.00850000</string>
+        </property>
+        <property name="text">
+         <string>14.33</string>
+        </property>
+        <property name="text">
+         <string>0.661</string>
+        </property>
+       </item>
+      </widget>
      </item>
     </layout>
    </item>

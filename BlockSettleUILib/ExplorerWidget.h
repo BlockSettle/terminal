@@ -23,7 +23,8 @@ public:
 private:
 	std::unique_ptr <Ui::ExplorerWidget> ui;
 
-	QStringListModel *m_testModel;
+protected slots:
+	void onSearchStarted();
 };
 
 #endif // EXPLORERWIDGET_H
