@@ -237,7 +237,7 @@ bool CelerMarketDataProvider::onReqRejected(const std::string& data)
 
    {
       FastLock locker{ccSymbolsListLocker_};
-      auto it = subscribedSymbols_.find(ccDef.securityId);
+      auto it = subscribedSymbols_.find(response.securityid());
       if (it != subscribedSymbols_.end()) {
          subscribedSymbols_.erase(it);
       }
@@ -255,7 +255,7 @@ void CelerMarketDataProvider::onCCSecurityReceived(const bs::network::CCSecurity
 
    {
       FastLock locker{ccSymbolsListLocker_};
-      if (loadedSymbols_->find(ccDef.securityId) != loadedSymbols_.end()) {
+      if (loadedSymbols_.find(ccDef.securityId) != loadedSymbols_.end()) {
          logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] already loaded. ignore");
          return;
       }
