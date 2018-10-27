@@ -2,6 +2,9 @@
 #include "ui_WalletKeysSubmitWidget.h"
 #include <set>
 #include <QFrame>
+#include <QtConcurrent/QtConcurrentRun>
+#include "ApplicationSettings.h"
+#include "MobileUtils.h"
 #include "WalletKeyWidget.h"
 
 
@@ -43,6 +46,29 @@ void WalletKeysSubmitWidget::init(MobileClientRequest requestType
    if (encTypes.empty()) {
       return;
    }
+
+   bool hasAuth = false;
+   for (const auto &encType : encTypes) {
+      if (encType == bs::wallet::EncryptionType::Auth) {
+         hasAuth = true;
+         break;
+      }
+   }
+   if ((flags_ & HidePubKeyFingerprint) || !hasAuth) {
+      ui_->labelPubKeyFP->hide();
+   }
+   else {
+      ui_->labelPubKeyFP->show();
+      QtConcurrent::run([this] {
+         const auto &authKeys = appSettings_->GetAuthKeys();
+         const auto &pubKeyFP = autheid::getPublicKeyFingerprint(authKeys.second);
+         const auto &sPubKeyFP = QString::fromStdString(autheid::toHexWithSeparators(pubKeyFP));
+         QMetaObject::invokeMethod(this, [this, sPubKeyFP] {
+            ui_->labelPubKeyFP->setText(sPubKeyFP);
+         });
+      });
+   }
+
    int encKeyIndex = 0;
    if (encTypes.size() == keyRank.first) {
       for (const auto &encType : encTypes) {
@@ -85,7 +111,8 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
       ui_->groupBox->layout()->addWidget(separator);
    }
 
-   auto widget = new WalletKeyWidget(requestType_, walletId_, pwdData_.size(), password, this);
+   const auto &authKeys = appSettings_->GetAuthKeys();
+   auto widget = new WalletKeyWidget(requestType_, walletId_, pwdData_.size(), password, authKeys, this);
    widget->init(appSettings_, QString());
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysSubmitWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysSubmitWidget::onKeyChanged);

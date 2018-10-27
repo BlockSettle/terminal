@@ -8,6 +8,7 @@
 #ifndef _BINARYDATA_H_
 #define _BINARYDATA_H_
 
+#include <algorithm>
 #include <stdio.h>
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	#if _MSC_PLATFORM_TOOLSET < 110
@@ -303,7 +304,7 @@ public:
    /////////////////////////////////////////////////////////////////////////////
    bool operator<(BinaryData const & bd2) const
    {
-      size_t minLen = min(getSize(), bd2.getSize());
+      size_t minLen = std::min(getSize(), bd2.getSize());
       for(size_t i=0; i<minLen; i++)
       {
          if( data_[i] == bd2.data_[i] )
@@ -343,7 +344,7 @@ public:
    /////////////////////////////////////////////////////////////////////////////
    bool operator>(BinaryData const & bd2) const
    {
-      size_t minLen = min(getSize(), bd2.getSize());
+      size_t minLen = std::min(getSize(), bd2.getSize());
       for(size_t i=0; i<minLen; i++)
       {
          if( data_[i] == bd2.data_[i] )
@@ -833,7 +834,7 @@ public:
    /////////////////////////////////////////////////////////////////////////////
    bool operator<(BinaryDataRef const & bd2) const
    {
-      auto minsize = min(nBytes_, bd2.nBytes_);
+      auto minsize = std::min(nBytes_, bd2.nBytes_);
       for (size_t i = 0; i < minsize; i++)
       {
          if (ptr_[i] == bd2.ptr_[i])
@@ -884,7 +885,7 @@ public:
    /////////////////////////////////////////////////////////////////////////////
    bool operator>(BinaryDataRef const & bd2) const
    {
-      size_t minLen = min(nBytes_, bd2.nBytes_);
+      size_t minLen = std::min(nBytes_, bd2.nBytes_);
       for(size_t i=0; i<minLen; i++)
       {
          if( ptr_[i] == bd2.ptr_[i] )
@@ -970,21 +971,21 @@ public:
    void advance(uint32_t nBytes) 
    { 
       pos_ += nBytes;  
-      pos_ = min(pos_, getSize());
+      pos_ = std::min(pos_, getSize());
    }
 
    /////////////////////////////////////////////////////////////////////////////
    void rewind(size_t nBytes) 
    { 
       pos_ -= nBytes;  
-      pos_ = max(pos_, (size_t)0);
+      pos_ = std::max(pos_, (size_t)0);
    }
 
    /////////////////////////////////////////////////////////////////////////////
    void resize(size_t nBytes)
    {
       bdStr_.resize(nBytes);
-      pos_ = min(nBytes, pos_);
+      pos_ = std::min(nBytes, pos_);
    }
 
    /////////////////////////////////////////////////////////////////////////////
@@ -1160,7 +1161,7 @@ public:
    void advance(size_t nBytes) 
    { 
       pos_.fetch_add(nBytes, memory_order_relaxed);  
-      pos_.store(min(pos_.load(memory_order_relaxed), totalSize_), memory_order_relaxed);
+      pos_.store(std::min(pos_.load(memory_order_relaxed), totalSize_), memory_order_relaxed);
    }
 
    /////////////////////////////////////////////////////////////////////////////

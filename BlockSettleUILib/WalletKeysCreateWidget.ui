@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>390</width>
-    <height>56</height>
+    <height>71</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -50,6 +50,13 @@
       <property name="bottomMargin">
        <number>7</number>
       </property>
+      <item>
+       <widget class="QLabel" name="labelPubKeyFP">
+        <property name="text">
+         <string>Public Key fingerprint</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QWidget" name="widgetControl" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout">

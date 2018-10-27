@@ -131,8 +131,8 @@ public:
    {
       shutdown();
 
-      if (readThr_.joinable())
-         readThr_.join();
+/*      if (readThr_.joinable())
+         readThr_.join();*/         // this leads to stalls on Linux and crashes on Windows
 
       if (serviceThr_.joinable())
          serviceThr_.join();

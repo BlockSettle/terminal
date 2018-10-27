@@ -2,8 +2,9 @@
 #include "ui_WalletKeysCreateWidget.h"
 #include <set>
 #include <QSpinBox>
-#include "WalletKeyWidget.h"
 #include "ApplicationSettings.h"
+#include "MobileUtils.h"
+#include "WalletKeyWidget.h"
 
 
 WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
@@ -57,7 +58,9 @@ void WalletKeysCreateWidget::init(MobileClientRequest requestType
 void WalletKeysCreateWidget::addKey(bool password)
 {
    assert(!walletId_.empty());
-   auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password, this);
+   const auto &authKeys = appSettings_->GetAuthKeys();
+   auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password
+      , authKeys, this);
    widget->init(appSettings_, username_);
    if (flags_ & HideAuthConnectButton) {
       widget->setHideAuthConnect(true);
@@ -65,6 +68,15 @@ void WalletKeysCreateWidget::addKey(bool password)
    if (flags_ & SetPasswordLabelAsNew) {
       widget->setPasswordLabelAsNew();
    }
+
+   if (flags_ & HidePubKeyFingerprint) {
+      ui_->labelPubKeyFP->hide();
+   }
+   else {
+      const auto &pubKeyFP = autheid::toHexWithSeparators(autheid::getPublicKeyFingerprint(authKeys.second));
+      ui_->labelPubKeyFP->setText(QString::fromStdString(pubKeyFP));
+   }
+
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
    connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);
    connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysCreateWidget::onEncKeyChanged);

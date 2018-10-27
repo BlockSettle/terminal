@@ -3,6 +3,7 @@
 
 #include <QTimer>
 #include <QWidget>
+#include "EncryptUtils.h"
 #include "EncryptionUtils.h"
 #include "MobileClientRequestType.h"
 
@@ -18,7 +19,9 @@ class WalletKeyWidget : public QWidget
    Q_OBJECT
 public:
    WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
-      , int index, bool password, QWidget* parent = nullptr);
+      , int index, bool password
+      , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
+      , QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings>& appSettings, const QString& username);

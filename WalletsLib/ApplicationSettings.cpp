@@ -1,6 +1,7 @@
 #include "ApplicationSettings.h"
 
 #include "BlockDataManagerConfig.h"
+#include "EncryptionUtils.h"
 #include "FastLock.h"
 
 #include <QCommandLineParser>
@@ -136,7 +137,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { AdvancedTxDialogByDefault,        SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
       { TransactionFilter,                SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) },
       { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
-      { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) }
+      { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
+      { authPrivKey,             SettingDef(QLatin1String("AuthPrivKey")) }
    };
 }
 
@@ -626,4 +628,24 @@ bs::LogLevel ApplicationSettings::parseLogLevel(QString level) const
       return bs::LogLevel::crit;
    }
    return bs::LogLevel::off;
+}
+
+std::pair<autheid::PrivateKey, autheid::PublicKey> ApplicationSettings::GetAuthKeys()
+{
+   if (!authPrivKey_.empty() && !authPubKey_.empty()) {
+      return { authPrivKey_, authPubKey_ };
+   }
+
+   SecureBinaryData privKey = BinaryData::CreateFromHex(get<std::string>(authPrivKey));
+   if (privKey.getSize() == autheid::kPrivateKeySize) {
+      const auto sPrivKey = privKey.toBinStr();
+      authPrivKey_ = autheid::SecureBytes(sPrivKey.begin(), sPrivKey.end());
+   }
+   else {
+      authPrivKey_ = autheid::generateSecureRandom(autheid::kPrivateKeySize);
+      const std::string sPrivKey(authPrivKey_.begin(), authPrivKey_.end());
+      set(authPrivKey, QString::fromStdString(BinaryData(sPrivKey).toHexStr()));
+   }
+   authPubKey_ = autheid::getPublicKey(authPrivKey_);
+   return { authPrivKey_, authPubKey_ };
 }
