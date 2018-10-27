@@ -3,8 +3,8 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.TXInfo 1.0
 import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.FrejaProxy 1.0
-import com.blocksettle.FrejaSignWalletObject 1.0
+import com.blocksettle.AuthProxy 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
 
 
 CustomDialog {
@@ -13,7 +13,7 @@ CustomDialog {
     property string password
     property bool   acceptable: false
     property bool   cancelledByUser: false
-    property FrejaSignWalletObject  frejaSign
+    property AuthSignWalletObject  authSign
     closePolicy: Popup.NoAutoClose
     id: passwordDialog
 
@@ -21,15 +21,15 @@ CustomDialog {
     implicitHeight: mainLayout.implicitHeight
 
     onTxInfoChanged: {
-        if (txInfo.wallet.encType === WalletInfo.Freja) {
-            frejaSign = freja.signWallet(txInfo.wallet.encKey, prompt, txInfo.wallet.rootId)
+        if (txInfo.wallet.encType === WalletInfo.Auth) {
+            authSign = auth.signWallet(txInfo.wallet.encKey, prompt, txInfo.wallet.rootId)
 
-            frejaSign.success.connect(function(key) {
+            authSign.success.connect(function(key) {
                 acceptable = true
                 password = key
                 passwordDialog.accept()
             })
-            frejaSign.error.connect(function(text) {
+            authSign.error.connect(function(text) {
                 passwordDialog.reject()
             })
         }
@@ -221,9 +221,9 @@ CustomDialog {
                 }
 
                 CustomLabel {
-                    id: labelFreja
-                    visible: txInfo.wallet.encType === WalletInfo.Freja
-                    text: frejaSign.status
+                    id: labelAuth
+                    visible: txInfo.wallet.encType === WalletInfo.Auth
+                    text: authSign.status
                 }
             }
 

@@ -5,8 +5,8 @@ import QtQuick.Dialogs 1.2
 import com.blocksettle.PasswordConfirmValidator 1.0
 import com.blocksettle.WalletSeed 1.0
 import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.FrejaProxy 1.0
-import com.blocksettle.FrejaSignWalletObject 1.0
+import com.blocksettle.AuthProxy 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
 
 import "bscontrols"
 
@@ -16,7 +16,7 @@ CustomDialog {
     property string password
     property bool isPrimary:    false
     property WalletSeed seed
-    property FrejaSignWalletObject  frejaSign
+    property AuthSignWalletObject  authSign
     property bool acceptable: tfName.text.length &&
                               (confirmedPassworrdInput.acceptableInput || password.length) &&
                               (digitalBackup ? lblDBFile.text !== "..." : rootKeyInput.acceptableInput)
@@ -151,8 +151,8 @@ CustomDialog {
                     checked:    true
                 }
                 CustomRadioButton {
-                    id: rbFreja
-                    text:   qsTr("Freja eID")
+                    id: rbAuth
+                    text:   qsTr("Auth eID")
                 }
             }
 
@@ -168,34 +168,34 @@ CustomDialog {
             }
 
             RowLayout {
-                visible:    rbFreja.checked
+                visible:    rbAuth.checked
                 spacing: 5
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
 
                 CustomTextInput {
-                    id: tiFrejaId
-                    placeholderText: qsTr("Freja ID (email)")
+                    id: tiAuthId
+                    placeholderText: qsTr("Auth ID (email)")
                 }
                 CustomButton {
-                    id: btnFreja
-                    text:   !frejaSign ? qsTr("Sign with Freja") : frejaSign.status
-                    enabled:    !frejaSign && tiFrejaId.text.length
+                    id: btnAuth
+                    text:   !authSign ? qsTr("Sign with Auth eID") : authSign.status
+                    enabled:    !authSign && tiAuthId.text.length
                     onClicked: {
-                        seed.encType = WalletInfo.Freja
-                        seed.encKey = tiFrejaId.text
+                        seed.encType = WalletInfo.Auth
+                        seed.encKey = tiAuthId.text
                         password = ''
-                        frejaSign = freja.signWallet(tiFrejaId.text, qsTr("Password for wallet %1").arg(tfName.text),
+                        authSign = auth.signWallet(tiAuthId.text, qsTr("Password for wallet %1").arg(tfName.text),
                                                               seed.walletId)
-                        btnFreja.enabled = false
-                        frejaSign.success.connect(function(key) {
+                        btnAuth.enabled = false
+                        authSign.success.connect(function(key) {
                             password = key
                             text = qsTr("Successfully signed")
                         })
-                        frejaSign.error.connect(function(text) {
-                            frejaSign = null
-                            btnFreja.enabled = tiFrejaId.text.length
+                        authSign.error.connect(function(text) {
+                            authSign = null
+                            btnAuth.enabled = tiAuthId.text.length
                         })
                     }
                 }
@@ -332,7 +332,7 @@ CustomDialog {
     }
 
     onRejected: {
-        frejaSign.cancel()
+        authSign.cancel()
     }
 
     Loader {
