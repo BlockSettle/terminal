@@ -216,7 +216,7 @@ bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
    logger_->debug("[CelerMarketDataProvider::RegisterCCOnCeler] registering CC on celer MD: {}"
       , securityId);
 
-   if (celerClient_->ExecuteSequence(command)) {
+   if (!celerClient_->ExecuteSequence(command)) {
       logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] failed to send command to MD server for {}"
          , securityId);
       return false;
