@@ -49,6 +49,7 @@ public:
 
 signals:
    void CCSecurityDef(bs::network::CCSecurityDef);
+   void CCSecurityId(const std::string& securityId);
    void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
 
    void CCAddressSubmitted(const QString);

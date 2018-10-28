@@ -62,6 +62,7 @@ void CCFileManager::FillFrom(Blocksettle::Communication::GetCCGenesisAddressesRe
          bs::Address(ccSecurity.genesisaddr()), ccSecurity.satoshisnb()
       };
       emit CCSecurityDef(ccSecDef);
+      emit CCSecurityId(ccSecurity.securityid());
       emit CCSecurityInfo(QString::fromStdString(ccSecDef.product), QString::fromStdString(ccSecDef.description)
          , (unsigned long)ccSecDef.nbSatoshis, QString::fromStdString(ccSecurity.genesisaddr()));
       ccSecurities_.push_back(ccSecDef);
