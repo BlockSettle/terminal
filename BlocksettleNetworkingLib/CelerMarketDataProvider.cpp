@@ -12,6 +12,7 @@
 #include <spdlog/spdlog.h>
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
+#include "com/celertech/staticdata/api/security/DownstreamSecurityProto.pb.h"
 
 CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::string& host, const std::string& port
@@ -36,6 +37,9 @@ bool CelerMarketDataProvider::StartMDConnection()
    emit StartConnecting();
 
    celerClient_ = std::make_shared<CelerClient>(connectionManager_, false);
+
+   celerClient_->RegisterHandler(CelerAPI::SecurityListingDownstreamEventType
+      , [this](const std::string& data) { return ProcessSecurityListingEvent(data); });
 
    ConnectToCelerClient();
 
@@ -202,8 +206,7 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
 }
 
 bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
-   , const std::string& serverExchangeId
-   , const CelerCreateCCSecurityOnMDSequence::callback_function& cb)
+   , const std::string& serverExchangeId)
 {
    if (!IsConnectedToCeler()) {
       logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] can't register CC product while disconnected");
@@ -211,7 +214,7 @@ bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
    }
 
    auto command = std::make_shared<CelerCreateCCSecurityOnMDSequence>(securityId
-      , serverExchangeId, cb, logger_);
+      , serverExchangeId, logger_);
 
    logger_->debug("[CelerMarketDataProvider::RegisterCCOnCeler] registering CC on celer MD: {}"
       , securityId);
@@ -248,24 +251,24 @@ bool CelerMarketDataProvider::onReqRejected(const std::string& data)
    return true;
 }
 
-void CelerMarketDataProvider::onCCSecurityReceived(const bs::network::CCSecurityDef& ccDef)
+void CelerMarketDataProvider::onCCSecurityReceived(const std::string& securityId)
 {
    logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] loaded CC symbol {}"
-      , ccDef.securityId);
+      , securityId);
 
    {
       FastLock locker{ccSymbolsListLocker_};
-      if (loadedSymbols_.find(ccDef.securityId) != loadedSymbols_.end()) {
+      if (loadedSymbols_.find(securityId) != loadedSymbols_.end()) {
          logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] {} already loaded. ignore"
-            , ccDef.securityId);
+            , securityId);
          return;
       }
 
-      loadedSymbols_.emplace(ccDef.securityId);
+      loadedSymbols_.emplace(securityId);
    }
 
    if (IsConnectedToCeler()) {
-      if (SubscribeToCCProduct(ccDef.securityId)) {
+      if (SubscribeToCCProduct(securityId)) {
          emit MDSecuritiesReceived();
       }
    }
@@ -303,6 +306,20 @@ bool CelerMarketDataProvider::SubscribeToCCProduct(const std::string& ccProduct)
 
    emit MDSecurityReceived(ccProduct, {bs::network::Asset::Type::PrivateMarket});
    emit MDUpdate(bs::network::Asset::Type::PrivateMarket, QString::fromStdString(ccProduct), {});
+
+   return true;
+}
+
+bool CelerMarketDataProvider::ProcessSecurityListingEvent(const std::string& data)
+{
+   com::celertech::staticdata::api::security::SecurityListingDownstreamEvent responseEvent;
+   if (!responseEvent.ParseFromString(data)) {
+      logger_->error("[CelerMarketDataProvider::ProcessSecurityListingEvent] failed to parse SecurityListingDownstreamEvent");
+      return false;
+   }
+
+   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation:\n{}"
+                  , responseEvent.DebugString());
 
    return true;
 }

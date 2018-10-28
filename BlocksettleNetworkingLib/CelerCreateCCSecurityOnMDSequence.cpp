@@ -2,32 +2,24 @@
 
 #include <spdlog/spdlog.h>
 
-#include "DownstreamSecurityProto.pb.h"
 #include "UpstreamSecurityProto.pb.h"
 #include "NettyCommunication.pb.h"
 
 CelerCreateCCSecurityOnMDSequence::CelerCreateCCSecurityOnMDSequence(const std::string& securityId
       , const std::string& exchangeId
-      , const callback_function& callback
       , const std::shared_ptr<spdlog::logger>& logger)
    : CelerCommandSequence("CelerCreateCCSecurityOnMDSequence",
       {
          { false, nullptr, &CelerCreateCCSecurityOnMDSequence::sendRequest }
-       , { true, &CelerCreateCCSecurityOnMDSequence::processResponse, nullptr }
       })
    , securityId_{securityId}
    , exchangeId_{exchangeId}
-   , callback_{callback}
    , logger_{logger}
 {
 }
 
 bool CelerCreateCCSecurityOnMDSequence::FinishSequence()
 {
-   assert(callback_);
-
-   callback_(result_, securityId_);
-
    return true;
 }
 
@@ -83,34 +75,4 @@ CelerMessage CelerCreateCCSecurityOnMDSequence::sendRequest()
 std::string CelerCreateCCSecurityOnMDSequence::GetExchangeId() const
 {
    return exchangeId_;
-}
-
-bool CelerCreateCCSecurityOnMDSequence::processResponse(const CelerMessage &message)
-{
-   com::celertech::baseserver::communication::protobuf::SingleResponseMessage response;
-
-   if (!response.ParseFromString(message.messageData)) {
-      logger_->error("[CelerCreateCCSecurityOnMDSequence::processResponse] failed to parse massage of type {}", message.messageType);
-      return false;
-   }
-
-   auto payloadType = CelerAPI::GetMessageType(response.payload().classname());
-   if (payloadType != CelerAPI::SecurityListingDownstreamEventType) {
-      logger_->error("[CelerCreateCCSecurityOnMDSequence::processResponse] unexpected type {} for class {}. Message: {}"
-                     , payloadType, response.payload().classname()
-                     , response.DebugString());
-      return false;
-   }
-
-   com::celertech::staticdata::api::security::SecurityListingDownstreamEvent responseEvent;
-   if (!responseEvent.ParseFromString(response.payload().contents())) {
-      logger_->error("[CelerCreateCCSecurityOnMDSequence::processResponse] failed to parse SecurityListingDownstreamEvent");
-      return false;
-   }
-
-   logger_->debug("[CelerCreateCCSecurityOnMDSequence::processResponse] get confirmation:\n{}"
-                  , responseEvent.DebugString());
-
-   result_ = true;
-   return true;
 }
