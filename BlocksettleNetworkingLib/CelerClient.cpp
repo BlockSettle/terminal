@@ -544,6 +544,10 @@ std::string CelerClient::SetToString(const std::unordered_set<std::string> &set)
 {
    std::string stringValue;
 
+   if (set.empty()) {
+      return "";
+   }
+
    for (const auto& address : set ) {
       stringValue.append(address);
       stringValue.append(";");
