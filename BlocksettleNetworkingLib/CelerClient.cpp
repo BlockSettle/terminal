@@ -314,6 +314,7 @@ void CelerClient::RegisterDefaulthandlers()
 {
    RegisterHandler(CelerAPI::HeartbeatType, [this](const std::string& data) { return this->onHeartbeat(data); });
    RegisterHandler(CelerAPI::SingleResponseMessageType, [this](const std::string& data) { return this->onSignleMessage(data); });
+   RegisterHandler(CelerAPI::ExceptionResponseMessageType, [this](const std::string& data) { return this->onExceptionResponse(data); });
    RegisterHandler(CelerAPI::MultiResponseMessageType, [this](const std::string& data) { return this->onMultiMessage(data); });
 }
 
@@ -353,6 +354,21 @@ bool CelerClient::onSignleMessage(const std::string& message)
    }
 
    return SendDataToSequence(response.clientrequestid(), CelerAPI::SingleResponseMessageType, message);
+}
+
+bool CelerClient::onExceptionResponse(const std::string& message)
+{
+   ExceptionResponseMessage response;
+
+   if (!response.ParseFromString(message)) {
+      logger_->error("[CelerClient::onExceptionResponse] failed to parse ExceptionResponseMessage");
+      return false;
+   }
+
+   logger_->error("[CelerClient::onExceptionResponse] get exception response: {}"
+      , response.DebugString());
+
+   return true;
 }
 
 bool CelerClient::onMultiMessage(const std::string& message)

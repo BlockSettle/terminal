@@ -25,6 +25,7 @@ enum CelerMessageType
    ReconnectionFailedMessageType,
    ReconnectionRequestType,
    SingleResponseMessageType,
+   ExceptionResponseMessageType,
    SocketConfigurationDownstreamEventType,
    StandardUserDownstreamEventType,
    ResetUserPasswordTokenType,
