@@ -8,11 +8,8 @@
 
 #include <bdmenums.h>
 
-#include <botan/ecdh.h>
-#include <botan/ec_group.h>
-#include <botan/auto_rng.h>
-
 #include "ArmorySettings.h"
+#include "EncryptUtils.h"
 #include "LogManager.h"
 
 
@@ -138,7 +135,7 @@ public:
    void SetWalletScanIndex(const std::string &id, unsigned int index);
    std::vector<std::pair<std::string, unsigned int>> UnfinishedWalletsRescan();
 
-   std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> GetAuthKeys();
+   std::pair<autheid::PrivateKey, autheid::PublicKey> GetAuthKeys();
 
 signals:
    void settingChanged(int setting, QVariant value);
@@ -171,10 +168,8 @@ private:
    QString  bitcoinsDir_;
    QString  dbDir_;
 
-   Botan::AutoSeeded_RNG   rng_;
-   const Botan::EC_Group   domain_;
-   Botan::ECDH_PrivateKey  authPrivKey_;
-   Botan::ECDH_PublicKey   authPubKey_;
+   autheid::PrivateKey  authPrivKey_;
+   autheid::PublicKey   authPubKey_;
 };
 
 #endif // __APPLICATION_SETTINGS_H__

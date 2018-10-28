@@ -2,9 +2,9 @@
 #include "ui_WalletKeysCreateWidget.h"
 #include <set>
 #include <QSpinBox>
-#include <botan/hash.h>
-#include "WalletKeyWidget.h"
 #include "ApplicationSettings.h"
+#include "MobileUtils.h"
+#include "WalletKeyWidget.h"
 
 
 WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
@@ -73,11 +73,8 @@ void WalletKeysCreateWidget::addKey(bool password)
       ui_->labelPubKeyFP->hide();
    }
    else {
-      std::unique_ptr<Botan::HashFunction> hash(Botan::HashFunction::create("SHA-256"));
-      hash->update(authKeys.second.public_value());
-      const auto &hashVal = hash->final();
-      std::string strHash(hashVal.begin(), hashVal.end());
-      ui_->labelPubKeyFP->setText(QString::fromStdString(BinaryData(strHash).toHexStr()));
+      const auto &pubKeyFP = autheid::toHexWithSeparators(autheid::getPublicKeyFingerprint(authKeys.second));
+      ui_->labelPubKeyFP->setText(QString::fromStdString(pubKeyFP));
    }
 
    connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);

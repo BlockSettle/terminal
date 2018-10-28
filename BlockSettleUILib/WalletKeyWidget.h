@@ -3,8 +3,7 @@
 
 #include <QTimer>
 #include <QWidget>
-#include <botan/ecdh.h>
-#include <botan/pubkey.h>
+#include "EncryptUtils.h"
 #include "EncryptionUtils.h"
 #include "MobileClientRequestType.h"
 
@@ -21,7 +20,7 @@ class WalletKeyWidget : public QWidget
 public:
    WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
       , int index, bool password
-      , const std::pair<Botan::ECDH_PrivateKey, Botan::ECDH_PublicKey> &
+      , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
       , QWidget* parent = nullptr);
    ~WalletKeyWidget() override;
 
