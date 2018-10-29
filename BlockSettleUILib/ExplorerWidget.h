@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <memory>
 #include "TabWithShortcut.h"
+#include "ArmoryConnection.h"
 
 namespace Ui {
    class ExplorerWidget;
@@ -19,6 +20,7 @@ public:
     ExplorerWidget(QWidget *parent = nullptr);
     ~ExplorerWidget() override;
 
+   void init(const std::shared_ptr<ArmoryConnection> &);
    void shortcutActivated(ShortcutType s) override;
 
 protected slots:
@@ -26,6 +28,7 @@ protected slots:
 
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;
+   std::shared_ptr<ArmoryConnection>   armory_;
 };
 
 #endif // EXPLORERWIDGET_H

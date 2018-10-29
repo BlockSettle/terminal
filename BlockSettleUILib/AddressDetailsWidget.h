@@ -1,7 +1,8 @@
-#ifndef ADDRESSDETAILSWIDGET_H
-#define ADDRESSDETAILSWIDGET_H
+#ifndef __ADDRESSDETAILSWIDGET_H__
+#define __ADDRESSDETAILSWIDGET_H__
 
 #include <QWidget>
+#include "Address.h"
 
 namespace Ui {
 class AddressDetailsWidget;
@@ -15,8 +16,11 @@ public:
     explicit AddressDetailsWidget(QWidget *parent = nullptr);
     ~AddressDetailsWidget();
 
+    void setAddrVal(const bs::Address& inAddrVal) { addrVal = inAddrVal; }
+
 private:
     Ui::AddressDetailsWidget *ui;
+    bs::Address addrVal;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

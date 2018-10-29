@@ -1,5 +1,5 @@
-#ifndef BLOCKDETAILSWIDGET_H
-#define BLOCKDETAILSWIDGET_H
+#ifndef __BLOCKDETAILSWIDGET_H__
+#define __BLOCKDETAILSWIDGET_H__
 
 #include <QWidget>
 
