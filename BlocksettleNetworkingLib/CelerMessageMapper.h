@@ -25,6 +25,7 @@ enum CelerMessageType
    ReconnectionFailedMessageType,
    ReconnectionRequestType,
    SingleResponseMessageType,
+   ExceptionResponseMessageType,
    SocketConfigurationDownstreamEventType,
    StandardUserDownstreamEventType,
    ResetUserPasswordTokenType,
@@ -112,6 +113,18 @@ enum CelerMessageType
    MarketDataFullSnapshotDownstreamEventType,
 
    MarketDataSubscriptionRequestType,
+
+   CreateSecurityDefinitionRequestType,
+   CreateWarehouseConfigurationRequestType,
+   WarehouseConfigurationDownstreamEventType,
+
+   CreateSecurityListingRequestType,
+   SecurityListingDownstreamEventType,
+
+   FindAllSecurityDefinitionsType,
+   SecurityDefinitionDownstreamEventType,
+
+   FindAllSecurityListingsRequestType,
 
    CelerMessageTypeLast,
    UndefinedType = CelerMessageTypeLast

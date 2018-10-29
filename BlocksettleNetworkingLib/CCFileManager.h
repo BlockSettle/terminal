@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <QString>
+#include <QVariant>
 
 namespace Blocksettle {
    namespace Communication {
@@ -49,11 +50,18 @@ public:
 
 signals:
    void CCSecurityDef(bs::network::CCSecurityDef);
+   void CCSecurityId(const std::string& securityId);
    void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
 
    void CCAddressSubmitted(const QString);
    void Loaded();
    void LoadingFailed();
+
+private slots:
+   void onPubSettingsChanged(int setting, QVariant value);
+
+private:
+   void RemoveAndDisableFileSave();
 
 protected:
    void ProcessGenAddressesResponse(const std::string& response, bool sigVerified, const std::string &sig) override;
@@ -73,6 +81,10 @@ private:
    std::shared_ptr<OTPManager>            otpManager_;
 
    CCSecurities   ccSecurities_;
+
+   // when user changes PuB connection settings - save to file should be disabled.
+   // dev build feature only. final release should have single PuB.
+   bool saveToFileDisabled_ = false;
 
 private:
    bool LoadFromFile(const std::string &path);
