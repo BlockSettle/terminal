@@ -25,6 +25,7 @@ public:
 
 protected slots:
    void onSearchStarted();
+   void populateTransactionWidget(const BinaryData inHex);
 
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;

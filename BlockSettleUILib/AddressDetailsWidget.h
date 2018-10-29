@@ -16,10 +16,11 @@ public:
     explicit AddressDetailsWidget(QWidget *parent = nullptr);
     ~AddressDetailsWidget();
 
-    void setAddrVal(const bs::Address& inAddrVal) { addrVal = inAddrVal; }
+    void setAddrVal(const bs::Address& inAddrVal);
+    void loadTransactions();
 
 private:
-    Ui::AddressDetailsWidget *ui;
+    Ui::AddressDetailsWidget *ui_;
     bs::Address addrVal;
 };
 

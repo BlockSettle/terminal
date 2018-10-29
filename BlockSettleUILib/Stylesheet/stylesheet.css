@@ -87,7 +87,14 @@ a {
 
 *[infoMessage="true"] {
   color: #f7b03a; }
+  
+*[whiteText="true"] {
+  color: #ffffff; }
 
+*[largeText="true"] {
+  font-size: 20px; }
+
+  
 *[statusBox="true"] {
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 20px;

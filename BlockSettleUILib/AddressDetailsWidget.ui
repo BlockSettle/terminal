@@ -93,16 +93,22 @@
          <number>4</number>
         </property>
         <item row="6" column="1">
-         <widget class="QLabel" name="label_9">
+         <widget class="CustomLabel" name="totalSent">
           <property name="text">
-           <string>0.00850000</string>
+           <string/>
+          </property>
+          <property name="whiteText" stdset="0">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
         <item row="5" column="1">
-         <widget class="QLabel" name="label_7">
+         <widget class="CustomLabel" name="totalReceived">
           <property name="text">
-           <string>0.00850000</string>
+           <string/>
+          </property>
+          <property name="whiteText" stdset="0">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -114,16 +120,22 @@
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QLabel" name="label_2">
+         <widget class="CustomLabel" name="balance">
           <property name="text">
-           <string>0.00000000</string>
+           <string/>
+          </property>
+          <property name="whiteText" stdset="0">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLabel" name="label_3">
+         <widget class="CustomLabel" name="addressId">
           <property name="text">
-           <string>1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr</string>
+           <string/>
+          </property>
+          <property name="whiteText" stdset="0">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -248,70 +260,19 @@
          <string>Size (kB)</string>
         </property>
        </column>
-       <item>
-        <property name="text">
-         <string>16-Aug-2018 10:26:53</string>
-        </property>
-        <property name="text">
-         <string>58db13edb59702d70e82bd8ffdf185e86c38bf4f8759872a395fa7ade03fbdca</string>
-        </property>
-        <property name="text">
-         <string>8</string>
-        </property>
-        <property name="text">
-         <string>3</string>
-        </property>
-        <property name="text">
-         <string>2</string>
-        </property>
-        <property name="text">
-         <string>0.36742580</string>
-        </property>
-        <property name="text">
-         <string>-0.00850000</string>
-        </property>
-        <property name="text">
-         <string>110.21</string>
-        </property>
-        <property name="text">
-         <string>0.521</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>31-May-2018 18:48:10</string>
-        </property>
-        <property name="text">
-         <string>7107283169c2554472a5198311626b26987af4f785c9727ad6a31c0fbda8ee2e</string>
-        </property>
-        <property name="text">
-         <string>11710</string>
-        </property>
-        <property name="text">
-         <string>1</string>
-        </property>
-        <property name="text">
-         <string>15</string>
-        </property>
-        <property name="text">
-         <string>+0.00850000</string>
-        </property>
-        <property name="text">
-         <string>+0.00850000</string>
-        </property>
-        <property name="text">
-         <string>14.33</string>
-        </property>
-        <property name="text">
-         <string>0.661</string>
-        </property>
-       </item>
       </widget>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomLabel</class>
+   <extends>QLabel</extends>
+   <header>CustomLabel.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

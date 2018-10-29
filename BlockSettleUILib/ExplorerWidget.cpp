@@ -3,6 +3,7 @@
 #include "ui_ExplorerWidget.h"
 #include "UiUtils.h"
 #include "BinaryData.h"
+#include <QToolTip>
 
 // Overloaded constuctor. Does basic setup and Qt signal connection.
 ExplorerWidget::ExplorerWidget(QWidget *parent) :
@@ -22,7 +23,6 @@ void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory)
 {
    armory_ = armory;
 }
-
 
 void ExplorerWidget::shortcutActivated(ShortcutType s)
 {
@@ -54,17 +54,10 @@ void ExplorerWidget::onSearchStarted()
    //   BLOCK-SPECIFIC INFO AND WILL BLOW UP THE DB SIZE IF REDESIGNED TO ADD
    //   SUPPORT. It may be possible to query Core directly and parse the JSON
    //   output.
-/*   ui_->stackedWidget->count();
-   int index = ui_->stackedWidget->currentIndex();
-   if (index < ui_->stackedWidget->count() - 1)	{
-      ui_->stackedWidget->setCurrentIndex(++index);
-   }
-   else {
-      ui_->stackedWidget->setCurrentIndex(0);
-   }*/
+
    const QString& userStr = ui_->searchBox->text();
    if (userStr.isEmpty()) {
-      // TO DO: TOSS UP AN ERROR WINDOW HERE.
+      QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7)), tr("Provide a valid address or transaction id."), ui_->searchBox);
       return;
    }
 
@@ -82,20 +75,63 @@ void ExplorerWidget::onSearchStarted()
    // Idx 2 = Address (AddressDetailsWidget)
    if(strIsAddress_ == true) {
       ui_->stackedWidget->setCurrentIndex(2);
-      ui_->Address->setAddrVal(address_);
 
       // TO DO: Pass the address to the address widget and populate the fields.
+      // this sets the address field
+      ui_->Address->setAddrVal(address_);
+      // this populates the transactions tree
+      ui_->Address->loadTransactions();
    }
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
       // String is a valid 32 byte hex string, so we may proceed.
       ui_->stackedWidget->setCurrentIndex(1);
       const BinaryData inHex = READHEX(userStr.toStdString());
-
+      
       // TO DO: Pass the Tx hash to the Tx widget and populate the fields.
+      populateTransactionWidget(inHex);
    }
    else {
       // TO DO: Toss up a window letting the user know this isn't a valid
       // address or Tx hash.
+      QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7)), tr("This is not a valid address or transaction id."), ui_->searchBox);
+      
+      //qDebug() << QLatin1String("[CreateTransactionDialogAdvanced::onCreatePressed] exception: ") << QString::fromStdString(e.what());
    }
+}
+
+// This function tries to use getTxByHash() to retrieve info about transaction. 
+// Code was commented out because I could not get it to work and didn't want to spend too
+// much time trying. At the bottom of the function are 2 calls, one that populates 
+// transaction id in the page, and the other populates Inputs tree. 
+void ExplorerWidget::populateTransactionWidget(const BinaryData inHex)
+{
+   // get the transaction data from armory
+   /*
+   const auto &cbTX = [this, entry, cb](Tx tx) {
+      if (!tx.isInitialized()) {
+         logger_->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
+            , entry.getTxHash().toHexStr());
+         cb(false);
+         return;
+      }
+
+      for (int i = 0; i < tx.getNumTxOut(); ++i) {
+         TxOut out = tx.getTxOutCopy(i);
+         auto address = out.getScrAddressStr();
+         if (ownAddresses_.find(address) != ownAddresses_.end()) {
+            cb(true);
+            return;
+         }
+      }
+      cb(false);Z
+   };*/
+   //armory_->getTxByHash(inHex, cbTransactionReceived);
+
+   ui_->Transaction->setTxRefVal(inHex);
+
+   // Load the inputs table with dummy data, feel free to modify to work with
+   // real data, or if you can get the getTxByHash() and the callback to work correctly
+   // for me I can update it to populate it with actual data. 
+   ui_->Transaction->loadInputs();
 }

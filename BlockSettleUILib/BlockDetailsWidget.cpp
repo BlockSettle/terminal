@@ -9,9 +9,9 @@ BlockDetailsWidget::BlockDetailsWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    QIcon btcIcon(QLatin1String(":/ICON_BITCOIN_2X"));
+    QIcon btcIcon(QLatin1String(":/FULL_LOGO"));
 
-    ui->icon->setPixmap(btcIcon.pixmap(32, 32));
+    ui->icon->setPixmap(btcIcon.pixmap(80, 80));
 }
 
 BlockDetailsWidget::~BlockDetailsWidget()
