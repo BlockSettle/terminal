@@ -11,6 +11,8 @@
 
 #include "CommonTypes.h"
 
+#include "CelerCreateCCSecurityOnMDSequence.h"
+
 namespace spdlog
 {
    class logger;
@@ -40,11 +42,17 @@ public:
 
    bool IsConnectionActive() const override;
 
+   bool RegisterCCOnCeler(const std::string& securityId
+      , const std::string& serverExchangeId);
+
 protected:
    bool StartMDConnection() override;
 
 public slots:
-   void onCCSecurityReceived(const bs::network::CCSecurityDef& ccDef);
+   void onCCSecurityReceived(const std::string& securityId);
+
+signals:
+   void CCSecuritRegistrationResult(bool result, const std::string& securityId);
 
 private slots:
    void OnConnectedToCeler();
@@ -62,6 +70,8 @@ private:
 
    bool SubscribeToCCProduct(const std::string& ccProduct);
 
+   bool ProcessSecurityListingEvent(const std::string& data);
+
 private:
    // connection details for MD source
    std::string mdHost_;
@@ -71,7 +81,6 @@ private:
    std::shared_ptr<CelerClient>        celerClient_;
 
    std::unordered_map<std::string, std::string>    requests_;
-   std::unordered_map<std::string, bs::network::SecurityDef>   secDefs_;
    bool filterUsdProducts_;
 
    bool connectionToCelerCompleted_ = false;

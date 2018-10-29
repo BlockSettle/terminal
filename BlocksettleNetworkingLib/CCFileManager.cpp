@@ -25,6 +25,28 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , appSettings_(appSettings)
    , otpManager_(otpMgr)
 {
+   connect(appSettings_.get(), &ApplicationSettings::settingChanged, this, &CCFileManager::onPubSettingsChanged
+      , Qt::QueuedConnection);
+}
+
+void CCFileManager::onPubSettingsChanged(int setting, QVariant)
+{
+   if ((setting == ApplicationSettings::pubBridgeHost) || (setting == ApplicationSettings::pubBridgePort)) {
+      RemoveAndDisableFileSave();
+   }
+}
+
+void CCFileManager::RemoveAndDisableFileSave()
+{
+   saveToFileDisabled_ = true;
+   const auto path = QString::fromStdString(appSettings_->get<std::string>(ApplicationSettings::ccFileName));
+   if (QFile::exists(path)) {
+      logger_->debug("[CCFileManager::RemoveAndDisableFileSave] remove {} and disable save"
+         , path.toStdString());
+      QFile::remove(path);
+   } else {
+      logger_->debug("[CCFileManager::RemoveAndDisableFileSave] disabling saving on cc gen file");
+   }
 }
 
 void CCFileManager::LoadSavedCCDefinitions()
@@ -62,6 +84,7 @@ void CCFileManager::FillFrom(Blocksettle::Communication::GetCCGenesisAddressesRe
          bs::Address(ccSecurity.genesisaddr()), ccSecurity.satoshisnb()
       };
       emit CCSecurityDef(ccSecDef);
+      emit CCSecurityId(ccSecurity.securityid());
       emit CCSecurityInfo(QString::fromStdString(ccSecDef.product), QString::fromStdString(ccSecDef.description)
          , (unsigned long)ccSecDef.nbSatoshis, QString::fromStdString(ccSecurity.genesisaddr()));
       ccSecurities_.push_back(ccSecDef);
@@ -220,6 +243,11 @@ bool CCFileManager::LoadFromFile(const std::string &path)
 
 bool CCFileManager::SaveToFile(const std::string &path, const std::string &sig)
 {
+   if (saveToFileDisabled_) {
+      logger_->debug("[CCFileManager::SaveToFile] save to file disabled");
+      return true;
+   }
+
    GetCCGenesisAddressesResponse resp;
 
    resp.set_networktype(networkType(appSettings_));

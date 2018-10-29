@@ -34,6 +34,7 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ReconnectionFailedMessage", ReconnectionFailedMessageType },
    { "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ReconnectionRequest", ReconnectionRequestType },
    { "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$SingleResponseMessage", SingleResponseMessageType },
+   { "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ExceptionResponseMessage", ExceptionResponseMessageType },
    { "com.celertech.clearing.api.tradecapturereport.processed.DownstreamProcessedTradeCaptureProto$ProcessedFxTradeCaptureReportDownstreamEvent", ProcessedFxTradeCaptureReportDownstreamEventType},
    { "com.celertech.clearing.api.tradecapturereport.processed.DownstreamProcessedTradeCaptureProto$ProcessedTradeCaptureReportAck", ProcessedTradeCaptureReportAckType},
    { "com.celertech.marketmerchant.api.quote.UpstreamQuoteProto$QuoteNotification", QuoteNotificationType },
@@ -90,7 +91,15 @@ static const std::unordered_map<std::string, CelerMessageType> nameToType = {
    { "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException", PersistenceExceptionType},
    { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent", MarketDataRequestRejectDownstreamEventType},
    { "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent", MarketDataFullSnapshotDownstreamEventType},
-   { "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest", MarketDataSubscriptionRequestType}
+   { "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest", MarketDataSubscriptionRequestType},
+   { "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$CreateSecurityDefinition", CreateSecurityDefinitionRequestType},
+   { "com.celertech.marketwarehouse.api.configuration.UpstreamWarehouseConfigurationProto$CreateWarehouseConfigurationRequest", CreateWarehouseConfigurationRequestType},
+   { "com.celertech.marketwarehouse.api.configuration.DownstreamWarehouseConfigurationProto$WarehouseConfigurationDownstreamEvent", WarehouseConfigurationDownstreamEventType},
+   { "com.celertech.staticdata.api.security.UpstreamSecurityProto$CreateSecurityListingRequest", CreateSecurityListingRequestType},
+   { "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent", SecurityListingDownstreamEventType},
+   { "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions", FindAllSecurityDefinitionsType},
+   { "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent", SecurityDefinitionDownstreamEventType},
+   { "com.celertech.staticdata.api.security.UpstreamSecurityProto$FindAllSecurityListingsRequest", FindAllSecurityListingsRequestType}
 };
 
 static const std::unordered_map<int, std::string> typeToName = {
@@ -114,6 +123,7 @@ static const std::unordered_map<int, std::string> typeToName = {
    { ReconnectionFailedMessageType, "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ReconnectionFailedMessage" },
    { ReconnectionRequestType, "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ReconnectionRequest" },
    { SingleResponseMessageType, "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$SingleResponseMessage" },
+   { ExceptionResponseMessageType, "com.celertech.baseserver.communication.netty.protobuf.NettyCommunication$ExceptionResponseMessage"},
    { FindAllOrdersType, "com.celertech.marketmerchant.api.order.UpstreamOrderProto$FindAllOrderSnapshotsBySessionKey" },
    { CreateUserPropertyRequestType, "com.celertech.staticdata.api.user.property.UpstreamUserPropertyProto$CreateUserPropertyRequest"},
    { UpdateUserPropertyRequestType, "com.celertech.staticdata.api.user.property.UpstreamUserPropertyProto$UpdateUserPropertyRequest"},
@@ -179,7 +189,15 @@ static const std::unordered_map<int, std::string> typeToName = {
    { PersistenceExceptionType, "com.celertech.baseserver.api.exception.DownstreamExceptionProto$PersistenceException"},
    { MarketDataRequestRejectDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataRequestRejectDownstreamEvent"},
    { MarketDataFullSnapshotDownstreamEventType, "com.celertech.marketdata.api.price.DownstreamPriceProto$MarketDataFullSnapshotDownstreamEvent"},
-   { MarketDataSubscriptionRequestType, "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest"}
+   { MarketDataSubscriptionRequestType, "com.celertech.marketdata.api.price.UpstreamPriceProto$MarketDataSubscriptionRequest"},
+   { CreateSecurityDefinitionRequestType, "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$CreateSecurityDefinition"},
+   { CreateWarehouseConfigurationRequestType , "com.celertech.marketwarehouse.api.configuration.UpstreamWarehouseConfigurationProto$CreateWarehouseConfigurationRequest"},
+   { WarehouseConfigurationDownstreamEventType, "com.celertech.marketwarehouse.api.configuration.DownstreamWarehouseConfigurationProto$WarehouseConfigurationDownstreamEvent"},
+   { CreateSecurityListingRequestType, "com.celertech.staticdata.api.security.UpstreamSecurityProto$CreateSecurityListingRequest"},
+   { SecurityListingDownstreamEventType, "com.celertech.staticdata.api.security.DownstreamSecurityProto$SecurityListingDownstreamEvent"},
+   { FindAllSecurityDefinitionsType, "com.celertech.marketmerchant.api.securitydefinition.UpstreamSecurityDefinitionProto$FindAllSecurityDefinitions"},
+   { SecurityDefinitionDownstreamEventType, "com.celertech.marketmerchant.api.securitydefinition.DownstreamSecurityDefinitionProto$SecurityDefinitionDownstreamEvent"},
+   { FindAllSecurityListingsRequestType, "com.celertech.staticdata.api.security.UpstreamSecurityProto$FindAllSecurityListingsRequest"}
 };
 
 std::string GetMessageClass(CelerMessageType messageType)

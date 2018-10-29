@@ -111,6 +111,7 @@ private:
 private:
    bool onHeartbeat(const std::string& message);
    bool onSignleMessage(const std::string& message);
+   bool onExceptionResponse(const std::string& message);
    bool onMultiMessage(const std::string& message);
 
    bool SendDataToSequence(const std::string& sequenceId, CelerAPI::CelerMessageType messageType, const std::string& message);

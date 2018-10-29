@@ -1,6 +1,7 @@
 #include "CelerMarketDataProvider.h"
 
 #include "CelerClient.h"
+#include "CelerLoadMDDefinitionsSequence.h"
 #include "CelerSubscribeToMDSequence.h"
 #include "CommonTypes.h"
 #include "ConnectionManager.h"
@@ -11,6 +12,7 @@
 #include <spdlog/spdlog.h>
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
+#include "com/celertech/staticdata/api/security/DownstreamSecurityProto.pb.h"
 
 CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::string& host, const std::string& port
@@ -35,6 +37,9 @@ bool CelerMarketDataProvider::StartMDConnection()
    emit StartConnecting();
 
    celerClient_ = std::make_shared<CelerClient>(connectionManager_, false);
+
+   celerClient_->RegisterHandler(CelerAPI::SecurityListingDownstreamEventType
+      , [this](const std::string& data) { return ProcessSecurityListingEvent(data); });
 
    ConnectToCelerClient();
 
@@ -81,6 +86,12 @@ void CelerMarketDataProvider::ConnectToCelerClient()
 
 void CelerMarketDataProvider::OnConnectedToCeler()
 {
+   // load definitions for debug purpose
+   auto loadDefinitions = std::make_shared<CelerLoadMDDefinitionsSequence>(logger_);
+   if (!celerClient_->ExecuteSequence(loadDefinitions)) {
+      logger_->debug("[CelerMarketDataProvider::OnConnectedToCeler] failed to send find request");
+   }
+
    std::vector<std::string> fxPairs{"EUR/GBP", "EUR/SEK", "GBP/SEK", "EUR/JPY", "GBP/JPY", "JPY/SEK"};
    const std::vector<std::string> xbtPairs{"XBT/GBP", "XBT/EUR", "XBT/SEK", "XBT/JPY"};
 
@@ -94,6 +105,8 @@ void CelerMarketDataProvider::OnConnectedToCeler()
          logger_->error("[CelerMarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
             , ccyPair);
       } else {
+         logger_->debug("[CelerMarketDataProvider::OnConnectedToCeler] add FX pair: {}", ccyPair);
+
          emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotFX});
          emit MDUpdate(bs::network::Asset::Type::SpotFX, QString::fromStdString(ccyPair), {});
       }
@@ -105,6 +118,8 @@ void CelerMarketDataProvider::OnConnectedToCeler()
          logger_->error("[CelerMarketDataProvider::OnConnectedToCeler] failed to send subscribe to {}"
             , ccyPair);
       } else {
+         logger_->debug("[CelerMarketDataProvider::OnConnectedToCeler] add XBT pair: {}", ccyPair);
+
          emit MDSecurityReceived(ccyPair, {bs::network::Asset::Type::SpotXBT});
          emit MDUpdate(bs::network::Asset::Type::SpotXBT, QString::fromStdString(ccyPair), {});
       }
@@ -164,6 +179,13 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
       security = QString::fromStdString(response.securityid());
    }
 
+   if (!response.has_producttype()) {
+      logger_->error("[CelerMarketDataProvider::onFullSnapshot] update do not have product type: {}"
+         , response.DebugString());
+      // we do not reject message, we just ignore illformed updated
+      return true;
+   }
+
    bs::network::MDFields fields;
 
    for (int i=0; i < response.marketdatapricesnapshotlevel_size(); ++i) {
@@ -176,11 +198,32 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
       }
    }
 
-   const auto itSecDef = secDefs_.find(security.toStdString());
-   const auto assetType = (itSecDef == secDefs_.end()) ? bs::network::Asset::fromCelerProductType(response.producttype())
-      : itSecDef->second.assetType;
+   const auto assetType = bs::network::Asset::fromCelerProductType(response.producttype());
 
    emit MDUpdate(assetType, security, fields);
+
+   return true;
+}
+
+bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
+   , const std::string& serverExchangeId)
+{
+   if (!IsConnectedToCeler()) {
+      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] can't register CC product while disconnected");
+      return false;
+   }
+
+   auto command = std::make_shared<CelerCreateCCSecurityOnMDSequence>(securityId
+      , serverExchangeId, logger_);
+
+   logger_->debug("[CelerMarketDataProvider::RegisterCCOnCeler] registering CC on celer MD: {}"
+      , securityId);
+
+   if (!celerClient_->ExecuteSequence(command)) {
+      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] failed to send command to MD server for {}"
+         , securityId);
+      return false;
+   }
 
    return true;
 }
@@ -195,25 +238,39 @@ bool CelerMarketDataProvider::onReqRejected(const std::string& data)
 
    logger_->debug("[CelerMarketDataProvider::onReqRejected] {}", response.DebugString());
 
-   // text field contain rejected ccy pair
+   {
+      FastLock locker{ccSymbolsListLocker_};
+      auto it = subscribedSymbols_.find(response.securityid());
+      if (it != subscribedSymbols_.end()) {
+         subscribedSymbols_.erase(it);
+      }
+   }
+
    emit MDReqRejected(response.securityid(), response.text());
 
    return true;
 }
 
-void CelerMarketDataProvider::onCCSecurityReceived(const bs::network::CCSecurityDef& ccDef)
+void CelerMarketDataProvider::onCCSecurityReceived(const std::string& securityId)
 {
    logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] loaded CC symbol {}"
-      , ccDef.securityId);
+      , securityId);
 
    {
       FastLock locker{ccSymbolsListLocker_};
-      loadedSymbols_.emplace(ccDef.securityId);
+      if (loadedSymbols_.find(securityId) != loadedSymbols_.end()) {
+         logger_->debug("[CelerMarketDataProvider::onCCSecurityReceived] {} already loaded. ignore"
+            , securityId);
+         return;
+      }
+
+      loadedSymbols_.emplace(securityId);
    }
 
    if (IsConnectedToCeler()) {
-      SubscribeToCCProduct(ccDef.securityId);
-      emit MDSecuritiesReceived();
+      if (SubscribeToCCProduct(securityId)) {
+         emit MDSecuritiesReceived();
+      }
    }
 }
 
@@ -231,8 +288,6 @@ bool CelerMarketDataProvider::SubscribeToCCProduct(const std::string& ccProduct)
             , ccProduct);
          return true;
       }
-
-      subscribedSymbols_.emplace(ccProduct);
    }
 
    auto subscribeCommand = std::make_shared<CelerSubscribeToMDSequence>(ccProduct
@@ -244,8 +299,29 @@ bool CelerMarketDataProvider::SubscribeToCCProduct(const std::string& ccProduct)
       return false;
    }
 
+   {
+      FastLock locker{ccSymbolsListLocker_};
+      subscribedSymbols_.emplace(ccProduct);
+   }
+
    emit MDSecurityReceived(ccProduct, {bs::network::Asset::Type::PrivateMarket});
    emit MDUpdate(bs::network::Asset::Type::PrivateMarket, QString::fromStdString(ccProduct), {});
+
+   return true;
+}
+
+bool CelerMarketDataProvider::ProcessSecurityListingEvent(const std::string& data)
+{
+   com::celertech::staticdata::api::security::SecurityListingDownstreamEvent responseEvent;
+   if (!responseEvent.ParseFromString(data)) {
+      logger_->error("[CelerMarketDataProvider::ProcessSecurityListingEvent] failed to parse SecurityListingDownstreamEvent");
+      return false;
+   }
+
+   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation:\n{}"
+                  , responseEvent.DebugString());
+
+   emit CCSecuritRegistrationResult(true, responseEvent.securityid());
 
    return true;
 }
