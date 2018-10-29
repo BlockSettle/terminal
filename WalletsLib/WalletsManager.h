@@ -121,7 +121,8 @@ signals:
    void walletChanged();
    void walletsReady();
    void walletsLoaded();
-   void walletBalanceUpdated();
+   void walletBalanceUpdated(std::string walletId);
+   void walletBalanceChanged(std::string walletId);
    void walletReady(const QString &walletId);
    void newWalletAdded(const std::string &walletId);
    void authWalletChanged();
