@@ -25,7 +25,8 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , appSettings_(appSettings)
    , otpManager_(otpMgr)
 {
-   connect(appSettings_.get(), &ApplicationSettings::settingChanged, this, &CCFileManager::onPubSettingsChanged);
+   connect(appSettings_.get(), &ApplicationSettings::settingChanged, this, &CCFileManager::onPubSettingsChanged
+      , Qt::QueuedConnection);
 }
 
 void CCFileManager::onPubSettingsChanged(int setting, QVariant)
