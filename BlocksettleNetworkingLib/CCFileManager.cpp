@@ -25,6 +25,27 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , appSettings_(appSettings)
    , otpManager_(otpMgr)
 {
+   connect(appSettings_.get(), &ApplicationSettings::settingChanged, this, &CCFileManager::onPubSettingsChanged);
+}
+
+void CCFileManager::onPubSettingsChanged(int setting, QVariant)
+{
+   if ((setting == ApplicationSettings::pubBridgeHost) || (setting == ApplicationSettings::pubBridgePort)) {
+      RemoveAndDisableFileSave();
+   }
+}
+
+void CCFileManager::RemoveAndDisableFileSave()
+{
+   saveToFileDisabled_ = true;
+   const auto path = QString::fromStdString(appSettings_->get<std::string>(ApplicationSettings::ccFileName));
+   if (QFile::exists(path)) {
+      logger_->debug("[CCFileManager::RemoveAndDisableFileSave] remove {} and disable save"
+         , path.toStdString());
+      QFile::remove(path);
+   } else {
+      logger_->debug("[CCFileManager::RemoveAndDisableFileSave] disabling saving on cc gen file");
+   }
 }
 
 void CCFileManager::LoadSavedCCDefinitions()
@@ -221,6 +242,11 @@ bool CCFileManager::LoadFromFile(const std::string &path)
 
 bool CCFileManager::SaveToFile(const std::string &path, const std::string &sig)
 {
+   if (saveToFileDisabled_) {
+      logger_->debug("[CCFileManager::SaveToFile] save to file disabled");
+      return true;
+   }
+
    GetCCGenesisAddressesResponse resp;
 
    resp.set_networktype(networkType(appSettings_));
