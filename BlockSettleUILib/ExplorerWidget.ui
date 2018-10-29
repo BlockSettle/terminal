@@ -43,7 +43,7 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="2,15">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="2,22">
       <property name="spacing">
        <number>0</number>
       </property>
@@ -103,7 +103,11 @@
           </spacer>
          </item>
          <item>
-          <widget class="QLineEdit" name="searchBox"/>
+          <widget class="QLineEdit" name="searchBox">
+           <property name="placeholderText">
+            <string>search for a transaction or address</string>
+           </property>
+          </widget>
          </item>
          <item>
           <spacer name="horizontalSpacer_2">
