@@ -74,10 +74,10 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
    envelope.set_apikey(kServerApiKey);
 
    const auto signature = autheid::signData(payload, authKeys_.first);
-   envelope.set_rasign(autheid::bytesToString(signature));
+   envelope.set_rasign(signature.data(), signature.size());
 
    const auto encPayload = autheid::encryptData(payload, serverPubKey_);
-   envelope.set_payload(autheid::bytesToString(encPayload));
+   envelope.set_payload(encPayload.data(), encPayload.size());
 
    return connection_->send(envelope.SerializeAsString());
 }
