@@ -409,7 +409,6 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &pa
                item.amountStr.clear();
                item.calcAmount(walletsManager_);
             }
-            item.isValid = item.wallet->isTxValid(item.txEntry.txHash);
          }
          if (newBlockNum != UINT32_MAX) {
             item.confirmations = armory_->getConfirmationsNumber(newBlockNum);
