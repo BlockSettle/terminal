@@ -114,8 +114,9 @@ public:
          } else {
             const QModelIndex lTxnIndex = sourceModel()->index(left.row(), AddressListModel::ColumnTxCount);
             const QModelIndex rTxnIndex = sourceModel()->index(right.row(), AddressListModel::ColumnTxCount);
-
-            return (sourceModel()->data(lTxnIndex) < sourceModel()->data(rTxnIndex));
+            if (lTxnIndex.data() != rTxnIndex.data()) {
+               return (sourceModel()->data(lTxnIndex) < sourceModel()->data(rTxnIndex));
+            }
          }
       }
 
@@ -222,8 +223,6 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
    walletsModel_->LoadWallets();
 
-   connect(ui->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
-
    connect(ui->walletPropertiesButton, &QPushButton::clicked, this, &WalletsWidget::showSelectedWalletProperties);
    connect(ui->createWalletButton, &QPushButton::clicked, this, &WalletsWidget::onNewWallet);
    connect(ui->treeViewWallets, &QTreeView::doubleClicked, this, &WalletsWidget::showWalletProperties);
@@ -238,7 +237,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    addressSortFilterModel_ = new AddressSortFilterModel(this);
    addressSortFilterModel_->setSourceModel(addressModel_);
    addressSortFilterModel_->setSortRole(AddressListModel::SortRole);
-   connect(addressModel_, &AddressListModel::updated, addressSortFilterModel_, &AddressSortFilterModel::onUpdated);
+   connect(addressModel_, &AddressListModel::updated, addressSortFilterModel_, &AddressSortFilterModel::onUpdated, Qt::QueuedConnection);
 
    ui->treeViewAddresses->setUniformRowHeights(true);
    ui->treeViewAddresses->setModel(addressSortFilterModel_);
@@ -248,6 +247,8 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 
    updateAddresses();
+   connect(ui->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
+   connect(walletsManager_.get(), &WalletsManager::walletBalanceChanged, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
 }
 
 std::vector<WalletsManager::wallet_gen_type> WalletsWidget::GetSelectedWallets() const
@@ -362,8 +363,28 @@ void WalletsWidget::onWalletContextMenu(const QPoint &p)
 
 void WalletsWidget::updateAddresses()
 {
-   addressModel_->setWallets(GetSelectedWallets());
+   const auto &selectedWallets = GetSelectedWallets();
+   if (selectedWallets == prevSelectedWallets_) {
+      return;
+   }
+   prevSelectedWallets_ = selectedWallets;
+   addressModel_->setWallets(selectedWallets);
    ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
+}
+
+void WalletsWidget::onWalletBalanceChanged(std::string walletId)
+{
+   const auto &selectedWallets = GetSelectedWallets();
+   bool changedSelected = false;
+   for (const auto &wallet : selectedWallets) {
+      if (wallet->GetWalletId() == walletId) {
+         changedSelected = true;
+         break;
+      }
+   }
+   if (changedSelected) {
+      addressModel_->setWallets(selectedWallets);
+   }
 }
 
 void WalletsWidget::onNewWallet()

@@ -444,25 +444,16 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
 
 void BSTerminalMainWindow::CompleteUIOnlineView()
 {
-   const auto &cbWalletsLD = [this](AsyncClient::LedgerDelegate delegate) {
-      transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_, walletsManager_, delegate, this);
-      transactionsModel_->moveToThread(QApplication::instance()->thread());
+   transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_, walletsManager_, this);
 
-      QMetaObject::invokeMethod(transactionsModel_.get(), "init", Qt::QueuedConnection);
-      QMetaObject::invokeMethod(this, "InitTransactionsView", Qt::QueuedConnection);
+   InitTransactionsView();
+   transactionsModel_->loadAllWallets();
 
-      if (walletsManager_->GetWalletsCount() != 0) {
-         QMetaObject::invokeMethod(action_send_, "setEnabled", Qt::QueuedConnection,
-            Q_ARG(bool, true));
-      }
-      else {
-         QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection,
-            Q_ARG(bool, !walletsManager_->HasPrimaryWallet()), Q_ARG(bool, true));
-      }
-   };
-   if (!armory_->getWalletsLedgerDelegate(cbWalletsLD)) {
-      logMgr_->logger("ui")->error("[CompleteUIOnlineView] failed to create wallets delegate. Go to offline mode");
-      return;
+   if (walletsManager_->GetWalletsCount() != 0) {
+      action_send_->setEnabled(true);
+   }
+   else {
+      createWallet(!walletsManager_->HasPrimaryWallet());
    }
 }
 

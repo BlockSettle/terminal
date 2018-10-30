@@ -315,7 +315,8 @@ namespace bs {
 
       void addrBalanceReceived(const bs::Address &, std::vector<uint64_t>) const;
       void addrTxNReceived(const bs::Address &, uint32_t) const;
-      void balanceUpdated(std::vector<uint64_t>) const;
+      void balanceUpdated(std::string walletId, std::vector<uint64_t>) const;
+      void balanceChanged(std::string walletId, std::vector<uint64_t>) const;
       void historyPageReceived(int id, std::vector<ClientClasses::LedgerEntry>) const;
 
    protected:

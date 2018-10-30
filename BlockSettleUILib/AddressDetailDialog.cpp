@@ -140,7 +140,6 @@ AddressDetailDialog::~AddressDetailDialog() = default;
 void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
 {
    TransactionsViewModel* model = new TransactionsViewModel(armory_, walletsManager_, delegate, this, wallet_);
-   model->init();
 
    IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
    incomingFilter->address = address_.display();

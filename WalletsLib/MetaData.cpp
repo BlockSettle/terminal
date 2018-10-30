@@ -489,7 +489,7 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
       const auto itBal = addressBalanceMap_.find(addr.id());
       if (itBal == addressBalanceMap_.end()) {
          cb({ 0, 0, 0 });
-         return false;
+         return true;
       }
       cb(itBal->second);
    }
@@ -728,8 +728,9 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
          totalBalance_ = totalBalance;
          spendableBalance_ = spendableBalance;
          unconfirmedBalance_ = unconfirmedBalance;
+         emit balanceChanged(GetWalletId(), balanceVector);
       }
-      emit balanceUpdated(balanceVector);
+      emit balanceUpdated(GetWalletId(), balanceVector);
       if (cb) {
          cb(balanceVector);
       }

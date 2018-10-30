@@ -57,15 +57,17 @@ class TransactionsViewModel : public QAbstractTableModel
 Q_OBJECT
 public:
     TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<WalletsManager> &
-       , const AsyncClient::LedgerDelegate &, QObject* parent, const std::shared_ptr<bs::Wallet> &defWlt = nullptr);
-   ~TransactionsViewModel() noexcept;
+       , const AsyncClient::LedgerDelegate &, QObject* parent, const std::shared_ptr<bs::Wallet> &defWlt);
+    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<WalletsManager> &
+       , QObject* parent = nullptr);
+    ~TransactionsViewModel() noexcept;
 
    TransactionsViewModel(const TransactionsViewModel&) = delete;
    TransactionsViewModel& operator = (const TransactionsViewModel&) = delete;
    TransactionsViewModel(TransactionsViewModel&&) = delete;
    TransactionsViewModel& operator = (TransactionsViewModel&&) = delete;
 
-   Q_INVOKABLE void init();
+   void loadAllWallets();
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -91,8 +93,9 @@ private slots:
    void timerCmd();
 
 private:
+   void init();
    void clear();
-   void loadLedgerEntries();
+   Q_INVOKABLE void loadLedgerEntries();
    void ledgerToTxData();
    void insertNewTransactions(const std::vector<bs::TXEntry> &page);
    void loadTransactionDetails(unsigned int iStart, size_t count);
@@ -155,6 +158,7 @@ public:
    std::shared_ptr<WalletsManager>     walletsManager_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
+   const bool        allWallets_;
    std::atomic_bool  stopped_;
    QFont             fontBold_;
    QColor            colorGray_, colorRed_, colorYellow_, colorGreen_, colorInvalid_;

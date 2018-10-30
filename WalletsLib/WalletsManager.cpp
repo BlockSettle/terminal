@@ -272,7 +272,10 @@ void WalletsManager::AddWallet(const wallet_gen_type &wallet, bool isHDLeaf)
    connect(wallet.get(), &bs::Wallet::walletReady, this, &WalletsManager::onWalletReady);
    connect(wallet.get(), &bs::Wallet::addressAdded, [this] { emit walletChanged(); });
    connect(wallet.get(), &bs::Wallet::walletReset, [this] { emit walletChanged(); });
-   connect(wallet.get(), &bs::Wallet::balanceUpdated, [this](std::vector<uint64_t>) { emit walletBalanceUpdated(); });
+   connect(wallet.get(), &bs::Wallet::balanceUpdated, [this](std::string walletId, std::vector<uint64_t>) {
+      emit walletBalanceUpdated(walletId); });
+   connect(wallet.get(), &bs::Wallet::balanceChanged, [this](std::string walletId, std::vector<uint64_t>) {
+      emit walletBalanceChanged(walletId); });
 }
 
 void WalletsManager::SaveWallet(const hd_wallet_type &wallet)

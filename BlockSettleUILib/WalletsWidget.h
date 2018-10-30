@@ -81,6 +81,7 @@ private slots:
    void onEnterKeyInAddressesPressed(const QModelIndex &index);
    void onEnterKeyInWalletsPressed(const QModelIndex &index);
    void onShowContextMenu(QMenu *, QPoint);
+   void onWalletBalanceChanged(std::string);
 
 private:
    std::unique_ptr<Ui::WalletsWidget> ui;
@@ -104,6 +105,7 @@ private:
    std::shared_ptr<bs::Wallet>   curWallet_;
    unsigned int   revokeReqId_ = 0;
    QString username_;
+   std::vector<std::shared_ptr<bs::Wallet>>  prevSelectedWallets_;
 };
 
 bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &

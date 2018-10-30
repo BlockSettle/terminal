@@ -35,7 +35,7 @@ AddressListModel::AddressListModel(std::shared_ptr<WalletsManager> walletsManage
    , processing_(false)
 {
    connect(walletsManager.get(), &WalletsManager::walletsReady, this, &AddressListModel::updateData);
-   connect(walletsManager.get(), &WalletsManager::walletChanged, this, &AddressListModel::updateData);
+//   connect(walletsManager.get(), &WalletsManager::walletChanged, this, &AddressListModel::updateData);
    connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &AddressListModel::updateData);
 }
 
@@ -163,8 +163,15 @@ void AddressListModel::updateWalletData()
             emit updated();
          }
       };
-      addrRow.wallet->getAddrTxN(addrRow.address, cbTxN);
-      addrRow.wallet->getAddrBalance(addrRow.address, cbBalance);
+      if (!addrRow.wallet->getAddrTxN(addrRow.address, cbTxN)) {
+         delete nbTxNs;
+         delete nbBalances;
+         return;
+      }
+      if (!addrRow.wallet->getAddrBalance(addrRow.address, cbBalance)) {
+         delete nbBalances;
+         return;
+      }
    }
 }
 
