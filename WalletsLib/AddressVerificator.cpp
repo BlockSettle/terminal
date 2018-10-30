@@ -659,27 +659,26 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
          }
       }
    };
-   std::vector<bs::Address> bsAddrs;
+   auto pages = new std::map<bs::Address, uint64_t>;
+   auto txHashSet = new std::set<BinaryData>;
    for (const auto &bsAddr : bsAddressList_) {
-      bsAddrs.emplace_back(bsAddr);
+      (*pages)[bsAddr] = 1;
    }
-   const auto &cbDelegates = [this, cbTXs](std::map<bs::Address, AsyncClient::LedgerDelegate> delegates) {
-      auto pages = new std::map<bs::Address, uint64_t>;
-      auto txHashSet = new std::set<BinaryData>;
-      for (const auto &delegate : delegates) {
-         auto addr = delegate.first;
-         auto delegatePtr = new AsyncClient::LedgerDelegate(delegate.second);
-         const auto &cbPageCnt = [this, pages, addr, delegatePtr, txHashSet, cbTXs](uint64_t pageCnt) {
-            (*pages)[addr] = pageCnt;
+   for (const auto &bsAddr : bsAddressList_) {
+      const auto &cbDelegate = [this, cbTXs, pages, txHashSet, bsAddr](AsyncClient::LedgerDelegate delegate) {
+         auto delegatePtr = new AsyncClient::LedgerDelegate(delegate);
+         const auto &cbPageCnt = [this, pages, bsAddr, delegatePtr, txHashSet, cbTXs](uint64_t pageCnt) {
+            (*pages)[bsAddr] = pageCnt;
             for (int i = 0; i < pageCnt; ++i) {
-               const auto &cbLedger = [this, pages, addr, txHashSet, cbTXs]
+               const auto &cbLedger = [this, pages, bsAddr, txHashSet, cbTXs]
                (std::vector<ClientClasses::LedgerEntry> entries) {
                   for (const auto &entry : entries) {
                      txHashSet->insert(entry.getTxHash());
                   }
-                  (*pages)[addr]--;
-                  if (!(*pages)[addr]) {
-                     pages->erase(addr);
+                  (*pages)[bsAddr]--;
+                  if (!(*pages)[bsAddr]) {
+                     pages->erase(bsAddr);
+                     logger_->debug("pages size = {}", pages->size());
                      if (pages->empty()) {
                         delete pages;
                         armory_->getTXsByHash(*txHashSet, cbTXs);
@@ -691,10 +690,10 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                delete delegatePtr;
             }
          };
-         delegate.second.getPageCount(cbPageCnt);
-      }
-   };
-   armory_->getLedgerDelegatesForAddresses(walletId_, bsAddrs, cbDelegates);
+         delegate.getPageCount(cbPageCnt);
+      };
+      armory_->getLedgerDelegateForAddress(walletId_, bsAddr, cbDelegate);
+   }
 }
 
 void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UTXO>)> cb) const
