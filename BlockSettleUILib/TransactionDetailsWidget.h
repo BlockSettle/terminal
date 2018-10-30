@@ -19,6 +19,7 @@ public:
     ~TransactionDetailsWidget();
 
     void setTxRefVal(const BinaryData& inTxRef);
+    void setTxVal(const QString inTx); // possibly a temporary function to show workflow
     void loadInputs();
 
 private:

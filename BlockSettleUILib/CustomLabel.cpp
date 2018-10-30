@@ -10,8 +10,7 @@ CustomLabel::CustomLabel(QWidget *parent) :
 
 }
 
-void CustomLabel::mouseReleaseEvent(QMouseEvent *ev)
-{
+void CustomLabel::mouseReleaseEvent(QMouseEvent *ev) {
    // will use left click in to open address page 
    if (ev->button() == Qt::LeftButton) {
 

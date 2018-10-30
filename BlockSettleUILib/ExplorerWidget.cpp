@@ -4,6 +4,7 @@
 #include "UiUtils.h"
 #include "BinaryData.h"
 #include <QToolTip>
+#include <QDebug>
 
 // Overloaded constuctor. Does basic setup and Qt signal connection.
 ExplorerWidget::ExplorerWidget(QWidget *parent) :
@@ -12,8 +13,12 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
 {
    ui_->setupUi(this);
 
+   // connection to handle enter key being pressed inside the search box
    connect(ui_->searchBox, &QLineEdit::returnPressed,
            this, &ExplorerWidget::onSearchStarted);
+   // connection to handle user clicking on transaction id inside address details page
+   connect(ui_->Address, &AddressDetailsWidget::transactionClicked,
+      this, &ExplorerWidget::onTransactionClicked);
 }
 
 ExplorerWidget::~ExplorerWidget() = default;
@@ -74,7 +79,7 @@ void ExplorerWidget::onSearchStarted()
    // Idx 1 = Tx (TransactionDetailsWidget)
    // Idx 2 = Address (AddressDetailsWidget)
    if(strIsAddress_ == true) {
-      ui_->stackedWidget->setCurrentIndex(2);
+      ui_->stackedWidget->setCurrentIndex(AddressPage);
 
       // TO DO: Pass the address to the address widget and populate the fields.
       // this sets the address field
@@ -85,7 +90,7 @@ void ExplorerWidget::onSearchStarted()
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
       // String is a valid 32 byte hex string, so we may proceed.
-      ui_->stackedWidget->setCurrentIndex(1);
+      ui_->stackedWidget->setCurrentIndex(TxPage);
       const BinaryData inHex = READHEX(userStr.toStdString());
       
       // TO DO: Pass the Tx hash to the Tx widget and populate the fields.
@@ -134,4 +139,12 @@ void ExplorerWidget::populateTransactionWidget(const BinaryData inHex)
    // real data, or if you can get the getTxByHash() and the callback to work correctly
    // for me I can update it to populate it with actual data. 
    ui_->Transaction->loadInputs();
+}
+
+// This slot function is called whenever user clicks on a transaction in
+// address details page or any other page.
+void ExplorerWidget::onTransactionClicked(QString txId) {
+   ui_->Transaction->setTxVal(txId);
+   ui_->Transaction->loadInputs();
+   ui_->stackedWidget->setCurrentIndex(TxPage);
 }

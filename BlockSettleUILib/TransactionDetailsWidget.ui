@@ -121,7 +121,7 @@
             </widget>
            </item>
            <item row="6" column="1">
-            <widget class="QLabel" name="tranHeight">
+            <widget class="CustomLabel" name="tranHeight">
              <property name="text">
               <string/>
              </property>
@@ -152,7 +152,7 @@
             </widget>
            </item>
            <item row="12" column="1">
-            <widget class="QLabel" name="tranFeePerByte">
+            <widget class="CustomLabel" name="tranFeePerByte">
              <property name="text">
               <string/>
              </property>
@@ -162,7 +162,7 @@
             </widget>
            </item>
            <item row="7" column="1">
-            <widget class="QLabel" name="tranConfirmations">
+            <widget class="CustomLabel" name="tranConfirmations">
              <property name="text">
               <string/>
              </property>
@@ -179,7 +179,7 @@
             </widget>
            </item>
            <item row="8" column="1">
-            <widget class="QLabel" name="tranNumInputs">
+            <widget class="CustomLabel" name="tranNumInputs">
              <property name="text">
               <string/>
              </property>
@@ -217,7 +217,7 @@
             </widget>
            </item>
            <item row="10" column="1">
-            <widget class="QLabel" name="tranOutput">
+            <widget class="CustomLabel" name="tranOutput">
              <property name="text">
               <string/>
              </property>
@@ -227,7 +227,7 @@
             </widget>
            </item>
            <item row="13" column="1">
-            <widget class="QLabel" name="tranSize">
+            <widget class="CustomLabel" name="tranSize">
              <property name="text">
               <string/>
              </property>
@@ -237,7 +237,7 @@
             </widget>
            </item>
            <item row="11" column="1">
-            <widget class="QLabel" name="tranFees">
+            <widget class="CustomLabel" name="tranFees">
              <property name="text">
               <string/>
              </property>
@@ -247,7 +247,7 @@
             </widget>
            </item>
            <item row="9" column="1">
-            <widget class="QLabel" name="tranNumOutputs">
+            <widget class="CustomLabel" name="tranNumOutputs">
              <property name="text">
               <string/>
              </property>
@@ -257,7 +257,7 @@
             </widget>
            </item>
            <item row="5" column="1">
-            <widget class="QLabel" name="tranDate">
+            <widget class="CustomLabel" name="tranDate">
              <property name="text">
               <string/>
              </property>
@@ -267,7 +267,7 @@
             </widget>
            </item>
            <item row="4" column="1">
-            <widget class="QLabel" name="tranID">
+            <widget class="CustomLabel" name="tranID">
              <property name="text">
               <string/>
              </property>
@@ -466,6 +466,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomLabel</class>
+   <extends>QLabel</extends>
+   <header>CustomLabel.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

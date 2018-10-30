@@ -10,8 +10,6 @@ namespace Ui {
    class ExplorerWidget;
 }
 
-//class QStringListModel;
-
 class ExplorerWidget : public TabWithShortcut
 {
 Q_OBJECT
@@ -23,9 +21,16 @@ public:
    void init(const std::shared_ptr<ArmoryConnection> &);
    void shortcutActivated(ShortcutType s) override;
 
+   enum Page {
+      BlockPage = 0,
+      TxPage = 1,
+      AddressPage = 2
+   };
+
 protected slots:
    void onSearchStarted();
    void populateTransactionWidget(const BinaryData inHex);
+   void onTransactionClicked(QString txId);
 
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;

@@ -211,7 +211,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QTreeWidget" name="treeAddressTransactions">
+      <widget class="CustomTreeWidget" name="treeAddressTransactions">
        <property name="alternatingRowColors">
         <bool>true</bool>
        </property>
@@ -271,6 +271,11 @@
    <class>CustomLabel</class>
    <extends>QLabel</extends>
    <header>CustomLabel.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomTreeWidget</class>
+   <extends>QTreeWidget</extends>
+   <header>CustomTreeWidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

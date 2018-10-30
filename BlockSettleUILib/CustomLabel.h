@@ -7,7 +7,7 @@ class CustomLabel : public QLabel
 {
     Q_OBJECT
 public:
-    CustomLabel(QWidget *parent);
+    CustomLabel(QWidget *parent = nullptr);
 
 protected:
    void mouseReleaseEvent(QMouseEvent *ev);
