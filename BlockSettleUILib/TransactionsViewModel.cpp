@@ -401,6 +401,9 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &pa
          uint32_t newBlockNum = UINT32_MAX;
          if (itPage != newData.end()) {
             newBlockNum = itPage->second.blockNum;
+            if (item.wallet) {
+               item.isValid = item.wallet->isTxValid(itPage->second.txHash);
+            }
             if (item.txEntry.value != itPage->second.value) {
                item.txEntry = itPage->second;
                item.amountStr.clear();
