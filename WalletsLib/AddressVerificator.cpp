@@ -678,7 +678,6 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                   (*pages)[bsAddr]--;
                   if (!(*pages)[bsAddr]) {
                      pages->erase(bsAddr);
-                     logger_->debug("pages size = {}", pages->size());
                      if (pages->empty()) {
                         delete pages;
                         armory_->getTXsByHash(*txHashSet, cbTXs);

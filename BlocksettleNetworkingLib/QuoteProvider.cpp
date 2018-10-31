@@ -294,6 +294,7 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
       }
    }
 
+   saveQuoteReqId(quote.requestId, quote.quoteId);
    emit quoteReceived(quote);
    return true;
 }
