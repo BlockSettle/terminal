@@ -110,8 +110,8 @@ void CheckRecipSigner::hasInputAddress(const bs::Address &addr, std::function<vo
 
    const auto &cbTXs = [this, cb, checker, lotsize](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
-         txHashSet_.erase(tx.getThisHash());
-         const auto &cbContains = [this, cb, checker](bool contains) {
+         const auto &cbContains = [this, cb, tx, checker](bool contains) {
+            txHashSet_.erase(tx.getThisHash());
             if (contains) {
                resultFound_ = true;
                cb(true);
