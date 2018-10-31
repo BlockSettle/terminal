@@ -7,8 +7,9 @@
 namespace Ui {
 class TransactionDetailsWidget;
 }
-class QTreeWidget;
+class CustomTreeWidget;
 class QTreeWidgetItem;
+class QTreeWidget;
 
 class TransactionDetailsWidget : public QWidget
 {
@@ -21,6 +22,22 @@ public:
     void setTxRefVal(const BinaryData& inTxRef);
     void setTxVal(const QString inTx); // possibly a temporary function to show workflow
     void loadInputs();
+
+    enum TxTreeColumns {
+       colType = 0,
+       colAddressId = 1,
+       colAmount = 2,
+       colWallet
+    };
+
+signals:
+   void addressClicked(QString addressId);
+
+protected slots:
+   void onAddressClicked(QTreeWidgetItem *item, int column);
+
+protected:
+   void loadTree(CustomTreeWidget *tree);
 
 private:
     Ui::TransactionDetailsWidget *ui_;

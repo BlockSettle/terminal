@@ -79,7 +79,7 @@
        <property name="darkFrame" stdset="0">
         <bool>true</bool>
        </property>
-       <layout class="QGridLayout" name="gridLayout" columnstretch="2,8">
+       <layout class="QGridLayout" name="gridLayout" columnstretch="2,10">
         <property name="leftMargin">
          <number>6</number>
         </property>
@@ -135,6 +135,9 @@
            <string/>
           </property>
           <property name="whiteText" stdset="0">
+           <bool>true</bool>
+          </property>
+          <property name="copyToClipboard" stdset="0">
            <bool>true</bool>
           </property>
          </widget>

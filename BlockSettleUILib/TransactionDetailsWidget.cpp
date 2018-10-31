@@ -7,6 +7,24 @@ TransactionDetailsWidget::TransactionDetailsWidget(QWidget *parent) :
    ui_(new Ui::TransactionDetailsWidget)
 {
    ui_->setupUi(this);
+
+   // setting up a tooltip that pops up immediately when mouse hovers over it
+   QIcon btcIcon(QLatin1String(":/resources/notification_info.png"));
+   ui_->labelTxPopup->setPixmap(btcIcon.pixmap(13, 13));
+   ui_->labelTxPopup->setMouseTracking(true);
+   ui_->labelTxPopup->toolTip_ = tr("The Transaction ID (TXID) is in big endian notation. It will differ from the user input if the input is little endian.");
+
+   // set the address column to have hand cursor
+   ui_->treeInput->handCursorColumns_.append(colAddressId);
+   ui_->treeOutput->handCursorColumns_.append(colAddressId);
+   // allow address columns to be copied to clipboard with right click
+   ui_->treeInput->copyToClipboardColumns_.append(colAddressId);
+   ui_->treeOutput->copyToClipboardColumns_.append(colAddressId);
+
+   connect(ui_->treeInput, &QTreeWidget::itemClicked,
+      this, &TransactionDetailsWidget::onAddressClicked);
+   connect(ui_->treeOutput, &QTreeWidget::itemClicked,
+      this, &TransactionDetailsWidget::onAddressClicked);
 }
 
 TransactionDetailsWidget::~TransactionDetailsWidget()
@@ -28,7 +46,12 @@ void TransactionDetailsWidget::setTxVal(const QString inTx) {
 // This function populates the inputs tree with top level and child items. The exactly same code
 // applies to ui_->treeOutput
 void TransactionDetailsWidget::loadInputs() {
-   QTreeWidget *tree = ui_->treeInput;
+   // for testing purposes i populate both trees with test data
+   loadTree(ui_->treeInput);
+   loadTree(ui_->treeOutput);
+}
+
+void TransactionDetailsWidget::loadTree(CustomTreeWidget *tree) {
    tree->clear();
    // here's the code to add data to the Input tree.
    for (int i = 0; i < 5; i++) {
@@ -36,13 +59,13 @@ void TransactionDetailsWidget::loadInputs() {
       QTreeWidgetItem *item = createItem(tree, tr("Input"), tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("-0.00850000"), tr("Settlement"));
 
       // add several child items to this top level item to crate a new branch in the tree
-      item->addChild(createItem(item, tr("p2wsh"), tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("-0.00850000"), tr("Settlement")));
-      item->addChild(createItem(item, tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("-0.00850000"), tr("Settlement")));
       item->addChild(createItem(item, tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("-0.00850000"), tr("Settlement")));
 
+      item->setExpanded(true);
       // add the item to the tree
       tree->addTopLevelItem(item);
    }
+   tree->resizeColumns();
 }
 
 QTreeWidgetItem * TransactionDetailsWidget::createItem(QTreeWidget *tree, QString type, QString address, QString amount, QString wallet) {
@@ -62,4 +85,12 @@ QTreeWidgetItem * TransactionDetailsWidget::createItem(QTreeWidgetItem *parentIt
    item->setText(2, amount); // amount
    item->setText(3, wallet); // wallet
    return item;
+}
+
+void TransactionDetailsWidget::onAddressClicked(QTreeWidgetItem *item, int column) {
+   // user has clicked the address column of the item so
+   // send a signal to ExplorerWidget to open AddressDetailsWidget
+   if (column == colAddressId) {
+      emit(addressClicked(item->text(colAddressId)));
+   }
 }

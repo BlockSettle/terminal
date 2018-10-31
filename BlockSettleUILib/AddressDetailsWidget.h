@@ -19,21 +19,32 @@ public:
     ~AddressDetailsWidget();
 
     void setAddrVal(const bs::Address& inAddrVal);
+    void setAddrVal(const QString inAddrVal);
     void loadTransactions();
+
+    enum AddressTreeColumns {
+       colDate = 0,
+       colTxId = 1,
+       colConfs = 2,
+       colInputsNum,
+       colOutputsNum,
+       colOutput,
+       colFees,
+       colFeePerByte,
+       colSize
+    };
 
  signals:
     void transactionClicked(QString txId);
 
 protected slots:
-   void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
-   void onItemClicked(QTreeWidgetItem *item, int column);
-
+   void onTxClicked(QTreeWidgetItem *item, int column);
 
 private:
     Ui::AddressDetailsWidget *ui_;
     bs::Address addrVal;
     void setConfirmationColor(QTreeWidgetItem *item);
-
+    void setOutputColor(QTreeWidgetItem *item);
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

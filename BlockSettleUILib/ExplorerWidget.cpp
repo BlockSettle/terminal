@@ -19,6 +19,9 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    // connection to handle user clicking on transaction id inside address details page
    connect(ui_->Address, &AddressDetailsWidget::transactionClicked,
       this, &ExplorerWidget::onTransactionClicked);
+   // connection to handle user clicking on adress id inside tx details page
+   connect(ui_->Transaction, &TransactionDetailsWidget::addressClicked,
+      this, &ExplorerWidget::onAddressClicked);
 }
 
 ExplorerWidget::~ExplorerWidget() = default;
@@ -147,4 +150,12 @@ void ExplorerWidget::onTransactionClicked(QString txId) {
    ui_->Transaction->setTxVal(txId);
    ui_->Transaction->loadInputs();
    ui_->stackedWidget->setCurrentIndex(TxPage);
+}
+
+// This slot function is called whenever user clicks on an address in
+// transaction details page or any other page.
+void ExplorerWidget::onAddressClicked(QString addressId) {
+   ui_->Address->setAddrVal(addressId);
+   ui_->Address->loadTransactions();
+   ui_->stackedWidget->setCurrentIndex(AddressPage);
 }

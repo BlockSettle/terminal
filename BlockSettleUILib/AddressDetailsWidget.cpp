@@ -2,16 +2,23 @@
 #include "ui_AddressDetailsWidget.h"
 #include <QDebug>
 
-AddressDetailsWidget::AddressDetailsWidget(QWidget *parent) :
-    QWidget(parent),
-   ui_(new Ui::AddressDetailsWidget)
+AddressDetailsWidget::AddressDetailsWidget(QWidget *parent) 
+   : QWidget(parent)
+   , ui_(new Ui::AddressDetailsWidget)
 {
    ui_->setupUi(this);
 
-   connect(ui_->treeAddressTransactions->selectionModel(), &QItemSelectionModel::selectionChanged,
-      this, &AddressDetailsWidget::onSelectionChanged);
+   // sets column resizing to fixed
+   //ui_->treeAddressTransactions->header()->setSectionResizeMode(QHeaderView::Fixed);
+
+   // tell CustomTreeWidget for which column the cursor becomes a hand cursor
+   ui_->treeAddressTransactions->handCursorColumns_.append(colTxId);
+   // allow TxId column to be copied to clipboard with right click
+   ui_->treeAddressTransactions->copyToClipboardColumns_.append(colTxId);
+
    connect(ui_->treeAddressTransactions, &QTreeWidget::itemClicked,
-      this, &AddressDetailsWidget::onItemClicked);
+      this, &AddressDetailsWidget::onTxClicked);
+
 }
 
 AddressDetailsWidget::~AddressDetailsWidget() {
@@ -29,9 +36,14 @@ void AddressDetailsWidget::setAddrVal(const bs::Address& inAddrVal) {
    // and unpacked here, but you can make this decision as you have a much better understanding of the armory piece.
 }
 
+void AddressDetailsWidget::setAddrVal(const QString inAddrVal) {
+   ui_->addressId->setText(inAddrVal);
+}
+
 void AddressDetailsWidget::loadTransactions() {
-   QTreeWidget *tree = ui_->treeAddressTransactions;
+   CustomTreeWidget *tree = ui_->treeAddressTransactions;
    tree->clear();
+   double outputVal = -4;
    // here's the code to add data to the address tree, the tree.
    for (int i = 0; i < 10; i++) {
       QTreeWidgetItem *item = new QTreeWidgetItem(tree);
@@ -40,20 +52,24 @@ void AddressDetailsWidget::loadTransactions() {
       item->setText(2, QString(tr("%1")).arg(i)); // confirmations
       item->setText(3, tr("3")); // inputs #
       item->setText(4, tr("2")); // outputs #
-      item->setText(5, tr("0.36742580")); // output
+      item->setText(5, QString::number(outputVal + i, 'G', 4)); // output
+      //item->setText(5, tr("0.36742580")); // output
       item->setText(6, tr("-0.00850000")); // fees
       item->setText(7, tr("110.21")); // fee per byte
       item->setText(8, tr("0.521")); // size
 
       setConfirmationColor(item);
+      // disabled as per Scott's request
+      //setOutputColor(item);
       tree->addTopLevelItem(item);
    }
+   tree->resizeColumns();
 }
 
 // This function sets the confirmation column to the correct color based
 // on the number of confirmations that are set inside the column.
 void AddressDetailsWidget::setConfirmationColor(QTreeWidgetItem *item) {
-   int conf = item->text(2).toInt();
+   auto conf = item->text(colConfs).toInt();
    QBrush brush;
    if (conf == 0) {
       brush.setColor(Qt::red);
@@ -64,18 +80,30 @@ void AddressDetailsWidget::setConfirmationColor(QTreeWidgetItem *item) {
    else {
       brush.setColor(Qt::darkGreen);
    }
-   item->setForeground(2, brush);
+   item->setForeground(colConfs, brush);
 }
 
-void AddressDetailsWidget::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected) {
-   qDebug() << "AddressDetailsWidget::onSelectionChanged column";
+// This functions sets the output column color based on positive or negative value.
+void AddressDetailsWidget::setOutputColor(QTreeWidgetItem *item) {
+   auto output = item->text(colOutput).toDouble();
+   QBrush brush;
+   if (output > 0) {
+      brush.setColor(Qt::darkGreen);
+   }
+   else if (output < 0) {
+      brush.setColor(Qt::red);
+   }
+   else {
+      brush.setColor(Qt::white);
+   }
+   item->setForeground(colOutput, brush);
 }
 
-void AddressDetailsWidget::onItemClicked(QTreeWidgetItem *item, int column) {
-   qDebug() << "AddressDetailsWidget::itemClicked column" << column;
-   // user has clicked the transaction of the item
-   if (column == 1) {
-
-      emit(transactionClicked(item->text(1)));
+void AddressDetailsWidget::onTxClicked(QTreeWidgetItem *item, int column) {
+   // user has clicked the transaction column of the item so
+   // send a signal to ExplorerWidget to open TransactionDetailsWidget
+   if (column == colTxId) {
+      emit(transactionClicked(item->text(colTxId)));
    }
 }
+

@@ -3,24 +3,35 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QToolTip>
+#include <QDebug>
+#include <QTimer>
 
 CustomLabel::CustomLabel(QWidget *parent) :
     QLabel(parent)
 {
-
+   if (property("showToolTipQuickly").toBool()) {
+      setMouseTracking(true);
+   }
 }
 
 void CustomLabel::mouseReleaseEvent(QMouseEvent *ev) {
-   // will use left click in to open address page 
-   if (ev->button() == Qt::LeftButton) {
-
-   }
    // on right click copy label text into clipboard and show a tooltip letting user know about it
-   else if (ev->button() == Qt::RightButton) {
-      QClipboard *clipboard = QApplication::clipboard();
-      clipboard->setText(text());
-      QToolTip::showText(this->mapToGlobal(QPoint(0, 3)), tr("Copied '") + text() + tr("' to clipboard."), this);
+   if (ev->button() == Qt::RightButton) {
+      if (property("copyToClipboard").toBool()) {
+         QClipboard *clipboard = QApplication::clipboard();
+         clipboard->setText(text());
+         // placing the tooltip in a timer because mouseReleaseEvent messes with it otherwise
+         QTimer::singleShot(50, [=] {
+            QToolTip::showText(this->mapToGlobal(QPoint(0, 3)), tr("Copied '") + text() + tr("' to clipboard."), this);
+         });
+      }
    }
-   // not calling parent's function because otherwise tooltip will not show up, for a label it's not a big deal
-   //QLabel::mouseReleaseEvent(ev);
+   QLabel::mouseReleaseEvent(ev);
+}
+
+void CustomLabel::mouseMoveEvent(QMouseEvent *ev) {
+   if (!toolTip_.isEmpty()) {
+      QToolTip::showText(mapToGlobal(QPoint(0, 7)), toolTip_, this);
+   }
+   QLabel::mouseMoveEvent(ev);
 }
