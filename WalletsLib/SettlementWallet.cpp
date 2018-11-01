@@ -678,7 +678,7 @@ void bs::SettlementMonitor::checkNewEntries(unsigned int)
       , addressString_);
 
    const std::function<void(std::vector<ClientClasses::LedgerEntry>)> cbHistory =
-      [this, &cbHistory] (std::vector<ClientClasses::LedgerEntry> entries) {
+      [this, cbHistory] (std::vector<ClientClasses::LedgerEntry> entries) {
       if (stopped_ || entries.empty()) {
          return;
       }
