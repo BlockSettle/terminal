@@ -1,5 +1,6 @@
 #include "AddressDetailsWidget.h"
 #include "ui_AddressDetailsWidget.h"
+
 #include <QDebug>
 
 AddressDetailsWidget::AddressDetailsWidget(QWidget *parent) 
@@ -17,7 +18,7 @@ AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
    ui_->treeAddressTransactions->copyToClipboardColumns_.append(colTxId);
 
    connect(ui_->treeAddressTransactions, &QTreeWidget::itemClicked,
-      this, &AddressDetailsWidget::onTxClicked);
+           this, &AddressDetailsWidget::onTxClicked);
 
 }
 
@@ -25,12 +26,20 @@ AddressDetailsWidget::~AddressDetailsWidget() {
     delete ui_;
 }
 
+// Initialize the widget and related widgets (block, address, Tx)
+void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
+                                const std::shared_ptr<spdlog::logger> &inLogger)
+{
+   armory_ = armory;
+   logger_ = inLogger;
+}
+
 void AddressDetailsWidget::setAddrVal(const bs::Address& inAddrVal) {
    addrVal = inAddrVal;
 
    // setting the address field in address page to dummy text
-   ui_->addressId->setText(tr("11111"));
-   ui_->balance->setText(tr("zero balance"));
+   ui_->addressId->setText(tr("111111"));
+   ui_->balance->setText(tr("0.123"));
    // The same can be done for all other fields such as balance, totalSent, totalReceived.
    // I think instead of creating a separate function for each the data should be sent all in one call
    // and unpacked here, but you can make this decision as you have a much better understanding of the armory piece.
@@ -44,6 +53,7 @@ void AddressDetailsWidget::loadTransactions() {
    CustomTreeWidget *tree = ui_->treeAddressTransactions;
    tree->clear();
    double outputVal = -4;
+
    // here's the code to add data to the address tree, the tree.
    for (int i = 0; i < 10; i++) {
       QTreeWidgetItem *item = new QTreeWidgetItem(tree);
@@ -106,4 +116,3 @@ void AddressDetailsWidget::onTxClicked(QTreeWidgetItem *item, int column) {
       emit(transactionClicked(item->text(colTxId)));
    }
 }
-

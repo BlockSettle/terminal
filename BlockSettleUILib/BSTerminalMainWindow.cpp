@@ -416,7 +416,7 @@ void BSTerminalMainWindow::InitWalletsView()
 // Initialize widgets related to transactions.
 void BSTerminalMainWindow::InitTransactionsView()
 {
-   ui->widgetExplorer->init(armory_);
+   ui->widgetExplorer->init(armory_, logMgr_->logger());
    ui->widgetTransactions->init(walletsManager_, armory_, signContainer_);
    ui->widgetTransactions->setEnabled(true);
 
