@@ -45,7 +45,6 @@ void TransactionsViewModel::init()
    qRegisterMetaType<TransactionItems>();
 
    if (armory_) {
-      connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &TransactionsViewModel::onZeroConf, Qt::QueuedConnection);
       connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::newBlock, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    }
@@ -256,11 +255,6 @@ void TransactionsViewModel::clear()
    stopped_ = false;
 }
 
-void TransactionsViewModel::onZeroConf(ArmoryConnection::ReqIdType reqId)
-{
-   insertNewTransactions(bs::convertTXEntries(armory_->getZCentries(reqId)));
-}
-
 void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
 {
    if (state == ArmoryConnection::State::Offline) {
@@ -449,6 +443,7 @@ void TransactionsViewModel::loadLedgerEntries()
 void TransactionsViewModel::ledgerToTxData()
 {
    size_t count = 0;
+   const unsigned int iStart = currentPage_.size();
    std::vector<bs::TXEntry> updatedEntries;
    beginResetModel();
    {
@@ -480,8 +475,10 @@ void TransactionsViewModel::ledgerToTxData()
    initialLoadCompleted_ = true;
 
    if (count) {
-      emit dataLoaded(currentPage_.size());
-      loadTransactionDetails(0, count);
+      if (updatedEntries.empty()) {
+         emit dataLoaded(currentPage_.size());
+      }
+      loadTransactionDetails(iStart, count);
    }
 }
 

@@ -82,7 +82,6 @@ public:
 private slots:
    void updatePage();
    void refresh();
-   void onZeroConf(ArmoryConnection::ReqIdType);
    void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
    void onNewItems(TransactionItems items);
    void onItemsDeleted(TransactionItems items);
