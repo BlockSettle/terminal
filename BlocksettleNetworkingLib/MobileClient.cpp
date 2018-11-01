@@ -14,9 +14,8 @@ namespace
 
    const int kKeySize = 32;
 
-   const std::string kServerApiKey = "2526f47d4b3925b2"; // Obtained from http://185.213.153.44:8181/key
-   const std::string kPrivateKey = "QHBb3KtxO1nF07cIQ77JYvAG5G6K/GuEgjakNa9y1yg=";
-   const std::string kServerPubKey = "ArtQBOQrA2z7oIrCHwqq/yh/0F8rozWTGWvk3RL92fbu";
+   // Obtained from http://185.213.153.44:8181/key
+   const std::string kApiKey = "Pj+Q9SsZloftMkmE7EhA8v2Bz1ZC9aOmUkAKTBW9hagJ";
 }
 
 MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
@@ -25,7 +24,6 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
    : QObject(parent)
    , logger_(logger)
    , authKeys_(authKeys)
-   , serverPubKey_(autheid::publicKeyFromString(kServerPubKey))
 {
    connectionManager_.reset(new ConnectionManager(logger));
 }
@@ -55,28 +53,20 @@ void MobileClient::init(const std::string &serverPubKey
 
 MobileClient::~MobileClient() = default;
 
-static void PadData(BinaryData &data)
-{
-   const auto rem = data.getSize() % BTC_AES::BLOCKSIZE;
-   if (rem) {
-      data.resize(data.getSize() - rem + BTC_AES::BLOCKSIZE);
-   }
-}
-
 bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType type)
 {
    RequestEnvelope envelope;
    envelope.set_type(type);
-   envelope.set_rapubkey(autheid::publicKeyToString(authKeys_.second));
+   envelope.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
    envelope.set_userid(email_);
    envelope.set_usertag(tag_);
-   envelope.set_apikey(kServerApiKey);
+   envelope.set_apikey(kApiKey);
 
    const auto signature = autheid::signData(payload, authKeys_.first);
+
    envelope.set_rasign(signature.data(), signature.size());
 
-   const auto encPayload = autheid::encryptData(payload, serverPubKey_);
-   envelope.set_payload(encPayload.data(), encPayload.size());
+   envelope.set_payload(payload.data(), payload.size());
 
    return connection_->send(envelope.SerializeAsString());
 }
@@ -157,7 +147,13 @@ void MobileClient::processGetKeyReply(const std::string &payload, uint64_t tag)
       return;
    }
 
-   emit succeeded(reply.deviceid(), reply.key());
+   autheid::SecureBytes keyDecrypted = autheid::decryptData(reply.key(), authKeys_.first);
+   if (keyDecrypted.empty()) {
+      emit failed(tr("Decrypt failed"));
+      return;
+   }
+
+   emit succeeded(reply.deviceid(), SecureBinaryData(keyDecrypted.data(), keyDecrypted.size()));
 }
 
 void MobileClient::processUpdateDeviceWalletReply(const string &payload, uint64_t tag)
