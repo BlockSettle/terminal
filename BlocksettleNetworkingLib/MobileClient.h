@@ -22,6 +22,8 @@ class MobileClient : public QObject, public DataConnectionListener
 {
    Q_OBJECT
 public:
+   static const char SeparatorSymbol = ':';
+
    MobileClient(const std::shared_ptr<spdlog::logger> &
       , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
       , QObject *parent = nullptr);
@@ -29,16 +31,13 @@ public:
 
    void init(const std::string &serverPubKey
       , const std::string &serverHost, const std::string &serverPort);
-   bool start(MobileClientRequest requestType, const std::string &email, const std::string &walletId);
+   bool start(MobileClientRequest requestType, const std::string &email, const std::string &walletId
+      , const std::vector<std::string> &knownDeviceIds);
    void cancel();
 
-   void updateServer(const std::string &deviceId, const std::string &walletId
-      , bool isPaired, bool deleteAll);
-
 signals:
-   void succeeded(const std::string& deviceId, const SecureBinaryData &password);
+   void succeeded(const std::string& encKey, const SecureBinaryData &password);
    void failed(const QString &text);
-   void updateServerFinished(bool success);
 
 private:
    void OnDataReceived(const std::string& data) override;
@@ -48,7 +47,6 @@ private:
 
    bool sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType);
    void processGetKeyReply(const std::string &payload, uint64_t tag);
-   void processUpdateDeviceWalletReply(const std::string &payload, uint64_t tag);
 
    static std::string toBase64(const std::string &);
    static std::vector<uint8_t> fromBase64(const std::string &);

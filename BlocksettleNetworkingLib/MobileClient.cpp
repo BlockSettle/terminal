@@ -26,7 +26,6 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
    , authKeys_(authKeys)
 {
    connectionManager_.reset(new ConnectionManager(logger));
-
 }
 
 std::string MobileClient::toBase64(const std::string &s)
@@ -72,8 +71,8 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
    return connection_->send(envelope.SerializeAsString());
 }
 
-bool MobileClient::start(MobileClientRequest requestType
-   , const std::string &email, const std::string &walletId)
+bool MobileClient::start(MobileClientRequest requestType, const std::string &email
+   , const std::string &walletId, const std::vector<std::string> &knownDeviceIds)
 {
    if (!connection_) {
       return false;
@@ -95,6 +94,25 @@ bool MobileClient::start(MobileClientRequest requestType
    request.set_title(action.toStdString() + " " + walletId);
    request.set_usenewdevices(newDevice);
 
+   switch (requestType) {
+   case MobileClientRequest::ActivateWallet:
+      request.set_registerkey(RegisterKeyReplace);
+      break;
+   case MobileClientRequest::DeactivateWallet:
+      request.set_registerkey(RegisterKeyClear);
+      break;
+   case MobileClientRequest::ActivateWalletNewDevice:
+      request.set_registerkey(RegisterKeyAdd);
+      break;
+   default:
+      request.set_registerkey(RegisterKeyKeep);
+      break;
+   }
+
+   for (const std::string& knownDeviceId : knownDeviceIds) {
+      request.add_knowndeviceids(knownDeviceId);
+   }
+
    return sendToAuthServer(request.SerializeAsString(), GetDeviceKeyType);
 }
 
@@ -114,19 +132,6 @@ void MobileClient::cancel()
    sendToAuthServer(request.SerializeAsString(), CancelDeviceKeyType);
 
    tag_ = 0;
-}
-
-void MobileClient::updateServer(const string &deviceId, const string &walletId, bool isPaired, bool deleteAll)
-{
-   UpdateDeviceWalletRequest request;
-   request.set_deviceid(deviceId);
-   request.set_walletid(walletId);
-   request.set_ispaired(isPaired);
-   request.set_deleteall(deleteAll);
-
-   tag_ = BinaryData::StrToIntLE<uint64_t>(SecureBinaryData().GenerateRandom(sizeof(tag_)));
-
-   sendToAuthServer(request.SerializeAsString(), UpdateDeviceWalletType);
 }
 
 // Called from background thread!
@@ -154,26 +159,8 @@ void MobileClient::processGetKeyReply(const std::string &payload, uint64_t tag)
       return;
    }
 
-   emit succeeded(reply.deviceid(), SecureBinaryData(keyDecrypted.data(), keyDecrypted.size()));
-}
-
-void MobileClient::processUpdateDeviceWalletReply(const string &payload, uint64_t tag)
-{
-   logger_->info("Process UpdateDeviceWallet reply");
-   UpdateDeviceWalletReply reply;
-
-   if (tag != tag_) {
-      logger_->warn("Skip AuthApp response with unknown tag");
-      return;
-   }
-
-   if (!reply.ParseFromString(payload)) {
-      logger_->error("Can't decode UpdateDeviceWalletReply packet");
-      emit updateServerFinished(false);
-      return;
-   }
-
-   emit updateServerFinished(reply.success());
+   std::string encKey = email_ + SeparatorSymbol + reply.deviceid();
+   emit succeeded(encKey, SecureBinaryData(keyDecrypted.data(), keyDecrypted.size()));
 }
 
 void MobileClient::OnDataReceived(const string &data)
@@ -202,9 +189,6 @@ void MobileClient::OnDataReceived(const string &data)
    switch (envelope.type()) {
    case GetDeviceKeyType:
       processGetKeyReply(decPayload, envelope.usertag());
-      break;
-   case UpdateDeviceWalletType:
-      processUpdateDeviceWalletReply(decPayload, envelope.usertag());
       break;
    default:
       logger_->warn("Got unknown packet type from AuthServer {}", envelope.type());
