@@ -62,7 +62,7 @@ signals:
    void orderFilled();
 
 private slots:
-   void onReplied(const bs::network::QuoteNotification &qn);
+   void onReplied(bs::network::QuoteNotification qn);
    void onOrder(const bs::network::Order &o);
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);

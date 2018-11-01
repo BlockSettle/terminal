@@ -79,7 +79,7 @@ namespace bs {
       signals:
          void aqScriptLoaded(const QString &filename);
          void autoSignActivated(const SecureBinaryData &password, const QString &hdWalletId, bool active);
-         void submitQuoteNotif(const network::QuoteNotification &);
+         void submitQuoteNotif(network::QuoteNotification);
          void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 
       public slots:
@@ -108,7 +108,6 @@ namespace bs {
          void aqStateChanged(int state);
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
          void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
-         void onQuoteReceived(const bs::network::Quote &);
          void onOrderUpdated(const bs::network::Order &);
          void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
          void onCreateHDWalletError(unsigned int id, std::string error);

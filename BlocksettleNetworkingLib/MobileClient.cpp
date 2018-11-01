@@ -26,7 +26,6 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
    , authKeys_(authKeys)
 {
    connectionManager_.reset(new ConnectionManager(logger));
-
 }
 
 std::string MobileClient::toBase64(const std::string &s)
