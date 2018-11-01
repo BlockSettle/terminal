@@ -192,7 +192,7 @@ uint64_t CheckRecipSigner::spendValue() const
 bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger
    , std::function<void(std::vector<bs::Address>)> cb)
 {
-   auto result = new std::vector<Address>;
+   auto result = std::make_shared<std::vector<Address>>();
 
    if (!armory_) {
       logger->error("[CheckRecipSigner::GetInputAddressList] there is no armory connection");
@@ -201,6 +201,9 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
 
    const auto &cbTXs = [this, result, cb](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
+         if (!result) {
+            return;
+         }
          const auto &txHash = tx.getThisHash();
          txHashSet_.erase(txHash);
          for (const auto &txOutIdx : txOutIdx_[txHash]) {
@@ -209,8 +212,7 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
          }
          if (txHashSet_.empty()) {
             txOutIdx_.clear();
-            cb(*result);
-            delete result;
+            cb(*result.get());
          }
       }
    };
