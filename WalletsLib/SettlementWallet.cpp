@@ -677,8 +677,7 @@ void bs::SettlementMonitor::checkNewEntries(unsigned int)
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
       , addressString_);
 
-   const std::function<void(std::vector<ClientClasses::LedgerEntry>)> cbHistory =
-      [this, cbHistory] (std::vector<ClientClasses::LedgerEntry> entries) {
+   const auto &cbHistory = [this] (std::vector<ClientClasses::LedgerEntry> entries) {
       if (stopped_ || entries.empty()) {
          return;
       }
@@ -709,7 +708,6 @@ void bs::SettlementMonitor::checkNewEntries(unsigned int)
             return;
          }
       }
-      rtWallet_->getHistoryPage(currentPageId_++, cbHistory);
    };
    {
       FastLock locker(walletLock_);
@@ -717,8 +715,7 @@ void bs::SettlementMonitor::checkNewEntries(unsigned int)
          return;
       }
    }
-   currentPageId_ = 0;
-   rtWallet_->getHistoryPage(currentPageId_++, cbHistory);
+   rtWallet_->getHistoryPage(0, cbHistory);  //XXX use only the first page for monitoring purposes
 }
 
 void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
