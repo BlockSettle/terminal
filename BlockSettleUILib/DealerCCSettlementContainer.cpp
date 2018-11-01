@@ -58,10 +58,13 @@ void DealerCCSettlementContainer::activate()
       });
    }
    catch (const std::exception &e) {
-      logger_->debug("Signer deser exc: {}", e.what());
+      logger_->error("Signer deser exc: {}", e.what());
+      emit genAddressVerified(false);
+      return;
    }
 
    if (!foundRecipAddr_ || !amountValid_) {
+      logger_->warn("[DealerCCSettlementContainer::activate] requester's TX verification failed");
       wallet_ = nullptr;
       emit genAddressVerified(false);
    }
@@ -89,6 +92,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
       emit readyToAccept();
    }
    else {
+      logger_->warn("[DealerCCSettlementContainer::onGenAddressVerified] counterparty's TX is unverified");
       emit error(tr("Failed to verify counterparty's transaction"));
       wallet_ = nullptr;
    }
