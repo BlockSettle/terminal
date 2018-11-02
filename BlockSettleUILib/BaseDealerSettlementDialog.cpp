@@ -135,6 +135,7 @@ void BaseDealerSettlementDialog::startAccepting()
    }
    widgetWalletKeys()->init(MobileClientRequest::SignWallet, rootWallet_->getWalletId()
       , keyRank_, encTypes_, encKeys_, appSettings_);
+   widgetPassword()->show();
    widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();
    adjustSize();
