@@ -229,10 +229,7 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
       emit genAddrVerified(true);
    }
 
-   if (createCCUnsignedTXdata()) {
-      emit sendOrder();
-   }
-   else {
+   if (!createCCUnsignedTXdata()) {
       ui_->labelHint->setText(tr("Failed to create unsigned CC transaction"));
       userKeyOk_ = false;
    }
@@ -326,23 +323,31 @@ bool CCSettlementTransactionWidget::createCCUnsignedTXdata()
       ccTxData_.inputs = utxoAdapter_->get(reserveId_);
       logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] {} CC inputs reserved ({} recipients)"
          , ccTxData_.inputs.size(), ccTxData_.recipients.size());
+      QMetaObject::invokeMethod(this, [this] { emit sendOrder(); });
    }
    else {
       const auto &cbFee = [this](float feePerByte) {
          const uint64_t spendVal = amount_ * price_ * BTCNumericTypes::BalanceDivider;
-
-         try {
-            const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
-            if (!recipient) {
-               throw std::runtime_error("invalid recipient: " + dealerAddress_);
+         const auto &cbTxOutList = [this, feePerByte, spendVal] (std::vector<UTXO> utxos) {
+            try {
+               const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
+               if (!recipient) {
+                  logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] invalid recipient: {}", dealerAddress_);
+                  return;
+               }
+               ccTxData_ = transactionData_->CreatePartialTXRequest(spendVal, feePerByte, { recipient }
+                  , dealerTx_, utxos);
+               logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
+               QMetaObject::invokeMethod(this, [this] { emit sendOrder(); });
             }
-            ccTxData_ = transactionData_->CreatePartialTXRequest(spendVal, feePerByte, { recipient }, dealerTx_);
-            logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
-         }
-         catch (const std::exception &e) {
-            logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
-               , dealerAddress_, e.what());
-            ui_->labelHint->setText(tr("Failed to create CC TX half"));
+            catch (const std::exception &e) {
+               logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
+                  , dealerAddress_, e.what());
+               ui_->labelHint->setText(tr("Failed to create CC TX half"));
+            }
+         };
+         if (!transactionData_->GetWallet()->getSpendableTxOutList(cbTxOutList, this, spendVal)) {
+            logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] getSpendableTxOutList failed");
          }
       };
       walletsManager_->estimatedFeePerByte(0, cbFee, this);
@@ -369,6 +374,7 @@ bool CCSettlementTransactionWidget::createCCSignedTXdata()
 
 const std::string CCSettlementTransactionWidget::getCCTxData() const
 {
+   logger_->debug("getCCTxData = {}", ccTxData_.serializeState().toHexStr());
    return ccTxData_.serializeState().toHexStr();
 }
 
