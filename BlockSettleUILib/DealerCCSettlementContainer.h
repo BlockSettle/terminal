@@ -3,6 +3,7 @@
 
 #include <memory>
 #include "AddressVerificator.h"
+#include "CheckRecipSigner.h"
 #include "SettlementContainer.h"
 #include "UtxoReservation.h"
 
@@ -81,6 +82,7 @@ private:
    bool              genAddrVerified_ = true;
    unsigned int      signId_ = 0;
    bool              cancelled_ = false;
+   bs::CheckRecipSigner signer_;
 
    QString walletName_;
 };

@@ -36,6 +36,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(const std::shared_p
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
    , appSettings_(appSettings)
+   , signer_(armory_)
 {
    ui_->setupUi(this);
 
@@ -186,13 +187,12 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
    bool foundRecipAddr = false;
    bool amountValid = false;
    const auto lotSize = assetManager_->getCCLotSize(product_);
-   bs::CheckRecipSigner signer(armory_);
    try {
       if (!lotSize) {
          throw std::runtime_error("invalid lot size");
       }
-      signer.deserializeState(dealerTx_);
-      foundRecipAddr = signer.findRecipAddress(bs::Address(rfq.receiptAddress)
+      signer_.deserializeState(dealerTx_);
+      foundRecipAddr = signer_.findRecipAddress(bs::Address(rfq.receiptAddress)
          , [lotSize, quote, &amountValid](uint64_t value, uint64_t valReturn, uint64_t valInput) {
          if ((quote.side == bs::network::Side::Sell) && qFuzzyCompare(quote.quantity, value / lotSize)) {
             amountValid = valInput == (value + valReturn);
@@ -221,9 +221,9 @@ void CCSettlementTransactionWidget::populateCCDetails(const bs::network::RFQ& rf
       ui_->labelGenesisAddress->setText(tr("Verifying"));
 
       const auto &cbHasInput = [this](bool has) {
-         emit genAddrVerified(has);
+         QMetaObject::invokeMethod(this, [this, has] { emit genAddrVerified(has); });
       };
-      signer.hasInputAddress(genAddr, cbHasInput, lotSize);
+      signer_.hasInputAddress(genAddr, cbHasInput, lotSize);
    }
    else {
       emit genAddrVerified(true);

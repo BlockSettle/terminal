@@ -26,6 +26,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , txReqData_(BinaryData::CreateFromHex(order.reqTransaction))
    , ownRecvAddr_(ownRecvAddr)
    , orderId_(QString::fromStdString(order.clOrderId))
+   , signer_(armory)
 {
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerCCSettlementContainer::onTXSigned);
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
@@ -44,10 +45,9 @@ DealerCCSettlementContainer::~DealerCCSettlementContainer()
 
 void DealerCCSettlementContainer::activate()
 {
-   bs::CheckRecipSigner signer(armory_);
    try {
-      signer.deserializeState(txReqData_);
-      foundRecipAddr_ = signer.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
+      signer_.deserializeState(txReqData_);
+      foundRecipAddr_ = signer_.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
          if ((order_.side == bs::network::Side::Buy) && qFuzzyCompare(order_.quantity, value / lotSize_)) {
             amountValid_ = true; //valInput == (value + valReturn);
          }
@@ -73,7 +73,7 @@ void DealerCCSettlementContainer::activate()
       const auto &cbHasInput = [this](bool has) {
          emit genAddressVerified(has);
       };
-      signer.hasInputAddress(genesisAddr_, cbHasInput, lotSize_);
+      signer_.hasInputAddress(genesisAddr_, cbHasInput, lotSize_);
    }
    else {
       emit genAddressVerified(true);
