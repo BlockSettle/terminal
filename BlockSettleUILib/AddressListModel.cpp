@@ -134,8 +134,8 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::Wallet> &wallet)
 
 void AddressListModel::updateWalletData()
 {
-   auto nbTxNs = new int(addressRows_.size());
-   auto nbBalances = new int(addressRows_.size());
+   auto nbTxNs = std::make_shared<int>(addressRows_.size());
+   auto nbBalances = std::make_shared<int>(addressRows_.size());
    for (size_t i = 0; i < addressRows_.size(); ++i) {
       auto &addrRow = addressRows_[i];
       const auto &cbTxN = [this, &addrRow, i, nbTxNs](uint32_t txn) {
@@ -145,7 +145,6 @@ void AddressListModel::updateWalletData()
          }
          addrRow.transactionCount = txn;
          if (*nbTxNs <= 0) {
-            delete nbTxNs;
             emit dataChanged(index(0, ColumnTxCount), index(addressRows_.size()-1, ColumnTxCount));
             emit updated();
          }
@@ -158,18 +157,14 @@ void AddressListModel::updateWalletData()
          }
          addrRow.balance = balances[0];
          if (*nbBalances <= 0) {
-            delete nbBalances;
             emit dataChanged(index(0, ColumnBalance), index(addressRows_.size() - 1, ColumnBalance));
             emit updated();
          }
       };
       if (!addrRow.wallet->getAddrTxN(addrRow.address, cbTxN)) {
-         delete nbTxNs;
-         delete nbBalances;
          return;
       }
       if (!addrRow.wallet->getAddrBalance(addrRow.address, cbBalance)) {
-         delete nbBalances;
          return;
       }
    }
