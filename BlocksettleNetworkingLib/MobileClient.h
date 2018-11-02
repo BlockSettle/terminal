@@ -61,7 +61,6 @@ private:
    std::string walletId_;
 
    std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
-   const autheid::PublicKey   serverPubKey_;
 };
 
 #endif // __MOBILE_CLIENT_H__

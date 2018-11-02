@@ -109,7 +109,6 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    utxoAdapter_ = std::make_shared<bs::DealerUtxoResAdapter>(logger_, nullptr);
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, utxoAdapter_.get(), &bs::OrderUtxoResAdapter::onOrder);
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDealerReply::onOrderUpdated);
-   connect(quoteProvider_.get(), &QuoteProvider::quoteReceived, this, &RFQDealerReply::onQuoteReceived);
    connect(utxoAdapter_.get(), &bs::OrderUtxoResAdapter::reservedUtxosChanged, this, &RFQDealerReply::onReservedUtxosChanged, Qt::QueuedConnection);
 
    aq_ = new UserScriptRunner(quoteProvider_, utxoAdapter_, signingContainer_,
@@ -870,8 +869,8 @@ void RFQDealerReply::submitButtonClicked()
    const auto &cbSubmit = [this, price](bs::network::QuoteNotification qn) {
       if (!qn.quoteRequestId.empty()) {
          logger_->debug("Submitted quote reply on {}: {}/{}", currentQRN_.quoteRequestId, qn.bidPx, qn.offerPx);
-         emit submitQuoteNotif(qn);
          sentNotifs_[qn.quoteRequestId] = price;
+         QMetaObject::invokeMethod(this, [this, qn] { emit submitQuoteNotif(qn); });
       }
    };
    submitReply(transactionData_, currentQRN_, price, cbSubmit);
@@ -1014,13 +1013,6 @@ void RFQDealerReply::aqStateChanged(int state)
    }
 }
 
-void RFQDealerReply::onQuoteReceived(const bs::network::Quote& quote)
-{
-   if (quote.assetType == bs::network::Asset::PrivateMarket) {
-      quoteProvider_->saveQuoteReqId(quote.requestId, quote.quoteId);
-   }
-}
-
 void RFQDealerReply::onOrderUpdated(const bs::network::Order &order)
 {
    if ((order.assetType == bs::network::Asset::PrivateMarket) && (order.status == bs::network::Order::Failed)) {
@@ -1090,7 +1082,7 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
    const auto &cbSubmit = [this, qrn](bs::network::QuoteNotification qn) {
       if (!qn.quoteRequestId.empty()) {
          logger_->debug("Submitted AQ reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
-         emit submitQuoteNotif(qn);
+         QMetaObject::invokeMethod(this, [this, qn] { emit submitQuoteNotif(qn); });
       }
    };
 

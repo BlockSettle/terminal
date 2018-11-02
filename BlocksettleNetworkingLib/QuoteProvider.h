@@ -66,7 +66,6 @@ public:
 
    bs::network::QuoteNotification getSubmittedXBTQuoteNotification(const std::string& settlementId);
 
-   void saveQuoteReqId(const std::string &quoteReqId, const std::string &quoteId);
    std::string getQuoteReqId(const std::string &quoteId) const;
    void delQuoteReqId(const std::string &quoteReqId);
 
@@ -110,6 +109,8 @@ private:
 
    bool onQuoteReqNotification(const std::string& data);
    bool onQuoteNotifCancelled(const std::string& data);
+
+   void saveQuoteReqId(const std::string &quoteReqId, const std::string &quoteId);
 
    void saveSubmittedXBTQuoteNotification(const bs::network::QuoteNotification& qn);
    void eraseSubmittedXBTQuoteNotification(const std::string& settlementId);

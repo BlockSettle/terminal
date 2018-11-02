@@ -273,7 +273,6 @@ namespace bs {
       std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
       std::shared_ptr<ArmoryConnection>         armory_;
       std::set<BinaryData>             ownAddresses_;
-      std::atomic_uint  currentPageId_;
       int               id_;
 
       std::string                            addressString_;
