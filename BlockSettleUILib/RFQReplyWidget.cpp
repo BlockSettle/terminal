@@ -198,7 +198,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             } else {
                auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
                   sr.requestorAuthAddress, walletsManager_, signingContainer_
-                     , celerClient_, appSettings_, this);
+                  , celerClient_, appSettings_, this);
                showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {

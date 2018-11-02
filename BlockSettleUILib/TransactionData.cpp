@@ -536,11 +536,13 @@ bs::wallet::TXSignRequest TransactionData::CreateTXRequest(bool isRBF, const bs:
 }
 
 bs::wallet::TXSignRequest TransactionData::CreatePartialTXRequest(uint64_t spendVal, float feePerByte
-   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData)
+   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData
+   , const std::vector<UTXO> &utxos)
 {
    const auto &changeAddr = wallet_->GetNewChangeAddress();
    createAddress(changeAddr);
-   auto txReq = wallet_->CreatePartialTXRequest(spendVal, inputs(), changeAddr, feePerByte, recipients, prevData);
+   auto txReq = wallet_->CreatePartialTXRequest(spendVal, utxos.empty() ? inputs() : utxos
+      , changeAddr, feePerByte, recipients, prevData);
    txReq.populateUTXOs = true;
    return txReq;
 }

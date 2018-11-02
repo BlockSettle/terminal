@@ -9,7 +9,7 @@ from openssl_settings import OpenSslSettings
 class WebsocketsSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '3.0.0'
+        self._version = '3.0.1'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
 

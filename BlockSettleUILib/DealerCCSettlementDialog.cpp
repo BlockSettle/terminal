@@ -72,6 +72,9 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    ui_->labelPayment->setText(settlContainer_->foundRecipAddr() && settlContainer_->isAmountValid()
       ? sValid : sInvalid);
 
+   if (!settlContainer_->GetSigningWallet()) {
+      throw std::runtime_error("missing signing wallet in the container");
+   }
    const auto &wallet = walletsManager->GetHDRootForLeaf(settlContainer_->GetSigningWallet()->GetWalletId());
    setWallet(wallet);
    ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(QString::fromStdString(wallet->getName())));
