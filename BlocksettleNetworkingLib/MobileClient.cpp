@@ -1,7 +1,7 @@
 #include "MobileClient.h"
-#include <botan/point_gfp.h>
+
 #include <spdlog/spdlog.h>
-#include <QDebug>
+#include <QTimer>
 #include "ConnectionManager.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
@@ -10,6 +10,8 @@ using namespace AutheID::RP;
 
 namespace
 {
+   const int kConnectTimeoutSeconds = 10;
+
    const int kTimeoutSeconds = 120;
 
    const int kKeySize = 32;
@@ -26,6 +28,9 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
    , authKeys_(authKeys)
 {
    connectionManager_.reset(new ConnectionManager(logger));
+
+   timer_ = new QTimer(this);
+   connect(timer_, &QTimer::timeout, this, &MobileClient::timeout);
 }
 
 std::string MobileClient::toBase64(const std::string &s)
@@ -42,158 +47,221 @@ std::vector<uint8_t> MobileClient::fromBase64(const std::string &s)
 void MobileClient::init(const std::string &serverPubKey
    , const std::string &serverHost, const std::string &serverPort)
 {
-   if (connection_) {
-      return;
-   }
-
-   connection_ = connectionManager_->CreateSecuredDataConnection();
-   connection_->SetServerPublicKey(serverPubKey);
-   connection_->openConnection(serverHost, serverPort, this);
+   serverPubKey_ = serverPubKey;
+   serverHost_ = serverHost;
+   serverPort_ = serverPort;
 }
 
 MobileClient::~MobileClient() = default;
 
-bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType type)
+bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type)
 {
-   RequestEnvelope envelope;
-   envelope.set_type(type);
-   envelope.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
-   envelope.set_userid(email_);
-   envelope.set_usertag(tag_);
-   envelope.set_apikey(kApiKey);
+   ClientPacket packet;
+   packet.set_type(type);
+   packet.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
 
    const auto signature = autheid::signData(payload, authKeys_.first);
 
-   envelope.set_rasign(signature.data(), signature.size());
+   packet.set_rasign(signature.data(), signature.size());
 
-   envelope.set_payload(payload.data(), payload.size());
+   packet.set_payload(payload.data(), payload.size());
 
-   return connection_->send(envelope.SerializeAsString());
+   return connection_->send(packet.SerializeAsString());
 }
 
 bool MobileClient::start(MobileClientRequest requestType, const std::string &email
    , const std::string &walletId, const std::vector<std::string> &knownDeviceIds)
 {
+   cancel();
+
+   connection_ = connectionManager_->CreateSecuredDataConnection();
+
    if (!connection_) {
+      logger_->error("connection_ == nullptr");
+      emit failed(tr("Internal error"));
       return false;
    }
 
-   cancel();
+   bool result = connection_->SetServerPublicKey(serverPubKey_);
+   if (!result) {
+      logger_->error("MobileClient::SetServerPublicKey failed");
+      emit failed(tr("Internal error"));
+      return false;
+   }
 
-   tag_ = BinaryData::StrToIntLE<uint64_t>(SecureBinaryData().GenerateRandom(sizeof(tag_)));
+   result = connection_->openConnection(serverHost_, serverPort_, this);
+   if (!result) {
+      logger_->error("MobileClient::openConnection failed");
+      emit failed(tr("Internal error"));
+      return false;
+   }
+
+   isConnecting_ = true;
+
    email_ = email;
    walletId_ = walletId;
 
-   GetDeviceKeyRequest request;
-   request.set_keyid(walletId_);
+   CreateRequest request;
+   request.mutable_devicekey()->set_keyid(walletId_);
    request.set_expiration(kTimeoutSeconds);
 
    QString action = getMobileClientRequestText(requestType);
    bool newDevice = isMobileClientNewDeviceNeeded(requestType);
 
    request.set_title(action.toStdString() + " " + walletId);
-   request.set_usenewdevices(newDevice);
+   request.set_apikey(kApiKey);
+   request.set_userid(email_);
+   request.mutable_devicekey()->set_usenewdevices(newDevice);
 
    switch (requestType) {
    case MobileClientRequest::ActivateWallet:
-      request.set_registerkey(RegisterKeyReplace);
+      request.mutable_devicekey()->set_registerkey(RegisterKeyReplace);
       break;
    case MobileClientRequest::DeactivateWallet:
-      request.set_registerkey(RegisterKeyClear);
+      request.mutable_devicekey()->set_registerkey(RegisterKeyClear);
       break;
    case MobileClientRequest::ActivateWalletNewDevice:
-      request.set_registerkey(RegisterKeyAdd);
+      request.mutable_devicekey()->set_registerkey(RegisterKeyAdd);
       break;
    default:
-      request.set_registerkey(RegisterKeyKeep);
+      request.mutable_devicekey()->set_registerkey(RegisterKeyKeep);
       break;
    }
 
    for (const std::string& knownDeviceId : knownDeviceIds) {
-      request.add_knowndeviceids(knownDeviceId);
+      request.mutable_devicekey()->add_knowndeviceids(knownDeviceId);
    }
 
-   return sendToAuthServer(request.SerializeAsString(), GetDeviceKeyType);
+   timer_->start(kConnectTimeoutSeconds * 1000);
+
+   return sendToAuthServer(request.SerializeAsString(), PayloadCreateRequest);
 }
 
 void MobileClient::cancel()
 {
-   if (!connection_) {
+   isConnecting_ = false;
+   timer_->stop();
+
+   if (!connection_ || requestId_.empty()) {
       return;
    }
 
-   if (tag_ == 0) {
-      return;
-   }
+   connection_->closeConnection();
 
-   CancelDeviceKeyRequest request;
-   request.set_keyid(walletId_);
+   CancelRequest request;
+   request.set_requestid(requestId_);
 
-   sendToAuthServer(request.SerializeAsString(), CancelDeviceKeyType);
+   sendToAuthServer(request.SerializeAsString(), PayloadCancelRequest);
 
-   tag_ = 0;
+   requestId_.clear();
 }
 
 // Called from background thread!
-void MobileClient::processGetKeyReply(const std::string &payload, uint64_t tag)
+void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize)
 {
-   if (tag != tag_) {
-      logger_->warn("Skip AuthApp response with unknown tag");
+   isConnecting_ = false;
+   timer_->stop();
+
+   CreateReply reply;
+   if (!reply.ParseFromArray(payload, payloadSize)) {
+      logger_->error("Can't decode ResultReply packet");
+      emit failed(tr("Invalid create reply"));
       return;
    }
 
-   GetDeviceKeyReply reply;
-   if (!reply.ParseFromString(payload)) {
-      logger_->error("Can't decode MobileAppGetKeyResponse packet");
-      emit failed(tr("Can't decode packet from AuthServer"));
+   if (!reply.success() || reply.requestid().empty()) {
+      logger_->error("Create request failed: {}", reply.errormsg());
+      emit failed(tr("Request failed"));
       return;
    }
-   if (reply.key().empty() || reply.deviceid().empty()) {
+
+   requestId_ = reply.requestid();
+
+   ResultRequest request;
+   request.set_requestid(requestId_);
+   sendToAuthServer(request.SerializeAsString(), PayloadResultRequest);
+}
+
+// Called from background thread!
+void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize)
+{
+   ResultReply reply;
+   if (!reply.ParseFromArray(payload, payloadSize)) {
+      logger_->error("Can't decode ResultReply packet");
+      emit failed(tr("Invalid result reply"));
+      return;
+   }
+
+   if (reply.requestid() != requestId_) {
+      return;
+   }
+
+   if (reply.encsecurereply().empty() || reply.deviceid().empty()) {
       emit failed(tr("Cancelled"));
       return;
    }
 
-   autheid::SecureBytes keyDecrypted = autheid::decryptData(reply.key(), authKeys_.first);
-   if (keyDecrypted.empty()) {
+   autheid::SecureBytes secureReplyData = autheid::decryptData(reply.encsecurereply(), authKeys_.first);
+   if (secureReplyData.empty()) {
       emit failed(tr("Decrypt failed"));
       return;
    }
 
+   SecureReply secureReply;
+   if (!secureReply.ParseFromArray(secureReplyData.data(), secureReplyData.size())) {
+      emit failed(tr("Invalid secure reply"));
+      return;
+   }
+
+   const std::string &deviceKey = secureReply.devicekey();
+
+   if (deviceKey.size() != kKeySize) {
+      emit failed(tr("Invalid key size"));
+      return;
+   }
+
    std::string encKey = email_ + SeparatorSymbol + reply.deviceid();
-   emit succeeded(encKey, SecureBinaryData(keyDecrypted.data(), keyDecrypted.size()));
+
+   emit succeeded(encKey, SecureBinaryData(deviceKey));
 }
 
 void MobileClient::OnDataReceived(const string &data)
 {
-   ReplyEnvelope envelope;
-   if (!envelope.ParseFromString(data)) {
+   ServerPacket packet;
+   if (!packet.ParseFromString(data)) {
       logger_->error("Invalid packet data from AuthServer");
-      emit failed(tr("Invalid packet data from AuthServer"));
+      emit failed(tr("Invalid packet"));
       return;
    }
 
-   if (envelope.encpayload().empty()) {
-      if (envelope.type() == HeartbeatType) {
-         //TODO: handle heartbeat
-      }
-      else {
-         logger_->error("No payload received from AuthServer");
-         emit failed(tr("Missing payload from AuthServer"));
-         return;
-      }
+   if (packet.encpayload().empty()) {
+      logger_->error("No payload received from AuthServer");
+      emit failed(tr("Missing payload"));
+      return;
    }
 
-   const auto &decrypted = autheid::decryptData(envelope.encpayload(), authKeys_.first);
-   const std::string decPayload(decrypted.begin(), decrypted.end());
+   const auto &decryptedPayload = autheid::decryptData(packet.encpayload(), authKeys_.first);
 
-   switch (envelope.type()) {
-   case GetDeviceKeyType:
-      processGetKeyReply(decPayload, envelope.usertag());
+   switch (packet.type()) {
+   case PayloadCreateReply:
+      processCreateReply(decryptedPayload.data(), decryptedPayload.size());
+      break;
+   case PayloadResultReply:
+      processResultReply(decryptedPayload.data(), decryptedPayload.size());
+      break;
+   case PayloadCancelReply:
       break;
    default:
-      logger_->warn("Got unknown packet type from AuthServer {}", envelope.type());
-      emit failed(tr("Got unknown packet type from AuthServer"));
+      logger_->error("Got unknown packet type from AuthServer {}", packet.type());
+      emit failed(tr("Unknown packet"));
    }
+}
+
+void MobileClient::timeout()
+{
+   cancel();
+   logger_->error("Connection to AuthServer failed, no answer received");
+   emit failed(tr("Server offline"));
 }
 
 void MobileClient::OnConnected()
@@ -206,5 +274,5 @@ void MobileClient::OnDisconnected()
 
 void MobileClient::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
-   emit failed(tr("Connection to the AuthServer failed"));
+   emit failed(tr("Connection failed"));
 }

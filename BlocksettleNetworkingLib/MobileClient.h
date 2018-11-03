@@ -15,6 +15,7 @@ namespace spdlog {
    class logger;
 }
 
+class QTimer;
 class ConnectionManager;
 class RequestReplyCommand;
 
@@ -39,14 +40,18 @@ signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
    void failed(const QString &text);
 
+private slots:
+   void timeout();
+
 private:
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   bool sendToAuthServer(const std::string &payload, const AutheID::RP::EnvelopeRequestType);
-   void processGetKeyReply(const std::string &payload, uint64_t tag);
+   bool sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type);
+   void processCreateReply(const uint8_t *payload, size_t payloadSize);
+   void processResultReply(const uint8_t *payload, size_t payloadSize);
 
    static std::string toBase64(const std::string &);
    static std::vector<uint8_t> fromBase64(const std::string &);
@@ -54,11 +59,19 @@ private:
    std::unique_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    std::shared_ptr<spdlog::logger> logger_;
-   uint64_t tag_{};
+   std::string requestId_;
    std::string email_;
    std::string walletId_;
 
+   std::string serverPubKey_;
+   std::string serverHost_;
+   std::string serverPort_;
+
    std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
+
+   QTimer *timer_;
+
+   bool isConnecting_{false};
 };
 
 #endif // __MOBILE_CLIENT_H__
