@@ -136,7 +136,7 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
 
    timer_->start(kConnectTimeoutSeconds * 1000);
 
-   return sendToAuthServer(request.SerializeAsString(), PayloadCreateRequest);
+   return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
 
 void MobileClient::cancel()
@@ -153,7 +153,7 @@ void MobileClient::cancel()
    CancelRequest request;
    request.set_requestid(requestId_);
 
-   sendToAuthServer(request.SerializeAsString(), PayloadCancelRequest);
+   sendToAuthServer(request.SerializeAsString(), PayloadCancel);
 
    requestId_.clear();
 }
@@ -181,7 +181,7 @@ void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize
 
    ResultRequest request;
    request.set_requestid(requestId_);
-   sendToAuthServer(request.SerializeAsString(), PayloadResultRequest);
+   sendToAuthServer(request.SerializeAsString(), PayloadResult);
 }
 
 // Called from background thread!
@@ -245,13 +245,13 @@ void MobileClient::OnDataReceived(const string &data)
    const auto &decryptedPayload = autheid::decryptData(packet.encpayload(), authKeys_.first);
 
    switch (packet.type()) {
-   case PayloadCreateReply:
+   case PayloadCreate:
       processCreateReply(decryptedPayload.data(), decryptedPayload.size());
       break;
-   case PayloadResultReply:
+   case PayloadResult:
       processResultReply(decryptedPayload.data(), decryptedPayload.size());
       break;
-   case PayloadCancelReply:
+   case PayloadCancel:
       break;
    default:
       logger_->error("Got unknown packet type from AuthServer {}", packet.type());
