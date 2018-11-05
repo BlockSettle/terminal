@@ -41,7 +41,6 @@ public:
    void setPasswordLabelAsOld();
    void setHideAuthEmailLabel(bool value);
    void setHideAuthControlsOnSignClicked(bool value);
-   const std::string &deviceId() const;
 
 signals:
    void keyChanged(int index, SecureBinaryData);
@@ -74,7 +73,6 @@ private:
 
    QTimer      timer_;
    float       timeLeft_;
-//   QString     prompt_;
    MobileClient *mobileClient_{};
 
    bool        hideAuthConnect_ = false;
@@ -84,7 +82,7 @@ private:
    bool        hideAuthEmailLabel_ = false;
    bool        hideAuthControlsOnSignClicked_ = false;
    MobileClientRequest requestType_{};
-   std::string deviceId_;
+   std::vector<std::string> knownDeviceIds_;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

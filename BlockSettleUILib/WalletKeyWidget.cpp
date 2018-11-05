@@ -55,8 +55,6 @@ WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::str
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &WalletKeyWidget::onTimer);
-
-
 }
 
 void WalletKeyWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings, const QString& username)
@@ -127,8 +125,9 @@ void WalletKeyWidget::onAuthSignClicked()
    ui_->progressBar->show();
    timer_.start();
    authRunning_ = true;
-//      prompt_.isEmpty() ? tr("Activate Auth eID signing") : prompt_, walletId_);
-   mobileClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString(), walletId_);
+
+   mobileClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
+      , walletId_, knownDeviceIds_);
    ui_->pushButtonAuth->setText(tr("Cancel Auth request"));
    ui_->comboBoxAuthId->setEnabled(false);
 
@@ -137,17 +136,16 @@ void WalletKeyWidget::onAuthSignClicked()
    }
 }
 
-void WalletKeyWidget::onAuthSucceeded(const std::string &deviceId, const SecureBinaryData &password)
+void WalletKeyWidget::onAuthSucceeded(const std::string &encKey, const SecureBinaryData &password)
 {
-   deviceId_ = deviceId;
-
    stop();
    ui_->pushButtonAuth->setText(tr("Successfully signed"));
    ui_->pushButtonAuth->setEnabled(false);
    ui_->widgetAuthLayout->show();
 
    QPropertyAnimation *a = startAuthAnimation(true);
-   connect(a, &QPropertyAnimation::finished, [this, password]() {
+   connect(a, &QPropertyAnimation::finished, [this, encKey, password]() {
+      emit encKeyChanged(index_, encKey);
       emit keyChanged(index_, password);
    });
 }
@@ -222,8 +220,17 @@ void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &enc
       return;
    }
    ui_->comboBoxAuthId->setEditable(false);
+
+   knownDeviceIds_.clear();
    for (const auto &encKey : encKeys) {
-      ui_->comboBoxAuthId->addItem(QString::fromStdString(encKey.toBinStr()));
+      std::string authIdWithDeviceId = encKey.toBinStr();
+      size_t splitIndex = authIdWithDeviceId.find(MobileClient::SeparatorSymbol);
+      if (splitIndex != std::string::npos) {
+         knownDeviceIds_.push_back(authIdWithDeviceId.substr(splitIndex + 1));
+      }
+
+      std::string authId = authIdWithDeviceId.substr(0, splitIndex);
+      ui_->comboBoxAuthId->addItem(QString::fromStdString(authId));
    }
    if ((index >= 0) && (index < encKeys.size())) {
       ui_->comboBoxAuthId->setCurrentIndex(index);
@@ -293,11 +300,6 @@ void WalletKeyWidget::setHideAuthEmailLabel(bool value)
 void WalletKeyWidget::setHideAuthControlsOnSignClicked(bool value)
 {
    hideAuthControlsOnSignClicked_ = value;
-}
-
-const string &WalletKeyWidget::deviceId() const
-{
-   return deviceId_;
 }
 
 QPropertyAnimation* WalletKeyWidget::startAuthAnimation(bool success)

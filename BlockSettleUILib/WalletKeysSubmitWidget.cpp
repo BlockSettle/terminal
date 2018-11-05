@@ -69,14 +69,22 @@ void WalletKeysSubmitWidget::init(MobileClientRequest requestType
       });
    }
 
+   bool isAuthOnly = true;
+   for (auto encType : encTypes) {
+      if (encType != bs::wallet::EncryptionType::Auth) {
+         isAuthOnly = false;
+      }
+   }
+
    int encKeyIndex = 0;
-   if (encTypes.size() == keyRank.first) {
+   if (isAuthOnly) {
+      addKey(false, encKeys, 0, true, prompt);
+   } else if (encTypes.size() == keyRank.first) {
       for (const auto &encType : encTypes) {
          const bool isPassword = (encType == bs::wallet::EncryptionType::Password);
          addKey(isPassword, encKeys, isPassword ? 0 : encKeyIndex++, true, prompt);
       }
-   }
-   else {
+   } else {
       if ((encTypes.size() > 1) && (keyRank.first == 1)) {
          addKey(true, encKeys, 0, false, prompt);
       }
@@ -189,16 +197,6 @@ void WalletKeysSubmitWidget::onEncKeyChanged(int index, SecureBinaryData encKey)
    emit keyChanged();
 }
 
-std::string WalletKeysSubmitWidget::getDeviceId() const
-{
-   for (const auto &keyWidget : widgets_) {
-      if (!keyWidget->deviceId().empty()) {
-         return keyWidget->deviceId();
-      }
-   }
-   return {};
-}
-
 bool WalletKeysSubmitWidget::isValid() const
 {
    if (pwdData_.empty()) {
@@ -227,6 +225,14 @@ void WalletKeysSubmitWidget::cancel()
    for (const auto &keyWidget : widgets_) {
       keyWidget->cancel();
    }
+}
+
+string WalletKeysSubmitWidget::encKey(int index) const
+{
+   if (index < 0 || index >= pwdData_.size()) {
+      return {};
+   }
+   return pwdData_[index].encKey.toBinStr();
 }
 
 SecureBinaryData WalletKeysSubmitWidget::key() const
