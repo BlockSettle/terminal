@@ -33,8 +33,8 @@ public:
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const QString &prompt, const QString &title = QString());
 
-   SecureBinaryData GetPassword() const;
-   std::string getDeviceId() const;
+   std::string getEncKey(int index) const;
+   SecureBinaryData getPassword() const;
 
 private slots:
    void updateState();
