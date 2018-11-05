@@ -105,9 +105,15 @@ class Configurator:
             print('Start unpacking: ' + self.get_package_name())
             try:
                 if self.unpack_in_common_dir():
-                    extractor.extractall(self._project_settings.get_sources_dir())
+                    if self._project_settings.on_windows():
+                        extractor.extractall('\\\\?\\' + self._project_settings.get_sources_dir())
+                    else:
+                        extractor.extractall(self._project_settings.get_sources_dir())
                 else:
-                    extractor.extractall(self.get_unpacked_sources_dir())
+                    if self._project_settings.on_windows():
+                        extractor.extractall('\\\\?\\' + self.get_unpacked_sources_dir())
+                    else:
+                        extractor.extractall(self.get_unpacked_sources_dir())
             except:
                 print("unpacking exception")
 

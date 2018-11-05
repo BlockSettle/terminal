@@ -242,7 +242,7 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 
 void TransactionsWidget::onDataLoaded(int count)
 {
-   if (count <= 0) {
+   if ((count <= 0) || (ui->dateEditStart->dateTime().date().year() > 2009)) {
       return;
    }
    auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
