@@ -999,7 +999,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
          passwordDialog.init(rootWallet ? rootWallet->getWalletId() : walletId
             , keyRank, encTypes, encKeys, applicationSettings_, QString::fromStdString(prompt));
          if (passwordDialog.exec() == QDialog::Accepted) {
-            password = passwordDialog.GetPassword();
+            password = passwordDialog.getPassword();
             cancelledByUser = false;
          }
          else {
