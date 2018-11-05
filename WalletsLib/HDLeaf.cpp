@@ -1395,7 +1395,8 @@ bool hd::CCLeaf::getAddrBalance(const bs::Address &addr, std::function<void(std:
    {
       const auto itBal = addressBalanceMap_.find(addr.prefixed());
       if (itBal == addressBalanceMap_.end()) {
-         return false;
+         cb({0,0,0});
+         return true;
       }
       xbtBalances = itBal->second;
    }
