@@ -102,10 +102,8 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
    walletId_ = walletId;
 
    CreateRequest request;
-   request.set_type(RequestDeviceKey);
    request.mutable_devicekey()->set_keyid(walletId_);
    request.set_expiration(kTimeoutSeconds);
-   request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
 
    QString action = getMobileClientRequestText(requestType);
    bool newDevice = isMobileClientNewDeviceNeeded(requestType);

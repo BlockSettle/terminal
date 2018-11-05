@@ -39,6 +39,7 @@ public:
    bool isValid() const;
    std::vector<bs::wallet::PasswordData> keys() const { return pwdData_; }
    bs::wallet::KeyRank keyRank() const { return keyRank_; }
+   std::string getDeviceId() const;
 
 signals:
    void keyChanged();

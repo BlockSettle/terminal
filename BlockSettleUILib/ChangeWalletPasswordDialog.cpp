@@ -28,6 +28,7 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
    , wallet_(wallet)
    , oldKeyRank_(keyRank)
    , appSettings_(appSettings)
+   , updateServerClient_(logger, appSettings->GetAuthKeys())
 {
    ui_->setupUi(this);
 
@@ -62,12 +63,10 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
    //connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateState(); });
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateState(); });
-   connect(deviceKeyOld_, &WalletKeyWidget::keyChanged, this, &ChangeWalletPasswordDialog::onOldDeviceKeyChanged);
-   connect(deviceKeyOld_, &WalletKeyWidget::failed, this, &ChangeWalletPasswordDialog::onOldDeviceFailed);
-
-   connect(deviceKeyNew_, &WalletKeyWidget::encKeyChanged, this, &ChangeWalletPasswordDialog::onNewDeviceEncKeyChanged);
-   connect(deviceKeyNew_, &WalletKeyWidget::keyChanged, this, &ChangeWalletPasswordDialog::onNewDeviceKeyChanged);
-   connect(deviceKeyNew_, &WalletKeyWidget::failed, this, &ChangeWalletPasswordDialog::onNewDeviceFailed);
+   connect(deviceKeyOld_, &WalletKeyWidget::keyChanged, this, &ChangeWalletPasswordDialog::onSubmitKeysKeyChanged2);
+   connect(deviceKeyOld_, &WalletKeyWidget::failed, this, &ChangeWalletPasswordDialog::onSubmitKeysFailed2);
+   connect(deviceKeyNew_, &WalletKeyWidget::keyChanged, this, &ChangeWalletPasswordDialog::onCreateKeysKeyChanged2);
+   connect(deviceKeyNew_, &WalletKeyWidget::failed, this, &ChangeWalletPasswordDialog::onCreateKeysFailed2);
 
    QString usernameAuthApp;
 
@@ -84,17 +83,6 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
 
       oldPasswordData_.push_back(passwordData);
       ++encTypesIt;
-      ++encKeysIt;
-   }
-
-   // For some reasons encTypes contains only distinct types.
-   // But we need to pass all auth ids because they contain different deviceId's
-   while (encKeysIt != encKeys.end()) {
-      bs::wallet::PasswordData passwordData{};
-      passwordData.encType = bs::wallet::EncryptionType::Auth;
-      passwordData.encKey = *encKeysIt;
-
-      oldPasswordData_.push_back(passwordData);
       ++encKeysIt;
    }
 
@@ -118,6 +106,13 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
    ui_->widgetSubmitKeys->setFocus();
 
    ui_->tabWidget->setCurrentIndex(int(Pages::Basic));
+
+   std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+   updateServerClient_.init(serverPubKey, serverHost, serverPort);
+   connect(&updateServerClient_, &MobileClient::updateServerFinished
+      , this, &ChangeWalletPasswordDialog::onUpdateServerFinished);
 
    updateState();
 }
@@ -191,7 +186,10 @@ void ChangeWalletPasswordDialog::continueBasic()
             return;
          }
 
-         oldKey_ = enterWalletPassword.getPassword();
+         oldKey_ = enterWalletPassword.GetPassword();
+         // Switch to password or different AuthApp id here so need to remove
+         // wallet registrations on all devices
+         deleteAllDeviceId_ = enterWalletPassword.getDeviceId();
       }
    }
    else {
@@ -215,12 +213,13 @@ void ChangeWalletPasswordDialog::continueBasic()
          return;
       }
 
-      newKeys[0].encKey = enterWalletPassword.getEncKey(0);
-      newKeys[0].password = enterWalletPassword.getPassword();
+      newKeys[0].password = enterWalletPassword.GetPassword();
+      newDeviceId_ = enterWalletPassword.getDeviceId();
    }
 
    newPasswordData_ = newKeys;
    newKeyRank_ = ui_->widgetCreateKeys->keyRank();
+   dryRun_ = true;
    changePassword();
 }
 
@@ -259,25 +258,46 @@ void ChangeWalletPasswordDialog::changePassword()
 {
    if (wallet_->isWatchingOnly()) {
       signingContainer_->ChangePassword(wallet_, newPasswordData_, newKeyRank_, oldKey_
-         , addNew_, false);
+         , addNew_, dryRun_);
    }
    else {
       bool result = wallet_->changePassword(logger_, newPasswordData_, newKeyRank_, oldKey_
-         , addNew_, false);
+         , addNew_, dryRun_);
       onPasswordChanged(wallet_->getWalletId(), result);
    }
 }
 
 void ChangeWalletPasswordDialog::resetKeys()
 {
+   newDeviceId_.clear();
+   deleteAllDeviceId_.clear();
    oldKey_.clear();
    deviceKeyOldValid_ = false;
    deviceKeyNewValid_ = false;
    isLatestChangeAddDevice_ = false;
    addNew_ = false;
+   dryRun_ = true;
 }
 
-void ChangeWalletPasswordDialog::onOldDeviceKeyChanged(int, SecureBinaryData password)
+void ChangeWalletPasswordDialog::updateServer()
+{
+   if (!newDeviceId_.empty()) {
+      updateServerClient_.updateServer(newDeviceId_, wallet_->getWalletId(), true, false);
+      newDeviceId_.clear();
+      return;
+   }
+
+   if (!deleteAllDeviceId_.empty()) {
+      updateServerClient_.updateServer(deleteAllDeviceId_, wallet_->getWalletId(), false, true);
+      deleteAllDeviceId_.clear();
+      return;
+   }
+
+   dryRun_ = false;
+   changePassword();
+}
+
+void ChangeWalletPasswordDialog::onSubmitKeysKeyChanged2(int, SecureBinaryData password)
 {
    deviceKeyOldValid_ = true;
    state_ = State::AddDeviceWaitNew;
@@ -286,7 +306,7 @@ void ChangeWalletPasswordDialog::onOldDeviceKeyChanged(int, SecureBinaryData pas
    updateState();
 }
 
-void ChangeWalletPasswordDialog::onOldDeviceFailed()
+void ChangeWalletPasswordDialog::onSubmitKeysFailed2()
 {
    state_ = State::Idle;
    updateState();
@@ -296,33 +316,26 @@ void ChangeWalletPasswordDialog::onOldDeviceFailed()
       , this).exec();
 }
 
-void ChangeWalletPasswordDialog::onNewDeviceEncKeyChanged(int index, SecureBinaryData encKey)
+void ChangeWalletPasswordDialog::onCreateKeysKeyChanged2(int, SecureBinaryData password)
 {
    bs::wallet::PasswordData newPassword{};
    newPassword.encType = bs::wallet::EncryptionType::Auth;
-   newPassword.encKey = encKey;
+   newPassword.encKey = oldPasswordData_.at(0).encKey;
+   newPassword.password = password;
    newPasswordData_.clear();
    newPasswordData_.push_back(newPassword);
-}
-
-void ChangeWalletPasswordDialog::onNewDeviceKeyChanged(int index, SecureBinaryData password)
-{
-   if (newPasswordData_.empty()) {
-      logger_->error("Internal error: newPasswordData_.empty()");
-      return;
-   }
-
-   newPasswordData_.back().password = password;
 
    newKeyRank_ = oldKeyRank_;
    newKeyRank_.second += 1;
+   newDeviceId_ = deviceKeyNew_->deviceId();
 
    isLatestChangeAddDevice_ = true;
+   dryRun_ = true;
    addNew_ = true;
    changePassword();
 }
 
-void ChangeWalletPasswordDialog::onNewDeviceFailed()
+void ChangeWalletPasswordDialog::onCreateKeysFailed2()
 {
    state_ = State::Idle;
    updateState();
@@ -358,6 +371,12 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
       return;
    }
 
+   if (dryRun_) {
+      dryRun_ = false;
+      updateServer();
+      return;
+   }
+
    if (isLatestChangeAddDevice_) {
       MessageBoxSuccess(tr("Wallet Password")
          , tr("Device successfully added")
@@ -369,6 +388,18 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
    }
 
    QDialog::accept();
+}
+
+void ChangeWalletPasswordDialog::onUpdateServerFinished(bool success)
+{
+   if (!success) {
+      MessageBoxCritical(tr("Wallet Password")
+         , tr("Updating server failed. Please try again later.")
+         , this).exec();
+      return;
+   }
+
+   updateServer();
 }
 
 void ChangeWalletPasswordDialog::onTabChanged(int index)

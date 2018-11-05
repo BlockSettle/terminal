@@ -32,13 +32,7 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
       setWindowTitle(title);
    }
 
-   bool isAuthOnly = true;
-   for (auto encType : encTypes) {
-      if (encType != bs::wallet::EncryptionType::Auth) {
-         isAuthOnly = false;
-      }
-   }
-   if (isAuthOnly) {
+   if (encTypes.size() == 1 && encTypes[0] == bs::wallet::EncryptionType::Auth) {
       ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideAuthConnectButton
          | WalletKeysSubmitWidget::HideAuthCombobox
          | WalletKeysSubmitWidget::HideGroupboxCaption
@@ -86,12 +80,12 @@ void EnterWalletPassword::reject()
    QDialog::reject();
 }
 
-std::string EnterWalletPassword::getEncKey(int index) const
-{
-   return ui_->widgetSubmitKeys->encKey(index);
-}
-
-SecureBinaryData EnterWalletPassword::getPassword() const
+SecureBinaryData EnterWalletPassword::GetPassword() const
 {
    return ui_->widgetSubmitKeys->key();
+}
+
+string EnterWalletPassword::getDeviceId() const
+{
+   return ui_->widgetSubmitKeys->getDeviceId();
 }

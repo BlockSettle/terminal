@@ -194,8 +194,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
          return false;
       }
 
-      keys->at(0).encKey = dialog.getEncKey(0);
-      keys->at(0).password = dialog.getPassword();
+      keys->at(0).password = dialog.GetPassword();
 
    }
    else if (!widgetCreateKeys->isValid()) {

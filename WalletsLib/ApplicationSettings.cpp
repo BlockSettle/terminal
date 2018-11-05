@@ -642,7 +642,7 @@ std::pair<autheid::PrivateKey, autheid::PublicKey> ApplicationSettings::GetAuthK
       authPrivKey_ = autheid::SecureBytes(sPrivKey.begin(), sPrivKey.end());
    }
    else {
-      authPrivKey_ = autheid::generatePrivateKey();
+      authPrivKey_ = autheid::generateSecureRandom(autheid::kPrivateKeySize);
       const std::string sPrivKey(authPrivKey_.begin(), authPrivKey_.end());
       set(authPrivKey, QString::fromStdString(BinaryData(sPrivKey).toHexStr()));
    }

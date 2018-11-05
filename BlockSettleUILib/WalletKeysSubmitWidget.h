@@ -43,12 +43,13 @@ public:
    void cancel();
 
    bool isValid() const;
-   std::string encKey(int index) const;
    SecureBinaryData key() const;
 
    void setFocus();
    void suspend() { suspended_ = true; }
    void resume();
+
+   std::string getDeviceId() const;
 
 signals:
    void keyChanged();
