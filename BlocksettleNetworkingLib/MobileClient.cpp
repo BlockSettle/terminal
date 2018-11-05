@@ -133,7 +133,9 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
       request.mutable_devicekey()->add_knowndeviceids(knownDeviceId);
    }
 
-   timer_->start(kConnectTimeoutSeconds * 1000);
+   QMetaObject::invokeMethod(timer_, [this] {
+      timer_->start(kConnectTimeoutSeconds * 1000);
+   });
 
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
@@ -161,7 +163,9 @@ void MobileClient::cancel()
 void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize)
 {
    isConnecting_ = false;
-   timer_->stop();
+   QMetaObject::invokeMethod(timer_, [this] {
+      timer_->stop();
+   });
 
    CreateReply reply;
    if (!reply.ParseFromArray(payload, payloadSize)) {
