@@ -71,31 +71,22 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
 
    QString usernameAuthApp;
 
-   auto encTypesIt = encTypes.begin();
-   auto encKeysIt = encKeys.begin();
-   while (encTypesIt != encTypes.end() && encKeysIt != encKeys.end()) {
-      bs::wallet::PasswordData passwordData{};
-      passwordData.encType = *encTypesIt;
-      passwordData.encKey = *encKeysIt;
-
-      if (passwordData.encType == bs::wallet::EncryptionType::Auth) {
-         usernameAuthApp = QString::fromStdString(passwordData.encKey.toBinStr());
-      }
-
-      oldPasswordData_.push_back(passwordData);
-      ++encTypesIt;
-      ++encKeysIt;
-   }
-
-   // For some reasons encTypes contains only distinct types.
-   // But we need to pass all auth ids because they contain different deviceId's
-   while (encKeysIt != encKeys.end()) {
+   for (const auto &encKey : encKeys) {   // assume we can have encKeys only for Auth type
       bs::wallet::PasswordData passwordData{};
       passwordData.encType = bs::wallet::EncryptionType::Auth;
-      passwordData.encKey = *encKeysIt;
+      passwordData.encKey = encKey;
 
       oldPasswordData_.push_back(passwordData);
-      ++encKeysIt;
+      usernameAuthApp = QString::fromStdString(encKey.toBinStr());
+   }
+
+   for (const auto &encType : encTypes) {
+      if (encType == bs::wallet::EncryptionType::Auth) {    // already added encKeys for Auth type
+         continue;
+      }
+      bs::wallet::PasswordData passwordData{};
+      passwordData.encType = encType;
+      oldPasswordData_.push_back(passwordData);
    }
 
    if (!usernameAuthApp.isEmpty()) {
