@@ -28,7 +28,6 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
    , authKeys_(authKeys)
 {
    connectionManager_.reset(new ConnectionManager(logger));
-
    timer_ = new QTimer(this);
    connect(timer_, &QTimer::timeout, this, &MobileClient::timeout);
 }

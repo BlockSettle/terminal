@@ -169,6 +169,7 @@ void DealerXBTSettlementContainer::activate()
 
    const auto reqAuthAddrSW = bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH);
    addrVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(reqAuthAddrSW));
+   addrVerificator_->RegisterBSAuthAddresses();
    addrVerificator_->RegisterAddresses();
 
    settlMonitor_->start();

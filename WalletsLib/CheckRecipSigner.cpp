@@ -105,21 +105,19 @@ void CheckRecipSigner::hasInputAddress(const bs::Address &addr, std::function<vo
       auto&& hash = brr.get_BinaryDataRef(32);
       txHashSet_.insert(hash);
    }
-   auto checker = new TxAddressChecker(addr, armory_);
+   auto checker = std::make_shared<TxAddressChecker>(addr, armory_);
    resultFound_ = false;
 
    const auto &cbTXs = [this, cb, checker, lotsize](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
-         txHashSet_.erase(tx.getThisHash());
-         const auto &cbContains = [this, cb, checker](bool contains) {
+         const auto &cbContains = [this, cb, tx, checker](bool contains) {
+            txHashSet_.erase(tx.getThisHash());
             if (contains) {
                resultFound_ = true;
                cb(true);
-               delete checker;
                return;
             }
             if (txHashSet_.empty()) {
-               delete checker;
                cb(false);
             }
          };
@@ -192,7 +190,7 @@ uint64_t CheckRecipSigner::spendValue() const
 bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger
    , std::function<void(std::vector<bs::Address>)> cb)
 {
-   auto result = new std::vector<Address>;
+   auto result = std::make_shared<std::vector<Address>>();
 
    if (!armory_) {
       logger->error("[CheckRecipSigner::GetInputAddressList] there is no armory connection");
@@ -201,6 +199,9 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
 
    const auto &cbTXs = [this, result, cb](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
+         if (!result) {
+            return;
+         }
          const auto &txHash = tx.getThisHash();
          txHashSet_.erase(txHash);
          for (const auto &txOutIdx : txOutIdx_[txHash]) {
@@ -209,29 +210,34 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
          }
          if (txHashSet_.empty()) {
             txOutIdx_.clear();
-            cb(*result);
-            delete result;
+            cb(*result.get());
          }
       }
    };
-   const auto &cbTX = [this, cbTXs](Tx tx) {
-      for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
-         TxIn in = tx.getTxInCopy(i);
-         OutPoint op = in.getOutPoint();
-         txHashSet_.insert(op.getTxHash());
-         txOutIdx_[op.getTxHash()].insert(op.getTxOutIndex());
+   const auto &cbOutputTXs = [this, cbTXs](std::vector<Tx> txs) {
+      for (const auto &tx : txs) {
+         for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
+            TxIn in = tx.getTxInCopy(i);
+            OutPoint op = in.getOutPoint();
+            txHashSet_.insert(op.getTxHash());
+            txOutIdx_[op.getTxHash()].insert(op.getTxOutIndex());
+         }
       }
       armory_->getTXsByHash(txHashSet_, cbTXs);
    };
+
+   std::set<BinaryData> outputHashSet;
+   txHashSet_.clear();
    for (const auto &spender : spenders_) {
       auto outputHash = spender->getOutputHash();
       if (outputHash.isNull() || outputHash.getSize() == 0) {
          logger->warn("[CheckRecipSigner::GetInputAddressList] spender has empty output hash");
       }
       else {
-         armory_->getTxByHash(outputHash, cbTX);
+         outputHashSet.emplace(std::move(outputHash));
       }
    }
+   armory_->getTXsByHash(outputHashSet, cbOutputTXs);
 
    return true;
 }

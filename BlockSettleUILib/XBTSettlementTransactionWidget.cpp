@@ -273,6 +273,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
    const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey, AddressEntryType_P2WPKH);
    ui_->labelDealerAuthAddress->setText(tr("Validating"));
    addrVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(dealerAddrSW));
+   addrVerificator_->RegisterBSAuthAddresses();
    addrVerificator_->RegisterAddresses();
 
    const auto list = authAddressManager_->GetVerifiedAddressList();

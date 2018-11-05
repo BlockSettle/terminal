@@ -152,7 +152,7 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQReply, &RFQDealerReply::onCelerDisconnected);
 }
 
-void RFQReplyWidget::onReplied(const bs::network::QuoteNotification &qn)
+void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
 {
    if (qn.assetType == bs::network::Asset::SpotFX) {
       return;
@@ -176,10 +176,12 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
       if (order.assetType == bs::network::Asset::PrivateMarket) {
          const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
          if (quoteReqId.empty()) {
+            logger_->error("[RFQReplyWidget::onOrder] quoteReqId is empty for {}", order.quoteId);
             return;
          }
          const auto itCCSR = sentCCReplies_.find(quoteReqId);
          if (itCCSR == sentCCReplies_.end()) {
+            logger_->error("[RFQReplyWidget::onOrder] missing previous CC reply for {}", quoteReqId);
             return;
          }
          const auto &sr = itCCSR->second;
@@ -196,7 +198,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             } else {
                auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
                   sr.requestorAuthAddress, walletsManager_, signingContainer_
-                     , celerClient_, appSettings_, this);
+                  , celerClient_, appSettings_, this);
                showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {

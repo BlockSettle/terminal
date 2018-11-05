@@ -7,6 +7,7 @@
 #include <atomic>
 
 #include "BinaryData.h"
+#include "CheckRecipSigner.h"
 #include "CommonTypes.h"
 #include "MetaData.h"
 #include "SettlementWallet.h"
@@ -111,6 +112,7 @@ private:
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
+   bs::CheckRecipSigner                signer_;
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
