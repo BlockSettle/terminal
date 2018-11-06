@@ -414,7 +414,7 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitTransactionsView()
 {
-   ui->widgetTransactions->init(walletsManager_, armory_);
+   ui->widgetTransactions->init(walletsManager_, armory_, signContainer_);
    ui->widgetTransactions->setEnabled(true);
 
    ui->widgetTransactions->SetTransactionsModel(transactionsModel_);

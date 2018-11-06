@@ -21,7 +21,10 @@ public:
 public:
    SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &wallet
       , bool swTransactionsOnly, bool confirmedOnly = false
-      , const selectionChangedCallback &selectionChanged = nullptr);
+      , const selectionChangedCallback &selectionChanged = nullptr
+      , const std::function<void()> &cbInputsReset = nullptr);
+   SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &
+      , const std::vector<UTXO> &, const selectionChangedCallback &selectionChanged = nullptr);
    ~SelectedTransactionInputs() noexcept = default;
 
    SelectedTransactionInputs(const SelectedTransactionInputs&) = delete;
@@ -56,10 +59,11 @@ public:
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    void Reload(const std::vector<UTXO> &);
 
+   void ResetInputs(std::function<void()>);
+
 private:
    std::vector<UTXO> filterNonSWInputs(const std::vector<UTXO> &);
    bool filterUTXO(std::vector<UTXO> &inputs, const UTXO &, size_t selectionStart);
-   void resetInputs(std::function<void()>);
    void resetSelection();
 
 private slots:

@@ -111,20 +111,6 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
    }
 }
 
-static bool isRBFEligible(const TransactionsViewItem &item)
-{
-   return ((item.confirmations == 0)
-      && item.txEntry.isRBF
-      && ( item.wallet != nullptr && item.wallet->GetType() != bs::wallet::Type::Settlement)
-      && ( item.direction == bs::Transaction::Direction::Internal || item.direction == bs::Transaction::Direction::Sent ));
-}
-
-static bool isCPFPEligible(const TransactionsViewItem &item)
-{
-   return ((item.confirmations == 0) && (item.wallet != nullptr && item.wallet->GetType() != bs::wallet::Type::Settlement)
-         && (item.direction == bs::Transaction::Direction::Internal || item.direction == bs::Transaction::Direction::Received));
-}
-
 void PortfolioWidget::showContextMenu(const QPoint &point)
 {
    if (!filter_) {
@@ -138,21 +124,23 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
       return;
    }
 
-   if (isRBFEligible(txItem)) {
+   if (txItem.isRBFeligible()) {
       contextMenu_.addAction(actionRBF_);
       actionRBF_->setData(sourceIndex.row());
    } else {
       actionRBF_->setData(-1);
    }
 
-   if (isCPFPEligible(txItem)) {
+   if (txItem.isCPFPeligible()) {
       contextMenu_.addAction(actionCPFP_);
       actionCPFP_->setData(sourceIndex.row());
    } else {
       actionCPFP_->setData(-1);
    }
 
-   contextMenu_.exec(ui_->treeViewUnconfirmedTransactions->mapToGlobal(point));
+   if (!contextMenu_.isEmpty()) {
+      contextMenu_.exec(ui_->treeViewUnconfirmedTransactions->mapToGlobal(point));
+   }
 }
 
 void PortfolioWidget::onCreateRBFDialog()

@@ -107,7 +107,7 @@ namespace UiUtils
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<WalletsManager>& walletsManager);
    void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
 
-   void selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
+   int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
    std::string getSelectedWalletId(QComboBox* comboBox);
 
    QPixmap getQRCode(const QString& address, int size = 0);

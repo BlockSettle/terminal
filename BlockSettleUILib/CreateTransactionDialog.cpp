@@ -142,9 +142,9 @@ void CreateTransactionDialog::closeEvent(QCloseEvent *e)
    e->ignore();
 }
 
-void CreateTransactionDialog::SelectWallet(const std::string& walletId)
+int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 {
-   UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
+   return UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
 }
 
 void CreateTransactionDialog::populateWalletsList()
@@ -217,10 +217,10 @@ void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
    transactionData_->SetFeePerByte(comboBoxFeeSuggestions()->itemData(currentIndex).toFloat());
 }
 
-void CreateTransactionDialog::selectedWalletChanged(int)
+void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const std::function<void()> &cbInputsReset)
 {
    auto currentWallet = walletsManager_->GetWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   transactionData_->SetWallet(currentWallet, armory_->topBlock());
+   transactionData_->SetWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
 }
 
 void CreateTransactionDialog::onTransactionUpdated()
