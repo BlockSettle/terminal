@@ -38,7 +38,7 @@ public:
       , bool loadFeeSuggestions, QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
-   void SelectWallet(const std::string& walletId);
+   int SelectWallet(const std::string& walletId);
    void setOfflineDir(const QString &dir) { offlineDir_ = dir; }
 
 protected:
@@ -86,7 +86,8 @@ signals:
 protected slots:
    virtual void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &);
    virtual void feeSelectionChanged(int);
-   virtual void selectedWalletChanged(int);
+   virtual void selectedWalletChanged(int, bool resetInputs = false
+      , const std::function<void()> &cbInputsReset = nullptr);
    virtual void onMaxPressed();
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
 

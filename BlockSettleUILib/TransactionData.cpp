@@ -31,7 +31,8 @@ TransactionData::~TransactionData()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint32_t topBlock)
+bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint32_t topBlock
+   , bool resetInputs, const std::function<void()> &cbInputsReset)
 {
    if (wallet == nullptr) {
       return false;
@@ -40,7 +41,7 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
       wallet_ = wallet;
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
          , swTransactionsOnly_, confirmedInputs_
-         , [this]{InvalidateTransactionData();});
+         , [this]{ InvalidateTransactionData(); }, cbInputsReset);
 
       coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
             return this->selectedInputs_->GetSelectedTransactions();
@@ -50,6 +51,38 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
          , topBlock);
       InvalidateTransactionData();
    }
+   else if (resetInputs) {
+      if (selectedInputs_) {
+         selectedInputs_->ResetInputs(cbInputsReset);
+      }
+      else {
+         selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
+            , swTransactionsOnly_, confirmedInputs_
+            , [this] { InvalidateTransactionData(); }, cbInputsReset);
+      }
+      InvalidateTransactionData();
+   }
+
+   return true;
+}
+
+bool TransactionData::SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &wallet, const std::vector<UTXO> &utxos
+   , uint32_t topBlock)
+{
+   if (wallet == nullptr) {
+      return false;
+   }
+   wallet_ = wallet;
+   selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_, utxos
+      , [this] {InvalidateTransactionData(); });
+
+   coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
+      return this->selectedInputs_->GetSelectedTransactions();
+   }
+      , std::vector<AddressBookEntry>{}
+   , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider)
+      , topBlock);
+   InvalidateTransactionData();
 
    return true;
 }

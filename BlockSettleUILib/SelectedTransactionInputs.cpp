@@ -3,13 +3,25 @@
 
 SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &wallet
    , bool swTransactionsOnly, bool confirmedOnly
-   , const selectionChangedCallback &selectionChanged)
+   , const selectionChangedCallback &selectionChanged, const std::function<void()> &cbInputsReset)
    : QObject(nullptr), wallet_(wallet)
    , swTransactionsOnly_(swTransactionsOnly)
    , confirmedOnly_(confirmedOnly)
    , selectionChanged_(selectionChanged)
 {
-   resetInputs(nullptr);
+   ResetInputs(cbInputsReset);
+}
+
+SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &wallet
+   , const std::vector<UTXO> &utxos
+   , const selectionChangedCallback &selectionChanged)
+   : QObject(nullptr), wallet_(wallet)
+   , swTransactionsOnly_(false)
+   , confirmedOnly_(false)
+   , useAutoSel_(false)
+   , selectionChanged_(selectionChanged)
+{
+   SetFixedInputs(utxos);
 }
 
 void SelectedTransactionInputs::Reload(const std::vector<UTXO> &utxos)
@@ -21,7 +33,7 @@ void SelectedTransactionInputs::Reload(const std::vector<UTXO> &utxos)
          }
       }
    };
-   resetInputs(cbFilter);
+   ResetInputs(cbFilter);
 }
 
 void SelectedTransactionInputs::SetFixedInputs(const std::vector<UTXO> &inputs)
@@ -61,21 +73,21 @@ void SelectedTransactionInputs::onUTXOsReceived(std::vector<UTXO> inputs)
    inputs_ = inputs;
    resetSelection();
    for (const auto &cb : resetCallbacks_) {
-      cb();
+      if (cb) {
+         cb();
+      }
    }
    resetCallbacks_.clear();
 }
 
-void SelectedTransactionInputs::resetInputs(std::function<void()> cb)
+void SelectedTransactionInputs::ResetInputs(std::function<void()> cb)
 {
    inputs_.clear();
    cpfpInputs_.clear();
 
-   if (cb) {
-      resetCallbacks_.push_back(cb);
-      if (resetCallbacks_.size() > 1) {
-         return;
-      }
+   resetCallbacks_.push_back(cb);
+   if (resetCallbacks_.size() > 1) {
+      return;
    }
    if (confirmedOnly_) {
       wallet_->getSpendableTxOutList([this](std::vector<UTXO> inputs) {

@@ -148,11 +148,11 @@ int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<Wall
    return selected;
 }
 
-void UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
+int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
 {
    int walletIndex = 0;
    if (comboBox->count() == 0) {
-      return;
+      return -1;
    }
 
    for (int i=0; i<comboBox->count(); ++i) {
@@ -165,6 +165,7 @@ void UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wal
    if (comboBox->currentIndex() != walletIndex) {
       comboBox->setCurrentIndex(walletIndex);
    }
+   return walletIndex;
 }
 
 int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<WalletsManager> &walletsManager)
