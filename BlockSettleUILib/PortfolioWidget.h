@@ -44,6 +44,7 @@ private slots:
 
    void onCreateRBFDialog();
    void onCreateCPFPDialog();
+
 private:
    std::unique_ptr<Ui::PortfolioWidget> ui_;
    std::shared_ptr<TransactionsViewModel> model_;
