@@ -668,7 +668,8 @@ void BSTerminalMainWindow::openOTPDialog()
       OTPFileInfoDialog dialog(otpManager_, this);
       dialog.exec();
    } else {
-      OTPImportDialog(otpManager_, celerConnection_->userName(), this).exec();
+      OTPImportDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
+         , applicationSettings_, this).exec();
    }
 }
 
@@ -712,7 +713,8 @@ void BSTerminalMainWindow::openCCTokenDialog()
             "for confirming your identity and to establish secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
-         OTPImportDialog otpDialog(otpManager_, celerConnection_->userName(), this);
+         OTPImportDialog otpDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
+            , applicationSettings_, this);
          if (otpDialog.exec() != QDialog::Accepted) {
             return;
          }
@@ -1050,7 +1052,8 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
             "for confirming your identity and to establish secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
-         OTPImportDialog(otpManager_, celerConnection_->userName(), this).exec();
+         OTPImportDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
+            , applicationSettings_, this).exec();
       }
    }
 }
