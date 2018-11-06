@@ -367,8 +367,8 @@ void WalletsWidget::updateAddresses()
    if (selectedWallets == prevSelectedWallets_) {
       return;
    }
-   prevSelectedWallets_ = selectedWallets;
    addressModel_->setWallets(selectedWallets);
+   prevSelectedWallets_ = selectedWallets;
    ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 }
 
