@@ -3,12 +3,16 @@
 
 #include <QWidget>
 #include <QtCharts>
+#include "CommonTypes.h"
 
 namespace Ui {
 class ChartWidget;
 }
 
 using namespace QtCharts;
+class MarketDataProvider;
+class ApplicationSettings;
+class ArmoryConnection;
 
 class ChartWidget : public QWidget
 {
@@ -17,12 +21,27 @@ class ChartWidget : public QWidget
 public:
     explicit ChartWidget(QWidget *parent = nullptr);
     ~ChartWidget();
+    void init(const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<MarketDataProvider> &
+       , const std::shared_ptr<ArmoryConnection> &);
+
+protected slots:
+   void onDateRangeChanged(int id);
+   void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 
 protected:
-   void setStyling();
+   void setChartStyle();
+   void createCandleChartAxis();
+   void createVolumeChartAxis();
+   void buildVolumeChart();
+   void buildCandleChart();
+   void populateInstruments();
 
 private:
     Ui::ChartWidget *ui_;
+    QButtonGroup dateRange_;
+    std::shared_ptr<MarketDataProvider> mdProvider_;
+    QStandardItemModel *cboModel_;
+
 };
 
 #endif // CHARTWIDGET_H

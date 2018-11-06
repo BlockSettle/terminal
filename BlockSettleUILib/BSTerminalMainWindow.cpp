@@ -595,6 +595,8 @@ void BSTerminalMainWindow::InitPortfolioView()
    ui->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
                              signContainer_, armory_, logMgr_->logger("ui"),
                              walletsManager_);
+   ui->widgetChart->init(applicationSettings_, mdProvider_, armory_);
+
 }
 
 void BSTerminalMainWindow::InitWalletsView()
