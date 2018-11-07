@@ -40,15 +40,6 @@ OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<spdlog::logger> &logg
 
    ui_->labelWarning->setVisible(false);
 
-   EnterOTPPasswordDialog passwordDialog(logger_, otpManager_
-      , tr("Enter password to update usage counter"), settings_, parentWidget());
-   if (passwordDialog.exec() == QDialog::Accepted) {
-      const auto &otpPassword = passwordDialog.GetPassword();
-      if (!otpManager_->IsPasswordCorrect(otpPassword)) {
-         MessageBoxCritical(QLatin1String("Invalid pass"), QLatin1String("Test"), this).exec();
-      }
-   }
-
    if (otpManager_->CountAdvancingRequired()) {
       if (!UpdateOTPCounter()) {
          ui_->labelWarning->setVisible(true);
