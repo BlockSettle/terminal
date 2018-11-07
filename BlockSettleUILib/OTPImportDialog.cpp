@@ -1,22 +1,28 @@
 #include "OTPImportDialog.h"
 #include "ui_OTPImportDialog.h"
 
+#include "ApplicationSettings.h"
 #include "EasyCoDec.h"
 #include "EasyEncValidator.h"
 #include "EncryptionUtils.h"
 #include "MessageBoxCritical.h"
 #include "OTPFile.h"
 #include "OTPManager.h"
+#include "MobileClient.h"
 #include "UiUtils.h"
 #include "make_unique.h"
 
 #include <spdlog/spdlog.h>
 
 
-OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
-   const std::string &defaultUserName, QWidget* parent)
+OTPImportDialog::OTPImportDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<OTPManager>& otpManager
+   , const std::string &defaultUserName
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::OTPImportDialog())
+   , logger_(logger)
    , otpManager_(otpManager)
    , easyCodec_(std::make_shared<EasyCoDec>())
 {
@@ -37,6 +43,15 @@ OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &OTPImportDialog::startAuthSign);
 
    ui_->lineEditAuthId->setText(QString::fromStdString(defaultUserName));
+
+   mobileClient_ = new MobileClient(logger_, appSettings->GetAuthKeys(), this);
+   connect(mobileClient_, &MobileClient::succeeded, this, &OTPImportDialog::onAuthSucceeded);
+   connect(mobileClient_, &MobileClient::failed, this, &OTPImportDialog::onAuthFailed);
+
+   std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+   mobileClient_->init(serverPubKey, serverHost, serverPort);
 }
 
 OTPImportDialog::~OTPImportDialog() = default;
@@ -78,7 +93,9 @@ void OTPImportDialog::keyTextChanged()
    }
 
    try {
-      hexKey_ = easyCodec_->toHex(EasyCoDec::Data{ ui_->lineEditOtp1->text().toStdString(), ui_->lineEditOtp2->text().toStdString() });
+      string otpKeyHex = easyCodec_->toHex(EasyCoDec::Data{
+         ui_->lineEditOtp1->text().toStdString(), ui_->lineEditOtp2->text().toStdString() });
+      otpKey_ = SecureBinaryData(BinaryData::CreateFromHex(otpKeyHex));
       ui_->lineEditAuthId->setFocus();
       updateAcceptButton();
    }
@@ -98,9 +115,18 @@ void OTPImportDialog::startAuthSign()
 {
    ui_->pushButtonAuth->setEnabled(false);
    ui_->lineEditAuthId->setEnabled(false);
+
+   QString otpId = OTPFile::GetShortId(OTPFile::GetOtpIdFromPrivateKey(otpKey_));
+   if (otpId.isEmpty()) {
+      MessageBoxCritical(tr("Error"), tr("Invalid OTP key"), this).exec();
+      return;
+   }
+
+   mobileClient_->start(MobileClientRequest::ActivateOTP
+      , ui_->lineEditAuthId->text().toStdString(), otpId.toStdString(), {});
 }
 
-void OTPImportDialog::onAuthSucceeded(SecureBinaryData password)
+void OTPImportDialog::onAuthSucceeded(const std::string& encKey, const SecureBinaryData &password)
 {
    ui_->labelPwdHint->setText(tr("Successfully signed"));
    otpPassword_ = password;
@@ -137,8 +163,7 @@ void OTPImportDialog::accept()
       return;
    }
 
-   const auto otpKey = SecureBinaryData(BinaryData::CreateFromHex(hexKey_));
-   auto resultCode = otpManager_->ImportOTPForCurrentUser(otpKey,
+   auto resultCode = otpManager_->ImportOTPForCurrentUser(otpKey_,
       otpPassword_, bs::wallet::EncryptionType::Auth, ui_->lineEditAuthId->text().toStdString());
    if (resultCode != OTPManager::OTPImportResult::Success) {
 

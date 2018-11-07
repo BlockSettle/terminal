@@ -1,7 +1,8 @@
 #include "AuthAddressDialog.h"
 #include "ui_AuthAddressDialog.h"
-#include <QItemSelection>
 
+#include <spdlog/spdlog.h>
+#include <QItemSelection>
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
@@ -14,11 +15,13 @@
 #include "UiUtils.h"
 
 
-AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<AuthAddressManager> &authAddressManager
+AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<OTPManager> &otpMgr
    , const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AuthAddressDialog())
+   , logger_(logger)
    , authAddressManager_(authAddressManager)
    , assetManager_(assetMgr)
    , otpManager_(otpMgr)
@@ -338,8 +341,8 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
    SecureBinaryData otpPassword = {};
 
    if (authAddressManager_->needsOTPpassword()) {
-      EnterOTPPasswordDialog passwordDialog(otpManager_
-         , tr("Authentication Address Submission"), this);
+      EnterOTPPasswordDialog passwordDialog(logger_, otpManager_
+         , tr("Authentication Address Submission"), settings_, this);
       if (passwordDialog.exec() != QDialog::Accepted) {
          authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
          lastSubmittedAddress_ = bs::Address{};

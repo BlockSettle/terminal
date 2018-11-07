@@ -35,6 +35,10 @@ public:
       , const QString& filePath, const SecureBinaryData& privateKey, bs::wallet::EncryptionType
       , const SecureBinaryData &password = {}, const SecureBinaryData &encKey = {});
 
+   static std::string GetOtpIdFromPrivateKey(const SecureBinaryData& privateKey);
+
+   static QString GetShortId(const std::string &otpId) { return QString::fromStdString(otpId.substr(0, 8)); }
+
    OTPFile() = delete;
    ~OTPFile() noexcept = default;
 
@@ -46,7 +50,7 @@ public:
    QString     GetImportDateString() const { return importDate_; }
    std::string GetOtpId() const { return otpId_; }
    SecureBinaryData GetChainCode() const { return chainCode_; }
-   QString     GetShortId() const { return QString::fromStdString(otpId_.substr(0, 8)); }
+   QString     GetShortId() const { return GetShortId(otpId_); }
    bs::wallet::EncryptionType encryptionType() const { return encType_; }
    SecureBinaryData encryptionKey() const { return encKey_; }
 

@@ -13,6 +13,7 @@ enum class MobileClientRequest
    ActivateWalletOldDevice,
    ActivateWalletNewDevice,
    VerifyWalletKey,
+   ActivateOTP,
 
    // Please also add new type text in getMobileClientRequestText
 };

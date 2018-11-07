@@ -87,9 +87,8 @@ std::shared_ptr<OTPFile> OTPFile::CreateFromPrivateKey(
 
    SecureBinaryData chainCode(chainCodeString);
 
-   CryptoECDSA crypto;
-   SecureBinaryData otpIdKey = crypto.CompressPoint(crypto.ComputePublicKey(privateKey));
-   if (otpIdKey.isNull()) {
+   std::string otpId = GetOtpIdFromPrivateKey(privateKey);
+   if (otpId.empty()) {
       logger->error("[OTPFile::CreateFromPrivateKey] failed to calculate otp key");
       return nullptr;
    }
@@ -105,8 +104,18 @@ std::shared_ptr<OTPFile> OTPFile::CreateFromPrivateKey(
       firstKey = Encrypt(firstKey, password, hash);
    }
 
-   return std::make_shared<OTPFile>(logger, filePath, otpIdKey.toHexStr(), chainCode, firstKey
+   return std::make_shared<OTPFile>(logger, filePath, otpId, chainCode, firstKey
       , encType, encKey, hash);
+}
+
+string OTPFile::GetOtpIdFromPrivateKey(const SecureBinaryData &privateKey)
+{
+   CryptoECDSA crypto;
+   SecureBinaryData otpIdKey = crypto.CompressPoint(crypto.ComputePublicKey(privateKey));
+   if (otpIdKey.isNull()) {
+      return {};
+   }
+   return otpIdKey.toHexStr();
 }
 
 SecureBinaryData OTPFile::GetNextKeyInChain(const SecureBinaryData& privateKey, const SecureBinaryData& chainCode)

@@ -56,7 +56,10 @@ namespace bs {
       mutable SecureBinaryData   pubKey_;
    };
 
-
+   // A base wallet that can be used by other wallets, or for very basic
+   // functionality (e.g., creating a bare wallet that can be registered and get
+   // info on addresses added to the wallet). The wallet may or may not be able
+   // to access the wallet DB.
    class PlainWallet : public Wallet
    {
       Q_OBJECT
@@ -90,6 +93,7 @@ namespace bs {
       std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override;
 
       bs::Address GetNewExtAddress(AddressEntryType) override { return {}; }
+      bs::Address GetNewIntAddress(AddressEntryType) override { return {}; }
 
       size_t GetUsedAddressCount() const override { return usedAddresses_.size(); }
       std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
