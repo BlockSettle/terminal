@@ -3,6 +3,7 @@
 #include "ApplicationSettings.h"
 #include "MarketDataProvider.h"
 #include "ArmoryConnection.h"
+#include <qrandom.h>
 
 ChartWidget::ChartWidget(QWidget *parent)
    : QWidget(parent)
@@ -21,6 +22,18 @@ ChartWidget::ChartWidget(QWidget *parent)
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked), 
       this, &ChartWidget::onDateRangeChanged);
 
+   // these signals are used to sync volume chart with price chart
+   // when scrolling and zooming
+   connect(ui_->viewPrice, &CustomChartView::chartZoomed,
+      ui_->viewVolume, &CustomChartView::onChartZoomed);
+   connect(ui_->viewPrice, &CustomChartView::chartScrolled,
+      ui_->viewVolume, &CustomChartView::onChartScrolled);
+   connect(ui_->viewPrice, &CustomChartView::chartZoomReset,
+      ui_->viewVolume, &CustomChartView::onChartZoomReset);
+   // drag and zoom is enabled only for the price chart
+   ui_->viewPrice->enableDrag(true);
+   ui_->viewPrice->enableZoom(true);
+
    // sort model for instruments combo box
    cboModel_ = new QStandardItemModel(this);
    auto proxy = new QSortFilterProxyModel();
@@ -28,21 +41,28 @@ ChartWidget::ChartWidget(QWidget *parent)
    proxy->sort(0);
    ui_->cboInstruments->setModel(proxy);
 
-   ui_->viewMain->setRubberBand(QChartView::HorizontalRubberBand);
+   priceSeries_ = new QCandlestickSeries(this);
+   priceSeries_->setIncreasingColor(QColor(34, 192, 100));
+   priceSeries_->setDecreasingColor(QColor(207, 41, 46));
+   QPen pen(QRgb(0xffffff));
+   pen.setWidth(1);
+   priceSeries_->setPen(pen);
+   priceSeries_->setBodyOutlineVisible(false);
+
+   volumeSeries_ = new QCandlestickSeries(this);
+   volumeSeries_->setIncreasingColor(QColor(32, 159, 223));
+   volumeSeries_->setBodyOutlineVisible(false);
+
 }
 
 void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<MarketDataProvider> &mdProvider
    , const std::shared_ptr<ArmoryConnection> &) {
    mdProvider_ = mdProvider;
 
-
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::onMDUpdated);
-
-   //populateInstruments();
 
    // populate charts with data
    buildCandleChart();
-   buildVolumeChart();
    // style the charts
    setChartStyle();
    // setup the chart axis
@@ -73,7 +93,7 @@ void ChartWidget::setChartStyle() {
    QBrush bgBrush(QColor(28, 40, 53));
 
    // candle stick chart
-   auto mainChart = ui_->viewMain->chart();
+   auto mainChart = ui_->viewPrice->chart();
    mainChart->setBackgroundBrush(bgBrush);
    // Customize chart title
    QFont font;
@@ -81,6 +101,13 @@ void ChartWidget::setChartStyle() {
    mainChart->setTitleFont(font);
    mainChart->setTitleBrush(QBrush(Qt::white));
    mainChart->legend()->setVisible(false);
+   qreal left, top, right, bottom;
+   mainChart->layout()->getContentsMargins(&left, &top, &right, &bottom);
+   bottom = 0.0;
+   mainChart->layout()->setContentsMargins(left, top, right, bottom);
+   auto mainMargins = mainChart->margins();
+   mainMargins.setBottom(0);
+   mainChart->setMargins(mainMargins);
 
    // volume chart
    auto volChart = ui_->viewVolume->chart();
@@ -88,16 +115,19 @@ void ChartWidget::setChartStyle() {
    // remove top and bottom margins for the volume chart
    auto margins = volChart->margins();
    margins.setTop(0);
-   margins.setBottom(0);
+   margins.setBottom(5);
    volChart->setMargins(margins);
    volChart->legend()->setVisible(false);
+   volChart->layout()->getContentsMargins(&left, &top, &right, &bottom);
+   top = 0.0;
+   volChart->layout()->setContentsMargins(left, top, right, bottom);
 }
 
 // Creates x and y axis for the candle stick chart.
 void ChartWidget::createCandleChartAxis() {
-   auto dateAxisx = new QDateTimeAxis;
-   auto chart = ui_->viewMain->chart();
-   auto series = qobject_cast<QCandlestickSeries *>(chart->series().at(0));
+   auto dateAxisx = new QDateTimeAxis(this);
+   auto chart = ui_->viewPrice->chart();
+   //auto series = qobject_cast<QCandlestickSeries *>(chart->series().at(0));
    dateAxisx->setFormat(tr("d-M-yy"));
    //dateAxisx->setTitleText(tr("Date"));
    dateAxisx->setTitleBrush(QBrush(Qt::white));
@@ -108,7 +138,15 @@ void ChartWidget::createCandleChartAxis() {
    chart->addAxis(dateAxisx, Qt::AlignBottom);
    chart->series().at(0)->attachAxis(dateAxisx);
    dateAxisx->setTickCount(10);
-   qDebug() << "count" << series->count();
+   dateAxisx->setLabelsVisible(false);
+
+   // add space offset to the x axis
+   // this code will eventually have to be moved to data range handler function
+   // and will need to be called when date range is modified
+   dateAxisx->setMax(dateAxisx->max().addDays(1));
+   dateAxisx->setMin(dateAxisx->min().addDays(-1));
+
+   // y axis
    QValueAxis *axisY = new QValueAxis;
    axisY->setLabelFormat(tr("%i"));
    axisY->setLabelsColor(QColor(Qt::white));
@@ -116,15 +154,18 @@ void ChartWidget::createCandleChartAxis() {
    axisY->setMinorGridLineVisible(false);
    chart->addAxis(axisY, Qt::AlignRight);
    chart->series().at(0)->attachAxis(axisY);
+   // add space offset to the y axis
+   auto tmpAxis = qobject_cast<QValueAxis *>(chart->axes(Qt::Vertical).at(0));
+   tmpAxis->setMax(tmpAxis->max() * 1.05);
+   tmpAxis->setMin(tmpAxis->min() * 0.95);
+   //tmpAxis->applyNiceNumbers();
 }
 
 // Creates x and y axis for the volume stick chart.
 void ChartWidget::createVolumeChartAxis() {
-   auto dateAxisx = new QDateTimeAxis;
+   auto dateAxisx = new QDateTimeAxis(this);
    auto chart = ui_->viewVolume->chart();
-   auto series = qobject_cast<QBarSeries *>(chart->series().at(0));
-   auto barset = series->barSets().at(0);
-   dateAxisx->setFormat(tr("d"));
+   dateAxisx->setFormat(tr("d-M-yy"));
    // hide grid lines
    dateAxisx->setGridLineVisible(false);
    dateAxisx->setMinorGridLineVisible(false);
@@ -132,7 +173,12 @@ void ChartWidget::createVolumeChartAxis() {
    chart->addAxis(dateAxisx, Qt::AlignBottom);
    chart->series().at(0)->attachAxis(dateAxisx);
    dateAxisx->setTickCount(10);
-   dateAxisx->setLabelsVisible(false);
+   dateAxisx->setLabelsVisible(true);
+   // add space offset to the x axis
+   // this code will eventually have to be moved to data range handler function
+   // and will need to be called when date range is modified
+   dateAxisx->setMax(dateAxisx->max().addDays(1));
+   dateAxisx->setMin(dateAxisx->min().addDays(-1));
 
    QValueAxis *axisY = new QValueAxis;
    axisY->setLabelFormat(tr("%i"));
@@ -142,349 +188,331 @@ void ChartWidget::createVolumeChartAxis() {
    axisY->setTickCount(2);
    chart->addAxis(axisY, Qt::AlignRight);
    chart->series().at(0)->attachAxis(axisY);
+   //axisY->applyNiceNumbers();
 }
 
 // Populates chart with data, right now it's just
 // test dummy data.
 void ChartWidget::buildCandleChart() {
-   auto chart = ui_->viewMain->chart();
-   QCandlestickSeries *series = new QCandlestickSeries();
-   series->setIncreasingColor(QColor(34, 192, 100));
-   series->setDecreasingColor(QColor(207, 41, 46));
-   QPen pen(QRgb(0xffffff));
-   pen.setWidth(1);
-   series->setPen(pen);
+   auto chart = ui_->viewPrice->chart();
+   priceSeries_->clear();
+   volumeSeries_->clear();
    chart->setTitle(tr("XBT/USD"));
-   series->setBodyOutlineVisible(false);
-
    QDateTime dt;
    dt.setDate(QDate(2018, 10, 1));
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 18.2, 9.9, 17.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 18.2, 9.9, 17.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 18.2, 9.9, 17.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 18.2, 9.9, 17.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 9.9, 10.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 9.7, 8.3, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(8.6, 9.7, 7.9, 8.2, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(9.4, 11.0, 9.9, 10.1, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(10.6, 13.2, 8.0, 10.9, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(11.2, 12.2, 10.6, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   series->append(new QCandlestickSet(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), series));
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
 
-   chart->addSeries(series);
+   ui_->viewPrice->chart()->addSeries(priceSeries_);
+   ui_->viewVolume->chart()->addSeries(volumeSeries_);
 
 }
 
-// Populates volume chart with data.
-void ChartWidget::buildVolumeChart() {
-   QBarSeries *series = new QBarSeries();
-   QBarSet *barSet = new QBarSet(tr("Volume"));
-   barSet->setPen(QPen(QRgb(0x209fdf)));
-   for (int i = 1; i < 151; i++) {
-      barSet->append(i);
-   }
-   series->append(barSet);
+void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume) {
 
-   auto chart = ui_->viewVolume->chart();
-   chart->addSeries(series);
-}
+   volume = QRandomGenerator::global()->generateDouble() * 100;
+   priceSeries_->append(new QCandlestickSet(open, high, low, close, timestamp, priceSeries_));
+   volumeSeries_->append(new QCandlestickSet(0.0, volume, 0.0, volume, timestamp, volumeSeries_));
 
-// Populates instruments combo box.
-void ChartWidget::populateInstruments() {
-   ui_->cboInstruments->addItem(tr("XBT/USD"));
-   ui_->cboInstruments->addItem(tr("XBT/EUR"));
-   ui_->cboInstruments->addItem(tr("XBT/GBT"));
-   ui_->cboInstruments->addItem(tr("XBT/JPY"));
 }
 
 // Handles changes of date range.

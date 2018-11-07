@@ -228,10 +228,10 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_3" stretch="8,2">
         <property name="spacing">
-         <number>5</number>
+         <number>0</number>
         </property>
         <item>
-         <widget class="QtCharts::QChartView" name="viewMain">
+         <widget class="CustomChartView" name="viewPrice">
           <property name="backgroundBrush">
            <brush brushstyle="SolidPattern">
             <color alpha="255">
@@ -241,10 +241,13 @@
             </color>
            </brush>
           </property>
+          <property name="renderHints">
+           <set>QPainter::HighQualityAntialiasing|QPainter::TextAntialiasing</set>
+          </property>
          </widget>
         </item>
         <item>
-         <widget class="QtCharts::QChartView" name="viewVolume">
+         <widget class="CustomChartView" name="viewVolume">
           <property name="backgroundBrush">
            <brush brushstyle="SolidPattern">
             <color alpha="255">
@@ -253,6 +256,9 @@
              <blue>25</blue>
             </color>
            </brush>
+          </property>
+          <property name="renderHints">
+           <set>QPainter::HighQualityAntialiasing|QPainter::TextAntialiasing</set>
           </property>
          </widget>
         </item>
@@ -265,9 +271,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QtCharts::QChartView</class>
+   <class>CustomChartView</class>
    <extends>QGraphicsView</extends>
-   <header>qchartview.h</header>
+   <header>customchartview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

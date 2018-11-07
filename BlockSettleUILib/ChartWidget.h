@@ -32,16 +32,16 @@ protected:
    void setChartStyle();
    void createCandleChartAxis();
    void createVolumeChartAxis();
-   void buildVolumeChart();
    void buildCandleChart();
-   void populateInstruments();
+   void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
 
 private:
     Ui::ChartWidget *ui_;
     QButtonGroup dateRange_;
     std::shared_ptr<MarketDataProvider> mdProvider_;
     QStandardItemModel *cboModel_;
-
+    QCandlestickSeries *priceSeries_;
+    QCandlestickSeries *volumeSeries_;
 };
 
 #endif // CHARTWIDGET_H
