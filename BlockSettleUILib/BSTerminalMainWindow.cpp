@@ -107,7 +107,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAuthManager();
    InitAssets();
 
-   authAddrDlg_ = std::make_shared<AuthAddressDialog>(authManager_, assetManager_, otpManager_, applicationSettings_, this);
+   authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
+      , assetManager_, otpManager_, applicationSettings_, this);
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsManager_, assetManager_, celerConnection_
       , signContainer_, ui->statusbar);
@@ -665,7 +666,7 @@ void BSTerminalMainWindow::setupMenu()
 void BSTerminalMainWindow::openOTPDialog()
 {
    if (otpManager_->CurrentUserHaveOTP()) {
-      OTPFileInfoDialog dialog(otpManager_, this);
+      OTPFileInfoDialog dialog(logMgr_->logger("ui"), otpManager_, applicationSettings_, this);
       dialog.exec();
    } else {
       OTPImportDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
@@ -1041,7 +1042,7 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
             , this);
 
          if (otpDialog.exec() == QDialog::Accepted) {
-            OTPFileInfoDialog(otpManager_, this).exec();
+            OTPFileInfoDialog(logMgr_->logger("ui"), otpManager_, applicationSettings_, this).exec();
          }
       }
    } else if (celerConnection_->tradingAllowed() ) {

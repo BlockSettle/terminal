@@ -1,5 +1,6 @@
 #include "OTPFileInfoDialog.h"
 #include "ui_OTPFileInfoDialog.h"
+
 #include <spdlog/spdlog.h>
 #include "EncryptionUtils.h"
 #include "EnterOTPPasswordDialog.h"
@@ -9,11 +10,15 @@
 #include "OTPManager.h"
 
 
-OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<OTPManager>& otpManager
- , QWidget* parent)
-  : QDialog(parent)
-  , ui_(new Ui::OTPFileInfoDialog())
-  , otpManager_(otpManager)
+OTPFileInfoDialog::OTPFileInfoDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<OTPManager>& otpManager
+   , const std::shared_ptr<ApplicationSettings> &settings
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::OTPFileInfoDialog())
+   , logger_(logger)
+   , otpManager_(otpManager)
+   , settings_(settings)
 {
    ui_->setupUi(this);
 
@@ -76,7 +81,8 @@ OTPFileInfoDialog::~OTPFileInfoDialog() = default;
 bool OTPFileInfoDialog::UpdateOTPCounter()
 {
    //get password
-   EnterOTPPasswordDialog passwordDialog(otpManager_, tr("Enter password to update usage counter"), parentWidget());
+   EnterOTPPasswordDialog passwordDialog(logger_, otpManager_
+      , tr("Enter password to update usage counter"), settings_, parentWidget());
    if (passwordDialog.exec() == QDialog::Accepted) {
       const auto &otpPassword = passwordDialog.GetPassword();
       return otpManager_->AdvanceOTPKey(otpPassword);
