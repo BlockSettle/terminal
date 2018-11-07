@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include <QDateTime>
 #include "TxClasses.h"
 
 
@@ -29,6 +30,8 @@ namespace bs {
          UtxoReservation * parent_ = nullptr;
       };
 
+      explicit UtxoReservation();
+
       static void init();
       static void destroy();
       static bool addAdapter(const std::shared_ptr<Adapter> &a);
@@ -47,6 +50,7 @@ namespace bs {
       std::unordered_map<std::string, UTXOs>       byReserveId_;
       std::unordered_map<std::string, std::string> walletByReserveId_;
       std::unordered_map<std::string, IdList>      resIdByWalletId_;
+      std::unordered_map<std::string, QDateTime>   reserveTime_;
       std::vector<std::shared_ptr<Adapter>>        adapters_;
    };
 

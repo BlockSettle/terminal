@@ -80,9 +80,7 @@ void CCSettlementTransactionWidget::onCancel()
 void CCSettlementTransactionWidget::cancel()
 {
    timer_.stop();
-   if (clientSells_) {
-      utxoAdapter_->unreserve(reserveId_);
-   }
+   utxoAdapter_->unreserve(reserveId_);
    ui_->widgetSubmitKeys->cancel();
 }
 
@@ -323,7 +321,8 @@ bool CCSettlementTransactionWidget::createCCUnsignedTXdata()
       ccTxData_.inputs = utxoAdapter_->get(reserveId_);
       logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] {} CC inputs reserved ({} recipients)"
          , ccTxData_.inputs.size(), ccTxData_.recipients.size());
-      QMetaObject::invokeMethod(this, [this] { emit sendOrder(); });
+      emit sendOrder();
+      signingContainer_->SyncAddresses(transactionData_->createAddresses());
    }
    else {
       const auto &cbFee = [this](float feePerByte) {
@@ -338,7 +337,9 @@ bool CCSettlementTransactionWidget::createCCUnsignedTXdata()
                ccTxData_ = transactionData_->CreatePartialTXRequest(spendVal, feePerByte, { recipient }
                   , dealerTx_, utxos);
                logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
+               utxoAdapter_->reserve(ccTxData_.walletId, reserveId_, ccTxData_.inputs);
                QMetaObject::invokeMethod(this, [this] { emit sendOrder(); });
+               signingContainer_->SyncAddresses(transactionData_->createAddresses());
             }
             catch (const std::exception &e) {
                logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
@@ -353,7 +354,6 @@ bool CCSettlementTransactionWidget::createCCUnsignedTXdata()
       walletsManager_->estimatedFeePerByte(0, cbFee, this);
    }
 
-   signingContainer_->SyncAddresses(transactionData_->createAddresses());
    return true;
 }
 
