@@ -765,3 +765,16 @@ bool TransactionsViewItem::containsInputsFrom(const Tx &inTx) const
    }
    return false;
 }
+
+bool TransactionsViewItem::isRBFeligible() const
+{
+   return ((confirmations == 0) && txEntry.isRBF
+      && (wallet != nullptr && wallet->GetType() != bs::wallet::Type::Settlement)
+      && (direction == bs::Transaction::Direction::Internal || direction == bs::Transaction::Direction::Sent));
+}
+
+bool TransactionsViewItem::isCPFPeligible() const
+{
+   return ((confirmations == 0) && (wallet != nullptr && wallet->GetType() != bs::wallet::Type::Settlement)
+      && (direction == bs::Transaction::Direction::Internal || direction == bs::Transaction::Direction::Received));
+}

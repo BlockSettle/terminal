@@ -68,7 +68,8 @@ protected:
    bool HaveSignedImportedTransaction() const override;
 
 protected slots:
-   void selectedWalletChanged(int currentIndex) override;
+   void selectedWalletChanged(int currentIndex, bool resetInputs
+      , const std::function<void()> &cbInputsReset = nullptr) override;
 
    void onAddressTextChanged(const QString& addressString);
    void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &) override;
@@ -103,7 +104,8 @@ private:
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void SetMinimumFee(float totalFee, float feePerByte = 0);
 
-   void SetFixedWallet(const std::string& walletId);
+   void SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset = nullptr);
+   void SetFixedWalletAndInputs(const std::shared_ptr<bs::Wallet> &, const std::vector<UTXO> &);
    void disableOutputsEditing();
    void disableInputSelection();
    void disableFeeChanging();

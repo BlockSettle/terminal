@@ -58,7 +58,9 @@ public:
    TransactionData(TransactionData&&) = delete;
    TransactionData& operator = (TransactionData&&) = delete;
 
-   bool SetWallet(const std::shared_ptr<bs::Wallet> &, uint32_t topBlock);
+   bool SetWallet(const std::shared_ptr<bs::Wallet> &, uint32_t topBlock
+      , bool resetInputs = false, const std::function<void()> &cbInputsReset = nullptr);
+   bool SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &, const std::vector<UTXO> &, uint32_t topBlock);
    void SetSigningWallet(const std::shared_ptr<bs::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    std::shared_ptr<bs::Wallet> GetSigningWallet() const { return signWallet_; }

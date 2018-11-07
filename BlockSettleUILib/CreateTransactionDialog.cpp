@@ -30,11 +30,15 @@
 #include "WalletsManager.h"
 #include "XbtAmountValidator.h"
 
-
-const std::map<unsigned int, QString> feeLevels = { {2, QObject::tr("20 minutes") },
-   { 4, QObject::tr("40 minutes") }, { 6, QObject::tr("1 hour") }, { 12, QObject::tr("2 hours") },
-   { 24, QObject::tr("4 hours") }, { 48, QObject::tr("8 hours") }, { 144, QObject::tr("24 hours") },
-   { 504, QObject::tr("3 days") }, { 1008, QObject::tr("7 days") }
+// Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
+const std::map<unsigned int, QString> feeLevels = {
+   { 2, QObject::tr("20 minutes") },
+   { 3, QObject::tr("30 minutes") },
+   { 4, QObject::tr("40 minutes") },
+   { 5, QObject::tr("50 minutes") },
+   { 6, QObject::tr("1 hour") },
+   { 10, QObject::tr("1 hour 40 minutes") },
+   { 20, QObject::tr("3 hours 20 minutes") }
 };
 
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
@@ -138,9 +142,9 @@ void CreateTransactionDialog::closeEvent(QCloseEvent *e)
    e->ignore();
 }
 
-void CreateTransactionDialog::SelectWallet(const std::string& walletId)
+int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 {
-   UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
+   return UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
 }
 
 void CreateTransactionDialog::populateWalletsList()
@@ -213,10 +217,10 @@ void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
    transactionData_->SetFeePerByte(comboBoxFeeSuggestions()->itemData(currentIndex).toFloat());
 }
 
-void CreateTransactionDialog::selectedWalletChanged(int)
+void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const std::function<void()> &cbInputsReset)
 {
    auto currentWallet = walletsManager_->GetWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   transactionData_->SetWallet(currentWallet, armory_->topBlock());
+   transactionData_->SetWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
 }
 
 void CreateTransactionDialog::onTransactionUpdated()

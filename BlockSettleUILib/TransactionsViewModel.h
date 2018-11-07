@@ -45,6 +45,9 @@ struct TransactionsViewItem
       , const std::shared_ptr<WalletsManager> &, std::function<void(const TransactionsViewItem *)>);
    void calcAmount(const std::shared_ptr<WalletsManager> &);
    bool containsInputsFrom(const Tx &tx) const;
+
+   bool isRBFeligible() const;
+   bool isCPFPeligible() const;
 };
 typedef std::vector<TransactionsViewItem>    TransactionItems;
 
