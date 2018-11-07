@@ -4,6 +4,7 @@
 #include "MarketDataProvider.h"
 #include "ArmoryConnection.h"
 #include <qrandom.h>
+#include "CustomCandlestickSet.h"
 
 ChartWidget::ChartWidget(QWidget *parent)
    : QWidget(parent)
@@ -34,6 +35,9 @@ ChartWidget::ChartWidget(QWidget *parent)
    ui_->viewPrice->enableDrag(true);
    ui_->viewPrice->enableZoom(true);
 
+   connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
+      this, &ChartWidget::onInstrumentChanged);
+
    // sort model for instruments combo box
    cboModel_ = new QStandardItemModel(this);
    auto proxy = new QSortFilterProxyModel();
@@ -48,11 +52,13 @@ ChartWidget::ChartWidget(QWidget *parent)
    pen.setWidth(1);
    priceSeries_->setPen(pen);
    priceSeries_->setBodyOutlineVisible(false);
+   connect(priceSeries_, &QCandlestickSeries::hovered, this, &ChartWidget::onPriceHover);
 
    volumeSeries_ = new QCandlestickSeries(this);
    volumeSeries_->setIncreasingColor(QColor(32, 159, 223));
    volumeSeries_->setBodyOutlineVisible(false);
 
+   dataItemText_ = new QGraphicsTextItem(ui_->viewPrice->chart());
 }
 
 void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<MarketDataProvider> &mdProvider
@@ -93,21 +99,25 @@ void ChartWidget::setChartStyle() {
    QBrush bgBrush(QColor(28, 40, 53));
 
    // candle stick chart
-   auto mainChart = ui_->viewPrice->chart();
-   mainChart->setBackgroundBrush(bgBrush);
+   auto priceChart = ui_->viewPrice->chart();
+   priceChart->setBackgroundBrush(bgBrush);
    // Customize chart title
    QFont font;
    font.setPixelSize(18);
-   mainChart->setTitleFont(font);
-   mainChart->setTitleBrush(QBrush(Qt::white));
-   mainChart->legend()->setVisible(false);
+   priceChart->setTitleFont(font);
+   priceChart->setTitleBrush(QBrush(Qt::white));
+   priceChart->legend()->setVisible(false);
    qreal left, top, right, bottom;
-   mainChart->layout()->getContentsMargins(&left, &top, &right, &bottom);
+   priceChart->layout()->getContentsMargins(&left, &top, &right, &bottom);
    bottom = 0.0;
-   mainChart->layout()->setContentsMargins(left, top, right, bottom);
-   auto mainMargins = mainChart->margins();
+   priceChart->layout()->setContentsMargins(left, top, right, bottom);
+   auto mainMargins = priceChart->margins();
    mainMargins.setBottom(0);
-   mainChart->setMargins(mainMargins);
+   priceChart->setMargins(mainMargins);
+
+   // this item is used to display price of individual candle sticks
+   dataItemText_->setPos(20, 20);
+   dataItemText_->setDefaultTextColor(QColor(Qt::white));
 
    // volume chart
    auto volChart = ui_->viewVolume->chart();
@@ -139,7 +149,6 @@ void ChartWidget::createCandleChartAxis() {
    chart->series().at(0)->attachAxis(dateAxisx);
    dateAxisx->setTickCount(10);
    dateAxisx->setLabelsVisible(false);
-
    // add space offset to the x axis
    // this code will eventually have to be moved to data range handler function
    // and will need to be called when date range is modified
@@ -148,17 +157,18 @@ void ChartWidget::createCandleChartAxis() {
 
    // y axis
    QValueAxis *axisY = new QValueAxis;
-   axisY->setLabelFormat(tr("%i"));
    axisY->setLabelsColor(QColor(Qt::white));
    axisY->setGridLineVisible(false);
    axisY->setMinorGridLineVisible(false);
    chart->addAxis(axisY, Qt::AlignRight);
+   axisY->setLabelFormat(tr("%06.1f"));
+   qDebug() << "chart localize" << chart->localizeNumbers();
    chart->series().at(0)->attachAxis(axisY);
    // add space offset to the y axis
    auto tmpAxis = qobject_cast<QValueAxis *>(chart->axes(Qt::Vertical).at(0));
    tmpAxis->setMax(tmpAxis->max() * 1.05);
    tmpAxis->setMin(tmpAxis->min() * 0.95);
-   //tmpAxis->applyNiceNumbers();
+   tmpAxis->applyNiceNumbers();
 }
 
 // Creates x and y axis for the volume stick chart.
@@ -181,14 +191,14 @@ void ChartWidget::createVolumeChartAxis() {
    dateAxisx->setMin(dateAxisx->min().addDays(-1));
 
    QValueAxis *axisY = new QValueAxis;
-   axisY->setLabelFormat(tr("%i"));
+   axisY->setLabelFormat(tr("%06.1f"));
    axisY->setLabelsColor(QColor(Qt::white));
    axisY->setGridLineVisible(false);
    axisY->setMinorGridLineVisible(false);
    axisY->setTickCount(2);
    chart->addAxis(axisY, Qt::AlignRight);
    chart->series().at(0)->attachAxis(axisY);
-   //axisY->applyNiceNumbers();
+   axisY->applyNiceNumbers();
 }
 
 // Populates chart with data, right now it's just
@@ -197,7 +207,6 @@ void ChartWidget::buildCandleChart() {
    auto chart = ui_->viewPrice->chart();
    priceSeries_->clear();
    volumeSeries_->clear();
-   chart->setTitle(tr("XBT/USD"));
    QDateTime dt;
    dt.setDate(QDate(2018, 10, 1));
    addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100);
@@ -509,8 +518,8 @@ void ChartWidget::buildCandleChart() {
 
 void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume) {
 
-   volume = QRandomGenerator::global()->generateDouble() * 100;
-   priceSeries_->append(new QCandlestickSet(open, high, low, close, timestamp, priceSeries_));
+   volume = QRandomGenerator::global()->generateDouble() * 2000; //randomly generating volume for testing
+   priceSeries_->append(new CustomCandlestickSet(open, high, low, close, volume, timestamp, priceSeries_));
    volumeSeries_->append(new QCandlestickSet(0.0, volume, 0.0, volume, timestamp, volumeSeries_));
 
 }
@@ -518,4 +527,26 @@ void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, q
 // Handles changes of date range.
 void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
+}
+
+// This slot function is called when mouse cursor hovers over a candlestick.
+void ChartWidget::onPriceHover(bool status, QCandlestickSet *set) {
+   if (status) {
+      if (set) {
+         auto customSet = qobject_cast<CustomCandlestickSet *>(set);
+         dataItemText_->setPlainText(QString(tr("O: %1   H: %2   L: %3   C: %4   Volume: %5")
+            .arg(customSet->open(), 0, 'g', -1)
+            .arg(customSet->high(), 0, 'g', -1)
+            .arg(customSet->low(), 0, 'g', -1)
+            .arg(customSet->close(), 0, 'g', -1)
+            .arg(customSet->volume(), 0, 'g', -1)));
+      }
+   }
+   else {
+      dataItemText_->setPlainText(tr(""));
+   }
+}
+
+void ChartWidget::onInstrumentChanged(const QString &text) {
+   ui_->viewPrice->chart()->setTitle(text);
 }

@@ -27,6 +27,8 @@ public:
 protected slots:
    void onDateRangeChanged(int id);
    void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
+   void onPriceHover(bool status, QCandlestickSet *set);
+   void onInstrumentChanged(const QString &text);
 
 protected:
    void setChartStyle();
@@ -42,6 +44,7 @@ private:
     QStandardItemModel *cboModel_;
     QCandlestickSeries *priceSeries_;
     QCandlestickSeries *volumeSeries_;
+    QGraphicsTextItem *dataItemText_;
 };
 
 #endif // CHARTWIDGET_H
