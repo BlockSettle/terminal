@@ -34,7 +34,7 @@ bool PublisherConnection::InitConnection()
 
    auto tempDataSocket = context_->CreatePublishSocket();
    if (tempDataSocket == nullptr) {
-      logger_->error("[PublisherConnection::BindPublishingConnection] failed to create data socket: {}", zmq_strerror(zmq_errno()));
+      logger_->error("[PublisherConnection::InitConnection] failed to create data socket: {}", zmq_strerror(zmq_errno()));
       return false;
    }
 
@@ -83,13 +83,15 @@ bool PublisherConnection::SetWelcomeMessage(const std::string& data)
    return true;
 }
 
+bool PublisherConnection::BindPublishingConnection(const std::string& endpoint_name)
+{
+   const std::string endpoint = std::string("inproc://") + endpoint_name;
+
+   return BindConnection(endpoint);
+}
+
 bool PublisherConnection::BindPublishingConnection(const std::string& host, const std::string& port)
 {
-   if (dataSocket_ == nullptr) {
-      logger_->error("[PublisherConnection::BindPublishingConnection] connection not initialized");
-      return false;
-   }
-
    // Why not PGM
    // 1. PGM is based on IP datagram, and worldwide IP multicast is require global multicast IP
    // 2. IP multicast traffic usually filtered by providers
@@ -97,42 +99,53 @@ bool PublisherConnection::BindPublishingConnection(const std::string& host, cons
    // 4. PGM protocol is still in draft phase ( for along time )
    // 5. OpenPGM implementation is abandoned by Google and not developed any more
    // So TCP/IP is good enough for us. And lets zmq take care about delivery, just use API.
-   std::string endpoint = std::string("tcp://") + host + ":" + port;
+   const std::string endpoint = std::string("tcp://") + host + ":" + port;
+   return BindConnection(endpoint);
+}
+
+
+bool PublisherConnection::BindConnection(const std::string& endpoint)
+{
+   if (dataSocket_ == nullptr) {
+      logger_->error("[PublisherConnection::BindConnection] connection not initialized");
+      return false;
+   }
+
    int result = zmq_bind(dataSocket_.get(), endpoint.c_str());
    if (result != 0) {
-      logger_->error("[PublisherConnection::BindPublishingConnection] failed to bind socket to {} : {}"
+      logger_->error("[PublisherConnection::BindConnection] failed to bind socket to {} : {}"
          , endpoint, zmq_strerror(zmq_errno()));
       return false;
    }
 
-   std::string tempConnectionName = context_->GenerateConnectionName(host, port);
+   std::string tempConnectionName = context_->GenerateConnectionName(endpoint);
    std::string controlEndpoint = std::string("inproc://server_") + tempConnectionName;
 
    // create master and slave paired sockets to control connection and resend data
    ZmqContext::sock_ptr tempThreadMasterSocket = context_->CreateInternalControlSocket();
    if (tempThreadMasterSocket == nullptr) {
-      logger_->error("[PublisherConnection::BindPublishingConnection] failed to create ThreadMasterSocket socket {}"
+      logger_->error("[PublisherConnection::BindConnection] failed to create ThreadMasterSocket socket {}"
          , tempConnectionName);
       return false;
    }
 
    result = zmq_bind(tempThreadMasterSocket.get(), controlEndpoint.c_str());
    if (result != 0) {
-      logger_->error("[PublisherConnection::BindPublishingConnection] failed to bind ThreadMasterSocket socket {}"
+      logger_->error("[PublisherConnection::BindConnection] failed to bind ThreadMasterSocket socket {}"
          , tempConnectionName);
       return false;
    }
 
    ZmqContext::sock_ptr tempThreadSlaveSocket = context_->CreateInternalControlSocket();
    if (tempThreadSlaveSocket == nullptr) {
-      logger_->error("[PublisherConnection::BindPublishingConnection] failed to create ThreadSlaveSocket socket {}"
+      logger_->error("[PublisherConnection::BindConnection] failed to create ThreadSlaveSocket socket {}"
          , tempConnectionName);
       return false;
    }
 
    result = zmq_connect(tempThreadSlaveSocket.get(), controlEndpoint.c_str());
    if (result != 0) {
-      logger_->error("[PublisherConnection::BindPublishingConnection] failed to connect ThreadSlaveSocket socket {}"
+      logger_->error("[PublisherConnection::BindConnection] failed to connect ThreadSlaveSocket socket {}"
          , tempConnectionName);
       return false;
    }
@@ -145,7 +158,7 @@ bool PublisherConnection::BindPublishingConnection(const std::string& host, cons
    // and start thread
    listenThread_ = std::thread(&PublisherConnection::listenFunction, this);
 
-   logger_->debug("[PublisherConnection::BindPublishingConnection] starting connection for {}"
+   logger_->debug("[PublisherConnection::BindConnection] starting connection for {}"
       , connectionName_);
 
    return true;

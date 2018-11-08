@@ -73,7 +73,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       settlIdStr_ = settlAddr_->getAsset()->settlementId().toHexStr();
    }
 
-   settlMonitor_ = settlWallet_->createMonitor(settlAddr_, logger);
+   settlMonitor_ = settlWallet_->createMonitorQtSignals(settlAddr_, logger);
    if (settlMonitor_ == nullptr) {
       throw std::runtime_error("failed to create Settlement monitor");
    }
@@ -91,8 +91,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    });
    addrVerificator_->SetBSAddressList(bsAddresses);
 
-   connect(settlMonitor_.get(), &bs::SettlementMonitor::payInDetected, this, &DealerXBTSettlementContainer::onPayInDetected);
-   connect(settlMonitor_.get(), &bs::SettlementMonitor::payOutDetected, this, &DealerXBTSettlementContainer::onPayOutDetected);
+   connect(settlMonitor_.get(), &bs::SettlementMonitorQtSignals::payInDetected, this, &DealerXBTSettlementContainer::onPayInDetected);
+   connect(settlMonitor_.get(), &bs::SettlementMonitorQtSignals::payOutDetected, this, &DealerXBTSettlementContainer::onPayOutDetected);
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }

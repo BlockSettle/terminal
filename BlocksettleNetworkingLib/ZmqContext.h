@@ -37,6 +37,7 @@ public:
    ZmqContext& operator = (ZmqContext&&) = delete;
 
    std::string GenerateConnectionName(const std::string& host, const std::string& port);
+   std::string GenerateConnectionName(const std::string& endpoint);
 
    static std::string CreateConnectionEndpoint(ZMQTransport transport, const std::string& host, const std::string& port);
 public:

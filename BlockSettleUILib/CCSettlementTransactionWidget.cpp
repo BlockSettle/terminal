@@ -17,6 +17,7 @@
 
 #include <spdlog/logger.h>
 
+CCSettlementTransactionWidget::~CCSettlementTransactionWidget() noexcept = default;
 
 CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    const std::shared_ptr<spdlog::logger> &logger

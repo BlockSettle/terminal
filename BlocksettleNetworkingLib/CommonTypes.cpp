@@ -1,5 +1,5 @@
 #include "CommonTypes.h"
-#include "SettlementWallet.h"
+#include "SettlementMonitor.h"
 
 Q_DECLARE_METATYPE(bs::PayoutSigner::Type)
 

@@ -13,7 +13,7 @@
 #include "BlockDataManagerConfig.h"
 #include "BtcDefinitions.h"
 #include "PlainWallet.h"
-
+#include "SettlementAddressEntry.h"
 
 namespace spdlog {
    class logger;
@@ -21,115 +21,8 @@ namespace spdlog {
 
 namespace bs {
    class SettlementAddressEntry;
-   class SettlementAssetEntry : public GenericAsset
-   {
-   public:
-      SettlementAssetEntry(const BinaryData &settlementId, const BinaryData &buyAuthPubKey
-         , const BinaryData &sellAuthPubKey, int id = -1)
-         : GenericAsset(AssetEntryType_Multisig, id)
-         , settlementId_(settlementId), buyAuthPubKey_(buyAuthPubKey), sellAuthPubKey_(sellAuthPubKey)
-         , addrType_(AddressEntryType_P2WSH)
-      {}
-      ~SettlementAssetEntry() override = default;
-
-      static std::shared_ptr<SettlementAddressEntry> getAddressEntry(const shared_ptr<SettlementAssetEntry> &);
-      static std::pair<bs::Address, std::shared_ptr<GenericAsset>> deserialize(BinaryDataRef value);
-      BinaryData serialize(void) const override;
-
-      bool hasPrivateKey(void) const override { return false; }
-      const BinaryData &getPrivateEncryptionKeyId(void) const override { return {}; }
-
-      const BinaryData &settlementId() const { return settlementId_; }
-      const BinaryData &buyAuthPubKey() const { return buyAuthPubKey_; }
-      const BinaryData &buyChainedPubKey() const;
-      const BinaryData &sellAuthPubKey() const { return sellAuthPubKey_; }
-      const BinaryData &sellChainedPubKey() const;
-
-      AddressEntryType addressType() const { return addrType_; }
-
-      const BinaryData &script() const;
-      void setScript(const BinaryData &script) { script_ = script; }
-      const BinaryData &p2wshScript() const;
-
-      BinaryData hash() const { return BtcUtils::hash160(script()); }
-      const BinaryData &prefixedHash() const;
-      const BinaryData &p2wsHash() const;
-      const BinaryData &prefixedP2SHash() const;
-
-      const std::vector<BinaryData> &supportedAddresses() const;
-      const std::vector<BinaryData> &supportedAddrHashes() const;
-
-   private:
-      BinaryData  settlementId_;
-      BinaryData  buyAuthPubKey_;
-      BinaryData  sellAuthPubKey_;
-      AddressEntryType     addrType_;
-      mutable BinaryData   script_;
-      mutable BinaryData   p2wshScript_;
-      mutable BinaryData   p2wshScriptH160_;
-      mutable BinaryData   hash_;
-      mutable BinaryData   p2wsHash_;
-      mutable BinaryData   prefixedP2SHash_;
-      mutable BinaryData   buyChainedPubKey_;
-      mutable BinaryData   sellChainedPubKey_;
-      mutable std::vector<BinaryData>  supportedHashes_, supportedAddresses_;
-   };
-
-
-   class SettlementAddressEntry : public AddressEntry
-   {
-   public:
-      SettlementAddressEntry(const std::shared_ptr<SettlementAssetEntry> &ae, AddressEntryType aeType = AddressEntryType_Multisig)
-         : AddressEntry(aeType), ae_(ae) {}
-      ~SettlementAddressEntry() noexcept override = default;
-
-      const std::shared_ptr<SettlementAssetEntry>  getAsset() const { return ae_; }
-      const BinaryData &getAddress() const override { return ae_->script(); }
-      const BinaryData &getScript() const override { return ae_->script(); }
-      const BinaryData &getPreimage(void) const override { return ae_->script(); }
-      const BinaryData &getPrefixedHash() const override { return ae_->prefixedHash(); }
-      const BinaryData &getHash() const override { return ae_->hash(); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return bs::Address(getPrefixedHash()).getRecipient(val); }
-      size_t getInputSize(void) const override { return getAddress().getSize() + 2 + 73 * 1/*m*/ + 40; }
-
-      const BinaryData& getID(void) const override { return ae_->getID(); }
-      int getIndex() const { return ae_->getIndex(); }
-
-   protected:
-      std::shared_ptr<SettlementAssetEntry>  ae_;
-   };
-
-   class SettlementAddressEntry_P2SH : public SettlementAddressEntry
-   {
-   public:
-      SettlementAddressEntry_P2SH(const std::shared_ptr<SettlementAssetEntry> &ae)
-         : SettlementAddressEntry(ae, AddressEntryType_P2SH) {}
-
-      const BinaryData &getPrefixedHash(void) const override { return ae_->prefixedP2SHash(); }
-      const BinaryData &getHash() const override { return ae_->p2wsHash(); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_P2SH>(ae_->p2wsHash(), val); }
-      size_t getInputSize(void) const override { return 75; }
-   };
-
-   class SettlementAddressEntry_P2WSH : public SettlementAddressEntry
-   {
-   public:
-      SettlementAddressEntry_P2WSH(const std::shared_ptr<SettlementAssetEntry> &ae)
-         : SettlementAddressEntry(ae, AddressEntryType_P2WSH) {}
-
-      const BinaryData &getPrefixedHash(void) const override;
-      const BinaryData &getHash() const override;
-      const BinaryData &getAddress() const override { return BtcUtils::scrAddrToSegWitAddress(getHash()); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_PW2SH>(getHash(), val); }
-      size_t getInputSize(void) const override { return 41; }
-
-   private:
-      mutable BinaryData   hash_;
-      mutable BinaryData   prefixedHash_;
-   };
-
-
-   class SettlementMonitor;
+   class SettlementMonitorQtSignals;
+   class SettlementMonitorCb;
 
    class SettlementWallet : public PlainWallet
    {
@@ -182,7 +75,13 @@ namespace bs {
       SecureBinaryData GetPublicKeyFor(const bs::Address &) override;
       KeyPair GetKeyPairFor(const bs::Address &, const SecureBinaryData &password) override;
 
-      std::shared_ptr<SettlementMonitor> createMonitor(const shared_ptr<SettlementAddressEntry> &addr
+      // return monitor that send QT signals and subscribed to zc/new block notification via qt
+      std::shared_ptr<SettlementMonitorQtSignals> createMonitorQtSignals(const shared_ptr<SettlementAddressEntry> &addr
+         , const std::shared_ptr<spdlog::logger>& logger);
+
+      // pure callback monitor. you should manually ask to update and set
+      // callbacks to get notifications
+      std::shared_ptr<SettlementMonitorCb> createMonitorCb(const shared_ptr<SettlementAddressEntry> &addr
          , const std::shared_ptr<spdlog::logger>& logger);
 
    protected:
@@ -206,98 +105,6 @@ namespace bs {
       std::map<int, std::shared_ptr<AsyncClient::BtcWallet>>   rtWallets_;
       std::unordered_map<std::string, int>                     rtWalletsById_;
    };
-
-
-   struct PayoutSigner
-   {
-      enum Type {
-         SignatureUndefined,
-         SignedByBuyer,
-         SignedBySeller
-      };
-
-      static const char *toString(const Type t) {
-         switch (t) {
-         case SignedByBuyer:        return "buyer";
-         case SignedBySeller:       return "seller";
-         case SignatureUndefined:
-         default:                   return "undefined";
-         }
-      }
-
-      static void WhichSignature(const Tx &
-         , uint64_t value
-         , const std::shared_ptr<bs::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &
-         , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
-   };
-
-   class SettlementMonitor : public QObject
-   {
-      Q_OBJECT
-      friend class SettlementWallet;
-   public:
-      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const shared_ptr<bs::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &
-         , QObject *parent = nullptr);
-
-      ~SettlementMonitor() noexcept override;
-
-      void start();
-      void stop();
-
-      int getPayinConfirmations() const { return payinConfirmations_; }
-      int getPayoutConfirmations() const { return payoutConfirmations_; }
-
-      PayoutSigner::Type getPayoutSignerSide() const { return payoutSignedBy_; }
-
-      int confirmedThreshold() const { return 6; }
-
-   signals:
-      // payin detected is sent on ZC and once it's get to block.
-      // if payin is already on chain before monitor started, payInDetected will
-      // emited only once
-      void payInDetected(int confirmationsNumber, const BinaryData &txHash);
-
-      void payOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy);
-      void payOutConfirmed(PayoutSigner::Type signedBy);
-
-   protected slots:
-      void checkNewEntries(unsigned int);
-
-   private:
-      std::atomic_bool                 stopped_;
-      std::atomic_flag                 walletLock_ = ATOMIC_FLAG_INIT;
-      std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
-      std::shared_ptr<ArmoryConnection>         armory_;
-      std::set<BinaryData>             ownAddresses_;
-      int               id_;
-
-      std::string                            addressString_;
-      shared_ptr<bs::SettlementAddressEntry> addressEntry_;
-
-      int payinConfirmations_;
-      int payoutConfirmations_;
-
-      bool payinInBlockChain_;
-      bool payoutConfirmedFlag_;
-
-      PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
-
-      std::shared_ptr<spdlog::logger> logger_;
-
-   protected:
-      void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
-      void IsPayOutTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
-
-      void CheckPayoutSignature(const ClientClasses::LedgerEntry &, std::function<void(PayoutSigner::Type)>) const;
-
-      void SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash);
-      void SendPayOutNotification(const ClientClasses::LedgerEntry &);
-   };
-
 }  //namespace bs
 
 #endif //__BS_SETTLEMENT_WALLET_H__

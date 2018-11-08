@@ -211,14 +211,14 @@ void ReqXBTSettlementContainer::activate()
       }
    }
 
-   monitor_ = walletsMgr_->GetSettlementWallet()->createMonitor(settlAddr_, logger_);
+   monitor_ = walletsMgr_->GetSettlementWallet()->createMonitorCb(settlAddr_, logger_);
    if (monitor_ == nullptr) {
       logger_->error("[ReqXBTSettlementContainer::populateXBTDetails] failed to create Settlement monitor");
       return;
    }
-   connect(monitor_.get(), &bs::SettlementMonitor::payInDetected, this, &ReqXBTSettlementContainer::onPayInZCDetected, Qt::QueuedConnection);
-   connect(monitor_.get(), &bs::SettlementMonitor::payOutDetected, this, &ReqXBTSettlementContainer::onPayoutZCDetected, Qt::QueuedConnection);
-   monitor_->start();
+   monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
+      , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
+      , [this](bs::PayoutSigner::Type) {});
 
    fee_ = transactionData_->GetTransactionSummary().totalFee;
 }

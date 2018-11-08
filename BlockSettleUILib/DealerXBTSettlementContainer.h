@@ -1,16 +1,20 @@
 #ifndef __DEALER_XBT_SETTLEMENT_CONTAINER_H__
 #define __DEALER_XBT_SETTLEMENT_CONTAINER_H__
 
-#include <memory>
-#include <unordered_set>
 #include "AddressVerificator.h"
 #include "SettlementContainer.h"
+#include "SettlementMonitor.h"
 #include "SettlementWallet.h"
+
 #include "TransactionData.h"
+
+#include <memory>
+#include <unordered_set>
 
 namespace spdlog {
    class logger;
 }
+
 class ArmoryConnection;
 class SignContainer;
 class QuoteProvider;
@@ -72,14 +76,14 @@ private:
    std::string    comment_;
    const double   amount_;
    const bool     autoSign_;
-   std::shared_ptr<spdlog::logger>              logger_;
-   std::shared_ptr<TransactionData>             transactionData_;
-   std::shared_ptr<bs::SettlementWallet>        settlWallet_;
-   std::shared_ptr<bs::SettlementAddressEntry>  settlAddr_;
-   std::shared_ptr<bs::SettlementMonitor>       settlMonitor_;
-   std::shared_ptr<AddressVerificator>          addrVerificator_;
-   std::shared_ptr<SignContainer>               signingContainer_;
-   AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
+   std::shared_ptr<spdlog::logger>                 logger_;
+   std::shared_ptr<TransactionData>                transactionData_;
+   std::shared_ptr<bs::SettlementWallet>           settlWallet_;
+   std::shared_ptr<bs::SettlementAddressEntry>     settlAddr_;
+   std::shared_ptr<bs::SettlementMonitorQtSignals> settlMonitor_;
+   std::shared_ptr<AddressVerificator>             addrVerificator_;
+   std::shared_ptr<SignContainer>                  signingContainer_;
+   AddressVerificationState                        cptyAddressState_ = AddressVerificationState::InProgress;
    std::string settlIdStr_;
    BinaryData  authKey_, reqAuthKey_;
    bool        payInDetected_ = false;

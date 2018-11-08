@@ -160,6 +160,7 @@ bool WalletKeysCreateWidget::isValid() const
    if (pwdData_.empty()) {
       return false;
    }
+
    std::set<SecureBinaryData> encKeys;
    for (const auto &pwd : pwdData_) {
       if (pwd.encType == bs::wallet::EncryptionType::Auth) {
@@ -170,7 +171,8 @@ bool WalletKeysCreateWidget::isValid() const
             return false;
          }
          encKeys.insert(pwd.encKey);
-      } else if (pwd.password.isNull()) {
+      } else if (pwd.password.getSize() < 6) {
+         // Password must be at least 6 chars long.
          return false;
       }
    }

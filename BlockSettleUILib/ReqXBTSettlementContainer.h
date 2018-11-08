@@ -7,7 +7,9 @@
 #include "AuthAddress.h"
 #include "MetaData.h"
 #include "SettlementContainer.h"
+#include "SettlementMonitor.h"
 #include "SettlementWallet.h"
+#include "UtxoReservation.h"
 #include "TransactionData.h"
 
 namespace spdlog {
@@ -108,7 +110,7 @@ private:
 
    std::shared_ptr<bs::SettlementAddressEntry>     settlAddr_;
    std::shared_ptr<AddressVerificator>       addrVerificator_;
-   std::shared_ptr<bs::SettlementMonitor>          monitor_;
+   std::shared_ptr<bs::SettlementMonitorCb>        monitor_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    AddressVerificationState   dealerVerifState_ = AddressVerificationState::InProgress;
