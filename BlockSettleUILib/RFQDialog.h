@@ -62,6 +62,7 @@ private slots:
    void onSettlementAccepted();
    void onSignTxRequested(QString orderId, QString reqId);
    void onSettlementOrder();
+   void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
 
 private:
    std::shared_ptr<bs::SettlementContainer> newCCcontainer();
@@ -76,7 +77,7 @@ private:
    std::shared_ptr<QuoteProvider>      quoteProvider_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
    std::shared_ptr<WalletsManager>     walletsManager_;
-   std::shared_ptr<SignContainer>      container_;
+   std::shared_ptr<SignContainer>      signContainer_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<CelerClient>        celerClient_;
@@ -89,7 +90,6 @@ private:
    std::shared_ptr<bs::SettlementContainer>     curContainer_;
    std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;
    std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
-   XBTSettlementTransactionWidget      *  xbtSettlementWidget_ = nullptr;  //TODO: will be vanished
 
    bool  cancelOnClose_ = true;
 };

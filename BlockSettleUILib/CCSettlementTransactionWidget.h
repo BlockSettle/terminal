@@ -41,8 +41,6 @@ public:
       , QWidget* parent = nullptr);
    ~CCSettlementTransactionWidget() override = default;
 
-   Q_INVOKABLE void cancel();    //TODO: will be vanished
-
 private:
    void onCancel();
    void onAccept();
