@@ -406,7 +406,6 @@ QTabBar::tab {
   border-bottom-color: #C2C7CB;
   /* same as the pane color */
   padding: 20px 15px 5px 15px;
-  font-family: 'Open Sans';
   background-color: transparent;
   subcontrol-origin: content;
 }

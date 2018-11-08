@@ -14,11 +14,16 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   class SettlementContainer;
+}
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class CCSettlementTransactionWidget;
 class QuoteProvider;
+class ReqCCSettlementContainer;
+class ReqXBTSettlementContainer;
 class SignContainer;
 class WalletsManager;
 class XBTSettlementTransactionWidget;
@@ -59,6 +64,10 @@ private slots:
    void onSettlementOrder();
 
 private:
+   std::shared_ptr<bs::SettlementContainer> newCCcontainer();
+   std::shared_ptr<bs::SettlementContainer> newXBTcontainer();
+
+private:
    std::unique_ptr<Ui::RFQDialog> ui_;
    std::shared_ptr<spdlog::logger>     logger_;
    const bs::network::RFQ              rfq_;
@@ -77,8 +86,10 @@ private:
 
    bs::network::Order                  XBTOrder_;
 
-   XBTSettlementTransactionWidget      *xbtSettlementWidget_ = nullptr;
-   CCSettlementTransactionWidget       *ccSettlementWidget_ = nullptr;
+   std::shared_ptr<bs::SettlementContainer>     curContainer_;
+   std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;
+   std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
+   XBTSettlementTransactionWidget      *  xbtSettlementWidget_ = nullptr;  //TODO: will be vanished
 
    bool  cancelOnClose_ = true;
 };
