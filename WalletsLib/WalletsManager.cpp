@@ -911,7 +911,7 @@ WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& n
       newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
    }
    if (!pwdData.empty()) {
-      newWallet->changePassword(logger_, pwdData, keyRank, SecureBinaryData(), false, false);
+      newWallet->changePassword(logger_, pwdData, keyRank, SecureBinaryData(), false, false, false);
    }
    AdoptNewWallet(newWallet, walletsPath);
    return newWallet;

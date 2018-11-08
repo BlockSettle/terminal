@@ -69,6 +69,7 @@ private:
    void continueAddDevice();
    void changePassword();
    void resetKeys();
+   void deleteDevice(const std::string &deviceId);
 
    std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
    std::shared_ptr<spdlog::logger> logger_;
@@ -80,6 +81,7 @@ private:
    std::vector<bs::wallet::PasswordData> newPasswordData_;
    // Init variables in resetKeys method so they always valid when we restart process
    bool addNew_;
+   bool removeOld_;
    SecureBinaryData oldKey_;
    State state_ = State::Idle;
    WalletKeyWidget *deviceKeyOld_ = nullptr;

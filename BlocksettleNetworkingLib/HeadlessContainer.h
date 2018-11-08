@@ -72,7 +72,7 @@ public:
    void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) override;
    RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
-      , bool addNew, bool dryRun) override;
+      , bool addNew, bool removeOld, bool dryRun) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;

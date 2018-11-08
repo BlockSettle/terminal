@@ -717,7 +717,7 @@ void HeadlessContainer::SetLimits(const std::shared_ptr<bs::hd::Wallet> &wallet,
 
 HeadlessContainer::RequestId HeadlessContainer::ChangePassword(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::vector<bs::wallet::PasswordData> &newPass, bs::wallet::KeyRank keyRank
-   , const SecureBinaryData &oldPass, bool addNew, bool dryRun)
+   , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
 {
    if (!wallet) {
       logger_->error("[HeadlessContainer] no root wallet for ChangePassword");
@@ -737,6 +737,7 @@ HeadlessContainer::RequestId HeadlessContainer::ChangePassword(const std::shared
    request.set_rankm(keyRank.first);
    request.set_rankn(keyRank.second);
    request.set_addnew(addNew);
+   request.set_removeold(removeOld);
    request.set_dryrun(dryRun);
 
    headless::RequestPacket packet;

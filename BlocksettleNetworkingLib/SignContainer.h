@@ -95,7 +95,7 @@ public:
    virtual void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) = 0;
    virtual RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
-      , bool addNew, bool dryRun) = 0;
+      , bool addNew, bool removeOld, bool dryRun) = 0;
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }

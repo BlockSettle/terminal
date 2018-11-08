@@ -20,6 +20,8 @@ QString getMobileClientRequestText(MobileClientRequest requestType)
       return app->tr("Activate wallet (existing device)");
    case MobileClientRequest::ActivateWalletNewDevice:
       return app->tr("Activate wallet (new device)");
+   case MobileClientRequest::DeactivateWalletDevice:
+      return app->tr("Deactivate wallet device");
    case MobileClientRequest::VerifyWalletKey:
       return app->tr("Verify wallet key");
    case MobileClientRequest::ActivateOTP:

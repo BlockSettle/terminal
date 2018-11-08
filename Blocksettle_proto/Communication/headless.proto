@@ -300,6 +300,7 @@ message ChangePasswordRequest
    uint32   rankM = 4;
    uint32   rankN = 5;
    bool     addNew = 6;
+   bool     removeOld = 8;
    bool     dryRun = 7;
 }
 

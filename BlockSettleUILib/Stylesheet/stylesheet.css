@@ -740,6 +740,14 @@ QPushButton, QToolButton, *[buttonImportant="true"], *[buttonSuccess="true"], *[
   min-height: 20px;
   qproperty-iconSize: 22px; }
 
+QToolButton#deviceDeleteButton {
+  border: 0px solid;
+  border-color: #ff0000;
+  padding: 0px 0px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
 QPushButton:hover, QToolButton:hover, [buttonImportant="true"]:hover, [buttonSuccess="true"]:hover, [buttonWarning="true"]:hover {
   border: 1px solid #5097bd;
   background-color: #5097bd; }
@@ -1361,3 +1369,4 @@ QLabel#loginVersionLabel {
 *[forgotPassword="true"] {
   color: #81888f;
   font-size: 10px; }
+
