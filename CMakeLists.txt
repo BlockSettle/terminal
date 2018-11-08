@@ -89,6 +89,7 @@ FIND_PACKAGE(Qt5PrintSupport REQUIRED)
 FIND_PACKAGE(Qt5Qml REQUIRED)
 FIND_PACKAGE(Qt5Quick REQUIRED)
 FIND_PACKAGE(Qt5QuickControls2 REQUIRED)
+FIND_PACKAGE(Qt5Charts REQUIRED)
 
 IF ( UNIX AND NOT APPLE )
    FIND_PACKAGE(Qt5DBus REQUIRED)
@@ -378,7 +379,8 @@ IF(WIN32)
          Qt5EventDispatcherSupportd.lib
          Qt5ThemeSupportd.lib
          Qt5WindowsUIAutomationSupportd.lib
-         Qt5AccessibilitySupportd.lib )
+         Qt5AccessibilitySupportd.lib
+         Qt5Chartsd.lib )
       LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quickd.lib
@@ -406,7 +408,8 @@ IF(WIN32)
          Qt5EventDispatcherSupport.lib
          Qt5ThemeSupport.lib
          Qt5WindowsUIAutomationSupport.lib
-         Qt5AccessibilitySupport.lib )
+         Qt5AccessibilitySupport.lib 
+         Qt5Charts.lib)
       LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quick.lib
@@ -469,6 +472,7 @@ ELSE(WIN32)
             libQt5GraphicsSupport_debug.a
             libQt5AccessibilitySupport_debug.a
             libQt5EdidSupport_debug.a
+            libQt5Charts_debug.a
             )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin_debug.a
@@ -499,6 +503,7 @@ ELSE(WIN32)
             libQt5GraphicsSupport.a
             libQt5AccessibilitySupport.a
             libQt5EdidSupport.a
+            libQt5Charts.a
             )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
