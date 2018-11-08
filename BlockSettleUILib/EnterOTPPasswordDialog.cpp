@@ -1,11 +1,16 @@
 #include "EnterOTPPasswordDialog.h"
 #include "ui_EnterOTPPasswordDialog.h"
+
 #include <spdlog/spdlog.h>
+#include "ApplicationSettings.h"
+#include "MobileClient.h"
 #include "OTPManager.h"
 
 
-EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager> &otpMgr
-   , const QString& reason, QWidget* parent)
+EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<spdlog::logger> &logger
+   ,const std::shared_ptr<OTPManager> &otpMgr
+   , const QString& reason, const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterOTPPasswordDialog())
    , authTimer_(nullptr)
@@ -20,6 +25,15 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager>
    ui_->labelReason->setText(reason);
 
    if (otpMgr->GetEncType() == bs::wallet::EncryptionType::Auth) {
+      mobileClient_ = new MobileClient(logger, appSettings->GetAuthKeys(), this);
+      connect(mobileClient_, &MobileClient::succeeded, this, &EnterOTPPasswordDialog::onAuthSucceeded);
+      connect(mobileClient_, &MobileClient::failed, this, &EnterOTPPasswordDialog::onAuthFailed);
+
+      std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+      std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+      std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+      mobileClient_->init(serverPubKey, serverHost, serverPort);
+
       ui_->lineEditPassword->hide();
       ui_->labelAuth->show();
       ui_->authTimer->show();
@@ -27,6 +41,9 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager>
       authTimer_ = new QTimer(this);
       connect(authTimer_, &QTimer::timeout, this, &EnterOTPPasswordDialog::authTimer);
       authTimer_->start(1000);
+
+      mobileClient_->start(MobileClientRequest::ActivateOTP
+         , otpMgr->GetEncKey().toStdString(), otpMgr->GetShortId().toStdString(), {});
    }
    else {
       ui_->labelAuth->hide();
@@ -49,7 +66,7 @@ void EnterOTPPasswordDialog::reject()
    QDialog::reject();
 }
 
-void EnterOTPPasswordDialog::onAuthSucceeded(SecureBinaryData password)
+void EnterOTPPasswordDialog::onAuthSucceeded(const std::string& encKey, const SecureBinaryData &password)
 {
    password_ = password;
    ui_->pushButtonOk->setEnabled(true);

@@ -12,7 +12,7 @@ void SettlementContainer::startTimer(const unsigned int durationSeconds)
    connect(&timer_, &QTimer::timeout, [this] {
       const auto timeDiff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime_);
       msTimeLeft_ = msDuration_ - timeDiff.count();
-      if (msTimeLeft_ <= 0) {
+      if (msTimeLeft_ < 0) {
          timer_.stop();
          msDuration_ = 0;
          msTimeLeft_ = 0;
