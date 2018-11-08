@@ -424,3 +424,13 @@ std::shared_ptr<bs::SettlementMonitorQtSignals> bs::SettlementWallet::createMoni
    }
    return std::make_shared<bs::SettlementMonitorQtSignals>(rtWallet, armory_, addr, logger);
 }
+
+std::shared_ptr<bs::SettlementMonitorCb> bs::SettlementWallet::createMonitorCb(const shared_ptr<SettlementAddressEntry> &addr
+   , const std::shared_ptr<spdlog::logger>& logger)
+{
+   const auto rtWallet = rtWallets_[addr->getIndex()];
+   if (rtWallet == nullptr) {
+      return nullptr;
+   }
+   return std::make_shared<bs::SettlementMonitorCb>(rtWallet, armory_, addr, logger);
+}

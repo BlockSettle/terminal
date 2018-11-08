@@ -333,3 +333,64 @@ void bs::SettlementMonitorQtSignals::onPayOutConfirmed(PayoutSigner::Type signed
 {
    emit payOutConfirmed(signedBy);
 }
+
+
+bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const shared_ptr<bs::SettlementAddressEntry> &addr
+   , const std::shared_ptr<spdlog::logger>& logger)
+ : SettlementMonitor(rtWallet, armory, addr, logger)
+{}
+
+bs::SettlementMonitorCb::~SettlementMonitorCb() noexcept
+{
+   stop();
+}
+
+void bs::SettlementMonitorCb::start(const onPayInDetectedCB& onPayInDetected
+      , const onPayOutDetectedCB& onPayOutDetected
+      , const onPayOutConfirmedCB& onPayOutConfirmed)
+{
+   onPayInDetected_ = onPayInDetected;
+   onPayOutDetected_ = onPayOutDetected;
+   onPayOutConfirmed_ = onPayOutConfirmed;
+
+   checkNewEntries();
+}
+
+void bs::SettlementMonitorCb::stop()
+{
+   onPayInDetected_ = {};
+   onPayOutDetected_ = {};
+   onPayOutConfirmed_ = {};
+}
+
+void bs::SettlementMonitorCb::onPayInDetected(int confirmationsNumber, const BinaryData &txHash)
+{
+   if (onPayInDetected_) {
+      onPayInDetected_(confirmationsNumber, txHash);
+   } else {
+      logger_->error("[SettlementMonitorCb::onPayInDetected] cb not set for {}"
+         , addressString_);
+   }
+}
+
+void bs::SettlementMonitorCb::onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy)
+{
+   if (onPayOutDetected_) {
+      onPayOutDetected_(confirmationsNumber, signedBy);
+   } else {
+      logger_->error("[SettlementMonitorCb::onPayOutDetected] cb not set for {}"
+         , addressString_);
+   }
+}
+
+void bs::SettlementMonitorCb::onPayOutConfirmed(PayoutSigner::Type signedBy)
+{
+   if (onPayOutConfirmed_) {
+      onPayOutConfirmed_(signedBy);
+   } else {
+      logger_->error("[SettlementMonitorCb::onPayOutConfirmed] cb not set for {}"
+         , addressString_);
+   }
+}

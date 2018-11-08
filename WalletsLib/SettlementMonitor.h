@@ -72,7 +72,6 @@ private:
    std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
    std::set<BinaryData>                      ownAddresses_;
 
-   std::string                               addressString_;
    shared_ptr<bs::SettlementAddressEntry>    addressEntry_;
 
    int payinConfirmations_ = -1;
@@ -84,8 +83,9 @@ private:
    PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
 
 protected:
-   std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<spdlog::logger>     logger_;
+   std::shared_ptr<ArmoryConnection>         armory_;
+   std::shared_ptr<spdlog::logger>           logger_;
+   std::string                               addressString_;
 
 protected:
    void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
@@ -131,7 +131,41 @@ protected:
 };
 
 class SettlementMonitorCb : public SettlementMonitor
-{};
+{
+public:
+   using onPayInDetectedCB = std::function<void (int, const BinaryData &)>;
+   using onPayOutDetectedCB = std::function<void (int, PayoutSigner::Type )>;
+   using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
+
+public:
+   SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+      , const std::shared_ptr<ArmoryConnection> &
+      , const shared_ptr<bs::SettlementAddressEntry> &
+      , const std::shared_ptr<spdlog::logger> &);
+   ~SettlementMonitorCb() noexcept override;
+
+   SettlementMonitorCb(const SettlementMonitorCb&) = delete;
+   SettlementMonitorCb& operator = (const SettlementMonitorCb&) = delete;
+
+   SettlementMonitorCb(SettlementMonitorCb&&) = delete;
+   SettlementMonitorCb& operator = (SettlementMonitorCb&&) = delete;
+
+   void start(const onPayInDetectedCB& onPayInDetected
+      , const onPayOutDetectedCB& onPayOutDetected
+      , const onPayOutConfirmedCB& onPayOutConfirmed);
+
+   void stop();
+
+protected:
+   void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
+   void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
+   void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
+
+private:
+   onPayInDetectedCB    onPayInDetected_;
+   onPayOutDetectedCB   onPayOutDetected_;
+   onPayOutConfirmedCB  onPayOutConfirmed_;
+};
 
 } //namespace bs
 
