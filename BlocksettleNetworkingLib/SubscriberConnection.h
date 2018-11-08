@@ -67,6 +67,7 @@ public:
    SubscriberConnection& operator = (SubscriberConnection&&) = delete;
 
    bool ConnectToPublisher(const std::string& host, const std::string& port, SubscriberConnectionListener* listener);
+   bool ConnectToPublisher(const std::string& endpoint, SubscriberConnectionListener* listener);
 
    void stopListen();
 
@@ -86,6 +87,8 @@ private:
    bool isActive() const;
 
    bool recvData();
+
+   bool ConnectToPublisherEndpoint(const std::string& endpoint, SubscriberConnectionListener* listener);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

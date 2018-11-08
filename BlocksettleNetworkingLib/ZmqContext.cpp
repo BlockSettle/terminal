@@ -51,9 +51,15 @@ ZmqContext::sock_ptr ZmqContext::CreateNullSocket()
    return { nullptr, zmq_close };
 }
 
+
 std::string ZmqContext::GenerateConnectionName(const std::string& host, const std::string& port)
 {
-   return host+":"+port+"_" + idGenerator_.getNextId();
+   return host + ":" + port + "_" + idGenerator_.getNextId();
+}
+
+std::string ZmqContext::GenerateConnectionName(const std::string& endpoint)
+{
+   return endpoint + "_" + idGenerator_.getNextId();
 }
 
 ZmqContext::sock_ptr ZmqContext::CreatePublishSocket()
