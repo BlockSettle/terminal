@@ -309,13 +309,13 @@ void XBTSettlementTransactionWidget::populateXBTDetails(const bs::network::Quote
       dealerTx_ = BinaryData::CreateFromHex(quote.dealerTransaction);
    }
 
-   monitor_ = walletsManager_->GetSettlementWallet()->createMonitor(settlAddr_, logger_);
+   monitor_ = walletsManager_->GetSettlementWallet()->createMonitorQtSignals(settlAddr_, logger_);
    if (monitor_ == nullptr) {
       logger_->error("[XBTSettlementTransactionWidget::populateXBTDetails] failed to create Settlement monitor");
       return;
    }
-   connect(monitor_.get(), &bs::SettlementMonitor::payInDetected, this, &XBTSettlementTransactionWidget::onPayInZCDetected);
-   connect(monitor_.get(), &bs::SettlementMonitor::payOutDetected, this, &XBTSettlementTransactionWidget::onPayoutZCDetected);
+   connect(monitor_.get(), &bs::SettlementMonitorQtSignals::payInDetected, this, &XBTSettlementTransactionWidget::onPayInZCDetected);
+   connect(monitor_.get(), &bs::SettlementMonitorQtSignals::payOutDetected, this, &XBTSettlementTransactionWidget::onPayoutZCDetected);
    monitor_->start();
 
    ui_->labelTransactionAmount->setText(UiUtils::displayQuantity(amount_, UiUtils::XbtCurrency));

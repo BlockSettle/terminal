@@ -11,6 +11,7 @@
 #include "BinaryData.h"
 #include "CommonTypes.h"
 #include "MetaData.h"
+#include "SettlementMonitor.h"
 #include "SettlementWallet.h"
 #include "UtxoReservation.h"
 
@@ -140,8 +141,8 @@ private:
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
 
-   std::shared_ptr<bs::SettlementMonitor>          monitor_;
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
+   std::shared_ptr<bs::SettlementMonitorQtSignals>    monitor_;
+   std::shared_ptr<bs::UtxoReservation::Adapter>      utxoAdapter_;
 
    std::vector<bs::wallet::EncryptionType>   encTypes_, encTypesAuth_;
    std::vector<SecureBinaryData>             encKeys_, encKeysAuth_;
