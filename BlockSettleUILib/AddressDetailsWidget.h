@@ -3,6 +3,8 @@
 
 #include "Address.h"
 #include "ArmoryConnection.h"
+#include "PlainWallet.h"
+#include "WalletsManager.h"
 
 #include <QWidget>
 #include <QItemSelection>
@@ -24,7 +26,7 @@ public:
    void init(const std::shared_ptr<ArmoryConnection> &armory,
              const std::shared_ptr<spdlog::logger> &inLogger);
    void setAddrVal(const bs::Address& inAddrVal);
-   void setAddrVal(const QString inAddrVal);
+   void loadWallet();
    void loadTransactions();
 
    enum AddressTreeColumns {
@@ -45,12 +47,24 @@ signals:
 protected slots:
    void onTxClicked(QTreeWidgetItem *item, int column);
 
+private slots:
+   void OnRefresh(std::vector<BinaryData> ids);
+
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
    void setOutputColor(QTreeWidgetItem *item);
 
-   Ui::AddressDetailsWidget *ui_;
-   bs::Address addrVal;
+   Q_INVOKABLE void getTxData(AsyncClient::LedgerDelegate inDelegate);
+
+   Ui::AddressDetailsWidget *ui_; // The main widget object.
+   bs::Address addrVal; // The address passed in by the user.
+   std::string dummyWalletID; // The wallet ID.
+   bs::PlainWallet dummyWallet; // Wallet that will hold the address.
+   std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
+   std::map<BinaryData, Tx> prevTxMap_; // A wallet's previous Tx hash / Tx map (fee stuff).
+   std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
+   std::set<BinaryData> txHashSet; // Hashes for a given address.
+   std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for an addr (fee calc).
 
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger> logger_;

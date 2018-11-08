@@ -105,8 +105,7 @@ void ExplorerWidget::onSearchStarted()
       // TO DO: Pass the address to the address widget and populate the fields.
       // this sets the address field
       ui_->Address->setAddrVal(address_);
-      // this populates the transactions tree
-      ui_->Address->loadTransactions();
+      ui_->Address->loadWallet();
    }
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
@@ -175,6 +174,5 @@ void ExplorerWidget::onTransactionClicked(QString txId) {
 // transaction details page or any other page.
 void ExplorerWidget::onAddressClicked(QString addressId) {
    ui_->Address->setAddrVal(addressId);
-   ui_->Address->loadTransactions();
    ui_->stackedWidget->setCurrentIndex(AddressPage);
 }
