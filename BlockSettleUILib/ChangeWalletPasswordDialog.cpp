@@ -132,15 +132,17 @@ void ChangeWalletPasswordDialog::reject()
 
 void ChangeWalletPasswordDialog::onContinueClicked()
 {
+   // Is this accurate? Shouldn't we wait until the change is confirmed?
    resetKeys();
 
    if (ui_->tabWidget->currentIndex() == int(Pages::Basic)) {
-      continueBasic();
+      continueBasic(); // Password
    } else {
-      continueAddDevice();
+      continueAddDevice(); // Auth eID
    }
 }
 
+// Change the wallet's password.
 void ChangeWalletPasswordDialog::continueBasic()
 {
    std::vector<bs::wallet::PasswordData> newKeys = ui_->widgetCreateKeys->keys();
@@ -149,13 +151,19 @@ void ChangeWalletPasswordDialog::continueBasic()
    bool isNewAuth = !newKeys.empty() && newKeys[0].encType == bs::wallet::EncryptionType::Auth;
 
    if (!ui_->widgetSubmitKeys->isValid() && !isOldAuth) {
-      MessageBoxCritical messageBox(tr("Invalid password"), tr("Please check old password"), this);
+      MessageBoxCritical messageBox(tr("Invalid password"),
+                                    tr("Please check old password."),
+                                    this);
       messageBox.exec();
       return;
    }
 
    if (!ui_->widgetCreateKeys->isValid() && !isNewAuth) {
-      MessageBoxCritical messageBox(tr("Invalid passwords"), tr("Please check new passwords"), this);
+      MessageBoxCritical messageBox(tr("Invalid password"),
+                                    tr("Please check new password, and make " \
+                                       "sure the length is at least six (6) " \
+                                       "characters long."),
+                                    this);
       messageBox.exec();
       return;
    }
@@ -215,6 +223,7 @@ void ChangeWalletPasswordDialog::continueBasic()
    changePassword();
 }
 
+// Add a new Auth eID device to the wallet.
 void ChangeWalletPasswordDialog::continueAddDevice()
 {
    if (state_ != State::Idle) {
