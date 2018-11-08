@@ -4,6 +4,7 @@
 #include "FastLock.h"
 #include "HDWallet.h"
 #include "PlainWallet.h"
+#include "SettlementMonitor.h"
 
 #include <QCoreApplication>
 #include <QDir>

@@ -24,7 +24,10 @@ public:
    bool InitConnection();
    bool SetWelcomeMessage(const std::string& data);
 
+   // bind to network address. TCP will be used
    bool BindPublishingConnection(const std::string& host, const std::string& port);
+   // bind to inproc endpoint
+   bool BindPublishingConnection(const std::string& endpoint_name);
 
    bool PublishData(const std::string& data);
 
@@ -47,6 +50,9 @@ private:
    void BroadcastPendingData();
 
    void ReadReceivedData();
+
+   bool BindConnection(const std::string& endpoint);
+
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<ZmqContext>      context_;

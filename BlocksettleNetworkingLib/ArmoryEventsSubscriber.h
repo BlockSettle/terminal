@@ -1,0 +1,54 @@
+#ifndef __ARMORY_EVENTS_SUBSCRIBER_H__
+#define __ARMORY_EVENTS_SUBSCRIBER_H__
+
+#include "SubscriberConnection.h"
+
+#include <functional>
+#include <memory>
+#include <string>
+
+#include <spdlog/logger.h>
+
+class ConnectionManager;
+
+class ArmoryEventsSubscriber : public SubscriberConnectionListener
+{
+public:
+   using onNewBlockCB = std::function<void (unsigned int32_t)>;
+   using onZCEventCB = std::function<void (unsigned int32_t)>;
+
+public:
+   ArmoryEventsSubscriber(const std::string& name
+      , const std::shared_ptr<spdlog::logger>& logger);
+   ~ArmoryEventsSubscriber() noexcept override;
+
+   ArmoryEventsSubscriber(const ArmoryEventsSubscriber&) = delete;
+   ArmoryEventsSubscriber& operator = (const ArmoryEventsSubscriber&) = delete;
+
+   ArmoryEventsSubscriber(ArmoryEventsSubscriber&&) = delete;
+   ArmoryEventsSubscriber& operator = (ArmoryEventsSubscriber&&) = delete;
+
+   void SetNewBlockCallback(const onNewBlockCB& cb);
+   void SetZCCallback(const onZCEventCB& cb);
+
+   bool SubscribeToArmoryEvents(const std::shared_ptr<ConnectionManager>& connectionManager);
+
+private:
+   bool UnsubscribeFromEvents();
+
+public:
+   void OnDataReceived(const std::string& data) override;
+   void OnConnected() override;
+   void OnDisconnected() override;
+
+private:
+   const std::string                name_;
+   std::shared_ptr<spdlog::logger>  logger_;
+
+   onNewBlockCB                     onNewBlock_;
+   onZCEventCB                      onZCEvent_;
+
+   std::shared_ptr<SubscriberConnection> subConection_ = nullptr;
+};
+
+#endif // __ARMORY_EVENTS_SUBSCRIBER_H__
