@@ -42,6 +42,11 @@ bool ArmoryEventsPublisher::ConnectToArmoryConnection(const std::shared_ptr<Armo
       return false;
    }
 
+   if (!publisher_->InitConnection()) {
+      logger_->error("[ArmoryEventsPublisher::ConnectToArmoryConnection] failed to init publisher connection");
+      return false;
+   }
+
    if (!publisher_->BindPublishingConnection("armory_events")) {
       logger_->error("[ArmoryEventsPublisher::ConnectToArmoryConnection] failed to init internal publisher");
       return false;
