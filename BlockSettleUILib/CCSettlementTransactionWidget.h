@@ -39,7 +39,7 @@ public:
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ReqCCSettlementContainer> &
       , QWidget* parent = nullptr);
-   ~CCSettlementTransactionWidget() override = default;
+   ~CCSettlementTransactionWidget() noexcept override;
 
    Q_INVOKABLE void cancel();    //TODO: will be vanished
 
