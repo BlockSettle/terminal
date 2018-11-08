@@ -34,7 +34,10 @@ public:
    bool SubscribeToArmoryEvents(const std::shared_ptr<ConnectionManager>& connectionManager);
 
 private:
-   bool UnsubscribeFromEvents();
+   void UnsubscribeFromEvents();
+
+   void ProcessNewBlockEvent(const std::string& eventData);
+   void ProcessZCEvent(const std::string& eventData);
 
 public:
    void OnDataReceived(const std::string& data) override;
