@@ -2,10 +2,12 @@
 #include "ui_TransactionDetailsWidget.h"
 #include "BTCNumericTypes.h"
 #include "BlockObj.h"
+#include "UiUtils.h"
 
 #include <memory>
-//#include <cmath>
 #include <QToolTip>
+
+Q_DECLARE_METATYPE(Tx);
 
 TransactionDetailsWidget::TransactionDetailsWidget(QWidget *parent) :
     QWidget(parent),
@@ -13,11 +15,15 @@ TransactionDetailsWidget::TransactionDetailsWidget(QWidget *parent) :
 {
    ui_->setupUi(this);
 
+   qRegisterMetaType<Tx>();
+
    // setting up a tooltip that pops up immediately when mouse hovers over it
    QIcon btcIcon(QLatin1String(":/resources/notification_info.png"));
    ui_->labelTxPopup->setPixmap(btcIcon.pixmap(13, 13));
    ui_->labelTxPopup->setMouseTracking(true);
-   ui_->labelTxPopup->toolTip_ = tr("The Transaction ID (TXID) is in big endian notation. It will differ from the user input if the input is little endian.");
+   ui_->labelTxPopup->toolTip_ = tr("The Transaction ID (TXID) is in big " \
+                                    "endian notation. It will differ from the " \
+                                    "user input if the input is little endian.");
 
    // set the address column to have hand cursor
    ui_->treeInput->handCursorColumns_.append(colAddressId);
@@ -45,21 +51,63 @@ void TransactionDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &arm
    logger_ = inLogger;
 }
 
-void TransactionDetailsWidget::setTxVal(const QString inTx)
-{
-   ui_->tranID->setText(inTx);
+// This function tries to use getTxByHash() to retrieve info about transaction. 
+// Code was commented out because I could not get it to work and didn't want to spend too
+// much time trying. At the bottom of the function are 2 calls, one that populates 
+// transaction id in the page, and the other populates Inputs tree.
+void TransactionDetailsWidget::populateTransactionWidget(BinaryData inHex,
+                                                         const bool& firstPass) {
+   // get the transaction data from armory
+   const auto &cbTX = [this, &inHex, firstPass](Tx tx) {
+      if (!tx.isInitialized()) {
+         logger_->error("[TransactionDetailsWidget::populateTransactionWidget] TX not " \
+                        "initialized for hash {}.",
+                        inHex.toHexStr());
+         // If failure, try swapping the endian. We want big endian data.
+         if(firstPass == true) {
+            BinaryData inHexBE = inHex.swapEndian();
+            populateTransactionWidget(inHexBE, false);
+         }
+         return;
+      }
+
+      // UI changes in a non-main thread will trigger a crash. Invoke a new
+      // thread to handle the received data. (UI changes happen eventually.)
+      QMetaObject::invokeMethod(this, "processTxData", Qt::QueuedConnection
+         , Q_ARG(Tx, tx));
+   };
+   armory_->getTxByHash(inHex.swapEndian(), cbTX);
 }
 
-void TransactionDetailsWidget::setTx(const Tx& inTx)
-{
-   curTx = inTx;
-}
+// Used in callback - FIX DESCRIPTION
+void TransactionDetailsWidget::processTxData(Tx tx) {
+   // Save Tx and the prev Tx entries (get input amounts & such)
+   curTx = tx;
 
-void TransactionDetailsWidget::setTxs(const std::vector<Tx> inTxs,
-                                      const std::map<BinaryData, std::set<uint32_t>> inIndices)
-{
-   curTxs = inTxs;
-   curIndices = inIndices;
+   const auto &cbProcessTX = [this](std::vector<Tx> prevTxs) {
+      for (const auto &prevTx : prevTxs) {
+         const auto &txHash = prevTx.getThisHash();
+         prevTxHashSet.erase(txHash); // If empty, use this to make a relevant call.
+         prevTxMap_[txHash] = prevTx;
+      }
+
+      // We're finally ready to display all the transactions.
+      setTxGUIValues();
+   };
+
+   // While here, we need to get the prev Tx with the UTXO being spent.
+   // This is done so that we can calculate fees later.
+   for (size_t i = 0; i < tx.getNumTxIn(); i++) {
+      TxIn in = tx.getTxInCopy(i);
+      OutPoint op = in.getOutPoint();
+      const auto &itTX = prevTxMap_.find(op.getTxHash());
+      if(itTX == prevTxMap_.end()) {
+         prevTxHashSet.insert(op.getTxHash());
+      }
+   }
+   if(!prevTxHashSet.empty()) {
+      armory_->getTXsByHash(prevTxHashSet, cbProcessTX);
+   }
 }
 
 // WARNING: Don't use ClientClasses::BlockHeader. It has parsing capabilities
@@ -74,137 +122,126 @@ void TransactionDetailsWidget::getHeaderData(const BinaryData& inHeader)
          return;
    }
 
-   curTxVersion = READ_UINT32_LE(inHeader.getPtr());
+   // FIX - May want to rethink where the data is saved.
+/*   curTxVersion = READ_UINT32_LE(inHeader.getPtr());
    curTxPrevHash = BinaryData(inHeader.getPtr() + 4, 32);
    curTxMerkleRoot = BinaryData(inHeader.getPtr() + 36, 32);
    curTxTimestamp = READ_UINT32_LE(inHeader.getPtr() + 68);
    curTxDifficulty = BinaryData(inHeader.getPtr() + 72, 4);
-   curTxNonce = READ_UINT32_LE(inHeader.getPtr() + 76);
+   curTxNonce = READ_UINT32_LE(inHeader.getPtr() + 76);*/
 }
 
 void TransactionDetailsWidget::setTxGUIValues()
 {
-   // In order to calc the fees, we have to resolve each TxIn.
+   // Get Tx header data.
+   BinaryData txHdr(curTx.getPtr(), 80);
+   getHeaderData(txHdr);
 
-   uint64_t inSat = 0;
-   std::vector<Tx> receivedTxs;
-
-   // Process the received transactions
-   for(const auto& resolvedTx : curTxs) {
-      // Sanity check.
-      if(!resolvedTx.isInitialized()) {
-         logger_->error("[TransactionDetailsWidget::setTxGUIValues] TX " \
-                        "not initialized - Fees");
-         return;
-      }
-
-      // Sanity check.
-      const auto &itTxOut = curIndices.find(resolvedTx.getThisHash());
-      if (itTxOut == curIndices.end()) {
-         logger_->error("[TransactionDetailsWidget::setTxGUIValues] TX " \
-                        "not initialized - Fees 2"); // FIX ME!!!
-         return;
-      }
-
-      // Get the appropriate TxOut Satoshis
-      for(const auto &txOutIdx : itTxOut->second) {
-         inSat += resolvedTx.getTxOutCopy(txOutIdx).getValue();
+   // Get fees & fee/byte by looping through the prev Tx set and calculating.
+   uint64_t totIn = 0;
+   for(size_t r = 0; r < curTx.getNumTxIn(); ++r) {
+      TxIn in = curTx.getTxInCopy(r);
+      OutPoint op = in.getOutPoint();
+      const auto &prevTx = prevTxMap_[op.getTxHash()];
+      if (prevTx.isInitialized()) {
+         TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
+         totIn += prevOut.getValue();
       }
    }
-
-   // TxOut calculations are much simpler.
-   uint64_t outSat = 0;
-   for(size_t j = 0; j < curTx.getNumTxOut(); ++j) {
-      outSat += curTx.getTxOutCopy(j).getValue();
-   }
-
-
-   // Calc the fees
-   uint64_t txFeeSats = inSat - outSat;
-   double txFee = double(txFeeSats) / double(BTCNumericTypes::BalanceDivider);
-   double outAmt = double(outSat) / double(BTCNumericTypes::BalanceDivider);
-   uint32_t txSize = curTx.getSize();
-   uint32_t satPerByte = int(round(txFeeSats / txSize));
-
-   // Get the appropriate block header and extract data as needed.
-   // TO DO - DISABLED FOR NOW DUE TO A CRASH. getHeaderByHeight(), an almost
-   // completely similar call, does work. This needs to be sorted out.
-/*   const auto &cbHdr = [this](BinaryData blockHdr) {
-      getHeaderData(blockHdr);
-   };
-   if(armory_->getRawHeaderForTxHash(curTx.getThisHash(), cbHdr) == false)
-   {
-      logger_->error("[TransactionDetailsWidget::setTxGUIValues] Unable to " \
-                     "get block header for Tx hash {}",
-                     curTx.getThisHash().toHexStr());
-      return;
-   }*/
+   uint64_t fees = totIn - curTx.getSumOfOutputs();
+   double feePerByte = (double)fees / (double)curTx.getSize();
 
    // Populate the GUI fields.
    ui_->tranID->setText(QString::fromStdString(curTx.getThisHash().toHexStr()));
-//   ui_->tranDate->setText(QString::fromStdString(to_string(curTxTimestamp)));
+//   ui_->tranDate->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(curTxTimestamp)));
    ui_->tranDate->setText(QString::fromStdString("Timestamp here"));        // FIX ME!!!
    ui_->tranHeight->setText(QString::fromStdString("Height here"));         // FIX ME!!!
    ui_->tranConfirmations->setText(QString::fromStdString("# confs here")); // FIX ME!!!
-   ui_->tranNumInputs->setText(QString::fromStdString(to_string(curTx.getNumTxIn())));
-   ui_->tranNumOutputs->setText(QString::fromStdString(to_string(curTx.getNumTxOut())));
-   ui_->tranOutput->setText(QLocale().toString(outAmt,
-                                               'f',
-                                               BTCNumericTypes::default_precision));
-   ui_->tranFees->setText(QLocale().toString(txFee,
-                                             'f',
-                                             BTCNumericTypes::default_precision));
-   ui_->tranFeePerByte->setText(QString::fromStdString(to_string(satPerByte)));
-   ui_->tranSize->setText(QString::fromStdString(to_string(txSize)));
-}
+   ui_->tranNumInputs->setText(QString::number(curTx.getNumTxIn()));
+   ui_->tranNumOutputs->setText(QString::number(curTx.getNumTxOut()));
+   ui_->tranOutput->setText(QString::number(curTx.getSumOfOutputs() / BTCNumericTypes::BalanceDivider,
+                                            'f',
+                                            BTCNumericTypes::default_precision));
+   ui_->tranFees->setText(QString::number(fees / BTCNumericTypes::BalanceDivider,
+                                          'f',
+                                          BTCNumericTypes::default_precision));
+   ui_->tranFeePerByte->setText(QString::number(nearbyint(feePerByte)));
+   ui_->tranSize->setText(QString::number(curTx.getSize()));
 
-// Take a Tx, get the set of Txs attached to the TxIns, and set the appropriate
-// values.
-void TransactionDetailsWidget::getTxsForTxIns()
-{
-   if(!curTx.isInitialized()) {
-      logger_->error("[TransactionDetailWidgets::getTxsForTxIns] TX not " \
-                     "initialized - Entry");
-         return;
-   }
-
-   std::set<BinaryData> txHashSet;
-   std::map<BinaryData, std::set<uint32_t>> txOutIndices;
-   for(size_t i = 0; i < curTx.getNumTxIn(); ++i) {
-      OutPoint op = curTx.getTxInCopy(i).getOutPoint();
-      txHashSet.insert(op.getTxHash());
-      txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
-   }
-
-   // Get the Txs associated with the TxIns.
-   const auto &cbTXs = [this, txOutIndices](std::vector<Tx> txs) {
-      this->setTxs(txs, txOutIndices);
-   };
-   armory_->getTXsByHash(txHashSet, cbTXs);
-
-   setTxGUIValues();
+   loadInputs();
 }
 
 // This function populates the inputs tree with top level and child items. The exactly same code
 // applies to ui_->treeOutput
 void TransactionDetailsWidget::loadInputs() {
    // for testing purposes i populate both trees with test data
-   loadTree(ui_->treeInput);
-   loadTree(ui_->treeOutput);
+   loadTreeIn(ui_->treeInput);
+   loadTreeOut(ui_->treeOutput);
 }
 
-void TransactionDetailsWidget::loadTree(CustomTreeWidget *tree) {
+void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree) {
    tree->clear();
 
    // here's the code to add data to the Input tree.
-   for (int i = 0; i < 5; i++) {
+   for (size_t i = 0; i < curTx.getNumTxIn(); i++) {
+      TxOut prevOut;
+      TxIn in = curTx.getTxInCopy(i);
+      OutPoint op = in.getOutPoint();
+      const auto &prevTx = prevTxMap_[op.getTxHash()];
+      if (prevTx.isInitialized()) {
+         prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
+      }
+      const auto outAddr = bs::Address::fromTxOut(prevOut);
+      double amtBTC = prevOut.getValue() / BTCNumericTypes::BalanceDivider;
+
       // create a top level item using type, address, amount, wallet values
-      QTreeWidgetItem *item = createItem(tree, tr("Input"), tr("2JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("0.00850000"), tr("Settlement"));
+      QTreeWidgetItem *item = createItem(tree,
+                                         tr("Input"),
+                                         outAddr.display(),
+                                         QString::number(amtBTC,
+                                                         'f',
+                                                         BTCNumericTypes::default_precision),
+                                         tr("Settlement"));
 
       // add several child items to this top level item to crate a new branch in the tree
-      item->addChild(createItem(item, tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"), tr("-0.00850000"), tr("Settlement")));
+/*      item->addChild(createItem(item,
+                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
+                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
+                                tr("-0.00850000"),
+                                tr("Settlement")));
+      item->setExpanded(true);*/
 
-      item->setExpanded(true);
+      // add the item to the tree
+      tree->addTopLevelItem(item);
+   }
+   tree->resizeColumns();
+}
+
+void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree) {
+   tree->clear();
+
+   // here's the code to add data to the Input tree.
+   for (size_t i = 0; i < curTx.getNumTxOut(); i++) {
+      const auto outAddr = bs::Address::fromTxOut(curTx.getTxOutCopy(i));
+      double amtBTC = curTx.getTxOutCopy(i).getValue() / BTCNumericTypes::BalanceDivider;
+
+      // create a top level item using type, address, amount, wallet values
+      QTreeWidgetItem *item = createItem(tree,
+                                         tr("Output"),
+                                         outAddr.display(),
+                                         QString::number(amtBTC,
+                                                         'f',
+                                                         BTCNumericTypes::default_precision),
+                                         tr("Settlement"));
+
+      // add several child items to this top level item to crate a new branch in the tree
+/*      item->addChild(createItem(item,
+                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
+                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
+                                tr("-0.00850000"),
+                                tr("Settlement")));
+      item->setExpanded(true);*/
+
       // add the item to the tree
       tree->addTopLevelItem(item);
    }

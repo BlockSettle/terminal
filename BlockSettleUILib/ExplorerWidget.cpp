@@ -53,25 +53,6 @@ void ExplorerWidget::shortcutActivated(ShortcutType s)
 // The function called when the user uses the search bar (Tx or address).
 void ExplorerWidget::onSearchStarted()
 {
-   // PSEUDOCODE: This needs to be coded properly.
-   // - Get the text - ui_->stackedWidget->text()
-   // - Convert to BinaryData and feed to a function that confirms if it's an
-   //   address. CreateTransactionDialogAdvanced.cpp should have an example.
-   // -- If an address, set index to 2 (Address) and pass along the address
-   //    object so that it can populate the window.
-   // - If not an address, check to see if it's a 32 byte hex string.
-   // -- If so, attempt to get the Tx fom ArmoryConnection.
-   // --- If success, set index to 1 (Tx) and pass along the Tx to populate
-   //     the window.
-   // --- If failure, issue a pop-up stating that the value is an invalid Tx
-   //     reference.
-   // - If not a valid byte string, issue a pop-up stating that the value is
-   //   neither a valid address or Tx reference.
-   // - BLOCKS ARE BEING IGNORED FOR NOW. ARMORY IS NOT DESIGNED TO SUPPORT
-   //   BLOCK-SPECIFIC INFO AND WILL BLOW UP THE DB SIZE IF REDESIGNED TO ADD
-   //   SUPPORT. It may be possible to query Core directly and parse the JSON
-   //   output.
-
    const QString& userStr = ui_->searchBox->text();
    if (userStr.isEmpty()) {
       QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7)),
@@ -111,12 +92,9 @@ void ExplorerWidget::onSearchStarted()
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
       // String is a valid 32 byte hex string, so we may proceed.
       ui_->stackedWidget->setCurrentIndex(TxPage);
-      const BinaryData inHex = READHEX(userStr.toStdString());
 
-      // TO DO: Pass the Tx hash to the Tx widget and populate the fields.
-      BinaryData inHexBE = inHex;
-      inHexBE.swapEndian();
-      populateTransactionWidget(inHexBE);
+      // TO DO: Pass the Tx hash to the Tx widget and populate the fields. Should do reversal there.
+      ui_->Transaction->populateTransactionWidget(READHEX(userStr.toStdString()));
    }
    else {
       // This isn't a valid address or 32 byte hex string.
@@ -124,41 +102,6 @@ void ExplorerWidget::onSearchStarted()
                          tr("This is not a valid address or transaction id."),
                          ui_->searchBox);
    }
-}
-
-// This function tries to use getTxByHash() to retrieve info about transaction. 
-// Code was commented out because I could not get it to work and didn't want to spend too
-// much time trying. At the bottom of the function are 2 calls, one that populates 
-// transaction id in the page, and the other populates Inputs tree. 
-void ExplorerWidget::populateTransactionWidget(const BinaryData& inHex)
-{
-   // get the transaction data from armory
-   TransactionDetailsWidget* cbTxWidget = ui_->Transaction;
-   const auto &cbTX = [this, inHex, cbTxWidget](Tx tx) {
-      if (!tx.isInitialized()) {
-         logger_->error("[ExplorerWidget::populateTransactionWidget] TX not " \
-                        "initialized for hash {}.",
-                        inHex.toHexStr());
-         return;
-      }
-      cbTxWidget->setTx(tx);
-
-      // SAVE THIS CODE FOR ELSEWHERE
-/*      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-         TxOut out = tx.getTxOutCopy(i);
-         auto address = out.getScrAddressStr();
-         if (ownAddresses_.find(address) != ownAddresses_.end()) {
-            return;
-         }
-      }*/
-   };
-   armory_->getTxByHash(inHex, cbTX);
-   ui_->Transaction->getTxsForTxIns();
-
-   // Load the inputs table with dummy data, feel free to modify to work with
-   // real data, or if you can get the getTxByHash() and the callback to work correctly
-   // for me I can update it to populate it with actual data. 
-   ui_->Transaction->loadInputs();
 }
 
 // This slot function is called whenever user clicks on a transaction in

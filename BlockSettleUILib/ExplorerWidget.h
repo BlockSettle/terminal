@@ -31,7 +31,6 @@ public:
 
 protected slots:
    void onSearchStarted();
-   void populateTransactionWidget(const BinaryData& inHex);
    void onTransactionClicked(QString txId);
    void onAddressClicked(QString addressId);
 

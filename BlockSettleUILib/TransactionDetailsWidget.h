@@ -29,11 +29,10 @@ public:
 
    void init(const std::shared_ptr<ArmoryConnection> &armory,
              const std::shared_ptr<spdlog::logger> &inLogger);
-   void setTxVal(const QString inTx); // possibly a temporary function to show workflow
-   void setTx(const Tx& inTx);
    void setTxGUIValues();
-   void getTxsForTxIns();
    void loadInputs();
+   void populateTransactionWidget(BinaryData inHex,
+                                  const bool& firstPass = true);
 
     enum TxTreeColumns {
        colType = 0,
@@ -49,25 +48,22 @@ protected slots:
    void onAddressClicked(QTreeWidgetItem *item, int column);
 
 protected:
-   void loadTree(CustomTreeWidget *tree);
+   void loadTreeIn(CustomTreeWidget *tree);
+   void loadTreeOut(CustomTreeWidget *tree);
 
 private:
    Ui::TransactionDetailsWidget *ui_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger> logger_;
 
-   // The Tx being analyzed, along with associated block header data.
-   Tx curTx;
-   uint32_t curTxVersion;
-   BinaryData curTxPrevHash;
-   BinaryData curTxMerkleRoot;
-   uint32_t curTxTimestamp;
-   BinaryData curTxDifficulty;
-   uint32_t curTxNonce;
+   Q_INVOKABLE void processTxData(Tx tx);
 
-   // Data captured from callback to get a TxIn's associated Tx & TxOut indices.
-   std::vector<Tx> curTxs;
-   std::map<BinaryData, std::set<uint32_t>> curIndices;
+   // The Tx being analyzed.
+   Tx curTx;
+
+   // Data captured from callback to get a Tx's inputs.
+   std::map<BinaryData, Tx> prevTxMap_; // A Tx's previous Tx hash / Tx map (fee stuff).
+   std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for a Tx (fee calc).
 
    QTreeWidgetItem * createItem(QTreeWidget *tree, QString type,
                                 QString address, QString amount,
