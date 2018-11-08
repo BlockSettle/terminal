@@ -7,6 +7,7 @@
 #include "AssetManager.h"
 #include "CCSettlementTransactionWidget.h"
 #include "QuoteProvider.h"
+#include "ReqCCSettlementContainer.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
@@ -94,13 +95,14 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
    }
 }
 
-void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote& quote)
+void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote &quote)
 {
    quote_ = quote;
 
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
       quoteProvider_->AcceptQuoteFX(reqId, quote);
-   } else {
+   }
+   else {
       if (rfq_.assetType == bs::network::Asset::SpotXBT) {
          xbtSettlementWidget_ = new XBTSettlementTransactionWidget(logger_, authAddressManager_
             , assetMgr_, quoteProvider_, container_, armory_, celerClient_, appSettings_, this);
@@ -116,34 +118,38 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
 
          auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget_);
          ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
-      } else {
-         ccSettlementWidget_ = new CCSettlementTransactionWidget(logger_, assetMgr_
-            , container_, armory_, celerClient_, appSettings_, this);
-
-         connect(ccSettlementWidget_, &CCSettlementTransactionWidget::settlementAccepted
-            , this, &RFQDialog::onSettlementAccepted);
-         connect(ccSettlementWidget_, &CCSettlementTransactionWidget::sendOrder
-            , this, &RFQDialog::onSettlementOrder);
-         connect(ccSettlementWidget_, &CCSettlementTransactionWidget::settlementCancelled
-            , this, &QDialog::close);
-
-         ccSettlementWidget_->reset(walletsManager_);
-         const bs::Address genAddress =  assetMgr_->getCCGenesisAddr(rfq_.product);
-
-         ccSettlementWidget_->populateDetails(rfq_, quote, transactionData_, genAddress);
-
-         auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget_);
-         ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
       }
-
+      else {
+         curContainer_ = newCCcontainer();
+      }
    }
+}
+
+std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
+{
+   ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
+      , container_, armory_, assetMgr_, walletsManager_, rfq_, quote_, transactionData_);
+   const auto ccSettlementWidget = new CCSettlementTransactionWidget(logger_
+      , celerClient_, appSettings_, ccSettlContainer_, this);
+
+   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementAccepted
+      , this, &RFQDialog::onSettlementAccepted);
+   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::sendOrder
+      , this, &RFQDialog::onSettlementOrder);
+   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
+      , this, &QDialog::close);
+
+   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget);
+   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
+
+   return ccSettlContainer_;
 }
 
 void RFQDialog::reject()
 {
    if (cancelOnClose_) {
       const auto widget = ui_->stackedWidgetRFQ->currentWidget();
-      if (widget) {
+      if (widget) {  //TODO: change to settlement container's cancel() when both are ready
          if (!QMetaObject::invokeMethod(widget, "cancel")) {
             logger_->warn("[RFQDialog::reject] failed to find [cancel] method for current stacked widget");
          }
@@ -173,16 +179,16 @@ void RFQDialog::onQuoteReceived(const bs::network::Quote& quote)
 
 void RFQDialog::onSettlementAccepted()
 {
-   if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
+   if (ccSettlContainer_) {
       const auto itCCOrder = ccReqIdToOrder_.find(QString::fromStdString(rfq_.requestId));
       if (itCCOrder != ccReqIdToOrder_.end()) {
-         quoteProvider_->SignTxRequest(itCCOrder->second, ccSettlementWidget_->getTxSignedData());
+         quoteProvider_->SignTxRequest(itCCOrder->second, ccSettlContainer_->txSignedData());
          ccReqIdToOrder_.erase(QString::fromStdString(rfq_.requestId));
          close();
       } else {
-         ccTxMap_[rfq_.requestId] = ccSettlementWidget_->getTxSignedData();
+         ccTxMap_[rfq_.requestId] = ccSettlContainer_->txSignedData();
       }
-   } else if (rfq_.assetType == bs::network::Asset::SpotXBT) {
+   } else if (rfq_.assetType == bs::network::Asset::SpotXBT) {    //TODO: change to xbtSettlContainer_ later
       if (XBTOrder_.settlementId != quote_.settlementId) {
          logger_->debug("[RFQDialog::onSettlementAccepted] did not receive proper order");
       }
@@ -195,9 +201,9 @@ void RFQDialog::onSettlementAccepted()
 
 void RFQDialog::onSettlementOrder()
 {
-   if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
-      const auto txData = ccSettlementWidget_->getCCTxData();
-      quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_, txData);
+   if (ccSettlContainer_) {
+      quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_
+         , ccSettlContainer_->txData());
    }
 }
 
