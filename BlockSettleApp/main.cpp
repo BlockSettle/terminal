@@ -113,6 +113,27 @@ static void checkFirstStart(ApplicationSettings *applicationSettings) {
   }
 }
 
+static void checkStyleSheet(QApplication &app) {
+   QLatin1String styleSheetFileName = QLatin1String("stylesheet.css");
+
+   QFileInfo info = QFileInfo(QLatin1String(styleSheetFileName));
+
+   static QDateTime lastTimestamp = info.lastModified();
+
+   if (lastTimestamp == info.lastModified()) {
+      return;
+   }
+
+   lastTimestamp = info.lastModified();
+
+   QFile stylesheetFile(styleSheetFileName);
+
+   bool result = stylesheetFile.open(QFile::ReadOnly);
+   assert(result);
+
+   app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
+}
+
 static int GuiApp(int argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
@@ -138,6 +159,15 @@ static int GuiApp(int argc, char** argv)
       p.setColor(QPalette::Disabled, QPalette::Light, QColor(10,22,25));
       QApplication::setPalette(p);
    }
+
+#ifdef QT_DEBUG
+   // Start monitoring to update stylesheet live when file is changed on the disk
+   QTimer timer;
+   QObject::connect(&timer, &QTimer::timeout, &app, [&app] {
+      checkStyleSheet(app);
+   });
+   timer.start(100);
+#endif
 
    QDirIterator it(QLatin1String(":/resources/Raleway/"));
    while (it.hasNext()) {
