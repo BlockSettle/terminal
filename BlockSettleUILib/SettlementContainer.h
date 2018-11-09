@@ -51,7 +51,7 @@ namespace bs {
       void timerStarted(int msDuration);
       void timerStopped();
 
-   protected:
+   protected slots:
       void startTimer(const unsigned int durationSeconds);
       void stopTimer();
 
