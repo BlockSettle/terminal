@@ -223,14 +223,11 @@ void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &enc
 
    knownDeviceIds_.clear();
    for (const auto &encKey : encKeys) {
-      std::string authIdWithDeviceId = encKey.toBinStr();
-      size_t splitIndex = authIdWithDeviceId.find(MobileClient::SeparatorSymbol);
-      if (splitIndex != std::string::npos) {
-         knownDeviceIds_.push_back(authIdWithDeviceId.substr(splitIndex + 1));
+      auto deviceInfo = MobileClient::getDeviceInfo(encKey.toBinStr());
+      if (!deviceInfo.deviceId.empty()) {
+         knownDeviceIds_.push_back(deviceInfo.deviceId);
       }
-
-      std::string authId = authIdWithDeviceId.substr(0, splitIndex);
-      ui_->comboBoxAuthId->addItem(QString::fromStdString(authId));
+      ui_->comboBoxAuthId->addItem(QString::fromStdString(deviceInfo.userId));
    }
    if ((index >= 0) && (index < encKeys.size())) {
       ui_->comboBoxAuthId->setCurrentIndex(index);

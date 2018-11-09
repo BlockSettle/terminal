@@ -12,6 +12,7 @@ enum class MobileClientRequest
    BackupWallet,
    ActivateWalletOldDevice,
    ActivateWalletNewDevice,
+   DeactivateWalletDevice,
    VerifyWalletKey,
    ActivateOTP,
 

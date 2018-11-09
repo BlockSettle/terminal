@@ -57,12 +57,13 @@ namespace bs {
          void setUserId(const BinaryData &usedId);
          bool eraseFile();
 
-         // addNew - is used when we add third AuthApp device (without asking for BOTH old devices).
-         // dryRun - is used to check that old password valid before notifying
-         // the server about added devices. No password change is happened.
+         // addNew: add new encryption key without asking for all old keys (used with multiple Auth eID devices).
+         // removeOld: remove missed keys comparing encKey field without asking for all old keys
+         // (newPass password fields should be empty). Used with multiple Auth eID devices.
+         // dryRun: check that old password valid. No password change happens.
          bool changePassword(const std::shared_ptr<spdlog::logger> &logger
             , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank
-            , const SecureBinaryData &oldPass, bool addNew, bool dryRun);
+            , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun);
 
          void RegisterWallet(const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
          void SetArmory(const std::shared_ptr<ArmoryConnection> &);

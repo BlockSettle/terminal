@@ -1199,7 +1199,7 @@ bool HeadlessContainerListener::onChangePassword(const std::string &clientId
 
    bool result = wallet->changePassword(logger_, pwdData, keyRank
       , BinaryData::CreateFromHex(request.oldpassword())
-      , request.addnew(), request.dryrun());
+      , request.addnew(), request.removeold(), request.dryrun());
 
    if (!result) {
       logger_->error("[HeadlessContainerListener] failed to change password for wallet {}", request.rootwalletid());

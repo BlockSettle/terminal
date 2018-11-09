@@ -18,6 +18,29 @@ namespace
 
    // Obtained from http://185.213.153.44:8181/key
    const std::string kApiKey = "Pj+Q9SsZloftMkmE7EhA8v2Bz1ZC9aOmUkAKTBW9hagJ";
+
+   static const char kSeparatorSymbol = ':';
+
+}
+
+MobileClient::DeviceInfo MobileClient::getDeviceInfo(const string &encKey)
+{
+   DeviceInfo result;
+
+   // encKey could be in form email, email:deviceId and email:deviceId:deviceName formats
+   size_t firstSep = encKey.find(kSeparatorSymbol);
+   if (firstSep != std::string::npos) {
+      size_t secondSep = encKey.find(kSeparatorSymbol, firstSep + 1);
+      size_t deviceIdLen = std::string::npos;
+      if (secondSep != std::string::npos) {
+         deviceIdLen = secondSep - firstSep - 1;
+         result.deviceName = encKey.substr(secondSep + 1);
+      }
+      result.deviceId = encKey.substr(firstSep + 1, deviceIdLen);
+   }
+
+   result.userId = encKey.substr(0, firstSep);
+   return result;
 }
 
 MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
@@ -30,6 +53,11 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
    connectionManager_.reset(new ConnectionManager(logger));
    timer_ = new QTimer(this);
    connect(timer_, &QTimer::timeout, this, &MobileClient::timeout);
+}
+
+MobileClient::~MobileClient()
+{
+   cancel();
 }
 
 std::string MobileClient::toBase64(const std::string &s)
@@ -50,8 +78,6 @@ void MobileClient::init(const std::string &serverPubKey
    serverHost_ = serverHost;
    serverPort_ = serverPort;
 }
-
-MobileClient::~MobileClient() = default;
 
 bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type)
 {
@@ -149,17 +175,16 @@ void MobileClient::cancel()
       return;
    }
 
-   connection_->closeConnection();
-
    CancelRequest request;
    request.set_requestid(requestId_);
 
    sendToAuthServer(request.SerializeAsString(), PayloadCancel);
 
+   connection_->closeConnection();
+
    requestId_.clear();
 }
 
-// Called from background thread!
 void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize)
 {
    isConnecting_ = false;
@@ -187,7 +212,6 @@ void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize
    sendToAuthServer(request.SerializeAsString(), PayloadResult);
 }
 
-// Called from background thread!
 void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize)
 {
    ResultReply reply;
@@ -200,6 +224,8 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    if (reply.requestid() != requestId_) {
       return;
    }
+
+   requestId_.clear();
 
    if (reply.encsecurereply().empty() || reply.deviceid().empty()) {
       emit failed(tr("Cancelled"));
@@ -225,7 +251,9 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
       return;
    }
 
-   std::string encKey = email_ + SeparatorSymbol + reply.deviceid();
+   std::string encKey = email_
+      + kSeparatorSymbol + reply.deviceid()
+      + kSeparatorSymbol + reply.devicename();
 
    emit succeeded(encKey, SecureBinaryData(deviceKey));
 }
@@ -249,10 +277,14 @@ void MobileClient::OnDataReceived(const string &data)
 
    switch (packet.type()) {
    case PayloadCreate:
-      processCreateReply(decryptedPayload.data(), decryptedPayload.size());
+      QMetaObject::invokeMethod(this, [this, decryptedPayload] {
+         processCreateReply(decryptedPayload.data(), decryptedPayload.size());
+      });
       break;
    case PayloadResult:
-      processResultReply(decryptedPayload.data(), decryptedPayload.size());
+      QMetaObject::invokeMethod(this, [this, decryptedPayload] {
+         processResultReply(decryptedPayload.data(), decryptedPayload.size());
+      });
       break;
    case PayloadCancel:
       break;

@@ -23,7 +23,14 @@ class MobileClient : public QObject, public DataConnectionListener
 {
    Q_OBJECT
 public:
-   static const char SeparatorSymbol = ':';
+   struct DeviceInfo
+   {
+      std::string userId;
+      std::string deviceId;
+      std::string deviceName;
+   };
+
+   static DeviceInfo getDeviceInfo(const std::string &encKey);
 
    MobileClient(const std::shared_ptr<spdlog::logger> &
       , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
@@ -67,11 +74,12 @@ private:
    std::string serverHost_;
    std::string serverPort_;
 
-   std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
+   const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
 
    QTimer *timer_;
 
    bool isConnecting_{false};
+   std::vector<std::string> knownDeviceIds_;
 };
 
 #endif // __MOBILE_CLIENT_H__

@@ -2,6 +2,7 @@
 #include "ui_ChangeWalletPasswordDialog.h"
 
 #include <spdlog/spdlog.h>
+#include <QToolButton>
 #include "ApplicationSettings.h"
 #include "EnterWalletPassword.h"
 #include "AuthNotice.h"
@@ -10,6 +11,7 @@
 #include "MessageBoxSuccess.h"
 #include "SignContainer.h"
 #include "WalletKeyWidget.h"
+#include "WalletKeysDeleteDevice.h"
 
 
 ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spdlog::logger> &logger
@@ -71,13 +73,36 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
 
    QString usernameAuthApp;
 
+
+   int authCount = 0;
    for (const auto &encKey : encKeys) {   // assume we can have encKeys only for Auth type
       bs::wallet::PasswordData passwordData{};
       passwordData.encType = bs::wallet::EncryptionType::Auth;
       passwordData.encKey = encKey;
 
       oldPasswordData_.push_back(passwordData);
-      usernameAuthApp = QString::fromStdString(encKey.toBinStr());
+      auto deviceInfo = MobileClient::getDeviceInfo(encKey.toBinStr());
+
+      if (!deviceInfo.userId.empty()) {
+         authCount += 1;
+
+         usernameAuthApp = QString::fromStdString(deviceInfo.userId);
+
+         QString deviceName;
+         if (!deviceInfo.deviceName.empty()) {
+            deviceName = QString::fromStdString(deviceInfo.deviceName);
+         } else {
+            deviceName = QString(tr("Device %1")).arg(authCount);
+         }
+
+         WalletKeysDeleteDevice *deviceWidget = new WalletKeysDeleteDevice(deviceName);
+
+         ui_->verticalLayoutDeleteDevices->insertWidget(authCount - 1, deviceWidget);
+
+         connect(deviceWidget, &WalletKeysDeleteDevice::deleteClicked, this, [this, deviceInfo] {
+            deleteDevice(deviceInfo.deviceId);
+         });
+      }
    }
 
    for (const auto &encType : encTypes) {
@@ -259,11 +284,11 @@ void ChangeWalletPasswordDialog::changePassword()
 {
    if (wallet_->isWatchingOnly()) {
       signingContainer_->ChangePassword(wallet_, newPasswordData_, newKeyRank_, oldKey_
-         , addNew_, false);
+         , addNew_, removeOld_, false);
    }
    else {
       bool result = wallet_->changePassword(logger_, newPasswordData_, newKeyRank_, oldKey_
-         , addNew_, false);
+         , addNew_, removeOld_, false);
       onPasswordChanged(wallet_->getWalletId(), result);
    }
 }
@@ -275,6 +300,7 @@ void ChangeWalletPasswordDialog::resetKeys()
    deviceKeyNewValid_ = false;
    isLatestChangeAddDevice_ = false;
    addNew_ = false;
+   removeOld_ = false;
 }
 
 void ChangeWalletPasswordDialog::onOldDeviceKeyChanged(int, SecureBinaryData password)
@@ -369,6 +395,56 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
    }
 
    QDialog::accept();
+}
+
+void ChangeWalletPasswordDialog::deleteDevice(const string &deviceId)
+{
+   newPasswordData_.clear();
+   for (const auto &passwordData : oldPasswordData_) {
+      auto deviceInfo = MobileClient::getDeviceInfo(passwordData.encKey.toBinStr());
+      if (deviceInfo.deviceId != deviceId) {
+         newPasswordData_.push_back(passwordData);
+      }
+   }
+   newKeyRank_ = oldKeyRank_;
+   newKeyRank_.second -= 1;
+
+   if (newKeyRank_.first != 1) {
+      // Something went wrong. Only 1-on-N scheme is supported
+      logger_->critical("ChangeWalletPasswordDialog: newKeyRank.first != 1");
+      return;
+   }
+
+   if (newKeyRank_.second != newPasswordData_.size()) {
+      // Something went wrong
+      logger_->critical("internal error: oldKeyRank_.second != newPasswordData.size()");
+      return;
+   }
+
+   if (newPasswordData_.size() == oldPasswordData_.size()) {
+      // Something went wrong
+      logger_->critical("internal error: newPasswordData.size() == oldPasswordData_.size()");
+      return;
+   }
+
+   if (newKeyRank_.second == 0) {
+      MessageBoxCritical(tr("Error")
+         , tr("Can't remove last device. Please switch to password encryption instead."), this).exec();
+      return;
+   }
+
+   EnterWalletPassword enterWalletPassword(MobileClientRequest::DeactivateWalletDevice, this);
+   enterWalletPassword.init(wallet_->getWalletId(), newKeyRank_
+      , newPasswordData_, appSettings_, tr("Deactivate device"));
+   int result = enterWalletPassword.exec();
+   if (result != QDialog::Accepted) {
+      return;
+   }
+
+   oldKey_ = enterWalletPassword.getPassword();
+   removeOld_ = true;
+
+   changePassword();
 }
 
 void ChangeWalletPasswordDialog::onTabChanged(int index)

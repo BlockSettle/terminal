@@ -1009,7 +1009,10 @@ void RFQDealerReply::aqStateChanged(int state)
    }
    else {
       const auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
-      initAQ(scripts[ui_->comboBoxAQScript->currentIndex() - 1]);
+      int index = ui_->comboBoxAQScript->currentIndex() - 1;
+      if (index >= 0 && index < scripts.size()) {
+         initAQ(scripts[index]);
+      }
    }
 }
 
