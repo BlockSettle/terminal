@@ -171,6 +171,7 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<WalletsManager> &wa
 {
    walletsManager_ = walletsManager;
    UiUtils::fillHDWalletsComboBox(ui_->comboBoxWalletAS, walletsManager_);
+   updateAutoSignState();
 
    if (aq_) {
       aq_->setWalletsManager(walletsManager_);
