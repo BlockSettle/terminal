@@ -25,7 +25,9 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ReqCCSettlementContainer> &settlContainer
    , QWidget* parent)
-   : QWidget(parent), logger_(logger), appSettings_(appSettings)
+   : QWidget(parent)
+   , ui_(new Ui::CCSettlementTransactionWidget())
+   , logger_(logger), appSettings_(appSettings)
    , settlContainer_(settlContainer)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
@@ -34,8 +36,8 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CCSettlementTransactionWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &CCSettlementTransactionWidget::onAccept);
-   connect(settlContainer_.get(), &ReqCCSettlementContainer::genAddrVerified, this, &CCSettlementTransactionWidget::onGenAddrVerified);
-   connect(settlContainer_.get(), &ReqCCSettlementContainer::paymentVerified, this, &CCSettlementTransactionWidget::onPaymentVerified);
+   connect(settlContainer_.get(), &ReqCCSettlementContainer::genAddrVerified, this, &CCSettlementTransactionWidget::onGenAddrVerified, Qt::QueuedConnection);
+   connect(settlContainer_.get(), &ReqCCSettlementContainer::paymentVerified, this, &CCSettlementTransactionWidget::onPaymentVerified, Qt::QueuedConnection);
    connect(settlContainer_.get(), &ReqCCSettlementContainer::error, this, &CCSettlementTransactionWidget::onError);
    connect(settlContainer_.get(), &ReqCCSettlementContainer::info, this, &CCSettlementTransactionWidget::onInfo);
    connect(settlContainer_.get(), &ReqCCSettlementContainer::timerTick, this, &CCSettlementTransactionWidget::onTimerTick);
@@ -53,11 +55,6 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
 
 void CCSettlementTransactionWidget::onCancel()
 {
-   cancel();
-}
-
-void CCSettlementTransactionWidget::cancel()
-{
    settlContainer_->cancel();
    ui_->widgetSubmitKeys->cancel();
 }
@@ -70,7 +67,7 @@ void CCSettlementTransactionWidget::onTimerTick(int msCurrent, int)
 
 void CCSettlementTransactionWidget::onTimerExpired()
 {
-   cancel();
+   onCancel();
 }
 
 void CCSettlementTransactionWidget::populateDetails()
@@ -108,14 +105,15 @@ void CCSettlementTransactionWidget::populateDetails()
 void CCSettlementTransactionWidget::onGenAddrVerified(bool result, QString error)
 {
    logger_->debug("[CCSettlementTransactionWidget::onGenAddrVerified] result = {} ({})", result, error.toStdString());
+   ui_->labelGenesisAddress->setText(result ? sValid : sInvalid);
+   updateAcceptButton();
+
    if (!result) {
       ui_->labelHint->setText(tr("Failed to verify genesis address: %1").arg(error));
    } else {
       ui_->labelHint->setText(tr("Accept offer to send your own signed half of the CoinJoin transaction"));
       initSigning();
    }
-   ui_->labelGenesisAddress->setText(result ? sValid : sInvalid);
-   updateAcceptButton();
 }
 
 void CCSettlementTransactionWidget::initSigning()
