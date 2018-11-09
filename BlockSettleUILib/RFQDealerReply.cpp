@@ -64,7 +64,6 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->comboBoxWallet, SIGNAL(currentIndexChanged(int)), this, SLOT(walletSelected(int)));
    connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
 
-   ui_->checkBoxAutoSign->setEnabled(false);
    connect(ui_->checkBoxAutoSign, &QCheckBox::clicked, this, &RFQDealerReply::onAutoSignActivated);
 
    ui_->responseTitle->hide();
@@ -91,10 +90,6 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    appSettings_ = appSettings;
    signingContainer_ = container;
    armory_ = armory;
-
-   if (walletsManager_) {
-      requestEncOpts();
-   }
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
@@ -140,18 +135,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::disconnected, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged);
-      connect(signingContainer_.get(), &SignContainer::HDWalletInfo,
-         [this] (unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes,
-            std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
-         {
-            const auto it = encOptsRequests_.find(id);
-
-            if (it != encOptsRequests_.cend()) {
-               encOpts_.emplace(std::make_pair(it->second, WalletEncOpts(encTypes,
-                  encKeys, keyRank)));
-               updateAutoSignState();
-            }
-         });
+      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &RFQDealerReply::onHDWalletInfo);
    }
 
    UtxoReservation::addAdapter(utxoAdapter_);
@@ -187,10 +171,6 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<WalletsManager> &wa
 {
    walletsManager_ = walletsManager;
    UiUtils::fillHDWalletsComboBox(ui_->comboBoxWalletAS, walletsManager_);
-
-   if (signingContainer_) {
-      requestEncOpts();
-   }
 
    if (aq_) {
       aq_->setWalletsManager(walletsManager_);
@@ -235,6 +215,29 @@ void RFQDealerReply::onAutoSignActivated()
    } else {
       disableAutoSign();
    }
+}
+
+void RFQDealerReply::onHDWalletInfo(unsigned int id
+   , std::vector<bs::wallet::EncryptionType> encTypes, std::vector<SecureBinaryData> encKeys
+   , bs::wallet::KeyRank keyRank)
+{
+   if (autoSignWalletInfoReqId_ != id) {
+      return;
+   }
+
+   EnterWalletPassword passwordDialog(MobileClientRequest::SignWallet, this);
+   passwordDialog.init(autoSignWalletId_, keyRank
+      , encTypes, encKeys, appSettings_
+      , tr("Activate auto sign"));
+   if (passwordDialog.exec() != QDialog::Accepted) {
+      disableAutoSign();
+      return;
+   }
+
+   ui_->checkBoxAutoSign->setChecked(true);
+   auto password = passwordDialog.getPassword();
+   emit autoSignActivated(password, QString::fromStdString(autoSignWalletId_), true);
+   updateAutoSignState();
 }
 
 bs::Address RFQDealerReply::getRecvAddress() const
@@ -818,47 +821,24 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    return true;
 }
 
-void RFQDealerReply::requestEncOpts()
-{
-   for (int i = 0; i < ui_->comboBoxWalletAS->count(); ++i) {
-      const auto id = ui_->comboBoxWalletAS->model()->data(
-         ui_->comboBoxWalletAS->model()->index(i, 0),
-         UiUtils::WalletIdRole).toString().toStdString();
-      const auto wallet = walletsManager_->GetHDWalletById(id);
-
-      const auto reqId = signingContainer_->GetInfo(wallet);
-
-      encOptsRequests_.emplace(std::make_pair(reqId, id));
-   }
-}
-
 void RFQDealerReply::tryEnableAutoSign()
 {
-   auto walletId = ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString().toStdString();
-   const auto it = encOpts_.find(walletId);
+   ui_->checkBoxAQ->setChecked(false);
 
-   if (it == encOpts_.cend() || it->second.walletEncTypes_.empty() ||
-      !it->second.walletEncRank_.first || !walletsManager_) {
+   if (!walletsManager_ || !signingContainer_) {
       return;
    }
-   const auto &wallet = walletsManager_->GetHDWalletById(walletId);
+
+   auto walletId = ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString().toStdString();
+
+   const auto wallet = walletsManager_->GetHDWalletById(walletId);
    if (!wallet) {
       logger_->error("Failed to obtain auto-sign wallet for id {}", walletId);
       return;
    }
 
-   EnterWalletPassword passwordDialog(MobileClientRequest::SignWallet, this);
-   passwordDialog.init(walletId, it->second.walletEncRank_
-      , it->second.walletEncTypes_, it->second.walletEncKeys_, appSettings_
-      , tr("Activate auto sign"));
-   if (passwordDialog.exec() != QDialog::Accepted) {
-      disableAutoSign();
-      return;
-   }
-
-   auto password = passwordDialog.getPassword();
-   emit autoSignActivated(password, QString::fromStdString(walletId), true);
-   updateAutoSignState();
+   autoSignWalletInfoReqId_ = signingContainer_->GetInfo(wallet);
+   autoSignWalletId_ = walletId;
 }
 
 void RFQDealerReply::disableAutoSign()

@@ -111,6 +111,8 @@ namespace bs {
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
          void onAutoSignActivated();
+         void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
+            , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -142,24 +144,9 @@ namespace bs {
          double   indicAsk_;
          std::atomic_bool     autoUpdatePrices_;
 
-         struct WalletEncOpts {
-            const std::vector<wallet::EncryptionType> walletEncTypes_;
-            const std::vector<SecureBinaryData> walletEncKeys_;
-            const bs::wallet::KeyRank walletEncRank_;
-
-            WalletEncOpts(const std::vector<wallet::EncryptionType> &walletEncTypes,
-               const std::vector<SecureBinaryData> &walletEncKeys,
-               const bs::wallet::KeyRank &walletEncRank)
-               : walletEncTypes_(walletEncTypes)
-               , walletEncKeys_(walletEncKeys)
-               , walletEncRank_(walletEncRank)
-            {}
-         };
-
-         std::map<std::string, WalletEncOpts> encOpts_;
-         std::map<unsigned int, std::string> encOptsRequests_;
-
          unsigned int         leafCreateReqId_ = 0;
+         unsigned int         autoSignWalletInfoReqId_ = 0;
+         std::string          autoSignWalletId_;
 
          std::string product_;
          std::string baseProduct_;
@@ -202,7 +189,6 @@ namespace bs {
          bool submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price
             , std::function<void(bs::network::QuoteNotification)>);
-         void requestEncOpts();
          void tryEnableAutoSign();
          void disableAutoSign();
          void updateAutoSignState();
