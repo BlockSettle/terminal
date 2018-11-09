@@ -60,7 +60,8 @@ public:
    using ReqIdType = unsigned int;
 
 public:
-   ArmoryConnection(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN);
+   ArmoryConnection(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN
+      , bool cbInMainThread = false);
    ~ArmoryConnection() noexcept;
 
    State state() const { return state_; }
@@ -126,6 +127,7 @@ private:
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<State>   state_ = { State::Unknown };
    std::atomic_uint     topBlock_ = { 0 };
+   const bool     cbInMainThread_;
    TxCacheFile    txCache_;
 
    std::atomic_bool  regThreadRunning_;
