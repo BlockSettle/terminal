@@ -229,6 +229,13 @@ void ReqXBTSettlementContainer::deactivate()
    monitor_->stop();
 }
 
+void ReqXBTSettlementContainer::zcReceived(unsigned int)
+{
+   if (monitor_) {
+      monitor_->checkNewEntries();
+   }
+}
+
 void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState state)
 {
    dealerVerifState_ = state;

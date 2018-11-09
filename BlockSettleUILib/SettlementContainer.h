@@ -16,8 +16,7 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory)
-         : QObject(nullptr), armory_(armory) {}
+      explicit SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory);
       ~SettlementContainer() override = default;
 
       virtual bool accept(const SecureBinaryData &password = {}) = 0;
@@ -55,6 +54,8 @@ namespace bs {
    protected:
       void startTimer(const unsigned int durationSeconds);
       void stopTimer();
+
+      virtual void zcReceived(unsigned int) {}
 
    protected:
       std::shared_ptr<ArmoryConnection>   armory_;

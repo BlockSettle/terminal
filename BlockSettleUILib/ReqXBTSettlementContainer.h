@@ -89,6 +89,9 @@ private slots:
    void onPayInZCDetected();
    void onPayoutZCDetected(int confNum, bs::PayoutSigner::Type);
 
+protected:
+   void zcReceived(unsigned int) override;
+
 private:
    unsigned int createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr
       , const SecureBinaryData &password);
