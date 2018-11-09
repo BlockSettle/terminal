@@ -11,6 +11,7 @@
 #include "MessageBoxSuccess.h"
 #include "SignContainer.h"
 #include "WalletKeyWidget.h"
+#include "WalletKeysDeleteDevice.h"
 
 
 ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spdlog::logger> &logger
@@ -87,36 +88,22 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
 
          usernameAuthApp = QString::fromStdString(deviceInfo.userId);
 
-         QLabel *label = new QLabel;
+         QString deviceName;
          if (!deviceInfo.deviceName.empty()) {
-            label->setText(QString::fromStdString(deviceInfo.deviceName));
+            deviceName = QString::fromStdString(deviceInfo.deviceName);
          } else {
-            label->setText(QString(tr("Device %1")).arg(authCount));
+            deviceName = QString(tr("Device %1")).arg(authCount);
          }
-         label->setObjectName(QLatin1String("deviceDeleteLabel"));
-         ui_->gridLayoutDevices->addWidget(label, authCount, 0);
 
-         QToolButton *button = new QToolButton;
-         button->setObjectName(QLatin1String("deviceDeleteButton"));
-         button->setIcon(QIcon(QLatin1String("://resources/cancel.png")));
-         button->setAutoRaise(true);
-         ui_->gridLayoutDevices->addWidget(button, authCount, 1);
+         WalletKeysDeleteDevice *deviceWidget = new WalletKeysDeleteDevice(deviceName);
 
-         QSpacerItem *spacer = new QSpacerItem(0, 0, QSizePolicy::Expanding);
-         ui_->gridLayoutDevices->addItem(spacer, authCount, 2);
+         ui_->verticalLayoutDeleteDevices->insertWidget(authCount - 1, deviceWidget);
 
-         connect(button, &QToolButton::clicked, this, [this, deviceInfo] {
+         connect(deviceWidget, &WalletKeysDeleteDevice::deleteClicked, this, [this, deviceInfo] {
             deleteDevice(deviceInfo.deviceId);
          });
       }
    }
-
-   QSpacerItem *spacer = new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Expanding);
-   ui_->gridLayoutDevices->addItem(spacer, authCount + 1, 0, 3);
-
-   ui_->gridLayoutDevices->setColumnStretch(0, 1);
-   ui_->gridLayoutDevices->setColumnStretch(1, 0);
-   ui_->gridLayoutDevices->setColumnStretch(2, 3);
 
    for (const auto &encType : encTypes) {
       if (encType == bs::wallet::EncryptionType::Auth) {    // already added encKeys for Auth type
