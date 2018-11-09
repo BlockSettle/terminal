@@ -60,6 +60,8 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared
    updateAcceptButton();
 }
 
+XBTSettlementTransactionWidget::~XBTSettlementTransactionWidget() noexcept = default;
+
 void XBTSettlementTransactionWidget::onCancel()
 {
    settlContainer_->cancel();

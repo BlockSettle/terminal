@@ -691,7 +691,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
       return false;
    }
 
-   if (!!wallet) {
+   if (!wallet) {
       logger_->error("[WalletsManager::GetTransactionDirection] wallet not specified");
       return false;
    }

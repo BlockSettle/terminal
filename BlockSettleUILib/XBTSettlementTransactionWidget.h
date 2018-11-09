@@ -31,7 +31,7 @@ public:
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ReqXBTSettlementContainer> &
       , QWidget* parent = nullptr);
-   ~XBTSettlementTransactionWidget() override = default;
+   ~XBTSettlementTransactionWidget() noexcept override;
 
 private:
    void populateDetails();
