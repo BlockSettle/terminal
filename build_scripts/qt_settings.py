@@ -43,7 +43,7 @@ class QtSettings(Configurator):
 
         modules_to_skip = ['doc', 'imageformats', 'webchannel', 'webview', 'sensors', 'serialport',
                            'script', 'multimedia', 'wayland', 'location', 'webglplugin', 'gamepad',
-                           'purchasing', 'canvas3d', 'speech', 'charts']
+                           'purchasing', 'canvas3d', 'speech']
         sql_drivers_to_skip = ['db2', 'oci', 'tds', 'sqlite2', 'odbc', 'ibase', 'psql']
 
         if self._project_settings.on_windows():
