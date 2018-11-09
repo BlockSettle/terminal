@@ -15,7 +15,7 @@
 
 namespace Ui {
     class RFQDealerReply;
-};
+}
 namespace spdlog {
    class logger;
 }
@@ -87,7 +87,6 @@ namespace bs {
          void quoteReqNotifStatusChanged(const network::QuoteReqNotification &);
          void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
          void onBestQuotePrice(const QString reqId, double price, bool own);
-         void onAutoSignActivated();
          void onAutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
          void onCelerConnected();
          void onCelerDisconnected();
@@ -103,7 +102,6 @@ namespace bs {
          void aqScriptChanged(int curIndex);
          void onAqScriptLoaded(const QString &filename);
          void walletSelected(int index);
-         void autoSignWalletSelected(int index);
          void onTransactionDataChanged();
          void aqStateChanged(int state);
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
@@ -112,8 +110,9 @@ namespace bs {
          void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
-         void startSigning();
-         void updateAutoSignState();
+         void onAutoSignActivated();
+         void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
+            , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -145,24 +144,9 @@ namespace bs {
          double   indicAsk_;
          std::atomic_bool     autoUpdatePrices_;
 
-         struct WalletEncOpts {
-            const std::vector<wallet::EncryptionType> walletEncTypes_;
-            const std::vector<SecureBinaryData> walletEncKeys_;
-            const bs::wallet::KeyRank walletEncRank_;
-
-            WalletEncOpts(const std::vector<wallet::EncryptionType> &walletEncTypes,
-               const std::vector<SecureBinaryData> &walletEncKeys,
-               const bs::wallet::KeyRank &walletEncRank)
-               : walletEncTypes_(walletEncTypes)
-               , walletEncKeys_(walletEncKeys)
-               , walletEncRank_(walletEncRank)
-            {}
-         };
-
-         std::map<std::string, WalletEncOpts> encOpts_;
-         std::map<unsigned int, std::string> encOptsRequests_;
-
          unsigned int         leafCreateReqId_ = 0;
+         unsigned int         autoSignWalletInfoReqId_ = 0;
+         std::string          autoSignWalletId_;
 
          std::string product_;
          std::string baseProduct_;
@@ -205,7 +189,9 @@ namespace bs {
          bool submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price
             , std::function<void(bs::network::QuoteNotification)>);
-         void requestEncOpts();
+         void tryEnableAutoSign();
+         void disableAutoSign();
+         void updateAutoSignState();
       };
 
    }  //namespace ui

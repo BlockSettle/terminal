@@ -1794,22 +1794,9 @@
                      <property name="text">
                       <string>Enabled</string>
                      </property>
-                     <property name="tristate">
-                      <bool>true</bool>
-                     </property>
                     </widget>
                    </item>
                   </layout>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeysAS" native="true">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>30</height>
-                   </size>
-                  </property>
                  </widget>
                 </item>
                </layout>
@@ -2138,12 +2125,6 @@
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>WalletKeysSubmitWidget</class>
-   <extends>QWidget</extends>
-   <header>WalletKeysSubmitWidget.h</header>
-   <container>1</container>
-  </customwidget>
   <customwidget>
    <class>CustomDoubleSpinBox</class>
    <extends>QDoubleSpinBox</extends>
