@@ -30,26 +30,26 @@
 #define WEIGHT_OUTANON  30.0f
 
 ////
-class CoinSelectionException : public runtime_error
+class CoinSelectionException : public std::runtime_error
 {
 public:
-   CoinSelectionException(const string& err) : runtime_error(err)
+   CoinSelectionException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 struct RestrictedUtxoSet
 {
-   vector<UTXO> allUtxos_;
+   std::vector<UTXO> allUtxos_;
    bool haveAll_ = false;
-   set<UTXO> selection_;
-   function<vector<UTXO>(uint64_t val)> getUtxoLbd_;
+   std::set<UTXO> selection_;
+   std::function<std::vector<UTXO>(uint64_t val)> getUtxoLbd_;
 
-   RestrictedUtxoSet(function<vector<UTXO>(uint64_t val)> lbd) :
+   RestrictedUtxoSet(std::function<std::vector<UTXO>(uint64_t val)> lbd) :
       getUtxoLbd_(lbd)
    {}
 
-   const vector<UTXO>& getAllUtxos(void)
+   const std::vector<UTXO>& getAllUtxos(void)
    {
       if (!haveAll_)
       {
@@ -91,7 +91,7 @@ struct RestrictedUtxoSet
          {
             fee += uint64_t(utxo.getWitnessDataSize() * fee_byte);
          }
-         catch (exception&)
+         catch (std::exception&)
          {
          }
       }
@@ -99,9 +99,9 @@ struct RestrictedUtxoSet
       return fee;
    }
 
-   vector<UTXO> getUtxoSelection(void) const
+   std::vector<UTXO> getUtxoSelection(void) const
    {
-      vector<UTXO> utxoVec;
+      std::vector<UTXO> utxoVec;
 
       for (auto& utxo : selection_)
          utxoVec.push_back(utxo);
@@ -113,7 +113,7 @@ struct RestrictedUtxoSet
 ////////////////////////////////////////////////////////////////////////////////
 struct PaymentStruct
 {
-   const map<unsigned, shared_ptr<ScriptRecipient>> recipients_;
+   const std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipients_;
    
    const uint64_t fee_;
    const float fee_byte_;
@@ -123,7 +123,7 @@ struct PaymentStruct
 
    const unsigned flags_ = 0;
 
-   PaymentStruct(map<unsigned, shared_ptr<ScriptRecipient>>& recipients,
+   PaymentStruct(std::map<unsigned, std::shared_ptr<ScriptRecipient>>& recipients,
       uint64_t fee, float fee_byte, unsigned flags) :
       recipients_(recipients), fee_(fee), fee_byte_(fee_byte),
       flags_(flags)
@@ -137,7 +137,7 @@ struct PaymentStruct
 ////////////////////////////////////////////////////////////////////////////////
 struct UtxoSelection
 {
-   vector<UTXO> utxoVec_;
+   std::vector<UTXO> utxoVec_;
 
    uint64_t value_ = 0;
    uint64_t fee_ = 0;
@@ -152,7 +152,7 @@ struct UtxoSelection
    UtxoSelection(void) 
    {}
 
-   UtxoSelection(vector<UTXO>& utxovec) :
+   UtxoSelection(std::vector<UTXO>& utxovec) :
       utxoVec_(move(utxovec))
    {}
 
@@ -165,31 +165,31 @@ struct UtxoSelection
 class CoinSelection
 {
 private:
-   vector<UTXO> utxoVec_;
+   std::vector<UTXO> utxoVec_;
    uint64_t utxoVecValue_ = 0;
-   function<vector<UTXO>(uint64_t val)> getUTXOsForVal_;
+   std::function<std::vector<UTXO>(uint64_t val)> getUTXOsForVal_;
    const uint64_t spendableValue_;
    unsigned topHeight_ = UINT32_MAX;
 
-   set<AddressBookEntry> addrBook_;
+   std::set<AddressBookEntry> addrBook_;
 
-   exception_ptr except_ptr_ = nullptr;
+   std::exception_ptr except_ptr_ = nullptr;
 
 protected:
    UtxoSelection getUtxoSelection(
-      PaymentStruct&, const vector<UTXO>&);
+      PaymentStruct&, const std::vector<UTXO>&);
 
-   void fleshOutSelection(const vector<UTXO>&, UtxoSelection& utxoSelect,
+   void fleshOutSelection(const std::vector<UTXO>&, UtxoSelection& utxoSelect,
       PaymentStruct& payStruct);
 
    void updateUtxoVector(uint64_t value);
-   static uint64_t tallyValue(const vector<UTXO>&);
+   static uint64_t tallyValue(const std::vector<UTXO>&);
 
-   vector<UTXO> checkForRecipientReuse(PaymentStruct&, const vector<UTXO>&);
+   std::vector<UTXO> checkForRecipientReuse(PaymentStruct&, const std::vector<UTXO>&);
 
 public:
-   CoinSelection(function<vector<UTXO>(uint64_t val)> func, 
-      const vector<AddressBookEntry>& addrBook, uint64_t spendableValue, 
+   CoinSelection(std::function<std::vector<UTXO>(uint64_t val)> func,
+      const std::vector<AddressBookEntry>& addrBook, uint64_t spendableValue,
       uint32_t topHeight) :
       getUTXOsForVal_(func), spendableValue_(spendableValue), topHeight_(topHeight)
    {
@@ -200,15 +200,15 @@ public:
    }
 
    UtxoSelection getUtxoSelectionForRecipients(
-      PaymentStruct& payStruct, const vector<UTXO>&);
+      PaymentStruct& payStruct, const std::vector<UTXO>&);
 
    uint64_t getFeeForMaxVal(
-      size_t txOutSize, float fee_byte, const vector<UTXO>&);
+      size_t txOutSize, float fee_byte, const std::vector<UTXO>&);
 
    void rethrow(void) 
    { 
       if (except_ptr_ != nullptr)
-         rethrow_exception(except_ptr_); 
+         std::rethrow_exception(except_ptr_); 
    }
 };
 
@@ -262,13 +262,13 @@ private:
    /////////////////////////////////////////////////////////////////////////////
    struct ScoredUtxoVector_Float
    {
-      const vector<UTXO> utxoVec_;
+      const std::vector<UTXO> utxoVec_;
       const float score_;
       const unsigned order_;
 
-      ScoredUtxoVector_Float(vector<UTXO> utxoVec, float score,
+      ScoredUtxoVector_Float(std::vector<UTXO> utxoVec, float score,
          unsigned order) :
-         utxoVec_(move(utxoVec)), score_(score), order_(order)
+         utxoVec_(std::move(utxoVec)), score_(score), order_(order)
       {}
 
       bool operator< (const ScoredUtxoVector_Float& rhs) const
@@ -283,11 +283,11 @@ private:
 private:
 
    /////////////////////////////////////////////////////////////////////////////
-   static set<ScoredUtxo_Float> ruleset_1(const vector<UTXO>&, unsigned);
+   static std::set<ScoredUtxo_Float> ruleset_1(const std::vector<UTXO>&, unsigned);
 
 public:
-   static vector<UTXO> sortCoins(
-      const vector<UTXO>& utxoVec, unsigned topHeight, unsigned ruleset);
+   static std::vector<UTXO> sortCoins(
+      const std::vector<UTXO>& utxoVec, unsigned topHeight, unsigned ruleset);
 };
 
 #endif
@@ -296,18 +296,18 @@ public:
 struct CoinSubSelection
 {
    //single spendval
-   static vector<UTXO> selectOneUtxo_SingleSpendVal(
-      const vector<UTXO>&, uint64_t spendVal, uint64_t fee);
+   static std::vector<UTXO> selectOneUtxo_SingleSpendVal(
+      const std::vector<UTXO>&, uint64_t spendVal, uint64_t fee);
 
-   static vector<UTXO> selectManyUtxo_SingleSpendVal(
-      const vector<UTXO>&, uint64_t spendVal, uint64_t fee);
+   static std::vector<UTXO> selectManyUtxo_SingleSpendVal(
+      const std::vector<UTXO>&, uint64_t spendVal, uint64_t fee);
 
    //double spendval
-   static vector<UTXO> selectOneUtxo_DoubleSpendVal(
-      const vector<UTXO>&, uint64_t spendVal, uint64_t fee);
+   static std::vector<UTXO> selectOneUtxo_DoubleSpendVal(
+      const std::vector<UTXO>&, uint64_t spendVal, uint64_t fee);
 
-   static vector<UTXO> selectManyUtxo_DoubleSpendVal(
-      const vector<UTXO>&, uint64_t spendVal, uint64_t fee);
+   static std::vector<UTXO> selectManyUtxo_DoubleSpendVal(
+      const std::vector<UTXO>&, uint64_t spendVal, uint64_t fee);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

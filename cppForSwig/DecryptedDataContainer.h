@@ -13,7 +13,7 @@
 #include "Assets.h"
 #include "ReentrantLock.h"
 #include "BinaryData.h"
-#include "lmdb/lmdbpp.h"
+#include "lmdbpp.h"
 
 #define ENCRYPTIONKEY_PREFIX        0xC0
 #define ENCRYPTIONKEY_PREFIX_TEMP   0xCC
@@ -21,17 +21,17 @@
 class AssetUnavailableException
 {};
 
-class DecryptedDataContainerException : public runtime_error
+class DecryptedDataContainerException : public std::runtime_error
 {
 public:
-   DecryptedDataContainerException(const string& msg) : runtime_error(msg)
+   DecryptedDataContainerException(const std::string& msg) : std::runtime_error(msg)
    {}
 };
 
-class EncryptedDataMissing : public runtime_error
+class EncryptedDataMissing : public std::runtime_error
 {
 public:
-   EncryptedDataMissing() : runtime_error("")
+   EncryptedDataMissing() : std::runtime_error("")
    {}
 };
 
@@ -40,29 +40,29 @@ class DecryptedDataContainer : public Lockable
 {
    struct DecryptedData
    {
-      map<BinaryData, unique_ptr<DecryptedEncryptionKey>> encryptionKeys_;
-      map<unsigned, unique_ptr<DecryptedPrivateKey>> privateKeys_;
+      std::map<BinaryData, std::unique_ptr<DecryptedEncryptionKey>> encryptionKeys_;
+      std::map<unsigned, std::unique_ptr<DecryptedPrivateKey>> privateKeys_;
    };
 
 private:
-   map<BinaryData, shared_ptr<KeyDerivationFunction>> kdfMap_;
-   unique_ptr<DecryptedData> lockedDecryptedData_ = nullptr;
+   std::map<BinaryData, std::shared_ptr<KeyDerivationFunction>> kdfMap_;
+   std::unique_ptr<DecryptedData> lockedDecryptedData_ = nullptr;
 
    struct OtherLockedContainer
    {
-      shared_ptr<DecryptedDataContainer> container_;
-      shared_ptr<ReentrantLock> lock_;
+      std::shared_ptr<DecryptedDataContainer> container_;
+      std::shared_ptr<ReentrantLock> lock_;
 
-      OtherLockedContainer(shared_ptr<DecryptedDataContainer> obj)
+      OtherLockedContainer(std::shared_ptr<DecryptedDataContainer> obj)
       {
          if (obj == nullptr)
-            throw runtime_error("emtpy DecryptedDataContainer ptr");
+            throw std::runtime_error("emtpy DecryptedDataContainer ptr");
 
          lock_ = make_unique<ReentrantLock>(obj.get());
       }
    };
 
-   vector<OtherLockedContainer> otherLocks_;
+   std::vector<OtherLockedContainer> otherLocks_;
 
    LMDBEnv* dbEnv_;
    LMDB* dbPtr_;
@@ -81,17 +81,17 @@ private:
    const SecureBinaryData defaultEncryptionKeyId_;
 
 protected:
-   map<BinaryData, shared_ptr<Asset_EncryptedData>> encryptionKeyMap_;
+   std::map<BinaryData, std::shared_ptr<Asset_EncryptedData>> encryptionKeyMap_;
 
 private:
-   function<SecureBinaryData(
+   std::function<SecureBinaryData(
       const BinaryData&)> getPassphraseLambda_;
 
 private:
-   unique_ptr<DecryptedEncryptionKey> deriveEncryptionKey(
-      unique_ptr<DecryptedEncryptionKey>, const BinaryData& kdfid) const;
+   std::unique_ptr<DecryptedEncryptionKey> deriveEncryptionKey(
+      std::unique_ptr<DecryptedEncryptionKey>, const BinaryData& kdfid) const;
 
-   unique_ptr<DecryptedEncryptionKey> promptPassphrase(
+   std::unique_ptr<DecryptedEncryptionKey> promptPassphrase(
       const BinaryData&, const BinaryData&) const;
 
    void initAfterLock(void);
@@ -109,7 +109,7 @@ public:
    }
 
    const SecureBinaryData& getDecryptedPrivateKey(
-      shared_ptr<Asset_PrivateKey> data);
+      std::shared_ptr<Asset_PrivateKey> data);
    SecureBinaryData encryptData(
       Cypher* const cypher, const SecureBinaryData& data);
 
@@ -117,28 +117,28 @@ public:
    void populateEncryptionKey(
       const BinaryData& keyid, const BinaryData& kdfid);
 
-   void addKdf(shared_ptr<KeyDerivationFunction> kdfPtr)
+   void addKdf(std::shared_ptr<KeyDerivationFunction> kdfPtr)
    {
-      kdfMap_.insert(make_pair(kdfPtr->getId(), kdfPtr));
+      kdfMap_.insert(std::make_pair(kdfPtr->getId(), kdfPtr));
    }
 
-   void addEncryptionKey(shared_ptr<Asset_EncryptionKey> keyPtr)
+   void addEncryptionKey(std::shared_ptr<Asset_EncryptionKey> keyPtr)
    {
-      encryptionKeyMap_.insert(make_pair(keyPtr->getId(), keyPtr));
+      encryptionKeyMap_.insert(std::make_pair(keyPtr->getId(), keyPtr));
    }
 
    void updateOnDisk(void);
    void readFromDisk(void);
 
    void updateKeyOnDiskNoPrefix(
-      const BinaryData&, shared_ptr<Asset_EncryptedData>);
+      const BinaryData&, std::shared_ptr<Asset_EncryptedData>);
    void updateKeyOnDisk(
-      const BinaryData&, shared_ptr<Asset_EncryptedData>);
+      const BinaryData&, std::shared_ptr<Asset_EncryptedData>);
 
    void deleteKeyFromDisk(const BinaryData& key);
 
    void setPassphrasePromptLambda(
-      function<SecureBinaryData(const BinaryData&)> lambda)
+      std::function<SecureBinaryData(const BinaryData&)> lambda)
    {
       getPassphraseLambda_ = lambda;
    }
@@ -146,7 +146,7 @@ public:
    void resetPassphraseLambda(void) { getPassphraseLambda_ = nullptr; }
 
    void encryptEncryptionKey(const BinaryData&, const SecureBinaryData&);
-   void lockOther(shared_ptr<DecryptedDataContainer> other);
+   void lockOther(std::shared_ptr<DecryptedDataContainer> other);
 };
 
 #endif

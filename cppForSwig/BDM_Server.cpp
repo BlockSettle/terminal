@@ -32,14 +32,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       /* in: void
          out: BDVCallback
       */
-      if (!cb_->isValid())
-         break;
-
-      auto longpoll = dynamic_cast<LongPoll*>(this->cb_.get());
-      if (longpoll == nullptr)
-         break;
-
-      return longpoll->respond(command);
+      break;
    }
 
    case Methods::goOnline:
@@ -672,7 +665,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       out: void
       */
       vector<BinaryData> bdVec;
-      for (unsigned i = 0; i < command->bindata_size(); i++)
+      for (int i = 0; i < command->bindata_size(); i++)
       {
          auto& val = command->bindata(i);
          BinaryData valRef((uint8_t*)val.data(), val.size());
@@ -756,7 +749,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
          throw runtime_error("invalid command for getHistoryForWalletSelection");
 
       vector<BinaryData> wltIDs;
-      for (unsigned i = 0; i < command->bindata_size(); i++)
+      for (int i = 0; i < command->bindata_size(); i++)
       {
          auto& id = command->bindata(i);
          BinaryData idRef((uint8_t*)id.data(), id.size());
@@ -816,34 +809,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
 
    case Methods::getUTXOsForAddrList:
    {
-      /*
-      in: addresses as bindata
-      out: Codec_Utxo::ManyUtxo
-      */
-
-      vector<BinaryData> addrVec;
-      for (unsigned i = 0; i < command->bindata_size(); i++)
-      {
-         auto& addr = command->bindata(i);
-         BinaryData addrRef((uint8_t*)addr.data(), addr.size());
-         addrVec.push_back(addrRef);
-      }
-
-      auto&& utxoVec = this->getUnspentTxoutsForAddr160List(addrVec, false);
-
-      auto response = make_shared<::Codec_Utxo::ManyUtxo>();
-      for (auto& utxo : utxoVec)
-      {
-         auto utxoPtr = response->add_value();
-         utxoPtr->set_value(utxo.value_);
-         utxoPtr->set_script(utxo.script_.getPtr(), utxo.script_.getSize());
-         utxoPtr->set_txheight(utxo.txHeight_);
-         utxoPtr->set_txindex(utxo.txIndex_);
-         utxoPtr->set_txoutindex(utxo.txOutIndex_);
-         utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
-      }
-
-      return response;
+      throw runtime_error("deprecated");
    }
 
    case Methods::getHeaderByHash:
@@ -888,7 +854,8 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
    }
 
    default:
-      LOGWARN << "unkonwn method";
+      LOGWARN << "unkonwn command";
+      throw runtime_error("unknown command");
    }
 
    return nullptr;
@@ -909,6 +876,7 @@ shared_ptr<BDV_Server_Object> Clients::get(const string& id) const
 void BDV_Server_Object::setup()
 {
    packetProcess_threadLock_.store(0, memory_order_relaxed);
+   notificationProcess_threadLock_.store(0, memory_order_relaxed);
 
    isReadyPromise_ = make_shared<promise<bool>>();
    isReadyFuture_ = isReadyPromise_->get_future();
@@ -927,11 +895,9 @@ void BDV_Server_Object::setup()
       return UINT32_MAX;
    };
 
-   if (BlockDataManagerConfig::getServiceType() == SERVICE_FCGI)
+   switch (BlockDataManagerConfig::getServiceType())
    {
-      cb_ = make_unique<LongPoll>(isReadyLambda);
-   }
-   else if (BlockDataManagerConfig::getServiceType() == SERVICE_WEBSOCKET)
+   case SERVICE_WEBSOCKET:
    {
       auto&& bdid = READHEX(getID());
       if (bdid.getSize() != 8)
@@ -939,9 +905,14 @@ void BDV_Server_Object::setup()
 
       auto intid = (uint64_t*)bdid.getPtr();
       cb_ = make_unique<WS_Callback>(*intid);
+      break;
    }
-   else
-   {
+   
+   case SERVICE_UNITTEST:
+      cb_ = make_unique<UnitTest_Callback>();
+      break;
+
+   default:
       throw runtime_error("unexpected service type");
    }
 }
@@ -999,7 +970,7 @@ void BDV_Server_Object::init()
       //fill with addresses from protobuf payloads
       for (auto& wlt : wltMap)
       {
-         for (unsigned i = 0; i < wlt.second.command_->bindata_size(); i++)
+         for (int i = 0; i < wlt.second.command_->bindata_size(); i++)
          {
             auto& addrStr = wlt.second.command_->bindata(i);
             BinaryDataRef addrRef; addrRef.setRef(addrStr);
@@ -1197,9 +1168,9 @@ void BDV_Server_Object::registerWallet(
       wltregstruct.command_ = command;
       wltregstruct.type_ = TypeWallet;
 
-      auto notif = make_shared<BDV_Notification_Refresh>(
+      auto notif = make_unique<BDV_Notification_Refresh>(
          getID(), BDV_registrationCompleted, command->hash());
-      processNotification(notif);
+      notifLambda_(move(notif));
 
       return;
    }
@@ -1224,9 +1195,9 @@ void BDV_Server_Object::registerLockbox(
       wltregstruct.command_ = command;
       wltregstruct.type_ = TypeLockbox;
 
-      auto notif = make_shared<BDV_Notification_Refresh>(
+      auto notif = make_unique<BDV_Notification_Refresh>(
          getID(), BDV_registrationCompleted, command->hash());
-      processNotification(notif);
+      notifLambda_(move(notif));
       return;
    }
 
@@ -1427,11 +1398,6 @@ void Clients::init(BlockDataManagerThread* bdmT,
       bdvMaintenanceThread();
    };
 
-   auto gcThread = [this](void)->void
-   {
-      garbageCollectorThread();
-   };
-
    auto parserThread = [this](void)->void
    {
       this->messageParserThread();
@@ -1453,12 +1419,6 @@ void Clients::init(BlockDataManagerThread* bdmT,
 
    auto callbackPtr = make_unique<ZeroConfCallbacks_BDV>(this);
    bdmT_->bdm()->registerZcCallbacks(move(callbackPtr));
-
-   //no gc for unit tests
-   if (bdmT_->bdm()->config().nodeType_ == Node_UnitTest)
-      return;
-
-   controlThreads_.push_back(thread(gcThread));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1526,7 +1486,23 @@ void Clients::bdvMaintenanceThread()
          continue;
       }
 
-      notifPtr->bdvPtr_->processNotification(notifPtr->notifPtr_);
+      auto bdvPtr = notifPtr->bdvPtr_;
+      unsigned zero = 0;
+      if (!bdvPtr->notificationProcess_threadLock_.compare_exchange_weak(
+         zero, 1))
+      {
+         //Failed to grab lock, there's already a thread processing a payload
+         //for this bdv. Insert the payload back into the queue. Another 
+         //thread will eventually pick it up and successfully grab the lock 
+         if (notifPtr == nullptr)
+            LOGERR << "!!!!!! empty notif at reinsertion";
+
+         innerBDVNotifStack_.push_back(move(notifPtr));
+         continue;
+      }
+
+      bdvPtr->processNotification(notifPtr->notifPtr_);
+      bdvPtr->notificationProcess_threadLock_.store(0);
    }
 }
 
@@ -1560,7 +1536,7 @@ void Clients::processShutdownCommand(shared_ptr<StaticCommand> command)
          this->exitRequestLoop();
       };
 
-      //run shutdown sequence in its own thread so that the fcgi listen
+      //run shutdown sequence in its own thread so that the server listen
       //loop can exit properly.
       thread shutdownThr(shutdownLambda);
       if (shutdownThr.joinable())
@@ -1630,7 +1606,7 @@ void Clients::exitRequestLoop()
    /*terminate request processing loop*/
    LOGINFO << "proceeding to shutdown";
 
-   //shutdown loop on FcgiServer side
+   //shutdown loop on server side
    if (shutdownCallback_)
       shutdownCallback_();
 }
@@ -1655,7 +1631,7 @@ shared_ptr<Message> Clients::registerBDV(
          throw runtime_error("invalid command for registerBDV");
       auto& magic_word = command->magicword();
       BinaryDataRef magic_word_ref; magic_word_ref.setRef(magic_word);
-      auto& thisMagicWord = bdmT_->bdm()->config().magicBytes_;
+      auto& thisMagicWord = NetworkConfig::getMagicBytes();
 
       if (thisMagicWord != magic_word_ref)
          throw runtime_error("magic word mismatch");
@@ -1756,41 +1732,6 @@ void Clients::notificationThread(void) const
          continue;
 
       outerBDVNotifStack_.push_back(move(notifPtr));
-   }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void Clients::garbageCollectorThread(void)
-{
-   while (1)
-   {
-      try
-      {
-         bool command = gcCommands_.pop_front();
-         if (!command)
-            return;
-      }
-      catch (StopBlockingLoop&)
-      {
-         return;
-      }
-
-      vector<string> bdvToDelete;
-
-      {
-         auto bdvmap = BDVs_.get();
-
-         for (auto& bdvPair : *bdvmap)
-         {
-            if (!bdvPair.second->cb_->isValid())
-               bdvToDelete.push_back(bdvPair.first);
-         }
-      }
-
-      for (auto& bdvID : bdvToDelete)
-      {
-         unregisterBDV(bdvID);
-      }
    }
 }
 
@@ -1927,85 +1868,6 @@ Callback::~Callback()
 {}
 
 ///////////////////////////////////////////////////////////////////////////////
-shared_ptr<Message> LongPoll::respond(shared_ptr<BDVCommand> command)
-{
-   unique_lock<mutex> lock(mu_, defer_lock);
-
-   if (!lock.try_lock())
-   {
-      auto response = make_shared<BDVCallback>();
-      auto notif = response->add_notification();
-      notif->set_type(NotificationType::continue_polling);
-      return response;
-   }
-
-   count_ = 0;
-
-   switch (command->method())
-   {
-   case Methods::waitOnBDVInit:
-   {
-      //check is bdv is ready
-      auto topheight = isReady_();
-      if (topheight != UINT32_MAX)
-      {
-         auto response = make_shared<BDVCallback>();
-         auto notif = response->add_notification();
-         notif->set_type(NotificationType::ready);
-         notif->set_height(topheight);
-
-         vector<shared_ptr<BDVCallback>> orderVec;
-         orderVec.push_back(response);
-         return respond_inner(orderVec);
-      }
-
-      //otherwise, fallback to wait on notifications
-   }
-
-   case Methods::waitOnBDVNotification:
-   {
-      vector<shared_ptr<BDVCallback>> orderVec;
-
-      try
-      {
-         orderVec = move(notificationStack_.pop_all(std::chrono::seconds(50)));
-      }
-      catch (IsEmpty&)
-      {
-         auto response = make_shared<BDVCallback>();
-         auto notif = response->add_notification();
-         notif->set_type(NotificationType::continue_polling);
-         orderVec.push_back(response);
-      }
-      catch (StackTimedOutException&)
-      {
-         auto response = make_shared<BDVCallback>();
-         auto notif = response->add_notification();
-         notif->set_type(NotificationType::continue_polling);
-         orderVec.push_back(response);
-      }
-      catch (StopBlockingLoop&)
-      {
-         count_ = 5;
-
-         //return terminate packet
-         auto response = make_shared<BDVCallback>();
-         auto notif = response->add_notification();
-         notif->set_type(NotificationType::terminate);
-         orderVec.push_back(response);
-      }
-
-      return respond_inner(orderVec);
-   }
-
-   default:
-      LOGWARN << "invalid command for longpoll callback";
-   }
-
-   return nullptr;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 void WS_Callback::callback(shared_ptr<BDVCallback> command)
 {
    //write to socket
@@ -2013,47 +1875,23 @@ void WS_Callback::callback(shared_ptr<BDVCallback> command)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-shared_ptr<Message> LongPoll::respond_inner(
-   vector<shared_ptr<BDVCallback>>& orderVec)
+void UnitTest_Callback::callback(shared_ptr<BDVCallback> command)
 {
-   if (orderVec.size() == 0)
-      return nullptr;
+   //stash the notification, unit test will pull it as needed
+   notifQueue_.push_back(move(command));
+}
 
-   //consolidate NewBlock and Progress notifications
-   shared_ptr<BDVCallback> order_newblock;
-   shared_ptr<BDVCallback> order_progress;
-
-   auto response = make_shared<::Codec_BDVCommand::BDVCallback>();
-
-   for (auto& order : orderVec)
+///////////////////////////////////////////////////////////////////////////////
+shared_ptr<::Codec_BDVCommand::BDVCallback> UnitTest_Callback::getNotification()
+{
+   try
    {
-      if (order->notification_size() == 0)
-         continue;
-
-      auto& notif = order->notification(0);
-      switch (notif.type())
-      {
-
-      case NotificationType::newblock:
-         order_newblock = order;
-         break;
-
-      case NotificationType::progress:
-         order_progress = order;
-         break;
-
-      default:
-         response->MergeFrom(*order);
-      }
+      return notifQueue_.pop_front();
    }
+   catch (StopBlockingLoop&)
+   {}
 
-   if (order_newblock != nullptr)
-      response->MergeFrom(*order_newblock);
-
-   if (order_progress != nullptr)
-      response->MergeFrom(*order_progress);
-    
-   return move(response);
+   return nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

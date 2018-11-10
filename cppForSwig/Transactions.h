@@ -19,10 +19,10 @@
 #include "Script.h"
 #include "SigHashEnum.h"
 
-class UnsupportedSigHashTypeException : public runtime_error
+class UnsupportedSigHashTypeException : public std::runtime_error
 {
 public:
-   UnsupportedSigHashTypeException(const string& what) : runtime_error(what)
+   UnsupportedSigHashTypeException(const std::string& what) : std::runtime_error(what)
    {}
 };
 
@@ -39,16 +39,16 @@ class TransactionStub
 {
 protected:
    unsigned flags_ = 0;
-   mutable shared_ptr<SigHashDataSegWit> sigHashDataObject_ = nullptr;
+   mutable std::shared_ptr<SigHashDataSegWit> sigHashDataObject_ = nullptr;
 
 public:
-   mutable map<unsigned, size_t> lastCodeSeparatorMap_;
+   mutable std::map<unsigned, size_t> lastCodeSeparatorMap_;
 
 public:
    virtual ~TransactionStub(void) = 0;
 
    virtual BinaryDataRef getSerializedOutputScripts(void) const = 0;
-   virtual vector<TxInData> getTxInsData(void) const = 0;
+   virtual std::vector<TxInData> getTxInsData(void) const = 0;
    virtual BinaryData getSubScript(unsigned index) const = 0;
    virtual BinaryDataRef getWitnessData(unsigned inputId) const = 0;
 
@@ -96,7 +96,7 @@ public:
    BinaryData getDataForSigHash(SIGHASH_TYPE, const TransactionStub&,
       BinaryDataRef outputScript, unsigned inputIndex);
    
-   vector<BinaryDataRef> tokenize(const BinaryData&, uint8_t);
+   std::vector<BinaryDataRef> tokenize(const BinaryData&, uint8_t);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -143,7 +143,7 @@ private:
 class TransactionVerifier : public TransactionStub
 {
 public:
-   typedef map<BinaryData, map<unsigned, UTXO>> utxoMap;
+   typedef std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
 
 private:
    utxoMap utxos_;
@@ -157,7 +157,7 @@ private:
    mutable TxEvalState txEvalState_;
 
 protected:
-   virtual unique_ptr<StackInterpreter> getStackInterpreter(unsigned) const;
+   virtual std::unique_ptr<StackInterpreter> getStackInterpreter(unsigned) const;
 
 public:
    TransactionVerifier(const BCTX& theTx, const utxoMap& utxos) :
@@ -165,7 +165,7 @@ public:
    {}
 
    TransactionVerifier(
-      const BCTX& theTx, const vector<UnspentTxOut>& utxoVec) :
+      const BCTX& theTx, const std::vector<UnspentTxOut>& utxoVec) :
       theTx_(theTx)
    {
       for (auto& utxo : utxoVec)
@@ -174,7 +174,7 @@ public:
             utxo.getTxHeight(), utxo.getTxtIndex(), utxo.getTxOutIndex(),
             utxo.getTxHash(), utxo.getScript());
          auto& inner_map = utxos_[utxo.getTxHash()];
-         inner_map.insert(make_pair(utxo.getTxOutIndex(), move(new_obj)));
+         inner_map.insert(std::make_pair(utxo.getTxOutIndex(), std::move(new_obj)));
       }
    }
    
@@ -182,7 +182,7 @@ public:
    TxEvalState evaluateState() const;
 
    BinaryDataRef getSerializedOutputScripts(void) const;
-   vector<TxInData> getTxInsData(void) const;
+   std::vector<TxInData> getTxInsData(void) const;
    BinaryData getSubScript(unsigned index) const;
    BinaryDataRef getWitnessData(unsigned inputId) const;
 
@@ -202,7 +202,7 @@ public:
 class TransactionVerifier_BCH : public TransactionVerifier
 {
 protected:
-   unique_ptr<StackInterpreter> getStackInterpreter(unsigned) const;
+   std::unique_ptr<StackInterpreter> getStackInterpreter(unsigned) const;
 
 public:
    TransactionVerifier_BCH(const BCTX& theTx, const utxoMap& utxos) :

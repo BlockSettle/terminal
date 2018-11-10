@@ -6,16 +6,17 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 #include "lmdbpp.h"    
+#include "lmdb.h"
 
-#include <lmdb.h>
 #include <unistd.h>
-
 #include <sstream>
 #include <cstring>
 #include <algorithm>
 #include <iostream>
 
-#ifndef _WIN32_
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
@@ -352,7 +353,13 @@ void LMDBEnv::open(const char *filename, unsigned flags)
    
    rc = mdb_env_open(dbenv, filename, MDB_NOSYNC | MDB_NOSUBDIR | flags, 0600);
    if (rc != MDB_SUCCESS)
-      throw LMDBException("Failed to open db " + std::string(filename) + " (" + errorString(rc) + ")");
+   {
+      std::stringstream ss;
+      ss << "Failed to open db " << std::string(filename) << 
+         " (" + errorString(rc) + ")" << std::endl;
+      std::cout << ss.str();
+      throw LMDBException(ss.str());
+   }
 
    filename_ = std::string(filename);
 }
@@ -363,6 +370,24 @@ void LMDBEnv::close()
    {
       mdb_env_close(dbenv);
       dbenv = nullptr;
+   }
+}
+
+size_t LMDBEnv::getMapSize() const
+{
+   return mdb_env_getmapsize(dbenv);
+}
+
+void LMDBEnv::setMapSize(size_t sz)
+{
+   auto rc = mdb_env_set_mapsize(dbenv, sz);
+   if (rc != MDB_SUCCESS)
+   {
+      std::stringstream ss;
+      ss << "failed to insert set map size, returned following error string: " << 
+         errorString(rc) << std::endl;
+      std::cout << ss.str();
+      throw LMDBException(ss.str());
    }
 }
 
@@ -506,7 +531,6 @@ void LMDBEnv::Transaction::rollback()
    throw std::runtime_error("unimplemented");
 }
 
-
 LMDB::~LMDB()
 {
    try
@@ -545,7 +569,7 @@ void LMDB::open(LMDBEnv *_env, const std::string &name)
 {
    if (isOpen())
    {
-      throw std::runtime_error("LMDB already open");
+      throw LMDBException("LMDB already open");
    }
    this->env = _env;
    
@@ -573,23 +597,24 @@ void LMDB::insert(
 {
    MDB_val mkey = { key.len, const_cast<char*>(key.data) };
    MDB_val mval = { value.len, const_cast<char*>(value.data) };
-   
+
    auto tID = std::this_thread::get_id();
 
    std::unique_lock<std::mutex> lock(env->threadTxMutex_);
-   
+
    auto txnIter = env->txForThreads_.find(tID);
 
    if (txnIter == env->txForThreads_.end())
       throw LMDBException("Failed to insert: need transaction");
    lock.unlock();
-   
+
    int rc = mdb_put(txnIter->second.txn_, dbi, &mkey, &mval, 0);
-   if (rc != MDB_SUCCESS)
-   {
-      std::cout << "failed to insert data, returned following error string: " << errorString(rc) << std::endl;
-      throw LMDBException("Failed to insert (" + errorString(rc) + ")");
-   }
+   if (rc == MDB_SUCCESS)
+      return;
+
+   std::cout << "failed to insert data, returned following error string: " <<
+      errorString(rc) << std::endl;
+   throw LMDBException("Failed to insert (" + errorString(rc) + ")");
 }
 
 void LMDB::erase(const CharacterArrayRef& key)
@@ -603,7 +628,7 @@ void LMDB::erase(const CharacterArrayRef& key)
    lock.unlock();
       
    MDB_val mkey = { key.len, const_cast<char*>(key.data) };
-   int rc = mdb_del(txnIter->second.txn_, dbi, &mkey, 0, 0);
+   int rc = mdb_del(txnIter->second.txn_, dbi, &mkey, 0);
    if (rc != MDB_SUCCESS && rc != MDB_NOTFOUND)
    {
       std::cout << "failed to erase data, returned following error string: " << errorString(rc) << std::endl;
@@ -624,7 +649,7 @@ void LMDB::wipe(const CharacterArrayRef& key)
 
    MDB_val mdb_data_obj = value(key);
    MDB_val mkey = { key.len, const_cast<char*>(key.data) };
-   int rc = mdb_del(txnIter->second.txn_, dbi, &mkey, 0, MDB_WIPE_DATA);
+   int rc = mdb_del(txnIter->second.txn_, dbi, &mkey, 0); // , MDB_WIPE_DATA);
    if (rc != MDB_SUCCESS && rc != MDB_NOTFOUND)
    {
       std::cout << "failed to erase data, returned following error string: " << errorString(rc) << std::endl;

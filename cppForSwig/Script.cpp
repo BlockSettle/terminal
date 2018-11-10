@@ -11,6 +11,8 @@
 #include "Signer.h"
 #include "cryptopp/oids.h"
 
+using namespace std;
+
 //dtors
 StackValue::~StackValue()
 {}
@@ -714,6 +716,32 @@ SIGHASH_TYPE StackInterpreter_BCH::getSigHashSingleByte(uint8_t sighashbyte) con
    if (!(sighashbyte & 0x40))
       throw ScriptException("invalid sighash for bch sig");
    return SIGHASH_TYPE(sighashbyte & 0xBF);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void StackInterpreter::op_min(void)
+{
+   auto&& b = pop_back();
+   auto&& a = pop_back();
+
+   auto aI = rawBinaryToInt(a);
+   auto bI = rawBinaryToInt(b);
+
+   auto cI = min(aI, bI);
+   stack_.push_back(move(intToRawBinary(cI)));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void StackInterpreter::op_max(void)
+{
+   auto&& b = pop_back();
+   auto&& a = pop_back();
+
+   auto aI = rawBinaryToInt(a);
+   auto bI = rawBinaryToInt(b);
+
+   auto cI = max(aI, bI);
+   stack_.push_back(move(intToRawBinary(cI)));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

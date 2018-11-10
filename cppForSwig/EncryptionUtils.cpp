@@ -14,10 +14,9 @@
 //#include <openssl/ecdsa.h>
 //#include <openssl/obj_mac.h>
 
+using namespace std;
 
 #define CRYPTO_DEBUG false
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 // We have to explicitly re-define some of these methods...
