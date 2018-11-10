@@ -175,7 +175,13 @@ static int GuiApp(int argc, char** argv)
    }
 
    QString location = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-   QLockFile lockFile(location + QLatin1String("/blocksettle.lock"));
+#ifdef QT_DEBUG
+   QString userName = QDir::home().dirName();
+   QString lockFilePath = location + QLatin1String("/blocksettle-") + userName + QLatin1String(".lock");
+#else
+   QString lockFilePath = location + QLatin1String("/blocksettle.lock");
+#endif
+   QLockFile lockFile(lockFilePath);
    lockFile.setStaleLockTime(0);
 
    if (!lockFile.tryLock()) {
