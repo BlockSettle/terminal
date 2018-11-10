@@ -1,4 +1,7 @@
 #include "CommonTypes.h"
+#include "SettlementMonitor.h"
+
+Q_DECLARE_METATYPE(bs::PayoutSigner::Type)
 
 using namespace bs::network;
 
@@ -16,6 +19,7 @@ public:
       qRegisterMetaType<bs::network::MDField>("MDField");
       qRegisterMetaType<bs::network::MDFields>("MDFields");
       qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
+      qRegisterMetaType<bs::PayoutSigner::Type>();
    }
 
    ~CommonTypesMetaRegistration() noexcept = default;

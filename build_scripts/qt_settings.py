@@ -16,7 +16,7 @@ class QtSettings(Configurator):
         self._release = '5.11'
         self._version = self._release + '.2'
         self._package_name = 'qt-everywhere-src-' + self._version
-        self._script_revision = '2'
+        self._script_revision = '3'
 
         if self._project_settings.on_windows():
             self._package_url = 'http://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
@@ -43,7 +43,7 @@ class QtSettings(Configurator):
 
         modules_to_skip = ['doc', 'imageformats', 'webchannel', 'webview', 'sensors', 'serialport',
                            'script', 'multimedia', 'wayland', 'location', 'webglplugin', 'gamepad',
-                           'purchasing', 'canvas3d', 'speech', 'charts']
+                           'purchasing', 'canvas3d', 'speech']
         sql_drivers_to_skip = ['db2', 'oci', 'tds', 'sqlite2', 'odbc', 'ibase', 'psql']
 
         if self._project_settings.on_windows():

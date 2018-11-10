@@ -73,7 +73,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       settlIdStr_ = settlAddr_->getAsset()->settlementId().toHexStr();
    }
 
-   settlMonitor_ = settlWallet_->createMonitor(settlAddr_, logger);
+   settlMonitor_ = settlWallet_->createMonitorCb(settlAddr_, logger);
    if (settlMonitor_ == nullptr) {
       throw std::runtime_error("failed to create Settlement monitor");
    }
@@ -90,9 +90,6 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       }
    });
    addrVerificator_->SetBSAddressList(bsAddresses);
-
-   connect(settlMonitor_.get(), &bs::SettlementMonitor::payInDetected, this, &DealerXBTSettlementContainer::onPayInDetected);
-   connect(settlMonitor_.get(), &bs::SettlementMonitor::payOutDetected, this, &DealerXBTSettlementContainer::onPayOutDetected);
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
@@ -172,7 +169,9 @@ void DealerXBTSettlementContainer::activate()
    addrVerificator_->RegisterBSAuthAddresses();
    addrVerificator_->RegisterAddresses();
 
-   settlMonitor_->start();
+   settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
+   , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
+   , [this](bs::PayoutSigner::Type) {});
 }
 
 void DealerXBTSettlementContainer::deactivate()
@@ -181,6 +180,13 @@ void DealerXBTSettlementContainer::deactivate()
    if (settlMonitor_) {
       settlMonitor_->stop();
       settlMonitor_ = nullptr;
+   }
+}
+
+void DealerXBTSettlementContainer::zcReceived(unsigned int)
+{
+   if (settlMonitor_) {
+      settlMonitor_->checkNewEntries();
    }
 }
 
@@ -227,7 +233,7 @@ void DealerXBTSettlementContainer::onPayInDetected(int confirmationsNumber, cons
    onCptyVerified();
 }
 
-void DealerXBTSettlementContainer::onPayOutDetected(int confirmationsNumber, bs::PayoutSigner::Type signedBy)
+void DealerXBTSettlementContainer::onPayOutDetected(bs::PayoutSigner::Type signedBy)
 {
    logger_->debug("[XbtSettlementContainer] Pay-out detected! Signed by {}"
       , bs::PayoutSigner::toString(signedBy));

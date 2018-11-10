@@ -4,6 +4,7 @@
 #include "FastLock.h"
 #include "HDWallet.h"
 #include "PlainWallet.h"
+#include "SettlementMonitor.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -680,8 +681,18 @@ void WalletsManager::UpdateSavedWallets()
 bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wallet> &wallet
    , std::function<void(bs::Transaction::Direction)> cb)
 {
-   if (!tx.isInitialized() || !armory_ || !wallet) {
-      logger_->debug("Failed to get TX direction");
+   if (!tx.isInitialized()) {
+      logger_->error("[WalletsManager::GetTransactionDirection] TX not initialized");
+      return false;
+   }
+
+   if (!armory_) {
+      logger_->error("[WalletsManager::GetTransactionDirection] armory not set");
+      return false;
+   }
+
+   if (!wallet) {
+      logger_->error("[WalletsManager::GetTransactionDirection] wallet not specified");
       return false;
    }
 
