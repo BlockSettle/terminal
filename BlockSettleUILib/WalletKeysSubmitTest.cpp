@@ -22,6 +22,7 @@ WalletKeysSubmitTest::WalletKeysSubmitTest(const std::shared_ptr<ApplicationSett
    addCheckbox(WalletKeysSubmitWidget::HideAuthEmailLabel, "HideAuthEmailLabel");
    addCheckbox(WalletKeysSubmitWidget::HideAuthControlsOnSignClicked, "HideAuthControlsOnSignClicked");
    addCheckbox(WalletKeysSubmitWidget::HidePubKeyFingerprint, "HidePubKeyFingerprint");
+   addCheckbox(WalletKeysSubmitWidget::HideProgressBar, "HideProgressBar");
 }
 
 WalletKeysSubmitTest::~WalletKeysSubmitTest() = default;

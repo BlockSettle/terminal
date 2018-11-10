@@ -45,7 +45,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    connect(settlContainer_.get(), &ReqCCSettlementContainer::timerStarted, [this](int msDuration) { ui_->progressBar->setMaximum(msDuration); });
    connect(settlContainer_.get(), &ReqCCSettlementContainer::walletInfoReceived, this, &CCSettlementTransactionWidget::initSigning);
    connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &CCSettlementTransactionWidget::onCancel);
-   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
+   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &CCSettlementTransactionWidget::onKeyChanged);
 
    settlContainer_->activate();
 
@@ -122,12 +122,20 @@ void CCSettlementTransactionWidget::initSigning()
       || !settlContainer_->isAcceptable()) {
       return;
    }
-   ui_->widgetSubmitKeys->init(MobileClientRequest::SignWallet, settlContainer_->walletId()
+   ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::NoFlag
+      | WalletKeysSubmitWidget::HideAuthConnectButton
+      | WalletKeysSubmitWidget::HideAuthCombobox
+      | WalletKeysSubmitWidget::HideGroupboxCaption
+      | WalletKeysSubmitWidget::AuthIdVisible
+      | WalletKeysSubmitWidget::HideAuthEmailLabel
+      | WalletKeysSubmitWidget::HidePubKeyFingerprint
+      | WalletKeysSubmitWidget::HideProgressBar
+   );
+   ui_->widgetSubmitKeys->init(MobileClientRequest::SignMarketTransaction, settlContainer_->walletId()
       , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys()
       , appSettings_);
    ui_->widgetSubmitKeys->setFocus();
-   QApplication::processEvents();
-   adjustSize();
+   ui_->widgetSubmitKeys->resume();
 }
 
 void CCSettlementTransactionWidget::onPaymentVerified(bool result, QString error)
@@ -148,6 +156,14 @@ void CCSettlementTransactionWidget::onError(QString text)
 void CCSettlementTransactionWidget::onInfo(QString text)
 {
    ui_->labelHint->setText(text);
+}
+
+void CCSettlementTransactionWidget::onKeyChanged()
+{
+   updateAcceptButton();
+   if (ui_->widgetSubmitKeys->isKeyFinal()) {
+      onAccept();
+   }
 }
 
 void CCSettlementTransactionWidget::onAccept()

@@ -27,7 +27,7 @@ class ReqCCSettlementContainer;
 namespace SwigClient
 {
    class BtcWallet;
-};
+}
 
 class CCSettlementTransactionWidget : public QWidget
 {
@@ -55,6 +55,7 @@ private slots:
    void onPaymentVerified(bool, QString);
    void onError(QString);
    void onInfo(QString);
+   void onKeyChanged();
 
 private:
    std::unique_ptr<Ui::CCSettlementTransactionWidget> ui_;
@@ -65,6 +66,7 @@ private:
    std::shared_ptr<spdlog::logger>     logger_;
    const std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ReqCCSettlementContainer>    settlContainer_;
+
 };
 
 #endif // __CC_SETTLEMENT_TRANSACTION_WIDGET_H__

@@ -12,8 +12,6 @@ namespace
 {
    const int kConnectTimeoutSeconds = 10;
 
-   const int kTimeoutSeconds = 120;
-
    const int kKeySize = 32;
 
    // Obtained from http://185.213.153.44:8181/key
@@ -126,14 +124,15 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
    email_ = email;
    walletId_ = walletId;
 
+   QString action = getMobileClientRequestText(requestType);
+   bool newDevice = isMobileClientNewDeviceNeeded(requestType);
+   int timeout = getMobileClientTimeout(requestType);
+
    CreateRequest request;
    request.set_type(RequestDeviceKey);
    request.mutable_devicekey()->set_keyid(walletId_);
-   request.set_expiration(kTimeoutSeconds);
+   request.set_expiration(timeout);
    request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
-
-   QString action = getMobileClientRequestText(requestType);
-   bool newDevice = isMobileClientNewDeviceNeeded(requestType);
 
    request.set_title(action.toStdString() + " " + walletId);
    request.set_apikey(kApiKey);

@@ -41,6 +41,7 @@ public:
    void setPasswordLabelAsOld();
    void setHideAuthEmailLabel(bool value);
    void setHideAuthControlsOnSignClicked(bool value);
+   void setHideProgressBar(bool value);
 
 signals:
    void keyChanged(int index, SecureBinaryData);
@@ -81,6 +82,7 @@ private:
    bool        showAuthId_ = false;
    bool        hideAuthEmailLabel_ = false;
    bool        hideAuthControlsOnSignClicked_ = false;
+   bool        hideProgressBar_ = false;
    MobileClientRequest requestType_{};
    std::vector<std::string> knownDeviceIds_;
 };

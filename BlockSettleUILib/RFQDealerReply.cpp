@@ -226,7 +226,7 @@ void RFQDealerReply::onHDWalletInfo(unsigned int id
       return;
    }
 
-   EnterWalletPassword passwordDialog(MobileClientRequest::SignWallet, this);
+   EnterWalletPassword passwordDialog(MobileClientRequest::SignMarketTransaction, this);
    passwordDialog.init(autoSignWalletId_, keyRank
       , encTypes, encKeys, appSettings_
       , tr("Activate auto sign"));
@@ -339,8 +339,9 @@ void RFQDealerReply::reset()
          }
       }
 
-      const auto assetType = assetManager_->GetAssetTypeForSecurity(currentQRN_.security);
+      auto assetType = assetManager_->GetAssetTypeForSecurity(currentQRN_.security);
       if (assetType == bs::network::Asset::Type::Undefined) {
+         assetType = bs::network::Asset::PrivateMarket;
          logger_->error("[RFQDealerReply::reset] could not get asset type for {}", currentQRN_.security);
       }
       const auto priceDecimals = UiUtils::GetPricePrecisionForAssetType(assetType);
