@@ -13,7 +13,6 @@
 #include "ReqCCSettlementContainer.h"
 
 #include <QLabel>
-#include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/logger.h>
 

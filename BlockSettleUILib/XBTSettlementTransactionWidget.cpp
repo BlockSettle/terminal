@@ -10,8 +10,6 @@
 #include "WalletsManager.h"
 #include <CelerClient.h>
 
-#include <QtConcurrent/QtConcurrentRun>
-
 #include <spdlog/logger.h>
 
 

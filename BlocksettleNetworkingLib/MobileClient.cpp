@@ -149,6 +149,10 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
    case MobileClientRequest::ActivateWalletNewDevice:
       request.mutable_devicekey()->set_registerkey(RegisterKeyAdd);
       break;
+   case MobileClientRequest::DeactivateWalletDevice:
+      // No need to update anything, the server will sync it as needed to known device list
+      request.mutable_devicekey()->set_registerkey(RegisterKeyKeep);
+      break;
    default:
       request.mutable_devicekey()->set_registerkey(RegisterKeyKeep);
       break;

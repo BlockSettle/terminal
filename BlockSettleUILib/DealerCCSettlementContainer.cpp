@@ -1,5 +1,4 @@
 #include "DealerCCSettlementContainer.h"
-#include <QtConcurrent/QtConcurrentRun>
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
 #include "MetaData.h"

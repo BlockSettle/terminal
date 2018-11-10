@@ -2,7 +2,6 @@
 #include <spdlog/logger.h>
 #include <QQmlComponent>
 #include <QQmlContext>
-#include <QtConcurrent/QtConcurrentRun>
 #include "AssetManager.h"
 #include "CurrencyPair.h"
 #include "MarketDataProvider.h"

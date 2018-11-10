@@ -10,7 +10,6 @@
 #include <QShortcut>
 #include <QStringList>
 #include <QSystemTrayIcon>
-#include <QtConcurrent/QtConcurrentRun>
 #include <QToolBar>
 #include <QTreeView>
 
