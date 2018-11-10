@@ -339,9 +339,8 @@ void RFQDealerReply::reset()
          }
       }
 
-      auto assetType = assetManager_->GetAssetTypeForSecurity(currentQRN_.security);
+      const auto assetType = assetManager_->GetAssetTypeForSecurity(currentQRN_.security);
       if (assetType == bs::network::Asset::Type::Undefined) {
-         assetType = bs::network::Asset::PrivateMarket;
          logger_->error("[RFQDealerReply::reset] could not get asset type for {}", currentQRN_.security);
       }
       const auto priceDecimals = UiUtils::GetPricePrecisionForAssetType(assetType);
