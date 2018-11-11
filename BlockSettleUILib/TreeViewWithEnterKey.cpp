@@ -46,12 +46,15 @@ void TreeViewWithEnterKey::keyPressEvent(QKeyEvent *event)
 
 void TreeViewWithEnterKey::mouseReleaseEvent(QMouseEvent *event)
 {
+   // Disabled from the BST-1401 request
+#if 0
    if (!indexAt(event->pos()).isValid()) {
       auto selModel = selectionModel();
       if (selModel != nullptr) {
          selModel->clear();
       }
    }
+#endif
 
    QTreeView::mouseReleaseEvent(event);
 }
