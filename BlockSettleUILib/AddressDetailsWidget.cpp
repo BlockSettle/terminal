@@ -211,16 +211,23 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate) {
    // Callback to process ledger entries (pages) from the ledger delegate. Gets
    // Tx entries from Armory.
    const auto &cbLedger = [this, cbCollectTXs]
-                          (std::vector<ClientClasses::LedgerEntry> entries) {
-      // Get the hash and TXEntry object for each relevant Tx hash.
-      for(const auto &entry : entries) {
-         BinaryData searchHash(entry.getTxHash());
-         const auto &itTX = txMap_.find(searchHash);
-         if(itTX == txMap_.end()) {
-            txHashSet_.insert(searchHash);
-            txEntryHashSet_[searchHash] = bs::convertTXEntry(entry);
+                          (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) {
+      try {
+         auto le = entries.get();
+         // Get the hash and TXEntry object for each relevant Tx hash.
+         for(const auto &entry : le) {
+            BinaryData searchHash(entry.getTxHash());
+            const auto &itTX = txMap_.find(searchHash);
+            if(itTX == txMap_.end()) {
+               txHashSet_.insert(searchHash);
+               txEntryHashSet_[searchHash] = bs::convertTXEntry(entry);
+            }
          }
       }
+      catch(exception&) {
+         auto eptr = current_exception();
+      }
+
       if(!txHashSet_.empty()) {
          armory_->getTXsByHash(txHashSet_, cbCollectTXs);
       }
@@ -247,9 +254,14 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
       ui_->balance->setText(QString::number(curBalance, 'f', 8));
 
       const auto &cbLedgerDelegate = [this](AsyncClient::LedgerDelegate delegate) {
-         // UI changes in a non-main thread will trigger a crash. Invoke a new
-         // thread to handle the received data. (UI changes happen eventually.)
-         QMetaObject::invokeMethod(this, [this, delegate] { getTxData(delegate); });
+         try {
+            // UI changes in a non-main thread will trigger a crash. Invoke a new
+            // thread to handle the received data. (UI changes happen eventually.)
+            QMetaObject::invokeMethod(this, [this, &delegate] { getTxData(delegate); });
+         }
+         catch(exception&) {
+            auto eptr = current_exception();
+         }
       };
       if(!armory_->getLedgerDelegateForAddress(dummyWallet_.GetWalletId(),
                                                addrVal_,

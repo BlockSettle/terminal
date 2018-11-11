@@ -308,8 +308,9 @@ void hd::Leaf::firstInit(bool force)
    if (activateAddressesInvoked_ || !armory_) {
       return;
    }
-   const auto &cb = [this](std::vector<ClientClasses::LedgerEntry> entries) {
-      activateAddressesFromLedger(entries);
+   const auto &cb = [this](std::vector<ClientClasses::LedgerEntry> entries)->void {
+      std::vector<ClientClasses::LedgerEntry> leEntries = entries;
+      activateAddressesFromLedger(leEntries);
    };
    activateAddressesInvoked_ = true;
    armory_->getWalletsHistory({ GetWalletId() }, cb);
@@ -1279,11 +1280,18 @@ void hd::CCLeaf::validationProc()
                emit walletReset();
             }
          };
-         const auto &cbHistory = [this, cbCheck, addr=ledger.first, addressesToCheck](std::vector<ClientClasses::LedgerEntry> entries) {
-            (*addressesToCheck)[addr] = entries.size();
+         const auto &cbHistory = [this, cbCheck, addr=ledger.first, addressesToCheck]
+                                 (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+            try {
+               auto le = entries.get();
+               (*addressesToCheck)[addr] = le.size();
 
-            for (const auto &entry : entries) {
-               armory_->getTxByHash(entry.getTxHash(), cbCheck);
+               for (const auto &entry : le) {
+                  armory_->getTxByHash(entry.getTxHash(), cbCheck);
+               }
+            }
+            catch(exception&) {
+               auto eptr = current_exception();
             }
          };
          ledger.second.getHistoryPage(0, cbHistory);  //? Shouldn't we continue past the first page?

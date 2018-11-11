@@ -116,7 +116,8 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
             auto out = tx.getTxOutCopy(i);
             const auto addr = bs::Address::fromTxOut(out);
             if (wallet->containsAddress(addr)) {
-               if (selInputs->SetUTXOSelection(out.getParentHash(), out.getIndex())) {
+               if (selInputs->SetUTXOSelection(tx.getThisHash(),
+                                               out.getIndex())) {
                   cntOutputs++;
                }
             }
@@ -232,12 +233,18 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       onTransactionUpdated();
    };
 
-   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](std::vector<UTXO> utxos) {
-      QMetaObject::invokeMethod(this, [this, wallet, utxos, txHashSet, cbTXs] {
-         SetFixedWalletAndInputs(wallet, utxos);
+   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
+      try {
+         auto inUTXOs = utxos.get();
+         QMetaObject::invokeMethod(this, [this, wallet, inUTXOs, txHashSet, cbTXs] {
+            SetFixedWalletAndInputs(wallet, inUTXOs);
 
-         armory_->getTXsByHash(txHashSet, cbTXs);
-      });
+            armory_->getTXsByHash(txHashSet, cbTXs);
+         });
+      }
+      catch(exception&) {
+         auto eptr = current_exception();
+      }
    };
    wallet->getRBFTxOutList(cbRBFInputs);
 }

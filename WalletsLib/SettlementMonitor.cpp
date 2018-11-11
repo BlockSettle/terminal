@@ -22,31 +22,40 @@ void bs::SettlementMonitor::checkNewEntries()
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
       , addressString_);
 
-   const auto &cbHistory = [this] (std::vector<ClientClasses::LedgerEntry> entries) {
-      if (entries.empty()) {
-         return;
+   const auto &cbHistory = [this](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+      try {
+         auto le = entries.get();
+         if (le.empty()) {
+            return;
+         }
+
+         for (const auto &entry : le) {
+            const auto &cbPayOut = [this, entry](bool ack) {
+               if (ack) {
+                  SendPayOutNotification(entry);
+               }
+               else {
+                  logger_->error("[SettlementMonitor::checkNewEntries] not "
+                                 "payin or payout transaction detected for "
+                                 "settlement address {}", addressString_);
+               }
+            };
+            const auto &cbPayIn = [this, entry, cbPayOut](bool ack) {
+               if (ack) {
+                  SendPayInNotification(armory_->getConfirmationsNumber(entry),
+                                        entry.getTxHash());
+               }
+               else {
+                  IsPayOutTransaction(entry, cbPayOut);
+               }
+            };
+            IsPayInTransaction(entry, cbPayIn);
+         }
+      }
+      catch(exception&) {
+         auto eptr = current_exception();
       }
 
-      for (const auto &entry : entries) {
-         const auto &cbPayOut = [this, entry](bool ack) {
-            if (ack) {
-               SendPayOutNotification(entry);
-            }
-            else {
-               logger_->error("[SettlementMonitor::checkNewEntries] not payin or payout transaction detected for settlement address {}"
-                  , addressString_);
-            }
-         };
-         const auto &cbPayIn = [this, entry, cbPayOut](bool ack) {
-            if (ack) {
-               SendPayInNotification(armory_->getConfirmationsNumber(entry), entry.getTxHash());
-            }
-            else {
-               IsPayOutTransaction(entry, cbPayOut);
-            }
-         };
-         IsPayInTransaction(entry, cbPayIn);
-      }
       {
          FastLock locker(walletLock_);
          if (!rtWallet_) {

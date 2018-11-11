@@ -88,7 +88,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
                   if (prevTx.isInitialized() && wallet) {
                      TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
                      value += prevOut.getValue();
-                     addAddress(wallet, prevOut, false, isTxOutgoing);
+                     addAddress(wallet, prevOut, false, isTxOutgoing,
+                                prevTx.getThisHash());
                   }
                   else {
                      QStringList items;
@@ -103,7 +104,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
                for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
                   TxOut out = item->tx.getTxOutCopy(i);
                   value -= out.getValue();
-                  addAddress(wallet, out, true, isTxOutgoing);
+                  addAddress(wallet, out, true, isTxOutgoing,
+                             item->tx.getThisHash());
                }
                ui_->labelComment->setText(QString::fromStdString(wallet->GetTransactionComment(item->tx.getThisHash())));
             }
@@ -175,7 +177,11 @@ QSize TransactionDetailDialog::minimumSizeHint() const
    return minimumSize();
 }
 
-void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wallet, const TxOut& out, bool isOutput, bool isTxOutgoing)
+void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wallet,
+                                         const TxOut& out,
+                                         bool isOutput,
+                                         bool isTxOutgoing,
+                                         const BinaryData& txHash)
 {
    const auto addr = bs::Address::fromTxOut(out);
    const auto &addressWallet = walletsManager_->GetWalletByAddress(addr.id());
@@ -226,9 +232,11 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wall
    auto parent = isOutput ? itemReceiver : itemSender;
    auto item = new QTreeWidgetItem(items);
    item->setData(0, Qt::UserRole, displayedAddress);
-   const auto txHash = QString::fromStdString(out.getParentHash().toHexStr(true));
-   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(out) << QString::number(out.getValue()) << txHash);
-   txItem->setData(0, Qt::UserRole, txHash);
+   const auto txHashStr = QString::fromStdString(txHash.toHexStr(true));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(out)
+                                     << QString::number(out.getValue())
+                                     << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
    item->addChild(txItem);
    parent->addChild(item);
 }

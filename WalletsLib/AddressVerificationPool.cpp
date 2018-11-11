@@ -7,7 +7,8 @@
 
 #include <QString>
 
-AddressVerificationPool::AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger, const std::string& poolId
+AddressVerificationPool::AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger
+   , const std::string& poolId
    , const std::shared_ptr<ArmoryConnection> &armory)
    : logger_(logger)
    , poolId_(poolId)

@@ -422,17 +422,34 @@ void TransactionsViewModel::loadLedgerEntries()
       return;
    }
    initialLoadCompleted_ = false;
-   const auto &cbPageCount = [this](uint64_t pageCnt) {
-      for (uint32_t pageId = 0; pageId < pageCnt; ++pageId) {
-         const auto &cbLedger = [this, pageId, pageCnt](std::vector<ClientClasses::LedgerEntry> entries) {
-            rawData_[pageId] = bs::convertTXEntries(entries);
-            if (rawData_.size() >= pageCnt) {
-               ledgerToTxData();
-            }
-         };
-         ledgerDelegate_.getHistoryPage(pageId, cbLedger);
+   const auto &cbPageCount = [this](ReturnMessage<uint64_t> pageCnt)->void {
+      try {
+         auto inPageCnt = pageCnt.get();
+         for (uint64_t pageId = 0; pageId < inPageCnt; ++pageId) {
+            const auto &cbLedger = [this, pageId, inPageCnt]
+               (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+               try {
+                 auto le = entries.get();
+                 rawData_[pageId] = bs::convertTXEntries(le);
+               }
+               catch (exception&) {
+                  // FIX ARMORY REBASE - Do something with the exception?
+                  auto eptr = current_exception();
+               }
+
+               if (rawData_.size() >= inPageCnt) {
+                  ledgerToTxData();
+               }
+            };
+            ledgerDelegate_.getHistoryPage(pageId, cbLedger);
+         }
+      }
+      catch (exception&) {
+         // FIX ARMORY REBASE - Do something with the exception?
+         auto eptr = current_exception();
       }
    };
+
    ledgerDelegate_.getPageCount(cbPageCount);
 }
 

@@ -316,15 +316,15 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 
    switch (get<NetworkType>(netType)) {
    case NetworkType::MainNet:
-      config.selectNetwork("Main");
+      config.selectNetwork(NETWORK_MODE_MAINNET);
       break;
 
    case NetworkType::TestNet:
-      config.selectNetwork("Test");
+      config.selectNetwork(NETWORK_MODE_TESTNET);
       break;
 
    case NetworkType::RegTest:
-      config.selectNetwork("Regtest");
+      config.selectNetwork(NETWORK_MODE_REGTEST);
       break;
 
    default:    break;
@@ -480,11 +480,7 @@ int ApplicationSettings::GetSatoshiPort() const
 
 SocketType ApplicationSettings::GetArmorySocketType() const
 {
-    if (get<int>(armoryDbPort) != GetDefaultArmoryPort()) {
-        return SocketHttp;
-    }
-
-    return SocketFcgi;
+   return SocketHttp;
 }
 
 int ApplicationSettings::GetDefaultArmoryPort() const
@@ -523,15 +519,9 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    settings.netType = get<NetworkType>(netType);
    settings.ignoreAllZC = get<bool>(ApplicationSettings::ignoreAllZC);
    settings.runLocally = get<bool>(ApplicationSettings::runArmoryLocally);
-   if (settings.runLocally) {
-      settings.armoryDBIp = "127.0.0.1";
-      settings.armoryDBPort = std::to_string(GetDefaultArmoryPort());
-      settings.socketType = SocketFcgi;
-   } else {
-      settings.armoryDBIp = get<std::string>(ApplicationSettings::armoryDbIp);
-      settings.armoryDBPort = get<std::string>(ApplicationSettings::armoryDbPort);
-      settings.socketType = GetArmorySocketType();
-   }
+   settings.armoryDBIp = get<std::string>(ApplicationSettings::armoryDbIp);
+   settings.armoryDBPort = get<std::string>(ApplicationSettings::armoryDbPort);
+   settings.socketType = GetArmorySocketType();
 
    settings.armoryExecutablePath = QDir::cleanPath(get<QString>(ApplicationSettings::armoryPathName));
    settings.dbDir = GetDBDir();

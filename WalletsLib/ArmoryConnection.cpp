@@ -311,14 +311,22 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
       logger_->error("[ArmoryConnection::getWalletsHistory] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](std::vector<ClientClasses::LedgerEntry> entries) {
-      if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [cb, entries] { cb(entries); });
+   const auto &cbWrap = [this, cb]
+                        (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) {
+      try {
+         auto le = entries.get();
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [cb, le] { cb(std::move(le)); });
+         }
+         else {
+            cb(std::move(le));
+         }
       }
-      else {
-         cb(entries);
+      catch(exception&) {
+         auto eptr = current_exception();
       }
    };
+
    bdv_->getHistoryForWalletSelection(walletIDs, "ascending", cbWrap);
    return true;
 }
@@ -331,28 +339,36 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
       return false;
    }
    QPointer<QObject> contextSmartPtr = context;
-   const auto &cbWrap = [this, cb, context, contextSmartPtr](const AsyncClient::LedgerDelegate &delegate) {
-      if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [cb, delegate, context, contextSmartPtr]{
-            if (context) {
-               if (contextSmartPtr) {
-                  cb(delegate);
+   const auto &cbWrap = [this, cb, context, contextSmartPtr]
+                        (ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
+      try {
+         auto ld = delegate.get();
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [cb, ld, context, contextSmartPtr]{
+               if (context) {
+                  if (contextSmartPtr) {
+                     cb(ld);
+                  }
+               } else {
+                  cb(ld);
                }
-            } else {
-               cb(delegate);
-            }
-         });
+            });
+         }
+         else {
+            cb(ld);
+         }
       }
-      else {
-         cb(delegate);
+      catch(exception&) {
+         auto eptr = current_exception();
       }
    };
    bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbWrap);
    return true;
 }
 
-bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletId, const std::vector<bs::Address> addresses
-   , std::function<void(std::map<bs::Address, AsyncClient::LedgerDelegate>)> cb)
+bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletId,
+                                       const std::vector<bs::Address> addresses,
+     std::function<void(std::map<bs::Address, AsyncClient::LedgerDelegate>)> cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[ArmoryConnection::getLedgerDelegatesForAddresses] invalid state: {}", (int)state_.load());
@@ -363,9 +379,17 @@ bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletI
    auto result = std::make_shared<std::map<bs::Address, AsyncClient::LedgerDelegate>>();
    for (const auto &addr : addresses) {
       addrSet->insert(addr);
-      const auto &cbProcess = [this, addrSet, result, addr, cb](AsyncClient::LedgerDelegate delegate) {
-         addrSet->erase(addr);
-         (*result)[addr] = delegate;
+      const auto &cbProcess = [this, addrSet, result, addr, cb]
+                              (ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
+         try {
+            auto ld = delegate.get();
+            addrSet->erase(addr);
+            (*result)[addr] = ld;
+         }
+         catch(exception&) {
+            auto eptr = current_exception();
+         }
+
          if (addrSet->empty()) {
             if (cbInMainThread_) {
                QMetaObject::invokeMethod(this, [cb, result] { cb(*result); });
@@ -386,12 +410,25 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(AsyncClient::
       logger_->error("[ArmoryConnection::getWalletsLedgerDelegate] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](AsyncClient::LedgerDelegate delegate) {
-      if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [cb, delegate]{ cb(delegate); });
+   const auto &cbWrap = [this, cb](ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
+      try {
+         auto ld = delegate.get();
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [cb, ld]{
+               try {
+                  cb(ld);
+               }
+               catch(exception& e) {
+                  cout << "UH OH! Error = " << e.what() << endl;
+               }
+            });
+         }
+         else {
+            cb(ld);
+         }
       }
-      else {
-         cb(delegate);
+      catch(exception&) {
+         auto eptr = current_exception();
       }
    };
    bdv_->getLedgerDelegateForWallets(cbWrap);
@@ -449,14 +486,16 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
    if (addGetTxCallback(hash, cb)) {
       return true;
    }
-   const auto &cbUpdateCache = [this, hash](Tx tx) {
-      if (tx.isInitialized()) {
-         txCache_.put(hash, tx);
+   const auto &cbUpdateCache = [this, hash](ReturnMessage<Tx> tx)->void {
+      try {
+         auto retTx = tx.get();
+         txCache_.put(hash, retTx);
+         callGetTxCallbacks(hash, retTx);
       }
-      else {
+      catch(exception&) {
+         auto eptr = current_exception();
          logger_->warn("[ArmoryConnection::getTxByHash] received uninited TX for hash {}", hash.toHexStr(true));
       }
-      callGetTxCallbacks(hash, tx);
    };
    bdv_->getTxByHash(hash, cbUpdateCache);
    return true;
@@ -512,8 +551,14 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
          if (addGetTxCallback(hash, cbUpdateTx)) {
             return true;
          }
-         bdv_->getTxByHash(hash, [this, hash](Tx tx) {
-            callGetTxCallbacks(hash, tx);
+         bdv_->getTxByHash(hash, [this, hash](ReturnMessage<Tx> tx)->void {
+            try {
+               auto retTx = tx.get();
+               callGetTxCallbacks(hash, retTx);
+            }
+            catch(exception&) {
+               auto eptr = current_exception();
+            }
          });
       }
    }
@@ -532,12 +577,18 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
    // For now, don't worry about chaining callbacks or Tx caches. Just dump
    // everything into the BDV. This may need to change in the future, making the
    // call more like getTxByHash().
-   const auto &cbWrap = [this, callback](BinaryData bd) {
-      if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [callback, bd] { callback(bd); });
+   const auto &cbWrap = [this, callback](ReturnMessage<BinaryData> bd) {
+      try {
+         auto header = bd.get();
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [callback, header] { callback(std::move(header)); });
+         }
+         else {
+            callback(header);
+         }
       }
-      else {
-         callback(bd);
+      catch(exception&) {
+         auto eptr = current_exception();
       }
    };
    bdv_->getRawHeaderForTxHash(inHash, cbWrap);
@@ -557,12 +608,18 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
    // For now, don't worry about chaining callbacks or Tx caches. Just dump
    // everything into the BDV. This may need to change in the future, making the
    // call more like getTxByHash().
-   const auto &cbWrap = [this, callback](BinaryData bd) {
-      if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [callback, bd] { callback(bd); });
+   const auto &cbWrap = [this, callback](ReturnMessage<BinaryData> bd) {
+      try {
+         auto header = bd.get();
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [callback, header] { callback(std::move(header)); });
+         }
+         else {
+            callback(header);
+         }
       }
-      else {
-         callback(bd);
+      catch(exception&) {
+         auto eptr = current_exception();
       }
    };
    bdv_->getHeaderByHeight(inHeight, cbWrap);
@@ -585,12 +642,18 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
          cb(0);
       }
    };
-   const auto &cbWrap = [this, cbProcess](ClientClasses::FeeEstimateStruct feeStruct) {
-      if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [cbProcess, feeStruct] { cbProcess(feeStruct); });
+   const auto &cbWrap = [this, cbProcess](ReturnMessage<ClientClasses::FeeEstimateStruct> feeStruct) {
+      try {
+         auto fs = feeStruct.get();
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [cbProcess, &fs] { cbProcess(fs); });
+         }
+         else {
+            cbProcess(fs);
+         }
       }
-      else {
-         cbProcess(feeStruct);
+      catch(exception&) {
+         auto eptr = current_exception();
       }
    };
    bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbWrap);

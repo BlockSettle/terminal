@@ -227,6 +227,10 @@ namespace bs {
       bool operator ==(const Wallet &w) const { return (w.GetWalletId() == GetWalletId()); }
       bool operator !=(const Wallet &w) const { return (w.GetWalletId() != GetWalletId()); }
 
+      // NB: We really shouldn't expose Armory's ReturnMessage<> this far out in
+      // the API. However, because the callback has to interact directly with a
+      // BtcWallet object, it is necessary in the case below.
+
       virtual bool containsAddress(const bs::Address &addr) = 0;
       virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
       virtual bool getAddrBalance(const bs::Address &addr) const;
@@ -237,7 +241,7 @@ namespace bs {
       virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX);
       virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
-      virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
+      virtual bool getRBFTxOutList(std::function<void(ReturnMessage<std::vector<UTXO>>)>) const;
       virtual std::string RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
          , bool asNew = false);
       void UnregisterWallet();
