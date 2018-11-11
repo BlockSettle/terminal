@@ -95,6 +95,8 @@ public:
    unsigned int getConfirmationsNumber(const ClientClasses::LedgerEntry &item) const;
    unsigned int getConfirmationsNumber(uint32_t blockNum) const;
 
+   bool isOnline() const { return isOnline_; }
+
 signals:
    void stateChanged(ArmoryConnection::State) const;
    void connectionError(QString) const;
