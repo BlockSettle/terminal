@@ -291,7 +291,9 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
       preOnlineRegIds_[regId] = cb;
    }
    else {
-      cb();
+      if (cb) {
+         cb();
+      }
    }
    return regId;
 }
