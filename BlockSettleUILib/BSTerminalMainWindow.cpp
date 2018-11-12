@@ -507,7 +507,7 @@ void BSTerminalMainWindow::ArmoryIsOffline()
 void BSTerminalMainWindow::initArmory()
 {
    armory_ = std::make_shared<ArmoryConnection>(logMgr_->logger()
-      , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
+      , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName), true);
    connect(armory_.get(), &ArmoryConnection::txBroadcastError, [](const QString &txHash, const QString &error) {
       NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { txHash, error });
    });
