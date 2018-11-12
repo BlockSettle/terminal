@@ -22,7 +22,6 @@ Q_DECLARE_METATYPE(BDMPhase)
 Q_DECLARE_METATYPE(NetworkType)
 Q_DECLARE_METATYPE(NodeStatus)
 
-//===================================================================================
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    , const std::string &txCacheFN, bool cbInMainThread)
    : QObject(nullptr)
@@ -293,11 +292,13 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
       preOnlineRegIds_[regId] = cb;
    }
    else {
-      if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [cb] { cb(); });
-      }
-      else {
-         cb();
+      if (cb) {
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [cb] { cb(); });
+         }
+         else {
+            cb();
+         }
       }
    }
    return regId;
@@ -499,6 +500,56 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
          });
       }
    }
+   return true;
+}
+
+bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
+                                             std::function<void(BinaryData)> callback)
+{
+   if (!bdv_ || (state_ != State::Ready)) {
+      logger_->error("[ArmoryConnection::getRawHeaderForTxHash] invalid state: {}",
+                     (int)state_.load());
+      return false;
+   }
+
+   // For now, don't worry about chaining callbacks or Tx caches. Just dump
+   // everything into the BDV. This may need to change in the future, making the
+   // call more like getTxByHash().
+   const auto &cbWrap = [this, callback](BinaryData bd) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [callback, bd] { callback(bd); });
+      }
+      else {
+         callback(bd);
+      }
+   };
+   bdv_->getRawHeaderForTxHash(inHash, cbWrap);
+
+   return true;
+}
+
+bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
+                                         std::function<void(BinaryData)> callback)
+{
+   if (!bdv_ || (state_ != State::Ready)) {
+      logger_->error("[ArmoryConnection::getHeaderByHeight] invalid state: {}",
+                     (int)state_.load());
+      return false;
+   }
+
+   // For now, don't worry about chaining callbacks or Tx caches. Just dump
+   // everything into the BDV. This may need to change in the future, making the
+   // call more like getTxByHash().
+   const auto &cbWrap = [this, callback](BinaryData bd) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [callback, bd] { callback(bd); });
+      }
+      else {
+         callback(bd);
+      }
+   };
+   bdv_->getHeaderByHeight(inHeight, cbWrap);
+
    return true;
 }
 

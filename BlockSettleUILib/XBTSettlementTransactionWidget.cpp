@@ -210,7 +210,7 @@ void XBTSettlementTransactionWidget::populateXBTDetails()
 
 void XBTSettlementTransactionWidget::onAccept()
 {
-   SecureBinaryData &authKey = (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary() && settlContainer_->payinReceived())
+   SecureBinaryData authKey = (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary() && settlContainer_->payinReceived())
       ? ui_->widgetSubmitKeysAuth->key() : ui_->widgetSubmitKeys->key();
    settlContainer_->accept(authKey);
 
