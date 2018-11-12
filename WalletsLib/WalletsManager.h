@@ -113,8 +113,6 @@ public:
 
    bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
 
-   bool getNewTransactions() const;
-
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
 
 signals:

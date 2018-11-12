@@ -235,17 +235,6 @@ bool bs::SettlementWallet::containsAddress(const bs::Address &addr)
    return false;
 }
 
-bool bs::SettlementWallet::hasWalletId(const std::string &id) const
-{
-   if (id == GetWalletId()) {
-      return true;
-   }
-   if (isTempWalletId(id)) {
-      return true;
-   }
-   return false;
-}
-
 bool bs::SettlementWallet::isTempWalletId(const std::string &id) const
 {
    return rtWalletsById_.find(id) != rtWalletsById_.end();

@@ -253,7 +253,13 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
    const auto &cbCollectTX = [this, state, cbCollectTXs](Tx tx) {
       state->txs[tx.getThisHash()] = tx;
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
+         if (!tx.isInitialized()) {
+            continue;
+         }
          TxIn in = tx.getTxInCopy(i);
+         if (!in.isInitialized()) {
+            continue;
+         }
          OutPoint op = in.getOutPoint();
          if (state->txs.find(op.getTxHash()) == state->txs.end()) {
             state->txHashSet.insert(op.getTxHash());
