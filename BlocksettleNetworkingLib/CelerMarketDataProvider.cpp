@@ -64,6 +64,8 @@ bool CelerMarketDataProvider::DisconnectFromMDSource()
 
    emit Disconnecting();
    celerClient_->CloseConnection();
+
+   return true;
 }
 
 bool CelerMarketDataProvider::IsConnectionActive() const

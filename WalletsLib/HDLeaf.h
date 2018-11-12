@@ -73,7 +73,6 @@ namespace bs {
          cb_write_last           cbWriteLast_ = nullptr;
          Portion                 currentPortion_;
          std::atomic_int         processing_;
-         std::atomic_bool        stopped_;
 
       private:
          bs::Address newAddress(const Path &path, AddressEntryType aet);
