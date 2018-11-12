@@ -17,7 +17,7 @@
 #include "ArmorySettings.h"
 #include "AsyncClient.h"
 #include "CacheFile.h"
-
+#include "BlockObj.h"
 
 class ArmoryConnection;
 class QProcess;
@@ -86,6 +86,10 @@ public:
 
    bool getTxByHash(const BinaryData &hash, std::function<void(Tx)>);
    bool getTXsByHash(const std::set<BinaryData> &hashes, std::function<void(std::vector<Tx>)>);
+   bool getRawHeaderForTxHash(const BinaryData& inHash,
+                              std::function<void(BinaryData)> callback);
+   bool getHeaderByHeight(const unsigned& inHeight,
+                          std::function<void(BinaryData)> callback);
 
    bool estimateFee(unsigned int nbBlocks, std::function<void(float)>);
 
@@ -126,6 +130,7 @@ private:
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<State>   state_ = { State::Unknown };
    std::atomic_uint     topBlock_ = { 0 };
+   std::shared_ptr<BlockHeader> getTxBlockHeader;
    TxCacheFile    txCache_;
 
    std::atomic_bool  regThreadRunning_;

@@ -460,6 +460,40 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
    return true;
 }
 
+bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
+                                             std::function<void(BinaryData)> callback)
+{
+   if (!bdv_ || (state_ != State::Ready)) {
+      logger_->error("[ArmoryConnection::getRawHeaderForTxHash] invalid state: {}",
+                     (int)state_.load());
+      return false;
+   }
+
+   // For now, don't worry about chaining callbacks or Tx caches. Just dump
+   // everything into the BDV. This may need to change in the future, making the
+   // call more like getTxByHash().
+   bdv_->getRawHeaderForTxHash(inHash, callback);
+
+   return true;
+}
+
+bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
+                                         std::function<void(BinaryData)> callback)
+{
+   if (!bdv_ || (state_ != State::Ready)) {
+      logger_->error("[ArmoryConnection::getHeaderByHeight] invalid state: {}",
+                     (int)state_.load());
+      return false;
+   }
+
+   // For now, don't worry about chaining callbacks or Tx caches. Just dump
+   // everything into the BDV. This may need to change in the future, making the
+   // call more like getTxByHash().
+   bdv_->getHeaderByHeight(inHeight, callback);
+
+   return true;
+}
+
 bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(float)> cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
