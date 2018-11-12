@@ -22,11 +22,12 @@ Q_DECLARE_METATYPE(BDMPhase)
 Q_DECLARE_METATYPE(NetworkType)
 Q_DECLARE_METATYPE(NodeStatus)
 
-//==========================================================================================================
-ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger, const std::string &txCacheFN)
+ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
+   , const std::string &txCacheFN, bool cbInMainThread)
    : QObject(nullptr)
    , logger_(logger)
    , txCache_(txCacheFN)
+   , cbInMainThread_(cbInMainThread)
    , regThreadRunning_(false)
    , connThreadRunning_(false)
    , maintThreadRunning_(true)
@@ -291,7 +292,14 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
       preOnlineRegIds_[regId] = cb;
    }
    else {
-      cb();
+      if (cb) {
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [cb] { cb(); });
+         }
+         else {
+            cb();
+         }
+      }
    }
    return regId;
 }
@@ -303,7 +311,15 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
       logger_->error("[ArmoryConnection::getWalletsHistory] invalid state: {}", (int)state_.load());
       return false;
    }
-   bdv_->getHistoryForWalletSelection(walletIDs, "ascending", cb);
+   const auto &cbWrap = [this, cb](std::vector<ClientClasses::LedgerEntry> entries) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [cb, entries] { cb(entries); });
+      }
+      else {
+         cb(entries);
+      }
+   };
+   bdv_->getHistoryForWalletSelection(walletIDs, "ascending", cbWrap);
    return true;
 }
 
@@ -314,7 +330,15 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
       logger_->error("[ArmoryConnection::getLedgerDelegateForAddress] invalid state: {}", (int)state_.load());
       return false;
    }
-   bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cb);
+   const auto &cbWrap = [this, cb](AsyncClient::LedgerDelegate delegate) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [cb, delegate]{ cb(delegate); });
+      }
+      else {
+         cb(delegate);
+      }
+   };
+   bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbWrap);
    return true;
 }
 
@@ -326,17 +350,20 @@ bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletI
       return false;
    }
 
-   auto addrSet = new std::set<bs::Address>;
-   auto result = new std::map<bs::Address, AsyncClient::LedgerDelegate>;
+   auto addrSet = std::make_shared<std::set<bs::Address>>();
+   auto result = std::make_shared<std::map<bs::Address, AsyncClient::LedgerDelegate>>();
    for (const auto &addr : addresses) {
       addrSet->insert(addr);
-      const auto &cbProcess = [addrSet, result, addr, cb](AsyncClient::LedgerDelegate delegate) {
+      const auto &cbProcess = [this, addrSet, result, addr, cb](AsyncClient::LedgerDelegate delegate) {
          addrSet->erase(addr);
          (*result)[addr] = delegate;
          if (addrSet->empty()) {
-            delete addrSet;
-            cb(*result);
-            delete result;
+            if (cbInMainThread_) {
+               QMetaObject::invokeMethod(this, [cb, result] { cb(*result); });
+            }
+            else {
+               cb(*result);
+            }
          }
       };
       bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbProcess);
@@ -350,7 +377,15 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(AsyncClient::
       logger_->error("[ArmoryConnection::getWalletsLedgerDelegate] invalid state: {}", (int)state_.load());
       return false;
    }
-   bdv_->getLedgerDelegateForWallets(cb);
+   const auto &cbWrap = [this, cb](AsyncClient::LedgerDelegate delegate) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [cb, delegate]{ cb(delegate); });
+      }
+      else {
+         cb(delegate);
+      }
+   };
+   bdv_->getLedgerDelegateForWallets(cbWrap);
    return true;
 }
 
@@ -382,7 +417,12 @@ void ArmoryConnection::callGetTxCallbacks(const BinaryData &hash, const Tx &tx)
       txCallbacks_.erase(it);
    }
    for (const auto &callback : callbacks) {
-      callback(tx);
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [callback, tx] { callback(tx); });
+      }
+      else {
+         callback(tx);
+      }
    }
 }
 
@@ -420,18 +460,21 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       return false;
    }
 
-   auto hashSet = new std::set<BinaryData>(hashes);
-   auto result = new std::vector<Tx>;
+   auto hashSet = std::make_shared<std::set<BinaryData>>(hashes);
+   auto result = std::make_shared<std::vector<Tx>>();
    const auto origHashes = hashes;
 
-   const auto &cbAppendTx = [hashSet, result, cb](Tx tx) {
+   const auto &cbAppendTx = [this, hashSet, result, cb](Tx tx) {
       const auto &txHash = tx.getThisHash();
       hashSet->erase(txHash);
       result->emplace_back(tx);
       if (hashSet->empty()) {
-         delete hashSet;
-         cb(*result);
-         delete result;
+         if (cbInMainThread_) {
+            QMetaObject::invokeMethod(this, [cb, result] { cb(*result); });
+         }
+         else {
+            cb(*result);
+         }
       }
    };
    const auto &cbUpdateTx = [this, cbAppendTx](Tx tx) {
@@ -460,6 +503,56 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
    return true;
 }
 
+bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
+                                             std::function<void(BinaryData)> callback)
+{
+   if (!bdv_ || (state_ != State::Ready)) {
+      logger_->error("[ArmoryConnection::getRawHeaderForTxHash] invalid state: {}",
+                     (int)state_.load());
+      return false;
+   }
+
+   // For now, don't worry about chaining callbacks or Tx caches. Just dump
+   // everything into the BDV. This may need to change in the future, making the
+   // call more like getTxByHash().
+   const auto &cbWrap = [this, callback](BinaryData bd) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [callback, bd] { callback(bd); });
+      }
+      else {
+         callback(bd);
+      }
+   };
+   bdv_->getRawHeaderForTxHash(inHash, cbWrap);
+
+   return true;
+}
+
+bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
+                                         std::function<void(BinaryData)> callback)
+{
+   if (!bdv_ || (state_ != State::Ready)) {
+      logger_->error("[ArmoryConnection::getHeaderByHeight] invalid state: {}",
+                     (int)state_.load());
+      return false;
+   }
+
+   // For now, don't worry about chaining callbacks or Tx caches. Just dump
+   // everything into the BDV. This may need to change in the future, making the
+   // call more like getTxByHash().
+   const auto &cbWrap = [this, callback](BinaryData bd) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [callback, bd] { callback(bd); });
+      }
+      else {
+         callback(bd);
+      }
+   };
+   bdv_->getHeaderByHeight(inHeight, cbWrap);
+
+   return true;
+}
+
 bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(float)> cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
@@ -474,7 +567,15 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
          cb(0);
       }
    };
-   bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbProcess);
+   const auto &cbWrap = [this, cbProcess](ClientClasses::FeeEstimateStruct feeStruct) {
+      if (cbInMainThread_) {
+         QMetaObject::invokeMethod(this, [cbProcess, feeStruct] { cbProcess(feeStruct); });
+      }
+      else {
+         cbProcess(feeStruct);
+      }
+   };
+   bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbWrap);
    return true;
 }
 
@@ -514,7 +615,12 @@ void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
          const auto regIdIt = preOnlineRegIds_.find(id.toBinStr());
          if (regIdIt != preOnlineRegIds_.end()) {
             logger_->debug("[ArmoryConnection::onRefresh] found preOnline registration id: {}", id.toBinStr());
-            regIdIt->second();
+            if (cbInMainThread_) {
+               QMetaObject::invokeMethod(this, [cb = regIdIt->second]{ cb(); });
+            }
+            else {
+               regIdIt->second();
+            }
             preOnlineRegIds_.erase(regIdIt);
          }
       }

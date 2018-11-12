@@ -92,7 +92,7 @@ void hd::BlockchainScanner::scanAddresses(unsigned int startIdx, unsigned int po
 
    std::shared_ptr<AsyncClient::BtcWallet> wlt;
    rescanRegId_ = armoryConn_->registerWallet(wlt, rescanWalletId_
-      , getRegAddresses(currentPortion_.addresses), [] {}, true);
+      , getRegAddresses(currentPortion_.addresses), {}, true);
 }
 
 void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids)
@@ -131,7 +131,7 @@ void hd::BlockchainScanner::processPortion()
          currentPortion_.registered = true;
          std::shared_ptr<AsyncClient::BtcWallet> wlt;
          rescanRegId_ = armoryConn_->registerWallet(wlt, rescanWalletId_
-            , getRegAddresses(currentPortion_.addresses), false);
+            , getRegAddresses(currentPortion_.addresses), {});
       }
       else {
          currentPortion_.start = currentPortion_.end = 0;

@@ -420,8 +420,10 @@ void BSTerminalMainWindow::InitWalletsView()
       , applicationSettings_, assetManager_, authManager_, armory_);
 }
 
+// Initialize widgets related to transactions.
 void BSTerminalMainWindow::InitTransactionsView()
 {
+   ui->widgetExplorer->init(armory_, logMgr_->logger());
    ui->widgetTransactions->init(walletsManager_, armory_, signContainer_);
    ui->widgetTransactions->setEnabled(true);
 
@@ -512,7 +514,7 @@ void BSTerminalMainWindow::ArmoryIsOffline()
 void BSTerminalMainWindow::initArmory()
 {
    armory_ = std::make_shared<ArmoryConnection>(logMgr_->logger()
-      , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
+      , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName), true);
    connect(armory_.get(), &ArmoryConnection::txBroadcastError, [](const QString &txHash, const QString &error) {
       NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { txHash, error });
    });
