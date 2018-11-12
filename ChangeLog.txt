@@ -1,3 +1,15 @@
+Release: 0.11.0
+Bug Fixes:
+   - Fixed SpotXBT and SpotCC settlement
+   - Fixed settlement transactions duplication in TX list
+   - RBF and CPFP fixes
+   - Minor UI fixes and enhancements
+   - Thread concurrency race condition fixes
+   - Various crash fixes
+Improvements:
+   - Auth eID support (supercedes Freja)
+   - Initial blockchain explorer support
+
 0.10.10
 Bug Fixes:
 Improvements:
