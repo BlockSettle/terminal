@@ -44,7 +44,6 @@ namespace bs {
          , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment = {});
       bool containsAddress(const bs::Address &addr) override;
 
-      bool hasWalletId(const std::string &id) const;
       bool isTempWalletId(const std::string &id) const;
       wallet::Type GetType() const override { return wallet::Type::Settlement; }
 

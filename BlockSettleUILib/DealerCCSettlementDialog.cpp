@@ -8,7 +8,6 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "HDWallet.h"
-#include <QtConcurrent/QtConcurrentRun>
 #include <CelerClient.h>
 
 #include <spdlog/spdlog.h>

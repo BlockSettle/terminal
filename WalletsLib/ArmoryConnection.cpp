@@ -459,6 +459,14 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       logger_->error("[ArmoryConnection::getTXsByHash] invalid state: {}", (int)state_.load());
       return false;
    }
+   if (hashes.empty()) {
+      logger_->warn("[ArmoryConnection::getTXsByHash] empty hash set");
+      return false;
+   }
+   if (!cb) {
+      logger_->warn("[ArmoryConnection::getTXsByHash] missing callback");
+      return false;
+   }
 
    auto hashSet = std::make_shared<std::set<BinaryData>>(hashes);
    auto result = std::make_shared<std::vector<Tx>>();

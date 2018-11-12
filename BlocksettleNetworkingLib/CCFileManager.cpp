@@ -11,7 +11,6 @@
 #include <cassert>
 
 #include <QFile>
-#include <QtConcurrent/QtConcurrentRun>
 
 #include "bs_communication.pb.h"
 
