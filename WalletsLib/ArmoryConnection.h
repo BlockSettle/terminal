@@ -131,8 +131,8 @@ private:
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<State>   state_ = { State::Unknown };
    std::atomic_uint     topBlock_ = { 0 };
-   const bool     cbInMainThread_;
    TxCacheFile    txCache_;
+   const bool     cbInMainThread_;
    std::shared_ptr<BlockHeader> getTxBlockHeader_;
 
    std::atomic_bool  regThreadRunning_;

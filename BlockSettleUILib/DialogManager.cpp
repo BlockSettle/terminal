@@ -5,8 +5,7 @@
 
 
 DialogManager::DialogManager(const QRect& mainWinowRect)
-   : rowHeight_(0)
-   , center_(mainWinowRect.x() + mainWinowRect.width() / 2, mainWinowRect.y())
+   : center_(mainWinowRect.x() + mainWinowRect.width() / 2, mainWinowRect.y())
 {
    screenSize_ = QApplication::desktop()->screenGeometry();
    reset();

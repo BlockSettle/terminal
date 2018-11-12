@@ -56,13 +56,13 @@ private slots:
 private:
    std::unique_ptr<Ui::XBTSettlementTransactionWidget> ui_;
 
-   const QString  sValid;
-   const QString  sInvalid;
-   const QString  sFailed;
-
    std::shared_ptr<spdlog::logger>              logger_;
    std::shared_ptr<ApplicationSettings>         appSettings_;
    std::shared_ptr<ReqXBTSettlementContainer>   settlContainer_;
+
+   const QString  sValid_;
+   const QString  sInvalid_;
+   const QString  sFailed_;
 };
 
 #endif // __XBT_SETTLEMENT_TRANSACTION_WIDGET_H__

@@ -59,12 +59,12 @@ private slots:
 private:
    std::unique_ptr<Ui::CCSettlementTransactionWidget> ui_;
 
-   const QString  sValid;
-   const QString  sInvalid;
-
    std::shared_ptr<spdlog::logger>     logger_;
    const std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ReqCCSettlementContainer>    settlContainer_;
+
+   const QString  sValid_;
+   const QString  sInvalid_;
 };
 
 #endif // __CC_SETTLEMENT_TRANSACTION_WIDGET_H__

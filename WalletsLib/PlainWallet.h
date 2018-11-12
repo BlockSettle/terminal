@@ -99,7 +99,7 @@ namespace bs {
       std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
       std::string GetAddressIndex(const bs::Address &) override;
       bool AddressIndexExists(const std::string &index) const override;
-      bs::Address CreateAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true) override { return {}; }
+      bs::Address CreateAddressWithIndex(const std::string &, AddressEntryType, bool) override { return {}; }
 
       SecureBinaryData GetPublicKeyFor(const bs::Address &) override;
       KeyPair GetKeyPairFor(const bs::Address &, const SecureBinaryData &password) override;
