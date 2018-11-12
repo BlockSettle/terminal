@@ -25,8 +25,8 @@ public:
 
    enum Page {
       BlockPage = 0,
-      TxPage = 1,
-      AddressPage = 2
+      TxPage,
+      AddressPage
    };
 
 protected slots:
