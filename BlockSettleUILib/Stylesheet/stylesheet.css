@@ -225,6 +225,8 @@ QMenuBar {
   position: absolute;
   top: 10px; }
   QMenuBar::item {
+    /* Used to center QMenuBar items vertically*/
+    padding: 7px;
     background: #1b2a2f;
     background-color: #1b2a2f; }
     QMenuBar::item:selected {
