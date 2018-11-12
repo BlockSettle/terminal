@@ -5,16 +5,13 @@
 
 BlockDetailsWidget::BlockDetailsWidget(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::BlockDetailsWidget)
+    ui_(new Ui::BlockDetailsWidget())
 {
-    ui->setupUi(this);
+    ui_->setupUi(this);
 
     QIcon btcIcon(QLatin1String(":/FULL_LOGO"));
 
-    ui->icon->setPixmap(btcIcon.pixmap(80, 80));
+    ui_->icon->setPixmap(btcIcon.pixmap(80, 80));
 }
 
-BlockDetailsWidget::~BlockDetailsWidget()
-{
-    delete ui;
-}
+BlockDetailsWidget::~BlockDetailsWidget() = default;

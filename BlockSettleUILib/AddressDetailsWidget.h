@@ -35,10 +35,10 @@ public:
       colConfs = 2,
       colInputsNum,
       colOutputsNum,
-      colOutput,
+      colOutputAmt,
       colFees,
       colFeePerByte,
-      colSize
+      colTxSize
    };
 
 signals:
@@ -53,18 +53,26 @@ private slots:
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
    void setOutputColor(QTreeWidgetItem *item);
+   void getTxData(AsyncClient::LedgerDelegate inDelegate);
 
-   Q_INVOKABLE void getTxData(AsyncClient::LedgerDelegate inDelegate);
+   // NB: Right now, the code is slightly inefficient. There are two maps with
+   // hashes for keys. One has transactions (Armory), and TXEntry objects (BS).
+   // This is due to the manner in which we retrieve data from Armory. Pages are
+   // returned for addresses, and we then retrieve the appropriate Tx objects
+   // from Armory. (Tx searches go directly to Tx object retrieval.) The thing
+   // is that the pages are what have data related to # of confs and other
+   // block-related data. The Tx objects from Armory don't have block-related
+   // data that we need. So, we need two maps, at least for now.
 
    Ui::AddressDetailsWidget *ui_; // The main widget object.
-   bs::Address addrVal; // The address passed in by the user.
-   std::string dummyWalletID; // The wallet ID.
-   bs::PlainWallet dummyWallet; // Wallet that will hold the address.
+   bs::Address addrVal_; // The address passed in by the user.
+   std::string dummyWalletID_; // The wallet ID.
+   bs::PlainWallet dummyWallet_; // Wallet that will hold the address.
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
-   std::map<BinaryData, Tx> prevTxMap_; // A wallet's previous Tx hash / Tx map (fee stuff).
+   std::map<BinaryData, Tx> prevTxMap_; // A wallet's previous Tx hash / Tx map (fee calc).
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
-   std::set<BinaryData> txHashSet; // Hashes for a given address.
-   std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for an addr (fee calc).
+   std::set<BinaryData> txHashSet_; // Hashes for a given address.
+   std::set<BinaryData> prevTxHashSet_; // Prev Tx hashes for an addr (fee calc).
 
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger> logger_;

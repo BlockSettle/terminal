@@ -2,21 +2,22 @@
 #define __BLOCKDETAILSWIDGET_H__
 
 #include <QWidget>
+#include <memory>
 
 namespace Ui {
-class BlockDetailsWidget;
+   class BlockDetailsWidget;
 }
 
 class BlockDetailsWidget : public QWidget
 {
-    Q_OBJECT
+   Q_OBJECT
 
 public:
-    explicit BlockDetailsWidget(QWidget *parent = nullptr);
-    ~BlockDetailsWidget();
+   explicit BlockDetailsWidget(QWidget *parent = nullptr);
+   ~BlockDetailsWidget() override;
 
 private:
-    Ui::BlockDetailsWidget *ui;
+   std::unique_ptr<Ui::BlockDetailsWidget> ui_;
 };
 
-#endif // BLOCKDETAILSWIDGET_H
+#endif // __BLOCKDETAILSWIDGET_H__

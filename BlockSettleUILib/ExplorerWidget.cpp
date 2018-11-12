@@ -63,16 +63,16 @@ void ExplorerWidget::onSearchStarted()
 
    // Check if this is an address first. Check Base58 and Bech32. 32 byte hex will
    // just cause the system to think it's a P2SH (?) address.
-   bool strIsAddress_ = false;
-   bs::Address address_;
+   bool strIsAddress = false;
+   bs::Address bsAddress;
    try {
-      address_ = bs::Address(userStr.trimmed(), bs::Address::Format::Base58);
-      strIsAddress_ = address_.isValid();
+      bsAddress = bs::Address(userStr.trimmed(), bs::Address::Format::Base58);
+      strIsAddress = bsAddress.isValid();
    } catch (...) {}
-   if(strIsAddress_ == false) {
+   if(strIsAddress == false) {
       try {
-         address_ = bs::Address(userStr.trimmed(), bs::Address::Format::Bech32);
-         strIsAddress_ = address_.isValid();
+         bsAddress = bs::Address(userStr.trimmed(), bs::Address::Format::Bech32);
+         strIsAddress = bsAddress.isValid();
       } catch (...) {}
    }
 
@@ -80,12 +80,12 @@ void ExplorerWidget::onSearchStarted()
    // Idx 0 = Block (BlockDetailsWidget - Not used for now)
    // Idx 1 = Tx (TransactionDetailsWidget)
    // Idx 2 = Address (AddressDetailsWidget)
-   if(strIsAddress_ == true) {
+   if(strIsAddress == true) {
       ui_->stackedWidget->setCurrentIndex(AddressPage);
 
-      // TO DO: Pass the address to the address widget and populate the fields.
-      // this sets the address field
-      ui_->Address->setAddrVal(address_);
+      // Pass the address to the address widget and load the wallet, which kicks
+      // off address processing and UI loading.
+      ui_->Address->setAddrVal(bsAddress);
       ui_->Address->loadWallet();
    }
    else if(userStr.length() == 64 &&
@@ -93,13 +93,13 @@ void ExplorerWidget::onSearchStarted()
       // String is a valid 32 byte hex string, so we may proceed.
       ui_->stackedWidget->setCurrentIndex(TxPage);
 
-      // TO DO: Pass the Tx hash to the Tx widget and populate the fields. Should do reversal there.
+      // Pass the Tx hash to the Tx widget and populate the fields.
       ui_->Transaction->populateTransactionWidget(READHEX(userStr.toStdString()));
    }
    else {
       // This isn't a valid address or 32 byte hex string.
       QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7)),
-                         tr("This is not a valid address or transaction id."),
+                         tr("This is not a valid address or transaction ID."),
                          ui_->searchBox);
    }
 }

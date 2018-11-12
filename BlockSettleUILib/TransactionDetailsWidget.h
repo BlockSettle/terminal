@@ -56,14 +56,14 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger> logger_;
 
-   Q_INVOKABLE void processTxData(Tx tx);
-
    // The Tx being analyzed.
-   Tx curTx;
+   Tx curTx_;
 
    // Data captured from callback to get a Tx's inputs.
    std::map<BinaryData, Tx> prevTxMap_; // A Tx's previous Tx hash / Tx map (fee stuff).
-   std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for a Tx (fee calc).
+   std::set<BinaryData> prevTxHashSet_; // Prev Tx hashes for a Tx (fee calc).
+
+   void processTxData(Tx tx);
 
    QTreeWidgetItem * createItem(QTreeWidget *tree, QString type,
                                 QString address, QString amount,
