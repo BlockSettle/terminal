@@ -320,7 +320,8 @@ int UiUtils::GetPricePrecisionForAssetType(const bs::network::Asset::Type& asset
       return GetPricePrecisionCC();
    }
 
-   return 0;
+   // Allow entering floating point numbers if the asset type was detected as Undefined
+   return 6;
 }
 
 QString UiUtils::displayAmountForProduct(double quantity, const QString& product, bs::network::Asset::Type at)

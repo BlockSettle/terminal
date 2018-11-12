@@ -1,7 +1,6 @@
 #include "AddressListModel.h"
 #include "WalletsManager.h"
 #include "UiUtils.h"
-#include <QtConcurrent/QtConcurrentRun>
 
 
 bool AddressListModel::AddressRow::isMultiLineComment() const

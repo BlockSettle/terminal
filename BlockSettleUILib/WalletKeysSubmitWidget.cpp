@@ -148,6 +148,9 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    if (flags_ & HideAuthControlsOnSignClicked) {
       widget->setHideAuthControlsOnSignClicked(true);
    }
+   if (flags_ & HideProgressBar) {
+      widget->setHideProgressBar(true);
+   }
 
    ui_->groupBox->layout()->addWidget(widget);
 
@@ -175,6 +178,7 @@ void WalletKeysSubmitWidget::onKeyChanged(int index, SecureBinaryData key)
       return;
    }
    pwdData_[index].password = key;
+   isKeyFinal_ = (pwdData_[index].encType == bs::wallet::EncryptionType::Auth);
    emit keyChanged();
 }
 
@@ -242,6 +246,11 @@ SecureBinaryData WalletKeysSubmitWidget::key() const
       result = mergeKeys(result, pwd.password);
    }
    return result;
+}
+
+bool WalletKeysSubmitWidget::isKeyFinal() const
+{
+   return isKeyFinal_;
 }
 
 void WalletKeysSubmitWidget::resume()

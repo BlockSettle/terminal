@@ -1,14 +1,11 @@
 #include "HDLeaf.h"
 
-
+#include <unordered_map>
+#include <QLocale>
+#include <QMutexLocker>
 #include "CheckRecipSigner.h"
 #include "HDNode.h"
 #include "Wallets.h"
-
-#include <unordered_map>
-
-#include <QMutexLocker>
-#include <QtConcurrent/QtConcurrentRun>
 
 #define ADDR_KEY     0x00002002
 

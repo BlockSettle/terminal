@@ -171,6 +171,7 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<WalletsManager> &wa
 {
    walletsManager_ = walletsManager;
    UiUtils::fillHDWalletsComboBox(ui_->comboBoxWalletAS, walletsManager_);
+   updateAutoSignState();
 
    if (aq_) {
       aq_->setWalletsManager(walletsManager_);
@@ -225,7 +226,7 @@ void RFQDealerReply::onHDWalletInfo(unsigned int id
       return;
    }
 
-   EnterWalletPassword passwordDialog(MobileClientRequest::SignWallet, this);
+   EnterWalletPassword passwordDialog(MobileClientRequest::SettlementTransaction, this);
    passwordDialog.init(autoSignWalletId_, keyRank
       , encTypes, encKeys, appSettings_
       , tr("Activate auto sign"));

@@ -25,7 +25,8 @@ public:
       SetPasswordLabelAsOld = 0x20,
       HideAuthEmailLabel = 0x40,
       HideAuthControlsOnSignClicked = 0x80,
-      HidePubKeyFingerprint = 0x100
+      HidePubKeyFingerprint = 0x100,
+      HideProgressBar = 0x200,
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 
@@ -45,6 +46,7 @@ public:
    bool isValid() const;
    std::string encKey(int index) const;
    SecureBinaryData key() const;
+   bool isKeyFinal() const;
 
    void setFocus();
    void suspend() { suspended_ = true; }
@@ -73,6 +75,7 @@ private:
    Flags flags_{NoFlag};
    std::shared_ptr<ApplicationSettings> appSettings_;
    MobileClientRequest requestType_{};
+   bool isKeyFinal_{false};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysSubmitWidget::Flags)
