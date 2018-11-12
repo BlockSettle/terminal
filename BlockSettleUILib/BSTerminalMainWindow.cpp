@@ -56,7 +56,6 @@
 #include "TabWithShortcut.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
-#include "WalletKeysSubmitTest.h"
 #include "ZmqSecuredDataConnection.h"
 
 #include <spdlog/spdlog.h>
@@ -147,13 +146,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    ui->widgetTransactions->setAppSettings(applicationSettings_);
 
    UpdateMainWindowAppearence();
-
-#if defined(QT_DEBUG) && 0
-   QTimer::singleShot(3000, this, [this] {
-      WalletKeysSubmitTest test(applicationSettings_, this);
-      test.exec();
-   });
-#endif
 }
 
 void BSTerminalMainWindow::postSplashscreenActions()

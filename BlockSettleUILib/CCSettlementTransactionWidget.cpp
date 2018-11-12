@@ -130,7 +130,7 @@ void CCSettlementTransactionWidget::initSigning()
       | WalletKeysSubmitWidget::HidePubKeyFingerprint
       | WalletKeysSubmitWidget::HideProgressBar
    );
-   ui_->widgetSubmitKeys->init(MobileClientRequest::SignMarketTransaction, settlContainer_->walletId()
+   ui_->widgetSubmitKeys->init(MobileClientRequest::SettlementTransaction, settlContainer_->walletId()
       , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys()
       , appSettings_);
    ui_->widgetSubmitKeys->setFocus();

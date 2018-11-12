@@ -26,7 +26,7 @@ QString getMobileClientRequestText(MobileClientRequest requestType)
       return app->tr("Verify wallet key");
    case MobileClientRequest::ActivateOTP:
       return app->tr("Activate OTP");
-   case MobileClientRequest::SignMarketTransaction:
+   case MobileClientRequest::SettlementTransaction:
       return app->tr("Sign transaction");
    default:
       throw std::logic_error("Invalid MobileClientRequest value");
@@ -48,7 +48,7 @@ bool isMobileClientNewDeviceNeeded(MobileClientRequest requestType)
 int getMobileClientTimeout(MobileClientRequest requestType)
 {
    switch (requestType) {
-   case MobileClientRequest::SignMarketTransaction:
+   case MobileClientRequest::SettlementTransaction:
       return 30;
    default:
       return 120;
