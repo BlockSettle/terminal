@@ -1382,3 +1382,23 @@ QLabel#loginVersionLabel {
   color: #81888f;
   font-size: 10px; }
 
+ToggleSwitch::groove:horizontal {
+    border: 1px solid #81888f;
+    border-radius: 9px;
+    background: transparent;
+    margin: 0;
+    height: 16px; }
+    
+ToggleSwitch::groove:horizontal[enabled=false] {
+    border: 1px solid #81888f; }
+
+ToggleSwitch::handle:horizontal {
+    background: #81888f;
+    border: 1px solid #81888f;       
+    width: 16px;
+    margin: -1px -1px -1px -1px;
+    border-radius: 8px; }
+    
+ ToggleSwitch::handle:horizontal[toggleOn=true][enabled=true] {
+    background: #247dac;
+    border: 1px solid #247dac; }
