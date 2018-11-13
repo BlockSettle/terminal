@@ -354,11 +354,11 @@ int PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAsse
    if (asset) {
       if (asset->getIndex() < 0) {
          id = lastAssetIndex_++;
-         asset->setId(id);
       }
       else {
          id = asset->getIndex();
       }
+      asset->setId(id);
    }
    else {
       id = lastAssetIndex_++;
