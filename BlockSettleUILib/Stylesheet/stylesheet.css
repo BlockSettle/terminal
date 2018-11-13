@@ -147,6 +147,8 @@ QWidget {
     /* leave space at the top for the title */
     padding-top: 10px;
     background-color: transparent; }
+    QWidget QGroupBox[h1="true"] { /* leave space at the top for the title when using h1 */
+       margin-top: 20px; }
     QWidget QGroupBox[wellGroupBox="true"] {
       border: 1px solid rgba(255, 255, 255, 0.15);
       padding: 10px; }
