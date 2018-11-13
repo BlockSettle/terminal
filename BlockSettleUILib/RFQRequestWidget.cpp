@@ -25,11 +25,9 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    ui_->setupUi(this);
 
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
-
-   connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
-   connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
-   connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
 }
+
+RFQRequestWidget::~RFQRequestWidget() = default;
 
 void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
 {
@@ -89,15 +87,21 @@ void RFQRequestWidget::shortcutActivated(ShortcutType s)
    }
 }
 
+void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<ApplicationSettings> &appSettings)
+{
+   appSettings_ = appSettings;
+   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ, mdProvider);
+}
+
 void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<CelerClient>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , std::shared_ptr<QuoteProvider> quoteProvider
-   , const std::shared_ptr<MarketDataProvider>& mdProvider
    , const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<SignContainer> &container)
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -106,9 +110,9 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    assetManager_ = assetManager;
    dialogManager_ = dialogManager;
    signingContainer_ = container;
+   armory_ = armory;
 
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ, mdProvider);
-   ui_->pageRFQTicket->init(authAddressManager, assetManager, quoteProvider, container);
+   ui_->pageRFQTicket->init(authAddressManager, assetManager, quoteProvider, container, armory);
 
    auto ordersModel = new OrderListModel(quoteProvider_, assetManager, ui_->treeViewOrders);
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -122,13 +126,34 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });
 
-   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQTicket, &RFQTicketXBT::disablePanel);
+   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
+   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
+
+   ui_->pageRFQTicket->disablePanel();
+}
+
+void RFQRequestWidget::onConnectedToCeler()
+{
+   connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
+   connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
+   connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
+
+   ui_->pageRFQTicket->enablePanel();
+}
+
+void RFQRequestWidget::onDisconnectedFromCeler()
+{
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
+
+   ui_->pageRFQTicket->disablePanel();
 }
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
 {
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_,
-      authAddressManager_, assetManager_, walletsManager_, signingContainer_, celerClient_, this);
+      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, this);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 

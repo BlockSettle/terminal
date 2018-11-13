@@ -14,7 +14,6 @@ enum CelerMessageType
    CreateStandardUserType,
    CreateUserPropertyRequestType,
    UpdateUserPropertyRequestType,
-   FindAllSecurityDefinitionsType,
    FindAllSocketsType,
    FindStandardUserType,
    GenerateResetUserPasswordTokenRequestType,
@@ -22,17 +21,11 @@ enum CelerMessageType
    LoginRequestType,
    LoginResponseType,
    LogoutMessageType,
-   MarketDataFullSnapshotDownstreamEventType,
-   MarketDataIncrementalDownstreamEventType,
-   MarketDataRequestType,
-   MarketDataRequestRejectType,
-   MarketStatsRequestType,
-   MarketStatsSnapshotEventType,
    MultiResponseMessageType,
    ReconnectionFailedMessageType,
    ReconnectionRequestType,
-   SecurityDefinitionDownstreamEventType,
    SingleResponseMessageType,
+   ExceptionResponseMessageType,
    SocketConfigurationDownstreamEventType,
    StandardUserDownstreamEventType,
    ResetUserPasswordTokenType,
@@ -114,7 +107,24 @@ enum CelerMessageType
    XBTTradeStatusRequestType,
    ColouredCoinTradeStatusRequestType,
 
-   PersistenceException,
+   PersistenceExceptionType,
+
+   MarketDataRequestRejectDownstreamEventType,
+   MarketDataFullSnapshotDownstreamEventType,
+
+   MarketDataSubscriptionRequestType,
+
+   CreateSecurityDefinitionRequestType,
+   CreateWarehouseConfigurationRequestType,
+   WarehouseConfigurationDownstreamEventType,
+
+   CreateSecurityListingRequestType,
+   SecurityListingDownstreamEventType,
+
+   FindAllSecurityDefinitionsType,
+   SecurityDefinitionDownstreamEventType,
+
+   FindAllSecurityListingsRequestType,
 
    CelerMessageTypeLast,
    UndefinedType = CelerMessageTypeLast

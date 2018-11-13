@@ -5,6 +5,7 @@
 #include <QString>
 #include <QPixmap>
 
+class QPrinter;
 
 //
 // WalletBackupPdfWriter
@@ -14,19 +15,25 @@
 class WalletBackupPdfWriter final
 {
 public:
-   WalletBackupPdfWriter(const QString &walletName,
-      const QString &walletId, const QString &keyLine1, const QString &keyLine2,
-      const QPixmap &logo, const QPixmap &qr);
+   WalletBackupPdfWriter(const QString &walletId
+      , const QString &keyLine1, const QString &keyLine2
+      , const QPixmap &logo, const QPixmap &qr);
 
    //! Write backup to PDF.
    bool write(const QString &fileName);
+
+   //! Generate resulted PDF preview pixmap. Height will be calculated using page aspect ratio.
+   // Use marginScale to lower visible margins (valid range 0..1).
+   QPixmap getPreview(int width, double marginScale);
+
+   //! Print on selected printer using printer's page size (A4 and letter only supported at the moment).
+   void print(QPrinter *printer);
 
 private:
    //! Draw backup.
    void draw(QPainter &p, qreal width, qreal height);
 
 private:
-   QString walletName_;
    QString walletId_;
    QString keyLine1_;
    QString keyLine2_;

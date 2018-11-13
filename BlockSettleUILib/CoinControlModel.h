@@ -18,13 +18,13 @@ struct UTXO;
 class CoinControlModel : public QAbstractItemModel
 {
 Q_OBJECT
-private:
+public:
    enum Column
    {
       ColumnName,
+      ColumnUTXOCount,
       ColumnComment,
       ColumnBalance,
-      ColumnEmpty,
       ColumnsCount
    };
 

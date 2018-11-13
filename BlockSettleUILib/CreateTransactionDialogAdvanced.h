@@ -14,23 +14,26 @@ Q_OBJECT
 
 public:
    static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForRBF(
-        const std::shared_ptr<WalletsManager> &
+        const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer>&
       , const Tx &
       , const std::shared_ptr<bs::Wallet>&
       , QWidget* parent = nullptr);
 
    static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(
-        const std::shared_ptr<WalletsManager>&
+        const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager>&
       , const std::shared_ptr<SignContainer>&
       , const std::shared_ptr<bs::Wallet>&
       , const Tx &
       , QWidget* parent = nullptr);
 
 public:
-   CreateTransactionDialogAdvanced(const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, bool loadFeeSuggestions, QWidget* parent);
-   ~CreateTransactionDialogAdvanced() noexcept override = default;
+   CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
+      , bool loadFeeSuggestions, QWidget* parent);
+   ~CreateTransactionDialogAdvanced() override;
 
    void preSetAddress(const QString& address);
    void preSetValue(const double value);
@@ -65,7 +68,8 @@ protected:
    bool HaveSignedImportedTransaction() const override;
 
 protected slots:
-   void selectedWalletChanged(int currentIndex) override;
+   void selectedWalletChanged(int currentIndex, bool resetInputs
+      , const std::function<void()> &cbInputsReset = nullptr) override;
 
    void onAddressTextChanged(const QString& addressString);
    void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &) override;
@@ -76,7 +80,7 @@ protected slots:
    void onCreatePressed();
    void onImportPressed();
 
-   void feeSelectionChanged(int currentIndex);
+   void feeSelectionChanged(int currentIndex) override;
    void onManualFeeChanged(int fee);
 
    void onNewAddressSelectedForChange();
@@ -89,15 +93,19 @@ private:
    void clear() override;
    void initUI();
 
+   void setRBFinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
+   void setCPFPinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
+
    void validateAddOutputButton();
-   void validateCreateButton();
+   Q_INVOKABLE void validateCreateButton();
 
    void AddRecipient(const bs::Address &, double amount, bool isMax = false);
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void SetMinimumFee(float totalFee, float feePerByte = 0);
 
-   void SetFixedWallet(const std::string& walletId);
+   void SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset = nullptr);
+   void SetFixedWalletAndInputs(const std::shared_ptr<bs::Wallet> &, const std::vector<UTXO> &);
    void disableOutputsEditing();
    void disableInputSelection();
    void disableFeeChanging();
@@ -113,7 +121,7 @@ private:
    void disableChangeAddressSelecting();
 
 private:
-   Ui::CreateTransactionDialogAdvanced*  ui_;
+   std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;
 
    bool     currentAddressValid_ = false;
    double   currentValue_ = 0;

@@ -22,8 +22,9 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
       , std::shared_ptr<CelerClient> celerClient
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent)
-   : BaseDealerSettlementDialog(logger, settlContainer, signContainer, parent)
+   : BaseDealerSettlementDialog(logger, settlContainer, signContainer, appSettings, parent)
    , ui_(new Ui::DealerXBTSettlementDialog())
    , settlContainer_(settlContainer)
 {
@@ -52,12 +53,12 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
    if (settlContainer_->weSell()) {
       ui_->labelTransactionDescription->setText(tr("Deliver"));
       ui_->labelTransactioAmount->setText(UiUtils::displayQuantity(settlContainer_->amount(), UiUtils::XbtCurrency));
-      setFrejaPasswordPrompt(tr("%1 Settlement %2")
+      setAuthPasswordPrompt(tr("%1 Settlement %2")
          .arg(QString::fromStdString(settlContainer_->security())).arg(tr("Pay-In")));
    } else {
       ui_->labelTransactionDescription->setText(tr("Receive"));
       ui_->labelTransactioAmount->setText(tr("Waiting for pay-in TX"));
-      setFrejaPasswordPrompt(tr("%1 Settlement %2")
+      setAuthPasswordPrompt(tr("%1 Settlement %2")
          .arg(QString::fromStdString(settlContainer_->security())).arg(tr("Pay-Out")));
    }
 
@@ -84,6 +85,8 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    activate();
 }
+
+DealerXBTSettlementDialog::~DealerXBTSettlementDialog() = default;
 
 QWidget *DealerXBTSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
 WalletKeysSubmitWidget *DealerXBTSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }

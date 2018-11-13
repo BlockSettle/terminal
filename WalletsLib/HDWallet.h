@@ -57,10 +57,16 @@ namespace bs {
          void setUserId(const BinaryData &usedId);
          bool eraseFile();
 
-         bool changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank, const SecureBinaryData &oldPass = {});
+         // addNew: add new encryption key without asking for all old keys (used with multiple Auth eID devices).
+         // removeOld: remove missed keys comparing encKey field without asking for all old keys
+         // (newPass password fields should be empty). Used with multiple Auth eID devices.
+         // dryRun: check that old password valid. No password change happens.
+         bool changePassword(const std::shared_ptr<spdlog::logger> &logger
+            , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank
+            , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun);
 
-         void RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew = false);
-         void SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm);
+         void RegisterWallet(const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
+         void SetArmory(const std::shared_ptr<ArmoryConnection> &);
          bool startRescan(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr, const cb_scan_write_last &cbw = nullptr);
          void saveToDir(const std::string &targetDir);
          void saveToFile(const std::string &filename, bool force = false);
@@ -116,7 +122,7 @@ namespace bs {
       class DummyWallet : public bs::hd::Wallet    // Just a container for old-style wallets
       {
       public:
-         explicit DummyWallet() : bs::hd::Wallet(tr("Armory Wallets").toStdString(), "") {}
+         DummyWallet(NetworkType netType) : hd::Wallet(tr("Armory Wallets").toStdString(), "", wallet::Seed(netType)) {}
 
          size_t getNumLeaves() const override { return leaves_.size(); }
          void add(const std::shared_ptr<bs::Wallet> wallet) { leaves_[wallet->GetWalletId()] = wallet; }

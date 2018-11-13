@@ -18,7 +18,7 @@ Q_OBJECT
 public:
    NewAddressDialog(const std::shared_ptr<bs::Wallet>& wallet, const std::shared_ptr<SignContainer> &
       , bool isNested = false, QWidget* parent = nullptr);
-   ~NewAddressDialog() override = default;
+   ~NewAddressDialog() override;
 
 protected:
    void showEvent(QShowEvent* event) override;
@@ -29,7 +29,7 @@ private:
    void UpdateSizeToAddress();
 
 private:
-   Ui::NewAddressDialog* ui_;
+   std::unique_ptr<Ui::NewAddressDialog> ui_;
    std::shared_ptr<bs::Wallet> wallet_;
    bs::Address    address_;
 };

@@ -1,9 +1,8 @@
 #include "MetaData.h"
+
+#include <QLocale>
 #include <QMutexLocker>
-#include <QtConcurrent/QtConcurrentRun>
 #include <bech32/ref/c++/segwit_addr.h>
-#include "PyBlockDataManager.h"
-#include "SafeBtcWallet.h"
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"
 #include "Wallets.h"
@@ -358,21 +357,12 @@ bs::wallet::Seed bs::wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &p
 bs::Wallet::Wallet()
    : QObject(nullptr), wallet::MetaData()
    , spendableBalance_(0), unconfirmedBalance_(0), totalBalance_(0)
-   , updateAddrBalance_(false), updateAddrTxN_(false), registered_(false)
-{
-   threadPool_.setMaxThreadCount(1);
-}
+   , updateAddrBalance_(false), updateAddrTxN_(false)
+{}
 
 bs::Wallet::~Wallet()
 {
-   stop();
    UtxoReservation::delAdapter(utxoAdapter_);
-}
-
-void bs::Wallet::stop()
-{
-   threadPool_.clear();
-   threadPool_.waitForDone();
 }
 
 std::string bs::Wallet::GetAddressComment(const bs::Address &address) const
@@ -433,7 +423,7 @@ bool bs::Wallet::SetTransactionComment(const BinaryData &txOrHash, const std::st
 
 bool bs::Wallet::isBalanceAvailable() const
 {
-   return (bdm_ != nullptr) && (bdm_->GetState() == PyBlockDataManagerState::Ready) && (btcWallet_ != nullptr);
+   return (armory_ != nullptr) && (armory_->state() == ArmoryConnection::State::Ready) && (btcWallet_ != nullptr);
 }
 
 BTCNumericTypes::balance_type bs::Wallet::GetSpendableBalance() const
@@ -466,159 +456,338 @@ BTCNumericTypes::balance_type bs::Wallet::GetTotalBalance() const
    return totalBalance_;
 }
 
-std::vector<uint64_t> bs::Wallet::getAddrBalance(const bs::Address &addr) const
+bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
 {
-   if (updateAddrBalance_ && isBalanceAvailable()) {
-      updateAddrBalance_ = false;
-      QMutexLocker lock(&addrMapsMtx_);
-      const auto &balanceMap = btcWallet_->getAddrBalancesFromDB();
-      for (const auto &balance : balanceMap) {     // std::map::insert doesn't replace elements
-         addressBalanceMap_[balance.first] = std::move(balance.second);
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   if (updateAddrBalance_) {
+      const auto &cbAddrBalance = [this](std::map<BinaryData, std::vector<uint64_t>> balanceMap) {
+         {
+            QMutexLocker lock(&addrMapsMtx_);
+            for (const auto &balance : balanceMap) {     // std::map::insert doesn't replace elements
+               addressBalanceMap_[balance.first] = std::move(balance.second);
+            }
+            updateAddrBalance_ = false;
+         }
+         for (const auto &queuedCb : cbBal_) {
+            const auto &it = addressBalanceMap_.find(queuedCb.first.id());
+            if (it != addressBalanceMap_.end()) {
+               queuedCb.second(it->second);
+            }
+            else {
+               queuedCb.second({ 0, 0, 0 });
+            }
+         }
+         cbBal_.clear();
+      };
+      cbBal_[addr] = cb;
+      if (cbBal_.size() == 1) {
+         btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
       }
    }
-   const auto itBal = addressBalanceMap_.find(addr.prefixed());
-   if (itBal == addressBalanceMap_.end()) {
-      return{ 0, 0, 0 };
+   else {
+      const auto itBal = addressBalanceMap_.find(addr.id());
+      if (itBal == addressBalanceMap_.end()) {
+         cb({ 0, 0, 0 });
+         return true;
+      }
+      cb(itBal->second);
    }
-   return itBal->second;
+   return true;
 }
 
-uint32_t bs::Wallet::getAddrTxN(const bs::Address &addr) const
+bool bs::Wallet::getAddrBalance(const bs::Address &addr) const
 {
-   if (updateAddrTxN_ && isBalanceAvailable()) {
-      updateAddrTxN_ = false;
-      QMutexLocker lock(&addrMapsMtx_);
-      const auto &txNMap = btcWallet_->getAddrTxnCountsFromDB();
-      for (const auto &txn : txNMap) {          // std::map::insert doesn't replace elements
-         addressTxNMap_[txn.first] = txn.second;
+   const auto &cb = [this, addr](std::vector<uint64_t> balances) {
+      emit addrBalanceReceived(addr, balances);
+   };
+   return getAddrBalance(addr, cb);
+}
+
+bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> cb) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   if (updateAddrTxN_) {
+      const auto &cbTxN = [this](std::map<BinaryData, uint32_t> txnMap) {
+         {
+            QMutexLocker lock(&addrMapsMtx_);
+            for (const auto &txn : txnMap) {          // std::map::insert doesn't replace elements
+               addressTxNMap_[txn.first] = txn.second;
+            }
+            updateAddrTxN_ = false;
+         }
+         for (const auto &queuedCb : cbTxN_) {
+            const auto &it = addressTxNMap_.find(queuedCb.first.id());
+            if (it != addressTxNMap_.end()) {
+               queuedCb.second(it->second);
+            }
+            else {
+               queuedCb.second(0);
+            }
+         }
+         cbTxN_.clear();
+      };
+      cbTxN_[addr] = cb;
+      if (cbTxN_.size() == 1) {
+         btcWallet_->getAddrTxnCountsFromDB(cbTxN);
       }
    }
-   const auto itTxN = addressTxNMap_.find(addr.prefixed());
-   if (itTxN == addressTxNMap_.end()) {
-      return 0;
+   else {
+      const auto itTxN = addressTxNMap_.find(addr.id());
+      if (itTxN == addressTxNMap_.end()) {
+         cb(0);
+         return true;
+      }
+      cb(itTxN->second);
    }
-   return itTxN->second;
+   return true;
 }
 
-std::vector<UTXO> bs::Wallet::getSpendableTxOutList(uint64_t val) const
+bool bs::Wallet::getAddrTxN(const bs::Address &addr) const
 {
-   if (!btcWallet_) {
-      return {};
+   const auto &cb = [this, addr](uint32_t txn) {
+      emit addrTxNReceived(addr, txn);
+   };
+   return getAddrTxN(addr, cb);
+}
+
+bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
+   , QObject *obj, uint64_t val)
+{
+   if (!isBalanceAvailable()) {
+      return false;
    }
-   auto txOutList = btcWallet_->getSpendableTxOutListForValue(val);
-   if (utxoAdapter_) {
-      utxoAdapter_->filter(txOutList);
+   spendableCallbacks_[obj].push_back(cb);
+   if (obj != nullptr) {
+      connect(obj, SIGNAL(destroyed()), this, SLOT(onSpendableObjDestroyed()));
+      if (spendableCallbacks_.size() > 1) {
+         return true;
+      }
    }
-   if (val != UINT64_MAX) {
-      uint64_t sum = 0;
-      int cutOffIdx = -1;
-      for (size_t i = 0; i < txOutList.size(); i++) {
-         const auto &utxo = txOutList[i];
-         sum += utxo.getValue();
-         if (sum >= val) {
-            cutOffIdx = i;
-            break;
+   else {
+      if (spendableCallbacks_[obj].size() > 1) {
+         return true;
+      }
+   }
+   const auto &cbTxOutList = [this, val](std::vector<UTXO> txOutList) {
+      if (utxoAdapter_) {
+         utxoAdapter_->filter(txOutList);
+      }
+      if (val != UINT64_MAX) {
+         uint64_t sum = 0;
+         int cutOffIdx = -1;
+         for (size_t i = 0; i < txOutList.size(); i++) {
+            const auto &utxo = txOutList[i];
+            sum += utxo.getValue();
+            if (sum >= val) {
+               cutOffIdx = i;
+               break;
+            }
+         }
+         if (cutOffIdx >= 0) {
+            txOutList.resize(cutOffIdx + 1);
          }
       }
-      if (cutOffIdx >= 0) {
-         txOutList.resize(cutOffIdx + 1);
+      for (const auto &cbPairs : spendableCallbacks_) {
+         if (cbPairs.first != nullptr) {
+            disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onSpendableObjDestroyed()));
+         }
+         for (const auto &cb : cbPairs.second) {
+            cb(txOutList);
+         }
+      }
+      spendableCallbacks_.clear();
+   };
+   btcWallet_->getSpendableTxOutListForValue(val, cbTxOutList);
+   return true;
+}
+
+bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)> cb) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   const auto &cbProcess = [this, val, cb](std::vector<UTXO> utxos) -> void {
+      if (utxoAdapter_) {
+         utxoAdapter_->filter(utxos);
+      }
+      std::sort(utxos.begin(), utxos.end(), [](const UTXO &a, const UTXO &b) {
+         return (a.getValue() < b.getValue());
+      });
+
+      int index = utxos.size() - 1;
+      while (index >= 0) {
+         if (utxos[index].getValue() < val) {
+            index++;
+            break;
+         }
+         index--;
+      }
+      if ((index >= 0) && (index < utxos.size())) {
+         cb({ utxos[index] });
+         return;
+      }
+      else if (index < 0) {
+         cb({ utxos.front() });
+         return;
+      }
+
+      std::vector<UTXO> result;
+      uint64_t sum = 0;
+      index = utxos.size() - 1;
+      while ((index >= 0) && (sum < val)) {  //TODO: needs to be optimized to fill the val more precisely
+         result.push_back(utxos[index]);
+         sum += utxos[index].getValue();
+         index--;
+      }
+      if (sum < val) {
+         cb({});
+      }
+      else {
+         cb(result);
+      }
+   };
+   btcWallet_->getSpendableTxOutListForValue(val, cbProcess);
+   return true;
+}
+
+void bs::Wallet::onSpendableObjDestroyed()
+{
+   spendableCallbacks_.erase(sender());
+}
+
+void bs::Wallet::onZCListObjDestroyed()
+{
+   zcListCallbacks_.erase(sender());
+}
+
+bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, QObject *obj)
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+
+   zcListCallbacks_[obj].push_back(cb);
+   if (obj != nullptr) {
+      connect(obj, SIGNAL(destroyed()), this, SLOT(onZCListObjDestroyed()));
+      if (zcListCallbacks_.size() > 1) {
+         return true;
       }
    }
-   return txOutList;
-}
-
-std::vector<UTXO> bs::Wallet::getUTXOsToSpend(uint64_t val) const
-{
-   if (!btcWallet_) {
-      return {};
-   }
-   auto utxos = btcWallet_->getSpendableTxOutListForValue(val);
-   if (utxoAdapter_) {
-      utxoAdapter_->filter(utxos);
-   }
-   std::sort(utxos.begin(), utxos.end(), [](const UTXO &a, const UTXO &b) {
-      return (a.getValue() < b.getValue());
-   });
-
-   int index = utxos.size() - 1;
-   while (index >= 0) {
-      if (utxos[index].getValue() < val) {
-         index++;
-         break;
+   else {
+      if (zcListCallbacks_[obj].size() > 1) {
+         return true;
       }
-      index--;
    }
-   if ((index >= 0) && (index < utxos.size())) {
-      return { utxos[index] };
-   }
-   else if (index < 0) {
-      return { utxos.front() };
-   }
-
-   std::vector<UTXO> result;
-   uint64_t sum = 0;
-   index = utxos.size() - 1;
-   while ((index >= 0) && (sum < val)) {  //TODO: needs to be optimized to fill the val more precisely
-      result.push_back(utxos[index]);
-      sum += utxos[index].getValue();
-      index--;
-   }
-   if (sum < val) {
-      return {};
-   }
-   return result;
+   const auto &cbZCList = [this](std::vector<UTXO> utxos) -> void {
+      for (const auto &cbPairs : zcListCallbacks_) {
+         if (cbPairs.first != nullptr) {
+            disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onZCListObjDestroyed()));
+         }
+         for (const auto &cb : cbPairs.second) {
+            cb(utxos);
+         }
+      }
+      zcListCallbacks_.clear();
+   };
+   btcWallet_->getSpendableZCList(cbZCList);
+   return true;
 }
 
-std::vector<UTXO> bs::Wallet::getSpendableZCList() const
+bool bs::Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
 {
-   if (!btcWallet_) {
-      return {};
+   if (!isBalanceAvailable()) {
+      return false;
    }
-   return btcWallet_->getSpendableZCList();
+   btcWallet_->getRBFTxOutList(cb);
+   return true;
 }
 
-std::vector<UTXO> bs::Wallet::getRBFTxOutList() const
-{
-   if (!btcWallet_) {
-      return{};
-   }
-   return btcWallet_->getRBFTxOutList();
-}
-
-void bs::Wallet::UpdateBalanceFromDB()
+void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64_t>)> &cb)
 {
    if (!isBalanceAvailable()) {
       return;
    }
-   const auto balanceVector = btcWallet_->getBalancesAndCount(bdm_->GetTopBlockHeight(), false);
-   if (balanceVector.size() < 4) {
-      return;
-   }
+   const auto &cbBalances = [this, cb](std::vector<uint64_t> balanceVector) {
+      if (balanceVector.size() < 4) {
+         return;
+      }
+      const auto totalBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[0]) / BTCNumericTypes::BalanceDivider;
+      const auto spendableBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[1]) / BTCNumericTypes::BalanceDivider;
+      const auto unconfirmedBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[2]) / BTCNumericTypes::BalanceDivider;
+      const auto count = balanceVector[3];
 
-   const auto totalBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[0]) / BTCNumericTypes::BalanceDivider;
-   const auto spendableBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[1]) / BTCNumericTypes::BalanceDivider;
-   const auto unconfirmedBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[2]) / BTCNumericTypes::BalanceDivider;
-   const auto count = balanceVector[3];
-
-   if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
-      || (unconfirmedBalance_ != unconfirmedBalance)) {
-      qDebug() << "updating maps";
-      updateAddrBalance_ = true;
-      updateAddrTxN_ = true;
-      QMutexLocker lock(&addrMapsMtx_);
-      addrCount_ = count;
-      totalBalance_ = totalBalance;
-      spendableBalance_ = spendableBalance;
-      unconfirmedBalance_ = unconfirmedBalance;
-   }
+      if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
+         || (unconfirmedBalance_ != unconfirmedBalance)) {
+         updateAddrBalance_ = true;
+         updateAddrTxN_ = true;
+         QMutexLocker lock(&addrMapsMtx_);
+         addrCount_ = count;
+         totalBalance_ = totalBalance;
+         spendableBalance_ = spendableBalance;
+         unconfirmedBalance_ = unconfirmedBalance;
+         emit balanceChanged(GetWalletId(), balanceVector);
+      }
+      emit balanceUpdated(GetWalletId(), balanceVector);
+      if (cb) {
+         cb(balanceVector);
+      }
+   };
+   btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
 }
 
-std::vector<LedgerEntryData> bs::Wallet::getHistoryPage(uint32_t id) const
+bool bs::Wallet::getHistoryPage(uint32_t id) const
 {
-   if (!btcWallet_) {
-      return {};
+   const auto &cb = [this, id](const bs::Wallet *wallet
+      , std::vector<ClientClasses::LedgerEntry> entries) {
+      emit historyPageReceived(id, entries);
+   };
+   return getHistoryPage(id, cb);
+}
+
+bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
+   , std::vector<ClientClasses::LedgerEntry>)> clientCb, bool onlyNew) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
    }
-   return btcWallet_->getHistoryPage(id);
+   const auto &cb = [this, id, onlyNew, clientCb](std::vector<ClientClasses::LedgerEntry> entries) {
+      if (!onlyNew) {
+         clientCb(this, entries);
+      }
+      else {
+         const auto &histPage = historyCache_.find(id);
+         if (histPage == historyCache_.end()) {
+            clientCb(this, entries);
+         }
+         else if (histPage->second.size() == entries.size()) {
+            clientCb(this, {});
+         }
+         else {
+            std::vector<ClientClasses::LedgerEntry> diff;
+            struct comparator {
+               bool operator() (const ClientClasses::LedgerEntry &a, const ClientClasses::LedgerEntry &b) const {
+                  return (a.getTxHash() < b.getTxHash());
+               }
+            };
+            std::set<ClientClasses::LedgerEntry, comparator> diffSet;
+            diffSet.insert(entries.begin(), entries.end());
+            for (const auto &entry : histPage->second) {
+               diffSet.erase(entry);
+            }
+            for (const auto &diffEntry : diffSet) {
+               diff.emplace_back(diffEntry);
+            }
+            clientCb(this, diff);
+         }
+      }
+      historyCache_[id] = entries;
+   };
+   btcWallet_->getHistoryPage(id, cb);
+   return true;
 }
 
 bs::Address bs::Wallet::GetRandomChangeAddress(AddressEntryType aet)
@@ -654,21 +823,17 @@ QString bs::Wallet::displayTxValue(int64_t val) const
    return QLocale().toString(val / BTCNumericTypes::BalanceDivider, 'f', BTCNumericTypes::default_precision);
 }
 
-void bs::Wallet::SetBDM(const std::shared_ptr<PyBlockDataManager>& bdm)
+void bs::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
-   if (!bdm_ && (bdm != nullptr)) {
-      bdm_ = bdm;
+   if (!armory_ && (armory != nullptr)) {
+      armory_ = armory;
    }
 }
 
-void bs::Wallet::RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew)
+std::string bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
-   SetBDM(bdm);
-   QtConcurrent::run(&threadPool_, this, &bs::Wallet::doRegister, bdm, asNew);
-}
+   SetArmory(armory);
 
-void bs::Wallet::doRegister(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew)
-{
    if (!utxoAdapter_) {
       utxoAdapter_ = std::make_shared<UtxoFilterAdapter>(GetWalletId());
       if (!UtxoReservation::addAdapter(utxoAdapter_)) {
@@ -676,15 +841,31 @@ void bs::Wallet::doRegister(const std::shared_ptr<PyBlockDataManager>& bdm, bool
       }
    }
 
-   const auto &addrSet = getAddrHashSet();
-   std::vector<BinaryData> addrVec;
-   addrVec.insert(addrVec.end(), addrSet.begin(), addrSet.end());
-
-   if (bdm_) {
-      bdm_->registerWallet(btcWallet_, addrVec, GetWalletId(), asNew);
+   if (armory_) {
+      const auto &addrSet = getAddrHashSet();
+      std::vector<BinaryData> addrVec;
+      addrVec.insert(addrVec.end(), addrSet.begin(), addrSet.end());
+      const auto &cbRegister = [this] {
+         emit walletReady(QString::fromStdString(GetWalletId()));
+      };
+      walletRegId_ = armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
+      return walletRegId_;
    }
-   registered_ = true;
-   emit walletReady(QString::fromStdString(GetWalletId()));
+   return {};
+}
+
+void bs::Wallet::UnregisterWallet()
+{
+   heartbeatRunning_ = false;
+   btcWallet_.reset();
+   {
+      QMutexLocker lock(&addrMapsMtx_);
+      cbBal_.clear();
+      cbTxN_.clear();
+   }
+   spendableCallbacks_.clear();
+   zcListCallbacks_.clear();
+   historyCache_.clear();
 }
 
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs
@@ -825,12 +1006,6 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal, 
    uint64_t fee = 0;
    auto utxos = inputs;
    if (utxos.empty()) {
-      utxos = getSpendableTxOutList();
-      if (utxos.empty()) {
-         utxos = getSpendableZCList();
-      }
-   }
-   if (utxos.empty()) {
       throw std::invalid_argument("No usable UTXOs");
    }
 
@@ -857,8 +1032,8 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal, 
       }
 
       const auto coinSelection = std::make_shared<CoinSelection>([utxos](uint64_t) { return utxos; }
-         , std::vector<AddressBookEntry>{}, PyBlockDataManager::instance()->GetTopBlockHeight()
-         , GetTotalBalance() * BTCNumericTypes::BalanceDivider);
+         , std::vector<AddressBookEntry>{}, GetSpendableBalance() * BTCNumericTypes::BalanceDivider
+         , armory_ ? armory_->topBlock() : UINT32_MAX);
 
       try {
          const auto selection = coinSelection->getUtxoSelectionForRecipients(payment, utxos);

@@ -36,6 +36,7 @@ public:
 
    QString getName() const { return name_; }
    QString getComment() const { return comment_; }
+   virtual int getUtxoCount() const { return 0; }
 
    bool hasChildren() const { return !childs_.empty(); }
    int  childrenCount() const { return childs_.count(); }
@@ -154,6 +155,7 @@ class AddressNode : public CoinControlNode
 public:
    AddressNode(const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
       : CoinControlNode(name, comment, row, parent)
+      , utxoCount_(0)
    {}
    ~AddressNode() noexcept override = default;
 
@@ -161,6 +163,20 @@ public:
       appendChildrenNode(transaction);
       NotifyChildAdded();
       AddBalance(transaction->getSelectionCount(), transaction->getTotalAmount(), transaction->getTotalAmount());
+      incrementUtxoCount();
+   }
+
+   void incrementUtxoCount()
+   {
+      ++utxoCount_;
+
+      if (getParent()) {
+         auto a = dynamic_cast<AddressNode*>(getParent());
+
+         if (a) {
+            a->incrementUtxoCount();
+         }
+      }
    }
 
    BTCNumericTypes::balance_type getTotalAmount() const override {
@@ -182,6 +198,11 @@ public:
    void setCheckedState(int state) override
    {
       UpdateChildsState(state);
+   }
+
+   int getUtxoCount() const override
+   {
+      return utxoCount_;
    }
 
 protected:
@@ -239,6 +260,7 @@ private:
    int totalSelected_ = 0;
    int totalChilds_ = 0;
    int checkedState_ = Qt::Unchecked;
+   int utxoCount_;
 };
 
 
@@ -251,6 +273,9 @@ void CoinControlNode::sort(int column, Qt::SortOrder order) {
          res = left->getName().compare(right->getName()) < 0;
          break;
       case 1:
+         res = left->getUtxoCount() < right->getUtxoCount();
+         break;
+      case 2:
          res = left->getComment().compare(right->getComment()) < 0;
          break;
       default:
@@ -284,6 +309,8 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
          return node->getName();
       case ColumnComment:
          return node->getComment();
+      case ColumnUTXOCount:
+         return node->getUtxoCount();
       case ColumnBalance: {
          const auto amount = (node->getSelectedAmount() <= 0) ? node->getTotalAmount() : node->getSelectedAmount();
          return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
@@ -295,8 +322,12 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
       if (index.column() == 0) {
          return node->getCheckedState();
       }
-   } else if ((role == Qt::TextAlignmentRole) && (index.column() == ColumnBalance)) {
-      return Qt::AlignRight;
+   } else if (role == Qt::TextAlignmentRole) {
+      if (index.column() == ColumnBalance) {
+         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+      } else if (index.column() == ColumnUTXOCount) {
+         return Qt::AlignCenter;
+      }
    }
    return QVariant{};
 }
@@ -326,6 +357,8 @@ QVariant CoinControlModel::headerData(int section, Qt::Orientation orientation, 
    switch (section) {
    case ColumnName:
       return tr("Address/Hash");
+   case ColumnUTXOCount:
+      return tr("#");
    case ColumnComment:
       return tr("Comment");
    case ColumnBalance:

@@ -7,7 +7,9 @@
 
 #include "ui_TransactionsWidget.h"
 
+#include "CreateTransactionDialogAdvanced.h"
 #include "HDWallet.h"
+#include "MessageBoxCritical.h"
 #include "TransactionsViewModel.h"
 #include "TransactionDetailDialog.h"
 #include "WalletsManager.h"
@@ -27,10 +29,10 @@ public:
       setSortRole(TransactionsViewModel::SortRole);
    }
 
-   int rowCount(const QModelIndex & parent = QModelIndex()) const override
-   {
+/*   int rowCount(const QModelIndex & parent = QModelIndex()) const override
+   {     //! causes assert(last < rowCount()) to invoke when filtering by wallet
       return qMin(QSortFilterProxyModel::rowCount(parent), 500);
-   }
+   }*/
 
    int totalRowCount() const
    {
@@ -156,17 +158,48 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
    ui->setupUi(this);
    connect(ui->treeViewTransactions, &QAbstractItemView::doubleClicked, this, &TransactionsWidget::showTransactionDetails);
    ui->treeViewTransactions->setContextMenuPolicy(Qt::CustomContextMenu);
+
+   actionCopyAddr_ = new QAction(tr("&Copy Address"));
+   connect(actionCopyAddr_, &QAction::triggered, [this]() {
+      qApp->clipboard()->setText(curAddress_);
+   });
+
+   actionRBF_ = new QAction(tr("Replace-By-Fee (RBF)"), this);
+   connect(actionRBF_, &QAction::triggered, this, &TransactionsWidget::onCreateRBFDialog);
+
+   actionCPFP_ = new QAction(tr("Child-Pays-For-Parent (CPFP)"), this);
+   connect(actionCPFP_, &QAction::triggered, this, &TransactionsWidget::onCreateCPFPDialog);
+
    connect(ui->treeViewTransactions, &QAbstractItemView::customContextMenuRequested, [=](const QPoint& p) {
       auto index = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
       auto addressIndex = transactionsModel_->index(index.row(), static_cast<int>(TransactionsViewModel::Columns::Address));
-      auto address = transactionsModel_->data(addressIndex).toString();
+      curAddress_ = transactionsModel_->data(addressIndex).toString();
 
-      QMenu* menu = new QMenu(this);
-      QAction* copyAction = menu->addAction(tr("&Copy Address"));
-      connect(copyAction, &QAction::triggered, [=]() {
-         qApp->clipboard()->setText(address);
-      });
-      menu->popup(ui->treeViewTransactions->mapToGlobal(p));
+      contextMenu_.clear();
+      contextMenu_.addAction(actionCopyAddr_);
+
+      if (sortFilterModel_) {
+         const auto sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
+         const auto txItem = transactionsModel_->getItem(sourceIndex.row());
+         if (txItem.initialized) {
+            if (txItem.isRBFeligible()) {
+               contextMenu_.addAction(actionRBF_);
+               actionRBF_->setData(sourceIndex.row());
+            }
+            else {
+               actionRBF_->setData(-1);
+            }
+
+            if (txItem.isCPFPeligible()) {
+               contextMenu_.addAction(actionCPFP_);
+               actionCPFP_->setData(sourceIndex.row());
+            }
+            else {
+               actionCPFP_->setData(-1);
+            }
+         }
+      }
+      contextMenu_.popup(ui->treeViewTransactions->mapToGlobal(p));
    });
    ui->treeViewTransactions->setUniformRowHeights(true);
    ui->treeViewTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -198,16 +231,22 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
    ui->labelResultCount->hide();
 }
 
+TransactionsWidget::~TransactionsWidget() = default;
+
+void TransactionsWidget::init(const std::shared_ptr<WalletsManager> &walletsMgr
+   , const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<SignContainer> &signContainer)
+{
+   walletsManager_ = walletsMgr;
+   armory_ = armory;
+   signContainer_ = signContainer;
+
+   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
+}
+
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
 {
    transactionsModel_ = model;
-   connect(transactionsModel_.get(), &TransactionsViewModel::dataLoaded, [this](int count) {
-      if (count > 0) {
-         auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
-         auto dateTime = transactionsModel_->data(index).toDateTime();
-         ui->dateEditStart->setDateTime(dateTime);
-      }
-   });
+   connect(transactionsModel_.get(), &TransactionsViewModel::dataLoaded, this, &TransactionsWidget::onDataLoaded, Qt::QueuedConnection);
 
    sortFilterModel_ = new TransactionsSortFilterModel(appSettings_, this);
    sortFilterModel_->setSourceModel(model.get());
@@ -215,7 +254,6 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    connect(sortFilterModel_, &TransactionsSortFilterModel::rowsInserted, this, &TransactionsWidget::updateResultCount);
    connect(sortFilterModel_, &TransactionsSortFilterModel::rowsRemoved, this, &TransactionsWidget::updateResultCount);
    connect(sortFilterModel_, &TransactionsSortFilterModel::modelReset, this, &TransactionsWidget::updateResultCount);
-   connect(transactionsModel_->GetWalletsManager().get(), &WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
 
    walletsChanged();
 
@@ -232,7 +270,18 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    ui->treeViewTransactions->setSortingEnabled(true);
    ui->treeViewTransactions->setModel(sortFilterModel_);
    ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::RbfFlag));
+   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
 //   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
+}
+
+void TransactionsWidget::onDataLoaded(int count)
+{
+   if ((count <= 0) || (ui->dateEditStart->dateTime().date().year() > 2009)) {
+      return;
+   }
+   auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
+   auto dateTime = transactionsModel_->data(index).toDateTime();
+   ui->dateEditStart->setDateTime(dateTime);
 }
 
 void TransactionsWidget::setAppSettings(std::shared_ptr<ApplicationSettings> appSettings)
@@ -290,12 +339,11 @@ void TransactionsWidget::walletsChanged()
    int currentIndex = -1;
    int primaryWalletIndex = 0;
 
-   const auto &walletsManager = transactionsModel_->GetWalletsManager();
    ui->walletBox->clear();
    ui->walletBox->addItem(tr("All Wallets"));
    int index = 1;
-   for (unsigned int i = 0; i < walletsManager->GetHDWalletsCount(); i++) {
-      const auto &hdWallet = walletsManager->GetHDWallet(i);
+   for (unsigned int i = 0; i < walletsManager_->GetHDWalletsCount(); i++) {
+      const auto &hdWallet = walletsManager_->GetHDWallet(i);
       ui->walletBox->addItem(QString::fromStdString(hdWallet->getName()));
       QStringList allLeafIds = walletLeavesIds(hdWallet);
 
@@ -303,7 +351,7 @@ void TransactionsWidget::walletsChanged()
          currentIndex = index;
       }
 
-      if (hdWallet == walletsManager->GetPrimaryWallet()) {
+      if (hdWallet == walletsManager_->GetPrimaryWallet()) {
          primaryWalletIndex = index;
       }
 
@@ -335,7 +383,7 @@ void TransactionsWidget::walletsChanged()
          ui->walletBox->setItemData(groupIndex, groupLeafIds, UiUtils::WalletIdRole);
       }
    }
-   const auto &settlWallet = walletsManager->GetSettlementWallet();
+   const auto &settlWallet = walletsManager_->GetSettlementWallet();
    if (settlWallet) {
       ui->walletBox->addItem(QLatin1String("Settlement"));
       ui->walletBox->setItemData(index++, QStringList() << QString::fromStdString(settlWallet->GetWalletId())
@@ -350,7 +398,7 @@ void TransactionsWidget::walletsChanged()
       if (walletIds.contains(c_allWalletsId)) {
          ui->walletBox->setCurrentIndex(0);
       } else {
-         const auto primaryWallet = walletsManager->GetPrimaryWallet();
+         const auto primaryWallet = walletsManager_->GetPrimaryWallet();
 
          if (primaryWallet) {
             ui->walletBox->setCurrentIndex(primaryWalletIndex);
@@ -379,24 +427,67 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 {
    auto txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index).row());
 
-   TransactionDetailDialog transactionDetailDialog(txItem, transactionsModel_->GetWalletsManager(), transactionsModel_->GetBlockDataManager(), this);
+   TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
    transactionDetailDialog.exec();
 }
 
 void TransactionsWidget::updateResultCount()
 {
-   auto all = sortFilterModel_->totalRowCount();
    auto shown = sortFilterModel_->rowCount();
    auto total = transactionsModel_->rowCount();
-   if (shown < total) {
-      ui->labelResultCount->setText(tr("Showing %L1 of %L2 results (of %L3 total). To see other transactions, change the filters and/or date range above. ").arg(shown).arg(all).arg(total));
-      ui->labelResultCount->show();
-   }
-   else if (all == 0 && total != 0) {
-      ui->labelResultCount->setText(tr("None of the %L1 transactions match the filter criteria. To see other transactions, change the filters and/or date range above. ").arg(total));
-      ui->labelResultCount->show();
+   ui->labelResultCount->setText(tr("Displaying %L1 transactions (of %L2 total).")
+      .arg(shown).arg(total));
+   ui->labelResultCount->show();
+}
+
+void TransactionsWidget::onCreateRBFDialog()
+{
+   auto txItem = transactionsModel_->getItem(actionRBF_->data().toInt());
+
+   const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
+      try {
+         auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
+            , walletsManager_, signContainer_
+            , txItem->tx, txItem->wallet
+            , this);
+         dlg->exec();
+      }
+      catch (const std::exception &e) {
+         MessageBoxCritical(tr("RBF Transaction"), tr("Failed to create RBF transaction")
+            , QLatin1String(e.what()), this).exec();
+      }
+   };
+
+   if (txItem.initialized) {
+      cbDialog(&txItem);
    }
    else {
-      ui->labelResultCount->hide();
+      txItem.initialize(armory_, walletsManager_, cbDialog);
+   }
+}
+
+void TransactionsWidget::onCreateCPFPDialog()
+{
+   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toInt());
+
+   const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
+      try {
+         auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
+            , walletsManager_, signContainer_
+            , txItem->wallet, txItem->tx
+            , this);
+         dlg->exec();
+      }
+      catch (const std::exception &e) {
+         MessageBoxCritical(tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
+            , QLatin1String(e.what()), this).exec();
+      }
+   };
+
+   if (txItem.initialized) {
+      cbDialog(&txItem);
+   }
+   else {
+      txItem.initialize(armory_, walletsManager_, cbDialog);
    }
 }

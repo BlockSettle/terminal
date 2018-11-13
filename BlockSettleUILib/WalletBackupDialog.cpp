@@ -16,12 +16,15 @@
 
 
 WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
-   , const std::shared_ptr<SignContainer> &container, QWidget *parent)
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletBackupDialog)
    , wallet_(wallet)
    , signingContainer_(container)
    , outputDir_(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).toStdString())
+   , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
@@ -47,6 +50,8 @@ WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wa
    outputFile_ = outputDir_ + "/backup_wallet_" + wallet->getName() + "_" + wallet->getWalletId();
    TextFileClicked();
 }
+
+WalletBackupDialog::~WalletBackupDialog() = default;
 
 bool WalletBackupDialog::isDigitalBackup() const
 {
@@ -101,12 +106,12 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    }
    else {
       try {
-         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet_->getName()),
-            QString::fromStdString(wallet_->getWalletId()),
+         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet_->getWalletId()),
             QString::fromStdString(easyData.part1),
             QString::fromStdString(easyData.part2),
             QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png")),
             UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2)));
+
          if (!pdfWriter.write(filePath())) {
             throw std::runtime_error("write failure");
          }
@@ -128,7 +133,8 @@ void WalletBackupDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet:
    }
    infoReqId_ = 0;
 
-   ui_->widgetSubmitKeys->init(wallet_->getWalletId(), keyRank, encTypes, encKeys);
+   ui_->widgetSubmitKeys->init(MobileClientRequest::BackupWallet, wallet_->getWalletId()
+      , keyRank, encTypes, encKeys, appSettings_);
    ui_->widgetSubmitKeys->setFocus();
    updateState();
 

@@ -51,19 +51,41 @@ ZmqContext::sock_ptr ZmqContext::CreateNullSocket()
    return { nullptr, zmq_close };
 }
 
+
 std::string ZmqContext::GenerateConnectionName(const std::string& host, const std::string& port)
 {
-   return host+":"+port+"_" + idGenerator_.getNextId();
+   return host + ":" + port + "_" + idGenerator_.getNextId();
+}
+
+std::string ZmqContext::GenerateConnectionName(const std::string& endpoint)
+{
+   return endpoint + "_" + idGenerator_.getNextId();
 }
 
 ZmqContext::sock_ptr ZmqContext::CreatePublishSocket()
 {
    FastLock lock(lockerFlag_);
-   return { zmq_socket(context_.get(), ZMQ_PUB), zmq_close };
+   return { zmq_socket(context_.get(), ZMQ_XPUB), zmq_close };
 }
 
 ZmqContext::sock_ptr ZmqContext::CreateSubscribeSocket()
 {
    FastLock lock(lockerFlag_);
    return { zmq_socket(context_.get(), ZMQ_SUB), zmq_close };
+}
+
+std::string ZmqContext::CreateConnectionEndpoint(ZMQTransport transport, const std::string& host, const std::string& port)
+{
+   std::string transportString;
+   switch (transport) {
+   case ZMQTransport::TCPTransport:
+      transportString = "tcp";
+      break;
+   case ZMQTransport::InprocTransport:
+      transportString = "inproc";
+      break;
+   default:
+      return std::string{};
+   }
+   return transportString + "://" + host + ":" + port;
 }

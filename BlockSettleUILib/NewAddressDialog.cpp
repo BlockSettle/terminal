@@ -35,6 +35,8 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::Wallet>& wallet
    });
 }
 
+NewAddressDialog::~NewAddressDialog() = default;
+
 void NewAddressDialog::copyToClipboard()
 {
    QApplication::clipboard()->setText(address_.display());
@@ -61,8 +63,6 @@ void NewAddressDialog::UpdateSizeToAddress()
    }
 
    ui_->lineEditNewAddress->setMinimumWidth(textWidth);
-   auto leftMargin = ui_->lineEditNewAddress->textMargins().left();
-   auto rightMargin = ui_->lineEditNewAddress->textMargins().right();
 
    layout()->activate();
 }

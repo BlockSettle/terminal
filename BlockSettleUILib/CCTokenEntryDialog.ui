@@ -198,9 +198,9 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="labelFreja">
+          <widget class="QLabel" name="labelAuth">
            <property name="text">
-            <string>Freja eID</string>
+            <string>Auth eID</string>
            </property>
           </widget>
          </item>

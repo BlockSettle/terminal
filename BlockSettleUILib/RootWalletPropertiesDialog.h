@@ -15,7 +15,7 @@ namespace bs {
    }
    class Wallet;
 }
-
+class ArmoryConnection;
 class ApplicationSettings;
 class AssetManager;
 class CurrentWalletFilter;
@@ -28,17 +28,18 @@ class RootWalletPropertiesDialog : public QDialog
 Q_OBJECT
 
 public:
-   RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<SignContainer> &, WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
+   RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<SignContainer> &
+      , WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
-   ~RootWalletPropertiesDialog() override = default;
+   ~RootWalletPropertiesDialog() override;
 
 private slots:
    void onDeleteWallet();
    void onBackupWallet();
    void onCreateWoWallet();
    void onChangePassword();
-   void onPasswordChanged(const std::string &walletId, bool ok);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
       , bs::wallet::KeyRank);
    void onWalletSelected();
@@ -54,12 +55,13 @@ private:
    void startWalletScan();
 
 private:
-   Ui::WalletPropertiesDialog    *     ui_;
+   std::unique_ptr<Ui::WalletPropertiesDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>     wallet_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<AssetManager>       assetMgr_;
+   std::shared_ptr<spdlog::logger>     logger_;
    CurrentWalletFilter                 *walletFilter_;
    unsigned int                        infoReqId_ = 0;
    std::vector<bs::wallet::EncryptionType>   walletEncTypes_;

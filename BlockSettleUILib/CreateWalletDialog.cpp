@@ -3,28 +3,41 @@
 
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
+#include "WalletPasswordVerifyDialog.h"
+#include "NewWalletSeedDialog.h"
 #include "SignContainer.h"
+#include "EnterWalletPassword.h"
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
+#include "AuthNotice.h"
+#include "UiUtils.h"
 
 #include <spdlog/spdlog.h>
 
 
 CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
-      , const std::shared_ptr<SignContainer> &container, NetworkType netType, const QString &walletsPath
-      , bool createPrimary, QWidget *parent)
+   , const std::shared_ptr<SignContainer> &container
+   , const QString &walletsPath
+   , const bs::wallet::Seed& walletSeed
+   , const std::string& walletId
+   , bool createPrimary
+   , const QString& username
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget *parent)
+
    : QDialog(parent)
    , ui_(new Ui::CreateWalletDialog)
    , walletsManager_(walletsManager)
    , signingContainer_(container)
-   , walletSeed_(netType, SecureBinaryData().GenerateRandom(32))
+   , appSettings_(appSettings)
    , walletsPath_(walletsPath)
+   , walletSeed_(walletSeed)
+   , walletId_(walletId)
 {
    ui_->setupUi(this);
 
-   walletId_ = bs::hd::Node(walletSeed_).getId();
-
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
+   ui_->checkBoxPrimaryWallet->setChecked(!walletsManager->HasPrimaryWallet());
 
    if (createPrimary && !walletsManager->HasPrimaryWallet()) {
       setWindowTitle(tr("Create Primary Wallet"));
@@ -38,52 +51,57 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
       ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->GetWalletsCount() + 1));
    }
 
-   connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::UpdateAcceptButtonState);
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { UpdateAcceptButtonState(); });
-   ui_->widgetCreateKeys->init(walletId_);
+   ui_->lineEditDescription->setValidator(new UiUtils::WalletDescriptionValidator(this));
+
+   ui_->labelWalletId->setText(QString::fromStdString(walletId_));
+
+   connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::updateAcceptButtonState);
+   //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateAcceptButtonState(); });
+   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyTypeChanged,
+      this, &CreateWalletDialog::onKeyTypeChanged);
+
+   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideAuthConnectButton);
+   ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet
+      , walletId_, username, appSettings);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
 
-   connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &CreateWalletDialog::CreateWallet);
+   connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &CreateWalletDialog::CreateWallet);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateWalletDialog::reject);
 
    connect(signingContainer_.get(), &SignContainer::HDWalletCreated, this, &CreateWalletDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CreateWalletDialog::onWalletCreateError);
 
-   UpdateAcceptButtonState();
+   adjustSize();
+   setMinimumSize(size());
 }
 
-void CreateWalletDialog::showEvent(QShowEvent *event)
-{
-   ui_->labelHintPrimary->setVisible(ui_->checkBoxPrimaryWallet->isVisible());
-   QDialog::showEvent(event);
-}
+CreateWalletDialog::~CreateWalletDialog() = default;
 
-bool CreateWalletDialog::couldCreateWallet() const
+void CreateWalletDialog::updateAcceptButtonState()
 {
-   return (ui_->widgetCreateKeys->isValid()
-         && !walletsManager_->WalletNameExists(ui_->lineEditWalletName->text().toStdString()));
-}
-
-void CreateWalletDialog::UpdateAcceptButtonState()
-{
-   ui_->pushButtonCreate->setEnabled(couldCreateWallet());
+   ui_->pushButtonContinue->setEnabled(ui_->widgetCreateKeys->isValid() &&
+      !ui_->lineEditWalletName->text().isEmpty());
 }
 
 void CreateWalletDialog::CreateWallet()
 {
-   if (!couldCreateWallet()) {
+   const QString &walletName = ui_->lineEditWalletName->text();
+   const QString  &walletDescription = ui_->lineEditDescription->text();
+   std::vector<bs::wallet::PasswordData> keys;
+
+   bool result = checkNewWalletValidity(walletsManager_.get(), walletName, walletId_
+      , ui_->widgetCreateKeys, &keys, appSettings_, this);
+   if (!result) {
       return;
    }
 
-   ui_->pushButtonCreate->setEnabled(false);
+   ui_->pushButtonContinue->setEnabled(false);
 
-   const auto &name = ui_->lineEditWalletName->text().toStdString();
-   const auto &description = ui_->lineEditDescription->text().toStdString();
-   createReqId_ = signingContainer_->CreateHDWallet(name, description
-      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, ui_->widgetCreateKeys->keys()
+   createReqId_ = signingContainer_->CreateHDWallet(walletName.toStdString(), walletDescription.toStdString()
+      , ui_->checkBoxPrimaryWallet->isChecked(), walletSeed_, keys
       , ui_->widgetCreateKeys->keyRank());
    walletPassword_.clear();
 }
@@ -100,6 +118,17 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
 
    info.exec();
    reject();
+}
+
+void CreateWalletDialog::onKeyTypeChanged(bool password)
+{
+   if (!password && !authNoticeWasShown_) {
+      AuthNotice dlg(this);
+
+      if (dlg.exec() == QDialog::Accepted) {
+         authNoticeWasShown_ = true;
+      }
+   }
 }
 
 void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet> wallet)
@@ -123,6 +152,64 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
 
 void CreateWalletDialog::reject()
 {
+   bool result = abortWalletCreationQuestionDialog(this);
+   if (!result) {
+      return;
+   }
+
    ui_->widgetCreateKeys->cancel();
    QDialog::reject();
+}
+
+bool checkNewWalletValidity(WalletsManager* walletsManager
+   , const QString& walletName
+   , const std::string& walletId
+   , WalletKeysCreateWidget* widgetCreateKeys
+   , std::vector<bs::wallet::PasswordData>* keys
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget* parent)
+{
+   *keys = widgetCreateKeys->keys();
+
+   if (walletsManager->WalletNameExists(walletName.toStdString())) {
+      MessageBoxCritical messageBox(QObject::tr("Invalid wallet name")
+         , QObject::tr("Wallet with this name already exists"), parent);
+      messageBox.exec();
+      return false;
+   }
+
+   if (!keys->empty() && keys->at(0).encType == bs::wallet::EncryptionType::Auth) {
+      if (keys->at(0).encKey.isNull()) {
+         MessageBoxCritical messageBox(QObject::tr("Invalid Auth eID")
+            , QObject::tr("Please check Auth eID Email"), parent);
+         messageBox.exec();
+         return false;
+      }
+
+      EnterWalletPassword dialog(MobileClientRequest::ActivateWallet, parent);
+      dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
+         , appSettings, QObject::tr("Activate Auth eID signing"));
+      int result = dialog.exec();
+      if (!result) {
+         return false;
+      }
+
+      keys->at(0).encKey = dialog.getEncKey(0);
+      keys->at(0).password = dialog.getPassword();
+
+   }
+   else if (!widgetCreateKeys->isValid()) {
+      MessageBoxCritical messageBox(QObject::tr("Invalid password"), QObject::tr("Please check passwords"), parent);
+      messageBox.exec();
+      return false;
+   }
+
+   WalletPasswordVerifyDialog verifyDialog(appSettings, parent);
+   verifyDialog.init(walletId, *keys, widgetCreateKeys->keyRank());
+   int result = verifyDialog.exec();
+   if (!result) {
+      return false;
+   }
+
+   return true;
 }

@@ -148,11 +148,11 @@ int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<Wall
    return selected;
 }
 
-void UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
+int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
 {
    int walletIndex = 0;
    if (comboBox->count() == 0) {
-      return;
+      return -1;
    }
 
    for (int i=0; i<comboBox->count(); ++i) {
@@ -165,6 +165,7 @@ void UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wal
    if (comboBox->currentIndex() != walletIndex) {
       comboBox->setCurrentIndex(walletIndex);
    }
+   return walletIndex;
 }
 
 int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<WalletsManager> &walletsManager)
@@ -319,7 +320,8 @@ int UiUtils::GetPricePrecisionForAssetType(const bs::network::Asset::Type& asset
       return GetPricePrecisionCC();
    }
 
-   return 0;
+   // Allow entering floating point numbers if the asset type was detected as Undefined
+   return 6;
 }
 
 QString UiUtils::displayAmountForProduct(double quantity, const QString& product, bs::network::Asset::Type at)
@@ -490,7 +492,8 @@ QValidator::State UiUtils::ValidateDoubleString(QString &input, int &pos, const 
    }
 
    bool converted = false;
-   double newValue = QLocale().toDouble(tempCopy, &converted);
+   // don't need result, just check if could convert
+   QLocale().toDouble(tempCopy, &converted);
    if (!converted) {
       return QValidator::Invalid;
    }
@@ -568,5 +571,35 @@ QString UiUtils::modelPath(const QModelIndex &index, QAbstractItemModel *model)
       return res;
    } else {
       return QString();
+   }
+}
+
+
+//
+// WalletDescriptionValidator
+//
+
+UiUtils::WalletDescriptionValidator::WalletDescriptionValidator(QObject *parent) : QValidator(parent)
+{}
+
+QValidator::State UiUtils::WalletDescriptionValidator::validate(QString &input, int &pos) const
+{
+   static const QString invalidCharacters = QLatin1String("\\/?:*<>|");
+
+   if (input.isEmpty()) {
+      return QValidator::Acceptable;
+   }
+
+   if (invalidCharacters.contains(input.at(pos - 1))) {
+      input.remove(pos - 1, 1);
+
+      if (pos > input.size()) {
+         --pos;
+      }
+
+      return QValidator::Invalid;
+   }
+   else {
+      return QValidator::Acceptable;
    }
 }

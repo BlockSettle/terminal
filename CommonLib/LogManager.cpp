@@ -96,7 +96,7 @@ std::shared_ptr<spdlog::logger> LogManager::create(const LogConfig &config)
 std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr<spdlog::logger> &logger, const LogConfig &config)
 {
    std::shared_ptr<spdlog::logger> result;
-   const auto level = convertLevel(config.level);
+
    if (logger) {
       auto sinks = logger->sinks();
       if (config.fileName.empty()) {

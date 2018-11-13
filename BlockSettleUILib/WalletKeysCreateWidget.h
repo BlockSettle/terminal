@@ -3,23 +3,37 @@
 
 #include <QWidget>
 #include "WalletEncryption.h"
+#include "MobileClientRequestType.h"
 
 namespace Ui {
     class WalletKeysCreateWidget;
 }
 class WalletKeyWidget;
-
+class ApplicationSettings;
 
 class WalletKeysCreateWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeysCreateWidget(QWidget* parent = nullptr);
-   ~WalletKeysCreateWidget() override = default;
+   enum Flag {
+      NoFlag = 0x00,
+      HideAuthConnectButton = 0x01,
+      HideWidgetContol = 0x02,
+      HideGroupboxCaption = 0x04,
+      SetPasswordLabelAsNew = 0x08,
+      HidePubKeyFingerprint = 0x10
+   };
+   Q_DECLARE_FLAGS(Flags, Flag)
 
-   void init(const std::string &walletId);
+   WalletKeysCreateWidget(QWidget* parent = nullptr);
+   ~WalletKeysCreateWidget() override;
+
+   void setFlags(Flags flags);
+   void init(MobileClientRequest requestType
+      , const std::string &walletId, const QString& username
+      , const std::shared_ptr<ApplicationSettings>& appSettings);
    void addPasswordKey() { addKey(true); }
-   void addFrejaKey() { addKey(false); }
+   void addAuthKey() { addKey(false); }
    void cancel();
 
    bool isValid() const;
@@ -29,6 +43,8 @@ public:
 signals:
    void keyChanged();
    void keyCountChanged();
+   void failed();
+   void keyTypeChanged(bool password);
 
 private slots:
    void onAddClicked();
@@ -42,11 +58,17 @@ private:
    void addKey(bool password);
 
 private:
-   Ui::WalletKeysCreateWidget *  ui_;
-   std::string    walletId_;
-   std::vector<WalletKeyWidget *>      widgets_;
-   std::vector<bs::wallet::PasswordData>  pwdData_;
-   bs::wallet::KeyRank                 keyRank_ = { 0, 0 };
+   std::unique_ptr<Ui::WalletKeysCreateWidget> ui_;
+   std::string walletId_;
+   std::vector<std::unique_ptr<WalletKeyWidget>> widgets_;
+   std::vector<bs::wallet::PasswordData> pwdData_;
+   bs::wallet::KeyRank keyRank_ = { 0, 0 };
+   Flags flags_{NoFlag};
+   std::shared_ptr<ApplicationSettings> appSettings_;
+   QString username_;
+   MobileClientRequest requestType_{};
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysCreateWidget::Flags)
 
 #endif // __WALLET_KEYS_CREATE_WIDGET_H__

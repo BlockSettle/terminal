@@ -1,5 +1,6 @@
 #include "TransactionData.h"
 
+#include "ArmoryConnection.h"
 #include "BTCNumericTypes.h"
 #include "CoinSelection.h"
 #include "SwigClient.h"
@@ -7,7 +8,6 @@
 #include "ScriptRecipient.h"
 #include "SettlementWallet.h"
 #include "RecipientContainer.h"
-#include "PyBlockDataManager.h"
 #include "UiUtils.h"
 
 #include <vector>
@@ -31,7 +31,8 @@ TransactionData::~TransactionData()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet)
+bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint32_t topBlock
+   , bool resetInputs, const std::function<void()> &cbInputsReset)
 {
    if (wallet == nullptr) {
       return false;
@@ -40,16 +41,48 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet)
       wallet_ = wallet;
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
          , swTransactionsOnly_, confirmedInputs_
-         , [this]{InvalidateTransactionData();});
+         , [this]{ InvalidateTransactionData(); }, cbInputsReset);
 
       coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
             return this->selectedInputs_->GetSelectedTransactions();
          }
          , std::vector<AddressBookEntry>{}
-         , static_cast<unsigned int>(PyBlockDataManager::instance()->GetTopBlockHeight())
-         , static_cast<uint64_t>(wallet_->GetTotalBalance() * BTCNumericTypes::BalanceDivider));
+         , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider)
+         , topBlock);
       InvalidateTransactionData();
    }
+   else if (resetInputs) {
+      if (selectedInputs_) {
+         selectedInputs_->ResetInputs(cbInputsReset);
+      }
+      else {
+         selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
+            , swTransactionsOnly_, confirmedInputs_
+            , [this] { InvalidateTransactionData(); }, cbInputsReset);
+      }
+      InvalidateTransactionData();
+   }
+
+   return true;
+}
+
+bool TransactionData::SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &wallet, const std::vector<UTXO> &utxos
+   , uint32_t topBlock)
+{
+   if (wallet == nullptr) {
+      return false;
+   }
+   wallet_ = wallet;
+   selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_, utxos
+      , [this] {InvalidateTransactionData(); });
+
+   coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
+      return this->selectedInputs_->GetSelectedTransactions();
+   }
+      , std::vector<AddressBookEntry>{}
+   , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider)
+      , topBlock);
+   InvalidateTransactionData();
 
    return true;
 }
@@ -536,11 +569,13 @@ bs::wallet::TXSignRequest TransactionData::CreateTXRequest(bool isRBF, const bs:
 }
 
 bs::wallet::TXSignRequest TransactionData::CreatePartialTXRequest(uint64_t spendVal, float feePerByte
-   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData)
+   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData
+   , const std::vector<UTXO> &utxos)
 {
    const auto &changeAddr = wallet_->GetNewChangeAddress();
    createAddress(changeAddr);
-   auto txReq = wallet_->CreatePartialTXRequest(spendVal, inputs(), changeAddr, feePerByte, recipients, prevData);
+   auto txReq = wallet_->CreatePartialTXRequest(spendVal, utxos.empty() ? inputs() : utxos
+      , changeAddr, feePerByte, recipients, prevData);
    txReq.populateUTXOs = true;
    return txReq;
 }

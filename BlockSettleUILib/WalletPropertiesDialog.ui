@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>560</width>
-    <height>455</height>
+    <height>475</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -103,6 +103,9 @@
            <property name="rootIsDecorated">
             <bool>true</bool>
            </property>
+           <attribute name="headerStretchLastSection">
+            <bool>true</bool>
+           </attribute>
           </widget>
          </item>
         </layout>
@@ -452,7 +455,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>Encryption Rank</string>
+                  <string>Encryption</string>
                  </property>
                 </widget>
                </item>

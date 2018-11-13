@@ -77,6 +77,8 @@ public:
                return getState();
             case WalletsViewModel::WalletColumns::ColumnNbAddresses:
                return nbAddr_ ? QString::number(nbAddr_) : QString();
+            case WalletsViewModel::WalletColumns::ColumnID:
+               return QString::fromStdString(id());
             default:
                return QVariant();
             }
@@ -98,7 +100,17 @@ public:
 
    void addGroups(const std::vector<std::shared_ptr<bs::hd::Group>> &groups);
 
-   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override { return wallets_; }
+   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override
+   {
+      std::vector<std::shared_ptr<bs::Wallet>> ret = wallets_;
+
+      for (const auto * g : qAsConst(children_)) {
+         const auto tmp = g->wallets();
+         ret.insert(ret.end(), tmp.cbegin(), tmp.cend());
+      }
+
+      return ret;
+   }
    BTCNumericTypes::balance_type getBalanceTotal() const { return balTotal_; }
    BTCNumericTypes::balance_type getBalanceUnconf() const { return balUnconf_; }
    BTCNumericTypes::balance_type getBalanceSpend() const { return balSpend_; }
@@ -221,6 +233,8 @@ public:
       }
    }
 
+   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override { return wallets_; }
+
    void addLeaves(const std::vector<std::shared_ptr<bs::Wallet>> &leaves) {
       for (const auto &leaf : leaves) {
          if (viewModel_->showRegularWallets() && (leaf == viewModel_->getAuthWallet())) {
@@ -263,6 +277,7 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<WalletsManager> &wallet
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 
    if (signContainer_) {
@@ -376,6 +391,8 @@ QVariant WalletsViewModel::headerData(int section, Qt::Orientation orientation, 
             return tr("Signer state");
          case WalletColumns::ColumnNbAddresses:
             return tr("# Used Addrs");
+         case WalletColumns::ColumnID:
+            return tr("ID");
          default:
             return QVariant();
          }
@@ -605,7 +622,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
          else if (hdWallet->encryptionRank().second <= 1) {
             switch (hdWallet->encryptionTypes()[0]) {
             case bs::wallet::EncryptionType::Password:   return tr("Password");
-            case bs::wallet::EncryptionType::Freja:   return tr("Freja eID");
+            case bs::wallet::EncryptionType::Auth:   return tr("Auth eID");
             default:    return tr("No");
             }
          }

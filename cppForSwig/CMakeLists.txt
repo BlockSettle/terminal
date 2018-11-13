@@ -1,18 +1,18 @@
 CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
 
-PROJECT( ${CRYPTO_LIB_NAME} )
+PROJECT(${CRYPTO_LIB_NAME})
 
-SET( SOURCES
+SET (SOURCES
    Accounts.cpp
    Addresses.cpp
    Assets.cpp
    AssetEncryption.cpp
-   BDM_seder.cpp
+   AsyncClient.cpp
    BinaryData.cpp
    BlockDataManagerConfig.cpp
    BtcUtils.cpp
+   ClientClasses.cpp
    CoinSelection.cpp
-   DataObject.cpp
    DBUtils.cpp
    DecryptedDataContainer.cpp
    DerivationScheme.cpp
@@ -33,6 +33,8 @@ SET( SOURCES
    UniversalTimer.cpp
    Wallets.cpp
    WalletManager.cpp
+   WebSocketClient.cpp
+   WebSocketMessage.cpp
    ${MDB_DIR}/mdb.c
    ${MDB_DIR}/midl.c
    ${MDB_DIR}/lmdbpp.cpp
@@ -40,17 +42,24 @@ SET( SOURCES
    bech32/ref/c++/segwit_addr.cpp
    )
 
-SET( HEADERS
+IF (WIN32)
+   LIST(APPEND SOURCES SocketService_win32.cpp)
+ELSE (WIN32)
+   LIST(APPEND SOURCES SocketService_unix.cpp)
+ENDIF (WIN32)
+
+SET (HEADERS
    Accounts.h
    Addresses.h
    Assets.h
    AssetEncryption.h
-   BDM_seder.h
+   AsyncClient.h
+   BDVCodec.h
    BinaryData.h
    BlockDataManagerConfig.h
    BtcUtils.h
+   ClientClasses.h
    CoinSelection.h
-   DataObject.h
    DBUtils.h
    DecryptedDataContainer.h
    DerivationScheme.h
@@ -62,6 +71,7 @@ SET( HEADERS
    Signer.h
    Script.h
    SocketObject.h
+   SocketService.h
    StringSockets.h
    SwigClient.h
    Transactions.h
@@ -69,6 +79,8 @@ SET( HEADERS
    TxEvalState.h
    Wallets.h
    WalletManager.h
+   WebSocketClient.h
+   WebSocketMessage.h
    UniversalTimer.h
    ${MDB_DIR}/lmdb.h
    ${MDB_DIR}/midl.h
@@ -77,9 +89,30 @@ SET( HEADERS
    bech32/ref/c++/segwit_addr.h
    )
 
+SET(PROTO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protobuf)
+FILE(GLOB PROTO_FILES ${PROTO_DIR}/*.proto)
+
+FOREACH(PROTO_FILE ${PROTO_FILES})
+   GET_FILENAME_COMPONENT(PROTO_NAME "${PROTO_FILE}" NAME_WE)
+
+   SET(PROTO_SOURCE_FILE "${PROTO_DIR}/${PROTO_NAME}.pb.cc")
+   SET(PROTO_HEADER_FILE "${PROTO_DIR}/${PROTO_NAME}.pb.h")
+
+   SET(PROTO_SOURCE_FILES ${PROTO_SOURCE_FILES} ${PROTO_SOURCE_FILE})
+   SET(PROTO_HEADER_FILES ${PROTO_HEADER_FILES} ${PROTO_HEADER_FILE})
+
+   ADD_CUSTOM_COMMAND(OUTPUT ${PROTO_SOURCE_FILE}
+                      OUTPUT ${PROTO_HEADER_FILE}
+                      DEPENDS ${PROTO_FILE}
+                      COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTO_FILE} --cpp_out=${PROTO_DIR} --proto_path=${PROTO_DIR}
+   )
+ENDFOREACH(PROTO_FILE)
+
+SET(PROTO_SOURCES ${PROTO_SOURCE_FILES} ${PROTO_HEADER_FILES})
+
 # Extra files for cryptopp
-SET( CRYPTOPP_EXTRA_SOURCES ${CRYPTOPP_EXTRA_DIR}/DetSign.cpp)
-SET( CRYPTOPP_EXTRA_HEADERS ${CRYPTOPP_EXTRA_DIR}/DetSign.h)
+SET (CRYPTOPP_EXTRA_SOURCES ${CRYPTOPP_EXTRA_DIR}/DetSign.cpp)
+SET (CRYPTOPP_EXTRA_HEADERS ${CRYPTOPP_EXTRA_DIR}/DetSign.h)
 
 # leveldb_windows_port
 IF(WIN32)
@@ -106,12 +139,15 @@ IF(WIN32)
    SET(OS_SPECIFIC_HEADERS ${LEVELDB_WINDOWS_PORT_HEADERS})
 ENDIF(WIN32)
 
-ADD_LIBRARY( ${CRYPTO_LIB_NAME}
-   ${SOURCES} ${HEADERS}
+ADD_LIBRARY(${CRYPTO_LIB_NAME}
+   ${SOURCES} ${HEADERS} ${PROTO_SOURCES}
    ${CRYPTOPP_EXTRA_SOURCES} ${CRYPTOPP_EXTRA_HEADERS}
    ${OS_SPECIFIC_SOURCES} ${OS_SPECIFIC_HEADERS})
 
-TARGET_LINK_LIBRARIES(${CRYPTO_LIB_NAME} ${CRYPTOPP_LIB})
+TARGET_LINK_LIBRARIES(${CRYPTO_LIB_NAME}
+   ${WS_LIB}
+   ${CRYPTOPP_LIB}
+   )
 
 IF(NOT WIN32)
    SET(ARMORYDB_SOURCES)

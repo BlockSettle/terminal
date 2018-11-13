@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>393</width>
-    <height>84</height>
+    <width>390</width>
+    <height>71</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,16 +21,19 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
-    <number>10</number>
+    <number>7</number>
+   </property>
+   <property name="sizeConstraint">
+    <enum>QLayout::SetMinimumSize</enum>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>7</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>7</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -38,62 +41,92 @@
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Create Wallet keys</string>
+      <string>Create Wallet Keys</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <property name="topMargin">
+       <number>7</number>
+      </property>
+      <property name="bottomMargin">
+       <number>7</number>
+      </property>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <item>
-         <widget class="QSpinBox" name="spinBoxRankM"/>
-        </item>
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string> of </string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelRankN">
-          <property name="text">
-           <string>N</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>keys</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButtonAddKey">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Add Key</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButtonDelKey">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Delete last key</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <widget class="QLabel" name="labelPubKeyFP">
+        <property name="text">
+         <string>Public Key fingerprint</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widgetControl" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>4</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QSpinBox" name="spinBoxRankM"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string> of </string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelRankN">
+           <property name="text">
+            <string>N</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>keys</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonAddKey">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Add Key</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonDelKey">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Delete last key</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </item>
      </layout>
     </widget>

@@ -36,6 +36,8 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
       this, &GeneralSettingsPage::onLogLevelChanged);
 }
 
+GeneralSettingsPage::~GeneralSettingsPage() = default;
+
 void GeneralSettingsPage::displaySettings(const std::shared_ptr<ApplicationSettings>& appSettings
    , const std::shared_ptr<WalletsManager>& walletsMgr, bool displayDefault)
 {
@@ -43,8 +45,8 @@ void GeneralSettingsPage::displaySettings(const std::shared_ptr<ApplicationSetti
    ui_->checkBoxMinimizeToTray->setChecked(appSettings->get<bool>(ApplicationSettings::minimizeToTray, displayDefault));
    ui_->checkBoxCloseToTray->setChecked(appSettings->get<bool>(ApplicationSettings::closeToTray, displayDefault));
    ui_->checkBoxShowTxNotification->setChecked(appSettings->get<bool>(ApplicationSettings::notifyOnTX, displayDefault));
-   ui_->addvancedDialogByDefaultCheckBox->setChecked(
-      appSettings->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault, displayDefault));
+   ui_->addvancedDialogByDefaultCheckBox->setChecked(appSettings->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault, displayDefault));
+   ui_->checkBox_subscribeToMdOnStart->setChecked(appSettings->get<bool>(ApplicationSettings::SubscribeToMDOnStart, displayDefault));
 
    const auto cfg = appSettings->GetLogsConfig(displayDefault);
    ui_->logFileName->setText(QString::fromStdString(cfg.at(0).fileName));
@@ -79,6 +81,9 @@ void GeneralSettingsPage::applyChanges(const std::shared_ptr<ApplicationSettings
    appSettings->set(ApplicationSettings::notifyOnTX, ui_->checkBoxShowTxNotification->isChecked());
    appSettings->set(ApplicationSettings::AdvancedTxDialogByDefault,
       ui_->addvancedDialogByDefaultCheckBox->isChecked());
+
+   appSettings->set(ApplicationSettings::SubscribeToMDOnStart
+      , ui_->checkBox_subscribeToMdOnStart->isChecked());
 
    auto cfg = appSettings->GetLogsConfig();
 

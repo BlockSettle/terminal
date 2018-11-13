@@ -67,7 +67,7 @@ public:
 
    AddressListModel(std::shared_ptr<WalletsManager> walletsManager, QObject* parent
       , AddressType addrType = AddressType::All);
-   ~AddressListModel() override;
+   ~AddressListModel() noexcept = default;
 
    int rowCount(const QModelIndex & parent) const override;
    int columnCount(const QModelIndex & parent) const override;
@@ -75,6 +75,9 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
    bool setWallets(const Wallets &);
+
+signals:
+   void updated();
 
 private slots:
    void updateData();
@@ -85,14 +88,11 @@ private:
    std::vector<AddressRow>    addressRows_;
    const AddressType          addrType_;
 
-   std::thread                updateThread_;
-   std::atomic_bool           stopped_;
    std::atomic_bool           processing_;
 
 private:
    void updateWallet(const std::shared_ptr<bs::Wallet> &);
    void updateWalletData();
-   void stopUpdateThread();
    AddressRow createRow(const bs::Address &, const std::shared_ptr<bs::Wallet> &) const;
    QVariant dataForRow(const AddressListModel::AddressRow &row, int column) const;
 };

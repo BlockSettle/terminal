@@ -14,8 +14,9 @@ class QtSettings(Configurator):
         self.jom = JomSettings(settings)
         self.openssl = OpenSslSettings(settings)
         self._release = '5.11'
-        self._version = self._release + '.1'
+        self._version = self._release + '.2'
         self._package_name = 'qt-everywhere-src-' + self._version
+        self._script_revision = '3'
 
         if self._project_settings.on_windows():
             self._package_url = 'http://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
@@ -24,6 +25,9 @@ class QtSettings(Configurator):
 
     def get_package_name(self):
         return self._package_name
+
+    def get_revision_string(self):
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -39,7 +43,7 @@ class QtSettings(Configurator):
 
         modules_to_skip = ['doc', 'imageformats', 'webchannel', 'webview', 'sensors', 'serialport',
                            'script', 'multimedia', 'wayland', 'location', 'webglplugin', 'gamepad',
-                           'purchasing', 'canvas3d', 'speech', 'charts']
+                           'purchasing', 'canvas3d', 'speech']
         sql_drivers_to_skip = ['db2', 'oci', 'tds', 'sqlite2', 'odbc', 'ibase', 'psql']
 
         if self._project_settings.on_windows():
@@ -84,7 +88,7 @@ class QtSettings(Configurator):
             command.append('-fontconfig')
 
             command.append('-no-glib')
-            command.append('-no-cups')
+            command.append('-cups')
             command.append('-no-icu')
             command.append('-nomake')
             command.append('tools')

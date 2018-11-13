@@ -469,7 +469,7 @@ public:
 
       size_t offset = 4;
 
-      for (auto i = 0; i < len_; i++)
+      for (unsigned i = 0; i < len_; i++)
       {
          if (offset >= len)
             throw TxFilterException("deser error");
@@ -644,19 +644,19 @@ struct ShardFilter_Spentness : public ShardFilter
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-struct TLS_SHARDTX
+struct SHARDTX
 {
    map<LMDBEnv*, LMDB::Mode> modes_;
    unique_ptr<map<LMDBEnv*, map<unsigned, unique_ptr<LMDBEnv::Transaction>>>> txMap_;
    map<LMDBEnv*, unsigned> levels_;
 
-   TLS_SHARDTX(void)
+   SHARDTX(void)
    {
       txMap_ = 
          make_unique<map<LMDBEnv*, map<unsigned, unique_ptr<LMDBEnv::Transaction>>>>();
    }
 
-   ~TLS_SHARDTX(void)
+   ~SHARDTX(void)
    {
       txMap_.reset();
    }
@@ -751,6 +751,9 @@ private:
    unique_ptr<ShardFilter> filterPtr_;
    mutex addMapMutex_;
 
+public:
+   static TransactionalMap<thread::id, shared_ptr<SHARDTX>> txShardMap_;
+
 private:
    shared_ptr<DBPair> getShard(unsigned) const;
    shared_ptr<DBPair> getShard(unsigned, bool) const;
@@ -805,6 +808,12 @@ public:
    unsigned getShardIdForKey(BinaryDataRef key) const;
    unsigned getTopShardId(void) const;
    void closeShardsById(unsigned);
+
+   static void clearThreadShardTx(thread::id id) 
+   { txShardMap_.erase(id); }
+   
+   static void clearThreadShardTx(vector<thread::id>& idVec) 
+   { txShardMap_.erase(idVec); }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1014,7 +1023,7 @@ public:
       uint32_t endBlock = UINT32_MAX) const;
 
    bool getStoredSubHistoryAtHgtX(StoredSubHistory& subssh,
-      const BinaryData& scrAddrStr, const BinaryData& hgtX) const;
+      const BinaryDataRef scrAddrStr, const BinaryData& hgtX) const;
    
    bool getStoredSubHistoryAtHgtX(StoredSubHistory& subssh,
       const BinaryData& dbkey) const;
@@ -1070,13 +1079,6 @@ public:
 
    // Sometimes we already know where the Tx is, but we don't know its hash
    BinaryData getTxHashForLdbKey(BinaryDataRef ldbKey6B) const;
-
-   BinaryData getTxHashForHeightAndIndex(uint32_t height,
-      uint16_t txIndex);
-
-   BinaryData getTxHashForHeightAndIndex(uint32_t height,
-      uint8_t  dup,
-      uint16_t txIndex);
 
    ////////////////////////////////////////////////////////////////////////////
    bool markBlockHeaderValid(BinaryDataRef headHash);
@@ -1181,13 +1183,8 @@ private:
    // just a 25-byte script.  But this generically captures all types
    // of addresses including pubkey-only, P2SH, 
    map<BinaryData, StoredScriptHistory>   registeredSSHs_;
-
-   const BinaryData ZCprefix_ = BinaryData(2);
-
    string blkFolder_;
-
    const shared_ptr<Blockchain> blockchainPtr_;
-
    const static set<DB_SELECT> supernodeDBs_;
 };
 

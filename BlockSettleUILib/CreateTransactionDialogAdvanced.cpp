@@ -1,13 +1,12 @@
 #include "CreateTransactionDialogAdvanced.h"
-
 #include "ui_CreateTransactionDialogAdvanced.h"
 
 #include "Address.h"
+#include "ArmoryConnection.h"
 #include "CoinControlDialog.h"
 #include "FixedFeeValidator.h"
 #include "MessageBoxInfo.h"
 #include "OfflineSigner.h"
-#include "PyBlockDataManager.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -29,9 +28,10 @@
 #include <stdexcept>
 
 
-CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<WalletsManager>& walletManager
+CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
- : CreateTransactionDialog(walletManager, container, loadFeeSuggestions, parent)
+ : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions, parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
    ui_->setupUi(this);
@@ -41,152 +41,202 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
    initUI();
 }
 
+CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
+
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
-        const std::shared_ptr<WalletsManager>& walletManager
+        const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container
-      , const Tx&  tx
+      , const Tx &tx
       , const std::shared_ptr<bs::Wallet>& wallet
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(walletManager, container, true, parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory, walletManager, container, true, parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
-   dlg->SetFixedWallet(wallet->GetWalletId());
 
    dlg->ui_->checkBoxRBF->setChecked(true);
    dlg->ui_->checkBoxRBF->setEnabled(false);
    dlg->ui_->pushButtonImport->setEnabled(false);
 
-   // set inputs
-   auto selInputs = dlg->transactionData_->GetSelectedInputs();
-   selInputs->SetUseAutoSel(false);
-
-   auto rbfList = wallet->getRBFTxOutList();
-   selInputs->SetInputs(rbfList, {});
-
-   const auto &bdm = PyBlockDataManager::instance();
-   int64_t totalVal = 0;
-
-   for (int i = 0; i < tx.getNumTxIn(); i++) {
-      const auto txin = tx.getTxInCopy(i);
-      const auto outpoint = txin.getOutPoint();
-      Tx prevTx = bdm->getTxByHash(outpoint.getTxHash());
-      if (prevTx.isInitialized()) {
-         TxOut prevOut = prevTx.getTxOutCopy(outpoint.getTxOutIndex());
-         totalVal += prevOut.getValue();
-      }
-      if (!selInputs->SetUTXOSelection(outpoint.getTxHash(), outpoint.getTxOutIndex())) {
-         throw std::runtime_error("No input[s] found");
-      }
-   }
-
-   QString  changeAddress;
-   double   changeAmount;
-
-   // set outputs
-   for (int i = 0; i < tx.getNumTxOut(); i++) {
-      TxOut out = tx.getTxOutCopy(i);
-      const auto addr = bs::Address::fromTxOut(out);
-
-      const auto addressString = addr.display();
-      const auto amount = UiUtils::amountToBtc(out.getValue());
-
-      // use last output as change addres
-      if (wallet->containsAddress(addr)) {
-         if (!changeAddress.isEmpty()) {
-            dlg->AddRecipient(changeAddress, changeAmount);
-         }
-
-         changeAddress = addressString;
-         changeAmount = amount;
-      } else {
-         dlg->AddRecipient(addressString, amount);
-      }
-
-      totalVal -= out.getValue();
-   }
-
-   dlg->SetFixedChangeAddress(changeAddress);
-
-   // set fee
-   if (totalVal < 0) {
-      throw std::runtime_error("Negative amount");
-   }
-
-   dlg->originalFee_ = totalVal;
-   const auto &txSize = tx.serializeNoWitness().getSize();
-   const float feePerByte = std::ceil((float)totalVal / txSize);
-   dlg->SetMinimumFee(totalVal, feePerByte + dlg->minRelayFeePerByte_);
-
-   dlg->disableInputSelection();
-   dlg->onTransactionUpdated();
-
-   if (changeAddress.isNull()) {
-      dlg->setUnchangeableTx();
-   }
-
+   dlg->setRBFinputs(tx, wallet);
    return dlg;
 }
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForCPFP(
-        const std::shared_ptr<WalletsManager>& walletManager
+        const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container
       , const std::shared_ptr<bs::Wallet>& wallet
       , const Tx &tx
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(walletManager, container, true, parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory, walletManager, container, true, parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
-   dlg->SetFixedWallet(wallet->GetWalletId());
    dlg->ui_->pushButtonImport->setEnabled(false);
 
-   // set inputs
-   auto selInputs = dlg->transactionData_->GetSelectedInputs();
-   selInputs->SetUseAutoSel(false);
+   dlg->setCPFPinputs(tx, wallet);
+   return dlg;
+}
 
-   int64_t totalVal = 0;
-   const auto &bdm = PyBlockDataManager::instance();
-
+void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::shared_ptr<bs::Wallet> &wallet)
+{
+   std::set<BinaryData> txHashSet;
+   std::map<BinaryData, std::set<uint32_t>> txOutIndices;
    for (int i = 0; i < tx.getNumTxIn(); i++) {
       const auto txin = tx.getTxInCopy(i);
       const auto outpoint = txin.getOutPoint();
-      Tx prevTx = bdm->getTxByHash(outpoint.getTxHash());
-      if (prevTx.isInitialized()) {
-         TxOut prevOut = prevTx.getTxOutCopy(outpoint.getTxOutIndex());
-         totalVal += prevOut.getValue();
-      }
+      txHashSet.insert(outpoint.getTxHash());
+      txOutIndices[outpoint.getTxHash()].insert(outpoint.getTxOutIndex());
    }
 
-   unsigned int cntOutputs = 0;
-   for (int i = 0; i < tx.getNumTxOut(); i++) {
-      auto out = tx.getTxOutCopy(i);
-      const auto addr = bs::Address::fromTxOut(out);
-      if (wallet->containsAddress(addr)) {
-         if (selInputs->SetUTXOSelection(out.getParentHash(), out.getIndex())) {
-            cntOutputs++;
+   const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
+      auto selInputs = transactionData_->GetSelectedInputs();
+      selInputs->SetUseAutoSel(false);
+      int64_t totalVal = 0;
+      for (const auto &prevTx : txs) {
+         const auto &txHash = prevTx.getThisHash();
+         const auto &itTxOut = txOutIndices.find(txHash);
+         if (itTxOut == txOutIndices.end()) {
+            continue;
+         }
+         for (const auto &txOutIdx : itTxOut->second) {
+            if (prevTx.isInitialized()) {
+               TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+               totalVal += prevOut.getValue();
+            }
+         }
+
+         unsigned int cntOutputs = 0;
+         for (int i = 0; i < tx.getNumTxOut(); i++) {
+            auto out = tx.getTxOutCopy(i);
+            const auto addr = bs::Address::fromTxOut(out);
+            if (wallet->containsAddress(addr)) {
+               if (selInputs->SetUTXOSelection(out.getParentHash(), out.getIndex())) {
+                  cntOutputs++;
+               }
+            }
+            totalVal -= out.getValue();
+         }
+
+         if (!cntOutputs) {
+            //!throw std::runtime_error("No input[s] found");
+            return;
+         }
+         if (totalVal < 0) {
+            //!throw std::runtime_error("negative TX balance");
+            return;
+         }
+
+         const auto &cbFee = [this, tx, totalVal](float fee) {
+            const auto txSize = tx.serializeNoWitness().getSize();
+            const float feePerByte = (float)totalVal / txSize;
+            originalFee_ = totalVal;
+            const size_t projectedTxSize = 85;  // 1 input and 1 output bech32
+            const float totalFee = std::abs(txSize * (fee - feePerByte) + projectedTxSize * fee);
+            const float newFPB = std::ceil(totalFee / (txSize + projectedTxSize));
+
+            QMetaObject::invokeMethod(this, [this, totalFee, newFPB] {
+               SetMinimumFee(totalFee, newFPB);
+               onTransactionUpdated();
+            });
+         };
+         walletsManager_->estimatedFeePerByte(2, cbFee, this);
+      }
+   };
+
+   SetFixedWallet(wallet->GetWalletId(), [this, txHashSet, cbTXs] {
+      armory_->getTXsByHash(txHashSet, cbTXs);
+   });
+}
+
+void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shared_ptr<bs::Wallet> &wallet)
+{
+   std::set<BinaryData> txHashSet;
+   std::map<BinaryData, std::set<uint32_t>> txOutIndices;
+   for (int i = 0; i < tx.getNumTxIn(); i++) {
+      const auto txin = tx.getTxInCopy(i);
+      const auto outpoint = txin.getOutPoint();
+      txHashSet.insert(outpoint.getTxHash());
+      txOutIndices[outpoint.getTxHash()].insert(outpoint.getTxOutIndex());
+   }
+
+   const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
+      int64_t totalVal = 0;
+      for (const auto &prevTx : txs) {
+         const auto &txHash = prevTx.getThisHash();
+         const auto &itTxOut = txOutIndices.find(txHash);
+         if (itTxOut == txOutIndices.end()) {
+            continue;
+         }
+         for (const auto &txOutIdx : itTxOut->second) {
+            if (prevTx.isInitialized()) {
+               TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+               totalVal += prevOut.getValue();
+            }
+            if (!transactionData_->GetSelectedInputs()->SetUTXOSelection(txHash, txOutIdx)) {
+               //!throw std::runtime_error("No input[s] found");
+               continue;
+            }
          }
       }
-      totalVal -= out.getValue();
-   }
 
-   if (!cntOutputs) {
-      throw std::runtime_error("No input[s] found");
-   }
-   if (totalVal < 0) {
-      throw std::runtime_error("negative TX balance");
-   }
+      QString  changeAddress;
+      double   changeAmount;
 
-   const auto fee2Blocks = walletManager->estimatedFeePerByte(2);
-   const auto txSize = tx.serializeNoWitness().getSize();
-   const float feePerByte = (float)totalVal / txSize;
-   dlg->originalFee_ = totalVal;
-   const size_t projectedTxSize = 85;  // 1 input and 1 output bech32
-   float totalFee = std::abs(txSize * (fee2Blocks - feePerByte) + projectedTxSize * fee2Blocks);
-   dlg->SetMinimumFee(totalFee, std::ceil(totalFee / (txSize + projectedTxSize)));
+      // set outputs
+      for (int i = 0; i < tx.getNumTxOut(); i++) {
+         TxOut out = tx.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(out);
 
-   dlg->onTransactionUpdated();
-   return dlg;
+         const auto addressString = addr.display();
+         const auto amount = UiUtils::amountToBtc(out.getValue());
+
+         // use last output as change addres
+         if (wallet->containsAddress(addr)) {
+            if (!changeAddress.isEmpty()) {
+               AddRecipient(changeAddress, changeAmount);
+            }
+
+            changeAddress = addressString;
+            changeAmount = amount;
+         }
+         else {
+            AddRecipient(addressString, amount);
+         }
+
+         totalVal -= out.getValue();
+      }
+
+      QMetaObject::invokeMethod(this, [this, changeAddress] { SetFixedChangeAddress(changeAddress); });
+
+      // set fee
+      if (totalVal < 0) {
+         //!throw std::runtime_error("Negative amount");
+         return;
+      }
+
+      originalFee_ = totalVal;
+      const auto &txSize = tx.serializeNoWitness().getSize();
+      const float feePerByte = std::ceil((float)totalVal / txSize);
+      SetMinimumFee(totalVal, feePerByte + minRelayFeePerByte_);
+
+      if (changeAddress.isNull()) {
+         setUnchangeableTx();
+      }
+
+      onTransactionUpdated();
+   };
+
+   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](std::vector<UTXO> utxos) {
+      QMetaObject::invokeMethod(this, [this, wallet, utxos, txHashSet, cbTXs] {
+         SetFixedWalletAndInputs(wallet, utxos);
+
+         armory_->getTXsByHash(txHashSet, cbTXs);
+      });
+   };
+   wallet->getRBFTxOutList(cbRBFInputs);
 }
 
 void CreateTransactionDialogAdvanced::initUI()
@@ -410,9 +460,9 @@ void CreateTransactionDialogAdvanced::RemoveOutputByRow(int row)
    ui_->comboBoxFeeSuggestions->setEnabled(true);
 }
 
-void CreateTransactionDialogAdvanced::selectedWalletChanged(int index)
+void CreateTransactionDialogAdvanced::selectedWalletChanged(int index, bool resetInputs, const std::function<void()> &cbInputsReset)
 {
-   CreateTransactionDialog::selectedWalletChanged(index);
+   CreateTransactionDialog::selectedWalletChanged(index, resetInputs, cbInputsReset);
 
    ui_->radioButtonNewAddrNative->setChecked(true);
 }
@@ -434,7 +484,7 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    if (originalFee_) {
       SetMinimumFee(originalFee_ + minRelayFeePerByte_ * summary.transactionSize, minFeePerByte_);
    }
-   validateCreateButton();
+   QMetaObject::invokeMethod(this, "validateCreateButton", Qt::QueuedConnection);
 }
 
 void CreateTransactionDialogAdvanced::preSetAddress(const QString& address)
@@ -538,7 +588,7 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    if (feeChangeDisabled_) {
       return;
    }
-   
+
    CreateTransactionDialog::onFeeSuggestionsLoaded(feeValues);
 
    AddManualFeeEntries((minFeePerByte_ > 0) ? minFeePerByte_ : feeValues.begin()->second
@@ -644,46 +694,61 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          if (tx.isInitialized()) {
             ui_->pushButtonCreate->setEnabled(true);
 
-            std::shared_ptr<bs::Wallet> wallet;
+            std::set<BinaryData> txHashSet;
+            std::map<BinaryData, std::set<uint32_t>> txOutIndices;
             std::vector<std::pair<BinaryData, uint32_t>> utxoHashes;
-            const auto &bdm = PyBlockDataManager::instance();
-            int64_t totalVal = 0;
+
             for (size_t i = 0; i < tx.getNumTxIn(); i++) {
                auto in = tx.getTxInCopy((int)i);
                OutPoint op = in.getOutPoint();
                utxoHashes.push_back({ op.getTxHash(), op.getTxOutIndex() });
-               Tx prevTx = bdm->getTxByHash(op.getTxHash());
-               if (prevTx.isInitialized()) {
-                  const auto prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
-                  totalVal += prevOut.getValue();
-                  if (!wallet) {
-                     const auto addr = bs::Address::fromTxOut(prevOut);
-                     const auto &addrWallet = walletsManager_->GetWalletByAddress(addr);
-                     if (addrWallet) {
-                        wallet = addrWallet;
+               txHashSet.insert(op.getTxHash());
+               txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
+            }
+
+            const auto &cbTXs = [this, tx, utxoHashes, txOutIndices](std::vector<Tx> txs) {
+               std::shared_ptr<bs::Wallet> wallet;
+               int64_t totalVal = 0;
+
+               for (const auto &prevTx : txs) {
+                  const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
+                  if (itTxOut == txOutIndices.end()) {
+                     continue;
+                  }
+                  for (const auto &txOutIdx : itTxOut->second) {
+                     const auto prevOut = prevTx.getTxOutCopy(txOutIdx);
+                     totalVal += prevOut.getValue();
+                     if (!wallet) {
+                        const auto addr = bs::Address::fromTxOut(prevOut);
+                        const auto &addrWallet = walletsManager_->GetWalletByAddress(addr);
+                        if (addrWallet) {
+                           wallet = addrWallet;
+                        }
                      }
                   }
                }
-            }
 
-            if (wallet) {
-               SetFixedWallet(wallet->GetWalletId());
-               auto selInputs = transactionData_->GetSelectedInputs();
-               for (const auto &txHash : utxoHashes) {
-                  selInputs->SetUTXOSelection(txHash.first, txHash.second);
+               if (wallet) {
+                  SetFixedWallet(wallet->GetWalletId());
+                  auto selInputs = transactionData_->GetSelectedInputs();
+                  for (const auto &txHash : utxoHashes) {
+                     selInputs->SetUTXOSelection(txHash.first, txHash.second);
+                  }
                }
-            }
-            for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-               TxOut out = tx.getTxOutCopy((int)i);
-               const auto addr = bs::Address::fromTxOut(out);
-               if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
-                  SetFixedChangeAddress(addr.display());
-               } else {
-                  AddRecipient(addr.display(), out.getValue() / BTCNumericTypes::BalanceDivider);
+               for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+                  TxOut out = tx.getTxOutCopy((int)i);
+                  const auto addr = bs::Address::fromTxOut(out);
+                  if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
+                     SetFixedChangeAddress(addr.display());
+                  }
+                  else {
+                     AddRecipient(addr.display(), out.getValue() / BTCNumericTypes::BalanceDivider);
+                  }
+                  totalVal -= out.getValue();
                }
-               totalVal -= out.getValue();
-            }
-            SetPredefinedFee(totalVal);
+               SetPredefinedFee(totalVal);
+            };
+            armory_->getTXsByHash(txHashSet, cbTXs);
          }
       }
    } else {
@@ -750,11 +815,19 @@ void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
    }
 }
 
-void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId)
+void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset)
 {
-   SelectWallet(walletId);
-   selectedWalletChanged(0);
+   const int idx = SelectWallet(walletId);
+   selectedWalletChanged(idx, true, cbInputsReset);
    ui_->comboBoxWallets->setEnabled(false);
+}
+
+void CreateTransactionDialogAdvanced::SetFixedWalletAndInputs(const std::shared_ptr<bs::Wallet> &wallet, const std::vector<UTXO> &inputs)
+{
+   SelectWallet(wallet->GetWalletId());
+   ui_->comboBoxWallets->setEnabled(false);
+   disableInputSelection();
+   transactionData_->SetWalletAndInputs(wallet, inputs, armory_->topBlock());
 }
 
 void CreateTransactionDialogAdvanced::disableOutputsEditing()

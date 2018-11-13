@@ -1,6 +1,13 @@
 #include "SettlementContainer.h"
+#include "ArmoryConnection.h"
 
 using namespace bs;
+
+SettlementContainer::SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory)
+   : QObject(nullptr), armory_(armory)
+{
+   connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &SettlementContainer::zcReceived, Qt::QueuedConnection);
+}
 
 void SettlementContainer::startTimer(const unsigned int durationSeconds)
 {
@@ -12,7 +19,7 @@ void SettlementContainer::startTimer(const unsigned int durationSeconds)
    connect(&timer_, &QTimer::timeout, [this] {
       const auto timeDiff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime_);
       msTimeLeft_ = msDuration_ - timeDiff.count();
-      if (msTimeLeft_ <= 0) {
+      if (msTimeLeft_ < 0) {
          timer_.stop();
          msDuration_ = 0;
          msTimeLeft_ = 0;

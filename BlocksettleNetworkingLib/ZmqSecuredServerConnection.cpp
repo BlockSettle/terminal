@@ -1,11 +1,9 @@
 #include "ZmqSecuredServerConnection.h"
+#include "ZMQHelperFunctions.h"
 
 #include "FastLock.h"
 #include "MessageHolder.h"
 
-#ifndef WIN32
-#  include <arpa/inet.h>
-#endif
 #include <zmq.h>
 #include <spdlog/spdlog.h>
 
@@ -104,20 +102,7 @@ bool ZmqSecuredServerConnection::ReadFromDataSocket()
 #endif
       size_t sockSize = sizeof(socket);
       if (zmq_getsockopt(dataSocket_.get(), ZMQ_FD, &socket, &sockSize) == 0) {
-#ifdef WIN32
-         SOCKADDR_IN peerInfo = { 0 };
-         int peerLen = sizeof(peerInfo);
-#else
-         sockaddr_in peerInfo = { 0 };
-         socklen_t peerLen = sizeof(peerInfo);
-#endif
-         const auto rc = getpeername(socket, (sockaddr *)&peerInfo, &peerLen);
-         if (rc == 0) {
-            clientInfo_[clientIdStr] = inet_ntoa(peerInfo.sin_addr);
-         }
-         else {
-            clientInfo_[clientIdStr] = "Not detected";
-         }
+         clientInfo_[clientIdStr] = bs::network::peerAddressString(static_cast<int>(socket));
       }
    }
 

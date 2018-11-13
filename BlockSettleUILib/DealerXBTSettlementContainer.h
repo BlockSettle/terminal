@@ -1,16 +1,21 @@
 #ifndef __DEALER_XBT_SETTLEMENT_CONTAINER_H__
 #define __DEALER_XBT_SETTLEMENT_CONTAINER_H__
 
-#include <memory>
-#include <unordered_set>
 #include "AddressVerificator.h"
 #include "SettlementContainer.h"
+#include "SettlementMonitor.h"
 #include "SettlementWallet.h"
+
 #include "TransactionData.h"
+
+#include <memory>
+#include <unordered_set>
 
 namespace spdlog {
    class logger;
 }
+
+class ArmoryConnection;
 class SignContainer;
 class QuoteProvider;
 class TransactionData;
@@ -24,7 +29,7 @@ public:
    DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
       , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<TransactionData> &, const std::unordered_set<std::string> &bsAddresses
-      , const std::shared_ptr<SignContainer> &, bool autoSign);
+      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &, bool autoSign);
    ~DealerXBTSettlementContainer() override = default;
 
    bool accept(const SecureBinaryData &password = {}) override;
@@ -41,7 +46,7 @@ public:
    std::string product() const override { return order_.product; }
    bs::network::Side::Type side() const override { return order_.side; }
    double quantity() const override { return order_.quantity; }
-   double price() const { return order_.price; }
+   double price() const override { return order_.price; }
    double amount() const override { return amount_; }
 
    bool weSell() const { return weSell_; }
@@ -57,9 +62,12 @@ signals:
 
 private slots:
    void onPayInDetected(int confirmationsNumber, const BinaryData &txHash);
-   void onPayOutDetected(int confirmationsNumber, bs::PayoutSigner::Type signedBy);
+   void onPayOutDetected(bs::PayoutSigner::Type signedBy);
 
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
+
+protected:
+   void zcReceived(unsigned int) override;
 
 private:
    void onCptyVerified();
@@ -75,7 +83,7 @@ private:
    std::shared_ptr<TransactionData>             transactionData_;
    std::shared_ptr<bs::SettlementWallet>        settlWallet_;
    std::shared_ptr<bs::SettlementAddressEntry>  settlAddr_;
-   std::shared_ptr<bs::SettlementMonitor>       settlMonitor_;
+   std::shared_ptr<bs::SettlementMonitorCb>     settlMonitor_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signingContainer_;
    AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;

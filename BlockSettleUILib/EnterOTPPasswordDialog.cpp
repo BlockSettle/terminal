@@ -1,15 +1,19 @@
 #include "EnterOTPPasswordDialog.h"
 #include "ui_EnterOTPPasswordDialog.h"
+
 #include <spdlog/spdlog.h>
+#include "ApplicationSettings.h"
+#include "MobileClient.h"
 #include "OTPManager.h"
 
 
-EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager> &otpMgr
-   , const QString& reason, QWidget* parent)
+EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<spdlog::logger> &logger
+   ,const std::shared_ptr<OTPManager> &otpMgr
+   , const QString& reason, const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterOTPPasswordDialog())
-   , freja_(spdlog::get(""))
-   , frejaTimer_(nullptr)
+   , authTimer_(nullptr)
 {
    ui_->setupUi(this);
 
@@ -20,26 +24,36 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<OTPManager>
 
    ui_->labelReason->setText(reason);
 
-   if (otpMgr->GetEncType() == bs::wallet::EncryptionType::Freja) {
+   if (otpMgr->GetEncType() == bs::wallet::EncryptionType::Auth) {
+      mobileClient_ = new MobileClient(logger, appSettings->GetAuthKeys(), this);
+      connect(mobileClient_, &MobileClient::succeeded, this, &EnterOTPPasswordDialog::onAuthSucceeded);
+      connect(mobileClient_, &MobileClient::failed, this, &EnterOTPPasswordDialog::onAuthFailed);
+
+      std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+      std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+      std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+      mobileClient_->init(serverPubKey, serverHost, serverPort);
+
       ui_->lineEditPassword->hide();
-      ui_->labelFreja->show();
-      ui_->frejaTimer->show();
-      ui_->frejaTimer->setFormat(tr("%n second(s) remaining", "", 120));
-      frejaTimer_ = new QTimer(this);
-      connect(frejaTimer_, &QTimer::timeout, this, &EnterOTPPasswordDialog::frejaTimer);
-      connect(&freja_, &FrejaSignOTP::succeeded, this, &EnterOTPPasswordDialog::onFrejaSucceeded);
-      connect(&freja_, &FrejaSign::failed, this, &EnterOTPPasswordDialog::onFrejaFailed);
-      connect(&freja_, &FrejaSign::statusUpdated, this, &EnterOTPPasswordDialog::onFrejaStatusUpdated);
-      freja_.start(otpMgr->GetEncKey(), reason, otpMgr->GetShortId());
-      frejaTimer_->start(1000);
+      ui_->labelAuth->show();
+      ui_->authTimer->show();
+      ui_->authTimer->setFormat(tr("%n second(s) remaining", "", 120));
+      authTimer_ = new QTimer(this);
+      connect(authTimer_, &QTimer::timeout, this, &EnterOTPPasswordDialog::authTimer);
+      authTimer_->start(1000);
+
+      mobileClient_->start(MobileClientRequest::ActivateOTP
+         , otpMgr->GetEncKey().toStdString(), otpMgr->GetShortId().toStdString(), {});
    }
    else {
-      ui_->labelFreja->hide();
-      ui_->frejaTimer->hide();
+      ui_->labelAuth->hide();
+      ui_->authTimer->hide();
       ui_->lineEditPassword->show();
       connect(ui_->lineEditPassword, &QLineEdit::textEdited, this, &EnterOTPPasswordDialog::passwordChanged);
    }
 }
+
+EnterOTPPasswordDialog::~EnterOTPPasswordDialog() = default;
 
 void EnterOTPPasswordDialog::passwordChanged()
 {
@@ -49,33 +63,32 @@ void EnterOTPPasswordDialog::passwordChanged()
 
 void EnterOTPPasswordDialog::reject()
 {
-   freja_.stop(true);
    QDialog::reject();
 }
 
-void EnterOTPPasswordDialog::onFrejaSucceeded(SecureBinaryData password)
+void EnterOTPPasswordDialog::onAuthSucceeded(const std::string& encKey, const SecureBinaryData &password)
 {
    password_ = password;
    ui_->pushButtonOk->setEnabled(true);
    accept();
 }
 
-void EnterOTPPasswordDialog::onFrejaFailed(const QString &)
+void EnterOTPPasswordDialog::onAuthFailed(const QString &)
 {
    QDialog::reject();
 }
 
-void EnterOTPPasswordDialog::onFrejaStatusUpdated(const QString &status)
+void EnterOTPPasswordDialog::onAuthStatusUpdated(const QString &status)
 {
-   ui_->labelFreja->setText(tr("Freja status: %1").arg(status));
+   ui_->labelAuth->setText(tr("Auth status: %1").arg(status));
 }
 
-void EnterOTPPasswordDialog::frejaTimer()
+void EnterOTPPasswordDialog::authTimer()
 {
-   ui_->frejaTimer->setValue(ui_->frejaTimer->value() - 1);
-   ui_->frejaTimer->setFormat(tr("%n second(s) remaining", "", ui_->frejaTimer->value()));
+   ui_->authTimer->setValue(ui_->authTimer->value() - 1);
+   ui_->authTimer->setFormat(tr("%n second(s) remaining", "", ui_->authTimer->value()));
 
-   if (!ui_->frejaTimer->value()) {
+   if (!ui_->authTimer->value()) {
       reject();
    }
 }

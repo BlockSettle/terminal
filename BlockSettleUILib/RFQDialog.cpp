@@ -7,6 +7,8 @@
 #include "AssetManager.h"
 #include "CCSettlementTransactionWidget.h"
 #include "QuoteProvider.h"
+#include "ReqCCSettlementContainer.h"
+#include "ReqXBTSettlementContainer.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
@@ -18,11 +20,18 @@ enum StackWidgetId
    SettlementTransactionId
 };
 
-RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::network::RFQ& rfq
-   , const std::shared_ptr<TransactionData>& transactionData, const std::shared_ptr<QuoteProvider>& quoteProvider
-   , const std::shared_ptr<AuthAddressManager>& authAddressManager, const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<WalletsManager> &walletsManager, const std::shared_ptr<SignContainer> &container
-   , std::shared_ptr<CelerClient> celerClient, QWidget* parent)
+RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const bs::network::RFQ& rfq
+   , const std::shared_ptr<TransactionData>& transactionData
+   , const std::shared_ptr<QuoteProvider>& quoteProvider
+   , const std::shared_ptr<AuthAddressManager>& authAddressManager
+   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
@@ -31,9 +40,11 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
    , quoteProvider_(quoteProvider)
    , authAddressManager_(authAddressManager)
    , walletsManager_(walletsManager)
-   , container_(container)
+   , signContainer_(signContainer)
    , assetMgr_(assetManager)
+   , armory_(armory)
    , celerClient_(celerClient)
+   , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
@@ -45,7 +56,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, [this] {
       QMetaObject::invokeMethod(this, "close");
    });
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::close);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::close);
 
@@ -59,7 +70,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQDialog::onSignTxRequested);
 
    if (rfq_.assetType == bs::network::Asset::SpotXBT) {
-      connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDialog::onOrderUpdated);
+      connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDialog::onOrderUpdated, Qt::QueuedConnection);
    }
 
    ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
@@ -68,6 +79,8 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::ne
 
    ui_->stackedWidgetRFQ->setCurrentIndex(RequestingQuoteId);
 }
+
+RFQDialog::~RFQDialog() = default;
 
 void RFQDialog::onOrderFilled(const std::string &quoteId)
 {
@@ -83,63 +96,71 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
    }
 }
 
-void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote& quote)
+void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote &quote)
 {
    quote_ = quote;
 
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
       quoteProvider_->AcceptQuoteFX(reqId, quote);
-   } else {
-      if (rfq_.assetType == bs::network::Asset::SpotXBT) {
-         xbtSettlementWidget_ = new XBTSettlementTransactionWidget(this);
-         xbtSettlementWidget_->init(logger_, authAddressManager_, assetMgr_
-            , quoteProvider_, container_, celerClient_);
-
-         connect(xbtSettlementWidget_, &XBTSettlementTransactionWidget::settlementAccepted
-            , this, &RFQDialog::onSettlementAccepted);
-         connect(xbtSettlementWidget_, &XBTSettlementTransactionWidget::settlementCancelled
-            , this, &QDialog::close);
-
-         xbtSettlementWidget_->reset(walletsManager_);
-
-         xbtSettlementWidget_->populateDetails(rfq_, quote, transactionData_);
-
-         auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget_);
-         ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
-      } else {
-         ccSettlementWidget_ = new CCSettlementTransactionWidget(this);
-         ccSettlementWidget_->init(logger_, assetMgr_, container_, celerClient_);
-
-         connect(ccSettlementWidget_, &CCSettlementTransactionWidget::settlementAccepted
-            , this, &RFQDialog::onSettlementAccepted);
-         connect(ccSettlementWidget_, &CCSettlementTransactionWidget::sendOrder
-            , this, &RFQDialog::onSettlementOrder);
-         connect(ccSettlementWidget_, &CCSettlementTransactionWidget::settlementCancelled
-            , this, &QDialog::close);
-
-         ccSettlementWidget_->reset(walletsManager_);
-         const bs::Address genAddress =  assetMgr_->getCCGenesisAddr(rfq_.product);
-
-         ccSettlementWidget_->populateDetails(rfq_, quote, transactionData_, genAddress);
-
-         auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget_);
-         ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
-      }
-
    }
+   else {
+      if (rfq_.assetType == bs::network::Asset::SpotXBT) {
+         curContainer_ = newXBTcontainer();
+      }
+      else {
+         curContainer_ = newCCcontainer();
+      }
+   }
+}
+
+std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
+{
+   xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
+      , authAddressManager_, assetMgr_, signContainer_, armory_, walletsManager_
+      , rfq_, quote_, transactionData_);
+
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
+      , this, &RFQDialog::onSettlementAccepted);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementCancelled
+      , this, &QDialog::close);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
+      , this, &RFQDialog::onXBTQuoteAccept);
+
+   const auto xbtSettlementWidget = new XBTSettlementTransactionWidget(logger_
+      , celerClient_, appSettings_, xbtSettlContainer_, this);
+
+   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget);
+   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
+
+   return xbtSettlContainer_;
+}
+
+std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
+{
+   ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
+      , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, transactionData_);
+
+   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementAccepted
+      , this, &RFQDialog::onSettlementAccepted);
+   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::sendOrder
+      , this, &RFQDialog::onSettlementOrder);
+   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
+      , this, &QDialog::close);
+
+   const auto ccSettlementWidget = new CCSettlementTransactionWidget(logger_
+      , celerClient_, appSettings_, ccSettlContainer_, this);
+
+   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget);
+   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
+
+   return ccSettlContainer_;
 }
 
 void RFQDialog::reject()
 {
-   if (cancelOnClose_) {
-      const auto widget = ui_->stackedWidgetRFQ->currentWidget();
-      if (widget) {
-         if (!QMetaObject::invokeMethod(widget, "cancel")) {
-            logger_->warn("[RFQDialog::reject] failed to find [cancel] method for current stacked widget");
-         }
-      }
-      else {
-         logger_->warn("[RFQDialog::reject] failed to get current stacked widget");
+   if (cancelOnClose_ && curContainer_) {
+      if (!curContainer_->cancel()) {
+         logger_->warn("[RFQDialog::reject] settlement container failed to cancel");
       }
    }
    QDialog::reject();
@@ -163,16 +184,16 @@ void RFQDialog::onQuoteReceived(const bs::network::Quote& quote)
 
 void RFQDialog::onSettlementAccepted()
 {
-   if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
+   if (ccSettlContainer_) {
       const auto itCCOrder = ccReqIdToOrder_.find(QString::fromStdString(rfq_.requestId));
       if (itCCOrder != ccReqIdToOrder_.end()) {
-         quoteProvider_->SignTxRequest(itCCOrder->second, ccSettlementWidget_->getTxSignedData());
+         quoteProvider_->SignTxRequest(itCCOrder->second, ccSettlContainer_->txSignedData());
          ccReqIdToOrder_.erase(QString::fromStdString(rfq_.requestId));
          close();
       } else {
-         ccTxMap_[rfq_.requestId] = ccSettlementWidget_->getTxSignedData();
+         ccTxMap_[rfq_.requestId] = ccSettlContainer_->txSignedData();
       }
-   } else if (rfq_.assetType == bs::network::Asset::SpotXBT) {
+   } else if (xbtSettlContainer_) {
       if (XBTOrder_.settlementId != quote_.settlementId) {
          logger_->debug("[RFQDialog::onSettlementAccepted] did not receive proper order");
       }
@@ -185,9 +206,10 @@ void RFQDialog::onSettlementAccepted()
 
 void RFQDialog::onSettlementOrder()
 {
-   if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
-      const auto txData = ccSettlementWidget_->getCCTxData();
-      quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_, txData);
+   logger_->debug("onSettlementOrder");
+   if (ccSettlContainer_) {
+      quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_
+         , ccSettlContainer_->txData());
    }
 }
 
@@ -206,9 +228,14 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
 
 void RFQDialog::onOrderUpdated(const bs::network::Order& order)
 {
-   if (xbtSettlementWidget_ && (order.settlementId == quote_.settlementId)
+   if (xbtSettlContainer_ && (order.settlementId == quote_.settlementId)
       && (rfq_.assetType == bs::network::Asset::SpotXBT) && (order.status == bs::network::Order::Pending)) {
          XBTOrder_ = order;
-         xbtSettlementWidget_->OrderReceived();
+         xbtSettlContainer_->OrderReceived();
    }
+}
+
+void RFQDialog::onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx)
+{
+   quoteProvider_->AcceptQuote(QString::fromStdString(reqId), quote_, hexPayoutTx);
 }

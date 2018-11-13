@@ -60,6 +60,8 @@ QuoteRequestsWidget::QuoteRequestsWidget(QWidget* parent)
    connect(ui_->treeViewQuoteRequests, &QTreeView::doubleClicked, this, &QuoteRequestsWidget::onQuoteReqNotifSelected);
 }
 
+QuoteRequestsWidget::~QuoteRequestsWidget() = default;
+
 void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
    , const std::shared_ptr<ApplicationSettings> &appSettings, std::shared_ptr<CelerClient> celerClient)
@@ -82,6 +84,9 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    ui_->treeViewQuoteRequests->setRfqModel(model_);
    ui_->treeViewQuoteRequests->setSortModel(sortModel_);
    ui_->treeViewQuoteRequests->setAppSettings(appSettings_);
+   ui_->treeViewQuoteRequests->header()->setSectionResizeMode(
+      static_cast<int>(QuoteRequestsModel::Column::SecurityID),
+      QHeaderView::ResizeToContents);
 
    connect(ui_->treeViewQuoteRequests, &QTreeView::collapsed,
            this, &QuoteRequestsWidget::onCollapsed);
@@ -275,10 +280,9 @@ void QuoteRequestsWidget::onRowsInserted(const QModelIndex &parent, int first, i
       const auto &index = model_->index(row, 0, parent);
       if (index.data(static_cast<int>(QuoteRequestsModel::Role::ReqId)).isNull()) {
          expandIfNeeded();
-         ui_->treeViewQuoteRequests->resizeColumnToContents(0);
       }
       else {
-         for (int i = 0; i < sortModel_->columnCount(); ++i) {
+         for (int i = 1; i < sortModel_->columnCount(); ++i) {
             if (i != static_cast<int>(QuoteRequestsModel::Column::Status)) {
                ui_->treeViewQuoteRequests->resizeColumnToContents(i);
             }

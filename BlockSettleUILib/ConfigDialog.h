@@ -21,6 +21,7 @@ public:
       , const std::shared_ptr<WalletsManager>& walletsMgr
       , const std::shared_ptr<AssetManager> &assetMgr
       , QWidget* parent = nullptr);
+   ~ConfigDialog() override;
 
 private slots:
    void onDisplayDefault();
@@ -29,7 +30,7 @@ private slots:
    void illformedSettings(bool illformed);
 
 private:
-   Ui::ConfigDialog *ui_;
+   std::unique_ptr<Ui::ConfigDialog> ui_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
    std::shared_ptr<WalletsManager>        walletsMgr_;
    std::shared_ptr<AssetManager>          assetMgr_;

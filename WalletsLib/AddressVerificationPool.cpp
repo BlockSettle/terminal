@@ -7,11 +7,12 @@
 
 #include <QString>
 
-AddressVerificationPool::AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger, const std::string& poolId)
+AddressVerificationPool::AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger, const std::string& poolId
+   , const std::shared_ptr<ArmoryConnection> &armory)
    : logger_(logger)
    , poolId_(poolId)
 {
-   verificator_ = std::make_shared<AddressVerificator>(logger_, poolId_
+   verificator_ = std::make_shared<AddressVerificator>(logger_, armory, poolId_
    , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
       {
          completeVerification(address, state);

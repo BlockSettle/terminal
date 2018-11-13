@@ -87,7 +87,14 @@ a {
 
 *[infoMessage="true"] {
   color: #f7b03a; }
+  
+*[whiteText="true"] {
+  color: #ffffff; }
 
+*[largeText="true"] {
+  font-size: 20px; }
+
+  
 *[statusBox="true"] {
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 20px;
@@ -105,7 +112,9 @@ QMainWindow {
 
 *[titlePaneSecondary="true"] {
   background-color: #1c2835;
-  color: #247dac; }
+  color: #247dac;
+  /* resize dialog's title label so its background is almost always visible (because we don't use layout in title)*/
+  min-width: 2000px; }
 
 *[titlePaneImportant="true"] {
   background-color: #1c2835;
@@ -216,6 +225,8 @@ QMenuBar {
   position: absolute;
   top: 10px; }
   QMenuBar::item {
+    /* Used to center QMenuBar items vertically*/
+    padding: 7px;
     background: #1b2a2f;
     background-color: #1b2a2f; }
     QMenuBar::item:selected {
@@ -273,7 +284,7 @@ QMenu::item:first {
   text-align: right;
   background-color: transparent;
   padding: 0 5px 0 0;
-  color: #81888f;
+  color: #247dac;
   height: 25px; }
   *[usernameButton="true"]:hover {
     background-color: transparent;
@@ -342,6 +353,10 @@ QTreeView {
   QTreeView *[buttonWarning="true"] {
     border: none; }
 
+QHeaderView {
+   background-color: #18202b;
+}
+
 QHeaderView::section {
   background-color: #18202b;
   color: #81888f;
@@ -400,9 +415,9 @@ QTabBar::tab {
   border-bottom-color: #C2C7CB;
   /* same as the pane color */
   padding: 20px 15px 5px 15px;
-  font-family: 'Open Sans';
   background-color: transparent;
-  subcontrol-origin: content; }
+  subcontrol-origin: content;
+}
 
 QTabBar::tab:first {
   padding: 20px 15px 5px 5px; }
@@ -432,7 +447,7 @@ QStatusBar {
     border-top: 0 solid #C2C7CB;
     border-width: 0px;
     background-color: #1c2835;
-    padding: 0 -1px; }
+    margin: 1px }
   *[classicTabs="true"] QTabWidget::tab-bar {
     left: 0px;
     alignment: left;
@@ -442,7 +457,8 @@ QStatusBar {
     background-color: transparent;
     color: #6f787c;
     padding: 7px 5px;
-    margin: 10px 2px 1px; }
+    margin: 10px 2px 1px;
+  }
   *[classicTabs="true"] QTabBar::tab:selected {
     subcontrol-origin: content;
     background: transparent;
@@ -732,6 +748,14 @@ QPushButton, QToolButton, *[buttonImportant="true"], *[buttonSuccess="true"], *[
   min-height: 20px;
   qproperty-iconSize: 22px; }
 
+QToolButton#deviceDeleteButton {
+  border: 0px solid;
+  border-color: #ff0000;
+  padding: 0px 0px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
 QPushButton:hover, QToolButton:hover, [buttonImportant="true"]:hover, [buttonSuccess="true"]:hover, [buttonWarning="true"]:hover {
   border: 1px solid #5097bd;
   background-color: #5097bd; }
@@ -918,6 +942,7 @@ QDateEdit {
   border-radius: 0;
   padding: 1px 5px 1px 7px;
   background: transparent;
+  height: 18px;
   max-height: 20px;
   color: #ffffff; }
   QComboBox QAbstractItemView,
@@ -977,6 +1002,13 @@ QDateEdit::drop-down {
   border-bottom-right-radius: 0;
   color: #0b1619; }
 
+QComboBox#comboBoxAuthId::drop-down {
+  width: 0px;
+  border-width: 0px; }
+
+QComboBox#comboBoxAuthId::down-arrow {
+  image: none; }
+
 QComboBox::down-arrow {
   image: url(":/resources/dropdown-arrow.png"); }
 
@@ -1004,6 +1036,8 @@ QLineEdit {
   color: #ffffff; }
   QLineEdit:focus {
     border: 1px solid #247dac; }
+  QLineEdit:disabled {
+    color: #586266; }
 
 QTextEdit {
   border: 1px solid #81888f;
@@ -1131,6 +1165,10 @@ QFrame[frameShape="5"] {
     border: none;
     height: 1px;
     background: #247dac; }
+
+QFrame[darkFrame="true"] {
+    background-color: #1c2835;
+}
 
 QRadioButton::indicator {
   width: 16px;
@@ -1343,3 +1381,24 @@ QLabel#loginVersionLabel {
 *[forgotPassword="true"] {
   color: #81888f;
   font-size: 10px; }
+
+ToggleSwitch::groove:horizontal {
+    border: 1px solid #81888f;
+    border-radius: 9px;
+    background: transparent;
+    margin: 0;
+    height: 16px; }
+    
+ToggleSwitch::groove:horizontal[enabled=false] {
+    border: 1px solid #81888f; }
+
+ToggleSwitch::handle:horizontal {
+    background: #81888f;
+    border: 1px solid #81888f;       
+    width: 16px;
+    margin: -1px -1px -1px -1px;
+    border-radius: 8px; }
+    
+ ToggleSwitch::handle:horizontal[toggleOn=true][enabled=true] {
+    background: #247dac;
+    border: 1px solid #247dac; }

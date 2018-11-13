@@ -1,34 +1,33 @@
 #ifndef __CC_FILE_MANAGER_H__
 #define __CC_FILE_MANAGER_H__
 
-#include <memory>
-#include <vector>
-#include <QObject>
-#include <QString>
-#include "CommonTypes.h"
+#include "CCPubConnection.h"
 #include "OTPManager.h"
 
+#include <memory>
+#include <vector>
 
-namespace spdlog {
-   class logger;
-}
+#include <QString>
+#include <QVariant>
+
 namespace Blocksettle {
    namespace Communication {
       class GetCCGenesisAddressesResponse;
    }
 }
+
 class ApplicationSettings;
-class ConnectionManager;
 class CelerClient;
 class OTPManager;
 
-class CCFileManager : public QObject
+class CCFileManager : public CCPubConnection
 {
 Q_OBJECT
 public:
    CCFileManager(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<OTPManager> &);
-   ~CCFileManager() noexcept = default;
+      , const std::shared_ptr<OTPManager>&
+      , const std::shared_ptr<ConnectionManager>&);
+   ~CCFileManager() noexcept override = default;
 
    CCFileManager(const CCFileManager&) = delete;
    CCFileManager& operator = (const CCFileManager&) = delete;
@@ -38,9 +37,8 @@ public:
    using CCSecurities = std::vector<bs::network::CCSecurityDef>;
    CCSecurities ccSecurities() const { return ccSecurities_; }
 
-   void LoadData();
-   void ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<CelerClient> &);
+   void LoadSavedCCDefinitions();
+   void ConnectToCelerClient(const std::shared_ptr<CelerClient> &);
 
    bool SubmitAddressToPuB(const bs::Address &, uint32_t seed, OTPManager::cbPassword);
    bool wasAddressSubmitted(const bs::Address &);
@@ -52,31 +50,47 @@ public:
 
 signals:
    void CCSecurityDef(bs::network::CCSecurityDef);
+   void CCSecurityId(const std::string& securityId);
    void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
+
    void CCAddressSubmitted(const QString);
    void Loaded();
    void LoadingFailed();
 
+private slots:
+   void onPubSettingsChanged(int setting, QVariant value);
+
 private:
-   std::shared_ptr<spdlog::logger>        logger_;
+   void RemoveAndDisableFileSave();
+
+protected:
+   void ProcessGenAddressesResponse(const std::string& response, bool sigVerified, const std::string &sig) override;
+   void ProcessSubmitAddrResponse(const std::string& response) override;
+
+   bool VerifySignature(const std::string& data, const std::string& signature) const override;
+
+   bool IsTestNet() const override;
+
+   std::string GetPuBHost() const override;
+   std::string GetPuBPort() const override;
+   std::string GetPuBKey() const override;
+
+private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<CelerClient>           celerClient_;
    std::shared_ptr<OTPManager>            otpManager_;
+
    CCSecurities   ccSecurities_;
-   int            currentRev_ = 0;
+
+   // when user changes PuB connection settings - save to file should be disabled.
+   // dev build feature only. final release should have single PuB.
+   bool saveToFileDisabled_ = false;
 
 private:
    bool LoadFromFile(const std::string &path);
    bool SaveToFile(const std::string &path, const std::string &signature);
    bool RequestFromPuB();
    void FillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *);
-
-   bool SubmitRequestToPB(const std::string& name, const std::string& data);
-   void OnDataReceived(const std::string& data);
-   void ProcessGenAddressesResponse(const std::string& response, bool sigVerified, const std::string &sig);
-   void ProcessSubmitAddrResponse(const std::string& response, bool sigVerified);
-   void ProcessErrorResponse(const std::string& responseString) const;
 };
 
 #endif // __CC_FILE_MANAGER_H__

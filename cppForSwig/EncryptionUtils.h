@@ -59,13 +59,13 @@
 #include <cmath>
 #include <algorithm>
 
-#include "cryptlib.h"
-#include "osrng.h"
-#include "sha.h"
-#include "aes.h"
-#include "modes.h"
-#include "eccrypto.h"
-#include "filters.h"
+#include "cryptopp/cryptlib.h"
+#include "cryptopp/osrng.h"
+#include "cryptopp/sha.h"
+#include "cryptopp/aes.h"
+#include "cryptopp/modes.h"
+#include "cryptopp/eccrypto.h"
+#include "cryptopp/filters.h"
 #include "cryptopp/DetSign.h"
 
 #include "BinaryData.h"
@@ -105,8 +105,6 @@
 // If a KDF uses 32 MB of memory, it is undeniably easier
 // to compute on a CPU than a GPU.
 #define DEFAULT_KDF_MAX_MEMORY 32*1024*1024
-
-using namespace std;
 
 
 // Use this to avoid "using namespace CryptoPP" (which confuses SWIG)

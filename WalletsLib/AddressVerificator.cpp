@@ -1,39 +1,14 @@
 #include "AddressVerificator.h"
 
-#include "LedgerEntryData.h"
-
-#include "PyBlockDataManager.h"
+#include "ArmoryConnection.h"
 #include "BinaryData.h"
 #include "FastLock.h"
 #include "BlockDataManagerConfig.h"
-#include "SafeBtcWallet.h"
-#include "SafeLedgerDelegate.h"
 
 #include <QDateTime>
 
 #include <cassert>
 #include <spdlog/spdlog.h>
-
-class AddressVerificatorListener : public PyBlockDataListener
-{
-public:
-   AddressVerificatorListener(AddressVerificator *verificator)
-    : verificator_(verificator), refreshEnabled_(true)
-   {}
-   ~AddressVerificatorListener() noexcept override = default;
-
-   void OnRefresh() override {
-      // if (refreshEnabled_) {
-         verificator_->OnRefresh();
-      // }
-   }
-
-   void setRefreshEnabled(bool enabled = true) { refreshEnabled_ = enabled; }
-
-private:
-   AddressVerificator *verificator_;
-   std::atomic_bool  refreshEnabled_;
-};
 
 enum class BSValidationAddressState
 {
@@ -47,7 +22,7 @@ enum class BSValidationAddressState
 static constexpr int MaxAadressValidationErrorCount = 3;
 static constexpr int MaxBSAddressValidationErrorCount = 3;
 
-struct AddressVarificationData
+struct AddressVerificationData
 {
    std::shared_ptr<AuthAddress>  address;
    AddressVerificationState      currentState;
@@ -58,38 +33,35 @@ struct AddressVarificationData
 
    BinaryData                    initialTxHash;
    BinaryData                    verificationTxHash;
+
+   unsigned int   nbTransactions;
+   bool           getInputFromBS;
+   bool           isVerifiedByUser;
+   int64_t        value = 0;
+   std::vector<ClientClasses::LedgerEntry>   entries;
+   std::vector<ClientClasses::LedgerEntry>   txOutEntries;
+   std::map<BinaryData, Tx>   txs;
+   std::set<BinaryData>       txHashSet;
+   bool           completed = false;
 };
 
-AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::string& walletId, verification_callback callback)
-   : logger_(logger)
+AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &armory
+   , const std::string& walletId, verification_callback callback)
+   : QObject(nullptr)
+   , logger_(logger)
+   , armory_(armory)
    , walletId_(walletId)
    , userCallback_(callback)
    , stopExecution_(false)
 {
-   registerInternalWallet();
-   startCommandQueue();
+   connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressVerificator::OnRefresh, Qt::QueuedConnection);
 
-   listener_ = std::make_shared<AddressVerificatorListener>(this);
-   PyBlockDataManager::instance()->addListener(listener_.get());
+   startCommandQueue();
 }
 
 AddressVerificator::~AddressVerificator() noexcept
 {
    stopCommandQueue();
-   const auto &bdm = PyBlockDataManager::instance();
-   if (bdm) {
-      bdm->removeListener(listener_.get());
-   }
-}
-
-bool AddressVerificator::registerInternalWallet()
-{   // register wallet with empty address list
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm || (bdm->GetState() != PyBlockDataManagerState::Ready)) {
-      return false;
-   }
-
-   return true;
 }
 
 bool AddressVerificator::startCommandQueue()
@@ -142,10 +114,10 @@ void AddressVerificator::commandQueueThreadFunction()
 
 bool AddressVerificator::SetBSAddressList(const std::unordered_set<std::string>& addressList)
 {
-   bsAddressList_.reserve(addressList.size());
    for (const auto &addr : addressList) {
       bs::Address address(addr);
-      bsAddressList_.insert(address.prefixed());
+      logger_->debug("BS address: {}", address.display<std::string>());
+      bsAddressList_.emplace(address.prefixed());
    }
    return true;
 }
@@ -156,20 +128,24 @@ bool AddressVerificator::StartAddressVerification(const std::shared_ptr<AuthAddr
 
    if (AddressWasRegistered(addressCopy)) {
       logger_->debug("[AddressVerificator::StartAddressVerification] adding verification command to queue: {}"
-         , address->GetChainedAddress().display<std::string>());
-      return AddCommandToQueue(CreateAddressValidationCommand(addressCopy));
+         , addressCopy->GetChainedAddress().display<std::string>());
+      if (registered_) {
+         AddCommandToQueue(CreateAddressValidationCommand(addressCopy));
+      }
+      else {
+         AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(addressCopy));
+      }
+      return true;
    }
 
    return RegisterUserAddress(addressCopy);
 }
 
-bool AddressVerificator::AddCommandToQueue(ExecutionCommand&& command)
+void AddressVerificator::AddCommandToQueue(ExecutionCommand&& command)
 {
    std::unique_lock<std::mutex> locker(dataMutex_);
    commandsQueue_.emplace(std::move(command));
    dataAvailable_.notify_all();
-
-   return true;
 }
 
 void AddressVerificator::AddCommandToWaitingUpdateQueue(ExecutionCommand&& command)
@@ -180,7 +156,7 @@ void AddressVerificator::AddCommandToWaitingUpdateQueue(ExecutionCommand&& comma
 
 AddressVerificator::ExecutionCommand AddressVerificator::CreateAddressValidationCommand(const std::shared_ptr<AuthAddress>& address)
 {
-   auto state = std::make_shared<AddressVarificationData>();
+   auto state = std::make_shared<AddressVerificationData>();
 
    state->address = address;
    state->currentState = AddressVerificationState::InProgress;
@@ -191,14 +167,60 @@ AddressVerificator::ExecutionCommand AddressVerificator::CreateAddressValidation
    return CreateAddressValidationCommand(state);
 }
 
-AddressVerificator::ExecutionCommand AddressVerificator::CreateAddressValidationCommand(const std::shared_ptr<AddressVarificationData>& state)
+AddressVerificator::ExecutionCommand AddressVerificator::CreateAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state)
 {
    return [this, state]() {
       this->ValidateAddress(state);
    };
 }
 
-void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVarificationData>& state)
+void AddressVerificator::doValidateAddress(const std::shared_ptr<AddressVerificationData>& state)
+{
+   bool isVerified = false;
+   for (const auto &entry : state->entries) {
+      if (!state->getInputFromBS) {    // if we did not get initial transaction from BS we ignore all other
+         if (IsInitialBsTransaction(entry, state, isVerified)) {
+            state->address->SetInitialTransactionTxHash(entry.getTxHash());
+            state->currentState = AddressVerificationState::PendingVerification;
+            state->getInputFromBS = true;
+         }
+      }
+      else {
+         if (!state->isVerifiedByUser && IsVerificationTransaction(entry, state, isVerified)) {
+            if (!isVerified) {
+               state->currentState = AddressVerificationState::VerificationSubmitted;
+               break;
+            }
+            if (HasRevokeOutputs(entry, state)) {
+               state->currentState = AddressVerificationState::Revoked;
+               break;
+            }
+            else {
+               state->address->SetVerificationChangeTxHash(entry.getTxHash());
+               state->currentState = AddressVerificationState::Verified;
+               state->isVerifiedByUser = true;
+               continue;
+            }
+         }
+         if (IsRevokeTransaction(entry, state)) {
+            state->currentState = AddressVerificationState::Revoked;
+            break;
+         }
+      }
+   }
+   if (!state->getInputFromBS) {
+      state->currentState = state->nbTransactions ? AddressVerificationState::Revoked : AddressVerificationState::NotSubmitted;
+   }
+   else if (state->value <= 0) {
+      state->currentState = AddressVerificationState::Revoked;
+   }
+
+   addressRetries_.erase(state->address->GetChainedAddress().prefixed());
+   ReturnValidationResult(state);
+   state->completed = true;
+}
+
+void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificationData>& state)
 {   // if we are here, that means that address was added, and now it is time to try to validate it
    if (bsAddressList_.empty()) {
       state->currentState = AddressVerificationState::VerificationFailed;
@@ -206,20 +228,81 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVarificati
       return;
    }
 
-   bool getInputFromBS = false;
-   bool isVerifiedByUser = false;
-   int64_t value = 0;
+   state->getInputFromBS = false;
+   state->isVerifiedByUser = false;
+   state->value = 0;
+   state->entries.clear();
 
-   const auto prefixedAddress = state->address->GetChainedAddress().prefixed();
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      logger_->error("[AddressVerificator::ValidateAddress] failed to get BDM");
+   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
+      logger_->error("[AddressVerificator::ValidateAddress] invalid Armory state {}", (int)armory_->state());
       state->currentState = AddressVerificationState::VerificationFailed;
       ReturnValidationResult(state);
       return;
    }
-   auto ledgerDelegate = bdm->getLedgerDelegateForScrAddr(walletId_, prefixedAddress);
-   if (!ledgerDelegate) {
+
+   const auto &cbCollectTXs = [this, state](std::vector<Tx> txs) {
+      for (const auto &tx : txs) {
+         const auto &txHash = tx.getThisHash();
+         state->txHashSet.erase(txHash);
+         state->txs[txHash] = tx;
+         if (state->txHashSet.empty()) {
+            doValidateAddress(state);
+         }
+      }
+   };
+   const auto &cbCollectTX = [this, state, cbCollectTXs](Tx tx) {
+      state->txs[tx.getThisHash()] = tx;
+      for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
+         if (!tx.isInitialized()) {
+            continue;
+         }
+         TxIn in = tx.getTxInCopy(i);
+         if (!in.isInitialized()) {
+            continue;
+         }
+         OutPoint op = in.getOutPoint();
+         if (state->txs.find(op.getTxHash()) == state->txs.end()) {
+            state->txHashSet.insert(op.getTxHash());
+         }
+      }
+      if (state->txHashSet.empty()) {
+         doValidateAddress(state);
+      }
+      else {
+         armory_->getTXsByHash(state->txHashSet, cbCollectTXs);
+      }
+   };
+   const auto &cbLedger = [this, state, cbCollectTX](std::vector<ClientClasses::LedgerEntry> entries) {
+      if (entries.empty()) {
+         state->currentState = AddressVerificationState::NotSubmitted;
+         state->completed = true;
+         addressRetries_.erase(state->address->GetChainedAddress().prefixed());
+         ReturnValidationResult(state);
+         return;
+      }
+      state->nbTransactions += entries.size();
+      state->entries = entries;
+      state->txs = bsTXs_;
+      for (const auto &entry : entries) {
+         state->value += entry.getValue();
+         const auto &itTX = state->txs.find(entry.getTxHash());
+         if (itTX == state->txs.end()) {
+            armory_->getTxByHash(entry.getTxHash(), cbCollectTX);
+         }
+         else {
+            cbCollectTX(itTX->second);
+         }
+         if (state->completed) {
+            break;
+         }
+      }
+   };
+   const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+      state->nbTransactions = 0;
+      delegate.getHistoryPage(0, cbLedger);
+   };
+   if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
+      const auto &prefixedAddress = state->address->GetChainedAddress().prefixed();
       if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < MaxAadressValidationErrorCount)) {
          logger_->debug("[AddressVerificator::ValidateAddress] Failed to get ledger for {} - retrying command", walletId_);
          AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(state));
@@ -233,83 +316,59 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVarificati
       }
       return;
    }
-
-   int currentPageId = 0;
-   unsigned int nbTransactions = 0;
-
-   while (state->currentState == AddressVerificationState::InProgress) {
-      const auto nextPage = ledgerDelegate->getHistoryPage(currentPageId);
-      if (nextPage.empty()) {
-         break;
-      }
-      nbTransactions += nextPage.size();
-
-      for (auto &entry : nextPage) {
-         bool isVerified = false;
-         value += entry.getValue();
-
-         if (!getInputFromBS) {    // if we did not get initial transaction from BS we ignore all other
-            if (IsInitialBsTransaction(entry, state, isVerified)) {
-               state->address->SetInitialTransactionTxHash(entry.getTxHash());
-               state->currentState = AddressVerificationState::PendingVerification;
-               getInputFromBS = true;
-            }
-         }
-         else {
-            if (!isVerifiedByUser && IsVerificationTransaction(entry, state, isVerified)) {
-               if (!isVerified) {
-                  state->currentState = AddressVerificationState::VerificationSubmitted;
-                  break;
-               }
-               if (HasRevokeOutputs(entry, state)) {
-                  state->currentState = AddressVerificationState::Revoked;
-                  break;
-               }
-               else {
-                  state->address->SetVerificationChangeTxHash(entry.getTxHash());
-                  state->currentState = AddressVerificationState::Verified;
-                  isVerifiedByUser = true;
-                  continue;
-               }
-            }
-            if (IsRevokeTransaction(entry, state)) {
-               state->currentState = AddressVerificationState::Revoked;
-               break;
-            }
-         }
-      }
-      currentPageId += 1;
-   }
-
-   if (!getInputFromBS) {
-      state->currentState = nbTransactions ? AddressVerificationState::Revoked : AddressVerificationState::NotSubmitted;
-   }
-   else if (value <= 0) {
-      state->currentState = AddressVerificationState::Revoked;
-   }
-
-   addressRetries_.erase(prefixedAddress);
-   ReturnValidationResult(state);
 }
 
-AddressVerificator::ExecutionCommand AddressVerificator::CreateBSAddressValidationCommand(const std::shared_ptr<AddressVarificationData>& state)
+AddressVerificator::ExecutionCommand AddressVerificator::CreateBSAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state)
 {
    return [this, state]() {
       this->CheckBSAddressState(state);
    };
 }
 
-void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVarificationData>& state)
+void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerificationData> &state)
 {     // check that outgoing transactions are only to auth address
-   const auto prefixedAddress = state->address->GetChainedAddress().prefixed();
-
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      logger_->error("[AddressVerificator::CheckBSAddressState] could not get proper BDM - looks like armory is offline");
-      return;
-   }
-   auto ledgerDelegate = bdm->getLedgerDelegateForScrAddr(walletId_, prefixedAddress);
-   if (ledgerDelegate == nullptr) {
+   const auto &cbCheckState = [this, state] {
+      for (auto &entry : state->entries) {
+         if (IsBSRevokeTranscation(entry, state)) {
+            state->bsAddressValidationState = BSValidationAddressState::Revoked;
+            state->currentState = AddressVerificationState::RevokedByBS;
+            break;
+         }
+      }
+      ReturnValidationResult(state);
+   };
+   const auto &cbCollectTXs = [state, cbCheckState](std::vector<Tx> txs) {
+      for (const auto &tx : txs) {
+         const auto &txHash = tx.getThisHash();
+         state->txHashSet.erase(txHash);
+         state->txs[txHash] = tx;
+         if (state->txHashSet.empty()) {
+            cbCheckState();
+         }
+      }
+   };
+   const auto &cbLedger = [this, state, cbCollectTXs, cbCheckState](std::vector<ClientClasses::LedgerEntry> entries) {
+      state->nbTransactions += entries.size();
+      state->entries = entries;
+      for (const auto &entry : entries) {
+         state->value += entry.getValue();
+         const auto &itTX = state->txs.find(entry.getTxHash());
+         if (itTX == state->txs.end()) {
+            state->txHashSet.insert(entry.getTxHash());
+         }
+      }
+      if (!state->txHashSet.empty()) {
+         armory_->getTXsByHash(state->txHashSet, cbCollectTXs);
+      }
+      else {
+         cbCheckState();
+      }
+   };
+   const auto &cbLedgerDelegate = [state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+      state->entries.clear();
+      delegate.getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
+   };
+   if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
       logger_->error("[AddressVerificator::CheckBSAddressState] Could not validate address. Looks like armory is offline.");
       if (state->bsAddressValidationErrorCount >= MaxBSAddressValidationErrorCount) {
          logger_->error("[AddressVerificator::CheckBSAddressState] marking address as failed to validate {}", state->bsFundingAddress.display<std::string>());
@@ -321,35 +380,15 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVarifi
       }
       return;
    }
-
-   int currentPageId = 0;
-
-   while (state->currentState == AddressVerificationState::InProgress) {
-      auto nextPage = ledgerDelegate->getHistoryPage(currentPageId);
-      if (nextPage.empty() ) {
-         break;
-      }
-      for (auto &entry : nextPage) {
-         if (IsBSRevokeTranscation(entry, state)) {
-            state->bsAddressValidationState = BSValidationAddressState::Revoked;
-            state->currentState = AddressVerificationState::RevokedByBS;
-            break;
-         }
-      }
-      currentPageId += 1;
-   }
-
-   ReturnValidationResult(state);
 }
 
-void AddressVerificator::ReturnValidationResult(const std::shared_ptr<AddressVarificationData>& state)
+void AddressVerificator::ReturnValidationResult(const std::shared_ptr<AddressVerificationData>& state)
 {
-   // XXX
    userCallback_(state->address, state->currentState);
 }
 
-bool AddressVerificator::IsInitialBsTransaction(const LedgerEntryData& entry
-   , const std::shared_ptr<AddressVarificationData>& state, bool &isVerified)
+bool AddressVerificator::IsInitialBsTransaction(const ClientClasses::LedgerEntry &entry
+   , const std::shared_ptr<AddressVerificationData>& state, bool &isVerified)
 {
    int64_t entryValue = (entry.getValue() < 0 ? -entry.getValue() : entry.getValue());
    if (entryValue <= (GetAuthAmount() * 2)) {
@@ -359,24 +398,15 @@ bool AddressVerificator::IsInitialBsTransaction(const LedgerEntryData& entry
    bool sentToUs = false;
    bool sentByBS = false;
 
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      return false;
-   }
-   auto tx = bdm->getTxByHash(entry.getTxHash());
+   const auto &tx = state->txs[entry.getTxHash()];
    if (!tx.isInitialized()) {
       return false;
    }
-
    for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
       TxIn in = tx.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
 
-      const auto &bdm = PyBlockDataManager::instance();
-      if (!bdm) {
-         return false;
-      }
-      Tx prevTx = bdm->getTxByHash(op.getTxHash());
+      Tx prevTx = state->txs[op.getTxHash()];
       if (prevTx.isInitialized()) {
          TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
          bs::Address address(prevOut.getScrAddressStr());
@@ -407,14 +437,14 @@ bool AddressVerificator::IsInitialBsTransaction(const LedgerEntryData& entry
       return false;
    }
 
-   isVerified = bdm ? bdm->IsTransactionConfirmed(entry) : false;
+   isVerified = armory_->isTransactionConfirmed(entry);
 
    state->initialTxHash = entry.getTxHash();
    return true;
 }
 
-bool AddressVerificator::IsVerificationTransaction(const LedgerEntryData& entry
-   , const std::shared_ptr<AddressVarificationData>& state, bool &isVerified)
+bool AddressVerificator::IsVerificationTransaction(const ClientClasses::LedgerEntry &entry
+   , const std::shared_ptr<AddressVerificationData>& state, bool &isVerified)
 {
    if (entry.getValue() <= (GetAuthAmount() * 2)) {
       return false;
@@ -425,15 +455,10 @@ bool AddressVerificator::IsVerificationTransaction(const LedgerEntryData& entry
    bool sentByUs = false;
    bool sentToBS = false;
 
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      return false;
-   }
-   auto tx = bdm->getTxByHash(entry.getTxHash());
+   const auto &tx = state->txs[entry.getTxHash()];
    if (!tx.isInitialized()) {
       return false;
    }
-
    for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
       TxIn in = tx.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
@@ -442,11 +467,7 @@ bool AddressVerificator::IsVerificationTransaction(const LedgerEntryData& entry
          continue;
       }
 
-      const auto &bdm = PyBlockDataManager::instance();
-      if (!bdm) {
-         break;
-      }
-      Tx prevTx = bdm->getTxByHash(op.getTxHash());
+      Tx prevTx = state->txs[op.getTxHash()];
       if (prevTx.isInitialized()) {
          TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
          bs::Address address(prevOut.getScrAddressStr(), state->address->GetChainedAddress().getType());
@@ -476,57 +497,32 @@ bool AddressVerificator::IsVerificationTransaction(const LedgerEntryData& entry
       return false;
    }
 
-   isVerified = bdm ? bdm->IsTransactionVerified(entry) : false;
+   isVerified = armory_->isTransactionVerified(entry);
    state->verificationTxHash = entry.getTxHash();
 
    return true;
 }
 
-bool AddressVerificator::HasRevokeOutputs(const LedgerEntryData& entry
-   , const std::shared_ptr<AddressVarificationData>& state)
+bool AddressVerificator::HasRevokeOutputs(const ClientClasses::LedgerEntry &entry
+   , const std::shared_ptr<AddressVerificationData>& state)
 {
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      return false;
-   }
-   const auto tx = bdm->getTxByHash(entry.getTxHash());
-   for (size_t i = 0; i < tx.getNumTxOut(); i++) {
-      auto txOut = tx.getTxOutCopy((int)i);
-      const auto addr = bs::Address::fromTxOutScript(txOut.getScript());
-      if (addr.prefixed() == state->address->GetChainedAddress().prefixed()) {
+   for (const auto &led : state->txOutEntries) {
+      if ((led.getBlockNum() < entry.getBlockNum()) || (led.getTxHash() == entry.getTxHash())) {
          continue;
       }
-
-      auto ledgerDelegate = bdm->getLedgerDelegateForScrAddr(walletId_, addr.prefixed());
-      if (!ledgerDelegate) {
-         continue;
+      const auto succTx = state->txs[led.getTxHash()];
+      if (!succTx.isInitialized()) {
+         continue;   //? return true
       }
-      uint32_t pageId = 0;
-      while (true) {
-         const auto page = ledgerDelegate->getHistoryPage(pageId);
-         if (page.empty()) {
-            break;
+      for (size_t j = 0; j < succTx.getNumTxIn(); j++) {
+         TxIn txIn = succTx.getTxInCopy((int)j);
+         if (!txIn.isInitialized()) {
+            return true;
          }
-         for (auto &led : page) {
-            if ((led.getBlockNum() < entry.getBlockNum()) || (led.getTxHash() == entry.getTxHash())) {
-               continue;
-            }
-            const auto succTx = bdm->getTxByHash(led.getTxHash());
-            if (!succTx.isInitialized()) {
-               return true;
-            }
-            for (size_t j = 0; j < succTx.getNumTxIn(); j++) {
-               TxIn txIn = succTx.getTxInCopy((int)j);
-               if (!txIn.isInitialized()) {
-                  return true;
-               }
-               OutPoint op = txIn.getOutPoint();
-               if (op.getTxHash() == entry.getTxHash()) {
-                  return true;
-               }
-            }
+         OutPoint op = txIn.getOutPoint();
+         if (op.getTxHash() == entry.getTxHash()) {
+            return true;
          }
-         pageId++;
       }
    }
    return false;
@@ -535,15 +531,12 @@ bool AddressVerificator::HasRevokeOutputs(const LedgerEntryData& entry
 //returns true if
 // - coins from initial transaction sent in any amount to any address
 // - anything is sent from verification transaction
-bool AddressVerificator::IsRevokeTransaction(const LedgerEntryData& entry
-   , const std::shared_ptr<AddressVarificationData>& state)
+bool AddressVerificator::IsRevokeTransaction(const ClientClasses::LedgerEntry &entry
+   , const std::shared_ptr<AddressVerificationData>& state)
 {
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      return false;
-   }
-   auto tx = bdm->getTxByHash(entry.getTxHash());
+   const auto &tx = state->txs[entry.getTxHash()];
    if (!tx.isInitialized()) {
+      logger_->error("Revoke TX is not inited ({})", entry.getTxHash().toHexStr(true));
       return false;
    }
 
@@ -562,18 +555,14 @@ bool AddressVerificator::IsRevokeTransaction(const LedgerEntryData& entry
          return true;
       }
    }
-
    return false;
 }
 
-bool AddressVerificator::IsBSRevokeTranscation(const LedgerEntryData& entry, const std::shared_ptr<AddressVarificationData>& state)
+bool AddressVerificator::IsBSRevokeTranscation(const ClientClasses::LedgerEntry &entry, const std::shared_ptr<AddressVerificationData>& state)
 {
-   const auto &bdm = PyBlockDataManager::instance();
-   if (!bdm) {
-      return false;
-   }
-   auto tx = bdm->getTxByHash(entry.getTxHash());
+   auto tx = state->txs[entry.getTxHash()];
    if (!tx.isInitialized()) {
+      logger_->error("BS revoke TX is not inited ({})", entry.getTxHash().toHexStr(true));
       return false;
    }
 
@@ -584,7 +573,6 @@ bool AddressVerificator::IsBSRevokeTranscation(const LedgerEntryData& entry, con
          return true;
       }
    }
-
    return false;
 }
 
@@ -638,56 +626,106 @@ void AddressVerificator::RegisterAddresses()
       authAddressSet_.swap(pendingRegAddresses_);
    }
 
-   const auto &bdm = PyBlockDataManager::instance();
-   if (bdm && (bdm->GetState() == PyBlockDataManagerState::Ready)) {
-      listener_->setRefreshEnabled(false);
-      bdm->registerWallet(internalWallet_, addresses, walletId_, false);
-      listener_->setRefreshEnabled(true);
-      logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses", addresses.size());
-
+   if (armory_ && (armory_->state() == ArmoryConnection::State::Ready)) {
       pendingRegAddresses_.clear();
+      regId_ = armory_->registerWallet(internalWallet_, walletId_, addresses, [] {}, true);
+      logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses in {} with {}", addresses.size(), walletId_, regId_);
    }
    else {
       logger_->error("[AddressVerificator::RegisterAddresses] failed to get BDM");
    }
 }
 
-void AddressVerificator::OnRefresh()
+void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
 {
+   const auto &it = std::find(ids.begin(), ids.end(), regId_);
+   if (it == ids.end()) {
+      return;
+   }
    logger_->debug("[AddressVerificator::OnRefresh] get refresh command");
 
-   ExecutionCommand command;
-   {
-      FastLock locker(waitingForUpdateQueueFlag_);
-      if (waitingForUpdateQueue_.empty()) {
-         logger_->debug("[AddressVerificator::OnRefresh] no pending commands for update");
-         return;
-      }
+   if (bsAddressList_.empty()) {
+      logger_->error("[AddressVerificator::OnRefresh] BS address list is empty");
+      return;
+   }
 
-      // move all pending commands to processing queue
-      while (!waitingForUpdateQueue_.empty()) {
-         command = waitingForUpdateQueue_.front();
-         waitingForUpdateQueue_.pop();
-         AddCommandToQueue(std::move(command));
+   const auto &cbTXs = [this](std::vector<Tx> txs) {
+      for (const auto &tx : txs) {
+         bsTXs_[tx.getThisHash()] = tx;
       }
+      registered_ = true;
+      logger_->debug("[AddressVerificator::OnRefresh] received {} BS TXs", txs.size());
+
+      {
+         FastLock locker(waitingForUpdateQueueFlag_);
+         while (!waitingForUpdateQueue_.empty()) {
+            auto command = waitingForUpdateQueue_.front();
+            waitingForUpdateQueue_.pop();
+            AddCommandToQueue(std::move(command));
+         }
+      }
+   };
+   auto pages = new std::map<bs::Address, uint64_t>;
+   auto txHashSet = new std::set<BinaryData>;
+   for (const auto &bsAddr : bsAddressList_) {
+      (*pages)[bsAddr] = 1;
+   }
+   for (const auto &bsAddr : bsAddressList_) {
+      const auto &cbDelegate = [this, cbTXs, pages, txHashSet, bsAddr](AsyncClient::LedgerDelegate delegate) {
+         auto delegatePtr = new AsyncClient::LedgerDelegate(delegate);
+         const auto &cbPageCnt = [this, pages, bsAddr, delegatePtr, txHashSet, cbTXs](uint64_t pageCnt) {
+            (*pages)[bsAddr] = pageCnt;
+            for (int i = 0; i < pageCnt; ++i) {
+               const auto &cbLedger = [this, pages, bsAddr, txHashSet, cbTXs]
+               (std::vector<ClientClasses::LedgerEntry> entries) {
+                  for (const auto &entry : entries) {
+                     txHashSet->insert(entry.getTxHash());
+                  }
+                  (*pages)[bsAddr]--;
+                  if (!(*pages)[bsAddr]) {
+                     pages->erase(bsAddr);
+                     if (pages->empty()) {
+                        delete pages;
+                        armory_->getTXsByHash(*txHashSet, cbTXs);
+                        delete txHashSet;
+                     }
+                  }
+               };
+               delegatePtr->getHistoryPage(i, cbLedger);
+               delete delegatePtr;
+            }
+         };
+         delegate.getPageCount(cbPageCnt);
+      };
+      armory_->getLedgerDelegateForAddress(walletId_, bsAddr, cbDelegate);
    }
 }
 
-std::vector<UTXO> AddressVerificator::GetVerificationInputs() const
+void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
-   std::vector<UTXO> result = internalWallet_->getSpendableTxOutListForValue();
-   const auto &zcInputs = internalWallet_->getSpendableZCList();
-   result.insert(result.begin(), zcInputs.begin(), zcInputs.end());
-   return result;
+   auto result = new std::vector<UTXO>;
+   const auto &cbInternal = [this, cb, result](std::vector<UTXO> utxos) {
+      *result = utxos;
+      const auto &cbZC = [cb, result](std::vector<UTXO> zcs) {
+         result->insert(result->begin(), zcs.begin(), zcs.end());
+         cb(*result);
+         delete result;
+      };
+      internalWallet_->getSpendableZCList(cbZC);
+   };
+   internalWallet_->getSpendableZCList(cbInternal);
 }
 
-std::vector<UTXO> AddressVerificator::GetRevokeInputs() const
+void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
-   std::vector<UTXO> result;
-   for (const auto &utxo : internalWallet_->getSpendableTxOutListForValue()) {
-      if ((utxo.getValue() == GetAuthAmount()) && (utxo.getTxOutIndex() == 1)) {
-         result.push_back(utxo);
+   const auto &cbInternal = [cb](std::vector<UTXO> utxos) {
+      std::vector<UTXO> result;
+      for (const auto &utxo : utxos) {
+         if ((utxo.getValue() == GetAuthAmount()) && (utxo.getTxOutIndex() == 1)) {
+            result.emplace_back(utxo);
+         }
       }
-   }
-   return result;
+      cb(result);
+   };
+   internalWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbInternal);
 }

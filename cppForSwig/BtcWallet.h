@@ -44,6 +44,7 @@ struct ScanWalletStruct
 class BtcWallet
 {
    friend class WalletGroup;
+   friend class BDV_Server_Object;
 
    static const uint32_t MIN_UTXO_PER_TXN = 100;
 
@@ -60,10 +61,8 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // addScrAddr when blockchain rescan req'd, addNewScrAddr for just-created
-   void addScrAddress(const BinaryData& addr);
-   void removeAddressBulk(vector<BinaryData> const & scrAddrBulk);
-
-   bool hasScrAddress(BinaryData const & scrAddr) const;
+   void removeAddressBulk(const vector<BinaryDataRef>&);
+   bool hasScrAddress(const BinaryDataRef&) const;
 
    // BlkNum is necessary for "unconfirmed" list, since it is dependent
    // on number of confirmations.  But for "spendable" TxOut list, it is
@@ -144,7 +143,8 @@ private:
 private:
 
    BlockDataViewer* const        bdvPtr_;
-   TransactionalMap<BinaryData, shared_ptr<ScrAddrObj>> scrAddrMap_;
+   TransactionalMap<
+      BinaryDataRef, shared_ptr<ScrAddrObj>> scrAddrMap_;
    
    bool ignoreLastScanned_ = true;
    bool isRegistered_ = false;

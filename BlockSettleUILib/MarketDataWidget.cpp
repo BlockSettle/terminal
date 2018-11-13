@@ -21,6 +21,8 @@ MarketDataWidget::~MarketDataWidget()
 void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting param
    , const std::shared_ptr<MarketDataProvider>& mdProvider)
 {
+   mdProvider_ = mdProvider;
+
    QStringList visSettings;
    if (appSettings != nullptr) {
       settingVisibility_ = param;
@@ -33,7 +35,6 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
 
    ui->treeViewMarketData->setModel(mdSortFilterModel_);
    ui->treeViewMarketData->setSortingEnabled(true);
-   ui->treeViewMarketData->sortByColumn(0, Qt::AscendingOrder);
 
    if (appSettings != nullptr) {
       mdHeader_ = std::make_shared<MDHeader>(Qt::Horizontal, ui->treeViewMarketData);
@@ -46,6 +47,8 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    }
 
    ui->treeViewMarketData->setHeader(mdHeader_.get());
+   ui->treeViewMarketData->header()->setSortIndicator(
+      static_cast<int>(MarketDataModel::MarketDataColumns::First), Qt::AscendingOrder);
 
    connect(marketDataModel_, &QAbstractItemModel::rowsInserted, [this]() {
       if (mdHeader_ != nullptr) {
@@ -61,6 +64,48 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
    connect(mdProvider.get(), &MarketDataProvider::MDReqRejected, this, &MarketDataWidget::onMDRejected);
+
+   connect(ui->pushButtonMDConnection, &QPushButton::clicked, this, &MarketDataWidget::ChangeMDSubscriptionState);
+
+   connect(mdProvider.get(), &MarketDataProvider::StartConnecting, this, &MarketDataWidget::OnMDConnecting);
+   connect(mdProvider.get(), &MarketDataProvider::Connected, this, &MarketDataWidget::OnMDConnected);
+   connect(mdProvider.get(), &MarketDataProvider::Disconnecting, this, &MarketDataWidget::OnMDDisconnecting);
+   connect(mdProvider.get(), &MarketDataProvider::Disconnected, this, &MarketDataWidget::OnMDDisconnected);
+
+   ui->pushButtonMDConnection->setText(tr("Subscribe"));
+}
+
+void MarketDataWidget::OnMDConnecting()
+{
+   ui->pushButtonMDConnection->setText(tr("Connecting"));
+   ui->pushButtonMDConnection->setEnabled(false);
+}
+
+void MarketDataWidget::OnMDConnected()
+{
+   ui->pushButtonMDConnection->setText(tr("Disconnect"));
+   ui->pushButtonMDConnection->setEnabled(true);
+}
+
+void MarketDataWidget::OnMDDisconnecting()
+{
+   ui->pushButtonMDConnection->setText(tr("Disconnecting"));
+   ui->pushButtonMDConnection->setEnabled(false);
+}
+
+void MarketDataWidget::OnMDDisconnected()
+{
+   ui->pushButtonMDConnection->setText(tr("Subscribe"));
+   ui->pushButtonMDConnection->setEnabled(true);
+}
+
+void MarketDataWidget::ChangeMDSubscriptionState()
+{
+   if (mdProvider_->IsConnectionActive()) {
+      mdProvider_->DisconnectFromMDSource();
+   } else {
+      mdProvider_->SubscribeToMD();
+   }
 }
 
 TreeViewWithEnterKey* MarketDataWidget::view() const

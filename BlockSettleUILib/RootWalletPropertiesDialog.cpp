@@ -12,7 +12,6 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "ChangeWalletPasswordDialog.h"
-#include "EnterWalletPassword.h"
 #include "HDWallet.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxQuestion.h"
@@ -52,8 +51,10 @@ private:
    std::shared_ptr<bs::hd::Wallet> wallet_;
 };
 
-RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
+RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &container
    , WalletsViewModel *walletsModel
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -66,6 +67,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
   , signingContainer_(container)
   , appSettings_(appSettings)
   , assetMgr_(assetMgr)
+  , logger_(logger)
 {
    ui_->setupUi(this);
 
@@ -76,12 +78,12 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    connect(walletsModel, &WalletsViewModel::modelReset,
       this, &RootWalletPropertiesDialog::onModelReset);
 
-   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnDescription));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnState));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnSpendableBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnUnconfirmedBalance));
    ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnNbAddresses));
+   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RootWalletPropertiesDialog::onWalletSelected);
 
@@ -93,7 +95,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
 
    updateWalletDetails(wallet_);
 
-   ui_->rescanButton->setEnabled(PyBlockDataManager::instance()->GetState() == PyBlockDataManagerState::Ready);
+   ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
    ui_->changePassphraseButton->setEnabled(false);
    if (!wallet_->isWatchingOnly()) {
       walletEncTypes_ = wallet_->encryptionTypes();
@@ -107,7 +109,6 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
          ui_->changePassphraseButton->setEnabled(false);
       }
       connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
-      connect(signingContainer_.get(), &SignContainer::PasswordChanged, this, &RootWalletPropertiesDialog::onPasswordChanged);
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RootWalletPropertiesDialog::onHDLeafCreated);
       infoReqId_ = signingContainer_->GetInfo(wallet_);
    }
@@ -115,9 +116,11 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<bs:
    ui_->treeViewWallets->expandAll();
 }
 
+RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
+
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
-   WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_, this);
+   WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_, appSettings_, this);
    if (delDlg.exec() == QDialog::Accepted) {
       close();
    }
@@ -125,7 +128,7 @@ void RootWalletPropertiesDialog::onDeleteWallet()
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   WalletBackupAndVerify(wallet_, signingContainer_, this);
+   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, this);
 }
 
 void RootWalletPropertiesDialog::onCreateWoWallet()
@@ -177,53 +180,29 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   auto changePasswordDialog = new ChangeWalletPasswordDialog(wallet_
-      , walletEncTypes_, walletEncKeys_, walletEncRank_, this);
+   ChangeWalletPasswordDialog changePasswordDialog(logger_, signingContainer_, wallet_
+      , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), appSettings_, this);
 
-   if (changePasswordDialog->exec() != QDialog::Accepted) {
-      changePasswordDialog->deleteLater();
-      return;
-   }
+   int result = changePasswordDialog.exec();
 
-   const auto oldPassword = changePasswordDialog->oldPassword();
-
-   if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, changePasswordDialog->newPasswordData()
-         , changePasswordDialog->newKeyRank(), oldPassword);
+   if (result == QDialog::Accepted) {
+      // Update wallet encryption type
+      infoReqId_ = signingContainer_->GetInfo(wallet_);
    }
-   else {
-      if (wallet_->changePassword(changePasswordDialog->newPasswordData(), changePasswordDialog->newKeyRank()
-         , oldPassword)) {
-         MessageBoxSuccess message(tr("Password change")
-            , tr("Wallet password successfully changed - don't forget your new password!")
-            , this);
-         message.exec();
-      }
-      else {
-         MessageBoxCritical message(tr("Password change failure")
-            , tr("A problem occured when changing wallet password")
-            , this);
-         message.exec();
-      }
-   }
-   changePasswordDialog->deleteLater();
 }
 
-void RootWalletPropertiesDialog::onPasswordChanged(const std::string &walletId, bool ok)
+static inline QString encTypeToString(bs::wallet::EncryptionType enc)
 {
-   if (walletId != wallet_->getWalletId()) {
-      return;
-   }
-   if (ok) {
-      MessageBoxSuccess(tr("Password change")
-         , tr("Wallet password successfully changed - don't forget your new password!")
-         , this).exec();
-   }
-   else {
-      MessageBoxCritical(tr("Password change failure")
-         , tr("A problem occured when changing wallet password")
-         , this).exec();
-   }
+   switch (enc) {
+      case bs::wallet::EncryptionType::Unencrypted :
+         return QObject::tr("Unencrypted");
+
+      case bs::wallet::EncryptionType::Password :
+         return QObject::tr("Password");
+
+      case bs::wallet::EncryptionType::Auth :
+         return QObject::tr("Auth");
+   };
 }
 
 void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
@@ -237,7 +216,16 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs:
    walletEncKeys_ = encKeys;
    walletEncRank_ = keyRank;
    ui_->changePassphraseButton->setEnabled(true);
-   ui_->labelEncRank->setText(tr("%1 of %2").arg(keyRank.first).arg(keyRank.second));
+
+   if (keyRank.first == 1 && keyRank.second == 1) {
+      if (!encTypes.empty()) {
+         ui_->labelEncRank->setText(encTypeToString(encTypes.front()));
+      } else {
+         ui_->labelEncRank->setText(tr("Unknown"));
+      }
+   } else {
+      ui_->labelEncRank->setText(tr("%1 of %2").arg(keyRank.first).arg(keyRank.second));
+   }
 }
 
 void RootWalletPropertiesDialog::onWalletSelected()

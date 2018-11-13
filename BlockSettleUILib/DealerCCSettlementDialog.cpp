@@ -1,14 +1,13 @@
 #include "DealerCCSettlementDialog.h"
 #include "ui_DealerCCSettlementDialog.h"
 
+#include "ArmoryConnection.h"
 #include "CommonTypes.h"
 #include "DealerCCSettlementContainer.h"
 #include "MetaData.h"
-#include "PyBlockDataManager.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
 #include "HDWallet.h"
-#include <QtConcurrent/QtConcurrentRun>
 #include <CelerClient.h>
 
 #include <spdlog/spdlog.h>
@@ -20,8 +19,9 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
       , std::shared_ptr<CelerClient> celerClient
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent)
-   : BaseDealerSettlementDialog(logger, container, signContainer, parent)
+   : BaseDealerSettlementDialog(logger, container, signContainer, appSettings, parent)
    , ui_(new Ui::DealerCCSettlementDialog())
    , settlContainer_(container)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
@@ -59,24 +59,29 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    if (settlContainer_->isDelivery()) {
       setWindowTitle(tr("Settlement Delivery"));
       ui_->labelPaymentName->setText(tr("Delivery"));
-      setFrejaPasswordPrompt(tr("%1 Delivery")
+      setAuthPasswordPrompt(tr("%1 Delivery")
          .arg(QString::fromStdString(settlContainer_->security())));
    } else {
       setWindowTitle(tr("Settlement Payment"));
       ui_->labelPaymentName->setText(tr("Payment"));
-      setFrejaPasswordPrompt(tr("%1 Payment")
+      setAuthPasswordPrompt(tr("%1 Payment")
          .arg(QString::fromStdString(settlContainer_->security())));
    }
 
    ui_->labelPayment->setText(settlContainer_->foundRecipAddr() && settlContainer_->isAmountValid()
       ? sValid : sInvalid);
 
+   if (!settlContainer_->GetSigningWallet()) {
+      throw std::runtime_error("missing signing wallet in the container");
+   }
    const auto &wallet = walletsManager->GetHDRootForLeaf(settlContainer_->GetSigningWallet()->GetWalletId());
    setWallet(wallet);
    ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(QString::fromStdString(wallet->getName())));
 
    validateGUI();
 }
+
+DealerCCSettlementDialog::~DealerCCSettlementDialog() = default;
 
 QWidget *DealerCCSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
 WalletKeysSubmitWidget *DealerCCSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }

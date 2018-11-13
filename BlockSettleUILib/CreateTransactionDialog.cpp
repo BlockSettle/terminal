@@ -1,6 +1,8 @@
 #include "CreateTransactionDialog.h"
+
 #include <stdexcept>
 #include <thread>
+
 #include <QDebug>
 #include <QCheckBox>
 #include <QComboBox>
@@ -11,13 +13,15 @@
 #include <QIntValidator>
 #include <QFile>
 #include <QFileDialog>
+#include <QCloseEvent>
+
 #include "Address.h"
+#include "ArmoryConnection.h"
 #include "CoinControlDialog.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
 #include "MessageBoxQuestion.h"
 #include "OfflineSigner.h"
-#include "PyBlockDataManager.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "TransactionOutputsModel.h"
@@ -26,16 +30,22 @@
 #include "WalletsManager.h"
 #include "XbtAmountValidator.h"
 
-
-const std::map<unsigned int, QString> feeLevels = { {2, QObject::tr("20 minutes") },
-   { 4, QObject::tr("40 minutes") }, { 6, QObject::tr("1 hour") }, { 12, QObject::tr("2 hours") },
-   { 24, QObject::tr("4 hours") }, { 48, QObject::tr("8 hours") }, { 144, QObject::tr("24 hours") },
-   { 504, QObject::tr("3 days") }, { 1008, QObject::tr("7 days") }
+// Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
+const std::map<unsigned int, QString> feeLevels = {
+   { 2, QObject::tr("20 minutes") },
+   { 3, QObject::tr("30 minutes") },
+   { 4, QObject::tr("40 minutes") },
+   { 5, QObject::tr("50 minutes") },
+   { 6, QObject::tr("1 hour") },
+   { 10, QObject::tr("1 hour 40 minutes") },
+   { 20, QObject::tr("3 hours 20 minutes") }
 };
 
-CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<WalletsManager>& walletManager
+CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
    : QDialog(parent)
+   , armory_(armory)
    , walletsManager_(walletManager)
    , signingContainer_(container)
    , loadFeeSuggestions_(loadFeeSuggestions)
@@ -114,13 +124,27 @@ void CreateTransactionDialog::reject()
       if (confirmExit.exec() != QDialog::Accepted) {
          return;
       }
+
+      if (txReq_.isValid()) {
+         if (signingContainer_) {
+            signingContainer_->CancelSignTx(txReq_.txId());
+         }
+      }
    }
+
    QDialog::reject();
 }
 
-void CreateTransactionDialog::SelectWallet(const std::string& walletId)
+void CreateTransactionDialog::closeEvent(QCloseEvent *e)
 {
-   UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
+   reject();
+
+   e->ignore();
+}
+
+int CreateTransactionDialog::SelectWallet(const std::string& walletId)
+{
+   return UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
 }
 
 void CreateTransactionDialog::populateWalletsList()
@@ -135,20 +159,35 @@ void CreateTransactionDialog::populateFeeList()
    comboBoxFeeSuggestions()->setCurrentIndex(0);
    comboBoxFeeSuggestions()->setEnabled(false);
 
-   connect(this, &CreateTransactionDialog::feeLoadingColmpleted
+   connect(this, &CreateTransactionDialog::feeLoadingCompleted
       , this, &CreateTransactionDialog::onFeeSuggestionsLoaded
       , Qt::QueuedConnection);
 
-   feeUpdatingThread_ = std::thread(&CreateTransactionDialog::feeUpdatingThreadFunction, this);
+   loadFees();
 }
 
-void CreateTransactionDialog::feeUpdatingThreadFunction()
+void CreateTransactionDialog::loadFees()
 {
-   std::map<unsigned int, float> feeValues;
+   struct Result {
+      std::map<unsigned int, float> values;
+      std::set<unsigned int>  levels;
+   };
+   auto result = new Result;
+
    for (const auto &feeLevel : feeLevels) {
-      feeValues[feeLevel.first] = walletsManager_->estimatedFeePerByte(feeLevel.first);
+      result->levels.insert(feeLevel.first);
    }
-   emit feeLoadingColmpleted(feeValues);
+   for (const auto &feeLevel : feeLevels) {
+      const auto &cbFee = [this, result, level=feeLevel.first](float fee) {
+         result->levels.erase(level);
+         result->values[level] = fee;
+         if (result->levels.empty()) {
+            emit feeLoadingCompleted(result->values);
+            delete result;
+         }
+      };
+      walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee, this);
+   }
 }
 
 void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)
@@ -178,10 +217,10 @@ void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
    transactionData_->SetFeePerByte(comboBoxFeeSuggestions()->itemData(currentIndex).toFloat());
 }
 
-void CreateTransactionDialog::selectedWalletChanged(int)
+void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const std::function<void()> &cbInputsReset)
 {
    auto currentWallet = walletsManager_->GetWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   transactionData_->SetWallet(currentWallet);
+   transactionData_->SetWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
 }
 
 void CreateTransactionDialog::onTransactionUpdated()
@@ -217,7 +256,8 @@ void CreateTransactionDialog::onMaxPressed()
    lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
 }
 
-void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error)
+void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
+   bool cancelledByUser)
 {
    if (!pendingTXSignId_ || (pendingTXSignId_ != id)) {
       return;
@@ -235,7 +275,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
          return;
       }
 
-      if (PyBlockDataManager::instance()->broadcastZC(signedTX)) {
+      if (armory_->broadcastZC(signedTX)) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
             transactionData_->GetWallet()->SetTransactionComment(signedTX, comment);
@@ -250,14 +290,16 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
       detailedText = QString::fromStdString(error);
    }
 
-   MessageBoxBroadcastError(detailedText, this).exec();
+   if (!cancelledByUser) {
+      MessageBoxBroadcastError(detailedText, this).exec();
+   }
+
    stopBroadcasting();
 }
 
 void CreateTransactionDialog::startBroadcasting()
 {
    broadcasting_ = true;
-   pushButtonCancel()->setEnabled(false);
    pushButtonCreate()->setEnabled(false);
    pushButtonCreate()->setText(tr("Waiting for TX signing..."));
 }
@@ -265,7 +307,6 @@ void CreateTransactionDialog::startBroadcasting()
 void CreateTransactionDialog::stopBroadcasting()
 {
    broadcasting_ = false;
-   pushButtonCancel()->setEnabled(true);
    pushButtonCreate()->setEnabled(true);
    updateCreateButtonText();
 }
@@ -276,7 +317,7 @@ bool CreateTransactionDialog::BroadcastImportedTx()
       return false;
    }
    startBroadcasting();
-   if (PyBlockDataManager::instance()->broadcastZC(importedSignedTX_)) {
+   if (armory_->broadcastZC(importedSignedTX_)) {
       if (!textEditComment()->document()->isEmpty()) {
          const auto &comment = textEditComment()->document()->toPlainText().toStdString();
          transactionData_->GetWallet()->SetTransactionComment(importedSignedTX_, comment);
@@ -299,19 +340,19 @@ bool CreateTransactionDialog::CreateTransaction()
    try {
       signingContainer_->SyncAddresses(transactionData_->createAddresses());
 
-      auto txReq = transactionData_->CreateTXRequest(checkBoxRBF()->checkState() == Qt::Checked
+      txReq_ = transactionData_->CreateTXRequest(checkBoxRBF()->checkState() == Qt::Checked
          , changeAddress);
-      txReq.comment = textEditComment()->document()->toPlainText().toStdString();
+      txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
-      if (txReq.fee <= originalFee_) {
+      if (txReq_.fee <= originalFee_) {
          MessageBoxCritical(tr("Fee is low"),
             tr("Your current fee (%1) should exceed the fee from the original transaction (%2)")
-            .arg(UiUtils::displayAmount(txReq.fee)).arg(UiUtils::displayAmount(originalFee_))).exec();
+            .arg(UiUtils::displayAmount(txReq_.fee)).arg(UiUtils::displayAmount(originalFee_))).exec();
          stopBroadcasting();
          return true;
       }
 
-      pendingTXSignId_ = signingContainer_->SignTXRequest(txReq, false,
+      pendingTXSignId_ = signingContainer_->SignTXRequest(txReq_, false,
          SignContainer::TXSignMode::Full, {}, true);
       if (!pendingTXSignId_) {
          throw std::logic_error("Signer failed to send request");

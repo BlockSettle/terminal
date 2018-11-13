@@ -475,7 +475,6 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
    }
    else if (values.find(PUBKEY_COMPRESSED_BYTE) != values.end()) {
       auto brrData = values[PUBKEY_COMPRESSED_BYTE][0];
-      const auto sizeRem = brrData.getSizeRemaining();
       const auto pubKey = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
       btc_hdnode node;
       if (pubKey.getSize() != sizeof(node.public_key)) {
@@ -486,7 +485,6 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
 
       if (values.find(PUBKEY_UNCOMPRESSED_BYTE) != values.end()) {
          auto brrData = values[PUBKEY_UNCOMPRESSED_BYTE][0];
-         const auto sizeRem = brrData.getSizeRemaining();
          const auto chainCode = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
          if (!chainCode.isNull() && chainCode.getSize() != sizeof(node.chain_code)) {
             throw std::runtime_error("chaincode size mismatch: " + std::to_string(chainCode.getSize()));

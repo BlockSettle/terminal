@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package Blocksettle.MarketData.Historic;
+
+
+enum DataType
+{
+   EmptyDataType        = 0;
+   OpenPriceType	= 1;
+   ClosePriceType	= 2;
+   HighPriceType	= 3;
+   LowPriceType		= 4;
+   LastPriceType	= 5;
+}
+
+message DataSetRequest
+{
+   repeated DataType dataTypes = 1;
+   string instrument = 2;
+   double startTime = 3;
+   double endTime = 4;
+}
+
+message DataSetResponse
+{
+   message Data
+   {
+      DataType type = 1;
+      double value = 2;
+      double volume = 3;
+      double timestamp = 4;
+   }
+
+   repeated Data data = 1;
+   string instrument = 2;
+   double startTime = 3;
+   double endTime = 4;
+}

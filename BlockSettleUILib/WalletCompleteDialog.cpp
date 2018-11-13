@@ -5,15 +5,17 @@
 WalletCompleteDialog::WalletCompleteDialog(const QString& walletName
  , bool asPrimary, QWidget* parent)
    : QDialog(parent)
-   , ui_(new Ui::WalletCompleteDialog())
    , walletName_(walletName)
    , primary_(asPrimary)
    , primaryPrefix_(tr("Primary "))
+   , ui_(new Ui::WalletCompleteDialog())
 {
    ui_->setupUi(this);
 
    connect(ui_->pushButtonFinish, &QPushButton::clicked, this, &WalletCompleteDialog::accept);
 }
+
+WalletCompleteDialog::~WalletCompleteDialog() = default;
 
 int WalletCompleteDialog::exec()
 {

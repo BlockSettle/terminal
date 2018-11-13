@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include <QDateTime>
 #include "TxClasses.h"
 
 
@@ -16,6 +17,7 @@ namespace bs {
       class Adapter {
          friend class UtxoReservation;
       public:
+         virtual ~Adapter() noexcept = default;
          bool reserve(const std::string &walletId, const std::string &reserveId, const std::vector<UTXO> &);
          std::string unreserve(const std::string &reserveId);
          std::vector<UTXO> get(const std::string &reserveId) const;
@@ -27,6 +29,8 @@ namespace bs {
       protected:
          UtxoReservation * parent_ = nullptr;
       };
+
+      explicit UtxoReservation();
 
       static void init();
       static void destroy();
@@ -46,6 +50,7 @@ namespace bs {
       std::unordered_map<std::string, UTXOs>       byReserveId_;
       std::unordered_map<std::string, std::string> walletByReserveId_;
       std::unordered_map<std::string, IdList>      resIdByWalletId_;
+      std::unordered_map<std::string, QDateTime>   reserveTime_;
       std::vector<std::shared_ptr<Adapter>>        adapters_;
    };
 

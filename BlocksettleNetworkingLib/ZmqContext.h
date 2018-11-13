@@ -11,6 +11,12 @@ namespace spdlog
    class logger;
 }
 
+enum class ZMQTransport
+{
+   TCPTransport,
+   InprocTransport
+};
+
 
 class ZmqContext
 {
@@ -31,6 +37,9 @@ public:
    ZmqContext& operator = (ZmqContext&&) = delete;
 
    std::string GenerateConnectionName(const std::string& host, const std::string& port);
+   std::string GenerateConnectionName(const std::string& endpoint);
+
+   static std::string CreateConnectionEndpoint(ZMQTransport transport, const std::string& host, const std::string& port);
 public:
    sock_ptr    CreateInternalControlSocket();
    sock_ptr    CreateMonitorSocket();

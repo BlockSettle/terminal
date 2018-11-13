@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package Blocksettle.ArmoryEvents;
+
+enum EventType
+{
+   NewBlockEventType = 0;
+   ZCEventType = 1;
+};
+
+message EventHeader
+{
+   EventType   event_type = 1;
+   bytes       event_data = 2;
+};
+
+message NewBlockEvent
+{
+   uint32      height = 1;
+};
+
+message ZCEvent
+{
+   uint32      zc_id = 1;
+};

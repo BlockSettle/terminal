@@ -3,7 +3,6 @@
 
 #include <QDialog>
 #include <memory>
-#include "FrejaREST.h"
 
 namespace Ui {
     class LoginWindow;
@@ -17,7 +16,7 @@ Q_OBJECT
 
 public:
    LoginWindow(const std::shared_ptr<ApplicationSettings> &, QWidget* parent = nullptr);
-   ~LoginWindow() override = default;
+   ~LoginWindow() override;
 
    QString getUsername() const;
    QString getPassword() const;
@@ -25,16 +24,15 @@ public:
 private slots:
    void onLoginPressed();
    void onTextChanged();
-   void onFrejaPressed();
+   void onAuthPressed();
 
-   void onFrejaSucceeded(const QString &userId, const QString &details);
-   void onFrejaFailed(const QString &userId, const QString &text);
-   void onFrejaStatusUpdated(const QString &userId, const QString &status);
+   void onAuthSucceeded(const QString &userId, const QString &details);
+   void onAuthFailed(const QString &userId, const QString &text);
+   void onAuthStatusUpdated(const QString &userId, const QString &status);
 
 private:
-   Ui::LoginWindow* ui_;
+   std::unique_ptr<Ui::LoginWindow> ui_;
    std::shared_ptr<ApplicationSettings> settings_;
-   FrejaAuth   frejaAuth_;
 };
 
 #endif // __LOGIN_WINDOW_H__

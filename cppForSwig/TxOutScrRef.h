@@ -72,7 +72,7 @@ struct TxOutScriptRef
          return this->type_ < rhs.type_;
    }
 
-   void setRef(const BinaryData& bd)
+   void setRef(const BinaryDataRef& bd)
    {
       type_ = (SCRIPT_PREFIX)bd.getPtr()[0];
       scriptRef_ = bd.getSliceRef(1, bd.getSize() - 1);

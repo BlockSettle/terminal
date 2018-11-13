@@ -10,6 +10,9 @@
 
 #include "headless.pb.h"
 
+#include <mutex>
+#include <set>
+
 namespace spdlog {
    class logger;
 }
@@ -20,6 +23,7 @@ namespace bs {
    }
 }
 class ApplicationSettings;
+class ConnectionManager;
 class HeadlessListener;
 class QProcess;
 class WalletsManager;
@@ -49,7 +53,10 @@ public:
 
    RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) override;
 
-   void SendPassword(const std::string &walletId, const PasswordType &password) override;
+   void SendPassword(const std::string &walletId, const PasswordType &password,
+      bool cancelledByUser) override;
+
+   RequestId CancelSignTx(const BinaryData &txId) override;
 
    RequestId SetUserId(const BinaryData &) override;
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override;
@@ -64,7 +71,8 @@ public:
    RequestId GetInfo(const std::shared_ptr<bs::hd::Wallet> &) override;
    void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) override;
    RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank, const SecureBinaryData &oldPass = {}) override;
+      , bs::wallet::KeyRank, const SecureBinaryData &oldPass
+      , bool addNew, bool removeOld, bool dryRun) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;
@@ -84,6 +92,7 @@ protected:
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
+   std::set<RequestId>                 signRequests_;
 };
 
 bool KillHeadlessProcess();
@@ -93,8 +102,10 @@ class RemoteSigner : public HeadlessContainer
 {
    Q_OBJECT
 public:
-   RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir, const QString &host
-      , const QString &port, const QString &pwHash = {}, OpMode opMode = OpMode::Remote);
+   RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
+      , const QString &port
+      , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash = {}
+      , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
    bool Start() override;
@@ -122,6 +133,10 @@ protected:
    const std::string    connPubKey_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    bool  authPending_ = false;
+
+private:
+   std::shared_ptr<ConnectionManager> connectionManager_;
+   mutable std::mutex mutex_;
 };
 
 class LocalSigner : public RemoteSigner
@@ -129,7 +144,9 @@ class LocalSigner : public RemoteSigner
    Q_OBJECT
 public:
    LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir, NetworkType
-      , const QString &port, const QString &pwHash = {}, double asSpendLimit = 0);
+      , const QString &port
+      , const std::shared_ptr<ConnectionManager>& connectionManager
+      , const QString &pwHash = {}, double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 
    bool Start() override;

@@ -15,13 +15,15 @@ CoinControlDialog::CoinControlDialog(const std::shared_ptr<SelectedTransactionIn
    ui_->widgetCoinControl->initWidget(inputs);
 }
 
+CoinControlDialog::~CoinControlDialog() = default;
+
 void CoinControlDialog::onAccepted()
 {
    ui_->widgetCoinControl->applyChanges(selectedInputs_);
    accept();
 }
 
-void CoinControlDialog::onSelectionChanged(size_t nbSelected)
+void CoinControlDialog::onSelectionChanged(size_t nbSelected, bool autoSelection)
 {
-   ui_->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(nbSelected > 0);
+   ui_->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(nbSelected > 0 || autoSelection);
 }

@@ -8,6 +8,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 
+class ArmoryConnection;
 
 namespace bs {
 
@@ -15,7 +16,7 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer() : QObject(nullptr) {}
+      explicit SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory);
       ~SettlementContainer() override = default;
 
       virtual bool accept(const SecureBinaryData &password = {}) = 0;
@@ -50,9 +51,14 @@ namespace bs {
       void timerStarted(int msDuration);
       void timerStopped();
 
-   protected:
+   protected slots:
       void startTimer(const unsigned int durationSeconds);
       void stopTimer();
+
+      virtual void zcReceived(unsigned int) {}
+
+   protected:
+      std::shared_ptr<ArmoryConnection>   armory_;
 
    private:
       QTimer   timer_;

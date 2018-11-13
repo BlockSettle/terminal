@@ -1,6 +1,7 @@
 #include "ApplicationSettings.h"
 
 #include "BlockDataManagerConfig.h"
+#include "EncryptionUtils.h"
 #include "FastLock.h"
 
 #include <QCommandLineParser>
@@ -81,14 +82,19 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { satoshiPort,             SettingDef(QString(), -1) },
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
-      { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("193.138.218.37")) },
-      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 81) },
+      { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("185.213.153.37")) },
+      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 7681) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
-      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("193.138.218.44")) },
+      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.44")) },
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
       { pubBridgePubKey,         SettingDef(QString(), QLatin1String("AEJL[u[3-i>v#4D?v3Te!B}S0nO7cG!QOsmI*--g")) },
+      { authServerHost,          SettingDef(QLatin1String("AuthServerHost"), QLatin1String("185.213.153.44")) },
+      { authServerPort,          SettingDef(QLatin1String("AuthServerPort"), 9094) },
+      { authServerPubKey,        SettingDef(QString(), QLatin1String("(=?/gEARFR3jjIi>>JBGtv=uKW/)ujUm#%wq#v}f")) },
       { celerHost,               SettingDef(QLatin1String("MatchSystemHost"), QLatin1String("104.155.117.179")) },
       { celerPort,               SettingDef(QLatin1String("MatchSystemPort"), 16001) },
+      { mdServerHost,            SettingDef(QLatin1String("MDServerHost"), QLatin1String("185.213.153.46")) },
+      { mdServerPort,            SettingDef(QLatin1String("MDServerPort"), 16005) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
       { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },
@@ -117,19 +123,22 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { Filter_MD_RFQ_Portfolio, SettingDef(QLatin1String("Filter/MD/RFQ_Portfolio")) },
       { Filter_MD_QN,            SettingDef(QLatin1String("Filter/MD/QN")) },
       { Filter_MD_QN_cnt,        SettingDef(QLatin1String("Filter/MD/QN/counters")) },
-      { ChangeLog_Base_Url,      SettingDef(QString(), QLatin1String("http://193.138.218.44/ChangeLog"))},
-      { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("http://193.138.218.36/terminal/downloads"))},
-      { ResetPassword_Url,       SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-forgot-password"))},
-      { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://193.138.218.36/pub-registration")) },
+      { ChangeLog_Base_Url,      SettingDef(QString(), QLatin1String("http://185.213.153.44/ChangeLog"))},
+      { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("http://pubb.blocksettle.com/terminal/downloads"))},
+      { ResetPassword_Url,       SettingDef(QString(), QLatin1String("http://pubb.blocksettle.com/pub-forgot-password"))},
+      { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://pubb.blbocksettle.com/pub-registration")) },
       { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0x06) },
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
       { PmRfqLimit,              SettingDef(QLatin1String("PmRfqLimit"), 5) },
-      { DisableBlueDotOnTabOfRfqBlotter, SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
       { PriceUpdateInterval,     SettingDef(QLatin1String("PriceUpdateInterval"), -1) },
       { ShowQuoted,              SettingDef(QLatin1String("ShowQuoted"), true) },
-      { AdvancedTxDialogByDefault,       SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
-      { TransactionFilter,       SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) }
+      { DisableBlueDotOnTabOfRfqBlotter,  SettingDef(QLatin1String("DisableBlueDotOnTabOfRfqBlotter"), false) },
+      { AdvancedTxDialogByDefault,        SettingDef(QLatin1String("AdvancedTxDialogByDefault"), false) },
+      { TransactionFilter,                SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) },
+      { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
+      { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
+      { authPrivKey,             SettingDef(QLatin1String("AuthPrivKey")) }
    };
 }
 
@@ -483,7 +492,7 @@ int ApplicationSettings::GetDefaultArmoryPort() const
    return GetDefaultArmoryPortForNetwork(get<NetworkType>(netType));
 }
 
-int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType) const
+int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType)
 {
    switch (networkType) {
    case NetworkType::MainNet:
@@ -619,4 +628,24 @@ bs::LogLevel ApplicationSettings::parseLogLevel(QString level) const
       return bs::LogLevel::crit;
    }
    return bs::LogLevel::off;
+}
+
+std::pair<autheid::PrivateKey, autheid::PublicKey> ApplicationSettings::GetAuthKeys()
+{
+   if (!authPrivKey_.empty() && !authPubKey_.empty()) {
+      return { authPrivKey_, authPubKey_ };
+   }
+
+   SecureBinaryData privKey = BinaryData::CreateFromHex(get<std::string>(authPrivKey));
+   if (privKey.getSize() == autheid::kPrivateKeySize) {
+      const auto sPrivKey = privKey.toBinStr();
+      authPrivKey_ = autheid::SecureBytes(sPrivKey.begin(), sPrivKey.end());
+   }
+   else {
+      authPrivKey_ = autheid::generatePrivateKey();
+      const std::string sPrivKey(authPrivKey_.begin(), authPrivKey_.end());
+      set(authPrivKey, QString::fromStdString(BinaryData(sPrivKey).toHexStr()));
+   }
+   authPubKey_ = autheid::getPublicKey(authPrivKey_);
+   return { authPrivKey_, authPubKey_ };
 }

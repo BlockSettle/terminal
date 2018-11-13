@@ -125,8 +125,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Your backup will allow you to restore your entire wallet, including authentication addresses and equity tokens.
-</string>
+         <string>Your digital wallet backup will allow you to restore your entire wallet, including authentication addresses and equity tokens.</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -200,7 +199,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Please take steps to secure your backup in an offline environment</string>
+            <string>The backup is unencrypted and will allow anyone who holds it to recover the entire wallet.</string>
            </property>
            <property name="textFormat">
             <enum>Qt::AutoText</enum>
@@ -277,7 +276,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>The backup is unencrypted and will allow anyone who holds it to recover the entire wallet</string>
+            <string>Please take steps to secure your digital backup in a secure offline environment.</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

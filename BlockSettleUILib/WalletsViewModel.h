@@ -121,6 +121,7 @@ public:
    enum class WalletColumns : int
    {
       ColumnName,
+      ColumnID,
       ColumnDescription,
       ColumnState,
       ColumnSpendableBalance,

@@ -48,19 +48,15 @@ private:
    bool DigitalImportOk();
    bool WoImportOk() const { return woFileExists_; }
 
-protected:
-   void resizeEvent(QResizeEvent* event) override;
-
 private:
-   Ui::ImportWalletTypeDialog* ui_;
-
+   std::unique_ptr<Ui::ImportWalletTypeDialog> ui_;
    QString                       digitalBackupFile_;
    WalletBackupFile::WalletData  walletData_;
    bool        woFileExists_ = false;
    QString     woFileName_;
    ImportType  importType_ = Full;
    std::shared_ptr<EasyCoDec> easyCodec_;
-   EasyEncValidator         * validator_ = nullptr;
+   std::unique_ptr<EasyEncValidator> validator_;
 };
 
 

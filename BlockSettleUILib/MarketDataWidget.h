@@ -24,7 +24,7 @@ Q_OBJECT
 
 public:
    MarketDataWidget(QWidget* parent = nullptr );
-   virtual ~MarketDataWidget();
+   ~MarketDataWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
       , const std::shared_ptr<MarketDataProvider>& mdProvider);
@@ -46,14 +46,22 @@ private slots:
    void onMDRejected(const std::string &security, const std::string &reason);
    void onEnterKeyPressed(const QModelIndex &index);
 
+   void OnMDConnecting();
+   void OnMDConnected();
+   void OnMDDisconnecting();
+   void OnMDDisconnected();
+
+   void ChangeMDSubscriptionState();
+
 private:
-   Ui::MarketDataWidget    *              ui;
+   std::unique_ptr<Ui::MarketDataWidget> ui;
    MarketDataModel         *              marketDataModel_;
    MDSortFilterProxyModel  *              mdSortFilterModel_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    ApplicationSettings::Setting           settingVisibility_;
    std::shared_ptr<MDHeader>              mdHeader_;
    bool  filteredView_ = true;
+   std::shared_ptr<MarketDataProvider>    mdProvider_;
 };
 
 #include <QPainter>

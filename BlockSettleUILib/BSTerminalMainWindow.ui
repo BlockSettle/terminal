@@ -175,6 +175,11 @@
         <string>TRANSACTIONS</string>
        </attribute>
       </widget>
+      <widget class="ExplorerWidget" name="widgetExplorer">
+       <attribute name="title">
+        <string>EXPLORER</string>
+       </attribute>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -587,6 +592,12 @@
    <class>RFQReplyWidget</class>
    <extends>QWidget</extends>
    <header>RFQReplyWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ExplorerWidget</class>
+   <extends>QWidget</extends>
+   <header>ExplorerWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

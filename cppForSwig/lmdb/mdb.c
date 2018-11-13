@@ -3771,10 +3771,60 @@ mdb_env_create(MDB_env **env)
 }
 
 static int ESECT
+mdb_env_checkmapsize(MDB_env *env, int index)
+{   
+   int do_truncate = 1;
+
+#ifdef _WIN32
+   WIN32_FILE_ATTRIBUTE_DATA fi;
+   if (!GetFileAttributesEx(env->me_path, GetFileExInfoStandard, &fi))
+   {
+      int result = GetLastError();
+      return -1;
+   }
+
+   if (fi.nFileSizeLow >= env->me_maps[index].me_mapsize)
+      do_truncate = 0;
+#else
+   //what is the file size?
+   struct stat stat_struct; int stat_result;
+
+   memset(&stat_struct, 0, sizeof(struct stat));
+   stat_result = stat(env->me_path, &stat_struct);
+   if (stat_result != 0)
+      stat_result = errno;
+
+   switch (stat_result)
+   {
+   case 0:
+   {
+      //if file size is less than new size, break
+      if (stat_struct.st_size <= env->me_maps[index].me_mapsize)
+         break;
+
+      //file size is larger than new size. we do not want to 
+      //truncate to a lower size, flag to skip.
+      do_truncate = 0;
+   }
+
+   case ENOENT:
+      break; //file does not exist, move on
+
+   default:
+      return -1;
+   }
+
+#endif
+   return do_truncate;
+}
+
+static int ESECT
 mdb_env_map(MDB_env *env, void *addr, int newsize, int index)
 {
    MDB_page *p;
    unsigned int flags = env->me_flags;
+   int do_truncate = mdb_env_checkmapsize(env, index);
+
 #ifdef _WIN32
    int rc;
    HANDLE mh;
@@ -3786,20 +3836,25 @@ mdb_env_map(MDB_env *env, void *addr, int newsize, int index)
    sizelo = env->me_maps[index].me_mapsize & 0xffffffff;
    sizehi = env->me_maps[index].me_mapsize >> 16 >> 16; /* only needed on Win64 */
 
+   if (do_truncate < 0)
+   {
+      printf("mdb_env_checkmapsize failed with error: %d\n", do_truncate);
+      return do_truncate;
+   }
+
    /* Windows won't create mappings for zero length files.
    * Have to allocate the maxsize as Windows needs the
    * space to be preallocated.
    */
 
-   GetFileSizeEx(env->me_fd, &li);
-   fileSize = (uint64_t)li.QuadPart;
-   if (fileSize < env->me_maps[index].me_mapsize)
-      newsize = 1;
+   if (do_truncate) {
+      if (SetFilePointer(env->me_fd, sizelo, &sizehi, 0) != (DWORD)sizelo)
+         return ErrCode();
 
-   if (newsize) {
-      if (SetFilePointer(env->me_fd, sizelo, &sizehi, 0) != (DWORD)sizelo
-         || !SetEndOfFile(env->me_fd)
-         || SetFilePointer(env->me_fd, 0, NULL, 0) != 0)
+      if (!SetEndOfFile(env->me_fd))
+         return ErrCode();
+
+      if (SetFilePointer(env->me_fd, 0, NULL, 0) != 0)
          return ErrCode();
    }
    mh = CreateFileMapping(env->me_fd, NULL, flags & MDB_WRITEMAP ?
@@ -3817,7 +3872,14 @@ mdb_env_map(MDB_env *env, void *addr, int newsize, int index)
       return rc;
 #else
    int prot = PROT_READ;
-   if (flags & MDB_WRITEMAP) {
+
+   if (do_truncate < 0)
+   {
+      printf("mdb_env_checkmapsize failed with error: %d\n", do_truncate);
+      return do_truncate;
+   }
+
+   if (flags & MDB_WRITEMAP && do_truncate) {
       prot |= PROT_WRITE;
       if (ftruncate(env->me_fd, env->me_maps[index].me_mapsize) < 0)
          return ErrCode();
@@ -9679,7 +9741,7 @@ static void mdb_enlarge_map(MDB_env *env, size_t extraDataSize, int forceExtraSi
    if (v - info.me_mapsize > MAX_MAPSIZE_INCEREMENT)
       v = info.me_mapsize + MAX_MAPSIZE_INCEREMENT;
 
-   //if the added size if smaller than the requested extra size
+   //if the added size is smaller than the requested extra size
    while (v - info.me_mapsize < extraDataSize)
       v += extraDataSize;
 
@@ -9689,7 +9751,10 @@ static void mdb_enlarge_map(MDB_env *env, size_t extraDataSize, int forceExtraSi
    rc = mdb_env_set_mapsize(env, v);
 
    if (rc)
+   {
       printf("mdb_enlarge_map failed with error: \"%s\", id: %d\n", mdb_strerror(rc), rc);
+      printf("db path is: %s\n", env->me_path);
+   }
 }
 
 static void mdb_txn_cleanup_oldmaps(MDB_txn *txn)

@@ -19,7 +19,6 @@ QT_END_NAMESPACE
 
 class AuthAddressManager;
 class BinaryData;
-class LedgerEntryData;
 class PyBlockDataManager;
 class QComboBox;
 class QDateTime;
@@ -108,7 +107,7 @@ namespace UiUtils
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<WalletsManager>& walletsManager);
    void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
 
-   void selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
+   int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
    std::string getSelectedWalletId(QComboBox* comboBox);
 
    QPixmap getQRCode(const QString& address, int size = 0);
@@ -127,6 +126,20 @@ namespace UiUtils
    QString modelPath(const QModelIndex &index, QAbstractItemModel *model);
 
    extern const QLatin1String XbtCurrency;
+
+
+   //
+   // WalletDescriptionValidator
+   //
+
+   //! Validator for description of wallet.
+   class WalletDescriptionValidator final : public QValidator
+   {
+   public:
+      explicit WalletDescriptionValidator(QObject *parent);
+
+      QValidator::State validate(QString &input, int &pos) const override;
+   };
 }
 
 #endif // __UI_UTILS_H__

@@ -150,10 +150,13 @@
           </widget>
          </item>
          <item>
-          <widget class="QTreeView" name="treeViewUTXO">
+          <widget class="CoinControlView" name="treeViewUTXO">
            <property name="alternatingRowColors">
             <bool>true</bool>
            </property>
+           <attribute name="headerStretchLastSection">
+            <bool>false</bool>
+           </attribute>
           </widget>
          </item>
         </layout>
@@ -261,7 +264,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Transaction Inputs:</string>
+               <string>Transaction Inputs</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -289,7 +292,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Total Amount:</string>
+               <string>Total Amount</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -385,6 +388,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CoinControlView</class>
+   <extends>QTreeView</extends>
+   <header>CoinControlView.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

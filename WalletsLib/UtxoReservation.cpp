@@ -1,4 +1,5 @@
 #include "UtxoReservation.h"
+#include <thread>
 #include "FastLock.h"
 
 using namespace bs;
@@ -40,6 +41,30 @@ bool bs::UtxoReservation::Adapter::filter(const std::string &walletId, std::vect
 
 static std::shared_ptr<bs::UtxoReservation> utxoResInstance_;
 
+bs::UtxoReservation::UtxoReservation()
+{
+   std::thread([this] {
+      constexpr int secsToExpire = 600;
+      std::this_thread::sleep_for(std::chrono::seconds(10));
+      if (!utxoResInstance_) {
+         return;
+      }
+      const auto &curTime = QDateTime::currentDateTime();
+      std::vector<std::string> expiredResId;
+      {
+         FastLock lock(flag_);
+         for (const auto resIdTime : reserveTime_) {
+            if (resIdTime.second.secsTo(curTime) > secsToExpire) {
+               expiredResId.push_back(resIdTime.first);
+            }
+         }
+      }
+      for (const auto resId : expiredResId) {
+         unreserve(resId);
+      }
+   }).detach();
+}
+
 void bs::UtxoReservation::init()
 {
    utxoResInstance_ = std::make_shared<bs::UtxoReservation>();
@@ -47,7 +72,7 @@ void bs::UtxoReservation::init()
 
 void bs::UtxoReservation::destroy()
 {
-   utxoResInstance_ = nullptr;
+   utxoResInstance_.reset();
 }
 
 bool bs::UtxoReservation::addAdapter(const std::shared_ptr<Adapter> &a)
@@ -78,10 +103,12 @@ bool bs::UtxoReservation::delAdapter(const std::shared_ptr<Adapter> &a)
 
 void bs::UtxoReservation::reserve(const std::string &walletId, const std::string &reserveId, const std::vector<UTXO> &utxos)
 {
+   const auto &curTime = QDateTime::currentDateTime();
    FastLock lock(flag_);
    byReserveId_[reserveId] = utxos;
    walletByReserveId_[reserveId] = walletId;
    resIdByWalletId_[walletId].insert(reserveId);
+   reserveTime_[reserveId] = curTime;
    for (const auto &a : adapters_) {
       a->reserved(walletId, utxos);
    }
@@ -102,6 +129,7 @@ std::string bs::UtxoReservation::unreserve(const std::string &reserveId)
 
    byReserveId_.erase(reserveId);
    walletByReserveId_.erase(reserveId);
+   reserveTime_.erase(reserveId);
    resIdByWalletId_[walletId].erase(reserveId);
    for (const auto &a : adapters_) {
       a->unreserved(walletId, reserveId);

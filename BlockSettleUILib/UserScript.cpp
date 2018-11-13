@@ -2,10 +2,10 @@
 #include <spdlog/logger.h>
 #include <QQmlComponent>
 #include <QQmlContext>
-#include <QtConcurrent/QtConcurrentRun>
 #include "AssetManager.h"
 #include "CurrencyPair.h"
 #include "MarketDataProvider.h"
+#include "UiUtils.h"
 #include "WalletsManager.h"
 
 #include <algorithm>
@@ -76,7 +76,8 @@ void UserScript::setWalletsManager(std::shared_ptr<WalletsManager> walletsManage
 MarketData::MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent)
    : QObject(parent)
 {
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated);
+   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated,
+      Qt::QueuedConnection);
 }
 
 double MarketData::bid(const QString &sec) const
@@ -165,8 +166,7 @@ void DataStorage::setSold(const QString &currency, double v, const QString &id)
 Constants::Constants(QObject *parent)
    : QObject(parent)
    , walletsManager_(nullptr)
-{
-}
+{}
 
 int Constants::payInTxSize() const
 {
@@ -178,23 +178,23 @@ int Constants::payOutTxSize() const
    return 82;
 }
 
-float Constants::feePerByte() const
+float Constants::feePerByte()
 {
    if (walletsManager_) {
-      return walletsManager_->estimatedFeePerByte(2);
-   } else {
-      return 0.0;
+      walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; }, this);
    }
+   return feePerByte_;  //NB: sometimes returns previous value if previous call needs to wait for result from Armory
 }
 
 QString Constants::xbtProductName() const
 {
-   return QString::fromStdString(bs::network::XbtCurrency);
+   return UiUtils::XbtCurrency;
 }
 
 void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
 {
    walletsManager_ = walletsManager;
+   walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; }, this);
 }
 
 

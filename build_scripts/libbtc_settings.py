@@ -11,16 +11,19 @@ class LibBTC(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self.mpir = MPIRSettings(settings)
-        self._version = 'master'
+        self._version = '22a0d05bb801392b15097641c5ef337da02e7f9b'
         self._package_name = 'libbtc'
 
         self._package_url = 'https://github.com/sergey-chernikov/' + self._package_name + '/archive/%s.zip' % self._version
 
     def get_package_name(self):
-        return self._package_name
+        return self._package_name + '-' + self._version
 
-    def get_unpacked_sources_dir(self):
-        return os.path.join(self._project_settings.get_sources_dir(), self._package_dir_name + '-' + self._version)
+    def get_revision_string(self):
+        return self._version
+
+    def get_install_dir(self):
+        return os.path.join(self._project_settings.get_common_build_dir(), 'libbtc')
 
     def get_url(self):
         return self._package_url
@@ -65,17 +68,30 @@ class LibBTC(Configurator):
         else:
             return 'Debug'
 
-    def install_win(self):
-        lib_dir = os.path.join(self.get_build_dir(), self.get_win_build_configuration())
-        include_dir = self.get_unpacked_sources_dir()
-
-        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+    def install_headers(self):
+        include_dir = os.path.join(self.get_unpacked_sources_dir(), 'include')
+        secp256k1_include_dir = os.path.join(self.get_unpacked_sources_dir(), 'src', 'secp256k1', 'include')
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-        self.filter_copy(lib_dir, install_lib_dir, '.lib')
         self.filter_copy(include_dir, install_include_dir, '.h')
 
+        for name in os.listdir(secp256k1_include_dir):
+            src_name = os.path.join(secp256k1_include_dir, name)
+            dst_name = os.path.join(install_include_dir, name)
+
+            if os.path.isfile(src_name):
+                 shutil.copy(src_name, dst_name)
+
         return True
+
+    def install_win(self):
+        lib_dir = os.path.join(self.get_build_dir(), self.get_win_build_configuration())
+
+        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+
+        self.filter_copy(lib_dir, install_lib_dir, '.lib')
+
+        return self.install_headers()
 
     def make_x(self):
         command = ['make', '-j', str(multiprocessing.cpu_count())]
@@ -85,12 +101,9 @@ class LibBTC(Configurator):
 
     def install_x(self):
         lib_dir = self.get_build_dir()
-        include_dir = self.get_unpacked_sources_dir()
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-        install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
         self.filter_copy(lib_dir, install_lib_dir, '.a')
-        self.filter_copy(include_dir, install_include_dir, '.h')
 
-        return True
+        return self.install_headers()

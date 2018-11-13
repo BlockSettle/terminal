@@ -21,6 +21,7 @@ enum RequestType
    DisconnectionRequestType    = 13;
    SignTXMultiRequestType      = 14;
    ChangePasswordRequestType   = 15;
+   CancelSignTxRequestType     = 16;
 }
 
 message RequestPacket
@@ -94,6 +95,12 @@ message SignTXReply
       string   error = 2;
    }
    Change   change = 3;
+   bool     cancelledByUser = 4;
+}
+
+message CancelSignTx
+{
+   bytes txId = 1;
 }
 
 message SignPayoutTXRequest
@@ -121,6 +128,7 @@ message PasswordReply
 {
    string   walletId = 1;
    string   password = 2;
+   bool     cancelledByUser = 3;
 }
 
 
@@ -291,6 +299,9 @@ message ChangePasswordRequest
    repeated PasswordData newPassword = 3;
    uint32   rankM = 4;
    uint32   rankN = 5;
+   bool     addNew = 6;
+   bool     removeOld = 8;
+   bool     dryRun = 7;
 }
 
 message ChangePasswordResponse

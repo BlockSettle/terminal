@@ -21,36 +21,14 @@
 // BtcWallet Methods
 //
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-void BtcWallet::addScrAddress(const BinaryData& scrAddr)
-{
-   auto addrMap = scrAddrMap_.get();
-   if (addrMap->find(scrAddr) != addrMap->end())
-      return;
-
-   vector<BinaryData> saVec;
-   saVec.push_back(scrAddr);
-
-   {
-      auto scrAddrMap = scrAddrMap_.get();
-      for (auto& scraddr : *scrAddrMap)
-         saVec.push_back(scraddr.first);
-   }
-
-   string IDstr(walletID_.getCharPtr(), walletID_.getSize());
-
-   bdvPtr_->registerAddresses(saVec, IDstr, false);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-void BtcWallet::removeAddressBulk(vector<BinaryData> const & scrAddrBulk)
+void BtcWallet::removeAddressBulk(vector<BinaryDataRef> const & scrAddrBulk)
 {
    scrAddrMap_.erase(scrAddrBulk);
    needsRefresh(true);
 }
 
 /////////////////////////////////////////////////////////////////////////////
-bool BtcWallet::hasScrAddress(HashString const & scrAddr) const
+bool BtcWallet::hasScrAddress(const BinaryDataRef& scrAddr) const
 {
    auto addrMap = scrAddrMap_.get();
    return (addrMap->find(scrAddr) != addrMap->end());
@@ -347,10 +325,10 @@ vector<UnspentTxOut> BtcWallet::getRBFTxOutList()
 
          for (auto& zcTxio : zcTxioMap)
          {
-            if (zcTxio.second.hasTxOutZC())
-               zcKeys.insert(zcTxio.second.getDBKeyOfOutput());
+            if (zcTxio.second->hasTxOutZC())
+               zcKeys.insert(zcTxio.second->getDBKeyOfOutput());
             else
-               txoutKeys.insert(zcTxio.second.getDBKeyOfOutput());
+               txoutKeys.insert(zcTxio.second->getDBKeyOfOutput());
          }
       }
    }
@@ -493,11 +471,17 @@ void BtcWallet::scanWalletZeroConf(const ScanWalletStruct& scanInfo,
    Scanning ZC will update the scrAddr ledger with the ZC txio. Ledgers require
    a block height, which should be the current top block.
    ***/
-   auto isZcFromWallet = [this](const BinaryDataRef zcKey)->bool
+   auto isZcFromWallet = [&scanInfo, this](const BinaryDataRef zcKey)->bool
    {
-      const auto& spentSAforZCKey = bdvPtr_->getSpentSAforZCKey(zcKey);
+      if (scanInfo.saStruct_.newKeysAndScrAddr_ == nullptr)
+         return false;
 
-      for (const auto& spentSA : spentSAforZCKey)
+      auto iter = scanInfo.saStruct_.newKeysAndScrAddr_->find(zcKey);
+      if (iter == scanInfo.saStruct_.newKeysAndScrAddr_->end() ||
+         iter->second == nullptr)
+         return false;
+
+      for (const auto& spentSA : *iter->second)
       {
          if (this->hasScrAddress(spentSA))
             return true;
@@ -547,7 +531,7 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
       {
          scanWalletZeroConf(scanInfo, updateID);
 
-         if (scanInfo.saStruct_.newZcKeys_.size() != 0)
+         if (scanInfo.saStruct_.newKeysAndScrAddr_ != nullptr)
          {
             //compute zc ledgers
             auto&& txioMap =
@@ -556,9 +540,9 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
             auto&& ledgerMap = updateWalletLedgersFromTxio(
                txioMap, scanInfo.endBlock_ + 1, UINT32_MAX);
 
-            for (auto& zckey : scanInfo.saStruct_.newZcKeys_)
+            for (auto& zckey : *scanInfo.saStruct_.newKeysAndScrAddr_)
             {
-               auto iter = ledgerMap.find(zckey);
+               auto iter = ledgerMap.find(zckey.first);
                if (iter == ledgerMap.end())
                   continue;
 
@@ -591,7 +575,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
    struct preHistory
    {
       uint32_t txioCount_;
-      vector<const BinaryData*> scrAddrs_;
+      vector<BinaryDataRef> scrAddrs_;
 
       preHistory(void) : txioCount_(0) {}
    };
@@ -616,7 +600,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
          auto& preHistAtHeight = preHistSummary[histPair.first];
 
          preHistAtHeight.txioCount_ += histPair.second;
-         preHistAtHeight.scrAddrs_.push_back(&scrAddrPair.first);
+         preHistAtHeight.scrAddrs_.push_back(scrAddrPair.first);
       }
    }
 
@@ -627,7 +611,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
       {
          //get hgtX for height
          uint8_t dupID = bdvPtr_->getDB()->getValidDupIDForHeight(preHistAtHeight.first);
-         const BinaryData& hgtX = DBUtils::heightAndDupToHgtx(preHistAtHeight.first, dupID);
+         auto&& hgtX = DBUtils::heightAndDupToHgtx(preHistAtHeight.first, dupID);
 
          set<BinaryData> txKeys;
 
@@ -636,7 +620,7 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
          for (auto scrAddr : preHistAtHeight.second.scrAddrs_)
          {
             StoredSubHistory subssh;
-            if (bdvPtr_->getDB()->getStoredSubHistoryAtHgtX(subssh, *scrAddr, hgtX))
+            if (bdvPtr_->getDB()->getStoredSubHistoryAtHgtX(subssh, scrAddr, hgtX))
             {
                for (auto& txioPair : subssh.txioMap_)
                {
@@ -724,7 +708,7 @@ map<BinaryData, LedgerEntry> BtcWallet::updateWalletLedgersFromTxio(
    uint32_t startBlock, uint32_t endBlock) const
 {
    return LedgerEntry::computeLedgerMap(txioMap, startBlock, endBlock, 
-      walletID_, bdvPtr_->getDB(), &bdvPtr_->blockchain());
+      walletID_, bdvPtr_->getDB(), &bdvPtr_->blockchain(), bdvPtr_->zcContainer());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -733,12 +717,13 @@ const ScrAddrObj* BtcWallet::getScrAddrObjByKey(const BinaryData& key) const
    auto addrMap = scrAddrMap_.get();
 
    auto saIter = addrMap->find(key);
-   if (saIter != addrMap->end())
+   if (saIter == addrMap->end())
    {
-      return saIter->second.get();
+      LOGWARN << "unknown address in btcwallet";
+      throw std::runtime_error("unknown address in btcwallet");
    }
-  
-   throw std::runtime_error("invalid address");
+      
+   return saIter->second.get();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

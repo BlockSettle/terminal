@@ -1,51 +1,60 @@
 #include "OTPImportDialog.h"
 #include "ui_OTPImportDialog.h"
 
+#include "ApplicationSettings.h"
 #include "EasyCoDec.h"
 #include "EasyEncValidator.h"
 #include "EncryptionUtils.h"
 #include "MessageBoxCritical.h"
 #include "OTPFile.h"
 #include "OTPManager.h"
+#include "MobileClient.h"
+#include "UiUtils.h"
+#include "make_unique.h"
 
 #include <spdlog/spdlog.h>
 
 
-OTPImportDialog::OTPImportDialog(const std::shared_ptr<OTPManager>& otpManager,
-   const std::string &defaultUserName, QWidget* parent)
+OTPImportDialog::OTPImportDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<OTPManager>& otpManager
+   , const std::string &defaultUserName
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::OTPImportDialog())
+   , logger_(logger)
    , otpManager_(otpManager)
    , easyCodec_(std::make_shared<EasyCoDec>())
-   , frejaSign_(spdlog::get(""))
 {
    ui_->setupUi(this);
 
    ui_->pushButtonOk->setEnabled(false);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &OTPImportDialog::accept);
 
-   validator_ = new EasyEncValidator(easyCodec_);
-   ui_->lineEditOtp1->setValidator(validator_);
+   validator_ = make_unique<EasyEncValidator>(easyCodec_);
+   ui_->lineEditOtp1->setValidator(validator_.get());
    connect(ui_->lineEditOtp1, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp1, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
-   ui_->lineEditOtp2->setValidator(validator_);
+   ui_->lineEditOtp2->setValidator(validator_.get());
    connect(ui_->lineEditOtp2, &QLineEdit::textEdited, this, &OTPImportDialog::keyTextChanged);
    connect(ui_->lineEditOtp2, &QLineEdit::editingFinished, this, &OTPImportDialog::keyTextChanged);
 
-   connect(ui_->lineEditFrejaId, &QLineEdit::textChanged, this, &OTPImportDialog::onFrejaIdChanged);
-   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &OTPImportDialog::startFrejaSign);
+   connect(ui_->lineEditAuthId, &QLineEdit::textChanged, this, &OTPImportDialog::onAuthIdChanged);
+   connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &OTPImportDialog::startAuthSign);
 
-   connect(&frejaSign_, &FrejaSignOTP::succeeded, this, &OTPImportDialog::onFrejaSucceeded);
-   connect(&frejaSign_, &FrejaSign::failed, this, &OTPImportDialog::onFrejaFailed);
-   connect(&frejaSign_, &FrejaSign::statusUpdated, this, &OTPImportDialog::onFrejaStatusUpdated);
+   ui_->lineEditAuthId->setText(QString::fromStdString(defaultUserName));
 
-   ui_->lineEditFrejaId->setText(QString::fromStdString(defaultUserName));
+   mobileClient_ = new MobileClient(logger_, appSettings->GetAuthKeys(), this);
+   connect(mobileClient_, &MobileClient::succeeded, this, &OTPImportDialog::onAuthSucceeded);
+   connect(mobileClient_, &MobileClient::failed, this, &OTPImportDialog::onAuthFailed);
+
+   std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+   mobileClient_->init(serverPubKey, serverHost, serverPort);
 }
 
-OTPImportDialog::~OTPImportDialog()
-{
-   delete validator_;
-}
+OTPImportDialog::~OTPImportDialog() = default;
 
 void OTPImportDialog::keyTextChanged()
 {
@@ -66,14 +75,28 @@ void OTPImportDialog::keyTextChanged()
       ui_->lineEditOtp2->setFocus();
    }
 
+   if (!key1valid) {
+      UiUtils::setWrongState(ui_->lineEditOtp1, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditOtp1, false);
+   }
+
+   if (!key2valid) {
+      UiUtils::setWrongState(ui_->lineEditOtp2, true);
+   } else {
+      UiUtils::setWrongState(ui_->lineEditOtp2, false);
+   }
+
    keyIsValid_ = (key1valid && key2valid);
    if (!keyIsValid_) {
       return;
    }
 
    try {
-      hexKey_ = easyCodec_->toHex(EasyCoDec::Data{ ui_->lineEditOtp1->text().toStdString(), ui_->lineEditOtp2->text().toStdString() });
-      ui_->lineEditFrejaId->setFocus();
+      string otpKeyHex = easyCodec_->toHex(EasyCoDec::Data{
+         ui_->lineEditOtp1->text().toStdString(), ui_->lineEditOtp2->text().toStdString() });
+      otpKey_ = SecureBinaryData(BinaryData::CreateFromHex(otpKeyHex));
+      ui_->lineEditAuthId->setFocus();
       updateAcceptButton();
    }
    catch (const std::exception &e) {
@@ -83,35 +106,40 @@ void OTPImportDialog::keyTextChanged()
    }
 }
 
-void OTPImportDialog::onFrejaIdChanged(const QString &)
+void OTPImportDialog::onAuthIdChanged(const QString &)
 {
    updateAcceptButton();
 }
 
-void OTPImportDialog::startFrejaSign()
+void OTPImportDialog::startAuthSign()
 {
-   frejaSign_.start(ui_->lineEditFrejaId->text(), tr("Activate Freja eID signing"),
-      OTPFile::CreateFromPrivateKey(spdlog::get(""), QString(),
-         SecureBinaryData(BinaryData::CreateFromHex(hexKey_)),
-         bs::wallet::EncryptionType::Unencrypted)->GetShortId());
-   ui_->pushButtonFreja->setEnabled(false);
-   ui_->lineEditFrejaId->setEnabled(false);
+   ui_->pushButtonAuth->setEnabled(false);
+   ui_->lineEditAuthId->setEnabled(false);
+
+   QString otpId = OTPFile::GetShortId(OTPFile::GetOtpIdFromPrivateKey(otpKey_));
+   if (otpId.isEmpty()) {
+      MessageBoxCritical(tr("Error"), tr("Invalid OTP key"), this).exec();
+      return;
+   }
+
+   mobileClient_->start(MobileClientRequest::ActivateOTP
+      , ui_->lineEditAuthId->text().toStdString(), otpId.toStdString(), {});
 }
 
-void OTPImportDialog::onFrejaSucceeded(SecureBinaryData password)
+void OTPImportDialog::onAuthSucceeded(const std::string& encKey, const SecureBinaryData &password)
 {
    ui_->labelPwdHint->setText(tr("Successfully signed"));
    otpPassword_ = password;
    updateAcceptButton();
 }
 
-void OTPImportDialog::onFrejaFailed(const QString &text)
+void OTPImportDialog::onAuthFailed(const QString &text)
 {
-   ui_->pushButtonFreja->setEnabled(true);
-   ui_->labelPwdHint->setText(tr("Freja failed: %1").arg(text));
+   ui_->pushButtonAuth->setEnabled(true);
+   ui_->labelPwdHint->setText(tr("Auth failed: %1").arg(text));
 }
 
-void OTPImportDialog::onFrejaStatusUpdated(const QString &status)
+void OTPImportDialog::onAuthStatusUpdated(const QString &status)
 {
    ui_->labelPwdHint->setText(status);
 }
@@ -123,7 +151,7 @@ void OTPImportDialog::updateAcceptButton()
    if (keyIsValid_ && !otpPassword_.isNull())
       enable = true;
 
-   ui_->pushButtonFreja->setEnabled(!ui_->lineEditFrejaId->text().isEmpty() && keyIsValid_);
+   ui_->pushButtonAuth->setEnabled(!ui_->lineEditAuthId->text().isEmpty() && keyIsValid_);
 
    ui_->pushButtonOk->setEnabled(enable);
 }
@@ -135,9 +163,8 @@ void OTPImportDialog::accept()
       return;
    }
 
-   const auto otpKey = SecureBinaryData(BinaryData::CreateFromHex(hexKey_));
-   auto resultCode = otpManager_->ImportOTPForCurrentUser(otpKey,
-      otpPassword_, bs::wallet::EncryptionType::Freja, ui_->lineEditFrejaId->text().toStdString());
+   auto resultCode = otpManager_->ImportOTPForCurrentUser(otpKey_,
+      otpPassword_, bs::wallet::EncryptionType::Auth, ui_->lineEditAuthId->text().toStdString());
    if (resultCode != OTPManager::OTPImportResult::Success) {
 
       QString errorText;

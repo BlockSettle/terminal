@@ -210,17 +210,17 @@ void hd::Wallet::setUserId(const BinaryData &userId)
    }
 }
 
-void hd::Wallet::SetBDM(const std::shared_ptr<PyBlockDataManager> &bdm)
+void hd::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    for (const auto &leaf : getLeaves()) {
-      leaf->SetBDM(bdm);
+      leaf->SetArmory(armory);
    }
 }
 
-void hd::Wallet::RegisterWallet(const std::shared_ptr<PyBlockDataManager>& bdm, bool asNew)
+void hd::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    for (const auto &leaf : getLeaves()) {
-      leaf->RegisterWallet(bdm, asNew);
+      leaf->RegisterWallet(armory, asNew);
    }
 }
 
@@ -368,9 +368,11 @@ void hd::Wallet::initDB()
       putDataToDB(db_, bwKey.getData(), bwData.getData());
    }
 
-   const auto &cbNode = [this](const std::shared_ptr<hd::Node> &node) {
+   uint16_t nodeCounter = 0;
+   const auto &cbNode = [this, &nodeCounter](const std::shared_ptr<hd::Node> &node) {
       BinaryWriter bwKey;
       bwKey.put_uint32_t(ROOTASSET_KEY);
+      bwKey.put_uint16_t(nodeCounter++);
 
       BinaryWriter bwData;
       const auto &nodeSer = node->serialize();
@@ -722,57 +724,121 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
    return false;
 }
 
-bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank, const SecureBinaryData &oldPass)
+bool hd::Wallet::changePassword(const std::shared_ptr<spdlog::logger> &logger
+   , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank
+   , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
 {
-   if ((keyRank.second != newPass.size()) || (keyRank.first < 1) || (keyRank.first > keyRank.second)) {
+   int newPassSize = newPass.size();
+   if (addNew) {
+      newPassSize += rootNodes_.rank().second;
+
+      if (keyRank.first != 1) {
+         logger->error("Wallet::changePassword: adding new keys is supported only for 1-of-N scheme");
+         return false;
+      }
+   }
+
+   if (removeOld) {
+      if (keyRank.first != 1) {
+         logger->error("Wallet::changePassword: removing old keys is supported only for 1-of-N scheme");
+         return false;
+      }
+   }
+
+   if (keyRank.second != newPassSize) {
+      logger->error("Wallet::changePassword: keyRank.second != newPassSize ({} != {}), rootNodes_: {} items, newPass: {} items"
+         , keyRank.second, newPassSize, rootNodes_.rank().second, newPass.size());
       return false;
    }
+
+   if ((keyRank.first < 1) || (keyRank.first > keyRank.second)) {
+      logger->error("Wallet::changePassword: keyRank.first > keyRank.second ({} > {})"
+         , keyRank.first, keyRank.second);
+      return false;
+   }
+
    const auto &decrypted = rootNodes_.decrypt(oldPass);
    if (!decrypted) {
+      logger->error("Wallet::changePassword: decrypt failed");
       return false;
+   }
+
+   if (dryRun) {
+      return true;
    }
 
    std::vector<std::shared_ptr<hd::Node>> rootNodes;
-   const auto &addNode = [&rootNodes, decrypted, newPass, keyRank](const std::vector<int> &combi) {
-      if (keyRank.first == 1) {
-         const auto &passData = newPass[combi[0]];
+
+   if (addNew) {
+      rootNodes_.forEach([&rootNodes](const std::shared_ptr<Node> node) {
+         // Copy old encrypted nodes
+         rootNodes.push_back(node);
+      });
+
+      for (const wallet::PasswordData &passData : newPass) {
          rootNodes.emplace_back(decrypted->encrypt(passData.password, { passData.encType }
             , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
       }
-      else {
-         SecureBinaryData xorPass;
-         std::set<wallet::EncryptionType> encTypes;
-         std::set<SecureBinaryData> encKeys;
-         for (int i = 0; i < keyRank.first; ++i) {
-            const auto &idx = combi[i];
-            const auto &passData = newPass[idx];
-            xorPass = mergeKeys(xorPass, passData.password);
-            encTypes.insert(passData.encType);
-            if (!passData.encKey.isNull()) {
-               encKeys.insert(passData.encKey);
+
+      if (keyRank.second != rootNodes.size()) {
+         logger->error("Wallet::changePassword: keyRank.second != rootNodes.size() after adding keys");
+         return false;
+      }
+   } else if (removeOld) {
+      rootNodes_.forEach([&rootNodes, &newPass](const std::shared_ptr<Node> node) {
+         // Copy old encrypted nodes
+         for (const auto &oldKey : node->encKeys()) {
+            for (const auto &newKey : newPass) {
+               if (oldKey == newKey.encKey) {
+                  rootNodes.push_back(node);
+                  return;
+               }
             }
          }
-         std::vector<wallet::EncryptionType> mergedEncTypes;
-         for (const auto &encType : encTypes) {
-            mergedEncTypes.emplace_back(encType);
+      });
+   } else {
+      const auto &addNode = [&rootNodes, decrypted, newPass, keyRank](const std::vector<int> &combi) {
+         if (keyRank.first == 1) {
+            const auto &passData = newPass[combi[0]];
+            rootNodes.emplace_back(decrypted->encrypt(passData.password, { passData.encType }
+               , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
          }
-         std::vector<SecureBinaryData> mergedEncKeys;
-         for (const auto &encKey : encKeys) {
-            mergedEncKeys.emplace_back(encKey);
+         else {
+            SecureBinaryData xorPass;
+            std::set<wallet::EncryptionType> encTypes;
+            std::set<SecureBinaryData> encKeys;
+            for (int i = 0; i < int(keyRank.first); ++i) {
+               const auto &idx = combi[i];
+               const auto &passData = newPass[idx];
+               xorPass = mergeKeys(xorPass, passData.password);
+               encTypes.insert(passData.encType);
+               if (!passData.encKey.isNull()) {
+                  encKeys.insert(passData.encKey);
+               }
+            }
+            std::vector<wallet::EncryptionType> mergedEncTypes;
+            for (const auto &encType : encTypes) {
+               mergedEncTypes.emplace_back(encType);
+            }
+            std::vector<SecureBinaryData> mergedEncKeys;
+            for (const auto &encKey : encKeys) {
+               mergedEncKeys.emplace_back(encKey);
+            }
+            rootNodes.emplace_back(decrypted->encrypt(xorPass, mergedEncTypes, mergedEncKeys));
          }
-         rootNodes.emplace_back(decrypted->encrypt(xorPass, mergedEncTypes, mergedEncKeys));
-      }
-   };
+      };
 
-   std::vector<int> combiIndices;
-   combiIndices.reserve(keyRank.second);
-   for (int i = 0; i < keyRank.second; ++i) {
-      combiIndices.push_back(i);
-   }
-   addNode(combiIndices);
-   while (nextCombi(combiIndices, keyRank.second, keyRank.first)) {
+      std::vector<int> combiIndices;
+      combiIndices.reserve(keyRank.second);
+      for (int i = 0; i < keyRank.second; ++i) {
+         combiIndices.push_back(i);
+      }
       addNode(combiIndices);
+      while (nextCombi(combiIndices, keyRank.second, keyRank.first)) {
+         addNode(combiIndices);
+      }
    }
+
    rootNodes_ = hd::Nodes(rootNodes, keyRank, walletId_);
 
    for (const auto &group : groups_) {
@@ -780,6 +846,7 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
    }
 
    updatePersistence();
+   logger->info("Wallet::changePassword: success");
    return true;
 }
 

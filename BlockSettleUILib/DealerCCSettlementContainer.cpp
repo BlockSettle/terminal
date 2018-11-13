@@ -1,5 +1,4 @@
 #include "DealerCCSettlementContainer.h"
-#include <QtConcurrent/QtConcurrentRun>
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
 #include "MetaData.h"
@@ -11,8 +10,8 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
       , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
       , const bs::Address &genAddr, const std::string &ownRecvAddr
       , const std::shared_ptr<TransactionData> &txData, const std::shared_ptr<SignContainer> &container
-      , bool autoSign)
-   : bs::SettlementContainer()
+      , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
+   : bs::SettlementContainer(armory)
    , logger_(logger)
    , order_(order)
    , quoteReqId_(quoteReqId)
@@ -26,6 +25,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , txReqData_(BinaryData::CreateFromHex(order.reqTransaction))
    , ownRecvAddr_(ownRecvAddr)
    , orderId_(QString::fromStdString(order.clOrderId))
+   , signer_(armory)
 {
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerCCSettlementContainer::onTXSigned);
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
@@ -44,10 +44,13 @@ DealerCCSettlementContainer::~DealerCCSettlementContainer()
 
 void DealerCCSettlementContainer::activate()
 {
-   bs::CheckRecipSigner signer;
    try {
-      signer.deserializeState(txReqData_);
-      foundRecipAddr_ = signer.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
+      signer_.deserializeState(txReqData_);
+      foundRecipAddr_ = signer_.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
+         // Fix SIGFPE crash
+         if (lotSize_ == 0) {
+            return;
+         }
          if ((order_.side == bs::network::Side::Buy) && qFuzzyCompare(order_.quantity, value / lotSize_)) {
             amountValid_ = true; //valInput == (value + valReturn);
          }
@@ -58,19 +61,22 @@ void DealerCCSettlementContainer::activate()
       });
    }
    catch (const std::exception &e) {
-      logger_->debug("Signer deser exc: {}", e.what());
+      logger_->error("Signer deser exc: {}", e.what());
+      emit genAddressVerified(false);
+      return;
    }
 
    if (!foundRecipAddr_ || !amountValid_) {
+      logger_->warn("[DealerCCSettlementContainer::activate] requester's TX verification failed");
       wallet_ = nullptr;
       emit genAddressVerified(false);
    }
    else if (order_.side == bs::network::Side::Buy) {
       emit info(tr("Waiting for genesis address verification to complete..."));
-      QtConcurrent::run([this, signer] {
-         const auto hasGenAddress = signer.hasInputAddress(genesisAddr_, lotSize_);
-         emit genAddressVerified(hasGenAddress);
-      });
+      const auto &cbHasInput = [this](bool has) {
+         emit genAddressVerified(has);
+      };
+      signer_.hasInputAddress(genesisAddr_, cbHasInput, lotSize_);
    }
    else {
       emit genAddressVerified(true);
@@ -85,10 +91,11 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 {
    genAddrVerified_ = addressVerified;
    if (addressVerified) {
-      emit info(tr("Accept to send own signed half of CoinJoin transaction"));
+      emit info(tr("Accept offer to send your own signed half of the CoinJoin transaction"));
       emit readyToAccept();
    }
    else {
+      logger_->warn("[DealerCCSettlementContainer::onGenAddressVerified] counterparty's TX is unverified");
       emit error(tr("Failed to verify counterparty's transaction"));
       wallet_ = nullptr;
    }
@@ -129,7 +136,8 @@ bool DealerCCSettlementContainer::cancel()
    return true;
 }
 
-void DealerCCSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg)
+void DealerCCSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
+   std::string errMsg, bool cancelledByUser)
 {
    if (signId_ && (signId_ == id)) {
       signId_ = 0;

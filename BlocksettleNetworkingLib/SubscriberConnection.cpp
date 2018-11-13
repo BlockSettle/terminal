@@ -6,6 +6,33 @@
 #include <zmq.h>
 #include <spdlog/spdlog.h>
 
+SubscriberConnectionListenerCB::SubscriberConnectionListenerCB(const dataReceivedCB& onDataReceived
+   , const connectedCB& onConnected
+   , const disconnectedCB& onDisconnected)
+ : onDataReceived_{onDataReceived}
+ , onConnected_{onConnected}
+ , onDisconnected_{onDisconnected}
+{}
+
+void SubscriberConnectionListenerCB::OnDataReceived(const std::string& data)
+{
+   if (onDataReceived_) {
+      onDataReceived_(data);
+   }
+}
+void SubscriberConnectionListenerCB::OnConnected()
+{
+   if (onConnected_) {
+      onConnected_();
+   }
+}
+void SubscriberConnectionListenerCB::OnDisconnected()
+{
+   if (onDisconnected_) {
+      onDisconnected_();
+   }
+}
+
 SubscriberConnection::SubscriberConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context)
  : logger_{logger}
@@ -26,23 +53,38 @@ bool SubscriberConnection::isActive() const
    return listener_ != nullptr;
 }
 
+bool SubscriberConnection::ConnectToPublisher(const std::string& endpointName, SubscriberConnectionListener* listener)
+{
+   const std::string endpoint = std::string("inproc://") + endpointName;
+
+   return ConnectToPublisherEndpoint(endpoint, listener);
+}
+
 bool SubscriberConnection::ConnectToPublisher(const std::string& host, const std::string& port, SubscriberConnectionListener* listener)
 {
+   const std::string endpoint = std::string("tcp://") + host + ":" + port;
+
+   return ConnectToPublisherEndpoint(endpoint, listener);
+}
+
+bool SubscriberConnection::ConnectToPublisherEndpoint(const std::string& endpoint, SubscriberConnectionListener* listener)
+{
    if (listener == nullptr) {
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] empty listener not allowed");
       return false;
    }
 
    if (isActive()) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] connection active.");
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] connection active.");
       return false;
    }
 
-   std::string tempConnectionName = context_->GenerateConnectionName(host, port);
+   std::string tempConnectionName = context_->GenerateConnectionName(endpoint);
    std::string controlEndpoint = std::string("inproc://") + tempConnectionName;
 
    ZmqContext::sock_ptr tempDataSocket = context_->CreateSubscribeSocket();
    if (tempDataSocket == nullptr) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] failed to create socket {} : {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] failed to create socket {} : {}"
          , tempConnectionName, zmq_strerror(zmq_errno()));
       return false;
    }
@@ -50,28 +92,28 @@ bool SubscriberConnection::ConnectToPublisher(const std::string& host, const std
    // create master and slave paired sockets to control connection and resend data
    ZmqContext::sock_ptr tempThreadMasterSocket = context_->CreateInternalControlSocket();
    if (tempThreadMasterSocket == nullptr) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] failed to create ThreadMasterSocket socket {}: {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] failed to create ThreadMasterSocket socket {}: {}"
          , tempConnectionName, zmq_strerror(zmq_errno()));
       return false;
    }
 
    int result = zmq_bind(tempThreadMasterSocket.get(), controlEndpoint.c_str());
    if (result != 0) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] failed to bind ThreadMasterSocket socket {}: {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] failed to bind ThreadMasterSocket socket {}: {}"
          , tempConnectionName, zmq_strerror(zmq_errno()));
       return false;
    }
 
    ZmqContext::sock_ptr tempThreadSlaveSocket = context_->CreateInternalControlSocket();
    if (tempThreadSlaveSocket == nullptr) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] failed to create ThreadSlaveSocket socket {} : {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] failed to create ThreadSlaveSocket socket {} : {}"
          , tempConnectionName, zmq_strerror(zmq_errno()));
       return false;
    }
 
    result = zmq_connect(tempThreadSlaveSocket.get(), controlEndpoint.c_str());
    if (result != 0) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] failed to connect ThreadSlaveSocket socket {}. {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] failed to connect ThreadSlaveSocket socket {}. {}"
          , tempConnectionName, zmq_strerror(zmq_errno()));
       return false;
    }
@@ -80,23 +122,22 @@ bool SubscriberConnection::ConnectToPublisher(const std::string& host, const std
 
    result = zmq_socket_monitor(tempDataSocket.get(), monitorConnectionName.c_str(), ZMQ_EVENT_ALL);
    if (result != 0) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] Failed to create monitor socket: {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] Failed to create monitor socket: {}"
          , zmq_strerror(zmq_errno()));
       return false;
    }
    auto tempMonSocket = context_->CreateMonitorSocket();
    result = zmq_connect(tempMonSocket.get(), monitorConnectionName.c_str());
    if (result != 0) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] Failed to connect monitor socket: {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] Failed to connect monitor socket: {}"
          , zmq_strerror(zmq_errno()));
       return false;
    }
 
    // connect subscriber socket
-   std::string endpoint = std::string("tcp://") + host + ":" + port;
    result = zmq_connect(tempDataSocket.get(), endpoint.c_str());
    if (result != 0) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] failed to connect socket to {}. {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] failed to connect socket to {}. {}"
          , endpoint, zmq_strerror(zmq_errno()));
       return false;
    }
@@ -104,7 +145,7 @@ bool SubscriberConnection::ConnectToPublisher(const std::string& host, const std
    // subscribe to data (all messages, no filtering)
    result = zmq_setsockopt(tempDataSocket.get(), ZMQ_SUBSCRIBE, nullptr, 0);
    if (result != 0) {
-      logger_->error("[SubscriberConnection::ConnectToPublisher] failed to subscribe: {}"
+      logger_->error("[SubscriberConnection::ConnectToPublisherEndpoint] failed to subscribe: {}"
          , zmq_strerror(zmq_errno()));
       return false;
    }
@@ -139,6 +180,13 @@ void SubscriberConnection::stopListen()
    }
 
    listenThread_.join();
+
+   auto tempListener = listener_;
+   listener_ = nullptr;
+   if (isConnected_) {
+      tempListener->OnDisconnected();
+   }
+
    return;
 }
 
@@ -209,10 +257,6 @@ void SubscriberConnection::listenFunction()
             break;
          }
       }
-   }
-
-   if (isConnected_) {
-      listener_->OnDisconnected();
    }
 }
 

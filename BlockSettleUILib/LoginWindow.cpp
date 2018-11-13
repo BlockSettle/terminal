@@ -12,7 +12,8 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
    : QDialog(parent)
    , ui_(new Ui::LoginWindow())
    , settings_(settings)
-   , frejaAuth_(spdlog::get(""))
+// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
+//   , frejaAuth_(spdlog::get(""))
 {
    ui_->setupUi(this);
    ui_->loginVersionLabel->setText(tr("Version %1").arg(QString::fromStdString(AboutDialog::version())));
@@ -39,16 +40,19 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
       ui_->lineEditUsername->setFocus();
    }
 
-   connect(ui_->pushButtonFreja, &QPushButton::clicked, this, &LoginWindow::onFrejaPressed);
-   connect(&frejaAuth_, &FrejaAuth::succeeded, this, &LoginWindow::onFrejaSucceeded);
-   connect(&frejaAuth_, &FrejaAuth::failed, this, &LoginWindow::onFrejaFailed);
-   connect(&frejaAuth_, &FrejaAuth::statusUpdated, this, &LoginWindow::onFrejaStatusUpdated);
+   connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &LoginWindow::onAuthPressed);
+// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
+//   connect(&frejaAuth_, &FrejaAuth::succeeded, this, &LoginWindow::onAuthSucceeded);
+//   connect(&frejaAuth_, &FrejaAuth::failed, this, &LoginWindow::onAuthFailed);
+//   connect(&frejaAuth_, &FrejaAuth::statusUpdated, this, &LoginWindow::onAuthStatusUpdated);
 }
+
+LoginWindow::~LoginWindow() = default;
 
 void LoginWindow::onTextChanged()
 {
    ui_->pushButtonLogin->setEnabled(!(ui_->lineEditPassword->text().isEmpty() || ui_->lineEditUsername->text().isEmpty()));
-   ui_->pushButtonFreja->setEnabled(!ui_->lineEditUsername->text().isEmpty());
+   ui_->pushButtonAuth->setEnabled(!ui_->lineEditUsername->text().isEmpty());
 }
 
 void LoginWindow::onLoginPressed()
@@ -69,34 +73,35 @@ QString LoginWindow::getPassword() const
    return ui_->lineEditPassword->text();
 }
 
-void LoginWindow::onFrejaPressed()
+void LoginWindow::onAuthPressed()
 {
-   ui_->pushButtonFreja->setEnabled(false);
-   if (!frejaAuth_.start(ui_->lineEditUsername->text().toLower())) {
-      ui_->pushButtonFreja->setEnabled(true);
-   }
+   ui_->pushButtonAuth->setEnabled(false);
+// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
+//   if (!frejaAuth_.start(ui_->lineEditUsername->text().toLower())) {
+//      ui_->pushButtonAuth->setEnabled(true);
+//   }
 }
 
-void LoginWindow::onFrejaSucceeded(const QString &userId, const QString &details)
+void LoginWindow::onAuthSucceeded(const QString &userId, const QString &details)
 {
-   auto palette = ui_->pushButtonFreja->palette();
+   auto palette = ui_->pushButtonAuth->palette();
    palette.setColor(QPalette::Button, QColor(Qt::green));
-   ui_->pushButtonFreja->setAutoFillBackground(true);
-   ui_->pushButtonFreja->setPalette(palette);
-   ui_->pushButtonFreja->update();
-   ui_->pushButtonFreja->setText(tr("Successfully authenticated"));
+   ui_->pushButtonAuth->setAutoFillBackground(true);
+   ui_->pushButtonAuth->setPalette(palette);
+   ui_->pushButtonAuth->update();
+   ui_->pushButtonAuth->setText(tr("Successfully authenticated"));
 }
-void LoginWindow::onFrejaFailed(const QString &userId, const QString &text)
+void LoginWindow::onAuthFailed(const QString &userId, const QString &text)
 {
-   auto palette = ui_->pushButtonFreja->palette();
+   auto palette = ui_->pushButtonAuth->palette();
    palette.setColor(QPalette::Button, QColor(Qt::red));
-   ui_->pushButtonFreja->setAutoFillBackground(true);
-   ui_->pushButtonFreja->setPalette(palette);
-   ui_->pushButtonFreja->update();
-   ui_->pushButtonFreja->setText(tr("Freja auth failed: %1").arg(text));
+   ui_->pushButtonAuth->setAutoFillBackground(true);
+   ui_->pushButtonAuth->setPalette(palette);
+   ui_->pushButtonAuth->update();
+   ui_->pushButtonAuth->setText(tr("Auth auth failed: %1").arg(text));
 }
 
-void LoginWindow::onFrejaStatusUpdated(const QString &userId, const QString &status)
+void LoginWindow::onAuthStatusUpdated(const QString &userId, const QString &status)
 {
-   ui_->pushButtonFreja->setText(status);
+   ui_->pushButtonAuth->setText(status);
 }

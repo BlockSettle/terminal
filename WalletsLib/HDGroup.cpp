@@ -317,6 +317,9 @@ void hd::Group::updateRootNodes(Nodes rootNodes, const std::shared_ptr<hd::Node>
       pathLeaf.append(leaf.first, true);
       initLeaf(leaf.second, pathLeaf, decrypted);
    }
+
+   // Fix problem with persistence when rootNodes_ count is lowered
+   needsCommit_ = true;
 }
 
 

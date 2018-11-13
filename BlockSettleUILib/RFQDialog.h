@@ -14,14 +14,21 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   class SettlementContainer;
+}
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class CCSettlementTransactionWidget;
 class QuoteProvider;
+class ReqCCSettlementContainer;
+class ReqXBTSettlementContainer;
 class SignContainer;
 class WalletsManager;
 class XBTSettlementTransactionWidget;
 class CelerClient;
+class ApplicationSettings;
 
 class RFQDialog : public QDialog
 {
@@ -35,9 +42,11 @@ public:
       , const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
-      , std::shared_ptr<CelerClient> celerClient
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<CelerClient> &celerClient
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent = nullptr);
-   ~RFQDialog() override = default;
+   ~RFQDialog() override;
 
 protected:
    void reject() override;
@@ -53,9 +62,14 @@ private slots:
    void onSettlementAccepted();
    void onSignTxRequested(QString orderId, QString reqId);
    void onSettlementOrder();
+   void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
 
 private:
-   Ui::RFQDialog* ui_;
+   std::shared_ptr<bs::SettlementContainer> newCCcontainer();
+   std::shared_ptr<bs::SettlementContainer> newXBTcontainer();
+
+private:
+   std::unique_ptr<Ui::RFQDialog> ui_;
    std::shared_ptr<spdlog::logger>     logger_;
    const bs::network::RFQ              rfq_;
    bs::network::Quote                  quote_;
@@ -63,16 +77,19 @@ private:
    std::shared_ptr<QuoteProvider>      quoteProvider_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
    std::shared_ptr<WalletsManager>     walletsManager_;
-   std::shared_ptr<SignContainer>      container_;
+   std::shared_ptr<SignContainer>      signContainer_;
    std::shared_ptr<AssetManager>       assetMgr_;
+   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<CelerClient>        celerClient_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_map<std::string, std::string> ccTxMap_;
    std::map<QString, QString>          ccReqIdToOrder_;
 
    bs::network::Order                  XBTOrder_;
 
-   XBTSettlementTransactionWidget      *xbtSettlementWidget_ = nullptr;
-   CCSettlementTransactionWidget       *ccSettlementWidget_ = nullptr;
+   std::shared_ptr<bs::SettlementContainer>     curContainer_;
+   std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;
+   std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
 
    bool  cancelOnClose_ = true;
 };

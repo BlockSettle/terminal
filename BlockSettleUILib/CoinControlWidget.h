@@ -17,13 +17,13 @@ class CoinControlWidget : public QWidget
 Q_OBJECT
 public:
    CoinControlWidget(QWidget* parent = nullptr );
-   ~CoinControlWidget() override = default;
+   ~CoinControlWidget() override;
 
    void initWidget(const std::shared_ptr<SelectedTransactionInputs> &);
    void applyChanges(const std::shared_ptr<SelectedTransactionInputs> &);
 
 signals:
-   void coinSelectionChanged(size_t currentlySelected);
+   void coinSelectionChanged(size_t currentlySelected, bool autoSelection);
 
 private slots:
    void updateSelectedTotals();
@@ -31,7 +31,7 @@ private slots:
    void rowClicked(const QModelIndex &index);
 
 private:
-   Ui::CoinControlWidget* ui_;
+   std::unique_ptr<Ui::CoinControlWidget> ui_;
 
    CoinControlModel *coinControlModel_;
 };
@@ -52,8 +52,14 @@ public:
    CCHeader(size_t totalTxCount, Qt::Orientation orient, QWidget *parent = nullptr)
       : QHeaderView(orient, parent), totalTxCount_(totalTxCount) {}
 
+   QSize checkboxSizeHint() const
+   {
+      QStyleOptionButton opt;
+      return style()->subElementRect(QStyle::SE_CheckBoxIndicator, &opt).size();
+   }
+
 protected:
-   void paintSection(QPainter *painter, const QRect &rect, int logIndex) const {
+   void paintSection(QPainter *painter, const QRect &rect, int logIndex) const override {
       painter->save();
       QHeaderView::paintSection(painter, rect, logIndex);
       painter->restore();
@@ -93,7 +99,7 @@ protected:
       }
    }
 
-   void mousePressEvent(QMouseEvent *event) {
+   void mousePressEvent(QMouseEvent *event) override {
       if (QRect(0, 0, checkboxSizeHint().width() + 4, height()).contains(event->x(), event->y())) {
          if (state_ == Qt::Unchecked) {
             state_ = Qt::Checked;
@@ -109,13 +115,6 @@ protected:
    }
 
 private:
-   QSize checkboxSizeHint() const
-   {
-      QStyleOptionButton opt;
-      return style()->subElementRect(QStyle::SE_CheckBoxIndicator, &opt).size();
-   }
-
-private:
    Qt::CheckState state_ = Qt::Unchecked;
    size_t         totalTxCount_;
 
@@ -123,7 +122,7 @@ signals:
    void stateChanged(int);
 
 public slots:
-   void onSelectionChanged(size_t nbSelected) {
+   void onSelectionChanged(size_t nbSelected, bool) {
       if (!nbSelected) {
          state_ = Qt::Unchecked;
       }

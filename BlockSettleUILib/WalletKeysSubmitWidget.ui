@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>393</width>
-    <height>35</height>
+    <height>48</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -23,14 +23,17 @@
    <property name="spacing">
     <number>10</number>
    </property>
+   <property name="sizeConstraint">
+    <enum>QLayout::SetMinimumSize</enum>
+   </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>7</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>7</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -38,9 +41,17 @@
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Submit Wallet keys</string>
+      <string>Decrypt Wallet</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3"/>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QLabel" name="labelPubKeyFP">
+        <property name="text">
+         <string>Public key fingerprint</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

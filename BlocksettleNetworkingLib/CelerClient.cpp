@@ -55,8 +55,8 @@ CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionMan
    , submittedCCAddressListProperty_(CelerUserProperties::SubmittedCCAddressListPropertyName)
    , otpId_(CelerUserProperties::OtpIdPropertyName)
    , otpIndex_(CelerUserProperties::OtpUsedKeyIndexPropertyName)
-   , serverNotAvailable_(false)
    , userIdRequired_(userIdRequired)
+   , serverNotAvailable_(false)
 {
    heartbeatTimer_ = new QTimer(this);
    heartbeatTimer_->setInterval(30 * 1000);
@@ -124,9 +124,19 @@ void CelerClient::loginSuccessCallback(const std::string& userName, const std::s
          userId_ = properties[CelerUserProperties::UserIdPropertyName];
          otpId_ = properties[CelerUserProperties::OtpIdPropertyName];
          otpIndex_ = properties[CelerUserProperties::OtpUsedKeyIndexPropertyName];
-         submittedAuthAddressListProperty_ = properties[CelerUserProperties::SubmittedBtcAuthAddressListPropertyName];
-         submittedCCAddressListProperty_ = properties[CelerUserProperties::SubmittedCCAddressListPropertyName];
          bitcoinParticipant_ = properties[CelerUserProperties::BitcoinParticipantPropertyName];
+
+         const auto authIt = properties.find(CelerUserProperties::SubmittedBtcAuthAddressListPropertyName);
+         if (authIt != properties.end()) {
+            submittedAuthAddressListProperty_ = authIt->second;
+            UpdateSetFromString(submittedAuthAddressListProperty_.value, submittedAuthAddressSet_);
+         }
+
+         const auto ccIt = properties.find(CelerUserProperties::SubmittedCCAddressListPropertyName);
+         if (ccIt != properties.end()) {
+            submittedCCAddressListProperty_ = properties[CelerUserProperties::SubmittedCCAddressListPropertyName];
+            UpdateSetFromString(submittedCCAddressListProperty_.value, submittedCCAddressSet_);
+         }
 
          const bool bd = (properties[CelerUserProperties::BitcoinDealerPropertyName].value == "true");
          const bool bp = (bitcoinParticipant_.value == "true");
@@ -139,8 +149,6 @@ void CelerClient::loginSuccessCallback(const std::string& userName, const std::s
             userType_ = tr("Market Data Participant");
          }
 
-         UpdateSetFromString(submittedAuthAddressListProperty_.value, submittedAuthAddressSet_);
-         UpdateSetFromString(submittedCCAddressListProperty_.value, submittedCCAddressSet_);
          emit OnConnectedToServer();
       });
       ExecuteSequence(getUserIdSequence);
@@ -306,6 +314,7 @@ void CelerClient::RegisterDefaulthandlers()
 {
    RegisterHandler(CelerAPI::HeartbeatType, [this](const std::string& data) { return this->onHeartbeat(data); });
    RegisterHandler(CelerAPI::SingleResponseMessageType, [this](const std::string& data) { return this->onSignleMessage(data); });
+   RegisterHandler(CelerAPI::ExceptionResponseMessageType, [this](const std::string& data) { return this->onExceptionResponse(data); });
    RegisterHandler(CelerAPI::MultiResponseMessageType, [this](const std::string& data) { return this->onMultiMessage(data); });
 }
 
@@ -345,6 +354,21 @@ bool CelerClient::onSignleMessage(const std::string& message)
    }
 
    return SendDataToSequence(response.clientrequestid(), CelerAPI::SingleResponseMessageType, message);
+}
+
+bool CelerClient::onExceptionResponse(const std::string& message)
+{
+   ExceptionResponseMessage response;
+
+   if (!response.ParseFromString(message)) {
+      logger_->error("[CelerClient::onExceptionResponse] failed to parse ExceptionResponseMessage");
+      return false;
+   }
+
+   logger_->error("[CelerClient::onExceptionResponse] get exception response: {}"
+      , response.DebugString());
+
+   return true;
 }
 
 bool CelerClient::onMultiMessage(const std::string& message)
@@ -519,6 +543,10 @@ bool CelerClient::SetCCAddressSubmitted(const std::string &address)
 std::string CelerClient::SetToString(const std::unordered_set<std::string> &set)
 {
    std::string stringValue;
+
+   if (set.empty()) {
+      return "";
+   }
 
    for (const auto& address : set ) {
       stringValue.append(address);

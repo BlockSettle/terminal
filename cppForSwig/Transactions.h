@@ -146,10 +146,9 @@ public:
    typedef map<BinaryData, map<unsigned, UTXO>> utxoMap;
 
 private:
-   const BCTX theTx_;
    utxoMap utxos_;
+   const BCTX theTx_;
 
-private:
    uint64_t checkOutputs(void) const;
    void checkSigs(void) const;
    void checkSigs_NoCatch(void) const;

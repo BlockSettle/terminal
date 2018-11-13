@@ -57,7 +57,10 @@
         <file alias="SPLASH_LOGO">resources/splashlogo_splashscreen.png</file>
         <file alias="SPLASH_LOGO_TESTNET">resources/splashlogo_testnet.png</file>
         <file alias="ICON_BITCOIN">resources/bitcoin-main-net.png</file>
+        <file alias="ICON_BITCOIN_2X">resources/bitcoin-main-net@2x.png</file>
         <file alias="ICON_BITCOIN_GRAY">resources/bitcoin-disabled.png</file>
+        <file alias="ICON_BITCOIN_ENABLED">resources/bitcoin-enabled.png</file>
+        <file alias="ICON_BITCOIN_ERROR">resources/bitcoin-error.png</file>
         <file alias="ICON_BS_16">resources/clearing-connection-blocksettle.png</file>
         <file alias="ICON_BS_24">resources/clearing-connection-blocksettle@1.5x.png</file>
         <file alias="ICON_BS_32">resources/clearing-connection-blocksettle@2x.png</file>
@@ -193,5 +196,9 @@
         <file>resources/down-arrow-primary@2x.png</file>
         <file>resources/radio-button-disabled.png</file>
         <file>resources/radio-button-disabled@2x.png</file>
+        <file>resources/license.txt</file>
+        <file>resources/md_license.html</file>
+        <file>resources/cancel.png</file>
+        <file>resources/cancel@2x.png</file>
     </qresource>
 </RCC>

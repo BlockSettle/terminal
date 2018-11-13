@@ -9,6 +9,7 @@
 #include <bdmenums.h>
 
 #include "ArmorySettings.h"
+#include "EncryptUtils.h"
 #include "LogManager.h"
 
 
@@ -43,8 +44,13 @@ public:
       pubBridgeHost,
       pubBridgePort,
       pubBridgePubKey,
+      authServerHost,
+      authServerPort,
+      authServerPubKey,
       celerHost,
       celerPort,
+      mdServerHost,
+      mdServerPort,
       celerUsername,
       signerHost,
       signerPort,
@@ -86,6 +92,9 @@ public:
       ShowQuoted,
       AdvancedTxDialogByDefault,
       TransactionFilter,
+      SubscribeToMDOnStart,
+      MDLicenseAccepted,
+      authPrivKey,
       _last
    };
 
@@ -109,7 +118,7 @@ public:
 
    int GetDefaultArmoryPort() const;
 
-   int GetDefaultArmoryPortForNetwork(NetworkType networkType) const;
+   static int GetDefaultArmoryPortForNetwork(NetworkType networkType);
 
    QString GetSettingsPath() const;
 
@@ -125,6 +134,8 @@ public:
    unsigned int GetWalletScanIndex(const std::string &id) const;
    void SetWalletScanIndex(const std::string &id, unsigned int index);
    std::vector<std::pair<std::string, unsigned int>> UnfinishedWalletsRescan();
+
+   std::pair<autheid::PrivateKey, autheid::PublicKey> GetAuthKeys();
 
 signals:
    void settingChanged(int setting, QVariant value);
@@ -156,6 +167,9 @@ private:
    QString  dataDir_;
    QString  bitcoinsDir_;
    QString  dbDir_;
+
+   autheid::PrivateKey  authPrivKey_;
+   autheid::PublicKey   authPubKey_;
 };
 
 #endif // __APPLICATION_SETTINGS_H__

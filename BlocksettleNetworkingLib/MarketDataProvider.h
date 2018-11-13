@@ -1,20 +1,18 @@
-#ifndef __CELER_MARKET_DATA_PROVIDER_H__
-#define __CELER_MARKET_DATA_PROVIDER_H__
+#ifndef __MARKET_DATA_PROVIDER_H__
+#define __MARKET_DATA_PROVIDER_H__
 
 #include <QObject>
+
+#include "CommonTypes.h"
+
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "CommonTypes.h"
-
 
 namespace spdlog
 {
    class logger;
 }
-
-class CelerClient;
-
 
 class MarketDataProvider : public QObject
 {
@@ -22,7 +20,7 @@ Q_OBJECT
 
 public:
    MarketDataProvider(const std::shared_ptr<spdlog::logger>& logger);
-   ~MarketDataProvider() noexcept = default;
+   ~MarketDataProvider() noexcept override = default;
 
    MarketDataProvider(const MarketDataProvider&) = delete;
    MarketDataProvider& operator = (const MarketDataProvider&) = delete;
@@ -30,31 +28,33 @@ public:
    MarketDataProvider(MarketDataProvider&&) = delete;
    MarketDataProvider& operator = (MarketDataProvider&&) = delete;
 
-   void ConnectToCelerClient(const std::shared_ptr<CelerClient>& celerClient, bool filterUsdProducts);
+   void SubscribeToMD();
+   virtual bool DisconnectFromMDSource() { return true; }
 
-private slots:
-   void OnConnectedToCeler();
-   void OnDisconnectedFromCeler();
+   virtual bool IsConnectionActive() const { return false; }
+
+protected:
+   virtual bool StartMDConnection() { return true; }
+
+public slots:
+   void MDLicenseAccepted();
 
 signals:
+   void UserWantToConnectToMD();
+
+   void StartConnecting();
+   void Connected();
+
+   void Disconnecting();
+   void Disconnected();
+
    void MDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void MDSecurityReceived(const std::string &security, const bs::network::SecurityDef &sd);
    void MDSecuritiesReceived();
-   void MDReqRejected(const std::string &security, const std::string &reqson);
+   void MDReqRejected(const std::string &security, const std::string &reason);
 
-private:
-   bool onMDUpdate(const std::string& data);
-   bool onMDStats(const std::string &data);
-   bool onReqRejected(const std::string& data);
-
-   static bool isPriceValid(double val);
-
-private:
-   std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<CelerClient>     celerClient_;
-   std::unordered_map<std::string, std::string>    requests_;
-   std::unordered_map<std::string, bs::network::SecurityDef>   secDefs_;
-   bool filterUsdProducts_;
+protected:
+   std::shared_ptr<spdlog::logger>  logger_ = nullptr;
 };
 
-#endif // __CELER_MARKET_DATA_PROVIDER_H__
+#endif // __MARKET_DATA_PROVIDER_H__

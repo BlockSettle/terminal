@@ -23,8 +23,9 @@ public:
       , std::shared_ptr<WalletsManager> walletsManager
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent = nullptr);
-   ~DealerCCSettlementDialog() noexcept override = default;
+   ~DealerCCSettlementDialog() override;
 
    DealerCCSettlementDialog(const DealerCCSettlementDialog&) = delete;
    DealerCCSettlementDialog& operator = (const DealerCCSettlementDialog&) = delete;
@@ -45,7 +46,7 @@ private slots:
    void onGenAddressVerified(bool);
 
 private:
-   Ui::DealerCCSettlementDialog*   ui_;
+   std::unique_ptr<Ui::DealerCCSettlementDialog> ui_;
    std::shared_ptr<DealerCCSettlementContainer> settlContainer_;
    const QString                   sValid;
    const QString                   sInvalid;

@@ -1,25 +1,30 @@
 #ifndef __SELECTED_TRANSACTION_INPUTS_H__
 #define __SELECTED_TRANSACTION_INPUTS_H__
 
-#include <vector>
-#include <memory>
+#include <deque>
 #include <functional>
-
+#include <memory>
+#include <vector>
+#include <QObject>
 #include "TxClasses.h"
 
 namespace bs {
    class Wallet;
 }
 
-class SelectedTransactionInputs
+class SelectedTransactionInputs : public QObject
 {
+   Q_OBJECT
 public:
    using selectionChangedCallback = std::function<void()>;
 
 public:
    SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &wallet
       , bool swTransactionsOnly, bool confirmedOnly = false
-      , const selectionChangedCallback &selectionChanged = nullptr);
+      , const selectionChangedCallback &selectionChanged = nullptr
+      , const std::function<void()> &cbInputsReset = nullptr);
+   SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &
+      , const std::vector<UTXO> &, const selectionChangedCallback &selectionChanged = nullptr);
    ~SelectedTransactionInputs() noexcept = default;
 
    SelectedTransactionInputs(const SelectedTransactionInputs&) = delete;
@@ -28,7 +33,7 @@ public:
    SelectedTransactionInputs(SelectedTransactionInputs&&) = delete;
    SelectedTransactionInputs& operator = (SelectedTransactionInputs&&) = delete;
 
-   void SetInputs(const std::vector<UTXO> &inputs, const std::vector<UTXO> &cpfpInputs);
+   void SetFixedInputs(const std::vector<UTXO> &inputs);
 
    bool UseAutoSel() const { return useAutoSel_; }
    void SetUseAutoSel(const bool autoSelect);
@@ -54,9 +59,16 @@ public:
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    void Reload(const std::vector<UTXO> &);
 
+   void ResetInputs(std::function<void()>);
+
 private:
-   void filterNotSWInputs(std::vector<UTXO>& inputs);
+   std::vector<UTXO> filterNonSWInputs(const std::vector<UTXO> &);
    bool filterUTXO(std::vector<UTXO> &inputs, const UTXO &, size_t selectionStart);
+   void resetSelection();
+
+private slots:
+   void onCPFPReceived(std::vector<UTXO>);
+   void onUTXOsReceived(std::vector<UTXO>);
 
 private:
    std::shared_ptr<bs::Wallet>   wallet_;
@@ -66,6 +78,7 @@ private:
    std::vector<UTXO>             cpfpInputs_;
    std::vector<bool>             selection_;
    const selectionChangedCallback   selectionChanged_;
+   std::vector<std::function<void()>>  resetCallbacks_;
 
    size_t   totalSelected_ = 0;
    uint64_t selectedBalance_ = 0;

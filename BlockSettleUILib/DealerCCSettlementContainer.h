@@ -3,6 +3,7 @@
 
 #include <memory>
 #include "AddressVerificator.h"
+#include "CheckRecipSigner.h"
 #include "SettlementContainer.h"
 #include "UtxoReservation.h"
 
@@ -12,6 +13,7 @@ namespace spdlog {
 namespace bs {
    class Wallet;
 }
+class ArmoryConnection;
 class SignContainer;
 class TransactionData;
 
@@ -22,7 +24,8 @@ class DealerCCSettlementContainer : public bs::SettlementContainer
 public:
    DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
       , const std::string &quoteReqId, uint64_t lotSize, const bs::Address &genAddr, const std::string &ownRecvAddr
-      , const std::shared_ptr<TransactionData> &, const std::shared_ptr<SignContainer> &, bool autoSign);
+      , const std::shared_ptr<TransactionData> &, const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &, bool autoSign);
    ~DealerCCSettlementContainer() override;
 
    bool accept(const SecureBinaryData &password = {}) override;
@@ -34,12 +37,12 @@ public:
    void deactivate() override { stopTimer(); }
 
    std::string id() const override { return quoteReqId_; }
-   bs::network::Asset::Type assetType() const { return order_.assetType; }
+   bs::network::Asset::Type assetType() const override { return order_.assetType; }
    std::string security() const override { return order_.security; }
    std::string product() const override { return order_.product; }
    bs::network::Side::Type side() const override { return order_.side; }
    double quantity() const override { return order_.quantity; }
-   double price() const { return order_.price; }
+   double price() const override { return order_.price; }
    double amount() const override { return quantity(); }
 
    bool foundRecipAddr() const { return foundRecipAddr_; }
@@ -56,7 +59,7 @@ signals:
    void genAddressVerified(bool result);
 
 private slots:
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg);
+   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
    void onGenAddressVerified(bool result);
 
 private:
@@ -79,6 +82,7 @@ private:
    bool              genAddrVerified_ = true;
    unsigned int      signId_ = 0;
    bool              cancelled_ = false;
+   bs::CheckRecipSigner signer_;
 
    QString walletName_;
 };

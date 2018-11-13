@@ -15,6 +15,7 @@ BlockDataViewer::BlockDataViewer(BlockDataManager* bdm) :
    db_ = bdm->getIFace();
    bc_ = bdm->blockchain();
    saf_ = bdm->getScrAddrFilter().get();
+   zc_ = bdm->zeroConfCont().get();
 
    bdmPtr_ = bdm;
 
@@ -31,23 +32,17 @@ BlockDataViewer::~BlockDataViewer()
 }
 
 /////////////////////////////////////////////////////////////////////////////
-bool BlockDataViewer::registerWallet(
-   vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew)
+void BlockDataViewer::registerWallet(
+   shared_ptr<::Codec_BDVCommand::BDVCommand> msg)
 {
-   if (IDstr.empty())
-      return true;
-
-   return groups_[group_wallet].registerWallet(scrAddrVec, IDstr, wltIsNew);
+   groups_[group_wallet].registerAddresses(msg);
 }
 
 /////////////////////////////////////////////////////////////////////////////
-bool BlockDataViewer::registerLockbox(
-   vector<BinaryData> const & scrAddrVec, string IDstr, bool wltIsNew)
+void BlockDataViewer::registerLockbox(
+   shared_ptr<::Codec_BDVCommand::BDVCommand> msg)
 {
-   if (IDstr.empty())
-      return true;
-   
-   return groups_[group_lockbox].registerWallet(scrAddrVec, IDstr, wltIsNew);
+   groups_[group_lockbox].registerAddresses(msg);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -130,7 +125,8 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       scanData.saStruct_.zcMap_ = 
          move(zcAction->packet_.txioMap_);
 
-      scanData.saStruct_.newZcKeys_ = zcAction->packet_.newZcKeys_;
+      scanData.saStruct_.newKeysAndScrAddr_ = 
+         zcAction->packet_.newKeysAndScrAddr_;
 
       if (zcAction->packet_.purgePacket_ != nullptr)
       {
@@ -204,49 +200,21 @@ bool BlockDataViewer::hasWallet(const BinaryData& ID) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool BlockDataViewer::registerAddresses(const vector<BinaryData>& saVec,
-   const string& walletID, bool areNew)
+void BlockDataViewer::registerAddresses(
+   shared_ptr<::Codec_BDVCommand::BDVCommand> msg)
 {
-   if (saVec.empty())
-      return false;
-   
+   auto& walletID = msg->walletid();
+   BinaryDataRef bdr; bdr.setRef(walletID);
+
    for (auto& group : groups_)
    {
-      if (group.hasID(walletID))
-         return group.registerAddresses(saVec, walletID, areNew);
+      if (group.hasID(bdr))
+         group.registerAddresses(msg);
    }
-
-   return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void BlockDataViewer::registerArbitraryAddressVec(
-   const vector<BinaryData>& saVec,
-   const string& walletID)
-{
-   auto callback = [this, walletID](bool refresh)->void
-   {
-      if (!refresh)
-         return;
-
-      flagRefresh(BDV_refreshAndRescan, walletID, nullptr);
-   };
-
-   shared_ptr<ScrAddrFilter::WalletInfo> wltInfo =
-      make_shared<ScrAddrFilter::WalletInfo>();
-   wltInfo->callback_ = callback;
-   wltInfo->ID_ = walletID;
-
-   for (auto& sa : saVec)
-      wltInfo->scrAddrSet_.insert(sa);
-
-   vector<shared_ptr<ScrAddrFilter::WalletInfo>> wltInfoVec;
-   wltInfoVec.push_back(move(wltInfo));
-   saf_->registerAddressBatch(move(wltInfoVec), false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-Tx BlockDataViewer::getTxByHash(HashString const & txhash) const
+Tx BlockDataViewer::getTxByHash(BinaryData const & txhash) const
 {
    StoredTx stx;
    if (db_->getStoredTx_byHash(txhash, &stx))
@@ -333,24 +301,6 @@ void BlockDataViewer::reset()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BlockDataViewer::scanScrAddrVector(
-   const map<BinaryData, ScrAddrObj>& scrAddrMap,
-   uint32_t startBlock, uint32_t endBlock) const
-{
-   //create new ScrAddrFilter for the occasion
-   shared_ptr<ScrAddrFilter> saf(saf_->copy());
-
-   //register scrAddr with it
-   vector<pair<BinaryData, unsigned>> saVec;
-   for (auto& scrAddrPair : scrAddrMap)
-      saVec.push_back(make_pair(scrAddrPair.first, startBlock));
-   saf->regScrAddrVecForScan(saVec);
-
-   //scan addresses
-   saf->applyBlockRangeToDB(startBlock, endBlock, vector<string>(), true);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 size_t BlockDataViewer::getWalletsPageCount(void) const
 {
    return groups_[group_wallet].getPageCount();
@@ -390,19 +340,6 @@ void BlockDataViewer::updateLockboxesLedgerFilter(
    const vector<BinaryData>& walletsList)
 {
    groups_[group_lockbox].updateLedgerFilter(walletsList);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void BlockDataViewer::flagRefresh(
-   BDV_refresh refresh, const BinaryData& refreshID,
-   unique_ptr<BDV_Notification_ZC> zcPtr)
-{ 
-   auto notif = make_unique<BDV_Notification_Refresh>(
-      getID(), refresh, refreshID);
-   if (zcPtr != nullptr)
-      notif->zcPacket_ = move(zcPtr->packet_);
-
-   pushNotification(move(notif));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -474,7 +411,7 @@ vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
       {
          auto zcIter = zcTxioMap.find(utxoPair.first);
          if (zcIter != zcTxioMap.end())
-            if (zcIter->second.hasTxInZC())
+            if (zcIter->second->hasTxInZC())
                continue;
 
          UTXOs.push_back(utxoPair.second);
@@ -485,13 +422,13 @@ vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
 
       for (const auto& zcTxio : zcTxioMap)
       {
-         if (!zcTxio.second.hasTxOutZC())
+         if (!zcTxio.second->hasTxOutZC())
             continue;
          
-         if (zcTxio.second.hasTxInZC())
+         if (zcTxio.second->hasTxInZC())
             continue;
 
-         TxOut txout = zcTxio.second.getTxOutCopy(db_);
+         TxOut txout = zcTxio.second->getTxOutCopy(db_);
          UnspentTxOut UTXO = UnspentTxOut(db_, txout, UINT32_MAX);
 
          UTXOs.push_back(UTXO);
@@ -554,7 +491,10 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForWallets()
    auto getPageId = [this](uint32_t block)->uint32_t
    { return this->groups_[group_wallet].getPageIdForBlockHeight(block); };
 
-   return LedgerDelegate(getHist, getBlock, getPageId);
+   auto getPageCount = [this](void)->uint32_t
+   { return this->getWalletsPageCount(); };
+
+   return LedgerDelegate(getHist, getBlock, getPageId, getPageCount);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -569,7 +509,10 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForLockboxes()
    auto getPageId = [this](uint32_t block)->uint32_t
    { return this->groups_[group_lockbox].getPageIdForBlockHeight(block); };
 
-   return LedgerDelegate(getHist, getBlock, getPageId);
+   auto getPageCount = [this](void)->uint32_t
+   { return this->getLockboxesPageCount(); };
+
+   return LedgerDelegate(getHist, getBlock, getPageId, getPageCount);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -603,7 +546,10 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForScrAddr(
    auto getPageId = [&](uint32_t block)->uint32_t
    { return sca.getPageIdForBlockHeight(block); };
 
-   return LedgerDelegate(getHist, getBlock, getPageId);
+   auto getPageCount = [&](void)->uint32_t
+   { return sca.getPageCount(); };
+
+   return LedgerDelegate(getHist, getBlock, getPageId, getPageCount);
 }
 
 
@@ -651,15 +597,22 @@ uint32_t BlockDataViewer::getClosestBlockHeightForTime(uint32_t timestamp)
 TxOut BlockDataViewer::getTxOutCopy(
    const BinaryData& txHash, uint16_t index) const
 {
-   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
-      
+   TxOut txOut;
+   
+   {
+      auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
+      BinaryData bdkey = db_->getDBKeyForHash(txHash);
+      if (bdkey.getSize() != 0)
+         txOut = move(db_->getTxOutCopy(bdkey, index));
+   }
 
-   BinaryData bdkey = db_->getDBKeyForHash(txHash);
+   if (!txOut.isInitialized())
+   {
+      auto&& zcKey = zeroConfCont_->getKeyForHash(txHash);
+      txOut = move(zeroConfCont_->getTxOutCopy(zcKey, index));
+   }
 
-   if (bdkey.getSize() == 0)
-      return TxOut();
-
-   return db_->getTxOutCopy(bdkey, index);
+   return txOut;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -673,7 +626,11 @@ TxOut BlockDataViewer::getTxOutCopy(const BinaryData& dbKey) const
    auto&& bdkey = dbKey.getSliceRef(0, 6);
    auto index = READ_UINT16_BE(dbKey.getSliceRef(6, 2));
 
-   return db_->getTxOutCopy(bdkey, index);
+   auto&& txOut = db_->getTxOutCopy(bdkey, index);
+   if (!txOut.isInitialized())
+      txOut = move(zeroConfCont_->getTxOutCopy(bdkey, index));
+
+   return txOut;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -702,7 +659,7 @@ bool BlockDataViewer::isRBF(const BinaryData& txHash) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool BlockDataViewer::hasScrAddress(const BinaryData& scrAddr) const
+bool BlockDataViewer::hasScrAddress(const BinaryDataRef& scrAddr) const
 {
    //TODO: make sure this is thread safe
 
@@ -743,19 +700,24 @@ tuple<uint64_t, uint64_t> BlockDataViewer::getAddrFullBalance(
 
 ///////////////////////////////////////////////////////////////////////////////
 unique_ptr<BDV_Notification_ZC> BlockDataViewer::createZcNotification(
-   function<bool(const BinaryData&)> filter)
+   function<bool(BinaryDataRef&)> filter)
 {
    ZeroConfContainer::NotificationPacket packet(getID());
 
    //grab zc map
-   auto txiomap = zeroConfCont_->getFullTxioMap();
-
-   for (auto& txiopair : *txiomap)
+   auto ss = zeroConfCont_->getSnapshot();
+   if (ss != nullptr)
    {
-      if (!filter(txiopair.first))
-         continue;
+      auto& txiomap = ss->txioMap_;
 
-      packet.txioMap_.insert(txiopair);
+      for (auto& txiopair : txiomap)
+      {
+         auto&& bdref = txiopair.first.getRef();
+         if (!filter(bdref))
+            continue;
+
+         packet.txioMap_.insert(txiopair);
+      }
    }
 
    auto notifPtr = make_unique<BDV_Notification_ZC>(packet);
@@ -773,37 +735,26 @@ WalletGroup::~WalletGroup()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool WalletGroup::registerWallet(
-   vector<BinaryData> const& scrAddrVec, string IDstr, bool wltIsNew)
+shared_ptr<BtcWallet> WalletGroup::getOrSetWallet(const BinaryDataRef& id)
 {
-   if (IDstr.empty())
-      return true;
-   
+   ReadWriteLock::WriteLock wl(lock_);
    shared_ptr<BtcWallet> theWallet;
 
+   auto wltIter = wallets_.find(id);
+   if (wltIter != wallets_.end())
    {
-      ReadWriteLock::WriteLock wl(lock_);
-      BinaryData id(IDstr);
+      theWallet = wltIter->second;
+   }
+   else
+   {
+      auto walletPtr = make_shared<BtcWallet>(bdvPtr_, id);
+      auto insertResult = wallets_.insert(make_pair(
+         id, walletPtr));
 
-
-      auto wltIter = wallets_.find(id);
-      if (wltIter != wallets_.end())
-      {
-         theWallet = wltIter->second;
-      }
-      else
-      {
-         auto insertResult = wallets_.insert(make_pair(
-            id, shared_ptr<BtcWallet>(new BtcWallet(bdvPtr_, id))
-            ));
-         theWallet = insertResult.first->second;
-      }
+      theWallet = insertResult.first->second;
    }
 
-   auto result = registerAddresses(scrAddrVec, IDstr, wltIsNew);
-
-   theWallet->resetCounters();
-   return result;
+   return theWallet;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -823,78 +774,101 @@ void WalletGroup::unregisterWallet(const string& IDstr)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool WalletGroup::registerAddresses(const vector<BinaryData>& saVec,
-   const string& IDstr, bool areNew)
+void WalletGroup::registerAddresses(
+   shared_ptr<::Codec_BDVCommand::BDVCommand> msg)
 {
-   if (saVec.empty())
-      return false;
+   if (!msg->has_walletid() || !msg->has_flag())
+      return;
 
-   shared_ptr<BtcWallet> theWallet;
+   if (msg->bindata_size() == 0)
+      return;
+   
+   auto walletID = msg->walletid();
+   BinaryDataRef walletIDRef; walletIDRef.setRef(walletID);
 
+   auto theWallet = getOrSetWallet(walletIDRef);
+   if (theWallet == nullptr)
    {
-      ReadWriteLock::ReadLock rl(lock_);
-
-      BinaryData walletID(IDstr);
-
-      auto wltIter = wallets_.find(walletID);
-      if (wltIter == wallets_.end())
-         return false;
-
-      theWallet = wltIter->second;
+      LOGWARN << "failed to get or set wallet";
+      return;
    }
 
+   //strip collisions from set of addresses to register
    auto addrMap = theWallet->scrAddrMap_.get();
 
-   set<BinaryData> saSet;
-   set<BinaryDataRef> saSetRef;
-   map<BinaryData, shared_ptr<ScrAddrObj>> saMap;
-   
-   //strip collisions from set of addresses to register
-   for (auto& sa : saVec)
+   set<BinaryDataRef> scrAddrSet;
+   for (int i=0; i<msg->bindata_size(); i++)
    {
-      saSetRef.insert(BinaryDataRef(sa));
-      if (addrMap->find(sa) != addrMap->end())
+      auto& scrAddr = msg->bindata(i);
+      BinaryDataRef scrAddrRef; scrAddrRef.setRef(scrAddr);
+
+      if (addrMap->find(scrAddrRef) != addrMap->end())
          continue;
 
-      saSet.insert(sa);
-      
-      auto saObj = make_shared<ScrAddrObj>(
-         bdvPtr_->getDB(), &bdvPtr_->blockchain(), sa);
-      saMap.insert(make_pair(sa, saObj));
+      scrAddrSet.insert(scrAddrRef);
    }
 
-   //remove registered addresses missing in new address vector
-   vector<BinaryData> removeAddrVec;
-   for (auto addrPair : *addrMap)
+   BinaryData id;
+   if (msg->has_hash())
    {
-      auto setIter = saSetRef.find(addrPair.first.getRef());
-      if (setIter != saSetRef.end())
-         continue;
-
-      removeAddrVec.push_back(addrPair.first);
+      auto idstr = msg->hash();
+      id.copyFrom(idstr);
    }
 
    auto callback = 
-      [&, saMap, removeAddrVec, theWallet](bool refresh)->void
+      [theWallet, id](set<BinaryDataRef>& addrSet)->void
    {
-      auto newScrAddrFilter = [&saMap](const BinaryData& sa)->bool
+      auto bdvPtr = theWallet->bdvPtr_;
+      auto dbPtr = theWallet->bdvPtr_->getDB();
+      auto bcPtr = &theWallet->bdvPtr_->blockchain();
+      auto zcPtr = theWallet->bdvPtr_->zcContainer();
+
+      map<BinaryDataRef, shared_ptr<ScrAddrObj>> saMap;
       {
-         return saMap.find(sa) != saMap.end();
-      };
+         auto addrMapPtr = theWallet->scrAddrMap_.get();
+         for (auto& addr : addrSet)
+         {
+            if (addrMapPtr->find(addr) != addrMapPtr->end())
+               continue;
 
-      auto&& zcNotifPacket = 
-         bdvPtr_->createZcNotification(newScrAddrFilter);
-      theWallet->scrAddrMap_.update(saMap);
+            auto scrAddrPtr = make_shared<ScrAddrObj>(
+               dbPtr, bcPtr, zcPtr, addr);
 
-      if (removeAddrVec.size() > 0)
-         theWallet->scrAddrMap_.erase(removeAddrVec);
+            saMap.insert(make_pair(addr, scrAddrPtr));
+         }
+      }
+
+      unique_ptr<BDV_Notification_ZC> zcNotifPacket;
+      if (saMap.size() > 0)
+      {
+         auto newScrAddrFilter = [&saMap](BinaryDataRef& sa)->bool
+         {
+            return saMap.find(sa) != saMap.end();
+         };
+
+         zcNotifPacket =
+            move(bdvPtr->createZcNotification(newScrAddrFilter));
+         theWallet->scrAddrMap_.update(saMap);
+      }
 
       theWallet->setRegistered();
-      bdvPtr_->flagRefresh(
-         BDV_refreshAndRescan, theWallet->walletID_, move(zcNotifPacket));
+      
+      //no notification if the registration id is blank
+      if (id.getSize() == 0)
+         return;
+      
+      bdvPtr->flagRefresh(
+         BDV_refreshAndRescan, id, move(zcNotifPacket));
    };
 
-   return saf_->registerAddresses(saSet, IDstr, areNew, callback);
+   auto batch = make_shared<AddressBatch>(msg->hash());
+   batch->scrAddrSet_ = move(scrAddrSet);
+   batch->msg_ = msg;
+   batch->isNew_ = msg->flag();
+   batch->callback_ = callback;
+
+   saf_->registerAddressBatch(batch);
+   theWallet->resetCounters();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
