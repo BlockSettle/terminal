@@ -410,6 +410,8 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
    default:
       return nullptr;
    }
+
+   return result;
 }
 
 int PlainWallet::getAddressIndex(const bs::Address &addr) const

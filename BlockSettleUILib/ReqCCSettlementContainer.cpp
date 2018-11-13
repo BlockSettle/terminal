@@ -18,8 +18,11 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const bs::network::RFQ &rfq, const bs::network::Quote &quote
    , const std::shared_ptr<TransactionData> &txData)
    : bs::SettlementContainer(armory), logger_(logger), signingContainer_(container)
-   , assetMgr_(assetMgr), walletsMgr_(walletsMgr)
-   , rfq_(rfq), quote_(quote), transactionData_(txData)
+   , transactionData_(txData)
+   , assetMgr_(assetMgr)
+   , walletsMgr_(walletsMgr)
+   , rfq_(rfq)
+   , quote_(quote)
    , genAddress_(assetMgr_->getCCGenesisAddr(product()))
    , dealerAddress_(quote_.dealerAuthPublicKey)
 {

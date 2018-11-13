@@ -12,8 +12,8 @@ VerifyWalletBackupDialog::VerifyWalletBackupDialog(const std::shared_ptr<bs::hd:
    : QDialog(parent)
    , ui_(new Ui::VerifyWalletBackupDialog)
    , wallet_(wallet)
-   , easyCodec_(std::make_shared<EasyCoDec>())
    , netType_(wallet->getXBTGroupType() == bs::hd::CoinType::Bitcoin_test ? NetworkType::TestNet : NetworkType::MainNet)
+   , easyCodec_(std::make_shared<EasyCoDec>())
 {
    ui_->setupUi(this);
 

@@ -30,9 +30,9 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , walletsManager_(walletsManager)
    , signingContainer_(container)
    , appSettings_(appSettings)
+   , walletsPath_(walletsPath)
    , walletSeed_(walletSeed)
    , walletId_(walletId)
-   , walletsPath_(walletsPath)
 {
    ui_->setupUi(this);
 

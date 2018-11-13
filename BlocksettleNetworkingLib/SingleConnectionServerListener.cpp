@@ -4,8 +4,8 @@
 
 SingleConnectionServerListener::SingleConnectionServerListener(const std::shared_ptr<ServerConnection>& connection
       , const std::shared_ptr<spdlog::logger>& logger, const std::string& name)
- : serverConnection_(connection)
- , logger_(logger)
+ : logger_(logger)
+ , serverConnection_(connection)
  , name_(name)
 {}
 

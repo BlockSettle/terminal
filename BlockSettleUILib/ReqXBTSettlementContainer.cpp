@@ -21,9 +21,16 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const std::shared_ptr<SignContainer> &signContainer, const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager> &walletsMgr, const bs::network::RFQ &rfq
    , const bs::network::Quote &quote, const std::shared_ptr<TransactionData> &txData)
-   : bs::SettlementContainer(armory), logger_(logger), authAddrMgr_(authAddrMgr), assetMgr_(assetMgr)
-   , signContainer_(signContainer), armory_(armory), walletsMgr_(walletsMgr)
-   , rfq_(rfq), quote_(quote), transactionData_(txData)
+   : bs::SettlementContainer(armory)
+   , logger_(logger)
+   , authAddrMgr_(authAddrMgr)
+   , assetMgr_(assetMgr)
+   , walletsMgr_(walletsMgr)
+   , signContainer_(signContainer)
+   , armory_(armory)
+   , transactionData_(txData)
+   , rfq_(rfq)
+   , quote_(quote)
    , clientSells_(!rfq.isXbtBuy())
 {
    qRegisterMetaType<AddressVerificationState>();

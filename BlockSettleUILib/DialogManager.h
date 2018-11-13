@@ -33,7 +33,7 @@ private:
    const QPoint   center_;
    unsigned int   nbActiveDlgs_ = 0;
 
-   int      rowHeight_;
+   int            rowHeight_ = 0;
 };
 
 #endif // __DIALOG_MANAGER_H__

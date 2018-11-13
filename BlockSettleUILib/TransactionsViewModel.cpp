@@ -15,8 +15,8 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    , const AsyncClient::LedgerDelegate &ledgerDelegate, QObject* parent, const std::shared_ptr<bs::Wallet> &defWlt)
    : QAbstractTableModel(parent)
    , armory_(armory)
-   , walletsManager_(walletsManager)
    , ledgerDelegate_(ledgerDelegate)
+   , walletsManager_(walletsManager)
    , defaultWallet_(defWlt)
    , allWallets_(false)
 {
