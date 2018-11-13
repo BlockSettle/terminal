@@ -160,8 +160,10 @@ message AcceptedQuoteUpdate
 
 message XBTBalanceUpdate
 {
-   required double xbt_balance = 1;
-   required uint64 used_address_count = 2;
+   required double total_xbt_balance = 1;
+   required double unconfirmed_xbt_balance = 2;
+   required double spendable_xbt_balance = 3;
+   required uint64 used_address_count = 4;
 }
 
 message ErrorNotification
