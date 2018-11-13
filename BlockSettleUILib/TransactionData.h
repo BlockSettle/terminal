@@ -81,6 +81,8 @@ public:
    bool UpdateRecipient(unsigned int recipientId, double amount, const bs::Address &);
    void RemoveRecipient(unsigned int recipientId);
 
+   void ClearAllRecipients();
+
    void SetFallbackRecvAddress(const bs::Address &addr) { fallbackRecvAddress_ = addr; }
    bs::Address GetFallbackRecvAddress();
 

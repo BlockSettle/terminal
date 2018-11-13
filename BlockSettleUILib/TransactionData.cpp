@@ -391,6 +391,14 @@ void TransactionData::RemoveRecipient(unsigned int recipientId)
    InvalidateTransactionData();
 }
 
+void TransactionData::ClearAllRecipients()
+{
+   if (!recipients_.empty()) {
+      recipients_.clear();
+      InvalidateTransactionData();
+   }
+}
+
 bool TransactionData::UpdateRecipientAddress(unsigned int recipientId, const bs::Address &address)
 {
    if (wallet_) {
