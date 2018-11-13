@@ -7,7 +7,7 @@ static WalletInfo::EncryptionType mapEncType(bs::wallet::EncryptionType encType)
 {
    switch (encType) {
    case bs::wallet::EncryptionType::Password:      return WalletInfo::Password;
-   case bs::wallet::EncryptionType::Freja:         return WalletInfo::Freja;
+   case bs::wallet::EncryptionType::Auth:          return WalletInfo::Auth;
    case bs::wallet::EncryptionType::Unencrypted:
    default:    return WalletInfo::Unencrypted;
    }
@@ -131,6 +131,15 @@ double TXInfo::amount() const
    uint64_t result = 0;
    for (const auto &recip : txReq_.recipients) {
       result += recip->getValue();
+   }
+   return result / BTCNumericTypes::BalanceDivider;
+}
+
+double TXInfo::inputAmount() const
+{
+   uint64_t result = 0;
+   for (const auto &utxo: txReq_.inputs) {
+      result += utxo.getValue();
    }
    return result / BTCNumericTypes::BalanceDivider;
 }

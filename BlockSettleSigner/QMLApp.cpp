@@ -5,7 +5,7 @@
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
-#include "FrejaProxy.h"
+#include "AuthProxy.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
 #include "HDWallet.h"
@@ -45,9 +45,9 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
-   qmlRegisterUncreatableType<FrejaProxy>("com.blocksettle.FrejaProxy", 1, 0,
-      "FrejaProxy", QStringLiteral("Cannot create a FrejaProxy instance"));
-   qmlRegisterType<FrejaSignWalletObject>("com.blocksettle.FrejaSignWalletObject", 1, 0, "FrejaSignWalletObject");
+   qmlRegisterUncreatableType<AuthProxy>("com.blocksettle.AuthProxy", 1, 0,
+      "AuthProxy", QStringLiteral("Cannot create a AuthProxy instance"));
+   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
    qmlRegisterType<WalletSeed>("com.blocksettle.WalletSeed", 1, 0, "WalletSeed");
@@ -62,6 +62,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    statusUpdater_ = std::make_shared<QMLStatusUpdater>(params_);
    connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
+
+   ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
 
    ctxt_->setContextProperty(QStringLiteral("signerParams"), params_.get());
    settingsConnections();
@@ -78,8 +80,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       }
    });
 
-   frejaProxy_ = std::make_shared<FrejaProxy>(logger_);
-   ctxt_->setContextProperty(QStringLiteral("freja"), frejaProxy_.get());
+   authProxy_ = std::make_shared<AuthProxy>(logger_);
+   ctxt_->setContextProperty(QStringLiteral("auth"), authProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
@@ -115,7 +117,7 @@ void QMLAppObj::walletsLoad()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
       if (!walletsMgr_->GetSettlementWallet()) {
-         if (!walletsMgr_->CreateSettlementWallet(params_->netType(), params_->getWalletsDir())) {
+         if (!walletsMgr_->CreateSettlementWallet(QString())) {
             logger_->error("Failed to create Settlement wallet");
          }
       }
@@ -204,15 +206,17 @@ void QMLAppObj::SetRootObject(QObject *obj)
          QMetaObject::invokeMethod(walletsView, "expandAll");
       }
    });
-   connect(rootObj_, SIGNAL(passwordEntered(QString, QString)), this, SLOT(onPasswordAccepted(QString, QString)));
+   connect(rootObj_, SIGNAL(passwordEntered(QString, QString, bool)),
+      this, SLOT(onPasswordAccepted(QString, QString, bool)));
 }
 
-void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password)
+void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password,
+   bool cancelledByUser)
 {
    SecureBinaryData decodedPwd = BinaryData::CreateFromHex(password.toStdString());
    logger_->debug("Password for wallet {} was accepted ({})", walletId.toStdString(), password.size());
    if (listener_) {
-      listener_->passwordReceived(walletId.toStdString(), decodedPwd);
+      listener_->passwordReceived(walletId.toStdString(), decodedPwd, cancelledByUser);
    }
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
       offlineProc_->passwordEntered(walletId.toStdString(), decodedPwd);
@@ -291,6 +295,11 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
    }
 }
 
+void QMLAppObj::onCancelSignTx(const BinaryData &txId)
+{
+   emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
+}
+
 void QMLAppObj::OnlineProcessing()
 {
    logger_->debug("Going online with socket {}:{}, network {}", params_->listenAddress().toStdString()
@@ -309,6 +318,8 @@ void QMLAppObj::OnlineProcessing()
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
    connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
+   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx,
+      this, &QMLAppObj::onCancelSignTx);
 
    if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
       logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());

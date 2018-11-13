@@ -3,8 +3,8 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.TXInfo 1.0
 import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.FrejaProxy 1.0
-import com.blocksettle.FrejaSignWalletObject 1.0
+import com.blocksettle.AuthProxy 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
 
 
 CustomDialog {
@@ -12,7 +12,8 @@ CustomDialog {
     property TXInfo txInfo
     property string password
     property bool   acceptable: false
-    property FrejaSignWalletObject  frejaSign
+    property bool   cancelledByUser: false
+    property AuthSignWalletObject  authSign
     closePolicy: Popup.NoAutoClose
     id: passwordDialog
 
@@ -20,17 +21,27 @@ CustomDialog {
     implicitHeight: mainLayout.implicitHeight
 
     onTxInfoChanged: {
-        if (txInfo.wallet.encType === WalletInfo.Freja) {
-            frejaSign = freja.signWallet(txInfo.wallet.encKey, prompt, txInfo.wallet.rootId)
+        if (txInfo.wallet.encType === WalletInfo.Auth) {
+            authSign = auth.signWallet(txInfo.wallet.encKey, prompt, txInfo.wallet.rootId)
 
-            frejaSign.success.connect(function(key) {
+            authSign.success.connect(function(key) {
                 acceptable = true
                 password = key
                 passwordDialog.accept()
             })
-            frejaSign.error.connect(function(text) {
+            authSign.error.connect(function(text) {
                 passwordDialog.reject()
             })
+        }
+    }
+
+    Connections {
+        target: qmlAppObj
+
+        onCancelSignTx: {
+            if (txId === txInfo.txId) {
+                passwordDialog.reject();
+            }
         }
     }
 
@@ -41,7 +52,7 @@ CustomDialog {
         Keys.onPressed: {
             if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
                 if (tfPassword.text.length) {
-                    passwordDialog.accept();
+                    confirmClicked();
                 }
 
                 event.accepted = true;
@@ -136,27 +147,25 @@ CustomDialog {
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text:   qsTr("Transaction Amount")
+                    text:   qsTr("Input Amount")
                 }
                 CustomLabelValue {
-                    text:   txInfo.amount.toFixed(8)
+                    text:   txInfo.inputAmount.toFixed(8)
                     Layout.alignment: Qt.AlignRight
                 }
 
                 CustomLabel {
                     Layout.fillWidth: true
                     text:   qsTr("Return Amount")
-                    visible:    txInfo.hasChange
                 }
                 CustomLabelValue {
-                    visible:    txInfo.hasChange
                     text:   txInfo.changeAmount.toFixed(8)
                     Layout.alignment: Qt.AlignRight
                 }
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text:   qsTr("Network Fee")
+                    text:   qsTr("Transaction Fee")
                 }
                 CustomLabelValue {
                     text:   txInfo.fee.toFixed(8)
@@ -165,7 +174,7 @@ CustomDialog {
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text:   qsTr("Total")
+                    text:   qsTr("Transaction Amount")
                 }
                 CustomLabelValue {
                     text:   txInfo.total.toFixed(8)
@@ -212,9 +221,9 @@ CustomDialog {
                 }
 
                 CustomLabel {
-                    id: labelFreja
-                    visible: txInfo.wallet.encType === WalletInfo.Freja
-                    text: frejaSign.status
+                    id: labelAuth
+                    visible: txInfo.wallet.encType === WalletInfo.Auth
+                    text: authSign.status
                 }
             }
 
@@ -279,9 +288,10 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("CONFIRM")
                         enabled: tfPassword.text.length || acceptable
+                        id: confirmButton
 
                         onClicked: {
-                            passwordDialog.accept()
+                            confirmClicked();
                         }
                     }
                 }
@@ -296,7 +306,8 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: passwordDialog.reject();
+                            cancelledByUser = true
+                            passwordDialog.reject();
                         }
                     }
                 }
@@ -312,9 +323,11 @@ CustomDialog {
         return hex;
     }
 
-    onAccepted: {
+    function confirmClicked() {
         if (txInfo.wallet.encType === WalletInfo.Password) {
             password = toHex(tfPassword.text)
         }
+
+        passwordDialog.accept()
     }
 }

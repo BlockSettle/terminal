@@ -16,22 +16,35 @@
 #include "ApplicationSettings.h"
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
+#include "EncryptionUtils.h"
+#include "StartupDialog.h"
 #include "MessageBoxCritical.h"
 #include "MessageBoxInfo.h"
+#include "WalletsManager.h"
 
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
+Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
 #elif defined (Q_OS_MAC)
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
+Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
 #elif defined (Q_OS_LINUX)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
+Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #endif
 
 Q_IMPORT_PLUGIN(QICOPlugin)
 
-Q_DECLARE_METATYPE(BinaryDataVector)
+Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(BinaryData)
+Q_DECLARE_METATYPE(SecureBinaryData)
+Q_DECLARE_METATYPE(std::vector<BinaryData>)
+Q_DECLARE_METATYPE(bs::TXEntry)
+Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
+Q_DECLARE_METATYPE(UTXO)
+Q_DECLARE_METATYPE(std::vector<UTXO>)
+Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
@@ -69,6 +82,58 @@ private:
    bool activationRequired_ = false;
 };
 
+static void checkFirstStart(ApplicationSettings *applicationSettings) {
+  bool wasInitialized = applicationSettings->get<bool>(ApplicationSettings::initialized);
+  if (wasInitialized) {
+    return;
+  }
+
+#ifdef _WIN32
+  // Read registry value in case it was set with installer. Could be used only on Windows for now.
+  QSettings settings(QLatin1String("HKEY_CURRENT_USER\\Software\\blocksettle\\blocksettle"), QSettings::NativeFormat);
+  bool showLicense = !settings.value(QLatin1String("license_accepted"), false).toBool();
+#else
+  bool showLicense = true;
+#endif // _WIN32
+
+  StartupDialog startupDialog(showLicense);
+  int result = startupDialog.exec();
+
+  if (result == QDialog::Rejected) {
+    std::exit(EXIT_FAILURE);
+  }
+
+  const bool runArmoryLocally = startupDialog.isRunArmoryLocally();
+  applicationSettings->set(ApplicationSettings::runArmoryLocally, runArmoryLocally);
+  applicationSettings->set(ApplicationSettings::netType, int(startupDialog.networkType()));
+
+  if (runArmoryLocally) {
+    applicationSettings->set(ApplicationSettings::armoryDbIp, startupDialog.armoryDbIp());
+    applicationSettings->set(ApplicationSettings::armoryDbPort, startupDialog.armoryDbPort());
+  }
+}
+
+static void checkStyleSheet(QApplication &app) {
+   QLatin1String styleSheetFileName = QLatin1String("stylesheet.css");
+
+   QFileInfo info = QFileInfo(QLatin1String(styleSheetFileName));
+
+   static QDateTime lastTimestamp = info.lastModified();
+
+   if (lastTimestamp == info.lastModified()) {
+      return;
+   }
+
+   lastTimestamp = info.lastModified();
+
+   QFile stylesheetFile(styleSheetFileName);
+
+   bool result = stylesheetFile.open(QFile::ReadOnly);
+   assert(result);
+
+   app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
+}
+
 static int GuiApp(int argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
@@ -95,13 +160,28 @@ static int GuiApp(int argc, char** argv)
       QApplication::setPalette(p);
    }
 
+#ifdef QT_DEBUG
+   // Start monitoring to update stylesheet live when file is changed on the disk
+   QTimer timer;
+   QObject::connect(&timer, &QTimer::timeout, &app, [&app] {
+      checkStyleSheet(app);
+   });
+   timer.start(100);
+#endif
+
    QDirIterator it(QLatin1String(":/resources/Raleway/"));
    while (it.hasNext()) {
       QFontDatabase::addApplicationFont(it.next());
    }
 
    QString location = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-   QLockFile lockFile(location + QLatin1String("/blocksettle.lock"));
+#ifdef QT_DEBUG
+   QString userName = QDir::home().dirName();
+   QString lockFilePath = location + QLatin1String("/blocksettle-") + userName + QLatin1String(".lock");
+#else
+   QString lockFilePath = location + QLatin1String("/blocksettle.lock");
+#endif
+   QLockFile lockFile(lockFilePath);
    lockFile.setStaleLockTime(0);
 
    if (!lockFile.tryLock()) {
@@ -111,10 +191,16 @@ static int GuiApp(int argc, char** argv)
       return box.exec();
    }
 
-   qRegisterMetaType<QVector<int> >();
+   qRegisterMetaType<QVector<int>>();
    qRegisterMetaType<std::string>();
-   qRegisterMetaType<BinaryDataVector>();
    qRegisterMetaType<BinaryData>();
+   qRegisterMetaType<SecureBinaryData>();
+   qRegisterMetaType<std::vector<BinaryData>>();
+   qRegisterMetaType<bs::TXEntry>();
+   qRegisterMetaType<std::vector<bs::TXEntry>>();
+   qRegisterMetaType<UTXO>();
+   qRegisterMetaType<std::vector<UTXO>>();
+   qRegisterMetaType<AsyncClient::LedgerDelegate>();
 
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
@@ -125,6 +211,8 @@ static int GuiApp(int argc, char** argv)
       errorMessage.exec();
       return 1;
    }
+
+   checkFirstStart(settings.get());
 
    QString logoIcon;
    if (settings->get<NetworkType>(ApplicationSettings::netType) == NetworkType::MainNet) {
@@ -149,11 +237,13 @@ static int GuiApp(int argc, char** argv)
 
       if (settings->get<bool>(ApplicationSettings::launchToTray)) {
          splashScreen.close();
-      }
-      else {
+      } else {
          mainWindow.show();
          splashScreen.finish(&mainWindow);
       }
+
+      mainWindow.postSplashscreenActions();
+
       return app.exec();
    }
    catch (const std::exception &e) {

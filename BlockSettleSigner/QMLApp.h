@@ -11,7 +11,7 @@
 namespace spdlog {
    class logger;
 }
-class FrejaProxy;
+class AuthProxy;
 class HeadlessContainerListener;
 class OfflineProcessor;
 class QmlWalletsViewModel;
@@ -37,9 +37,10 @@ public:
 
 signals:
    void loadingComplete();
+   void cancelSignTx(const QString &txId);
 
 private slots:
-   void onPasswordAccepted(const QString &walletId, const QString &password);
+   void onPasswordAccepted(const QString &walletId, const QString &password, bool cancelledByUser);
    void onOfflinePassword(const bs::wallet::TXSignRequest &);
    void onPasswordRequested(const bs::wallet::TXSignRequest &, const QString &prompt);
    void onAutoSignPwdRequested(const std::string &walletId);
@@ -49,6 +50,7 @@ private slots:
    void onLimitsChanged();
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
+   void onCancelSignTx(const BinaryData &txId);
 
 private:
    void OnlineProcessing();
@@ -67,7 +69,7 @@ private:
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
-   std::shared_ptr<FrejaProxy>                  frejaProxy_;
+   std::shared_ptr<AuthProxy>                   authProxy_;
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;

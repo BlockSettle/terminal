@@ -2,8 +2,8 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.PasswordConfirmValidator 1.0
-import com.blocksettle.FrejaProxy 1.0
-import com.blocksettle.FrejaSignWalletObject 1.0
+import com.blocksettle.AuthProxy 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 
 import "bscontrols"
@@ -18,22 +18,22 @@ CustomDialog {
     property bool acceptable: newPasswordWithConfirm.acceptableInput &&
                               tfOldPassword.text.length
     property int inputLablesWidth: 110
-    property FrejaSignWalletObject  frejaSignOld
-    property FrejaSignWalletObject  frejaSignNew
+    property AuthSignWalletObject  authSignOld
+    property AuthSignWalletObject  authSignNew
 
     implicitWidth: 400
     implicitHeight: mainLayout.implicitHeight
 
     onWalletChanged: {
-        if (wallet.encType === WalletInfo.Freja) {
-            frejaSignOld = freja.signWallet(wallet.encKey, qsTr("Old password for wallet %1").arg(wallet.name),
+        if (wallet.encType === WalletInfo.Auth) {
+            authSignOld = auth.signWallet(wallet.encKey, qsTr("Old password for wallet %1").arg(wallet.name),
                                          wallet.rootId)
 
-            frejaSignOld.success.connect(function(key) {
+            authSignOld.success.connect(function(key) {
                 oldPassword = key
-                labelFrejaStatus.text = qsTr("Old password ok")
+                labelAuthStatus.text = qsTr("Old password ok")
             })
-            frejaSignOld.error.connect(function(text) {
+            authSignOld.error.connect(function(text) {
                 changeWalletPasswordDialog.reject()
             })
         }
@@ -98,14 +98,14 @@ CustomDialog {
                 }
 
                 CustomLabel {
-                    id: labelFreja
-                    visible: wallet.encType === WalletInfo.Freja
-                    text: qsTr("Sign with Freja eID")
+                    id: labelAuth
+                    visible: wallet.encType === WalletInfo.Auth
+                    text: qsTr("Sign with Auth eID")
                 }
                 CustomLabel {
-                    id: labelFrejaStatus
-                    visible: wallet.encType === WalletInfo.Freja
-                    text: frejaSignOld.status
+                    id: labelAuthStatus
+                    visible: wallet.encType === WalletInfo.Auth
+                    text: authSignOld.status
                 }
             }
 
@@ -121,8 +121,8 @@ CustomDialog {
                     checked: true
                 }
                 CustomRadioButton {
-                    id: rbFreja
-                    text: qsTr("Freja eID")
+                    id: rbAuth
+                    text: qsTr("Auth eID")
                     checked: false
                 }
             }
@@ -142,28 +142,28 @@ CustomDialog {
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
-                visible:    rbFreja.checked
+                visible:    rbAuth.checked
 
                 CustomTextInput {
-                    id: tiNewFrejaId
-                    placeholderText: qsTr("New Freja ID (email)")
+                    id: tiNewAuthId
+                    placeholderText: qsTr("New Auth ID (email)")
                 }
                 CustomButton {
-                    id: btnFrejaNew
-                    text:   !frejaSignNew ? qsTr("Sign with Freja") : frejaSignNew.status
-                    enabled:    !frejaSignNew && tiNewFrejaId.text.length
+                    id: btnAuthNew
+                    text:   !authSignNew ? qsTr("Sign with Auth eID") : authSignNew.status
+                    enabled:    !authSignNew && tiNewAuthId.text.length
                     onClicked: {
-                        frejaSignNew = freja.signWallet(tiNewFrejaId.text, qsTr("New password for wallet %1").arg(wallet.name),
+                        authSignNew = auth.signWallet(tiNewAuthId.text, qsTr("New password for wallet %1").arg(wallet.name),
                                                               wallet.rootId)
-                        btnFrejaNew.enabled = false
-                        frejaSignNew.success.connect(function(key) {
+                        btnAuthNew.enabled = false
+                        authSignNew.success.connect(function(key) {
                             acceptable = true
                             newPassword = key
                             text = qsTr("Successfully signed")
                         })
-                        frejaSignNew.error.connect(function(text) {
-                            frejaSignNew = null
-                            btnFrejaNew.enabled = tiNewFrejaId.text.length
+                        authSignNew.error.connect(function(text) {
+                            authSignNew = null
+                            btnAuthNew.enabled = tiNewAuthId.text.length
                         })
                     }
                 }
@@ -230,14 +230,14 @@ CustomDialog {
         if (rbPassword.checked) {
             newPassword = toHex(newPasswordWithConfirm.text)
         }
-        else if (rbFreja.checked) {
-            wallet.encType = WalletInfo.Freja
-            wallet.encKey = tiNewFrejaId.text
+        else if (rbAuth.checked) {
+            wallet.encType = WalletInfo.Auth
+            wallet.encKey = tiNewAuthId.text
         }
     }
 
     onRejected: {
-        frejaSignOld.cancel()
-        frejaSignNew.cancel()
+        authSignOld.cancel()
+        authSignNew.cancel()
     }
 }

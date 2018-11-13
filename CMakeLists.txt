@@ -15,8 +15,11 @@ ELSE(CMAKE_BUILD_TYPE STREQUAL "Debug")
    SET(THIRD_PARTY_BUILD_MODE "release")
 ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
+add_definitions(-DNOMINMAX)
+
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
+SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
 
@@ -26,8 +29,8 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
-SET(BS_VERSION_MINOR 9 )
-SET(BS_VERSION_PATCH 1 )
+SET(BS_VERSION_MINOR 11 )
+SET(BS_VERSION_PATCH 0 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -86,6 +89,7 @@ FIND_PACKAGE(Qt5PrintSupport REQUIRED)
 FIND_PACKAGE(Qt5Qml REQUIRED)
 FIND_PACKAGE(Qt5Quick REQUIRED)
 FIND_PACKAGE(Qt5QuickControls2 REQUIRED)
+FIND_PACKAGE(Qt5Charts REQUIRED)
 
 IF ( UNIX AND NOT APPLE )
    FIND_PACKAGE(Qt5DBus REQUIRED)
@@ -141,14 +145,18 @@ IF( NOT ZMQ_LIB )
    ENDIF( NOT ZMQ_LIB)
 ENDIF( NOT ZMQ_LIB)
 
-#IF( WIN32 )
-#   FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Debug)
-#   FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Release)
-#ENDIF()
+IF( WIN32 )
+   IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#      FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Debug)
+   ELSE()
+#      FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Release)
+   ENDIF()
+ENDIF()
 
 # OpenSSL libs
 SET(OPENSSL_ROOT         ${THIRD_PARTY_COMMON_DIR}/OpenSSL)
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${OPENSSL_ROOT}/lib)
+SET(OPENSSL_INCLUDE_DIR ${OPENSSL_ROOT}/include)
 
 IF( WIN32 )
    SET(OPENSSL_LIB_NAME "libssl")
@@ -171,6 +179,10 @@ ENDIF( NOT OPENSSL_CRYPTO_LIB)
 SET(OPENSSL_LIBS
    ${OPENSSL_LIB}
    ${OPENSSL_CRYPTO_LIB})
+INCLUDE_DIRECTORIES( ${OPENSSL_INCLUDE_DIR} )
+
+# SET(OPENSSL_ROOT_DIR ${OPENSSL_ROOT})
+# SET(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_ROOT}/lib)
 
 # setup cryptopp
 SET(CRYPTOPP_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/cryptopp)
@@ -190,8 +202,42 @@ ENDIF()
 INCLUDE_DIRECTORIES( ${CRYPTOPP_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${CRYPTOPP_INCLUDE_DIR}/cryptopp )
 
-#add lib qrencode
 
+# setup botan
+SET(BOTAN_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/botan)
+SET(BOTAN_LIB_DIR ${BOTAN_PACKAGE_ROOT}/lib)
+SET(BOTAN_INCLUDE_DIR ${BOTAN_PACKAGE_ROOT}/include/botan-2)
+
+IF (WIN32)
+   SET(BOTAN_LIB_NAME botan-2.lib botan.lib)
+ELSE(WIN32)
+   SET(BOTAN_LIB_NAME libbotan-2.a)
+ENDIF(WIN32)
+
+FIND_LIBRARY( BOTAN_LIB NAMES ${BOTAN_LIB_NAME} PATHS ${BOTAN_LIB_DIR} NO_DEFAULT_PATH )
+IF( NOT BOTAN_LIB)
+   MESSAGE( FATAL_ERROR "Could not find botan lib in ${BOTAN_LIB_DIR}")
+ENDIF()
+
+
+# setup libwebsockets
+SET(WS_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libwebsockets)
+SET(WS_LIB_DIR ${WS_PACKAGE_ROOT}/lib)
+SET(WS_INCLUDE_DIR ${WS_PACKAGE_ROOT}/include)
+
+IF (WIN32)
+   SET(WS_LIB_NAME websockets_static)
+ELSE(WIN32)
+   SET(WS_LIB_NAME libwebsockets.a)
+ENDIF(WIN32)
+
+FIND_LIBRARY(WS_LIB NAMES ${WS_LIB_NAME} PATHS ${WS_LIB_DIR} NO_DEFAULT_PATH )
+IF(NOT WS_LIB)
+   MESSAGE(FATAL_ERROR "Could not find libwebsockets in ${WS_LIB_DIR}")
+ENDIF()
+INCLUDE_DIRECTORIES(${WS_INCLUDE_DIR})
+
+#add lib qrencode
 SET(QRENCODE_ROOT             ${THIRD_PARTY_COMMON_DIR}/LibQREncode)
 SET(QRENCODE_LIB_DIR          ${QRENCODE_ROOT}/lib)
 SET(QRENCODE_INCLUDE_DIR      ${QRENCODE_ROOT}/include)
@@ -228,7 +274,20 @@ FIND_LIBRARY( LIBBTC_LIB NAMES ${LIBBTC_LIB_NAME} PATHS ${LIBBTC_LIB_DIR} NO_DEF
 IF( NOT LIBBTC_LIB)
    MESSAGE( FATAL_ERROR "Could not find libbtc in ${LIBBTC_LIB_DIR}")
 ENDIF()
-INCLUDE_DIRECTORIES( ${LIBBTC_INCLUDE_DIR}/include )
+INCLUDE_DIRECTORIES( ${LIBBTC_INCLUDE_DIR} )
+
+# setup libchacha20poly1305
+SET(LIBCP_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libchacha20poly1305)
+SET(LIBCP_LIB_DIR ${LIBCP_PACKAGE_ROOT}/lib)
+SET(LIBCP_INCLUDE_DIR ${LIBCP_PACKAGE_ROOT}/include)
+
+SET(LIBCP_LIB_NAME libchacha20poly1305)
+
+FIND_LIBRARY(LIBCP_LIB NAMES ${LIBCP_LIB_NAME} PATHS ${LIBCP_LIB_DIR} NO_DEFAULT_PATH )
+IF( NOT LIBCP_LIB)
+   MESSAGE( FATAL_ERROR "Could not find libchacha20poly1305 in ${LIBCP_LIB_DIR}")
+ENDIF()
+INCLUDE_DIRECTORIES( ${LIBCP_INCLUDE_DIR} )
 
 SET(MPIR_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/mpir)
 SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
@@ -255,77 +314,12 @@ ELSE ( APPLE )
 ENDIF ( APPLE )
 
 
-SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto/ )
+SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
 
-# setup Blocksettle communication proto files
-SET( BS_COMMUNICATION_GENERATED_PATH ${PATH_TO_GENERATED}/BS/Communication)
-FILE( MAKE_DIRECTORY ${BS_COMMUNICATION_GENERATED_PATH} )
-
-SET(BS_COMMUNICATION_PROTO_FILES_DIR ${BLOCK_SETTLE_ROOT}/common/Blocksettle_proto/Communication)
-FILE(GLOB BS_COMMUNICATION_PROTO_FILES ${BS_COMMUNICATION_PROTO_FILES_DIR}/*.proto)
-EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${BS_COMMUNICATION_PROTO_FILES} --cpp_out=${BS_COMMUNICATION_GENERATED_PATH} --proto_path=${BS_COMMUNICATION_PROTO_FILES_DIR})
-
-SET( BS_COMMUNICATION_INCLUDE_DIR ${BS_COMMUNICATION_GENERATED_PATH} )
-FILE( GLOB BS_COMMUNICATION_PROTO_SOURCES ${BS_COMMUNICATION_GENERATED_PATH}/*.cc )
-FILE( GLOB BS_COMMUNICATION_PROTO_HEADERS ${BS_COMMUNICATION_GENERATED_PATH}/*.h )
-
-# setup Blocksettle storage proto files
-SET( BS_STORAGE_GENERATED_PATH ${PATH_TO_GENERATED}/BS/Storage)
-FILE( MAKE_DIRECTORY ${BS_STORAGE_GENERATED_PATH} )
-
-SET(BS_STORAGE_PROTO_FILES_DIR ${BLOCK_SETTLE_ROOT}/common/Blocksettle_proto/Storage)
-FILE(GLOB BS_STORAGE_PROTO_FILES ${BS_STORAGE_PROTO_FILES_DIR}/*.proto)
-EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${BS_STORAGE_PROTO_FILES} --cpp_out=${BS_STORAGE_GENERATED_PATH} --proto_path=${BS_STORAGE_PROTO_FILES_DIR})
-
-SET( BS_STORAGE_INCLUDE_DIR ${BS_STORAGE_GENERATED_PATH} )
-FILE( GLOB BS_STORAGE_PROTO_SOURCES ${BS_STORAGE_GENERATED_PATH}/*.cc )
-FILE( GLOB BS_STORAGE_PROTO_HEADERS ${BS_STORAGE_GENERATED_PATH}/*.h )
-
-# setup CELER proto files
-SET(PROTO_BASE_PATH ${BLOCK_SETTLE_ROOT}/Celer/)
-
-FUNCTION( ADD_PROTO_DIR NAME PATH )
-   SET( PROTO_FILES_PATH ${PROTO_BASE_PATH}/${PATH} )
-   FILE( GLOB PROTO_FILES_LIST ${PROTO_FILES_PATH}/*.proto )
-
-   EXECUTE_PROCESS( COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTO_FILES_LIST} --cpp_out=${PATH_TO_GENERATED} --proto_path=${PROTO_BASE_PATH})
-
-   FILE( GLOB GENERATED_PROTO_SOURCES ${PATH_TO_GENERATED}/${PATH}/*.cc)
-   FILE( GLOB GENERATED_PROTO_HEADERS ${PATH_TO_GENERATED}/${PATH}/*.h)
-
-   SET( ${NAME}_INCLUDE_DIR ${PATH_TO_GENERATED}/${PATH} PARENT_SCOPE)
-   SET( ${NAME}_PROTO_SOURCES ${GENERATED_PROTO_SOURCES} PARENT_SCOPE )
-   SET( ${NAME}_PROTO_HEADERS ${GENERATED_PROTO_HEADERS} PARENT_SCOPE )
-
-ENDFUNCTION(ADD_PROTO_DIR)
-
-ADD_PROTO_DIR(LOGIN                         com/celertech/baseserver/communication/login)
-ADD_PROTO_DIR(NETTY                         com/celertech/baseserver/communication/protobuf)
-ADD_PROTO_DIR(ENUMS                         com/celertech/baseserver/api/enums)
-ADD_PROTO_DIR(API_USER                      com/celertech/baseserver/api/user)
-ADD_PROTO_DIR(API_SESSION                   com/celertech/baseserver/api/session)
-ADD_PROTO_DIR(API_SOCKET                    com/celertech/baseserver/api/socket)
-ADD_PROTO_DIR(CELER_BASESERVER_EXCEPTION    com/celertech/baseserver/api/exception)
-
-ADD_PROTO_DIR(MARKET_ENUMS                  com/celertech/marketmerchant/api/enums)
-ADD_PROTO_DIR(MARKET_SECURITY_DEFINITION    com/celertech/marketmerchant/api/securitydefinition)
-ADD_PROTO_DIR(MARKET_DATA                   com/celertech/marketmerchant/api/marketdata)
-ADD_PROTO_DIR(MARKET_STATS                  com/celertech/marketmerchant/api/marketstatistic)
-ADD_PROTO_DIR(STATIC_USER_PROPERTY          com/celertech/staticdata/api/user/property)
-
-ADD_PROTO_DIR(BS_COMMON_ENUMS               com/blocksettle/enums)
-ADD_PROTO_DIR(BS_TERMINAL_API               com/blocksettle/terminal)
-
-ADD_PROTO_DIR(QUOTE                         com/celertech/marketmerchant/api/quote)
-ADD_PROTO_DIR(ORDER                         com/celertech/marketmerchant/api/order)
-ADD_PROTO_DIR(SIGN                          com/celertech/marketmerchant/api/order/bitcoin)
-ADD_PROTO_DIR(CELER_API_ACCOUNTS            com/celertech/staticdata/api/account)
-ADD_PROTO_DIR(CELER_API_USER_ACCOUNT        com/celertech/staticdata/api/user/account)
-ADD_PROTO_DIR(CELER_PIGGYBANK_API_ENUMS     com/celertech/piggybank/api/enums)
-ADD_PROTO_DIR(CELER_PIGGYBANK_API_SUBLEDGER com/celertech/piggybank/api/subledger)
-
-
+SET( AUTH_PROTO_LIB_NAME               AuthProtoLib )
+SET( BS_PROTO_LIB_NAME                 BsProtoLib )
+SET( CELER_PROTO_LIB_NAME              CelerProtoLib )
 SET( BLOCKSETTLE_APP_NAME              blocksettle )
 SET( SIGNER_APP_NAME                   blocksettle_signer )
 SET( BLOCKSETTLE_UI_LIBRARY_NAME       bsuilib )
@@ -373,7 +367,8 @@ IF(WIN32)
       version
       UxTheme
       Qt5::QWindowsIntegrationPlugin
-      Qt5::QICOPlugin)
+      Qt5::QICOPlugin
+      Qt5::QWindowsPrinterSupportPlugin)
 
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
       SET(QT_LIBS
@@ -384,7 +379,8 @@ IF(WIN32)
          Qt5EventDispatcherSupportd.lib
          Qt5ThemeSupportd.lib
          Qt5WindowsUIAutomationSupportd.lib
-         Qt5AccessibilitySupportd.lib )
+         Qt5AccessibilitySupportd.lib
+         Qt5Chartsd.lib )
       LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quickd.lib
@@ -412,7 +408,8 @@ IF(WIN32)
          Qt5EventDispatcherSupport.lib
          Qt5ThemeSupport.lib
          Qt5WindowsUIAutomationSupport.lib
-         Qt5AccessibilitySupport.lib )
+         Qt5AccessibilitySupport.lib 
+         Qt5Charts.lib)
       LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quick.lib
@@ -459,6 +456,7 @@ ELSE(WIN32)
          Qt5::QCocoaIntegrationPlugin
          Qt5::PrintSupport
          Qt5::QICOPlugin
+         Qt5::QCocoaPrinterSupportPlugin
          ${ZLIB_LIBRARIES}
          ${CUPS_LIBRARIES})
 
@@ -474,6 +472,7 @@ ELSE(WIN32)
             libQt5GraphicsSupport_debug.a
             libQt5AccessibilitySupport_debug.a
             libQt5EdidSupport_debug.a
+            libQt5Charts_debug.a
             )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin_debug.a
@@ -504,6 +503,7 @@ ELSE(WIN32)
             libQt5GraphicsSupport.a
             libQt5AccessibilitySupport.a
             libQt5EdidSupport.a
+            libQt5Charts.a
             )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
@@ -560,6 +560,7 @@ ELSE(WIN32)
       SET( OS_SPECIFIC_LIBS
          Qt5::QXcbIntegrationPlugin
          Qt5::QICOPlugin
+         Qt5::QCupsPrinterSupportPlugin
          fontconfig
          freetype
          X11-xcb
@@ -589,6 +590,7 @@ ELSE(WIN32)
          m
          double-conversion
          dl
+         cups
          ${CMAKE_THREAD_LIBS_INIT} )
 
       SET(QT_QUICK_LIBS
@@ -617,6 +619,10 @@ FOREACH(lib_name ${QT_LIBS})
 
    LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
+
+ADD_SUBDIRECTORY(AuthCommon)
+ADD_SUBDIRECTORY( Celer )
+ADD_SUBDIRECTORY( common/Blocksettle_proto )
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)

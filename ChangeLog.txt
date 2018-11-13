@@ -1,3 +1,99 @@
+Release: 0.11.0
+Bug Fixes:
+   - Fixed SpotXBT and SpotCC settlement
+   - Fixed settlement transactions duplication in TX list
+   - RBF and CPFP fixes
+   - Minor UI fixes and enhancements
+   - Thread concurrency race condition fixes
+   - Various crash fixes
+Improvements:
+   - Auth eID support (supercedes Freja)
+   - Initial blockchain explorer support
+
+0.10.10
+Bug Fixes:
+Improvements:
+   - MD license agreement
+   - default settings for MD server on staging
+   - subscribe to indicative prices on PM products
+
+0.10.9
+Bug Fixes:
+   - crash on disconnect from MD
+Improvements:
+   - MD license agreement
+   - subscribe to MD on startup settings
+
+0.10.8
+Bug Fixes:
+Improvements:
+   - switch to private auth server
+   - minor UI improvements and fixes
+
+0.10.7
+Bug Fixes:
+   - fix crash on initial CC validation
+Improvements:
+   - subscribe to new MD server without login
+   - minor UI improvements and fixes
+
+0.10.6
+Bug Fixes:
+   -
+Improvements:
+   - Aded possibility to cancel transaction from terminal with remote Signer
+   - No warning messages in Terminal if transaction was just cancelled
+   - Diskless settlement wallet in signer
+
+0.10.5
+Bug Fixes:
+   - Coin control UI fix ( autoselection )
+   - Fixed IP detection of connected client in Signer
+Improvements:
+   - Label with count of transactions is always shown
+   - About dialog tabs
+
+0.10.4
+Bug Fixes:
+   - Various UI fixes for address list and details, TX list, Create TX advanced
+   - Fixed termination of transaction signing.
+Improvements:
+   - UI speed improvements for TX list
+   - Added input amount into transaction sign dialog.
+
+0.10.3
+Bug Fixes:
+   -
+Improvements:
+   - Disabled some special characters in wallet description.
+
+0.10.2
+Bug Fixes:
+   -
+Improvements:
+   - Add new first start (license agreement and primary network settings)
+
+0.10.1
+Bug Fixes:
+   - Fixed TX dialog crash if closed before receiving reply from Armory
+   - Memory leaks in UI Dialogs
+Improvements:
+   - Ability to cancel UTXO and estimateFee requests on caller obj destruction
+   - Keep-alive for Armory connection
+
+Release: 0.10.0
+Bug Fixes:
+   -
+Improvements:
+   - Moved Armory connection to websockets and async
+
+0.9.2
+Bug fixes:
+  -
+Improvements:
+ - UTXO count in coin control
+ - minor UI improvements
+
 Release: 0.9.1
 Bug Fixes:
    -

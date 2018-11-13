@@ -63,7 +63,7 @@ static bs::wallet::EncryptionType mapEncType(WalletInfo::EncryptionType encType)
    switch (encType)
    {
    case WalletInfo::EncryptionType::Password:   return bs::wallet::EncryptionType::Password;
-   case WalletInfo::EncryptionType::Freja:      return bs::wallet::EncryptionType::Freja;
+   case WalletInfo::EncryptionType::Auth:       return bs::wallet::EncryptionType::Auth;
    case WalletInfo::EncryptionType::Unencrypted:
    default:    return bs::wallet::EncryptionType::Unencrypted;
    }
@@ -78,7 +78,11 @@ bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPas
       return false;
    }
    const bs::wallet::PasswordData pwdData = { BinaryData::CreateFromHex(newPass.toStdString()), mapEncType(encType), encKey.toStdString() };
-   if (!wallet->changePassword({ pwdData }, { 1, 1 }, BinaryData::CreateFromHex(oldPass.toStdString()))) {
+
+   bool result = wallet->changePassword(logger_, { pwdData }, { 1, 1 }
+      , BinaryData::CreateFromHex(oldPass.toStdString()), false, false, false);
+
+   if (!result) {
       emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
       return false;
    }
@@ -161,8 +165,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 
    if (isPrintable) {
       try {
-         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet->getName()),
-            QString::fromStdString(wallet->getWalletId()),
+         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet->getWalletId()),
             QString::fromStdString(easyData.part1),
             QString::fromStdString(easyData.part2),
             QPixmap(QLatin1String(":/FULL_LOGO")),
