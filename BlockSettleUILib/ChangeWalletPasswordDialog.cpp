@@ -7,8 +7,7 @@
 #include "EnterWalletPassword.h"
 #include "AuthNotice.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxSuccess.h"
+#include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "WalletKeyWidget.h"
 #include "WalletKeysDeleteDevice.h"
@@ -176,7 +175,7 @@ void ChangeWalletPasswordDialog::continueBasic()
    bool isNewAuth = !newKeys.empty() && newKeys[0].encType == bs::wallet::EncryptionType::Auth;
 
    if (!ui_->widgetSubmitKeys->isValid() && !isOldAuth) {
-      MessageBoxCritical messageBox(tr("Invalid password"),
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Invalid password"),
                                     tr("Please check old password."),
                                     this);
       messageBox.exec();
@@ -184,7 +183,7 @@ void ChangeWalletPasswordDialog::continueBasic()
    }
 
    if (!ui_->widgetCreateKeys->isValid() && !isNewAuth) {
-      MessageBoxCritical messageBox(tr("Invalid password"),
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Invalid password"),
                                     tr("Please check new password, and make " \
                                        "sure the length is at least six (6) " \
                                        "characters long."),
@@ -194,7 +193,7 @@ void ChangeWalletPasswordDialog::continueBasic()
    }
 
    if (isOldAuth && isNewAuth && oldPasswordData_[0].encKey == newKeys[0].encKey) {
-      MessageBoxCritical messageBox(tr("Invalid new Auth eID")
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Invalid new Auth eID")
          , tr("Please use different Auth eID. New Freje eID is already used."), this);
       messageBox.exec();
       return;
@@ -256,14 +255,14 @@ void ChangeWalletPasswordDialog::continueAddDevice()
    }
 
    if (oldKeyRank_.first != 1) {
-      MessageBoxCritical messageBox(tr("Add Device error")
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Add Device error")
          , tr("Only 1-of-N AuthApp encryption supported"), this);
       messageBox.exec();
       return;
    }
 
    if (oldPasswordData_.empty() || oldPasswordData_[0].encType != bs::wallet::EncryptionType::Auth) {
-      MessageBoxCritical messageBox(tr("Add Device error")
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Add Device error")
          , tr("Please switch to Auth encryption first"), this);
       messageBox.exec();
       return;
@@ -317,7 +316,7 @@ void ChangeWalletPasswordDialog::onOldDeviceFailed()
    state_ = State::Idle;
    updateState();
 
-   MessageBoxCritical(tr("Wallet Password")
+   BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
       , tr("A problem occured requesting old device key")
       , this).exec();
 }
@@ -353,7 +352,7 @@ void ChangeWalletPasswordDialog::onNewDeviceFailed()
    state_ = State::Idle;
    updateState();
 
-   MessageBoxCritical(tr("Wallet Password")
+   BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
       , tr("A problem occured requesting new device key")
       , this).exec();
 }
@@ -370,11 +369,11 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
       logger_->error("ChangeWalletPassword failed for {}", walletId);
 
       if (isLatestChangeAddDevice_) {
-         MessageBoxCritical(tr("Wallet Password")
+         BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
             , tr("Device adding failed")
             , this).exec();
       } else {
-         MessageBoxCritical(tr("Wallet Password")
+         BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
             , tr("A problem occured when changing wallet password")
             , this).exec();
       }
@@ -385,11 +384,11 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
    }
 
    if (isLatestChangeAddDevice_) {
-      MessageBoxSuccess(tr("Wallet Password")
+      BSMessageBox(BSMessageBox::success, tr("Wallet Password")
          , tr("Device successfully added")
          , this).exec();
    } else {
-      MessageBoxSuccess(tr("Wallet Password")
+      BSMessageBox(BSMessageBox::success, tr("Wallet Password")
          , tr("Wallet password successfully changed")
          , this).exec();
    }
@@ -428,8 +427,8 @@ void ChangeWalletPasswordDialog::deleteDevice(const string &deviceId)
    }
 
    if (newKeyRank_.second == 0) {
-      MessageBoxCritical(tr("Error")
-         , tr("Can't remove last device. Please switch to password encryption instead."), this).exec();
+      BSMessageBox(BSMessageBox::critical, tr("Error")
+         , tr("Cannot remove last device. Please switch to password encryption instead."), this).exec();
       return;
    }
 

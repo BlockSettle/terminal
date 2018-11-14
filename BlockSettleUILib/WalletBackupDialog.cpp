@@ -7,8 +7,7 @@
 #include <QStandardPaths>
 
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
+#include "BSMessageBox.h"
 #include "PaperBackupWriter.h"
 #include "SignContainer.h"
 #include "WalletBackupFile.h"
@@ -86,7 +85,7 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
 
    QFile f(filePath());
    if (f.exists()) {
-      MessageBoxQuestion qRewrite(tr("Wallet Backup"), tr("Backup already exists")
+      BSMessageBox qRewrite(BSMessageBox::question, tr("Wallet Backup"), tr("Backup already exists")
          , tr("File %1 already exists. Do you want to overwrite it?").arg(filePath()), this);
       if (qRewrite.exec() != QDialog::Accepted) {
          return;
@@ -144,7 +143,7 @@ void WalletBackupDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet:
 
 void WalletBackupDialog::showError(const QString &title, const QString &text)
 {
-   MessageBoxCritical(title, text).exec();
+   BSMessageBox(BSMessageBox::critical, title, text).exec();
 }
 
 void WalletBackupDialog::onContainerError(unsigned int id, std::string errMsg)
@@ -212,10 +211,11 @@ void WalletBackupDialog::accept()
 
 void WalletBackupDialog::reject()
 {
-   MessageBoxQuestion confCancel(tr("Warning"), tr("ABORT BACKUP PROCESS?")
+   BSMessageBox confCancel(BSMessageBox::question, tr("Warning"), tr("Abort Backup Process?")
       , tr("BlockSettle strongly encourages you to take the necessary precautions to ensure you backup your"
-         " private keys. Are you sure wish to abort the process?"), this);
-   confCancel.setConfirmButtonText(tr("Yes")).setCancelButtonText(tr("No"));
+         " private keys. Are you sure you wish to abort this process?"), this);
+   confCancel.setConfirmButtonText(tr("Yes"));
+   confCancel.setCancelButtonText(tr("No"));
 
    if (confCancel.exec() == QDialog::Accepted) {
       ui_->widgetSubmitKeys->cancel();

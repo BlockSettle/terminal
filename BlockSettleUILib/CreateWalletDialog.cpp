@@ -2,7 +2,7 @@
 #include "ui_CreateWalletDialog.h"
 
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "WalletPasswordVerifyDialog.h"
 #include "NewWalletSeedDialog.h"
 #include "SignContainer.h"
@@ -112,7 +112,7 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
       return;
    }
    createReqId_ = 0;
-   MessageBoxCritical info(tr("Create failed")
+   BSMessageBox info(BSMessageBox::critical, tr("Create failed")
       , tr("Failed to create or import wallet %1").arg(ui_->lineEditWalletName->text())
       , QString::fromStdString(errMsg), this);
 
@@ -137,7 +137,7 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
       return;
    }
    if (walletId_ != wallet->getWalletId()) {
-      MessageBoxCritical(tr("Wallet ID mismatch")
+      BSMessageBox(BSMessageBox::critical, tr("Wallet ID mismatch")
          , tr("Pre-created wallet id: %1, id after creation: %2")
             .arg(QString::fromStdString(walletId_)).arg(QString::fromStdString(wallet->getWalletId()))
          , this).exec();
@@ -172,7 +172,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
    *keys = widgetCreateKeys->keys();
 
    if (walletsManager->WalletNameExists(walletName.toStdString())) {
-      MessageBoxCritical messageBox(QObject::tr("Invalid wallet name")
+      BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid wallet name")
          , QObject::tr("Wallet with this name already exists"), parent);
       messageBox.exec();
       return false;
@@ -180,7 +180,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
 
    if (!keys->empty() && keys->at(0).encType == bs::wallet::EncryptionType::Auth) {
       if (keys->at(0).encKey.isNull()) {
-         MessageBoxCritical messageBox(QObject::tr("Invalid Auth eID")
+         BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid Auth eID")
             , QObject::tr("Please check Auth eID Email"), parent);
          messageBox.exec();
          return false;
@@ -199,7 +199,8 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
 
    }
    else if (!widgetCreateKeys->isValid()) {
-      MessageBoxCritical messageBox(QObject::tr("Invalid password"), QObject::tr("Please check passwords"), parent);
+      BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid password")
+         , QObject::tr("Please check the password"), parent);
       messageBox.exec();
       return false;
    }

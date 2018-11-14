@@ -15,19 +15,29 @@ Q_OBJECT
 
 public:
    enum messageBoxType {
-      mbInfo = 1,
-      mbSuccess = 2,
-      mbQuestion = 3,
-      mbWarning = 4,
-      mbCritical = 5
+      info = 1,
+      success = 2,
+      question = 3,
+      warning = 4,
+      critical = 5
    };
 
-   BSMessageBox(const QString& title, const QString& windowTitle
-      , const QString& text, messageBoxType mbType = mbInfo
-      , const QString& details = QString()
+   BSMessageBox(messageBoxType mbType
+      , const QString& title, const QString& text
+      , QWidget* parent = nullptr);
+
+   BSMessageBox(messageBoxType mbType
+      , const QString& title, const QString& text, const QString& details
+      , QWidget* parent = nullptr);
+
+   BSMessageBox(messageBoxType mbType
+      , const QString& title, const QString& text
+      , const QString& description, const QString& details
       , QWidget* parent = nullptr);
 
    ~BSMessageBox() override;
+   void setConfirmButtonText(const QString &text);
+   void setCancelButtonText(const QString &text);
 
 protected slots:
    void onDetailsPressed();
@@ -42,5 +52,14 @@ private:
    std::unique_ptr<Ui::BSMessageBox> ui_;
 };
 
+class MessageBoxCCWalletQuestion : public BSMessageBox {
+public:
+   MessageBoxCCWalletQuestion(const QString &ccProduct, QWidget *parent = nullptr);
+};
+
+class MessageBoxBroadcastError : public BSMessageBox {
+public:
+   MessageBoxBroadcastError(const QString &details, QWidget *parent = nullptr);
+};
 
 #endif // __MESSAGE_BOX_H__
