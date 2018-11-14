@@ -1,7 +1,7 @@
 #include "ExplorerWidget.h"
 #include "ui_ExplorerWidget.h"
 #include "UiUtils.h"
-#include "BinaryData.h"
+#include "TransactionDetailsWidget.h"
 
 #include <QStringListModel>
 #include <QToolTip>
@@ -13,12 +13,10 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
 {
    ui_->setupUi(this);
 
+   // connection to handle enter key being pressed inside the search box
    connect(ui_->searchBox, &QLineEdit::returnPressed,
            this, &ExplorerWidget::onSearchStarted);
-   // connection to handle enter key being pressed inside the search box
-    connect(ui_->searchBox, &QLineEdit::returnPressed,
-            this, &ExplorerWidget::onSearchStarted);
-   // connection to handle user clicking on transaction id inside address details page
+   // connection to handle user clicking on TXID inside address details page
    connect(ui_->Address, &AddressDetailsWidget::transactionClicked,
            this, &ExplorerWidget::onTransactionClicked);
    // connection to handle user clicking on adress id inside tx details page
@@ -94,7 +92,8 @@ void ExplorerWidget::onSearchStarted()
       ui_->stackedWidget->setCurrentIndex(TxPage);
 
       // Pass the Tx hash to the Tx widget and populate the fields.
-      ui_->Transaction->populateTransactionWidget(READHEX(userStr.toStdString()));
+      BinaryTXID userTXID(READHEX(userStr.toStdString()), true);
+      ui_->Transaction->populateTransactionWidget(userTXID);
    }
    else {
       // This isn't a valid address or 32 byte hex string.
@@ -110,12 +109,32 @@ void ExplorerWidget::onTransactionClicked(QString txId) {
 //   ui_->Transaction->setTxVal(txId);
 //   ui_->Transaction->getTxsForTxIns(); // Maybe moved?
 //   ui_->Transaction->loadInputs();
+   BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
    ui_->stackedWidget->setCurrentIndex(TxPage);
+   ui_->Transaction->populateTransactionWidget(terminalTXID);
 }
 
 // This slot function is called whenever user clicks on an address in
 // transaction details page or any other page.
 void ExplorerWidget::onAddressClicked(QString addressId) {
-   ui_->Address->setAddrVal(addressId);
    ui_->stackedWidget->setCurrentIndex(AddressPage);
+
+   bs::Address bsAddress;
+   bool strIsBase58 = false;
+   try {
+      bsAddress = bs::Address(addressId.trimmed(), bs::Address::Format::Base58);
+      strIsBase58 = bsAddress.isValid();
+   } catch (...) {}
+   if(strIsBase58 == false) {
+      try {
+         bsAddress = bs::Address(addressId.trimmed(), bs::Address::Format::Bech32);
+         strIsBase58 = bsAddress.isValid();
+      } catch (...) {}
+   }
+
+   // There really should be an error case here, but for now, assume addr is
+   // valid. (It would be very bad if Armory fed up bad addresses!)
+   // TO DO: Add a check for wallets that have already been loaded?
+   ui_->Address->setAddrVal(bsAddress);
+   ui_->Address->loadWallet();
 }

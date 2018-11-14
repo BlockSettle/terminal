@@ -28,6 +28,7 @@ public:
    void setAddrVal(const bs::Address& inAddrVal);
    void loadWallet();
    void loadTransactions();
+   void clearFields();
 
    enum AddressTreeColumns {
       colDate = 0,
@@ -63,6 +64,13 @@ private:
    // is that the pages are what have data related to # of confs and other
    // block-related data. The Tx objects from Armory don't have block-related
    // data that we need. So, we need two maps, at least for now.
+   //
+   // In addition, note that the TX hashes returned by Armory are in "internal"
+   // byte order, whereas the displayed values need to be in "RPC" byte order.
+   // (Look at the BinaryTXID class comments for more info on this phenomenon.)
+   // The only time we care about this is when displaying data to the user; the
+   // data is consistent otherwise, which makes Armory happy. Don't worry about
+   // about BinaryTXID. A simple endian flip in printed strings is all we need.
 
    Ui::AddressDetailsWidget *ui_; // The main widget object.
    bs::Address addrVal_; // The address passed in by the user.
@@ -71,7 +79,9 @@ private:
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, Tx> prevTxMap_; // A wallet's previous Tx hash / Tx map (fee calc).
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
-   std::set<BinaryData> txHashSet_; // Hashes for a given address.
+
+   // Structs passed to Armory to tell it which TX hashes to look up.
+   std::set<BinaryData> txHashSet_; // Hashes assoc'd with a given address.
    std::set<BinaryData> prevTxHashSet_; // Prev Tx hashes for an addr (fee calc).
 
    std::shared_ptr<ArmoryConnection>   armory_;

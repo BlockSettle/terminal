@@ -78,8 +78,8 @@ void AddressDetailsWidget::loadTransactions() {
       // Populate the transaction entries.
       item->setText(colDate,
                     UiUtils::displayDateTime(QDateTime::fromTime_t(curTXEntry.second.txTime)));
-      item->setText(colTxId,
-                    QString::fromStdString(curTXEntry.first.toHexStr()));
+      item->setText(colTxId, // Flip Armory's TXID byte order: internal -> RPC
+                    QString::fromStdString(curTXEntry.first.toHexStr(true)));
       item->setText(colConfs,
                     QString::number(armory_->getConfirmationsNumber(curTXEntry.second.blockNum)));
       item->setText(colInputsNum,
@@ -237,6 +237,9 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
 
    logger_->debug("[AddressDetailsWidget::OnRefresh] get refresh command");
 
+   // In case we've been here earlier, clear all the text.
+   clearFields();
+
    ui_->addressId->setText(addrVal_.display());
    // Once this callback runs, the data is safe to grab.
    const auto &cbBalance = [this](std::vector<uint64_t> balances) {
@@ -257,4 +260,13 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
       }
    };
    dummyWallet_.UpdateBalanceFromDB(cbBalance);
+}
+
+// Clear all the fields.
+void AddressDetailsWidget::clearFields() {
+   ui_->addressId->clear();
+   ui_->balance->clear();
+   ui_->totalReceived->clear();
+   ui_->totalSent->clear();
+   ui_->treeAddressTransactions->clear();
 }
