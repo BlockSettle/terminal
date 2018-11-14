@@ -704,10 +704,10 @@ void BSTerminalMainWindow::openAccountInfoDialog()
 void BSTerminalMainWindow::openCCTokenDialog()
 {
    if (!otpManager_->CurrentUserHaveOTP()) {
-      BSMessageBox createOtpReq(BSMessageBox::question, tr("One Time Password")
-         , tr("Import one time password")
+      BSMessageBox createOtpReq(BSMessageBox::question, tr("One-Time Password")
+         , tr("Import one-time password")
          , tr("Would you like to import your OTP at this time?")
-         , tr("BlockSettle has sent a one time password to your registered postal address. The OTP is used "
+         , tr("BlockSettle has sent a one-time password to your registered postal address. The OTP is used "
             "to confirm your identity and to establish a secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
@@ -1046,7 +1046,7 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
       BSMessageBox createOtpReq(BSMessageBox::question, tr("One-Time Password")
          , tr("Import one-time password")
          , tr("Would you like to import your OTP at this time?")
-         , tr("BlockSettle has sent a one time password to your registered postal address. The OTP is used "
+         , tr("BlockSettle has sent a one-time password to your registered postal address. The OTP is used "
             "to confirm your identity and to establish a secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
