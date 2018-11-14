@@ -72,6 +72,7 @@ class QtSettings(Configurator):
         command.append('-qt-harfbuzz')
         command.append('-sql-sqlite')
         command.append('-sql-mysql')
+        command.append('-no-feature-vulkan')
 
         command.append('-openssl-linked')
         # command.append('-no-securetransport')
