@@ -142,8 +142,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connect(ui->action_Version, &QAction::triggered, aboutDlgCb(3));
 
    // Enable/disable send action when first wallet created/last wallet removed
-   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &BSTerminalMainWindow::updateEnabled);
-   connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &BSTerminalMainWindow::updateEnabled);
+   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &BSTerminalMainWindow::updateControlEnabledState);
 
    ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
@@ -224,7 +224,7 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addAction(ui->action_Quit);
    sysTrayIcon_->setContextMenu(trayMenu);
 
-   updateEnabled();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::setupIcon()
@@ -376,7 +376,7 @@ void BSTerminalMainWindow::acceptMDAgreement()
    mdProvider_->MDLicenseAccepted();
 }
 
-void BSTerminalMainWindow::updateEnabled()
+void BSTerminalMainWindow::updateControlEnabledState()
 {
    action_send_->setEnabled(walletsManager_->GetWalletsCount() > 0
       && armory_->isOnline());
@@ -465,7 +465,7 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
    if (walletsManager_->GetWalletsCount() == 0) {
       createWallet(!walletsManager_->HasPrimaryWallet());
    }
-   updateEnabled();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -509,7 +509,7 @@ void BSTerminalMainWindow::ArmoryIsOffline()
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    walletsManager_->UnregisterSavedWallets();
    connectArmory();
-   updateEnabled();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::initArmory()
