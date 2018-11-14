@@ -18,8 +18,8 @@ SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::W
    : QObject(nullptr), wallet_(wallet)
    , swTransactionsOnly_(false)
    , confirmedOnly_(false)
-   , useAutoSel_(false)
    , selectionChanged_(selectionChanged)
+   , useAutoSel_(false)
 {
    SetFixedInputs(utxos);
 }

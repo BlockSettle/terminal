@@ -1,5 +1,4 @@
 #include "DealerCCSettlementContainer.h"
-#include <QtConcurrent/QtConcurrentRun>
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
 #include "MetaData.h"
@@ -48,6 +47,10 @@ void DealerCCSettlementContainer::activate()
    try {
       signer_.deserializeState(txReqData_);
       foundRecipAddr_ = signer_.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
+         // Fix SIGFPE crash
+         if (lotSize_ == 0) {
+            return;
+         }
          if ((order_.side == bs::network::Side::Buy) && qFuzzyCompare(order_.quantity, value / lotSize_)) {
             amountValid_ = true; //valInput == (value + valReturn);
          }

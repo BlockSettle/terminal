@@ -10,8 +10,8 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &celerClient
    , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
    : QObject(nullptr)
-   , iconSize_(16, 16)
    , statusBar_(parent)
+   , iconSize_(16, 16)
    , armoryConnState_(ArmoryConnection::State::Offline)
    , armory_(armory)
    , walletsManager_(walletsManager)

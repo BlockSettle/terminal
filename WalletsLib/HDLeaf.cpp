@@ -1,14 +1,11 @@
 #include "HDLeaf.h"
 
-
+#include <unordered_map>
+#include <QLocale>
+#include <QMutexLocker>
 #include "CheckRecipSigner.h"
 #include "HDNode.h"
 #include "Wallets.h"
-
-#include <unordered_map>
-
-#include <QMutexLocker>
-#include <QtConcurrent/QtConcurrentRun>
 
 #define ADDR_KEY     0x00002002
 
@@ -134,7 +131,7 @@ void hd::BlockchainScanner::processPortion()
          currentPortion_.registered = true;
          std::shared_ptr<AsyncClient::BtcWallet> wlt;
          rescanRegId_ = armoryConn_->registerWallet(wlt, rescanWalletId_
-            , getRegAddresses(currentPortion_.addresses), {}, false);
+            , getRegAddresses(currentPortion_.addresses), {});
       }
       else {
          currentPortion_.start = currentPortion_.end = 0;
@@ -968,7 +965,7 @@ public:
       return itKey->second;
    }
 
-   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey) override {
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData&) override {
       throw std::runtime_error("no privkey");
       return {};
    }

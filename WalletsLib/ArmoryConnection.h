@@ -17,7 +17,7 @@
 #include "ArmorySettings.h"
 #include "AsyncClient.h"
 #include "CacheFile.h"
-
+#include "BlockObj.h"
 
 class ArmoryConnection;
 class QProcess;
@@ -60,7 +60,8 @@ public:
    using ReqIdType = unsigned int;
 
 public:
-   ArmoryConnection(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN);
+   ArmoryConnection(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN
+      , bool cbInMainThread = false);
    ~ArmoryConnection() noexcept;
 
    State state() const { return state_; }
@@ -86,6 +87,10 @@ public:
 
    bool getTxByHash(const BinaryData &hash, std::function<void(Tx)>);
    bool getTXsByHash(const std::set<BinaryData> &hashes, std::function<void(std::vector<Tx>)>);
+   bool getRawHeaderForTxHash(const BinaryData& inHash,
+                              std::function<void(BinaryData)> callback);
+   bool getHeaderByHeight(const unsigned& inHeight,
+                          std::function<void(BinaryData)> callback);
 
    bool estimateFee(unsigned int nbBlocks, std::function<void(float)>);
 
@@ -129,6 +134,8 @@ private:
    std::atomic<State>   state_ = { State::Unknown };
    std::atomic_uint     topBlock_ = { 0 };
    TxCacheFile    txCache_;
+   const bool     cbInMainThread_;
+   std::shared_ptr<BlockHeader> getTxBlockHeader_;
 
    std::atomic_bool  regThreadRunning_;
    std::atomic_bool  connThreadRunning_;

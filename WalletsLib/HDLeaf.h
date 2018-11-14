@@ -73,7 +73,6 @@ namespace bs {
          cb_write_last           cbWriteLast_ = nullptr;
          Portion                 currentPortion_;
          std::atomic_int         processing_;
-         std::atomic_bool        stopped_;
 
       private:
          bs::Address newAddress(const Path &path, AddressEntryType aet);
@@ -189,9 +188,9 @@ namespace bs {
          std::shared_ptr<Node>   node_;
          Nodes                   rootNodes_;
          hd::Path                path_;
-         bool        isExtOnly_ = false;
          std::string name_, desc_;
          std::string suffix_;
+         bool        isExtOnly_ = false;
 
          Path::Elem  lastIntIdx_ = 0;
          Path::Elem  lastExtIdx_ = 0;

@@ -1,6 +1,7 @@
 #include "MetaData.h"
+
+#include <QLocale>
 #include <QMutexLocker>
-#include <QtConcurrent/QtConcurrentRun>
 #include <bech32/ref/c++/segwit_addr.h>
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"

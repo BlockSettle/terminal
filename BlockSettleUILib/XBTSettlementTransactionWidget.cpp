@@ -10,8 +10,6 @@
 #include "WalletsManager.h"
 #include <CelerClient.h>
 
-#include <QtConcurrent/QtConcurrentRun>
-
 #include <spdlog/logger.h>
 
 
@@ -25,9 +23,9 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared
    , logger_(logger)
    , appSettings_(appSettings)
    , settlContainer_(settlContainer)
-   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
-   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
-   , sFailed(tr("<span style=\"color: #CF292E;\">Failed</span>"))
+   , sValid_(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid_(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
+   , sFailed_(tr("<span style=\"color: #CF292E;\">Failed</span>"))
 {
    ui_->setupUi(this);
 
@@ -137,14 +135,14 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged(AddressVer
    QString text;
    switch (state) {
    case AddressVerificationState::Verified: {
-         text = sValid;
-         ui_->widgetSubmitKeys->init(MobileClientRequest::SignWallet, settlContainer_->walletId()
+         text = sValid_;
+         ui_->widgetSubmitKeys->init(MobileClientRequest::SettlementTransaction, settlContainer_->walletId()
             , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys(), appSettings_);
          ui_->widgetSubmitKeys->setFocus();
          // tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security)).arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out"))
 
          if (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary()) {
-            ui_->widgetSubmitKeysAuth->init(MobileClientRequest::SignWallet
+            ui_->widgetSubmitKeysAuth->init(MobileClientRequest::SettlementTransaction
                , settlContainer_->authWalletId(), settlContainer_->authKeyRank(), settlContainer_->authEncTypes()
                , settlContainer_->authEncKeys(), appSettings_);
          }
@@ -153,10 +151,10 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged(AddressVer
    }
       break;
    case AddressVerificationState::VerificationFailed:
-      text = sFailed;
+      text = sFailed_;
       break;
    default:
-      text = sInvalid;
+      text = sInvalid_;
       break;
    }
 
@@ -172,7 +170,7 @@ void XBTSettlementTransactionWidget::onAuthWalletInfoReceived()
 void XBTSettlementTransactionWidget::populateXBTDetails()
 {
    ui_->labelDealerAuthAddress->setText(tr("Validating"));
-   ui_->labelUserAuthAddress->setText(settlContainer_->userKeyOk() ? sValid : sInvalid);
+   ui_->labelUserAuthAddress->setText(settlContainer_->userKeyOk() ? sValid_ : sInvalid_);
 
    if (settlContainer_->weSell()) {
       window()->setWindowTitle(tr("Settlement Pay-In (XBT)"));

@@ -15,8 +15,8 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    , const AsyncClient::LedgerDelegate &ledgerDelegate, QObject* parent, const std::shared_ptr<bs::Wallet> &defWlt)
    : QAbstractTableModel(parent)
    , armory_(armory)
-   , walletsManager_(walletsManager)
    , ledgerDelegate_(ledgerDelegate)
+   , walletsManager_(walletsManager)
    , defaultWallet_(defWlt)
    , allWallets_(false)
 {
@@ -236,7 +236,6 @@ void TransactionsViewModel::refresh()
 
 void TransactionsViewModel::updatePage()
 {
-//   walletsManager_->getNewTransactions();
    if (allWallets_) {
       loadAllWallets();
    }
@@ -319,13 +318,10 @@ void TransactionsViewModel::insertNewTransactions(const std::vector<bs::TXEntry>
    const auto &settlWallet = walletsManager_->GetSettlementWallet();
 
    for (const auto entry : page) {
-      if (settlWallet && settlWallet->isTempWalletId(entry.id)) {
+      const auto item = itemFromTransaction(entry);
+      if (!item.wallet) {
          continue;
       }
-      const auto item = itemFromTransaction(entry);
-/*      if (!item.isValid) {
-         continue;
-      }*/
       const auto txKey = mkTxKey(item);
       {
          QMutexLocker locker(&updateMutex_);
@@ -451,9 +447,9 @@ void TransactionsViewModel::ledgerToTxData()
       for (const auto &le : rawData_) {
          for (const auto &led : le.second) {
             const auto item = itemFromTransaction(led);
-/*            if (!item.isValid) {
+            if (!item.wallet) {
                continue;
-            }*/
+            }
             const auto txKey = mkTxKey(item);
             if (txKeyExists(txKey)) {
                updatedEntries.emplace_back(std::move(led));

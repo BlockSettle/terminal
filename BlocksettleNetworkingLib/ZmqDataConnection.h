@@ -71,6 +71,7 @@ private:
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
+   const bool                       useMonitor_;
    std::string                      connectionName_;
 
    std::shared_ptr<ZmqContext>      context_;
@@ -88,7 +89,6 @@ private:
    ZmqContext::sock_ptr             threadSlaveSocket_;
 
    bool                             isConnected_;
-   const bool                       useMonitor_;
 
    std::vector<std::string>         sendQueue_;
 

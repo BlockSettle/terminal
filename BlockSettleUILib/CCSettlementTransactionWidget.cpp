@@ -13,7 +13,6 @@
 #include "ReqCCSettlementContainer.h"
 
 #include <QLabel>
-#include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/logger.h>
 
@@ -27,10 +26,11 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CCSettlementTransactionWidget())
-   , logger_(logger), appSettings_(appSettings)
+   , logger_(logger)
+   , appSettings_(appSettings)
    , settlContainer_(settlContainer)
-   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
-   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
+   , sValid_(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid_(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
 
@@ -45,7 +45,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    connect(settlContainer_.get(), &ReqCCSettlementContainer::timerStarted, [this](int msDuration) { ui_->progressBar->setMaximum(msDuration); });
    connect(settlContainer_.get(), &ReqCCSettlementContainer::walletInfoReceived, this, &CCSettlementTransactionWidget::initSigning);
    connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &CCSettlementTransactionWidget::onCancel);
-   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
+   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &CCSettlementTransactionWidget::onKeyChanged);
 
    settlContainer_->activate();
 
@@ -105,7 +105,7 @@ void CCSettlementTransactionWidget::populateDetails()
 void CCSettlementTransactionWidget::onGenAddrVerified(bool result, QString error)
 {
    logger_->debug("[CCSettlementTransactionWidget::onGenAddrVerified] result = {} ({})", result, error.toStdString());
-   ui_->labelGenesisAddress->setText(result ? sValid : sInvalid);
+   ui_->labelGenesisAddress->setText(result ? sValid_ : sInvalid_);
    updateAcceptButton();
 
    if (!result) {
@@ -122,12 +122,20 @@ void CCSettlementTransactionWidget::initSigning()
       || !settlContainer_->isAcceptable()) {
       return;
    }
-   ui_->widgetSubmitKeys->init(MobileClientRequest::SignWallet, settlContainer_->walletId()
+   ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::NoFlag
+      | WalletKeysSubmitWidget::HideAuthConnectButton
+      | WalletKeysSubmitWidget::HideAuthCombobox
+      | WalletKeysSubmitWidget::HideGroupboxCaption
+      | WalletKeysSubmitWidget::AuthIdVisible
+      | WalletKeysSubmitWidget::HideAuthEmailLabel
+      | WalletKeysSubmitWidget::HidePubKeyFingerprint
+      | WalletKeysSubmitWidget::HideProgressBar
+   );
+   ui_->widgetSubmitKeys->init(MobileClientRequest::SettlementTransaction, settlContainer_->walletId()
       , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys()
       , appSettings_);
    ui_->widgetSubmitKeys->setFocus();
-   QApplication::processEvents();
-   adjustSize();
+   ui_->widgetSubmitKeys->resume();
 }
 
 void CCSettlementTransactionWidget::onPaymentVerified(bool result, QString error)
@@ -135,7 +143,7 @@ void CCSettlementTransactionWidget::onPaymentVerified(bool result, QString error
    if (!error.isEmpty()) {
       ui_->labelHint->setText(error);
    }
-   ui_->labelPayment->setText(result ? sValid : sInvalid);
+   ui_->labelPayment->setText(result ? sValid_ : sInvalid_);
    updateAcceptButton();
 }
 
@@ -148,6 +156,14 @@ void CCSettlementTransactionWidget::onError(QString text)
 void CCSettlementTransactionWidget::onInfo(QString text)
 {
    ui_->labelHint->setText(text);
+}
+
+void CCSettlementTransactionWidget::onKeyChanged()
+{
+   updateAcceptButton();
+   if (ui_->widgetSubmitKeys->isKeyFinal()) {
+      onAccept();
+   }
 }
 
 void CCSettlementTransactionWidget::onAccept()

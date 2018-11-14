@@ -113,8 +113,6 @@ public:
 
    bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
 
-   bool getNewTransactions() const;
-
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
 
 signals:
@@ -172,6 +170,7 @@ private:
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    const bool                             preferWatchingOnly_;
 
    using wallet_container_type = std::unordered_map<std::string, wallet_gen_type>;
@@ -189,7 +188,6 @@ private:
    wallet_gen_type                        authAddressWallet_;
    BinaryData                             userId_;
    std::shared_ptr<bs::SettlementWallet>  settlementWallet_;
-   std::shared_ptr<ArmoryConnection>      armory_;
    std::unordered_map<std::string, std::string> ccSecurities_;
 
    std::map<BinaryData, bs::Transaction::Direction>   txDirections_;

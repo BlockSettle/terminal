@@ -8,7 +8,8 @@
 #include <spdlog/spdlog.h>
 
 ZmqDataConnection::ZmqDataConnection(const std::shared_ptr<spdlog::logger>& logger, bool useMonitor)
-   : logger_(logger), useMonitor_(useMonitor)
+   : logger_(logger)
+   , useMonitor_(useMonitor)
    , dataSocket_(ZmqContext::CreateNullSocket())
    , monSocket_(ZmqContext::CreateNullSocket())
    , threadMasterSocket_(ZmqContext::CreateNullSocket())

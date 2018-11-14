@@ -24,8 +24,8 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent)
    : QDialog(parent)
-   , logger_(logger)
    , ui_(new Ui::ChangeWalletPasswordDialog())
+   , logger_(logger)
    , signingContainer_(signingContainer)
    , wallet_(wallet)
    , oldKeyRank_(keyRank)

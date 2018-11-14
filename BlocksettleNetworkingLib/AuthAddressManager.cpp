@@ -297,6 +297,8 @@ bool AuthAddressManager::Verify(const bs::Address &address)
       armory_->getTXsByHash(txHashSet, cbTXs);
    };
    addressVerificator_->GetVerificationInputs(cbInputs);
+
+   return true;
 }
 
 bool AuthAddressManager::RevokeAddress(const bs::Address &address)

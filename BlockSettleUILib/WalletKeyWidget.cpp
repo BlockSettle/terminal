@@ -122,7 +122,9 @@ void WalletKeyWidget::onAuthSignClicked()
    }
    timeLeft_ = 120;
    ui_->progressBar->setMaximum(timeLeft_ * 100);
-   ui_->progressBar->show();
+   if (!hideProgressBar_) {
+      ui_->progressBar->show();
+   }
    timer_.start();
    authRunning_ = true;
 
@@ -297,6 +299,11 @@ void WalletKeyWidget::setHideAuthEmailLabel(bool value)
 void WalletKeyWidget::setHideAuthControlsOnSignClicked(bool value)
 {
    hideAuthControlsOnSignClicked_ = value;
+}
+
+void WalletKeyWidget::setHideProgressBar(bool value)
+{
+   hideProgressBar_ = value;
 }
 
 QPropertyAnimation* WalletKeyWidget::startAuthAnimation(bool success)
