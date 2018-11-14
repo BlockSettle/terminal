@@ -240,7 +240,7 @@ bool abortWalletCreationQuestionDialog(QWidget* parent)
    BSMessageBox messageBox(BSMessageBox::question, QObject::tr("Warning"), QObject::tr("Abort Wallet Creation?")
       , QObject::tr("The Wallet will not be created if you don't complete the procedure.\n"
          "Are you sure you want to abort the Wallet Creation process?"), parent);
-   messageBox.setConfirmButtonText(QObject::tr("Abort Wallet Creation"));
+   messageBox.setConfirmButtonText(QObject::tr("Abort"));
    messageBox.setCancelButtonText(QObject::tr("Back"));
 
    int result = messageBox.exec();
