@@ -30,7 +30,7 @@ public:
    OfflineSigner(OfflineSigner&&) = delete;
    OfflineSigner& operator = (OfflineSigner&&) = delete;
 
-   bool SetTargetDir(const QString& targetDir);
+   void SetTargetDir(const QString& targetDir);
 
    bool Start() override;
    bool Stop() override { return true; }
