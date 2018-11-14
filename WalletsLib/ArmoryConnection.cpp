@@ -299,6 +299,7 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
          else {
             cb();
          }
+      }
    }
    return regId;
 }
