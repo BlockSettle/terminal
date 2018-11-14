@@ -115,7 +115,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Hash (big-endian)</string>
+              <string>Hash (RPC byte order)</string>
              </property>
             </widget>
            </item>

@@ -9,6 +9,43 @@
 
 Q_DECLARE_METATYPE(Tx);
 
+const BinaryData BinaryTXID::getRPCTXID() {
+   BinaryData retVal;
+   if(txidIsRPC_ == true) {
+      retVal = txid_;
+   }
+   else {
+      retVal = txid_.swapEndian();
+   }
+
+   return retVal;
+}
+
+const BinaryData BinaryTXID::getInternalTXID() {
+   BinaryData retVal;
+   if(txidIsRPC_ == false) {
+      retVal = txid_;
+   }
+   else {
+      retVal = txid_.swapEndian();
+   }
+
+   return retVal;
+}
+
+bool BinaryTXID::operator==(const BinaryTXID& inTXID) const {
+   return (txidIsRPC_ == inTXID.getTXIDIsRPC()) &&
+          (txid_ == inTXID.getRawTXID());
+}
+
+bool BinaryTXID::operator<(const BinaryTXID& inTXID) const {
+   return txid_ < inTXID.getRawTXID();
+}
+
+bool BinaryTXID::operator>(const BinaryTXID& inTXID) const {
+   return txid_ > inTXID.getRawTXID();
+}
+
 TransactionDetailsWidget::TransactionDetailsWidget(QWidget *parent) :
     QWidget(parent),
    ui_(new Ui::TransactionDetailsWidget)
@@ -19,9 +56,10 @@ TransactionDetailsWidget::TransactionDetailsWidget(QWidget *parent) :
    QIcon btcIcon(QLatin1String(":/resources/notification_info.png"));
    ui_->labelTxPopup->setPixmap(btcIcon.pixmap(13, 13));
    ui_->labelTxPopup->setMouseTracking(true);
-   ui_->labelTxPopup->toolTip_ = tr("The Transaction ID (TXID) is in big " \
-                                    "endian notation. It will differ from the " \
-                                    "user input if the input is little endian.");
+   ui_->labelTxPopup->toolTip_ = tr("The Transaction ID (TXID) uses RPC byte "
+                                    "order. It will match the RPC output from "
+                                    "Bitcoin Core, along with the byte order "
+                                    "from the BlockSettle Terminal.");
 
    // set the address column to have hand cursor
    ui_->treeInput->handCursorColumns_.append(colAddressId);
@@ -49,19 +87,20 @@ void TransactionDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &arm
    logger_ = inLogger;
 }
 
-// This function uses getTxByHash() to retrieve info about transaction.
-void TransactionDetailsWidget::populateTransactionWidget(BinaryData inHex,
+// This function uses getTxByHash() to retrieve info about transaction. The
+// incoming TXID must be in RPC order, not internal order.
+void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
                                                          const bool& firstPass) {
    // get the transaction data from armory
-   const auto &cbTX = [this, &inHex, firstPass](Tx tx) {
+   const auto &cbTX = [this, &rpcTXID, firstPass](Tx tx) {
       if (!tx.isInitialized()) {
          logger_->error("[TransactionDetailsWidget::populateTransactionWidget] TX not " \
                         "initialized for hash {}.",
-                        inHex.toHexStr());
-         // If failure, try swapping the endian. We want big endian data.
+                        rpcTXID.getRPCTXID().toHexStr());
+         // If failure, try swapping the endian. Treat the result as RPC.
          if(firstPass == true) {
-            BinaryData inHexBE = inHex.swapEndian();
-            populateTransactionWidget(inHexBE, false);
+            BinaryTXID intTXID(rpcTXID.getInternalTXID(), true);
+            populateTransactionWidget(intTXID, false);
          }
          return;
       }
@@ -70,7 +109,9 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryData inHex,
       // thread to handle the received data. (UI changes happen eventually.)
       QMetaObject::invokeMethod(this, [this, tx] { processTxData(tx); });
    };
-   armory_->getTxByHash(inHex.swapEndian(), cbTX);
+
+   // The TXID passed to Armory *must* be in internal order!
+   armory_->getTxByHash(rpcTXID.getInternalTXID(), cbTX);
 }
 
 // Used in callback to process the Tx object returned by Armory.
@@ -82,9 +123,9 @@ void TransactionDetailsWidget::processTxData(Tx tx) {
    // the fees.
    const auto &cbProcessTX = [this](std::vector<Tx> prevTxs) {
       for (const auto &prevTx : prevTxs) {
-         const auto &txHash = prevTx.getThisHash();
-         prevTxHashSet_.erase(txHash); // Can check if empty and do things.
-         prevTxMap_[txHash] = prevTx;
+         BinaryTXID intPrevTXHash(prevTx.getThisHash(), false);
+         prevTxHashSet_.erase(intPrevTXHash.getInternalTXID());
+         prevTxMap_[intPrevTXHash] = prevTx;
       }
 
       // We're ready to display all the transaction-related data in the UI.
@@ -96,9 +137,10 @@ void TransactionDetailsWidget::processTxData(Tx tx) {
    for (size_t i = 0; i < tx.getNumTxIn(); i++) {
       TxIn in = tx.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
-      const auto &itTX = prevTxMap_.find(op.getTxHash());
+      BinaryTXID intPrevTXID(op.getTxHash(), false);
+      const auto &itTX = prevTxMap_.find(intPrevTXID);
       if(itTX == prevTxMap_.end()) {
-         prevTxHashSet_.insert(op.getTxHash());
+         prevTxHashSet_.insert(intPrevTXID.getInternalTXID());
       }
    }
 
@@ -108,9 +150,9 @@ void TransactionDetailsWidget::processTxData(Tx tx) {
    }
 }
 
-// WARNING: Don't use ClientClasses::BlockHeader. It has parsing capabilities
-// but it's meant to be an internal Armory class, touching things like the DB.
-// Just parse the raw data header here.
+// NB: Don't use ClientClasses::BlockHeader. It has parsing capabilities but
+// it's meant to be an internal Armory class, touching things like the DB. Just
+// parse the raw data header here.
 void TransactionDetailsWidget::getHeaderData(const BinaryData& inHeader)
 {
    if(inHeader.getSize() != 80)
@@ -131,6 +173,9 @@ void TransactionDetailsWidget::getHeaderData(const BinaryData& inHeader)
 
 void TransactionDetailsWidget::setTxGUIValues()
 {
+   // In case we've been here earlier, clear all the text.
+   clearFields();
+
    // Get Tx header data. NOT USED FOR NOW.
 //   BinaryData txHdr(curTx_.getPtr(), 80);
 //   getHeaderData(txHdr);
@@ -140,7 +185,8 @@ void TransactionDetailsWidget::setTxGUIValues()
    for(size_t r = 0; r < curTx_.getNumTxIn(); ++r) {
       TxIn in = curTx_.getTxInCopy(r);
       OutPoint op = in.getOutPoint();
-      const auto &prevTx = prevTxMap_[op.getTxHash()];
+      BinaryTXID intPrevTXID(op.getTxHash(), false);
+      const auto &prevTx = prevTxMap_[intPrevTXID];
       if (prevTx.isInitialized()) {
          TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
          totIn += prevOut.getValue();
@@ -156,7 +202,9 @@ void TransactionDetailsWidget::setTxGUIValues()
    // using that right now.
 
    // Populate the GUI fields.
-   ui_->tranID->setText(QString::fromStdString(curTx_.getThisHash().toHexStr()));
+   // Output TXID in RPC byte order by flipping TXID bytes rcv'd by Armory (internal
+   // order).
+   ui_->tranID->setText(QString::fromStdString(curTx_.getThisHash().toHexStr(true)));
 //   ui_->tranDate->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(curTxTimestamp)));
    ui_->tranDate->setText(QString::fromStdString("Timestamp here"));        // FIX ME!!!
    ui_->tranHeight->setText(QString::fromStdString("Height here"));         // FIX ME!!!
@@ -192,7 +240,8 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree) {
       TxOut prevOut;
       TxIn in = curTx_.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
-      const auto &prevTx = prevTxMap_[op.getTxHash()];
+      BinaryTXID intPrevTXID(op.getTxHash(), false);
+      const auto &prevTx = prevTxMap_[intPrevTXID];
       if (prevTx.isInitialized()) {
          prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
       }
@@ -206,9 +255,10 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree) {
                                          QString::number(amtBTC,
                                                          'f',
                                                          BTCNumericTypes::default_precision),
-                                         tr("Settlement"));
+                                         QString());
 
-      // add several child items to this top level item to crate a new branch in the tree
+      // Example: Add several child items to this top level item to crate a new
+      // branch in the tree.
 /*      item->addChild(createItem(item,
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
@@ -238,9 +288,10 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree) {
                                          QString::number(amtBTC,
                                                          'f',
                                                          BTCNumericTypes::default_precision),
-                                         tr("Settlement"));
+                                         QString());
 
-      // add several child items to this top level item to crate a new branch in the tree
+      // Example: Add several child items to this top level item to crate a new
+      // branch in the tree.
 /*      item->addChild(createItem(item,
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
@@ -288,4 +339,20 @@ void TransactionDetailsWidget::onAddressClicked(QTreeWidgetItem *item, int colum
    if (column == colAddressId) {
       emit(addressClicked(item->text(colAddressId)));
    }
+}
+
+// Clear all the fields.
+void TransactionDetailsWidget::clearFields() {
+   ui_->tranID->clear();
+   ui_->tranDate->clear();
+   ui_->tranHeight->clear();
+   ui_->tranConfirmations->clear();
+   ui_->tranNumInputs->clear();
+   ui_->tranNumOutputs->clear();
+   ui_->tranOutput->clear();
+   ui_->tranFees->clear();
+   ui_->tranFeePerByte->clear();
+   ui_->tranSize->clear();
+   ui_->treeInput->clear();
+   ui_->treeOutput->clear();
 }
