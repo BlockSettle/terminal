@@ -192,11 +192,20 @@ void ChangeWalletPasswordDialog::continueBasic()
       return;
    }
 
-   if (isOldAuth && isNewAuth && oldPasswordData_[0].encKey == newKeys[0].encKey) {
-      BSMessageBox messageBox(BSMessageBox::critical, tr("Invalid new Auth eID")
-         , tr("Please use different Auth eID. New Freje eID is already used."), this);
-      messageBox.exec();
-      return;
+   if (isOldAuth && isNewAuth) {
+      bool sameAuthId = true;
+      for (const auto &oldPassData : oldPasswordData_) {
+         auto deviceInfo = MobileClient::getDeviceInfo(oldPassData.encKey.toBinStr());
+         if (deviceInfo.userId != newKeys[0].encKey.toBinStr()) {
+            sameAuthId = false;
+         }
+      }
+      if (sameAuthId) {
+         BSMessageBox messageBox(BSMessageBox::critical, tr("Invalid new Auth eID")
+            , tr("Please use different Auth eID. Same Auth eID is already used."), this);
+         messageBox.exec();
+         return;
+      }
    }
 
    bool showAuthUsageInfo = true;
