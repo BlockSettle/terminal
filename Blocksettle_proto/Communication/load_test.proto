@@ -4,10 +4,13 @@ package Blocksettle.Communication.load_test;
 
 enum AdminCommandCode
 {
-   StartConnectCode = 1;
-   StartCustomerTradingCode = 2;
-   StopCustomerTradingCode = 3;
-   GetXBTFundingAddressCode = 4;
+   StartConnectCode           = 1;
+   StartCustomerTradingCode   = 2;
+   StopCustomerTradingCode    = 3;
+   GetXBTFundingAddressCode   = 4;
+   // no command data
+   GetXBTWalletInfoCode       = 5;
+   CreateTXCode               = 6;
 }
 
 message AdminCommandHeader
@@ -66,6 +69,20 @@ message AdminCommandStartTrading
    repeated DealingPrice         xbt_dealing_prices = 5;
 }
 
+message AdminCommandCreateTX
+{
+   required bool     send_all = 1;
+   optional double   total_spend_amount = 2;
+   optional uint64   max_inputs_count = 3;
+
+   required uint64   outputs_count = 4;
+   required bool     create_new = 5;
+   // if not random or new - least used address will be used as outputs
+   required bool     use_random = 6;
+
+   optional uint64   max_tx_size_bytes = 7;
+}
+
 enum CustomerUpdateType
 {
    AppReadyStatus             = 1;
@@ -83,6 +100,8 @@ enum CustomerUpdateType
    XBTAddressType             = 13;
    OTPUpdateAddressType       = 14;
    AuthAddressStateType       = 15;
+   XBTWalletInfoType          = 16;
+   TXBroadcastedType          = 17;
 }
 
 enum RFQProductGroup
@@ -194,4 +213,24 @@ message AuthAddressUpdate
 {
    required string   auth_address = 1;
    required string   address_state_string = 2;
+}
+
+message AddressInfo
+{
+   required string   address = 1;
+   required uint32   tx_count = 2;
+}
+
+message XBTWalletInfo
+{
+   repeated AddressInfo address_info = 1;
+}
+
+message TXBroadcasted
+{
+   required uint64   used_inputs = 1;
+   required uint64   outputs_count = 2;
+   required uint64   tx_amount = 3;
+   required uint64   fee_amount = 4;
+   required uint64   tx_size = 5;
 }

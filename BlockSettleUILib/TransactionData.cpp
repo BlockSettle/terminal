@@ -28,6 +28,8 @@ TransactionData::TransactionData(onTransactionChanged changedCallback, bool SWOn
 
 TransactionData::~TransactionData()
 {
+   disableTransactionUpdate();
+   changedCallback_ = {};
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
@@ -232,6 +234,7 @@ bool TransactionData::UpdateTransactionData()
    }
 
    summary_.usedTransactions = usedUTXO_.size();
+   summary_.outputsCount = recipients_.size();
    summary_.initialized = true;
 
    return true;
@@ -294,12 +297,11 @@ bool TransactionData::RecipientsReady() const
    return true;
 }
 
-bool TransactionData::SetFeePerByte(float feePerByte)
+void TransactionData::SetFeePerByte(float feePerByte)
 {
    feePerByte_ = feePerByte;
    totalFee_ = 0;
    InvalidateTransactionData();
-   return true;
 }
 
 void TransactionData::SetTotalFee(uint64_t fee)

@@ -28,6 +28,9 @@ public:
       // usedTransactions - count of utxo that will be used in transaction
       size_t   usedTransactions;
 
+      // outputsCount - number of recipients ( without change )
+      size_t   outputsCount;
+
       // availableBalance - total available balance. in case of manual selection - same as selectedBalance
       double   availableBalance;
 
@@ -64,7 +67,7 @@ public:
    void SetSigningWallet(const std::shared_ptr<bs::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    std::shared_ptr<bs::Wallet> GetSigningWallet() const { return signWallet_; }
-   bool SetFeePerByte(float feePerByte);
+   void SetFeePerByte(float feePerByte);
    float FeePerByte() const { return feePerByte_; }
    void SetTotalFee(uint64_t fee);
 
