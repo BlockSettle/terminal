@@ -25,6 +25,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , quote_(quote)
    , genAddress_(assetMgr_->getCCGenesisAddr(product()))
    , dealerAddress_(quote_.dealerAuthPublicKey)
+   , signer_(armory)
 {
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
@@ -102,9 +103,7 @@ void ReqCCSettlementContainer::activate()
 
       const auto &cbHasInput = [this](bool has) {
          userKeyOk_ = has;
-         QMetaObject::invokeMethod(this, [this, has] {
-            emit genAddrVerified(has, has ? QString{} : tr("GA check failed"));
-         });
+         emit genAddrVerified(has, has ? QString{} : tr("GA check failed"));
       };
       signer_.hasInputAddress(genAddress_, cbHasInput, lotSize_);
    }

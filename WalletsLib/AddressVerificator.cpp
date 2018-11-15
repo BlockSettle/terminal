@@ -665,14 +665,14 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
          }
       }
    };
-   auto pages = new std::map<bs::Address, uint64_t>;
-   auto txHashSet = new std::set<BinaryData>;
+   auto pages = std::make_shared<std::map<bs::Address, uint64_t>>();
+   auto txHashSet = std::make_shared<std::set<BinaryData>>();
    for (const auto &bsAddr : bsAddressList_) {
       (*pages)[bsAddr] = 1;
    }
    for (const auto &bsAddr : bsAddressList_) {
       const auto &cbDelegate = [this, cbTXs, pages, txHashSet, bsAddr](AsyncClient::LedgerDelegate delegate) {
-         auto delegatePtr = new AsyncClient::LedgerDelegate(delegate);
+         auto delegatePtr = std::make_shared<AsyncClient::LedgerDelegate>(delegate);
          const auto &cbPageCnt = [this, pages, bsAddr, delegatePtr, txHashSet, cbTXs](uint64_t pageCnt) {
             (*pages)[bsAddr] = pageCnt;
             for (int i = 0; i < pageCnt; ++i) {
@@ -685,14 +685,11 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                   if (!(*pages)[bsAddr]) {
                      pages->erase(bsAddr);
                      if (pages->empty()) {
-                        delete pages;
                         armory_->getTXsByHash(*txHashSet, cbTXs);
-                        delete txHashSet;
                      }
                   }
                };
                delegatePtr->getHistoryPage(i, cbLedger);
-               delete delegatePtr;
             }
          };
          delegate.getPageCount(cbPageCnt);
