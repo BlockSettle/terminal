@@ -201,11 +201,7 @@ void BSTerminalMainWindow::setupToolbar()
 
    action_logout_->setVisible(false);
 
-   ButtonMenu *userMenu = new ButtonMenu(ui->pushButtonUser);
-
-   userMenu->addAction(action_login_);
-   userMenu->addAction(action_logout_);
-   ui->pushButtonUser->setMenu(userMenu);
+   connect(ui->pushButtonUser, &QPushButton::clicked, this, &BSTerminalMainWindow::onButtonUserClicked);
 
    QMenu* trayMenu = new QMenu(this);
    QAction* trayShowAction = trayMenu->addAction(tr("&Open Terminal"));
@@ -1161,4 +1157,18 @@ void BSTerminalMainWindow::setupShortcuts()
             TabWithShortcut::ShortcutType::Alt_P);
       }
    );
+}
+
+void BSTerminalMainWindow::onButtonUserClicked() {
+   if (ui->pushButtonUser->text() == tr("user.name")) {
+      onLogin();
+      // set button text to this temporary text until the login
+      // completes and button text is changed to the username
+      setLoginButtonText(tr("Logging in..."));
+   }
+   else {
+      if (BSMessageBox(BSMessageBox::question, tr("User Logout"), tr("You are about to logout")
+         , tr("Do you want to continue?")).exec() == QDialog::Accepted)
+      onLogout();
+   }
 }
