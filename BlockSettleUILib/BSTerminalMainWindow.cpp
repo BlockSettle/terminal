@@ -1167,7 +1167,7 @@ void BSTerminalMainWindow::onButtonUserClicked() {
       setLoginButtonText(tr("Logging in..."));
    }
    else {
-      if (MessageBoxQuestion(tr("User Logout"), tr("You are about to logout")
+      if (BSMessageBox(BSMessageBox::question, tr("User Logout"), tr("You are about to logout")
          , tr("Do you want to continue?")).exec() == QDialog::Accepted)
       onLogout();
    }
