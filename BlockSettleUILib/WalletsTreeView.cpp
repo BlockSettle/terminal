@@ -6,6 +6,7 @@ WalletsTreeView::WalletsTreeView(QWidget *parent)
     setAlternatingRowColors(true);
     setItemsExpandable(true);
     setRootIsDecorated(false);
+    setEnableDeselection(false);
 }
 
 void WalletsTreeView::resizeColumns()
