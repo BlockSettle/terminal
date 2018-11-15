@@ -5,8 +5,6 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "CreateTransactionDialogAdvanced.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
 #include "OfflineSigner.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
