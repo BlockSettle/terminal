@@ -227,7 +227,8 @@ void RFQDealerReply::onHDWalletInfo(unsigned int id
    EnterWalletPassword passwordDialog(MobileClientRequest::SettlementTransaction, this);
    passwordDialog.init(autoSignWalletId_, keyRank
       , encTypes, encKeys, appSettings_
-      , tr("Activate auto sign"));
+      , tr("Activate Auto-Sign"));
+   passwordDialog.setWindowTitle(tr("Activate Auto-Sign"));
    if (passwordDialog.exec() != QDialog::Accepted) {
       disableAutoSign();
       return;
@@ -994,6 +995,16 @@ void RFQDealerReply::aqScriptChanged(int curIndex)
          aqFillHistory();
          return;
       }
+      else {
+         initAQ(scriptFN);
+      }
+   }
+   else {
+      // enable toggleswitch if a script is selected
+      // celer is connected
+      if (celerConnected_) {
+         ui_->checkBoxAQ->setEnabled(true);
+      }
    }
 }
 
@@ -1195,7 +1206,10 @@ void RFQDealerReply::onCreateHDWalletError(unsigned int id, std::string errMsg)
 
 void RFQDealerReply::onCelerConnected()
 {
-   ui_->checkBoxAQ->setEnabled(true);
+   // enable toggleswitch only if a script file is already selected
+   if (ui_->comboBoxAQScript->currentIndex() > 0) {
+      ui_->checkBoxAQ->setEnabled(true);
+   }
    celerConnected_ = true;
    ui_->groupBoxAutoSign->setEnabled(true);
 }

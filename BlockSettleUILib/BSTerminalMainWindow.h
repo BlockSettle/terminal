@@ -96,6 +96,7 @@ private slots:
 
    void acceptMDAgreement();
    void updateControlEnabledState();
+   void onButtonUserClicked();
 
 private:
    QAction *action_send_;
