@@ -18,10 +18,7 @@
 #include "HDWallet.h"
 #include "ImportWalletDialog.h"
 #include "ImportWalletTypeDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
-#include "MessageBoxQuestion.h"
-#include "MessageBoxSuccess.h"
+#include "BSMessageBox.h"
 #include "NewWalletDialog.h"
 #include "NewWalletSeedDialog.h"
 #include "RootWalletPropertiesDialog.h"
@@ -451,7 +448,7 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
 bool WalletsWidget::ImportNewWallet(bool primary, bool report)
 {
    if (primary && assetManager_->privateShares(true).empty()) {
-      MessageBoxQuestion q(tr("Private Market Import"), tr("Private Market data is missing")
+      BSMessageBox q(BSMessageBox::question, tr("Private Market Import"), tr("Private Market data is missing")
          , tr("You do not have Private Market data available in the BlockSettle Terminal. You must first log "
             "into your Celer account from the main menu. A successful login will cause the proper data to be "
             "automatically downloaded. Without this data, you will be unable to receive your Private Market "
@@ -489,20 +486,20 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
          const auto targetFile = appSettings_->GetHomeDir() + QLatin1String("/") + fi.fileName();
          const auto title = tr("Wallet import error");
          if (QFile(targetFile).exists()) {
-            MessageBoxCritical(title, tr("Watching-only wallet file %1 already exists!").arg(targetFile)).exec();
+            BSMessageBox(BSMessageBox::critical, title, tr("Watching-only wallet file %1 already exists!").arg(targetFile)).exec();
             return false;
          }
          if (!QFile::copy(importWalletDialog.GetWatchinOnlyFileName(), targetFile)) {
-            MessageBoxCritical(title, tr("Failed to copy watching-only wallet file to %1").arg(targetFile)).exec();
+            BSMessageBox(BSMessageBox::critical, title, tr("Failed to copy watching-only wallet file to %1").arg(targetFile)).exec();
             return false;
          }
          const auto &newWallet = std::make_shared<bs::hd::Wallet>(targetFile.toStdString());
          if (!newWallet) {
-            MessageBoxCritical(title, tr("Failed to load watching-only wallet from %1").arg(targetFile)).exec();
+            BSMessageBox(BSMessageBox::critical, title, tr("Failed to load watching-only wallet from %1").arg(targetFile)).exec();
             return false;
          }
          if (walletsManager_->GetHDWalletById(newWallet->getWalletId()) != nullptr) {
-            MessageBoxCritical(title, tr("Watching-only wallet with id %1 already exists!")
+            BSMessageBox(BSMessageBox::critical, title, tr("Watching-only wallet with id %1 already exists!")
                .arg(QString::fromStdString(newWallet->getWalletId()))).exec();
             return false;
          }
@@ -589,12 +586,12 @@ void WalletsWidget::showInfo(bool report, const QString &title, const QString &t
    if (!report) {
       return;
    }
-   MessageBoxSuccess(title, text).exec();
+   BSMessageBox(BSMessageBox::success, title, text).exec();
 }
 
 void WalletsWidget::showError(const QString &text) const
 {
-   MessageBoxCritical(tr("Wallets managing error"), text).exec();
+   BSMessageBox(BSMessageBox::critical, tr("Wallets managing error"), text).exec();
 }
 
 void WalletsWidget::onCopyAddress()
@@ -613,7 +610,7 @@ void WalletsWidget::onEditAddrComment()
       , QLineEdit::Normal, QString::fromStdString(curWallet_->GetAddressComment(curAddress_)), &isOk);
    if (isOk) {
       if (!curWallet_->SetAddressComment(curAddress_, comment.toStdString())) {
-         MessageBoxCritical(tr("Address Comment"), tr("Failed to save comment")).exec();
+         BSMessageBox(BSMessageBox::critical, tr("Address Comment"), tr("Failed to save comment")).exec();
       }
    }
 }
@@ -626,12 +623,12 @@ void WalletsWidget::onRevokeSettlement()
    const auto settlId = BinaryData::CreateFromHex(addrIndex.section(QLatin1Char('.'), 0, 0).toStdString());
    const auto sellAuthKey = BinaryData::CreateFromHex(addrIndex.section(QLatin1Char('.'), 2, 2).toStdString());
    if (addrIndex.isEmpty() || settlId.isNull() || sellAuthKey.isNull()) {
-      MessageBoxCritical(title, tr("Unknown settlement address")).exec();
+      BSMessageBox(BSMessageBox::critical, title, tr("Unknown settlement address")).exec();
       return;
    }
    const auto &ae = settlWallet->getExistingAddress(settlId);
    if (!ae) {
-      MessageBoxCritical(title, tr("Invalid settlement address")).exec();
+      BSMessageBox(BSMessageBox::critical, title, tr("Invalid settlement address")).exec();
       return;
    }
 
@@ -652,7 +649,7 @@ void WalletsWidget::onRevokeSettlement()
             revokeReqId_ = signingContainer_->SignPayoutTXRequest(txReq, authAddr, ae);
          }
          catch (const std::exception &e) {
-            MessageBoxCritical(title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
+            BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
          }
       };
       walletsManager_->estimatedFeePerByte(2, cbFee, this);
@@ -669,7 +666,7 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
    revokeReqId_ = 0;
    const auto &title = tr("Settlement Revoke");
    if (!error.empty()) {
-      MessageBoxCritical(title, tr("Failed to sign revoke pay-out"), QString::fromStdString(error)).exec();
+      BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QString::fromStdString(error)).exec();
       return;
    }
 
@@ -677,7 +674,7 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
       walletsManager_->GetSettlementWallet()->SetTransactionComment(signedTX, "Settlement Revoke");
    }
    else {
-      MessageBoxCritical(title, tr("Failed to send transaction to mempool")).exec();
+      BSMessageBox(BSMessageBox::critical, title, tr("Failed to send transaction to mempool")).exec();
    }
 }
 
@@ -686,12 +683,12 @@ void WalletsWidget::onDeleteWallet()
    const auto action = qobject_cast<QAction *>(sender());
    const auto walletId = action ? action->data().toString() : QString();
    if (walletId.isEmpty()) {
-      MessageBoxCritical(tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
+      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
       return;
    }
    const auto &wallet = walletsManager_->GetWalletById(walletId.toStdString());
    if (!wallet) {
-      MessageBoxCritical(tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
+      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
       return;
    }
    WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, this).exec();
@@ -708,7 +705,7 @@ bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
    }
    WalletBackupDialog walletBackupDialog(wallet, container, appSettings, parent);
    if (walletBackupDialog.exec() == QDialog::Accepted) {
-      MessageBoxSuccess(QObject::tr("Backup"), QObject::tr("%1 Backup successfully created")
+      BSMessageBox(BSMessageBox::success, QObject::tr("Backup"), QObject::tr("%1 Backup successfully created")
          .arg(walletBackupDialog.isDigitalBackup() ? QObject::tr("Digital") : QObject::tr("Paper"))
             , walletBackupDialog.filePath(), parent).exec();
       if (!walletBackupDialog.isDigitalBackup()) {

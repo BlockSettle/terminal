@@ -13,10 +13,7 @@
 #include "AssetManager.h"
 #include "ChangeWalletPasswordDialog.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
-#include "MessageBoxSuccess.h"
-#include "MessageBoxWarning.h"
+#include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
 #include "WalletDeleteDialog.h"
@@ -136,7 +133,7 @@ void RootWalletPropertiesDialog::onCreateWoWallet()
    if (wallet_->isWatchingOnly()) {
       copyWoWallet();
    } else {
-      MessageBoxWarning(tr("Create W/O wallet")
+      BSMessageBox(BSMessageBox::warning, tr("Create W/O wallet")
          , tr("Watching-only wallet from full wallet should be created on signer side")).exec();
    }
 }
@@ -152,7 +149,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
    const auto walletFileName = wallet_->fileNamePrefix(true) + wallet_->getWalletId() + "_wallet.lmdb";
    const auto target = dir + QString::fromStdString("/" + walletFileName);
    if (QFile::exists(target)) {
-      MessageBoxQuestion request(title
+      BSMessageBox request(BSMessageBox::question, title
          , tr("Confirm wallet file overwrite")
          , tr("Wallet file <b>%1</b> already exists in %2. Overwrite it?").arg(QString::fromStdString(walletFileName)).arg(dir)
          , this);
@@ -163,13 +160,13 @@ void RootWalletPropertiesDialog::copyWoWallet()
    }
 
    if (QFile::copy(appSettings_->GetHomeDir() + QString::fromStdString("/" + walletFileName), target)) {
-      MessageBoxSuccess(title, tr("Wallet created")
+      BSMessageBox(BSMessageBox::success, title, tr("Wallet created")
          , tr("Created wallet file <b>%1</b> in <span>%2</span>")
             .arg(QString::fromStdString(walletFileName))
             .arg(dir)
          , this).exec();
    } else {
-      MessageBoxCritical(title
+      BSMessageBox(BSMessageBox::critical, title
          , tr("Failed to copy")
          , tr("Failed to copy <b>%1</b> from %2 to %3")
             .arg(QString::fromStdString(walletFileName)).arg(appSettings_->GetHomeDir())
@@ -297,7 +294,8 @@ void RootWalletPropertiesDialog::startWalletScan()
       emit walletsManager_->walletImportStarted(wallet_->getWalletId());
    }
    else {
-      MessageBoxWarning(tr("Wallet rescan"), tr("Wallet blockchain rescan is already in progress"), this).exec();
+      BSMessageBox(BSMessageBox::warning, tr("Wallet rescan")
+         , tr("Wallet blockchain rescan is already in progress"), this).exec();
    }
    accept();
 }

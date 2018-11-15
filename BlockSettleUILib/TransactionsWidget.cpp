@@ -9,7 +9,7 @@
 
 #include "CreateTransactionDialogAdvanced.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "TransactionsViewModel.h"
 #include "TransactionDetailDialog.h"
 #include "WalletsManager.h"
@@ -453,7 +453,7 @@ void TransactionsWidget::onCreateRBFDialog()
          dlg->exec();
       }
       catch (const std::exception &e) {
-         MessageBoxCritical(tr("RBF Transaction"), tr("Failed to create RBF transaction")
+         BSMessageBox(BSMessageBox::critical, tr("RBF Transaction"), tr("Failed to create RBF transaction")
             , QLatin1String(e.what()), this).exec();
       }
    };
@@ -479,7 +479,7 @@ void TransactionsWidget::onCreateCPFPDialog()
          dlg->exec();
       }
       catch (const std::exception &e) {
-         MessageBoxCritical(tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
+         BSMessageBox(BSMessageBox::critical, tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
             , QLatin1String(e.what()), this).exec();
       }
    };

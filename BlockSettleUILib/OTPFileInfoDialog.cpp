@@ -4,8 +4,7 @@
 #include <spdlog/spdlog.h>
 #include "EncryptionUtils.h"
 #include "EnterOTPPasswordDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
+#include "BSMessageBox.h"
 #include "OTPFile.h"
 #include "OTPManager.h"
 
@@ -92,9 +91,9 @@ bool OTPFileInfoDialog::UpdateOTPCounter()
 
 void OTPFileInfoDialog::RemoveOTP()
 {
-   MessageBoxQuestion confirmBox(tr("Remove OTP")
+   BSMessageBox confirmBox(BSMessageBox::question, tr("Remove OTP")
       , tr("Are you sure to remove imported OTP file?")
-      , tr("If removed you will not be able to submit request to BlockSettle")
+      , tr("If removed you will not be able to submit a request to BlockSettle")
       , this);
    if (confirmBox.exec() == QDialog::Accepted) {
       otpManager_->RemoveOTPForCurrentUser();
@@ -263,7 +262,8 @@ void OTPFileInfoDialog::accept()
    };
 
    if (!otpManager_->UpdatePassword(cb)) {
-      MessageBoxCritical(tr("OTP password failed"), tr("Failed to set or change OTP password")).exec();
+      BSMessageBox(BSMessageBox::critical, tr("OTP password failed"), 
+         tr("Failed to set or change OTP password")).exec();
       QDialog::reject();
    }
    QDialog::accept();

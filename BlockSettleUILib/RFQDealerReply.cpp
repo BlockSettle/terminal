@@ -18,9 +18,7 @@
 #include "EnterWalletPassword.h"
 #include "FastLock.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
-#include "MessageBoxWarning.h"
+#include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -482,7 +480,7 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
                   leafCreateReqId_ = signingContainer_->CreateHDLeaf(walletsManager_->GetPrimaryWallet(), path);
                }
             } else {
-               MessageBoxCritical errorMessage(tr("Signer not connected")
+               BSMessageBox errorMessage(BSMessageBox::critical, tr("Signer not connected")
                   , tr("Could not create CC subwallet.")
                   , this);
                errorMessage.exec();
@@ -1115,7 +1113,7 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          else {
             if (!ccWallet) {
                ui_->checkBoxAQ->setChecked(false);
-               MessageBoxCritical(tr("Auto Quoting")
+               BSMessageBox(BSMessageBox::critical, tr("Auto Quoting")
                   , tr("No wallet created for %1 - auto-quoting disabled").arg(QString::fromStdString(cc))
                ).exec();
                return;
@@ -1147,7 +1145,7 @@ void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool ac
    updateAutoSignState();
 
    if (!error.empty()) {
-      MessageBoxWarning(tr("Auto-Sign deactivated"), tr("Signer returned error: %1")
+      BSMessageBox(BSMessageBox::warning, tr("Auto-Sign deactivated"), tr("Signer returned error: %1")
          .arg(QString::fromStdString(error))).exec();
    }
 }
@@ -1177,8 +1175,9 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryD
       reset();
       updateRecvAddresses();
    } else {
-      MessageBoxCritical(tr("%1 Wallet").arg(QString::fromStdString(baseProduct_))
-         , tr("Failed to create wallet")).exec();
+      BSMessageBox(BSMessageBox::critical, tr("Failed to create wallet")
+         , tr("Failed to create wallet")
+         , tr("%1 Wallet").arg(QString::fromStdString(baseProduct_))).exec();
    }
 }
 
@@ -1189,8 +1188,9 @@ void RFQDealerReply::onCreateHDWalletError(unsigned int id, std::string errMsg)
    }
 
    leafCreateReqId_ = 0;
-   MessageBoxCritical( tr("%1 Wallet").arg(QString::fromStdString(product_))
-      , tr("Failed to create wallet")).exec();
+   BSMessageBox(BSMessageBox::critical, tr("Failed to create wallet")
+      , tr("Failed to create wallet")
+      , tr("%1 Wallet").arg(QString::fromStdString(product_))).exec();
 }
 
 void RFQDealerReply::onCelerConnected()
