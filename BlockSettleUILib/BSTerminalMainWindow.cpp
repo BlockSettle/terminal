@@ -141,6 +141,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connect(ui->action_Contact_BlockSettle, &QAction::triggered, aboutDlgCb(2));
    connect(ui->action_Version, &QAction::triggered, aboutDlgCb(3));
 
+   // Enable/disable send action when first wallet created/last wallet removed
+   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &BSTerminalMainWindow::updateControlEnabledState);
+
    ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
    ui->widgetTransactions->setAppSettings(applicationSettings_);
@@ -199,7 +203,6 @@ void BSTerminalMainWindow::setupToolbar()
    // receive bitcoins
    toolBar->addAction(action_receive_);
 
-   action_send_->setEnabled(false);
    action_logout_->setVisible(false);
 
    ButtonMenu *userMenu = new ButtonMenu(ui->pushButtonUser);
@@ -220,6 +223,8 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addSeparator();
    trayMenu->addAction(ui->action_Quit);
    sysTrayIcon_->setContextMenu(trayMenu);
+
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::setupIcon()
@@ -371,6 +376,12 @@ void BSTerminalMainWindow::acceptMDAgreement()
    mdProvider_->MDLicenseAccepted();
 }
 
+void BSTerminalMainWindow::updateControlEnabledState()
+{
+   action_send_->setEnabled(walletsManager_->GetWalletsCount() > 0
+      && armory_->isOnline());
+}
+
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
 {
    return applicationSettings_->get<bool>(ApplicationSettings::MDLicenseAccepted);
@@ -451,12 +462,10 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
    InitTransactionsView();
    transactionsModel_->loadAllWallets();
 
-   if (walletsManager_->GetWalletsCount() != 0) {
-      action_send_->setEnabled(true);
-   }
-   else {
+   if (walletsManager_->GetWalletsCount() == 0) {
       createWallet(!walletsManager_->HasPrimaryWallet());
    }
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -499,8 +508,8 @@ void BSTerminalMainWindow::ArmoryIsOffline()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    walletsManager_->UnregisterSavedWallets();
-   action_send_->setEnabled(false);
    connectArmory();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::initArmory()
