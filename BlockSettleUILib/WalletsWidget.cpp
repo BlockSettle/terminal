@@ -169,6 +169,8 @@ WalletsWidget::WalletsWidget(QWidget* parent)
    connect(ui->treeViewWallets, &WalletsTreeView::enterKeyPressed,
            this, &WalletsWidget::onEnterKeyInWalletsPressed);
    connect(this, &WalletsWidget::showContextMenu, this, &WalletsWidget::onShowContextMenu, Qt::QueuedConnection);
+
+   ui->treeViewWallets->setEnableDeselection(false);
 }
 
 WalletsWidget::~WalletsWidget() = default;
