@@ -309,7 +309,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 
    BSMessageBox *qry = nullptr;
    const auto &qryTitle = tr("Authentication Address");
-   const auto &qryText = tr("Submit new Authentication Address");
+   const auto &qryText = tr("New Authentication Address");
    if (validationAmount > 0) {
       qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address? Setting up a new Authentication Address"
