@@ -5,7 +5,6 @@
 #include "ArmoryConnection.h"
 #include "CoinControlDialog.h"
 #include "FixedFeeValidator.h"
-#include "MessageBoxInfo.h"
 #include "OfflineSigner.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"

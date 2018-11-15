@@ -38,11 +38,7 @@
 #include "LoginWindow.h"
 #include "MarketDataProvider.h"
 #include "MDAgreementDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
-#include "MessageBoxQuestion.h"
-#include "MessageBoxSuccess.h"
-#include "MessageBoxWarning.h"
+#include "BSMessageBox.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
@@ -119,7 +115,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    ui->widgetTransactions->setEnabled(false);
 
    if (!signContainer_->Start()) {
-      MessageBoxWarning(tr("BlockSettle Signer"), tr("Failed to start local signer process")).exec();
+      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer"), tr("Failed to start local signer process")).exec();
    }
 
    connectArmory();
@@ -140,6 +136,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connect(ui->actionAbout_the_Terminal, &QAction::triggered, aboutDlgCb(1));
    connect(ui->action_Contact_BlockSettle, &QAction::triggered, aboutDlgCb(2));
    connect(ui->action_Version, &QAction::triggered, aboutDlgCb(3));
+
+   // Enable/disable send action when first wallet created/last wallet removed
+   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &BSTerminalMainWindow::updateControlEnabledState);
 
    ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
@@ -199,14 +199,9 @@ void BSTerminalMainWindow::setupToolbar()
    // receive bitcoins
    toolBar->addAction(action_receive_);
 
-   action_send_->setEnabled(false);
    action_logout_->setVisible(false);
 
-   ButtonMenu *userMenu = new ButtonMenu(ui->pushButtonUser);
-
-   userMenu->addAction(action_login_);
-   userMenu->addAction(action_logout_);
-   ui->pushButtonUser->setMenu(userMenu);
+   connect(ui->pushButtonUser, &QPushButton::clicked, this, &BSTerminalMainWindow::onButtonUserClicked);
 
    QMenu* trayMenu = new QMenu(this);
    QAction* trayShowAction = trayMenu->addAction(tr("&Open Terminal"));
@@ -220,6 +215,8 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addSeparator();
    trayMenu->addAction(ui->action_Quit);
    sysTrayIcon_->setContextMenu(trayMenu);
+
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::setupIcon()
@@ -371,6 +368,12 @@ void BSTerminalMainWindow::acceptMDAgreement()
    mdProvider_->MDLicenseAccepted();
 }
 
+void BSTerminalMainWindow::updateControlEnabledState()
+{
+   action_send_->setEnabled(walletsManager_->GetWalletsCount() > 0
+      && armory_->isOnline());
+}
+
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
 {
    return applicationSettings_->get<bool>(ApplicationSettings::MDLicenseAccepted);
@@ -451,12 +454,10 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
    InitTransactionsView();
    transactionsModel_->loadAllWallets();
 
-   if (walletsManager_->GetWalletsCount() != 0) {
-      action_send_->setEnabled(true);
-   }
-   else {
+   if (walletsManager_->GetWalletsCount() == 0) {
       createWallet(!walletsManager_->HasPrimaryWallet());
    }
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -499,8 +500,8 @@ void BSTerminalMainWindow::ArmoryIsOffline()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    walletsManager_->UnregisterSavedWallets();
-   action_send_->setEnabled(false);
    connectArmory();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -526,7 +527,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       if (wallet->isPrimary()) {
          return true;
       }
-      MessageBoxQuestion qry(tr("Create primary wallet"), tr("Promote to primary wallet")
+      BSMessageBox qry(BSMessageBox::question, tr("Create primary wallet"), tr("Promote to primary wallet")
          , tr("In order to execute trades and take delivery of XBT and Equity Tokens, you are required to"
             " have a Primary Wallet which supports the sub-wallets required to interact with the system.")
          .arg(QString::fromStdString(wallet->getName())), this);
@@ -553,12 +554,12 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
 
 void BSTerminalMainWindow::showInfo(const QString &title, const QString &text)
 {
-   MessageBoxInfo(title, text).exec();
+   BSMessageBox(BSMessageBox::info, title, text).exec();
 }
 
 void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 {
-   MessageBoxCritical(title, text, this).exec();
+   BSMessageBox(BSMessageBox::critical, title, text, this).exec();
 }
 
 void BSTerminalMainWindow::onReceive()
@@ -708,11 +709,11 @@ void BSTerminalMainWindow::openAccountInfoDialog()
 void BSTerminalMainWindow::openCCTokenDialog()
 {
    if (!otpManager_->CurrentUserHaveOTP()) {
-      MessageBoxQuestion createOtpReq(tr("One-Time Password")
-         , tr("IMPORT ONE-TIME PASSWORD")
+      BSMessageBox createOtpReq(BSMessageBox::question, tr("One-Time Password")
+         , tr("Import one-time password")
          , tr("Would you like to import your OTP at this time?")
-         , tr("BlockSettle has sent a One-Time Password to your registered postal address. The OTP is used "
-            "for confirming your identity and to establish secure channel through which communication can occur.")
+         , tr("BlockSettle has sent a one-time password to your registered postal address. The OTP is used "
+            "to confirm your identity and to establish a secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
          OTPImportDialog otpDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
@@ -822,7 +823,7 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    switch(errorCode)
    {
    case CelerClient::LoginError:
-      MessageBoxCritical loginErrorBox(tr("Login failed"), tr("Invalid username/password pair"), this);
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr("Invalid username/password pair"), this);
       loginErrorBox.exec();
       break;
    }
@@ -836,7 +837,7 @@ void BSTerminalMainWindow::createAuthWallet()
       }
 
       if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
-         MessageBoxQuestion createAuthReq(tr("Authentication Wallet")
+         BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
             , tr("Create Authentication Wallet")
             , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
             , this);
@@ -854,16 +855,16 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
          return;
       }
       if (!walletsManager_->HasSettlementWallet()) {
-         MessageBoxQuestion createSettlReq(tr("Create settlement wallet")
+         BSMessageBox createSettlReq(BSMessageBox::question, tr("Create settlement wallet")
             , tr("Settlement wallet missing")
             , tr("You don't have Settlement wallet, yet. Do you wish to create it?")
             , this);
          if (createSettlReq.exec() == QDialog::Accepted) {
             const auto title = tr("Settlement wallet");
             if (walletsManager_->CreateSettlementWallet(applicationSettings_->GetHomeDir())) {
-               MessageBoxSuccess(title, tr("Settlement wallet successfully created")).exec();
+               BSMessageBox(BSMessageBox::success, title, tr("Settlement wallet successfully created")).exec();
             } else {
-               showError(title, tr("Failed to create"));
+               showError(title, tr("Failed to create settlement wallet"));
                return;
             }
          }
@@ -1022,7 +1023,7 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
 {
    if (otpManager_->CurrentUserHaveOTP()) {
       if (!otpManager_->IsCurrentOTPLatest()) {
-         MessageBoxQuestion removeOtpQuestion(tr("OTP outdated")
+         BSMessageBox removeOtpQuestion(BSMessageBox::question, tr("OTP outdated")
             , tr("Your OTP is outdated")
             , tr("Do you want to remove outdated OTP?")
             , tr("Looks like new OTP was generated for your account. All future requests signed by your local OTP will be rejected.")
@@ -1030,14 +1031,14 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
 
          if (removeOtpQuestion.exec() == QDialog::Accepted) {
             if (otpManager_->RemoveOTPForCurrentUser()) {
-               MessageBoxInfo(tr("OTP file removed"), tr("Old OTP file was removed."), this).exec();
+               BSMessageBox(BSMessageBox::info, tr("OTP file removed"), tr("Old OTP file was removed."), this).exec();
             } else {
-               MessageBoxCritical(tr("OTP file not removed"), tr("Terminal failed to remove OTP file."), this).exec();
+               BSMessageBox(BSMessageBox::critical, tr("OTP file not removed"), tr("Terminal failed to remove OTP file."), this).exec();
             }
          }
       } else if (otpManager_->CountAdvancingRequired()) {
-         MessageBoxQuestion otpDialog(tr("One-Time Password")
-            , tr("UPDATE ONE-TIME PASSWORD COUNTER")
+         BSMessageBox otpDialog(BSMessageBox::question, tr("One-Time Password")
+            , tr("Update one-time password counter")
             , tr("Would you like to update your OTP usage counter at this time?")
             , tr("Looks like you have used your OTP on another machine. Local OTP usage counter should be advanced or your requests will be rejected.")
             , this);
@@ -1047,11 +1048,11 @@ void BSTerminalMainWindow::OnOTPSyncCompleted()
          }
       }
    } else if (celerConnection_->tradingAllowed() ) {
-      MessageBoxQuestion createOtpReq(tr("One-Time Password")
-         , tr("IMPORT ONE-TIME PASSWORD")
+      BSMessageBox createOtpReq(BSMessageBox::question, tr("One-Time Password")
+         , tr("Import one-time password")
          , tr("Would you like to import your OTP at this time?")
-         , tr("BlockSettle has sent a One-Time Password to your registered postal address. The OTP is used "
-            "for confirming your identity and to establish secure channel through which communication can occur.")
+         , tr("BlockSettle has sent a one-time password to your registered postal address. The OTP is used "
+            "to confirm your identity and to establish a secure channel through which communication can occur.")
          , this);
       if (createOtpReq.exec() == QDialog::Accepted) {
          OTPImportDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
@@ -1156,4 +1157,18 @@ void BSTerminalMainWindow::setupShortcuts()
             TabWithShortcut::ShortcutType::Alt_P);
       }
    );
+}
+
+void BSTerminalMainWindow::onButtonUserClicked() {
+   if (ui->pushButtonUser->text() == tr("user.name")) {
+      onLogin();
+      // set button text to this temporary text until the login
+      // completes and button text is changed to the username
+      setLoginButtonText(tr("Logging in..."));
+   }
+   else {
+      if (BSMessageBox(BSMessageBox::question, tr("User Logout"), tr("You are about to logout")
+         , tr("Do you want to continue?")).exec() == QDialog::Accepted)
+      onLogout();
+   }
 }

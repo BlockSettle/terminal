@@ -38,7 +38,7 @@ public:
       double   selectedBalance;
 
       // balanceToSpent - total amount received by recipients
-      double   balanceToSpent;
+      double   balanceToSpend;
 
       size_t   transactionSize;
       uint64_t totalFee;

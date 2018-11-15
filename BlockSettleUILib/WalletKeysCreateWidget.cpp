@@ -69,7 +69,7 @@ void WalletKeysCreateWidget::addKey(bool password)
       widget->setPasswordLabelAsNew();
    }
 
-   if (flags_ & HidePubKeyFingerprint) {
+   if (flags_ & HidePubKeyFingerprint || true) {
       ui_->labelPubKeyFP->hide();
    }
    else {

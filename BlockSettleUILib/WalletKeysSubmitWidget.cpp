@@ -54,7 +54,7 @@ void WalletKeysSubmitWidget::init(MobileClientRequest requestType
          break;
       }
    }
-   if ((flags_ & HidePubKeyFingerprint) || !hasAuth) {
+   if ((flags_ & HidePubKeyFingerprint) || !hasAuth || true) {
       ui_->labelPubKeyFP->hide();
    }
    else {

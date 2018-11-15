@@ -147,6 +147,8 @@ QWidget {
     /* leave space at the top for the title */
     padding-top: 10px;
     background-color: transparent; }
+    QWidget QGroupBox[h1="true"] { /* leave space at the top for the title when using h1 */
+       margin-top: 20px; }
     QWidget QGroupBox[wellGroupBox="true"] {
       border: 1px solid rgba(255, 255, 255, 0.15);
       padding: 10px; }
@@ -1390,7 +1392,7 @@ ToggleSwitch::groove:horizontal {
     height: 16px; }
     
 ToggleSwitch::groove:horizontal[enabled=false] {
-    border: 1px solid #81888f; }
+    border: 1px solid #535b63; }
 
 ToggleSwitch::handle:horizontal {
     background: #81888f;
@@ -1398,7 +1400,12 @@ ToggleSwitch::handle:horizontal {
     width: 16px;
     margin: -1px -1px -1px -1px;
     border-radius: 8px; }
-    
+  
+ToggleSwitch::handle:horizontal[enabled=false] {
+    background: #535b63;
+    border: 1px solid #535b63;       
+}
+ 
  ToggleSwitch::handle:horizontal[toggleOn=true][enabled=true] {
     background: #247dac;
     border: 1px solid #247dac; }

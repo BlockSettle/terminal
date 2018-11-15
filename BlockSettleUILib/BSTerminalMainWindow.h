@@ -95,6 +95,8 @@ private slots:
    bool createWallet(bool primary, bool reportSuccess = true);
 
    void acceptMDAgreement();
+   void updateControlEnabledState();
+   void onButtonUserClicked();
 
 private:
    QAction *action_send_;
