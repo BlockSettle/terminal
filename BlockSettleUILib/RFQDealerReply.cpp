@@ -230,6 +230,7 @@ void RFQDealerReply::onHDWalletInfo(unsigned int id
    passwordDialog.init(autoSignWalletId_, keyRank
       , encTypes, encKeys, appSettings_
       , tr("Activate Auto-Sign"));
+   passwordDialog.setWindowTitle(tr("Activate Auto-Sign"));
    if (passwordDialog.exec() != QDialog::Accepted) {
       disableAutoSign();
       return;
