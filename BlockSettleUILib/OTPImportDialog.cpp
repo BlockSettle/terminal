@@ -5,7 +5,7 @@
 #include "EasyCoDec.h"
 #include "EasyEncValidator.h"
 #include "EncryptionUtils.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "OTPFile.h"
 #include "OTPManager.h"
 #include "MobileClient.h"
@@ -118,7 +118,7 @@ void OTPImportDialog::startAuthSign()
 
    QString otpId = OTPFile::GetShortId(OTPFile::GetOtpIdFromPrivateKey(otpKey_));
    if (otpId.isEmpty()) {
-      MessageBoxCritical(tr("Error"), tr("Invalid OTP key"), this).exec();
+      BSMessageBox(BSMessageBox::critical, tr("Error"), tr("Invalid OTP key"), this).exec();
       return;
    }
 
@@ -182,7 +182,7 @@ void OTPImportDialog::accept()
          break;
       }
 
-      MessageBoxCritical(tr("OTP Import"), errorText, this).exec();
+      BSMessageBox(BSMessageBox::critical, tr("OTP Import"), errorText, this).exec();
       return;
    }
 

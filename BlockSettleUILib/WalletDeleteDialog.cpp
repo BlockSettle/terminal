@@ -7,8 +7,7 @@
 #include <QStandardPaths>
 
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxSuccess.h"
+#include "BSMessageBox.h"
 #include "WalletsWidget.h"
 #include "SignContainer.h"
 
@@ -76,7 +75,8 @@ void WalletDeleteDialog::deleteHDWallet()
 {
    if (ui_->checkBoxBackup->isChecked()) {
       if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_, this)) {
-         MessageBoxCritical(tr("No backup"), tr("No backup was created for this wallet - deletion cancelled")).exec();
+         BSMessageBox(BSMessageBox::critical, tr("No backup")
+            , tr("No backup was created for this wallet - deletion cancelled")).exec();
          reject();
          return;
       }
@@ -85,7 +85,7 @@ void WalletDeleteDialog::deleteHDWallet()
       signingContainer_->DeleteHD(hdWallet_);
    }
    if (walletsManager_->DeleteWalletFile(hdWallet_)) {
-      MessageBoxSuccess(tr("Wallet deleted")
+      BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
          , tr("HD Wallet was successfully deleted")
          , tr("HD wallet \"%1\" (%2) was successfully deleted")
          .arg(QString::fromStdString(hdWallet_->getName()))
@@ -93,7 +93,7 @@ void WalletDeleteDialog::deleteHDWallet()
       accept();
    }
    else {
-      MessageBoxCritical(tr("Wallet deletion failed")
+      BSMessageBox(BSMessageBox::critical, tr("Wallet deletion failed")
          , tr("Failed to delete local copy of %1").arg(QString::fromStdString(hdWallet_->getName()))).exec();
       reject();
    }
@@ -105,7 +105,7 @@ void WalletDeleteDialog::deleteWallet()
       signingContainer_->DeleteHD(wallet_);
    }
    if (walletsManager_->DeleteWalletFile(wallet_)) {
-      MessageBoxSuccess(tr("Wallet deleted")
+      BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
          , tr("Wallet was successfully deleted")
          , tr("Wallet \"%1\" (%2) was successfully deleted")
          .arg(QString::fromStdString(wallet_->GetWalletName()))
@@ -113,7 +113,7 @@ void WalletDeleteDialog::deleteWallet()
       accept();
    }
    else {
-      MessageBoxCritical(tr("Wallet deletion failed")
+      BSMessageBox(BSMessageBox::critical, tr("Wallet deletion failed")
          , tr("Failed to delete wallet %1").arg(QString::fromStdString(wallet_->GetWalletName()))).exec();
       reject();
    }

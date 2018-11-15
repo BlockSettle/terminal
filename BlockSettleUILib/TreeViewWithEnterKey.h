@@ -24,6 +24,10 @@ public:
 
    QStyleOptionViewItem viewOptions() const override;
 
+   // Could be used to disable deselection from mouse clicks in empty space.
+   // Enabled by default.
+   void setEnableDeselection(bool enableDeselection);
+
 public slots:
    //! Activate view, set focus, select first item if not selected.
    void activate();
@@ -31,6 +35,8 @@ public slots:
 protected:
    void keyPressEvent(QKeyEvent *event) override;
    void mouseReleaseEvent(QMouseEvent *event) override;
+
+   bool enableDeselection_{true};
 }; // class TreeViewWithENterKey
 
 #endif // _TREEVIEWWITHENTERKEY_H_INCLUDED_

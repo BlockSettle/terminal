@@ -16,7 +16,7 @@
 #include "DealerXBTSettlementDialog.h"
 #include "DialogManager.h"
 #include "MarketDataProvider.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "OrderListModel.h"
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
@@ -202,7 +202,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {
-            MessageBoxCritical box(tr("Settlement error")
+            BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                , tr("Failed to start dealer's CC settlement")
                , QString::fromLatin1(e.what())
                , this);
@@ -228,7 +228,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                   showSettlementDialog(dsd);
                }
             } catch (const std::exception &e) {
-               MessageBoxCritical box(tr("Settlement error")
+               BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                   , tr("Failed to start dealer's settlement")
                   , QString::fromLatin1(e.what())
                   , this);
