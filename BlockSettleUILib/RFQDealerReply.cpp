@@ -998,7 +998,14 @@ void RFQDealerReply::aqScriptChanged(int curIndex)
          return;
       }
       else {
-         onAqScriptLoaded(scriptFN);
+         initAQ(scriptFN);
+      }
+   }
+   else {
+      // enable toggleswitch if a script is selected
+      // celer is connected
+      if (celerConnected_) {
+         ui_->checkBoxAQ->setEnabled(true);
       }
    }
 }
@@ -1199,7 +1206,10 @@ void RFQDealerReply::onCreateHDWalletError(unsigned int id, std::string errMsg)
 
 void RFQDealerReply::onCelerConnected()
 {
-   ui_->checkBoxAQ->setEnabled(true);
+   // enable toggleswitch only if a script file is already selected
+   if (ui_->comboBoxAQScript->currentIndex() > 0) {
+      ui_->checkBoxAQ->setEnabled(true);
+   }
    celerConnected_ = true;
    ui_->groupBoxAutoSign->setEnabled(true);
 }
