@@ -996,6 +996,9 @@ void RFQDealerReply::aqScriptChanged(int curIndex)
          aqFillHistory();
          return;
       }
+      else {
+         onAqScriptLoaded(scriptFN);
+      }
    }
 }
 
