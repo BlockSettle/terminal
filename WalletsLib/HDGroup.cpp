@@ -359,18 +359,21 @@ void hd::AuthGroup::setUserID(const BinaryData &userId)
 {
    userId_ = userId;
 
-   if (tempLeaves_.empty() && !leaves_.empty()) {
+   if (userId.isNull() && tempLeaves_.empty() && !leaves_.empty()) {
       for (auto &leaf : leaves_) {
          leaf.second->SetUserID(userId);
       }
+      tempLeaves_ = leaves_;
+      for (const auto &leaf : tempLeaves_) {
+         deleteLeaf(leaf.first);
+      }
    }
-   else {
+   else if (!tempLeaves_.empty() && leaves_.empty()) {
       auto leaves = std::move(tempLeaves_);
+      tempLeaves_.clear();
       for (const auto &tempLeaf : leaves) {
          tempLeaf.second->SetUserID(userId);
-         if (addLeaf(tempLeaf.second)) {
-            emit leafAdded(QString::fromStdString(tempLeaf.second->GetWalletId()));
-         }
+         addLeaf(tempLeaf.second, true);
       }
    }
 }

@@ -295,12 +295,14 @@ void WalletsManager::SaveWallet(const hd_wallet_type &wallet)
    }
 }
 
-void WalletsManager::SetAuthWalletFrom(const hd_wallet_type &wallet)
+bool WalletsManager::SetAuthWalletFrom(const hd_wallet_type &wallet)
 {
    const auto group = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
    if ((group != nullptr) && (group->getNumLeaves() > 0)) {
       authAddressWallet_ = group->getLeaf(0);
+      return true;
    }
+   return false;
 }
 
 void WalletsManager::onHDLeafAdded(QString id)
@@ -323,11 +325,9 @@ void WalletsManager::onHDLeafAdded(QString id)
          leaf->RegisterWallet(armory_);
       }
 
-      if (authAddressWallet_ == nullptr) {
-         SetAuthWalletFrom(hdWallet.second);
-         if (authAddressWallet_ != nullptr) {
-            emit authWalletChanged();
-         }
+      if (SetAuthWalletFrom(hdWallet.second)) {
+         logger_->debug("Auth wallet updated");
+         emit authWalletChanged();
       }
       emit walletChanged();
       break;
