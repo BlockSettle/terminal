@@ -1392,7 +1392,7 @@ ToggleSwitch::groove:horizontal {
     height: 16px; }
     
 ToggleSwitch::groove:horizontal[enabled=false] {
-    border: 1px solid #81888f; }
+    border: 1px solid #535b63; }
 
 ToggleSwitch::handle:horizontal {
     background: #81888f;
@@ -1400,7 +1400,12 @@ ToggleSwitch::handle:horizontal {
     width: 16px;
     margin: -1px -1px -1px -1px;
     border-radius: 8px; }
-    
+  
+ToggleSwitch::handle:horizontal[enabled=false] {
+    background: #535b63;
+    border: 1px solid #535b63;       
+}
+ 
  ToggleSwitch::handle:horizontal[toggleOn=true][enabled=true] {
     background: #247dac;
     border: 1px solid #247dac; }
