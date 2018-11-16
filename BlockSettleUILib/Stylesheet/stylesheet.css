@@ -1127,7 +1127,8 @@ QSpinBox::down-arrow {
   width: 10px;
   height: auto; }
 
-QDoubleSpinBox::down-button {
+QDoubleSpinBox::down-button
+QSpinBox::down-button {
   border-top: 1px solid #81888f; }
 
 QDoubleSpinBox:disabled,
