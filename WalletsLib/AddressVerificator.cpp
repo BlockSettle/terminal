@@ -151,7 +151,7 @@ void AddressVerificator::AddCommandToWaitingUpdateQueue(const std::string &key, 
 {
    FastLock locker(waitingForUpdateQueueFlag_);
    if (waitingForUpdateQueue_.find(key) == waitingForUpdateQueue_.end()) {
-      waitingForUpdateQueue_[key] = std::move(command);
+      waitingForUpdateQueue_.emplace(key, std::move(command));
    }
 }
 
