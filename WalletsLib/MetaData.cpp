@@ -919,7 +919,7 @@ bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &i
    return request;
 }
 
-void bs::Wallet::firstInit()
+void bs::Wallet::firstInit(bool force)
 {
    UpdateBalanceFromDB();
 }
