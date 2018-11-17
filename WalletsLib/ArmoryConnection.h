@@ -79,8 +79,10 @@ public:
    bool getWalletsHistory(const std::vector<std::string> &walletIDs
       , std::function<void (std::vector<ClientClasses::LedgerEntry>)>);
 
+   // If context is not null and cbInMainThread is true then the callback will be called
+   // on main thread only if context is still alive.
    bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &
-      , std::function<void(AsyncClient::LedgerDelegate)>);
+      , std::function<void(AsyncClient::LedgerDelegate)>, QObject *context = nullptr);
    bool getLedgerDelegatesForAddresses(const std::string &walletId, const std::vector<bs::Address>
       , std::function<void(std::map<bs::Address, AsyncClient::LedgerDelegate>)>);
    bool getWalletsLedgerDelegate(std::function<void(AsyncClient::LedgerDelegate)>);

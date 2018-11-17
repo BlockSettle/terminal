@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QProcess>
+#include <QPointer>
 
 #include <cassert>
 #include <exception>
@@ -323,15 +324,24 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
 }
 
 bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &addr
-   , std::function<void(AsyncClient::LedgerDelegate)> cb)
+   , std::function<void(AsyncClient::LedgerDelegate)> cb, QObject *context)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[ArmoryConnection::getLedgerDelegateForAddress] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](AsyncClient::LedgerDelegate delegate) {
+   QPointer<QObject> contextSmartPtr = context;
+   const auto &cbWrap = [this, cb, context, contextSmartPtr](const AsyncClient::LedgerDelegate &delegate) {
       if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [cb, delegate]{ cb(delegate); });
+         QMetaObject::invokeMethod(this, [cb, delegate, context, contextSmartPtr]{
+            if (context) {
+               if (contextSmartPtr) {
+                  cb(delegate);
+               }
+            } else {
+               cb(delegate);
+            }
+         });
       }
       else {
          cb(delegate);
