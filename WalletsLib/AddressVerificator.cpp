@@ -41,8 +41,6 @@ struct AddressVerificationData
    std::vector<ClientClasses::LedgerEntry>   entries;
    std::vector<ClientClasses::LedgerEntry>   txOutEntries;
    std::map<BinaryData, Tx>   txs;
-   std::set<BinaryData>       txHashSet;
-   bool           completed = false;
 };
 
 AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &armory
@@ -133,7 +131,8 @@ bool AddressVerificator::StartAddressVerification(const std::shared_ptr<AuthAddr
          AddCommandToQueue(CreateAddressValidationCommand(addressCopy));
       }
       else {
-         AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(addressCopy));
+         AddCommandToWaitingUpdateQueue(addressCopy->GetChainedAddress().id().toBinStr()
+            , CreateAddressValidationCommand(addressCopy));
       }
       return true;
    }
@@ -148,10 +147,12 @@ void AddressVerificator::AddCommandToQueue(ExecutionCommand&& command)
    dataAvailable_.notify_all();
 }
 
-void AddressVerificator::AddCommandToWaitingUpdateQueue(ExecutionCommand&& command)
+void AddressVerificator::AddCommandToWaitingUpdateQueue(const std::string &key, ExecutionCommand&& command)
 {
    FastLock locker(waitingForUpdateQueueFlag_);
-   waitingForUpdateQueue_.emplace(std::move(command));
+   if (waitingForUpdateQueue_.find(key) == waitingForUpdateQueue_.end()) {
+      waitingForUpdateQueue_.emplace(key, std::move(command));
+   }
 }
 
 AddressVerificator::ExecutionCommand AddressVerificator::CreateAddressValidationCommand(const std::shared_ptr<AuthAddress>& address)
@@ -217,7 +218,6 @@ void AddressVerificator::doValidateAddress(const std::shared_ptr<AddressVerifica
 
    addressRetries_.erase(state->address->GetChainedAddress().prefixed());
    ReturnValidationResult(state);
-   state->completed = true;
 }
 
 void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificationData>& state)
@@ -240,61 +240,63 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
       return;
    }
 
-   const auto &cbCollectTXs = [this, state](std::vector<Tx> txs) {
+   const auto &cbCollectOutTXs = [this, state](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
-         const auto &txHash = tx.getThisHash();
-         state->txHashSet.erase(txHash);
-         state->txs[txHash] = tx;
-         if (state->txHashSet.empty()) {
-            doValidateAddress(state);
-         }
+         state->txs[tx.getThisHash()] = tx;
       }
+      doValidateAddress(state);
    };
-   const auto &cbCollectTX = [this, state, cbCollectTXs](Tx tx) {
-      state->txs[tx.getThisHash()] = tx;
-      for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
-         if (!tx.isInitialized()) {
-            continue;
-         }
-         TxIn in = tx.getTxInCopy(i);
-         if (!in.isInitialized()) {
-            continue;
-         }
-         OutPoint op = in.getOutPoint();
-         if (state->txs.find(op.getTxHash()) == state->txs.end()) {
-            state->txHashSet.insert(op.getTxHash());
+   const auto &cbCollectInitialTXs = [this, state, cbCollectOutTXs](std::vector<Tx> txs) {
+      std::set<BinaryData> txOutHashes;
+      for (const auto &tx : txs) {
+         state->txs[tx.getThisHash()] = tx;
+         for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
+            if (!tx.isInitialized()) {
+               continue;
+            }
+            TxIn in = tx.getTxInCopy(i);
+            if (!in.isInitialized()) {
+               continue;
+            }
+            OutPoint op = in.getOutPoint();
+            if (state->txs.find(op.getTxHash()) == state->txs.end()) {
+               txOutHashes.insert(op.getTxHash());
+            }
          }
       }
-      if (state->txHashSet.empty()) {
+      if (txOutHashes.empty()) {
          doValidateAddress(state);
       }
       else {
-         armory_->getTXsByHash(state->txHashSet, cbCollectTXs);
+         armory_->getTXsByHash(txOutHashes, cbCollectOutTXs);
       }
    };
-   const auto &cbLedger = [this, state, cbCollectTX](std::vector<ClientClasses::LedgerEntry> entries) {
+   const auto &cbLedger = [this, state, cbCollectInitialTXs](std::vector<ClientClasses::LedgerEntry> entries) {
       if (entries.empty()) {
          state->currentState = AddressVerificationState::NotSubmitted;
-         state->completed = true;
          addressRetries_.erase(state->address->GetChainedAddress().prefixed());
          ReturnValidationResult(state);
          return;
       }
       state->nbTransactions += entries.size();
       state->entries = entries;
-      state->txs = bsTXs_;
+      for (const auto &tx : bsTXs_) {
+         state->txs[tx.getThisHash()] = tx;
+      }
+      std::set<BinaryData> initialTxHashes;
       for (const auto &entry : entries) {
          state->value += entry.getValue();
          const auto &itTX = state->txs.find(entry.getTxHash());
          if (itTX == state->txs.end()) {
-            armory_->getTxByHash(entry.getTxHash(), cbCollectTX);
+            initialTxHashes.insert(entry.getTxHash());
          }
-         else {
-            cbCollectTX(itTX->second);
-         }
-         if (state->completed) {
-            break;
-         }
+      }
+
+      if (initialTxHashes.empty()) {
+         cbCollectInitialTXs(bsTXs_);
+      }
+      else {
+         armory_->getTXsByHash(initialTxHashes, cbCollectInitialTXs);
       }
    };
    const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
@@ -302,10 +304,10 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
       delegate.getHistoryPage(0, cbLedger);
    };
    if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
-      const auto &prefixedAddress = state->address->GetChainedAddress().prefixed();
+      const auto &prefixedAddress = state->address->GetChainedAddress().id();
       if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < MaxAadressValidationErrorCount)) {
          logger_->debug("[AddressVerificator::ValidateAddress] Failed to get ledger for {} - retrying command", walletId_);
-         AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(state));
+         AddCommandToWaitingUpdateQueue(prefixedAddress.toBinStr(), CreateAddressValidationCommand(state));
          addressRetries_[prefixedAddress]++;    // reschedule validation since error occured
       }
       else {
@@ -340,25 +342,23 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
    const auto &cbCollectTXs = [state, cbCheckState](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
-         state->txHashSet.erase(txHash);
          state->txs[txHash] = tx;
-         if (state->txHashSet.empty()) {
-            cbCheckState();
-         }
       }
+      cbCheckState();
    };
    const auto &cbLedger = [this, state, cbCollectTXs, cbCheckState](std::vector<ClientClasses::LedgerEntry> entries) {
       state->nbTransactions += entries.size();
       state->entries = entries;
+      std::set<BinaryData> txHashSet;
       for (const auto &entry : entries) {
          state->value += entry.getValue();
          const auto &itTX = state->txs.find(entry.getTxHash());
          if (itTX == state->txs.end()) {
-            state->txHashSet.insert(entry.getTxHash());
+            txHashSet.insert(entry.getTxHash());
          }
       }
-      if (!state->txHashSet.empty()) {
-         armory_->getTXsByHash(state->txHashSet, cbCollectTXs);
+      if (!txHashSet.empty()) {
+         armory_->getTXsByHash(txHashSet, cbCollectTXs);
       }
       else {
          cbCheckState();
@@ -597,7 +597,7 @@ bool AddressVerificator::RegisterUserAddress(const std::shared_ptr<AuthAddress>&
    logger_->debug("[AddressVerificator::RegisterUserAddress] add address to update Q: {}"
       , address->GetChainedAddress().display<std::string>());
 
-   AddCommandToWaitingUpdateQueue(CreateAddressValidationCommand(address));
+   AddCommandToWaitingUpdateQueue(address->GetChainedAddress().id().toBinStr(), CreateAddressValidationCommand(address));
    return true;
 }
 
@@ -650,19 +650,18 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
    }
 
    const auto &cbTXs = [this](std::vector<Tx> txs) {
-      for (const auto &tx : txs) {
-         bsTXs_[tx.getThisHash()] = tx;
-      }
+      bsTXs_ = txs;
       registered_ = true;
       logger_->debug("[AddressVerificator::OnRefresh] received {} BS TXs", txs.size());
 
-      {
-         FastLock locker(waitingForUpdateQueueFlag_);
-         while (!waitingForUpdateQueue_.empty()) {
-            auto command = waitingForUpdateQueue_.front();
-            waitingForUpdateQueue_.pop();
-            AddCommandToQueue(std::move(command));
-         }
+      FastLock waitQlock(waitingForUpdateQueueFlag_);
+      std::unique_lock<std::mutex> commandQlock(dataMutex_);
+      for (const auto &waitCmd : waitingForUpdateQueue_) {
+         commandsQueue_.emplace(std::move(waitCmd.second));
+      }
+      waitingForUpdateQueue_.clear();
+      if (!commandsQueue_.empty()) {
+         dataAvailable_.notify_all();
       }
    };
    auto pages = std::make_shared<std::map<bs::Address, uint64_t>>();

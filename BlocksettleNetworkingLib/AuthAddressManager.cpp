@@ -72,8 +72,12 @@ void AuthAddressManager::SetAuthWallet()
 bool AuthAddressManager::setup()
 {
    if (!HaveAuthWallet()) {
+      logger_->debug("Auth wallet missing");
       addressVerificator_.reset();
       return false;
+   }
+   if (addressVerificator_) {
+      return true;
    }
 
    addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, SecureBinaryData().GenerateRandom(8).toHexStr()
@@ -142,7 +146,7 @@ bool AuthAddressManager::WalletAddressesLoaded()
 
 bool AuthAddressManager::IsReady() const
 {
-   return HasAuthAddr() && HaveBSAddressList() && ConnectedToArmory();
+   return HasAuthAddr() && HaveBSAddressList() && armory_ && armory_->isOnline();
 }
 
 bool AuthAddressManager::HaveAuthWallet() const
@@ -611,6 +615,7 @@ void AuthAddressManager::VerifyWalletAddresses()
 void AuthAddressManager::VerifyWalletAddressesFunction()
 {
    if (!HaveBSAddressList()) {
+      logger_->debug("AuthAddressManager doesn't have BS addresses");
       return;
    }
    bool updated = false;
@@ -625,6 +630,9 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
                SetState(addr, AddressVerificationState::Submitted);
             }
          }
+      }
+      else {
+         logger_->debug("AuthAddressManager auth wallet is null");
       }
       updated = true;
 
@@ -719,11 +727,6 @@ bool AuthAddressManager::HaveBSAddressList() const
 const std::unordered_set<std::string> &AuthAddressManager::GetBSAddresses() const
 {
    return bsAddressList_;
-}
-
-bool AuthAddressManager::ConnectedToArmory() const
-{
-   return addressVerificator_ != nullptr;
 }
 
 bool AuthAddressManager::SendGetBSAddressListRequest()

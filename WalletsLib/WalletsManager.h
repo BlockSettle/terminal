@@ -159,7 +159,7 @@ private:
    void SaveWallet(const hd_wallet_type& wallet);
    void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
    void EraseWallet(const wallet_gen_type &wallet);
-   void SetAuthWalletFrom(const hd_wallet_type &);
+   bool SetAuthWalletFrom(const hd_wallet_type &);
 
    void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
       , std::function<void(bs::Transaction::Direction)>);

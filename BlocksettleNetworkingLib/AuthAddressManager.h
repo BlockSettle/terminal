@@ -140,7 +140,6 @@ private:
    void ProcessErrorResponse(const std::string& response) const;
 
    bool HaveBSAddressList() const;
-   bool ConnectedToArmory() const;
 
    void VerifyWalletAddressesFunction();
    bool WalletAddressesLoaded();
