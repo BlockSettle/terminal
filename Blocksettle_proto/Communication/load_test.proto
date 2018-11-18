@@ -36,8 +36,6 @@ message AdminCommandConnect
    required string   auth_server_port = 13;
    required string   auth_server_public_key = 14;
    required bool     need_auth_address = 15;
-   required bool     generate_address = 16;
-   optional uint64   generate_address_interval = 17;
 }
 
 message RFQAmount
@@ -102,6 +100,8 @@ enum CustomerUpdateType
    AuthAddressStateType       = 15;
    XBTWalletInfoType          = 16;
    TXBroadcastedType          = 17;
+   // ZCReceivedNotificationType - no message body
+   ZCReceivedNotificationType = 18;
 }
 
 enum RFQProductGroup
