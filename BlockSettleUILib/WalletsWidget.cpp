@@ -189,6 +189,7 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    const auto &defWallet = walletsManager_->GetDefaultWallet();
    InitWalletsView(defWallet ? defWallet->GetWalletId() : std::string{});
+   connect(walletsManager_.get(), &WalletsManager::walletImportFinished, [this] { walletsModel_->LoadWallets(); });
 
    auto filter = appSettings_->get<int>(ApplicationSettings::WalletFiltering);
 
@@ -529,12 +530,6 @@ void WalletsWidget::shortcutActivated(ShortcutType s)
       default :
          break;
    }
-}
-
-void WalletsWidget::onImportComplete(const std::string &walletId)
-{
-   walletsManager_->onWalletImported(walletId);
-   walletImporters_.erase(walletId);
 }
 
 void WalletsWidget::onFilterSettingsChanged()

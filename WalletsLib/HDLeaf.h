@@ -35,7 +35,7 @@ namespace bs {
             }
          };
 
-         using PooledAddress = std::pair<BlockchainScanner::AddrPoolKey, bs::Address>;
+         using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
          using cb_completed = std::function<void()>;
          using cb_save_to_wallet = std::function<void(const std::vector<PooledAddress> &)>;
          using cb_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
@@ -55,6 +55,7 @@ namespace bs {
       private:
          struct Portion {
             std::vector<PooledAddress>  addresses;
+            std::map<bs::Address, AddrPoolKey>  poolKeyByAddr;
             Path::Elem        start;
             Path::Elem        end;
             std::atomic_bool  registered;
@@ -64,6 +65,7 @@ namespace bs {
 
          std::shared_ptr<Node>   node_;
          std::shared_ptr<ArmoryConnection>   armoryConn_;
+         std::shared_ptr<AsyncClient::BtcWallet>   rescanWallet_;
          std::string             walletId_;
          std::string             rescanWalletId_;
          std::string             rescanRegId_;
@@ -95,10 +97,8 @@ namespace bs {
          ~Leaf() override;
          virtual void init(const std::shared_ptr<Node> &node, const hd::Path &, Nodes rootNodes);
          virtual bool copyTo(std::shared_ptr<hd::Leaf> &) const;
-         virtual void setData(const std::string &) {}
-         virtual void setData(uint64_t) {}
 
-         void firstInit() override;
+         void firstInit(bool force = false) override;
          std::string GetWalletId() const override;
          std::string GetWalletDescription() const override;
          void SetDescription(const std::string &desc) override { desc_ = desc; }
@@ -268,7 +268,7 @@ namespace bs {
 
          void setData(const std::string &) override;
          void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
-         void firstInit() override;
+         void firstInit(bool force) override;
 
          bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *, uint64_t val = UINT64_MAX) override;
          bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *) override;

@@ -153,6 +153,7 @@ public:
    };
 
    TransactionItems                    currentPage_;
+   TransactionItems                    erasedPage_;
    std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
    std::unordered_set<std::string>     currentKeys_;
    std::shared_ptr<ArmoryConnection>   armory_;
