@@ -60,7 +60,11 @@ CreateTransactionDialog::~CreateTransactionDialog() noexcept
 
 void CreateTransactionDialog::init()
 {
-   transactionData_ = std::make_shared<TransactionData>([this]() { onTransactionUpdated(); });
+   transactionData_ = std::make_shared<TransactionData>([this]() {
+      QMetaObject::invokeMethod(this, [this] {
+         onTransactionUpdated();
+      });
+   });
 
    xbtValidator_ = new XbtAmountValidator(this);
    lineEditAmount()->setValidator(xbtValidator_);

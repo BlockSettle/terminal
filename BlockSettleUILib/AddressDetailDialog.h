@@ -18,7 +18,6 @@ class ArmoryConnection;
 class Tx;
 class WalletsManager;
 
-
 class AddressDetailDialog : public QDialog
 {
 Q_OBJECT

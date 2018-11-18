@@ -81,13 +81,16 @@ protected slots:
    void onImportPressed();
 
    void feeSelectionChanged(int currentIndex) override;
-   void onManualFeeChanged(int fee);
 
    void onNewAddressSelectedForChange();
    void onExistingAddressSelectedForChange();
 
    void showContextMenu(const QPoint& point);
    void onRemoveOutput();
+
+private slots:
+   void updateManualFeeControls();
+   void setTxFees();
 
 private:
    void clear() override;
@@ -110,7 +113,6 @@ private:
    void disableInputSelection();
    void disableFeeChanging();
    void SetFixedChangeAddress(const QString& changeAddress);
-   void setFixedFee(const int64_t& manualFee, bool perByte = false);
    void SetPredefinedFee(const int64_t& manualFee);
    void setUnchangeableTx();
 
