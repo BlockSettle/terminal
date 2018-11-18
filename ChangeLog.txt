@@ -1,3 +1,10 @@
+0.11.2
+Bug Fixes:
+   - Fixed wallet import
+   - Fixes for Auth Address Verification
+   - minor UI fixes
+Improvements:
+
 0.11.1
 Bug Fixes:
    - Fixed Settlement wallet persistency
