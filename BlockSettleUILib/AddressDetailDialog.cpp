@@ -115,10 +115,10 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    }
    else {
       const auto &cbLedgerDelegate = [this, armory](AsyncClient::LedgerDelegate delegate) {
-         QMetaObject::invokeMethod(this, "initModels", Qt::QueuedConnection
-            , Q_ARG(AsyncClient::LedgerDelegate, delegate));
+         QMetaObject::invokeMethod(this, [this, delegate] { initModels(delegate); }
+            , Qt::QueuedConnection);
       };
-      if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate)) {
+      if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate, this)) {
          ui_->labelError->setText(tr("Error loading address info"));
          onError();
       }

@@ -21,7 +21,6 @@
 #include "AuthAddressManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
-#include "ButtonMenu.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -748,6 +747,10 @@ void BSTerminalMainWindow::onLogin()
          ui->widgetWallets->setUsername(QString::fromStdString(username));
          action_logout_->setVisible(false);
          action_login_->setEnabled(false);
+
+         // set button text to this temporary text until the login
+         // completes and button text is changed to the username
+         setLoginButtonText(tr("Logging in..."));
       }
    }
 }
@@ -1162,11 +1165,7 @@ void BSTerminalMainWindow::setupShortcuts()
 void BSTerminalMainWindow::onButtonUserClicked() {
    if (ui->pushButtonUser->text() == tr("user.name")) {
       onLogin();
-      // set button text to this temporary text until the login
-      // completes and button text is changed to the username
-      setLoginButtonText(tr("Logging in..."));
-   }
-   else {
+   } else {
       if (BSMessageBox(BSMessageBox::question, tr("User Logout"), tr("You are about to logout")
          , tr("Do you want to continue?")).exec() == QDialog::Accepted)
       onLogout();
