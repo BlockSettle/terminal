@@ -20,7 +20,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , logger_(logger)
    , walletsMgr_(walletsMgr)
    , walletsPath_(walletsPath)
-   , backupPath_(walletsPath + "../backup")
+   , backupPath_(walletsPath + "/../backup")
    , pwHash_(pwHash)
    , hasUI_(hasUI)
    , backupEnabled_{backupEnabled}
@@ -751,6 +751,7 @@ bool HeadlessContainerListener::onSyncAddress(const std::string &clientId, headl
       }
    }
 
+   logger_->debug("[HeadlessContainerListener] creating {} new addresses", newAddresses.size());
    std::vector<std::pair<std::string, std::string>> failedAddresses;
    for (const auto &tuple : newAddresses) {
       const auto &wallet = std::get<0>(tuple);

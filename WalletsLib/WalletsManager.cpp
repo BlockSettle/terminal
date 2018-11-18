@@ -295,26 +295,30 @@ void WalletsManager::SaveWallet(const hd_wallet_type &wallet)
    }
 }
 
-void WalletsManager::SetAuthWalletFrom(const hd_wallet_type &wallet)
+bool WalletsManager::SetAuthWalletFrom(const hd_wallet_type &wallet)
 {
    const auto group = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
    if ((group != nullptr) && (group->getNumLeaves() > 0)) {
       authAddressWallet_ = group->getLeaf(0);
+      return true;
    }
+   return false;
 }
 
 void WalletsManager::onHDLeafAdded(QString id)
 {
-   logger_->debug("HD leaf {} added", id.toStdString());
    for (const auto &hdWallet : hdWallets_) {
       const auto &leaf = hdWallet.second->getLeaf(id.toStdString());
       if (leaf == nullptr) {
          continue;
       }
+      logger_->debug("HD leaf {} ({}) added", id.toStdString(), leaf->GetWalletName());
 
       const auto &ccIt = ccSecurities_.find(leaf->GetShortName());
       if (ccIt != ccSecurities_.end()) {
-         leaf->SetDescription(ccIt->second);
+         leaf->SetDescription(ccIt->second.desc);
+         leaf->setData(ccIt->second.genesisAddr);
+         leaf->setData(ccIt->second.lotSize);
       }
 
       leaf->SetUserID(userId_);
@@ -323,11 +327,9 @@ void WalletsManager::onHDLeafAdded(QString id)
          leaf->RegisterWallet(armory_);
       }
 
-      if (authAddressWallet_ == nullptr) {
-         SetAuthWalletFrom(hdWallet.second);
-         if (authAddressWallet_ != nullptr) {
-            emit authWalletChanged();
-         }
+      if (SetAuthWalletFrom(hdWallet.second)) {
+         logger_->debug("Auth wallet updated");
+         emit authWalletChanged();
       }
       emit walletChanged();
       break;
@@ -522,6 +524,13 @@ void WalletsManager::onWalletReady(const QString &walletId)
    }
 }
 
+void WalletsManager::onWalletImported(const std::string &walletId)
+{
+   logger_->debug("HD wallet {} imported", walletId);
+   UpdateSavedWallets(true);
+   emit walletImportFinished(walletId);
+}
+
 bool WalletsManager::IsArmoryReady() const
 {
    return (armory_ && (armory_->state() == ArmoryConnection::State::Ready));
@@ -667,13 +676,13 @@ void WalletsManager::UnregisterSavedWallets()
    }
 }
 
-void WalletsManager::UpdateSavedWallets()
+void WalletsManager::UpdateSavedWallets(bool force)
 {
    for (auto &it : wallets_) {
-      it.second->firstInit();
+      it.second->firstInit(force);
    }
    if (settlementWallet_) {
-      settlementWallet_->firstInit();
+      settlementWallet_->firstInit(force);
    }
 }
 
@@ -970,7 +979,7 @@ void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned l
          }
       }
    }
-   ccSecurities_[cc] = ccDesc.toStdString();
+   ccSecurities_[cc] = { ccDesc.toStdString(), nbSatoshis, genesisAddr.toStdString() };
 }
 
 void WalletsManager::onCCInfoLoaded()

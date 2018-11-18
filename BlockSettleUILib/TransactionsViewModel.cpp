@@ -49,6 +49,7 @@ void TransactionsViewModel::init()
       connect(armory_.get(), &ArmoryConnection::newBlock, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    }
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &WalletsManager::walletImportFinished, [this](const std::string &) { refresh(); });
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
 
@@ -68,9 +69,7 @@ void TransactionsViewModel::loadAllWallets()
 {
    const auto &cbWalletsLD = [this](AsyncClient::LedgerDelegate delegate) {
       ledgerDelegate_ = delegate;
-      QMetaObject::invokeMethod(this, [this] {
-         QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
-      });
+      QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
    };
    armory_->getWalletsLedgerDelegate(cbWalletsLD);
 }
@@ -247,6 +246,7 @@ void TransactionsViewModel::clear()
    beginResetModel();
    {
       QMutexLocker locker(&updateMutex_);
+      erasedPage_ = std::move(currentPage_);
       currentPage_.clear();
       currentKeys_.clear();
    }
@@ -513,6 +513,7 @@ void TransactionsViewModel::onItemsDeleted(TransactionItems items)
       beginRemoveRows(QModelIndex(), idx, idx);
       {
          QMutexLocker locker(&updateMutex_);
+         erasedPage_.emplace_back(std::move(currentPage_[idx]));
          currentPage_.erase(currentPage_.begin() + idx);
       }
       endRemoveRows();

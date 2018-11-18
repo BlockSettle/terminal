@@ -82,7 +82,7 @@ namespace bs {
          bool        extOnlyAddresses_;
          bool        needsCommit_ = true;
          std::unordered_map<Path::Elem, std::shared_ptr<hd::Leaf>>  leaves_;
-         unsigned int   scanPortion_ = 100;
+         unsigned int   scanPortion_ = 200;
 
       private:
          BinaryData serialize() const;

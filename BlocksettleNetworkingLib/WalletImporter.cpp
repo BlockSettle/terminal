@@ -18,6 +18,15 @@ WalletImporter::WalletImporter(const std::shared_ptr<SignContainer> &container
    connect(signingContainer_.get(), &SignContainer::HDWalletCreated, this, &WalletImporter::onHDWalletCreated);
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &WalletImporter::onHDLeafCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &WalletImporter::onHDWalletError);
+
+   connect(walletsMgr_.get(), &WalletsManager::walletImportFinished, this, &WalletImporter::onImportComplete);
+}
+
+void WalletImporter::onImportComplete(const std::string &id)
+{
+   if (rootWallet_ && (rootWallet_->getWalletId() == id)) {
+      signingContainer_->SyncAddresses(walletsMgr_->GetAddressesInAllWallets());
+   }
 }
 
 void WalletImporter::onWalletScanComplete(bs::hd::Group *grp, bs::hd::Path::Elem wallet, bool isValid)
@@ -26,17 +35,7 @@ void WalletImporter::onWalletScanComplete(bs::hd::Group *grp, bs::hd::Path::Elem
       return;
    }
    if (isValid) {
-      if (grp) {
-         const auto &wlt = grp->getLeaf(wallet);
-         if (wlt) {
-            std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> addressesToSync;
-            for (const auto &addr : wlt->GetUsedAddressList()) {
-               addressesToSync.push_back({ wlt, addr });
-            }
-            signingContainer_->SyncAddresses(addressesToSync);
-         }
-      }
-      if (grp->getIndex() == rootWallet_->getXBTGroupType()) {
+      if (grp && (grp->getIndex() == rootWallet_->getXBTGroupType())) {
          const bs::hd::Path::Elem nextWallet = (wallet == UINT32_MAX) ? 0 : wallet + 1;
          bs::hd::Path path;
          path.append(bs::hd::purpose, true);
@@ -103,7 +102,9 @@ void WalletImporter::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryD
 
       const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, rootWallet_->networkType());
       const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
-      group->createLeaf(bs::hd::Path::keyToElem(cc), leafNode);
+      const auto &leaf = group->createLeaf(bs::hd::Path::keyToElem(cc), leafNode);
+      leaf->setData(assetMgr_->getCCGenesisAddr(cc).display<std::string>());
+      leaf->setData(assetMgr_->getCCLotSize(cc));
 
       if (createCCWalletReqs_.empty()) {
          if (armory_->state() == ArmoryConnection::State::Ready) {
