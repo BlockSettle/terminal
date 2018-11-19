@@ -1,8 +1,8 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
-import com.blocksettle.FrejaProxy 1.0
-import com.blocksettle.FrejaSignWalletObject 1.0
+import com.blocksettle.AuthProxy 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 
 CustomDialog {
@@ -11,22 +11,22 @@ CustomDialog {
     property string password
     property bool acceptable: (wallet.encType === WalletInfo.Unencrypted) || tfPassword.text.length || password.length
     property string exportDir:  Qt.resolvedUrl(".")
-    property FrejaSignWalletObject  frejaSign
+    property AuthSignWalletObject  authSign
 
     id: exportWoWalletDialog
     implicitWidth: 400
     implicitHeight: mainLayout.implicitHeight
 
     onWalletChanged: {
-        if (wallet.encType === WalletInfo.Freja) {
-            frejaSign = freja.signWallet(wallet.encKey, qsTr("Export watching-only wallet for %1")
+        if (wallet.encType === WalletInfo.Auth) {
+            authSign = auth.signWallet(wallet.encKey, qsTr("Export watching-only wallet for %1")
                                          .arg(wallet.name), wallet.rootId)
 
-            frejaSign.success.connect(function(key) {
+            authSign.success.connect(function(key) {
                 password = key
-                labelFrejaStatus.text = qsTr("Password ok")
+                labelAuthStatus.text = qsTr("Password ok")
             })
-            frejaSign.error.connect(function(text) {
+            authSign.error.connect(function(text) {
                 exportWoWalletDialog.reject()
             })
         }
@@ -97,14 +97,14 @@ CustomDialog {
                 }
 
                 CustomLabel {
-                    id: labelFreja
-                    visible: wallet.encType === WalletInfo.Freja
-                    text: qsTr("Sign with Freja eID")
+                    id: labelAuth
+                    visible: wallet.encType === WalletInfo.Auth
+                    text: qsTr("Sign with Auth eID")
                 }
                 CustomLabel {
-                    id: labelFrejaStatus
-                    visible: wallet.encType === WalletInfo.Freja
-                    text: frejaSign.status
+                    id: labelAuthStatus
+                    visible: wallet.encType === WalletInfo.Auth
+                    text: authSign.status
                 }
             }
 
@@ -217,6 +217,6 @@ CustomDialog {
     }
 
     onRejected: {
-        frejaSign.cancel();
+        authSign.cancel();
     }
 }

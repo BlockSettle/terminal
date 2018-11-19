@@ -22,7 +22,6 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
-   const auto netType = params->testNet() ? NetworkType::TestNet : NetworkType::MainNet;
    walletsMgr_ = std::make_shared<WalletsManager>(logger);
 }
 

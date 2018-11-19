@@ -31,7 +31,7 @@ public:
    enum EncryptionType {
       Unencrypted,
       Password,
-      Freja
+      Auth
    };
    Q_ENUMS(EncryptionType)
 

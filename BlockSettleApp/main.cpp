@@ -16,9 +16,9 @@
 #include "ApplicationSettings.h"
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
+#include "EncryptionUtils.h"
 #include "StartupDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
+#include "BSMessageBox.h"
 #include "WalletsManager.h"
 
 
@@ -37,6 +37,7 @@ Q_IMPORT_PLUGIN(QICOPlugin)
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(BinaryData)
+Q_DECLARE_METATYPE(SecureBinaryData)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(bs::TXEntry)
 Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
@@ -111,6 +112,27 @@ static void checkFirstStart(ApplicationSettings *applicationSettings) {
   }
 }
 
+static void checkStyleSheet(QApplication &app) {
+   QLatin1String styleSheetFileName = QLatin1String("stylesheet.css");
+
+   QFileInfo info = QFileInfo(QLatin1String(styleSheetFileName));
+
+   static QDateTime lastTimestamp = info.lastModified();
+
+   if (lastTimestamp == info.lastModified()) {
+      return;
+   }
+
+   lastTimestamp = info.lastModified();
+
+   QFile stylesheetFile(styleSheetFileName);
+
+   bool result = stylesheetFile.open(QFile::ReadOnly);
+   assert(result);
+
+   app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
+}
+
 static int GuiApp(int argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
@@ -137,17 +159,32 @@ static int GuiApp(int argc, char** argv)
       QApplication::setPalette(p);
    }
 
+#ifdef QT_DEBUG
+   // Start monitoring to update stylesheet live when file is changed on the disk
+   QTimer timer;
+   QObject::connect(&timer, &QTimer::timeout, &app, [&app] {
+      checkStyleSheet(app);
+   });
+   timer.start(100);
+#endif
+
    QDirIterator it(QLatin1String(":/resources/Raleway/"));
    while (it.hasNext()) {
       QFontDatabase::addApplicationFont(it.next());
    }
 
    QString location = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-   QLockFile lockFile(location + QLatin1String("/blocksettle.lock"));
+#ifdef QT_DEBUG
+   QString userName = QDir::home().dirName();
+   QString lockFilePath = location + QLatin1String("/blocksettle-") + userName + QLatin1String(".lock");
+#else
+   QString lockFilePath = location + QLatin1String("/blocksettle.lock");
+#endif
+   QLockFile lockFile(lockFilePath);
    lockFile.setStaleLockTime(0);
 
    if (!lockFile.tryLock()) {
-      MessageBoxInfo box(app.tr("BlockSettle Terminal")
+      BSMessageBox box(BSMessageBox::info, app.tr("BlockSettle Terminal")
          , app.tr("BlockSettle Terminal is already running")
          , app.tr("Another instance of BlockSettle Terminal is running. It may be running in the background, look for the BlockSettle icon in the system tray"));
       return box.exec();
@@ -156,6 +193,7 @@ static int GuiApp(int argc, char** argv)
    qRegisterMetaType<QVector<int>>();
    qRegisterMetaType<std::string>();
    qRegisterMetaType<BinaryData>();
+   qRegisterMetaType<SecureBinaryData>();
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<bs::TXEntry>();
    qRegisterMetaType<std::vector<bs::TXEntry>>();
@@ -166,7 +204,7 @@ static int GuiApp(int argc, char** argv)
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
    if (!settings->LoadApplicationSettings(app.arguments())) {
-      MessageBoxCritical errorMessage(app.tr("Error")
+      BSMessageBox errorMessage(BSMessageBox::critical, app.tr("Error")
          , app.tr("Failed to parse command line arguments")
          , settings->ErrorText());
       errorMessage.exec();
@@ -198,16 +236,18 @@ static int GuiApp(int argc, char** argv)
 
       if (settings->get<bool>(ApplicationSettings::launchToTray)) {
          splashScreen.close();
-      }
-      else {
+      } else {
          mainWindow.show();
          splashScreen.finish(&mainWindow);
       }
+
+      mainWindow.postSplashscreenActions();
+
       return app.exec();
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
-      MessageBoxCritical(app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
+      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
       return 1;
    }
    return 0;

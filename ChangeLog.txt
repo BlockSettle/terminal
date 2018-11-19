@@ -1,3 +1,54 @@
+0.11.2
+Bug Fixes:
+   - Fixed wallet import
+   - Fixes for Auth Address Verification
+   - minor UI fixes
+Improvements:
+
+0.11.1
+Bug Fixes:
+   - Fixed Settlement wallet persistency
+Improvements:
+
+Release: 0.11.0
+Bug Fixes:
+   - Fixed SpotXBT and SpotCC settlement
+   - Fixed settlement transactions duplication in TX list
+   - RBF and CPFP fixes
+   - Minor UI fixes and enhancements
+   - Thread concurrency race condition fixes
+   - Various crash fixes
+Improvements:
+   - Auth eID support (supercedes Freja)
+   - Initial blockchain explorer support
+
+0.10.10
+Bug Fixes:
+Improvements:
+   - MD license agreement
+   - default settings for MD server on staging
+   - subscribe to indicative prices on PM products
+
+0.10.9
+Bug Fixes:
+   - crash on disconnect from MD
+Improvements:
+   - MD license agreement
+   - subscribe to MD on startup settings
+
+0.10.8
+Bug Fixes:
+Improvements:
+   - switch to private auth server
+   - minor UI improvements and fixes
+
+0.10.7
+Bug Fixes:
+   - fix crash on initial CC validation
+Improvements:
+   - subscribe to new MD server without login
+   - minor UI improvements and fixes
+
 0.10.6
 Bug Fixes:
    -
@@ -5,7 +56,7 @@ Improvements:
    - Aded possibility to cancel transaction from terminal with remote Signer
    - No warning messages in Terminal if transaction was just cancelled
    - Diskless settlement wallet in signer
-   
+
 0.10.5
 Bug Fixes:
    - Coin control UI fix ( autoselection )

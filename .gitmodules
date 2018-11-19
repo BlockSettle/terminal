@@ -4,3 +4,6 @@
 [submodule "Celer"]
 	path = Celer
 	url = https://github.com/BlockSettle/Celer.git
+[submodule "AuthCommon"]
+	path = AuthCommon
+	url = https://github.com/scomil/AuthCommon.git
