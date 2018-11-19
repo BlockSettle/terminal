@@ -42,6 +42,9 @@ void AddressDetailsWidget::setAddrVal(const bs::Address& inAddrVal) {
 }
 
 void AddressDetailsWidget::loadWallet() {
+   // In case we've been here earlier, clear all the text.
+   clearFields();
+
    // Armory can't directly take an address and return all the required data.
    // Work around this by creating a dummy wallet, adding the explorer address,
    // registering the wallet, and getting the required data.
@@ -236,9 +239,6 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
    }
 
    logger_->debug("[AddressDetailsWidget::OnRefresh] get refresh command");
-
-   // In case we've been here earlier, clear all the text.
-   clearFields();
 
    ui_->addressId->setText(addrVal_.display());
    // Once this callback runs, the data is safe to grab.
