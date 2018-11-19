@@ -22,6 +22,10 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    // connection to handle user clicking on adress id inside tx details page
    connect(ui_->Transaction, &TransactionDetailsWidget::addressClicked,
            this, &ExplorerWidget::onAddressClicked);
+   connect(ui_->btnSearch, &QPushButton::clicked,
+      this, &ExplorerWidget::onSearchStarted);
+   connect(ui_->btnReset, &QPushButton::clicked,
+      this, &ExplorerWidget::onReset);
 }
 
 ExplorerWidget::~ExplorerWidget() = default;
@@ -85,6 +89,7 @@ void ExplorerWidget::onSearchStarted()
       // off address processing and UI loading.
       ui_->Address->setAddrVal(bsAddress);
       ui_->Address->loadWallet();
+      ui_->searchBox->clear();
    }
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
@@ -94,6 +99,7 @@ void ExplorerWidget::onSearchStarted()
       // Pass the Tx hash to the Tx widget and populate the fields.
       BinaryTXID userTXID(READHEX(userStr.toStdString()), true);
       ui_->Transaction->populateTransactionWidget(userTXID);
+      ui_->searchBox->clear();
    }
    else {
       // This isn't a valid address or 32 byte hex string.
@@ -137,4 +143,9 @@ void ExplorerWidget::onAddressClicked(QString addressId) {
    // TO DO: Add a check for wallets that have already been loaded?
    ui_->Address->setAddrVal(bsAddress);
    ui_->Address->loadWallet();
+}
+
+void ExplorerWidget::onReset() {
+   ui_->stackedWidget->setCurrentIndex(BlockPage);
+   ui_->searchBox->clear();
 }
