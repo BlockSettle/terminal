@@ -136,6 +136,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
 
    ui_->labelWalletName->setText(item.walletName.isEmpty() ? tr("Unknown") : item.walletName);
 
+   /* disabled the context menu for copy to clipboard functionality, it can be removed later
    ui_->treeAddresses->setContextMenuPolicy(Qt::CustomContextMenu);
    connect(ui_->treeAddresses, &QTreeView::customContextMenuRequested, [=](const QPoint& p) {
       const auto address = ui_->treeAddresses->itemAt(p)->data(0, Qt::UserRole).toString();
@@ -148,7 +149,9 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
          });
          menu->popup(ui_->treeAddresses->mapToGlobal(p));
       }
-   });
+   });*/
+   // allow address column to be copied to clipboard with right click
+   ui_->treeAddresses->copyToClipboardColumns_.append(2);
 
    setMinimumHeight(minHeightAtRendering);
    resize(minimumSize());
