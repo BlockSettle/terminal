@@ -576,11 +576,12 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
       logger_->error("[ArmoryConnection::estimateFee] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbProcess = [cb](ClientClasses::FeeEstimateStruct feeStruct) {
+   const auto &cbProcess = [this, cb, nbBlocks](ClientClasses::FeeEstimateStruct feeStruct) {
       if (feeStruct.error_.empty()) {
          cb(feeStruct.val_);
       }
       else {
+         logger_->warn("[ArmoryConnection::estimateFee] error '{}' for nbBlocks={}", feeStruct.error_, nbBlocks);
          cb(0);
       }
    };
