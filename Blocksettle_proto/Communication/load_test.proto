@@ -13,6 +13,7 @@ enum AdminCommandCode
    CreateTXCode               = 6;
    // no command data
    StopTXSendingCode          = 7;
+   RevokeAllCoinsCode         = 8;
 }
 
 message AdminCommandHeader
@@ -85,6 +86,11 @@ message AdminCommandCreateTX
 
    required bool     repeat_tx = 9;
    optional uint64   repeat_tx_interval = 10;
+}
+
+message AdminCommandRevokeAllCoins
+{
+   required string revoke_to_address = 1;
 }
 
 enum CustomerUpdateType
