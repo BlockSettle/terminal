@@ -11,6 +11,8 @@ enum AdminCommandCode
    // no command data
    GetXBTWalletInfoCode       = 5;
    CreateTXCode               = 6;
+   // no command data
+   StopTXSendingCode          = 7;
 }
 
 message AdminCommandHeader
@@ -71,7 +73,6 @@ message AdminCommandCreateTX
 {
    required bool     send_all = 1;
    optional double   total_spend_amount = 2;
-   optional uint64   max_inputs_count = 3;
 
    required uint64   outputs_count = 4;
    required bool     create_new = 5;
@@ -79,6 +80,11 @@ message AdminCommandCreateTX
    required bool     use_random = 6;
 
    optional uint64   max_tx_size_bytes = 7;
+
+   required bool     allow_zc_inputs = 8;
+
+   required bool     repeat_tx = 9;
+   optional uint64   repeat_tx_interval = 10;
 }
 
 enum CustomerUpdateType
