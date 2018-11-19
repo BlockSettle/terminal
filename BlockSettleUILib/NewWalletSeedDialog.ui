@@ -385,6 +385,16 @@ To make sure that you have properly saved your RPK, please retype the RPK here.<
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>pushButtonCancel</tabstop>
+  <tabstop>pushButtonSave</tabstop>
+  <tabstop>pushButtonPrint</tabstop>
+  <tabstop>pushButtonBack</tabstop>
+  <tabstop>pushButtonContinue</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>lineEditLine1</tabstop>
+  <tabstop>lineEditLine2</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
