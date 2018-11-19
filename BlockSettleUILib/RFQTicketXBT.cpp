@@ -15,8 +15,7 @@
 #include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
+#include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -721,7 +720,7 @@ void RFQTicketXBT::submitButtonClicked()
             rfq.coinTxInput = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, rfq.requestId);
          } catch (const std::exception &e) {
-            MessageBoxCritical dlg(tr("RFQ NOT SENT"), QString::fromLatin1(e.what()));
+            BSMessageBox dlg(BSMessageBox::critical, tr("RFQ not sent"), QString::fromLatin1(e.what()));
             dlg.setWindowTitle(tr("RFQ Failure"));
             dlg.exec();
             return;
@@ -1011,7 +1010,7 @@ void RFQTicketXBT::productSelectionChanged()
                   ui_->pushButtonCreateWallet->setEnabled(true);
                   ui_->pushButtonCreateWallet->setText(tr("Create %1 wallet").arg(product));
                } else {
-                  MessageBoxCritical errorMessage(tr("Signer not connected")
+                  BSMessageBox errorMessage(BSMessageBox::critical, tr("Signer not connected")
                      , tr("Could not create CC subwallet.")
                      , this);
                   errorMessage.exec();

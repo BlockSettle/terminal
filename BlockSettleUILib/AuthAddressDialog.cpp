@@ -8,10 +8,7 @@
 #include "AuthAddressManager.h"
 #include "AuthAddressViewModel.h"
 #include "EnterOTPPasswordDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
-#include "MessageBoxQuestion.h"
-#include "MessageBoxWarning.h"
+#include "BSMessageBox.h"
 #include "UiUtils.h"
 
 
@@ -115,28 +112,28 @@ void AuthAddressDialog::onAuthMgrInfo(const QString &text)
 
 void AuthAddressDialog::showError(const QString &text, const QString &details)
 {
-   MessageBoxCritical errorMessage(text, details, this);
+   BSMessageBox errorMessage(BSMessageBox::critical, tr("Error"), text, details, this);
    errorMessage.exec();
 }
 
 void AuthAddressDialog::showInfo(const QString &title, const QString &text)
 {
-   MessageBoxInfo(title, text).exec();
+   BSMessageBox(BSMessageBox::info, title, text).exec();
 }
 
 void AuthAddressDialog::onAuthAddrSubmitError(const QString &, const QString &)
 {
-   MessageBoxWarning(tr("Submission Aborted")
-      , tr("The process of submitting an Authentication Address has been aborted. "
+   BSMessageBox(BSMessageBox::info, tr("Submission Aborted")
+      , tr("The process of submitting an Authentication Address has been aborted."
            "Any reserved balance will have been returned.")).exec();
    close();
 }
 
 void AuthAddressDialog::onAuthAddrSubmitSuccess(const QString &)
 {
-   MessageBoxInfo(tr("Successful Submission")
+   BSMessageBox(BSMessageBox::info, tr("Submission Successful")
       , tr("Your Authentication Address has now been submitted.")
-      , tr("Please allow BlockSettle 24h to fund your Authentication Address.")).exec();
+      , tr("Please allow BlockSettle 24 hours to fund your Authentication Address.")).exec();
    close();
 }
 
@@ -174,7 +171,7 @@ void AuthAddressDialog::onAddressListUpdated()
 
 void AuthAddressDialog::onAuthVerifyTxSent()
 {
-   MessageBoxInfo(tr("Authentication Address")
+   BSMessageBox(BSMessageBox::info, tr("Authentication Address")
       , tr("Verification Transaction successfully sent.")
       , tr("Once the validation transaction is mined six (6) blocks deep, your Authentication Address will be"
          " accepted as valid by the network and you can enter orders in the Spot XBT product group.")).exec();
@@ -184,12 +181,13 @@ void AuthAddressDialog::onAuthVerifyTxSent()
 void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
 {
    if (state == QLatin1String("Verified")) {
-      MessageBoxInfo(tr("Authentication Address")
+      BSMessageBox(BSMessageBox::info, tr("Authentication Address")
          , tr("Authentication Address verified.")
          , tr("Your Authentication Address is confirmed and you may now place orders in the Spot XBT product group.")
          ).exec();
    } else if (state == QLatin1String("Revoked")) {
-      MessageBoxWarning(tr("Authentication Address revoked")
+      BSMessageBox(BSMessageBox::warning, tr("Authentication Address")
+         , tr("Authentication Address revoked.")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();
    }
 }
@@ -282,7 +280,7 @@ void AuthAddressDialog::revokeSelectedAddress()
       return;
    }
 
-   MessageBoxQuestion revokeQ(tr("Auth Address Revoke")
+   BSMessageBox revokeQ(BSMessageBox::question, tr("Auth Address Revoke")
       , tr("Revoking Authentication Address")
       , tr("Revoking Authentication Address will lead to using your own XBT funds to pay transfer commission. Are you sure you wish to revoke?")
       , this);
@@ -295,13 +293,12 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 {
    const auto eurBalance = assetManager_->getBalance("EUR");
    if (validationAmount > eurBalance) {
-      MessageBoxWarning warnFunds(tr("INSUFFICIENT EUR BALANCE")
+      BSMessageBox warnFunds(BSMessageBox::warning, tr("Insufficient EUR Balance")
          , tr("Please fund your EUR account prior to submitting an Authentication Address")
          , tr("Required amount (EUR): %1<br/>Deposits and withdrawals are administered through the "
             "<a href=\"https://blocksettle.com\">Client Portal</a>")
          .arg(UiUtils::displayCurrencyAmount(validationAmount)), this);
       warnFunds.setWindowTitle(tr("Insufficient Funds"));
-      warnFunds.setButtonText(tr("Ok"));
       warnFunds.exec();
 
       authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
@@ -310,18 +307,18 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       return;
    }
 
-   MessageBoxQuestion *qry = nullptr;
-   const auto &qryTitle = tr("Submit Authentication Address");
-   const auto &qryText = tr("NEW AUTHENTICATION ADDRESS");
+   BSMessageBox *qry = nullptr;
+   const auto &qryTitle = tr("Authentication Address");
+   const auto &qryText = tr("New Authentication Address");
    if (validationAmount > 0) {
-      qry = new MessageBoxQuestion(qryTitle, qryText
+      qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address? Setting up a new Authentication Address"
             " costs %1 %2.").arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
          , tr("BlockSettle will not deduct an amount higher than the Fee Schedule maximum regardless of the"
             " stated cost. Please confirm BlockSettle can debit the Authentication Address fee from your account."), this);
    }
    else {
-      qry = new MessageBoxQuestion(qryTitle, qryText
+      qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address?")
          , tr("It appears that you're submitting the same Authentication Address again. The confirmation is"
             " formal and won't result in any withdrawals from your account."), this);

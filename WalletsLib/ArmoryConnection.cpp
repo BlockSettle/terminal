@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QProcess>
+#include <QPointer>
 
 #include <cassert>
 #include <exception>
@@ -60,15 +61,14 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
             }
          }
          if (!zcToDelete.empty()) {
-            logger_->debug("[ArmoryConnection::zc maintenance] Erasing {} ZC entries"
+            logger_->debug("[ArmoryConnection::zc maintenance] erasing {} ZC entries"
                , zcToDelete.size());
             for (const auto &reqId : zcToDelete) {
                zcData_.erase(reqId);
             }
          }
       }
-
-      logger_->error("[ArmoryConnection::zc maintenance] stoped");
+      logger_->debug("[ArmoryConnection::zc maintenance] stopped");
    };
    std::thread(cbZCMaintenance).detach();
 }
@@ -324,15 +324,24 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
 }
 
 bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &addr
-   , std::function<void(AsyncClient::LedgerDelegate)> cb)
+   , std::function<void(AsyncClient::LedgerDelegate)> cb, QObject *context)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[ArmoryConnection::getLedgerDelegateForAddress] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](AsyncClient::LedgerDelegate delegate) {
+   QPointer<QObject> contextSmartPtr = context;
+   const auto &cbWrap = [this, cb, context, contextSmartPtr](const AsyncClient::LedgerDelegate &delegate) {
       if (cbInMainThread_) {
-         QMetaObject::invokeMethod(this, [cb, delegate]{ cb(delegate); });
+         QMetaObject::invokeMethod(this, [cb, delegate, context, contextSmartPtr]{
+            if (context) {
+               if (contextSmartPtr) {
+                  cb(delegate);
+               }
+            } else {
+               cb(delegate);
+            }
+         });
       }
       else {
          cb(delegate);
@@ -567,11 +576,12 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
       logger_->error("[ArmoryConnection::estimateFee] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbProcess = [cb](ClientClasses::FeeEstimateStruct feeStruct) {
+   const auto &cbProcess = [this, cb, nbBlocks](ClientClasses::FeeEstimateStruct feeStruct) {
       if (feeStruct.error_.empty()) {
          cb(feeStruct.val_);
       }
       else {
+         logger_->warn("[ArmoryConnection::estimateFee] error '{}' for nbBlocks={}", feeStruct.error_, nbBlocks);
          cb(0);
       }
    };

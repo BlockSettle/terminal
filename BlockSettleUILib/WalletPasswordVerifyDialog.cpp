@@ -1,7 +1,7 @@
 #include "WalletPasswordVerifyDialog.h"
 
 #include "EnterWalletPassword.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "ui_WalletPasswordVerifyDialog.h"
 
 WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::shared_ptr<ApplicationSettings> &appSettings
@@ -12,7 +12,12 @@ WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::shared_ptr<App
 {
    ui_->setupUi(this);
 
+   ui_->pushButtonContinue->setEnabled(false);
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &WalletPasswordVerifyDialog::onContinueClicked);
+   connect(ui_->lineEditPassword, &QLineEdit::textEdited, this, [=](const QString &text) {
+      ui_->pushButtonContinue->setDisabled(text.isEmpty());
+   });
+
 }
 
 WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
@@ -56,7 +61,8 @@ void WalletPasswordVerifyDialog::onContinueClicked()
 
    if (key.encType == bs::wallet::EncryptionType::Password) {
       if (ui_->lineEditPassword->text().toStdString() != key.password.toBinStr()) {
-         MessageBoxCritical errorMessage(tr("Error"), tr("Password does not match. Please try again."), this);
+         BSMessageBox errorMessage(BSMessageBox::critical, tr("Error")
+            , tr("Password does not match. Please try again."), this);
          errorMessage.exec();
          return;
       }

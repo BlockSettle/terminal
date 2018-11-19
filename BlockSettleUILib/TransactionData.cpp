@@ -149,6 +149,8 @@ bool TransactionData::UpdateTransactionData()
    }
 
    summary_.availableBalance = UiUtils::amountToBtc(availableBalance);
+   summary_.isAutoSelected = selectedInputs_->UseAutoSel();
+
    bool maxAmount = true;
    std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
    if (RecipientsReady()) {
@@ -164,58 +166,62 @@ bool TransactionData::UpdateTransactionData()
          recipientsMap.emplace(it.first, recip);
       }
    }
+   if (recipientsMap.empty()) {
+      return false;
+   }
 
-   if (selectedInputs_->UseAutoSel()) {
-      summary_.isAutoSelected = true;
+   PaymentStruct payment = !qFuzzyIsNull(feePerByte_)
+      ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
+      : PaymentStruct(recipientsMap, totalFee_, 0, 0);
+   summary_.balanceToSpend = UiUtils::amountToBtc(payment.spendVal_);
 
-      if (!recipientsMap.empty()) {
-         PaymentStruct payment = !qFuzzyIsNull(feePerByte_)
-            ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
-            : PaymentStruct(recipientsMap, totalFee_, 0, 0);
-         summary_.balanceToSpent = UiUtils::amountToBtc(payment.spendVal_);
-
-         if (payment.spendVal_ < availableBalance) {
-            UtxoSelection selection;
-            try {
-               selection = coinSelection_->getUtxoSelectionForRecipients(payment, transactions);
-            } catch (const std::runtime_error& err) {
-               qDebug() << "UpdateTransactionData coinSelection exception: " << err.what();
-               return false;
-            } catch (...) {
-               qDebug() << "UpdateTransactionData coinSelection exception";
-               return false;
-            }
-
-            usedUTXO_ = selection.utxoVec_;
-
-            summary_.transactionSize = selection.size_;
-            summary_.totalFee = selection.fee_;
-            summary_.feePerByte = selection.fee_byte_;
-
-            summary_.hasChange = selection.hasChange_ && !maxAmount;
-
-            summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
+   if (payment.spendVal_ <= availableBalance) {
+      if (selectedInputs_->UseAutoSel()) {
+         UtxoSelection selection;
+         try {
+            selection = coinSelection_->getUtxoSelectionForRecipients(payment, transactions);
          }
+         catch (const std::runtime_error& err) {
+            qDebug() << "UpdateTransactionData coinSelection exception: " << err.what();
+            return false;
+         }
+         catch (...) {
+            qDebug() << "UpdateTransactionData coinSelection exception";
+            return false;
+         }
+
+         usedUTXO_ = selection.utxoVec_;
+
+         summary_.transactionSize = selection.size_;
+         summary_.totalFee = selection.fee_;
+         summary_.feePerByte = selection.fee_byte_;
+
+         summary_.hasChange = selection.hasChange_ && !maxAmount;
+
+         summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
-   } else {
-      summary_.isAutoSelected = false;
-      usedUTXO_ = transactions;
-      if (!recipientsMap.empty()) {
-         PaymentStruct payment = !qFuzzyIsNull(feePerByte_)
-            ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
-            : PaymentStruct(recipientsMap, totalFee_, 0, 0);
+      else {
+         usedUTXO_ = transactions;
 
-         summary_.balanceToSpent = UiUtils::amountToBtc(payment.spendVal_);
-
-         if (payment.spendVal_ < availableBalance) {
-            auto usedUTXOCopy{usedUTXO_};
-            UtxoSelection selection{usedUTXOCopy};
+         if (maxAmount) {
+            summary_.transactionSize = usedUTXO_.size();
+            summary_.totalFee = availableBalance - payment.spendVal_;
+            totalFee_ = summary_.totalFee;
+//            summary_.feePerByte = feePerByte_;
+            summary_.hasChange = false;
+            summary_.selectedBalance = UiUtils::amountToBtc(availableBalance);
+         }
+         else {
+            auto usedUTXOCopy{ usedUTXO_ };
+            UtxoSelection selection{ usedUTXOCopy };
             try {
                selection.computeSizeAndFee(payment);
-            } catch (const std::runtime_error& err) {
+            }
+            catch (const std::runtime_error& err) {
                qDebug() << "UpdateTransactionData UtxoSelection exception: " << err.what();
                return false;
-            } catch (...) {
+            }
+            catch (...) {
                qDebug() << "UpdateTransactionData UtxoSelection exception";
                return false;
             }
@@ -224,14 +230,14 @@ bool TransactionData::UpdateTransactionData()
             summary_.totalFee = selection.fee_;
             summary_.feePerByte = selection.fee_byte_;
 
-            summary_.hasChange = selection.hasChange_ && !maxAmount;
+            summary_.hasChange = selection.hasChange_;
 
             summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
          }
       }
+      summary_.usedTransactions = usedUTXO_.size();
    }
 
-   summary_.usedTransactions = usedUTXO_.size();
    summary_.initialized = true;
 
    return true;
@@ -270,7 +276,7 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
    }
    fee = fee / BTCNumericTypes::BalanceDivider;
 
-   auto availableBalance = GetTransactionSummary().availableBalance - GetTransactionSummary().balanceToSpent;
+   auto availableBalance = GetTransactionSummary().availableBalance - GetTransactionSummary().balanceToSpend;
 
    if (availableBalance < fee) {
       return 0;

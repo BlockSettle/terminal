@@ -33,6 +33,7 @@ protected slots:
    void onSearchStarted();
    void onTransactionClicked(QString txId);
    void onAddressClicked(QString addressId);
+   void onReset();
 
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;

@@ -221,6 +221,9 @@ namespace bs {
       virtual void SetDescription(const std::string &) = 0;
       virtual wallet::Type GetType() const { return wallet::Type::Bitcoin; }
 
+      virtual void setData(const std::string &) {}
+      virtual void setData(uint64_t) {}
+
       bool operator ==(const Wallet &w) const { return (w.GetWalletId() == GetWalletId()); }
       bool operator !=(const Wallet &w) const { return (w.GetWalletId() != GetWalletId()); }
 
@@ -248,7 +251,7 @@ namespace bs {
       virtual BTCNumericTypes::balance_type GetSpendableBalance() const;
       virtual BTCNumericTypes::balance_type GetUnconfirmedBalance() const;
       virtual BTCNumericTypes::balance_type GetTotalBalance() const;
-      virtual void firstInit();
+      virtual void firstInit(bool force = false);
 
       virtual void AddUnconfirmedBalance(BTCNumericTypes::balance_type delta);
       virtual bool isInitialized() const { return inited_; }

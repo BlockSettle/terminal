@@ -4,8 +4,6 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "CoinControlDialog.h"
-#include "FixedFeeValidator.h"
-#include "MessageBoxInfo.h"
 #include "OfflineSigner.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"
@@ -17,13 +15,11 @@
 #include "WalletsManager.h"
 #include "XbtAmountValidator.h"
 
-#include <QDebug>
 #include <QEvent>
 #include <QKeyEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QPushButton>
-#include <QIntValidator>
 
 #include <stdexcept>
 
@@ -39,6 +35,13 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
    selectedChangeAddress_ = bs::Address{};
 
    initUI();
+
+   connect(ui_->doubleSpinBoxFeesManualPerByte, QOverload<double>::of(&QDoubleSpinBox::valueChanged)
+      , this, &CreateTransactionDialogAdvanced::setTxFees);
+   connect(ui_->spinBoxFeesManualTotal, QOverload<int>::of(&QSpinBox::valueChanged)
+      , this, &CreateTransactionDialogAdvanced::setTxFees);
+
+   updateManualFeeControls();
 }
 
 CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
@@ -484,7 +487,8 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    if (originalFee_) {
       SetMinimumFee(originalFee_ + minRelayFeePerByte_ * summary.transactionSize, minFeePerByte_);
    }
-   QMetaObject::invokeMethod(this, "validateCreateButton", Qt::QueuedConnection);
+   QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
+      , Qt::QueuedConnection);
 }
 
 void CreateTransactionDialogAdvanced::preSetAddress(const QString& address)
@@ -579,8 +583,10 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
 
 void CreateTransactionDialogAdvanced::AddManualFeeEntries(float feePerByte, float totalFee)
 {
-   ui_->comboBoxFeeSuggestions->addItem(tr("Manual Fee Selection"), feePerByte);
-   ui_->comboBoxFeeSuggestions->addItem(tr("Total Network Fee"), totalFee);
+   ui_->doubleSpinBoxFeesManualPerByte->setValue(feePerByte);
+   ui_->spinBoxFeesManualTotal->setValue(qRound(totalFee));
+   ui_->comboBoxFeeSuggestions->addItem(tr("Manual Fee Selection"));
+   ui_->comboBoxFeeSuggestions->addItem(tr("Total Network Fee"));
 }
 
 void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)
@@ -601,42 +607,19 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    }
 }
 
-void CreateTransactionDialogAdvanced::onManualFeeChanged(int fee)
-{
-   if (ui_->comboBoxFeeSuggestions->currentIndex() == (ui_->comboBoxFeeSuggestions->count() - 2)) {
-      transactionData_->SetFeePerByte(fee);
-   }
-   else {
-      transactionData_->SetTotalFee(fee);
-   }
-}
-
 void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePerByte)
 {
    minTotalFee_ = totalFee;
    minFeePerByte_ = feePerByte;
 
-   if (loadFeeSuggestions_ && (ui_->comboBoxFeeSuggestions->count() >= 2)) {
-      ui_->comboBoxFeeSuggestions->setItemData(ui_->comboBoxFeeSuggestions->count() - 2, feePerByte);
-      ui_->comboBoxFeeSuggestions->setItemData(ui_->comboBoxFeeSuggestions->count() - 1, totalFee);
-   }
+   ui_->doubleSpinBoxFeesManualPerByte->setMinimum(feePerByte);
+   ui_->spinBoxFeesManualTotal->setMinimum(qRound(totalFee));
 }
 
 void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
 {
-   if (currentIndex < (ui_->comboBoxFeeSuggestions->count() - 2)) {
-      CreateTransactionDialog::feeSelectionChanged(currentIndex);
-
-      ui_->comboBoxFeeSuggestions->setEditable(false);
-   } else {
-      const auto &feeVal = ui_->comboBoxFeeSuggestions->currentData().toFloat();
-      if (currentIndex == (ui_->comboBoxFeeSuggestions->count() - 2)) {
-         setFixedFee(feeVal, true);
-      }
-      else {
-         setFixedFee(feeVal, false);
-      }
-   }
+   setTxFees();
+   updateManualFeeControls();
 }
 
 bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
@@ -849,8 +832,9 @@ void CreateTransactionDialogAdvanced::disableInputSelection()
 void CreateTransactionDialogAdvanced::disableFeeChanging()
 {
    feeChangeDisabled_ = true;
-   ui_->comboBoxFeeSuggestions->setEditable(false);
    ui_->comboBoxFeeSuggestions->setEnabled(false);
+   ui_->doubleSpinBoxFeesManualPerByte->setEnabled(false);
+   ui_->spinBoxFeesManualTotal->setEnabled(false);
 }
 
 void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& changeAddress)
@@ -873,30 +857,8 @@ void CreateTransactionDialogAdvanced::SetPredefinedFee(const int64_t& manualFee)
    transactionData_->SetTotalFee(manualFee);
 }
 
-void CreateTransactionDialogAdvanced::setFixedFee(const int64_t& manualFee, bool perByte)
-{
-   ui_->comboBoxFeeSuggestions->setEditable(true);
-
-   auto lineEdit = new QLineEdit(this);
-   ui_->comboBoxFeeSuggestions->setLineEdit(lineEdit);
-
-   auto feeValidator = new FixedFeeValidator(manualFee, perByte ? tr(" s/b") :  tr(" satoshi")
-      , ui_->comboBoxFeeSuggestions);
-   feeValidator->setMinValue(perByte ? minFeePerByte_ : minTotalFee_);
-   connect(feeValidator, &FixedFeeValidator::feeUpdated, this, &CreateTransactionDialogAdvanced::onManualFeeChanged);
-
-   if (perByte) {
-      transactionData_->SetFeePerByte(manualFee);
-   } else {
-      transactionData_->SetTotalFee(manualFee);
-   }
-
-   ui_->comboBoxFeeSuggestions->setFocus();
-}
-
 void CreateTransactionDialogAdvanced::setUnchangeableTx()
 {
-   ui_->comboBoxFeeSuggestions->setEditable(false);
    ui_->comboBoxFeeSuggestions->setEnabled(false);
    ui_->treeViewOutputs->setEnabled(false);
    ui_->lineEditAddress->setEnabled(false);
@@ -917,4 +879,27 @@ void CreateTransactionDialogAdvanced::showExistingChangeAddress(bool show)
 void CreateTransactionDialogAdvanced::disableChangeAddressSelecting()
 {
    ui_->widgetChangeAddress->setEnabled(false);
+}
+
+void CreateTransactionDialogAdvanced::updateManualFeeControls()
+{
+   int itemIndex = ui_->comboBoxFeeSuggestions->currentIndex();
+   int itemCount = ui_->comboBoxFeeSuggestions->count();
+
+   ui_->doubleSpinBoxFeesManualPerByte->setVisible(itemCount > 2 && itemIndex == itemCount - 2);
+   ui_->spinBoxFeesManualTotal->setVisible(itemCount > 2 && itemIndex == itemCount - 1);
+}
+
+void CreateTransactionDialogAdvanced::setTxFees()
+{
+   int itemIndex = ui_->comboBoxFeeSuggestions->currentIndex();
+   int itemCount = ui_->comboBoxFeeSuggestions->count();
+
+   if (itemIndex < (ui_->comboBoxFeeSuggestions->count() - 2)) {
+      CreateTransactionDialog::feeSelectionChanged(itemIndex);
+   } else if (itemIndex == itemCount - 2) {
+      transactionData_->SetFeePerByte(float(ui_->doubleSpinBoxFeesManualPerByte->value()));
+   } else if (itemIndex == itemCount - 1) {
+      transactionData_->SetTotalFee(ui_->spinBoxFeesManualTotal->value());
+   }
 }

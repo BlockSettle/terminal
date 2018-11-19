@@ -70,7 +70,6 @@ private slots:
    void updateAddresses();
    void onAddressContextMenu(const QPoint &);
    void onWalletContextMenu(const QPoint &);
-   void onImportComplete(const std::string &walletId);
    void onNewWallet();
    void onCopyAddress();
    void onEditAddrComment();

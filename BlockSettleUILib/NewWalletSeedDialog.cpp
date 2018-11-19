@@ -11,8 +11,7 @@
 #include <QScrollArea>
 #include <QEvent>
 
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
+#include "BSMessageBox.h"
 #include "PaperBackupWriter.h"
 #include "UiUtils.h"
 #include "ui_NewWalletSeedDialog.h"
@@ -128,7 +127,7 @@ void NewWalletSeedDialog::onSaveClicked()
    bool result = pdfWriter_->write(filePath);
 
    if (!result) {
-      MessageBoxCritical messageBox(tr("Failed to save backup file")
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Failed to save backup file")
          , tr("Unable to open file %1 for writing").arg(filePath));
       messageBox.exec();
       return;
@@ -155,8 +154,8 @@ void NewWalletSeedDialog::onPrintClicked()
    // See https://bugreports.qt.io/browse/QTBUG-36112
    // Happens on macOS with Qt 5.11.11
    if (printer.outputFormat() != QPrinter::NativeFormat) {
-      MessageBoxCritical messageBox(tr("Printing Error")
-         , tr("Please make sure that you have printer connected."), this);
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Print Error")
+         , tr("Please make sure that you have a printer connected."), this);
       messageBox.exec();
       return;
    }
@@ -193,7 +192,7 @@ void NewWalletSeedDialog::onContinueClicked()
 void NewWalletSeedDialog::validateKeys()
 {
    if (!keysAreCorrect_) {
-      MessageBoxCritical messageBox(tr("Check failed!")
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Check failed!")
          , tr("Input values do not match with the original keys. Please make sure the input lines are correct."));
       messageBox.exec();
       return;
@@ -238,10 +237,11 @@ void NewWalletSeedDialog::onKeyChanged(const QString &)
 
 bool abortWalletCreationQuestionDialog(QWidget* parent)
 {
-   MessageBoxQuestion messageBox(QObject::tr("Warning"), QObject::tr("ABORT WALLET CREATION?")
+   BSMessageBox messageBox(BSMessageBox::question, QObject::tr("Warning"), QObject::tr("Abort Wallet Creation?")
       , QObject::tr("The Wallet will not be created if you don't complete the procedure.\n"
          "Are you sure you want to abort the Wallet Creation process?"), parent);
-   messageBox.setConfirmButtonText(QObject::tr("Abort Wallet Creation")).setCancelButtonText(QObject::tr("Back"));
+   messageBox.setConfirmButtonText(QObject::tr("Abort"));
+   messageBox.setCancelButtonText(QObject::tr("Back"));
 
    int result = messageBox.exec();
    return (result == QDialog::Accepted);

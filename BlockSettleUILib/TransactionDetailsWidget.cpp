@@ -91,6 +91,10 @@ void TransactionDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &arm
 // incoming TXID must be in RPC order, not internal order.
 void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
                                                          const bool& firstPass) {
+   // In case we've been here earlier, clear all the text.
+   if (firstPass) {
+      clearFields();
+   }
    // get the transaction data from armory
    const auto &cbTX = [this, &rpcTXID, firstPass](Tx tx) {
       if (!tx.isInitialized()) {
@@ -173,9 +177,6 @@ void TransactionDetailsWidget::getHeaderData(const BinaryData& inHeader)
 
 void TransactionDetailsWidget::setTxGUIValues()
 {
-   // In case we've been here earlier, clear all the text.
-   clearFields();
-
    // Get Tx header data. NOT USED FOR NOW.
 //   BinaryData txHdr(curTx_.getPtr(), 80);
 //   getHeaderData(txHdr);

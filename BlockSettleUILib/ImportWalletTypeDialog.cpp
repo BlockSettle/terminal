@@ -6,7 +6,7 @@
 #include <QStandardPaths>
 
 #include "EasyEncValidator.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "MetaData.h"
 #include "UiUtils.h"
 #include "make_unique.h"
@@ -181,12 +181,12 @@ void ImportWalletTypeDialog::OnSelectFilePressed()
          QByteArray data = file.readAll();
          walletData_ = WalletBackupFile::Deserialize(std::string(data.data(), data.size()));
          if (walletData_.id.empty()) {
-            MessageBoxCritical(tr("Backup file corrupted"), tr("Could not load wallet from file"), this).exec();
+            BSMessageBox(BSMessageBox::critical, tr("Backup file corrupted"), tr("Could not load wallet from file"), this).exec();
          } else {
             ui_->labelFileName->setText(fileToOpen);
          }
       } else {
-         MessageBoxCritical(tr("Failed to read backup file"), tr("Could not read %1").arg(fileToOpen), this).exec();
+         BSMessageBox(BSMessageBox::critical, tr("Failed to read backup file"), tr("Could not read %1").arg(fileToOpen), this).exec();
       }
 
       updateImportButton();
@@ -209,7 +209,7 @@ void ImportWalletTypeDialog::OnSelectWoFilePressed()
          woFileExists_ = true;
       }
       else {
-         MessageBoxCritical(tr("Failed to read backup file"), tr("Could not read %1").arg(woFileName_), this).exec();
+         BSMessageBox(BSMessageBox::critical, tr("Failed to read backup file"), tr("Could not read %1").arg(woFileName_), this).exec();
       }
 
       updateImportButton();

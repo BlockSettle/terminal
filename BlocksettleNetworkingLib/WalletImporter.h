@@ -40,6 +40,7 @@ private slots:
    void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
    void onHDWalletError(unsigned int id, std::string error);
    void onWalletScanComplete(bs::hd::Group *, bs::hd::Path::Elem wallet, bool isValid);
+   void onImportComplete(const std::string &id);
 
 private:
    std::shared_ptr<SignContainer>      signingContainer_;
