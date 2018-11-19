@@ -166,14 +166,9 @@ void NetworkSettingsPage::applyChanges()
       appSettings_->set(ApplicationSettings::armoryDbIp, ui_->armoryDBHostLineEdit->text());
       appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortSpinBox->value());
    }
-   appSettings_->set(ApplicationSettings::celerHost, ui_->celerHostLineEdit->text());
-   appSettings_->set(ApplicationSettings::celerPort, ui_->celerPortSpinBox->value());
 
    appSettings_->set(ApplicationSettings::pubBridgeHost, ui_->lineEditPublicBridgeHost->text());
    appSettings_->set(ApplicationSettings::pubBridgePort, ui_->spinBoxPublicBridgePort->value());
-
-   appSettings_->set(ApplicationSettings::mdServerHost, ui_->lineEditMDHost->text());
-   appSettings_->set(ApplicationSettings::mdServerPort, ui_->spinBoxMDPort->value());
 }
 
 void NetworkSettingsPage::onRunArmoryLocallyChecked(bool checked)
