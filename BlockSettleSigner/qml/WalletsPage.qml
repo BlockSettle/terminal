@@ -110,9 +110,9 @@ Item {
                                     dlgImp.digitalBackup = (dlgNew.type === WalletNewDialog.WalletType.DigitalBackupFile)
                                     dlgImp.seed = walletsProxy.createWalletSeed()
                                     dlgImp.accepted.connect(function(){
-                                        if (walletsProxy.importWallet(dlg.isPrimary, dlg.seed, dlg.password)) {
+                                        if (walletsProxy.importWallet(dlgImp.isPrimary, dlgImp.seed, dlgImp.password)) {
                                             ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>")
-                                                                     .arg(dlg.seed.walletName))
+                                                                     .arg(dlgImp.seed.walletName))
                                         }
                                     })
                                     dlgImp.open()
