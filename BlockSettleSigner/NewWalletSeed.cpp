@@ -67,7 +67,10 @@ void NewWalletSeed::print()
       emit unableToPrint();
       return;
    }
-
+   
+   // QPrintDialog doesn't want to work in QML, 
+   // use QPrinterInfo to get all available printers
+   // and create Ui so that user can select the printer to use
    QPrintDialog dialog(&printer);
    dialog.setWindowTitle(tr("Print Wallet Seed"));
    dialog.setPrintRange(QAbstractPrintDialog::CurrentPage);
