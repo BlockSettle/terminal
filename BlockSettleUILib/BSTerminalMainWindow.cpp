@@ -183,6 +183,9 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
    };
 
    command->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
+      if (data.empty()) {
+         showError(title, tr("Empty reply from BlockSettle server"));
+      }
       Blocksettle::Communication::GetNetworkSettingsResponse response;
       if (!response.ParseFromString(data)) {
          showError(title, tr("Invalid reply from BlockSettle server"));
@@ -215,6 +218,9 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
    }
    else {
       logMgr_->logger()->debug("[GetNetworkSettingsFromPuB] request sent");
+   }
+   if (!command->WaitForRequestedProcessed(500)) {
+      showError(title, tr("No response from BlockSettle server"));
    }
 }
 
