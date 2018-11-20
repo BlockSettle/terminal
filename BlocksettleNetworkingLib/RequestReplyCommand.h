@@ -39,6 +39,8 @@ public:
    void SetReplyCallback(const data_callback_type& callback);
    void SetErrorCallback(const error_callback_type& callback);
 
+   void CleanupCallbacks();
+
    std::string GetName() const { return name_; }
 
    bool ExecuteRequest(const std::string& host, const std::string& port
