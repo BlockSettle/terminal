@@ -13,41 +13,21 @@ enum EnvConfiguration
 
 struct EnvSettings
 {
-   QString  celerHost;
-   int      celerPort;
-
    QString  pubHost;
    int      pubPort;
-
-   QString  mdHost;
-   int      mdPort;
 };
 
 bool operator == (const EnvSettings& l, const EnvSettings& r)
 {
-   return l.celerHost == r.celerHost
-         && l.celerPort == r.celerPort
-         && l.pubHost == r.pubHost
-         && l.pubPort == r.pubPort
-         && l.mdHost == r.mdHost
-         && l.mdPort == r.mdPort;
+   return l.pubHost == r.pubHost
+      && l.pubPort == r.pubPort;
 }
 
-static const EnvSettings StagingEnvSettings{
-   QLatin1String("104.155.117.179"),
-   16001,
-   QLatin1String("185.213.153.45"),
-   9091,
-   QLatin1String("185.213.153.44"),
-   16001};
+static const EnvSettings StagingEnvSettings {
+   QLatin1String("185.213.153.45"), 9091 };
 
 static const EnvSettings UATEnvSettings{
-   QLatin1String("185.213.153.43"),
-   16001,
-   QLatin1String("185.213.153.44"),
-   9091,
-   QLatin1String("185.213.153.46"),
-   16005};
+   QLatin1String("185.213.153.44"), 9091 };
 
 NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    : QWidget{parent}
@@ -137,12 +117,8 @@ void NetworkSettingsPage::DetectEnvironmentSettings()
    int index = CustomConfiguration;
 
    EnvSettings currentConfiguration{
-      ui_->celerHostLineEdit->text(),
-      ui_->celerPortSpinBox->value(),
       ui_->lineEditPublicBridgeHost->text(),
-      ui_->spinBoxPublicBridgePort->value(),
-      ui_->lineEditMDHost->text(),
-      ui_->spinBoxMDPort->value()
+      ui_->spinBoxPublicBridgePort->value()
    };
 
    if (currentConfiguration == StagingEnvSettings) {
@@ -198,12 +174,7 @@ void NetworkSettingsPage::onEnvSelected(int index)
          settings = &UATEnvSettings;
       }
 
-      ui_->celerHostLineEdit->setText(settings->celerHost);
-      ui_->celerPortSpinBox->setValue(settings->celerPort);
       ui_->lineEditPublicBridgeHost->setText(settings->pubHost);
       ui_->spinBoxPublicBridgePort->setValue(settings->pubPort);
-
-      ui_->lineEditMDHost->setText(settings->mdHost);
-      ui_->spinBoxMDPort->setValue(settings->mdPort);
    }
 }

@@ -392,6 +392,9 @@
          </item>
          <item>
           <widget class="QLineEdit" name="celerHostLineEdit">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>---</string>
            </property>
@@ -448,6 +451,9 @@
          </item>
          <item>
           <widget class="QSpinBox" name="celerPortSpinBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="maximum">
             <number>65535</number>
            </property>
@@ -668,7 +674,11 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEditMDHost"/>
+          <widget class="QLineEdit" name="lineEditMDHost">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -718,6 +728,9 @@
          </item>
          <item>
           <widget class="QSpinBox" name="spinBoxMDPort">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="maximum">
             <number>65535</number>
            </property>
