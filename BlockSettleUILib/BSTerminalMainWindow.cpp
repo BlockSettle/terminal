@@ -200,6 +200,14 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
          showError(title, tr("Empty network settings received from BlockSettle server"));
          return false;
       }
+      if (networkSettings_.find(NetworkSettingType::Celer) == networkSettings_.end()) {
+         showError(title, tr("Missing Celer connection settings"));
+         return false;
+      }
+      if (networkSettings_.find(NetworkSettingType::MarketData) == networkSettings_.end()) {
+         showError(title, tr("Missing Market Data server connection settings"));
+         return false;
+      }
       logMgr_->logger()->debug("[GetNetworkSettingsFromPuB] received {} network settings", networkSettings_.size());
       populateAppSettings(networkSettings_);
       cb(networkSettings_);
