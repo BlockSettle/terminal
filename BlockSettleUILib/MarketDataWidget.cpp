@@ -104,7 +104,8 @@ void MarketDataWidget::ChangeMDSubscriptionState()
    if (mdProvider_->IsConnectionActive()) {
       mdProvider_->DisconnectFromMDSource();
    } else {
-      mdProvider_->SubscribeToMD();
+      mdProvider_->SubscribeToMD(appSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+         , appSettings_->get<std::string>(ApplicationSettings::mdServerPort));
    }
 }
 

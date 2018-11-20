@@ -24,7 +24,6 @@ Q_OBJECT
 
 public:
    BSMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::string& host, const std::string& port
       , const std::shared_ptr<spdlog::logger>& logger);
    ~BSMarketDataProvider() noexcept override = default;
 
@@ -39,7 +38,7 @@ public:
    bool IsConnectionActive() const override;
 
 protected:
-   bool StartMDConnection() override;
+   bool StartMDConnection(const std::string& host, const std::string& port) override;
 
 private:
    void onDataFromMD(const std::string& data);
@@ -50,10 +49,6 @@ private:
    void OnIncrementalUpdate(const std::string& data);
 
 private:
-   // connection details for MD source
-   std::string mdHost_;
-   std::string mdPort_;
-
    std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<SubscriberConnection> mdConnection_ = nullptr;
    std::shared_ptr<SubscriberConnectionListenerCB> listener_ = nullptr;
