@@ -34,6 +34,12 @@ void RequestReplyCommand::SetErrorCallback(const error_callback_type& callback)
    errorCallback_ = callback;
 }
 
+void RequestReplyCommand::CleanupCallbacks()
+{
+   replyCallback_ = {};
+   errorCallback_ = {};
+}
+
 bool RequestReplyCommand::ExecuteRequest(const std::string& host
    , const std::string& port, const std::string& data, bool executeOnConnect)
 {
