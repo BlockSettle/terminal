@@ -67,7 +67,9 @@ private:
 
 
 bs::SettlementWallet::SettlementWallet()
-   : PlainWallet(tr("Settlement").toStdString(), tr("Settlement Wallet").toStdString())
+   : PlainWallet(tr("Settlement").toStdString()
+                 , tr("Settlement Wallet").toStdString()
+                 , logger_)
 {}
 
 bs::SettlementWallet::SettlementWallet(const std::string &filename)
@@ -254,7 +256,7 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
          auto inUTXOs = inputs.get();
          if (inUTXOs.empty()) {
             if (allowZC) {
-               const auto &cbZC = [cb]
+               const auto &cbZC = [this, cb]
                                   (ReturnMessage<std::vector<UTXO>> zcs)->void {
                   try {
                      auto inZCUTXOs = zcs.get();
@@ -262,8 +264,10 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
                         cb(inZCUTXOs[0]);
                      }
                   }
-                  catch(exception&) {
-                     auto eptr = current_exception();
+                  catch(std::exception& e) {
+                     getLogger()->error("[bs::SettlementWallet::GetInputFor] " \
+                        "Return data error (getSpendableZCList) - {}",
+                        e.what());
                   }
                };
                rtWallet->getSpendableZCList(cbZC);
@@ -273,8 +277,9 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
             cb(inUTXOs[0]);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[bs::SettlementWallet::GetInputFor] Return data " \
+            "error (getSpendableTxOutListForValue) - {}", e.what());
       }
    };
    rtWallet->getSpendableTxOutListForValue(UINT64_MAX, cbSpendable);
@@ -403,14 +408,15 @@ bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTX
       result->insert(result->end(), utxos.begin(), utxos.end());
 
       for (const auto &rtWallet : rtWallets_) {
-         const auto &cbRTWlist = [result, walletSet, id=rtWallet.first, cb]
+         const auto &cbRTWlist = [this, result, walletSet, id=rtWallet.first, cb]
                                  (ReturnMessage<std::vector<UTXO>> utxos)->void {
             try {
                auto inUTXOs = utxos.get();
                result->insert(result->end(), inUTXOs.begin(), inUTXOs.end());
             }
-            catch(exception&) {
-               auto eptr = current_exception();
+            catch(std::exception& e) {
+               getLogger()->error("[bs::SettlementWallet::getSpendableZCList] " \
+                  "Return data error - {}", e.what());
             }
 
             walletSet->erase(id);

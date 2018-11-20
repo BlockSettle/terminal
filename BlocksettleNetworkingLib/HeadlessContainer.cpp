@@ -237,7 +237,11 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
    else if (response.has_wallet()) {
       const auto netType = (response.wallet().nettype() == headless::TestNetType) ? NetworkType::TestNet : NetworkType::MainNet;
       auto wallet = std::make_shared<bs::hd::Wallet>(response.wallet().walletid()
-         , netType, false, response.wallet().name(), response.wallet().description());
+                                                     , netType
+                                                     , false
+                                                     , response.wallet().name()
+                                                     , logger_
+                                                     , response.wallet().description());
 
       for (int i = 0; i < response.wallet().groups_size(); i++) {
          const auto grpPath = bs::hd::Path::fromString(response.wallet().groups(i).path());

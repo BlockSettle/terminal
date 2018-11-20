@@ -354,10 +354,16 @@ bs::wallet::Seed bs::wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &p
 }
 
 
+bs::Wallet::Wallet(const std::shared_ptr<spdlog::logger> &logger)
+   : QObject(nullptr), wallet::MetaData()
+   , spendableBalance_(0), unconfirmedBalance_(0), totalBalance_(0)
+   , updateAddrBalance_(false), updateAddrTxN_(false), logger_(logger)
+{}
+
 bs::Wallet::Wallet()
    : QObject(nullptr), wallet::MetaData()
    , spendableBalance_(0), unconfirmedBalance_(0), totalBalance_(0)
-   , updateAddrBalance_(false), updateAddrTxN_(false)
+   , updateAddrBalance_(false), updateAddrTxN_(false), logger_(nullptr)
 {}
 
 bs::Wallet::~Wallet()
@@ -474,8 +480,9 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
                updateAddrBalance_ = false;
             }
          }
-         catch(exception&) {
-            auto eptr = current_exception();
+         catch(std::exception& e) {
+            logger_->error("[bs::Wallet::getAddrBalance] Return data error ", \
+               "- {}", e.what());
          }
 
          for (const auto &queuedCb : cbBal_) {
@@ -519,7 +526,7 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t
       return false;
    }
    if (updateAddrTxN_) {
-      const auto &cbTxN = [this]
+      const auto &cbTxN = [this, addr]
                         (ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
          try {
             auto inTxnMap = txnMap.get();
@@ -531,8 +538,9 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t
                updateAddrTxN_ = false;
             }
          }
-         catch(exception&) {
-            auto eptr = current_exception();
+         catch(std::exception& e) {
+            logger_->error("[bs::Wallet::getAddrTxN] Return data error - {} ", \
+               "- Address {}", e.what(), addr.display().toStdString());
          }
 
          for (const auto &queuedCb : cbTxN_) {
@@ -620,8 +628,9 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
             }
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[bs::Wallet::getSpendableTxOutList] Return data " \
+            "error {} - value {}", e.what(), val);
       }
 
       spendableCallbacks_.clear();
@@ -654,7 +663,7 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
             }
             index--;
          }
-         if ((index >= 0) && (index < utxosObj.size())) {
+         if ((index >= 0) && ((size_t)index < utxosObj.size())) {
             cb({ utxosObj[index] });
             return;
          }
@@ -679,8 +688,9 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
             cb(result);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[bs::Wallet::getUTXOsToSpend] Return data error " \
+            "- {} - value {}", e.what(), val);
       }
    };
    btcWallet_->getSpendableTxOutListForValue(val, cbProcess);
@@ -727,8 +737,9 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
             }
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[bs::Wallet::getSpendableZCList] Return data error " \
+            "- {}", e.what());
       }
 
       zcListCallbacks_.clear();
@@ -737,12 +748,26 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
    return true;
 }
 
-bool bs::Wallet::getRBFTxOutList(std::function<void(ReturnMessage<std::vector<UTXO>>)> cb) const
+bool bs::Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
 {
    if (!isBalanceAvailable()) {
       return false;
    }
-   btcWallet_->getRBFTxOutList(cb);
+
+   // The callback we passed in needs data from Armory. Write a simple callback
+   // that takes Armory's data and uses it in the callback.
+   const auto &cbArmory = [this, cb](ReturnMessage<std::vector<UTXO>> utxos)->void {
+      try {
+         auto inUTXOs = utxos.get();
+         cb(std::move(inUTXOs));
+      }
+      catch(std::exception& e) {
+         logger_->error("[bs::Wallet::getRBFTxOutList] Return data error - " \
+            "{}", e.what());
+      }
+   };
+
+   btcWallet_->getRBFTxOutList(cbArmory);
    return true;
 }
 
@@ -782,8 +807,9 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
             cb(bv);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[bs::Wallet::UpdateBalanceFromDB] Return data error " \
+            "- {}", e.what());
       }
    };
    btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
@@ -839,8 +865,9 @@ bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet
          }
          historyCache_[id] = le;
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[bs::Wallet::getHistoryPage] Return data " \
+            "error - {} - ID {}", e.what(), id);
       }
    };
    btcWallet_->getHistoryPage(id, cb);

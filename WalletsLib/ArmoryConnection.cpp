@@ -322,8 +322,9 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
             cb(std::move(le));
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[ArmoryConnection::getWalletsHistory] Return data " \
+            "error - {}", e.what());
       }
    };
 
@@ -339,7 +340,7 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
       return false;
    }
    QPointer<QObject> contextSmartPtr = context;
-   const auto &cbWrap = [this, cb, context, contextSmartPtr]
+   const auto &cbWrap = [this, cb, context, contextSmartPtr, walletId, addr]
                         (ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
       try {
          auto ld = delegate.get();
@@ -358,8 +359,10 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
             cb(ld);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[ArmoryConnection::getLedgerDelegateForAddress] " \
+            "Return data error - {} - Wallet {} - Address {}", e.what(),
+            walletId, addr.display().toStdString());
       }
    };
    bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbWrap);
@@ -379,15 +382,16 @@ bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletI
    auto result = std::make_shared<std::map<bs::Address, AsyncClient::LedgerDelegate>>();
    for (const auto &addr : addresses) {
       addrSet->insert(addr);
-      const auto &cbProcess = [this, addrSet, result, addr, cb]
+      const auto &cbProcess = [this, addrSet, result, addr, cb, walletId]
                               (ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
          try {
             auto ld = delegate.get();
             addrSet->erase(addr);
             (*result)[addr] = ld;
          }
-         catch(exception&) {
-            auto eptr = current_exception();
+         catch(std::exception& e) {
+            logger_->error("[ArmoryConnection::getLedgerDelegatesForAddresses] " \
+               "Return data error - {} - Wallet {}", e.what(), walletId);
          }
 
          if (addrSet->empty()) {
@@ -427,8 +431,9 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(AsyncClient::
             cb(ld);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[ArmoryConnection::getWalletsLedgerDelegate] " \
+            "Return data error - {}", e.what());
       }
    };
    bdv_->getLedgerDelegateForWallets(cbWrap);
@@ -492,9 +497,9 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
          txCache_.put(hash, retTx);
          callGetTxCallbacks(hash, retTx);
       }
-      catch(exception&) {
-         auto eptr = current_exception();
-         logger_->warn("[ArmoryConnection::getTxByHash] received uninited TX for hash {}", hash.toHexStr(true));
+      catch(std::exception& e) {
+         logger_->error("[ArmoryConnection::getTxByHash] " \
+            "Return data error - {} - hash {}", e.what(), hash.toHexStr());
       }
    };
    bdv_->getTxByHash(hash, cbUpdateCache);
@@ -556,8 +561,10 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
                auto retTx = tx.get();
                callGetTxCallbacks(hash, retTx);
             }
-            catch(exception&) {
-               auto eptr = current_exception();
+            catch(std::exception& e) {
+               // Switch endian on print to RPC byte order
+               logger_->error("[ArmoryConnection::getTXsByHash] Return data " \
+                  "error - {} - Hash {}", e.what(), hash.toHexStr(true));
             }
          });
       }
@@ -577,7 +584,7 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
    // For now, don't worry about chaining callbacks or Tx caches. Just dump
    // everything into the BDV. This may need to change in the future, making the
    // call more like getTxByHash().
-   const auto &cbWrap = [this, callback](ReturnMessage<BinaryData> bd) {
+   const auto &cbWrap = [this, callback, inHash](ReturnMessage<BinaryData> bd) {
       try {
          auto header = bd.get();
          if (cbInMainThread_) {
@@ -587,8 +594,10 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
             callback(header);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+               // Switch endian on print to RPC byte order
+         logger_->error("[ArmoryConnection::getRawHeaderForTxHash] Return " \
+            "data error - {} - hash {}", e.what(), inHash.toHexStr(true));
       }
    };
    bdv_->getRawHeaderForTxHash(inHash, cbWrap);
@@ -608,7 +617,7 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
    // For now, don't worry about chaining callbacks or Tx caches. Just dump
    // everything into the BDV. This may need to change in the future, making the
    // call more like getTxByHash().
-   const auto &cbWrap = [this, callback](ReturnMessage<BinaryData> bd) {
+   const auto &cbWrap = [this, callback, inHeight](ReturnMessage<BinaryData> bd) {
       try {
          auto header = bd.get();
          if (cbInMainThread_) {
@@ -618,8 +627,9 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
             callback(header);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[ArmoryConnection::getHeaderByHeight] Return data " \
+            "error - {} - height {}", e.what(), inHeight);
       }
    };
    bdv_->getHeaderByHeight(inHeight, cbWrap);
@@ -642,7 +652,8 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
          cb(0);
       }
    };
-   const auto &cbWrap = [this, cbProcess](ReturnMessage<ClientClasses::FeeEstimateStruct> feeStruct) {
+   const auto &cbWrap = [this, cbProcess, nbBlocks]
+                        (ReturnMessage<ClientClasses::FeeEstimateStruct> feeStruct) {
       try {
          auto fs = feeStruct.get();
          if (cbInMainThread_) {
@@ -652,8 +663,9 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
             cbProcess(fs);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[ArmoryConnection::estimateFee] Return data " \
+            "error - {} - {} blocks", e.what(), nbBlocks);
       }
    };
    bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbWrap);

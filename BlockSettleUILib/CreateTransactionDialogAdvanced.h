@@ -17,6 +17,7 @@ public:
         const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<spdlog::logger>&
       , const Tx &
       , const std::shared_ptr<bs::Wallet>&
       , QWidget* parent = nullptr);
@@ -26,13 +27,15 @@ public:
       , const std::shared_ptr<WalletsManager>&
       , const std::shared_ptr<SignContainer>&
       , const std::shared_ptr<bs::Wallet>&
+      , const std::shared_ptr<spdlog::logger>&
       , const Tx &
       , QWidget* parent = nullptr);
 
 public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
-      , bool loadFeeSuggestions, QWidget* parent);
+      , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
+      , QWidget* parent);
    ~CreateTransactionDialogAdvanced() override;
 
    void preSetAddress(const QString& address);
@@ -124,6 +127,7 @@ private:
 
 private:
    std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;
+   std::shared_ptr<spdlog::logger> logger_;
 
    bool     currentAddressValid_ = false;
    double   currentValue_ = 0;

@@ -108,7 +108,8 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
       }
       try {
          logger_->debug("Loading BIP44 wallet from {}", file.toStdString());
-         const auto &wallet = std::make_shared<bs::hd::Wallet>(fileInfo.absoluteFilePath().toStdString());
+         const auto &wallet = std::make_shared<bs::hd::Wallet>(fileInfo.absoluteFilePath().toStdString()
+                                                               , logger_);
          current += ratio;
          if (progressDelegate) {
             progressDelegate(current);
@@ -197,7 +198,7 @@ void WalletsManager::BackupWallet(const hd_wallet_type &wallet, const std::strin
    auto files = dirBackup.entryList(QStringList{ QString::fromStdString(
       bs::hd::Wallet::fileNamePrefix(false) + wallet->getWalletId() + "_*.lmdb" )});
    if (!files.empty() && (files.size() >= nbBackupFilesToKeep_)) {
-      for (int i = 0; i <= files.size() - nbBackupFilesToKeep_; i++) {
+      for (uint i = 0; i <= files.size() - nbBackupFilesToKeep_; i++) {
          logger_->debug("Removing old backup file {}", files[i].toStdString());
          QFile::remove(backupDir + QDir::separator() + files[i]);
       }
@@ -253,7 +254,7 @@ bool WalletsManager::CreateSettlementWallet(const QString &walletsPath)
 void WalletsManager::SaveWallet(const wallet_gen_type& newWallet, NetworkType netType)
 {
    if (hdDummyWallet_ == nullptr) {
-      hdDummyWallet_ = std::make_shared<bs::hd::DummyWallet>(netType);
+      hdDummyWallet_ = std::make_shared<bs::hd::DummyWallet>(netType, logger_);
       hdWalletsId_.emplace_back(hdDummyWallet_->getWalletId());
       hdWallets_[hdDummyWallet_->getWalletId()] = hdDummyWallet_;
    }
@@ -919,7 +920,8 @@ WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& n
       throw std::runtime_error("Can't create wallets in watching-only mode");
    }
 
-   const auto newWallet = std::make_shared<bs::hd::Wallet>(name, description, seed);
+   const auto newWallet = std::make_shared<bs::hd::Wallet>(name, description
+                                                           , seed, logger_);
 
    if (hdWallets_.find(newWallet->getWalletId()) != hdWallets_.end()) {
       throw std::runtime_error("HD wallet with id " + newWallet->getWalletId() + " already exists");

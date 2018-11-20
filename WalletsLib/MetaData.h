@@ -212,6 +212,7 @@ namespace bs {
 
    public:
       Wallet();
+      Wallet(const std::shared_ptr<spdlog::logger> &logger);
       ~Wallet() override;
 
       virtual std::string GetWalletId() const = 0;
@@ -223,6 +224,10 @@ namespace bs {
 
       virtual void setData(const std::string &) {}
       virtual void setData(uint64_t) {}
+      virtual void setLogger(const std::shared_ptr<spdlog::logger> &logger) {
+         logger_ = logger;
+      }
+
 
       bool operator ==(const Wallet &w) const { return (w.GetWalletId() == GetWalletId()); }
       bool operator !=(const Wallet &w) const { return (w.GetWalletId() != GetWalletId()); }
@@ -237,11 +242,12 @@ namespace bs {
       virtual bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const;
       virtual bool getAddrTxN(const bs::Address &addr) const;
       virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
+      virtual std::shared_ptr<spdlog::logger> getLogger() const { return logger_; }
       virtual BinaryData getRootId() const = 0;
       virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX);
       virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
-      virtual bool getRBFTxOutList(std::function<void(ReturnMessage<std::vector<UTXO>>)>) const;
+      virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
       virtual std::string RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
          , bool asNew = false);
       void UnregisterWallet();
@@ -347,6 +353,7 @@ namespace bs {
       std::string    walletRegId_;
       std::shared_ptr<ArmoryConnection>      armory_;
       std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
+      std::shared_ptr<spdlog::logger>   logger_; // May need to be set manually.
       mutable std::vector<bs::Address>       usedAddresses_;
       mutable std::set<BinaryData>           addrPrefixedHashes_, addressHashes_;
       mutable QMutex    addrMapsMtx_;

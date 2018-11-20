@@ -52,8 +52,9 @@ void bs::SettlementMonitor::checkNewEntries()
             IsPayInTransaction(entry, cbPayIn);
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[bs::SettlementMonitor::checkNewEntries] Return " \
+            "data error - {}", e.what());
       }
 
       {

@@ -26,9 +26,12 @@
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
-   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
- : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions, parent)
+   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
+   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
+ : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions
+    , logger, parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
+ , logger_(logger_)
 {
    ui_->setupUi(this);
 
@@ -50,11 +53,17 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
         const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container
+      , const std::shared_ptr<spdlog::logger>& logger
       , const Tx &tx
       , const std::shared_ptr<bs::Wallet>& wallet
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory, walletManager, container, true, parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
+                                                                walletManager,
+                                                                container,
+                                                                true,
+                                                                logger,
+                                                                parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -71,10 +80,16 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const std::shared_ptr<WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container
       , const std::shared_ptr<bs::Wallet>& wallet
+      , const std::shared_ptr<spdlog::logger>& logger
       , const Tx &tx
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory, walletManager, container, true, parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
+                                                                walletManager,
+                                                                container,
+                                                                true,
+                                                                logger,
+                                                                parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
@@ -87,7 +102,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
 {
    std::set<BinaryData> txHashSet;
    std::map<BinaryData, std::set<uint32_t>> txOutIndices;
-   for (int i = 0; i < tx.getNumTxIn(); i++) {
+   for (size_t i = 0; i < tx.getNumTxIn(); i++) {
       const auto txin = tx.getTxInCopy(i);
       const auto outpoint = txin.getOutPoint();
       txHashSet.insert(outpoint.getTxHash());
@@ -112,7 +127,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          }
 
          unsigned int cntOutputs = 0;
-         for (int i = 0; i < tx.getNumTxOut(); i++) {
+         for (size_t i = 0; i < tx.getNumTxOut(); i++) {
             auto out = tx.getTxOutCopy(i);
             const auto addr = bs::Address::fromTxOut(out);
             if (wallet->containsAddress(addr)) {
@@ -159,7 +174,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
 {
    std::set<BinaryData> txHashSet;
    std::map<BinaryData, std::set<uint32_t>> txOutIndices;
-   for (int i = 0; i < tx.getNumTxIn(); i++) {
+   for (size_t i = 0; i < tx.getNumTxIn(); i++) {
       const auto txin = tx.getTxInCopy(i);
       const auto outpoint = txin.getOutPoint();
       txHashSet.insert(outpoint.getTxHash());
@@ -187,10 +202,10 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       }
 
       QString  changeAddress;
-      double   changeAmount;
+      double   changeAmount = 0;
 
       // set outputs
-      for (int i = 0; i < tx.getNumTxOut(); i++) {
+      for (size_t i = 0; i < tx.getNumTxOut(); i++) {
          TxOut out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
 
@@ -242,8 +257,9 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
             armory_->getTXsByHash(txHashSet, cbTXs);
          });
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[CreateTransactionDialogAdvanced::setRBFinputs] " \
+            "Return data error - {}", e.what());
       }
    };
    wallet->getRBFTxOutList(cbRBFInputs);
@@ -265,6 +281,7 @@ void CreateTransactionDialogAdvanced::initUI()
    ui_->treeViewOutputs->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
    ui_->treeViewOutputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
+   // QModelIndex isn't used. We should use it or lose it.
    connect(outputsModel_, &TransactionOutputsModel::rowsInserted, [this](const QModelIndex &parent, int first, int last)
    {
       for (int i = first; i <= last; i++) {
@@ -557,6 +574,7 @@ void CreateTransactionDialogAdvanced::onAddOutput()
    ui_->pushButtonAddOutput->setEnabled(false);
 }
 
+// Nothing is being done with isMax right now. We should use it or lose it.
 void CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &address, double amount, bool isMax)
 {
    auto recipientId = transactionData_->RegisterNewRecipient();
@@ -623,6 +641,7 @@ void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePer
    ui_->spinBoxFeesManualTotal->setMinimum(qRound(totalFee));
 }
 
+// currentIndex isn't being used. We should use it or lose it.
 void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
 {
    setTxFees();

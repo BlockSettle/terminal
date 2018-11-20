@@ -303,7 +303,8 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
          }
       }
       catch(exception& e) {
-         auto eptr = current_exception();
+         logger_->error("[AddressVerificator::ValidateAddress] Return data " \
+            "error - {}", e.what());
       }
    };
    const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
@@ -376,7 +377,8 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
          }
       }
       catch(exception& e) {
-         auto eptr = current_exception();
+         logger_->error("[AddressVerificator::CheckBSAddressState] Return " \
+            "data error - {}", e.what());
       }
    };
    const auto &cbLedgerDelegate = [state, cbLedger](AsyncClient::LedgerDelegate delegate) {
@@ -406,7 +408,7 @@ bool AddressVerificator::IsInitialBsTransaction(const ClientClasses::LedgerEntry
    , const std::shared_ptr<AddressVerificationData>& state, bool &isVerified)
 {
    int64_t entryValue = (entry.getValue() < 0 ? -entry.getValue() : entry.getValue());
-   if (entryValue <= (GetAuthAmount() * 2)) {
+   if (entryValue <= (int64_t)(GetAuthAmount() * 2)) {
       return false;
    }
 
@@ -461,7 +463,7 @@ bool AddressVerificator::IsInitialBsTransaction(const ClientClasses::LedgerEntry
 bool AddressVerificator::IsVerificationTransaction(const ClientClasses::LedgerEntry &entry
    , const std::shared_ptr<AddressVerificationData>& state, bool &isVerified)
 {
-   if (entry.getValue() <= (GetAuthAmount() * 2)) {
+   if (entry.getValue() <= (int64_t)(GetAuthAmount() * 2)) {
       return false;
    }
 
@@ -693,8 +695,8 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
             try {
                auto inPageCnt = pageCnt.get();
                (*pages)[bsAddr] = inPageCnt;
-               for (int i = 0; i < inPageCnt; ++i) {
-                  const auto &cbLedger = [this, pages, bsAddr, txHashSet, cbTXs]
+               for (uint64_t i = 0; i < inPageCnt; ++i) {
+                  const auto &cbLedger = [this, pages, bsAddr, txHashSet, cbTXs, i]
                      (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                      try {
                         auto le = entries.get();
@@ -702,8 +704,10 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                            txHashSet->insert(entry.getTxHash());
                         }
                      }
-                     catch(exception&) {
-                        auto eptr = current_exception();
+                     catch(std::exception& e) {
+                        logger_->error("[AddressVerificator::OnRefresh] Return " \
+                           "data error (getHistoryPage) - {} - Page {}",
+                           e.what(), i);
                      }
                      (*pages)[bsAddr]--;
                      if (!(*pages)[bsAddr]) {
@@ -716,8 +720,9 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                   delegatePtr->getHistoryPage(i, cbLedger);
                }
             }
-            catch(exception&) {
-               auto eptr = current_exception();
+            catch(std::exception& e) {
+               logger_->error("[AddressVerificator::OnRefresh] Return data " \
+                  "error (getPageCount) - {}", e.what());
             }
          };
          delegate.getPageCount(cbPageCnt);
@@ -729,22 +734,25 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
 void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
    auto result = new std::vector<UTXO>;
-   const auto &cbInternal = [this, cb, result](ReturnMessage<std::vector<UTXO>> utxos)->void {
+   const auto &cbInternal = [this, cb, &result]
+                            (ReturnMessage<std::vector<UTXO>> utxos)->void {
       try {
-         auto inUTXOs = utxos.get();
-         *result = inUTXOs;
+         *result = utxos.get();
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[AddressVerificator::GetVerificationInputs] Return " \
+            "data error (getSpendableZCList UTXOs) - {}", e.what());
       }
 
-      const auto &cbZC = [cb, result](ReturnMessage<std::vector<UTXO>> zcs)->void {
+      const auto &cbZC = [this, cb, &result]
+                         (ReturnMessage<std::vector<UTXO>> zcs)->void {
          try {
             auto inZCUTXOs = zcs.get();
             result->insert(result->begin(), inZCUTXOs.begin(), inZCUTXOs.end());
          }
-         catch(exception&) {
-            auto eptr = current_exception();
+         catch(std::exception& e) {
+            logger_->error("[AddressVerificator::GetVerificationInputs] " \
+               "Return data error (getSpendableZCList ZCs) - {}", e.what());
          }
 
          cb(*result);
@@ -757,7 +765,7 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
 
 void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
-   const auto &cbInternal = [cb](ReturnMessage<std::vector<UTXO>> utxos) {
+   const auto &cbInternal = [this, cb](ReturnMessage<std::vector<UTXO>> utxos) {
       std::vector<UTXO> result;
 
       try {
@@ -769,8 +777,9 @@ void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> 
             }
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[AddressVerificator::GetRevokeInputs] " \
+            "Return data error - {}", e.what());
       }
 
       cb(result);

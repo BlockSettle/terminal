@@ -9,21 +9,31 @@
 
 using namespace bs;
 
-hd::Wallet::Wallet(const std::string &name, const std::string &desc, const bs::wallet::Seed &seed, bool extOnlyAddresses)
-   : QObject(nullptr), name_(name), desc_(desc), netType_(seed.networkType()), extOnlyAddresses_(extOnlyAddresses)
+hd::Wallet::Wallet(const std::string &name, const std::string &desc
+                   , const bs::wallet::Seed &seed
+                   , const std::shared_ptr<spdlog::logger> &logger
+                   , bool extOnlyAddresses)
+   : QObject(nullptr), name_(name), desc_(desc)
+      , netType_(seed.networkType()), extOnlyAddresses_(extOnlyAddresses)
+      , logger_(logger)
 {
    initNew(seed);
 }
 
-hd::Wallet::Wallet(const std::string &filename, bool extOnlyAddresses)
-   : extOnlyAddresses_(extOnlyAddresses)
+hd::Wallet::Wallet(const std::string &filename
+                   , const std::shared_ptr<spdlog::logger> &logger
+                   , bool extOnlyAddresses)
+   : extOnlyAddresses_(extOnlyAddresses), logger_(logger)
 {
    loadFromFile(filename);
 }
 
-hd::Wallet::Wallet(const std::string &walletId, NetworkType netType, bool extOnlyAddresses, const std::string &name
-   , const std::string &desc)
-   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
+hd::Wallet::Wallet(const std::string &walletId, NetworkType netType
+                   , bool extOnlyAddresses, const std::string &name
+                   , const std::shared_ptr<spdlog::logger> &logger
+                   , const std::string &desc)
+   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc)
+      , netType_(netType), logger_(logger)
    , extOnlyAddresses_(extOnlyAddresses)
 { }
 
@@ -132,11 +142,13 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(CoinType ct)
    const Path path({ purpose, ct });
    switch (ct) {
    case CoinType::BlockSettle_Auth:
-      result = std::make_shared<AuthGroup>(rootNodes_, path, name_, desc_, extOnlyAddresses_);
+      result = std::make_shared<AuthGroup>(rootNodes_, path, name_, desc_
+                                           , logger_, extOnlyAddresses_);
       break;
 
    case CoinType::BlockSettle_CC:
-      result = std::make_shared<CCGroup>(rootNodes_, path, name_, desc_, extOnlyAddresses_);
+      result = std::make_shared<CCGroup>(rootNodes_, path, name_, desc_, logger_
+                                         , extOnlyAddresses_);
       break;
 
    default:
@@ -601,8 +613,11 @@ void hd::Wallet::readFromDB()
             throw WalletException("entry val size mismatch");
          }
          try {
-            const auto group = hd::Group::deserialize(keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
-               , rootNodes_, name_, desc_, extOnlyAddresses_);
+            const auto group = hd::Group::deserialize(keyBDR
+                 , brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
+                                                      , rootNodes_, name_
+                                                      , desc_, logger_
+                                                      , extOnlyAddresses_);
             if (group != nullptr) {
                addGroup(group);
             }
@@ -701,7 +716,9 @@ std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryDat
    if (rootNodes_.empty()) {    // already watching-only
       return nullptr;
    }
-   auto woWallet = std::make_shared<hd::Wallet>(getWalletId(), netType_, extOnlyAddresses_, name_, desc_);
+   auto woWallet = std::make_shared<hd::Wallet>(getWalletId(), netType_
+                                                , extOnlyAddresses_, name_
+                                                , logger_, desc_);
 
    const auto &extNode = rootNodes_.decrypt(password);
    for (const auto &group : groups_) {

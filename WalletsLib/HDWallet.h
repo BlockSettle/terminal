@@ -20,10 +20,16 @@ namespace bs {
          using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
          Wallet(const std::string &name, const std::string &desc
-            , const bs::wallet::Seed &, bool extOnlyAddresses = false);
-         Wallet(const std::string &filename, bool extOnlyAddresses = false);
-         Wallet(const std::string &walletId, NetworkType netType, bool extOnlyAddresses
-            , const std::string &name, const std::string &desc);
+                , const bs::wallet::Seed &
+                , const std::shared_ptr<spdlog::logger> &logger
+                , bool extOnlyAddresses = false);
+         Wallet(const std::string &filename
+                , const std::shared_ptr<spdlog::logger> &logger
+                , bool extOnlyAddresses = false);
+         Wallet(const std::string &walletId, NetworkType netType
+                , bool extOnlyAddresses , const std::string &name
+                , const std::shared_ptr<spdlog::logger> &logger
+                , const std::string &desc);
          ~Wallet() override;
 
          Wallet(const Wallet&) = delete;
@@ -99,8 +105,8 @@ namespace bs {
          mutable std::map<std::string, std::shared_ptr<bs::Wallet>>  leaves_;
          mutable QMutex    mtxGroups_;
          BinaryData        userId_;
+         std::shared_ptr<spdlog::logger>     logger_;
 
-      protected:
          void initNew(const bs::wallet::Seed &);
          void loadFromFile(const std::string &filename);
          std::string getFileName(const std::string &dir) const;
@@ -122,7 +128,10 @@ namespace bs {
       class DummyWallet : public bs::hd::Wallet    // Just a container for old-style wallets
       {
       public:
-         DummyWallet(NetworkType netType) : hd::Wallet(tr("Armory Wallets").toStdString(), "", wallet::Seed(netType)) {}
+         DummyWallet(NetworkType netType
+                     , const std::shared_ptr<spdlog::logger> &logger)
+         : hd::Wallet(tr("Armory Wallets").toStdString(), ""
+                      , wallet::Seed(netType), logger) {}
 
          size_t getNumLeaves() const override { return leaves_.size(); }
          void add(const std::shared_ptr<bs::Wallet> wallet) { leaves_[wallet->GetWalletId()] = wallet; }

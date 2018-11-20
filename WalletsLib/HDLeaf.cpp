@@ -308,9 +308,8 @@ void hd::Leaf::firstInit(bool force)
    if (activateAddressesInvoked_ || !armory_) {
       return;
    }
-   const auto &cb = [this](std::vector<ClientClasses::LedgerEntry> entries)->void {
-      std::vector<ClientClasses::LedgerEntry> leEntries = entries;
-      activateAddressesFromLedger(leEntries);
+   const auto &cb = [this](std::vector<ClientClasses::LedgerEntry> entries) {
+      activateAddressesFromLedger(entries);
    };
    activateAddressesInvoked_ = true;
    armory_->getWalletsHistory({ GetWalletId() }, cb);
@@ -1151,9 +1150,11 @@ void hd::AuthLeaf::SetUserID(const BinaryData &userId)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-hd::CCLeaf::CCLeaf(const std::string &name, const std::string &desc, bool extOnlyAddresses)
+hd::CCLeaf::CCLeaf(const std::string &name, const std::string &desc,
+                   const std::shared_ptr<spdlog::logger> &logger,
+                   bool extOnlyAddresses)
    : hd::Leaf(name, desc, bs::wallet::Type::ColorCoin, extOnlyAddresses)
-   , validationStarted_(false), validationEnded_(false)
+   , validationStarted_(false), validationEnded_(false), logger_(logger)
 {}
 
 hd::CCLeaf::~CCLeaf()
@@ -1290,8 +1291,9 @@ void hd::CCLeaf::validationProc()
                   armory_->getTxByHash(entry.getTxHash(), cbCheck);
                }
             }
-            catch(exception&) {
-               auto eptr = current_exception();
+            catch(std::exception& e) {
+               logger_->error("[hd::CCLeaf::validationProc] Return data " \
+                  "error - {}", e.what());
             }
          };
          ledger.second.getHistoryPage(0, cbHistory);  //? Shouldn't we continue past the first page?

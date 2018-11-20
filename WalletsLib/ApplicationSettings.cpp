@@ -519,8 +519,13 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    settings.netType = get<NetworkType>(netType);
    settings.ignoreAllZC = get<bool>(ApplicationSettings::ignoreAllZC);
    settings.runLocally = get<bool>(ApplicationSettings::runArmoryLocally);
-   settings.armoryDBIp = get<std::string>(ApplicationSettings::armoryDbIp);
-   settings.armoryDBPort = get<std::string>(ApplicationSettings::armoryDbPort);
+   if (settings.runLocally) {
+      settings.armoryDBIp = "127.0.0.1";
+      settings.armoryDBPort = std::to_string(GetDefaultArmoryPort());
+   } else {
+      settings.armoryDBIp = get<std::string>(ApplicationSettings::armoryDbIp);
+      settings.armoryDBPort = get<std::string>(ApplicationSettings::armoryDbPort);
+   }
    settings.socketType = GetArmorySocketType();
 
    settings.armoryExecutablePath = QDir::cleanPath(get<QString>(ApplicationSettings::armoryPathName));

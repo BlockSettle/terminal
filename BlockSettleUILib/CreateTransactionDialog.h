@@ -35,7 +35,8 @@ public:
    CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
-      , bool loadFeeSuggestions, QWidget* parent);
+      , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
+      , QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
    int SelectWallet(const std::string& walletId);
@@ -117,6 +118,7 @@ protected:
    BinaryData     importedSignedTX_;
 
 private:
+   std::shared_ptr<spdlog::logger> logger_;
    bs::wallet::TXSignRequest txReq_;
 };
 

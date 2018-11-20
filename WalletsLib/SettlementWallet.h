@@ -94,15 +94,14 @@ namespace bs {
 
    private:
       std::shared_ptr<bs::SettlementAddressEntry> getAddressBySettlementId(const BinaryData &settlementId) const;
-
       void createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset);
 
-   private:
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
       std::map<bs::Address, std::shared_ptr<SettlementAddressEntry>>    addrEntryByAddr_;
       std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
       std::map<int, std::shared_ptr<AsyncClient::BtcWallet>>   rtWallets_;
       std::unordered_map<std::string, int>                     rtWalletsById_;
+      std::shared_ptr<spdlog::logger> logger_; // Will need to be set manually.
    };
 }  //namespace bs
 

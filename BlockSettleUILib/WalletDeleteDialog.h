@@ -6,6 +6,10 @@
 #include "BinaryData.h"
 
 
+namespace spdlog
+{
+   class logger;
+}
 namespace Ui {
    class WalletDeleteDialog;
 }
@@ -28,11 +32,13 @@ public:
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    ~WalletDeleteDialog() override;
 
@@ -45,13 +51,13 @@ private:
    void deleteHDWallet();
    void deleteWallet();
 
-private:
    std::unique_ptr<Ui::WalletDeleteDialog> ui_;
    std::shared_ptr<bs::hd::Wallet>  hdWallet_;
    std::shared_ptr<bs::Wallet>      wallet_;
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<spdlog::logger>     logger_;
 };
 
 #endif // __WALLET_DELETE_DIALOG_H__

@@ -85,7 +85,7 @@ private:
    std::set<BinaryData> prevTxHashSet_; // Prev Tx hashes for an addr (fee calc).
 
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<spdlog::logger> logger_; // Will need to be set manually.
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

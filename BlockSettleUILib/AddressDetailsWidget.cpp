@@ -34,6 +34,7 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
 {
    armory_ = armory;
    logger_ = inLogger;
+   dummyWallet_.setLogger(inLogger);
    connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
 }
 
@@ -224,8 +225,9 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate) {
             }
          }
       }
-      catch(exception&) {
-         auto eptr = current_exception();
+      catch(std::exception& e) {
+         logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
+            "- {}", e.what());
       }
 
       if(!txHashSet_.empty()) {
@@ -254,14 +256,9 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
       ui_->balance->setText(QString::number(curBalance, 'f', 8));
 
       const auto &cbLedgerDelegate = [this](AsyncClient::LedgerDelegate delegate) {
-         try {
-            // UI changes in a non-main thread will trigger a crash. Invoke a new
-            // thread to handle the received data. (UI changes happen eventually.)
-            QMetaObject::invokeMethod(this, [this, &delegate] { getTxData(delegate); });
-         }
-         catch(exception&) {
-            auto eptr = current_exception();
-         }
+         // UI changes in a non-main thread will trigger a crash. Invoke a new
+         // thread to handle the received data. (UI changes happen eventually.)
+         QMetaObject::invokeMethod(this, [this, &delegate] { getTxData(delegate); });
       };
       if(!armory_->getLedgerDelegateForAddress(dummyWallet_.GetWalletId(),
                                                addrVal_,

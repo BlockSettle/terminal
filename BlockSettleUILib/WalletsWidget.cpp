@@ -309,7 +309,10 @@ void WalletsWidget::showAddressProperties(const QModelIndex& index)
    const size_t addrIndex = addressModel_->data(sourceIndex, AddressListModel::AddrIndexRole).toUInt();
    const auto address = (addrIndex < addresses.size()) ? addresses[addrIndex] : bs::Address();
 
-   AddressDetailDialog* dialog = new AddressDetailDialog(address, wallet, walletsManager_, armory_, this);
+   AddressDetailDialog* dialog = new AddressDetailDialog(address, wallet,
+                                                         walletsManager_,
+                                                         armory_, logger_,
+                                                         this);
    dialog->exec();
 }
 
@@ -494,7 +497,8 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
             BSMessageBox(BSMessageBox::critical, title, tr("Failed to copy watching-only wallet file to %1").arg(targetFile)).exec();
             return false;
          }
-         const auto &newWallet = std::make_shared<bs::hd::Wallet>(targetFile.toStdString());
+         const auto &newWallet = std::make_shared<bs::hd::Wallet>(targetFile.toStdString()
+                                                                  , logger_);
          if (!newWallet) {
             BSMessageBox(BSMessageBox::critical, title, tr("Failed to load watching-only wallet from %1").arg(targetFile)).exec();
             return false;
@@ -686,13 +690,15 @@ void WalletsWidget::onDeleteWallet()
       BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
       return;
    }
-   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, this).exec();
+   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_
+                      , logger_, this).exec();
 }
 
 
 bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
 {
    if (!wallet) {
@@ -704,7 +710,7 @@ bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
          .arg(walletBackupDialog.isDigitalBackup() ? QObject::tr("Digital") : QObject::tr("Paper"))
             , walletBackupDialog.filePath(), parent).exec();
       if (!walletBackupDialog.isDigitalBackup()) {
-         VerifyWalletBackupDialog(wallet, parent).exec();
+         VerifyWalletBackupDialog(wallet, logger, parent).exec();
       }
       WalletWarningDialog(parent).exec();
       return true;

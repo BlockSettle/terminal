@@ -117,7 +117,8 @@ RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
-   WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_, appSettings_, this);
+   WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_
+                             , appSettings_, logger_, this);
    if (delDlg.exec() == QDialog::Accepted) {
       close();
    }
@@ -125,7 +126,8 @@ void RootWalletPropertiesDialog::onDeleteWallet()
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, this);
+   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, logger_
+                         , this);
 }
 
 void RootWalletPropertiesDialog::onCreateWoWallet()

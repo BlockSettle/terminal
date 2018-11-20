@@ -41,12 +41,14 @@ const std::map<unsigned int, QString> feeLevels = {
 
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
-   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
+   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
+   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
    : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
    , signingContainer_(container)
    , loadFeeSuggestions_(loadFeeSuggestions)
+   , logger_(logger)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
