@@ -258,8 +258,10 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          });
       }
       catch(std::exception& e) {
-         logger_->error("[CreateTransactionDialogAdvanced::setRBFinputs] " \
-            "Return data error - {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[CreateTransactionDialogAdvanced::setRBFinputs] " \
+               "Return data error - {}", e.what());
+         }
       }
    };
    wallet->getRBFTxOutList(cbRBFInputs);

@@ -53,8 +53,10 @@ void bs::SettlementMonitor::checkNewEntries()
          }
       }
       catch(std::exception& e) {
-         logger_->error("[bs::SettlementMonitor::checkNewEntries] Return " \
-            "data error - {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[bs::SettlementMonitor::checkNewEntries] Return " \
+               "data error - {}", e.what());
+         }
       }
 
       {

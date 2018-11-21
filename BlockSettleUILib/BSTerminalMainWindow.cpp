@@ -389,7 +389,7 @@ void BSTerminalMainWindow::InitAuthManager()
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
    connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, &BSTerminalMainWindow::onAuthMgrConnComplete);
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this]() {
+   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &walletId) {
       if (authAddrDlg_) {
          openAuthManagerDialog();
       }

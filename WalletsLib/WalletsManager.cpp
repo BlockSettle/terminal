@@ -198,7 +198,7 @@ void WalletsManager::BackupWallet(const hd_wallet_type &wallet, const std::strin
    auto files = dirBackup.entryList(QStringList{ QString::fromStdString(
       bs::hd::Wallet::fileNamePrefix(false) + wallet->getWalletId() + "_*.lmdb" )});
    if (!files.empty() && (files.size() >= nbBackupFilesToKeep_)) {
-      for (uint i = 0; i <= files.size() - nbBackupFilesToKeep_; i++) {
+      for (size_t i = 0; i <= files.size() - nbBackupFilesToKeep_; i++) {
          logger_->debug("Removing old backup file {}", files[i].toStdString());
          QFile::remove(backupDir + QDir::separator() + files[i]);
       }

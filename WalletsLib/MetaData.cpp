@@ -481,8 +481,10 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
             }
          }
          catch(std::exception& e) {
-            logger_->error("[bs::Wallet::getAddrBalance] Return data error ", \
-               "- {}", e.what());
+            if(logger_ != nullptr) {
+               logger_->error("[bs::Wallet::getAddrBalance] Return data error ", \
+                  "- {}", e.what());
+            }
          }
 
          for (const auto &queuedCb : cbBal_) {
@@ -539,8 +541,10 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t
             }
          }
          catch(std::exception& e) {
-            logger_->error("[bs::Wallet::getAddrTxN] Return data error - {} ", \
-               "- Address {}", e.what(), addr.display().toStdString());
+            if(logger_ != nullptr) {
+               logger_->error("[bs::Wallet::getAddrTxN] Return data error - {} ", \
+                  "- Address {}", e.what(), addr.display().toStdString());
+            }
          }
 
          for (const auto &queuedCb : cbTxN_) {
@@ -629,8 +633,10 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
          }
       }
       catch(std::exception& e) {
-         logger_->error("[bs::Wallet::getSpendableTxOutList] Return data " \
-            "error {} - value {}", e.what(), val);
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getSpendableTxOutList] Return data " \
+               "error {} - value {}", e.what(), val);
+         }
       }
 
       spendableCallbacks_.clear();
@@ -689,8 +695,10 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
          }
       }
       catch(std::exception& e) {
-         logger_->error("[bs::Wallet::getUTXOsToSpend] Return data error " \
-            "- {} - value {}", e.what(), val);
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getUTXOsToSpend] Return data error " \
+               "- {} - value {}", e.what(), val);
+         }
       }
    };
    btcWallet_->getSpendableTxOutListForValue(val, cbProcess);
@@ -738,8 +746,10 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
          }
       }
       catch(std::exception& e) {
-         logger_->error("[bs::Wallet::getSpendableZCList] Return data error " \
-            "- {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getSpendableZCList] Return data error " \
+               "- {}", e.what());
+         }
       }
 
       zcListCallbacks_.clear();
@@ -762,8 +772,10 @@ bool bs::Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) cons
          cb(std::move(inUTXOs));
       }
       catch(std::exception& e) {
-         logger_->error("[bs::Wallet::getRBFTxOutList] Return data error - " \
-            "{}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getRBFTxOutList] Return data error - " \
+               "{}", e.what());
+         }
       }
    };
 
@@ -808,8 +820,10 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
          }
       }
       catch(std::exception& e) {
-         logger_->error("[bs::Wallet::UpdateBalanceFromDB] Return data error " \
-            "- {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::UpdateBalanceFromDB] Return data error " \
+               "- {}", e.what());
+         }
       }
    };
    btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
@@ -866,8 +880,10 @@ bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet
          historyCache_[id] = le;
       }
       catch(std::exception& e) {
-         logger_->error("[bs::Wallet::getHistoryPage] Return data " \
-            "error - {} - ID {}", e.what(), id);
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getHistoryPage] Return data " \
+               "error - {} - ID {}", e.what(), id);
+         }
       }
    };
    btcWallet_->getHistoryPage(id, cb);

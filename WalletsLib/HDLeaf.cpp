@@ -1292,8 +1292,10 @@ void hd::CCLeaf::validationProc()
                }
             }
             catch(std::exception& e) {
-               logger_->error("[hd::CCLeaf::validationProc] Return data " \
-                  "error - {}", e.what());
+            if(logger_ != nullptr) {
+                  logger_->error("[hd::CCLeaf::validationProc] Return data " \
+                     "error - {}", e.what());
+               }
             }
          };
          ledger.second.getHistoryPage(0, cbHistory);  //? Shouldn't we continue past the first page?

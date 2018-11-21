@@ -226,8 +226,10 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate) {
          }
       }
       catch(std::exception& e) {
-         logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
-            "- {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
+               "- {}", e.what());
+         }
       }
 
       if(!txHashSet_.empty()) {

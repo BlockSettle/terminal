@@ -265,9 +265,11 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
                      }
                   }
                   catch(std::exception& e) {
-                     getLogger()->error("[bs::SettlementWallet::GetInputFor] " \
-                        "Return data error (getSpendableZCList) - {}",
-                        e.what());
+                     if(logger_ != nullptr) {
+                        getLogger()->error("[bs::SettlementWallet::GetInputFor] " \
+                           "Return data error (getSpendableZCList) - {}",
+                           e.what());
+                     }
                   }
                };
                rtWallet->getSpendableZCList(cbZC);
@@ -278,8 +280,10 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
          }
       }
       catch(std::exception& e) {
-         logger_->error("[bs::SettlementWallet::GetInputFor] Return data " \
-            "error (getSpendableTxOutListForValue) - {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[bs::SettlementWallet::GetInputFor] Return data " \
+               "error (getSpendableTxOutListForValue) - {}", e.what());
+         }
       }
    };
    rtWallet->getSpendableTxOutListForValue(UINT64_MAX, cbSpendable);
@@ -415,8 +419,10 @@ bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTX
                result->insert(result->end(), inUTXOs.begin(), inUTXOs.end());
             }
             catch(std::exception& e) {
-               getLogger()->error("[bs::SettlementWallet::getSpendableZCList] " \
-                  "Return data error - {}", e.what());
+               if(logger_ != nullptr) {
+                  getLogger()->error("[bs::SettlementWallet::getSpendableZCList] " \
+                     "Return data error - {}", e.what());
+               }
             }
 
             walletSet->erase(id);

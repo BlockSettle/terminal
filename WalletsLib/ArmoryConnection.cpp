@@ -323,8 +323,10 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
          }
       }
       catch(std::exception& e) {
-         logger_->error("[ArmoryConnection::getWalletsHistory] Return data " \
-            "error - {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[ArmoryConnection::getWalletsHistory] Return data " \
+               "error - {}", e.what());
+         }
       }
    };
 
@@ -360,9 +362,11 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
          }
       }
       catch(std::exception& e) {
-         logger_->error("[ArmoryConnection::getLedgerDelegateForAddress] " \
-            "Return data error - {} - Wallet {} - Address {}", e.what(),
-            walletId, addr.display().toStdString());
+         if(logger_ != nullptr) {
+            logger_->error("[ArmoryConnection::getLedgerDelegateForAddress] " \
+               "Return data error - {} - Wallet {} - Address {}", e.what(),
+               walletId, addr.display().toStdString());
+         }
       }
    };
    bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbWrap);
@@ -390,8 +394,10 @@ bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletI
             (*result)[addr] = ld;
          }
          catch(std::exception& e) {
-            logger_->error("[ArmoryConnection::getLedgerDelegatesForAddresses] " \
-               "Return data error - {} - Wallet {}", e.what(), walletId);
+            if(logger_ != nullptr) {
+               logger_->error("[ArmoryConnection::getLedgerDelegatesForAddresses] " \
+                  "Return data error - {} - Wallet {}", e.what(), walletId);
+            }
          }
 
          if (addrSet->empty()) {
@@ -432,8 +438,10 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(AsyncClient::
          }
       }
       catch(std::exception& e) {
-         logger_->error("[ArmoryConnection::getWalletsLedgerDelegate] " \
-            "Return data error - {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[ArmoryConnection::getWalletsLedgerDelegate] " \
+               "Return data error - {}", e.what());
+         }
       }
    };
    bdv_->getLedgerDelegateForWallets(cbWrap);
@@ -498,8 +506,10 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
          callGetTxCallbacks(hash, retTx);
       }
       catch(std::exception& e) {
-         logger_->error("[ArmoryConnection::getTxByHash] " \
-            "Return data error - {} - hash {}", e.what(), hash.toHexStr());
+         if(logger_ != nullptr) {
+            logger_->error("[ArmoryConnection::getTxByHash] " \
+               "Return data error - {} - hash {}", e.what(), hash.toHexStr());
+         }
       }
    };
    bdv_->getTxByHash(hash, cbUpdateCache);
@@ -562,9 +572,11 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
                callGetTxCallbacks(hash, retTx);
             }
             catch(std::exception& e) {
-               // Switch endian on print to RPC byte order
-               logger_->error("[ArmoryConnection::getTXsByHash] Return data " \
-                  "error - {} - Hash {}", e.what(), hash.toHexStr(true));
+               if(logger_ != nullptr) {
+                  // Switch endian on print to RPC byte order
+                  logger_->error("[ArmoryConnection::getTXsByHash] Return data " \
+                     "error - {} - Hash {}", e.what(), hash.toHexStr(true));
+               }
             }
          });
       }
@@ -595,9 +607,11 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
          }
       }
       catch(std::exception& e) {
-               // Switch endian on print to RPC byte order
-         logger_->error("[ArmoryConnection::getRawHeaderForTxHash] Return " \
-            "data error - {} - hash {}", e.what(), inHash.toHexStr(true));
+         if(logger_ != nullptr) {
+            // Switch endian on print to RPC byte order
+            logger_->error("[ArmoryConnection::getRawHeaderForTxHash] Return " \
+               "data error - {} - hash {}", e.what(), inHash.toHexStr(true));
+         }
       }
    };
    bdv_->getRawHeaderForTxHash(inHash, cbWrap);
@@ -628,8 +642,10 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
          }
       }
       catch(std::exception& e) {
-         logger_->error("[ArmoryConnection::getHeaderByHeight] Return data " \
-            "error - {} - height {}", e.what(), inHeight);
+         if(logger_ != nullptr) {
+            logger_->error("[ArmoryConnection::getHeaderByHeight] Return data " \
+               "error - {} - height {}", e.what(), inHeight);
+         }
       }
    };
    bdv_->getHeaderByHeight(inHeight, cbWrap);
@@ -664,8 +680,10 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
          }
       }
       catch(std::exception& e) {
-         logger_->error("[ArmoryConnection::estimateFee] Return data " \
-            "error - {} - {} blocks", e.what(), nbBlocks);
+         if(logger_ != nullptr) {
+            logger_->error("[ArmoryConnection::estimateFee] Return data " \
+               "error - {} - {} blocks", e.what(), nbBlocks);
+         }
       }
    };
    bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbWrap);

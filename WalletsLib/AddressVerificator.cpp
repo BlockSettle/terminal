@@ -705,9 +705,11 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                         }
                      }
                      catch(std::exception& e) {
-                        logger_->error("[AddressVerificator::OnRefresh] Return " \
-                           "data error (getHistoryPage) - {} - Page {}",
-                           e.what(), i);
+                        if(logger_ != nullptr) {
+                           logger_->error("[AddressVerificator::OnRefresh] Return " \
+                              "data error (getHistoryPage) - {} - Page {}",
+                              e.what(), i);
+                        }
                      }
                      (*pages)[bsAddr]--;
                      if (!(*pages)[bsAddr]) {
@@ -721,8 +723,10 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                }
             }
             catch(std::exception& e) {
-               logger_->error("[AddressVerificator::OnRefresh] Return data " \
-                  "error (getPageCount) - {}", e.what());
+               if(logger_ != nullptr) {
+                  logger_->error("[AddressVerificator::OnRefresh] Return data " \
+                     "error (getPageCount) - {}", e.what());
+               }
             }
          };
          delegate.getPageCount(cbPageCnt);
@@ -740,8 +744,10 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
          *result = utxos.get();
       }
       catch(std::exception& e) {
-         logger_->error("[AddressVerificator::GetVerificationInputs] Return " \
-            "data error (getSpendableZCList UTXOs) - {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[AddressVerificator::GetVerificationInputs] Return " \
+               "data error (getSpendableZCList UTXOs) - {}", e.what());
+         }
       }
 
       const auto &cbZC = [this, cb, &result]
@@ -751,8 +757,10 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
             result->insert(result->begin(), inZCUTXOs.begin(), inZCUTXOs.end());
          }
          catch(std::exception& e) {
-            logger_->error("[AddressVerificator::GetVerificationInputs] " \
-               "Return data error (getSpendableZCList ZCs) - {}", e.what());
+            if(logger_ != nullptr) {
+               logger_->error("[AddressVerificator::GetVerificationInputs] " \
+                  "Return data error (getSpendableZCList ZCs) - {}", e.what());
+            }
          }
 
          cb(*result);
@@ -778,8 +786,10 @@ void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> 
          }
       }
       catch(std::exception& e) {
-         logger_->error("[AddressVerificator::GetRevokeInputs] " \
-            "Return data error - {}", e.what());
+         if(logger_ != nullptr) {
+            logger_->error("[AddressVerificator::GetRevokeInputs] " \
+               "Return data error - {}", e.what());
+         }
       }
 
       cb(result);
