@@ -23,9 +23,10 @@ CustomDialog {
     implicitWidth: 400
     implicitHeight: mainLayout.implicitHeight
 
-    onSeedChanged: {
-        seed.setRandomKey()
+    Component.onCompleted: {
+        tfName.text = qsTr("Wallet #%1").arg(walletsProxy.walletNames.length + 1);
     }
+
 
     FocusScope {
         anchors.fill: parent
@@ -60,7 +61,15 @@ CustomDialog {
                     text:  qsTr("Create New Wallet")
                 }
             }
-
+            CustomHeader {
+                id: headerText
+                text:   qsTr("Wallet Details")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -133,7 +142,29 @@ CustomDialog {
                     }
                 }
             }
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
 
+                CustomCheckBox {
+                    id: cbPrimary
+                    Layout.fillWidth: true
+                    Layout.leftMargin: inputLabelsWidth + 5
+                    enabled: !primaryWalletExists
+                    text:   qsTr("Primary Wallet")
+                }
+            }
+            CustomHeader {
+                id: headerText2
+                text:   qsTr("Create Wallet Keys")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -195,21 +226,6 @@ CustomDialog {
                 }
             }
 
-            RowLayout {
-                spacing: 5
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-
-                CustomCheckBox {
-                    id: cbPrimary
-                    Layout.fillWidth: true
-                    Layout.leftMargin: inputLabelsWidth + 5
-                    enabled: !primaryWalletExists
-                    text:   qsTr("Primary Wallet")
-                }
-            }
-
             Rectangle {
                 Layout.fillHeight: true
             }
@@ -232,7 +248,7 @@ CustomDialog {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        text:   qsTr("CONFIRM")
+                        text:   qsTr("Continue")
                         enabled:    acceptable
                         onClicked: {
                             accept()
@@ -267,8 +283,8 @@ CustomDialog {
     }
 
     onAccepted: {
-        seed.setWalletName(tfName.text)
-        seed.setWalletDesc(tfDesc.text)
+        seed.walletName = tfName.text
+        seed.walletDesc = tfDesc.text
         isPrimary = cbPrimary.checked
         if (rbPassword.checked) {
             seed.encType = WalletInfo.Password

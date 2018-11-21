@@ -39,7 +39,6 @@ CustomDialog {
             Layout.rightMargin: 10
 
             CustomLabelValue{
-                width: parent.width
                 Layout.fillWidth: true
                 text:   qsTr("Please select where you would like to create a new wallet from...")
             }

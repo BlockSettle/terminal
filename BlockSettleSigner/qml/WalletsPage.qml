@@ -91,16 +91,33 @@ Item {
                         Layout.fillWidth: true
                         text:   qsTr("New Wallet")
                         onClicked: {
-                            var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "walletNewDlg")
+
+                            // let user create a new wallet or import one from file
+                            var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "WalletNewDialog")
                             dlgNew.accepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.RandomSeed) {
                                     newWalletSeed.generate();
-                                    var dlgSeed = Qt.createQmlObject("NewWalletSeedDialog {}", mainWindow, "walletCreateDlg")
+                                    // allow user to save wallet seed lines and then prompt him to enter them for verification
+                                    var dlgSeed = Qt.createQmlObject("NewWalletSeedDialog {}", mainWindow, "NewWalletSeedDialog")
                                     dlgSeed.accepted.connect(function() {
-                                        if (walletsProxy.createWallet(dlgSeed.isPrimary, dlgSeed.password, dlgSeed.seed)) {
-                                            ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created")
-                                                                     .arg(dlgSeed.seed.walletName))
+                                        // let user set a password or Auth eID and also name and desc. for the new wallet
+                                        var dlgPwd = Qt.createQmlObject("WalletCreateDialog {}", mainWindow, "walletCreateDlg")
+                                        dlgPwd.primaryWalletExists = walletsProxy.primaryWalletExists
+                                        dlgPwd.seed = walletsProxy.createWalletSeed()
+                                        if (!dlgPwd.seed.parsePaperKey(newWalletSeed.part1 + "\n" + newWalletSeed.part2)) {
+                                            ibFailure.displayMessage("Failed to parse wallet seed")
                                         }
+                                        else {
+                                            dlgPwd.open();
+                                        }
+
+                                        dlgPwd.accepted.connect(function(){
+                                            if (walletsProxy.createWallet(dlgPwd.isPrimary, dlgPwd.password, dlgPwd.seed)) {
+                                                ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created")
+                                                                         .arg(dlgPwd.seed.walletName))
+                                            }
+                                        })
+
                                     })
                                     dlgSeed.open()
                                 }
