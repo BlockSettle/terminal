@@ -260,7 +260,7 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
       const auto &cbLedgerDelegate = [this](AsyncClient::LedgerDelegate delegate) {
          // UI changes in a non-main thread will trigger a crash. Invoke a new
          // thread to handle the received data. (UI changes happen eventually.)
-         QMetaObject::invokeMethod(this, [this, &delegate] { getTxData(delegate); });
+         QMetaObject::invokeMethod(this, [this, delegate] { getTxData(delegate); });
       };
       if(!armory_->getLedgerDelegateForAddress(dummyWallet_.GetWalletId(),
                                                addrVal_,

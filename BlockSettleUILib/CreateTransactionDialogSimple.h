@@ -60,7 +60,6 @@ private:
    void onTransactionUpdated() override;
 
    std::unique_ptr<Ui::CreateTransactionDialogSimple> ui_;
-   std::shared_ptr<spdlog::logger> logger_;
    unsigned int   recipientId_ = 0;
    bool  advancedDialogRequested_ = false;
 

@@ -127,7 +127,6 @@ private:
 
 private:
    std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;
-   std::shared_ptr<spdlog::logger> logger_;
 
    bool     currentAddressValid_ = false;
    double   currentValue_ = 0;

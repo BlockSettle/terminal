@@ -104,6 +104,7 @@ protected:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<TransactionData> transactionData_;
+   std::shared_ptr<spdlog::logger> logger_;
 
    XbtAmountValidator * xbtValidator_ = nullptr;
 
@@ -118,7 +119,6 @@ protected:
    BinaryData     importedSignedTX_;
 
 private:
-   std::shared_ptr<spdlog::logger> logger_;
    bs::wallet::TXSignRequest txReq_;
 };
 
