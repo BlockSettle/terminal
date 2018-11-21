@@ -31,7 +31,7 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
  : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions
     , logger, parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
- , logger_(logger_)
+ , logger_(logger)
 {
    ui_->setupUi(this);
 
