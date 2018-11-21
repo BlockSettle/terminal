@@ -714,7 +714,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
       const double quantity = reversed ? qrn.quantity / price : qrn.quantity;
 
       if (isBid) {
-         if ((payInRecipId_ == UINT_MAX) || !transData->NbRecipients()) {
+         if ((payInRecipId_ == UINT_MAX) || !transData->GetRecipientsCount()) {
             const std::string &comment = std::string(bs::network::Side::toString(bs::network::Side::invert(qrn.side)))
                + " " + qrn.security + " @ " + std::to_string(price);
             const auto settlAddr = walletsManager_->GetSettlementWallet()->newAddress(

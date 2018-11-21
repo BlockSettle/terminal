@@ -74,7 +74,6 @@ public:
    std::vector<unsigned int> GetRecipientIdList() const;
 
    unsigned int RegisterNewRecipient();
-   size_t NbRecipients() const { return recipients_.size(); }
    bool UpdateRecipientAddress(unsigned int recipientId, const bs::Address &);
    bool UpdateRecipientAddress(unsigned int recipientId, const std::shared_ptr<AddressEntry> &);
    void ResetRecipientAddress(unsigned int recipientId);
