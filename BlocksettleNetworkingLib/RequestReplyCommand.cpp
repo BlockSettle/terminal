@@ -36,8 +36,11 @@ void RequestReplyCommand::SetErrorCallback(const error_callback_type& callback)
 
 void RequestReplyCommand::CleanupCallbacks()
 {
-   replyCallback_ = {};
-   errorCallback_ = {};
+   data_callback_type   oldReplyCallback;
+   error_callback_type  oldErrorCallback;
+
+   std::swap(oldReplyCallback, replyCallback_);
+   std::swap(oldErrorCallback, errorCallback_);
 }
 
 bool RequestReplyCommand::ExecuteRequest(const std::string& host
