@@ -21,15 +21,15 @@ namespace bs {
 
          Wallet(const std::string &name, const std::string &desc
                 , const bs::wallet::Seed &
-                , const std::shared_ptr<spdlog::logger> &logger
+                , const std::shared_ptr<spdlog::logger> &logger = nullptr
                 , bool extOnlyAddresses = false);
          Wallet(const std::string &filename
-                , const std::shared_ptr<spdlog::logger> &logger
+                , const std::shared_ptr<spdlog::logger> &logger = nullptr
                 , bool extOnlyAddresses = false);
          Wallet(const std::string &walletId, NetworkType netType
                 , bool extOnlyAddresses , const std::string &name
-                , const std::shared_ptr<spdlog::logger> &logger
-                , const std::string &desc);
+                , const std::shared_ptr<spdlog::logger> &logger = nullptr
+                , const std::string &desc = {});
          ~Wallet() override;
 
          Wallet(const Wallet&) = delete;
