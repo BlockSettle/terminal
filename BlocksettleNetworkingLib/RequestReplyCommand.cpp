@@ -82,14 +82,14 @@ bool RequestReplyCommand::ExecuteRequest(const std::string& host
 void RequestReplyCommand::OnDataReceived(const std::string& data)
 {
    if (!replyReceived_) {
+      replyReceived_ = true;
+      requestCompleted_->SetEvent();
       if (dropResult_) {
          result_ = true;
       }
       else {
          result_ = replyCallback_(data);
       }
-      replyReceived_ = true;
-      requestCompleted_->SetEvent();
    } else {
       logger_->error("[RequestReplyCommand::OnDataReceived] reply already received. Ignore data for {}."
          , name_);
