@@ -29,8 +29,8 @@ namespace bs {
       Q_OBJECT
 
    public:
-      SettlementWallet();
-      SettlementWallet(const std::string &filename);
+      SettlementWallet(const std::shared_ptr<spdlog::logger> &logger = nullptr);
+      SettlementWallet(const std::string &filename, const std::shared_ptr<spdlog::logger> &logger = nullptr);
       ~SettlementWallet() override = default;
 
       SettlementWallet(const SettlementWallet&) = delete;
@@ -101,7 +101,6 @@ namespace bs {
       std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
       std::map<int, std::shared_ptr<AsyncClient::BtcWallet>>   rtWallets_;
       std::unordered_map<std::string, int>                     rtWalletsById_;
-      std::shared_ptr<spdlog::logger> logger_; // Will need to be set manually.
    };
 }  //namespace bs
 

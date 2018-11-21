@@ -65,12 +65,11 @@ namespace bs {
       Q_OBJECT
 
    public:
-      PlainWallet() {}
       PlainWallet(const std::string &name, const std::string &desc
-                  , const std::shared_ptr<spdlog::logger> &logger);
+                  , const std::shared_ptr<spdlog::logger> &logger = nullptr);
       PlainWallet(const std::string &filename
-                  , const std::shared_ptr<spdlog::logger> &logger);
-      PlainWallet(const std::shared_ptr<spdlog::logger> &logger)
+                  , const std::shared_ptr<spdlog::logger> &logger = nullptr);
+      PlainWallet(const std::shared_ptr<spdlog::logger> &logger = nullptr)
          : Wallet(logger) {}
       ~PlainWallet() override;
 

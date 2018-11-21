@@ -671,15 +671,15 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, std::function<void(flo
    const auto &cbWrap = [this, cbProcess, nbBlocks]
                         (ReturnMessage<ClientClasses::FeeEstimateStruct> feeStruct) {
       try {
-         auto fs = feeStruct.get();
+         const auto &fs = feeStruct.get();
          if (cbInMainThread_) {
-            QMetaObject::invokeMethod(this, [cbProcess, &fs] { cbProcess(fs); });
+            QMetaObject::invokeMethod(this, [cbProcess, fs] { cbProcess(fs); });
          }
          else {
             cbProcess(fs);
          }
       }
-      catch(std::exception& e) {
+      catch (const std::exception &e) {
          if(logger_ != nullptr) {
             logger_->error("[ArmoryConnection::estimateFee] Return data " \
                "error - {} - {} blocks", e.what(), nbBlocks);

@@ -66,14 +66,14 @@ private:
 };
 
 
-bs::SettlementWallet::SettlementWallet()
+bs::SettlementWallet::SettlementWallet(const std::shared_ptr<spdlog::logger> &logger)
    : PlainWallet(tr("Settlement").toStdString()
                  , tr("Settlement Wallet").toStdString()
-                 , logger_)
+                 , logger)
 {}
 
-bs::SettlementWallet::SettlementWallet(const std::string &filename)
-   : PlainWallet()
+bs::SettlementWallet::SettlementWallet(const std::string &filename, const std::shared_ptr<spdlog::logger> &logger)
+   : PlainWallet(logger)
 {
    loadFromFile(filename);
 }
