@@ -267,12 +267,12 @@ void SignerSettings::parseArguments(const QStringList &args)
       set(OfflineMode, true, false);
    }
 
-   BlockDataManagerConfig config;
+   NetworkConfig config;
    if (testNet()) {
-      config.selectNetwork("Test");
+      config.selectNetwork(NETWORK_MODE_TESTNET);
    }
    else {
-      config.selectNetwork("Main");
+      config.selectNetwork(NETWORK_MODE_MAINNET);
    }
 }
 
