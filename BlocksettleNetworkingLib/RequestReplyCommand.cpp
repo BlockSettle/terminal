@@ -36,8 +36,11 @@ void RequestReplyCommand::SetErrorCallback(const error_callback_type& callback)
 
 void RequestReplyCommand::CleanupCallbacks()
 {
-   replyCallback_ = {};
-   errorCallback_ = {};
+   data_callback_type   oldReplyCallback;
+   error_callback_type  oldErrorCallback;
+
+   std::swap(oldReplyCallback, replyCallback_);
+   std::swap(oldErrorCallback, errorCallback_);
 }
 
 bool RequestReplyCommand::ExecuteRequest(const std::string& host
@@ -82,14 +85,14 @@ bool RequestReplyCommand::ExecuteRequest(const std::string& host
 void RequestReplyCommand::OnDataReceived(const std::string& data)
 {
    if (!replyReceived_) {
+      replyReceived_ = true;
+      requestCompleted_->SetEvent();
       if (dropResult_) {
          result_ = true;
       }
       else {
          result_ = replyCallback_(data);
       }
-      replyReceived_ = true;
-      requestCompleted_->SetEvent();
    } else {
       logger_->error("[RequestReplyCommand::OnDataReceived] reply already received. Ignore data for {}."
          , name_);
