@@ -627,18 +627,32 @@ void TransactionsViewModel::updateTransactionDetails(TransactionsViewItem &item,
 
 
 void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<WalletsManager> &walletsMgr, std::function<void(const TransactionsViewItem *)> cb)
+   , const std::shared_ptr<WalletsManager> &walletsMgr, std::function<void(const TransactionsViewItem *)> userCB)
 {
-   const auto &cbInit = [this, walletsMgr, cb] {
-      if (amountStr.isEmpty() && txHashes.empty()) {
-         calcAmount(walletsMgr);
-      }
+   const auto cbCheckIfInitializationCompleted = [this, userCB]()
+   {
       if (!dirStr.isEmpty() && !mainAddress.isEmpty() && !amountStr.isEmpty()) {
          initialized = true;
-         cb(this);
+         userCB(this);
       }
    };
-   const auto &cbTXs = [this, cbInit](std::vector<Tx> txs) {
+
+   const auto cbMainAddr = [this, cbCheckIfInitializationCompleted](QString mainAddr) {
+      mainAddress = mainAddr;
+      cbCheckIfInitializationCompleted();
+   };
+
+   const auto cbInit = [this, walletsMgr, cbMainAddr, cbCheckIfInitializationCompleted] {
+      if (amountStr.isEmpty() && txHashes.empty()) {
+         calcAmount(walletsMgr);
+         if (mainAddress.isEmpty()) {
+            walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr);
+         }
+      }
+      cbCheckIfInitializationCompleted();
+   };
+
+   const auto cbTXs = [this, cbInit](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
          txHashes.erase(txHash);
@@ -653,11 +667,8 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       dirStr = QObject::tr(bs::Transaction::toStringDir(dir));
       cbInit();
    };
-   const auto &cbMainAddr = [this, cbInit](QString mainAddr) {
-      mainAddress = mainAddr;
-      cbInit();
-   };
-   const auto &cbTX = [this, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr](Tx newTx) {
+
+   const auto cbTX = [this, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr](Tx newTx) {
       if (!newTx.isInitialized()) {
          return;
       }
@@ -692,19 +703,14 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       if (dirStr.isEmpty()) {
          walletsMgr->GetTransactionDirection(tx, wallet, cbDir);
       }
-      if (mainAddress.isEmpty()) {
-         walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr);
-      }
    };
 
    if (initialized) {
-      cb(this);
-   }
-   else {
+      userCB(this);
+   } else {
       if (tx.isInitialized()) {
          cbTX(tx);
-      }
-      else {
+      } else {
          armory->getTxByHash(txEntry.txHash, cbTX);
       }
    }

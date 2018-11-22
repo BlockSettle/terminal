@@ -27,8 +27,6 @@ struct TransactionsViewItem
 {
    bs::TXEntry txEntry;
    Tx tx;
-   std::map<BinaryData, Tx>   txIns;
-   std::set<BinaryData>       txHashes;
    bool initialized = false;
    QString mainAddress;
    bs::Transaction::Direction direction = bs::Transaction::Unknown;
@@ -51,6 +49,10 @@ struct TransactionsViewItem
 
    bool isRBFeligible() const;
    bool isCPFPeligible() const;
+private:
+   std::set<BinaryData>       txHashes;
+   std::map<BinaryData, Tx>   txIns;
+
 };
 typedef std::vector<TransactionsViewItem>    TransactionItems;
 
