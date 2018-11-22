@@ -133,7 +133,7 @@ bs::Address bs::Address::fromHash(const BinaryData &hash, AddressEntryType aet)
 {
    if ((aet == AddressEntryType_P2SH) && (hash.getSize() == 20)) {
       BinaryData binAddr;
-      binAddr.append(BlockDataManagerConfig::getScriptHashPrefix());
+      binAddr.append(NetworkConfig::getScriptHashPrefix());
       binAddr.append(hash);
       return bs::Address(binAddr, aet);
    }
@@ -219,10 +219,10 @@ AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
 {
    if (addr.getSize() == 21) {
       const auto prefix = addr[0];
-      if (prefix == BlockDataManagerConfig::getPubkeyHashPrefix()) {
+      if (prefix == NetworkConfig::getPubkeyHashPrefix()) {
          return AddressEntryType_P2PKH;
       }
-      else if (prefix == BlockDataManagerConfig::getScriptHashPrefix()) {
+      else if (prefix == NetworkConfig::getScriptHashPrefix()) {
          return AddressEntryType_P2SH;
       }
       else if (prefix == SCRIPT_PREFIX_P2WSH) {
@@ -300,10 +300,10 @@ BinaryData bs::Address::prefixed() const
 {
    if ((getSize() == 20) || (getSize() == 32)) {   // Missing the prefix, we have to add it
       if (prefixed_.isNull()) {
-         auto prefix = BlockDataManagerConfig::getPubkeyHashPrefix();
+         auto prefix = NetworkConfig::getPubkeyHashPrefix();
          switch (aet_) {
          case AddressEntryType_P2SH:
-            prefix = BlockDataManagerConfig::getScriptHashPrefix();
+            prefix = NetworkConfig::getScriptHashPrefix();
             break;
          case AddressEntryType_Multisig:
             prefix = SCRIPT_PREFIX_MULTISIG;
@@ -369,7 +369,7 @@ bool bs::Address::operator==(const bs::Address &addr) const
    return (id() == addr.id());
 }
 
-shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
+std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
 {
    try {
       switch (getType()) {
@@ -413,7 +413,7 @@ BinaryData bs::Address::getWitnessScript() const
    return witnessScr_;
 }
 
-shared_ptr<ScriptRecipient> bs::Address::getRecipient(double amount) const
+std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(double amount) const
 {
    return getRecipient((uint64_t)(amount * BTCNumericTypes::BalanceDivider));
 }

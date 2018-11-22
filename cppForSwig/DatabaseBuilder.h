@@ -15,19 +15,18 @@ class BlockDataManager;
 class ScrAddrFilter;
 class UnresolvedHashException {};
 
-typedef function<void(BDMPhase, double, unsigned, unsigned)> ProgressCallback;
+typedef std::function<void(BDMPhase, double, unsigned, unsigned)> ProgressCallback;
 
 /////////////////////////////////////////////////////////////////////////////
 class DatabaseBuilder
 {
 private:
    BlockFiles& blockFiles_;
-   shared_ptr<Blockchain> blockchain_;
+   std::shared_ptr<Blockchain> blockchain_;
    LMDBBlockDatabase* db_;
-   shared_ptr<ScrAddrFilter> scrAddrFilter_;
+   std::shared_ptr<ScrAddrFilter> scrAddrFilter_;
 
    const ProgressCallback progress_;
-   const BinaryData magicBytes_;
    BlockOffset topBlockOffset_;
    const BlockDataManagerConfig bdmConfig_;
 
@@ -39,9 +38,9 @@ private:
    
    bool addBlocksToDB(
       BlockDataLoader& bdl, uint16_t fileID, size_t startOffset,
-      shared_ptr<BlockOffset> bo, bool fullHints);
+      std::shared_ptr<BlockOffset> bo, bool fullHints);
    void parseBlockFile(const uint8_t* fileMap, size_t fileSize, size_t startOffset,
-      function<bool(const uint8_t* data, size_t size, size_t offset)>);
+      std::function<bool(const uint8_t* data, size_t size, size_t offset)>);
 
    Blockchain::ReorganizationState updateBlocksInDB(
       const ProgressCallback &progress, bool verbose, bool fullHints);
@@ -51,17 +50,17 @@ private:
 
    void resetHistory(void);
    bool reparseBlkFiles(unsigned fromID);
-   map<BinaryData, shared_ptr<BlockHeader>> assessBlkFile(BlockDataLoader& bdl,
+   std::map<BinaryData, std::shared_ptr<BlockHeader>> assessBlkFile(BlockDataLoader& bdl,
       unsigned fileID);
 
    void verifyTransactions(void);
    void commitAllTxHints(
-      const map<uint32_t, BlockData>&, const set<unsigned>&);
-   void commitAllStxos(shared_ptr<BlockDataFileMap>, 
-      const map<uint32_t, BlockData>&, const set<unsigned>&);
+      const std::map<uint32_t, BlockData>&, const std::set<unsigned>&);
+   void commitAllStxos(std::shared_ptr<BlockDataFileMap>,
+      const std::map<uint32_t, BlockData>&, const std::set<unsigned>&);
 
-   void repairTxFilters(const set<unsigned>&);
-   void reprocessTxFilter(shared_ptr<BlockDataFileMap>, unsigned);
+   void repairTxFilters(const std::set<unsigned>&);
+   void reprocessTxFilter(std::shared_ptr<BlockDataFileMap>, unsigned);
 
    void cycleDatabases(void);
 

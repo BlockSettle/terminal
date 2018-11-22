@@ -1,8 +1,9 @@
 #ifndef __TRANSACTION_DETAIL_DIALOG_H__
 #define __TRANSACTION_DETAIL_DIALOG_H__
 
-#include <QDialog>
+#include "BinaryData.h"
 
+#include <QDialog>
 #include <memory>
 
 namespace Ui {
@@ -40,7 +41,8 @@ private:
    QTreeWidgetItem   *  itemReceiver = nullptr;
 
 private:
-   void addAddress(const std::shared_ptr<bs::Wallet> &, const TxOut& out, bool isOutput, bool isTxOutgoing);
+   void addAddress(const std::shared_ptr<bs::Wallet> &, const TxOut& out,
+                   bool isOutput, bool isTxOutgoing, const BinaryData& txHash);
    QString getScriptType(const TxOut &);
 };
 

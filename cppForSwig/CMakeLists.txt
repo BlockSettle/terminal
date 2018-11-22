@@ -17,10 +17,11 @@ SET (SOURCES
    DecryptedDataContainer.cpp
    DerivationScheme.cpp
    EncryptionUtils.cpp
-   FcgiMessage.cpp
+   HttpMessage.cpp
    JSON_codec.cpp
    lmdb_wrapper.cpp
    log.cpp
+   NetworkConfig.cpp
    ReentrantLock.cpp
    Script.cpp
    Signer.cpp
@@ -64,9 +65,10 @@ SET (HEADERS
    DecryptedDataContainer.h
    DerivationScheme.h
    EncryptionUtils.h
-   FcgiMessage.h
+   HttpMessage.h
    JSON_codec.h
    lmdb_wrapper.h
+   NetworkConfig.h
    ReentrantLock.h
    Signer.h
    Script.h

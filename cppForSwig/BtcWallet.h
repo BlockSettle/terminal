@@ -61,7 +61,7 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // addScrAddr when blockchain rescan req'd, addNewScrAddr for just-created
-   void removeAddressBulk(const vector<BinaryDataRef>&);
+   void removeAddressBulk(const std::vector<BinaryDataRef>&);
    bool hasScrAddress(const BinaryDataRef&) const;
 
    // BlkNum is necessary for "unconfirmed" list, since it is dependent
@@ -74,21 +74,21 @@ public:
    uint64_t getSpendableBalance(uint32_t currBlk) const;
    uint64_t getUnconfirmedBalance(uint32_t currBlk) const;
 
-   map<BinaryData, uint32_t> getAddrTxnCounts(int32_t updateID) const;
-   map<BinaryData, tuple<uint64_t, uint64_t, uint64_t>> 
+   std::map<BinaryData, uint32_t> getAddrTxnCounts(int32_t updateID) const;
+   std::map<BinaryData, std::tuple<uint64_t, uint64_t, uint64_t>>
       getAddrBalances(int32_t updateID, unsigned blockheight) const;
 
    uint64_t getWltTotalTxnCount(void) const;
 
    void prepareTxOutHistory(uint64_t val);
    void prepareFullTxOutHistory(bool ignoreZC);
-   vector<UnspentTxOut> getSpendableTxOutListForValue(uint64_t val = UINT64_MAX);
-   vector<UnspentTxOut> getSpendableTxOutListZC(void);
-   vector<UnspentTxOut> getRBFTxOutList(void);
+   std::vector<UnspentTxOut> getSpendableTxOutListForValue(uint64_t val = UINT64_MAX);
+   std::vector<UnspentTxOut> getSpendableTxOutListZC(void);
+   std::vector<UnspentTxOut> getRBFTxOutList(void);
 
    void clearBlkData(void);
    
-   vector<AddressBookEntry> createAddressBook(void);
+   std::vector<AddressBookEntry> createAddressBook(void);
 
    void reset(void);
    
@@ -98,14 +98,14 @@ public:
    void setWalletID(BinaryData const & wltId) { walletID_ = wltId; }
    const BinaryData& walletID() const { return walletID_; }
 
-   shared_ptr<map<BinaryData, LedgerEntry>> getHistoryPage(uint32_t);
-   vector<LedgerEntry> getHistoryPageAsVector(uint32_t);
+   std::shared_ptr<std::map<BinaryData, LedgerEntry>> getHistoryPage(uint32_t);
+   std::vector<LedgerEntry> getHistoryPageAsVector(uint32_t);
    size_t getHistoryPageCount(void) const { return histPages_.getPageCount(); }
 
    void needsRefresh(bool refresh);
    bool hasBdvPtr(void) const { return bdvPtr_ != nullptr; }
 
-   void setRegistrationCallback(function<void(void)> lbd)
+   void setRegistrationCallback(std::function<void(void)> lbd)
    {
       doneRegisteringCallback_ = lbd;
    }
@@ -121,8 +121,8 @@ private:
 
    void setRegistered(bool isTrue = true) { isRegistered_ = isTrue; }
 
-   map<BinaryData, LedgerEntry> updateWalletLedgersFromTxio(
-      const map<BinaryData, TxIOPair>& txioMap,
+   std::map<BinaryData, LedgerEntry> updateWalletLedgersFromTxio(
+      const std::map<BinaryData, TxIOPair>& txioMap,
       uint32_t startBlock, uint32_t endBlock) const;
 
    void mapPages(void);
@@ -131,11 +131,13 @@ private:
    BlockDataViewer* getBdvPtr(void) const
    { return bdvPtr_; }
 
-   map<uint32_t, uint32_t> computeScrAddrMapHistSummary(void);
-   const map<uint32_t, uint32_t>& getSSHSummary(void) const
+   std::map<uint32_t, uint32_t> computeScrAddrMapHistSummary(void);
+   std::map<uint32_t, uint32_t> computeScrAddrMapHistSummary_Super(void);
+
+   const std::map<uint32_t, uint32_t>& getSSHSummary(void) const
    { return histPages_.getSSHsummary(); }
 
-   map<BinaryData, TxIOPair> getTxioForRange(uint32_t, uint32_t) const;
+   std::map<BinaryData, TxIOPair> getTxioForRange(uint32_t, uint32_t) const;
    void unregister(void) { isRegistered_ = false; }
    void resetTxOutHistory(void);
    void resetCounters(void);
@@ -144,7 +146,7 @@ private:
 
    BlockDataViewer* const        bdvPtr_;
    TransactionalMap<
-      BinaryDataRef, shared_ptr<ScrAddrObj>> scrAddrMap_;
+      BinaryDataRef, std::shared_ptr<ScrAddrObj>> scrAddrMap_;
    
    bool ignoreLastScanned_ = true;
    bool isRegistered_ = false;
@@ -162,9 +164,9 @@ private:
 
    //call this lambda once a wallet is done registering and scanning 
    //for the first time
-   function<void(void)> doneRegisteringCallback_ = [](void)->void{};
+   std::function<void(void)> doneRegisteringCallback_ = [](void)->void{};
 
-   set<BinaryData> validZcKeys_;
+   std::set<BinaryData> validZcKeys_;
 
    mutable int lastPulledCountsID_ = -1;
    mutable int lastPulledBalancesID_ = -1;

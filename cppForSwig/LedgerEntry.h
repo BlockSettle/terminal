@@ -101,7 +101,7 @@ public:
       isChainedZC_(isChainedZC) {}
 
    BinaryData const &  getScrAddr(void) const;
-   string              getWalletID(void) const;
+   std::string         getWalletID(void) const;
    int64_t             getValue(void) const     { return value_;         }
    uint32_t            getBlockNum(void) const  { return blockNum_;      }
    BinaryData const &  getTxHash(void) const    { return txHash_;        }
@@ -127,20 +127,20 @@ public:
    void pprint(void);
    void pprintOneLine(void) const;
 
-   static void purgeLedgerMapFromHeight(map<BinaryData, LedgerEntry>& leMap,
+   static void purgeLedgerMapFromHeight(std::map<BinaryData, LedgerEntry>& leMap,
                                         uint32_t purgeFrom);
-   static void purgeLedgerVectorFromHeight(vector<LedgerEntry>& leMap,
+   static void purgeLedgerVectorFromHeight(std::vector<LedgerEntry>& leMap,
       uint32_t purgeFrom);
 
-   static map<BinaryData, LedgerEntry> computeLedgerMap(
-                                const map<BinaryData, TxIOPair>& txioMap,
+   static std::map<BinaryData, LedgerEntry> computeLedgerMap(
+                                const std::map<BinaryData, TxIOPair>& txioMap,
                                 uint32_t startBlock, uint32_t endBlock,
                                 const BinaryDataRef ID,
                                 const LMDBBlockDatabase* db,
                                 const Blockchain* bc,
                                 const ZeroConfContainer* zc);
    
-   const set<BinaryData>& getScrAddrList(void) const
+   const std::set<BinaryData>& getScrAddrList(void) const
    { return scrAddrSet_; }
 
    void fillMessage(::Codec_LedgerEntry::LedgerEntry* msg);
@@ -148,7 +148,7 @@ public:
 public:
 
    static LedgerEntry EmptyLedger_;
-   static map<BinaryData, LedgerEntry> EmptyLedgerMap_;
+   static std::map<BinaryData, LedgerEntry> EmptyLedgerMap_;
    static BinaryData EmptyID_;
 
 private:
@@ -168,7 +168,7 @@ private:
    bool             isChainedZC_ = false;
 
    //for matching scrAddr comments to LedgerEntries on the Python side
-   set<BinaryData> scrAddrSet_;
+   std::set<BinaryData> scrAddrSet_;
 }; 
 
 struct LedgerEntry_DescendingOrder
@@ -182,7 +182,7 @@ class LedgerDelegate
    friend class BlockDataViewer;
 
 public:
-   vector<LedgerEntry> getHistoryPage(uint32_t id)
+   std::vector<LedgerEntry> getHistoryPage(uint32_t id)
    {
       return getHistoryPage_(id);
    }
@@ -204,10 +204,10 @@ public:
 
 private:
    LedgerDelegate(
-      function<vector<LedgerEntry>(uint32_t)> getHist,
-      function<uint32_t(uint32_t)> getBlock,
-      function<uint32_t(uint32_t)> getPageId,
-      function<uint32_t(void)> getPageCount) :
+      std::function<std::vector<LedgerEntry>(uint32_t)> getHist,
+      std::function<uint32_t(uint32_t)> getBlock,
+      std::function<uint32_t(uint32_t)> getPageId,
+      std::function<uint32_t(void)> getPageCount) :
       getHistoryPage_(getHist),
       getBlockInVicinity_(getBlock),
       getPageIdForBlockHeight_(getPageId),
@@ -215,10 +215,10 @@ private:
    {}
 
 private:
-   const function<vector<LedgerEntry>(uint32_t)> getHistoryPage_;
-   const function<uint32_t(uint32_t)>            getBlockInVicinity_;
-   const function<uint32_t(uint32_t)>            getPageIdForBlockHeight_;
-   const function<uint32_t(void)>                getPageCount_;
+   const std::function<std::vector<LedgerEntry>(uint32_t)> getHistoryPage_;
+   const std::function<uint32_t(uint32_t)>            getBlockInVicinity_;
+   const std::function<uint32_t(uint32_t)>            getPageIdForBlockHeight_;
+   const std::function<uint32_t(void)>                getPageCount_;
 };
 
 #endif

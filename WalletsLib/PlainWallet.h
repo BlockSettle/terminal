@@ -65,9 +65,12 @@ namespace bs {
       Q_OBJECT
 
    public:
-      PlainWallet(const std::string &name, const std::string &desc);
-      PlainWallet(const std::string &filename);
-      PlainWallet() {}
+      PlainWallet(const std::string &name, const std::string &desc
+                  , const std::shared_ptr<spdlog::logger> &logger = nullptr);
+      PlainWallet(const std::string &filename
+                  , const std::shared_ptr<spdlog::logger> &logger = nullptr);
+      PlainWallet(const std::shared_ptr<spdlog::logger> &logger = nullptr)
+         : Wallet(logger) {}
       ~PlainWallet() override;
 
       PlainWallet(const PlainWallet&) = delete;
@@ -78,6 +81,9 @@ namespace bs {
       static std::string fileNamePrefix(bool) { return "plain_"; }
       void saveToDir(const std::string &targetDir);
       void saveToFile(const std::string &filename);
+      void setLogger(const std::shared_ptr<spdlog::logger> &logger) {
+         logger_ = logger;
+      }
 
       virtual int addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset = nullptr);
       bool containsAddress(const bs::Address &addr) override;

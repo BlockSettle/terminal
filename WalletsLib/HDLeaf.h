@@ -11,6 +11,9 @@
 #include "HDNode.h"
 #include "MetaData.h"
 
+namespace spdlog {
+   class logger;
+}
 
 namespace bs {
    class TxAddressChecker;
@@ -261,7 +264,9 @@ namespace bs {
          Q_OBJECT
 
       public:
-         CCLeaf(const std::string &name, const std::string &desc, bool extOnlyAddresses = false);
+         CCLeaf(const std::string &name, const std::string &desc,
+                const std::shared_ptr<spdlog::logger> &logger,
+                bool extOnlyAddresses = false);
          ~CCLeaf() override;
 
          wallet::Type GetType() const override { return wallet::Type::ColorCoin; }
@@ -298,8 +303,8 @@ namespace bs {
             , bool applyCorrection = true) const;
          std::vector<UTXO> filterUTXOs(const std::vector<UTXO> &) const;
 
-      private:
          std::shared_ptr<TxAddressChecker>   checker_;
+         std::shared_ptr<spdlog::logger>     logger_;
          uint64_t       lotSizeInSatoshis_ = 0;
          volatile bool  validationStarted_, validationEnded_;
          double         balanceCorrection_ = 0;

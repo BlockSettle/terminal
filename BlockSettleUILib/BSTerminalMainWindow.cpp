@@ -389,7 +389,7 @@ void BSTerminalMainWindow::InitAuthManager()
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
    connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, &BSTerminalMainWindow::onAuthMgrConnComplete);
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &walletId) {
+   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &) {
       if (authAddrDlg_) {
          openAuthManagerDialog();
       }
@@ -497,7 +497,9 @@ void BSTerminalMainWindow::InitAssets()
 void BSTerminalMainWindow::InitPortfolioView()
 {
    portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsManager_, assetManager_, this);
-   ui->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_, signContainer_, armory_, walletsManager_);
+   ui->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
+                             signContainer_, armory_, logMgr_->logger("ui"),
+                             walletsManager_);
 }
 
 void BSTerminalMainWindow::InitWalletsView()
@@ -510,7 +512,8 @@ void BSTerminalMainWindow::InitWalletsView()
 void BSTerminalMainWindow::InitTransactionsView()
 {
    ui->widgetExplorer->init(armory_, logMgr_->logger());
-   ui->widgetTransactions->init(walletsManager_, armory_, signContainer_);
+   ui->widgetTransactions->init(walletsManager_, armory_, signContainer_,
+                                logMgr_->logger("ui"));
    ui->widgetTransactions->setEnabled(true);
 
    ui->widgetTransactions->SetTransactionsModel(transactionsModel_);
@@ -540,7 +543,10 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
 
 void BSTerminalMainWindow::CompleteUIOnlineView()
 {
-   transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_, walletsManager_, this);
+   transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_
+                                                               , walletsManager_
+                                                         , logMgr_->logger("ui")
+                                                                , this);
 
    InitTransactionsView();
    transactionsModel_->loadAllWallets();
@@ -685,7 +691,9 @@ void BSTerminalMainWindow::onReceive()
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsManager_, signContainer_, true, this};
+   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsManager_,
+                                                  signContainer_, true,
+                                                  logMgr_->logger("ui"), this};
    advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    if (!selectedWalletId.empty()) {
@@ -712,7 +720,9 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg{armory_, walletsManager_, signContainer_, this};
+         CreateTransactionDialogSimple dlg{armory_, walletsManager_,
+                                           signContainer_, logMgr_->logger("ui"),
+                                           this};
          dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
          if (!selectedWalletId.empty()) {

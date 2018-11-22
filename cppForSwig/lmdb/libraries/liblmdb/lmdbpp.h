@@ -239,6 +239,7 @@ public:
 private:
 
    LMDB(const LMDB &nocopy);
+   void resize(MDB_env*);
 };
 
 struct LMDBThreadTxInfo
@@ -320,6 +321,8 @@ public:
    void close();
 
    const std::string& getFilename(void) const { return filename_; }
+   size_t getMapSize(void) const;
+   void setMapSize(size_t);
    
 private:
    LMDBEnv(const LMDBEnv&); // disallow copy

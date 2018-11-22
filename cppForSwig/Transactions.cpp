@@ -10,6 +10,8 @@
 #include "cryptopp/oids.h"
 #include "make_unique.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 TransactionStub::~TransactionStub(void)
 {}

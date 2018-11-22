@@ -33,10 +33,10 @@ enum DerivationSchemeType
 };
 
 
-class DerivationSchemeException : public runtime_error
+class DerivationSchemeException : public std::runtime_error
 {
 public:
-   DerivationSchemeException(const string& msg) : runtime_error(msg)
+   DerivationSchemeException(const std::string& msg) : std::runtime_error(msg)
    {}
 };
 
@@ -60,17 +60,17 @@ public:
    DerivationSchemeType getType(void) const { return type_; }
 
    //virtual
-   virtual vector<shared_ptr<AssetEntry>> extendPublicChain(
-      shared_ptr<AssetEntry>, unsigned start, unsigned end) = 0;
-   virtual vector<shared_ptr<AssetEntry>> extendPrivateChain(
-      shared_ptr<DecryptedDataContainer>,
-      shared_ptr<AssetEntry>, unsigned start, unsigned end) = 0;
+   virtual std::vector<std::shared_ptr<AssetEntry>> extendPublicChain(
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end) = 0;
+   virtual std::vector<std::shared_ptr<AssetEntry>> extendPrivateChain(
+      std::shared_ptr<DecryptedDataContainer>,
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end) = 0;
    virtual BinaryData serialize(void) const = 0;
 
    virtual const SecureBinaryData& getChaincode(void) const = 0;
 
    //static
-   static shared_ptr<DerivationScheme> deserialize(BinaryDataRef);
+   static std::shared_ptr<DerivationScheme> deserialize(BinaryDataRef);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,25 +85,25 @@ public:
    //tors
    DerivationScheme_ArmoryLegacy(SecureBinaryData& chainCode) :
       DerivationScheme(DerSchemeType_ArmoryLegacy),
-      chainCode_(move(chainCode))
+      chainCode_(std::move(chainCode))
    {}
 
    //locals
-   shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
-      shared_ptr<DecryptedDataContainer>,
-      const SecureBinaryData& privKey, unique_ptr<Cypher>,
+   std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
+      std::shared_ptr<DecryptedDataContainer>,
+      const SecureBinaryData& privKey, std::unique_ptr<Cypher>,
       const BinaryData& full_id, unsigned index);
    
-   shared_ptr<AssetEntry_Single> computeNextPublicEntry(
+   std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
       const SecureBinaryData& pubKey,
       const BinaryData& full_id, unsigned index);
 
    //virtuals
-   vector<shared_ptr<AssetEntry>> extendPublicChain(
-      shared_ptr<AssetEntry>, unsigned start, unsigned end);
-   vector<shared_ptr<AssetEntry>> extendPrivateChain(
-      shared_ptr<DecryptedDataContainer>,
-      shared_ptr<AssetEntry>, unsigned start, unsigned end);
+   std::vector<std::shared_ptr<AssetEntry>> extendPublicChain(
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end);
+   std::vector<std::shared_ptr<AssetEntry>> extendPrivateChain(
+      std::shared_ptr<DecryptedDataContainer>,
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end);
 
    BinaryData serialize(void) const;
 
@@ -122,25 +122,25 @@ public:
    //tors
    DerivationScheme_BIP32(SecureBinaryData& chainCode) :
       DerivationScheme(DerSchemeType_BIP32),
-      chainCode_(move(chainCode))
+      chainCode_(std::move(chainCode))
    {}
 
    //locals
-   shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
-      shared_ptr<DecryptedDataContainer>,
-      const SecureBinaryData& privKey, unique_ptr<Cypher>,
+   std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
+      std::shared_ptr<DecryptedDataContainer>,
+      const SecureBinaryData& privKey, std::unique_ptr<Cypher>,
       const BinaryData& full_id, unsigned index);
 
-   shared_ptr<AssetEntry_Single> computeNextPublicEntry(
+   std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
       const SecureBinaryData& pubKey,
       const BinaryData& full_id, unsigned index);
 
    //virtuals
-   vector<shared_ptr<AssetEntry>> extendPublicChain(
-      shared_ptr<AssetEntry>, unsigned start, unsigned end);
-   vector<shared_ptr<AssetEntry>> extendPrivateChain(
-      shared_ptr<DecryptedDataContainer>,
-      shared_ptr<AssetEntry>, unsigned start, unsigned end);
+   std::vector<std::shared_ptr<AssetEntry>> extendPublicChain(
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end);
+   std::vector<std::shared_ptr<AssetEntry>> extendPrivateChain(
+      std::shared_ptr<DecryptedDataContainer>,
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end);
 
    BinaryData serialize(void) const;
 

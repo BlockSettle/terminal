@@ -13,6 +13,8 @@
 #include "ScrAddrFilter.h"
 #include "Transactions.h"
 
+using namespace std;
+
 /////////////////////////////////////////////////////////////////////////////
 DatabaseBuilder::DatabaseBuilder(BlockFiles& blockFiles, 
    BlockDataManager& bdm,
@@ -22,7 +24,7 @@ DatabaseBuilder::DatabaseBuilder(BlockFiles& blockFiles,
    bdmConfig_(bdm.config()), blockchain_(bdm.blockchain()),
    scrAddrFilter_(bdm.getScrAddrFilter()),
    progress_(progress),
-   magicBytes_(db_->getMagicBytes()), topBlockOffset_(0, 0),
+   topBlockOffset_(0, 0),
    forceRescanSSH_(forceRescanSSH)
 {}
 
@@ -463,7 +465,8 @@ void DatabaseBuilder::parseBlockFile(
    function<bool(const uint8_t* data, size_t size, size_t offset)> callback)
 {
    //check magic bytes at start of file
-   auto magicBytesSize = magicBytes_.getSize();
+   auto& magicBytes = NetworkConfig::getMagicBytes();
+   auto magicBytesSize = magicBytes.getSize();
    if (fileSize < magicBytesSize)
    {
       stringstream ss;
@@ -472,7 +475,7 @@ void DatabaseBuilder::parseBlockFile(
    }
 
    BinaryDataRef dataMagic(fileMap, magicBytesSize);
-   if (dataMagic != magicBytes_)
+   if (dataMagic != magicBytes)
       throw runtime_error("Unexpected network magic bytes found in block data file");
 
    //set pointer to start offset
@@ -485,12 +488,12 @@ void DatabaseBuilder::parseBlockFile(
       size_t localProgress = magicBytesSize;
       BinaryDataRef magic(fileMap, magicBytesSize);
 
-      if (magic != magicBytes_)
+      if (magic != magicBytes)
       {
          //no magic byte trailing the last valid file offset, let's look for one
          BinaryDataRef theFile(fileMap + localProgress, 
             fileSize - progress - localProgress);
-         int32_t foundOffset = theFile.find(magicBytes_);
+         int32_t foundOffset = theFile.find(magicBytes);
          if (foundOffset == -1)
             return;
          
@@ -499,7 +502,7 @@ void DatabaseBuilder::parseBlockFile(
          localProgress += foundOffset;
 
          magic.setRef(fileMap + localProgress, magicBytesSize);
-         if (magic != magicBytes_)
+         if (magic != magicBytes)
             throw runtime_error("parsing for magic byte failed");
 
          localProgress += 4;
@@ -579,6 +582,7 @@ BinaryData DatabaseBuilder::scanHistory(int32_t startHeight,
          progress_, reportprogress);
 
       bcs.scan();
+      bcs.scanSpentness();
       bcs.updateSSH(forceRescanSSH_ & init);
 
       return bcs.getTopScannedBlockHash();
@@ -607,14 +611,16 @@ Blockchain::ReorganizationState DatabaseBuilder::update(void)
    {
       //reorg, undo blocks up to branch point
       undoHistory(reorgState);
-
       startHeight = reorgState.reorgBranchPoint_->getBlockHeight() + 1;
    }
 
    //scan new blocks   
    BinaryData&& topScannedHash = scanHistory(startHeight, false, false);
    if (topScannedHash != blockchain_->top()->getThisHash())
+   {
+      LOGERR << "scan failure during DatabaseBuilder::update";
       throw runtime_error("scan failure during DatabaseBuilder::update");
+   }
 
    //TODO: recover from failed scan 
 
@@ -939,6 +945,7 @@ void DatabaseBuilder::commitAllStxos(
          pair<BinaryData, BinaryWriter> stxocount;
          
          stxocount.first = move(DBUtils::getBlkDataKeyNoPrefix(id, 0xFF, i));
+         stxocount.second.put_BinaryData(hash);
          stxocount.second.put_var_int(txouts.size());
 
          serializedStxos.push_back(move(stxocount));
@@ -952,9 +959,7 @@ void DatabaseBuilder::commitAllStxos(
             auto txoutDataRef = txns[i]->getTxOutRef(y);
 
             StoredTxOut::serializeDBValue(bwPair.second, ARMORY_DB_SUPER, false,
-               0, isCoinbase, TXOUT_SPENTUNK, txoutDataRef, 
-               emptyRef, hash.getRef(), y);
-
+               0, isCoinbase, txoutDataRef, TXOUT_UNSPENT, BinaryDataRef());
             serializedStxos.push_back(move(bwPair));
          }
       }
@@ -1463,9 +1468,5 @@ void DatabaseBuilder::reprocessTxFilter(
 void DatabaseBuilder::cycleDatabases()
 {
    db_->closeDatabases();
-   db_->openDatabases(
-      bdmConfig_.dbDir_,
-      bdmConfig_.genesisBlockHash_,
-      bdmConfig_.genesisTxHash_,
-      bdmConfig_.magicBytes_);
+   db_->openDatabases(bdmConfig_.dbDir_);
 }

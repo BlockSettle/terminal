@@ -85,18 +85,18 @@ class UniversalTimer
 public:
    static UniversalTimer & instance(void);
    static void cleanup(void);
-   void init (string key, string grpstr="");
-   void start (string key, string grpstr="");
-   void restart (string key, string grpstr="");
-   void stop (string key, string grpstr="");
-   void reset (string key, string grpstr="");
-   double read (string key, string grpstr="");
-   string getLastKey(void) {return most_recent_key_;}
+   void init (std::string key, std::string grpstr="");
+   void start (std::string key, std::string grpstr="");
+   void restart (std::string key, std::string grpstr="");
+   void stop (std::string key, std::string grpstr="");
+   void reset (std::string key, std::string grpstr="");
+   double read (std::string key, std::string grpstr="");
+   std::string getLastKey(void) {return most_recent_key_;}
    double getLastTiming(void) {return call_timers_[most_recent_key_].getPrev();}
-   void printCSV(ostream & os=cout, bool excludeZeros=false);
-   void printCSV(string filename, bool excludeZeros=false);
-   void print(ostream & os=cout, bool excludeZeros=false);
-   void print(string filename, bool excludeZeros=false);
+   void printCSV(std::ostream & os=std::cout, bool excludeZeros=false);
+   void printCSV(std::string filename, bool excludeZeros=false);
+   void print(std::ostream & os=std::cout, bool excludeZeros=false);
+   void print(std::string filename, bool excludeZeros=false);
 protected:
    UniversalTimer(void) : most_recent_key_("") { }
 private:
@@ -118,17 +118,17 @@ private:
       double getPrev(void) { return prev_elapsed_; }
    private:
       bool    isRunning_;
-      chrono::time_point<chrono::system_clock> start_clock_;
+      std::chrono::time_point<std::chrono::system_clock> start_clock_;
       double  prev_elapsed_;
       size_t  accum_time_;
    };
    static UniversalTimer* theUT_;
-   map<string, timer> call_timers_;
-   map<string, int > call_count_;
-   map<string, string> call_group_;
-   string most_recent_key_;
+   std::map<std::string, timer> call_timers_;
+   std::map<std::string, int > call_count_;
+   std::map<std::string, std::string> call_group_;
+   std::string most_recent_key_;
 
-   static atomic<int32_t> lock_;
+   static std::atomic<int32_t> lock_;
 };
 
 
@@ -143,7 +143,7 @@ private:
 class TimerToken
 {
 public:
-   TimerToken(string name) 
+   TimerToken(std::string name)
    { 
       timerName_ = name; 
       UniversalTimer::instance().start(timerName_);
@@ -164,7 +164,7 @@ public:
    }
 
 private: 
-   string timerName_;
+   std::string timerName_;
    double lastTiming_;
 };
 

@@ -110,6 +110,7 @@ private:
 bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &
    , const std::shared_ptr<SignContainer> &
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent);
 
 #endif // __WALLETS_WIDGET_H__
