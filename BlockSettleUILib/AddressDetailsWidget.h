@@ -25,10 +25,9 @@ public:
 
    void init(const std::shared_ptr<ArmoryConnection> &armory,
              const std::shared_ptr<spdlog::logger> &inLogger);
-   void setAddrVal(const bs::Address& inAddrVal);
-   void loadWallet();
+   void populateDataFor(const bs::Address& inAddrVal);
    void loadTransactions();
-   void clearFields();
+   void clear();
 
    enum AddressTreeColumns {
       colDate = 0,
@@ -55,7 +54,9 @@ private:
    void setConfirmationColor(QTreeWidgetItem *item);
    void setOutputColor(QTreeWidgetItem *item);
    void getTxData(AsyncClient::LedgerDelegate inDelegate);
+   void refresh(const std::shared_ptr<bs::PlainWallet> &);
 
+private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
    // hashes for keys. One has transactions (Armory), and TXEntry objects (BS).
    // This is due to the manner in which we retrieve data from Armory. Pages are
@@ -73,19 +74,12 @@ private:
    // about BinaryTXID. A simple endian flip in printed strings is all we need.
 
    Ui::AddressDetailsWidget *ui_; // The main widget object.
-   bs::Address addrVal_; // The address passed in by the user.
-   std::string dummyWalletID_; // The wallet ID.
-   bs::PlainWallet dummyWallet_; // Wallet that will hold the address.
+   std::unordered_map<std::string, std::shared_ptr<bs::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
-   std::map<BinaryData, Tx> prevTxMap_; // A wallet's previous Tx hash / Tx map (fee calc).
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
 
-   // Structs passed to Armory to tell it which TX hashes to look up.
-   std::set<BinaryData> txHashSet_; // Hashes assoc'd with a given address.
-   std::set<BinaryData> prevTxHashSet_; // Prev Tx hashes for an addr (fee calc).
-
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<spdlog::logger> logger_; // Will need to be set manually.
+   std::shared_ptr<spdlog::logger>     logger_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H
