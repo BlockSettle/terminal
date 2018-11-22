@@ -110,10 +110,8 @@ void ExplorerWidget::onSearchStarted()
 
 // This slot function is called whenever user clicks on a transaction in
 // address details page or any other page.
-void ExplorerWidget::onTransactionClicked(QString txId) {
-//   ui_->Transaction->setTxVal(txId);
-//   ui_->Transaction->getTxsForTxIns(); // Maybe moved?
-//   ui_->Transaction->loadInputs();
+void ExplorerWidget::onTransactionClicked(QString txId)
+{
    BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
    ui_->stackedWidget->setCurrentIndex(TxPage);
    ui_->Transaction->populateTransactionWidget(terminalTXID);
@@ -121,7 +119,8 @@ void ExplorerWidget::onTransactionClicked(QString txId) {
 
 // This slot function is called whenever user clicks on an address in
 // transaction details page or any other page.
-void ExplorerWidget::onAddressClicked(QString addressId) {
+void ExplorerWidget::onAddressClicked(QString addressId)
+{
    ui_->stackedWidget->setCurrentIndex(AddressPage);
 
    bs::Address bsAddress;
@@ -143,7 +142,8 @@ void ExplorerWidget::onAddressClicked(QString addressId) {
    ui_->Address->populateDataFor(bsAddress);
 }
 
-void ExplorerWidget::onReset() {
+void ExplorerWidget::onReset()
+{
    ui_->stackedWidget->setCurrentIndex(BlockPage);
    ui_->searchBox->clear();
 }

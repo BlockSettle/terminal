@@ -72,15 +72,13 @@ class TransactionDetailsWidget : public QWidget
 
 public:
    explicit TransactionDetailsWidget(QWidget *parent = nullptr);
-   ~TransactionDetailsWidget();
+   ~TransactionDetailsWidget() override;
 
    void init(const std::shared_ptr<ArmoryConnection> &armory,
              const std::shared_ptr<spdlog::logger> &inLogger);
-   void setTxGUIValues();
-   void loadInputs();
+
    void populateTransactionWidget(BinaryTXID rpcTXID,
                                   const bool& firstPass = true);
-   void clearFields();
 
     enum TxTreeColumns {
        colType = 0,
@@ -94,6 +92,7 @@ signals:
 
 protected slots:
    void onAddressClicked(QTreeWidgetItem *item, int column);
+   void onNewBlock(unsigned int);
 
 protected:
    void loadTreeIn(CustomTreeWidget *tree);
@@ -101,8 +100,12 @@ protected:
 
 private:
    void getHeaderData(const BinaryData& inHeader);
+   void loadInputs();
+   void setTxGUIValues();
+   void clear();
 
-   Ui::TransactionDetailsWidget *ui_;
+private:
+   std::unique_ptr<Ui::TransactionDetailsWidget>   ui_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger> logger_;
 
@@ -110,7 +113,6 @@ private:
 
    // Data captured from Armory callbacks.
    std::map<BinaryTXID, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
-   std::set<BinaryData> prevTxHashSet_; // A Tx's associated prev Tx hashes.
 
    void processTxData(Tx tx);
 
