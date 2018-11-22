@@ -13,6 +13,11 @@ OfflineSigner::OfflineSigner(const std::shared_ptr<spdlog::logger> &logger, cons
    : SignContainer(logger, SignContainer::OpMode::Offline), targetDir_(dir)
 { }
 
+void OfflineSigner::SetTargetDir(const QString& targetDir)
+{
+   targetDir_ = targetDir;
+}
+
 bool OfflineSigner::Start()
 {
    emit ready();
