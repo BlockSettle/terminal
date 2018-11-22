@@ -211,26 +211,48 @@ Signer bs::wallet::TXSignRequest::getSigner() const
    return signer;
 }
 
-static size_t estimateSize(const std::vector<UTXO> &inputs, const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
+// Estimate the TX virtual size. This will not be exact, as there's no sig yet.
+// So, the inputs will have to be rounded up to ensure that we meet the virtual
+// size requirement for RBF.
+static size_t estimateSize(const std::vector<UTXO> &inputs
+                           , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
 {
    if (inputs.empty() || recipients.empty()) {
       return 0;
    }
+
+   // Start with 10 bytes in every TX (version, SegWit flags, and lock time).
    size_t result = 10;
+
+   // Get the output virtual sizes from Armory.
    for (const auto &recip : recipients) {
       result += recip->getSize();
    }
+
+   // Estimate the virtual size for the inputs. Because we can't analyze the
+   // exact sig size until there's an actual signature, always play it safe and
+   // round up the estimated weight by assuming sigs will be at max size. 
    for (auto& utxo : inputs) {
       const auto scrType = BtcUtils::getTxOutScriptType(utxo.getScript());
       switch (scrType) {
+      // 179-181, so assume 181.
       case TXOUT_SCRIPT_STDHASH160:
-         result += 180;
+         result += 181;
          break;
+      // 42-44, so assume 44.
       case TXOUT_SCRIPT_P2WPKH:
-         result += 41;
+         result += 44;
          break;
-      case TXOUT_SCRIPT_NONSTANDARD:
+      // Assume P2SH is P2SH-P2WPKH, as we don't spend any other form of P2SH
+      // for now. If this changes, Armory doesn't distinguish between P2SH
+      // flavors. Ergo, another solution will be required.
+      // Should be 91 no matter what but this needs to be confirmed.
       case TXOUT_SCRIPT_P2SH:
+         result += 91;
+         break;
+      // We should never get here, and if we do, the values will almost
+      // certainly be incorrect.
+      case TXOUT_SCRIPT_NONSTANDARD:
       default:
          result += 65;
          break;
@@ -970,7 +992,7 @@ void bs::Wallet::UnregisterWallet()
 
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
-   , bool isRBF, bs::Address changeAddress)
+   , bool isRBF, bs::Address changeAddress, const uint64_t& origFee)
 {
    bs::wallet::TXSignRequest request;
    request.walletId = GetWalletId();
@@ -1000,8 +1022,17 @@ bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &i
    }
 
    request.recipients = recipients;
-   request.fee = fee;
    request.RBF = isRBF;
+
+   // Make sure the incremental relay fee is respected. It's assumed to be 1000
+   // sat/KB (1 sat/b). If the user changes this in Core, the bump could fail.
+   uint64_t minIncRelayFee = origFee + request.estimateTxSize();
+   if(isRBF && fee < minIncRelayFee) {
+      request.fee = minIncRelayFee;
+   }
+   else {
+      request.fee = fee;
+   }
 
    const uint64_t changeAmount = inputAmount - (spendAmount + fee);
    if (changeAmount) {

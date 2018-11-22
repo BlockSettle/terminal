@@ -345,15 +345,28 @@ bool CreateTransactionDialog::CreateTransaction()
       signingContainer_->SyncAddresses(transactionData_->createAddresses());
 
       txReq_ = transactionData_->CreateTXRequest(checkBoxRBF()->checkState() == Qt::Checked
-         , changeAddress);
+         , changeAddress, originalFee_);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
-      if (txReq_.fee <= originalFee_) {
-         BSMessageBox(BSMessageBox::critical, tr("Fee is low"),
-            tr("Your current fee (%1) should exceed the fee from the original transaction (%2)")
-            .arg(UiUtils::displayAmount(txReq_.fee)).arg(UiUtils::displayAmount(originalFee_))).exec();
-         stopBroadcasting();
-         return true;
+      // We shouldn't hit this case since the request checks the incremental
+      // relay fee requirement for RBF. But, in case we
+      if(txReq_.fee <= originalFee_) {
+         BSMessageBox(BSMessageBox::info, tr("Fee is too low"),
+            tr("Due to RBF requirements, the current fee (%1) will be " \
+               "increased 1 satoshi above the original transaction fee (%2)")
+            .arg(UiUtils::displayAmount(txReq_.fee))
+            .arg(UiUtils::displayAmount(originalFee_))).exec();
+         txReq_.fee = originalFee_ + 1;
+      }
+
+      const float newFeePerByte = (float)txReq_.fee / (float)txReq_.estimateTxSize();
+      if(newFeePerByte < originalFeePerByte_) {
+         BSMessageBox(BSMessageBox::info, tr("Fee per byte is too low"),
+            tr("Due to RBF requirements, the current fee per byte (%1) will " \
+               "be increased to the original transaction fee rate (%2)")
+            .arg(newFeePerByte)
+            .arg(originalFeePerByte_)).exec();
+         txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
       }
 
       pendingTXSignId_ = signingContainer_->SignTXRequest(txReq_, false,

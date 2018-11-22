@@ -96,7 +96,9 @@ public:
    bs::wallet::TXSignRequest CreateUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
    bs::wallet::TXSignRequest GetSignTXRequest() const;
 
-   bs::wallet::TXSignRequest CreateTXRequest(bool isRBF = false, const bs::Address &changeAddr = {}) const;
+   bs::wallet::TXSignRequest CreateTXRequest(bool isRBF = false
+                                             , const bs::Address &changeAddr = {}
+                                             , const uint64_t& origFee = 0) const;
    bs::wallet::TXSignRequest CreatePartialTXRequest(uint64_t spendVal, float feePerByte
       , const std::vector<std::shared_ptr<ScriptRecipient>> &, const BinaryData &prevData
       , const std::vector<UTXO> &inputs = {});

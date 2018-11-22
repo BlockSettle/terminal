@@ -114,6 +114,7 @@ protected:
    unsigned int   pendingTXSignId_ = 0;
    bool           broadcasting_ = false;
    uint64_t       originalFee_ = 0;
+   float          originalFeePerByte_ = 0.0f;
 
    QString        offlineDir_;
    BinaryData     importedSignedTX_;

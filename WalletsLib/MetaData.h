@@ -303,7 +303,8 @@ namespace bs {
 
       virtual wallet::TXSignRequest CreateTXRequest(const std::vector<UTXO> &
          , const std::vector<std::shared_ptr<ScriptRecipient>> &
-         , const uint64_t fee = 0, bool isRBF = false, bs::Address changeAddress = {});
+         , const uint64_t fee = 0, bool isRBF = false
+         , bs::Address changeAddress = {}, const uint64_t& origFee = 0);
       virtual BinaryData SignTXRequest(const wallet::TXSignRequest &,
                                        const SecureBinaryData &password = {},
                                        bool keepDuplicatedRecipients = false);

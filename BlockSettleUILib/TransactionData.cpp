@@ -579,9 +579,13 @@ bs::wallet::TXSignRequest TransactionData::GetSignTXRequest() const
    return unsignedTxReq_;
 }
 
-bs::wallet::TXSignRequest TransactionData::CreateTXRequest(bool isRBF, const bs::Address &changeAddr) const
+bs::wallet::TXSignRequest TransactionData::CreateTXRequest(bool isRBF
+                                                 , const bs::Address &changeAddr
+                                                , const uint64_t& origFee) const
 {
-   return wallet_->CreateTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddr);
+   return wallet_->CreateTXRequest(inputs(), GetRecipientList()
+                                   , summary_.totalFee, isRBF, changeAddr
+                                   , origFee);
 }
 
 bs::wallet::TXSignRequest TransactionData::CreatePartialTXRequest(uint64_t spendVal, float feePerByte

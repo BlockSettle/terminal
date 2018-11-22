@@ -151,6 +151,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
             const auto txSize = tx.serializeNoWitness().getSize();
             const float feePerByte = (float)totalVal / txSize;
             originalFee_ = totalVal;
+            originalFeePerByte_ = feePerByte;
             const size_t projectedTxSize = 85;  // 1 input and 1 output bech32
             const float totalFee = std::abs(txSize * (fee - feePerByte) + projectedTxSize * fee);
             const float newFPB = std::ceil(totalFee / (txSize + projectedTxSize));
@@ -235,10 +236,33 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          return;
       }
 
+      // RBF minimum amounts are a little tricky. The rules are:
+      //
+      // - Calculate based not on the TX size, but on the virtual size, which is
+      //   ceil(TX weight / 4). For reference, TX weight = Total_TX_Size +
+      //   (3 * Base_TX_Size) (Base_TX_Size = TX size w/o witness data).
+      // - The fee/KB must be the same or equal. (If replacing multiple TXs,
+      //   Core probably calculates based on the sum of fees and TX sizes.)
+      // - The final fee must be at least 1 sat higher than the sum of the
+      //   fees of the replaced TXs.
+      // - The resultant TX must be bumped by, at minimum, the incremental relay
+      //   fee (IRL) * the new TX's virtual size. The fee can be adjusted in
+      //   Core by the incrementalrelayfee config option. By default, the fee is
+      //   1000 sat/KB (1 sat/B), which is what we will assume is being used.
+      //   (This may need to be a terminal config option later.)
+      //
+      // Ideally, we'd dynamically adjust the minimum fee size in this dialog.
+      // However, the dialog currently has no access to an Armory Tx object,
+      // which is what calculates the virtual size. So, we'll set the minimum to
+      // the original fee rate and fee+1, and then apply the IRL when creating
+      // the TX. If the fee needs to be bumped, we'll do it at that point.
+      // (TO DO: Check if transactionData_ can be used to estimate the size.)
+
       originalFee_ = totalVal;
       const auto &txSize = tx.serializeNoWitness().getSize();
-      const float feePerByte = std::ceil((float)totalVal / txSize);
-      SetMinimumFee(totalVal, feePerByte + minRelayFeePerByte_);
+      const float feePerByte = (float)totalVal / txSize;
+      originalFeePerByte_ = feePerByte;
+      SetMinimumFee(originalFee_ + 1, minRelayFeePerByte_);
 
       if (changeAddress.isNull()) {
          setUnchangeableTx();
@@ -509,9 +533,15 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       showExistingChangeAddress(changeSelectionEnabled);
    }
 
-   if (originalFee_) {
-      SetMinimumFee(originalFee_ + minRelayFeePerByte_ * summary.transactionSize, minFeePerByte_);
-   }
+   // If we're doing RBF, set the bare minimum for the total fee and fee/byte.
+   // The total fee will still need to be checked and possibly bumped later, as
+   // it's impossible to know the final TX size at this point (and, ergo, the
+   // amount required to satisfy the incremental relay fee).
+   // (TO DO: Check if transactionData_ can be used to estimate the size, which
+   // can then be used to set the minimum fee.)
+/*   if (originalFee_) {
+      SetMinimumFee(originalFee_, minFeePerByte_);
+   }*/
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
 }
