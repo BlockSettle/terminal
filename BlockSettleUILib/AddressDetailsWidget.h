@@ -21,7 +21,7 @@ class AddressDetailsWidget : public QWidget
 
 public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
-   ~AddressDetailsWidget();
+   ~AddressDetailsWidget() override;
 
    void init(const std::shared_ptr<ArmoryConnection> &armory,
              const std::shared_ptr<spdlog::logger> &inLogger);
@@ -44,11 +44,10 @@ public:
 signals:
    void transactionClicked(QString txId);
 
-protected slots:
-   void onTxClicked(QTreeWidgetItem *item, int column);
-
 private slots:
+   void onTxClicked(QTreeWidgetItem *item, int column);
    void OnRefresh(std::vector<BinaryData> ids);
+   void onNewBlock(unsigned int);
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
@@ -73,7 +72,7 @@ private:
    // data is consistent otherwise, which makes Armory happy. Don't worry about
    // about BinaryTXID. A simple endian flip in printed strings is all we need.
 
-   Ui::AddressDetailsWidget *ui_; // The main widget object.
+   std::unique_ptr<Ui::AddressDetailsWidget> ui_; // The main widget object.
    std::unordered_map<std::string, std::shared_ptr<bs::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.

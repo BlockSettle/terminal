@@ -24,10 +24,7 @@ AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
 
 }
 
-AddressDetailsWidget::~AddressDetailsWidget()
-{
-    delete ui_;
-}
+AddressDetailsWidget::~AddressDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
 void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
@@ -35,7 +32,9 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
 {
    armory_ = armory;
    logger_ = inLogger;
+
    connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryConnection::newBlock, this, &AddressDetailsWidget::onNewBlock, Qt::QueuedConnection);
 }
 
 void AddressDetailsWidget::populateDataFor(const bs::Address &inAddrVal)
@@ -125,6 +124,21 @@ void AddressDetailsWidget::loadTransactions()
    ui_->totalSent->setText(UiUtils::displayAmount(totSpent));
 
    tree->resizeColumns();
+}
+
+void AddressDetailsWidget::onNewBlock(unsigned int)
+{
+   CustomTreeWidget *tree = ui_->treeAddressTransactions;
+   int index = 0;
+   for (const auto &curTXEntry : txEntryHashSet_) {
+      if (index >= tree->topLevelItemCount()) {
+         break;
+      }
+      auto item = tree->topLevelItem(index++);
+      item->setText(colConfs,
+         QString::number(armory_->getConfirmationsNumber(curTXEntry.second.blockNum)));
+      setConfirmationColor(item);
+   }
 }
 
 // This function sets the confirmation column to the correct color based
