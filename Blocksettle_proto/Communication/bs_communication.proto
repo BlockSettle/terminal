@@ -13,7 +13,8 @@ enum RequestType
    GenerateCCSeedRequestType            = 7;
    RevokeAuthAddressRequestType         = 8;
    ConfirmAuthAddressSubmitType         = 9;
-   FundCCGenAddrRequestType		       = 10;
+   FundCCGenAddrRequestType		= 10;
+   GetNetworkSettingsType               = 11;
 }
 
 enum AddressNetworkType
@@ -193,4 +194,23 @@ message FundCCGenAddrRequest
    required uint32   amount = 2;
    required uint32   lot_size = 3;
    optional string   reference = 4;
+}
+
+
+enum NetworkSettingType
+{
+   CelerConnType = 1;
+   MDConnType = 2;
+   MDHSConnType = 3;
+}
+
+message GetNetworkSettingsResponse
+{
+   message ConnectionData
+   {
+      required NetworkSettingType type = 1;
+      required string host = 2;
+      required uint32 port = 3;
+   }
+   repeated ConnectionData settings = 1;
 }

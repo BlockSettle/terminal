@@ -231,7 +231,7 @@ void WalletKeysSubmitWidget::cancel()
    }
 }
 
-string WalletKeysSubmitWidget::encKey(int index) const
+std::string WalletKeysSubmitWidget::encKey(int index) const
 {
    if (index < 0 || index >= pwdData_.size()) {
       return {};

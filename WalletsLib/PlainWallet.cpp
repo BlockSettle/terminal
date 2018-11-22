@@ -10,14 +10,17 @@ using namespace bs;
 #define WALLET_PREFIX_BYTE    0x01     // can use as format version
 
 
-PlainWallet::PlainWallet(const std::string &name, const std::string &desc)
-   : Wallet(), desc_(desc)
+PlainWallet::PlainWallet(const std::string &name, const std::string &desc
+                         , const std::shared_ptr<spdlog::logger> &logger)
+   : Wallet(logger), desc_(desc)
 {
    walletName_ = name;
    walletId_ = BtcUtils::computeID(SecureBinaryData().GenerateRandom(32)).toBinStr();
 }
 
-PlainWallet::PlainWallet(const std::string &filename)
+PlainWallet::PlainWallet(const std::string &filename
+                         , const std::shared_ptr<spdlog::logger> &logger)
+   : Wallet(logger)
 {
    loadFromFile(filename);
 }

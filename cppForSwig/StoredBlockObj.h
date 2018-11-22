@@ -26,7 +26,7 @@
 #include "txio.h"
 #include "BlockDataManagerConfig.h"
 
-#define ARMORY_DB_VERSION   0x9502
+#define ARMORY_DB_VERSION   0x9701
 #define ARMORY_DB_DEFAULT   ARMORY_DB_FULL
 #define UTXO_STORAGE        SCRIPT_UTXO_VECTOR
 
@@ -43,13 +43,13 @@ enum DB_SELECT
    BLKDATA,
    SSH,
    SUBSSH,
+   SUBSSH_META,
    HISTORY,
    STXO,
    TXHINTS,
    ZERO_CONF,
    TXFILTERS,
    SPENTNESS,
-   CHECKPOINT,
    COUNT
 };
 
@@ -127,6 +127,7 @@ public:
    uint32_t        appliedToHgt_=0;
    uint32_t        armoryVer_=ARMORY_DB_VERSION;
    ARMORY_DB_TYPE  armoryType_=ARMORY_DB_FULL; //default db mode
+   uint64_t metaInt_ = UINT64_MAX;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -163,15 +164,14 @@ public:
       BinaryWriter&,
       ARMORY_DB_TYPE, bool,
       uint16_t txversion, bool isCoinbase,
-      TXOUT_SPENTNESS,
       const BinaryDataRef dataRef,
-      const BinaryDataRef spentByTxIn,
-      const BinaryDataRef hash,
-      uint16_t txoutindex);
+      TXOUT_SPENTNESS spentness, BinaryDataRef spentByTxin);
 
    BinaryData getDBKey(bool withPrefix = true) const;
+   BinaryData getSpentnessKey(void) const;
    BinaryData getDBKeyOfParentTx(bool withPrefix = true) const;
-   BinaryData& getHgtX(void);
+   const BinaryData& getHgtX(void) const;
+   unsigned getHeight(void) const;
 
    StoredTxOut & createFromTxOut(TxOut & txout);
    BinaryData    getSerializedTxOut(void) const;
@@ -207,7 +207,7 @@ public:
    TXOUT_SPENTNESS   spentness_;
    bool              isCoinbase_;
    BinaryData        spentByTxInKey_;
-   BinaryData        hgtX_;
+   mutable BinaryData hgtX_;
    
 
    mutable BinaryData scrAddr_;
@@ -306,7 +306,7 @@ public:
    bool isRBF(void) const { return isRBF_; }
 
    ////
-   map<uint16_t, StoredTxOut> stxoMap_;
+   std::map<uint16_t, StoredTxOut> stxoMap_;
    bool isRBF_ = false;
 };
 
@@ -416,7 +416,7 @@ public:
    { return static_cast<DBTx&>(stxMap_[index]); }
 
    ///
-   map<uint16_t, StoredTx> stxMap_;
+   std::map<uint16_t, StoredTx> stxMap_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -458,13 +458,16 @@ public:
 
    uint64_t getSubHistoryBalance(bool withMultisig=false);
    uint64_t getSubHistoryReceived(bool withMultisig=false);
-
-   void pprintFullSubSSH(uint32_t indent=3);
    
    StoredSubHistory(const StoredSubHistory& copy)
    {
       *this = copy;
    }
+
+   static void compressMany(
+      const std::map<BinaryDataRef, StoredSubHistory*>& ssh,
+      unsigned heightOffset, unsigned spentOffset,
+      BinaryWriter& bw);
 
    StoredSubHistory& operator=(const StoredSubHistory& copy)
    {
@@ -488,7 +491,7 @@ public:
    // Store all TxIOs for this ScrAddr and block
    BinaryData     uniqueKey_;  // includes the prefix byte!
    BinaryData     hgtX_;
-   map<BinaryData, TxIOPair> txioMap_;
+   std::map<BinaryData, TxIOPair> txioMap_;
    uint32_t height_;
    uint8_t  dupID_;
    uint32_t txioCount_;
@@ -517,22 +520,23 @@ public:
    void       unserializeDBValue(BinaryData const & bd);
    void       unserializeDBValue(BinaryDataRef      bd);
    void       unserializeDBKey(BinaryDataRef key, bool withPrefix=true);
+   void decompressManySubssh(const BinaryDataRef&,
+      unsigned height_offset, unsigned spent_offset,
+      unsigned lower_bound, unsigned upper_bound,
+      std::function<bool(unsigned, uint8_t)>& isDupIdValid);
    
-   void       addUpSummary(const StoredScriptHistory&);
-   void       substractSummary(const StoredScriptHistory&);
-
+   void addSummary(const StoredScriptHistory&);
+   void substractSummary(const StoredScriptHistory&);
+   
    BinaryData    getDBKey(bool withPrefix=true) const;
    SCRIPT_PREFIX getScriptType(void) const;
-
-   void pprintOneLine(uint32_t indent=3);
-   void pprintFullSSH(uint32_t indent=3);
 
    uint64_t getScriptReceived(bool withMultisig=false);
    uint64_t getScriptBalance(bool withMultisig=false);
 
    bool     haveFullHistoryLoaded(void) const;
 
-   bool getFullTxioMap(map<BinaryData, TxIOPair> & mapToFill,
+   bool getFullTxioMap(std::map<BinaryData, TxIOPair> & mapToFill,
                        bool withMultisig=false);
 
    void mergeSubHistory(const StoredSubHistory& subssh);
@@ -547,7 +551,7 @@ public:
    int32_t        tallyHeight_ = -1;
    uint64_t       totalTxioCount_;
    uint64_t       totalUnspent_;
-   map<unsigned, unsigned> subsshSummary_;
+   std::map<unsigned, unsigned> subsshSummary_;
 
    // If this ssh has only one TxIO (most of them), then we don't bother
    // with supplemental entries just to hold that one TxIO in the DB.
@@ -555,7 +559,7 @@ public:
    // objects which will have the per-block lists of TxIOs.  But when 
    // it gets serialized to disk, we will store single-Txio SSHs in
    // the base entry and forego extra DB entries.
-   map<BinaryData, StoredSubHistory> subHistMap_;
+   std::map<BinaryData, StoredSubHistory> subHistMap_;
 };
 
 
@@ -583,8 +587,8 @@ public:
    uint32_t    blockHeight_;
    uint8_t     duplicateID_;
 
-   vector<StoredTxOut>  stxOutsRemovedByBlock_;
-   vector<OutPoint>     outPointsAddedByBlock_;
+   std::vector<StoredTxOut>  stxOutsRemovedByBlock_;
+   std::vector<OutPoint>     outPointsAddedByBlock_;
 };
 
 
@@ -614,7 +618,7 @@ public:
    BinaryData getDBKey(bool withPrefix=true) const;
 
    BinaryData         txHashPrefix_; 
-   vector<BinaryData> dbKeyList_;
+   std::vector<BinaryData> dbKeyList_;
    BinaryData         preferredDBKey_;
 };
 
@@ -639,11 +643,11 @@ public:
          {
             if(dupAndHashList_[i].second != hash)
                LOGERR << "Pushing different hash into existing HHL dupID"; 
-            dupAndHashList_[i] = make_pair(dup,hash);
+            dupAndHashList_[i] = std::make_pair(dup,hash);
             return;
          }
       }
-      dupAndHashList_.push_back(make_pair(dup,hash));
+      dupAndHashList_.push_back(std::make_pair(dup,hash));
    }
 
    BinaryData getDBKey(bool withPrefix=true) const;
@@ -654,7 +658,7 @@ public:
    void setPreferredDupID(uint8_t newDup) {preferredDup_ = newDup;}
 
    uint32_t           height_;
-   vector<pair<uint8_t, BinaryData> > dupAndHashList_;
+   std::vector<std::pair<uint8_t, BinaryData> > dupAndHashList_;
    uint8_t            preferredDup_;
 };
 

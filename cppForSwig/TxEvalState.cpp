@@ -9,6 +9,8 @@
 #include "TxEvalState.h"
 #include "EncryptionUtils.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 bool TxInEvalState::isValid(void) const
 {

@@ -13,10 +13,10 @@
 #include "EncryptionUtils.h"
 #include "AssetEncryption.h"
 
-class AssetException : public runtime_error
+class AssetException : public std::runtime_error
 {
 public:
-   AssetException(const string& err) : runtime_error(err)
+   AssetException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
@@ -65,7 +65,7 @@ struct DecryptedEncryptionKey
 
 private:
    const SecureBinaryData rawKey_;
-   map<BinaryData, SecureBinaryData> derivedKeys_;
+   std::map<BinaryData, SecureBinaryData> derivedKeys_;
 
 private:
    BinaryData computeId(const SecureBinaryData& key) const;
@@ -74,13 +74,13 @@ private:
 
 public:
    DecryptedEncryptionKey(SecureBinaryData& key) :
-      rawKey_(move(key))
+      rawKey_(std::move(key))
    {}
 
-   void deriveKey(shared_ptr<KeyDerivationFunction> kdf);
+   void deriveKey(std::shared_ptr<KeyDerivationFunction> kdf);
    BinaryData getId(const BinaryData& kdfid) const;
 
-   unique_ptr<DecryptedEncryptionKey> copy(void) const;
+   std::unique_ptr<DecryptedEncryptionKey> copy(void) const;
    bool hasData(void) const { return rawKey_.getSize() != 0; }
 };
 
@@ -96,7 +96,7 @@ private:
 
 public:
    DecryptedPrivateKey(unsigned id, SecureBinaryData& key) :
-      id_(id), privateKey_(move(key))
+      id_(id), privateKey_(std::move(key))
    {}
 
    bool hasData(void) const { return privateKey_.getSize() != 0; }
@@ -134,15 +134,15 @@ public:
       {
       case 33:
       {
-         uncompressed_ = move(CryptoECDSA().UncompressPoint(pubkey));
-         compressed_ = move(pubkey);
+         uncompressed_ = std::move(CryptoECDSA().UncompressPoint(pubkey));
+         compressed_ = std::move(pubkey);
          break;
       }
 
       case 65:
       {
-         compressed_ = move(CryptoECDSA().CompressPoint(pubkey));
-         uncompressed_ = move(pubkey);
+         compressed_ = std::move(CryptoECDSA().CompressPoint(pubkey));
+         uncompressed_ = std::move(pubkey);
          break;
       }
 
@@ -154,8 +154,8 @@ public:
    Asset_PublicKey(SecureBinaryData& uncompressedKey,
       SecureBinaryData& compressedKey) :
       Asset(AssetType_PublicKey),
-      uncompressed_(move(uncompressedKey)),
-      compressed_(move(compressedKey))
+      uncompressed_(std::move(uncompressedKey)),
+      compressed_(std::move(compressedKey))
    {
       if (uncompressed_.getSize() != 65 ||
          compressed_.getSize() != 33)
@@ -175,11 +175,11 @@ struct Asset_EncryptedData : public Asset
 
 protected:
    const SecureBinaryData data_;
-   unique_ptr<Cypher> cypher_;
+   std::unique_ptr<Cypher> cypher_;
 
 public:
-   Asset_EncryptedData(SecureBinaryData& data, unique_ptr<Cypher> cypher)
-      : Asset(AssetType_EncryptedData), data_(move(data))
+   Asset_EncryptedData(SecureBinaryData& data, std::unique_ptr<Cypher> cypher)
+      : Asset(AssetType_EncryptedData), data_(std::move(data))
    {
       if (data_.getSize() == 0)
          return;
@@ -187,7 +187,7 @@ public:
       if (cypher == nullptr)
          throw AssetException("null cypher for privkey");
 
-      cypher_ = move(cypher);
+      cypher_ = std::move(cypher);
    }
 
    //virtual
@@ -200,7 +200,7 @@ public:
       return (data_.getSize() != 0);
    }
 
-   unique_ptr<Cypher> copyCypher(void) const
+   std::unique_ptr<Cypher> copyCypher(void) const
    {
       if (cypher_ == nullptr)
          return nullptr;
@@ -224,8 +224,8 @@ public:
    }
 
    //static
-   static shared_ptr<Asset_EncryptedData> deserialize(const BinaryDataRef&);
-   static shared_ptr<Asset_EncryptedData> deserialize(
+   static std::shared_ptr<Asset_EncryptedData> deserialize(const BinaryDataRef&);
+   static std::shared_ptr<Asset_EncryptedData> deserialize(
       size_t len, const BinaryDataRef&);
 };
 
@@ -236,13 +236,13 @@ public:
    const BinaryData id_;
 
 private:
-   unique_ptr<DecryptedEncryptionKey> decrypt(
+   std::unique_ptr<DecryptedEncryptionKey> decrypt(
       const SecureBinaryData& key) const;
 
 public:
    Asset_EncryptionKey(BinaryData& id, SecureBinaryData& data,
-      unique_ptr<Cypher> cypher) :
-      Asset_EncryptedData(data, move(cypher)), id_(move(id))
+      std::unique_ptr<Cypher> cypher) :
+      Asset_EncryptedData(data, std::move(cypher)), id_(std::move(id))
    {}
 
    BinaryData serialize(void) const;
@@ -260,13 +260,13 @@ public:
    const int id_;
 
 private:
-   unique_ptr<DecryptedPrivateKey> decrypt(
+   std::unique_ptr<DecryptedPrivateKey> decrypt(
       const SecureBinaryData& key) const;
 
 public:
    Asset_PrivateKey(int id,
-      SecureBinaryData& data, unique_ptr<Cypher> cypher) :
-      Asset_EncryptedData(data, move(cypher)), id_(id)
+      SecureBinaryData& data, std::unique_ptr<Cypher> cypher) :
+      Asset_EncryptedData(data, std::move(cypher)), id_(id)
    {}
 
    BinaryData serialize(void) const;
@@ -313,9 +313,9 @@ public:
    virtual const BinaryData& getPrivateEncryptionKeyId(void) const = 0;
 
    //static
-   static shared_ptr<AssetEntry> deserialize(
+   static std::shared_ptr<AssetEntry> deserialize(
       BinaryDataRef key, BinaryDataRef value);
-   static shared_ptr<AssetEntry> deserDBValue(
+   static std::shared_ptr<AssetEntry> deserDBValue(
       int index, const BinaryData& account_id,
       BinaryDataRef value);
 };
@@ -324,41 +324,41 @@ public:
 class AssetEntry_Single : public AssetEntry
 {
 private:
-   shared_ptr<Asset_PublicKey> pubkey_;
-   shared_ptr<Asset_PrivateKey> privkey_;
+   std::shared_ptr<Asset_PublicKey> pubkey_;
+   std::shared_ptr<Asset_PrivateKey> privkey_;
 
 public:
    //tors
    AssetEntry_Single(int id, const BinaryData& accountID,
       SecureBinaryData& pubkey,
-      shared_ptr<Asset_PrivateKey> privkey) :
+      std::shared_ptr<Asset_PrivateKey> privkey) :
       AssetEntry(AssetEntryType_Single, id, accountID), 
       privkey_(privkey)
    {
-      pubkey_ = make_shared<Asset_PublicKey>(pubkey);
+      pubkey_ = std::make_shared<Asset_PublicKey>(pubkey);
    }
 
    AssetEntry_Single(int id, const BinaryData& accountID,
       SecureBinaryData& pubkeyUncompressed,
       SecureBinaryData& pubkeyCompressed,
-      shared_ptr<Asset_PrivateKey> privkey) :
+      std::shared_ptr<Asset_PrivateKey> privkey) :
       AssetEntry(AssetEntryType_Single, id, accountID), 
       privkey_(privkey)
    {
-      pubkey_ = make_shared<Asset_PublicKey>(
+      pubkey_ = std::make_shared<Asset_PublicKey>(
          pubkeyUncompressed, pubkeyCompressed);
    }
 
    AssetEntry_Single(int id, const BinaryData& accountID,
-      shared_ptr<Asset_PublicKey> pubkey,
-      shared_ptr<Asset_PrivateKey> privkey) :
+      std::shared_ptr<Asset_PublicKey> pubkey,
+      std::shared_ptr<Asset_PrivateKey> privkey) :
       AssetEntry(AssetEntryType_Single, id, accountID),
       pubkey_(pubkey), privkey_(privkey)
    {}
 
    //local
-   shared_ptr<Asset_PublicKey> getPubKey(void) const { return pubkey_; }
-   shared_ptr<Asset_PrivateKey> getPrivKey(void) const { return privkey_; }
+   std::shared_ptr<Asset_PublicKey> getPubKey(void) const { return pubkey_; }
+   std::shared_ptr<Asset_PrivateKey> getPrivKey(void) const { return privkey_; }
 
    //virtual
    BinaryData serialize(void) const;
@@ -375,13 +375,13 @@ private:
    //map<AssetWalletID, AssetEntryPtr>
    //ordering by wallet ids guarantees the ms script hash can be 
    //reconstructed deterministically
-   const map<BinaryData, shared_ptr<AssetEntry>> assetMap_;
+   const std::map<BinaryData, std::shared_ptr<AssetEntry>> assetMap_;
 
    const unsigned m_;
    const unsigned n_;
 
 private:
-   const map<BinaryData, shared_ptr<AssetEntry>> getAssetMap(void) const
+   const std::map<BinaryData, std::shared_ptr<AssetEntry>> getAssetMap(void) const
    {
       return assetMap_;
    }
@@ -389,7 +389,7 @@ private:
 public:
    //tors
    AssetEntry_Multisig(int id, const BinaryData& accountID,
-      const map<BinaryData, shared_ptr<AssetEntry>>& assetMap,
+      const std::map<BinaryData, std::shared_ptr<AssetEntry>>& assetMap,
       unsigned m, unsigned n) :
       AssetEntry(AssetEntryType_Multisig, id, accountID),
       assetMap_(assetMap), m_(m), n_(n)

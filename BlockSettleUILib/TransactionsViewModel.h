@@ -16,6 +16,9 @@
 #include "MetaData.h"
 #include "WalletsManager.h"
 
+namespace spdlog {
+   class logger;
+}
 
 class SafeLedgerDelegate;
 class WalletsManager;
@@ -59,10 +62,16 @@ class TransactionsViewModel : public QAbstractTableModel
 {
 Q_OBJECT
 public:
-    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<WalletsManager> &
-       , const AsyncClient::LedgerDelegate &, QObject* parent, const std::shared_ptr<bs::Wallet> &defWlt);
-    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<WalletsManager> &
-       , QObject* parent = nullptr);
+    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+                          , const std::shared_ptr<WalletsManager> &
+                          , const AsyncClient::LedgerDelegate &
+                          , const std::shared_ptr<spdlog::logger> &
+                          , QObject* parent
+                          , const std::shared_ptr<bs::Wallet> &defWlt);
+    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+                          , const std::shared_ptr<WalletsManager> &
+                          , const std::shared_ptr<spdlog::logger> &
+                          , QObject* parent = nullptr);
     ~TransactionsViewModel() noexcept;
 
    TransactionsViewModel(const TransactionsViewModel&) = delete;
@@ -152,11 +161,13 @@ public:
       WalletRole
    };
 
+private:
    TransactionItems                    currentPage_;
    TransactionItems                    erasedPage_;
    std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
    std::unordered_set<std::string>     currentKeys_;
    std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<spdlog::logger>     logger_;
    AsyncClient::LedgerDelegate         ledgerDelegate_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    mutable QMutex                      updateMutex_;

@@ -91,10 +91,10 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { authServerHost,          SettingDef(QLatin1String("AuthServerHost"), QLatin1String("185.213.153.44")) },
       { authServerPort,          SettingDef(QLatin1String("AuthServerPort"), 9094) },
       { authServerPubKey,        SettingDef(QString(), QLatin1String("(=?/gEARFR3jjIi>>JBGtv=uKW/)ujUm#%wq#v}f")) },
-      { celerHost,               SettingDef(QLatin1String("MatchSystemHost"), QLatin1String("104.155.117.179")) },
-      { celerPort,               SettingDef(QLatin1String("MatchSystemPort"), 16001) },
-      { mdServerHost,            SettingDef(QLatin1String("MDServerHost"), QLatin1String("185.213.153.46")) },
-      { mdServerPort,            SettingDef(QLatin1String("MDServerPort"), 16005) },
+      { celerHost,               SettingDef(QString(), QLatin1String("104.155.117.179")) },
+      { celerPort,               SettingDef(QString(), 16001) },
+      { mdServerHost,            SettingDef(QString(), QLatin1String("185.213.153.46")) },
+      { mdServerPort,            SettingDef(QString(), 16005) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
       { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },
@@ -316,15 +316,15 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 
    switch (get<NetworkType>(netType)) {
    case NetworkType::MainNet:
-      config.selectNetwork("Main");
+      config.selectNetwork(NETWORK_MODE_MAINNET);
       break;
 
    case NetworkType::TestNet:
-      config.selectNetwork("Test");
+      config.selectNetwork(NETWORK_MODE_TESTNET);
       break;
 
    case NetworkType::RegTest:
-      config.selectNetwork("Regtest");
+      config.selectNetwork(NETWORK_MODE_REGTEST);
       break;
 
    default:    break;
@@ -480,11 +480,7 @@ int ApplicationSettings::GetSatoshiPort() const
 
 SocketType ApplicationSettings::GetArmorySocketType() const
 {
-    if (get<int>(armoryDbPort) != GetDefaultArmoryPort()) {
-        return SocketHttp;
-    }
-
-    return SocketFcgi;
+   return SocketHttp;
 }
 
 int ApplicationSettings::GetDefaultArmoryPort() const
@@ -526,12 +522,11 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    if (settings.runLocally) {
       settings.armoryDBIp = "127.0.0.1";
       settings.armoryDBPort = std::to_string(GetDefaultArmoryPort());
-      settings.socketType = SocketFcgi;
    } else {
       settings.armoryDBIp = get<std::string>(ApplicationSettings::armoryDbIp);
       settings.armoryDBPort = get<std::string>(ApplicationSettings::armoryDbPort);
-      settings.socketType = GetArmorySocketType();
    }
+   settings.socketType = GetArmorySocketType();
 
    settings.armoryExecutablePath = QDir::cleanPath(get<QString>(ApplicationSettings::armoryPathName));
    settings.dbDir = GetDBDir();

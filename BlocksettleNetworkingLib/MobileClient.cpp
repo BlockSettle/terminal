@@ -21,7 +21,7 @@ namespace
 
 }
 
-MobileClient::DeviceInfo MobileClient::getDeviceInfo(const string &encKey)
+MobileClient::DeviceInfo MobileClient::getDeviceInfo(const std::string &encKey)
 {
    DeviceInfo result;
 
@@ -261,7 +261,7 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    emit succeeded(encKey, SecureBinaryData(deviceKey));
 }
 
-void MobileClient::OnDataReceived(const string &data)
+void MobileClient::OnDataReceived(const std::string &data)
 {
    ServerPacket packet;
    if (!packet.ParseFromString(data)) {

@@ -35,7 +35,7 @@ protected:
 private:
    size_t      nbMaxElems_;
    LMDB     *  db_ = nullptr;
-   shared_ptr<LMDBEnv>  dbEnv_;
+   std::shared_ptr<LMDBEnv>  dbEnv_;
    std::map<BinaryData, BinaryData> map_, mapModified_;
    mutable QReadWriteLock  rwLock_;
    mutable QWaitCondition  wcModified_;

@@ -93,6 +93,8 @@ private:
    std::vector<std::string>         sendQueue_;
 
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
+
+   std::shared_ptr<bool>            continueExecution_ = nullptr;
 };
 
 #endif // __ZEROMQ_DATA_CONNECTION_H__

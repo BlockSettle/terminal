@@ -47,50 +47,52 @@ private:
       }
 
       static bool comparator(
-         const shared_ptr<Page>& a, const shared_ptr<Page>& b)
+         const std::shared_ptr<Page>& a, const std::shared_ptr<Page>& b)
       {
          return *a < *b;
       }
    };
 
-   bool isInitialized_ = false;
-   vector<shared_ptr<Page>> pages_;
-   map<uint32_t, uint32_t> SSHsummary_;
-
-   uint32_t currentPage_ = -1;
+   std::shared_ptr<std::atomic<bool>> isInitialized_;
+   std::shared_ptr<std::vector<std::shared_ptr<Page>>> pages_;
+   std::map<uint32_t, uint32_t> SSHsummary_;
    
    static uint32_t txnPerPage_;
 
 public:
 
-   HistoryPager(void) {}
-
-   shared_ptr<map<BinaryData, LedgerEntry>> getPageLedgerMap(
-      function< map<BinaryData, TxIOPair>(uint32_t, uint32_t) > getTxio,
-      function< map<BinaryData, LedgerEntry>(
-         const map<BinaryData, TxIOPair>&, uint32_t, uint32_t) > buildLedgers,
-      uint32_t pageId, unsigned updateID, map<BinaryData, TxIOPair>* txioMap = nullptr);
-
-   shared_ptr<map<BinaryData, LedgerEntry>> getPageLedgerMap(uint32_t pageId);
-
-   void reset(void) { 
-      pages_.clear(); 
-      isInitialized_ = false;
+   HistoryPager(void) 
+   {
+      isInitialized_ = std::make_shared<std::atomic<bool>>();
+      isInitialized_->store(false, std::memory_order_relaxed);
    }
 
-   void addPage(uint32_t count, uint32_t bottom, uint32_t top);
-   void sortPages(void);
+   std::shared_ptr<std::map<BinaryData, LedgerEntry>> getPageLedgerMap(
+      std::function<std::map<BinaryData, TxIOPair>(uint32_t, uint32_t) > getTxio,
+      std::function<std::map<BinaryData, LedgerEntry>(
+         const std::map<BinaryData, TxIOPair>&, uint32_t, uint32_t) > buildLedgers,
+      uint32_t pageId, unsigned updateID, std::map<BinaryData, TxIOPair>* txioMap = nullptr);
+
+   std::shared_ptr<std::map<BinaryData, LedgerEntry>> getPageLedgerMap(uint32_t pageId);
+
+   void reset(void) 
+   { 
+      isInitialized_->store(false, std::memory_order_relaxed);
+      pages_.reset(); 
+   }
+
+   void addPage(std::vector<std::shared_ptr<Page>>&,
+      uint32_t count, uint32_t bottom, uint32_t top);
+   void sortPages(std::vector<std::shared_ptr<Page>>&);
    
    bool mapHistory(
-      function< map<uint32_t, uint32_t>(void) > getSSHsummary);
+      std::function<std::map<uint32_t, uint32_t>(void) > getSSHsummary);
    
-   const map<uint32_t, uint32_t>& getSSHsummary(void) const
+   const std::map<uint32_t, uint32_t>& getSSHsummary(void) const
    { return SSHsummary_; }
    
    uint32_t getPageBottom(uint32_t id) const;
-   size_t   getPageCount(void) const { return pages_.size(); }
-   uint32_t getCurrentPage(void) const { return currentPage_; }
-   void setCurrentPage(uint32_t pageId) { currentPage_ = pageId; }
+   size_t   getPageCount(void) const;
    
    uint32_t getRangeForHeightAndCount(uint32_t height, uint32_t count) const;
    uint32_t getBlockInVicinity(uint32_t blk) const;
@@ -98,7 +100,7 @@ public:
 
    bool isInitiliazed(void) const
    {
-      return isInitialized_;
+      return isInitialized_->load(std::memory_order_relaxed);
    }
 };
 

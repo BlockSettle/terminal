@@ -35,6 +35,35 @@ public:
    {}
 };
 
+///////////////////////////////////////////////////////////////////////////////
+template<class U> class ReturnMessage
+{
+private:
+   U value_;
+   shared_ptr<ClientMessageError> error_;
+
+public:
+   ReturnMessage(U& val) :
+      value_(move(val))
+   {}
+
+   ReturnMessage(const U& val) :
+      value_(val)
+   {}
+
+   ReturnMessage(ClientMessageError& err)
+   {
+      error_ = make_shared<ClientMessageError>(err);
+   }
+
+   U get(void) 
+   { 
+      if (error_ != nullptr)
+         throw *error_;
+         
+      return move(value_);
+   }
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 struct ClientCache : public Lockable
@@ -86,8 +115,8 @@ namespace AsyncClient
       LedgerDelegate(shared_ptr<SocketPrototype>, const string&, const string&);
 
       void getHistoryPage(uint32_t id, 
-         function<void(vector<::ClientClasses::LedgerEntry>)>);
-      void getPageCount(function<void(uint64_t)>) const;
+         function<void(ReturnMessage<vector<::ClientClasses::LedgerEntry>>)>);
+      void getPageCount(function<void(ReturnMessage<uint64_t>)>) const;
    };
 
    class BtcWallet;
@@ -133,7 +162,7 @@ namespace AsyncClient
 
       uint64_t getTxioCount(void) const { return count_; }
 
-      void getSpendableTxOutList(bool, function<void(vector<UTXO>)>);
+      void getSpendableTxOutList(bool, function<void(ReturnMessage<vector<UTXO>>)>);
       const BinaryData& getScrAddr(void) const { return scrAddr_; }
       const BinaryData& getAddrHash(void) const { return addrHash_; }
 
@@ -156,28 +185,31 @@ namespace AsyncClient
       BtcWallet(const BlockDataViewer&, const string&);
       
       void getBalancesAndCount(uint32_t topBlockHeight,
-         function<void(vector<uint64_t>)>);
+         function<void(ReturnMessage<vector<uint64_t>>)>);
 
       void getSpendableTxOutListForValue(uint64_t val, 
-         function<void(vector<UTXO>)>);
-      void getSpendableZCList(function<void(vector<UTXO>)>);
-      void getRBFTxOutList(function<void(vector<UTXO>)>);
+         function<void(ReturnMessage<vector<UTXO>>)>);
+      void getSpendableZCList(function<void(ReturnMessage<vector<UTXO>>)>);
+      void getRBFTxOutList(function<void(ReturnMessage<vector<UTXO>>)>);
 
-      void getAddrTxnCountsFromDB(function<void(map<BinaryData, uint32_t>)>);
-      void getAddrBalancesFromDB(function<void(map<BinaryData, vector<uint64_t>>)>);
+      void getAddrTxnCountsFromDB(function<void(
+         ReturnMessage<map<BinaryData, uint32_t>>)>);
+      void getAddrBalancesFromDB(function<void(
+         ReturnMessage<map<BinaryData, vector<uint64_t>>>)>);
 
       void getHistoryPage(uint32_t id, 
-         function<void(vector<::ClientClasses::LedgerEntry>)>);
+         function<void(ReturnMessage<vector<::ClientClasses::LedgerEntry>>)>);
       void getLedgerEntryForTxHash(
          const BinaryData& txhash, 
-         function<void(shared_ptr<::ClientClasses::LedgerEntry>)>);
+         function<void(ReturnMessage<shared_ptr<::ClientClasses::LedgerEntry>>)>);
 
       ScrAddrObj getScrAddrObjByKey(const BinaryData&,
          uint64_t, uint64_t, uint64_t, uint32_t);
 
       virtual string registerAddresses(
          const vector<BinaryData>& addrVec, bool isNew);
-      void createAddressBook(function<void(vector<AddressBookEntry>)>) const;
+      void createAddressBook(
+         function<void(ReturnMessage<vector<AddressBookEntry>>)>) const;
    };
 
    /////////////////////////////////////////////////////////////////////////////
@@ -217,9 +249,10 @@ namespace AsyncClient
    public:
       Blockchain(const BlockDataViewer&);
       void getHeaderByHash(const BinaryData& hash, 
-         function<void(ClientClasses::BlockHeader)>);
+         function<void(ReturnMessage<ClientClasses::BlockHeader>)>);
       void getHeaderByHeight(
-         unsigned height, function<void(ClientClasses::BlockHeader)>);
+         unsigned height, 
+         function<void(ReturnMessage<ClientClasses::BlockHeader>)>);
    };
 
    /////////////////////////////////////////////////////////////////////////////
@@ -265,10 +298,13 @@ namespace AsyncClient
       static shared_ptr<BlockDataViewer> getNewBDV(
          const string& addr, const string& port, shared_ptr<RemoteCallback>);
 
-      void getLedgerDelegateForWallets(function<void(LedgerDelegate)>);
-      void getLedgerDelegateForLockboxes(function<void(LedgerDelegate)>);
+      void getLedgerDelegateForWallets(
+         function<void(ReturnMessage<LedgerDelegate>)>);
+      void getLedgerDelegateForLockboxes(
+         function<void(ReturnMessage<LedgerDelegate>)>);
       void getLedgerDelegateForScrAddr(
-         const string&, const BinaryData&, function<void(LedgerDelegate)>);
+         const string&, const BinaryData&, 
+         function<void(ReturnMessage<LedgerDelegate>)>);
       Blockchain blockchain(void);
 
       void goOnline(void);
@@ -278,28 +314,32 @@ namespace AsyncClient
       void shutdownNode(const string&);
 
       void broadcastZC(const BinaryData& rawTx);
-      void getTxByHash(const BinaryData& txHash, function<void(Tx)>);
+      void getTxByHash(const BinaryData& txHash, 
+         function<void(ReturnMessage<Tx>)>);
       void getRawHeaderForTxHash(
-         const BinaryData& txHash, function<void(BinaryData)>);
+         const BinaryData& txHash, 
+         function<void(ReturnMessage<BinaryData>)>);
       void getHeaderByHeight(
-         unsigned height, function<void(BinaryData)>);
+         unsigned height, 
+         function<void(ReturnMessage<BinaryData>)>);
 
       void updateWalletsLedgerFilter(const vector<BinaryData>& wltIdVec);
       bool hasRemoteDB(void);
 
       void getNodeStatus(
-         function<void(shared_ptr<::ClientClasses::NodeStatusStruct>)>);
+         function<void(ReturnMessage<shared_ptr<::ClientClasses::NodeStatusStruct>>)>);
       void estimateFee(unsigned, const string&, 
-         function<void(ClientClasses::FeeEstimateStruct)>);
+         function<void(ReturnMessage<ClientClasses::FeeEstimateStruct>)>);
 
       void getHistoryForWalletSelection(
          const vector<string>& wldIDs, const string& orderingStr,
-         function<void(vector<::ClientClasses::LedgerEntry>)>);
+         function<void(ReturnMessage<vector<::ClientClasses::LedgerEntry>>)>);
 
-      void broadcastThroughRPC(const BinaryData& rawTx, function<void(string)>);
+      void broadcastThroughRPC(const BinaryData& rawTx, 
+         function<void(ReturnMessage<string>)>);
 
       void getUtxosForAddrVec(const vector<BinaryData>&, 
-         function<void(vector<UTXO>)>);
+         function<void(ReturnMessage<vector<UTXO>>)>);
 
       static unique_ptr<WritePayload_Protobuf> make_payload(
          ::Codec_BDVCommand::Methods, const string&);
@@ -336,10 +376,10 @@ public:
 struct CallbackReturn_String : public CallbackReturn_WebSocket
 {
 private:
-   function<void(string)> userCallbackLambda_;
+   function<void(ReturnMessage<string>)> userCallbackLambda_;
 
 public:
-   CallbackReturn_String(function<void(string)> lbd) :
+   CallbackReturn_String(function<void(ReturnMessage<string>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -351,14 +391,14 @@ public:
 struct CallbackReturn_LedgerDelegate : public CallbackReturn_WebSocket
 {
 private:
-   function<void(AsyncClient::LedgerDelegate)> userCallbackLambda_;
+   function<void(ReturnMessage<AsyncClient::LedgerDelegate>)> userCallbackLambda_;
    shared_ptr<SocketPrototype> sockPtr_;
    const string& bdvID_;
 
 public:
    CallbackReturn_LedgerDelegate(
       shared_ptr<SocketPrototype> sock, const string& bdvid,
-      function<void(AsyncClient::LedgerDelegate)> lbd) :
+      function<void(ReturnMessage<AsyncClient::LedgerDelegate>)> lbd) :
       sockPtr_(sock), bdvID_(bdvid), userCallbackLambda_(lbd)
    {}
 
@@ -370,13 +410,13 @@ public:
 struct CallbackReturn_Tx : public CallbackReturn_WebSocket
 {
 private:
-   function<void(Tx)> userCallbackLambda_;
+   function<void(ReturnMessage<Tx>)> userCallbackLambda_;
    shared_ptr<ClientCache> cache_;
    BinaryData txHash_;
 
 public:
    CallbackReturn_Tx(shared_ptr<ClientCache> cache,
-      const BinaryData& txHash, function<void(Tx)> lbd) :
+      const BinaryData& txHash, function<void(ReturnMessage<Tx>)> lbd) :
       cache_(cache), txHash_(txHash), userCallbackLambda_(lbd)
    {}
 
@@ -388,7 +428,7 @@ public:
 struct CallbackReturn_RawHeader : public CallbackReturn_WebSocket
 {
 private:
-   function<void(BinaryData)> userCallbackLambda_;
+   function<void(ReturnMessage<BinaryData>)> userCallbackLambda_;
    shared_ptr<ClientCache> cache_;
    BinaryData txHash_;
    unsigned height_;
@@ -397,7 +437,7 @@ public:
    CallbackReturn_RawHeader(
       shared_ptr<ClientCache> cache,
       unsigned height, const BinaryData& txHash, 
-      function<void(BinaryData)> lbd) :
+      function<void(ReturnMessage<BinaryData>)> lbd) :
       cache_(cache),txHash_(txHash), height_(height),
       userCallbackLambda_(lbd)
    {}
@@ -410,12 +450,12 @@ public:
 class CallbackReturn_NodeStatusStruct : public CallbackReturn_WebSocket
 {
 private:
-   function<void(shared_ptr<::ClientClasses::NodeStatusStruct>)> 
+   function<void(ReturnMessage<shared_ptr<::ClientClasses::NodeStatusStruct>>)>
       userCallbackLambda_;
 
 public:
-   CallbackReturn_NodeStatusStruct(
-      function<void(shared_ptr<::ClientClasses::NodeStatusStruct>)> lbd) :
+   CallbackReturn_NodeStatusStruct(function<void(
+      ReturnMessage<shared_ptr<::ClientClasses::NodeStatusStruct>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -427,11 +467,12 @@ public:
 struct CallbackReturn_FeeEstimateStruct : public CallbackReturn_WebSocket
 {
 private:
-   function<void(ClientClasses::FeeEstimateStruct)> userCallbackLambda_;
+   function<void(ReturnMessage<ClientClasses::FeeEstimateStruct>)> 
+      userCallbackLambda_;
 
 public:
    CallbackReturn_FeeEstimateStruct(
-      function<void(ClientClasses::FeeEstimateStruct)> lbd) :
+      function<void(ReturnMessage<ClientClasses::FeeEstimateStruct>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -443,11 +484,12 @@ public:
 struct CallbackReturn_VectorLedgerEntry : public CallbackReturn_WebSocket
 {
 private:
-   function<void(vector<::ClientClasses::LedgerEntry>)> userCallbackLambda_;
+   function<void(ReturnMessage<vector<::ClientClasses::LedgerEntry>>)> 
+      userCallbackLambda_;
 
 public:
    CallbackReturn_VectorLedgerEntry(
-      function<void(vector<::ClientClasses::LedgerEntry>)> lbd) :
+      function<void(ReturnMessage<vector<::ClientClasses::LedgerEntry>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -459,11 +501,11 @@ public:
 struct CallbackReturn_UINT64 : public CallbackReturn_WebSocket
 {
 private:
-   function<void(uint64_t)> userCallbackLambda_;
+   function<void(ReturnMessage<uint64_t>)> userCallbackLambda_;
 
 public:
    CallbackReturn_UINT64(
-      function<void(uint64_t)> lbd) :
+      function<void(ReturnMessage<uint64_t>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -475,11 +517,11 @@ public:
 struct CallbackReturn_VectorUTXO : public CallbackReturn_WebSocket
 {
 private:
-   function<void(vector<UTXO>)> userCallbackLambda_;
+   function<void(ReturnMessage<vector<UTXO>>)> userCallbackLambda_;
 
 public:
    CallbackReturn_VectorUTXO(
-      function<void(vector<UTXO>)> lbd) :
+      function<void(ReturnMessage<vector<UTXO>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -491,11 +533,11 @@ public:
 struct CallbackReturn_VectorUINT64 : public CallbackReturn_WebSocket
 {
 private:
-   function<void(vector<uint64_t>)> userCallbackLambda_;
+   function<void(ReturnMessage<vector<uint64_t>>)> userCallbackLambda_;
 
 public:
    CallbackReturn_VectorUINT64(
-      function<void(vector<uint64_t>)> lbd) :
+      function<void(ReturnMessage<vector<uint64_t>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -507,11 +549,11 @@ public:
 struct CallbackReturn_Map_BD_U32 : public CallbackReturn_WebSocket
 {
 private:
-   function<void(map<BinaryData, uint32_t>)> userCallbackLambda_;
+   function<void(ReturnMessage<map<BinaryData, uint32_t>>)> userCallbackLambda_;
 
 public:
    CallbackReturn_Map_BD_U32(
-      function<void(map<BinaryData, uint32_t>)> lbd) :
+      function<void(ReturnMessage<map<BinaryData, uint32_t>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -523,11 +565,12 @@ public:
 struct CallbackReturn_Map_BD_VecU64 : public CallbackReturn_WebSocket
 {
 private:
-   function<void(map<BinaryData, vector<uint64_t>>)> userCallbackLambda_;
+   function<void(ReturnMessage<map<BinaryData, vector<uint64_t>>>)> 
+      userCallbackLambda_;
 
 public:
    CallbackReturn_Map_BD_VecU64(
-      function<void(map<BinaryData, vector<uint64_t>>)> lbd) :
+      function<void(ReturnMessage<map<BinaryData, vector<uint64_t>>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -539,11 +582,12 @@ public:
 struct CallbackReturn_LedgerEntry : public CallbackReturn_WebSocket
 {
 private:
-   function<void(shared_ptr<::ClientClasses::LedgerEntry>)> userCallbackLambda_;
+   function<void(ReturnMessage<shared_ptr<::ClientClasses::LedgerEntry>>)> 
+      userCallbackLambda_;
 
 public:
    CallbackReturn_LedgerEntry(
-      function<void(shared_ptr<::ClientClasses::LedgerEntry>)> lbd) :
+      function<void(ReturnMessage<shared_ptr<::ClientClasses::LedgerEntry>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -555,11 +599,11 @@ public:
 struct CallbackReturn_VectorAddressBookEntry : public CallbackReturn_WebSocket
 {
 private:
-   function<void(vector<AddressBookEntry>)> userCallbackLambda_;
+   function<void(ReturnMessage<vector<AddressBookEntry>>)> userCallbackLambda_;
 
 public:
    CallbackReturn_VectorAddressBookEntry(
-      function<void(vector<AddressBookEntry>)> lbd) :
+      function<void(ReturnMessage<vector<AddressBookEntry>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -571,10 +615,10 @@ public:
 struct CallbackReturn_Bool : public CallbackReturn_WebSocket
 {
 private:
-   function<void(bool)> userCallbackLambda_;
+   function<void(ReturnMessage<bool>)> userCallbackLambda_;
 
 public:
-   CallbackReturn_Bool(function<void(bool)> lbd) :
+   CallbackReturn_Bool(function<void(ReturnMessage<bool>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -586,12 +630,12 @@ public:
 struct CallbackReturn_BlockHeader : public CallbackReturn_WebSocket
 {
 private:
-   function<void(ClientClasses::BlockHeader)> userCallbackLambda_;
+   function<void(ReturnMessage<ClientClasses::BlockHeader>)> userCallbackLambda_;
    const unsigned height_;
 
 public:
    CallbackReturn_BlockHeader(unsigned height, 
-      function<void(ClientClasses::BlockHeader)> lbd) :
+      function<void(ReturnMessage<ClientClasses::BlockHeader>)> lbd) :
       height_(height), userCallbackLambda_(lbd)
    {}
 

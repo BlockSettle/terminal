@@ -25,14 +25,14 @@
 
 #define BATCH_SIZE  1024 * 1024 * 512ULL
 
-class ScanningException : public runtime_error
+class ScanningException : public std::runtime_error
 {
 private:
    const unsigned badHeight_;
 
 public:
-   ScanningException(unsigned badHeight, const string &what = "")
-      : runtime_error(what), badHeight_(badHeight)
+   ScanningException(unsigned badHeight, const std::string &what = "")
+      : std::runtime_error(what), badHeight_(badHeight)
    { }
 };
 
@@ -40,10 +40,10 @@ public:
 struct ParserBatch
 {
 public:
-   map<unsigned, shared_ptr<BlockDataFileMap>> fileMaps_;
+   std::map<unsigned, std::shared_ptr<BlockDataFileMap>> fileMaps_;
 
-   atomic<unsigned> blockCounter_;
-   mutex mergeMutex_;
+   std::atomic<unsigned> blockCounter_;
+   std::mutex mergeMutex_;
 
    const unsigned start_;
    const unsigned end_;
@@ -51,27 +51,27 @@ public:
    const unsigned startBlockFileID_;
    const unsigned targetBlockFileID_;
 
-   map<unsigned, shared_ptr<BlockData>> blockMap_;
-   map<BinaryData, map<unsigned, StoredTxOut>> outputMap_;
-   map<BinaryData, map<BinaryData, StoredSubHistory>> sshMap_;
-   vector<StoredTxOut> spentOutputs_;
+   std::map<unsigned, std::shared_ptr<BlockData>> blockMap_;
+   std::map<BinaryData, std::map<unsigned, StoredTxOut>> outputMap_;
+   std::map<BinaryData, std::map<BinaryData, StoredSubHistory>> sshMap_;
+   std::vector<StoredTxOut> spentOutputs_;
 
-   const shared_ptr<map<TxOutScriptRef, int>> scriptRefMap_;
-   promise<bool> completedPromise_;
+   const std::shared_ptr<std::map<TxOutScriptRef, int>> scriptRefMap_;
+   std::promise<bool> completedPromise_;
    unsigned count_;
 
 public:
    ParserBatch(unsigned start, unsigned end, 
       unsigned startID, unsigned endID,
-      shared_ptr<map<TxOutScriptRef, int>> scriptRefMap) :
+      std::shared_ptr<std::map<TxOutScriptRef, int>> scriptRefMap) :
       start_(start), end_(end), 
       startBlockFileID_(startID), targetBlockFileID_(endID),
       scriptRefMap_(scriptRefMap)
    {
       if (end < start)
-         throw runtime_error("end > start");
+         throw std::runtime_error("end > start");
 
-      blockCounter_.store(start_, memory_order_relaxed);
+      blockCounter_.store(start_, std::memory_order_relaxed);
    }
 };
 
@@ -85,7 +85,7 @@ private:
       BinaryData hash_;
 
       //map<blockId, set<tx offset>>
-      map<uint32_t, set<uint32_t>> filterHits_;
+      std::map<uint32_t, std::set<uint32_t>> filterHits_;
 
       bool operator < (const TxFilterResults& rhs) const
       {
@@ -93,7 +93,7 @@ private:
       }
    };
 
-   shared_ptr<Blockchain> blockchain_;
+   std::shared_ptr<Blockchain> blockchain_;
    LMDBBlockDatabase* db_;
    ScrAddrFilter* scrAddrFilter_;
    BlockDataLoader blockDataLoader_;
@@ -109,17 +109,17 @@ private:
    bool reportProgress_ = false;
 
    //only for relevant utxos
-   map<BinaryData, map<unsigned, StoredTxOut>> utxoMap_;
+   std::map<BinaryData, std::map<unsigned, StoredTxOut>> utxoMap_;
 
    unsigned startAt_ = 0;
 
-   mutex resolverMutex_;
+   std::mutex resolverMutex_;
 
-   BlockingQueue<unique_ptr<ParserBatch>> outputQueue_;
-   BlockingQueue<unique_ptr<ParserBatch>> inputQueue_;
-   BlockingQueue<unique_ptr<ParserBatch>> commitQueue_;
+   BlockingQueue<std::unique_ptr<ParserBatch>> outputQueue_;
+   BlockingQueue<std::unique_ptr<ParserBatch>> inputQueue_;
+   BlockingQueue<std::unique_ptr<ParserBatch>> commitQueue_;
 
-   atomic<unsigned> completedBatches_;
+   std::atomic<unsigned> completedBatches_;
 
 private:
    void writeBlockData(void);
@@ -129,18 +129,18 @@ private:
    int32_t check_merkle(int32_t startHeight);
 
    void getFilterHitsThread(
-      const set<BinaryData>& hashSet,
-      atomic<int>& counter,
-      map<uint32_t, set<TxFilterResults>>& resultMap);
+      const std::set<BinaryData>& hashSet,
+      std::atomic<int>& counter,
+      std::map<uint32_t, std::set<TxFilterResults>>& resultMap);
 
    void processFilterHitsThread(
-      map<uint32_t, map<uint32_t, 
-      set<const TxFilterResults*>>>& filtersResultMap,
+      std::map<uint32_t, std::map<uint32_t,
+      std::set<const TxFilterResults*>>>& filtersResultMap,
       TransactionalSet<BinaryData>& missingHashes,
-      atomic<int>& counter, map<BinaryData, BinaryData>& results,
-      function<void(size_t)> prog);
+      std::atomic<int>& counter, std::map<BinaryData, BinaryData>& results,
+      std::function<void(size_t)> prog);
 
-   shared_ptr<BlockData> getBlockData(
+   std::shared_ptr<BlockData> getBlockData(
       ParserBatch*, unsigned);
 
    void processOutputs(void);
@@ -151,7 +151,7 @@ private:
 
 
 public:
-   BlockchainScanner(shared_ptr<Blockchain> bc, LMDBBlockDatabase* db,
+   BlockchainScanner(std::shared_ptr<Blockchain> bc, LMDBBlockDatabase* db,
       ScrAddrFilter* saf,
       BlockFiles& bf,
       unsigned threadcount, unsigned queue_depth, 

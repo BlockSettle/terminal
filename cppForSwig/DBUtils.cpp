@@ -28,6 +28,7 @@
 #include <dirent.h>
 #endif
 
+using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////
 const BinaryData DBUtils::ZeroConfHeader_ = BinaryData::CreateFromHex("FFFF");
@@ -565,4 +566,11 @@ int DBUtils::removeDirectory(const string& path)
 #endif
 
    return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+size_t DBUtils::getFileSize(const string& path)
+{
+   auto stat_struct = getPathStat(path);
+   return stat_struct.st_size;
 }
