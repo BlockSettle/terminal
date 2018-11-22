@@ -11,24 +11,32 @@
 #include <QtConcurrent/QtConcurrentRun>
 
 
-TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<WalletsManager> &walletsManager
-   , const AsyncClient::LedgerDelegate &ledgerDelegate, QObject* parent, const std::shared_ptr<bs::Wallet> &defWlt)
+TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
+                         , const std::shared_ptr<WalletsManager> &walletsManager
+                             , const AsyncClient::LedgerDelegate &ledgerDelegate
+                                 , const std::shared_ptr<spdlog::logger> &logger
+                                             , QObject* parent
+                                    , const std::shared_ptr<bs::Wallet> &defWlt)
    : QAbstractTableModel(parent)
    , armory_(armory)
    , ledgerDelegate_(ledgerDelegate)
    , walletsManager_(walletsManager)
    , defaultWallet_(defWlt)
+   , logger_(logger)
    , allWallets_(false)
 {
    init();
    QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
 }
 
-TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<WalletsManager> &walletsManager
-   , QObject* parent)
+TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
+                         , const std::shared_ptr<WalletsManager> &walletsManager
+                                 , const std::shared_ptr<spdlog::logger> &logger
+                                             , QObject* parent)
    : QAbstractTableModel(parent)
    , armory_(armory)
    , walletsManager_(walletsManager)
+   , logger_(logger)
    , allWallets_(true)
 {
    init();
@@ -422,17 +430,34 @@ void TransactionsViewModel::loadLedgerEntries()
       return;
    }
    initialLoadCompleted_ = false;
-   const auto &cbPageCount = [this](uint64_t pageCnt) {
-      for (uint32_t pageId = 0; pageId < pageCnt; ++pageId) {
-         const auto &cbLedger = [this, pageId, pageCnt](std::vector<ClientClasses::LedgerEntry> entries) {
-            rawData_[pageId] = bs::convertTXEntries(entries);
-            if (rawData_.size() >= pageCnt) {
-               ledgerToTxData();
-            }
-         };
-         ledgerDelegate_.getHistoryPage(pageId, cbLedger);
+   const auto &cbPageCount = [this](ReturnMessage<uint64_t> pageCnt)->void {
+      try {
+         auto inPageCnt = pageCnt.get();
+         for (uint64_t pageId = 0; pageId < inPageCnt; ++pageId) {
+            const auto &cbLedger = [this, pageId, inPageCnt]
+               (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+               try {
+                 auto le = entries.get();
+                 rawData_[pageId] = bs::convertTXEntries(le);
+               }
+               catch (exception& e) {
+                  logger_->error("[TransactionsViewModel::loadLedgerEntries] " \
+                     "Return data error (getPageCount) - {}", e.what());
+               }
+
+               if (rawData_.size() >= inPageCnt) {
+                  ledgerToTxData();
+               }
+            };
+            ledgerDelegate_.getHistoryPage(pageId, cbLedger);
+         }
+      }
+      catch (exception& e) {
+         logger_->error("[TransactionsViewModel::loadLedgerEntries] Return " \
+            "data error (getPageCount) - {}", e.what());
       }
    };
+
    ledgerDelegate_.getPageCount(cbPageCount);
 }
 
@@ -494,7 +519,7 @@ void TransactionsViewModel::onNewItems(TransactionItems items)
 int TransactionsViewModel::getItemIndex(const TransactionsViewItem &item) const
 {
    QMutexLocker locker(&updateMutex_);
-   for (int i = 0; i < currentPage_.size(); i++) {
+   for (size_t i = 0; i < currentPage_.size(); i++) {
       const auto &curItem = currentPage_[i];
       if (mkTxKey(item) == mkTxKey(curItem)) {
          return i;
@@ -567,7 +592,7 @@ bool TransactionsViewModel::isTransactionVerified(int transactionRow) const
 TransactionsViewItem TransactionsViewModel::getItem(int row) const
 {
    QMutexLocker locker(&updateMutex_);
-   if ((row < 0) || (row >= currentPage_.size())) {
+   if ((row < 0) || (row >= (int)currentPage_.size())) {
       return {};
    }
    return currentPage_[row];

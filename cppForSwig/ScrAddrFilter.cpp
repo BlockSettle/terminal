@@ -16,6 +16,7 @@
 #include "txio.h"
 #include <thread>
 
+using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -112,7 +113,7 @@ void ScrAddrFilter::updateAddressMerkleInDB()
    }
    catch (runtime_error&)
    {
-      sshSdbi.magic_ = lmdb_->getMagicBytes();
+      sshSdbi.magic_ = NetworkConfig::getMagicBytes();
       sshSdbi.metaHash_ = BtcUtils::EmptyHash_;
       sshSdbi.topBlkHgt_ = 0;
       sshSdbi.armoryType_ = ARMORY_DB_BARE;

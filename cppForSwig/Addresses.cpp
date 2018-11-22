@@ -8,6 +8,8 @@
 
 #include "Addresses.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 AddressEntry::~AddressEntry()
 {}
@@ -59,7 +61,7 @@ const BinaryData& AddressEntry_P2PKH::getPrefixedHash() const
       auto& hash = getHash();
 
       //get and prepend network byte
-      auto networkByte = BlockDataManagerConfig::getPubkeyHashPrefix();
+      auto networkByte = NetworkConfig::getPubkeyHashPrefix();
 
       prefixedHash_.append(networkByte);
       prefixedHash_.append(hash);
@@ -434,7 +436,7 @@ const BinaryData& AddressEntry_P2SH::getPrefixedHash() const
       auto& hash = getHash();
 
       BinaryWriter bw;
-      bw.put_uint8_t(BlockDataManagerConfig::getScriptHashPrefix());
+      bw.put_uint8_t(NetworkConfig::getScriptHashPrefix());
       bw.put_BinaryData(hash);
 
       prefixedHash_ = bw.getData();

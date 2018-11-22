@@ -8,7 +8,6 @@
 
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
-#include "DBUtils.h"
 #include "DbHeader.h"
 #include "EncryptionUtils.h"
 #include "JSON_codec.h"
@@ -17,15 +16,15 @@
 #include "sys/stat.h"
 #endif
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // NodeStatusStruct
 //
 ////////////////////////////////////////////////////////////////////////////////
-uint8_t BlockDataManagerConfig::pubkeyHashPrefix_;
-uint8_t BlockDataManagerConfig::scriptHashPrefix_;
 ARMORY_DB_TYPE BlockDataManagerConfig::armoryDbType_ = ARMORY_DB_FULL;
-SOCKET_SERVICE BlockDataManagerConfig::service_ = SERVICE_FCGI;
+SOCKET_SERVICE BlockDataManagerConfig::service_ = SERVICE_WEBSOCKET;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -81,7 +80,7 @@ const string BlockDataManagerConfig::defaultRegtestBlkFileLocation_ =
 BlockDataManagerConfig::BlockDataManagerConfig() :
    cookie_(SecureBinaryData().GenerateRandom(32).toHexStr())
 {
-   selectNetwork("Main");
+   selectNetwork(NETWORK_MODE_MAINNET);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -93,50 +92,60 @@ string BlockDataManagerConfig::portToString(unsigned port)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BlockDataManagerConfig::selectNetwork(const string &netname)
+bool BlockDataManagerConfig::fileExists(const string& path, int mode)
 {
-   if (netname == "Main")
+#ifdef _WIN32
+   return _access(path.c_str(), mode) == 0;
+#else
+   auto nixmode = F_OK;
+   if (mode & 2)
+      nixmode |= R_OK;
+   if (mode & 4)
+      nixmode |= W_OK;
+   return access(path.c_str(), nixmode) == 0;
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BlockDataManagerConfig::selectNetwork(NETWORK_MODE mode)
+{
+   NetworkConfig::selectNetwork(mode);
+
+   switch (mode)
    {
-      genesisBlockHash_ = READHEX(MAINNET_GENESIS_HASH_HEX);
-      genesisTxHash_ = READHEX(MAINNET_GENESIS_TX_HASH_HEX);
-      magicBytes_ = READHEX(MAINNET_MAGIC_BYTES);
+   case NETWORK_MODE_MAINNET:
+   {
       btcPort_ = portToString(NODE_PORT_MAINNET);
       rpcPort_ = portToString(RPC_PORT_MAINNET);
-      pubkeyHashPrefix_ = SCRIPT_PREFIX_HASH160;
-      scriptHashPrefix_ = SCRIPT_PREFIX_P2SH;
-      
-      if (!customFcgiPort_)
+
+      if (!customListenPort_)
          listenPort_ = portToString(LISTEN_PORT_MAINNET);
+      break;
    }
-   else if (netname == "Test")
+
+   case NETWORK_MODE_TESTNET:
    {
-      genesisBlockHash_ = READHEX(TESTNET_GENESIS_HASH_HEX);
-      genesisTxHash_ = READHEX(TESTNET_GENESIS_TX_HASH_HEX);
-      magicBytes_ = READHEX(TESTNET_MAGIC_BYTES);
       btcPort_ = portToString(NODE_PORT_TESTNET);
       rpcPort_ = portToString(RPC_PORT_TESTNET);
-      pubkeyHashPrefix_ = SCRIPT_PREFIX_HASH160_TESTNET;
-      scriptHashPrefix_ = SCRIPT_PREFIX_P2SH_TESTNET;
 
-      testnet_ = true;
-      
-      if (!customFcgiPort_)
+      if (!customListenPort_)
          listenPort_ = portToString(LISTEN_PORT_TESTNET);
+      break;
    }
-   else if (netname == "Regtest")
+
+   case NETWORK_MODE_REGTEST:
    {
-      genesisBlockHash_ = READHEX(REGTEST_GENESIS_HASH_HEX);
-      genesisTxHash_ = READHEX(REGTEST_GENESIS_TX_HASH_HEX);
-      magicBytes_ = READHEX(REGTEST_MAGIC_BYTES);
       btcPort_ = portToString(NODE_PORT_REGTEST);
       rpcPort_ = portToString(RPC_PORT_TESTNET);
-      pubkeyHashPrefix_ = SCRIPT_PREFIX_HASH160_TESTNET;
-      scriptHashPrefix_ = SCRIPT_PREFIX_P2SH_TESTNET;
 
-      regtest_ = true;
-      
-      if (!customFcgiPort_)
+      if (!customListenPort_)
          listenPort_ = portToString(LISTEN_PORT_REGTEST);
+      break;
+   }
+
+   default:
+      LOGERR << "unexpected network mode!";
+      throw runtime_error("unxecpted network mode");
    }
 }
 
@@ -256,12 +265,30 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
       }
       else
       {
-         if (!testnet_ && !regtest_)
+         switch (NetworkConfig::getMode())
+         {
+         case NETWORK_MODE_MAINNET:
+         {
             dataDir_ = defaultDataDir_;
-         else if (!regtest_)
+            break;
+         }
+
+         case NETWORK_MODE_TESTNET:
+         {
             dataDir_ = defaultTestnetDataDir_;
-         else
+            break;
+         }
+
+         case NETWORK_MODE_REGTEST:
+         {
             dataDir_ = defaultRegtestDataDir_;
+            break;
+         }
+
+         default:
+            LOGERR << "unexpected network mode";
+            throw runtime_error("unexpected network mode");
+         }
       }
 
       expandPath(dataDir_);
@@ -270,7 +297,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
       auto configPath = dataDir_;
       appendPath(configPath, "armorydb.conf");
 
-      if (DBUtils::fileExists(configPath, 2))
+      if (fileExists(configPath, 2))
       {
          ConfigFile cf(configPath);
          auto mapIter = cf.keyvalMap_.find("datadir");
@@ -293,10 +320,17 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 
       if (blkFileLocation_.size() == 0)
       {
-         if (!testnet_)
+         switch (NetworkConfig::getMode())
+         {
+         case NETWORK_MODE_MAINNET:
+         {
             blkFileLocation_ = defaultBlkFileLocation_;
-         else
+            break;
+         }
+         
+         default:
             blkFileLocation_ = defaultTestnetBlkFileLocation_;
+         }
       }
 
       //expand paths if necessary
@@ -315,7 +349,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
       //test all paths
       auto testPath = [](const string& path, int mode)
       {
-         if (!DBUtils::fileExists(path, mode))
+         if (!fileExists(path, mode))
          {
             stringstream ss;
             ss << path << " is not a valid path";
@@ -349,11 +383,11 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 
       testPath(blkFileLocation_, 2);
 
-      //fcgi port
-      if (useCookie_ && !customFcgiPort_)
+      //listen port
+      if (useCookie_ && !customListenPort_)
       {
-         //no custom fcgi port was provided and the db was spawned with a 
-         //cookie file, fcgi port will be randomized
+         //no custom listen port was provided and the db was spawned with a 
+         //cookie file, listen port will be randomized
          srand(time(0));
          while (1)
          {
@@ -395,7 +429,7 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
       }
       else
       {
-         customFcgiPort_ = true;
+         customListenPort_ = true;
       }
    }
 
@@ -403,18 +437,18 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
    iter = args.find("testnet");
    if (iter != args.end())
    {
-      selectNetwork("Test");
+      selectNetwork(NETWORK_MODE_TESTNET);
    }
    else
    {
       iter = args.find("regtest");
       if (iter != args.end())
       {
-         selectNetwork("Regtest");
+         selectNetwork(NETWORK_MODE_REGTEST);
       }
       else
       {
-         selectNetwork("Main");
+         selectNetwork(NETWORK_MODE_MAINNET);
       }
    }
 

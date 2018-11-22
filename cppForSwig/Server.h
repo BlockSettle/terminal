@@ -15,11 +15,6 @@
 #include <atomic>
 #include <vector>
 
-using namespace std;
-
-#include "include/fcgiapp.h"
-#include "include/fcgios.h"
-#include "FcgiMessage.h"
 #include "WebSocketMessage.h"
 #include "libwebsockets.h"
 
@@ -33,50 +28,6 @@ using namespace std;
 
 class Clients;
 class BlockDataManagerThread;
-
-///////////////////////////////////////////////////////////////////////////////
-class FCGI_Server
-{
-   /***
-   Figure if it should use a socket or a named pipe.
-   Force it to listen only to localhost if we use a socket
-   (both in *nix and win32 code files)
-   ***/
-
-private:
-   SOCKET sockfd_ = -1;
-   mutex mu_;
-   atomic<bool> run_;
-   atomic<uint32_t> liveThreads_;
-
-   const string ip_;
-   const string port_;
-
-   unique_ptr<Clients> clients_;
-   SocketService keepAliveService_;
-
-private:
-   function<void(void)> getShutdownCallback(void)
-   {
-      auto shutdownCallback = [this](void)->void
-      {
-         this->haltFcgiLoop();
-      };
-
-      return shutdownCallback;
-   }
-
-   void passToKeepAliveService(shared_ptr<FCGX_Request>);
-
-public:
-   FCGI_Server(BlockDataManagerThread* bdmT, string port, bool listen_all);
-
-   void init(void);
-   void enterLoop(void);
-   void processRequest(shared_ptr<FCGX_Request> req);
-   void haltFcgiLoop(void);
-   void shutdown(void);
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 struct per_session_data__http {

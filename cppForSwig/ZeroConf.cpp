@@ -14,6 +14,8 @@
 #include "ZeroConf.h"
 #include "BlockDataMap.h"
 
+using namespace std;
+
 ///////////////////////////////////////////////////////////////////////////////
 //ZeroConfContainer Methods
 ///////////////////////////////////////////////////////////////////////////////
@@ -43,10 +45,7 @@ Tx ZeroConfContainer::getTxByHash(const BinaryData& txHash) const
    if (txiter == txmap.end())
       return Tx();
 
-   auto& theTx = txiter->second->tx_;
-   theTx.setTxRef(TxRef(keyIter->second));
-
-   return theTx;
+   return txiter->second->tx_;
 }
 ///////////////////////////////////////////////////////////////////////////////
 bool ZeroConfContainer::hasTxByHash(const BinaryData& txHash) const
@@ -67,8 +66,9 @@ bool ZeroConfContainer::purge(
 
    set<BinaryData> keysToDelete;
    auto& zcMap = ss->txMap_;
+   auto& txoutspentbyzc = ss->txOutsSpentByZC_;
 
-   auto updateChildren = [&zcMap, &minedKeys, this](
+   auto updateChildren = [&zcMap, &minedKeys, &txoutspentbyzc, this](
       BinaryDataRef& txHash, const BinaryData& blockKey,
       map<BinaryData, unsigned> minedHashes)->void
    {
@@ -100,6 +100,7 @@ bool ZeroConfContainer::purge(
                continue;
 
             auto prevKey = input.opRef_.getDbKey();
+            txoutspentbyzc.erase(prevKey);
             input.opRef_.reset();
 
             BinaryWriter bw_key(8);
@@ -160,7 +161,7 @@ bool ZeroConfContainer::purge(
    {
       //reset resolved outpoints cause of reorg
       for (auto& zc_pair : zcMap)
-         zc_pair.second.reset();
+         zc_pair.second->reset();
    }
 
    auto getIdSpoofLbd = [](const BinaryData&)->unsigned
@@ -363,8 +364,63 @@ void ZeroConfContainer::dropZC(
 
    /*** drop tx from snapshot ***/
    auto&& hashToDelete = iter->second->getTxHash().getRef();
-   outPointsSpentByKey_.erase(hashToDelete);
    ss->txHashToDBKey_.erase(hashToDelete);
+
+   //drop from outPointsSpentByKey_
+   outPointsSpentByKey_.erase(hashToDelete);
+   for (auto& input : iter->second->inputs_)
+   {
+      auto opIter = 
+         outPointsSpentByKey_.find(input.opRef_.getTxHashRef());
+      if (opIter == outPointsSpentByKey_.end())
+         continue;
+
+      //erase the index
+      opIter->second.erase(input.opRef_.getIndex());
+
+      //erase the txhash if the index map is empty
+      if (opIter->second.size() == 0)
+      {
+         outPointsSpentByKey_.erase(opIter);
+      }
+      else if (opIter->first.getPtr() == input.opRef_.getTxHashRef().getPtr())
+      {
+         //outpoint hash reference is owned by this tx object, rekey it
+         
+         //1. save the idmap
+         auto indexMap = move(opIter->second);
+
+         //2. erase current entry
+         outPointsSpentByKey_.erase(opIter);
+
+         //3. look for another zc among the referenced spenders
+         for (auto& id : indexMap)
+         {
+            auto& tx_key = id.second;
+            if (tx_key == key)
+               continue;
+
+            //4. we have a different zc, grab it
+            auto replaceIter = txMap.find(tx_key);
+            
+            //sanity checks
+            if (replaceIter == txMap.end() || 
+               id.first >= replaceIter->second->inputs_.size())
+               continue;
+
+            //5. grab hash reference and key by it
+            auto replaceHash = 
+               replaceIter->second->inputs_[id.first].opRef_.getTxHashRef();
+
+            pair<BinaryDataRef, map<unsigned, BinaryDataRef>> new_pair;
+            new_pair.first = replaceHash;
+            new_pair.second = move(indexMap);
+            outPointsSpentByKey_.insert(new_pair);
+            break;
+         }
+      }
+
+   }
 
    //drop from keyToSpendScrAddr_
    auto saSetIter = keyToSpentScrAddr_.find(key);
@@ -628,6 +684,8 @@ void ZeroConfContainer::parseNewZC(
             //loop through all outpoints consumed by this ZC
             for (auto& idSet : bulkData.outPointsSpentByKey_)
             {
+               set<BinaryData> childKeysToDrop;
+
                //compare them to the list of currently spent outpoints
                auto hashIter = outPointsSpentByKey_.find(idSet.first);
                if (hashIter == outPointsSpentByKey_.end())
@@ -651,7 +709,8 @@ void ZeroConfContainer::parseNewZC(
                            auto txiter = txmap.find(key);
                            if (txiter != txmap.end())
                               invalidatedTx.insert(*txiter);
-                           dropZC(ss, key);
+                           childKeysToDrop.insert(key);
+                           //dropZC(ss, key);
                         }
                      }
                      catch (exception&)
@@ -660,6 +719,9 @@ void ZeroConfContainer::parseNewZC(
                      }
                   }
                }
+
+               for (auto& childKey : childKeysToDrop)
+                  dropZC(ss, childKey);
             }
          }
 
@@ -885,7 +947,6 @@ void ZeroConfContainer::preprocessTx(ParsedTx& tx) const
 
    for (uint32_t iin = 0; iin < nTxIn; iin++)
    {
-
       auto& txIn = tx.inputs_[iin];
       if (txIn.isResolved())
          continue;
@@ -1274,9 +1335,39 @@ vector<TxOut> ZeroConfContainer::getZcTxOutsForKey(
       auto outId = READ_UINT16_BE(outIdRef);
 
       auto&& txout = theTx.tx_.getTxOutCopy(outId);
-      txout.setParentTxRef(zcKey);
-
       result.push_back(move(txout));
+   }
+
+   return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+vector<UnspentTxOut> ZeroConfContainer::getZcUTXOsForKey(
+   const set<BinaryData>& keys) const
+{
+   vector<UnspentTxOut> result;
+   auto ss = getSnapshot();
+   auto& txmap = ss->txMap_;
+
+   for (auto& key : keys)
+   {
+      auto zcKey = key.getSliceRef(0, 6);
+
+      auto txIter = txmap.find(zcKey);
+      if (txIter == txmap.end())
+         continue;
+
+      auto& theTx = *txIter->second;
+
+      auto outIdRef = key.getSliceRef(6, 2);
+      auto outId = READ_UINT16_BE(outIdRef);
+
+      auto&& txout = theTx.tx_.getTxOutCopy(outId);
+      UnspentTxOut utxo(
+         theTx.getTxHash(), outId, UINT32_MAX,
+         txout.getValue(), txout.getScript());
+
+      result.push_back(move(utxo));
    }
 
    return result;

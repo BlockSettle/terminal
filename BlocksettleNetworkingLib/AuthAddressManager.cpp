@@ -754,7 +754,7 @@ bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::s
 
    command->SetReplyCallback([command, this](const std::string& data) {
       OnDataReceived(data);
-      command->SetReplyCallback(nullptr);
+      command->CleanupCallbacks();
       FastLock locker(lockCommands_);
       activeCommands_.erase(command);
       return true;
@@ -762,7 +762,7 @@ bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::s
 
    command->SetErrorCallback([command, this](const std::string& message) {
       logger_->error("[AuthAddressManager::{}] error callback: {}", command->GetName(), message);
-      command->SetReplyCallback(nullptr);
+      command->CleanupCallbacks();
       FastLock locker(lockCommands_);
       activeCommands_.erase(command);
    });

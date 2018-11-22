@@ -45,6 +45,7 @@
 #include "OTPImportDialog.h"
 #include "OTPManager.h"
 #include "QuoteProvider.h"
+#include "RequestReplyCommand.h"
 #include "SelectWalletDialog.h"
 #include "SignContainer.h"
 #include "StatusBarView.h"
@@ -147,10 +148,103 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UpdateMainWindowAppearence();
 }
 
+void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(std::map<NetworkSettingType, std::pair<std::string, unsigned int>>)> &cb)
+{
+   if (!networkSettings_.empty()) {
+      cb(networkSettings_);
+      return;
+   }
+
+   Blocksettle::Communication::RequestPacket reqPkt;
+   reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
+   reqPkt.set_requestdata("");
+
+   const auto connection = connectionManager_->CreateSecuredDataConnection();
+   connection->SetServerPublicKey(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
+   auto command = std::make_shared<RequestReplyCommand>("network_settings", connection, logMgr_->logger());
+   const auto &title = tr("Network settings");
+
+   const auto &populateAppSettings = [this](std::map<NetworkSettingType, std::pair<std::string, unsigned int>> settings) {
+      for (const auto &setting : settings) {
+         switch (setting.first) {
+         case NetworkSettingType::Celer:
+            applicationSettings_->set(ApplicationSettings::celerHost, QString::fromStdString(setting.second.first));
+            applicationSettings_->set(ApplicationSettings::celerPort, setting.second.second);
+            break;
+         case NetworkSettingType::MarketData:
+            applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(setting.second.first));
+            applicationSettings_->set(ApplicationSettings::mdServerPort, setting.second.second);
+            break;
+         default:
+            logMgr_->logger()->info("[GetNetworkSettingsFromPuB] unknown network setting {}", (int)setting.first);
+            break;
+         }
+      }
+   };
+
+   command->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
+      if (data.empty()) {
+         showError(title, tr("Empty reply from BlockSettle server"));
+      }
+      Blocksettle::Communication::GetNetworkSettingsResponse response;
+      if (!response.ParseFromString(data)) {
+         showError(title, tr("Invalid reply from BlockSettle server"));
+         return false;
+      }
+      for (int i = 0; i < response.settings_size(); ++i) {
+         const auto &setting = response.settings(i);
+         networkSettings_[static_cast<NetworkSettingType>(setting.type())] = {setting.host(), setting.port()};
+      }
+
+      if (networkSettings_.empty()) {
+         showError(title, tr("Empty network settings received from BlockSettle server"));
+         return false;
+      }
+      if (networkSettings_.find(NetworkSettingType::Celer) == networkSettings_.end()) {
+         showError(title, tr("Missing Celer connection settings"));
+         return false;
+      }
+      if (networkSettings_.find(NetworkSettingType::MarketData) == networkSettings_.end()) {
+         showError(title, tr("Missing Market Data server connection settings"));
+         return false;
+      }
+      logMgr_->logger()->debug("[GetNetworkSettingsFromPuB] received {} network settings", networkSettings_.size());
+      populateAppSettings(networkSettings_);
+      cb(networkSettings_);
+      return true;
+   });
+   command->SetErrorCallback([this, title](const std::string& message) {
+      logMgr_->logger()->error("[GetNetworkSettingsFromPuB] error: {}", message);
+      showError(title, tr("Failed to obtain network settings from BlockSettle server"));
+   });
+
+   if (!command->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
+      , applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePort)
+      , reqPkt.SerializeAsString())) {
+      logMgr_->logger()->error("[GetNetworkSettingsFromPuB] failed to send request");
+      showError(title, tr("Failed to retrieve network settings due to invalid connection to BlockSettle server"));
+   }
+   else {
+      logMgr_->logger()->debug("[GetNetworkSettingsFromPuB] request sent");
+   }
+   if (!command->WaitForRequestedProcessed(500)) {
+      showError(title, tr("No response from BlockSettle server"));
+   }
+}
+
 void BSTerminalMainWindow::postSplashscreenActions()
 {
    if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
-      mdProvider_->SubscribeToMD();
+      GetNetworkSettingsFromPuB([this](std::map<NetworkSettingType, std::pair<std::string, unsigned int>> networkSettings) {
+         const auto &itSettings = networkSettings.find(NetworkSettingType::MarketData);
+         if (itSettings != networkSettings.end()) {
+            const auto &setPair = itSettings->second;
+            mdProvider_->SubscribeToMD(setPair.first, std::to_string(setPair.second));
+         }
+         else {
+            showError(tr("Market Data Connection"), tr("MD connection settings not found in reply from BlockSettle server"));
+         }
+      });
    }
 }
 
@@ -295,7 +389,7 @@ void BSTerminalMainWindow::InitAuthManager()
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
    connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, &BSTerminalMainWindow::onAuthMgrConnComplete);
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &walletId) {
+   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &) {
       if (authAddrDlg_) {
          openAuthManagerDialog();
       }
@@ -346,14 +440,12 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort), logMgr_->logger("message"), true);
+   mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
 }
 
-void BSTerminalMainWindow::acceptMDAgreement()
+void BSTerminalMainWindow::acceptMDAgreement(const std::string &host, const std::string &port)
 {
    if (!isMDLicenseAccepted()) {
       MDAgreementDialog dlg{this};
@@ -364,7 +456,7 @@ void BSTerminalMainWindow::acceptMDAgreement()
       saveUserAcceptedMDLicense();
    }
 
-   mdProvider_->MDLicenseAccepted();
+   mdProvider_->MDLicenseAccepted(host, port);
 }
 
 void BSTerminalMainWindow::updateControlEnabledState()
@@ -405,7 +497,9 @@ void BSTerminalMainWindow::InitAssets()
 void BSTerminalMainWindow::InitPortfolioView()
 {
    portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsManager_, assetManager_, this);
-   ui->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_, signContainer_, armory_, walletsManager_);
+   ui->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
+                             signContainer_, armory_, logMgr_->logger("ui"),
+                             walletsManager_);
 }
 
 void BSTerminalMainWindow::InitWalletsView()
@@ -418,7 +512,8 @@ void BSTerminalMainWindow::InitWalletsView()
 void BSTerminalMainWindow::InitTransactionsView()
 {
    ui->widgetExplorer->init(armory_, logMgr_->logger());
-   ui->widgetTransactions->init(walletsManager_, armory_, signContainer_);
+   ui->widgetTransactions->init(walletsManager_, armory_, signContainer_,
+                                logMgr_->logger("ui"));
    ui->widgetTransactions->setEnabled(true);
 
    ui->widgetTransactions->SetTransactionsModel(transactionsModel_);
@@ -448,7 +543,10 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
 
 void BSTerminalMainWindow::CompleteUIOnlineView()
 {
-   transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_, walletsManager_, this);
+   transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_
+                                                               , walletsManager_
+                                                         , logMgr_->logger("ui")
+                                                                , this);
 
    InitTransactionsView();
    transactionsModel_->loadAllWallets();
@@ -558,7 +656,9 @@ void BSTerminalMainWindow::showInfo(const QString &title, const QString &text)
 
 void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 {
-   BSMessageBox(BSMessageBox::critical, title, text, this).exec();
+   QMetaObject::invokeMethod(this, [this, title, text] {
+      BSMessageBox(BSMessageBox::critical, title, text, this).exec();
+   });
 }
 
 void BSTerminalMainWindow::onReceive()
@@ -591,7 +691,9 @@ void BSTerminalMainWindow::onReceive()
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsManager_, signContainer_, true, this};
+   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsManager_,
+                                                  signContainer_, true,
+                                                  logMgr_->logger("ui"), this};
    advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    if (!selectedWalletId.empty()) {
@@ -618,7 +720,9 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg{armory_, walletsManager_, signContainer_, this};
+         CreateTransactionDialogSimple dlg{armory_, walletsManager_,
+                                           signContainer_, logMgr_->logger("ui"),
+                                           this};
          dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
          if (!selectedWalletId.empty()) {
@@ -733,6 +837,8 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   GetNetworkSettingsFromPuB([this](std::map<NetworkSettingType, std::pair<std::string, unsigned int>>) {});
+
    LoginWindow loginDialog(applicationSettings_, this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
@@ -782,7 +888,8 @@ void BSTerminalMainWindow::onUserLoggedIn()
    setLoginButtonText(QString::fromStdString(celerConnection_->userName()));
 
    if (!mdProvider_->IsConnectionActive()) {
-      mdProvider_->SubscribeToMD();
+      mdProvider_->SubscribeToMD(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+         , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
    }
 }
 

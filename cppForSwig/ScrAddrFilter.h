@@ -34,15 +34,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 struct AddressBatch
 {
-   function<void(set<BinaryDataRef>&)> callback_;
+   std::function<void(std::set<BinaryDataRef>&)> callback_;
    
-   set<BinaryDataRef> scrAddrSet_;
-   shared_ptr<::google::protobuf::Message> msg_;
-   const string batchID_;
-   string walletID_;
+   std::set<BinaryDataRef> scrAddrSet_;
+   std::shared_ptr<::google::protobuf::Message> msg_;
+   const std::string batchID_;
+   std::string walletID_;
    bool isNew_;
 
-   AddressBatch(const string& id) :
+   AddressBatch(const std::string& id) :
       batchID_(id)
    {}
 };
@@ -65,7 +65,7 @@ public:
    const BinaryData& getHash(void) const
    {
       if (addrHash_.getSize() == 0)
-         addrHash_ = move(BtcUtils::getHash256(scrAddr_));
+         addrHash_ = std::move(BtcUtils::getHash256(scrAddr_));
 
       return addrHash_;
    }
@@ -127,31 +127,31 @@ private:
    const unsigned sdbiKey_;
    LMDBBlockDatabase *const lmdb_;
 
-   shared_ptr<TransactionalMap<
-      BinaryDataRef, shared_ptr<AddrAndHash>>> scrAddrMap_;
-   BlockingQueue<shared_ptr<AddressBatch>> registrationStack_;
+   std::shared_ptr<TransactionalMap<
+      BinaryDataRef, std::shared_ptr<AddrAndHash>>> scrAddrMap_;
+   BlockingQueue<std::shared_ptr<AddressBatch>> registrationStack_;
 
-   thread thr_;
+   std::thread thr_;
 
 public:
-   mutex mergeLock_;
+   std::mutex mergeLock_;
 
 private:
    static void cleanUpPreviousChildren(LMDBBlockDatabase* lmdb);
    void registrationThread(void);
 
-   shared_ptr<TransactionalMap<BinaryDataRef, shared_ptr<AddrAndHash>>>
+   std::shared_ptr<TransactionalMap<BinaryDataRef, std::shared_ptr<AddrAndHash>>>
       getScrAddrMapPtr(void) const
    {
       return scrAddrMap_;
    }
 
-   set<BinaryDataRef> updateAddrMap(const set<BinaryDataRef>&, unsigned);
-   void setSSHLastScanned(set<BinaryDataRef>&, unsigned);
+   std::set<BinaryDataRef> updateAddrMap(const std::set<BinaryDataRef>&, unsigned);
+   void setSSHLastScanned(std::set<BinaryDataRef>&, unsigned);
 
 protected:
-   function<void(
-      const vector<string>& wltIDs, double prog, unsigned time)>
+   std::function<void(
+      const std::vector<std::string>& wltIDs, double prog, unsigned time)>
       scanThreadProgressCallback_;
 
 public:
@@ -159,15 +159,15 @@ public:
    ScrAddrFilter(LMDBBlockDatabase* lmdb, unsigned sdbiKey)
       : lmdb_(lmdb), sdbiKey_(sdbiKey)
    {
-      scrAddrMap_ = make_shared<
-         TransactionalMap<BinaryDataRef, shared_ptr<AddrAndHash>>>();
+      scrAddrMap_ = std::make_shared<
+         TransactionalMap<BinaryDataRef, std::shared_ptr<AddrAndHash>>>();
    }
    
    virtual ~ScrAddrFilter() { shutdown(); }
    
    LMDBBlockDatabase* db() { return lmdb_; }
 
-   shared_ptr<map<BinaryDataRef, shared_ptr<AddrAndHash>>> 
+   std::shared_ptr<std::map<BinaryDataRef, std::shared_ptr<AddrAndHash>>>
       getScrAddrMap(void) const
    { 
       return scrAddrMap_->get(); 
@@ -178,10 +178,10 @@ public:
       return scrAddrMap_->size();
    }
 
-   shared_ptr<map<TxOutScriptRef, int>> getOutScrRefMap(void);
+   std::shared_ptr<std::map<TxOutScriptRef, int>> getOutScrRefMap(void);
 
    int32_t scanFrom(void) const;
-   void registerAddressBatch(shared_ptr<AddressBatch>);
+   void registerAddressBatch(std::shared_ptr<AddressBatch>);
 
    void resetSshDB(void);
 
@@ -198,8 +198,8 @@ public:
    StoredDBInfo getSshSDBI(void) const;
    void putSshSDBI(const StoredDBInfo&);
    
-   set<BinaryData> getMissingHashes(void) const;
-   void putMissingHashes(const set<BinaryData>&);
+   std::set<BinaryData> getMissingHashes(void) const;
+   void putMissingHashes(const std::set<BinaryData>&);
 
    void cleanUpSdbis(void);
    void shutdown(void);
@@ -208,11 +208,11 @@ public:
 
 //virtuals
 protected:
-   virtual shared_ptr<ScrAddrFilter> getNew(unsigned) = 0;
+   virtual std::shared_ptr<ScrAddrFilter> getNew(unsigned) = 0;
    virtual BinaryData applyBlockRangeToDB(
-      uint32_t startBlock, uint32_t endBlock, const vector<string>& wltIDs,
+      uint32_t startBlock, uint32_t endBlock, const std::vector<std::string>& wltIDs,
       bool reportProgress)=0;
-   virtual shared_ptr<Blockchain> blockchain(void) const = 0;
+   virtual std::shared_ptr<Blockchain> blockchain(void) const = 0;
    virtual bool bdmIsRunning(void) const = 0;
 };
 

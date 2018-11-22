@@ -32,7 +32,7 @@ private:
    unsigned n_ = 0;
    unsigned m_ = 0;
 
-   map<BinaryData, bool> pubKeyState_;
+   std::map<BinaryData, bool> pubKeyState_;
 
    mutable PubKeyType keyType_ = Type_Unkonwn;
 
@@ -43,14 +43,14 @@ public:
    bool isValid(void) const;
    unsigned getSigCount(void) const;
    bool isSignedForPubKey(const BinaryData& pubkey);
-   const map<BinaryData, bool> getPubKeyMap(void) const { return pubKeyState_; }
+   const std::map<BinaryData, bool> getPubKeyMap(void) const { return pubKeyState_; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 class TxEvalState
 {
 private:
-   map<unsigned, TxInEvalState> evalMap_;
+   std::map<unsigned, TxInEvalState> evalMap_;
 
 public:
    size_t getEvalMapSize(void) const { return evalMap_.size(); }

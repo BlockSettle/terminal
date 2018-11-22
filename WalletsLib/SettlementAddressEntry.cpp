@@ -134,7 +134,7 @@ const BinaryData &bs::SettlementAssetEntry::sellChainedPubKey() const
 const BinaryData &bs::SettlementAssetEntry::prefixedHash() const
 {
    if (hash_.isNull()) {
-      hash_.append(BlockDataManagerConfig::getScriptHashPrefix());
+      hash_.append(NetworkConfig::getScriptHashPrefix());
       hash_.append(hash());
    }
    return hash_;
@@ -162,7 +162,7 @@ const BinaryData &bs::SettlementAssetEntry::p2wsHash() const
 const BinaryData &bs::SettlementAssetEntry::prefixedP2SHash() const
 {
    if (prefixedP2SHash_.isNull()) {
-      prefixedP2SHash_.append(BlockDataManagerConfig::getScriptHashPrefix());
+      prefixedP2SHash_.append(NetworkConfig::getScriptHashPrefix());
       prefixedP2SHash_.append(p2wsHash());
    }
    return prefixedP2SHash_;

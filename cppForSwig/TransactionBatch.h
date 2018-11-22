@@ -124,8 +124,6 @@ Transaction batching format:
 #ifndef _H_TRANSACTION_BATCH
 #define _H_TRANSACTION_BATCH
 
-using namespace std;
-
 #include <vector>
 #include <map>
 #include <stdint.h>
@@ -142,14 +140,14 @@ using namespace std;
 #define SECTION_LOCKTIME   "Locktime:"
 
 ////////////////////////////////////////////////////////////////////////////////
-class TransactionBatchException : public runtime_error
+class TransactionBatchException : public std::runtime_error
 {
 private:
    const unsigned lineId_;
 
 public:
-   TransactionBatchException(const string& err, unsigned lineId) :
-      runtime_error(err), lineId_(lineId)
+   TransactionBatchException(const std::string& err, unsigned lineId) :
+      std::runtime_error(err), lineId_(lineId)
    {}
 
    unsigned line(void) const { return lineId_; }
@@ -158,7 +156,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 struct Spender
 {
-   string txHash_;
+   std::string txHash_;
    uint32_t index_;
    uint32_t sequence_ = UINT32_MAX;
 };
@@ -166,17 +164,17 @@ struct Spender
 ////////////////////////////////////////////////////////////////////////////////
 struct Recipient
 {
-   string address_;
+   std::string address_;
    uint64_t value_;
-   string comment_;
+   std::string comment_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 class TransactionBatch
 {
 private:
-   vector<Spender> spenders_;
-   vector<Recipient> recipients_;
+   std::vector<Spender> spenders_;
+   std::vector<Recipient> recipients_;
   
    Recipient change_;
    
@@ -184,42 +182,42 @@ private:
    uint64_t fee_rate_ = 0;
    float fee_ = 0;
 
-   string walletID_;
+   std::string walletID_;
    bool haveWalletID_ = false;
 
 private:
-   map<string, function<
-      void(const vector<string>&, pair<unsigned, unsigned>&)> > sections_;
+   std::map<std::string, std::function<
+      void(const std::vector<std::string>&, std::pair<unsigned, unsigned>&)> > sections_;
 
 private:
-   void unserialize_wallet(const vector<string>&, pair<unsigned, unsigned>&);
-   void unserialize_recipients(const vector<string>&, pair<unsigned, unsigned>&);
-   void unserialize_spenders(const vector<string>&, pair<unsigned, unsigned>&);
-   void unserialize_change(const vector<string>&, pair<unsigned, unsigned>&);
-   void unserialize_fee(const vector<string>&, pair<unsigned, unsigned>&);
-   void unserialize_locktime(const vector<string>&, pair <unsigned, unsigned>&);
+   void unserialize_wallet(const std::vector<std::string>&, std::pair<unsigned, unsigned>&);
+   void unserialize_recipients(const std::vector<std::string>&, std::pair<unsigned, unsigned>&);
+   void unserialize_spenders(const std::vector<std::string>&, std::pair<unsigned, unsigned>&);
+   void unserialize_change(const std::vector<std::string>&, std::pair<unsigned, unsigned>&);
+   void unserialize_fee(const std::vector<std::string>&, std::pair<unsigned, unsigned>&);
+   void unserialize_locktime(const std::vector<std::string>&, std::pair<unsigned, unsigned>&);
 
-   void unserialize(const string& str);
+   void unserialize(const std::string& str);
 
 public:
    TransactionBatch(void);
 
    //add/set
    void addSpender(
-      const string& txHashStr, unsigned txOutIndex, unsigned sequence);
-   void addRecipient(const string& b58Address, uint64_t value);
-   void setChange(const string& b58Address);
+      const std::string& txHashStr, unsigned txOutIndex, unsigned sequence);
+   void addRecipient(const std::string& b58Address, uint64_t value);
+   void setChange(const std::string& b58Address);
    
-   void setWalletID(const string& ID) { walletID_ = ID; }
+   void setWalletID(const std::string& ID) { walletID_ = ID; }
 
    //ser/deser
-   void processBatchStr(const string& batch);
-   string serialize(void) const;
+   void processBatchStr(const std::string& batch);
+   std::string serialize(void) const;
 
    //get
-   const string& getWalletID(void) const { return walletID_; }
-   vector<Recipient> getRecipients(void) const { return recipients_; }
-   vector<Spender> getSpenders(void) const { return spenders_; }
+   const std::string& getWalletID(void) const { return walletID_; }
+   std::vector<Recipient> getRecipients(void) const { return recipients_; }
+   std::vector<Spender> getSpenders(void) const { return spenders_; }
    const Recipient& getChange(void) const { return change_; }
    const uint64_t getFeeRate(void) const { return fee_rate_; }
    const float getFlatFee(void) const { return fee_; }

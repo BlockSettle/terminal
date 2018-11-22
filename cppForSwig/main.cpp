@@ -32,9 +32,6 @@ int main(int argc, char* argv[])
    LOGINFO << "Running on " << bdmConfig.threadCount_ << " threads";
    LOGINFO << "Ram usage level: " << bdmConfig.ramUsage_;
 
-   if (FCGX_Init())
-      throw runtime_error("failed to initialize FCGI engine");
-
    //init db
    BlockDataManagerConfig::setServiceType(SERVICE_WEBSOCKET);
    BlockDataManagerThread bdmThread(bdmConfig);

@@ -11,7 +11,8 @@
 /* $OpenLDAP$ */
 /* This work is part of OpenLDAP Software <http://www.openldap.org/>.
  *
- * Copyright 2000-2014 The OpenLDAP Foundation.
+ * Copyright 2000-2018 The OpenLDAP Foundation.
+ * Portions Copyright 2001-2018 Howard Chu, Symas Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +27,7 @@
 #ifndef _MDB_MIDL_H_
 #define _MDB_MIDL_H_
 
-#include <stddef.h>
+#include "lmdb.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +43,7 @@ extern "C" {
 	/** A generic unsigned ID number. These were entryIDs in back-bdb.
 	 *	Preferably it should have the same size as a pointer.
 	 */
-typedef size_t MDB_ID;
+typedef mdb_size_t MDB_ID;
 
 	/** An IDL is an ID List, a sorted array of IDs. The first
 	 * element of the array is a counter for how many actual
@@ -55,7 +56,11 @@ typedef MDB_ID *MDB_IDL;
 /* IDL sizes - likely should be even bigger
  *   limiting factors: sizeof(ID), thread stack size
  */
+#ifdef MDB_VL32
+#define	MDB_IDL_LOGN	14	/* DB_SIZE is 2^14, UM_SIZE is 2^15 */
+#else
 #define	MDB_IDL_LOGN	16	/* DB_SIZE is 2^16, UM_SIZE is 2^17 */
+#endif
 #define MDB_IDL_DB_SIZE		(1<<MDB_IDL_LOGN)
 #define MDB_IDL_UM_SIZE		(1<<(MDB_IDL_LOGN+1))
 
@@ -98,9 +103,8 @@ void mdb_midl_free(MDB_IDL ids);
 	/** Shrink an IDL.
 	 * Return the IDL to the default size if it has grown larger.
 	 * @param[in,out] idp	Address of the IDL to shrink.
-	 * @return	0 on no change, non-zero if shrunk.
 	 */
-int mdb_midl_shrink(MDB_IDL *idp);
+void mdb_midl_shrink(MDB_IDL *idp);
 
 	/** Make room for num additional elements in an IDL.
 	 * @param[in,out] idp	Address of the IDL.
@@ -178,6 +182,20 @@ int mdb_mid2l_insert( MDB_ID2L ids, MDB_ID2 *id );
 	 */
 int mdb_mid2l_append( MDB_ID2L ids, MDB_ID2 *id );
 
+#ifdef MDB_VL32
+typedef struct MDB_ID3 {
+	MDB_ID mid;		/**< The ID */
+	void *mptr;		/**< The pointer */
+	unsigned int mcnt;		/**< Number of pages */
+	unsigned int mref;		/**< Refcounter */
+} MDB_ID3;
+
+typedef MDB_ID3 *MDB_ID3L;
+
+unsigned mdb_mid3l_search( MDB_ID3L ids, MDB_ID id );
+int mdb_mid3l_insert( MDB_ID3L ids, MDB_ID3 *id );
+
+#endif /* MDB_VL32 */
 /** @} */
 /** @} */
 #ifdef __cplusplus

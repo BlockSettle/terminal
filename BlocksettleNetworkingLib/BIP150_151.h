@@ -78,12 +78,12 @@ void startupBIP151CTX();
 void shutdownBIP151CTX();
 
 // Global function used to load up the key DBs. CALL AFTER BIP 151 IS INITIALIZED.
-void startupBIP150CTX(const uint32_t& ipVer, const string& dataDir);
+void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir);
 
 // Global variables.
 extern std::string bipDataDir_;
-extern unordered_set<std::string> authPeers_; // Compressed ECDSA key
-extern unordered_map<std::string, std::string> knownPeers_; // IP:Port/Com. key
+extern std::unordered_set<std::string> authPeers_; // Compressed ECDSA key
+extern std::unordered_map<std::string, std::string> knownPeers_; // IP:Port/Com. key
 extern btc_pubkey pubIDKey_;
 extern uint32_t ipType;
 

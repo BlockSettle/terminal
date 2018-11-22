@@ -66,12 +66,14 @@ private:
 };
 
 
-bs::SettlementWallet::SettlementWallet()
-   : PlainWallet(tr("Settlement").toStdString(), tr("Settlement Wallet").toStdString())
+bs::SettlementWallet::SettlementWallet(const std::shared_ptr<spdlog::logger> &logger)
+   : PlainWallet(tr("Settlement").toStdString()
+                 , tr("Settlement Wallet").toStdString()
+                 , logger)
 {}
 
-bs::SettlementWallet::SettlementWallet(const std::string &filename)
-   : PlainWallet()
+bs::SettlementWallet::SettlementWallet(const std::string &filename, const std::shared_ptr<spdlog::logger> &logger)
+   : PlainWallet(logger)
 {
    loadFromFile(filename);
 }
@@ -108,7 +110,7 @@ int bs::SettlementWallet::addAddress(const bs::Address &addr, std::shared_ptr<bs
 AddressEntryType bs::SettlementWallet::getAddrTypeForAddr(const BinaryData &addr)
 {
    BinaryData prefixed;
-   prefixed.append(BlockDataManagerConfig::getScriptHashPrefix());
+   prefixed.append(NetworkConfig::getScriptHashPrefix());
    prefixed.append(addr);
    const auto itAsset = assetByAddr_.find(prefixed);
    if (itAsset != assetByAddr_.end()) {
@@ -248,19 +250,40 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
       return false;
    }
 
-   const auto &cbSpendable = [this, cb, allowZC, rtWallet](std::vector<UTXO> inputs) {
-      if (inputs.empty()) {
-         if (allowZC) {
-            const auto &cbZC = [cb](std::vector<UTXO> zcs) {
-               if (zcs.size() == 1) {
-                  cb(zcs[0]);
-               }
-            };
-            rtWallet->getSpendableZCList(cbZC);
+   const auto &cbSpendable = [this, cb, allowZC, rtWallet]
+                             (ReturnMessage<std::vector<UTXO>> inputs)->void {
+      try {
+         auto inUTXOs = inputs.get();
+         if (inUTXOs.empty()) {
+            if (allowZC) {
+               const auto &cbZC = [this, cb]
+                                  (ReturnMessage<std::vector<UTXO>> zcs)->void {
+                  try {
+                     auto inZCUTXOs = zcs.get();
+                     if (inZCUTXOs.size() == 1) {
+                        cb(inZCUTXOs[0]);
+                     }
+                  }
+                  catch(std::exception& e) {
+                     if(logger_ != nullptr) {
+                        getLogger()->error("[bs::SettlementWallet::GetInputFor] " \
+                           "Return data error (getSpendableZCList) - {}",
+                           e.what());
+                     }
+                  }
+               };
+               rtWallet->getSpendableZCList(cbZC);
+            }
+         }
+         else if (inUTXOs.size() == 1) {
+            cb(inUTXOs[0]);
          }
       }
-      else if (inputs.size() == 1) {
-         cb(inputs[0]);
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[bs::SettlementWallet::GetInputFor] Return data " \
+               "error (getSpendableTxOutListForValue) - {}", e.what());
+         }
       }
    };
    rtWallet->getSpendableTxOutListForValue(UINT64_MAX, cbSpendable);
@@ -389,8 +412,19 @@ bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTX
       result->insert(result->end(), utxos.begin(), utxos.end());
 
       for (const auto &rtWallet : rtWallets_) {
-         const auto &cbRTWlist = [result, walletSet, id=rtWallet.first, cb](std::vector<UTXO> utxos) {
-            result->insert(result->end(), utxos.begin(), utxos.end());
+         const auto &cbRTWlist = [this, result, walletSet, id=rtWallet.first, cb]
+                                 (ReturnMessage<std::vector<UTXO>> utxos)->void {
+            try {
+               auto inUTXOs = utxos.get();
+               result->insert(result->end(), inUTXOs.begin(), inUTXOs.end());
+            }
+            catch(std::exception& e) {
+               if(logger_ != nullptr) {
+                  getLogger()->error("[bs::SettlementWallet::getSpendableZCList] " \
+                     "Return data error - {}", e.what());
+               }
+            }
+
             walletSet->erase(id);
             if (walletSet->empty()) {
                delete walletSet;

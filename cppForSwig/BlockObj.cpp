@@ -19,7 +19,7 @@
 #include "BlockObj.h"
 #include "lmdb_wrapper.h"
 
-
+using namespace std;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -201,14 +201,73 @@ BinaryDataRef DBOutPoint::getDBkey() const
    return BinaryDataRef();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+//
+// TxRef methods
+//
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+uint32_t TxRef::getBlockHeight(void) const
+{
+   if (dbKey6B_.getSize() == 6 &&
+      !dbKey6B_.startsWith(DBUtils::ZeroConfHeader_))
+      return DBUtils::hgtxToHeight(dbKey6B_.getSliceCopy(0, 4));
+   else
+      return UINT32_MAX;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+uint8_t TxRef::getDuplicateID(void) const
+{
+   if (dbKey6B_.getSize() == 6)
+      return DBUtils::hgtxToDupID(dbKey6B_.getSliceCopy(0, 4));
+   else
+      return UINT8_MAX;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+uint16_t TxRef::getBlockTxIndex(void) const
+{
+   if (dbKey6B_.getSize() == 6)
+   {
+      if (!dbKey6B_.startsWith(DBUtils::ZeroConfHeader_))
+         return READ_UINT16_BE(dbKey6B_.getPtr() + 4);
+      else
+         return READ_UINT32_BE(dbKey6B_.getPtr() + 2);
+   }
+   else
+      return UINT16_MAX;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+void TxRef::pprint(ostream & os, int nIndent) const
+{
+   os << "TxRef Information:" << endl;
+   //os << "   Hash:      " << getThisHash().toHexStr() << endl;
+   os << "   Height:    " << getBlockHeight() << endl;
+   os << "   BlkIndex:  " << getBlockTxIndex() << endl;
+   //os << "   FileIdx:   " << blkFilePtr_.getFileIndex() << endl;
+   //os << "   FileStart: " << blkFilePtr_.getStartByte() << endl;
+   //os << "   NumBytes:  " << blkFilePtr_.getNumBytes() << endl;
+   os << "   ----- " << endl;
+   os << "   Read from disk, full tx-info: " << endl;
+   //getTxCopy().pprint(os, nIndent+1); 
+}
+
+/////////////////////////////////////////////////////////////////////////////
+void TxRef::setRef(BinaryDataRef bdr)
+{
+   dbKey6B_ = bdr.copy();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 //
 // DBTxRef Methods
 //
-////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////
-
+/////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 BinaryData DBTxRef::serialize(void) const 
 { 
@@ -296,21 +355,6 @@ UnspentTxOut::UnspentTxOut(void) :
    isMultisigRef_(false)
 {
    // Nothing to do here
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void UnspentTxOut::init(LMDBBlockDatabase *db, TxOut & txout, uint32_t blkNum, 
-   bool isMulti)
-{
-   TxRef txRef = txout.getParentTxRef();
-   DBTxRef parentTxRef(txRef, db);
-   txHash_     = parentTxRef.getThisHash();
-   txOutIndex_ = txout.getIndex();
-   txIndex_    = txRef.getBlockTxIndex();
-   txHeight_   = txout.getParentHeight();
-   value_      = txout.getValue();
-   script_     = txout.getScript();
-   isMultisigRef_ = isMulti;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
