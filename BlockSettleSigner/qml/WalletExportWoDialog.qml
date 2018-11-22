@@ -212,7 +212,7 @@ CustomDialog {
 
     onAccepted: {
         if (wallet.encType === WalletInfo.Password) {
-            password = toHex(tfPassword.text)
+            password = tfPassword.text
         }
     }
 
