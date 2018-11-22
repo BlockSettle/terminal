@@ -12,7 +12,6 @@ WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::shared_ptr<App
 {
    ui_->setupUi(this);
 
-   ui_->pushButtonContinue->setEnabled(false);
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &WalletPasswordVerifyDialog::onContinueClicked);
    connect(ui_->lineEditPassword, &QLineEdit::textEdited, this, [=](const QString &text) {
       ui_->pushButtonContinue->setDisabled(text.isEmpty());
@@ -44,6 +43,7 @@ void WalletPasswordVerifyDialog::init(const std::string& walletId
 
 void WalletPasswordVerifyDialog::initPassword()
 {
+   ui_->pushButtonContinue->setEnabled(false);
    ui_->labelAuthHint->hide();
    adjustSize();
 }
