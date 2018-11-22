@@ -8,6 +8,8 @@
 
 #include "CoinSelection.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
 // CoinSelection                                                              //

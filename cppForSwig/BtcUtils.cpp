@@ -14,6 +14,7 @@
 #include "BlockDataManagerConfig.h"
 #include "bech32/ref/c++/segwit_addr.h"
 
+using namespace std;
 
 const BinaryData BtcUtils::BadAddress_ = BinaryData::CreateFromHex("0000000000000000000000000000000000000000");
 const BinaryData BtcUtils::EmptyHash_  = BinaryData::CreateFromHex("0000000000000000000000000000000000000000000000000000000000000000");
@@ -40,7 +41,7 @@ BinaryData BtcUtils::computeID(const SecureBinaryData& pubkey)
    auto&& h160 = getHash160(bdr);
    
    BinaryWriter bw;
-   bw.put_uint8_t(BlockDataManagerConfig::getPubkeyHashPrefix());
+   bw.put_uint8_t(NetworkConfig::getPubkeyHashPrefix());
    bw.put_BinaryDataRef(h160.getSliceRef(0, 5));
 
    //now reverse it
@@ -260,8 +261,8 @@ BinaryData BtcUtils::getTxOutScrAddr(BinaryDataRef script,
    if (type == TXOUT_SCRIPT_NONSTANDARD)
       type = getTxOutScriptType(script);
 
-   auto h160Prefix = BlockDataManagerConfig::getPubkeyHashPrefix();
-   auto scriptPrefix = BlockDataManagerConfig::getScriptHashPrefix();
+   auto h160Prefix = NetworkConfig::getPubkeyHashPrefix();
+   auto scriptPrefix = NetworkConfig::getScriptHashPrefix();
 
    switch (type)
    {
@@ -324,9 +325,9 @@ TxOutScriptRef BtcUtils::getTxOutScrAddrNoCopy(BinaryDataRef script)
    TxOutScriptRef outputRef;
 
    auto p2pkh_prefix = 
-      SCRIPT_PREFIX(BlockDataManagerConfig::getPubkeyHashPrefix());
+      SCRIPT_PREFIX(NetworkConfig::getPubkeyHashPrefix());
    auto p2sh_prefix = 
-      SCRIPT_PREFIX(BlockDataManagerConfig::getScriptHashPrefix());
+      SCRIPT_PREFIX(NetworkConfig::getScriptHashPrefix());
    
    auto type = getTxOutScriptType(script);
    switch (type)
@@ -441,10 +442,10 @@ BinaryData BtcUtils::scrAddrToSegWitAddress(const BinaryData& scrAddr)
    //hardcoded for version 0 witness programs for now
    string header;
 
-   if (BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160)
+   if (NetworkConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160)
       header = move(string(SEGWIT_ADDRESS_MAINNET_HEADER));
-   else if (BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET &&
-      BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET)
+   else if (NetworkConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET &&
+      NetworkConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET)
       header = move(string(SEGWIT_ADDRESS_TESTNET_HEADER));
    else
       throw runtime_error("invalid network for segwit address");
@@ -463,9 +464,9 @@ BinaryData BtcUtils::segWitAddressToScrAddr(const BinaryData& swAddr)
 {
    string header;
 
-   if (BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160)
+   if (NetworkConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160)
       header = move(string(SEGWIT_ADDRESS_MAINNET_HEADER));
-   else if (BlockDataManagerConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET)
+   else if (NetworkConfig::getPubkeyHashPrefix() == SCRIPT_PREFIX_HASH160_TESTNET)
       header = move(string(SEGWIT_ADDRESS_TESTNET_HEADER));
    else
       throw runtime_error("invalid network for segwit address");

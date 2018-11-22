@@ -69,15 +69,19 @@ public:
 };
 
 
-AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::shared_ptr<bs::Wallet> &wallet
-   , const std::shared_ptr<WalletsManager>& walletsManager, const std::shared_ptr<ArmoryConnection> &armory
-   , QWidget* parent)
+AddressDetailDialog::AddressDetailDialog(const bs::Address& address
+                                     , const std::shared_ptr<bs::Wallet> &wallet
+                         , const std::shared_ptr<WalletsManager>& walletsManager
+                               , const std::shared_ptr<ArmoryConnection> &armory
+                                 , const std::shared_ptr<spdlog::logger> &logger
+                                         , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AddressDetailDialog())
    , address_(address)
    , walletsManager_(walletsManager)
    , armory_(armory)
    , wallet_(wallet)
+   , logger_(logger)
 {
    setAttribute(Qt::WA_DeleteOnClose);
    ui_->setupUi(this);
@@ -139,7 +143,12 @@ AddressDetailDialog::~AddressDetailDialog() = default;
 
 void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
 {
-   TransactionsViewModel* model = new TransactionsViewModel(armory_, walletsManager_, delegate, this, wallet_);
+   TransactionsViewModel* model = new TransactionsViewModel(armory_
+                                                            , walletsManager_
+                                                            , delegate
+                                                            , logger_
+                                                            , this
+                                                            , wallet_);
 
    IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
    incomingFilter->address = address_.display();

@@ -12,6 +12,8 @@
 #include <string.h>
 #include "BitcoinP2p.h"
 
+using namespace std;
+
 bool PEER_USES_WITNESS;
 
 template <typename T> uint32_t put_integer_be(uint8_t* ptr, const T& integer)
@@ -1405,8 +1407,12 @@ void BitcoinP2P::updateNodeStatus(bool connected)
 ////////////////////////////////////////////////////////////////////////////////
 void  BitcoinP2PSocket::respond(vector<uint8_t>& packet)
 {
-   readDataStack_->push_back(move(packet));
+   if (packet.size() >= 0)
+      readDataStack_->push_back(move(packet));
+   else
+      readDataStack_->terminate();
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 void BitcoinP2PSocket::pushPayload(

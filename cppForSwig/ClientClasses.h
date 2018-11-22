@@ -46,13 +46,13 @@ public:
    virtual void run(BDMAction action, void* ptr, int block = 0) = 0;
    virtual void progress(
       BDMPhase phase,
-      const vector<string> &walletIdVec,
+      const std::vector<std::string> &walletIdVec,
       float progress, unsigned secondsRem,
       unsigned progressNumeric
    ) = 0;
    virtual void disconnected(void) = 0;
 
-   bool processNotifications(shared_ptr<::Codec_BDVCommand::BDVCallback>);
+   bool processNotifications(std::shared_ptr<::Codec_BDVCommand::BDVCallback>);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -112,12 +112,12 @@ namespace ClientClasses
       //////////////////////////////////////////////////////////////////////////
       uint8_t const * getPtr(void) const {
          if (!isInitialized_)
-            throw runtime_error("uninitialized BlockHeader");
+            throw std::runtime_error("uninitialized BlockHeader");
          return dataCopy_.getPtr();
       }
       size_t        getSize(void) const {
          if (!isInitialized_)
-            throw runtime_error("uninitialized BlockHeader");
+            throw std::runtime_error("uninitialized BlockHeader");
          return dataCopy_.getSize();
       }
       bool            isInitialized(void) const { return isInitialized_; }
@@ -139,18 +139,18 @@ namespace ClientClasses
    class LedgerEntry
    {
    private:
-      shared_ptr<::google::protobuf::Message> msgPtr_;
+      std::shared_ptr<::google::protobuf::Message> msgPtr_;
       const ::Codec_LedgerEntry::LedgerEntry* ptr_ = nullptr;
 
    public:
       LedgerEntry(BinaryDataRef bdr);
-      LedgerEntry(shared_ptr<::Codec_LedgerEntry::LedgerEntry>);
-      LedgerEntry(shared_ptr<::Codec_LedgerEntry::ManyLedgerEntry>,
+      LedgerEntry(std::shared_ptr<::Codec_LedgerEntry::LedgerEntry>);
+      LedgerEntry(std::shared_ptr<::Codec_LedgerEntry::ManyLedgerEntry>,
          unsigned);
-      LedgerEntry(shared_ptr<::Codec_BDVCommand::BDVCallback>,
+      LedgerEntry(std::shared_ptr<::Codec_BDVCommand::BDVCallback>,
          unsigned, unsigned);
 
-      const string&       getID(void) const;
+      const std::string&  getID(void) const;
       int64_t             getValue(void) const;
       uint32_t            getBlockNum(void) const;
       BinaryDataRef       getTxHash(void) const;
@@ -163,7 +163,7 @@ namespace ClientClasses
       bool                isChainedZC(void) const;
       bool                isWitness(void) const;
 
-      vector<BinaryDataRef> getScrAddrList(void) const;
+      std::vector<BinaryDataRef> getScrAddrList(void) const;
 
       bool operator==(const LedgerEntry& rhs);
    };
@@ -172,11 +172,11 @@ namespace ClientClasses
    class NodeChainState
    {
    private:
-      shared_ptr<::google::protobuf::Message> msgPtr_;
+      std::shared_ptr<::google::protobuf::Message> msgPtr_;
       const ::Codec_NodeStatus::NodeChainState* ptr_;
 
    public:
-      NodeChainState(shared_ptr<::Codec_NodeStatus::NodeStatus>);
+      NodeChainState(std::shared_ptr<::Codec_NodeStatus::NodeStatus>);
 
       unsigned getTopBlock(void) const;
       ChainStatus state(void) const;
@@ -193,15 +193,15 @@ namespace ClientClasses
       friend class ::RemoteCallback;
 
    private:
-      shared_ptr<::google::protobuf::Message> msgPtr_;
+      std::shared_ptr<::google::protobuf::Message> msgPtr_;
       const ::Codec_NodeStatus::NodeStatus* ptr_;
       
    private:
-      NodeStatusStruct(shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned);
+      NodeStatusStruct(std::shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned);
 
    public:
       NodeStatusStruct(BinaryDataRef);
-      NodeStatusStruct(shared_ptr<::Codec_NodeStatus::NodeStatus>);
+      NodeStatusStruct(std::shared_ptr<::Codec_NodeStatus::NodeStatus>);
 
       NodeStatus status(void) const;
       bool isSegWitEnabled(void) const;
@@ -215,11 +215,11 @@ namespace ClientClasses
       friend class ::RemoteCallback;
 
    private:
-      shared_ptr<::google::protobuf::Message> msgPtr_;
+      std::shared_ptr<::google::protobuf::Message> msgPtr_;
       const ::Codec_NodeStatus::ProgressData* ptr_;
 
    private:
-      ProgressData(shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned);
+      ProgressData(std::shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned);
 
    public:
       ProgressData(BinaryDataRef);
@@ -228,7 +228,7 @@ namespace ClientClasses
       double progress(void) const;
       unsigned time(void) const;
       unsigned numericProgress(void) const;
-      vector<string> wltIDs(void) const;
+      std::vector<std::string> wltIDs(void) const;
    };
 };
 

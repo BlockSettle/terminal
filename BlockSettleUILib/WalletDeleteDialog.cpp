@@ -16,6 +16,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &wa
    , const std::shared_ptr<WalletsManager> &walletsMgr
    , const std::shared_ptr<SignContainer> &container
    , std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletDeleteDialog)
@@ -23,6 +24,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &wa
    , walletsManager_(walletsMgr)
    , signingContainer_(container)
    , appSettings_(appSettings)
+   , logger_(logger)
 {
    init();
 
@@ -39,6 +41,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &wallet
    , const std::shared_ptr<WalletsManager> &walletsMgr
    , const std::shared_ptr<SignContainer> &container
    , std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletDeleteDialog)
@@ -46,6 +49,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &wallet
    , walletsManager_(walletsMgr)
    , signingContainer_(container)
    , appSettings_(appSettings)
+   , logger_(logger)
 {
    init();
 
@@ -74,7 +78,8 @@ void WalletDeleteDialog::init()
 void WalletDeleteDialog::deleteHDWallet()
 {
    if (ui_->checkBoxBackup->isChecked()) {
-      if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_, this)) {
+      if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_
+                                 , logger_, this)) {
          BSMessageBox(BSMessageBox::critical, tr("No backup")
             , tr("No backup was created for this wallet - deletion cancelled")).exec();
          reject();

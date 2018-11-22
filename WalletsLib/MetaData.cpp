@@ -354,10 +354,16 @@ bs::wallet::Seed bs::wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &p
 }
 
 
+bs::Wallet::Wallet(const std::shared_ptr<spdlog::logger> &logger)
+   : QObject(nullptr), wallet::MetaData()
+   , spendableBalance_(0), unconfirmedBalance_(0), totalBalance_(0)
+   , updateAddrBalance_(false), updateAddrTxN_(false), logger_(logger)
+{}
+
 bs::Wallet::Wallet()
    : QObject(nullptr), wallet::MetaData()
    , spendableBalance_(0), unconfirmedBalance_(0), totalBalance_(0)
-   , updateAddrBalance_(false), updateAddrTxN_(false)
+   , updateAddrBalance_(false), updateAddrTxN_(false), logger_(nullptr)
 {}
 
 bs::Wallet::~Wallet()
@@ -462,14 +468,25 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
       return false;
    }
    if (updateAddrBalance_) {
-      const auto &cbAddrBalance = [this](std::map<BinaryData, std::vector<uint64_t>> balanceMap) {
-         {
-            QMutexLocker lock(&addrMapsMtx_);
-            for (const auto &balance : balanceMap) {     // std::map::insert doesn't replace elements
-               addressBalanceMap_[balance.first] = std::move(balance.second);
+      const auto &cbAddrBalance = [this]
+         (ReturnMessage<std::map<BinaryData, std::vector<uint64_t>>> balanceMap) {
+         auto bm = balanceMap.get();
+         try {
+            {
+               QMutexLocker lock(&addrMapsMtx_);
+               for (const auto &balance : bm) {     // std::map::insert doesn't replace elements
+                  addressBalanceMap_[balance.first] = std::move(balance.second);
+               }
+               updateAddrBalance_ = false;
             }
-            updateAddrBalance_ = false;
          }
+         catch(std::exception& e) {
+            if(logger_ != nullptr) {
+               logger_->error("[bs::Wallet::getAddrBalance] Return data error ", \
+                  "- {}", e.what());
+            }
+         }
+
          for (const auto &queuedCb : cbBal_) {
             const auto &it = addressBalanceMap_.find(queuedCb.first.id());
             if (it != addressBalanceMap_.end()) {
@@ -511,14 +528,25 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t
       return false;
    }
    if (updateAddrTxN_) {
-      const auto &cbTxN = [this](std::map<BinaryData, uint32_t> txnMap) {
-         {
-            QMutexLocker lock(&addrMapsMtx_);
-            for (const auto &txn : txnMap) {          // std::map::insert doesn't replace elements
-               addressTxNMap_[txn.first] = txn.second;
+      const auto &cbTxN = [this, addr]
+                        (ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
+         try {
+            auto inTxnMap = txnMap.get();
+            {
+               QMutexLocker lock(&addrMapsMtx_);
+               for (const auto &txn : inTxnMap) {          // std::map::insert doesn't replace elements
+                  addressTxNMap_[txn.first] = txn.second;
+               }
+               updateAddrTxN_ = false;
             }
-            updateAddrTxN_ = false;
          }
+         catch(std::exception& e) {
+            if(logger_ != nullptr) {
+               logger_->error("[bs::Wallet::getAddrTxN] Return data error - {} ", \
+                  "- Address {}", e.what(), addr.display().toStdString());
+            }
+         }
+
          for (const auto &queuedCb : cbTxN_) {
             const auto &it = addressTxNMap_.find(queuedCb.first.id());
             if (it != addressTxNMap_.end()) {
@@ -572,33 +600,45 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
          return true;
       }
    }
-   const auto &cbTxOutList = [this, val](std::vector<UTXO> txOutList) {
-      if (utxoAdapter_) {
-         utxoAdapter_->filter(txOutList);
-      }
-      if (val != UINT64_MAX) {
-         uint64_t sum = 0;
-         int cutOffIdx = -1;
-         for (size_t i = 0; i < txOutList.size(); i++) {
-            const auto &utxo = txOutList[i];
-            sum += utxo.getValue();
-            if (sum >= val) {
-               cutOffIdx = i;
-               break;
+
+   const auto &cbTxOutList = [this, val]
+                             (ReturnMessage<std::vector<UTXO>> txOutList) {
+      try {
+         auto txOutListObj = txOutList.get();
+         if (utxoAdapter_) {
+            utxoAdapter_->filter(txOutListObj);
+         }
+         if (val != UINT64_MAX) {
+            uint64_t sum = 0;
+            int cutOffIdx = -1;
+            for (size_t i = 0; i < txOutListObj.size(); i++) {
+               const auto &utxo = txOutListObj[i];
+               sum += utxo.getValue();
+               if (sum >= val) {
+                  cutOffIdx = i;
+                  break;
+               }
+            }
+            if (cutOffIdx >= 0) {
+               txOutListObj.resize(cutOffIdx + 1);
             }
          }
-         if (cutOffIdx >= 0) {
-            txOutList.resize(cutOffIdx + 1);
+         for (const auto &cbPairs : spendableCallbacks_) {
+            if (cbPairs.first != nullptr) {
+               disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onSpendableObjDestroyed()));
+            }
+            for (const auto &cb : cbPairs.second) {
+               cb(txOutListObj);
+            }
          }
       }
-      for (const auto &cbPairs : spendableCallbacks_) {
-         if (cbPairs.first != nullptr) {
-            disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onSpendableObjDestroyed()));
-         }
-         for (const auto &cb : cbPairs.second) {
-            cb(txOutList);
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getSpendableTxOutList] Return data " \
+               "error {} - value {}", e.what(), val);
          }
       }
+
       spendableCallbacks_.clear();
    };
    btcWallet_->getSpendableTxOutListForValue(val, cbTxOutList);
@@ -610,44 +650,55 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
    if (!isBalanceAvailable()) {
       return false;
    }
-   const auto &cbProcess = [this, val, cb](std::vector<UTXO> utxos) -> void {
-      if (utxoAdapter_) {
-         utxoAdapter_->filter(utxos);
-      }
-      std::sort(utxos.begin(), utxos.end(), [](const UTXO &a, const UTXO &b) {
-         return (a.getValue() < b.getValue());
-      });
-
-      int index = utxos.size() - 1;
-      while (index >= 0) {
-         if (utxos[index].getValue() < val) {
-            index++;
-            break;
+   const auto &cbProcess = [this, val, cb]
+                           (ReturnMessage<std::vector<UTXO>> utxos)-> void {
+      try {
+         auto utxosObj = utxos.get();
+         if (utxoAdapter_) {
+            utxoAdapter_->filter(utxosObj);
          }
-         index--;
-      }
-      if ((index >= 0) && (index < utxos.size())) {
-         cb({ utxos[index] });
-         return;
-      }
-      else if (index < 0) {
-         cb({ utxos.front() });
-         return;
-      }
+         std::sort(utxosObj.begin(), utxosObj.end(), [](const UTXO &a, const UTXO &b) {
+            return (a.getValue() < b.getValue());
+         });
 
-      std::vector<UTXO> result;
-      uint64_t sum = 0;
-      index = utxos.size() - 1;
-      while ((index >= 0) && (sum < val)) {  //TODO: needs to be optimized to fill the val more precisely
-         result.push_back(utxos[index]);
-         sum += utxos[index].getValue();
-         index--;
+         int index = utxosObj.size() - 1;
+         while (index >= 0) {
+            if (utxosObj[index].getValue() < val) {
+               index++;
+               break;
+            }
+            index--;
+         }
+         if ((index >= 0) && ((size_t)index < utxosObj.size())) {
+            cb({ utxosObj[index] });
+            return;
+         }
+         else if (index < 0) {
+            cb({ utxosObj.front() });
+            return;
+         }
+
+         std::vector<UTXO> result;
+         uint64_t sum = 0;
+         index = utxosObj.size() - 1;
+         while ((index >= 0) && (sum < val)) {  //TODO: needs to be optimized to fill the val more precisely
+            result.push_back(utxosObj[index]);
+            sum += utxosObj[index].getValue();
+            index--;
+         }
+
+         if (sum < val) {
+            cb({});
+         }
+         else {
+            cb(result);
+         }
       }
-      if (sum < val) {
-         cb({});
-      }
-      else {
-         cb(result);
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getUTXOsToSpend] Return data error " \
+               "- {} - value {}", e.what(), val);
+         }
       }
    };
    btcWallet_->getSpendableTxOutListForValue(val, cbProcess);
@@ -682,15 +733,25 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
          return true;
       }
    }
-   const auto &cbZCList = [this](std::vector<UTXO> utxos) -> void {
-      for (const auto &cbPairs : zcListCallbacks_) {
-         if (cbPairs.first != nullptr) {
-            disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onZCListObjDestroyed()));
-         }
-         for (const auto &cb : cbPairs.second) {
-            cb(utxos);
+   const auto &cbZCList = [this](ReturnMessage<std::vector<UTXO>> utxos)-> void {
+      try {
+         auto inUTXOs = utxos.get();
+         for (const auto &cbPairs : zcListCallbacks_) {
+            if (cbPairs.first != nullptr) {
+               disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onZCListObjDestroyed()));
+            }
+            for (const auto &cb : cbPairs.second) {
+               cb(inUTXOs);
+            }
          }
       }
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getSpendableZCList] Return data error " \
+               "- {}", e.what());
+         }
+      }
+
       zcListCallbacks_.clear();
    };
    btcWallet_->getSpendableZCList(cbZCList);
@@ -702,7 +763,23 @@ bool bs::Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) cons
    if (!isBalanceAvailable()) {
       return false;
    }
-   btcWallet_->getRBFTxOutList(cb);
+
+   // The callback we passed in needs data from Armory. Write a simple callback
+   // that takes Armory's data and uses it in the callback.
+   const auto &cbArmory = [this, cb](ReturnMessage<std::vector<UTXO>> utxos)->void {
+      try {
+         auto inUTXOs = utxos.get();
+         cb(std::move(inUTXOs));
+      }
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getRBFTxOutList] Return data error - " \
+               "{}", e.what());
+         }
+      }
+   };
+
+   btcWallet_->getRBFTxOutList(cbArmory);
    return true;
 }
 
@@ -711,29 +788,42 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
    if (!isBalanceAvailable()) {
       return;
    }
-   const auto &cbBalances = [this, cb](std::vector<uint64_t> balanceVector) {
-      if (balanceVector.size() < 4) {
-         return;
-      }
-      const auto totalBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[0]) / BTCNumericTypes::BalanceDivider;
-      const auto spendableBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[1]) / BTCNumericTypes::BalanceDivider;
-      const auto unconfirmedBalance = static_cast<BTCNumericTypes::balance_type>(balanceVector[2]) / BTCNumericTypes::BalanceDivider;
-      const auto count = balanceVector[3];
+   const auto &cbBalances = [this, cb]
+                    (ReturnMessage<std::vector<uint64_t>> balanceVector)->void {
+      try {
+         auto bv = balanceVector.get();
+         if (bv.size() < 4) {
+            return;
+         }
+         const auto totalBalance =
+            static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
+         const auto spendableBalance =
+            static_cast<BTCNumericTypes::balance_type>(bv[1]) / BTCNumericTypes::BalanceDivider;
+         const auto unconfirmedBalance =
+            static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
+         const auto count = bv[3];
 
-      if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
-         || (unconfirmedBalance_ != unconfirmedBalance)) {
-         updateAddrBalance_ = true;
-         updateAddrTxN_ = true;
-         QMutexLocker lock(&addrMapsMtx_);
-         addrCount_ = count;
-         totalBalance_ = totalBalance;
-         spendableBalance_ = spendableBalance;
-         unconfirmedBalance_ = unconfirmedBalance;
-         emit balanceChanged(GetWalletId(), balanceVector);
+         if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
+            || (unconfirmedBalance_ != unconfirmedBalance)) {
+            updateAddrBalance_ = true;
+            updateAddrTxN_ = true;
+            QMutexLocker lock(&addrMapsMtx_);
+            addrCount_ = count;
+            totalBalance_ = totalBalance;
+            spendableBalance_ = spendableBalance;
+            unconfirmedBalance_ = unconfirmedBalance;
+            emit balanceChanged(GetWalletId(), bv);
+         }
+         emit balanceUpdated(GetWalletId(), bv);
+         if (cb) {
+            cb(bv);
+         }
       }
-      emit balanceUpdated(GetWalletId(), balanceVector);
-      if (cb) {
-         cb(balanceVector);
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::UpdateBalanceFromDB] Return data error " \
+               "- {}", e.what());
+         }
       }
    };
    btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
@@ -754,37 +844,47 @@ bool bs::Wallet::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet
    if (!isBalanceAvailable()) {
       return false;
    }
-   const auto &cb = [this, id, onlyNew, clientCb](std::vector<ClientClasses::LedgerEntry> entries) {
-      if (!onlyNew) {
-         clientCb(this, entries);
-      }
-      else {
-         const auto &histPage = historyCache_.find(id);
-         if (histPage == historyCache_.end()) {
-            clientCb(this, entries);
-         }
-         else if (histPage->second.size() == entries.size()) {
-            clientCb(this, {});
+   const auto &cb = [this, id, onlyNew, clientCb]
+                    (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+      try {
+         auto le = entries.get();
+         if (!onlyNew) {
+            clientCb(this, le);
          }
          else {
-            std::vector<ClientClasses::LedgerEntry> diff;
-            struct comparator {
-               bool operator() (const ClientClasses::LedgerEntry &a, const ClientClasses::LedgerEntry &b) const {
-                  return (a.getTxHash() < b.getTxHash());
+            const auto &histPage = historyCache_.find(id);
+            if (histPage == historyCache_.end()) {
+               clientCb(this, le);
+            }
+            else if (histPage->second.size() == le.size()) {
+               clientCb(this, {});
+            }
+            else {
+               std::vector<ClientClasses::LedgerEntry> diff;
+               struct comparator {
+                  bool operator() (const ClientClasses::LedgerEntry &a, const ClientClasses::LedgerEntry &b) const {
+                     return (a.getTxHash() < b.getTxHash());
+                  }
+               };
+               std::set<ClientClasses::LedgerEntry, comparator> diffSet;
+               diffSet.insert(le.begin(), le.end());
+               for (const auto &entry : histPage->second) {
+                  diffSet.erase(entry);
                }
-            };
-            std::set<ClientClasses::LedgerEntry, comparator> diffSet;
-            diffSet.insert(entries.begin(), entries.end());
-            for (const auto &entry : histPage->second) {
-               diffSet.erase(entry);
+               for (const auto &diffEntry : diffSet) {
+                  diff.emplace_back(diffEntry);
+               }
+               clientCb(this, diff);
             }
-            for (const auto &diffEntry : diffSet) {
-               diff.emplace_back(diffEntry);
-            }
-            clientCb(this, diff);
+         }
+         historyCache_[id] = le;
+      }
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[bs::Wallet::getHistoryPage] Return data " \
+               "error - {} - ID {}", e.what(), id);
          }
       }
-      historyCache_[id] = entries;
    };
    btcWallet_->getHistoryPage(id, cb);
    return true;

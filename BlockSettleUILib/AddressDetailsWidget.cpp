@@ -34,6 +34,7 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
 {
    armory_ = armory;
    logger_ = inLogger;
+   dummyWallet_.setLogger(inLogger);
    connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
 }
 
@@ -42,6 +43,9 @@ void AddressDetailsWidget::setAddrVal(const bs::Address& inAddrVal) {
 }
 
 void AddressDetailsWidget::loadWallet() {
+   // In case we've been here earlier, clear all the text.
+   clearFields();
+
    // Armory can't directly take an address and return all the required data.
    // Work around this by creating a dummy wallet, adding the explorer address,
    // registering the wallet, and getting the required data.
@@ -208,16 +212,26 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate) {
    // Callback to process ledger entries (pages) from the ledger delegate. Gets
    // Tx entries from Armory.
    const auto &cbLedger = [this, cbCollectTXs]
-                          (std::vector<ClientClasses::LedgerEntry> entries) {
-      // Get the hash and TXEntry object for each relevant Tx hash.
-      for(const auto &entry : entries) {
-         BinaryData searchHash(entry.getTxHash());
-         const auto &itTX = txMap_.find(searchHash);
-         if(itTX == txMap_.end()) {
-            txHashSet_.insert(searchHash);
-            txEntryHashSet_[searchHash] = bs::convertTXEntry(entry);
+                          (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) {
+      try {
+         auto le = entries.get();
+         // Get the hash and TXEntry object for each relevant Tx hash.
+         for(const auto &entry : le) {
+            BinaryData searchHash(entry.getTxHash());
+            const auto &itTX = txMap_.find(searchHash);
+            if(itTX == txMap_.end()) {
+               txHashSet_.insert(searchHash);
+               txEntryHashSet_[searchHash] = bs::convertTXEntry(entry);
+            }
          }
       }
+      catch(std::exception& e) {
+         if(logger_ != nullptr) {
+            logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
+               "- {}", e.what());
+         }
+      }
+
       if(!txHashSet_.empty()) {
          armory_->getTXsByHash(txHashSet_, cbCollectTXs);
       }
@@ -236,9 +250,6 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
    }
 
    logger_->debug("[AddressDetailsWidget::OnRefresh] get refresh command");
-
-   // In case we've been here earlier, clear all the text.
-   clearFields();
 
    ui_->addressId->setText(addrVal_.display());
    // Once this callback runs, the data is safe to grab.

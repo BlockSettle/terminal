@@ -6,14 +6,15 @@ MarketDataProvider::MarketDataProvider(const std::shared_ptr<spdlog::logger>& lo
    : logger_{logger}
 {}
 
-void MarketDataProvider::SubscribeToMD()
+void MarketDataProvider::SubscribeToMD(const std::string &host, const std::string &port)
 {
-   emit UserWantToConnectToMD();
+   emit UserWantToConnectToMD(host, port);
 }
 
-void MarketDataProvider::MDLicenseAccepted()
+void MarketDataProvider::MDLicenseAccepted(const std::string &host, const std::string &port)
 {
-   logger_->debug("[MarketDataProvider::MDLicenseAccepted] user accepted MD agreement. Start connection");
+   logger_->debug("[MarketDataProvider::MDLicenseAccepted] user accepted MD agreement. Start connection to {}:{}"
+      , host, port);
 
-   StartMDConnection();
+   StartMDConnection(host, port);
 }

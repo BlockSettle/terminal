@@ -143,7 +143,7 @@ public:
 
    bool add_pair(const std::string& key, std::shared_ptr<JSON_value> val)
    {
-      auto&& keyval = std::make_pair(std::move(JSON_string(key)), val);
+      auto&& keyval = make_pair(std::move(JSON_string(key)), val);
 
       auto insert_iter = keyval_pairs_.insert(std::move(keyval));
       return insert_iter.second;

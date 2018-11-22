@@ -26,11 +26,11 @@ enum SpendScriptType
 };
 
 ////
-class ScriptRecipientException : public runtime_error
+class ScriptRecipientException : public std::runtime_error
 {
 public:
-   ScriptRecipientException(const string& err) :
-      runtime_error(err)
+   ScriptRecipientException(const std::string& err) :
+      std::runtime_error(err)
    {}
 };
 
@@ -67,7 +67,7 @@ public:
    void setValue(uint64_t val) { value_ = val; }
 
    //static
-   static shared_ptr<ScriptRecipient> deserialize(const BinaryDataRef& dataPtr);
+   static std::shared_ptr<ScriptRecipient> deserialize(const BinaryDataRef& dataPtr);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ public:
       bw.put_var_int(rawScript.getSize());
       bw.put_BinaryData(rawScript);
 
-      script_ = move(bw.getData());
+      script_ = std::move(bw.getData());
    }
 
    //return size is static
@@ -124,7 +124,7 @@ public:
       bw.put_var_int(rawScript.getSize());
       bw.put_BinaryData(rawScript);
 
-      script_ = move(bw.getData());
+      script_ = std::move(bw.getData());
    }
 
    //return size is static
@@ -155,7 +155,7 @@ public:
       bw.put_var_int(rawScript.getSize());
       bw.put_BinaryData(rawScript);
 
-      script_ = move(bw.getData());
+      script_ = std::move(bw.getData());
    }
 
    size_t getSize(void) const { return 31; }
@@ -185,7 +185,7 @@ public:
       bw.put_var_int(rawScript.getSize());
       bw.put_BinaryData(rawScript);
 
-      script_ = move(bw.getData());
+      script_ = std::move(bw.getData());
    }
 
    size_t getSize(void) const { return 32; }
@@ -215,7 +215,7 @@ public:
       bw.put_var_int(rawScript.getSize());
       bw.put_BinaryData(rawScript);
 
-      script_ = move(bw.getData());
+      script_ = std::move(bw.getData());
    }
 
    size_t getSize(void) const { return 43; }
@@ -297,7 +297,7 @@ public:
       bw.put_var_int(binScript_.getSize());
       bw.put_BinaryData(binScript_);
 
-      script_ = move(bw.getData());
+      script_ = std::move(bw.getData());
    }
 
    size_t getSize(void) const

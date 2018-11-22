@@ -19,7 +19,7 @@ class ArmoryConnection;
 class AddressVerificationPool
 {
 public:
-   using verificationCompletedCallback = function<void (AddressVerificationState state)>;
+   using verificationCompletedCallback = std::function<void (AddressVerificationState state)>;
 public:
    // pool Id will be used as wallet ID in verificator, as well as identifier in log
    AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger, const std::string& poolId

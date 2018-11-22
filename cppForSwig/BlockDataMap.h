@@ -25,12 +25,10 @@
 
 #include <map>
 
-using namespace std;
-
 #include "BlockObj.h"
 #include "BinaryData.h"
 
-#define OffsetAndSize pair<size_t, size_t>
+#define OffsetAndSize std::pair<size_t, size_t>
 
 ////////////////////////////////////////////////////////////////////////////////
 struct BCTX
@@ -43,9 +41,9 @@ struct BCTX
 
    bool usesWitness_ = false;
 
-   vector<OffsetAndSize> txins_;
-   vector<OffsetAndSize> txouts_;
-   vector<OffsetAndSize> witnesses_;
+   std::vector<OffsetAndSize> txins_;
+   std::vector<OffsetAndSize> txouts_;
+   std::vector<OffsetAndSize> witnesses_;
 
    mutable BinaryData txHash_;
 
@@ -93,13 +91,13 @@ struct BCTX
    {
       getHash();
 
-      return move(txHash_);
+      return std::move(txHash_);
    }
 
    BinaryDataRef getTxInRef(unsigned inputId) const
    {
       if (inputId >= txins_.size())
-         throw range_error("txin index overflow");
+         throw std::range_error("txin index overflow");
 
       auto txinIter = txins_.cbegin() + inputId;
 
@@ -110,7 +108,7 @@ struct BCTX
    BinaryDataRef getTxOutRef(unsigned outputId) const
    {
       if (outputId >= txouts_.size())
-         throw range_error("txout index overflow");
+         throw std::range_error("txout index overflow");
 
       auto txoutIter = txouts_.cbegin() + outputId;
 
@@ -118,21 +116,21 @@ struct BCTX
          (*txoutIter).second);
    }
 
-   static shared_ptr<BCTX> parse(
+   static std::shared_ptr<BCTX> parse(
       BinaryRefReader brr, unsigned id = UINT32_MAX)
    {
       return parse(brr.getCurrPtr(), brr.getSizeRemaining(), id);
    }
 
-   static shared_ptr<BCTX> parse(
+   static std::shared_ptr<BCTX> parse(
       const uint8_t* data, size_t len, unsigned id=UINT32_MAX)
    {
-      vector<size_t> offsetIns, offsetOuts, offsetsWitness;
+      std::vector<size_t> offsetIns, offsetOuts, offsetsWitness;
       auto txlen = BtcUtils::TxCalcLength(
          data, len,
          &offsetIns, &offsetOuts, &offsetsWitness);
 
-      auto txPtr = make_shared<BCTX>(data, txlen);
+      auto txPtr = std::make_shared<BCTX>(data, txlen);
 
       //create BCTX object and fill it up
       txPtr->version_ = READ_UINT32_LE(data);
@@ -146,13 +144,13 @@ struct BCTX
       //convert offsets to offset + size pairs
       for (unsigned int y = 0; y < offsetIns.size() - 1; y++)
          txPtr->txins_.push_back(
-         make_pair(
+            std::make_pair(
          offsetIns[y],
          offsetIns[y + 1] - offsetIns[y]));
 
       for (unsigned int y = 0; y < offsetOuts.size() - 1; y++)
          txPtr->txouts_.push_back(
-         make_pair(
+            std::make_pair(
          offsetOuts[y],
          offsetOuts[y + 1] - offsetOuts[y]));
 
@@ -160,7 +158,7 @@ struct BCTX
       {
          for (unsigned int y = 0; y < offsetsWitness.size() - 1; y++)
             txPtr->witnesses_.push_back(
-            make_pair(
+               std::make_pair(
             offsetsWitness[y],
             offsetsWitness[y + 1] - offsetsWitness[y]));
       }
@@ -187,11 +185,11 @@ struct BCTX
 class BlockData
 {
 private:
-   shared_ptr<BlockHeader> headerPtr_;
+   std::shared_ptr<BlockHeader> headerPtr_;
    const uint8_t* data_ = nullptr;
    size_t size_ = SIZE_MAX;
 
-   vector<shared_ptr<BCTX>> txns_;
+   std::vector<std::shared_ptr<BCTX>> txns_;
 
    unsigned fileID_ = UINT32_MAX;
    size_t offset_ = SIZE_MAX;
@@ -209,8 +207,8 @@ public:
    {}
 
    void deserialize(const uint8_t* data, size_t size,
-      const shared_ptr<BlockHeader>, 
-      function<unsigned int(const BinaryData&)> getID, bool checkMerkle,
+      const std::shared_ptr<BlockHeader>,
+      std::function<unsigned int(const BinaryData&)> getID, bool checkMerkle,
       bool keepHashes);
 
    bool isInitialized(void) const
@@ -218,12 +216,12 @@ public:
       return (data_ != nullptr);
    }
 
-   const vector<shared_ptr<BCTX>>& getTxns(void) const
+   const std::vector<std::shared_ptr<BCTX>>& getTxns(void) const
    {
       return txns_;
    }
 
-   const shared_ptr<BlockHeader> header(void) const
+   const std::shared_ptr<BlockHeader> header(void) const
    {
       return headerPtr_;
    }
@@ -236,13 +234,13 @@ public:
    void setFileID(unsigned fileid) { fileID_ = fileid; }
    void setOffset(size_t offset) { offset_ = offset; }
 
-   shared_ptr<BlockHeader> createBlockHeader(void) const;
+   std::shared_ptr<BlockHeader> createBlockHeader(void) const;
    const BinaryData& getHash(void) const { return blockHash_; }
    
-   TxFilter<TxFilterType> computeTxFilter(const vector<BinaryData>&) const;
+   TxFilter<TxFilterType> computeTxFilter(const std::vector<BinaryData>&) const;
    const TxFilter<TxFilterType>& getTxFilter(void) const { return txFilter_; }
    uint32_t uniqueID(void) const { return uniqueID_; }
-   shared_ptr<BlockHeader> getHeaderPtr(void) const { return headerPtr_; }
+   std::shared_ptr<BlockHeader> getHeaderPtr(void) const { return headerPtr_; }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -279,17 +277,17 @@ struct BlockOffset
 class BlockFiles
 {
 private:
-   map<uint32_t, string> filePaths_;
-   const string folderPath_;
+   std::map<uint32_t, std::string> filePaths_;
+   const std::string folderPath_;
    size_t totalBlockchainBytes_ = 0;
 
 public:
-   BlockFiles(const string& folderPath) :
+   BlockFiles(const std::string& folderPath) :
       folderPath_(folderPath)
    {}
 
    void detectAllBlockFiles(void);
-   const string& folderPath(void) const { return folderPath_; }
+   const std::string& folderPath(void) const { return folderPath_; }
    const unsigned fileCount(void) const { return filePaths_.size(); }
 };
 
@@ -303,10 +301,10 @@ private:
    uint8_t* fileMap_ = nullptr;
    size_t size_ = 0;
 
-   atomic<int> useCounter_;
+   std::atomic<int> useCounter_;
 
 public:
-   BlockDataFileMap(const string& filename);
+   BlockDataFileMap(const std::string& filename);
    ~BlockDataFileMap(void);
 
    const uint8_t* getPtr() const
@@ -321,27 +319,27 @@ public:
 class BlockDataLoader
 {
 private:     
-   const string path_;
-   const string prefix_;
+   const std::string path_;
+   const std::string prefix_;
 
 private:   
 
    BlockDataLoader(const BlockDataLoader&) = delete; //no copies
 
-   uint32_t nameToIntID(const string& filename);
-   string intIDToName(uint32_t fileid);
+   uint32_t nameToIntID(const std::string& filename);
+   std::string intIDToName(uint32_t fileid);
 
-   shared_ptr<BlockDataFileMap>
+   std::shared_ptr<BlockDataFileMap>
       getNewBlockDataMap(uint32_t fileid);
 
 public:
-   BlockDataLoader(const string& path);
+   BlockDataLoader(const std::string& path);
 
    ~BlockDataLoader(void)
    {}
 
-   shared_ptr<BlockDataFileMap> get(const string& filename);
-   shared_ptr<BlockDataFileMap> get(uint32_t fileid);
+   std::shared_ptr<BlockDataFileMap> get(const std::string& filename);
+   std::shared_ptr<BlockDataFileMap> get(uint32_t fileid);
 };
 
 #endif

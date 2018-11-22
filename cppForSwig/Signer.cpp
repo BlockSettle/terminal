@@ -11,6 +11,8 @@
 #include "Transactions.h"
 #include "make_unique.h"
 
+using namespace std;
+
 StackItem::~StackItem()
 {}
 
