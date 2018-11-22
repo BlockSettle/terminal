@@ -67,8 +67,7 @@ namespace bs {
          // removeOld: remove missed keys comparing encKey field without asking for all old keys
          // (newPass password fields should be empty). Used with multiple Auth eID devices.
          // dryRun: check that old password valid. No password change happens.
-         bool changePassword(const std::shared_ptr<spdlog::logger> &logger
-            , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank
+         bool changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank
             , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun);
 
          void RegisterWallet(const std::shared_ptr<ArmoryConnection> &, bool asNew = false);

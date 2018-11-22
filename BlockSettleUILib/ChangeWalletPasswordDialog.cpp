@@ -295,7 +295,7 @@ void ChangeWalletPasswordDialog::changePassword()
          , addNew_, removeOld_, false);
    }
    else {
-      bool result = wallet_->changePassword(logger_, newPasswordData_, newKeyRank_, oldKey_
+      bool result = wallet_->changePassword(newPasswordData_, newKeyRank_, oldKey_
          , addNew_, removeOld_, false);
       onPasswordChanged(wallet_->getWalletId(), result);
    }
