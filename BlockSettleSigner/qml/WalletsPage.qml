@@ -39,6 +39,22 @@ Item {
         return walletInfo
     }
 
+    function exportWalletDialog(wallet) {
+        var dlg = Qt.createQmlObject("WalletExportWoDialog {}", mainWindow, "exportWoDlg")
+        dlg.wallet = wallet
+        dlg.woWalletFileName = walletsProxy.getWoWalletFile(dlg.wallet.id)
+        dlg.exportDir = decodeURIComponent(signerParams.walletsDir)
+        console.log("exportWatchingOnly id:" + wallet.id + " name:" + wallet.name + " encType:" + wallet.encType + " encKey:" + wallet.encKey)
+        dlg.accepted.connect(function() {
+            console.log("exportWatchingOnly id:" + dlg.wallet.id + " dir:" + dlg.exportDir + " pwd:" + dlg.password)
+            if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
+                ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
+                                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
+            }
+        })
+        dlg.open()
+    }
+
     ScrollView {
         id: scrollView
         anchors.fill: parent
@@ -92,6 +108,10 @@ Item {
                         text:   qsTr("New Wallet")
                         onClicked: {
 
+                            //var walletInfo2 = getWalletById(walletsView, qsTr("28xFzXjFU"))
+                            //var walletInfo2 = getCurrentWallet(walletsView)
+                            //console.log("id:" + walletInfo2.id + " name:" + walletInfo2.name + " rootId:" + walletInfo2.rootId + " encType:" + walletInfo2.encType + " encKey:" + walletInfo2.encKey)
+
                             // let user create a new wallet or import one from file
                             var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "WalletNewDialog")
                             dlgNew.accepted.connect(function() {
@@ -112,9 +132,18 @@ Item {
                                         }
 
                                         dlgPwd.accepted.connect(function(){
+                                            // create the wallet
+
                                             if (walletsProxy.createWallet(dlgPwd.isPrimary, dlgPwd.password, dlgPwd.seed)) {
-                                                ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created")
-                                                                         .arg(dlgPwd.seed.walletName))
+                                                ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created").arg(dlgPwd.seed.walletName))
+                                                // open export dialog to give user a chance to export the wallet
+                                                walletInfo.id = dlgPwd.seed.walletId
+                                                walletInfo.rootId = dlgPwd.seed.walletId
+                                                walletInfo.name = dlgPwd.seed.walletName
+                                                walletInfo.encType = dlgPwd.encType
+                                                walletInfo.encKey = dlgPwd.encKey
+                                                console.log("createWallet id:" + dlgPwd.seed.walletId + " name:" + dlgPwd.seed.walletName + " encType:" + dlgPwd.encType)
+                                                exportWalletDialog(walletInfo)
                                             }
                                         })
 
@@ -218,17 +247,7 @@ Item {
                         text:   qsTr("Export Watching Only Wallet")
                         enabled:    isHdRoot()
                         onClicked: {
-                            var dlg = Qt.createQmlObject("WalletExportWoDialog {}", mainWindow, "exportWoDlg")
-                            dlg.wallet = getCurrentWallet(walletsView)
-                            dlg.woWalletFileName = walletsProxy.getWoWalletFile(dlg.wallet.id)
-                            dlg.exportDir = decodeURIComponent(signerParams.walletsDir)
-                            dlg.accepted.connect(function() {
-                                if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
-                                    ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
-                                                             .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
-                                }
-                            })
-                            dlg.open()
+                            exportWalletDialog(getCurrentWallet(walletsView))
                         }
                     }
                 }

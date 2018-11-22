@@ -14,11 +14,12 @@ CustomDialog {
     property string password
     property bool isPrimary:    false
     property WalletSeed seed
+    property int encType
+    property string encKey
     property AuthSignWalletObject  authSign
-    property bool acceptable:   tfName.text.length &&
-                                newPasswordWithConfirm.acceptableInput
+    property bool acceptable:   tfName.text.length && newPasswordWithConfirm.acceptableInput
     property int inputLabelsWidth: 110
-
+    property int curPage: WalletCreateDialog.Page.Main
     id:root
     implicitWidth: 400
     implicitHeight: mainLayout.implicitHeight
@@ -27,6 +28,11 @@ CustomDialog {
         tfName.text = qsTr("Wallet #%1").arg(walletsProxy.walletNames.length + 1);
     }
 
+    enum Page {
+        Main = 1,
+        PasswordNotice = 2,
+        AuthNotice = 3
+    }
 
     FocusScope {
         anchors.fill: parent
@@ -52,6 +58,7 @@ CustomDialog {
             spacing: 10
             width: parent.width
             id: mainLayout
+            visible: curPage === WalletCreateDialog.Page.Main
 
             RowLayout{
                 CustomHeaderPanel{
@@ -79,7 +86,8 @@ CustomDialog {
                 CustomRadioButton {
                     id: rbMainNet
                     text:   qsTr("MainNet")
-                    checked:    seed.mainNet
+                    Layout.leftMargin: inputLabelsWidth
+                    checked: seed ? seed.mainNet : false
                     onClicked: {
                         seed.mainNet = true
                     }
@@ -87,7 +95,7 @@ CustomDialog {
                 CustomRadioButton {
                     id: rbTestNet
                     text:   qsTr("TestNet")
-                    checked:    seed.testNet
+                    checked: seed ? seed.testNet : false
                     onClicked: {
                         seed.testNet = true
                     }
@@ -105,7 +113,25 @@ CustomDialog {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     Layout.fillWidth: true
-                    text:   qsTr("Wallet Name")
+                    text:   qsTr("Wallet ID")
+                }
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: seed ? seed.walletId : qsTr("")
+                }
+            }
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
+                    Layout.minimumWidth: inputLabelsWidth
+                    Layout.preferredWidth: inputLabelsWidth
+                    Layout.maximumWidth: inputLabelsWidth
+                    Layout.fillWidth: true
+                    text:   qsTr("Name")
                 }
                 CustomTextInput {
                     id: tfName
@@ -128,7 +154,7 @@ CustomDialog {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     Layout.fillWidth: true
-                    text:   qsTr("Wallet Description")
+                    text:   qsTr("Description")
                 }
                 CustomTextInput {
                     id: tfDesc
@@ -175,6 +201,7 @@ CustomDialog {
                     id: rbPassword
                     text:   qsTr("Password")
                     checked:    true
+                    Layout.leftMargin: inputLabelsWidth
                 }
                 CustomRadioButton {
                     id: rbAuth
@@ -186,10 +213,10 @@ CustomDialog {
                 id: newPasswordWithConfirm
                 visible:    rbPassword.checked
                 columnSpacing: 10
-                passwordLabelTxt: qsTr("Wallet Password")
-                passwordInputPlaceholder: qsTr("New Wallet Password")
+                passwordLabelTxt: qsTr("Password")
+                passwordInputPlaceholder: qsTr("Wallet Password")
                 confirmLabelTxt: qsTr("Confirm Password")
-                confirmInputPlaceholder: qsTr("Confirm New Wallet Password")
+                confirmInputPlaceholder: qsTr("Confirm Wallet Password")
             }
 
             RowLayout {
@@ -208,8 +235,8 @@ CustomDialog {
                     text:   !authSign ? qsTr("Sign with Auth eID") : authSign.status
                     enabled:    !authSign && tiAuthId.text.length
                     onClicked: {
-                        seed.encType = WalletInfo.Auth
-                        seed.encKey = tiAuthId.text
+                        encType = WalletInfo.Auth
+                        encKey = tiAuthId.text
                         authSign = auth.signWallet(tiAuthId.text, qsTr("Password for wallet %1").arg(tfName.text),
                                                               seed.walletId)
                         btnAuth.enabled = false
@@ -251,7 +278,7 @@ CustomDialog {
                         text:   qsTr("Continue")
                         enabled:    acceptable
                         onClicked: {
-                            accept()
+                            curPage = WalletCreateDialog.Page.PasswordNotice
                         }
                     }
                 }
@@ -272,6 +299,89 @@ CustomDialog {
                 }
             }
         }
+
+        ColumnLayout {
+            anchors.fill: parent
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            spacing: 10
+            width: parent.width
+            visible: curPage === WalletCreateDialog.Page.PasswordNotice
+            id: passwordNotice
+
+            RowLayout{
+                CustomHeaderPanel{
+                    Layout.preferredHeight: 40
+                    Layout.fillWidth: true
+                    text:  qsTr("Notice!")
+                }
+            }
+            CustomHeader {
+                text:   qsTr("Please take care of your assets!")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
+            CustomLabel {
+                Layout.fillWidth: true
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                text: qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! Your Wallet and any backups are useless if you lose them. \n\nA backup protects your wallet forever, against hard drive loss and losing your passphrase. It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. Please make a backup and keep it in a safe place.\n\nPlease enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!")
+            }
+            BSTextInput {
+                id: passwordNoticeConfirm
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                focus: true
+                echoMode: TextField.Password
+                placeholderText: qsTr("Password")
+                Layout.fillWidth: true
+            }
+            Rectangle {
+                Layout.fillHeight: true
+            }
+
+            CustomButtonBar {
+                implicitHeight: childrenRect.height
+                implicitWidth: root.width
+
+                Flow {
+                    spacing: 5
+                    padding: 5
+                    height: childrenRect.height + 10
+                    width: parent.width - buttonRowLeft - 5
+                    LayoutMirroring.enabled: true
+                    LayoutMirroring.childrenInherit: true
+                    anchors.left: parent.left   // anchor left becomes right
+
+                    CustomButtonPrimary {
+                        Layout.fillWidth: true
+                        text:   qsTr("Continue")
+                        enabled:    newPasswordWithConfirm.text === passwordNoticeConfirm.text
+                        onClicked: {
+                            accept()
+                        }
+                    }
+                }
+                Flow {
+                    spacing: 5
+                    padding: 5
+                    height: childrenRect.height + 10
+
+                    CustomButton {
+                        Layout.fillWidth: true
+                        text:   qsTr("Cancel")
+                        onClicked: {
+                            curPage = WalletCreateDialog.Page.Main
+                        }
+                    }
+                }
+            }
+        }
     }
 
     function toHex(str) {
@@ -287,12 +397,14 @@ CustomDialog {
         seed.walletDesc = tfDesc.text
         isPrimary = cbPrimary.checked
         if (rbPassword.checked) {
-            seed.encType = WalletInfo.Password
+            encType = WalletInfo.Password
             password = newPasswordWithConfirm.text
         }
     }
 
     onRejected: {
-        authSign.cancel()
+        if (authSign) {
+            authSign.cancel()
+        }
     }
 }
