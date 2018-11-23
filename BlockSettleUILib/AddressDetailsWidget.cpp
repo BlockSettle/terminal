@@ -128,17 +128,7 @@ void AddressDetailsWidget::loadTransactions()
 
 void AddressDetailsWidget::onNewBlock(unsigned int)
 {
-   CustomTreeWidget *tree = ui_->treeAddressTransactions;
-   int index = 0;
-   for (const auto &curTXEntry : txEntryHashSet_) {
-      if (index >= tree->topLevelItemCount()) {
-         break;
-      }
-      auto item = tree->topLevelItem(index++);
-      item->setText(colConfs,
-         QString::number(armory_->getConfirmationsNumber(curTXEntry.second.blockNum)));
-      setConfirmationColor(item);
-   }
+   loadTransactions();
 }
 
 // This function sets the confirmation column to the correct color based
