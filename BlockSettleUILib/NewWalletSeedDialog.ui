@@ -56,9 +56,6 @@
          <property name="title">
           <string>SAVE YOUR PRIVATE ROOT KEY</string>
          </property>
-         <property name="h1" stdset="0">
-          <bool>true</bool>
-         </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="spacing">
            <number>9</number>
@@ -83,9 +80,6 @@
 Remember to keep your backup in a secure offline environment. The backup is unencrypted and will allow anyone who holds the backup to recover the entire wallet. Secure custodianship is critical!</string>
             </property>
             <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-            <property name="h1" stdset="0">
              <bool>true</bool>
             </property>
            </widget>
@@ -161,9 +155,6 @@ Remember to keep your backup in a secure offline environment. The backup is unen
          <property name="title">
           <string>CONFIRM ROOT PRIVATE KEY</string>
          </property>
-         <property name="h1" stdset="0">
-          <bool>true</bool>
-         </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <property name="leftMargin">
            <number>0</number>
@@ -185,9 +176,6 @@ Remember to keep your backup in a secure offline environment. The backup is unen
 To make sure that you have properly saved your RPK, please retype the RPK here.</string>
             </property>
             <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-            <property name="h1" stdset="0">
              <bool>true</bool>
             </property>
            </widget>
@@ -212,34 +200,20 @@ To make sure that you have properly saved your RPK, please retype the RPK here.<
               <property name="text">
                <string>Line 2:</string>
               </property>
-              <property name="h1" stdset="0">
-               <bool>true</bool>
-              </property>
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QLineEdit" name="lineEditLine2">
-              <property name="h1" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
+             <widget class="QLineEdit" name="lineEditLine2"/>
             </item>
             <item row="0" column="0">
              <widget class="QLabel" name="label_3">
               <property name="text">
                <string>Line 1:</string>
               </property>
-              <property name="h1" stdset="0">
-               <bool>true</bool>
-              </property>
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QLineEdit" name="lineEditLine1">
-              <property name="h1" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
+             <widget class="QLineEdit" name="lineEditLine1"/>
             </item>
            </layout>
           </item>
@@ -376,6 +350,9 @@ To make sure that you have properly saved your RPK, please retype the RPK here.<
          <string>Continue</string>
         </property>
         <property name="default">
+         <bool>true</bool>
+        </property>
+        <property name="flat">
          <bool>true</bool>
         </property>
        </widget>
