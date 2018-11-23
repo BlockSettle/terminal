@@ -211,7 +211,6 @@ void AddressVerificator::doValidateAddress(const std::shared_ptr<AddressVerifica
    }
    if (!state->getInputFromBS) {
       state->currentState = state->nbTransactions ? AddressVerificationState::Revoked : AddressVerificationState::NotSubmitted;
-
    }
    else if (state->value <= 0) {
       state->currentState = AddressVerificationState::Revoked;
