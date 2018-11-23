@@ -238,7 +238,7 @@ void CreateTransactionDialog::onTransactionUpdated()
    labelEstimatedFee()->setText(UiUtils::displayAmount(summary.totalFee));
    labelTotalAmount()->setText(UiUtils::displayAmount(UiUtils::amountToBtc(summary.balanceToSpend) + UiUtils::amountToBtc(summary.totalFee)));
    if (labelTxSize()) {
-      labelTxSize()->setText(QString::number(summary.transactionSize) + tr(" bytes"));
+      labelTxSize()->setText(QString::number(summary.txVirtSize) + tr(" bytes"));
    }
 
    if (feePerByteLabel() != nullptr) {
@@ -359,7 +359,7 @@ bool CreateTransactionDialog::CreateTransaction()
          txReq_.fee = originalFee_ + 1;
       }
 
-      const float newFeePerByte = (float)txReq_.fee / (float)txReq_.estimateTxSize();
+      const float newFeePerByte = (float)txReq_.fee / (float)txReq_.estimateTxVirtSize();
       if(newFeePerByte < originalFeePerByte_) {
          BSMessageBox(BSMessageBox::info, tr("Fee per byte is too low"),
             tr("Due to RBF requirements, the current fee per byte (%1) will " \

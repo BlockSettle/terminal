@@ -194,7 +194,7 @@ bool TransactionData::UpdateTransactionData()
 
          usedUTXO_ = selection.utxoVec_;
 
-         summary_.transactionSize = selection.size_;
+         summary_.txVirtSize = selection.size_;
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
 
@@ -206,7 +206,7 @@ bool TransactionData::UpdateTransactionData()
          usedUTXO_ = transactions;
 
          if (maxAmount) {
-            summary_.transactionSize = usedUTXO_.size();
+            summary_.txVirtSize = usedUTXO_.size();
             summary_.totalFee = availableBalance - payment.spendVal_;
             totalFee_ = summary_.totalFee;
 //            summary_.feePerByte = feePerByte_;
@@ -228,7 +228,7 @@ bool TransactionData::UpdateTransactionData()
                return false;
             }
 
-            summary_.transactionSize = selection.size_;
+            summary_.txVirtSize = selection.size_;
             summary_.totalFee = selection.fee_;
             summary_.feePerByte = selection.fee_byte_;
 

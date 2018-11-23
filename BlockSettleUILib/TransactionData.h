@@ -40,7 +40,7 @@ public:
       // balanceToSpent - total amount received by recipients
       double   balanceToSpend;
 
-      size_t   transactionSize;
+      size_t   txVirtSize;
       uint64_t totalFee;
       double   feePerByte;
 

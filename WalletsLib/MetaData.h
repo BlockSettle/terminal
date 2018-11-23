@@ -135,7 +135,7 @@ namespace bs {
          bool isValid() const noexcept;
          BinaryData serializeState() const { return getSigner().serializeState(); }
          BinaryData txId() const { return getSigner().getTxId(); }
-         size_t estimateTxSize() const;
+         size_t estimateTxVirtSize() const;
 
       private:
          Signer   getSigner() const;
@@ -150,7 +150,7 @@ namespace bs {
          BinaryData  prevState;
 
          bool isValid() const noexcept;
-         size_t estimateTxSize() const;
+         size_t estimateTxVirtSize() const;
          void addInput(const UTXO &utxo, const std::shared_ptr<bs::Wallet> &wallet) { inputs[utxo] = wallet; }
       };
 
