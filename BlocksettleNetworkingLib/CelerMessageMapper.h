@@ -109,10 +109,8 @@ enum CelerMessageType
 
    PersistenceExceptionType,
 
-   MarketDataRequestRejectDownstreamEventType,
-   MarketDataFullSnapshotDownstreamEventType,
-
-   MarketDataSubscriptionRequestType,
+   MarketStatisticSnapshotDownstreamEventType,
+   MarketStatisticRequestType,
 
    CreateSecurityDefinitionRequestType,
    CreateWarehouseConfigurationRequestType,
