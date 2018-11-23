@@ -9,7 +9,7 @@ CustomDialog {
     property WalletInfo wallet
     property string woWalletFileName
     property string password
-    property bool acceptable: (wallet.encType === WalletInfo.Unencrypted) || tfPassword.text.length || password.length
+    property bool acceptable: wallet ? (wallet.encType === WalletInfo.Unencrypted) || tfPassword.text.length || password.length : false
     property string exportDir:  Qt.resolvedUrl(".")
     property AuthSignWalletObject  authSign
 
@@ -59,7 +59,7 @@ CustomDialog {
                     Layout.preferredHeight: 40
                     id: panelHeader
                     Layout.fillWidth: true
-                    text:  qsTr("Export Watching-Only Copy of %1").arg(wallet.name)
+                    text:  wallet ? qsTr("Export Watching-Only Copy of %1").arg(wallet.name) : ""
                 }
             }
 
@@ -71,7 +71,7 @@ CustomDialog {
                 Layout.rightMargin: 10
 
                 CustomLabel {
-                    visible:    wallet.encType === WalletInfo.Password
+                    visible: wallet ? wallet.encType === WalletInfo.Password : false
                     elide: Label.ElideRight
                     text: qsTr("Password")
                     Layout.minimumWidth: 110
@@ -81,7 +81,7 @@ CustomDialog {
                 }
                 CustomTextInput {
                     id: tfPassword
-                    visible:    wallet.encType === WalletInfo.Password
+                    visible: wallet ? wallet.encType === WalletInfo.Password : false
                     focus: true
                     placeholderText: qsTr("Wallet password")
                     echoMode: TextField.Password
@@ -98,13 +98,13 @@ CustomDialog {
 
                 CustomLabel {
                     id: labelAuth
-                    visible: wallet.encType === WalletInfo.Auth
+                    visible: wallet ? wallet.encType === WalletInfo.Auth : false
                     text: qsTr("Sign with Auth eID")
                 }
                 CustomLabel {
                     id: labelAuthStatus
-                    visible: wallet.encType === WalletInfo.Auth
-                    text: authSign.status
+                    visible: wallet ? wallet.encType === WalletInfo.Auth : false
+                    text: authSign ? authSign.status : ""
                 }
             }
 

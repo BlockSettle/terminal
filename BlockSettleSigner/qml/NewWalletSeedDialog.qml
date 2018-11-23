@@ -19,7 +19,7 @@ CustomDialog {
         else {
             btnContinue.enabled = false;
         }
-        btnContinue.enabled = true; // for testing only, MUST REMOVE
+        //btnContinue.enabled = true; // for testing only, MUST REMOVE
     }
 
     InfoBanner {
