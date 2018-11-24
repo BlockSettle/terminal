@@ -17,7 +17,13 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
    QCommandLineParser parser;
 
    for (SettingsParam *param : params_) {
-      parser.addOption({param->name(), param->desc(), param->name()});
+      // Current param value is default value, show it in the help
+      QString defaultValueHelp = (*param)();
+      if (defaultValueHelp.isEmpty()) {
+         defaultValueHelp = QLatin1String("<empty>");
+      }
+      QString desc = QString(QLatin1String("%1. Default: %2")).arg(param->desc()).arg(defaultValueHelp);
+      parser.addOption({param->name(), desc, param->name()});
    }
 
    parser.addHelpOption();
