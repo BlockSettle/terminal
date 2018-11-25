@@ -1081,7 +1081,6 @@ void StoredTxOut::unserializeDBValue(BinaryRefReader & brr)
    txVersion_   =                  bitunpack.getBits(2);
    spentness_   = (TXOUT_SPENTNESS)bitunpack.getBits(2);
    isCoinbase_  =                  bitunpack.getBit();
-   auto dbType  = (ARMORY_DB_TYPE) bitunpack.getBits(2);
 
    unserialize(brr);
 
@@ -2211,7 +2210,6 @@ void StoredSubHistory::compressMany(
             heightPtr[0] = keyptr[2];
             heightPtr[1] = keyptr[1];
             heightPtr[2] = keyptr[0];
-            auto output_dupid = keyptr[3];
 
             if (output_height != subssh.second->height_)
             {

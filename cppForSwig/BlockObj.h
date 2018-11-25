@@ -41,12 +41,12 @@ template<typename T> class TxFilter
    template <typename U> friend class TxFilterPool;
 
 private:
-   std::vector<T> filterVector_;
-   const uint8_t* filterPtr_ = nullptr;
-   
+   bool isValid_ = false;
    uint32_t blockKey_ = UINT32_MAX;
    size_t len_ = SIZE_MAX;
-   bool isValid_ = false;
+
+   std::vector<T> filterVector_;
+   const uint8_t* filterPtr_ = nullptr;
 
 private:
    void update(const BinaryData& hash)
@@ -123,15 +123,17 @@ public:
    }
 
    TxFilter(const TxFilter<T>& obj) :
+      isValid_(obj.isValid_),
       blockKey_(obj.blockKey_), len_(obj.len_),
-      isValid_(obj.isValid_), filterPtr_(obj.filterPtr_)
+      filterPtr_(obj.filterPtr_)
    {
       filterVector_ = obj.filterVector_;
    }
 
    TxFilter(TxFilter<T>&& mv) :
+      isValid_(mv.isValid_),
       blockKey_(mv.blockKey_), len_(mv.len_),
-      isValid_(mv.isValid_), filterPtr_(mv.filterPtr_)
+      filterPtr_(mv.filterPtr_)
    {
       filterVector_ = move(mv.filterVector_);
    }

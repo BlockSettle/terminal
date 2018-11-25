@@ -88,7 +88,11 @@ struct lws_context* WebSocketClient::init()
 
    const char *prot, *p;
    char path[300];
-   lws_parse_uri((char*)addr_.c_str(), &prot, &i.address, &i.port, &p);
+   if(lws_parse_uri((char*)addr_.c_str(), &prot, &i.address, &i.port, &p) !=0)
+   {
+      LOGERR << "failed to parse server URI";
+      throw LWS_Error("failed to parse server URI");
+   }
 
    path[0] = '/';
    lws_strncpy(path + 1, p, sizeof(path) - 1);
@@ -259,7 +263,7 @@ int WebSocketClient::callback(struct lws *wsi,
          body, packet.getSize() - LWS_PRE,
          LWS_WRITE_BINARY);
 
-      if (m != packet.getSize() - LWS_PRE)
+      if (m != (int)packet.getSize() - (int)LWS_PRE)
       {
          LOGERR << "failed to send packet of size";
          LOGERR << "packet is " << packet.getSize() <<

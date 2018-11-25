@@ -315,6 +315,10 @@ shared_ptr<Payload::DeserializedPayloads> Payload::deserialize(
                case Payload_reject:
                   payloadVec.push_back(move(make_unique<Payload_Reject>(
                      payloadptr, *length)));
+
+               default:
+                  payloadVec.push_back(move(make_unique<Payload_Unknown>(
+                     payloadptr, *length)));
                }
             }
             else
@@ -1062,8 +1066,19 @@ void BitcoinP2P::checkServices(unique_ptr<Payload> payload)
 {
    Payload_Version* pver = (Payload_Version*)payload.get();
 
-   auto&& mainnetMW = READHEX(MAINNET_MAGIC_BYTES);
-   auto mwInt = (uint32_t*)mainnetMW.getPtr();
+   auto& this_mw = NetworkConfig::getMagicBytes();
+   auto mwInt = (uint32_t*)this_mw.getPtr();
+
+   if(*mwInt != magic_word_)
+   {
+      BinaryDataRef bdr_mw;
+      bdr_mw.setRef((uint8_t*)&magic_word_, 4);
+
+      LOGERR << "Node magic word does not match expected magic word:";
+      LOGERR << "   expected: " << this_mw.toHexStr();
+      LOGERR << "   got: " << bdr_mw.toHexStr();
+      throw BitcoinP2P_Exception("magic word mismatch");
+   }
 
    //Hardcode disabling SW for mainnet until BIP9 rule detection is implemented
    if(pver->vheader_.services_ & NODE_WITNESS)

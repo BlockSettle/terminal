@@ -463,7 +463,6 @@ void BlockchainScanner_Super::processOutputsThread(
       const auto header = currentBlock->header();
 
       //update processed height
-      auto topHeight = header->getBlockHeight();
       auto&& hgtx = DBUtils::heightAndDupToHgtx(
          header->getBlockHeight(), header->getDuplicateID());
 
@@ -548,7 +547,6 @@ void BlockchainScanner_Super::processOutputsThread(
    batch->txOutSshResults_[thisId] = move(tsr);
 
    //grab batch mutex and merge processed data in
-   auto merge_start = chrono::system_clock::now();
    unique_lock<mutex> lock(batch->mergeMutex_);
    batch->hashToDbKey_.insert(hashToKey.begin(), hashToKey.end());
 }
@@ -888,7 +886,7 @@ void BlockchainScanner_Super::scanSpentness()
       size_t tallySize = currentHeader->getBlockSize();
       while (tallySize < BATCH_SIZE_SUPER)
       {
-         auto nextHeight = currentHeader->getBlockHeight();
+         int nextHeight = (int)currentHeader->getBlockHeight();
          if (nextHeight <= end || nextHeight == 0)
             break;
 
@@ -1057,7 +1055,7 @@ void BlockchainScanner_Super::parseSpentnessThread(ParserBatch_Spentness* batch)
             auto spentness_pair = make_pair(move(txoutkey), bw.getData());
 
             //figure out which bucket this key goes in
-            if (height_iter->second.height_ >= batch->bdb_->end_)
+            if (height_iter->second.height_ >= (uint32_t)batch->bdb_->end_)
             {
                //output belongs to tx within our batch range, we can
                //commit the spentness data right away
@@ -1257,8 +1255,6 @@ void BlockchainScanner_Super::undo(Blockchain::ReorganizationState& reorgState)
    while (blockPtr != reorgState.reorgBranchPoint_)
    {
       int currentHeight = blockPtr->getBlockHeight();
-      auto currentDupId = blockPtr->getDuplicateID();
-
       auto&& hintsTx = db_->beginTransaction(TXHINTS, LMDB::ReadOnly);
 
       //grab blocks from previous top until branch point
@@ -1395,8 +1391,8 @@ void BlockDataBatch::populateFileMap()
 
    auto begin = min(start_, end_);
    auto end = max(start_, end_);
-   for (unsigned i = begin; i <= end; i++)
-      blockMap_.insert(make_pair(i, nullptr));
+   for (int i = begin; i <= end; i++)
+      blockMap_.insert(make_pair((unsigned)i, nullptr));
 };
 
 ////////////////////////////////////////////////////////////////////////////////
