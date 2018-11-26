@@ -154,6 +154,9 @@
           <property name="text">
            <string>Note - Something has happened Note - Something has happened</string>
           </property>
+          <property name="textFormat">
+           <enum>Qt::RichText</enum>
+          </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
           </property>
