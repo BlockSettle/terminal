@@ -149,7 +149,7 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
 
 void CreateWalletDialog::reject()
 {
-   bool result = abortWalletCreationQuestionDialog(this);
+   bool result = MessageBoxWalletCreateAbort(this).exec();
    if (!result) {
       return;
    }

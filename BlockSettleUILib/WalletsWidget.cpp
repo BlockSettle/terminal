@@ -33,6 +33,7 @@
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
 #include "TreeViewWithEnterKey.h"
+#include "NewWalletSeedConfirmDialog.h"
 
 
 class AddressSortFilterModel : public QSortFilterProxyModel
@@ -421,7 +422,13 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
    if (!result) {
       return false;
    }
-
+   // get the user to confirm the seed
+   NewWalletSeedConfirmDialog dlg(QString::fromStdString(walletId)
+      , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);
+   result = dlg.exec();
+   if (!result) {
+      return false;
+   }
    std::shared_ptr<bs::hd::Wallet> newWallet;
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
       , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, appSettings_, this);
