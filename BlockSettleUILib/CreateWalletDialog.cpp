@@ -126,6 +126,7 @@ void CreateWalletDialog::onKeyTypeChanged(bool password)
          authNoticeWasShown_ = true;
       }
    }
+   ui_->labelPasswordWarning->setVisible(password);
 }
 
 void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet> wallet)
