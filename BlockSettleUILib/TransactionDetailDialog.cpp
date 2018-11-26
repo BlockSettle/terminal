@@ -125,7 +125,12 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
             }
             adjustSize();
          };
-         armory->getTXsByHash(txHashSet, cbTXs);
+         if (txHashSet.empty()) {
+            cbTXs({});
+         }
+         else {
+            armory->getTXsByHash(txHashSet, cbTXs);
+         }
       }
 
       ui_->labelConfirmations->setText(QString::number(item->confirmations));

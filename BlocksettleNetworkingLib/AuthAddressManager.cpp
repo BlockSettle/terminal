@@ -298,7 +298,12 @@ bool AuthAddressManager::Verify(const bs::Address &address)
             }
          }
       };
-      armory_->getTXsByHash(txHashSet, cbTXs);
+      if (txHashSet.empty()) {
+         emit Error(tr("Invalid initial TX"));
+      }
+      else {
+         armory_->getTXsByHash(txHashSet, cbTXs);
+      }
    };
    addressVerificator_->GetVerificationInputs(cbInputs);
 

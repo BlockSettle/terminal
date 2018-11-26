@@ -99,7 +99,6 @@ private slots:
    void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
    void onNewItems(TransactionItems items);
    void onItemsDeleted(TransactionItems items);
-   void onItemsConfirmed(TransactionItems items);
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
@@ -110,10 +109,11 @@ private:
    void clear();
    Q_INVOKABLE void loadLedgerEntries();
    void ledgerToTxData();
-   void insertNewTransactions(const std::vector<bs::TXEntry> &page);
    void loadTransactionDetails(unsigned int iStart, size_t count);
    void updateBlockHeight(const std::vector<bs::TXEntry> &page);
    void updateTransactionDetails(TransactionsViewItem &item, int index);
+   void updateTransactionDetails(TransactionsViewItem &item
+      , const std::function<void(const TransactionsViewItem *itemPtr)> &cb);
    TransactionsViewItem itemFromTransaction(const bs::TXEntry &);
    bool txKeyExists(const std::string &key);
    int getItemIndex(const TransactionsViewItem &) const;
@@ -126,7 +126,6 @@ private:
       enum class Type {
          Add,
          Delete,
-         Confirm,
          Update
       };
       Type  type;
@@ -174,6 +173,7 @@ private:
    std::shared_ptr<WalletsManager>     walletsManager_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
+   std::vector<bs::TXEntry>            pendingNewItems_;
    const bool        allWallets_;
    std::atomic_bool  stopped_;
    QFont             fontBold_;
