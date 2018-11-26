@@ -258,7 +258,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       // to the amount required by the RBF/IRL policy, and keep the minimum
       // fee/byte where it is.
       originalFee_ = totalVal;
-      const auto &txVirtSize = tx.serializeNoWitness().getSize();
+      const auto &txVirtSize = std::ceil(tx.getTxWeight() / 4);
       const float feePerByte = (float)totalVal / txVirtSize;
       originalFeePerByte_ = feePerByte;
       const auto &newMinFee = originalFee_ + txVirtSize;
