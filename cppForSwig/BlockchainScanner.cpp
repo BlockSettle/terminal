@@ -103,7 +103,7 @@ void BlockchainScanner::scan_nocheck(int32_t scanFrom)
       unsigned firstBlockFileID = UINT32_MAX;
       unsigned targetBlockFileID = UINT32_MAX;
 
-      while (startHeight <= topBlock->getBlockHeight())
+      while (startHeight <= (int32_t)topBlock->getBlockHeight())
       {
          //figure out how many blocks to pull for this batch
          //batches try to grab up nBlockFilesPerBatch_ worth of block data
@@ -490,9 +490,6 @@ void BlockchainScanner::processOutputsThread(ParserBatch* batch)
       //TODO: flag isMultisig
       const auto header = blockdata->header();
 
-      //update processed height
-      auto topHeight = header->getBlockHeight();
-
       auto& txns = blockdata->getTxns();
       for (unsigned i = 0; i < txns.size(); i++)
       {
@@ -754,8 +751,6 @@ void BlockchainScanner::writeBlockData()
          LOGERR << "empty top block header ptr, aborting scan";
          throw runtime_error("nullptr header");
       }
-
-      auto topHeight = topheader->getBlockHeight();
       
       map<BinaryData, BinaryWriter> serializedSubSSH;
       map<BinaryData, BinaryWriter> serializedStxo;
@@ -1103,7 +1098,7 @@ void BlockchainScanner::updateSSH(bool force, int32_t startHeight)
          auto txinCount = tx.getNumTxIn();
          auto dataPtr = tx.getPtr();
 
-         for (auto i = 0; i < txinCount; i++)
+         for (size_t i = 0; i < txinCount; i++)
          {
             auto offset = tx.getTxInOffset(i);
             BinaryDataRef bdr(dataPtr + offset, 32);

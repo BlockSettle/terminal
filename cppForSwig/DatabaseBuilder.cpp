@@ -20,11 +20,10 @@ DatabaseBuilder::DatabaseBuilder(BlockFiles& blockFiles,
    BlockDataManager& bdm,
    const ProgressCallback &progress,
    bool forceRescanSSH)
-   : blockFiles_(blockFiles), db_(bdm.getIFace()),
-   bdmConfig_(bdm.config()), blockchain_(bdm.blockchain()),
-   scrAddrFilter_(bdm.getScrAddrFilter()),
-   progress_(progress),
-   topBlockOffset_(0, 0),
+   : blockFiles_(blockFiles), blockchain_(bdm.blockchain()),
+   db_(bdm.getIFace()), scrAddrFilter_(bdm.getScrAddrFilter()),
+   progress_(progress), topBlockOffset_(0, 0),
+   bdmConfig_(bdm.config()), 
    forceRescanSSH_(forceRescanSSH)
 {}
 
@@ -264,7 +263,6 @@ Blockchain::ReorganizationState DatabaseBuilder::updateBlocksInDB(
    if (verbose)
    {
       calc.init(baseID);
-      auto val = calc.fractionCompleted();
       progress(BDMPhase_BlockData,
          calc.fractionCompleted(), UINT32_MAX,
          baseID);
@@ -604,7 +602,6 @@ Blockchain::ReorganizationState DatabaseBuilder::update(void)
    if (!reorgState.hasNewTop_)
       return reorgState;
 
-   uint32_t prevTop = reorgState.prevTop_->getBlockHeight();
    uint32_t startHeight = reorgState.prevTop_->getBlockHeight() + 1;
 
    if (!reorgState.prevTopStillValid_)
@@ -917,8 +914,6 @@ void DatabaseBuilder::commitAllStxos(
    if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
       throw runtime_error("invalid db mode");
 
-   auto blockPtr = blockDataPtr->getPtr();
-
    vector<pair<BinaryData, BinaryWriter>> serializedStxos;
 
    for (auto& id : insertedBlocks)
@@ -1175,7 +1170,6 @@ void DatabaseBuilder::verifyTransactions()
             catch (exception& e)
             {
                unique_lock<mutex> lock(stateStruct->mu_);
-               auto error = e.what();
                LOGERR << "+++ error at #" << thisHeight << ":" << i;
                LOGERR << "+++ strerr: " << e.what();
                stateStruct->unknownErrors_.fetch_add(1, memory_order_relaxed);

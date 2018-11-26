@@ -310,7 +310,7 @@ FeeEstimateResult NodeRPC::queryFeeByteSmart(HttpSocket& sock,
 
 ////////////////////////////////////////////////////////////////////////////////
 FeeEstimateResult NodeRPC::getFeeByte(
-   unsigned confTarget, string& strategy)
+   unsigned confTarget, const string& strategy)
 {
    auto estimateCachePtr = atomic_load(&currentEstimateCache_);
 
@@ -322,12 +322,25 @@ FeeEstimateResult NodeRPC::getFeeByte(
       throw RpcError();
 
    auto targetIter = iterStrat->second.lower_bound(confTarget);
-   if (targetIter == iterStrat->second.end() ||
-      targetIter == iterStrat->second.begin())
+   if (targetIter != iterStrat->second.begin())
+      --targetIter;
+
+   return targetIter->second;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+map<unsigned, FeeEstimateResult> NodeRPC::getFeeSchedule(const string& strategy)
+{
+   auto estimateCachePtr = atomic_load(&currentEstimateCache_);
+
+   if (estimateCachePtr == nullptr)
       throw RpcError();
 
-   --targetIter;
-   return targetIter->second;
+   auto iterStrat = estimateCachePtr->find(strategy);
+   if (iterStrat == estimateCachePtr->end())
+      throw RpcError();
+
+   return iterStrat->second;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

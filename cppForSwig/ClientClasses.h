@@ -67,7 +67,7 @@ namespace ClientClasses
       bool isSmart_ = false;
 
       FeeEstimateStruct(float val, bool isSmart, const std::string& error) :
-         val_(val), isSmart_(isSmart), error_(error)
+         error_(error), val_(val), isSmart_(isSmart)
       {}
 
       FeeEstimateStruct(void) 

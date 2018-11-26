@@ -354,7 +354,7 @@ int32_t ScrAddrFilter::scanFrom() const
 
       for (auto scrAddr : *scraddrmap)
       {
-         if (lowestBlock != scrAddr.second->scannedHeight_)
+         if (lowestBlock != (int32_t)scrAddr.second->scannedHeight_)
          {
             lowestBlock = -1;
             break;
@@ -395,7 +395,6 @@ void ScrAddrFilter::getAllScrAddrInDB()
    //iterate over ssh DB
    while(dbIter->advanceAndRead(DB_PREFIX_SCRIPT))
    {
-      auto keyRef = dbIter->getKeyRef();
       StoredScriptHistory ssh;
       ssh.unserializeDBKey(dbIter->getKeyRef());
       ssh.unserializeDBValue(dbIter->getValueReader());

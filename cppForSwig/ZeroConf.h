@@ -344,7 +344,7 @@ public:
 public:
    ZeroConfContainer(LMDBBlockDatabase* db,
       std::shared_ptr<BitcoinP2P> node, unsigned maxZcThread) :
-      topId_(0), db_(db), maxZcThreadCount_(maxZcThread), networkNode_(node)
+      topId_(0), db_(db), networkNode_(node), maxZcThreadCount_(maxZcThread)
    {
       zcEnabled_.store(false, std::memory_order_relaxed);
 
