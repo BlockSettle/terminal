@@ -43,7 +43,7 @@ CelerMessage CelerCreateCCSecurityOnMDSequence::sendRequest()
 
    auto description = request.add_parameter();
    description->set_key("description");
-   description->set_value("Definition created via PB");
+   description->set_value("Definition created via MD");
 
    auto tickSize = request.add_parameter();
    tickSize->set_key("tickSize");
