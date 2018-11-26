@@ -61,6 +61,8 @@ private:
    void ConnectToCelerClient();
 
    bool onFullSnapshot(const std::string& data);
+   bool onReqRejected(const std::string& data);
+   bool onMDStatisticsUpdate(const std::string& data);
 
    static bool isPriceValid(double val);
 
