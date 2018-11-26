@@ -141,7 +141,7 @@ CustomDialog {
                     text:   qsTr("Transaction Size")
                 }
                 CustomLabelValue {
-                    text:   txInfo.txSize
+                    text:   txInfo.txVirtSize
                     Layout.alignment: Qt.AlignRight
                 }
 
