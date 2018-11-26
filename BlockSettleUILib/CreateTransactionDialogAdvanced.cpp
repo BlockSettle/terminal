@@ -151,6 +151,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
             const auto txSize = tx.serializeNoWitness().getSize();
             const float feePerByte = (float)totalVal / txSize;
             originalFee_ = totalVal;
+            originalFeePerByte_ = feePerByte;
             const size_t projectedTxSize = 85;  // 1 input and 1 output bech32
             const float totalFee = std::abs(txSize * (fee - feePerByte) + projectedTxSize * fee);
             const float newFPB = std::ceil(totalFee / (txSize + projectedTxSize));
@@ -235,10 +236,33 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          return;
       }
 
+      // RBF minimum amounts are a little tricky. The rules/policies are:
+      //
+      // - RULE: Calculate based not on the absolute TX size, but on the virtual
+      //   size, which is ceil(TX weight / 4) (e.g., 32.2 -> 33). For reference,
+      //   TX weight = Total_TX_Size + (3 * Base_TX_Size).
+      //   (Base_TX_Size = TX size w/o witness data)
+      // - RULE: The new fee/KB must meet or exceed the old one. (If replacing
+      //   multiple TXs, Core seems to calculate based on the sum of fees and
+      //   TX sizes for the old TXs.)
+      // - RULE: The new fee must be at least 1 satoshi higher than the sum of
+      //   the fees of the replaced TXs.
+      // - POLICY: The new fee must be bumped by, at a minimum, the incremental
+      //   relay fee (IRL) * the new TX's virtual size. The fee can be adjusted
+      //   in Core by the incrementalrelayfee config option. By default, the fee
+      //   is 1000 sat/KB (1 sat/B), which is what we will assume is being used.
+      //   (This may need to be a terminal config option later.)
+      //
+      // It's impossible to calculate the minimum required fee, as the user can
+      // do many different things. We'll just start by setting the minimum fee
+      // to the amount required by the RBF/IRL policy, and keep the minimum
+      // fee/byte where it is.
       originalFee_ = totalVal;
-      const auto &txSize = tx.serializeNoWitness().getSize();
-      const float feePerByte = std::ceil((float)totalVal / txSize);
-      SetMinimumFee(totalVal, feePerByte + minRelayFeePerByte_);
+      const auto &txVirtSize = std::ceil(tx.getTxWeight() / 4);
+      const float feePerByte = (float)totalVal / txVirtSize;
+      originalFeePerByte_ = feePerByte;
+      const auto &newMinFee = originalFee_ + txVirtSize;
+      SetMinimumFee(newMinFee, originalFeePerByte_);
 
       if (changeAddress.isNull()) {
          setUnchangeableTx();
@@ -504,13 +528,19 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    const auto &summary = transactionData_->GetTransactionSummary();
 
    if (!changeAddressFixed_) {
-      bool changeSelectionEnabled = summary.hasChange || (summary.transactionSize == 0);
+      bool changeSelectionEnabled = summary.hasChange || (summary.txVirtSize == 0);
       ui_->changeAddrGroupBox->setEnabled(changeSelectionEnabled);
       showExistingChangeAddress(changeSelectionEnabled);
    }
 
+   // If we're doing RBF, set the bare minimum for the total fee and fee/byte.
+   // The total fee will still need to be checked and possibly bumped later, as
+   // it's impossible to know the final TX size at this point (and, ergo, the
+   // amount required to satisfy the incremental relay fee). But, we can make a
+   // good guess here.
    if (originalFee_) {
-      SetMinimumFee(originalFee_ + minRelayFeePerByte_ * summary.transactionSize, minFeePerByte_);
+      const auto &newFee = originalFee_ + summary.txVirtSize;
+      SetMinimumFee(newFee, minFeePerByte_);
    }
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
@@ -598,7 +628,7 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
 {
    const bool isSignerReady = signingContainer_ && ((signingContainer_->opMode() == SignContainer::OpMode::Offline)
       || !signingContainer_->isOffline());
-   const bool isTxValid = transactionData_->IsTransactionValid() && transactionData_->GetTransactionSummary().transactionSize;
+   const bool isTxValid = transactionData_->IsTransactionValid() && transactionData_->GetTransactionSummary().txVirtSize;
 
    ui_->pushButtonCreate->setEnabled(isTxValid
       && isSignerReady

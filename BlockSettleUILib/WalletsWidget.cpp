@@ -415,7 +415,7 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
    std::string walletId = bs::hd::Node(walletSeed).getId();
 
    NewWalletSeedDialog newWalletSeedDialog(QString::fromStdString(walletId)
-      , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2));
+      , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);
 
    int result = newWalletSeedDialog.exec();
    if (!result) {

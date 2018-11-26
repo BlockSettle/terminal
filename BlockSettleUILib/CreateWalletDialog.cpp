@@ -9,7 +9,6 @@
 #include "EnterWalletPassword.h"
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
-#include "AuthNotice.h"
 #include "UiUtils.h"
 
 #include <spdlog/spdlog.h>
@@ -123,9 +122,7 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
 void CreateWalletDialog::onKeyTypeChanged(bool password)
 {
    if (!password && !authNoticeWasShown_) {
-      AuthNotice dlg(this);
-
-      if (dlg.exec() == QDialog::Accepted) {
+      if (MessageBoxAuthNotice(this).exec() == QDialog::Accepted) {
          authNoticeWasShown_ = true;
       }
    }

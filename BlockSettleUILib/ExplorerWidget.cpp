@@ -87,8 +87,7 @@ void ExplorerWidget::onSearchStarted()
 
       // Pass the address to the address widget and load the wallet, which kicks
       // off address processing and UI loading.
-      ui_->Address->setAddrVal(bsAddress);
-      ui_->Address->loadWallet();
+      ui_->Address->populateDataFor(bsAddress);
       ui_->searchBox->clear();
    }
    else if(userStr.length() == 64 &&
@@ -111,10 +110,8 @@ void ExplorerWidget::onSearchStarted()
 
 // This slot function is called whenever user clicks on a transaction in
 // address details page or any other page.
-void ExplorerWidget::onTransactionClicked(QString txId) {
-//   ui_->Transaction->setTxVal(txId);
-//   ui_->Transaction->getTxsForTxIns(); // Maybe moved?
-//   ui_->Transaction->loadInputs();
+void ExplorerWidget::onTransactionClicked(QString txId)
+{
    BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
    ui_->stackedWidget->setCurrentIndex(TxPage);
    ui_->Transaction->populateTransactionWidget(terminalTXID);
@@ -122,7 +119,8 @@ void ExplorerWidget::onTransactionClicked(QString txId) {
 
 // This slot function is called whenever user clicks on an address in
 // transaction details page or any other page.
-void ExplorerWidget::onAddressClicked(QString addressId) {
+void ExplorerWidget::onAddressClicked(QString addressId)
+{
    ui_->stackedWidget->setCurrentIndex(AddressPage);
 
    bs::Address bsAddress;
@@ -141,11 +139,11 @@ void ExplorerWidget::onAddressClicked(QString addressId) {
    // There really should be an error case here, but for now, assume addr is
    // valid. (It would be very bad if Armory fed up bad addresses!)
    // TO DO: Add a check for wallets that have already been loaded?
-   ui_->Address->setAddrVal(bsAddress);
-   ui_->Address->loadWallet();
+   ui_->Address->populateDataFor(bsAddress);
 }
 
-void ExplorerWidget::onReset() {
+void ExplorerWidget::onReset()
+{
    ui_->stackedWidget->setCurrentIndex(BlockPage);
    ui_->searchBox->clear();
 }

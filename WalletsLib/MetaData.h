@@ -135,7 +135,7 @@ namespace bs {
          bool isValid() const noexcept;
          BinaryData serializeState() const { return getSigner().serializeState(); }
          BinaryData txId() const { return getSigner().getTxId(); }
-         size_t estimateTxSize() const;
+         size_t estimateTxVirtSize() const;
 
       private:
          Signer   getSigner() const;
@@ -150,7 +150,7 @@ namespace bs {
          BinaryData  prevState;
 
          bool isValid() const noexcept;
-         size_t estimateTxSize() const;
+         size_t estimateTxVirtSize() const;
          void addInput(const UTXO &utxo, const std::shared_ptr<bs::Wallet> &wallet) { inputs[utxo] = wallet; }
       };
 
@@ -303,7 +303,8 @@ namespace bs {
 
       virtual wallet::TXSignRequest CreateTXRequest(const std::vector<UTXO> &
          , const std::vector<std::shared_ptr<ScriptRecipient>> &
-         , const uint64_t fee = 0, bool isRBF = false, bs::Address changeAddress = {});
+         , const uint64_t fee = 0, bool isRBF = false
+         , bs::Address changeAddress = {}, const uint64_t& origFee = 0);
       virtual BinaryData SignTXRequest(const wallet::TXSignRequest &,
                                        const SecureBinaryData &password = {},
                                        bool keepDuplicatedRecipients = false);

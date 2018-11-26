@@ -211,26 +211,58 @@ Signer bs::wallet::TXSignRequest::getSigner() const
    return signer;
 }
 
-static size_t estimateSize(const std::vector<UTXO> &inputs, const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
+// Estimate the TX virtual size. This will not be exact, as there's no sig yet.
+// Round up the inputs to guarantee that we meet RBF's relay fee policy.
+static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
+              , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
 {
    if (inputs.empty() || recipients.empty()) {
       return 0;
    }
+
+   // Start with 10 bytes in every TX (version, SegWit flags, and lock time).
    size_t result = 10;
+
+   // Get the output virtual sizes from Armory. Assume these will be accurate.
    for (const auto &recip : recipients) {
       result += recip->getSize();
    }
+
+   // Estimate the virtual size for the inputs. Because we can't analyze the
+   // exact sig size until there's an actual signature, always play it safe and
+   // round up the estimated weight by assuming sigs will be at max size. 
    for (auto& utxo : inputs) {
       const auto scrType = BtcUtils::getTxOutScriptType(utxo.getScript());
       switch (scrType) {
+      // 179-181, so assume 181.
       case TXOUT_SCRIPT_STDHASH160:
-         result += 180;
+         result += 181;
          break;
+      // 42-44, so assume 44.
       case TXOUT_SCRIPT_P2WPKH:
-         result += 41;
+         result += 44;
          break;
-      case TXOUT_SCRIPT_NONSTANDARD:
+      // Assume P2SH is P2SH-P2WPKH, as we don't spend any other form of P2SH
+      // for now. If this changes, Armory doesn't distinguish between P2SH
+      // flavors, and another solution will be required. 91-92, so assume 92.
       case TXOUT_SCRIPT_P2SH:
+         result += 92;
+
+         // WARNING: The following code is a very ugly hack, and should be
+         // removed ASAP!!! Armory has a bug in how it treats assets (e.g.,
+         // UTXOs). If the asset has two different P2SH types, the asset will be
+         // treated as if the asset has only one P2SH type (the last one
+         // encountered, presumably). A fix has been pushed to 0.96.5. However,
+         // due to wallets changes in 0.97, it can't be ported to 0.97 as-is.
+         // Instead, once 0.96.5 has been properly synced with 0.97, a new fix
+         // for 0.97 will be written. So, we'll cheat and add some bytes here,
+         // based on personal observation. This code needs to be removed the
+         // moment 0.97 has a proper fix.
+         result += 25;
+         break;
+      // We should never get here, and if we do, the values will almost
+      // certainly be incorrect. Reassess later as needed.
+      case TXOUT_SCRIPT_NONSTANDARD:
       default:
          result += 65;
          break;
@@ -239,7 +271,7 @@ static size_t estimateSize(const std::vector<UTXO> &inputs, const std::vector<st
    return result;
 }
 
-size_t bs::wallet::TXSignRequest::estimateTxSize() const
+size_t bs::wallet::TXSignRequest::estimateTxVirtSize() const
 {
    if (!isValid()) {
       return 0;
@@ -248,7 +280,7 @@ size_t bs::wallet::TXSignRequest::estimateTxSize() const
    if (change.value) {
       recipCopy.push_back(change.address.getRecipient(change.value));
    }
-   return ::estimateSize(inputs, recipCopy);
+   return ::estimateTXVirtSize(inputs, recipCopy);
 }
 
 
@@ -260,7 +292,7 @@ bool bs::wallet::TXMultiSignRequest::isValid() const noexcept
    return true;
 }
 
-size_t bs::wallet::TXMultiSignRequest::estimateTxSize() const
+size_t bs::wallet::TXMultiSignRequest::estimateTxVirtSize() const
 {
    if (!isValid()) {
       return 0;
@@ -270,7 +302,7 @@ size_t bs::wallet::TXMultiSignRequest::estimateTxSize() const
    for (const auto &input : inputs) {
       inputsList.push_back(input.first);
    }
-   return ::estimateSize(inputsList, recipients);
+   return ::estimateTXVirtSize(inputsList, recipients);
 }
 
 
@@ -819,8 +851,8 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
             cb(bv);
          }
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error("[bs::Wallet::UpdateBalanceFromDB] Return data error " \
                "- {}", e.what());
          }
@@ -970,7 +1002,7 @@ void bs::Wallet::UnregisterWallet()
 
 bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &inputs
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
-   , bool isRBF, bs::Address changeAddress)
+   , bool isRBF, bs::Address changeAddress, const uint64_t& origFee)
 {
    bs::wallet::TXSignRequest request;
    request.walletId = GetWalletId();
@@ -1000,8 +1032,17 @@ bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &i
    }
 
    request.recipients = recipients;
-   request.fee = fee;
    request.RBF = isRBF;
+
+   // Make sure the incremental relay fee is respected. It's assumed to be 1000
+   // sat/KB (1 sat/b). If the user changes this in Core, the bump could fail.
+   uint64_t minIncRelayFee = origFee + request.estimateTxVirtSize();
+   if(isRBF && fee < minIncRelayFee) {
+      request.fee = minIncRelayFee;
+   }
+   else {
+      request.fee = fee;
+   }
 
    const uint64_t changeAmount = inputAmount - (spendAmount + fee);
    if (changeAmount) {
