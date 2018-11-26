@@ -349,7 +349,7 @@ bool CreateTransactionDialog::CreateTransaction()
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
       if (txReq_.fee <= originalFee_) {
-         BSMessageBox(BSMessageBox::critical, tr("Fee is low"),
+         BSMessageBox(BSMessageBox::critical, tr("Error"), tr("Fee is low"),
             tr("Your current fee (%1) should exceed the fee from the original transaction (%2)")
             .arg(UiUtils::displayAmount(txReq_.fee)).arg(UiUtils::displayAmount(originalFee_))).exec();
          stopBroadcasting();
