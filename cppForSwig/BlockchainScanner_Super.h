@@ -62,8 +62,9 @@ struct BlockDataBatch
    BlockDataBatch(int start, int end, std::set<unsigned>& ids,
       BLOCKDATA_ORDER order,
       BlockDataLoader* bdl, std::shared_ptr<Blockchain> bcPtr) :
+      order_(order),
       start_(start), end_(end), blockDataFileIDs_(std::move(ids)),
-      blockDataLoader_(bdl), blockchain_(bcPtr), order_(order)
+      blockDataLoader_(bdl), blockchain_(bcPtr)
    {}
 
    void populateFileMap(void);
@@ -218,12 +219,11 @@ public:
       BlockFiles& bf, bool init,
       unsigned threadcount, unsigned queue_depth,
       ProgressCallback prg, bool reportProgress) :
-      blockchain_(bc), db_(db),
-      totalThreadCount_(threadcount), writeQueueDepth_(1/*queue_depth*/),
+      init_(init), blockchain_(bc), db_(db),
       blockDataLoader_(bf.folderPath()),
-      progress_(prg), reportProgress_(reportProgress),
+      totalThreadCount_(threadcount), writeQueueDepth_(1/*queue_depth*/),
       totalBlockFileCount_(bf.fileCount()),
-      init_(init)
+      progress_(prg), reportProgress_(reportProgress)
    {}
 
    void scan(void);

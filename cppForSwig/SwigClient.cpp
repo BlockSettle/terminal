@@ -681,7 +681,7 @@ vector<AddressBookEntry> SwigClient::BtcWallet::createAddressBook(void) const
 //
 ///////////////////////////////////////////////////////////////////////////////
 Lockbox::Lockbox(AsyncClient::Lockbox& asynclb) :
-asyncLockbox_(asynclb), BtcWallet(asynclb)
+   BtcWallet(asynclb), asyncLockbox_(asynclb)
 {}
 
 ///////////////////////////////////////////////////////////////////////////////

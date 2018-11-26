@@ -157,10 +157,10 @@ public:
       unsigned threadcount, unsigned queue_depth, 
       ProgressCallback prg, bool reportProgress) :
       blockchain_(bc), db_(db), scrAddrFilter_(saf),
-      totalThreadCount_(threadcount), writeQueueDepth_(queue_depth),
       blockDataLoader_(bf.folderPath()),
-      progress_(prg), reportProgress_(reportProgress),
-      totalBlockFileCount_(bf.fileCount())
+      totalThreadCount_(threadcount), writeQueueDepth_(queue_depth),
+      totalBlockFileCount_(bf.fileCount()),
+      progress_(prg), reportProgress_(reportProgress)
    {}
 
    void scan(int32_t startHeight);

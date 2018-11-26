@@ -3,7 +3,7 @@
 
 // Pre-C++14 compilers don't have access to make_unique. Use a workaround on
 // those compilers. Once VS2017 is a required compiler, we can start to rely
-// solely on __cplusplus, but for now....
+// solely on __cplusplus, but for now, we must use _MSC_VER on Windows.
 #ifndef _WIN32
 #include <memory>
 #if __cplusplus >= 201402L
@@ -15,7 +15,7 @@ template<typename T, typename... Args> std::unique_ptr<T> make_unique(Args&&... 
 }
 #endif
 #else
-#if _MSC_VER < 1910
+#if _MSC_VER < 1900
 template<typename T, typename... Args> std::unique_ptr<T> make_unique(Args&&... args)
 {
    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));

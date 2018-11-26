@@ -1084,7 +1084,7 @@ public:
    ARMORY_DB_TYPE armoryDbType(void) const
    { return BlockDataManagerConfig::getDbType(); }
 
-   const std::string& baseDir(void) const { DatabaseContainer::baseDir_; }
+   const std::string& baseDir(void) const { return DatabaseContainer::baseDir_; }
    void setBlkFolder(const std::string& path) { blkFolder_ = path; }
 
    void closeDB(DB_SELECT db);
@@ -1180,8 +1180,8 @@ private:
    // just a 25-byte script.  But this generically captures all types
    // of addresses including pubkey-only, P2SH, 
    std::map<BinaryData, StoredScriptHistory>   registeredSSHs_;
+   const std::shared_ptr<Blockchain> blockchainPtr_;   
    std::string blkFolder_;
-   const std::shared_ptr<Blockchain> blockchainPtr_;
    const static std::set<DB_SELECT> supernodeDBs_;
 
    TransactionalMap<unsigned, unsigned> heightToBatchId_;

@@ -371,8 +371,9 @@ struct UTXO
 
    UTXO(uint64_t value, uint32_t txHeight, uint32_t txIndex, 
       uint32_t txOutIndex, BinaryData txHash, BinaryData script) :
-      txHash_(std::move(txHash)), txHeight_(txHeight), txIndex_(txIndex),
-      txOutIndex_(txOutIndex), value_(value), script_(std::move(script))
+      txHash_(std::move(txHash)), txOutIndex_(txOutIndex), 
+      txHeight_(txHeight), txIndex_(txIndex),
+      value_(value), script_(std::move(script))
    {}
 
    UTXO(void) {}

@@ -140,7 +140,7 @@ int WebSocketServer::callback(
          body, packet.getSize() - LWS_PRE,
          LWS_WRITE_BINARY);
 
-      if (m != packet.getSize() - LWS_PRE)
+      if (m != (int)packet.getSize() - (int)LWS_PRE)
       {
          LOGERR << "failed to send packet of size";
          LOGERR << "packet is " << packet.getSize() <<
