@@ -62,4 +62,9 @@ public:
    MessageBoxBroadcastError(const QString &details, QWidget *parent = nullptr);
 };
 
+class MessageBoxAuthNotice : public BSMessageBox {
+public:
+   MessageBoxAuthNotice(QWidget *parent = nullptr);
+};
+
 #endif // __MESSAGE_BOX_H__

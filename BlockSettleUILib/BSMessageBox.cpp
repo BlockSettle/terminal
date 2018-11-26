@@ -2,6 +2,7 @@
 #include "ui_BSMessageBox.h"
 #include <QDebug>
 #include <QShowEvent>
+#include <QTimer>
 
 // Basic constructor, sets message box type, title and text
 BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
@@ -47,10 +48,33 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
    setFixedWidth(400);
    // hide the details part of the message box
    hideDetails();
-   // then recalculate the height, this is needed in case the text
-   // in the message box doesn't fit in its height, this call
-   // will increase the height of the message box to fit the text
-   setFixedHeight(sizeHint().height()+15);
+   adjustSize();
+   hide();
+   // not sure why but this helps size the messagebox 
+   // correctly based how much text it contains
+   // putting it in a timer makes sure all resizing has been
+   // finished by adjustSize()
+   QTimer::singleShot(20, [=] {
+      showDetails();
+      hideDetails();
+
+      // now that we had resized the dialog it
+      // might not be perfectly centerred anymore
+      // so center it again
+      QTimer::singleShot(5, [=] {
+         auto p = this->parent();
+         if (p) {
+            auto w = qobject_cast<QWidget *>(p);
+            auto parentRect = w->geometry();
+            auto parentCenter = parentRect.center();
+            auto myCenter = mapToGlobal(rect().center());
+            auto movePoint = parentCenter - myCenter;
+            //qDebug() << parentRect << pos() << parentCenter << myCenter << movePoint;
+             move(pos() + movePoint);
+             show();
+         }
+      });
+   });
 }
 
 BSMessageBox::~BSMessageBox() = default;
@@ -130,4 +154,10 @@ MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details, QWidg
    : BSMessageBox(BSMessageBox::critical, tr("Broadcast Failure"),
       tr("Failed to Sign Transaction"), tr("Error occured when signing a transaction.")
       , details, parent) {
+}
+
+MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)
+   : BSMessageBox(BSMessageBox::info, tr("Auth eID"),
+      tr("Signing with Auth eID"), tr("Auth eID is a convenient alternative to passwords. Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s).\n\nYou may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. Auth eID requires the user to be vigilant with devices using Auth eID. If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable.\n\nAuth eID is not a wallet backup! No wallet data is stored with Auth eID. Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate wallet. You may then attach a password or your Auth eID account to the wallet.\n\nAuth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store. \n\nFor more information, please consult the \"Getting Started With Auth eID\" guide.")
+      , parent) {
 }

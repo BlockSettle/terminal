@@ -5,7 +5,6 @@
 #include <QToolButton>
 #include "ApplicationSettings.h"
 #include "EnterWalletPassword.h"
-#include "AuthNotice.h"
 #include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
@@ -232,7 +231,7 @@ void ChangeWalletPasswordDialog::continueBasic()
 
    if (isNewAuth) {
       if (showAuthUsageInfo) {
-         AuthNotice authNotice(this);
+         MessageBoxAuthNotice authNotice(this);
          int result = authNotice.exec();
          if (result != QDialog::Accepted) {
             return;
