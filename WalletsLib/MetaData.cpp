@@ -851,8 +851,8 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
             cb(bv);
          }
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error("[bs::Wallet::UpdateBalanceFromDB] Return data error " \
                "- {}", e.what());
          }
