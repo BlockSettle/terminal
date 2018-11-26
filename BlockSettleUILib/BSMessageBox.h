@@ -38,6 +38,7 @@ public:
    ~BSMessageBox() override;
    void setConfirmButtonText(const QString &text);
    void setCancelButtonText(const QString &text);
+   void setLabelTextFormat(Qt::TextFormat tf);
 
 protected slots:
    void onDetailsPressed();
@@ -60,6 +61,11 @@ public:
 class MessageBoxBroadcastError : public BSMessageBox {
 public:
    MessageBoxBroadcastError(const QString &details, QWidget *parent = nullptr);
+};
+
+class MessageBoxAuthNotice : public BSMessageBox {
+public:
+   MessageBoxAuthNotice(QWidget *parent = nullptr);
 };
 
 #endif // __MESSAGE_BOX_H__
