@@ -89,7 +89,7 @@ void AddressDetailsWidget::loadTransactions()
          }
       }
       uint64_t fees = totIn - tx.getSumOfOutputs();
-      double feePerByte = (double)fees / (double)tx.serializeNoWitness().getSize();
+      double feePerByte = (double)fees / (double)tx.getTxWeight();
 
       // Populate the transaction entries.
       item->setText(colDate,
