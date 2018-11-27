@@ -310,22 +310,18 @@ bool TransactionsViewModel::txKeyExists(const std::string &key)
    return (currentKeys_.find(key) != currentKeys_.end());
 }
 
-void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> allPages)
+void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
 {
-   insertNewTransactions(allPages);
-   updateBlockHeight(allPages);
-}
-
-void TransactionsViewModel::insertNewTransactions(const std::vector<bs::TXEntry> &page)
-{
+   pendingNewItems_.insert(pendingNewItems_.end(), page.begin(), page.end());
    if (!initialLoadCompleted_) {
       return;
    }
-   TransactionItems newItems;
-   newItems.reserve(page.size());
-   const auto &settlWallet = walletsManager_->GetSettlementWallet();
+   initialLoadCompleted_ = false;
+   auto newItems = std::make_shared<std::unordered_map<std::string, TransactionsViewItem>>();
+   auto newTxKeys = std::make_shared<std::unordered_set<std::string>>();
+   std::vector<bs::TXEntry> updatedEntries;
 
-   for (const auto entry : page) {
+   for (const auto &entry : pendingNewItems_) {
       const auto item = itemFromTransaction(entry);
       if (!item.wallet) {
          continue;
@@ -334,16 +330,42 @@ void TransactionsViewModel::insertNewTransactions(const std::vector<bs::TXEntry>
       {
          QMutexLocker locker(&updateMutex_);
          if (txKeyExists(txKey)) {
+            updatedEntries.push_back(entry);
             continue;
          }
          currentKeys_.insert(txKey);
       }
-      newItems.push_back(item);
+      newTxKeys->insert(txKey);
+      newItems->emplace(txKey, std::move(item));
    }
+   pendingNewItems_.clear();
 
-   if (!newItems.empty()) {
-      addCommand({Command::Type::Add, newItems});
+   if (!newItems->empty()) {
+      for (auto &item : *newItems) {
+         const auto &cbInited = [this, newItems, newTxKeys](const TransactionsViewItem *itemPtr) {
+            if (!itemPtr || !itemPtr->initialized) {
+               logger_->error("item is not inited");
+               return;
+            }
+            const auto &txKey = mkTxKey(*itemPtr);
+            newTxKeys->erase(txKey);
+            (*newItems)[txKey] = *itemPtr;
+            if (newTxKeys->empty()) {
+               TransactionItems items;
+               items.reserve(newItems->size());
+               for (const auto &item : *newItems) {
+                  items.push_back(item.second);
+               }
+               addCommand({ Command::Type::Add, items });
+            }
+         };
+         updateTransactionDetails(item.second, cbInited);
+      }
    }
+   if (!updatedEntries.empty()) {
+      updateBlockHeight(updatedEntries);
+   }
+   initialLoadCompleted_ = true;
 }
 
 void TransactionsViewModel::timerCmd()
@@ -367,9 +389,6 @@ void TransactionsViewModel::executeCommand(const Command &cmd)
    case Command::Type::Delete:
       onItemsDeleted(cmd.items);
       break;
-   case Command::Type::Confirm:
-      onItemsConfirmed(cmd.items);
-      break;
    case Command::Type::Update:
       break;
    }
@@ -387,7 +406,6 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &pa
    for (const auto &item : page) {
       newData[mkTxKey(item)] = item;
    }
-   TransactionItems firstConfItems;
    {
       QMutexLocker locker(&updateMutex_);
       if (currentPage_.empty()) {
@@ -410,18 +428,12 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &pa
          }
          if (newBlockNum != UINT32_MAX) {
             item.confirmations = armory_->getConfirmationsNumber(newBlockNum);
-            if (item.confirmations == 1) {
-               firstConfItems.push_back(item);
-            }
+            item.txEntry.blockNum = newBlockNum;
          }
       }
    }
    emit dataChanged(index(0, static_cast<int>(Columns::Amount))
    , index(currentPage_.size() - 1, static_cast<int>(Columns::Status)));
-
-   if (!firstConfItems.empty()) {
-      addCommand({ Command::Type::Confirm, firstConfItems });
-   }
 }
 
 void TransactionsViewModel::loadLedgerEntries()
@@ -512,8 +524,6 @@ void TransactionsViewModel::onNewItems(TransactionItems items)
       currentPage_.insert(currentPage_.end(), items.begin(), items.end());
    }
    endInsertRows();
-
-   loadTransactionDetails(curLastIdx, items.size());
 }
 
 int TransactionsViewModel::getItemIndex(const TransactionsViewItem &item) const
@@ -557,31 +567,6 @@ void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &it
    }
 }
 
-void TransactionsViewModel::onItemsConfirmed(TransactionItems items)
-{
-   TransactionItems doubleSpendItems;
-   {
-      QMutexLocker locker(&updateMutex_);
-      for (size_t i = 0; i < currentPage_.size(); i++) {
-         const auto &curItem = currentPage_[i];
-         if (curItem.confirmations) {
-            continue;
-         }
-         for (const auto &item : items) {
-            if (!item.tx.isInitialized()) {
-               continue;
-            }
-            if (curItem.containsInputsFrom(item.tx)) {
-               doubleSpendItems.push_back(curItem);
-            }
-         }
-      }
-   }
-   if (!doubleSpendItems.empty()) {
-      addCommand({Command::Type::Delete, doubleSpendItems});
-   }
-}
-
 bool TransactionsViewModel::isTransactionVerified(int transactionRow) const
 {
    QMutexLocker locker(&updateMutex_);
@@ -621,6 +606,20 @@ void TransactionsViewModel::updateTransactionDetails(TransactionsViewItem &item,
 {
    const auto &cbInited = [this, index](const TransactionsViewItem *itemPtr) {
       onRowUpdated(index, *itemPtr, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Amount));
+   };
+   item.initialize(armory_, walletsManager_, cbInited);
+}
+
+void TransactionsViewModel::updateTransactionDetails(TransactionsViewItem &item
+   , const std::function<void(const TransactionsViewItem *itemPtr)> &cb)
+{
+   const auto &cbInited = [this, cb](const TransactionsViewItem *itemPtr) {
+      if (cb) {
+         cb(itemPtr);
+      }
+      else {
+         logger_->warn("[TransactionsViewModel::updateTransactionDetails] missing callback");
+      }
    };
    item.initialize(armory_, walletsManager_, cbInited);
 }
