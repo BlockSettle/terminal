@@ -19,9 +19,9 @@ class QtSettings(Configurator):
         self._script_revision = '3'
 
         if self._project_settings.on_windows():
-            self._package_url = 'http://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
+            self._package_url = 'https://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
         else:
-            self._package_url = 'http://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.tar.xz'
+            self._package_url = 'https://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.tar.xz'
 
     def get_package_name(self):
         return self._package_name
