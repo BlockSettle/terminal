@@ -324,7 +324,7 @@ void ChangeWalletPasswordDialog::onOldDeviceFailed()
    state_ = State::Idle;
    updateState();
 
-   BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+   BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
       , tr("A problem occured requesting old device key")
       , this).exec();
 }
@@ -360,7 +360,7 @@ void ChangeWalletPasswordDialog::onNewDeviceFailed()
    state_ = State::Idle;
    updateState();
 
-   BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+   BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
       , tr("A problem occured requesting new device key")
       , this).exec();
 }
@@ -377,11 +377,11 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
       logger_->error("ChangeWalletPassword failed for {}", walletId);
 
       if (isLatestChangeAddDevice_) {
-         BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+         BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
             , tr("Device adding failed")
             , this).exec();
       } else {
-         BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+         BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
             , tr("A problem occured when changing wallet password")
             , this).exec();
       }
@@ -392,12 +392,12 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
    }
 
    if (isLatestChangeAddDevice_) {
-      BSMessageBox(BSMessageBox::success, tr("Wallet Password")
+      BSMessageBox(BSMessageBox::success, tr("Wallet Encryption")
          , tr("Device successfully added")
          , this).exec();
    } else {
-      BSMessageBox(BSMessageBox::success, tr("Wallet Password")
-         , tr("Wallet password successfully changed")
+      BSMessageBox(BSMessageBox::success, tr("Wallet Encryption")
+         , tr("Wallet encryption successfully changed")
          , this).exec();
    }
 
