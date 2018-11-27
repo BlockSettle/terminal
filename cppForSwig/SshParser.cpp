@@ -8,6 +8,8 @@
 
 #include "SshParser.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 subSshParserResult parseSubSsh(
@@ -171,913 +173,695 @@ subSshParserResult parseSubSsh(
 void ShardedSshParser::updateSsh()
 {
    LOGINFO << "updating SSH";
+   auto now = chrono::system_clock::now();
 
-   //parse subssh shards
-   auto dbPtr = db_->getDbPtr(SUBSSH);
-   auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbPtr);
-   counter_.store(dbSharded->getShardIdForHeight(scanFrom_));
-   
-   compileCheckpoints();
+   commitedBoundsCounter_.store(0, memory_order_relaxed);
+   fetchBoundsCounter_.store(0, memory_order_relaxed);
 
-   LOGINFO << "compiled checkpoints";
+   //initialize bounds vector
+   firstShard_ = db_->getShardIdForHeight(firstHeight_);
+   setupBounds();
 
-   //create ssh parse bounds
-   auto&& bounds = getBounds(false, 0);
-   for (auto& bound : bounds)
-      sshBoundsQueue_.push_back(move(bound));
-   sshBoundsQueue_.completed();
 
-   //tally ssh
+   //parser lambda
    auto ssh_lambda = [this](void)->void
    {
-      tallySshThread();
+      parseSshThread();
    };
-  
-   //start writer thread
-   auto writer_lambda = [this](void)->void
-   {
-      putSSH();
-   };
-   thread writer_thread(writer_lambda);
 
-   vector<thread::id> idVec;
+   vector<thread> threads;
+   unsigned count = threadCount_;
+   if (threadCount_ > 1)
+      --count;
+   for (unsigned i = 1; i < count; i++)
+      threads.push_back(thread(ssh_lambda));
+
+   putSSH();
+
+   for (auto& thr : threads)
+   {
+      if (thr.joinable())
+         thr.join();
+   }
+
+   chrono::duration<double> length = chrono::system_clock::now() - now;
+   LOGINFO << "Updated SSH in " << length.count() << "s";
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void ShardedSshParser::undo()
+{
+   commitedBoundsCounter_.store(0, memory_order_relaxed);
+   fetchBoundsCounter_.store(0, memory_order_relaxed);
+
+   //initialize
+   firstShard_ = db_->getShardIdForHeight(firstHeight_);
+   undo_ = true;
+   setupBounds();
+
+   //parser lambda
+   auto ssh_lambda = [this](void)->void
+   {
+      parseSshThread();
+   };
+
    vector<thread> threads;
    for (unsigned i = 1; i < threadCount_; i++)
       threads.push_back(thread(ssh_lambda));
-   tallySshThread();
+   putSSH();
 
    for (auto& thr : threads)
    {
-      idVec.push_back(thr.get_id());
       if (thr.joinable())
          thr.join();
-   }
-
-   idVec.push_back(writer_thread.get_id());
-
-   //kill writer thread
-   serializedSshQueue_.completed();
-   if (writer_thread.joinable())
-      writer_thread.join();
-
-   DatabaseContainer_Sharded::clearThreadShardTx(idVec);
-
-   LOGINFO << "Updated SSH";
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void ShardedSshParser::parseShardsThread(
-   const vector<pair<BinaryData, BinaryData>>& boundsVec)
-{
-   auto getDupForHeight = [this](unsigned height)->uint8_t
-   {
-      return this->db_->getValidDupIDForHeight(height);
-   };
-
-   auto dbPtr = db_->getDbPtr(SUBSSH);
-   auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbPtr);
-   if (dbSharded == nullptr)
-      throw runtime_error("unexpected SUBSSH dbPtr type");
-
-   auto topShardId = dbSharded->getTopShardId();
-   auto metaShardPtr = dbSharded->getShard(META_SHARD_ID);
-
-   auto&& topBlockHash = db_->getTopBlockHash();
-   unsigned topBlockInChain = 0;
-   {
-      auto headerPtr = db_->blockchain()->getHeaderByHash(topBlockHash);
-      topBlockInChain = headerPtr->getBlockHeight();
-   }
-
-
-   auto total = boundsVec.size();
-
-   while (1)
-   {
-      //grab a shard id
-      auto countId = counter_.fetch_add(1, memory_order_relaxed);
-      unsigned shardId = countId / total;
-      if (shardId > topShardId)
-         break;
-
-      auto boundId = countId % total;
-      auto& bound = *(boundsVec.begin() + boundId);
-
-      //get shardptr from db object
-      
-      auto semaIter = shardSemaphores_.find(shardId);
-      if (semaIter == shardSemaphores_.end())
-         throw runtime_error("missing shard semaphore");
-
-      map<BinaryData, pair<StoredScriptHistory, bool>> sshMap;
-
-      {
-         BinaryData shardTopHash;
-         {
-            BinaryWriter topHashKey;
-            topHashKey.put_uint32_t(SHARD_TOPHASH_ID, BE);
-            topHashKey.put_uint16_t(shardId, BE);
-            auto shardtx = metaShardPtr->beginTransaction(LMDB::ReadOnly);
-            shardTopHash = metaShardPtr->getValue(topHashKey.getDataRef());
-         }
-
-         unsigned lastScannedHeight = 0;
-         try
-         {
-            auto headerPtr = db_->blockchain()->getHeaderByHash(shardTopHash);
-            if (headerPtr->isMainBranch())
-            {
-               lastScannedHeight = headerPtr->getBlockHeight() + 1;
-            }
-         }
-         catch (exception&)
-         {
-         }
-
-         //check top scanned height vs shard bounds
-         auto shard_bounds = dbSharded->getShardBounds(shardId);
-         auto this_bound = min(topBlockInChain, shard_bounds.second);
-         if (this_bound < lastScannedHeight)
-         {
-            semaIter->second.fetch_sub(1, memory_order_relaxed);
-            continue;
-         }
-
-         //grab all ssh in checkpoint
-         if (lastScannedHeight > 0)
-         {
-            BinaryWriter boundKeyMin;
-            boundKeyMin.put_uint16_t(shardId, BE);
-            boundKeyMin.put_BinaryDataRef(
-               bound.first.getSliceRef(1, bound.first.getSize() - 1));
-
-            BinaryWriter boundKeyMax;
-            boundKeyMax.put_uint16_t(shardId, BE);
-            boundKeyMax.put_BinaryDataRef(
-               bound.second.getSliceRef(1, bound.second.getSize() - 1));
-
-            auto checkpointtx = db_->beginTransaction(CHECKPOINT, LMDB::ReadOnly);
-            auto checkpoint_iter = db_->getIterator(CHECKPOINT);
-
-            if (checkpoint_iter->seekToStartsWith(boundKeyMin.getDataRef()))
-            {
-               do
-               {
-                  auto keyRef = checkpoint_iter->getKeyRef();
-                  if (keyRef.getSize() >= boundKeyMax.getSize() && 
-                      keyRef.getSliceRef(0, boundKeyMax.getSize()) >
-                     boundKeyMax.getDataRef())
-                     break;
-
-                  auto&& sshKey = keyRef.getSliceCopy(2, keyRef.getSize() - 2);
-
-                  auto&& ssh_pair = make_pair(StoredScriptHistory(), false);
-                  ssh_pair.first.unserializeDBValue(checkpoint_iter->getValueRef());
-
-                  sshMap.insert(move(make_pair(
-                     move(sshKey), move(ssh_pair))));
-               } while (checkpoint_iter->advanceAndRead());
-            }
-         }
-
-         //cycle over subssh tallying all values, txio counts and subssh summaries
-         auto shardPtr = dbSharded->getShard(shardId, true);
-         auto shardtx = shardPtr->beginTransaction(LMDB::ReadOnly);
-         auto shard_iter = shardPtr->getIterator();
-         if (!shard_iter->seekToStartsWith(bound.first))
-         {
-            semaIter->second.fetch_sub(1, memory_order_relaxed);
-            continue;
-         }
-
-         auto&& result = parseSubSsh(
-            move(shard_iter),
-            lastScannedHeight, false,
-            getDupForHeight,
-            nullptr, bound.second);
-
-         //tally results
-         for (auto& ssh_pair : result.second)
-         {
-            //can't have values above the bound
-            if (ssh_pair.second.totalTxioCount_ == 0)
-               continue;
-
-            auto ssh_iter = sshMap.find(ssh_pair.first);
-            if (ssh_iter == sshMap.end())
-            {
-               auto&& new_pair = make_pair(move(ssh_pair.second), true);
-               auto&& insert_pair =
-                  make_pair(move(ssh_pair.first), move(new_pair));
-               sshMap.insert(move(insert_pair));
-            }
-            else
-            {
-               ssh_iter->second.first.addUpSummary(ssh_pair.second);
-               ssh_iter->second.second = true;
-            }
-         }
-      }
-
-      //serialize
-      auto batch = make_unique<SshBatch>(shardId);
-
-      for (auto& ssh_pair : sshMap)
-      {
-         //skip unflagged ssh
-         if (!ssh_pair.second.second)
-            continue;
-
-         BinaryWriter bwKey;
-         bwKey.put_uint16_t(shardId, BE);
-         bwKey.put_BinaryData(ssh_pair.first);
-
-         BinaryWriter bwData;
-         ssh_pair.second.first.serializeDBValue(
-            bwData, BlockDataManagerConfig::getDbType());
-
-         auto&& data_pair = make_pair(bwKey.getData(), move(bwData));
-         batch->serializedSsh_.insert(move(data_pair));
-      }
-
-      //push to writer
-      if (batch->serializedSsh_.size() > 0)
-      {
-         future<bool> fut;
-         bool waitOnWriter = false;
-         if (checkpointQueue_.count() > total * 4)
-         {
-            batch->waitOnWriter_ = move(make_unique<promise<bool>>());
-            fut = batch->waitOnWriter_->get_future();
-            waitOnWriter = true;
-         }
-
-         checkpointQueue_.push_back(move(batch));
-
-         if (waitOnWriter)
-            fut.wait();
-      }
-      else
-      {
-         semaIter->second.fetch_sub(1, memory_order_relaxed);
-      }
-   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void ShardedSshParser::putCheckpoint(unsigned boundsCount)
-{
-   TIMER_START("checkpoints");
-
-   auto dbPtr = db_->getDbPtr(SUBSSH);
-   auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbPtr);
-   if (dbSharded == nullptr)
-      throw runtime_error("unexpected subssh db type");
-
-   auto metaShardPtr = dbSharded->getShard(META_SHARD_ID);
-   auto currentShard = dbSharded->getShardIdForHeight(scanFrom_);
-   auto topShardId = dbSharded->getTopShardId();
-
-   auto topBlockHeight = db_->blockchain()->top()->getBlockHeight();
-
-   auto closeShard = 
-      [this, metaShardPtr, dbSharded, &topBlockHeight](unsigned shardId)->void
-   {
-      {
-         auto bounds = dbSharded->getShardBounds(shardId);
-         auto topHeight = min(bounds.second, topBlockHeight);
-
-         auto blockPtr = db_->blockchain()->getHeaderByHeight(topHeight);
-        
-         //update top scanned block hash entry
-         BinaryWriter topHashKey;
-         topHashKey.put_uint32_t(SHARD_TOPHASH_ID, BE);
-         topHashKey.put_uint16_t(shardId, BE);
-         auto tx = metaShardPtr->beginTransaction(LMDB::ReadWrite);
-
-         metaShardPtr->putValue(
-            topHashKey.getDataRef(), blockPtr->getThisHashRef());
-      }
-      
-      if (!init_)
-         return;
-
-      try
-      {
-         //close the shard, we won't need it again
-         auto shardPtr = dbSharded->getShard(shardId);
-         if (!shardPtr->isOpen())
-            return;
-
-         shardPtr->close();
-         LOGINFO << "closed shard #" << shardId;
-      }
-      catch(...)
-      { }
-   };
-
-   while (1)
-   {
-      unique_ptr<SshBatch> dataPtr;
-      try
-      {
-         dataPtr = move(checkpointQueue_.pop_front());
-      }
-      catch (StopBlockingLoop&)
-      {
-         break;
-      }
-
-      auto tx = db_->beginTransaction(CHECKPOINT, LMDB::ReadWrite);
-      for (auto& data_pair : dataPtr->serializedSsh_)
-      {
-         db_->putValue(
-            CHECKPOINT, 
-            data_pair.first.getRef(), data_pair.second.getDataRef());
-      }
-
-      if (dataPtr->waitOnWriter_ != nullptr)
-         dataPtr->waitOnWriter_->set_value(true);
-
-      auto semaIter = shardSemaphores_.find(dataPtr->shardId_);
-      if (semaIter != shardSemaphores_.end())
-      {
-         auto val = semaIter->second.fetch_sub(1, memory_order_relaxed);
-         if (val == 1)
-         {
-            closeShard(semaIter->first);
-            LOGINFO << "Commited SSH shard #" << semaIter->first;
-         }
-      }
-   }
-
-   LOGINFO << "closing left over shards";
-   {
-      auto tx = metaShardPtr->beginTransaction(LMDB::ReadWrite);
-      unsigned missed = 0;
-
-      for (auto& sema : shardSemaphores_)
-      {
-         auto val = sema.second.load(memory_order_relaxed);
-         if (val != 0)
-         {
-            ++missed;
-            continue;
-         }
-
-         BinaryWriter topHashKey;
-         topHashKey.put_uint32_t(SHARD_TOPHASH_ID, BE);
-         topHashKey.put_uint16_t(sema.first, BE);
-
-         auto bounds = dbSharded->getShardBounds(sema.first);
-         auto topHeight = min(bounds.second, topBlockHeight);
-         auto tophash = metaShardPtr->getValue(topHashKey.getDataRef());
-
-         try
-         {
-            auto headerPtr = db_->blockchain()->getHeaderByHash(tophash);
-            if (headerPtr->getBlockHeight() >= topHeight)
-               continue;
-         }
-         catch (...)
-         {
-         }
-            
-         closeShard(sema.first);
-      }
-      
-      if (missed > 0)
-      {
-         LOGINFO << "missing " << missed << " shards!";
-         throw runtime_error("missed shards");
-      }
-   }
-
-   TIMER_STOP("checkpoints");
-   LOGINFO << "compiled ssh checkpoints in " << TIMER_READ_SEC("checkpoints") << "s";
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void ShardedSshParser::compileCheckpoints(void)
-{
-   LOGINFO << "updating ssh checkpoints";
-   
-   auto dbPtr = db_->getDbPtr(SUBSSH);
-   auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbPtr);
-   if (dbSharded == nullptr)
-      throw runtime_error("unexpected subssh db type");
-
-   auto firstShardId = dbSharded->getShardIdForHeight(scanFrom_);
-
-   //create bounds
-   auto&& boundsVec = getBounds(true, DB_PREFIX_SUBSSH);
-   auto counter = firstShardId * boundsVec.size();
-   counter_.store(counter, memory_order_relaxed);
-
-   for (unsigned i = firstShardId; i <= dbSharded->getTopShardId(); i++)
-   {
-      auto& sema = shardSemaphores_[i];
-      sema.store(boundsVec.size(), memory_order_relaxed);
-   }
-
-   auto writerLbd = [this, &boundsVec](void)
-   {
-      putCheckpoint(boundsVec.size());
-   };
-
-
-   auto parserLbd = [this, &boundsVec](void)
-   {
-      parseShardsThread(boundsVec);
-   };
-   
-   //start writer thread
-   thread writerThread(writerLbd);
-
-   vector<thread::id> idVec;
-   vector<thread> threads;
-   for (unsigned i = 1; i < threadCount_; i++)
-   {
-      threads.push_back(thread(parserLbd));
-   }
-
-   parserLbd();
-   for (auto& thr : threads)
-   {
-      idVec.push_back(thr.get_id());
-      if (thr.joinable())
-         thr.join();
-   }
-
-   idVec.push_back(writerThread.get_id());
-
-   //kill checkpoints queue
-   checkpointQueue_.completed();
-
-   if (writerThread.joinable())
-      writerThread.join();
-
-   DatabaseContainer_Sharded::clearThreadShardTx(idVec);
-
-   LOGINFO << "updated ssh checkpoints";
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void ShardedSshParser::tallySshThread()
-{
-   auto parseShards = 
-      [this](
-      unsigned start, unsigned end, 
-      const pair<BinaryData, BinaryData>& bounds)
-      ->map<BinaryData, StoredScriptHistory>
-   {
-      map<BinaryData, StoredScriptHistory> sshMap;
-
-      for (unsigned i = start; i < end; i++)
-      {
-         auto dbIter = db_->getIterator(CHECKPOINT);
-         BinaryWriter shardMin;
-         shardMin.put_uint16_t(i, BE);
-         shardMin.put_BinaryData(bounds.first);
-
-         BinaryWriter shardMax;
-         shardMax.put_uint16_t(i, BE);
-         shardMax.put_BinaryData(bounds.second);
-
-         if (!dbIter->seekTo(shardMin.getDataRef()))
-            continue;
-
-         do
-         {
-            auto keyRef = dbIter->getKeyRef();
-            if (keyRef.getSize() < shardMax.getSize())
-               continue;
-
-            auto compareRef = keyRef.getSliceRef(0, shardMax.getSize());
-            if (compareRef > shardMax.getDataRef())
-               break;
-
-            StoredScriptHistory ssh;
-            ssh.unserializeDBKey(keyRef.getSliceRef(1, keyRef.getSize() - 1));
-            ssh.unserializeDBValue(dbIter->getValueRef());
-
-            auto sshIter = sshMap.find(ssh.uniqueKey_);
-            if (sshIter == sshMap.end())
-            {
-               sshMap.insert(make_pair(
-                  ssh.uniqueKey_, move(ssh)));
-            }
-            else
-            {
-               sshIter->second.addUpSummary(ssh);
-            }
-         } 
-         while (dbIter->advanceAndRead());
-      }
-
-      return sshMap;
-   };
-
-   auto serializeSsh = 
-      [](map<BinaryData, BinaryWriter>& serializedSsh,
-      const map<BinaryData, StoredScriptHistory>& sshMap,
-      DB_PREFIX prefix)->void
-   {
-      for (auto& ssh_pair : sshMap)
-      {
-         BinaryWriter bw(1 + ssh_pair.first.getSize());
-         bw.put_uint8_t(prefix);
-         bw.put_BinaryData(ssh_pair.first);
-
-         auto insert_pair = serializedSsh.insert(make_pair(
-            bw.getData(), BinaryWriter()));
-
-         ssh_pair.second.serializeDBValue(
-            insert_pair.first->second,
-            BlockDataManagerConfig::getDbType());
-      }
-   };
-
-   auto subSshDbPtr = db_->getDbPtr(SUBSSH);
-   auto sshDbPtr = db_->getDbPtr(SSH);
-   auto dbSharded = 
-      dynamic_pointer_cast<DatabaseContainer_Sharded>(subSshDbPtr);
-   if (dbSharded == nullptr)
-      throw runtime_error("unexpected SUBSSH dbPtr type");
-
-   auto firstShardScanFrom = scanFrom_;
-   if (scanFrom_ > 0)
-      --firstShardScanFrom;
-
-   auto firstShard = dbSharded->getShardIdForHeight(firstShardScanFrom);
-   auto nextCheckpoint = dbSharded->getShardIdForHeight(scanTo_);
-
-   size_t tallySize = 0;
-
-   auto tx = db_->beginTransaction(CHECKPOINT, LMDB::ReadOnly);
-   
-   while (1)
-   {
-      //grab bounds
-      pair<BinaryData, BinaryData> bounds;
-      try
-      {
-         bounds = move(sshBoundsQueue_.pop_front());
-      }
-      catch (StopBlockingLoop&)
-      {
-         break;
-      }
-
-      //first cover checkpoint ssh data
-      auto batch = make_unique<SshBatch>(0);
-      if (nextCheckpoint > firstShard)
-      {
-         auto&& sshMap = parseShards(
-            firstShard, nextCheckpoint,
-            bounds);
-
-         //grab checkpoint data for each ssh to update
-         auto sshTx = sshDbPtr->beginTransaction(LMDB::ReadOnly);
-         for (auto& ssh_pair : sshMap)
-         {
-            BinaryWriter bw(1 + ssh_pair.first.getSize());
-            bw.put_uint8_t(DB_PREFIX_SCRIPT);
-            bw.put_BinaryData(ssh_pair.first);
-
-            auto ssh_data = sshDbPtr->getValue(bw.getDataRef());
-            if (ssh_data.getSize() != 0)
-            {
-               StoredScriptHistory ssh_obj;
-               ssh_obj.unserializeDBValue(ssh_data);
-               ssh_pair.second.addUpSummary(ssh_obj);
-            }
-
-            //mark temp entry for clean up if applicable
-            auto keyPtr = const_cast<uint8_t*>(bw.getDataRef().getPtr());
-            keyPtr[0] = DB_PREFIX_TEMPSCRIPT;
-            ssh_data = sshDbPtr->getValue(bw.getDataRef());
-            if (ssh_data.getSize() != 0)
-            {
-               batch->serializedSsh_.insert(
-                  make_pair(bw.getData(), BinaryWriter()));
-            }
-         }
-
-         if(sshMap.size() > 0)
-            serializeSsh(batch->serializedSsh_, sshMap, DB_PREFIX_SCRIPT);
-      }
-
-      //then temp ssh
-      /*auto&& sshMap2 = parseShards(
-         nextCheckpoint, dbSharded->getTopShardId() + 1,
-         bounds);
-      serializeSsh(batch->serializedSsh_,
-         sshMap2,
-         DB_PREFIX_TEMPSCRIPT);*/
-
-      //push to writer thread
-      if (batch->serializedSsh_.size() == 0)
-         continue;
-
-      bool waitOnWriter = false;
-      future<bool> fut;
-      if (serializedSshQueue_.count() >= threadCount_ * 2)
-      {
-         batch->waitOnWriter_ = move(make_unique<promise<bool>>());
-         fut = batch->waitOnWriter_->get_future();
-         waitOnWriter = true;
-      }
-
-      serializedSshQueue_.push_back(move(batch));
-
-      if (waitOnWriter)
-         fut.wait();
    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void ShardedSshParser::putSSH()
 {
-   auto dbPtr = db_->getDbPtr(SSH);
+   auto len = boundsVector_.size();
+   auto increment = len / 100;
 
-   while (1)
+   for (unsigned i = 0; i < len; i++)
    {
-      unique_ptr<SshBatch> dataPtr;
+      auto batch = boundsVector_[i].get();
+      batch->fut_.wait();
 
-      try
+      if (batch->serializedSsh_.size() > 0)
       {
-         dataPtr = move(serializedSshQueue_.pop_front());
-      }
-      catch (StopBlockingLoop&)
-      {
-         break;
-      }
-
-      if (dataPtr->serializedSsh_.size() == 0)
-         continue;
-
-      auto tx = dbPtr->beginTransaction(LMDB::ReadWrite);
-      for (auto& ssh_pair : dataPtr->serializedSsh_)
-      {
-         if (ssh_pair.second.getSize() > 0)
+         auto tx = db_->beginTransaction(SSH, LMDB::ReadWrite);
+         for (auto& ssh_pair : batch->serializedSsh_)
          {
-            dbPtr->putValue(
-               ssh_pair.first.getRef(),
-               ssh_pair.second.getDataRef());
-         }
-         else
-         {
-            dbPtr->deleteValue(ssh_pair.first.getRef());
-         }
-      }
-
-      if (dataPtr->waitOnWriter_ != nullptr)
-         dataPtr->waitOnWriter_->set_value(true);
-
-      LOGINFO << "put one ssh batch of size " << dataPtr->serializedSsh_.size();
-   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void ShardedSshParser::undoCheckpoint(unsigned shardId)
-{
-   //gather ssh from flagged checkpoint
-   map<BinaryData, StoredScriptHistory> sshMap;
-   auto&& keyPrefix = WRITE_UINT16_BE(shardId);
-
-   {
-      auto tx = db_->beginTransaction(CHECKPOINT, LMDB::ReadOnly);
-      auto dbIter = db_->getIterator(CHECKPOINT);
-      if (!dbIter->seekToStartsWith(keyPrefix))
-         return;
-
-      do
-      {
-         if (!dbIter->getKeyRef().startsWith(keyPrefix.getRef()))
-            break;
-
-         pair<BinaryData, StoredScriptHistory> sshPair;
-
-         sshPair.second.unserializeDBKey(
-            dbIter->getKeyRef().getSliceRef(1, dbIter->getKeyRef().getSize() - 1));
-         sshPair.second.unserializeDBValue(dbIter->getValueRef());
-         sshPair.first = sshPair.second.uniqueKey_;
-
-         sshMap.insert(move(sshPair));
-      } 
-      while (dbIter->advanceAndRead());
-   }
-
-   auto sshDbPtr = db_->getDbPtr(SSH);
-   map<BinaryData, BinaryWriter> serializeSsh;
-
-   //grab ssh from sshdb perm entry, substract checkpoint from it
-   {
-      auto tx = sshDbPtr->beginTransaction(LMDB::ReadOnly);
-
-      for (auto& sshPair : sshMap)
-      {
-         BinaryWriter bw(1 + sshPair.first.getSize());
-         bw.put_uint8_t(DB_PREFIX_SCRIPT);
-         bw.put_BinaryData(sshPair.first);
-
-         auto val = sshDbPtr->getValue(bw.getDataRef());
-         if (val.getSize() == 0)
-            continue;
-
-         StoredScriptHistory ssh_checkpoint;
-         ssh_checkpoint.unserializeDBValue(val);
-         ssh_checkpoint.substractSummary(sshPair.second);
-
-         pair<BinaryData, BinaryWriter> bwPair;
-         bwPair.first = bw.getData();
-         ssh_checkpoint.serializeDBValue(bwPair.second, db_->getDbType());
-         serializeSsh.insert(move(bwPair));
-      }
-   }
-
-   if (serializeSsh.size() == 0)
-      return;
-
-   //write to disk
-   {
-      auto tx = sshDbPtr->beginTransaction(LMDB::ReadWrite);
-      for (auto& bwPair : serializeSsh)
-      {
-         sshDbPtr->putValue(
-            bwPair.first.getRef(), bwPair.second.getDataRef());
-      }
-   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void ShardedSshParser::resetCheckpoint(unsigned shardId)
-{
-   set<BinaryData> sshSet;
-   auto&& keyPrefix = WRITE_UINT16_BE(shardId);
-
-   //gather ssh from flagged checkpoint
-   {
-      auto tx = db_->beginTransaction(CHECKPOINT, LMDB::ReadOnly);
-      auto dbIter = db_->getIterator(CHECKPOINT);
-      if (!dbIter->seekToStartsWith(keyPrefix))
-         return;
-
-      do
-      {
-         if (!dbIter->getKeyRef().startsWith(keyPrefix.getRef()))
-            break;
-
-         sshSet.insert(dbIter->getKey());
-      } 
-      while (dbIter->advanceAndRead());
-   }
-
-   //delete all keys
-   {
-      auto tx = db_->beginTransaction(CHECKPOINT, LMDB::ReadWrite);
-
-      for (auto& ssh : sshSet)
-         db_->deleteValue(CHECKPOINT, ssh.getRef());
-   }
-
-   //reset top scanned hash in meta shard
-   auto dbSubSsh = db_->getDbPtr(SUBSSH);
-   auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbSubSsh);
-   if (dbSharded == nullptr)
-      throw runtime_error("unexpected SUBSSH dbPtr type");
-
-   {
-      auto metaShardPtr = dbSharded->getShard(META_SHARD_ID);
-      auto tx = metaShardPtr->beginTransaction(LMDB::ReadWrite);
-      
-      BinaryWriter key;
-      key.put_uint32_t(SHARD_TOPHASH_ID, BE);
-      key.put_uint16_t(shardId, BE);
-
-      metaShardPtr->deleteValue(key.getDataRef());
-   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void ShardedSshParser::undoShards(const set<unsigned>& undoneHeights)
-{
-   auto dbSubSsh = db_->getDbPtr(SUBSSH);
-   auto dbSharded = dynamic_pointer_cast<DatabaseContainer_Sharded>(dbSubSsh);
-   if(dbSharded == nullptr)
-      throw runtime_error("unexpected SUBSSH dbPtr type");
-
-   //undo checkpoints from ssh db, skip last shard as it's not covered by the
-   //ssh db
-   set<unsigned> shardsToUndo;
-   for (auto& height : undoneHeights)
-   {
-      auto shardId = dbSharded->getShardIdForHeight(height);
-      if (shardId == dbSharded->getTopShardId())
-         continue;
-
-      shardsToUndo.insert(shardId);
-   }
-
-   for (auto& shardId : shardsToUndo)
-      undoCheckpoint(shardId);
-
-   //check all flagged shards, reset relevant checkpoints if 
-   //they're off the main chain
-   set<unsigned> shardsToReset;
-   for (auto& height : undoneHeights)
-   {
-      auto shardId = dbSharded->getShardIdForHeight(height);
-      shardsToReset.insert(shardId);
-   }
-
-   {
-      auto metaShardPtr = dbSharded->getShard(META_SHARD_ID);
-      auto tx = metaShardPtr->beginTransaction(LMDB::ReadOnly);
-
-      auto iter = shardsToReset.begin();
-      while (iter != shardsToReset.end())
-      {
-         BinaryWriter key;
-         key.put_uint32_t(SHARD_TOPHASH_ID, BE);
-         key.put_uint16_t(*iter, BE);
-
-         auto hash = metaShardPtr->getValue(key.getDataRef());
-
-         try
-         {
-            auto headerPtr = db_->blockchain()->getHeaderByHash(hash);
-            if (headerPtr->isMainBranch())
+            if (ssh_pair.second.getSize() > 0)
             {
-               shardsToReset.erase(iter++);
-               continue;
+               db_->putValue(SSH,
+                  ssh_pair.first.getRef(),
+                  ssh_pair.second.getDataRef());
+            }
+            else
+            {
+               db_->deleteValue(SSH, ssh_pair.first.getRef());
             }
          }
-         catch(...)
-         { }
+      }
 
-         ++iter;
+      commitedBoundsCounter_.fetch_add(1, memory_order_relaxed);
+      writeThreadCV_.notify_all();
+
+      //release bound ptr
+      auto batch_mv = move(boundsVector_[i]);
+
+      if (increment!=0 && i%increment == 0)
+      {
+         float progress = float(i) / float(len);
+         LOGINFO << "ssh scan progress: " << progress * 100.0f << "%";
       }
    }
-
-   if (shardsToReset.size() == 0)
-      return;
-
-   for (auto& shardId : shardsToReset)
-      resetCheckpoint(shardId);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-vector<pair<BinaryData, BinaryData>> ShardedSshParser::getBounds(
-   bool withPrefix, uint8_t prefix)
+void ShardedSshParser::setupBounds()
 {
-   set<uint8_t> special_bytes;
-   special_bytes.insert(BlockDataManagerConfig::getPubkeyHashPrefix());
-   special_bytes.insert(BlockDataManagerConfig::getScriptHashPrefix());
-   special_bytes.insert(SCRIPT_PREFIX_P2WPKH);
-   special_bytes.insert(SCRIPT_PREFIX_P2WSH);
-
-   vector<pair<BinaryData, BinaryData>> boundsVec;
-
-   for (uint16_t i = 0; i < 256; i++)
+   auto addBounds = [this](const BinaryData& start, const BinaryData& end)->void
    {
-      auto byte_iter = special_bytes.find(i);
-      if (byte_iter != special_bytes.end())
+      auto boundsPtr = make_unique<SshBounds>();
+      boundsPtr->bounds_ = move(make_pair(start, end));
+      boundsVector_.push_back(move(boundsPtr));
+   };
+
+   BinaryData startKey;
+   uint64_t tally = 0;
+
+   //recursive lambda woohoo!
+   function<void(SshMapping& ssh_mapping, const BinaryData& parent)> mapToBounds = 
+      [&startKey, &tally, &mapToBounds, &addBounds]
+      (SshMapping& ssh_mapping, const BinaryData& parent)->void
+   {
+      for (auto& mapping : ssh_mapping.map_)
       {
-         for (uint16_t y = 0; y < 256; y++)
+         //sanity checks
+         if (mapping.second == nullptr || mapping.second->count_ == 0)
+            continue;
+
+         //create start key if this the begining of a fresh bound
+         if (startKey.getSize() == 0)
          {
-            BinaryWriter bw_first;
-            if (withPrefix)
-               bw_first.put_uint8_t(prefix);
-            bw_first.put_uint8_t(i);
-            bw_first.put_uint8_t(y);
-
-            BinaryWriter bw_last;
-            bw_last.put_BinaryData(bw_first.getData());
-            bw_last.put_uint8_t(0xFF);
-
-            auto&& bounds = make_pair(bw_first.getData(), bw_last.getData());
-            boundsVec.push_back(move(bounds));
+            BinaryWriter bw_start;
+            if (parent.getSize() > 0)
+               bw_start.put_BinaryData(parent);
+            bw_start.put_uint8_t(mapping.first);
+            startKey = bw_start.getData();
          }
 
+         if (mapping.second->count_ > SSH_BOUNDS_BATCH_SIZE * 2)
+         {
+            //too many subssh in this slice, we should break it down a layer
+
+            //does it have another layer?
+            if (mapping.second->map_.size() != 0)
+            {
+               BinaryWriter bw_parent;
+               if (parent.getSize() > 0)
+                  bw_parent.put_BinaryData(parent);
+               bw_parent.put_uint8_t(mapping.first);
+               mapToBounds(*mapping.second, bw_parent.getData());
+               continue;
+            }
+
+            //else proceed as usual
+            LOGWARN << "large slice with no further layer";
+         }
+
+         tally += mapping.second->count_;
+         if (tally >= SSH_BOUNDS_BATCH_SIZE)
+         {
+            BinaryWriter bw_last;
+            if (parent.getSize() > 0)
+               bw_last.put_BinaryData(parent);
+            bw_last.put_uint8_t(mapping.first);
+            bw_last.put_uint8_t(0xFF);
+
+            //add to container
+            addBounds(startKey, bw_last.getData());
+
+            //reset for new bounds
+            tally = 0;
+            startKey.clear();
+         }
+      }
+   };
+
+   auto&& sshMapping = mapSubSshDB();
+   mapToBounds(sshMapping, BinaryData());
+
+   //add last entry
+   if (startKey.getSize() != 0)
+   {
+      BinaryWriter bw_last;
+      bw_last.put_uint8_t(0xFF);
+
+      //add to container
+      addBounds(startKey, bw_last.getData());
+   }
+
+   LOGINFO << "scanning " << boundsVector_.size() << " ssh bounds";
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SshMapping ShardedSshParser::mapSubSshDB()
+{
+   //lambda
+   auto processLbd = [this](unsigned index)->void
+   {
+      mapSubSshDBThread(index);
+   };
+
+   LOGINFO << "mapping subssh db";
+   SshMapping sshMapping;
+
+   auto&& subssh_sdbi = db_->getStoredDBInfo(SUBSSH, 0);
+
+   //initialize
+   mapCount_.store(firstShard_, memory_order_relaxed);
+   mappingResults_.resize(threadCount_);
+   vector<thread> threads;
+
+   //start processing threads
+   for (unsigned i = 1; i < threadCount_; i++)
+      threads.push_back(thread(processLbd, i));
+   processLbd(0);
+
+   //wait on completion
+   for (auto& thr : threads)
+   {
+      if (thr.joinable())
+         thr.join();
+   }
+
+   //merge results
+   for (auto& mapping : mappingResults_)
+      sshMapping.merge(mapping);
+   return sshMapping;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void ShardedSshParser::mapSubSshDBThread(unsigned index)
+{
+   auto tx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
+
+   auto& sshMapping = mappingResults_[index];
+
+   auto&& subssh_sdbi = db_->getStoredDBInfo(SUBSSH, 0);
+   auto top_id = subssh_sdbi.metaInt_;
+   auto current_id = mapCount_.fetch_add(1, memory_order_relaxed);
+
+   while (current_id <= top_id)
+   {
+      auto dbIter = db_->getIterator(SUBSSH);
+
+      {
+         //seek to id
+         BinaryWriter firstShardKey(4);
+         firstShardKey.put_uint32_t(current_id, BE);
+
+         if (!dbIter->seekTo(firstShardKey.getDataRef()) ||
+            dbIter->getKeyRef().getSize() < 4)
+         {
+            current_id = mapCount_.fetch_add(1, memory_order_relaxed);
+            continue;
+         }
+
+         auto keyReader = dbIter->getKeyReader();
+         auto keyId = keyReader.get_uint32_t(BE);
+         if (keyId != current_id)
+         {
+            current_id = mapCount_.fetch_add(1, memory_order_relaxed);
+            continue;
+         }
+      }
+
+      do
+      {
+         auto keyReader = dbIter->getKeyReader();
+         if (keyReader.getSize() < 5)
+            continue;
+
+         auto key_id = keyReader.get_uint32_t(BE);
+         if (key_id != current_id)
+            break;
+
+         auto key = keyReader.get_BinaryDataRef(keyReader.getSizeRemaining());
+         auto ptr = key.getPtr();
+
+         ++sshMapping.count_;
+
+         auto first_byte = *ptr;
+         auto mappingPtr = sshMapping.getMappingForKey(first_byte);
+         ++mappingPtr->count_;
+
+         if (key.getSize() < 3)
+            continue;
+
+         auto second_byte = *(ptr + 1);
+         auto mappingPtr2 = mappingPtr->getMappingForKey(second_byte);
+         ++mappingPtr2->count_;
+
+         auto third_byte = *(ptr + 2);
+         auto mappingPtr3 = mappingPtr2->getMappingForKey(third_byte);
+         ++mappingPtr3->count_;
+      } while (dbIter->advanceAndRead());
+
+      current_id = mapCount_.fetch_add(1, memory_order_relaxed);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SshBounds* ShardedSshParser::getNext()
+{
+   //if write queue is too long, wait on condvar, otherwise break
+   while (fetchBoundsCounter_.load(memory_order_relaxed) - 
+          commitedBoundsCounter_.load(memory_order_relaxed) > 
+          threadCount_ * 2)
+   {
+      unique_lock<mutex> lock(cvMutex_);
+      writeThreadCV_.wait(lock);
+   }
+
+   //increment counter, grab bound ptr from vector
+   auto id = fetchBoundsCounter_.fetch_add(1, memory_order_relaxed);
+   if (id >= boundsVector_.size())
+      return nullptr;
+
+   auto boundsPtr = boundsVector_[id].get();
+   return boundsPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void ShardedSshParser::parseSshThread()
+{
+   //get top batch id
+   auto&& subssh_sdbi = db_->getStoredDBInfo(SUBSSH, 0);
+   auto id_max = subssh_sdbi.metaInt_;
+
+   //seek lambda
+   auto seekToBoundsStart = [](LDBIter* iterPtr,
+      unsigned id, SshBounds* bounds,
+      BinaryData& keyStart, BinaryData& keyEnd)->bool
+   {
+      BinaryWriter bw_start;
+      bw_start.put_uint32_t(id, BE);
+      bw_start.put_BinaryData(bounds->bounds_.first);
+
+      if (!iterPtr->seekTo(bw_start.getDataRef()))
+         return false;
+
+      BinaryRefReader brr_key(iterPtr->getKeyRef());
+      auto id_key = brr_key.get_uint32_t(BE);
+      if (id_key != id)
+         return false;
+
+      BinaryWriter bw_end;
+      bw_end.put_uint32_t(id, BE);
+      bw_end.put_BinaryData(bounds->bounds_.second);
+
+      keyStart = bw_start.getData();
+      keyEnd = bw_end.getData();
+
+      return true;
+   };
+
+   //key compare lambda
+   auto compareKeyToBounds = [](BinaryDataRef key, 
+      const BinaryData& start, const BinaryData& end)->int
+   {
+      auto len = min(key.getSize(), start.getSize());
+      auto keyRef = move(key.getSliceRef(0, len));
+      if (start.getSliceRef(0, len) > keyRef)
+         return -1;
+
+      len = min(key.getSize(), end.getSize());
+      keyRef = move(key.getSliceRef(0, len));
+      if (keyRef > end.getSliceRef(0, len))
+         return 1;
+
+      return 0;
+   };
+
+   //dupId check
+   auto dbPtr = db_;
+   auto checkDupId = [dbPtr](unsigned height, uint8_t dupId)->bool
+   {
+      return dupId == dbPtr->getValidDupIDForHeight(height);
+   };
+
+   //fetch base height
+   auto metaTx = db_->beginTransaction(SUBSSH_META, LMDB::ReadOnly);
+   auto getHeightForId = [dbPtr](unsigned id)->unsigned
+   {
+      BinaryWriter bw(8);
+      bw.put_uint32_t(id, BE);
+      bw.put_uint32_t(0);
+
+      auto result = dbPtr->getValueNoCopy(SUBSSH_META, bw.getDataRef());
+      if (result.getSize() == 0)
+      {
+         LOGERR << "cant get height base for batch id " << id;
+         throw runtime_error("");
+      }
+
+      BinaryRefReader brr(result);
+      return brr.get_uint32_t();
+   };
+
+   auto tx = db_->beginTransaction(SUBSSH, LMDB::ReadOnly);
+   while (true)
+   {
+      //grab range to work on
+      auto bounds = getNext();
+      if (bounds == nullptr)
+         break;
+
+      auto now = chrono::system_clock::now();
+      map<BinaryDataRef, StoredScriptHistory> sshMap;
+
+      //initialize db iterator
+      auto dbIter = db_->getIterator(SUBSSH);
+      unsigned current_id = firstShard_;
+      BinaryData bound_start;
+      BinaryData bound_end;
+
+      while (current_id <= id_max)
+      {
+         if (!seekToBoundsStart(dbIter.get(), current_id,
+            bounds, bound_start, bound_end))
+         {
+            ++current_id;
+            continue;
+         }
+
+         //get base height for id
+         auto base_height = getHeightForId(current_id);
+
+         do
+         {
+            auto&& keyRef = dbIter->getKeyRef();
+
+            //compare key to bounds
+            if (compareKeyToBounds(keyRef, bound_start, bound_end) != 0)
+               break;
+
+            //parse entry
+            auto&& brr_key = dbIter->getKeyReader();
+
+            //get ssh from map
+            brr_key.advance(4);
+            auto scrAddrRef =
+               brr_key.get_BinaryDataRef(brr_key.getSizeRemaining());
+            auto ssh_iter = sshMap.find(scrAddrRef);
+            if (ssh_iter == sshMap.end())
+            {
+               StoredScriptHistory sshNew;
+               sshNew.uniqueKey_ = scrAddrRef;
+               auto ssh_pair =
+                  move(make_pair(sshNew.uniqueKey_.getRef(), move(sshNew)));
+               ssh_iter = sshMap.insert(move(ssh_pair)).first;
+            }
+            auto& ssh = ssh_iter->second;
+
+            ++bounds->count_;
+            size_t totalTxioCount = 0;
+
+            //read through values
+            auto&& brr_data = dbIter->getValueReader();
+            auto subsshcount = brr_data.get_var_int();
+
+            for (unsigned z = 0; z < subsshcount; z++)
+            {
+               uint64_t totalValue = 0;
+               unsigned extraTxCount = 0;
+               auto subssh_height = brr_data.get_var_int();
+               auto subssh_dupid = brr_data.get_uint8_t();
+
+               //grab txio count
+               auto txio_count = brr_data.get_var_int();
+
+               for (unsigned y = 0; y < txio_count; y++)
+               {
+                  //get value
+                  auto value = brr_data.get_var_int();
+
+                  //get spent flag
+                  auto spent_flag = brr_data.get_uint8_t();
+
+                  switch (spent_flag)
+                  {
+                  case 0:
+                  {
+                     //unspent, add value to ssh
+                     totalValue += value;
+
+                     //skip 2 varints
+                     brr_data.get_var_int();
+                     brr_data.get_var_int();
+                     break;
+                  }
+
+                  case 1:
+                  {
+                     //funds and spends in same block, no effect 
+                     //on value, skip 4 varints
+                     brr_data.get_var_int();
+                     brr_data.get_var_int();
+                     brr_data.get_var_int();
+                     brr_data.get_var_int();
+
+                     //add an extra txio since this entry covers 2 tx
+                     ++extraTxCount;
+                     break;
+                  }
+
+                  case 0xFF:
+                  {
+                     //spent, substract value from ssh
+                     totalValue -= value;
+
+                     //skip 5 varints and 1 byte
+                     brr_data.get_var_int();
+                     brr_data.get_uint8_t();
+                     brr_data.get_var_int();
+                     brr_data.get_var_int();
+                     brr_data.get_var_int();
+                     brr_data.get_var_int();
+                     break;
+                  }
+
+                  default:
+                     LOGERR << "unexpected spent flag";
+                     throw runtime_error("unexpected spent flag");
+                  }
+               }
+
+               auto subsshHeight = base_height + subssh_height;
+               if (subsshHeight < firstHeight_)
+                  continue;
+               if(!checkDupId(subsshHeight, subssh_dupid) && !undo_)
+                  continue;
+
+               ssh.totalUnspent_ += totalValue;
+               totalTxioCount += txio_count + extraTxCount;
+            }
+
+            //tally count
+            if (totalTxioCount > 0)
+            {
+               ssh.totalTxioCount_ += totalTxioCount;
+               ssh.subsshSummary_[current_id] = totalTxioCount;
+            }
+
+         } while (dbIter->advanceAndRead());
+
+         //increment batch id
+         ++current_id;
+      }
+
+      if (sshMap.size() > 0 && (firstShard_ != 0 || undo_))
+      {
+         //does the key exist in db already?
+         auto sshtx = db_->beginTransaction(SSH, LMDB::ReadOnly);
+         auto sshIter = db_->getIterator(SSH);
+
+         map<BinaryDataRef, StoredScriptHistory> substractedMap;
+         auto subIter = sshMap.begin();
+         do
+         {
+            if (!sshIter->seekToExact(DB_PREFIX_SCRIPT, subIter->first))
+            {
+               if(undo_)
+                  LOGWARN << "failed to find ssh to undo";
+
+               ++subIter;
+               continue;
+            }
+
+            StoredScriptHistory dbSsh;
+            dbSsh.unserializeDBKey(sshIter->getKeyRef());
+            dbSsh.unserializeDBValue(sshIter->getValueRef());
+
+            if (!undo_)
+            {
+               subIter->second.addSummary(dbSsh);
+               ++subIter;
+            }
+            else
+            {
+               dbSsh.substractSummary(subIter->second);
+               substractedMap.insert(make_pair(
+                  dbSsh.uniqueKey_.getRef(), move(dbSsh)));
+               sshMap.erase(subIter++);
+            }
+         } 
+         while (subIter != sshMap.end());
+
+         for (auto& sub_pair : substractedMap)
+         {
+            sshMap.insert(make_pair(
+               sub_pair.first, move(sub_pair.second)));
+         }
+      }
+
+      //serialize result
+      bounds->serializeResult(sshMap);
+      bounds->time_ = chrono::system_clock::now() - now;
+
+      //flag as completed
+      bounds->completed_->set_value(true);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void SshBounds::serializeResult(map<BinaryDataRef, StoredScriptHistory>& sshMap)
+{
+   for (auto& ssh_pair : sshMap)
+   {
+      BinaryWriter bw_key(1 + ssh_pair.first.getSize());
+      bw_key.put_uint8_t(DB_PREFIX_SCRIPT);
+      bw_key.put_BinaryDataRef(ssh_pair.first);
+
+      auto& bw = serializedSsh_[bw_key.getData()];
+      ssh_pair.second.serializeDBValue(bw, ARMORY_DB_SUPER);
+   }
+
+   sshMap.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<SshMapping> SshMapping::getMappingForKey(uint8_t key)
+{
+   auto iter = map_.find(key);
+   if(iter == map_.end())
+   {
+      auto&& map_pair = make_pair(key, make_shared<SshMapping>());
+      iter = map_.insert(move(map_pair)).first;
+   }
+
+   return iter->second;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void SshMapping::prettyPrint(stringstream& ss, unsigned stepping)
+{
+   auto printSteps = [&ss, &stepping](void)->void
+   {
+      for (unsigned i = 0; i < stepping; i++)
+         ss << " ";
+   };
+
+   printSteps();
+   ss << " count: " << count_ << endl;
+   if (count_ > SSH_BOUNDS_BATCH_SIZE * 5)
+   {
+      printSteps();
+      ss << " breaking down map:" << endl;
+
+      for (auto& submap : map_)
+      {
+         if (submap.second == nullptr)
+            continue;
+
+         printSteps();
+         ss << "  key: " << (unsigned)submap.first << endl;
+         submap.second->prettyPrint(ss, stepping + 2);
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void SshMapping::merge(SshMapping& mapping)
+{
+   count_ += mapping.count_;
+
+   if (mapping.map_.size() == 0)
+      return;
+
+   for (auto& entry : mapping.map_)
+   {
+      auto iter = map_.find(entry.first);
+      if (iter == map_.end())
+      {
+         map_.insert(entry);
          continue;
       }
 
-      BinaryWriter bw_first;
-      if (withPrefix)
-         bw_first.put_uint8_t(prefix);
-      bw_first.put_uint8_t(i);
+      if (iter->second == nullptr)
+      {
+         iter->second = entry.second;
+         continue;
+      }
 
-      BinaryWriter bw_last;
-      if (withPrefix)
-         bw_last.put_uint8_t(prefix);
-      bw_last.put_uint8_t(i);
-      bw_last.put_uint8_t(0xFF);
+      if (entry.second == nullptr)
+         continue;
 
-      auto&& bounds = make_pair(bw_first.getData(), bw_last.getData());
-      boundsVec.push_back(move(bounds));
+      iter->second->merge(*entry.second);
    }
-
-   return boundsVec;
 }

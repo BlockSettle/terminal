@@ -141,7 +141,7 @@ class ReadWriteLock
 public:
    void lockRead()
    {
-      unique_lock<mutex> rl(all_lock);
+      std::unique_lock<std::mutex> rl(all_lock);
       
       std::thread::id this_thread_id = std::this_thread::get_id();
       auto idIter = thread_ids_.find(this_thread_id);
@@ -164,12 +164,12 @@ public:
    }
    void unlockRead()
    {
-      unique_lock<mutex> rl(all_lock);
+      std::unique_lock<std::mutex> rl(all_lock);
       std::thread::id this_thread_id = std::this_thread::get_id();
       auto idIter = thread_ids_.find(this_thread_id);
 
       if (idIter == thread_ids_.end())
-         throw runtime_error("unregistered thread attempted to release a lock");
+         throw std::runtime_error("unregistered thread attempted to release a lock");
 
       idIter->second--;
       if (idIter->second == 0)
@@ -182,12 +182,12 @@ public:
    
    void lockWrite()
    {
-      unique_lock<mutex> rl(all_lock);
+      std::unique_lock<std::mutex> rl(all_lock);
 
       std::thread::id this_thread_id = std::this_thread::get_id();
       auto idIter = thread_ids_.find(this_thread_id);
       if (idIter != thread_ids_.end())
-         throw runtime_error("ReadWriteLock deadlock: requested write lock"
+         throw std::runtime_error("ReadWriteLock deadlock: requested write lock"
          "within a thread already holding a read lock");
 
       has_writer = true;

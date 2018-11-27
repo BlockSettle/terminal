@@ -82,6 +82,7 @@ void WalletKeyWidget::onTypeChanged()
    ui_->lineEditPassword->setVisible(password_);
    ui_->labelPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
    ui_->lineEditPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
+   ui_->labelPasswordInfo->setVisible(password_);
 
    ui_->labelAuthId->setVisible(!password_ && showAuthId_);
    ui_->widgetAuthLayout->setVisible(!password_);
@@ -104,6 +105,32 @@ void WalletKeyWidget::onPasswordChanged()
    else {
       emit keyChanged(index_, {});
    }
+
+   QString msg;
+   bool bGreen = false;
+   if (ui_->lineEditPasswordConfirm->isVisible()) {
+      auto pwd = ui_->lineEditPassword->text();
+      auto pwdCf = ui_->lineEditPasswordConfirm->text();
+      if (!pwd.isEmpty() && !pwdCf.isEmpty()) {
+         if (pwd == pwdCf) {
+            if (pwd.length() < 6) {
+               msg = tr("Passwords match but are too short!");
+            }
+            else {
+               msg = tr("Passwords match!");
+               bGreen = true;
+            }
+         }
+         else if (pwd.length() < pwdCf.length()) {
+            msg = tr("Confirmation Password is too long!");
+         }
+         else {
+            msg = tr("Passwords do not match!");
+         }
+      }
+   }
+   ui_->labelPasswordInfo->setStyleSheet(tr("QLabel { color : %1; }").arg(bGreen ? tr("#38C673") : tr("#EE2249")));
+   ui_->labelPasswordInfo->setText(msg);
 }
 
 void WalletKeyWidget::onAuthIdChanged(const QString &text)

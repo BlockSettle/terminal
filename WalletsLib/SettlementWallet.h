@@ -29,8 +29,8 @@ namespace bs {
       Q_OBJECT
 
    public:
-      SettlementWallet();
-      SettlementWallet(const std::string &filename);
+      SettlementWallet(const std::shared_ptr<spdlog::logger> &logger = nullptr);
+      SettlementWallet(const std::string &filename, const std::shared_ptr<spdlog::logger> &logger = nullptr);
       ~SettlementWallet() override = default;
 
       SettlementWallet(const SettlementWallet&) = delete;
@@ -44,7 +44,6 @@ namespace bs {
          , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment = {});
       bool containsAddress(const bs::Address &addr) override;
 
-      bool hasWalletId(const std::string &id) const;
       bool isTempWalletId(const std::string &id) const;
       wallet::Type GetType() const override { return wallet::Type::Settlement; }
 
@@ -95,10 +94,8 @@ namespace bs {
 
    private:
       std::shared_ptr<bs::SettlementAddressEntry> getAddressBySettlementId(const BinaryData &settlementId) const;
-
       void createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset);
 
-   private:
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
       std::map<bs::Address, std::shared_ptr<SettlementAddressEntry>>    addrEntryByAddr_;
       std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;

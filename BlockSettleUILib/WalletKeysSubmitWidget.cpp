@@ -54,7 +54,7 @@ void WalletKeysSubmitWidget::init(MobileClientRequest requestType
          break;
       }
    }
-   if ((flags_ & HidePubKeyFingerprint) || !hasAuth) {
+   if ((flags_ & HidePubKeyFingerprint) || !hasAuth || true) {
       ui_->labelPubKeyFP->hide();
    }
    else {
@@ -231,7 +231,7 @@ void WalletKeysSubmitWidget::cancel()
    }
 }
 
-string WalletKeysSubmitWidget::encKey(int index) const
+std::string WalletKeysSubmitWidget::encKey(int index) const
 {
    if (index < 0 || index >= pwdData_.size()) {
       return {};

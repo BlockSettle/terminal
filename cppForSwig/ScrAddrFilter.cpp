@@ -16,6 +16,7 @@
 #include "txio.h"
 #include <thread>
 
+using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -112,7 +113,7 @@ void ScrAddrFilter::updateAddressMerkleInDB()
    }
    catch (runtime_error&)
    {
-      sshSdbi.magic_ = lmdb_->getMagicBytes();
+      sshSdbi.magic_ = NetworkConfig::getMagicBytes();
       sshSdbi.metaHash_ = BtcUtils::EmptyHash_;
       sshSdbi.topBlkHgt_ = 0;
       sshSdbi.armoryType_ = ARMORY_DB_BARE;
@@ -353,7 +354,7 @@ int32_t ScrAddrFilter::scanFrom() const
 
       for (auto scrAddr : *scraddrmap)
       {
-         if (lowestBlock != scrAddr.second->scannedHeight_)
+         if (lowestBlock != (int32_t)scrAddr.second->scannedHeight_)
          {
             lowestBlock = -1;
             break;
@@ -394,7 +395,6 @@ void ScrAddrFilter::getAllScrAddrInDB()
    //iterate over ssh DB
    while(dbIter->advanceAndRead(DB_PREFIX_SCRIPT))
    {
-      auto keyRef = dbIter->getKeyRef();
       StoredScriptHistory ssh;
       ssh.unserializeDBKey(dbIter->getKeyRef());
       ssh.unserializeDBValue(dbIter->getValueReader());

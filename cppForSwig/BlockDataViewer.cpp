@@ -7,10 +7,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "BlockDataViewer.h"
 
+using namespace std;
 
 /////////////////////////////////////////////////////////////////////////////
 BlockDataViewer::BlockDataViewer(BlockDataManager* bdm) :
-   zeroConfCont_(bdm->zeroConfCont()), rescanZC_(false)
+   rescanZC_(false), zeroConfCont_(bdm->zeroConfCont())
 {
    db_ = bdm->getIFace();
    bc_ = bdm->blockchain();
@@ -161,7 +162,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
    scanData.reorg_ = reorg;
 
    vector<uint32_t> startBlocks;
-   for (auto& group : groups_)
+   for (size_t i = 0; i < groups_.size(); i++)
       startBlocks.push_back(startBlock);
 
    auto sbIter = startBlocks.begin();
@@ -221,16 +222,6 @@ Tx BlockDataViewer::getTxByHash(BinaryData const & txhash) const
       return stx.getTxCopy();
    else
       return zeroConfCont_->getTxByHash(txhash);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool BlockDataViewer::isTxMainBranch(const Tx &tx) const
-{
-   if (!tx.hasTxRef())
-      return false;
-
-   DBTxRef dbTxRef(tx.getTxRef(), db_);
-   return dbTxRef.isMainBranch();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -377,65 +368,6 @@ shared_ptr<BlockHeader> BlockDataViewer::getHeaderByHash(
    const BinaryData& blockHash) const
 {
    return bc_->getHeaderByHash(blockHash);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-vector<UnspentTxOut> BlockDataViewer::getUnspentTxoutsForAddr160List(
-   const vector<BinaryData>& scrAddrVec, bool ignoreZc) const
-{
-   auto scrAddrMap = saf_->getScrAddrMap();
-
-   if (BlockDataManagerConfig::getDbType() != ARMORY_DB_SUPER)
-   {
-      for (const auto& scrAddr : scrAddrVec)
-      {
-         auto saIter = scrAddrMap->find(scrAddr);
-         if (saIter == scrAddrMap->end())
-            throw std::range_error("Don't have this scrAddr tracked");
-      }
-   }
-
-   vector<UnspentTxOut> UTXOs;
-
-   for (const auto& scrAddr : scrAddrVec)
-   {
-      const auto& zcTxioMap = zeroConfCont_->getUnspentZCforScrAddr(scrAddr);
-
-      StoredScriptHistory ssh;
-      db_->getStoredScriptHistory(ssh, scrAddr);
-
-      map<BinaryData, UnspentTxOut> scrAddrUtxoMap;
-      db_->getFullUTXOMapForSSH(ssh, scrAddrUtxoMap);
-
-      for (const auto& utxoPair : scrAddrUtxoMap)
-      {
-         auto zcIter = zcTxioMap.find(utxoPair.first);
-         if (zcIter != zcTxioMap.end())
-            if (zcIter->second->hasTxInZC())
-               continue;
-
-         UTXOs.push_back(utxoPair.second);
-      }
-
-      if (ignoreZc)
-         continue;
-
-      for (const auto& zcTxio : zcTxioMap)
-      {
-         if (!zcTxio.second->hasTxOutZC())
-            continue;
-         
-         if (zcTxio.second->hasTxInZC())
-            continue;
-
-         TxOut txout = zcTxio.second->getTxOutCopy(db_);
-         UnspentTxOut UTXO = UnspentTxOut(db_, txout, UINT32_MAX);
-
-         UTXOs.push_back(UTXO);
-      }
-   }
-
-   return UTXOs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -631,6 +563,21 @@ TxOut BlockDataViewer::getTxOutCopy(const BinaryData& dbKey) const
       txOut = move(zeroConfCont_->getTxOutCopy(bdkey, index));
 
    return txOut;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+StoredTxOut BlockDataViewer::getStoredTxOut(const BinaryData& dbKey) const
+{
+   if (dbKey.getSize() != 8)
+      throw runtime_error("invalid txout key length");
+
+   auto&& tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
+
+   StoredTxOut stxo;
+   db_->getStoredTxOut(stxo, dbKey);
+   stxo.parentHash_ = move(db_->getTxHashForLdbKey(dbKey.getSliceRef(0, 6)));
+   
+   return stxo;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -951,7 +898,6 @@ vector<LedgerEntry> WalletGroup::getHistoryPage(
    if (rebuildLedger || remapWallets)
       pageHistory(remapWallets, false);
 
-   hist_.setCurrentPage(pageId);
    vector<LedgerEntry> vle;
 
    if (rebuildLedger || remapWallets)

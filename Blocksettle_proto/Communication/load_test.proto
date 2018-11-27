@@ -4,10 +4,16 @@ package Blocksettle.Communication.load_test;
 
 enum AdminCommandCode
 {
-   StartConnectCode = 1;
-   StartCustomerTradingCode = 2;
-   StopCustomerTradingCode = 3;
-   GetXBTFundingAddressCode = 4;
+   StartConnectCode           = 1;
+   StartCustomerTradingCode   = 2;
+   StopCustomerTradingCode    = 3;
+   GetXBTFundingAddressCode   = 4;
+   // no command data
+   GetXBTWalletInfoCode       = 5;
+   CreateTXCode               = 6;
+   // no command data
+   StopTXSendingCode          = 7;
+   RevokeAllCoinsCode         = 8;
 }
 
 message AdminCommandHeader
@@ -27,9 +33,12 @@ message AdminCommandConnect
    required string   wallets_root = 7;
    required string   armory_host = 8;
    required string   armory_port = 9;
-   required bool     need_auth_address = 10;
-   required bool     generate_address = 11;
-   optional uint64   generate_address_interval = 12;
+   required string   md_host = 10;
+   required string   md_port = 11;
+   required string   auth_server_host = 12;
+   required string   auth_server_port = 13;
+   required string   auth_server_public_key = 14;
+   required bool     need_auth_address = 15;
 }
 
 message RFQAmount
@@ -61,6 +70,29 @@ message AdminCommandStartTrading
    repeated DealingPrice         xbt_dealing_prices = 5;
 }
 
+message AdminCommandCreateTX
+{
+   required bool     send_all = 1;
+   optional double   total_spend_amount = 2;
+
+   required uint64   outputs_count = 4;
+   required bool     create_new = 5;
+   // if not random or new - least used address will be used as outputs
+   required bool     use_random = 6;
+
+   optional uint64   max_tx_size_bytes = 7;
+
+   required bool     allow_zc_inputs = 8;
+
+   required bool     repeat_tx = 9;
+   optional uint64   repeat_tx_interval = 10;
+}
+
+message AdminCommandRevokeAllCoins
+{
+   required string revoke_to_address = 1;
+}
+
 enum CustomerUpdateType
 {
    AppReadyStatus             = 1;
@@ -78,6 +110,10 @@ enum CustomerUpdateType
    XBTAddressType             = 13;
    OTPUpdateAddressType       = 14;
    AuthAddressStateType       = 15;
+   XBTWalletInfoType          = 16;
+   TXBroadcastedType          = 17;
+   // ZCReceivedNotificationType - no message body
+   ZCReceivedNotificationType = 18;
 }
 
 enum RFQProductGroup
@@ -155,8 +191,10 @@ message AcceptedQuoteUpdate
 
 message XBTBalanceUpdate
 {
-   required double xbt_balance = 1;
-   required uint64 used_address_count = 2;
+   required double total_xbt_balance = 1;
+   required double unconfirmed_xbt_balance = 2;
+   required double spendable_xbt_balance = 3;
+   required uint64 used_address_count = 4;
 }
 
 message ErrorNotification
@@ -187,4 +225,24 @@ message AuthAddressUpdate
 {
    required string   auth_address = 1;
    required string   address_state_string = 2;
+}
+
+message AddressInfo
+{
+   required string   address = 1;
+   required uint32   tx_count = 2;
+}
+
+message XBTWalletInfo
+{
+   repeated AddressInfo address_info = 1;
+}
+
+message TXBroadcasted
+{
+   required uint64   used_inputs = 1;
+   required uint64   outputs_count = 2;
+   required uint64   tx_amount = 3;
+   required uint64   fee_amount = 4;
+   required uint64   tx_size = 5;
 }

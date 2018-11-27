@@ -13,6 +13,8 @@
 #include <sys/mman.h>
 #endif
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 void BlockData::deserialize(const uint8_t* data, size_t size,
    const shared_ptr<BlockHeader> blockHeader,

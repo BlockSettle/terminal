@@ -4,7 +4,8 @@
 using namespace bs;
 
 OrderUtxoResAdapter::OrderUtxoResAdapter(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
-   : logger_(logger), QObject(parent)
+   : QObject(parent)
+   , logger_(logger)
 { }
 
 void bs::OrderUtxoResAdapter::reserved(const std::string &walletId, const std::vector<UTXO> &utxos)

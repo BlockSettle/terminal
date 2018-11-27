@@ -27,7 +27,6 @@ Q_OBJECT
 
 public:
    CelerMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::string& host, const std::string& port
       , const std::shared_ptr<spdlog::logger>& logger
       , bool filterUsdProducts);
    ~CelerMarketDataProvider() noexcept override = default;
@@ -46,7 +45,7 @@ public:
       , const std::string& serverExchangeId);
 
 protected:
-   bool StartMDConnection() override;
+   bool StartMDConnection(const std::string &host, const std::string &port) override;
 
 public slots:
    void onCCSecurityReceived(const std::string& securityId);
@@ -73,10 +72,6 @@ private:
    bool ProcessSecurityListingEvent(const std::string& data);
 
 private:
-   // connection details for MD source
-   std::string mdHost_;
-   std::string mdPort_;
-
    std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<CelerClient>        celerClient_;
 

@@ -62,7 +62,6 @@ public:
 
    void LoadWallets(NetworkType, const QString &walletsPath, const load_progress_delegate &progressDelegate = nullptr);
    void BackupWallet(const hd_wallet_type &, const std::string &targetDir) const;
-   void AddWallet(const hd_wallet_type &, const QString &walletsPath);
 
    size_t GetWalletsCount() const { return wallets_.size(); }
    bool HasPrimaryWallet() const;
@@ -110,10 +109,9 @@ public:
       , bs::wallet::Seed, const QString &walletsPath, bool primary = false
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    void AdoptNewWallet(const hd_wallet_type &, const QString &walletsPath);
+   void AddWallet(const hd_wallet_type &, const QString &walletsPath);
 
    bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
-
-   bool getNewTransactions() const;
 
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
 
@@ -136,7 +134,6 @@ signals:
 public slots:
    void onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
    void onCCInfoLoaded();
-   void onWalletImported(const std::string &walletId) { emit walletImportFinished(walletId); }
 
 private slots:
    void onZeroConfReceived(unsigned int);
@@ -147,21 +144,22 @@ private slots:
    void onRefresh();
    void onStateChanged(ArmoryConnection::State);
    void onFeeObjDestroyed();
+   void onWalletImported(const std::string &walletId);
 
 private:
    bool empty() const { return (wallets_.empty() && !settlementWallet_); }
 
    // notification from block data manager listener ( WalletsManagerBlockListener )
    void ResumeRescan();
-   void UpdateSavedWallets();
+   void UpdateSavedWallets(bool force = false);
    void RegisterSettlementWallet();
 
    bool IsWalletFile(const QString& fileName) const;
    void SaveWallet(const wallet_gen_type& newWallet, NetworkType);
    void SaveWallet(const hd_wallet_type& wallet);
-   void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
    void EraseWallet(const wallet_gen_type &wallet);
-   void SetAuthWalletFrom(const hd_wallet_type &);
+   bool SetAuthWalletFrom(const hd_wallet_type &);
+   void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
 
    void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
       , std::function<void(bs::Transaction::Direction)>);
@@ -172,6 +170,7 @@ private:
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ArmoryConnection>      armory_;
    const bool                             preferWatchingOnly_;
 
    using wallet_container_type = std::unordered_map<std::string, wallet_gen_type>;
@@ -189,8 +188,13 @@ private:
    wallet_gen_type                        authAddressWallet_;
    BinaryData                             userId_;
    std::shared_ptr<bs::SettlementWallet>  settlementWallet_;
-   std::shared_ptr<ArmoryConnection>      armory_;
-   std::unordered_map<std::string, std::string> ccSecurities_;
+
+   struct CCInfo {
+      std::string desc;
+      uint64_t    lotSize;
+      std::string genesisAddr;
+   };
+   std::unordered_map<std::string, CCInfo>   ccSecurities_;
 
    std::map<BinaryData, bs::Transaction::Direction>   txDirections_;
    mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;

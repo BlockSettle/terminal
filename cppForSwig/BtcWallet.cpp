@@ -15,6 +15,8 @@
 #include "txio.h"
 #include "BlockDataViewer.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -257,8 +259,15 @@ vector<UnspentTxOut> BtcWallet::getSpendableTxOutListForValue(uint64_t val)
          if (!txioPair.second.isSpendable(db, blk))
             continue;
 
-         TxOut txout = txioPair.second.getTxOutCopy(db);
-         UnspentTxOut UTXO = UnspentTxOut(db, txout, blk);
+         auto&& txout_key = txioPair.second.getDBKeyOfOutput();
+         StoredTxOut stxo;
+         db->getStoredTxOut(stxo, txout_key);
+         auto&& hash = db->getTxHashForLdbKey(txout_key.getSliceRef(0, 6));
+
+         BinaryData script(stxo.getScriptRef());
+         UnspentTxOut UTXO(hash, txioPair.second.getIndexOfOutput(), stxo.getHeight(),
+            stxo.getValue(), script);
+
          utxoList.push_back(UTXO);
       }
    }
@@ -287,27 +296,7 @@ vector<UnspentTxOut> BtcWallet::getSpendableTxOutListZC()
       }
    }
 
-   auto&& txoutVec = bdvPtr_->getZcTxOutsForKeys(txioKeys);
-
-   //convert TxOut to UnspentTxOut
-   vector<UnspentTxOut> utxoVec;
-   for (auto& txout : txoutVec)
-   {
-      UnspentTxOut utxo;
-      utxo.txHash_ = txout.getParentHash();
-      utxo.txHeight_ = txout.getParentHeight();
-
-      utxo.txIndex_ = txout.getParentIndex();
-      utxo.txOutIndex_ = txout.getIndex();
-
-      utxo.value_ = txout.getValue();
-      utxo.script_ = txout.getScript();
-      utxo.txOutIndex_ = txout.getIndex();
-
-      utxoVec.push_back(move(utxo));
-   }
-
-   return utxoVec;
+   return bdvPtr_->getZcUTXOsForKeys(txioKeys);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -333,45 +322,17 @@ vector<UnspentTxOut> BtcWallet::getRBFTxOutList()
       }
    }
 
-   auto&& txoutVec = bdvPtr_->getZcTxOutsForKeys(zcKeys);
+   auto&& utxoVec = bdvPtr_->getZcUTXOsForKeys(zcKeys);
+
    BinaryDataRef prevTxKey;
    BinaryDataRef prevTxHash;
    for (auto& txoutkey : txoutKeys)
    {
-      auto&& txout = bdvPtr_->getTxOutCopy(txoutkey);
-      
-      auto txkey = txoutkey.getSliceRef(0, 6);
-      if (txkey == prevTxKey)
-      {
-         txout.setParentHash(prevTxHash);
-      }
-      else
-      {
-         auto&& txhash = bdvPtr_->getTxHashForDbKey(txkey);
-         prevTxKey = txkey;
-         if (txhash.getSize() == 0)
-            throw runtime_error("failed to get hash for dbkey");
-         txout.setParentHash(txhash);
-      }
+      auto&& stxo = bdvPtr_->getStoredTxOut(txoutkey);
 
-      txoutVec.push_back(move(txout));
-      prevTxHash.setRef(txoutVec.back().getParentHash());
-   }
-
-   //convert TxOut to UnspentTxOut
-   vector<UnspentTxOut> utxoVec;
-   for (auto& txout : txoutVec)
-   {
-      UnspentTxOut utxo;
-      utxo.txHash_ = txout.getParentHash();
-      utxo.txHeight_ = txout.getParentHeight();
-
-      utxo.txIndex_ = txout.getParentIndex();
-      utxo.txOutIndex_ = txout.getIndex();
-
-      utxo.value_ = txout.getValue();
-      utxo.script_ = txout.getScript();
-      utxo.txOutIndex_ = txout.getIndex();
+      BinaryData script(stxo.getScriptRef());
+      UnspentTxOut utxo(stxo.parentHash_, stxo.txOutIndex_, stxo.getHeight(),
+         stxo.getValue(), script);
 
       utxoVec.push_back(move(utxo));
    }
@@ -572,15 +533,18 @@ void BtcWallet::reset()
 ////////////////////////////////////////////////////////////////////////////////
 map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
 {
-   struct preHistory
+   if (BlockDataManagerConfig::getDbType() == ARMORY_DB_SUPER)
+      return computeScrAddrMapHistSummary_Super();
+
+   struct PreHistory
    {
       uint32_t txioCount_;
       vector<BinaryDataRef> scrAddrs_;
 
-      preHistory(void) : txioCount_(0) {}
+      PreHistory(void) : txioCount_(0) {}
    };
 
-   map<uint32_t, preHistory> preHistSummary;
+   map<uint32_t, PreHistory> preHistSummary;
 
    auto addrMap = scrAddrMap_.get();
 
@@ -639,6 +603,33 @@ map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary()
    }
 
    return histSummary;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+map<uint32_t, uint32_t> BtcWallet::computeScrAddrMapHistSummary_Super()
+{
+   auto addrMap = scrAddrMap_.get();
+   auto&& sshtx = bdvPtr_->getDB()->beginTransaction(SSH, LMDB::ReadOnly);
+
+   map<uint32_t, uint32_t> result;
+
+   for (auto& scrAddrPair : *addrMap)
+   {
+      scrAddrPair.second->mapHistory();
+      const map<uint32_t, uint32_t>& txioSum =
+         scrAddrPair.second->getHistSSHsummary();
+
+      for (auto& sum : txioSum)
+      {
+         auto iter = result.find(sum.first);
+         if (iter != result.end())
+            iter->second += sum.second;
+         else
+            result.insert(sum);
+      }
+   }
+
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -738,7 +729,7 @@ ScrAddrObj& BtcWallet::getScrAddrObjRef(const BinaryData& key)
    }
 
    std::ostringstream ss;
-   ss << "no ScrAddr matches key " << key.toBinStr() << 
+   ss << "no ScrAddr matches key " << key.toHexStr() << 
       " in Wallet " << walletID_.toBinStr();
    LOGERR << ss.str();
    throw std::runtime_error(ss.str());

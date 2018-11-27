@@ -7,13 +7,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "HistoryPager.h"
 
+using namespace std;
+
 uint32_t HistoryPager::txnPerPage_ = 100;
 
 ////////////////////////////////////////////////////////////////////////////////
-void HistoryPager::addPage(uint32_t count, uint32_t bottom, uint32_t top)
+void HistoryPager::addPage(vector<shared_ptr<Page>>& pages,
+   uint32_t count, uint32_t bottom, uint32_t top)
 {
-   auto newPage = make_shared<Page>(count, bottom, top);
-   pages_.push_back(newPage);
+   pages.push_back(make_shared<Page>(count, bottom, top));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -24,14 +26,20 @@ shared_ptr<map<BinaryData, LedgerEntry>> HistoryPager::getPageLedgerMap(
    uint32_t pageId, unsigned updateID,
    map<BinaryData, TxIOPair>* txioMap)
 {
-   if (!isInitialized_)
+   if (!isInitialized_->load(memory_order_relaxed))
+   {
+      LOGERR << "Uninitialized history";
       throw std::runtime_error("Uninitialized history");
+   }
 
-   if (pageId >= pages_.size())
+   auto pagesLocal = atomic_load_explicit(&pages_, memory_order_acquire);
+   if (pagesLocal == nullptr)
       return nullptr;
 
-   currentPage_ = pageId;
-   auto& page = pages_[pageId];
+   if (pageId >= pagesLocal->size())
+      return nullptr;
+
+   auto& page = (*pagesLocal)[pageId];
 
    if (updateID != UINT32_MAX && page->updateID_ == updateID)
    {
@@ -64,11 +72,20 @@ shared_ptr<map<BinaryData, LedgerEntry>> HistoryPager::getPageLedgerMap(
 shared_ptr<map<BinaryData, LedgerEntry>> HistoryPager::getPageLedgerMap(
    uint32_t pageId)
 {
-   if (!isInitialized_)
+   if (!isInitialized_->load(memory_order_relaxed))
+   {
+      LOGERR << "Uninitialized history";
       throw std::runtime_error("Uninitialized history");
+   }
 
-   currentPage_ = pageId;
-   auto& page = pages_[pageId];
+   auto pagesLocal = atomic_load_explicit(&pages_, memory_order_acquire);
+   if (pagesLocal == nullptr)
+      return nullptr;
+
+   if (pageId >= pagesLocal->size())
+      return nullptr;
+
+   auto& page = (*pagesLocal)[pageId];
 
    if (page->pageLedgers_.size() != 0)
    {
@@ -102,13 +119,14 @@ bool HistoryPager::mapHistory(
 
    reset();
    SSHsummary_.clear();
-   
    SSHsummary_ = move(newSummary);
+   auto newPages = make_shared<vector<shared_ptr<Page>>>();
    
    if (SSHsummary_.size() == 0)
    {
-      addPage(0, 0, UINT32_MAX);
-      isInitialized_ = true;
+      addPage(*newPages, 0, 0, UINT32_MAX);
+      atomic_store_explicit(&pages_, newPages, memory_order_release);
+      isInitialized_->store(true, memory_order_relaxed);
       return true;
    }
 
@@ -122,7 +140,7 @@ bool HistoryPager::mapHistory(
 
       if (threshold > txnPerPage_)
       {
-         addPage(threshold, histIter->first, top);
+         addPage(*newPages, threshold, histIter->first, top);
 
          threshold = 0;
          top = histIter->first - 1;
@@ -132,34 +150,64 @@ bool HistoryPager::mapHistory(
    }
 
    if (threshold != 0)
-      addPage(threshold, 0, top);
+      addPage(*newPages, threshold, 0, top);
 
-   sortPages();
+   //sort pages canonically then store
+   sortPages(*newPages);
+   atomic_store_explicit(&pages_, newPages, memory_order_release);
 
-   isInitialized_ = true;
+   //mark as initialized
+   isInitialized_->store(true, memory_order_relaxed);
    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 uint32_t HistoryPager::getPageBottom(uint32_t id) const
 {
-   if (id < pages_.size())
-      return pages_[id]->blockStart_;
+   if (!isInitialized_->load(memory_order_relaxed))
+      return 0;
+
+   auto pagesLocal = atomic_load_explicit(&pages_, memory_order_acquire);
+   if (pagesLocal == nullptr)
+      return 0;
+
+   if (id < pagesLocal->size())
+      return (*pagesLocal)[id]->blockStart_;
 
    return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+size_t HistoryPager::getPageCount(void) const
+{
+   if (!isInitialized_->load(memory_order_relaxed))
+      return 0;
+
+   auto pagesLocal = atomic_load_explicit(&pages_, memory_order_acquire);
+   if (pagesLocal == nullptr)
+      return 0;
+
+   return pagesLocal->size();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 uint32_t HistoryPager::getRangeForHeightAndCount(
    uint32_t height, uint32_t count) const
 {
-   if (!isInitialized_)
+   if (!isInitialized_->load(memory_order_relaxed))
+   {
+      LOGERR << "Uninitialized history";
       throw std::runtime_error("Uninitialized history");
+   }
 
+   auto pagesLocal = atomic_load_explicit(&pages_, memory_order_acquire);
+   if (pagesLocal == nullptr)
+      return 0;
+   
    uint32_t total = 0;
    uint32_t top = 0;
 
-   for (const auto& page : pages_)
+   for (const auto& page : *pagesLocal)
    {
       if (page->blockEnd_ > height)
       {
@@ -177,8 +225,11 @@ uint32_t HistoryPager::getRangeForHeightAndCount(
 ////////////////////////////////////////////////////////////////////////////////
 uint32_t HistoryPager::getBlockInVicinity(uint32_t blk) const
 {
-   if (!isInitialized_)
+   if (!isInitialized_->load(memory_order_relaxed))
+   {
+      LOGERR << "Uninitialized history";
       throw std::runtime_error("Uninitialized history");
+   }
 
    uint32_t blkDiff = UINT32_MAX;
    uint32_t blkHeight = UINT32_MAX;
@@ -202,11 +253,19 @@ uint32_t HistoryPager::getBlockInVicinity(uint32_t blk) const
 ////////////////////////////////////////////////////////////////////////////////
 uint32_t HistoryPager::getPageIdForBlockHeight(uint32_t blk) const
 {
-   if (!isInitialized_)
+   if (!isInitialized_->load(memory_order_relaxed))
+   {
+      LOGERR << "Uninitialized history";
       throw std::runtime_error("Uninitialized history");
+   }
 
    unsigned i = 0;
-   for (auto& page : pages_)
+
+   auto pagesLocal = atomic_load_explicit(&pages_, memory_order_acquire);
+   if (pagesLocal == nullptr)
+      return 0;
+
+   for (auto& page : *pagesLocal)
    {
       if (blk >= page->blockStart_ && blk <= page->blockEnd_)
          return i;
@@ -218,7 +277,7 @@ uint32_t HistoryPager::getPageIdForBlockHeight(uint32_t blk) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void HistoryPager::sortPages()
+void HistoryPager::sortPages(vector<shared_ptr<Page>>& pages)
 {
-   std::sort(pages_.begin(), pages_.end(), Page::comparator); 
+   std::sort(pages.begin(), pages.end(), Page::comparator);
 }

@@ -41,9 +41,6 @@ CelerMessage CelerSubscribeToMDSequence::subscribeToMD()
 
    request.set_settlementtype("SP");
 
-   logger_->debug("[CelerSubscribeToMDSequence::subscribeToMD] sending MarketDataSubscriptionRequest\n{}"
-      , request.DebugString());
-
    CelerMessage message;
    message.messageType = CelerAPI::MarketDataSubscriptionRequestType;
    message.messageData = request.SerializeAsString();

@@ -8,7 +8,8 @@
 #include <spdlog/spdlog.h>
 
 ZmqDataConnection::ZmqDataConnection(const std::shared_ptr<spdlog::logger>& logger, bool useMonitor)
-   : logger_(logger), useMonitor_(useMonitor)
+   : logger_(logger)
+   , useMonitor_(useMonitor)
    , dataSocket_(ZmqContext::CreateNullSocket())
    , monSocket_(ZmqContext::CreateNullSocket())
    , threadMasterSocket_(ZmqContext::CreateNullSocket())
@@ -16,6 +17,7 @@ ZmqDataConnection::ZmqDataConnection(const std::shared_ptr<spdlog::logger>& logg
    , isConnected_(false)
 {
    assert(logger_);
+   continueExecution_ = std::make_shared<bool>(false);
 }
 
 ZmqDataConnection::~ZmqDataConnection() noexcept
@@ -154,6 +156,7 @@ bool ZmqDataConnection::openConnection(const std::string& host , const std::stri
    setListener(listener);
 
    // and start thread
+   *continueExecution_ = true;
    listenThread_ = std::thread(&ZmqDataConnection::listenFunction, this);
 
    SPDLOG_DEBUG(logger_, "[ZmqDataConnection::openConnection] starting connection for {}"
@@ -195,7 +198,9 @@ void ZmqDataConnection::listenFunction()
 
    int result;
 
-   while(true) {
+   auto executionFlag = continueExecution_;
+
+   while(*executionFlag) {
       result = zmq_poll(poll_items, monSocket_ ? 3 : 2, -1);
       if (result == -1) {
          logger_->error("[ZmqDataConnection::listenFunction] poll failed for {} : {}"
@@ -270,11 +275,6 @@ void ZmqDataConnection::listenFunction()
          }
       }
    }
-
-   if (isConnected_) {
-      notifyOnDisconnected();
-   }
-   SPDLOG_DEBUG(logger_, "[ZmqDataConnection::listenFunction] poll thread stopped for {}", connectionName_);
 }
 
 bool ZmqDataConnection::recvData()
@@ -332,15 +332,22 @@ bool ZmqDataConnection::closeConnection()
 
    SPDLOG_DEBUG(logger_, "[ZmqDataConnection::closeConnection] stopping {}", connectionName_);
 
-   int command = ZmqDataConnection::CommandStop;
-   int result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
-   if (result == -1) {
-      logger_->error("[ZmqDataConnection::closeConnection] failed to send stop comamnd for {} : {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
+   if (std::this_thread::get_id() == listenThread_.get_id()) {
+      //connectino is closed in callback
+      listenThread_.detach();
+      *continueExecution_ = false;
    }
+   else {
+      int command = ZmqDataConnection::CommandStop;
+      int result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+      if (result == -1) {
+         logger_->error("[ZmqDataConnection::closeConnection] failed to send stop comamnd for {} : {}"
+            , connectionName_, zmq_strerror(zmq_errno()));
+         return false;
+      }
 
-   listenThread_.join();
+      listenThread_.join();
+   }
    resetConnectionObjects();
 
    return true;

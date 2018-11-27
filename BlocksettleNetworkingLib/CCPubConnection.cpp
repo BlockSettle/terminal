@@ -43,13 +43,13 @@ bool CCPubConnection::SubmitRequestToPB(const std::string& name, const std::stri
 
    command->SetReplyCallback([command, this](const std::string& data) {
       OnDataReceived(data);
-      command->SetReplyCallback(nullptr);
+      command->CleanupCallbacks();
       return true;
    });
 
    command->SetErrorCallback([command, this](const std::string& message) {
       logger_->error("[CCPubConnection::{}] error callback: {}", command->GetName(), message);
-      command->SetReplyCallback(nullptr);
+      command->CleanupCallbacks();
    });
 
    if (!command->ExecuteRequest(GetPuBHost(), GetPuBPort(), data)) {

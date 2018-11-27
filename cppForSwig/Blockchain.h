@@ -49,17 +49,17 @@ public:
    {
       bool prevTopStillValid_ = false;
       bool hasNewTop_ = false;
-      shared_ptr<BlockHeader> prevTop_;
-      shared_ptr<BlockHeader> newTop_;
-      shared_ptr<BlockHeader> reorgBranchPoint_;
+      std::shared_ptr<BlockHeader> prevTop_;
+      std::shared_ptr<BlockHeader> newTop_;
+      std::shared_ptr<BlockHeader> reorgBranchPoint_;
    };
    
    /**
     * Adds a block to the chain
     **/
-   set<uint32_t> addBlocksInBulk(
-      const map<HashString, shared_ptr<BlockHeader>>&, bool flag);
-   void forceAddBlocksInBulk(map<HashString, shared_ptr<BlockHeader>>&);
+   std::set<uint32_t> addBlocksInBulk(
+      const std::map<HashString, std::shared_ptr<BlockHeader>>&, bool flag);
+   void forceAddBlocksInBulk(std::map<HashString, std::shared_ptr<BlockHeader>>&);
 
    ReorganizationState organize(bool verbose);
    ReorganizationState forceOrganize();
@@ -67,27 +67,18 @@ public:
 
    void updateBranchingMaps(LMDBBlockDatabase*, ReorganizationState&);
 
-   shared_ptr<BlockHeader> top() const;
-   shared_ptr<BlockHeader> getGenesisBlock() const;
-   const shared_ptr<BlockHeader> getHeaderByHeight(unsigned height) const;
+   std::shared_ptr<BlockHeader> top() const;
+   std::shared_ptr<BlockHeader> getGenesisBlock() const;
+   const std::shared_ptr<BlockHeader> getHeaderByHeight(unsigned height) const;
    bool hasHeaderByHeight(unsigned height) const;
    
-   const shared_ptr<BlockHeader> getHeaderByHash(HashString const & blkHash) const;
-   shared_ptr<BlockHeader> getHeaderById(uint32_t id) const;
+   const std::shared_ptr<BlockHeader> getHeaderByHash(HashString const & blkHash) const;
+   std::shared_ptr<BlockHeader> getHeaderById(uint32_t id) const;
 
    bool hasHeaderWithHash(BinaryData const & txHash) const;
-   const shared_ptr<BlockHeader> getHeaderPtrForTxRef(const TxRef &txr) const;
-   const shared_ptr<BlockHeader> getHeaderPtrForTx(const Tx & txObj) const
-   {
-      if(txObj.getTxRef().isNull())
-      {
-         throw runtime_error("TxRef in Tx object is not set, cannot get header ptr");
-      }
-      
-      return getHeaderPtrForTxRef(txObj.getTxRef());
-   }
+   const std::shared_ptr<BlockHeader> getHeaderPtrForTxRef(const TxRef &txr) const;
    
-   shared_ptr<map<HashString, shared_ptr<BlockHeader>>> allHeaders(void) const
+   std::shared_ptr<std::map<HashString, std::shared_ptr<BlockHeader>>> allHeaders(void) const
    {
       return headerMap_.get();
    }
@@ -95,36 +86,36 @@ public:
    void putBareHeaders(LMDBBlockDatabase *db, bool updateDupID=true);
    void putNewBareHeaders(LMDBBlockDatabase *db);
 
-   unsigned int getNewUniqueID(void) { return topID_.fetch_add(1, memory_order_relaxed); }
+   unsigned int getNewUniqueID(void) { return topID_.fetch_add(1, std::memory_order_relaxed); }
 
-   map<unsigned, set<unsigned>> mapIDsPerBlockFile(void) const;
-   map<unsigned, HeightAndDup> getHeightAndDupMap(void) const;
+   std::map<unsigned, std::set<unsigned>> mapIDsPerBlockFile(void) const;
+   std::map<unsigned, HeightAndDup> getHeightAndDupMap(void) const;
 
 private:
-   shared_ptr<BlockHeader> organizeChain(bool forceRebuild = false, bool verbose = false);
+   std::shared_ptr<BlockHeader> organizeChain(bool forceRebuild = false, bool verbose = false);
    /////////////////////////////////////////////////////////////////////////////
    // Update/organize the headers map (figure out longest chain, mark orphans)
    // Start from a node, trace down to the highest solved block, accumulate
    // difficulties and difficultySum values.  Return the difficultySum of 
    // this block.
-   double traceChainDown(shared_ptr<BlockHeader> bhpStart);
+   double traceChainDown(std::shared_ptr<BlockHeader> bhpStart);
 
 private:
    //TODO: make this whole class thread safe
 
    const BinaryData genesisHash_;
-   TransactionalMap<BinaryData, shared_ptr<BlockHeader>> headerMap_;
-   TransactionalMap<unsigned, shared_ptr<BlockHeader>> headersById_;
+   TransactionalMap<BinaryData, std::shared_ptr<BlockHeader>> headerMap_;
+   TransactionalMap<unsigned, std::shared_ptr<BlockHeader>> headersById_;
 
-   vector<shared_ptr<BlockHeader>> newlyParsedBlocks_;
-   TransactionalMap<unsigned, shared_ptr<BlockHeader>> headersByHeight_;
-   shared_ptr<BlockHeader> topBlockPtr_;
+   std::vector<std::shared_ptr<BlockHeader>> newlyParsedBlocks_;
+   TransactionalMap<unsigned, std::shared_ptr<BlockHeader>> headersByHeight_;
+   std::shared_ptr<BlockHeader> topBlockPtr_;
    unsigned topBlockId_ = 0;
    Blockchain(const Blockchain&); // not defined
 
-   atomic<unsigned int> topID_;
+   std::atomic<unsigned int> topID_;
 
-   mutable mutex mu_;
+   mutable std::mutex mu_;
 };
 
 #endif

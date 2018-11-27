@@ -10,16 +10,25 @@ using namespace bs;
 #define WALLET_PREFIX_BYTE    0x01     // can use as format version
 
 
-PlainWallet::PlainWallet(const std::string &name, const std::string &desc)
-   : Wallet(), desc_(desc)
+PlainWallet::PlainWallet(const std::string &name, const std::string &desc
+                         , const std::shared_ptr<spdlog::logger> &logger)
+   : Wallet(logger), desc_(desc)
 {
    walletName_ = name;
    walletId_ = BtcUtils::computeID(SecureBinaryData().GenerateRandom(32)).toBinStr();
 }
 
-PlainWallet::PlainWallet(const std::string &filename)
+PlainWallet::PlainWallet(const std::string &filename
+                         , const std::shared_ptr<spdlog::logger> &logger)
+   : Wallet(logger)
 {
    loadFromFile(filename);
+}
+
+PlainWallet::PlainWallet(const std::shared_ptr<spdlog::logger> &logger)
+   : Wallet(logger)
+{
+   walletId_ = BtcUtils::computeID(SecureBinaryData().GenerateRandom(32)).toBinStr();
 }
 
 PlainWallet::~PlainWallet()
@@ -129,17 +138,17 @@ void PlainWallet::writeDB()
          bwDesc.put_BinaryData(walletDescriptionData);
          putDataToDB(db_, bwKey.getData(), bwDesc.getData());
       }
+   }
 
-      {  // asset count
-         BinaryWriter bwKey;
-         bwKey.put_uint32_t(ROOTASSET_KEY);
+   {  // asset count
+      BinaryWriter bwKey;
+      bwKey.put_uint32_t(ROOTASSET_KEY);
 
-         BinaryWriter bwData;
-         bwData.put_var_int(4);
-         bwData.put_int32_t(lastAssetIndex_);
+      BinaryWriter bwData;
+      bwData.put_var_int(4);
+      bwData.put_int32_t(lastAssetIndex_);
 
-         putDataToDB(db_, bwKey.getData(), bwData.getData());
-      }
+      putDataToDB(db_, bwKey.getData(), bwData.getData());
    }
 
    for (const auto &asset : assets_) {
@@ -148,6 +157,7 @@ void PlainWallet::writeDB()
       }
       BinaryWriter bwKey;
       bwKey.put_uint8_t(ASSETENTRY_PREFIX);
+      bwKey.put_int32_t(asset.second->id());
 
       BinaryWriter bwData;
       const auto &assetSer = asset.second->serialize();
@@ -269,16 +279,19 @@ void PlainWallet::readFromDB()
 
          BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
          BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
-         if (keyBDR.getSize() != 1) {
+         if (keyBDR.getSize() != (sizeof(uint8_t) + sizeof(int32_t))) {
             dbIter.advance();
             continue;
          }
          BinaryRefReader brrKey(keyBDR);
          BinaryRefReader brrVal(valueBDR);
 
-         if (brrKey.get_uint8_t() != ASSETENTRY_PREFIX) {
-            throw WalletException("invalid asset key");
+         const auto prefix = brrKey.get_uint8_t();
+         if (prefix != ASSETENTRY_PREFIX) {
+            dbIter.advance();
+            continue;
          }
+         const auto id = brrKey.get_int32_t();
 
          try {
             const auto &len = static_cast<uint32_t>(brrVal.get_var_int());
@@ -293,7 +306,10 @@ void PlainWallet::readFromDB()
             const auto assetRef = brrVal.get_BinaryDataRef(len);
             const auto &assetPair = deserializeAsset(assetRef);
             if (assets_.find(assetPair.second->id()) != assets_.end()) {
-               throw WalletException("asset with index " + std::to_string(assetPair.second->id()) + " already exists");
+               throw WalletException("index " + std::to_string(assetPair.second->id()) + " already exists");
+            }
+            if (assetPair.second->id() != id) {
+               throw WalletException("id check failed: " + std::to_string(assetPair.second->id()) + " vs " + std::to_string(id));
             }
             addAddress(assetPair.first, assetPair.second);
          }
@@ -347,8 +363,11 @@ int PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAsse
    if (asset) {
       if (asset->getIndex() < 0) {
          id = lastAssetIndex_++;
-         asset->setId(id);
       }
+      else {
+         id = asset->getIndex();
+      }
+      asset->setId(id);
    }
    else {
       id = lastAssetIndex_++;
@@ -410,6 +429,8 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
    default:
       return nullptr;
    }
+
+   return result;
 }
 
 int PlainWallet::getAddressIndex(const bs::Address &addr) const

@@ -29,11 +29,11 @@ public:
 
       void pprint(void)
       {
-         cout << (nodeHash_.getSize()>0 ? nodeHash_.getSliceCopy(0,4).toHexStr() : "        ") << " "
+         std::cout << (nodeHash_.getSize()>0 ? nodeHash_.getSliceCopy(0,4).toHexStr() : "        ") << " "
               << (isOnPath_ ? 1 : 0) << " "
               << (isLeaf_ ? 1 : 0) << " "
               << (ptrLeft_==NULL ? "L-empty" : "L-exist") << " "
-              << (ptrRight_==NULL ? "R-empty" : "R-exist") << endl;
+              << (ptrRight_==NULL ? "R-empty" : "R-exist") << std::endl;
       }
    };
 
@@ -61,8 +61,8 @@ public:
 
    
    PartialMerkleTree(uint32_t nTx, 
-                     vector<bool> const * bits=NULL, 
-                     vector<HashString> const * hashes=NULL)
+      std::vector<bool> const * bits=NULL,
+      std::vector<HashString> const * hashes=NULL)
    {
       createTreeNodes(nTx, bits, hashes);
    }
@@ -87,8 +87,8 @@ public:
    /////////////////////////////////////////////////////////////////////////////
    // "bits" and "hashes" are vectors of size=numTx
    void createTreeNodes(uint32_t nTx, 
-                        vector<bool> const * bits=NULL, 
-                        vector<HashString> const * hashes=NULL)
+      std::vector<bool> const * bits=NULL,
+      std::vector<HashString> const * hashes=NULL)
    {
       // We're going to create a binary search tree that looks exactly like
       // the target merkle tree.  It's structure is entirely dependent on 
@@ -101,7 +101,7 @@ public:
       static CryptoPP::SHA256 sha256_;
       BinaryData hashOut(32);
       uint32_t nLevel = nTx;
-      vector<MerkleNode*> levelLower(nLevel);
+      std::vector<MerkleNode*> levelLower(nLevel);
 
       // Setup leaf nodes
       for(uint32_t i=0; i<nTx; i++)
@@ -117,7 +117,7 @@ public:
 
       while( nLevel > 1 )
       {
-         vector<MerkleNode*> levelUpper( (nLevel+1)/2 );
+         std::vector<MerkleNode*> levelUpper( (nLevel+1)/2 );
          for(uint32_t i=0; i<nLevel; i+=2)
          {
             MerkleNode* newNode = new MerkleNode;
@@ -153,8 +153,8 @@ public:
 
       BinaryWriter bw;
    
-      list<bool> vBits;
-      list<HashString> vHash;
+      std::list<bool> vBits;
+      std::list<HashString> vHash;
 
       // This will populate the vBits and vHash vectors
       recurseSerializeTree(root_, vBits, vHash);
@@ -164,7 +164,7 @@ public:
 
       // var_int + vector<hash>  - Num Hash + HashList
       bw.put_var_int(vHash.size());
-      list<HashString>::iterator iter;
+      std::list<HashString>::iterator iter;
       for(iter = vHash.begin(); iter != vHash.end(); iter++)
          bw.put_BinaryData(*iter);
 
@@ -184,7 +184,7 @@ public:
    
       // Destroy the tree if it already exists
       recurseDestroyTree(root_);
-      list<HashString> vHash;
+      std::list<HashString> vHash;
 
       // Read numTx
       uint32_t numTx = brr.get_uint32_t();
@@ -205,7 +205,7 @@ public:
       uint32_t numBits = (uint32_t)brr.get_var_int();
       BinaryData vBytes;
       brr.get_BinaryData(vBytes, (numBits+7)/8);
-      list<bool> vBits = BtcUtils::UnpackBits(vBytes, numBits);
+      std::list<bool> vBits = BtcUtils::UnpackBits(vBytes, numBits);
 
       recurseUnserializeTree(root_, vBits, vHash);
       recurseCalcHash(root_);
@@ -227,7 +227,7 @@ public:
          return node->nodeHash_;
 
       if(node->isLeaf_)
-         cout << "ERROR:  leaf node without hash?" << endl;
+         std::cout << "ERROR:  leaf node without hash?" << std::endl;
 
       BinaryData combined(64);
       BinaryData left(32);
@@ -247,8 +247,8 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    static void recurseSerializeTree(MerkleNode* node, 
-                                    list<bool> & vBits, 
-                                    list<HashString> & vHash)
+      std::list<bool> & vBits,
+      std::list<HashString> & vHash)
    {
       //cout << "Pushing bit: " << (node->isOnPath_) << endl;
       vBits.push_back(node->isOnPath_);
@@ -269,11 +269,11 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    static void recurseUnserializeTree( MerkleNode* node,
-                                       list<bool> & vBits, 
-                                       list<HashString> & vHash)
+      std::list<bool> & vBits,
+      std::list<HashString> & vHash)
    {
-      list<bool>::iterator bIter = vBits.begin();
-      list<HashString>::iterator hIter = vHash.begin();
+      std::list<bool>::iterator bIter = vBits.begin();
+      std::list<HashString>::iterator hIter = vHash.begin();
       //cout << "Popping bits: " << (*bIter ? 1 : 0) << endl;
       node->isOnPath_ = *bIter;
       vBits.erase(bIter);
@@ -298,7 +298,7 @@ public:
    void pprintTree(void)
    {
       recursePprintTree(root_);
-      cout << "Merkle root: " << root_->nodeHash_.toHexStr() << endl;
+      std::cout << "Merkle root: " << root_->nodeHash_.toHexStr() << std::endl;
    }
   
    void recursePprintTree(MerkleNode* node)

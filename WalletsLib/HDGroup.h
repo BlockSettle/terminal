@@ -18,9 +18,12 @@ namespace bs {
          friend class bs::hd::Wallet;
 
       public:
-         Group(Nodes rootNodes, const Path &path, const std::string &walletName, const std::string &name, const std::string &desc
-            , bool extOnlyAddresses = false)
-            : QObject(nullptr), rootNodes_(rootNodes), path_(path), walletName_(walletName), name_(name), desc_(desc), extOnlyAddresses_(extOnlyAddresses) {}
+         Group(Nodes rootNodes, const Path &path, const std::string &walletName
+               , const std::string &name, const std::string &desc
+               , bool extOnlyAddresses = false)
+            : QObject(nullptr), rootNodes_(rootNodes), path_(path)
+               , walletName_(walletName), name_(name), desc_(desc)
+               , extOnlyAddresses_(extOnlyAddresses) {}
 
          std::shared_ptr<Group> CreateWatchingOnly(const std::shared_ptr<Node> &extNode) const;
 
@@ -73,7 +76,6 @@ namespace bs {
          virtual std::shared_ptr<Group> CreateWO() const;
          virtual void FillWO(std::shared_ptr<hd::Group> &, const std::shared_ptr<Node> &extNode) const;
 
-      protected:
          Nodes       rootNodes_;
          Path        path_;
          std::string walletName_, name_, desc_;
@@ -82,14 +84,19 @@ namespace bs {
          bool        extOnlyAddresses_;
          bool        needsCommit_ = true;
          std::unordered_map<Path::Elem, std::shared_ptr<hd::Leaf>>  leaves_;
-         unsigned int   scanPortion_ = 100;
+         unsigned int   scanPortion_ = 200;
 
       private:
          BinaryData serialize() const;
-         static std::shared_ptr<Group> deserialize(BinaryDataRef key, BinaryDataRef val, Nodes rootNodes
-            , const std::string &name, const std::string &desc, bool extOnlyAddresses);
+         static std::shared_ptr<Group> deserialize(BinaryDataRef key
+                                                   , BinaryDataRef val
+                                                   , Nodes rootNodes
+                                                   , const std::string &name
+                                                   , const std::string &desc
+                                 , const std::shared_ptr<spdlog::logger> &logger
+                                                   , bool extOnlyAddresses);
          void deserialize(BinaryDataRef value);
-      };
+    };
 
 
       class AuthGroup : public Group
@@ -98,7 +105,8 @@ namespace bs {
       
       public:
          AuthGroup(Nodes rootNodes, const Path &path, const std::string &name
-            , const std::string &desc, bool extOnlyAddresses = false);
+            , const std::string &desc, const std::shared_ptr<spdlog::logger>& logger
+            ,bool extOnlyAddresses = false);
 
          bs::wallet::Type getType() const override { return bs::wallet::Type::Authentication; }
 
@@ -114,9 +122,11 @@ namespace bs {
          void FillWO(std::shared_ptr<hd::Group> &, const std::shared_ptr<Node> &extNode) const override;
          void serializeLeaves(BinaryWriter &) const override;
 
-      protected:
          BinaryData  userId_;
          std::unordered_map<Path::Elem, std::shared_ptr<Leaf>>  tempLeaves_;
+
+      private:
+         std::shared_ptr<spdlog::logger>     logger_;
       };
 
 
@@ -126,14 +136,22 @@ namespace bs {
 
       public:
          CCGroup(Nodes rootNodes, const Path &path, const std::string &name
-            , const std::string &desc, bool extOnlyAddresses = false)
-            : Group(rootNodes, path, name, nameForType(CoinType::BlockSettle_CC), desc, extOnlyAddresses) {}
+                 , const std::string &desc
+                 , const std::shared_ptr<spdlog::logger> &logger
+                 , bool extOnlyAddresses = false)
+            : Group(rootNodes, path, name, nameForType(CoinType::BlockSettle_CC),
+                    desc, extOnlyAddresses)
+            , logger_(logger) {}
 
          bs::wallet::Type getType() const override { return bs::wallet::Type::ColorCoin; }
 
       protected:
          std::shared_ptr<Leaf> newLeaf() const override;
          std::shared_ptr<Group> CreateWO() const override;
+
+      private:
+         std::shared_ptr<spdlog::logger>     logger_;
+
       };
 
    }  //namespace hd

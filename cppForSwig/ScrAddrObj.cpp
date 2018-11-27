@@ -7,6 +7,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "ScrAddrObj.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -534,8 +536,15 @@ vector<UnspentTxOut> ScrAddrObj::getAllUTXOs(
       if (!txioPair.second.isSpendable(db_, blk))
          continue;
 
-      TxOut txout = txioPair.second.getTxOutCopy(db_);
-      UnspentTxOut UTXO = UnspentTxOut(db_, txout, blk);
+      auto&& txout_key = txioPair.second.getDBKeyOfOutput();
+      StoredTxOut stxo;
+      db_->getStoredTxOut(stxo, txout_key);
+      auto&& hash = db_->getTxHashForLdbKey(txout_key.getSliceRef(0, 6));
+
+      BinaryData script(stxo.getScriptRef());
+      UnspentTxOut UTXO(hash, txioPair.second.getIndexOfOutput(), stxo.getHeight(),
+         stxo.getValue(), script);
+
       utxoList.push_back(UTXO);
    }
 
@@ -578,8 +587,6 @@ vector<UnspentTxOut> ScrAddrObj::getSpendableTxOutList(
    //deliberately slow, only trying to support the old bdm behavior until the
    //Python side has been reworked to ask for paged UTXO history
 
-
-
    StoredScriptHistory ssh;
    map<BinaryData, UnspentTxOut> utxoMap;
    db_->getStoredScriptHistory(ssh, scrAddr_);
@@ -609,10 +616,14 @@ vector<UnspentTxOut> ScrAddrObj::getSpendableTxOutList(
       if (txio.second.hasTxInZC())
          continue;
 
-      TxOut txout = txio.second.getTxOutCopy(db_);
-      uint32_t blk = DBUtils::hgtxToHeight(
-         txio.second.getDBKeyOfOutput().getSliceCopy(0, 4));
-      UnspentTxOut UTXO = UnspentTxOut(db_, txout, blk);
+      auto&& txout_key = txio.second.getDBKeyOfOutput();
+      StoredTxOut stxo;
+      db_->getStoredTxOut(stxo, txout_key);
+      auto&& hash = db_->getTxHashForLdbKey(txout_key.getSliceRef(0, 6));
+
+      BinaryData script(stxo.getScriptRef());
+      UnspentTxOut UTXO(hash, txio.second.getIndexOfOutput(), stxo.getHeight(), 
+         stxo.getValue(), script);
 
       utxoVec.push_back(UTXO);
    }

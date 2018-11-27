@@ -21,6 +21,8 @@
 #include "BlockchainScanner.h"
 #include "DatabaseBuilder.h"
 
+using namespace std;
+
 static bool scanFor(std::istream &in, const uint8_t * bytes, const unsigned len)
 {
    std::vector<uint8_t> ahead(len); // the bytes matched
@@ -712,7 +714,7 @@ protected:
       catch (runtime_error&)
       {
          StoredDBInfo sdbi;
-         sdbi.magic_ = bdm_->config().magicBytes_;
+         sdbi.magic_ = NetworkConfig::getMagicBytes();
          sdbi.metaHash_ = BtcUtils::EmptyHash_;
          sdbi.topBlkHgt_ = 0;
          sdbi.armoryType_ = BlockDataManagerConfig::getDbType();
@@ -728,7 +730,7 @@ protected:
       catch (runtime_error&)
       {
          StoredDBInfo sdbi;
-         sdbi.magic_ = bdm_->config().magicBytes_;
+         sdbi.magic_ = NetworkConfig::getMagicBytes();
          sdbi.metaHash_ = BtcUtils::EmptyHash_;
          sdbi.topBlkHgt_ = 0;
          sdbi.armoryType_ = BlockDataManagerConfig::getDbType();
@@ -778,10 +780,11 @@ BlockDataManager::BlockDataManager(
    if (bdmConfig.exceptionPtr_ != nullptr)
    {
       exceptPtr_ = bdmConfig.exceptionPtr_;
-      return;
+      LOGERR << "exception thrown in bdmConfig, aborting!";
+      exit(-1);
    }
    
-   blockchain_ = make_shared<Blockchain>(config_.genesisBlockHash_);
+   blockchain_ = make_shared<Blockchain>(NetworkConfig::getGenesisBlockHash());
 
    iface_ = new LMDBBlockDatabase(
       blockchain_, 
@@ -789,25 +792,25 @@ BlockDataManager::BlockDataManager(
 
    readBlockHeaders_ = make_shared<BitcoinQtBlockFiles>(
       config_.blkFileLocation_,
-      config_.magicBytes_
-      );
+      NetworkConfig::getMagicBytes());
 
    nodeStatusPollMutex_ = make_shared<mutex>();
 
    try
    {
       openDatabase();
+      auto& magicBytes = NetworkConfig::getMagicBytes();
       
       if (bdmConfig.nodeType_ == Node_BTC)
       {
          networkNode_ = make_shared<BitcoinP2P>("127.0.0.1", config_.btcPort_,
-            *(uint32_t*)config_.magicBytes_.getPtr());
+            *(uint32_t*)magicBytes.getPtr());
          nodeRPC_ = make_shared<NodeRPC>(config_);
       }
       else if (bdmConfig.nodeType_ == Node_UnitTest)
       {
          networkNode_ = make_shared<NodeUnitTest>("127.0.0.1", config_.btcPort_,
-            *(uint32_t*)config_.magicBytes_.getPtr());
+            *(uint32_t*)magicBytes.getPtr());
          nodeRPC_ = make_shared<NodeRPC_UnitTest>(config_);
       }
       else
@@ -831,18 +834,15 @@ void BlockDataManager::openDatabase()
 {
    LOGINFO << "blkfile dir: " << config_.blkFileLocation_;
    LOGINFO << "lmdb dir: " << config_.dbDir_;
-   if (config_.genesisBlockHash_.getSize() == 0)
+   if (!NetworkConfig::isInitialized())
    {
+      LOGERR << "ERROR: Genesis Block Hash not set!";
       throw runtime_error("ERROR: Genesis Block Hash not set!");
    }
 
    try
    {
-      iface_->openDatabases(
-         config_.dbDir_,
-         config_.genesisBlockHash_,
-         config_.genesisTxHash_,
-         config_.magicBytes_);
+      iface_->openDatabases(config_.dbDir_);
    }
    catch (runtime_error &e)
    {
@@ -909,6 +909,9 @@ void BlockDataManager::resetDatabases(ResetDBMode mode)
    case Reset_Rebuild:
       iface_->destroyAndResetDatabases();
       blockchain_->clear();
+      break;
+   
+   default:
       break;
    }
 

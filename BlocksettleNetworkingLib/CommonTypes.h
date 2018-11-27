@@ -99,8 +99,10 @@ namespace bs {
          static com::celertech::marketdata::api::enums::assettype::AssetType toCelerMDAssetType(Type at) {
             switch (at) {
                case SpotFX:         return com::celertech::marketdata::api::enums::assettype::FX;
-               case SpotXBT:        return com::celertech::marketdata::api::enums::assettype::CRYPTO;
-               case PrivateMarket:  return com::celertech::marketdata::api::enums::assettype::CRYPTO;
+               case SpotXBT:        // fall through
+               case PrivateMarket:  // fall through
+               default:
+                                    return com::celertech::marketdata::api::enums::assettype::CRYPTO;
             }
          }
          static com::celertech::marketmerchant::api::enums::producttype::ProductType toCelerProductType(Type at) {

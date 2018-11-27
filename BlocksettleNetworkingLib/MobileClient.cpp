@@ -21,7 +21,7 @@ namespace
 
 }
 
-MobileClient::DeviceInfo MobileClient::getDeviceInfo(const string &encKey)
+MobileClient::DeviceInfo MobileClient::getDeviceInfo(const std::string &encKey)
 {
    DeviceInfo result;
 
@@ -134,7 +134,7 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
    request.set_expiration(timeout);
    request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
 
-   request.set_title(action.toStdString() + " " + walletId);
+   request.set_title(action.toStdString() + "\nWallet ID:" + walletId);
    request.set_apikey(kApiKey);
    request.set_userid(email_);
    request.mutable_devicekey()->set_usenewdevices(newDevice);
@@ -261,7 +261,7 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    emit succeeded(encKey, SecureBinaryData(deviceKey));
 }
 
-void MobileClient::OnDataReceived(const string &data)
+void MobileClient::OnDataReceived(const std::string &data)
 {
    ServerPacket packet;
    if (!packet.ParseFromString(data)) {

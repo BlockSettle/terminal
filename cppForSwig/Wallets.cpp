@@ -8,6 +8,9 @@
 
 #include "Wallets.h"
 #include "BlockDataManagerConfig.h"
+
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //// WalletMeta
@@ -1254,7 +1257,7 @@ bool AssetWallet::hasScrAddr(const BinaryData& scrAddr)
 {
    try
    {
-      auto& ID = getAssetIDForAddr(scrAddr);
+      getAssetIDForAddr(scrAddr);
    }
    catch (runtime_error&)
    {

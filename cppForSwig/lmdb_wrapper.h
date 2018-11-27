@@ -23,7 +23,7 @@
 #include "BlockObj.h"
 #include "StoredBlockObj.h"
 
-#include "lmdb/lmdbpp.h"
+#include "lmdbpp.h"
 #include "ThreadSafeClasses.h"
 #include "ReentrantLock.h"
 
@@ -48,58 +48,58 @@ struct InvalidShardException
 {};
 
 ////
-struct FilterException : public runtime_error
+struct FilterException : public std::runtime_error
 {
-   FilterException(const string& err) : runtime_error(err)
+   FilterException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////
-struct DBIterException : public runtime_error
+struct DBIterException : public std::runtime_error
 {
-   DBIterException(const string& err) : runtime_error(err)
+   DBIterException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////
-struct LmdbWrapperException : public runtime_error
+struct LmdbWrapperException : public std::runtime_error
 {
-   LmdbWrapperException(const string& err) : runtime_error(err)
+   LmdbWrapperException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////
-struct SshAccessorException : public runtime_error
+struct SshAccessorException : public std::runtime_error
 {
-   SshAccessorException(const string& err) : runtime_error(err)
+   SshAccessorException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////
-struct SpentnessAccessorException : public runtime_error
+struct SpentnessAccessorException : public std::runtime_error
 {
-   SpentnessAccessorException(const string& err) : runtime_error(err)
+   SpentnessAccessorException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////
-struct DbShardedException : public runtime_error
+struct DbShardedException : public std::runtime_error
 {
-   DbShardedException(const string& err) : runtime_error(err)
+   DbShardedException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////
-struct TxFilterException : public runtime_error
+struct TxFilterException : public std::runtime_error
 {
-   TxFilterException(const string& err) : runtime_error(err)
+   TxFilterException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
 ////
-struct DbTxException : public runtime_error
+struct DbTxException : public std::runtime_error
 {
-   DbTxException(const string& err) : runtime_error(err)
+   DbTxException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
@@ -113,7 +113,7 @@ struct DbTxException : public runtime_error
 #define STD_READ_OPTS       leveldb::ReadOptions()
 #define STD_WRITE_OPTS      leveldb::WriteOptions()
 
-#define KVLIST vector<pair<BinaryData,BinaryData> > 
+#define KVLIST std::vector<std::pair<BinaryData,BinaryData> > 
 
 #define DEFAULT_LDB_BLOCK_SIZE 32*1024
 
@@ -212,7 +212,7 @@ private:
 
 public:
    LDBIter_Single(LMDB::Iterator&& iter) :
-      iter_(move(iter))
+      iter_(std::move(iter))
    {}
 
    //virutals
@@ -235,7 +235,7 @@ class DatabaseContainer_Sharded;
 class LDBIter_Sharded : public LDBIter
 {
 private:
-   unique_ptr<LDBIter> iter_;
+   std::unique_ptr<LDBIter> iter_;
    DatabaseContainer_Sharded* dbPtr_;
    unsigned currentShard_;
 
@@ -274,14 +274,14 @@ public:
    {}
 
    LMDBEnv::Transaction beginTransaction(LMDB::Mode mode);
-   void open(const string& path, const string& dbName);
+   void open(const std::string& path, const std::string& dbName);
    void close(void);
 
    BinaryDataRef getValue(BinaryDataRef keyWithPrefix) const;
    void putValue(BinaryDataRef key, BinaryDataRef value);
    void deleteValue(BinaryDataRef key);
    
-   unique_ptr<LDBIter_Single> getIterator(void);
+   std::unique_ptr<LDBIter_Single> getIterator(void);
    unsigned getId(void) const { return id_; }
 
    bool isOpen(void) const;
@@ -308,7 +308,7 @@ private:
 
 public:
    DbTransaction_Single(LMDBEnv::Transaction&& dbtx) :
-      dbtx_(move(dbtx))
+      dbtx_(std::move(dbtx))
    {}
 };
 
@@ -316,7 +316,7 @@ public:
 class DbTransaction_Sharded : public DbTransaction
 {
 private:
-   const thread::id threadId_;
+   const std::thread::id threadId_;
    LMDBEnv* envPtr_ = nullptr;
 
 public:
@@ -331,7 +331,7 @@ template<typename T> class TxFilterPool
    //each bucket represents on blk file
 
 private:
-   set<TxFilter<T>> pool_;
+   std::set<TxFilter<T>> pool_;
    const uint8_t* poolPtr_ = nullptr;
    size_t len_ = SIZE_MAX;
 
@@ -339,7 +339,7 @@ public:
    TxFilterPool(void) 
    {}
 
-   TxFilterPool(set<TxFilter<T>> pool) :
+   TxFilterPool(std::set<TxFilter<T>> pool) :
       pool_(move(pool)), len_(pool_.size())
    {}
 
@@ -351,7 +351,7 @@ public:
       poolPtr_(ptr), len_(len)
    {}
 
-   void update(const set<TxFilter<T>>& hashSet)
+   void update(const std::set<TxFilter<T>>& hashSet)
    {
       pool_.insert(hashSet.begin(), hashSet.end());
       len_ = pool_.size();
@@ -359,7 +359,7 @@ public:
 
    bool isValid(void) const { return len_ != SIZE_MAX; }
 
-   map<uint32_t, set<uint32_t>> compare(const BinaryData& hash) const
+   std::map<uint32_t, std::set<uint32_t>> compare(const BinaryData& hash) const
    {
       if (hash.getSize() != 32)
          throw TxFilterException("hash is 32 bytes long");
@@ -369,7 +369,7 @@ public:
 
       //get key
 
-      map<uint32_t, set<uint32_t>> returnMap;
+      std::map<uint32_t, std::set<uint32_t>> returnMap;
 
       if (pool_.size())
       {
@@ -403,7 +403,7 @@ public:
             auto&& resultSet = filterPtr.compare(hash);
             if (resultSet.size() > 0)
             {
-               returnMap.insert(make_pair(
+               returnMap.insert(std::make_pair(
                   filterPtr.getBlockKey(),
                   move(resultSet)));
             }
@@ -417,12 +417,12 @@ public:
       return returnMap;
    }
 
-   vector<TxFilter<T>> getFilterPoolPtr(void)
+   std::vector<TxFilter<T>> getFilterPoolPtr(void)
    {
       if (poolPtr_ == nullptr)
          throw TxFilterException("missing pool ptr");
 
-      vector<TxFilter<T>> filters;
+      std::vector<TxFilter<T>> filters;
 
       //get count
       auto size = (uint32_t*)poolPtr_;
@@ -481,7 +481,7 @@ public:
 
          offset += *filtersize;
 
-         pool_.insert(move(filter));
+         pool_.insert(std::move(filter));
       }
    }
 
@@ -505,7 +505,7 @@ protected:
    const DB_SELECT dbSelect_;
 
 public:
-   static string baseDir_;
+   static std::string baseDir_;
    static BinaryData magicBytes_;
 
 public:
@@ -517,17 +517,17 @@ public:
    virtual ~DatabaseContainer(void) = 0;
 
    //static
-   static string getDbPath(DB_SELECT);
-   static string getDbPath(const string&);
-   static string getDbName(DB_SELECT);
+   static std::string getDbPath(DB_SELECT);
+   static std::string getDbPath(const std::string&);
+   static std::string getDbName(DB_SELECT);
 
    //virtual
    virtual StoredDBInfo open(void) = 0;
    virtual void close(void) = 0;
    virtual void eraseOnDisk(void) = 0;
 
-   virtual unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const = 0;
-   virtual unique_ptr<LDBIter> getIterator(void) = 0;
+   virtual std::unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const = 0;
+   virtual std::unique_ptr<LDBIter> getIterator(void) = 0;
    
    virtual BinaryDataRef getValue(BinaryDataRef keyWithPrefix) const = 0;
    virtual void putValue(BinaryDataRef key, BinaryDataRef value) = 0;
@@ -558,8 +558,8 @@ public:
    void close(void);
    void eraseOnDisk(void);
 
-   unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const;
-   unique_ptr<LDBIter> getIterator(void);
+   std::unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const;
+   std::unique_ptr<LDBIter> getIterator(void);
 
    BinaryDataRef getValue(BinaryDataRef key) const;
    void putValue(BinaryDataRef key, BinaryDataRef value);
@@ -578,7 +578,7 @@ struct ShardFilter
    virtual unsigned getHeightForId(unsigned) const = 0;
    virtual BinaryData serialize(void) const = 0;
 
-   static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
+   static std::unique_ptr<ShardFilter> deserialize(BinaryDataRef);
    static BinaryData getDbKey(void);
 };
 
@@ -609,7 +609,7 @@ struct ShardFilter_ScrAddr : public ShardFilter
    unsigned getHeightForId(unsigned) const;
    BinaryData serialize(void) const;
 
-   static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
+   static std::unique_ptr<ShardFilter> deserialize(BinaryDataRef);
 };
 
 ////////
@@ -639,21 +639,21 @@ struct ShardFilter_Spentness : public ShardFilter
    unsigned getHeightForId(unsigned) const;
    BinaryData serialize(void) const;
 
-   static unique_ptr<ShardFilter> deserialize(BinaryDataRef);
+   static std::unique_ptr<ShardFilter> deserialize(BinaryDataRef);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 struct SHARDTX
 {
-   map<LMDBEnv*, LMDB::Mode> modes_;
-   unique_ptr<map<LMDBEnv*, map<unsigned, unique_ptr<LMDBEnv::Transaction>>>> txMap_;
-   map<LMDBEnv*, unsigned> levels_;
+   std::map<LMDBEnv*, LMDB::Mode> modes_;
+   std::unique_ptr<std::map<LMDBEnv*, std::map<unsigned, std::unique_ptr<LMDBEnv::Transaction>>>> txMap_;
+   std::map<LMDBEnv*, unsigned> levels_;
 
    SHARDTX(void)
    {
       txMap_ = 
-         make_unique<map<LMDBEnv*, map<unsigned, unique_ptr<LMDBEnv::Transaction>>>>();
+         make_unique<std::map<LMDBEnv*, std::map<unsigned, std::unique_ptr<LMDBEnv::Transaction>>>>();
    }
 
    ~SHARDTX(void)
@@ -661,7 +661,7 @@ struct SHARDTX
       txMap_.reset();
    }
 
-   void beginShardTx(LMDBEnv* env, shared_ptr<DBPair> dbPtr)
+   void beginShardTx(LMDBEnv* env, std::shared_ptr<DBPair> dbPtr)
    {
       auto txIter = txMap_->find(env);
       if (txIter == txMap_->end())
@@ -684,14 +684,14 @@ struct SHARDTX
       auto levelIter = levels_.find(env);
       if (levelIter == levels_.end())
       {
-         levelIter = levels_.insert(make_pair(env, 0)).first;
+         levelIter = levels_.insert(std::make_pair(env, 0)).first;
       }
 
       auto modeIter = modes_.find(env);
       if (levelIter->second == 0)
       {
          if (modeIter == modes_.end())
-            modes_.insert(make_pair(env, mode));
+            modes_.insert(std::make_pair(env, mode));
          else
             modeIter->second = mode;
       }
@@ -707,7 +707,7 @@ struct SHARDTX
       if (txIter == txMap_->end())
       {
          txMap_->insert(
-            make_pair(env, map<unsigned, unique_ptr<LMDBEnv::Transaction>>()));
+            std::make_pair(env, std::map<unsigned, std::unique_ptr<LMDBEnv::Transaction>>()));
       }
 
       ++levelIter->second;
@@ -747,17 +747,17 @@ class DatabaseContainer_Sharded : public DatabaseContainer, public Lockable
    friend class BlockchainScanner_Super;
 
 private:
-   mutable TransactionalMap<unsigned, shared_ptr<DBPair>> dbMap_;
-   unique_ptr<ShardFilter> filterPtr_;
-   mutex addMapMutex_;
+   mutable TransactionalMap<unsigned, std::shared_ptr<DBPair>> dbMap_;
+   std::unique_ptr<ShardFilter> filterPtr_;
+   std::mutex addMapMutex_;
 
 public:
-   static TransactionalMap<thread::id, shared_ptr<SHARDTX>> txShardMap_;
+   static TransactionalMap<std::thread::id, std::shared_ptr<SHARDTX>> txShardMap_;
 
 private:
-   shared_ptr<DBPair> getShard(unsigned) const;
-   shared_ptr<DBPair> getShard(unsigned, bool) const;
-   shared_ptr<DBPair> addShard(unsigned) const;
+   std::shared_ptr<DBPair> getShard(unsigned) const;
+   std::shared_ptr<DBPair> getShard(unsigned, bool) const;
+   std::shared_ptr<DBPair> addShard(unsigned) const;
    void openShard(unsigned id) const;
 
    void updateShardCounter(unsigned) const;
@@ -765,7 +765,7 @@ private:
    void loadFilter(void);
    void putFilter(void);
 
-   string getShardPath(unsigned) const;
+   std::string getShardPath(unsigned) const;
    void lockShard(unsigned) const;
 
    void initAfterLock(void) {}
@@ -777,7 +777,7 @@ public:
    {}
 
    DatabaseContainer_Sharded(DB_SELECT dbSelect,
-      unique_ptr<ShardFilter> filter) :
+      std::unique_ptr<ShardFilter> filter) :
       DatabaseContainer(dbSelect), filterPtr_(move(filter))
    {}
 
@@ -795,24 +795,24 @@ public:
    StoredDBInfo getStoredDBInfo(uint32_t id);
    void putStoredDBInfo(StoredDBInfo const & sdbi, uint32_t id);
 
-   unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const;
-   unique_ptr<LDBIter> getIterator();
+   std::unique_ptr<DbTransaction> beginTransaction(LMDB::Mode) const;
+   std::unique_ptr<LDBIter> getIterator();
 
    BinaryDataRef getValue(BinaryDataRef key) const;
    void putValue(BinaryDataRef key, BinaryDataRef value);
    void deleteValue(BinaryDataRef key);
 
    //locals
-   pair<unsigned, unsigned> getShardBounds(unsigned) const;
+   std::pair<unsigned, unsigned> getShardBounds(unsigned) const;
    unsigned getShardIdForHeight(unsigned) const;
    unsigned getShardIdForKey(BinaryDataRef key) const;
    unsigned getTopShardId(void) const;
    void closeShardsById(unsigned);
 
-   static void clearThreadShardTx(thread::id id) 
+   static void clearThreadShardTx(std::thread::id id)
    { txShardMap_.erase(id); }
    
-   static void clearThreadShardTx(vector<thread::id>& idVec) 
+   static void clearThreadShardTx(std::vector<std::thread::id>& idVec)
    { txShardMap_.erase(idVec); }
 };
 
@@ -823,7 +823,7 @@ class LMDBBlockDatabase
    friend class BlockchainScanner_Super;
 
 private:
-   shared_ptr<DatabaseContainer> getDbPtr(DB_SELECT db) const
+   std::shared_ptr<DatabaseContainer> getDbPtr(DB_SELECT db) const
    {
       auto iter = dbMap_.find(db);
       if (iter == dbMap_.end())
@@ -833,25 +833,19 @@ private:
    }
    
 public:
-   LMDBBlockDatabase(shared_ptr<Blockchain>, const string&);
+   LMDBBlockDatabase(std::shared_ptr<Blockchain>, const std::string&);
    ~LMDBBlockDatabase(void);
 
    /////////////////////////////////////////////////////////////////////////////
-   void openDatabases(const string &basedir,
-      BinaryData const & genesisBlkHash,
-      BinaryData const & genesisTxHash,
-      BinaryData const & magic);
-
-   /////////////////////////////////////////////////////////////////////////////
-   void openSupernodeDBs(void);
+   void openDatabases(const std::string &basedir);
 
    /////////////////////////////////////////////////////////////////////////////
    void closeDatabases();
-   void replaceDatabases(DB_SELECT, const string&);
+   void replaceDatabases(DB_SELECT, const std::string&);
    void cycleDatabase(DB_SELECT);
 
    /////////////////////////////////////////////////////////////////////////////
-   unique_ptr<DbTransaction> beginTransaction(DB_SELECT db, LMDB::Mode mode) const
+   std::unique_ptr<DbTransaction> beginTransaction(DB_SELECT db, LMDB::Mode mode) const
    {
       auto dbObj = getDbPtr(db);
       return dbObj->beginTransaction(mode);
@@ -873,7 +867,7 @@ public:
 
 
    /////////////////////////////////////////////////////////////////////////////
-   unique_ptr<LDBIter> getIterator(DB_SELECT db) const
+   std::unique_ptr<LDBIter> getIterator(DB_SELECT db) const
    {
       auto dbObj = getDbPtr(db);
       return dbObj->getIterator();
@@ -917,14 +911,14 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    void readAllHeaders(
-      const function<void(shared_ptr<BlockHeader>, uint32_t, uint8_t)> &callback
+      const std::function<void(std::shared_ptr<BlockHeader>, uint32_t, uint8_t)> &callback
       );
 
-   map<uint32_t, uint32_t> getSSHSummary(BinaryDataRef scrAddrStr,
+   std::map<uint32_t, uint32_t> getSSHSummary(BinaryDataRef scrAddrStr,
       uint32_t endBlock);
 
    uint32_t getStxoCountForTx(const BinaryData & dbKey6) const;
-   void resetHistoryForAddressVector(const vector<BinaryData>&);
+   void resetHistoryForAddressVector(const std::vector<BinaryData>&);
 
 public:
 
@@ -932,10 +926,10 @@ public:
    uint8_t getValidDupIDForHeight_fromDB(uint32_t blockHgt);
    void setValidDupIDForHeight(
       uint32_t blockHgt, uint8_t dup, bool overwrite = true);
-   void setValidDupIDForHeight(map<unsigned, uint8_t>&);
+   void setValidDupIDForHeight(std::map<unsigned, uint8_t>&);
    
    bool isBlockIDOnMainBranch(unsigned) const;
-   void setBlockIDBranch(map<unsigned, bool>&);
+   void setBlockIDBranch(std::map<unsigned, bool>&);
 
    /////////////////////////////////////////////////////////////////////////////
    // Interface to translate Stored* objects to/from persistent DB storage
@@ -1009,7 +1003,7 @@ public:
    bool getStoredTxOut(
       StoredTxOut & stxo, const BinaryData& txHash, uint16_t txoutid) const;
 
-   void getUTXOflags(map<BinaryData, StoredSubHistory>&) const;
+   void getUTXOflags(std::map<BinaryData, StoredSubHistory>&) const;
    void getUTXOflags(StoredSubHistory&) const;
    void getUTXOflags_Super(StoredSubHistory&) const;
 
@@ -1050,7 +1044,7 @@ public:
 
    // This could go in StoredBlockObj if it didn't need to lookup DB data
    bool     getFullUTXOMapForSSH(StoredScriptHistory & ssh,
-      map<BinaryData, UnspentTxOut> & mapToFill,
+      std::map<BinaryData, UnspentTxOut> & mapToFill,
       bool withMultisig = false);
 
    uint64_t getBalanceForScrAddr(BinaryDataRef scrAddr, bool withMulti = false);
@@ -1072,7 +1066,7 @@ public:
    Tx    getFullTxCopy(BinaryData ldbKey6B) const;
    Tx    getFullTxCopy(uint32_t hgt, uint16_t txIndex) const;
    Tx    getFullTxCopy(uint32_t hgt, uint8_t dup, uint16_t txIndex) const;
-   Tx    getFullTxCopy(uint16_t txIndex, shared_ptr<BlockHeader> bhPtr) const;
+   Tx    getFullTxCopy(uint16_t txIndex, std::shared_ptr<BlockHeader> bhPtr) const;
    TxOut getTxOutCopy(BinaryData ldbKey6B, uint16_t txOutIdx) const;
    TxIn  getTxInCopy(BinaryData ldbKey6B, uint16_t txInIdx) const;
 
@@ -1087,21 +1081,18 @@ public:
    KVLIST getAllDatabaseEntries(DB_SELECT db);
    void   printAllDatabaseEntries(DB_SELECT db);
 
-   BinaryData getGenesisBlockHash(void) { return genesisBlkHash_; }
-   BinaryData getGenesisTxHash(void)    { return genesisTxHash_; }
-   BinaryData getMagicBytes(void)       { return magicBytes_; }
+   ARMORY_DB_TYPE armoryDbType(void) const
+   { return BlockDataManagerConfig::getDbType(); }
 
-   ARMORY_DB_TYPE armoryDbType(void) { return BlockDataManagerConfig::getDbType(); }
-
-   const string& baseDir(void) const { DatabaseContainer::baseDir_; }
-   void setBlkFolder(const string& path) { blkFolder_ = path; }
+   const std::string& baseDir(void) const { return DatabaseContainer::baseDir_; }
+   void setBlkFolder(const std::string& path) { blkFolder_ = path; }
 
    void closeDB(DB_SELECT db);
    StoredDBInfo openDB(DB_SELECT);
    void resetSSHdb(void);
    void resetSSHdb_Super(void);
 
-   const shared_ptr<Blockchain> blockchain(void) const { return blockchainPtr_; }
+   const std::shared_ptr<Blockchain> blockchain(void) const { return blockchainPtr_; }
 
    /////////////////////////////////////////////////////////////////////////////
    template <typename T> TxFilterPool<T> getFilterPoolForFileNum(
@@ -1119,7 +1110,7 @@ public:
       {
          pool.deserialize((uint8_t*)val.getPtr(), val.getSize());
       }
-      catch (exception&)
+      catch (std::exception&)
       { }
 
       return pool;
@@ -1146,7 +1137,7 @@ public:
       uint32_t fileNum, const TxFilterPool<T>& pool)
    {
       if (!pool.isValid())
-         throw runtime_error("invalid filterpool");
+         throw std::runtime_error("invalid filterpool");
 
       //update on disk
       auto db = TXFILTERS;
@@ -1160,17 +1151,23 @@ public:
       putValue(TXFILTERS, key, data);
    }
 
-   void putMissingHashes(const set<BinaryData>&, uint32_t);
-   set<BinaryData> getMissingHashes(uint32_t) const;
+   void putMissingHashes(const std::set<BinaryData>&, uint32_t);
+   std::set<BinaryData> getMissingHashes(uint32_t) const;
+
+   void updateHeightToIdMap(std::map<unsigned, unsigned>& idmap)
+   {
+      heightToBatchId_.update(move(idmap));
+   }
+
+   void loadHeightToIdMap();
+   unsigned getShardIdForHeight(unsigned) const;
+   unsigned getNextShardIdForHeight(unsigned) const;
 
 public:
-   map<DB_SELECT, shared_ptr<DatabaseContainer>> dbMap_;
+   std::map<DB_SELECT, std::shared_ptr<DatabaseContainer>> dbMap_;
+   const static std::map<std::string, size_t> mapSizes_;
 
 private:
-   BinaryData           genesisBlkHash_;
-   BinaryData           genesisTxHash_;
-   BinaryData           magicBytes_;
-
    bool                 dbIsOpen_;
    uint32_t             ldbBlockSize_;
 
@@ -1182,10 +1179,12 @@ private:
    // In this case, a address is any TxOut script, which is usually
    // just a 25-byte script.  But this generically captures all types
    // of addresses including pubkey-only, P2SH, 
-   map<BinaryData, StoredScriptHistory>   registeredSSHs_;
-   string blkFolder_;
-   const shared_ptr<Blockchain> blockchainPtr_;
-   const static set<DB_SELECT> supernodeDBs_;
+   std::map<BinaryData, StoredScriptHistory>   registeredSSHs_;
+   const std::shared_ptr<Blockchain> blockchainPtr_;   
+   std::string blkFolder_;
+   const static std::set<DB_SELECT> supernodeDBs_;
+
+   TransactionalMap<unsigned, unsigned> heightToBatchId_;
 };
 
 #endif

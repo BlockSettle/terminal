@@ -55,8 +55,8 @@ CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionMan
    , submittedCCAddressListProperty_(CelerUserProperties::SubmittedCCAddressListPropertyName)
    , otpId_(CelerUserProperties::OtpIdPropertyName)
    , otpIndex_(CelerUserProperties::OtpUsedKeyIndexPropertyName)
-   , serverNotAvailable_(false)
    , userIdRequired_(userIdRequired)
+   , serverNotAvailable_(false)
 {
    heartbeatTimer_ = new QTimer(this);
    heartbeatTimer_->setInterval(30 * 1000);

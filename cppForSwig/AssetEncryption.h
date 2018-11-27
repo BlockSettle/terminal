@@ -23,10 +23,10 @@ enum CypherType
    CypherType_Serpent
 };
 
-class CypherException : public runtime_error
+class CypherException : public std::runtime_error
 {
 public:
-   CypherException(const string& msg) : runtime_error(msg)
+   CypherException(const std::string& msg) : std::runtime_error(msg)
    {}
 };
 
@@ -51,7 +51,7 @@ public:
 
    virtual const BinaryData& getId(void) const = 0;
    virtual BinaryData serialize(void) const = 0;
-   static shared_ptr<KeyDerivationFunction>
+   static std::shared_ptr<KeyDerivationFunction>
       deserialize(const BinaryDataRef&);
 };
 
@@ -71,7 +71,7 @@ private:
 public:
    KeyDerivationFunction_Romix() :
       KeyDerivationFunction(),
-      salt_(move(initialize()))
+      salt_(std::move(initialize()))
    {}
 
    KeyDerivationFunction_Romix(unsigned iterations, unsigned memTarget,
@@ -117,8 +117,8 @@ public:
 
    //virtuals
    virtual BinaryData serialize(void) const = 0;
-   virtual unique_ptr<Cypher> getCopy(void) const = 0;
-   virtual unique_ptr<Cypher> getCopy(const BinaryData& keyId) const = 0;
+   virtual std::unique_ptr<Cypher> getCopy(void) const = 0;
+   virtual std::unique_ptr<Cypher> getCopy(const BinaryData& keyId) const = 0;
 
    virtual SecureBinaryData encrypt(const SecureBinaryData& key,
       const SecureBinaryData& data) const = 0;
@@ -131,7 +131,7 @@ public:
    virtual bool isSame(Cypher* const) const = 0;
 
    //statics
-   static unique_ptr<Cypher> deserialize(BinaryRefReader& brr);
+   static std::unique_ptr<Cypher> deserialize(BinaryRefReader& brr);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -143,7 +143,7 @@ public:
       Cypher(CypherType_AES, kdfId, encryptionKeyId)
    {
       //init IV
-      iv_ = move(SecureBinaryData().GenerateRandom(BTC_AES::BLOCKSIZE));
+      iv_ = std::move(SecureBinaryData().GenerateRandom(BTC_AES::BLOCKSIZE));
    }
 
    Cypher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId,
@@ -153,13 +153,13 @@ public:
       if (iv.getSize() != BTC_AES::BLOCKSIZE)
          throw CypherException("invalid iv length");
 
-      iv_ = move(iv);
+      iv_ = std::move(iv);
    }
 
    //virtuals
    BinaryData serialize(void) const;
-   unique_ptr<Cypher> getCopy(void) const;
-   unique_ptr<Cypher> getCopy(const BinaryData& keyId) const;
+   std::unique_ptr<Cypher> getCopy(void) const;
+   std::unique_ptr<Cypher> getCopy(const BinaryData& keyId) const;
 
    SecureBinaryData encrypt(const SecureBinaryData& key,
       const SecureBinaryData& data) const;

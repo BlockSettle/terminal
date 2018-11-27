@@ -137,6 +137,7 @@ namespace bs {
          std::unordered_map<std::string, double>   sentNotifs_;
          network::QuoteReqNotification    currentQRN_;
          std::shared_ptr<TransactionData> transactionData_;
+         unsigned int   payInRecipId_ = UINT_MAX;
          bool dealerSellXBT_;
          std::shared_ptr<SelectedTransactionInputs>   ccCoinSel_;
 

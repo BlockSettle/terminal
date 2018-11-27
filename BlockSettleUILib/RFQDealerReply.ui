@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>350</width>
-    <height>725</height>
+    <height>596</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -54,7 +54,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_11">
       <property name="spacing">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="leftMargin">
        <number>0</number>
@@ -82,6 +82,15 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>0</number>
+        </property>
         <property name="verticalScrollBarPolicy">
          <enum>Qt::ScrollBarAsNeeded</enum>
         </property>
@@ -100,7 +109,7 @@
            <x>0</x>
            <y>0</y>
            <width>348</width>
-           <height>477</height>
+           <height>420</height>
           </rect>
          </property>
          <property name="sizePolicy">
@@ -112,13 +121,13 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>410</height>
+           <height>350</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
            <width>16777215</width>
-           <height>16777215</height>
+           <height>420</height>
           </size>
          </property>
          <property name="toggleTabs" stdset="0">
@@ -1112,6 +1121,12 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>118</height>
+                </size>
+               </property>
                <property name="tabShape">
                 <enum>QTabWidget::Rounded</enum>
                </property>
@@ -1345,47 +1360,16 @@
                     </property>
                     <item>
                      <widget class="QLabel" name="labelWallet">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <property name="minimumSize">
-                       <size>
-                        <width>85</width>
-                        <height>0</height>
-                       </size>
-                      </property>
-                      <property name="maximumSize">
-                       <size>
-                        <width>85</width>
-                        <height>16777215</height>
-                       </size>
-                      </property>
                       <property name="text">
                        <string>Input wallet:</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QComboBox" name="comboBoxWallet">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                     </widget>
+                     <widget class="QComboBox" name="comboBoxWallet"/>
                     </item>
                     <item>
                      <widget class="QPushButton" name="pushButtonAdvanced">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
                       <property name="baseSize">
                        <size>
                         <width>0</width>
@@ -1469,7 +1453,7 @@
                         <verstretch>0</verstretch>
                        </sizepolicy>
                       </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_11">
+                      <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="7,14,0">
                        <property name="spacing">
                         <number>5</number>
                        </property>
@@ -1487,50 +1471,13 @@
                        </property>
                        <item>
                         <widget class="QLabel" name="label_10">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                           <horstretch>0</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="minimumSize">
-                          <size>
-                           <width>85</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>85</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
                          <property name="text">
                           <string>Auto Quoting Script</string>
-                         </property>
-                         <property name="scaledContents">
-                          <bool>false</bool>
-                         </property>
-                         <property name="wordWrap">
-                          <bool>true</bool>
                          </property>
                         </widget>
                        </item>
                        <item alignment="Qt::AlignVCenter">
-                        <widget class="QComboBox" name="comboBoxAQScript">
-                         <property name="minimumSize">
-                          <size>
-                           <width>0</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>16777215</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                        </widget>
+                        <widget class="QComboBox" name="comboBoxAQScript"/>
                        </item>
                        <item>
                         <widget class="QPushButton" name="pushButtonAQScript">
@@ -1564,7 +1511,7 @@
                         <verstretch>0</verstretch>
                        </sizepolicy>
                       </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_10">
+                      <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="3,0">
                        <property name="spacing">
                         <number>0</number>
                        </property>
@@ -1575,47 +1522,40 @@
                         <number>0</number>
                        </property>
                        <property name="rightMargin">
-                        <number>0</number>
+                        <number>6</number>
                        </property>
                        <property name="bottomMargin">
                         <number>0</number>
                        </property>
                        <item>
-                        <spacer name="horizontalSpacer_2">
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
+                        <widget class="QLabel" name="label_12">
+                         <property name="text">
+                          <string/>
                          </property>
-                         <property name="sizeType">
-                          <enum>QSizePolicy::Fixed</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>90</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                        </spacer>
+                        </widget>
                        </item>
                        <item>
-                        <widget class="QCheckBox" name="checkBoxAQ">
-                         <property name="font">
-                          <font>
-                           <pointsize>11</pointsize>
-                           <weight>50</weight>
-                           <bold>false</bold>
-                          </font>
+                        <widget class="ToggleSwitch" name="checkBoxAQ">
+                         <property name="minimumSize">
+                          <size>
+                           <width>0</width>
+                           <height>18</height>
+                          </size>
                          </property>
-                         <property name="toolTip">
-                          <string>Turn auto-quoting on or off</string>
+                         <property name="maximumSize">
+                          <size>
+                           <width>35</width>
+                           <height>16777215</height>
+                          </size>
                          </property>
-                         <property name="layoutDirection">
-                          <enum>Qt::LeftToRight</enum>
+                         <property name="maximum">
+                          <number>50</number>
                          </property>
-                         <property name="autoFillBackground">
-                          <bool>false</bool>
+                         <property name="pageStep">
+                          <number>1</number>
                          </property>
-                         <property name="text">
-                          <string>Enabled</string>
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
                          </property>
                         </widget>
                        </item>
@@ -1659,15 +1599,18 @@
                 <bool>false</bool>
                </property>
                <property name="title">
-                <string>AUTO SIGN</string>
+                <string>AUTO-SIGN</string>
                </property>
                <property name="wellGroupBox" stdset="0">
                 <bool>true</bool>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout">
+                <property name="spacing">
+                 <number>5</number>
+                </property>
                 <item>
                  <widget class="QWidget" name="widget_4" native="true">
-                  <layout class="QHBoxLayout" name="horizontalLayout_18">
+                  <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="3,6">
                    <property name="spacing">
                     <number>5</number>
                    </property>
@@ -1688,38 +1631,13 @@
                    </property>
                    <item>
                     <widget class="QLabel" name="labelWallet_2">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="minimumSize">
-                      <size>
-                       <width>85</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                     <property name="maximumSize">
-                      <size>
-                       <width>85</width>
-                       <height>16777215</height>
-                      </size>
-                     </property>
                      <property name="text">
                       <string>Wallet</string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QComboBox" name="comboBoxWalletAS">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                    </widget>
+                    <widget class="QComboBox" name="comboBoxWalletAS"/>
                    </item>
                   </layout>
                  </widget>
@@ -1732,9 +1650,9 @@
                     <height>0</height>
                    </size>
                   </property>
-                  <layout class="QHBoxLayout" name="horizontalLayout_5">
+                  <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="3,0">
                    <property name="spacing">
-                    <number>0</number>
+                    <number>5</number>
                    </property>
                    <property name="leftMargin">
                     <number>0</number>
@@ -1749,50 +1667,34 @@
                     <number>0</number>
                    </property>
                    <item>
-                    <spacer name="horizontalSpacer">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                    <widget class="QLabel" name="label_11">
+                     <property name="text">
+                      <string/>
                      </property>
-                     <property name="sizeType">
-                      <enum>QSizePolicy::Fixed</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>90</width>
-                       <height>20</height>
-                      </size>
-                     </property>
-                    </spacer>
+                    </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="checkBoxAutoSign">
-                     <property name="enabled">
-                      <bool>false</bool>
+                    <widget class="ToggleSwitch" name="checkBoxAutoSign">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>18</height>
+                      </size>
                      </property>
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
+                     <property name="maximumSize">
+                      <size>
+                       <width>35</width>
+                       <height>16777215</height>
+                      </size>
                      </property>
-                     <property name="font">
-                      <font>
-                       <pointsize>11</pointsize>
-                       <weight>50</weight>
-                       <bold>false</bold>
-                      </font>
+                     <property name="maximum">
+                      <number>50</number>
                      </property>
-                     <property name="cursor">
-                      <cursorShape>ArrowCursor</cursorShape>
+                     <property name="pageStep">
+                      <number>1</number>
                      </property>
-                     <property name="contextMenuPolicy">
-                      <enum>Qt::NoContextMenu</enum>
-                     </property>
-                     <property name="layoutDirection">
-                      <enum>Qt::LeftToRight</enum>
-                     </property>
-                     <property name="text">
-                      <string>Enabled</string>
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
                      </property>
                     </widget>
                    </item>
@@ -1824,12 +1726,6 @@
       </item>
       <item>
        <widget class="QWidget" name="responseTitle" native="true">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -1847,13 +1743,13 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_7">
          <property name="spacing">
-          <number>5</number>
+          <number>10</number>
          </property>
          <property name="leftMargin">
           <number>0</number>
          </property>
          <property name="topMargin">
-          <number>10</number>
+          <number>5</number>
          </property>
          <property name="rightMargin">
           <number>0</number>
@@ -1882,18 +1778,6 @@
          </item>
          <item>
           <widget class="QWidget" name="verticalWidget7" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>115</height>
-            </size>
-           </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
@@ -1905,7 +1789,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <property name="spacing">
-             <number>5</number>
+             <number>10</number>
             </property>
             <property name="leftMargin">
              <number>10</number>
@@ -1917,17 +1801,11 @@
              <number>10</number>
             </property>
             <property name="bottomMargin">
-             <number>5</number>
+             <number>10</number>
             </property>
             <item>
              <widget class="QWidget" name="verticalWidget8" native="true">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_16">
+              <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="7,13">
                <property name="spacing">
                 <number>5</number>
                </property>
@@ -1935,7 +1813,7 @@
                 <number>0</number>
                </property>
                <property name="topMargin">
-                <number>0</number>
+                <number>5</number>
                </property>
                <property name="rightMargin">
                 <number>0</number>
@@ -1945,18 +1823,6 @@
                </property>
                <item alignment="Qt::AlignLeft">
                 <widget class="QLabel" name="labelRecvAddr">
-                 <property name="minimumSize">
-                  <size>
-                   <width>90</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>90</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
                  <property name="text">
                   <string>Receiving Address</string>
                  </property>
@@ -1979,7 +1845,7 @@
                 <height>0</height>
                </size>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_17">
+              <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="7,13">
                <property name="spacing">
                 <number>5</number>
                </property>
@@ -1995,26 +1861,8 @@
                <property name="bottomMargin">
                 <number>0</number>
                </property>
-               <item alignment="Qt::AlignLeft">
+               <item>
                 <widget class="QLabel" name="authenticationAddressLabel">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                   <horstretch>2</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>90</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>90</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
                  <property name="text">
                   <string>Auth Address</string>
                  </property>
@@ -2024,14 +1872,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QComboBox" name="authenticationAddressComboBox">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                </widget>
+                <widget class="QComboBox" name="authenticationAddressComboBox"/>
                </item>
               </layout>
              </widget>
@@ -2129,6 +1970,11 @@
    <class>CustomDoubleSpinBox</class>
    <extends>QDoubleSpinBox</extends>
    <header>CustomDoubleSpinBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ToggleSwitch</class>
+   <extends>QSlider</extends>
+   <header>ToggleSwitch.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -3,14 +3,12 @@
 
 #include "ApplicationSettings.h"
 #include "CreateWalletDialog.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "WalletImporter.h"
 #include "WalletPasswordVerifyDialog.h"
 #include "WalletsManager.h"
 #include "UiUtils.h"
-#include "AuthNotice.h"
-#include "MessageBoxQuestion.h"
 
 #include <spdlog/spdlog.h>
 
@@ -93,7 +91,7 @@ ImportWalletDialog::~ImportWalletDialog() = default;
 
 void ImportWalletDialog::onError(const QString &errMsg)
 {
-   MessageBoxCritical(tr("Import wallet error"), errMsg).exec();
+   BSMessageBox(BSMessageBox::critical, tr("Import wallet error"), errMsg).exec();
    reject();
 }
 
@@ -106,7 +104,7 @@ void ImportWalletDialog::updateAcceptButtonState()
 void ImportWalletDialog::onKeyTypeChanged(bool password)
 {
    if (!password && !authNoticeWasShown_) {
-      AuthNotice dlg(this);
+      MessageBoxAuthNotice dlg(this);
 
       if (dlg.exec() == QDialog::Accepted) {
          authNoticeWasShown_ = true;
@@ -157,10 +155,11 @@ void ImportWalletDialog::onImportAccepted()
 
 bool abortWalletImportQuestionDialog(QWidget* parent)
 {
-   MessageBoxQuestion messageBox(QObject::tr("Warning"), QObject::tr("ABORT WALLET IMPORT?")
+   BSMessageBox messageBox(BSMessageBox::question, QObject::tr("Warning"), QObject::tr("Do you want to abort Wallet Import?")
       , QObject::tr("The Wallet will not be imported if you don't complete the procedure.\n"
          "Are you sure you want to abort the Wallet Import process?"), parent);
-   messageBox.setConfirmButtonText(QObject::tr("Abort Wallet Import")).setCancelButtonText(QObject::tr("Back"));
+   messageBox.setConfirmButtonText(QObject::tr("Abort Wallet Import"));
+   messageBox.setCancelButtonText(QObject::tr("Back"));
 
    int result = messageBox.exec();
    return (result == QDialog::Accepted);

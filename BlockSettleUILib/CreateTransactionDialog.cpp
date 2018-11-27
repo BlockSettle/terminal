@@ -18,9 +18,7 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "CoinControlDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
-#include "MessageBoxQuestion.h"
+#include "BSMessageBox.h"
 #include "OfflineSigner.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
@@ -43,12 +41,14 @@ const std::map<unsigned int, QString> feeLevels = {
 
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
-   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions, QWidget* parent)
+   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
+   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
    : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
    , signingContainer_(container)
    , loadFeeSuggestions_(loadFeeSuggestions)
+   , logger_(logger)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
@@ -62,7 +62,11 @@ CreateTransactionDialog::~CreateTransactionDialog() noexcept
 
 void CreateTransactionDialog::init()
 {
-   transactionData_ = std::make_shared<TransactionData>([this]() { onTransactionUpdated(); });
+   transactionData_ = std::make_shared<TransactionData>([this]() {
+      QMetaObject::invokeMethod(this, [this] {
+         onTransactionUpdated();
+      });
+   });
 
    xbtValidator_ = new XbtAmountValidator(this);
    lineEditAmount()->setValidator(xbtValidator_);
@@ -117,10 +121,10 @@ void CreateTransactionDialog::clear()
 void CreateTransactionDialog::reject()
 {
    if (broadcasting_) {
-      MessageBoxQuestion confirmExit(tr("Abort transaction broadcasting")
-         , tr("You're about to abort transaction sending")
+      BSMessageBox confirmExit(BSMessageBox::question, tr("Abort transaction broadcasting")
+         , tr("You are about to abort transaction sending")
          , tr("Are you sure you wish to abort the signing and sending process?"), this);
-      confirmExit.setExclamationIcon();
+      //confirmExit.setExclamationIcon();
       if (confirmExit.exec() != QDialog::Accepted) {
          return;
       }
@@ -232,9 +236,9 @@ void CreateTransactionDialog::onTransactionUpdated()
    labelTxInputs()->setText(summary.isAutoSelected ? tr("Auto (%1)").arg(QString::number(summary.usedTransactions))
       : QString::number(summary.usedTransactions));
    labelEstimatedFee()->setText(UiUtils::displayAmount(summary.totalFee));
-   labelTotalAmount()->setText(UiUtils::displayAmount(UiUtils::amountToBtc(summary.balanceToSpent) + UiUtils::amountToBtc(summary.totalFee)));
+   labelTotalAmount()->setText(UiUtils::displayAmount(UiUtils::amountToBtc(summary.balanceToSpend) + UiUtils::amountToBtc(summary.totalFee)));
    if (labelTxSize()) {
-      labelTxSize()->setText(QString::number(summary.transactionSize) + tr(" bytes"));
+      labelTxSize()->setText(QString::number(summary.txVirtSize));
    }
 
    if (feePerByteLabel() != nullptr) {
@@ -243,7 +247,7 @@ void CreateTransactionDialog::onTransactionUpdated()
 
    if (changeLabel() != nullptr) {
       if (summary.hasChange) {
-         changeLabel()->setText(UiUtils::displayAmount(summary.selectedBalance - UiUtils::amountToBtc(summary.balanceToSpent) - UiUtils::amountToBtc(summary.totalFee)));
+         changeLabel()->setText(UiUtils::displayAmount(summary.selectedBalance - UiUtils::amountToBtc(summary.balanceToSpend) - UiUtils::amountToBtc(summary.totalFee)));
       } else {
          changeLabel()->setText(UiUtils::displayAmount(0.0));
       }
@@ -268,7 +272,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
 
    if (error.empty()) {
       if (signingContainer_->isOffline()) {   // Offline signing
-         MessageBoxInfo(tr("Offline Transacation")
+         BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
             , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
             , this).exec();
          accept();
@@ -326,7 +330,7 @@ bool CreateTransactionDialog::BroadcastImportedTx()
    }
    importedSignedTX_.clear();
    stopBroadcasting();
-   MessageBoxCritical(tr("Transaction broadcast"), tr("Failed to broadcast imported transaction"), this).exec();
+   BSMessageBox(BSMessageBox::critical, tr("Transaction broadcast"), tr("Failed to broadcast imported transaction"), this).exec();
    return false;
 }
 
@@ -341,15 +345,28 @@ bool CreateTransactionDialog::CreateTransaction()
       signingContainer_->SyncAddresses(transactionData_->createAddresses());
 
       txReq_ = transactionData_->CreateTXRequest(checkBoxRBF()->checkState() == Qt::Checked
-         , changeAddress);
+         , changeAddress, originalFee_);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
-      if (txReq_.fee <= originalFee_) {
-         MessageBoxCritical(tr("Fee is low"),
-            tr("Your current fee (%1) should exceed the fee from the original transaction (%2)")
-            .arg(UiUtils::displayAmount(txReq_.fee)).arg(UiUtils::displayAmount(originalFee_))).exec();
-         stopBroadcasting();
-         return true;
+      // We shouldn't hit this case since the request checks the incremental
+      // relay fee requirement for RBF. But, in case we
+      if(txReq_.fee <= originalFee_) {
+         BSMessageBox(BSMessageBox::info, tr("Error"), tr("Fee is too low"),
+            tr("Due to RBF requirements, the current fee (%1) will be " \
+               "increased 1 satoshi above the original transaction fee (%2)")
+            .arg(UiUtils::displayAmount(txReq_.fee))
+            .arg(UiUtils::displayAmount(originalFee_))).exec();
+         txReq_.fee = originalFee_ + 1;
+      }
+
+      const float newFeePerByte = (float)txReq_.fee / (float)txReq_.estimateTxVirtSize();
+      if(newFeePerByte < originalFeePerByte_) {
+         BSMessageBox(BSMessageBox::info, tr("Error"), tr("Fee per byte is too low"),
+            tr("Due to RBF requirements, the current fee per byte (%1) will " \
+               "be increased to the original transaction fee rate (%2)")
+            .arg(newFeePerByte)
+            .arg(originalFeePerByte_)).exec();
+         txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
       }
 
       pendingTXSignId_ = signingContainer_->SignTXRequest(txReq_, false,
@@ -376,6 +393,7 @@ bool CreateTransactionDialog::CreateTransaction()
    }
 
    stopBroadcasting();
+   BSMessageBox(BSMessageBox::critical, text, text, detailedText).exec();
    showError(text, detailedText);
    return false;
 }
@@ -417,6 +435,6 @@ std::vector<bs::wallet::TXSignRequest> CreateTransactionDialog::ImportTransactio
 
 void CreateTransactionDialog::showError(const QString &text, const QString &detailedText)
 {
-   MessageBoxCritical errorMessage(text, detailedText, this);
+   BSMessageBox errorMessage(BSMessageBox::critical, text, detailedText, this);
    errorMessage.exec();
 }

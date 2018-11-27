@@ -10,8 +10,8 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &celerClient
    , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
    : QObject(nullptr)
-   , iconSize_(16, 16)
    , statusBar_(parent)
+   , iconSize_(16, 16)
    , armoryConnState_(ArmoryConnection::State::Offline)
    , armory_(armory)
    , walletsManager_(walletsManager)
@@ -370,13 +370,25 @@ QString StatusBarView::getImportingText() const
    if (importingWallets_.empty()) {
       return {};
    }
+   // Sometimes GetHDWalletById returns nullptr (perhaps importingWallets_ is stalled).
+   // So add some error checking here.
    if (importingWallets_.size() == 1) {
-      return tr("Rescanning blockchain for wallet %1...").arg(QString::fromStdString(walletsManager_->GetHDWalletById(*(importingWallets_.begin()))->getName()));
+      auto wallet = walletsManager_->GetHDWalletById(*(importingWallets_.begin()));
+      if (!wallet) {
+         return {};
+      }
+      return tr("Rescanning blockchain for wallet %1...").arg(QString::fromStdString(wallet->getName()));
    }
    else {
       QStringList walletNames;
       for (const auto &walletId : importingWallets_) {
-         walletNames << QString::fromStdString(walletsManager_->GetHDWalletById(walletId)->getName());
+         auto wallet = walletsManager_->GetHDWalletById(walletId);
+         if (wallet) {
+            walletNames << QString::fromStdString(wallet->getName());
+         }
+      }
+      if (walletNames.empty()) {
+         return {};
       }
       return tr("Rescanning blockchain for wallets %1...").arg(walletNames.join(QLatin1Char(',')));
    }

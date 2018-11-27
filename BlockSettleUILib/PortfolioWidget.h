@@ -7,6 +7,9 @@
 
 #include "TabWithShortcut.h"
 
+namespace spdlog {
+   class logger;
+}
 namespace Ui {
     class PortfolioWidget;
 };
@@ -32,9 +35,13 @@ public:
 
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model);
 
-   void init(const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<MarketDataProvider> &
-      , const std::shared_ptr<CCPortfolioModel> &, const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<WalletsManager> &);
+   void init(const std::shared_ptr<ApplicationSettings> &
+             , const std::shared_ptr<MarketDataProvider> &
+             , const std::shared_ptr<CCPortfolioModel> &
+             , const std::shared_ptr<SignContainer> &
+             , const std::shared_ptr<ArmoryConnection> &
+             , const std::shared_ptr<spdlog::logger> &
+             , const std::shared_ptr<WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -48,6 +55,7 @@ private slots:
 private:
    std::unique_ptr<Ui::PortfolioWidget> ui_;
    std::shared_ptr<TransactionsViewModel> model_;
+   std::shared_ptr<spdlog::logger>        logger_;
    UnconfirmedTransactionFilter* filter_;
    QMenu    contextMenu_;
    QAction  *actionRBF_;

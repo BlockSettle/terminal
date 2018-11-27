@@ -218,6 +218,9 @@
        <property name="alternatingRowColors">
         <bool>true</bool>
        </property>
+       <property name="sortingEnabled">
+        <bool>true</bool>
+       </property>
        <column>
         <property name="text">
          <string>Date</string>
@@ -260,7 +263,7 @@
        </column>
        <column>
         <property name="text">
-         <string>Size (kB)</string>
+         <string>Size (B)</string>
         </property>
        </column>
       </widget>
