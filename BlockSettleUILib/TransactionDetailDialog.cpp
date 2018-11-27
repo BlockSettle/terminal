@@ -36,7 +36,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
       }
 
       if (item->tx.isInitialized()) {
-         ui_->labelSize->setText(QString::number(item->tx.serializeNoWitness().getSize()));
+         ui_->labelSize->setText(QString::number(item->tx.getTxWeight()));
 
          std::set<BinaryData> txHashSet;
          std::map<BinaryData, std::set<uint32_t>> txOutIndices;
@@ -112,7 +112,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
 
             if (initialized) {
                ui_->labelFee->setText(UiUtils::displayAmount(value));
-               ui_->labelSb->setText(QString::number(value / item->tx.serializeNoWitness().getSize()));
+               ui_->labelSb->setText(QString::number(value / item->tx.getTxWeight()));
             }
 
             ui_->treeAddresses->expandItem(itemSender);

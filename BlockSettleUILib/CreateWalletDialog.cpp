@@ -9,7 +9,6 @@
 #include "EnterWalletPassword.h"
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
-#include "AuthNotice.h"
 #include "UiUtils.h"
 
 #include <spdlog/spdlog.h>
@@ -123,12 +122,11 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
 void CreateWalletDialog::onKeyTypeChanged(bool password)
 {
    if (!password && !authNoticeWasShown_) {
-      AuthNotice dlg(this);
-
-      if (dlg.exec() == QDialog::Accepted) {
+      if (MessageBoxAuthNotice(this).exec() == QDialog::Accepted) {
          authNoticeWasShown_ = true;
       }
    }
+   ui_->labelPasswordWarning->setVisible(password);
 }
 
 void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet> wallet)
@@ -152,7 +150,7 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
 
 void CreateWalletDialog::reject()
 {
-   bool result = abortWalletCreationQuestionDialog(this);
+   bool result = MessageBoxWalletCreateAbort(this).exec();
    if (!result) {
       return;
    }
@@ -188,7 +186,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
 
       EnterWalletPassword dialog(MobileClientRequest::ActivateWallet, parent);
       dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
-         , appSettings, QObject::tr("Activate Auth eID signing"));
+         , appSettings, QObject::tr("Activate Auth eID Signing"), QObject::tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
          return false;

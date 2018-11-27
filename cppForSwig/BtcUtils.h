@@ -1830,7 +1830,7 @@ public:
       unsigned zero_count = 0;
       int offset = 0;
       auto ptr = b58.getPtr();
-      while (offset < b58.getSize())
+      while (offset < (int)b58.getSize())
       {
          if (ptr[offset] != '1')
             break;

@@ -11,7 +11,7 @@ using namespace std;
 
 /////////////////////////////////////////////////////////////////////////////
 BlockDataViewer::BlockDataViewer(BlockDataManager* bdm) :
-   zeroConfCont_(bdm->zeroConfCont()), rescanZC_(false)
+   rescanZC_(false), zeroConfCont_(bdm->zeroConfCont())
 {
    db_ = bdm->getIFace();
    bc_ = bdm->blockchain();
@@ -162,7 +162,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
    scanData.reorg_ = reorg;
 
    vector<uint32_t> startBlocks;
-   for (auto& group : groups_)
+   for (size_t i = 0; i < groups_.size(); i++)
       startBlocks.push_back(startBlock);
 
    auto sbIter = startBlocks.begin();

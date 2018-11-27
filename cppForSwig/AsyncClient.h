@@ -43,6 +43,10 @@ private:
    shared_ptr<ClientMessageError> error_;
 
 public:
+   ReturnMessage(void) :
+      value_(U())
+   {}
+
    ReturnMessage(U& val) :
       value_(move(val))
    {}
@@ -98,7 +102,6 @@ namespace SwigClient
 
 namespace AsyncClient
 {
-   static bool textSerialization_ = false;
    class BlockDataViewer;
 
    /////////////////////////////////////////////////////////////////////////////
@@ -143,10 +146,11 @@ namespace AsyncClient
 
    private:
       ScrAddrObj(const BinaryData& addr, const BinaryData& addrHash, int index) :
-         bdvID_(string()), walletID_(string()), index_(index),
+         bdvID_(string()), walletID_(string()), 
          scrAddr_(addr), addrHash_(addrHash),
-         sock_(nullptr), count_(0),
-         fullBalance_(0), spendableBalance_(0), unconfirmedBalance_(0)
+         sock_(nullptr), 
+         fullBalance_(0), spendableBalance_(0), unconfirmedBalance_(0),
+         count_(0), index_(index)
       {}
 
    public:
@@ -330,6 +334,8 @@ namespace AsyncClient
          function<void(ReturnMessage<shared_ptr<::ClientClasses::NodeStatusStruct>>)>);
       void estimateFee(unsigned, const string&, 
          function<void(ReturnMessage<ClientClasses::FeeEstimateStruct>)>);
+      void getFeeSchedule(const string&,function<void(ReturnMessage<
+            std::map<unsigned, ClientClasses::FeeEstimateStruct>>)>);
 
       void getHistoryForWalletSelection(
          const vector<string>& wldIDs, const string& orderingStr,
@@ -399,7 +405,7 @@ public:
    CallbackReturn_LedgerDelegate(
       shared_ptr<SocketPrototype> sock, const string& bdvid,
       function<void(ReturnMessage<AsyncClient::LedgerDelegate>)> lbd) :
-      sockPtr_(sock), bdvID_(bdvid), userCallbackLambda_(lbd)
+      userCallbackLambda_(lbd), sockPtr_(sock), bdvID_(bdvid)
    {}
 
    //virtual
@@ -417,7 +423,7 @@ private:
 public:
    CallbackReturn_Tx(shared_ptr<ClientCache> cache,
       const BinaryData& txHash, function<void(ReturnMessage<Tx>)> lbd) :
-      cache_(cache), txHash_(txHash), userCallbackLambda_(lbd)
+      userCallbackLambda_(lbd), cache_(cache), txHash_(txHash)
    {}
 
    //virtual
@@ -438,8 +444,8 @@ public:
       shared_ptr<ClientCache> cache,
       unsigned height, const BinaryData& txHash, 
       function<void(ReturnMessage<BinaryData>)> lbd) :
-      cache_(cache),txHash_(txHash), height_(height),
-      userCallbackLambda_(lbd)
+      userCallbackLambda_(lbd),
+      cache_(cache),txHash_(txHash), height_(height)
    {}
 
    //virtual
@@ -473,6 +479,23 @@ private:
 public:
    CallbackReturn_FeeEstimateStruct(
       function<void(ReturnMessage<ClientClasses::FeeEstimateStruct>)> lbd) :
+      userCallbackLambda_(lbd)
+   {}
+
+   //virtual
+   void callback(const WebSocketMessagePartial&);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct CallbackReturn_FeeSchedule : public CallbackReturn_WebSocket
+{
+private:
+   function<void(ReturnMessage<map<unsigned, ClientClasses::FeeEstimateStruct>>)>
+      userCallbackLambda_;
+
+public:
+   CallbackReturn_FeeSchedule(function<void(ReturnMessage<
+      map<unsigned, ClientClasses::FeeEstimateStruct>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
 
@@ -636,7 +659,7 @@ private:
 public:
    CallbackReturn_BlockHeader(unsigned height, 
       function<void(ReturnMessage<ClientClasses::BlockHeader>)> lbd) :
-      height_(height), userCallbackLambda_(lbd)
+      userCallbackLambda_(lbd), height_(height)
    {}
 
    //virtual

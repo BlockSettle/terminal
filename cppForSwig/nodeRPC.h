@@ -177,7 +177,8 @@ public:
    void registerNodeStatusLambda(std::function<void(void)> lbd) { nodeStatusLambda_ = lbd; }
 
    virtual bool canPool(void) const { return true; }
-   FeeEstimateResult getFeeByte(unsigned confTarget, std::string& strategy);
+   FeeEstimateResult getFeeByte(unsigned confTarget, const std::string& strategy);
+   std::map<unsigned, FeeEstimateResult> getFeeSchedule(const std::string& strategy);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -5,7 +5,6 @@
 #include <QToolButton>
 #include "ApplicationSettings.h"
 #include "EnterWalletPassword.h"
-#include "AuthNotice.h"
 #include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
@@ -232,7 +231,7 @@ void ChangeWalletPasswordDialog::continueBasic()
 
    if (isNewAuth) {
       if (showAuthUsageInfo) {
-         AuthNotice authNotice(this);
+         MessageBoxAuthNotice authNotice(this);
          int result = authNotice.exec();
          if (result != QDialog::Accepted) {
             return;
@@ -271,8 +270,8 @@ void ChangeWalletPasswordDialog::continueAddDevice()
    }
 
    if (oldPasswordData_.empty() || oldPasswordData_[0].encType != bs::wallet::EncryptionType::Auth) {
-      BSMessageBox messageBox(BSMessageBox::critical, tr("Add Device error")
-         , tr("Please switch to Auth encryption first"), this);
+      BSMessageBox messageBox(BSMessageBox::critical, tr("Add Device")
+         , tr("Auth eID encryption"), tr("Auth eID is not enabled"), this);
       messageBox.exec();
       return;
    }
@@ -325,7 +324,7 @@ void ChangeWalletPasswordDialog::onOldDeviceFailed()
    state_ = State::Idle;
    updateState();
 
-   BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+   BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
       , tr("A problem occured requesting old device key")
       , this).exec();
 }
@@ -361,7 +360,7 @@ void ChangeWalletPasswordDialog::onNewDeviceFailed()
    state_ = State::Idle;
    updateState();
 
-   BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+   BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
       , tr("A problem occured requesting new device key")
       , this).exec();
 }
@@ -378,11 +377,11 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
       logger_->error("ChangeWalletPassword failed for {}", walletId);
 
       if (isLatestChangeAddDevice_) {
-         BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+         BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
             , tr("Device adding failed")
             , this).exec();
       } else {
-         BSMessageBox(BSMessageBox::critical, tr("Wallet Password")
+         BSMessageBox(BSMessageBox::critical, tr("Wallet Encryption")
             , tr("A problem occured when changing wallet password")
             , this).exec();
       }
@@ -393,12 +392,12 @@ void ChangeWalletPasswordDialog::onPasswordChanged(const string &walletId, bool 
    }
 
    if (isLatestChangeAddDevice_) {
-      BSMessageBox(BSMessageBox::success, tr("Wallet Password")
+      BSMessageBox(BSMessageBox::success, tr("Wallet Encryption")
          , tr("Device successfully added")
          , this).exec();
    } else {
-      BSMessageBox(BSMessageBox::success, tr("Wallet Password")
-         , tr("Wallet password successfully changed")
+      BSMessageBox(BSMessageBox::success, tr("Wallet Encryption")
+         , tr("Wallet encryption successfully changed")
          , this).exec();
    }
 

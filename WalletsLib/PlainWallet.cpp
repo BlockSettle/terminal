@@ -25,6 +25,12 @@ PlainWallet::PlainWallet(const std::string &filename
    loadFromFile(filename);
 }
 
+PlainWallet::PlainWallet(const std::shared_ptr<spdlog::logger> &logger)
+   : Wallet(logger)
+{
+   walletId_ = BtcUtils::computeID(SecureBinaryData().GenerateRandom(32)).toBinStr();
+}
+
 PlainWallet::~PlainWallet()
 {
    if (db_) {

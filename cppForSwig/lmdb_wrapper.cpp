@@ -542,7 +542,10 @@ void LMDBBlockDatabase::openDatabases(
       if (CURRDB == HEADERS)
       {
          if (getDbType() != sdbi.armoryType_)
-            throw LmdbWrapperException("db type mismatch");
+         {
+            LOGERR << "db type mismatch, aborting";
+            exit(-2);
+         }
       }
    }
 
@@ -807,7 +810,7 @@ BinaryData LMDBBlockDatabase::getDBKeyForHash(const BinaryData& txhash,
       {
          BinaryDataRef hint = brrHints.get_BinaryDataRef(6);
          BinaryRefReader brrHint(hint);
-         BLKDATA_TYPE bdtype = DBUtils::readBlkDataKeyNoPrefix(
+         DBUtils::readBlkDataKeyNoPrefix(
             brrHint, height, dup, txIdx);
 
          if (dup != expectedDupId)
@@ -2289,7 +2292,7 @@ bool LMDBBlockDatabase::getStoredTxOut(
    uint16_t txIdx;
    BinaryRefReader brrKey(txKey);
 
-   BLKDATA_TYPE bdtype = DBUtils::readBlkDataKeyNoPrefix(
+   DBUtils::readBlkDataKeyNoPrefix(
       brrKey, id, dup, txIdx);
 
    //grab header

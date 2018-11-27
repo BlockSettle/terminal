@@ -81,7 +81,7 @@ void WalletDeleteDialog::deleteHDWallet()
       if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_
                                  , logger_, this)) {
          BSMessageBox(BSMessageBox::critical, tr("No backup")
-            , tr("No backup was created for this wallet - deletion cancelled")).exec();
+            , tr("No backup was created for this wallet - deletion cancelled"), this).exec();
          reject();
          return;
       }
@@ -94,12 +94,12 @@ void WalletDeleteDialog::deleteHDWallet()
          , tr("HD Wallet was successfully deleted")
          , tr("HD wallet \"%1\" (%2) was successfully deleted")
          .arg(QString::fromStdString(hdWallet_->getName()))
-         .arg(QString::fromStdString(hdWallet_->getWalletId()))).exec();
+         .arg(QString::fromStdString(hdWallet_->getWalletId())), this).exec();
       accept();
    }
    else {
       BSMessageBox(BSMessageBox::critical, tr("Wallet deletion failed")
-         , tr("Failed to delete local copy of %1").arg(QString::fromStdString(hdWallet_->getName()))).exec();
+         , tr("Failed to delete local copy of %1").arg(QString::fromStdString(hdWallet_->getName())), this).exec();
       reject();
    }
 }
@@ -114,12 +114,12 @@ void WalletDeleteDialog::deleteWallet()
          , tr("Wallet was successfully deleted")
          , tr("Wallet \"%1\" (%2) was successfully deleted")
          .arg(QString::fromStdString(wallet_->GetWalletName()))
-         .arg(QString::fromStdString(wallet_->GetWalletId()))).exec();
+         .arg(QString::fromStdString(wallet_->GetWalletId())), this).exec();
       accept();
    }
    else {
       BSMessageBox(BSMessageBox::critical, tr("Wallet deletion failed")
-         , tr("Failed to delete wallet %1").arg(QString::fromStdString(wallet_->GetWalletName()))).exec();
+         , tr("Failed to delete wallet %1").arg(QString::fromStdString(wallet_->GetWalletName())), this).exec();
       reject();
    }
 }

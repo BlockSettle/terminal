@@ -28,6 +28,8 @@ TransactionData::TransactionData(onTransactionChanged changedCallback, bool SWOn
 
 TransactionData::~TransactionData()
 {
+   disableTransactionUpdate();
+   changedCallback_ = {};
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
@@ -192,7 +194,7 @@ bool TransactionData::UpdateTransactionData()
 
          usedUTXO_ = selection.utxoVec_;
 
-         summary_.transactionSize = selection.size_;
+         summary_.txVirtSize = selection.size_;
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
 
@@ -204,7 +206,7 @@ bool TransactionData::UpdateTransactionData()
          usedUTXO_ = transactions;
 
          if (maxAmount) {
-            summary_.transactionSize = usedUTXO_.size();
+            summary_.txVirtSize = usedUTXO_.size();
             summary_.totalFee = availableBalance - payment.spendVal_;
             totalFee_ = summary_.totalFee;
 //            summary_.feePerByte = feePerByte_;
@@ -226,7 +228,7 @@ bool TransactionData::UpdateTransactionData()
                return false;
             }
 
-            summary_.transactionSize = selection.size_;
+            summary_.txVirtSize = selection.size_;
             summary_.totalFee = selection.fee_;
             summary_.feePerByte = selection.fee_byte_;
 
@@ -238,6 +240,7 @@ bool TransactionData::UpdateTransactionData()
       summary_.usedTransactions = usedUTXO_.size();
    }
 
+   summary_.outputsCount = recipients_.size();
    summary_.initialized = true;
 
    return true;
@@ -300,12 +303,11 @@ bool TransactionData::RecipientsReady() const
    return true;
 }
 
-bool TransactionData::SetFeePerByte(float feePerByte)
+void TransactionData::SetFeePerByte(float feePerByte)
 {
    feePerByte_ = feePerByte;
    totalFee_ = 0;
    InvalidateTransactionData();
-   return true;
 }
 
 void TransactionData::SetTotalFee(uint64_t fee)
@@ -395,6 +397,14 @@ void TransactionData::RemoveRecipient(unsigned int recipientId)
 {
    recipients_.erase(recipientId);
    InvalidateTransactionData();
+}
+
+void TransactionData::ClearAllRecipients()
+{
+   if (!recipients_.empty()) {
+      recipients_.clear();
+      InvalidateTransactionData();
+   }
 }
 
 bool TransactionData::UpdateRecipientAddress(unsigned int recipientId, const bs::Address &address)
@@ -569,9 +579,13 @@ bs::wallet::TXSignRequest TransactionData::GetSignTXRequest() const
    return unsignedTxReq_;
 }
 
-bs::wallet::TXSignRequest TransactionData::CreateTXRequest(bool isRBF, const bs::Address &changeAddr) const
+bs::wallet::TXSignRequest TransactionData::CreateTXRequest(bool isRBF
+                                                 , const bs::Address &changeAddr
+                                                , const uint64_t& origFee) const
 {
-   return wallet_->CreateTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddr);
+   return wallet_->CreateTXRequest(inputs(), GetRecipientList()
+                                   , summary_.totalFee, isRBF, changeAddr
+                                   , origFee);
 }
 
 bs::wallet::TXSignRequest TransactionData::CreatePartialTXRequest(uint64_t spendVal, float feePerByte

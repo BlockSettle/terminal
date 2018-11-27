@@ -9,7 +9,6 @@
 #include "WalletPasswordVerifyDialog.h"
 #include "WalletsManager.h"
 #include "UiUtils.h"
-#include "AuthNotice.h"
 
 #include <spdlog/spdlog.h>
 
@@ -105,7 +104,7 @@ void ImportWalletDialog::updateAcceptButtonState()
 void ImportWalletDialog::onKeyTypeChanged(bool password)
 {
    if (!password && !authNoticeWasShown_) {
-      AuthNotice dlg(this);
+      MessageBoxAuthNotice dlg(this);
 
       if (dlg.exec() == QDialog::Accepted) {
          authNoticeWasShown_ = true;

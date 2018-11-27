@@ -381,7 +381,6 @@ SshMapping ShardedSshParser::mapSubSshDB()
    SshMapping sshMapping;
 
    auto&& subssh_sdbi = db_->getStoredDBInfo(SUBSSH, 0);
-   auto top_id = subssh_sdbi.metaInt_;
 
    //initialize
    mapCount_.store(firstShard_, memory_order_relaxed);

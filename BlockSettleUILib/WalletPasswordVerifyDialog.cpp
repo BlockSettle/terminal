@@ -12,7 +12,6 @@ WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::shared_ptr<App
 {
    ui_->setupUi(this);
 
-   ui_->pushButtonContinue->setEnabled(false);
    connect(ui_->pushButtonContinue, &QPushButton::clicked, this, &WalletPasswordVerifyDialog::onContinueClicked);
    connect(ui_->lineEditPassword, &QLineEdit::textEdited, this, [=](const QString &text) {
       ui_->pushButtonContinue->setDisabled(text.isEmpty());
@@ -44,6 +43,7 @@ void WalletPasswordVerifyDialog::init(const std::string& walletId
 
 void WalletPasswordVerifyDialog::initPassword()
 {
+   ui_->pushButtonContinue->setEnabled(false);
    ui_->labelAuthHint->hide();
    adjustSize();
 }
@@ -52,6 +52,7 @@ void WalletPasswordVerifyDialog::initAuth(const QString&)
 {
    ui_->lineEditPassword->hide();
    ui_->labelPasswordHint->hide();
+   ui_->groupPassword->hide();
    adjustSize();
 }
 
@@ -61,8 +62,8 @@ void WalletPasswordVerifyDialog::onContinueClicked()
 
    if (key.encType == bs::wallet::EncryptionType::Password) {
       if (ui_->lineEditPassword->text().toStdString() != key.password.toBinStr()) {
-         BSMessageBox errorMessage(BSMessageBox::critical, tr("Error")
-            , tr("Password does not match. Please try again."), this);
+         BSMessageBox errorMessage(BSMessageBox::critical, tr("Warning")
+            , tr("Incorrect password"), tr("The password you have entered is incorrect. Please try again."), this);
          errorMessage.exec();
          return;
       }
@@ -70,7 +71,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
    
    if (key.encType == bs::wallet::EncryptionType::Auth) {
       EnterWalletPassword dialog(MobileClientRequest::VerifyWalletKey, this);
-      dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Activate Auth eID signing"));
+      dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Confirm Auth eID Signing"), tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
          return;
