@@ -12,7 +12,7 @@ class JomSettings(Configurator):
         self._version = 'Latest'
         self._package_name = 'Jom'
 
-        self._package_url = 'http://download.qt.io/official_releases/jom/jom.zip'
+        self._package_url = 'https://download.qt.io/official_releases/jom/jom.zip'
 
     def get_package_name(self):
         return self._package_name
