@@ -68,4 +68,9 @@ public:
    MessageBoxAuthNotice(QWidget *parent = nullptr);
 };
 
+class MessageBoxWalletCreateAbort : public BSMessageBox {
+public:
+   MessageBoxWalletCreateAbort(QWidget *parent = nullptr);
+};
+
 #endif // __MESSAGE_BOX_H__

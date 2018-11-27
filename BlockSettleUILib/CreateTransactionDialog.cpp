@@ -238,7 +238,7 @@ void CreateTransactionDialog::onTransactionUpdated()
    labelEstimatedFee()->setText(UiUtils::displayAmount(summary.totalFee));
    labelTotalAmount()->setText(UiUtils::displayAmount(UiUtils::amountToBtc(summary.balanceToSpend) + UiUtils::amountToBtc(summary.totalFee)));
    if (labelTxSize()) {
-      labelTxSize()->setText(QString::number(summary.txVirtSize) + tr(" bytes"));
+      labelTxSize()->setText(QString::number(summary.txVirtSize));
    }
 
    if (feePerByteLabel() != nullptr) {

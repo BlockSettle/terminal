@@ -9,7 +9,7 @@ QString getMobileClientRequestText(MobileClientRequest requestType)
 
    switch (requestType) {
    case MobileClientRequest::ActivateWallet:
-      return app->tr("Activate wallet");
+      return app->tr("Activate Auth eID Signing");
    case MobileClientRequest::DeactivateWallet:
       return app->tr("Deactivate wallet");
    case MobileClientRequest::SignWallet:
@@ -23,7 +23,7 @@ QString getMobileClientRequestText(MobileClientRequest requestType)
    case MobileClientRequest::DeactivateWalletDevice:
       return app->tr("Deactivate wallet device");
    case MobileClientRequest::VerifyWalletKey:
-      return app->tr("Verify wallet key");
+      return app->tr("Confirm Auth eID Signing");
    case MobileClientRequest::ActivateOTP:
       return app->tr("Activate OTP");
    case MobileClientRequest::SettlementTransaction:
