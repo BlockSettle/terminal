@@ -63,7 +63,8 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
       // so center it again
       QTimer::singleShot(5, [=] {
          auto p = this->parent();
-         if (p) {
+         // only resize if the message box is larger than 300px in height
+         if (p && this->height() > 300) {
             auto w = qobject_cast<QWidget *>(p);
             auto parentRect = w->geometry();
             auto parentCenter = parentRect.center();

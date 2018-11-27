@@ -26,7 +26,6 @@
 #include "SignContainer.h"
 #include "VerifyWalletBackupDialog.h"
 #include "WalletBackupDialog.h"
-#include "WalletCompleteDialog.h"
 #include "WalletDeleteDialog.h"
 #include "WalletImporter.h"
 #include "WalletsManager.h"
@@ -441,9 +440,9 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
          }
 
          if (report) {
-            WalletCreateCompleteDialog completedDialog(QString::fromStdString(newWallet->getName())
-               , createWalletDialog.isNewWalletPrimary(), this);
-            completedDialog.exec();
+            BSMessageBox(BSMessageBox::success
+               , tr("%1Wallet Created").arg(createWalletDialog.isNewWalletPrimary() ? tr("Primary ") : QString())
+               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->getName())), this).exec();
          }
 
          return true;
@@ -486,9 +485,9 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
             walletImporters_[walletId] = importer;
 
             if (report) {
-               WalletImportCompleteDialog completedDialog(createImportedWallet.getNewWalletName()
-                  , createImportedWallet.ImportedAsPrimary(), this);
-               completedDialog.exec();
+               BSMessageBox(BSMessageBox::success
+                  , tr("%1Wallet Imported").arg(createImportedWallet.ImportedAsPrimary() ? tr("Primary ") : QString())
+                  , tr("Wallet \"%1\" Successfully Imported").arg(createImportedWallet.getNewWalletName()), this).exec();
             }
          }
       }
@@ -517,7 +516,10 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
          }
          walletsManager_->AddWallet(newWallet, appSettings_->GetHomeDir());
          if (report) {
-            WalletCreateCompleteDialog(QString::fromStdString(newWallet->getName()), false, this).exec();
+            BSMessageBox(BSMessageBox::success
+               , tr("Wallet Created")
+               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->getName()))
+               , this).exec();
          }
       }
    }

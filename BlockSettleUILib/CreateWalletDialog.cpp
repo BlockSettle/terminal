@@ -186,7 +186,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
 
       EnterWalletPassword dialog(MobileClientRequest::ActivateWallet, parent);
       dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
-         , appSettings, QObject::tr("Activate Auth eID signing"));
+         , appSettings, QObject::tr("Activate Auth eID Signing"), QObject::tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
          return false;
