@@ -37,13 +37,6 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
    selectedChangeAddress_ = bs::Address{};
 
    initUI();
-
-   connect(ui_->doubleSpinBoxFeesManualPerByte, QOverload<double>::of(&QDoubleSpinBox::valueChanged)
-      , this, &CreateTransactionDialogAdvanced::setTxFees);
-   connect(ui_->spinBoxFeesManualTotal, QOverload<int>::of(&QSpinBox::valueChanged)
-      , this, &CreateTransactionDialogAdvanced::setTxFees);
-
-   updateManualFeeControls();
 }
 
 CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
@@ -60,7 +53,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
                                                                 walletManager,
                                                                 container,
-                                                                true,
+                                                                false,
                                                                 logger,
                                                                 parent);
 
@@ -86,7 +79,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
                                                                 walletManager,
                                                                 container,
-                                                                true,
+                                                                false,
                                                                 logger,
                                                                 parent);
 
@@ -170,10 +163,9 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
             // with the minimum fee/byte. For now, the minimum fee will be set
             // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
             // a value that won't always be accurate is a bad idea.
-            QMetaObject::invokeMethod(this, [this, newFPB] {
-               SetMinimumFee(0, newFPB);
-               onTransactionUpdated();
-            });
+            SetMinimumFee(0, newFPB);
+            onTransactionUpdated();
+            populateFeeList();
          };
          walletsManager_->estimatedFeePerByte(2, cbFee, this);
       }
@@ -242,7 +234,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          totalVal -= out.getValue();
       }
 
-      QMetaObject::invokeMethod(this, [this, changeAddress] { SetFixedChangeAddress(changeAddress); });
+      SetFixedChangeAddress(changeAddress);
 
       // set fee
       if (totalVal < 0) {
@@ -277,6 +269,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       originalFeePerByte_ = feePerByte;
       const auto &newMinFee = originalFee_ + txVirtSize;
       SetMinimumFee(newMinFee, originalFeePerByte_);
+      populateFeeList();
 
       if (changeAddress.isNull()) {
          setUnchangeableTx();
@@ -288,14 +281,14 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
    const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
       try {
          auto inUTXOs = utxos.get();
-         QMetaObject::invokeMethod(this, [this, wallet, inUTXOs, txHashSet, cbTXs] {
+         QMetaObject::invokeMethod(this, [this, wallet, txHashSet, inUTXOs, cbTXs] {
             SetFixedWalletAndInputs(wallet, inUTXOs);
 
             armory_->getTXsByHash(txHashSet, cbTXs);
          });
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error("[CreateTransactionDialogAdvanced::setRBFinputs] " \
                "Return data error - {}", e.what());
          }
@@ -376,6 +369,13 @@ void CreateTransactionDialogAdvanced::initUI()
    contextMenu_.addAction(removeOutputAction_);
 
    connect(ui_->treeViewOutputs, &QTreeView::customContextMenuRequested, this, &CreateTransactionDialogAdvanced::showContextMenu);
+
+   connect(ui_->doubleSpinBoxFeesManualPerByte, QOverload<double>::of(&QDoubleSpinBox::valueChanged)
+      , this, &CreateTransactionDialogAdvanced::setTxFees);
+   connect(ui_->spinBoxFeesManualTotal, QOverload<int>::of(&QSpinBox::valueChanged)
+      , this, &CreateTransactionDialogAdvanced::setTxFees);
+
+   updateManualFeeControls();
 }
 
 void CreateTransactionDialogAdvanced::clear()
@@ -547,15 +547,6 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       showExistingChangeAddress(changeSelectionEnabled);
    }
 
-   // If we're doing RBF, set the bare minimum for the total fee and fee/byte.
-   // The total fee will still need to be checked and possibly bumped later, as
-   // it's impossible to know the final TX size at this point (and, ergo, the
-   // amount required to satisfy the incremental relay fee). But, we can make a
-   // good guess here.
-   if (originalFee_) {
-      const auto &newFee = originalFee_ + summary.txVirtSize;
-      SetMinimumFee(newFee, minFeePerByte_);
-   }
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
 }
