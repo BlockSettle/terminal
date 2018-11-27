@@ -29,7 +29,8 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
    , ui_(new Ui::NewWalletSeedDialog)
    , walletId_(walletId)
    , keyLine1_(keyLine1)
-   , keyLine2_(keyLine2) {
+   , keyLine2_(keyLine2)
+{
    ui_->setupUi(this);
 
    pdfWriter_.reset(new WalletBackupPdfWriter(walletId, keyLine1, keyLine2
@@ -46,7 +47,8 @@ NewWalletSeedDialog::NewWalletSeedDialog(const QString& walletId
 
 NewWalletSeedDialog::~NewWalletSeedDialog() = default;
 
-bool NewWalletSeedDialog::eventFilter(QObject *obj, QEvent *event) {
+bool NewWalletSeedDialog::eventFilter(QObject *obj, QEvent *event)
+{
    if (obj == ui_->scrollArea->viewport() && event->type() == QEvent::Resize) {
       QResizeEvent *e = static_cast<QResizeEvent*>(event);
 
@@ -62,7 +64,8 @@ bool NewWalletSeedDialog::eventFilter(QObject *obj, QEvent *event) {
    }
 }
 
-void NewWalletSeedDialog::onSaveClicked() {
+void NewWalletSeedDialog::onSaveClicked()
+{
    QDir documentsDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
    QString filePath = documentsDir.filePath(QString::fromLatin1("backup_wallet_%1.pdf").arg(walletId_));
 
@@ -84,14 +87,16 @@ void NewWalletSeedDialog::onSaveClicked() {
    }
 }
 
-void NewWalletSeedDialog::reject() {
+void NewWalletSeedDialog::reject()
+{
    bool result = MessageBoxWalletCreateAbort(this).exec();
    if (result) {
       QDialog::reject();
    }
 }
 
-void NewWalletSeedDialog::onPrintClicked() {
+void NewWalletSeedDialog::onPrintClicked()
+{
    QPrinter printer(QPrinter::PrinterResolution);
 
    printer.setOutputFormat(QPrinter::NativeFormat);
