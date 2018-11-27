@@ -26,13 +26,13 @@
 #include "SignContainer.h"
 #include "VerifyWalletBackupDialog.h"
 #include "WalletBackupDialog.h"
-#include "WalletCompleteDialog.h"
 #include "WalletDeleteDialog.h"
 #include "WalletImporter.h"
 #include "WalletsManager.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
 #include "TreeViewWithEnterKey.h"
+#include "NewWalletSeedConfirmDialog.h"
 
 
 class AddressSortFilterModel : public QSortFilterProxyModel
@@ -421,7 +421,13 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
    if (!result) {
       return false;
    }
-
+   // get the user to confirm the seed
+   NewWalletSeedConfirmDialog dlg(QString::fromStdString(walletId)
+      , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);
+   result = dlg.exec();
+   if (!result) {
+      return false;
+   }
    std::shared_ptr<bs::hd::Wallet> newWallet;
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
       , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, appSettings_, this);
@@ -434,9 +440,9 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
          }
 
          if (report) {
-            WalletCreateCompleteDialog completedDialog(QString::fromStdString(newWallet->getName())
-               , createWalletDialog.isNewWalletPrimary(), this);
-            completedDialog.exec();
+            BSMessageBox(BSMessageBox::success
+               , tr("%1Wallet Created").arg(createWalletDialog.isNewWalletPrimary() ? tr("Primary ") : QString())
+               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->getName())), this).exec();
          }
 
          return true;
@@ -479,9 +485,9 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
             walletImporters_[walletId] = importer;
 
             if (report) {
-               WalletImportCompleteDialog completedDialog(createImportedWallet.getNewWalletName()
-                  , createImportedWallet.ImportedAsPrimary(), this);
-               completedDialog.exec();
+               BSMessageBox(BSMessageBox::success
+                  , tr("%1Wallet Imported").arg(createImportedWallet.ImportedAsPrimary() ? tr("Primary ") : QString())
+                  , tr("Wallet \"%1\" Successfully Imported").arg(createImportedWallet.getNewWalletName()), this).exec();
             }
          }
       }
@@ -510,7 +516,10 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
          }
          walletsManager_->AddWallet(newWallet, appSettings_->GetHomeDir());
          if (report) {
-            WalletCreateCompleteDialog(QString::fromStdString(newWallet->getName()), false, this).exec();
+            BSMessageBox(BSMessageBox::success
+               , tr("Wallet Created")
+               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->getName()))
+               , this).exec();
          }
       }
    }

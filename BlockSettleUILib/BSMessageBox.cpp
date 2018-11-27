@@ -63,7 +63,8 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
       // so center it again
       QTimer::singleShot(5, [=] {
          auto p = this->parent();
-         if (p) {
+         // only resize if the message box is larger than 300px in height
+         if (p && this->height() > 300) {
             auto w = qobject_cast<QWidget *>(p);
             auto parentRect = w->geometry();
             auto parentCenter = parentRect.center();
@@ -166,4 +167,12 @@ MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)
       , parent) {
    // use rich text because of the hyperlink
    setLabelTextFormat(Qt::RichText);
+}
+
+MessageBoxWalletCreateAbort::MessageBoxWalletCreateAbort(QWidget *parent)
+   : BSMessageBox(BSMessageBox::question, tr("Warning"), tr("Abort Wallet Creation?")
+      , tr("The Wallet will not be created if you don't complete the procedure.\n\n"
+         "Are you sure you want to abort the Wallet Creation process?"), parent) {
+   setConfirmButtonText(QObject::tr("Abort"));
+   setCancelButtonText(QObject::tr("Back"));
 }

@@ -210,6 +210,22 @@
     </widget>
    </item>
    <item>
+    <widget class="QLabel" name="labelPasswordWarning">
+     <property name="text">
+      <string>Your password must be a minimum of six (6) characters</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>9</number>
+     </property>
+     <property name="statusWarningLabel" stdset="0">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>

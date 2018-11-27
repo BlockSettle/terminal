@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>423</width>
-    <height>176</height>
+    <height>178</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -35,7 +35,78 @@
    <property name="spacing">
     <number>7</number>
    </property>
-   <item row="4" column="0" colspan="3">
+   <item row="3" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEditPasswordConfirm">
+     <property name="echoMode">
+      <enum>QLineEdit::Password</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEditPassword">
+     <property name="echoMode">
+      <enum>QLineEdit::Password</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="labelPasswordConfirm">
+     <property name="minimumSize">
+      <size>
+       <width>120</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>120</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Confirm password</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="3">
+    <widget class="QProgressBar" name="progressBar">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>25</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>25</height>
+      </size>
+     </property>
+     <property name="value">
+      <number>24</number>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="labelPassword">
+     <property name="minimumSize">
+      <size>
+       <width>120</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>120</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Password</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="3">
     <widget class="QLabel" name="labelAuthId">
      <property name="text">
       <string>--</string>
@@ -61,7 +132,7 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
+   <item row="11" column="0">
     <widget class="QLabel" name="labelAuthInfo">
      <property name="minimumSize">
       <size>
@@ -93,78 +164,23 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="labelPassword">
-     <property name="minimumSize">
-      <size>
-       <width>120</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>120</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Password</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="labelPasswordConfirm">
-     <property name="minimumSize">
-      <size>
-       <width>120</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>120</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Confirm password</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0" colspan="3">
-    <widget class="QProgressBar" name="progressBar">
+   <item row="1" column="0" colspan="3">
+    <widget class="QWidget" name="widgetSpacing" native="true">
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>25</height>
+       <height>5</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>25</height>
+       <height>5</height>
       </size>
      </property>
-     <property name="value">
-      <number>24</number>
-     </property>
     </widget>
    </item>
-   <item row="3" column="1" colspan="2">
-    <widget class="QLineEdit" name="lineEditPasswordConfirm">
-     <property name="echoMode">
-      <enum>QLineEdit::Password</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1" colspan="2">
-    <widget class="QLineEdit" name="lineEditPassword">
-     <property name="echoMode">
-      <enum>QLineEdit::Password</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1" colspan="2">
+   <item row="11" column="1" colspan="2">
     <widget class="QWidget" name="widgetAuthLayout" native="true">
      <layout class="QHBoxLayout" name="widgetAuth">
       <property name="leftMargin">
@@ -208,19 +224,10 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0" colspan="3">
-    <widget class="QWidget" name="widgetSpacing" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>5</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>5</height>
-      </size>
+   <item row="4" column="0" colspan="3">
+    <widget class="QLabel" name="labelPasswordInfo">
+     <property name="text">
+      <string/>
      </property>
     </widget>
    </item>
