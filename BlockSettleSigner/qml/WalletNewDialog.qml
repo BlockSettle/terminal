@@ -80,7 +80,7 @@ CustomDialog {
 
                 CustomButton {
                     Layout.fillWidth: true
-                    text:   qsTr("Random Seed")
+                    text:   qsTr("Create New")
                     onClicked: {
                         type = WalletNewDialog.WalletType.RandomSeed
                         accept()
