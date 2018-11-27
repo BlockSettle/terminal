@@ -111,7 +111,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
       auto selInputs = transactionData_->GetSelectedInputs();
       selInputs->SetUseAutoSel(false);
-      int64_t totalVal = 0;
+      int64_t origFee = 0;
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          const auto &itTxOut = txOutIndices.find(txHash);
@@ -121,7 +121,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          for (const auto &txOutIdx : itTxOut->second) {
             if (prevTx.isInitialized()) {
                TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
-               totalVal += prevOut.getValue();
+               origFee += prevOut.getValue();
             }
          }
 
@@ -135,29 +135,43 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
                   cntOutputs++;
                }
             }
-            totalVal -= out.getValue();
+            origFee -= out.getValue();
          }
 
          if (!cntOutputs) {
             //!throw std::runtime_error("No input[s] found");
             return;
          }
-         if (totalVal < 0) {
+         if (origFee < 0) {
             //!throw std::runtime_error("negative TX balance");
             return;
          }
 
-         const auto &cbFee = [this, tx, totalVal](float fee) {
-            const auto txSize = tx.serializeNoWitness().getSize();
-            const float feePerByte = (float)totalVal / txSize;
-            originalFee_ = totalVal;
+         const auto &cbFee = [this, tx, origFee](float fee) {
+            const auto txSize = tx.getTxWeight();
+            const float feePerByte = (float)origFee / txSize;
+            originalFee_ = origFee;
             originalFeePerByte_ = feePerByte;
-            const size_t projectedTxSize = 85;  // 1 input and 1 output bech32
-            const float totalFee = std::abs(txSize * (fee - feePerByte) + projectedTxSize * fee);
-            const float newFPB = std::ceil(totalFee / (txSize + projectedTxSize));
 
-            QMetaObject::invokeMethod(this, [this, totalFee, newFPB] {
-               SetMinimumFee(totalFee, newFPB);
+            // CPFP has no enforced rules for fees. We use the following
+            // algorithm for determining the fee/byte. If the current 2-block
+            // fee is less than the fee used by the parent, stick to the current
+            // 2-block fee. If not, add the difference to the 2-block fee and
+            // use the result for the child fee. Simple but it should work. A
+            // little tinkering may be worthwhile later.
+            const float feeDiff = fee - originalFee_;
+            float newFPB = fee;
+            if (std::signbit(feeDiff) == false) { // Is the diff positive?
+               newFPB += feeDiff;
+            }
+
+            // SetMinimumFee() may need to be re-thought. RBF is the only
+            // scenario where we really need to enforce a minimum fee in concert
+            // with the minimum fee/byte. For now, the minimum fee will be set
+            // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
+            // a value that won't always be accurate is a bad idea.
+            QMetaObject::invokeMethod(this, [this, newFPB] {
+               SetMinimumFee(0, newFPB);
                onTransactionUpdated();
             });
          };
