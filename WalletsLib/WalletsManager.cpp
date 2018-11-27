@@ -817,7 +817,13 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
       }
       updateTxDirCache(txHash, bs::Transaction::Unknown, cb);
    };
-   armory_->getTXsByHash(opTxHashes, cbProcess);
+   if (opTxHashes.empty()) {
+      logger_->error("[WalletsManager::GetTransactionDirection] empty TX hashes");
+      return false;
+   }
+   else {
+      armory_->getTXsByHash(opTxHashes, cbProcess);
+   }
    return true;
 }
 
@@ -885,7 +891,13 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
          }
          cbProcessAddresses(addresses);
       };
-      armory_->getTXsByHash(opTxHashes, cbProcess);
+      if (opTxHashes.empty()) {
+         logger_->error("[WalletsManager::GetTransactionMainAddress] empty TX hashes");
+         return false;
+      }
+      else {
+         armory_->getTXsByHash(opTxHashes, cbProcess);
+      }
    }
    else {
       cbProcessAddresses(addresses);

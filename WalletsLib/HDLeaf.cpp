@@ -293,8 +293,8 @@ void hd::Leaf::init(const std::shared_ptr<Node> &node, const hd::Path &path, Nod
 
 void hd::Leaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
-   activateAddressesFromLedger(armory_->getZCentries(reqId));
-}
+//!   activateAddressesFromLedger(armory_->getZCentries(reqId));
+}  // if ZC is received, then likely wallet already contains the participating address
 
 void hd::Leaf::onRefresh(std::vector<BinaryData> ids)
 {
@@ -360,9 +360,13 @@ void hd::Leaf::activateAddressesFromLedger(const std::vector<ClientClasses::Ledg
             emit addressAdded();
          }
       };
-      armory_->getTXsByHash(opTxHashes, cbInputs);
+      if (!opTxHashes.empty()) {
+         armory_->getTXsByHash(opTxHashes, cbInputs);
+      }
    };
-   armory_->getTXsByHash(txHashes, cb);
+   if (!txHashes.empty()) {
+      armory_->getTXsByHash(txHashes, cb);
+   }
 }
 
 void hd::Leaf::activateHiddenAddress(const bs::Address &addr)
@@ -1236,7 +1240,6 @@ void hd::CCLeaf::validationProc()
    validationEnded_ = true;
    refreshInvalidUTXOs();
    hd::Leaf::firstInit();
-   emit addressAdded();
 
    if (!validationStarted_) {
       return;
@@ -1284,15 +1287,15 @@ void hd::CCLeaf::validationProc()
          const auto &cbHistory = [this, cbCheck, addr=ledger.first, addressesToCheck]
                                  (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
             try {
-               auto le = entries.get();
+               const auto &le = entries.get();
                (*addressesToCheck)[addr] = le.size();
 
                for (const auto &entry : le) {
                   armory_->getTxByHash(entry.getTxHash(), cbCheck);
                }
             }
-            catch(std::exception& e) {
-            if(logger_ != nullptr) {
+            catch (const std::exception &e) {
+            if (logger_ != nullptr) {
                   logger_->error("[hd::CCLeaf::validationProc] Return data " \
                      "error - {}", e.what());
                }
@@ -1325,7 +1328,7 @@ void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<
          uint64_t invalidBalance = 0;
          std::map<BinaryData, TxResultData> txHashMap;
       };
-      auto result = new Result;
+      auto result = std::make_shared<Result>();
 
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
@@ -1350,13 +1353,17 @@ void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<
             if (result->txHashMap.empty()) {
                balanceCorrection_ += result->invalidBalance / BTCNumericTypes::BalanceDivider;
                cb(filterUTXOs(utxos));
-               delete result;
             }
          };
          checker_->containsInputAddress(txData.tx, cbResult, lotSizeInSatoshis_, txData.utxo.getValue());
       }
    };
-   armory_->getTXsByHash(txHashes, cbProcess);
+   if (txHashes.empty()) {
+      cb(utxos);
+   }
+   else {
+      armory_->getTXsByHash(txHashes, cbProcess);
+   }
 }
 
 void hd::CCLeaf::firstInit(bool force)
@@ -1381,7 +1388,6 @@ void hd::CCLeaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
    hd::Leaf::onZeroConfReceived(reqId);
    refreshInvalidUTXOs(true);
-   emit addressAdded();    //?
 }
 
 std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
