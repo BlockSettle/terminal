@@ -69,7 +69,7 @@ class TXInfo : public QObject
    Q_PROPERTY(bool isValid READ isValid NOTIFY dataChanged)
    Q_PROPERTY(int nbInputs READ nbInputs NOTIFY dataChanged)
    Q_PROPERTY(QStringList recvAddresses READ recvAddresses NOTIFY dataChanged)
-   Q_PROPERTY(int txSize READ txSize NOTIFY dataChanged)
+   Q_PROPERTY(int txVirtSize READ txVirtSize NOTIFY dataChanged)
    Q_PROPERTY(double amount READ amount NOTIFY dataChanged)
    Q_PROPERTY(double total READ total NOTIFY dataChanged)
    Q_PROPERTY(double fee READ fee NOTIFY dataChanged)
@@ -87,7 +87,7 @@ public:
    bool isValid() const { return txReq_.isValid(); }
    int nbInputs() const { return (int)txReq_.inputs.size(); }
    QStringList recvAddresses() const;
-   int txSize() const { return (int)txReq_.estimateTxSize(); }
+   int txVirtSize() const { return (int)txReq_.estimateTxVirtSize(); }
    double amount() const;
    double total() const { return amount() + fee(); }
    double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }
