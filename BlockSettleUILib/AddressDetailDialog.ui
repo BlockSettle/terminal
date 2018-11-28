@@ -266,11 +266,14 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLabel" name="labelAddress">
+                <widget class="CustomLabel" name="labelAddress">
                  <property name="text">
                   <string>--</string>
                  </property>
                  <property name="whiteLabel" stdset="0">
+                  <bool>true</bool>
+                 </property>
+                 <property name="copyToClipboard" stdset="0">
                   <bool>true</bool>
                  </property>
                 </widget>
@@ -655,6 +658,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomLabel</class>
+   <extends>QLabel</extends>
+   <header>CustomLabel.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
