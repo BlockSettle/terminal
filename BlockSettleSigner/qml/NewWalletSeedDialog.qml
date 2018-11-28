@@ -9,7 +9,7 @@ import "bscontrols"
 
 CustomDialog {
     implicitWidth: curPage == 1 ? mainWindow.width * 0.8 : 400
-    implicitHeight: curPage == 1 ? mainWindow.height * 0.98 : 280
+    implicitHeight: curPage == 1 ? mainWindow.height * 0.98 : 265
     id: root
     property int curPage: 1
     property bool acceptable: (curPage == 1 || seedMatch)
@@ -116,10 +116,6 @@ CustomDialog {
                             seedMatch = false
                         }
                     }
-                }
-
-                onEntryComplete: {
-
                 }
             }
 

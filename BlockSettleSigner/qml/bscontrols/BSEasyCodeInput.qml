@@ -57,7 +57,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
-
+        Layout.bottomMargin: 5
         BSInputLabel {
             id: keyLine1Label
             Layout.fillWidth: true
@@ -86,22 +86,6 @@ ColumnLayout {
                     entryComplete()
                 }
             }
-        }
-    }
-
-    RowLayout {
-        opacity: keyLine1.validator.statusMsg === "" ? 0.0 : 1.0
-        Layout.fillWidth: true
-        Layout.leftMargin: 10
-        Layout.rightMargin: 10
-
-        BSInputLabel {
-            topPadding: 1
-            bottomPadding: 1
-            Layout.fillWidth: true
-            Layout.leftMargin: inputLablesWidth + 5
-            text:  keyLine1.validator.statusMsg
-            color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
     }
 
@@ -142,13 +126,21 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
-
+        BSInputLabel {
+            opacity: keyLine1.validator.statusMsg === "" ? 0.0 : 1.0
+            topPadding: 1
+            bottomPadding: 1
+            Layout.fillWidth: true
+            Layout.leftMargin: inputLablesWidth + 5
+            text:  keyLine1.validator.statusMsg
+            color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+        }
         BSInputLabel {
             opacity: keyLine2.validator.statusMsg === "" ? 0.0 : 1.0
             topPadding: 1
             bottomPadding: 1
             Layout.fillWidth: true
-            Layout.leftMargin: inputLablesWidth + 5
+            Layout.leftMargin: 2
             text:  keyLinesIdentical ? identicalLinesErrorMsg : keyLine2.validator.statusMsg
             color: keyLine1.text === keyLine2.text || !keyLine2.acceptableInput ?
                        BSStyle.inputsInvalidColor : BSStyle.inputsValidColor
