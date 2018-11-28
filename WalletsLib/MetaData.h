@@ -283,6 +283,7 @@ namespace bs {
       virtual size_t GetExtAddressCount() const { return usedAddresses_.size(); }
       virtual size_t GetIntAddressCount() const { return usedAddresses_.size(); }
       virtual size_t GetWalletAddressCount() const { return addrCount_; }
+      virtual bool GetActiveAddressCount(const std::function<void(size_t)> &) const;
       virtual bs::Address GetNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
       virtual bs::Address GetNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
       virtual bs::Address GetNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return GetNewExtAddress(aet); }

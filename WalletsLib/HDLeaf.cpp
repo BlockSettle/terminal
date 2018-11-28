@@ -1251,12 +1251,12 @@ void hd::CCLeaf::validationProc()
       addressesToCheck->emplace(addr, -1);
    }
 
-   const auto &cbLedgers = [this, addressesToCheck](std::map<bs::Address, AsyncClient::LedgerDelegate> ledgers) {
-      for (auto ledger : ledgers) {
+   for (const auto &addr : GetUsedAddressList()) {
+      const auto &cbLedger = [this, addr, addressesToCheck](AsyncClient::LedgerDelegate ledger) {
          if (!validationStarted_) {
             return;
          }
-         const auto &cbCheck = [this, addr=ledger.first, addressesToCheck](Tx tx) {
+         const auto &cbCheck = [this, addr, addressesToCheck](Tx tx) {
             const auto &cbResult = [this, tx](bool contained) {
                if (!contained && tx.isInitialized()) {
                   invalidTxHash_.insert(tx.getThisHash());
@@ -1284,8 +1284,8 @@ void hd::CCLeaf::validationProc()
                emit walletReset();
             }
          };
-         const auto &cbHistory = [this, cbCheck, addr=ledger.first, addressesToCheck]
-                                 (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+         const auto &cbHistory = [this, cbCheck, addr, addressesToCheck]
+         (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
             try {
                const auto &le = entries.get();
                (*addressesToCheck)[addr] = le.size();
@@ -1293,18 +1293,17 @@ void hd::CCLeaf::validationProc()
                for (const auto &entry : le) {
                   armory_->getTxByHash(entry.getTxHash(), cbCheck);
                }
-            }
-            catch (const std::exception &e) {
-            if (logger_ != nullptr) {
+            } catch (const std::exception &e) {
+               if (logger_ != nullptr) {
                   logger_->error("[hd::CCLeaf::validationProc] Return data " \
                      "error - {}", e.what());
                }
             }
          };
-         ledger.second.getHistoryPage(0, cbHistory);  //? Shouldn't we continue past the first page?
-      }
-   };
-   armory_->getLedgerDelegatesForAddresses(GetWalletId(), GetUsedAddressList(), cbLedgers);
+         ledger.getHistoryPage(0, cbHistory);  //? Shouldn't we continue past the first page?
+      };
+      armory_->getLedgerDelegateForAddress(GetWalletId(), addr, cbLedger, this);
+   }
 }
 
 void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<void(const std::vector<UTXO> &)> cb)

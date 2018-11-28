@@ -614,6 +614,36 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr) const
    return getAddrTxN(addr, cb);
 }
 
+bool bs::Wallet::GetActiveAddressCount(const std::function<void(size_t)> &cb) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   if (addressTxNMap_.empty() || updateAddrTxN_) {
+      const auto &cbTxN = [this, cb] (ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
+         try {
+            auto inTxnMap = txnMap.get();
+            {
+               QMutexLocker lock(&addrMapsMtx_);
+               for (const auto &txn : inTxnMap) {          // std::map::insert doesn't replace elements
+                  addressTxNMap_[txn.first] = txn.second;
+               }
+               updateAddrTxN_ = false;
+            }
+            cb(addressTxNMap_.size());
+         } catch (std::exception& e) {
+            if (logger_ != nullptr) {
+               logger_->error("[bs::Wallet::GetActiveAddressCount] Return data error - {} ", e.what());
+            }
+         }
+      };
+      btcWallet_->getAddrTxnCountsFromDB(cbTxN);
+   } else {
+      cb(addressTxNMap_.size());
+   }
+   return true;
+}
+
 bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
    , QObject *obj, uint64_t val)
 {
