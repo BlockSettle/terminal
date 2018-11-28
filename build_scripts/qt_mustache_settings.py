@@ -9,7 +9,7 @@ class QtMustache(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = 'a61f7385790ee33a051082957791f4859555e154'
-        self._package_name = 'qt-mustache-a61f7385790ee33a051082957791f4859555e154'
+        self._package_name = 'qt-mustache-' + self._version
         self._package_url = 'https://github.com/robertknight/qt-mustache/archive/' + self._version + '.zip'
 
     def get_package_name(self):
