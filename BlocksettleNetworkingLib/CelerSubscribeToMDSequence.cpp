@@ -65,6 +65,7 @@ CelerMessage CelerSubscribeToMDSequence::subscribeToMDStatistics()
    request.set_securityid(currencyPair_);
    request.set_producttype(bs::network::Asset::toCelerMDProductType(assetType_));
    request.set_assettype(bs::network::Asset::toCelerMDAssetType(assetType_));
+   request.set_exchangecode("XCEL");
 
    logger_->debug("[CelerSubscribeToMDSequence::subscribeToMDStatistics] subscribe request:\n{}"
       , request.DebugString());
