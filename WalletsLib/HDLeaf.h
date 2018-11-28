@@ -113,7 +113,7 @@ namespace bs {
          std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
-         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX) override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj, uint64_t val = UINT64_MAX) override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;

@@ -1227,7 +1227,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
       };
       findInvalidUTXOs(utxos, cbUpdateZcBalance);
    };
-   hd::Leaf::getSpendableZCList(cbRefreshZC);
+   hd::Leaf::getSpendableZCList(cbRefreshZC, this);
 }
 
 void hd::CCLeaf::validationProc()
