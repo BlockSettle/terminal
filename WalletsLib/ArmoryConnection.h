@@ -79,8 +79,10 @@ public:
    bool getWalletsHistory(const std::vector<std::string> &walletIDs
       , std::function<void (std::vector<ClientClasses::LedgerEntry>)>);
 
+   // If context is not null and cbInMainThread is true then the callback will be called
+   // on main thread only if context is still alive.
    bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &
-      , std::function<void(AsyncClient::LedgerDelegate)>);
+      , std::function<void(AsyncClient::LedgerDelegate)>, QObject *context = nullptr);
    bool getLedgerDelegatesForAddresses(const std::string &walletId, const std::vector<bs::Address>
       , std::function<void(std::map<bs::Address, AsyncClient::LedgerDelegate>)>);
    bool getWalletsLedgerDelegate(std::function<void(AsyncClient::LedgerDelegate)>);
@@ -99,6 +101,8 @@ public:
    bool isTransactionConfirmed(const ClientClasses::LedgerEntry &) const;
    unsigned int getConfirmationsNumber(const ClientClasses::LedgerEntry &item) const;
    unsigned int getConfirmationsNumber(uint32_t blockNum) const;
+
+   bool isOnline() const { return isOnline_; }
 
 signals:
    void stateChanged(ArmoryConnection::State) const;
@@ -131,8 +135,8 @@ private:
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<State>   state_ = { State::Unknown };
    std::atomic_uint     topBlock_ = { 0 };
-   const bool     cbInMainThread_;
    TxCacheFile    txCache_;
+   const bool     cbInMainThread_;
    std::shared_ptr<BlockHeader> getTxBlockHeader_;
 
    std::atomic_bool  regThreadRunning_;

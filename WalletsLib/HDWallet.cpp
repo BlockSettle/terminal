@@ -7,23 +7,39 @@
 #include "Wallets.h"
 
 
+#define LOG(logger, method, ...) \
+if ((logger)) { \
+   logger->method(__VA_ARGS__); \
+}
+
+
 using namespace bs;
 
-hd::Wallet::Wallet(const std::string &name, const std::string &desc, const bs::wallet::Seed &seed, bool extOnlyAddresses)
-   : QObject(nullptr), name_(name), desc_(desc), netType_(seed.networkType()), extOnlyAddresses_(extOnlyAddresses)
+hd::Wallet::Wallet(const std::string &name, const std::string &desc
+                   , const bs::wallet::Seed &seed
+                   , const std::shared_ptr<spdlog::logger> &logger
+                   , bool extOnlyAddresses)
+   : QObject(nullptr), name_(name), desc_(desc)
+      , netType_(seed.networkType()), extOnlyAddresses_(extOnlyAddresses)
+      , logger_(logger)
 {
    initNew(seed);
 }
 
-hd::Wallet::Wallet(const std::string &filename, bool extOnlyAddresses)
-   : extOnlyAddresses_(extOnlyAddresses)
+hd::Wallet::Wallet(const std::string &filename
+                   , const std::shared_ptr<spdlog::logger> &logger
+                   , bool extOnlyAddresses)
+   : extOnlyAddresses_(extOnlyAddresses), logger_(logger)
 {
    loadFromFile(filename);
 }
 
-hd::Wallet::Wallet(const std::string &walletId, NetworkType netType, bool extOnlyAddresses, const std::string &name
-   , const std::string &desc)
-   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
+hd::Wallet::Wallet(const std::string &walletId, NetworkType netType
+                   , bool extOnlyAddresses, const std::string &name
+                   , const std::shared_ptr<spdlog::logger> &logger
+                   , const std::string &desc)
+   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc)
+      , netType_(netType), logger_(logger)
    , extOnlyAddresses_(extOnlyAddresses)
 { }
 
@@ -132,11 +148,13 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(CoinType ct)
    const Path path({ purpose, ct });
    switch (ct) {
    case CoinType::BlockSettle_Auth:
-      result = std::make_shared<AuthGroup>(rootNodes_, path, name_, desc_, extOnlyAddresses_);
+      result = std::make_shared<AuthGroup>(rootNodes_, path, name_, desc_
+                                           , logger_, extOnlyAddresses_);
       break;
 
    case CoinType::BlockSettle_CC:
-      result = std::make_shared<CCGroup>(rootNodes_, path, name_, desc_, extOnlyAddresses_);
+      result = std::make_shared<CCGroup>(rootNodes_, path, name_, desc_, logger_
+                                         , extOnlyAddresses_);
       break;
 
    default:
@@ -601,8 +619,11 @@ void hd::Wallet::readFromDB()
             throw WalletException("entry val size mismatch");
          }
          try {
-            const auto group = hd::Group::deserialize(keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
-               , rootNodes_, name_, desc_, extOnlyAddresses_);
+            const auto group = hd::Group::deserialize(keyBDR
+                 , brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
+                                                      , rootNodes_, name_
+                                                      , desc_, logger_
+                                                      , extOnlyAddresses_);
             if (group != nullptr) {
                addGroup(group);
             }
@@ -698,12 +719,19 @@ std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
 
 std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryData &password) const
 {
-   if (rootNodes_.empty()) {    // already watching-only
+   if (rootNodes_.empty()) {
+      LOG(logger_, info, "[Wallet::CreateWatchingOnly] already watching-only");
       return nullptr;
    }
-   auto woWallet = std::make_shared<hd::Wallet>(getWalletId(), netType_, extOnlyAddresses_, name_, desc_);
+   auto woWallet = std::make_shared<hd::Wallet>(getWalletId(), netType_
+                                                , extOnlyAddresses_, name_
+                                                , logger_, desc_);
 
    const auto &extNode = rootNodes_.decrypt(password);
+   if (!extNode) {
+      LOG(logger_, warn, "[Wallet::CreateWatchingOnly] failed to decrypt root node[s]");
+      return nullptr;
+   }
    for (const auto &group : groups_) {
       woWallet->addGroup(group.second->CreateWatchingOnly(extNode));
    }
@@ -724,8 +752,7 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
    return false;
 }
 
-bool hd::Wallet::changePassword(const std::shared_ptr<spdlog::logger> &logger
-   , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank
+bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank
    , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
 {
    int newPassSize = newPass.size();
@@ -733,33 +760,33 @@ bool hd::Wallet::changePassword(const std::shared_ptr<spdlog::logger> &logger
       newPassSize += rootNodes_.rank().second;
 
       if (keyRank.first != 1) {
-         logger->error("Wallet::changePassword: adding new keys is supported only for 1-of-N scheme");
+         LOG(logger_, error, "Wallet::changePassword: adding new keys is supported only for 1-of-N scheme");
          return false;
       }
    }
 
    if (removeOld) {
       if (keyRank.first != 1) {
-         logger->error("Wallet::changePassword: removing old keys is supported only for 1-of-N scheme");
+         LOG(logger_, error, "Wallet::changePassword: removing old keys is supported only for 1-of-N scheme");
          return false;
       }
    }
 
    if (keyRank.second != newPassSize) {
-      logger->error("Wallet::changePassword: keyRank.second != newPassSize ({} != {}), rootNodes_: {} items, newPass: {} items"
+      LOG(logger_, error, "Wallet::changePassword: keyRank.second != newPassSize ({} != {}), rootNodes_: {} items, newPass: {} items"
          , keyRank.second, newPassSize, rootNodes_.rank().second, newPass.size());
       return false;
    }
 
    if ((keyRank.first < 1) || (keyRank.first > keyRank.second)) {
-      logger->error("Wallet::changePassword: keyRank.first > keyRank.second ({} > {})"
+      LOG(logger_, error, "Wallet::changePassword: keyRank.first > keyRank.second ({} > {})"
          , keyRank.first, keyRank.second);
       return false;
    }
 
    const auto &decrypted = rootNodes_.decrypt(oldPass);
    if (!decrypted) {
-      logger->error("Wallet::changePassword: decrypt failed");
+      LOG(logger_, error, "Wallet::changePassword: decrypt failed");
       return false;
    }
 
@@ -781,7 +808,7 @@ bool hd::Wallet::changePassword(const std::shared_ptr<spdlog::logger> &logger
       }
 
       if (keyRank.second != rootNodes.size()) {
-         logger->error("Wallet::changePassword: keyRank.second != rootNodes.size() after adding keys");
+         LOG(logger_, error, "Wallet::changePassword: keyRank.second != rootNodes.size() after adding keys");
          return false;
       }
    } else if (removeOld) {
@@ -846,7 +873,7 @@ bool hd::Wallet::changePassword(const std::shared_ptr<spdlog::logger> &logger
    }
 
    updatePersistence();
-   logger->info("Wallet::changePassword: success");
+   LOG(logger_, info, "Wallet::changePassword: success");
    return true;
 }
 

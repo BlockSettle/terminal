@@ -18,8 +18,8 @@ CelerFindSubledgersForAccountSequence::CelerFindSubledgersForAccountSequence(con
        , { true, &CelerFindSubledgersForAccountSequence::processFindSubledgersResponse, nullptr}
       })
  , logger_(logger)
- , accountName_(accountName)
  , cb_(cb)
+ , accountName_(accountName)
 {}
 
 bool CelerFindSubledgersForAccountSequence::FinishSequence()

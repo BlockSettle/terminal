@@ -19,27 +19,32 @@
 class IncomingTransactionFilter : public QSortFilterProxyModel
 {
 public:
-   QString address;
-
    IncomingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override {
-      auto transactionAddress = sourceModel()->data(sourceModel()->index(source_row, static_cast<int>(TransactionsViewModel::Columns::Address))).toString();
-      return transactionAddress == address;
+
+   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   {
+      const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
+      if (!txModel) {
+         return false;
+      }
+      const auto &txItem = txModel->getItem(source_row);
+      return (txItem.txEntry.value > 0);
    }
 };
 
 class OutgoingTransactionFilter : public QSortFilterProxyModel
 {
 public:
-   QString address;
-
    OutgoingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override {
-      auto transactionAddress = sourceModel()->data(sourceModel()->index(source_row, static_cast<int>(TransactionsViewModel::Columns::Address))).toString();
-      if (transactionAddress.isEmpty()) {
+
+   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   {
+      const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
+      if (!txModel) {
          return false;
       }
-      return transactionAddress != address;
+      const auto &txItem = txModel->getItem(source_row);
+      return (txItem.txEntry.value < 0);
    }
 };
 
@@ -69,15 +74,19 @@ public:
 };
 
 
-AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::shared_ptr<bs::Wallet> &wallet
-   , const std::shared_ptr<WalletsManager>& walletsManager, const std::shared_ptr<ArmoryConnection> &armory
-   , QWidget* parent)
+AddressDetailDialog::AddressDetailDialog(const bs::Address& address
+                                     , const std::shared_ptr<bs::Wallet> &wallet
+                         , const std::shared_ptr<WalletsManager>& walletsManager
+                               , const std::shared_ptr<ArmoryConnection> &armory
+                                 , const std::shared_ptr<spdlog::logger> &logger
+                                         , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AddressDetailDialog())
    , address_(address)
    , walletsManager_(walletsManager)
    , armory_(armory)
    , wallet_(wallet)
+   , logger_(logger)
 {
    setAttribute(Qt::WA_DeleteOnClose);
    ui_->setupUi(this);
@@ -115,10 +124,9 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address, const std::
    }
    else {
       const auto &cbLedgerDelegate = [this, armory](AsyncClient::LedgerDelegate delegate) {
-         QMetaObject::invokeMethod(this, "initModels", Qt::QueuedConnection
-            , Q_ARG(AsyncClient::LedgerDelegate, delegate));
+         initModels(delegate);
       };
-      if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate)) {
+      if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate, this)) {
          ui_->labelError->setText(tr("Error loading address info"));
          onError();
       }
@@ -139,10 +147,14 @@ AddressDetailDialog::~AddressDetailDialog() = default;
 
 void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
 {
-   TransactionsViewModel* model = new TransactionsViewModel(armory_, walletsManager_, delegate, this, wallet_);
+   TransactionsViewModel* model = new TransactionsViewModel(armory_
+                                                            , walletsManager_
+                                                            , delegate
+                                                            , logger_
+                                                            , this
+                                                            , wallet_);
 
    IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
-   incomingFilter->address = address_.display();
    incomingFilter->setSourceModel(model);
    AddressTransactionFilter* inFilter = new AddressTransactionFilter(this);
    inFilter->setSourceModel(incomingFilter);
@@ -150,7 +162,6 @@ void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
    ui_->inputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
 
    OutgoingTransactionFilter* outgoingFilter = new OutgoingTransactionFilter(this);
-   outgoingFilter->address = address_.display();
    outgoingFilter->setSourceModel(model);
    AddressTransactionFilter* outFilter = new AddressTransactionFilter(this);
    outFilter->setSourceModel(outgoingFilter);

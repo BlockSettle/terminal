@@ -104,10 +104,10 @@ private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AuthAddressManager>    authAddrMgr_;
    std::shared_ptr<AssetManager>          assetMgr_;
-   std::shared_ptr<TransactionData>       transactionData_;
    std::shared_ptr<WalletsManager>        walletsMgr_;
    std::shared_ptr<SignContainer>         signContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<TransactionData>       transactionData_;
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
 

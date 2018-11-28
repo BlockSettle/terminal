@@ -72,8 +72,12 @@ void AuthAddressManager::SetAuthWallet()
 bool AuthAddressManager::setup()
 {
    if (!HaveAuthWallet()) {
+      logger_->debug("Auth wallet missing");
       addressVerificator_.reset();
       return false;
+   }
+   if (addressVerificator_) {
+      return true;
    }
 
    addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, SecureBinaryData().GenerateRandom(8).toHexStr()
@@ -142,7 +146,7 @@ bool AuthAddressManager::WalletAddressesLoaded()
 
 bool AuthAddressManager::IsReady() const
 {
-   return HasAuthAddr() && HaveBSAddressList() && ConnectedToArmory();
+   return HasAuthAddr() && HaveBSAddressList() && armory_ && armory_->isOnline();
 }
 
 bool AuthAddressManager::HaveAuthWallet() const
@@ -294,9 +298,16 @@ bool AuthAddressManager::Verify(const bs::Address &address)
             }
          }
       };
-      armory_->getTXsByHash(txHashSet, cbTXs);
+      if (txHashSet.empty()) {
+         emit Error(tr("Invalid initial TX"));
+      }
+      else {
+         armory_->getTXsByHash(txHashSet, cbTXs);
+      }
    };
    addressVerificator_->GetVerificationInputs(cbInputs);
+
+   return true;
 }
 
 bool AuthAddressManager::RevokeAddress(const bs::Address &address)
@@ -609,6 +620,7 @@ void AuthAddressManager::VerifyWalletAddresses()
 void AuthAddressManager::VerifyWalletAddressesFunction()
 {
    if (!HaveBSAddressList()) {
+      logger_->debug("AuthAddressManager doesn't have BS addresses");
       return;
    }
    bool updated = false;
@@ -623,6 +635,9 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
                SetState(addr, AddressVerificationState::Submitted);
             }
          }
+      }
+      else {
+         logger_->debug("AuthAddressManager auth wallet is null");
       }
       updated = true;
 
@@ -719,11 +734,6 @@ const std::unordered_set<std::string> &AuthAddressManager::GetBSAddresses() cons
    return bsAddressList_;
 }
 
-bool AuthAddressManager::ConnectedToArmory() const
-{
-   return addressVerificator_ != nullptr;
-}
-
 bool AuthAddressManager::SendGetBSAddressListRequest()
 {
    GetBSFundingAddressListRequest addressRequest;
@@ -749,7 +759,7 @@ bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::s
 
    command->SetReplyCallback([command, this](const std::string& data) {
       OnDataReceived(data);
-      command->SetReplyCallback(nullptr);
+      command->CleanupCallbacks();
       FastLock locker(lockCommands_);
       activeCommands_.erase(command);
       return true;
@@ -757,7 +767,7 @@ bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::s
 
    command->SetErrorCallback([command, this](const std::string& message) {
       logger_->error("[AuthAddressManager::{}] error callback: {}", command->GetName(), message);
-      command->SetReplyCallback(nullptr);
+      command->CleanupCallbacks();
       FastLock locker(lockCommands_);
       activeCommands_.erase(command);
    });

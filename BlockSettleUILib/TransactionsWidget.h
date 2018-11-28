@@ -8,6 +8,9 @@
 
 #include "TabWithShortcut.h"
 
+namespace spdlog {
+   class logger;
+}
 namespace Ui {
    class TransactionsWidget;
 }
@@ -28,8 +31,10 @@ public:
    TransactionsWidget(QWidget* parent = nullptr );
    ~TransactionsWidget() override;
 
-   void init(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<SignContainer> &);
+   void init(const std::shared_ptr<WalletsManager> &
+             , const std::shared_ptr<ArmoryConnection> &
+             , const std::shared_ptr<SignContainer> &
+             , const std::shared_ptr<spdlog::logger> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
    void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
 
@@ -47,8 +52,8 @@ private slots:
 
 private:
    std::unique_ptr<Ui::TransactionsWidget> ui;
+   std::shared_ptr<spdlog::logger>     logger_;
 
-private:
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<SignContainer>         signContainer_;

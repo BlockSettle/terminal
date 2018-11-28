@@ -8,3 +8,9 @@ message FeeEstimate
 	optional bool smartFee = 2;
 	optional string error = 3;
 }
+
+message FeeSchedule
+{
+	repeated uint32	     target   = 1;
+	repeated FeeEstimate estimate = 2;
+}

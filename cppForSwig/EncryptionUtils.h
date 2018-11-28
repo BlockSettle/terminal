@@ -106,7 +106,6 @@
 // to compute on a CPU than a GPU.
 #define DEFAULT_KDF_MAX_MEMORY 32*1024*1024
 
-
 // Use this to avoid "using namespace CryptoPP" (which confuses SWIG)
 // and also so it's easy to switch the AES MODE or PRNG, in one place
 #define UNSIGNED    ((CryptoPP::Integer::Signedness)(0))
@@ -145,7 +144,7 @@ public:
                    { lockData(); }
    SecureBinaryData(uint8_t const * d0, uint8_t const * d1) : BinaryData(d0, d1)
                    { lockData(); }
-   SecureBinaryData(string const & str) : BinaryData(str)
+   SecureBinaryData(std::string const & str) : BinaryData(str)
                    { lockData(); }
    SecureBinaryData(BinaryDataRef const & bdRef) : BinaryData(bdRef)
                    { lockData(); }
@@ -164,8 +163,8 @@ public:
    size_t            getSize(void) const { return BinaryData::getSize(); }
    SecureBinaryData  copy(void)    const { return SecureBinaryData(getPtr(), getSize());}
    
-   string toHexStr(bool BE=false) const { return BinaryData::toHexStr(BE);}
-   string toBinStr(void) const          { return BinaryData::toBinStr();  }
+   std::string toHexStr(bool BE=false) const { return BinaryData::toHexStr(BE);}
+   std::string toBinStr(void) const          { return BinaryData::toBinStr();  }
 
    SecureBinaryData(SecureBinaryData const & sbd2) : 
            BinaryData(sbd2.getPtr(), sbd2.getSize()) { lockData(); }
@@ -254,14 +253,14 @@ public:
    SecureBinaryData DeriveKey(SecureBinaryData const & password);
 
    /////////////////////////////////////////////////////////////////////////////
-   string       getHashFunctionName(void) const { return hashFunctionName_; }
+   std::string       getHashFunctionName(void) const { return hashFunctionName_; }
    uint32_t     getMemoryReqtBytes(void) const  { return memoryReqtBytes_; }
    uint32_t     getNumIterations(void) const    { return numIterations_; }
    SecureBinaryData   getSalt(void) const       { return salt_; }
    
 private:
 
-   string   hashFunctionName_;  // name of hash function to use (only one)
+   std::string   hashFunctionName_;  // name of hash function to use (only one)
    uint32_t hashOutputBytes_;
    uint32_t kdfOutputBytes_;    // size of final key data
 
@@ -427,17 +426,17 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // BIP32 methods
-   static pair<SecureBinaryData, SecureBinaryData> bip32_derive_private_key(
+   static std::pair<SecureBinaryData, SecureBinaryData> bip32_derive_private_key(
       const SecureBinaryData& privateKey,
       const SecureBinaryData& chainCode,
       unsigned index);
 
-   static pair<SecureBinaryData, SecureBinaryData> bip32_derive_public_key(
+   static std::pair<SecureBinaryData, SecureBinaryData> bip32_derive_public_key(
       const SecureBinaryData& publicKey,
       const SecureBinaryData& chainCode,
       unsigned index);
 
-   static pair<SecureBinaryData, SecureBinaryData> bip32_seed_to_master_root(
+   static std::pair<SecureBinaryData, SecureBinaryData> bip32_seed_to_master_root(
       const SecureBinaryData& seed);
 
    /////////////////////////////////////////////////////////////////////////////

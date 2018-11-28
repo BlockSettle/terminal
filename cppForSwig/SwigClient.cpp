@@ -109,10 +109,19 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForWallets()
    auto prom = make_shared<promise<LedgerDelegate>>();
    auto fut = prom->get_future();
 
-   auto returnLBD = [prom](AsyncClient::LedgerDelegate as_led)->void
+   auto returnLBD = [prom](ReturnMessage<AsyncClient::LedgerDelegate> as_led)->void
    {
-      LedgerDelegate led(as_led);
-      prom->set_value(move(led));
+      try
+      {
+         auto led_mv = move(as_led.get());
+         LedgerDelegate led(led_mv);
+         prom->set_value(move(led));
+      }
+      catch (ClientMessageError&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getLedgerDelegateForWallets(returnLBD);
@@ -125,10 +134,19 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForLockboxes()
    auto prom = make_shared<promise<LedgerDelegate>>();
    auto fut = prom->get_future();
 
-   auto returnLBD = [prom](AsyncClient::LedgerDelegate as_led)->void
+   auto returnLBD = [prom](ReturnMessage<AsyncClient::LedgerDelegate> as_led)->void
    {
-      LedgerDelegate led(as_led);
-      prom->set_value(move(led));
+      try
+      {
+         auto led_mv = move(as_led.get());
+         LedgerDelegate led(led_mv);
+         prom->set_value(move(led));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getLedgerDelegateForLockboxes(returnLBD);
@@ -153,9 +171,17 @@ Tx BlockDataViewer::getTxByHash(const BinaryData& txHash)
    auto prom = make_shared<promise<Tx>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](Tx tx)->void
+   auto resultLBD = [prom](ReturnMessage<Tx> tx)->void
    {
-      prom->set_value(move(tx));
+      try
+      {
+         prom->set_value(move(tx.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getTxByHash(txHash, resultLBD);
@@ -168,9 +194,17 @@ BinaryData BlockDataViewer::getRawHeaderForTxHash(const BinaryData& txHash)
    auto prom = make_shared<promise<BinaryData>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](BinaryData data)->void
+   auto resultLBD = [prom](ReturnMessage<BinaryData> data)->void
    {
-      prom->set_value(move(data));
+      try
+      {
+         prom->set_value(move(data.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getRawHeaderForTxHash(txHash, resultLBD);
@@ -184,10 +218,19 @@ LedgerDelegate BlockDataViewer::getLedgerDelegateForScrAddr(
    auto prom = make_shared<promise<LedgerDelegate>>();
    auto fut = prom->get_future();
 
-   auto returnLBD = [prom](AsyncClient::LedgerDelegate as_led)->void
+   auto returnLBD = [prom](ReturnMessage<AsyncClient::LedgerDelegate> as_led)->void
    {
-      LedgerDelegate led(as_led);
-      prom->set_value(move(led));
+      try
+      {
+         auto led_mv = move(as_led.get());
+         LedgerDelegate led(led_mv);
+         prom->set_value(move(led));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getLedgerDelegateForScrAddr(walletID, scrAddr, returnLBD);
@@ -209,9 +252,17 @@ shared_ptr<::ClientClasses::NodeStatusStruct> BlockDataViewer::getNodeStatus()
    auto fut = prom->get_future();
 
    auto resultLBD = [prom](
-      shared_ptr<::ClientClasses::NodeStatusStruct> nss)->void
+      ReturnMessage<shared_ptr<::ClientClasses::NodeStatusStruct>> nss)->void
    {
-      prom->set_value(nss);
+      try
+      {
+         prom->set_value(nss.get());
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getNodeStatus(resultLBD);
@@ -225,9 +276,17 @@ ClientClasses::FeeEstimateStruct BlockDataViewer::estimateFee(
    auto prom = make_shared<promise<ClientClasses::FeeEstimateStruct>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](ClientClasses::FeeEstimateStruct fes)->void
+   auto resultLBD = [prom](ReturnMessage<ClientClasses::FeeEstimateStruct> fes)->void
    {
-      prom->set_value(move(fes));
+      try
+      {
+         prom->set_value(move(fes.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.estimateFee(blocksToConfirm, strategy, resultLBD);
@@ -242,9 +301,18 @@ vector<::ClientClasses::LedgerEntry>
    auto prom = make_shared<promise<vector<::ClientClasses::LedgerEntry>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<::ClientClasses::LedgerEntry> vec)->void
+   auto resultLBD = [prom](
+      ReturnMessage<vector<::ClientClasses::LedgerEntry>> vec)->void
    {
-      prom->set_value(move(vec));
+      try
+      {
+         prom->set_value(move(vec.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getHistoryForWalletSelection(wltIDs, orderingStr, resultLBD);
@@ -257,9 +325,17 @@ string BlockDataViewer::broadcastThroughRPC(const BinaryData& rawTx)
    auto prom = make_shared<promise<string>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](string val)->void
+   auto resultLBD = [prom](ReturnMessage<string> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.broadcastThroughRPC(rawTx, resultLBD);
@@ -273,9 +349,17 @@ vector<UTXO> BlockDataViewer::getUtxosForAddrVec(
    auto prom = make_shared<promise<vector<UTXO>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<UTXO> vec)->void
+   auto resultLBD = [prom](ReturnMessage<vector<UTXO>> vec)->void
    {
-      prom->set_value(move(vec));
+      try
+      {
+         prom->set_value(move(vec.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    bdvAsync_.getUtxosForAddrVec(addrVec, resultLBD);
@@ -310,9 +394,18 @@ vector<::ClientClasses::LedgerEntry> LedgerDelegate::getHistoryPage(
    auto prom = make_shared<promise<vector<::ClientClasses::LedgerEntry>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<::ClientClasses::LedgerEntry> vec)->void
+   auto resultLBD = [prom](
+      ReturnMessage<vector<::ClientClasses::LedgerEntry>> vec)->void
    {
-      prom->set_value(move(vec));
+      try
+      {
+         prom->set_value(move(vec.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncLed_.getHistoryPage(id, resultLBD);
@@ -325,9 +418,17 @@ uint64_t LedgerDelegate::getPageCount() const
    auto prom = make_shared<promise<uint64_t>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](uint64_t val)->void
+   auto resultLBD = [prom](ReturnMessage<uint64_t> val)->void
    {
-      prom->set_value(val);
+      try
+      {
+         prom->set_value(val.get());
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncLed_.getPageCount(resultLBD);
@@ -357,9 +458,17 @@ vector<uint64_t> SwigClient::BtcWallet::getBalancesAndCount(
    auto prom = make_shared<promise<vector<uint64_t>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<uint64_t> val)->void
+   auto resultLBD = [prom](ReturnMessage<vector<uint64_t>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getBalancesAndCount(blockheight, resultLBD);
@@ -372,9 +481,17 @@ vector<UTXO> SwigClient::BtcWallet::getSpendableTxOutListForValue(uint64_t val)
    auto prom = make_shared<promise<vector<UTXO>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<UTXO> val)->void
+   auto resultLBD = [prom](ReturnMessage<vector<UTXO>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getSpendableTxOutListForValue(val, resultLBD);
@@ -387,9 +504,17 @@ vector<UTXO> SwigClient::BtcWallet::getSpendableZCList()
    auto prom = make_shared<promise<vector<UTXO>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<UTXO> val)->void
+   auto resultLBD = [prom](ReturnMessage<vector<UTXO>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getSpendableZCList(resultLBD);
@@ -402,9 +527,17 @@ vector<UTXO> SwigClient::BtcWallet::getRBFTxOutList()
    auto prom = make_shared<promise<vector<UTXO>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<UTXO> val)->void
+   auto resultLBD = [prom](ReturnMessage<vector<UTXO>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getRBFTxOutList(resultLBD);
@@ -417,9 +550,17 @@ map<BinaryData, uint32_t> SwigClient::BtcWallet::getAddrTxnCountsFromDB()
    auto prom = make_shared<promise<map<BinaryData, uint32_t>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](map<BinaryData, uint32_t> val)->void
+   auto resultLBD = [prom](ReturnMessage<map<BinaryData, uint32_t>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getAddrTxnCountsFromDB(resultLBD);
@@ -433,9 +574,18 @@ map<BinaryData, vector<uint64_t>>
    auto prom = make_shared<promise<map<BinaryData, vector<uint64_t>>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](map<BinaryData, vector<uint64_t>> val)->void
+   auto resultLBD = [prom](
+      ReturnMessage<map<BinaryData, vector<uint64_t>>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getAddrBalancesFromDB(resultLBD);
@@ -449,9 +599,18 @@ vector<::ClientClasses::LedgerEntry> SwigClient::BtcWallet::getHistoryPage(
    auto prom = make_shared<promise<vector<::ClientClasses::LedgerEntry>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<::ClientClasses::LedgerEntry> val)->void
+   auto resultLBD = [prom](
+      ReturnMessage<vector<::ClientClasses::LedgerEntry>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getHistoryPage(id, resultLBD);
@@ -466,9 +625,18 @@ shared_ptr<::ClientClasses::LedgerEntry>
    auto prom = make_shared<promise<shared_ptr<::ClientClasses::LedgerEntry>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](shared_ptr<::ClientClasses::LedgerEntry> val)->void
+   auto resultLBD = [prom](
+      ReturnMessage<shared_ptr<::ClientClasses::LedgerEntry>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.getLedgerEntryForTxHash(txhash, resultLBD);
@@ -490,9 +658,17 @@ vector<AddressBookEntry> SwigClient::BtcWallet::createAddressBook(void) const
    auto prom = make_shared<promise<vector<AddressBookEntry>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<AddressBookEntry> val)->void
+   auto resultLBD = [prom](ReturnMessage<vector<AddressBookEntry>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncWallet_.createAddressBook(resultLBD);
@@ -505,7 +681,7 @@ vector<AddressBookEntry> SwigClient::BtcWallet::createAddressBook(void) const
 //
 ///////////////////////////////////////////////////////////////////////////////
 Lockbox::Lockbox(AsyncClient::Lockbox& asynclb) :
-asyncLockbox_(asynclb), BtcWallet(asynclb)
+   BtcWallet(asynclb), asyncLockbox_(asynclb)
 {}
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -560,9 +736,17 @@ vector<UTXO> ScrAddrObj::getSpendableTxOutList(bool ignoreZC)
    auto prom = make_shared<promise<vector<UTXO>>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](vector<UTXO> val)->void
+   auto resultLBD = [prom](ReturnMessage<vector<UTXO>> val)->void
    {
-      prom->set_value(move(val));
+      try
+      {
+         prom->set_value(move(val.get()));
+      }
+      catch (exception&)
+      {
+         auto eptr = current_exception();
+         prom->set_exception(eptr);
+      }
    };
 
    asyncAddr_.getSpendableTxOutList(ignoreZC, resultLBD);
@@ -639,9 +823,9 @@ SwigClient::Blockchain::Blockchain(const BlockDataViewer& bdv) :
    auto prom = make_shared<promise<::ClientClasses::BlockHeader>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](::ClientClasses::BlockHeader val)->void
+   auto resultLBD = [prom](ReturnMessage<::ClientClasses::BlockHeader> val)->void
    {
-      prom->set_value(move(val));
+      prom->set_value(move(val.get()));
    };
 
    asyncBlockchain_.getHeaderByHash(hash, resultLBD);
@@ -654,9 +838,9 @@ ClientClasses::BlockHeader SwigClient::Blockchain::getHeaderByHeight(unsigned he
    auto prom = make_shared<promise<ClientClasses::BlockHeader>>();
    auto fut = prom->get_future();
 
-   auto resultLBD = [prom](ClientClasses::BlockHeader val)->void
+   auto resultLBD = [prom](ReturnMessage<ClientClasses::BlockHeader> val)->void
    {
-      prom->set_value(move(val));
+      prom->set_value(move(val.get()));
    };
 
    asyncBlockchain_.getHeaderByHeight(height, resultLBD);

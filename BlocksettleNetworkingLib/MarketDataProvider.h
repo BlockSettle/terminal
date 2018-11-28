@@ -28,19 +28,19 @@ public:
    MarketDataProvider(MarketDataProvider&&) = delete;
    MarketDataProvider& operator = (MarketDataProvider&&) = delete;
 
-   void SubscribeToMD();
+   void SubscribeToMD(const std::string &host, const std::string &port);
    virtual bool DisconnectFromMDSource() { return true; }
 
    virtual bool IsConnectionActive() const { return false; }
 
 protected:
-   virtual bool StartMDConnection() { return true; }
+   virtual bool StartMDConnection(const std::string &host, const std::string &port) { return true; }
 
 public slots:
-   void MDLicenseAccepted();
+   void MDLicenseAccepted(const std::string &host, const std::string &port);
 
 signals:
-   void UserWantToConnectToMD();
+   void UserWantToConnectToMD(const std::string &host, const std::string &port);
 
    void StartConnecting();
    void Connected();

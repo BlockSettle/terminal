@@ -12,6 +12,8 @@
 
 #include "google/protobuf/text_format.h"
 
+using namespace std;
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // SocketPrototype
@@ -547,6 +549,7 @@ void PersistentSocket::socketService_win()
    }
 
    run_.store(false, memory_order_relaxed);
+   readQueue_.terminate();
 }
 #endif
 
@@ -585,6 +588,9 @@ void PersistentSocket::readService()
 
       respond(payload);
    }
+
+   vector<uint8_t> emptyPacket;
+   respond(emptyPacket);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

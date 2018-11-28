@@ -22,17 +22,19 @@
 #define STACKITEM_SIG_PREFIX              0x13
 #define STACKITEM_MULTISIG_PREFIX         0x14
 
+#include <algorithm>
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
 #include "BtcUtils.h"
 #include "SigHashEnum.h"
 #include "TxEvalState.h"
 
+
 ////////////////////////////////////////////////////////////////////////////////
-class ScriptException : public runtime_error
+class ScriptException : public std::runtime_error
 {
 public:
-   ScriptException(const string& what) : runtime_error(what)
+   ScriptException(const std::string& what) : std::runtime_error(what)
    {}
 };
 
@@ -52,7 +54,7 @@ struct ExtendedOpCode : public OpCode
    unsigned itemIndex_;
    BinaryData data_;
 
-   vector<shared_ptr<ReversedStackEntry>> referenceStackItemVec_;
+   std::vector<std::shared_ptr<ReversedStackEntry>> referenceStackItemVec_;
 
    ExtendedOpCode(const OpCode& oc) :
       OpCode(oc)
@@ -207,8 +209,8 @@ class SigHashDataSegWit;
 class StackInterpreter : public ScriptParser
 {
 private:
-   vector<BinaryData> stack_;
-   vector<BinaryData> altstack_;
+   std::vector<BinaryData> stack_;
+   std::vector<BinaryData> altstack_;
    bool onlyPushDataInInput_ = true;
 
    const TransactionStub* txStubPtr_;
@@ -222,12 +224,12 @@ private:
    BinaryDataRef outputScriptRef_;
    BinaryData p2shScript_;
 
-   shared_ptr<SigHashDataSegWit> SHD_SW_ = nullptr;
+   std::shared_ptr<SigHashDataSegWit> SHD_SW_ = nullptr;
 
    TxInEvalState txInEvalState_;
 
 protected:
-   shared_ptr<SigHashData> sigHashDataObject_ = nullptr;
+   std::shared_ptr<SigHashData> sigHashDataObject_ = nullptr;
    virtual SIGHASH_TYPE getSigHashSingleByte(uint8_t) const;
 
 private:
@@ -292,18 +294,18 @@ private:
       BinaryData btrue;
       btrue.append(1);
 
-      stack_.push_back(move(btrue));
+      stack_.push_back(std::move(btrue));
    }
 
    void op_1negate(void)
    {
-      stack_.push_back(move(intToRawBinary(-1)));
+      stack_.push_back(std::move(intToRawBinary(-1)));
    }
 
    void op_depth(void)
    {
       BinaryWriter bw;
-      stack_.push_back(move(intToRawBinary(stack_.size())));
+      stack_.push_back(std::move(intToRawBinary(stack_.size())));
    }
 
    void op_dup(void)
@@ -316,7 +318,7 @@ private:
       auto&& data1 = pop_back();
       auto&& data2 = pop_back();
 
-      stack_.push_back(move(data1));
+      stack_.push_back(std::move(data1));
    }
 
    void op_over(void)
@@ -326,7 +328,7 @@ private:
 
       auto stackIter = stack_.rbegin();
       auto data = *(stackIter + 1);
-      stack_.push_back(move(data));
+      stack_.push_back(std::move(data));
    }
 
    void op_2dup(void)
@@ -373,7 +375,7 @@ private:
    void op_toaltstack(void)
    {
       auto&& a = pop_back();
-      altstack_.push_back(move(a));
+      altstack_.push_back(std::move(a));
    }
 
    void op_fromaltstack(void)
@@ -398,7 +400,7 @@ private:
       auto&& a = pop_back();
       auto aI = rawBinaryToInt(a);
 
-      if (aI >= stack_.size())
+      if (aI >= (int64_t)stack_.size())
          throw ScriptException("op_pick index exceeds stack size");
 
       auto stackIter = stack_.rbegin() + aI;
@@ -410,18 +412,18 @@ private:
       auto&& a = pop_back();
       auto rollindex = rawBinaryToInt(a);
 
-      if (rollindex >= stack_.size())
+      if (rollindex >= (int64_t)stack_.size())
          throw ScriptException("op_roll index exceeds stack size");
 
-      vector<BinaryData> dataVec;
+      std::vector<BinaryData> dataVec;
       while (rollindex-- > 0)
-         dataVec.push_back(move(pop_back()));
+         dataVec.push_back(std::move(pop_back()));
       auto&& rolldata = pop_back();
 
       auto dataIter = dataVec.rbegin();
       while (dataIter != dataVec.rend())
       {
-         stack_.push_back(move(*dataIter));
+         stack_.push_back(std::move(*dataIter));
          ++dataIter;
       }
 
@@ -434,9 +436,9 @@ private:
       auto&& b = pop_back();
       auto&& a = pop_back();
 
-      stack_.push_back(move(b));
-      stack_.push_back(move(c));
-      stack_.push_back(move(a));
+      stack_.push_back(std::move(b));
+      stack_.push_back(std::move(c));
+      stack_.push_back(std::move(a));
    }
 
    void op_swap(void)
@@ -444,8 +446,8 @@ private:
       auto&& data1 = pop_back();
       auto&& data2 = pop_back();
 
-      stack_.push_back(move(data1));
-      stack_.push_back(move(data2));
+      stack_.push_back(std::move(data1));
+      stack_.push_back(std::move(data2));
    }
 
    void op_tuck(void)
@@ -453,43 +455,43 @@ private:
       auto&& b = pop_back();
       auto&& a = pop_back();
 
-      stack_.push_back(move(b));
-      stack_.push_back(move(a));
-      stack_.push_back(move(b));
+      stack_.push_back(std::move(b));
+      stack_.push_back(std::move(a));
+      stack_.push_back(std::move(b));
    }
 
    void op_ripemd160(void)
    {
       auto&& data = pop_back();
       auto&& hash = BtcUtils().ripemd160_SWIG(data);
-      stack_.push_back(move(hash));
+      stack_.push_back(std::move(hash));
    }
 
    void op_sha256(void)
    {
       auto&& data = pop_back();
       auto&& sha256 = BtcUtils::getSha256(data);
-      stack_.push_back(move(sha256));
+      stack_.push_back(std::move(sha256));
    }
 
    void op_hash160()
    {
       auto&& data = pop_back();
       auto&& hash160 = BtcUtils::getHash160(data);
-      stack_.push_back(move(hash160));
+      stack_.push_back(std::move(hash160));
    }
 
    void op_hash256()
    {
       auto&& data = pop_back();
       auto&& hash256 = BtcUtils::getHash256(data);
-      stack_.push_back(move(hash256));
+      stack_.push_back(std::move(hash256));
    }
 
    void op_size(void)
    {
       auto& data = stack_back();
-      stack_.push_back(move(intToRawBinary(data.getSize())));
+      stack_.push_back(std::move(intToRawBinary(data.getSize())));
    }
 
    void op_equal(void)
@@ -501,7 +503,7 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_1add(void)
@@ -509,7 +511,7 @@ private:
       auto&& a = pop_back();
       auto aI = rawBinaryToInt(a);
 
-      stack_.push_back(move(intToRawBinary(aI + 1)));
+      stack_.push_back(std::move(intToRawBinary(aI + 1)));
    }
 
    void op_1sub(void)
@@ -517,7 +519,7 @@ private:
       auto&& a = pop_back();
       auto aI = rawBinaryToInt(a);
 
-      stack_.push_back(move(intToRawBinary(aI - 1)));
+      stack_.push_back(std::move(intToRawBinary(aI - 1)));
    }
 
    void op_negate(void)
@@ -525,7 +527,7 @@ private:
       auto&& a = pop_back();
       auto aI = rawBinaryToInt(a);
 
-      stack_.push_back(move(intToRawBinary(-aI)));
+      stack_.push_back(std::move(intToRawBinary(-aI)));
    }
 
    void op_abs(void)
@@ -547,7 +549,7 @@ private:
       else
          aI = 1;
 
-      stack_.push_back(move(intToRawBinary(aI)));
+      stack_.push_back(std::move(intToRawBinary(aI)));
    }
 
    void op_0notequal(void)
@@ -558,7 +560,7 @@ private:
       if (aI != 0)
          aI = 1;
 
-      stack_.push_back(move(intToRawBinary(aI)));
+      stack_.push_back(std::move(intToRawBinary(aI)));
    }
 
    void op_numequal(void)
@@ -573,7 +575,7 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_numnotequal()
@@ -588,7 +590,7 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_lessthan(void)
@@ -603,7 +605,7 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_lessthanorequal(void)
@@ -618,7 +620,7 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_greaterthan(void)
@@ -633,7 +635,7 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_greaterthanorequal(void)
@@ -648,32 +650,12 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
-   void op_min(void)
-   {
-      auto&& b = pop_back();
-      auto&& a = pop_back();
+   void op_min(void);
 
-      auto aI = rawBinaryToInt(a);
-      auto bI = rawBinaryToInt(b);
-
-      auto cI = min(aI, bI);
-      stack_.push_back(move(intToRawBinary(cI)));
-   }
-
-   void op_max(void)
-   {
-      auto&& b = pop_back();
-      auto&& a = pop_back();
-
-      auto aI = rawBinaryToInt(a);
-      auto bI = rawBinaryToInt(b);
-
-      auto cI = max(aI, bI);
-      stack_.push_back(move(intToRawBinary(cI)));
-   }
+   void op_max(void);
 
    void op_within(void)
    {
@@ -689,7 +671,7 @@ private:
 
       BinaryData bd;
       bd.append(state);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_booland(void)
@@ -706,7 +688,7 @@ private:
 
       BinaryData bd;
       bd.append(val);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_boolor(void)
@@ -723,7 +705,7 @@ private:
 
       BinaryData bd;
       bd.append(val);
-      stack_.push_back(move(bd));
+      stack_.push_back(std::move(bd));
    }
 
    void op_add(void)
@@ -735,7 +717,7 @@ private:
       auto bI = rawBinaryToInt(b);
 
       auto cI = aI + bI;
-      stack_.push_back(move(intToRawBinary(cI)));
+      stack_.push_back(std::move(intToRawBinary(cI)));
    }
 
    void op_sub(void)
@@ -747,7 +729,7 @@ private:
       auto bI = rawBinaryToInt(b);
 
       auto cI = aI - bI;
-      stack_.push_back(move(intToRawBinary(cI)));
+      stack_.push_back(std::move(intToRawBinary(cI)));
    }
 
    void op_checksig(void);
@@ -801,7 +783,7 @@ public:
 
    void checkState(void);
    void processSW(BinaryDataRef outputScript);
-   void setSegWitSigHashDataObject(shared_ptr<SigHashDataSegWit> shdo)
+   void setSegWitSigHashDataObject(std::shared_ptr<SigHashDataSegWit> shdo)
    {
       SHD_SW_ = shdo;
    }
@@ -865,17 +847,17 @@ struct StackValue_Static : public StackValue
    BinaryData value_;
 
    StackValue_Static(BinaryData val) :
-      StackValue(StackValueType_Static), value_(move(val))
+      StackValue(StackValueType_Static), value_(std::move(val))
    {}
 };
 
 ////
 struct StackValue_Reference : public StackValue
 {
-   shared_ptr<ReversedStackEntry> valueReference_;
+   std::shared_ptr<ReversedStackEntry> valueReference_;
    BinaryData value_;
 
-   StackValue_Reference(shared_ptr<ReversedStackEntry> rsePtr) :
+   StackValue_Reference(std::shared_ptr<ReversedStackEntry> rsePtr) :
       StackValue(StackValueType_Reference), valueReference_(rsePtr)
    {}
 };
@@ -894,10 +876,10 @@ struct StackValue_FromFeed : public StackValue
 ////
 struct StackValue_Sig : public StackValue
 {
-   shared_ptr<ReversedStackEntry> pubkeyRef_;
+   std::shared_ptr<ReversedStackEntry> pubkeyRef_;
    SecureBinaryData sig_;
 
-   StackValue_Sig(shared_ptr<ReversedStackEntry> ref) :
+   StackValue_Sig(std::shared_ptr<ReversedStackEntry> ref) :
       StackValue(StackValueType_Sig), pubkeyRef_(ref)
    {}
 };
@@ -905,13 +887,13 @@ struct StackValue_Sig : public StackValue
 ////
 struct StackValue_Multisig : public StackValue
 {
-   const vector<BinaryDataRef> pubkeyVec_;
-   map<unsigned, SecureBinaryData> sig_;
+   const std::vector<BinaryDataRef> pubkeyVec_;
+   std::map<unsigned, SecureBinaryData> sig_;
    const unsigned m_;
 
-   StackValue_Multisig(vector<BinaryDataRef> pubkeyVec, unsigned m) :
+   StackValue_Multisig(std::vector<BinaryDataRef> pubkeyVec, unsigned m) :
       StackValue(StackValueType_Multisig), 
-      pubkeyVec_(move(pubkeyVec)), m_(m)
+      pubkeyVec_(std::move(pubkeyVec)), m_(m)
    {}
 };
 
@@ -925,13 +907,13 @@ public:
    BinaryData staticData_;
 
    //ptr to parent for op_dup style entries
-   shared_ptr<ReversedStackEntry> parent_ = nullptr; 
+   std::shared_ptr<ReversedStackEntry> parent_ = nullptr;
 
    //effective opcodes on this item
-   vector<shared_ptr<OpCode>> opcodes_;
+   std::vector<std::shared_ptr<OpCode>> opcodes_;
 
    //original value prior to opcode effect
-   shared_ptr<StackValue> resolvedValue_;
+   std::shared_ptr<StackValue> resolvedValue_;
 
 public:
    ReversedStackEntry(void)
@@ -941,7 +923,7 @@ public:
       static_(true), staticData_(data)
    {}
 
-   bool push_opcode(shared_ptr<OpCode> ocptr)
+   bool push_opcode(std::shared_ptr<OpCode> ocptr)
    {
       if (static_ && parent_ == nullptr)
          return false;
@@ -983,14 +965,14 @@ public:
    BinaryData getByVal(const BinaryData& key)
    {
       if (feedPtr_ == nullptr)
-         throw runtime_error("invalid value");
+         throw std::runtime_error("invalid value");
 
       return feedPtr_->getByVal(key);
    }
 
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& key)
    {
-      throw runtime_error("invalid value");
+      throw std::runtime_error("invalid value");
    }
 };
 
@@ -1013,7 +995,7 @@ public:
    const StackItemType type_;
 
    StackItem(StackItemType type, unsigned id) :
-      type_(type), id_(id)
+      id_(id), type_(type)
    {}
 
    virtual ~StackItem(void) = 0;
@@ -1023,7 +1005,7 @@ public:
    virtual bool isValid(void) const { return true; }
    virtual BinaryData serialize(void) const = 0;
 
-   static shared_ptr<StackItem> deserialize(const BinaryDataRef&);
+   static std::shared_ptr<StackItem> deserialize(const BinaryDataRef&);
 };
 
 ////
@@ -1032,7 +1014,7 @@ struct StackItem_PushData : public StackItem
    const BinaryData data_;
 
    StackItem_PushData(unsigned id, BinaryData&& data) :
-      StackItem(StackItemType_PushData, id), data_(move(data))
+      StackItem(StackItemType_PushData, id), data_(std::move(data))
    {}
 
    bool isSame(const StackItem* obj) const;
@@ -1045,7 +1027,7 @@ struct StackItem_Sig : public StackItem
    const SecureBinaryData data_;
 
    StackItem_Sig(unsigned id, SecureBinaryData&& data) :
-      StackItem(StackItemType_Sig, id), data_(move(data))
+      StackItem(StackItemType_Sig, id), data_(std::move(data))
    {}
 
    bool isSame(const StackItem* obj) const;
@@ -1055,7 +1037,7 @@ struct StackItem_Sig : public StackItem
 ////
 struct StackItem_MultiSig : public StackItem
 {
-   map<unsigned, SecureBinaryData> sigs_;
+   std::map<unsigned, SecureBinaryData> sigs_;
    const unsigned m_;
 
    StackItem_MultiSig(unsigned id, unsigned m) :
@@ -1064,8 +1046,8 @@ struct StackItem_MultiSig : public StackItem
 
    void setSig(unsigned id, SecureBinaryData& sig)
    {
-      auto sigpair = make_pair(id, move(sig));
-      sigs_.insert(move(sigpair));
+      auto sigpair = std::make_pair(id, std::move(sig));
+      sigs_.insert(std::move(sigpair));
    }
 
    bool isSame(const StackItem* obj) const;
@@ -1096,7 +1078,7 @@ struct StackItem_SerializedScript : public StackItem
 
    StackItem_SerializedScript(unsigned id, BinaryData&& data) :
       StackItem(StackItemType_SerializedScript, id), 
-      data_(move(data))
+      data_(std::move(data))
    {}
 
    bool isSame(const StackItem* obj) const;
@@ -1128,15 +1110,15 @@ public:
 class ResolvedStackLegacy : public ResolvedStack
 {
 private:
-   vector<shared_ptr<StackItem>> stack_;
+   std::vector<std::shared_ptr<StackItem>> stack_;
 
 public:
-   void setStack(vector<shared_ptr<StackItem>> stack) 
+   void setStack(std::vector<std::shared_ptr<StackItem>> stack)
    { 
       stack_.insert(stack_.end(), stack.begin(), stack.end());
    }
 
-   const vector<shared_ptr<StackItem>>& getStack(void) const 
+   const std::vector<std::shared_ptr<StackItem>>& getStack(void) const
    { 
       return stack_; 
    }
@@ -1149,25 +1131,25 @@ public:
 class ResolvedStackWitness : public ResolvedStackLegacy
 {
 private:
-   vector<shared_ptr<StackItem>> witnessStack_;
+   std::vector<std::shared_ptr<StackItem>> witnessStack_;
 
 public:
-   ResolvedStackWitness(shared_ptr<ResolvedStack> stackptr)
+   ResolvedStackWitness(std::shared_ptr<ResolvedStack> stackptr)
    {
       if (stackptr == nullptr)
          return;
 
-      auto stackptrLegacy = dynamic_pointer_cast<ResolvedStackLegacy>(stackptr);
+      auto stackptrLegacy = std::dynamic_pointer_cast<ResolvedStackLegacy>(stackptr);
       if (stackptrLegacy == nullptr)
-         throw runtime_error("unexpected resolved stack ptr type");
+         throw std::runtime_error("unexpected resolved stack ptr type");
 
       setStack(stackptrLegacy->getStack());
    }
 
-   void setWitnessStack(vector<shared_ptr<StackItem>> stack) 
+   void setWitnessStack(std::vector<std::shared_ptr<StackItem>> stack)
    { witnessStack_ = move(stack); }
    
-   const vector<shared_ptr<StackItem>>& getWitnessStack(void) const 
+   const std::vector<std::shared_ptr<StackItem>>& getWitnessStack(void) const
    { return witnessStack_; }
 
    BinaryData serializeWitnessStack(void) const;
@@ -1178,23 +1160,23 @@ public:
 class StackResolver : ScriptParser
 {
 private:
-   deque<shared_ptr<ReversedStackEntry>> stack_;
+   std::deque<std::shared_ptr<ReversedStackEntry>> stack_;
    unsigned flags_ = 0;
 
-   shared_ptr<ResolvedStack> resolvedStack_ = nullptr;
+   std::shared_ptr<ResolvedStack> resolvedStack_ = nullptr;
    unsigned opCodeCount_ = 0;
    bool opHash_ = false;
    bool isP2SH_ = false;
    bool isSW_ = false;
 
    const BinaryDataRef script_;
-   shared_ptr<ResolverFeed> feed_;
-   shared_ptr<SignerProxy> proxy_;
+   std::shared_ptr<ResolverFeed> feed_;
+   std::shared_ptr<SignerProxy> proxy_;
 
 private:
-   shared_ptr<ReversedStackEntry> pop_back(void)
+   std::shared_ptr<ReversedStackEntry> pop_back(void)
    {
-      shared_ptr<ReversedStackEntry> item;
+      std::shared_ptr<ReversedStackEntry> item;
 
       if (stack_.size() > 0)
       {
@@ -1202,15 +1184,15 @@ private:
          stack_.pop_back();
       }
       else
-         item = make_shared<ReversedStackEntry>();
+         item = std::make_shared<ReversedStackEntry>();
 
       return item;
    }
 
-   shared_ptr<ReversedStackEntry> getTopStackEntryPtr(void)
+   std::shared_ptr<ReversedStackEntry> getTopStackEntryPtr(void)
    {
       if (stack_.size() == 0)
-         stack_.push_back(make_shared<ReversedStackEntry>());
+         stack_.push_back(std::make_shared<ReversedStackEntry>());
 
       return stack_.back();
    }
@@ -1225,7 +1207,7 @@ private:
 
    void pushdata(const BinaryData& data)
    {
-      auto rse = make_shared<ReversedStackEntry>(data);
+      auto rse = std::make_shared<ReversedStackEntry>(data);
       stack_.push_back(rse);
    }
 
@@ -1233,7 +1215,7 @@ private:
    {
       auto rsePtr = getTopStackEntryPtr();
 
-      auto rseDup = make_shared<ReversedStackEntry>();
+      auto rseDup = std::make_shared<ReversedStackEntry>();
       rseDup->static_ = true;
       rseDup->parent_ = rsePtr;
 
@@ -1242,8 +1224,8 @@ private:
 
    void push_op_code(const OpCode& oc)
    {
-      auto rsePtr = make_shared<ReversedStackEntry>();
-      auto ocPtr = make_shared<OpCode>(oc);
+      auto rsePtr = std::make_shared<ReversedStackEntry>();
+      auto ocPtr = std::make_shared<OpCode>(oc);
 
       rsePtr->push_opcode(ocPtr);
       stack_.push_back(rsePtr);
@@ -1256,7 +1238,7 @@ private:
       items, such operations should not reduce the stack depth.
       ***/
 
-      auto ocPtr = make_shared<OpCode>(oc);
+      auto ocPtr = std::make_shared<OpCode>(oc);
       auto item1 = getTopStackEntryPtr();
       item1->push_opcode(ocPtr);
 
@@ -1281,7 +1263,7 @@ private:
 
       if (item1->parent_ != item2)
       {
-         auto eoc1 = make_shared<ExtendedOpCode>(oc);
+         auto eoc1 = std::make_shared<ExtendedOpCode>(oc);
          eoc1->itemIndex_ = 1;
          eoc1->referenceStackItemVec_.push_back(item2);
          if (item1->push_opcode(eoc1))
@@ -1290,7 +1272,7 @@ private:
 
       if (item2->parent_ != item1)
       {
-         auto eoc2 = make_shared<ExtendedOpCode>(oc);
+         auto eoc2 = std::make_shared<ExtendedOpCode>(oc);
          eoc2->itemIndex_ = 2;
          eoc2->referenceStackItemVec_.push_back(item1);
          if (item2->push_opcode(eoc2))
@@ -1311,8 +1293,8 @@ private:
 
 public:
    StackResolver(BinaryDataRef script,
-      shared_ptr<ResolverFeed> feed,
-      shared_ptr<SignerProxy> proxy) :
+      std::shared_ptr<ResolverFeed> feed,
+      std::shared_ptr<SignerProxy> proxy) :
       script_(script), feed_(feed), proxy_(proxy)
    {}
 
@@ -1325,7 +1307,7 @@ public:
       }
    }
    
-   shared_ptr<ResolvedStack> getResolvedStack();
+   std::shared_ptr<ResolvedStack> getResolvedStack();
    unsigned getFlags(void) const { return flags_; }
    void setFlags(unsigned flags) { flags_ = flags; }
 };

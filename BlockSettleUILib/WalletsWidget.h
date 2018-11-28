@@ -70,7 +70,6 @@ private slots:
    void updateAddresses();
    void onAddressContextMenu(const QPoint &);
    void onWalletContextMenu(const QPoint &);
-   void onImportComplete(const std::string &walletId);
    void onNewWallet();
    void onCopyAddress();
    void onEditAddrComment();
@@ -111,6 +110,7 @@ private:
 bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &
    , const std::shared_ptr<SignContainer> &
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent);
 
 #endif // __WALLETS_WIDGET_H__

@@ -39,14 +39,14 @@ struct TxOutScriptRef
 
    TxOutScriptRef(TxOutScriptRef&& outscr)
    {
-      type_ = move(outscr.type_);
+      type_ = std::move(outscr.type_);
       if (outscr.scriptCopy_.getSize() > 0)
       {
-         scriptCopy_ = move(outscr.scriptCopy_);
+         scriptCopy_ = std::move(outscr.scriptCopy_);
          outscr.scriptRef_.setRef(scriptCopy_);
       }
 
-      scriptRef_ = move(outscr.scriptRef_);
+      scriptRef_ = std::move(outscr.scriptRef_);
    }
 
    TxOutScriptRef& operator=(const TxOutScriptRef& rhs)

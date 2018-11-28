@@ -26,10 +26,11 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::CCSettlementTransactionWidget())
-   , logger_(logger), appSettings_(appSettings)
+   , logger_(logger)
+   , appSettings_(appSettings)
    , settlContainer_(settlContainer)
-   , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
-   , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
+   , sValid_(tr("<span style=\"color: #22C064;\">Verified</span>"))
+   , sInvalid_(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
 
@@ -104,7 +105,7 @@ void CCSettlementTransactionWidget::populateDetails()
 void CCSettlementTransactionWidget::onGenAddrVerified(bool result, QString error)
 {
    logger_->debug("[CCSettlementTransactionWidget::onGenAddrVerified] result = {} ({})", result, error.toStdString());
-   ui_->labelGenesisAddress->setText(result ? sValid : sInvalid);
+   ui_->labelGenesisAddress->setText(result ? sValid_ : sInvalid_);
    updateAcceptButton();
 
    if (!result) {
@@ -130,7 +131,7 @@ void CCSettlementTransactionWidget::initSigning()
       | WalletKeysSubmitWidget::HidePubKeyFingerprint
       | WalletKeysSubmitWidget::HideProgressBar
    );
-   ui_->widgetSubmitKeys->init(MobileClientRequest::SignMarketTransaction, settlContainer_->walletId()
+   ui_->widgetSubmitKeys->init(MobileClientRequest::SettlementTransaction, settlContainer_->walletId()
       , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys()
       , appSettings_);
    ui_->widgetSubmitKeys->setFocus();
@@ -142,7 +143,7 @@ void CCSettlementTransactionWidget::onPaymentVerified(bool result, QString error
    if (!error.isEmpty()) {
       ui_->labelHint->setText(error);
    }
-   ui_->labelPayment->setText(result ? sValid : sInvalid);
+   ui_->labelPayment->setText(result ? sValid_ : sInvalid_);
    updateAcceptButton();
 }
 

@@ -115,12 +115,12 @@
               </size>
              </property>
              <property name="text">
-              <string>Hash (big-endian)</string>
+              <string>Hash (RPC byte order)</string>
              </property>
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QLabel" name="labelHash">
+            <widget class="CustomLabel" name="labelHash">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -131,9 +131,12 @@
               <string>???</string>
              </property>
              <property name="textInteractionFlags">
-              <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+              <set>Qt::LinksAccessibleByMouse</set>
              </property>
              <property name="whiteLabel" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="copyToClipboard" stdset="0">
               <bool>true</bool>
              </property>
             </widget>
@@ -287,7 +290,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Size (bytes)</string>
+              <string>Weight</string>
              </property>
             </widget>
            </item>
@@ -464,7 +467,7 @@
             </widget>
            </item>
            <item row="10" column="1">
-            <widget class="QLabel" name="labelAddress">
+            <widget class="CustomLabel" name="labelAddress">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -475,9 +478,12 @@
               <string>???</string>
              </property>
              <property name="textInteractionFlags">
-              <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+              <set>Qt::LinksAccessibleByMouse</set>
              </property>
              <property name="whiteLabel" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="copyToClipboard" stdset="0">
               <bool>true</bool>
              </property>
             </widget>
@@ -553,7 +559,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QTreeWidget" name="treeAddresses">
+             <widget class="CustomTreeWidget" name="treeAddresses">
               <property name="alternatingRowColors">
                <bool>true</bool>
               </property>
@@ -624,6 +630,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomLabel</class>
+   <extends>QLabel</extends>
+   <header>CustomLabel.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomTreeWidget</class>
+   <extends>QTreeWidget</extends>
+   <header>CustomTreeWidget.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

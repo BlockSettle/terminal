@@ -18,9 +18,7 @@
 #include "EnterWalletPassword.h"
 #include "FastLock.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
-#include "MessageBoxWarning.h"
+#include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -56,7 +54,7 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
 
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &RFQDealerReply::submitButtonClicked);
    connect(ui_->pushButtonPull, &QPushButton::clicked, this, &RFQDealerReply::pullButtonClicked);
-   connect(ui_->checkBoxAQ, &QCheckBox::stateChanged, this, &RFQDealerReply::aqStateChanged);
+   connect(ui_->checkBoxAQ, &ToggleSwitch::stateChanged, this, &RFQDealerReply::aqStateChanged);
    connect(ui_->comboBoxAQScript, SIGNAL(activated(int)), this, SLOT(aqScriptChanged(int)));
    connect(this, &RFQDealerReply::aqScriptLoaded, this, &RFQDealerReply::onAqScriptLoaded);
    connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
@@ -64,7 +62,7 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->comboBoxWallet, SIGNAL(currentIndexChanged(int)), this, SLOT(walletSelected(int)));
    connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
 
-   connect(ui_->checkBoxAutoSign, &QCheckBox::clicked, this, &RFQDealerReply::onAutoSignActivated);
+   connect(ui_->checkBoxAutoSign, &ToggleSwitch::clicked, this, &RFQDealerReply::onAutoSignActivated);
 
    ui_->responseTitle->hide();
 }
@@ -226,10 +224,11 @@ void RFQDealerReply::onHDWalletInfo(unsigned int id
       return;
    }
 
-   EnterWalletPassword passwordDialog(MobileClientRequest::SignMarketTransaction, this);
+   EnterWalletPassword passwordDialog(MobileClientRequest::SettlementTransaction, this);
    passwordDialog.init(autoSignWalletId_, keyRank
       , encTypes, encKeys, appSettings_
-      , tr("Activate auto sign"));
+      , tr("Activate Auto-Sign"));
+   passwordDialog.setWindowTitle(tr("Activate Auto-Sign"));
    if (passwordDialog.exec() != QDialog::Accepted) {
       disableAutoSign();
       return;
@@ -295,6 +294,7 @@ void RFQDealerReply::updateRespQuantity()
 
 void RFQDealerReply::reset()
 {
+   payInRecipId_ = UINT_MAX;
    if (currentQRN_.empty()) {
       ui_->labelProductGroup->clear();
       ui_->labelSecurity->clear();
@@ -482,7 +482,7 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
                   leafCreateReqId_ = signingContainer_->CreateHDLeaf(walletsManager_->GetPrimaryWallet(), path);
                }
             } else {
-               MessageBoxCritical errorMessage(tr("Signer not connected")
+               BSMessageBox errorMessage(BSMessageBox::critical, tr("Signer not connected")
                   , tr("Could not create CC subwallet.")
                   , this);
                errorMessage.exec();
@@ -571,7 +571,8 @@ bool RFQDealerReply::checkBalance() const
    if ((currentQRN_.side == bs::network::Side::Buy) ^ (product_ == baseProduct_)) {
       const auto amount = getAmount();
       if ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && transactionData_) {
-         return (amount <= (transactionData_->GetTransactionSummary().availableBalance - transactionData_->GetTransactionSummary().totalFee));
+         return (amount <= (transactionData_->GetTransactionSummary().availableBalance
+            - transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider));
       }
       else if ((currentQRN_.assetType == bs::network::Asset::PrivateMarket) && ccCoinSel_) {
          uint64_t balance = 0;
@@ -592,7 +593,7 @@ bool RFQDealerReply::checkBalance() const
 
    if ((currentQRN_.assetType == bs::network::Asset::PrivateMarket) && transactionData_) {
       return (currentQRN_.quantity * getPrice() <= transactionData_->GetTransactionSummary().availableBalance
-         - transactionData_->GetTransactionSummary().totalFee);
+         - transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider);
    }
 
    const double value = getValue();
@@ -602,7 +603,8 @@ bool RFQDealerReply::checkBalance() const
    const bool isXbt = (currentQRN_.assetType == bs::network::Asset::PrivateMarket) ||
       ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && (product_ == baseProduct_));
    if (isXbt && transactionData_) {
-      return (value <= (transactionData_->GetTransactionSummary().availableBalance - transactionData_->GetTransactionSummary().totalFee));
+      return (value <= (transactionData_->GetTransactionSummary().availableBalance
+         - transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider));
    }
    return assetManager_->checkBalance(product_, value);
 }
@@ -712,16 +714,21 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
       const double quantity = reversed ? qrn.quantity / price : qrn.quantity;
 
       if (isBid) {
-         const std::string &comment = std::string(bs::network::Side::toString(bs::network::Side::invert(qrn.side)))
-            + " " + qrn.security + " @ " + std::to_string(price);
-         const auto settlAddr = walletsManager_->GetSettlementWallet()->newAddress(
-            BinaryData::CreateFromHex(qrn.settlementId), BinaryData::CreateFromHex(qrn.requestorAuthPublicKey),
-            BinaryData::CreateFromHex(authKey), comment);
+         if ((payInRecipId_ == UINT_MAX) || !transData->GetRecipientsCount()) {
+            const std::string &comment = std::string(bs::network::Side::toString(bs::network::Side::invert(qrn.side)))
+               + " " + qrn.security + " @ " + std::to_string(price);
+            const auto settlAddr = walletsManager_->GetSettlementWallet()->newAddress(
+               BinaryData::CreateFromHex(qrn.settlementId), BinaryData::CreateFromHex(qrn.requestorAuthPublicKey),
+               BinaryData::CreateFromHex(authKey), comment);
 
-         const auto recipient = transData->RegisterNewRecipient();
-         transData->UpdateRecipientAmount(recipient, quantity);
-         if (!transData->UpdateRecipientAddress(recipient, settlAddr)) {
-            logger_->warn("[RFQDealerReply::submit] Failed to update address for recipient {}", recipient);
+            payInRecipId_ = transData->RegisterNewRecipient();
+            transData->UpdateRecipientAmount(payInRecipId_, quantity);
+            if (!transData->UpdateRecipientAddress(payInRecipId_, settlAddr)) {
+               logger_->warn("[RFQDealerReply::submit] Failed to update address for recipient {}", payInRecipId_);
+            }
+         }
+         else {
+            transData->UpdateRecipientAmount(payInRecipId_, quantity);
          }
 
          try {
@@ -996,6 +1003,16 @@ void RFQDealerReply::aqScriptChanged(int curIndex)
          aqFillHistory();
          return;
       }
+      else {
+         initAQ(scriptFN);
+      }
+   }
+   else {
+      // enable toggleswitch if a script is selected
+      // celer is connected
+      if (celerConnected_) {
+         ui_->checkBoxAQ->setEnabled(true);
+      }
    }
 }
 
@@ -1115,7 +1132,7 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          else {
             if (!ccWallet) {
                ui_->checkBoxAQ->setChecked(false);
-               MessageBoxCritical(tr("Auto Quoting")
+               BSMessageBox(BSMessageBox::critical, tr("Auto Quoting")
                   , tr("No wallet created for %1 - auto-quoting disabled").arg(QString::fromStdString(cc))
                ).exec();
                return;
@@ -1147,7 +1164,7 @@ void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool ac
    updateAutoSignState();
 
    if (!error.empty()) {
-      MessageBoxWarning(tr("Auto-Sign deactivated"), tr("Signer returned error: %1")
+      BSMessageBox(BSMessageBox::warning, tr("Auto-Sign deactivated"), tr("Signer returned error: %1")
          .arg(QString::fromStdString(error))).exec();
    }
 }
@@ -1177,8 +1194,9 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryD
       reset();
       updateRecvAddresses();
    } else {
-      MessageBoxCritical(tr("%1 Wallet").arg(QString::fromStdString(baseProduct_))
-         , tr("Failed to create wallet")).exec();
+      BSMessageBox(BSMessageBox::critical, tr("Failed to create wallet")
+         , tr("Failed to create wallet")
+         , tr("%1 Wallet").arg(QString::fromStdString(baseProduct_))).exec();
    }
 }
 
@@ -1189,13 +1207,17 @@ void RFQDealerReply::onCreateHDWalletError(unsigned int id, std::string errMsg)
    }
 
    leafCreateReqId_ = 0;
-   MessageBoxCritical( tr("%1 Wallet").arg(QString::fromStdString(product_))
-      , tr("Failed to create wallet")).exec();
+   BSMessageBox(BSMessageBox::critical, tr("Failed to create wallet")
+      , tr("Failed to create wallet")
+      , tr("%1 Wallet").arg(QString::fromStdString(product_))).exec();
 }
 
 void RFQDealerReply::onCelerConnected()
 {
-   ui_->checkBoxAQ->setEnabled(true);
+   // enable toggleswitch only if a script file is already selected
+   if (ui_->comboBoxAQScript->currentIndex() > 0) {
+      ui_->checkBoxAQ->setEnabled(true);
+   }
    celerConnected_ = true;
    ui_->groupBoxAutoSign->setEnabled(true);
 }

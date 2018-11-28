@@ -1,7 +1,7 @@
 #include "NotificationCenter.h"
 #include "ui_BSTerminalMainWindow.h"
 #include "ApplicationSettings.h"
-#include "MessageBoxWarning.h"
+#include "BSMessageBox.h"
 
 #if defined (Q_OS_WIN)
 #include <shellapi.h>
@@ -197,25 +197,25 @@ void NotificationTrayIconResponder::newVersionMessageClicked()
       const auto errDownload = tr("Failed to open download URL");
 #if defined (Q_OS_WIN)
       if ((unsigned int)ShellExecute(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL) <= 32) {
-         MessageBoxWarning mb(title, errDownload);
+         BSMessageBox mb(BSMessageBox::warning, title, errDownload);
          mb.exec();
       }
 #elif defined (Q_OS_LINUX)
       char buf[256];
       snprintf(buf, sizeof(buf), "xdg-open '%s'", url.c_str());
       if (system(buf) != 0) {
-         MessageBoxWarning mb(title, errDownload);
+         BSMessageBox mb(BSMessageBox::warning, title, errDownload);
          mb.exec();
       }
 #elif defined (Q_OS_OSX)
       char buf[256];
       snprintf(buf, sizeof(buf), "open '%s'", url.c_str());
       if (system(buf) != 0) {
-         MessageBoxWarning mb(title, errDownload);
+         BSMessageBox mb(BSMessageBox::warning, title, errDownload);
          mb.exec();
    }
 #else
-      MessageBoxWarning mb(title, tr("Shell execution is not supported on this platform, yet"));
+      BSMessageBox mb(BSMessageBox::warning, title, tr("Shell execution is not supported on this platform, yet"));
       mb.exec();
 #endif
    }

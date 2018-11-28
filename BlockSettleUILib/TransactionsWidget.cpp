@@ -9,7 +9,7 @@
 
 #include "CreateTransactionDialogAdvanced.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "TransactionsViewModel.h"
 #include "TransactionDetailDialog.h"
 #include "WalletsManager.h"
@@ -234,11 +234,15 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
 TransactionsWidget::~TransactionsWidget() = default;
 
 void TransactionsWidget::init(const std::shared_ptr<WalletsManager> &walletsMgr
-   , const std::shared_ptr<ArmoryConnection> &armory, const std::shared_ptr<SignContainer> &signContainer)
+                              , const std::shared_ptr<ArmoryConnection> &armory
+                              , const std::shared_ptr<SignContainer> &signContainer
+                              , const std::shared_ptr<spdlog::logger> &logger)
+
 {
    walletsManager_ = walletsMgr;
    armory_ = armory;
    signContainer_ = signContainer;
+   logger_ = logger;
 
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
 }
@@ -447,13 +451,12 @@ void TransactionsWidget::onCreateRBFDialog()
    const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, signContainer_
-            , txItem->tx, txItem->wallet
-            , this);
+            , walletsManager_, signContainer_, logger_, txItem->tx
+            , txItem->wallet, this);
          dlg->exec();
       }
       catch (const std::exception &e) {
-         MessageBoxCritical(tr("RBF Transaction"), tr("Failed to create RBF transaction")
+         BSMessageBox(BSMessageBox::critical, tr("RBF Transaction"), tr("Failed to create RBF transaction")
             , QLatin1String(e.what()), this).exec();
       }
    };
@@ -473,13 +476,12 @@ void TransactionsWidget::onCreateCPFPDialog()
    const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, signContainer_
-            , txItem->wallet, txItem->tx
-            , this);
+            , walletsManager_, signContainer_, txItem->wallet
+            , logger_, txItem->tx, this);
          dlg->exec();
       }
       catch (const std::exception &e) {
-         MessageBoxCritical(tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
+         BSMessageBox(BSMessageBox::critical, tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
             , QLatin1String(e.what()), this).exec();
       }
    };

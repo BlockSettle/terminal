@@ -5,8 +5,6 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "CreateTransactionDialogAdvanced.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
 #include "OfflineSigner.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
@@ -19,8 +17,10 @@
 
 CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
-   , const std::shared_ptr<SignContainer> &container, QWidget* parent)
- : CreateTransactionDialog(armory, walletManager, container, true, parent)
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
+ : CreateTransactionDialog(armory, walletManager, container, true, logger,
+                           parent)
  , ui_(new Ui::CreateTransactionDialogSimple)
 {
    ui_->setupUi(this);
@@ -213,7 +213,7 @@ bool CreateTransactionDialogSimple::userRequestedAdvancedDialog() const
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogSimple::CreateAdvancedDialog()
 {
    auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
-      , signingContainer_, true, parentWidget());
+      , signingContainer_, true, logger_, parentWidget());
 
    if (!offlineTransactions_.empty()) {
       advancedDialog->SetImportedTransactions(offlineTransactions_);

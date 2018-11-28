@@ -16,10 +16,10 @@
 #include "Assets.h"
 #include "BlockDataManagerConfig.h"
 
-class AddressException : public runtime_error
+class AddressException : public std::runtime_error
 {
 public:
-   AddressException(const string& err) : runtime_error(err)
+   AddressException(const std::string& err) : std::runtime_error(err)
    {}
 };
 
@@ -68,7 +68,7 @@ public:
    virtual const BinaryData& getID(void) const = 0;
 
    virtual const BinaryData& getAddress() const = 0;
-   virtual shared_ptr<ScriptRecipient> getRecipient(uint64_t) const = 0;
+   virtual std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const = 0;
    
    virtual const BinaryData& getHash(void) const = 0;
    virtual const BinaryData& getPrefixedHash(void) const = 0;
@@ -82,29 +82,29 @@ public:
    //throw by default, SW types will overload
    virtual size_t getWitnessDataSize(void) const
    {
-      throw runtime_error("no witness data");
+      throw std::runtime_error("no witness data");
    }
 
    //static
-   static shared_ptr<AddressEntry> instantiate(
-      shared_ptr<AssetEntry>, AddressEntryType);
+   static std::shared_ptr<AddressEntry> instantiate(
+      std::shared_ptr<AssetEntry>, AddressEntryType);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 class AddressEntry_WithAsset
 {
 private:
-   const shared_ptr<AssetEntry> asset_;
+   const std::shared_ptr<AssetEntry> asset_;
    const bool isCompressed_;
 
 public:
-   AddressEntry_WithAsset(shared_ptr<AssetEntry> asset, bool isCompressed) :
+   AddressEntry_WithAsset(std::shared_ptr<AssetEntry> asset, bool isCompressed) :
       asset_(asset), isCompressed_(isCompressed)
    {}
 
    virtual ~AddressEntry_WithAsset(void) = 0;
 
-   const shared_ptr<AssetEntry> getAsset(void) const { return asset_; }
+   const std::shared_ptr<AssetEntry> getAsset(void) const { return asset_; }
    bool isCompressed(void) const { return isCompressed_; }
 };
 
@@ -113,11 +113,11 @@ class AddressEntry_P2PKH : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
-   AddressEntry_P2PKH(shared_ptr<AssetEntry> asset, bool isCompressed) :
+   AddressEntry_P2PKH(std::shared_ptr<AssetEntry> asset, bool isCompressed) :
       AddressEntry(AddressEntryType_P2PKH), 
       AddressEntry_WithAsset(asset, isCompressed)
    {
-      auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(asset);
+      auto asset_single = std::dynamic_pointer_cast<AssetEntry_Single>(asset);
       if (asset_single == nullptr)
          throw AddressException("need single asset for single signer address type");
    }
@@ -130,7 +130,7 @@ public:
    const BinaryData& getHash(void) const;
    const BinaryData& getPreimage(void) const;
 
-   shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
+   std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
    const BinaryData& getScript(void) const;
 
    //size (accounts for outpoint and sequence)
@@ -142,11 +142,11 @@ class AddressEntry_P2PK : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
-   AddressEntry_P2PK(shared_ptr<AssetEntry> asset, bool isCompressed) :
+   AddressEntry_P2PK(std::shared_ptr<AssetEntry> asset, bool isCompressed) :
       AddressEntry(AddressEntryType_P2PK), 
       AddressEntry_WithAsset(asset, isCompressed)
    {
-      auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(asset);
+      auto asset_single = std::dynamic_pointer_cast<AssetEntry_Single>(asset);
       if (asset_single == nullptr)
          throw AddressException("need single asset for single signer address type");
    }
@@ -159,7 +159,7 @@ public:
    const BinaryData& getPrefixedHash(void) const;
    const BinaryData& getPreimage(void) const;
 
-   shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
+   std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
    const BinaryData& getScript(void) const;
 
    //size (accounts for outpoint and sequence)
@@ -171,11 +171,11 @@ class AddressEntry_P2WPKH : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
-   AddressEntry_P2WPKH(shared_ptr<AssetEntry> asset) :
+   AddressEntry_P2WPKH(std::shared_ptr<AssetEntry> asset) :
       AddressEntry(AddressEntryType_P2WPKH), 
       AddressEntry_WithAsset(asset, true)
    {
-      auto asset_single = dynamic_pointer_cast<AssetEntry_Single>(asset);
+      auto asset_single = std::dynamic_pointer_cast<AssetEntry_Single>(asset);
       if (asset_single == nullptr)
          throw AddressException("need single asset for single signer address type");
    }
@@ -188,7 +188,7 @@ public:
    const BinaryData& getPrefixedHash(void) const;
    const BinaryData& getPreimage(void) const;
 
-   shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
+   std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
    const BinaryData& getScript(void) const;
 
    //size (accounts for outpoint and sequence)
@@ -201,11 +201,11 @@ class AddressEntry_Multisig : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
-   AddressEntry_Multisig(shared_ptr<AssetEntry> asset, bool compressed) :
+   AddressEntry_Multisig(std::shared_ptr<AssetEntry> asset, bool compressed) :
       AddressEntry(AddressEntryType_Multisig),
       AddressEntry_WithAsset(asset, compressed)
    {
-      auto asset_ms = dynamic_pointer_cast<AssetEntry_Multisig>(asset);
+      auto asset_ms = std::dynamic_pointer_cast<AssetEntry_Multisig>(asset);
       if (asset_ms == nullptr)
          throw AddressException("need multisig asset for multisig address type");
    }
@@ -218,7 +218,7 @@ public:
    const BinaryData& getPrefixedHash(void) const;
    const BinaryData& getPreimage(void) const;
 
-   shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
+   std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
    const BinaryData& getScript(void) const;
 
    //size (accounts for outpoint and sequence)
@@ -229,10 +229,10 @@ public:
 class AddressEntry_Nested
 {
 private:
-   shared_ptr<AddressEntry> addrPtr_;
+   std::shared_ptr<AddressEntry> addrPtr_;
 
 public:
-   AddressEntry_Nested(shared_ptr<AddressEntry> addrPtr) :
+   AddressEntry_Nested(std::shared_ptr<AddressEntry> addrPtr) :
       addrPtr_(addrPtr)
    {
       if (addrPtr_ == nullptr)
@@ -241,7 +241,7 @@ public:
 
    virtual ~AddressEntry_Nested(void) = 0;
 
-   shared_ptr<AddressEntry> getPredecessor(void) const { return addrPtr_; }
+   std::shared_ptr<AddressEntry> getPredecessor(void) const { return addrPtr_; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -249,7 +249,7 @@ class AddressEntry_P2SH : public AddressEntry, public AddressEntry_Nested
 {
 public:
    //tors
-   AddressEntry_P2SH(shared_ptr<AddressEntry> addrPtr) :
+   AddressEntry_P2SH(std::shared_ptr<AddressEntry> addrPtr) :
       AddressEntry(AddressEntryType_P2SH), 
       AddressEntry_Nested(addrPtr)
    {
@@ -266,7 +266,7 @@ public:
    const BinaryData& getPreimage(void) const;
    
    const BinaryData& getScript(void) const;
-   shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
+   std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
 
    //size (accounts for outpoint and sequence)
    size_t getInputSize(void) const;
@@ -278,7 +278,7 @@ class AddressEntry_P2WSH : public AddressEntry, public AddressEntry_Nested
 {
 public:
    //tors
-   AddressEntry_P2WSH(shared_ptr<AddressEntry> addrPtr) :
+   AddressEntry_P2WSH(std::shared_ptr<AddressEntry> addrPtr) :
       AddressEntry(AddressEntryType_P2WSH), 
       AddressEntry_Nested(addrPtr)
    {
@@ -298,7 +298,7 @@ public:
    const BinaryData& getPreimage(void) const;
 
    const BinaryData& getScript(void) const;
-   shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
+   std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
 
    //size (accounts for outpoint and sequence)
    size_t getInputSize(void) const { return 41; }

@@ -126,8 +126,8 @@ private:
 
 public:
    Tx tx_;
-   vector<ParsedTxIn> inputs_;
-   vector<ParsedTxOut> outputs_;
+   std::vector<ParsedTxIn> inputs_;
+   std::vector<ParsedTxOut> outputs_;
    ParsedTxStatus state_ = Tx_Uninitialized;
    bool isRBF_ = false;
    bool isChainedZc_ = false;
@@ -135,7 +135,7 @@ public:
 
 public:
    ParsedTx(BinaryData& key) :
-      zcKey_(move(key))
+      zcKey_(std::move(key))
    {}
 
    ParsedTxStatus status(void) const { return state_; }
@@ -149,20 +149,20 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 struct ZeroConfBatch
 {
-   map<BinaryDataRef, shared_ptr<ParsedTx>> txMap_;
-   atomic<unsigned> counter_;
-   promise<bool> isReadyPromise_;
+   std::map<BinaryDataRef, std::shared_ptr<ParsedTx>> txMap_;
+   std::atomic<unsigned> counter_;
+   std::promise<bool> isReadyPromise_;
    unsigned timeout_ = TXGETDATA_TIMEOUT_MS;
 
 public:
    ZeroConfBatch(void)
    {
-      counter_.store(0, memory_order_relaxed);
+      counter_.store(0, std::memory_order_relaxed);
    }
 
    void incrementCounter(void)
    {
-      auto val = counter_.fetch_add(1, memory_order_relaxed);
+      auto val = counter_.fetch_add(1, std::memory_order_relaxed);
       if (val + 1 == txMap_.size())
          isReadyPromise_.set_value(true);
    }
@@ -172,15 +172,15 @@ public:
 struct ZeroConfInvPacket
 {
    BinaryData zcKey_;
-   shared_ptr<ZeroConfBatch> batchPtr_;
+   std::shared_ptr<ZeroConfBatch> batchPtr_;
    InvEntry invEntry_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 struct ParsedZCData
 {
-   set<BinaryData> txioKeys_;
-   set<BinaryData> invalidatedKeys_;
+   std::set<BinaryData> txioKeys_;
+   std::set<BinaryData> invalidatedKeys_;
 
    void mergeTxios(ParsedZCData& pzd)
    {
@@ -191,23 +191,23 @@ struct ParsedZCData
 ////////////////////////////////////////////////////////////////////////////////
 struct ZcPurgePacket
 {
-   set<BinaryData> invalidatedZcKeys_;
-   map<BinaryData, BinaryData> minedTxioKeys_;
+   std::set<BinaryData> invalidatedZcKeys_;
+   std::map<BinaryData, BinaryData> minedTxioKeys_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 struct ZcUpdateBatch
 {
 private:
-   unique_ptr<promise<bool>> completed_;
+   std::unique_ptr<std::promise<bool>> completed_;
 
 public:
-   map<BinaryDataRef, shared_ptr<ParsedTx>> zcToWrite_;
-   set<BinaryData> txHashes_;
-   set<BinaryData> keysToDelete_;
-   set<BinaryData> txHashesToDelete_;
+   std::map<BinaryDataRef, std::shared_ptr<ParsedTx>> zcToWrite_;
+   std::set<BinaryData> txHashes_;
+   std::set<BinaryData> keysToDelete_;
+   std::set<BinaryData> txHashesToDelete_;
 
-   shared_future<bool> getCompletedFuture(void);
+   std::shared_future<bool> getCompletedFuture(void);
    void setCompleted(bool);
    bool hasData(void) const;
 };
@@ -215,18 +215,18 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 struct ZeroConfSharedStateSnapshot
 {
-   map<BinaryDataRef, BinaryDataRef> txHashToDBKey_; //<txHash, dbKey>
-   map<BinaryDataRef, shared_ptr<ParsedTx>> txMap_; //<zcKey, zcTx>
-   set<BinaryData> txOutsSpentByZC_; //<txOutDbKeys>
+   std::map<BinaryDataRef, BinaryDataRef> txHashToDBKey_; //<txHash, dbKey>
+   std::map<BinaryDataRef, std::shared_ptr<ParsedTx>> txMap_; //<zcKey, zcTx>
+   std::set<BinaryData> txOutsSpentByZC_; //<txOutDbKeys>
 
    //TODO: rethink this map, slow to purge
    //<scrAddr,  <dbKeyOfOutput, TxIOPair>> 
-   map<BinaryData, shared_ptr<map<BinaryData, shared_ptr<TxIOPair>>>>  txioMap_;
+   std::map<BinaryData, std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>>>>  txioMap_;
 
-   static shared_ptr<ZeroConfSharedStateSnapshot> copy(
-      shared_ptr<ZeroConfSharedStateSnapshot> obj)
+   static std::shared_ptr<ZeroConfSharedStateSnapshot> copy(
+      std::shared_ptr<ZeroConfSharedStateSnapshot> obj)
    {
-      auto ss = make_shared<ZeroConfSharedStateSnapshot>();
+      auto ss = std::make_shared<ZeroConfSharedStateSnapshot>();
       if (obj != nullptr)
       {
          ss->txHashToDBKey_ = obj->txHashToDBKey_;
@@ -247,14 +247,14 @@ class ZeroConfContainer
 private:
    struct BulkFilterData
    {
-      map<BinaryData, shared_ptr<map<BinaryData, shared_ptr<TxIOPair>>>> 
+      std::map<BinaryData, std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>>>>
          scrAddrTxioMap_;
-      map<BinaryDataRef, map<unsigned, BinaryDataRef>> outPointsSpentByKey_;
-      set<BinaryData> txOutsSpentByZC_;
-      map<BinaryDataRef, shared_ptr<set<BinaryDataRef>>> keyToSpentScrAddr_;
-      map<BinaryDataRef, set<BinaryDataRef>> keyToFundedScrAddr_;
+      std::map<BinaryDataRef, std::map<unsigned, BinaryDataRef>> outPointsSpentByKey_;
+      std::set<BinaryData> txOutsSpentByZC_;
+      std::map<BinaryDataRef, std::shared_ptr<std::set<BinaryDataRef>>> keyToSpentScrAddr_;
+      std::map<BinaryDataRef, std::set<BinaryDataRef>> keyToFundedScrAddr_;
 
-      map<string, ParsedZCData> flaggedBDVs_;
+      std::map<std::string, ParsedZCData> flaggedBDVs_;
 
       bool isEmpty(void) { return scrAddrTxioMap_.size() == 0; }
    };
@@ -262,14 +262,14 @@ private:
 public:
    struct NotificationPacket
    {
-      string bdvID_;
-      map<BinaryData, shared_ptr<map<BinaryData, shared_ptr<TxIOPair>>>> txioMap_;
-      shared_ptr<ZcPurgePacket> purgePacket_;
-      shared_ptr<map<BinaryData, shared_ptr<set<BinaryDataRef>>>>
+      std::string bdvID_;
+      std::map<BinaryData, std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>>>> txioMap_;
+      std::shared_ptr<ZcPurgePacket> purgePacket_;
+      std::shared_ptr<std::map<BinaryData, std::shared_ptr<std::set<BinaryDataRef>>>>
          newKeysAndScrAddr_;
-      shared_ptr<map<BinaryDataRef, shared_ptr<ParsedTx>>> txMap_;
+      std::shared_ptr<std::map<BinaryDataRef, std::shared_ptr<ParsedTx>>> txMap_;
 
-      NotificationPacket(const string& bdvID) :
+      NotificationPacket(const std::string& bdvID) :
          bdvID_(bdvID)
       {}
    };
@@ -277,64 +277,64 @@ public:
    struct ZcActionStruct
    {
       ZcAction action_;
-      shared_ptr<ZeroConfBatch> batch_;
-      unique_ptr<promise<shared_ptr<ZcPurgePacket>>> resultPromise_ = nullptr;
+      std::shared_ptr<ZeroConfBatch> batch_;
+      std::unique_ptr<std::promise<std::shared_ptr<ZcPurgePacket>>> resultPromise_ = nullptr;
       Blockchain::ReorganizationState reorgState_;
    };
 
 private:
-   shared_ptr<ZeroConfSharedStateSnapshot> snapshot_;
+   std::shared_ptr<ZeroConfSharedStateSnapshot> snapshot_;
    
    //<txHash, map<opId, ZcKeys>>
-   map<BinaryDataRef, map<unsigned, BinaryDataRef>> outPointsSpentByKey_;
+   std::map<BinaryDataRef, std::map<unsigned, BinaryDataRef>> outPointsSpentByKey_;
 
    //<zcKey, set<ScrAddr>>
-   map<BinaryDataRef, shared_ptr<set<BinaryDataRef>>> keyToSpentScrAddr_;
+   std::map<BinaryDataRef, std::shared_ptr<std::set<BinaryDataRef>>> keyToSpentScrAddr_;
    
-   set<BinaryData> allZcTxHashes_;
-   map<BinaryDataRef, set<BinaryDataRef>> keyToFundedScrAddr_;
+   std::set<BinaryData> allZcTxHashes_;
+   std::map<BinaryDataRef, std::set<BinaryDataRef>> keyToFundedScrAddr_;
 
    std::atomic<uint32_t> topId_;
    LMDBBlockDatabase* db_;
 
-   set<BinaryData> emptySetBinData_;
+   std::set<BinaryData> emptySetBinData_;
 
    //stacks inv tx packets from node
-   shared_ptr<BitcoinP2P> networkNode_;
+   std::shared_ptr<BitcoinP2P> networkNode_;
    BlockingQueue<ZeroConfInvPacket> newInvTxStack_;
 
-   mutex parserMutex_;
-   mutex parserThreadMutex_;
+   std::mutex parserMutex_;
+   std::mutex parserThreadMutex_;
 
-   vector<thread> parserThreads_;
-   atomic<bool> zcEnabled_;
+   std::vector<std::thread> parserThreads_;
+   std::atomic<bool> zcEnabled_;
    const unsigned maxZcThreadCount_;
 
-   shared_ptr<TransactionalMap<BinaryDataRef, shared_ptr<AddrAndHash>>> scrAddrMap_;
+   std::shared_ptr<TransactionalMap<BinaryDataRef, std::shared_ptr<AddrAndHash>>> scrAddrMap_;
 
    unsigned parserThreadCount_ = 0;
-   unique_ptr<ZeroConfCallbacks> bdvCallbacks_;
+   std::unique_ptr<ZeroConfCallbacks> bdvCallbacks_;
    BlockingQueue<ZcUpdateBatch> updateBatch_;
 
 private:
    BulkFilterData ZCisMineBulkFilter(ParsedTx & tx, const BinaryDataRef& ZCkey,
-      function<bool(const BinaryData&, BinaryData&)> getzckeyfortxhash,
-      function<const ParsedTx&(const BinaryData&)> getzctxbykey);
+      std::function<bool(const BinaryData&, BinaryData&)> getzckeyfortxhash,
+      std::function<const ParsedTx&(const BinaryData&)> getzctxbykey);
 
    void preprocessTx(ParsedTx&) const;
 
    void loadZeroConfMempool(bool clearMempool);
    bool purge(
       const Blockchain::ReorganizationState&, 
-      shared_ptr<ZeroConfSharedStateSnapshot>,
-      map<BinaryData, BinaryData>&);
+      std::shared_ptr<ZeroConfSharedStateSnapshot>,
+      std::map<BinaryData, BinaryData>&);
    void reset(void);
 
    void processInvTxThread(void);
    void processInvTxThread(ZeroConfInvPacket&);
 
    void increaseParserThreadPool(unsigned);
-   void preprocessZcMap(map<BinaryDataRef, shared_ptr<ParsedTx>>&);
+   void preprocessZcMap(std::map<BinaryDataRef, std::shared_ptr<ParsedTx>>&);
 
 public:
    //stacks new zc Tx objects from node
@@ -343,13 +343,13 @@ public:
 
 public:
    ZeroConfContainer(LMDBBlockDatabase* db,
-      shared_ptr<BitcoinP2P> node, unsigned maxZcThread) :
-      topId_(0), db_(db), maxZcThreadCount_(maxZcThread), networkNode_(node)
+      std::shared_ptr<BitcoinP2P> node, unsigned maxZcThread) :
+      topId_(0), db_(db), networkNode_(node), maxZcThreadCount_(maxZcThread)
    {
-      zcEnabled_.store(false, memory_order_relaxed);
+      zcEnabled_.store(false, std::memory_order_relaxed);
 
       //register ZC callback
-      auto processInvTx = [this](vector<InvEntry> entryVec)->void
+      auto processInvTx = [this](std::vector<InvEntry> entryVec)->void
       {
          this->processInvTxVec(entryVec, true);
       };
@@ -360,54 +360,55 @@ public:
    bool hasTxByHash(const BinaryData& txHash) const;
    Tx getTxByHash(const BinaryData& txHash) const;
 
-   void dropZC(shared_ptr<ZeroConfSharedStateSnapshot>, const BinaryDataRef&);
-   void dropZC(shared_ptr<ZeroConfSharedStateSnapshot>, const set<BinaryData>&);
+   void dropZC(std::shared_ptr<ZeroConfSharedStateSnapshot>, const BinaryDataRef&);
+   void dropZC(std::shared_ptr<ZeroConfSharedStateSnapshot>, const std::set<BinaryData>&);
 
    void parseNewZC(void);
    void parseNewZC(
-      map<BinaryDataRef, shared_ptr<ParsedTx>> zcMap, 
-      shared_ptr<ZeroConfSharedStateSnapshot>,
+      std::map<BinaryDataRef, std::shared_ptr<ParsedTx>> zcMap,
+      std::shared_ptr<ZeroConfSharedStateSnapshot>,
       bool updateDB, bool notify);
    bool isTxOutSpentByZC(const BinaryData& dbKey) const;
 
    void clear(void);
 
-   map<BinaryData, shared_ptr<TxIOPair>> 
+   std::map<BinaryData, std::shared_ptr<TxIOPair>>
       getUnspentZCforScrAddr(BinaryData scrAddr) const;
-   map<BinaryData, shared_ptr<TxIOPair>> 
+   std::map<BinaryData, std::shared_ptr<TxIOPair>>
       getRBFTxIOsforScrAddr(BinaryData scrAddr) const;
 
-   vector<TxOut> getZcTxOutsForKey(const set<BinaryData>&) const;
+   std::vector<TxOut> getZcTxOutsForKey(const std::set<BinaryData>&) const;
+   std::vector<UnspentTxOut> getZcUTXOsForKey(const std::set<BinaryData>&) const;
 
    void updateZCinDB(void);
 
-   void processInvTxVec(vector<InvEntry>, bool extend,
+   void processInvTxVec(std::vector<InvEntry>, bool extend,
       unsigned timeout = TXGETDATA_TIMEOUT_MS);
 
-   void init(shared_ptr<ScrAddrFilter>, bool clearMempool);
+   void init(std::shared_ptr<ScrAddrFilter>, bool clearMempool);
    void shutdown();
 
-   void setZeroConfCallbacks(unique_ptr<ZeroConfCallbacks> ptr)
+   void setZeroConfCallbacks(std::unique_ptr<ZeroConfCallbacks> ptr)
    {
-      bdvCallbacks_ = move(ptr);
+      bdvCallbacks_ = std::move(ptr);
    }
 
    void broadcastZC(const BinaryData& rawzc,
-      const string& bdvId, uint32_t timeout_ms);
+      const std::string& bdvId, uint32_t timeout_ms);
 
-   bool isEnabled(void) const { return zcEnabled_.load(memory_order_relaxed); }
+   bool isEnabled(void) const { return zcEnabled_.load(std::memory_order_relaxed); }
    void pushZcToParser(const BinaryDataRef& rawTx);
 
-   shared_ptr<map<BinaryData, shared_ptr<TxIOPair>> >
+   std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>> >
       getTxioMapForScrAddr(const BinaryData&) const;
 
-   shared_ptr<ZeroConfSharedStateSnapshot> getSnapshot(void) const
+   std::shared_ptr<ZeroConfSharedStateSnapshot> getSnapshot(void) const
    {
-      auto ss = atomic_load_explicit(&snapshot_, memory_order_acquire);
+      auto ss = std::atomic_load_explicit(&snapshot_, std::memory_order_acquire);
       return ss;
    }
 
-   shared_ptr<ParsedTx> getTxByKey(const BinaryData&) const;
+   std::shared_ptr<ParsedTx> getTxByKey(const BinaryData&) const;
    TxOut getTxOutCopy(const BinaryDataRef, unsigned) const;
    BinaryDataRef getKeyForHash(const BinaryData&) const;
    BinaryDataRef getHashForKey(const BinaryData&) const;
@@ -419,11 +420,11 @@ class ZeroConfCallbacks
 public:
    virtual ~ZeroConfCallbacks(void) = 0;
 
-   virtual set<string> hasScrAddr(const BinaryDataRef&) const = 0;
+   virtual std::set<std::string> hasScrAddr(const BinaryDataRef&) const = 0;
    virtual void pushZcNotification(
       ZeroConfContainer::NotificationPacket& packet) = 0;
    virtual void errorCallback(
-      const string& bdvId, string& errorStr, const string& txHash) = 0;
+      const std::string& bdvId, std::string& errorStr, const std::string& txHash) = 0;
 };
 
 #endif

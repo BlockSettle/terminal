@@ -2,14 +2,13 @@
 #include "ui_CreateWalletDialog.h"
 
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "WalletPasswordVerifyDialog.h"
 #include "NewWalletSeedDialog.h"
 #include "SignContainer.h"
 #include "EnterWalletPassword.h"
 #include "WalletsManager.h"
 #include "WalletKeysCreateWidget.h"
-#include "AuthNotice.h"
 #include "UiUtils.h"
 
 #include <spdlog/spdlog.h>
@@ -30,9 +29,9 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , walletsManager_(walletsManager)
    , signingContainer_(container)
    , appSettings_(appSettings)
+   , walletsPath_(walletsPath)
    , walletSeed_(walletSeed)
    , walletId_(walletId)
-   , walletsPath_(walletsPath)
 {
    ui_->setupUi(this);
 
@@ -112,7 +111,7 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
       return;
    }
    createReqId_ = 0;
-   MessageBoxCritical info(tr("Create failed")
+   BSMessageBox info(BSMessageBox::critical, tr("Create failed")
       , tr("Failed to create or import wallet %1").arg(ui_->lineEditWalletName->text())
       , QString::fromStdString(errMsg), this);
 
@@ -123,12 +122,11 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
 void CreateWalletDialog::onKeyTypeChanged(bool password)
 {
    if (!password && !authNoticeWasShown_) {
-      AuthNotice dlg(this);
-
-      if (dlg.exec() == QDialog::Accepted) {
+      if (MessageBoxAuthNotice(this).exec() == QDialog::Accepted) {
          authNoticeWasShown_ = true;
       }
    }
+   ui_->labelPasswordWarning->setVisible(password);
 }
 
 void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet> wallet)
@@ -137,7 +135,7 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
       return;
    }
    if (walletId_ != wallet->getWalletId()) {
-      MessageBoxCritical(tr("Wallet ID mismatch")
+      BSMessageBox(BSMessageBox::critical, tr("Wallet ID mismatch")
          , tr("Pre-created wallet id: %1, id after creation: %2")
             .arg(QString::fromStdString(walletId_)).arg(QString::fromStdString(wallet->getWalletId()))
          , this).exec();
@@ -152,7 +150,7 @@ void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd
 
 void CreateWalletDialog::reject()
 {
-   bool result = abortWalletCreationQuestionDialog(this);
+   bool result = MessageBoxWalletCreateAbort(this).exec();
    if (!result) {
       return;
    }
@@ -172,7 +170,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
    *keys = widgetCreateKeys->keys();
 
    if (walletsManager->WalletNameExists(walletName.toStdString())) {
-      MessageBoxCritical messageBox(QObject::tr("Invalid wallet name")
+      BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid wallet name")
          , QObject::tr("Wallet with this name already exists"), parent);
       messageBox.exec();
       return false;
@@ -180,7 +178,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
 
    if (!keys->empty() && keys->at(0).encType == bs::wallet::EncryptionType::Auth) {
       if (keys->at(0).encKey.isNull()) {
-         MessageBoxCritical messageBox(QObject::tr("Invalid Auth eID")
+         BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid Auth eID")
             , QObject::tr("Please check Auth eID Email"), parent);
          messageBox.exec();
          return false;
@@ -188,7 +186,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
 
       EnterWalletPassword dialog(MobileClientRequest::ActivateWallet, parent);
       dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
-         , appSettings, QObject::tr("Activate Auth eID signing"));
+         , appSettings, QObject::tr("Activate Auth eID Signing"), QObject::tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
          return false;
@@ -199,7 +197,8 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
 
    }
    else if (!widgetCreateKeys->isValid()) {
-      MessageBoxCritical messageBox(QObject::tr("Invalid password"), QObject::tr("Please check passwords"), parent);
+      BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid password")
+         , QObject::tr("Please check the password"), parent);
       messageBox.exec();
       return false;
    }

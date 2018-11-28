@@ -30,6 +30,8 @@ public:
    OfflineSigner(OfflineSigner&&) = delete;
    OfflineSigner& operator = (OfflineSigner&&) = delete;
 
+   void SetTargetDir(const QString& targetDir);
+
    bool Start() override;
    bool Stop() override { return true; }
    bool Connect() override { return true; }
@@ -76,7 +78,7 @@ public:
    bool isReady() const override { return true; }
 
 private:
-   const QString  targetDir_;
+   QString        targetDir_;
    RequestId      seqId_ = 1;
 };
 

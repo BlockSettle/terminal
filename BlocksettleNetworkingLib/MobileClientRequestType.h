@@ -16,7 +16,7 @@ enum class MobileClientRequest
    VerifyWalletKey,
    ActivateOTP,
    // Private market and others with lower timeout
-   SignMarketTransaction,
+   SettlementTransaction,
 
    // Please also add new type text in getMobileClientRequestText
 };
