@@ -198,9 +198,9 @@ int WalletContainer::detectHighestUsedIndex()
 CoinSelectionInstance::CoinSelectionInstance(
    WalletContainer* const walletContainer, 
    const vector<AddressBookEntry>& addrBook, unsigned topHeight) :
-   walletContainer_(walletContainer),
    cs_(getFetchLambdaFromWalletContainer(walletContainer), addrBook,
       walletContainer->spendableBalance_, topHeight),
+   walletContainer_(walletContainer),
    spendableBalance_(walletContainer->spendableBalance_)
 {}
 
@@ -208,9 +208,9 @@ CoinSelectionInstance::CoinSelectionInstance(
 CoinSelectionInstance::CoinSelectionInstance(
    SwigClient::Lockbox* const lockbox, 
    unsigned M, unsigned N, uint64_t balance, unsigned topHeight) :
-   walletContainer_(nullptr),
    cs_(getFetchLambdaFromLockbox(lockbox, M, N), 
       vector<AddressBookEntry>(), balance, topHeight),
+   walletContainer_(nullptr),      
    spendableBalance_(balance)
 {}
 

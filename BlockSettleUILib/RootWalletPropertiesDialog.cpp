@@ -200,7 +200,7 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
          return QObject::tr("Password");
 
       case bs::wallet::EncryptionType::Auth :
-         return QObject::tr("Auth");
+         return QObject::tr("Auth eID");
    };
 }
 
@@ -223,7 +223,7 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs:
          ui_->labelEncRank->setText(tr("Unknown"));
       }
    } else {
-      ui_->labelEncRank->setText(tr("%1 of %2").arg(keyRank.first).arg(keyRank.second));
+      ui_->labelEncRank->setText(tr("Auth eID %1 of %2").arg(keyRank.first).arg(keyRank.second));
    }
 }
 

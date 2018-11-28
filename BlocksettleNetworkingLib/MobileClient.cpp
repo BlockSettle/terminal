@@ -134,7 +134,7 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
    request.set_expiration(timeout);
    request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
 
-   request.set_title(action.toStdString() + " " + walletId);
+   request.set_title(action.toStdString() + "\nWallet ID:" + walletId);
    request.set_apikey(kApiKey);
    request.set_userid(email_);
    request.mutable_devicekey()->set_usenewdevices(newDevice);

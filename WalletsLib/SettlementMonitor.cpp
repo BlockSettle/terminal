@@ -198,7 +198,7 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
       std::map<BinaryData, std::set<uint32_t>>  txOutIdx;
       uint64_t value;
    };
-   auto result = new Result;
+   auto result = std::make_shared<Result>();
    result->value = value;
 
    const auto &cbProcess = [result, ae, tx, cb, logger](std::vector<Tx> txs) {

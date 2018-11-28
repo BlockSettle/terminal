@@ -274,7 +274,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
    const auto &cbLedger = [this, state, cbCollectInitialTXs]
         (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
       try {
-         auto le = entries.get();
+         const auto &le = entries.get();
          if (le.empty()) {
             state->currentState = AddressVerificationState::NotSubmitted;
             addressRetries_.erase(state->address->GetChainedAddress().prefixed());
@@ -302,7 +302,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
             armory_->getTXsByHash(initialTxHashes, cbCollectInitialTXs);
          }
       }
-      catch(exception& e) {
+      catch (const std::exception &e) {
          logger_->error("[AddressVerificator::ValidateAddress] Return data " \
             "error - {}", e.what());
       }
@@ -357,7 +357,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
    const auto &cbLedger = [this, state, cbCollectTXs, cbCheckState]
       (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
       try {
-         auto le = entries.get();
+         const auto &le = entries.get();
          state->nbTransactions += le.size();
          state->entries = le;
          std::set<BinaryData> txHashSet;
@@ -376,7 +376,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
             cbCheckState();
          }
       }
-      catch(exception& e) {
+      catch (const std::exception &e) {
          logger_->error("[AddressVerificator::CheckBSAddressState] Return " \
             "data error - {}", e.what());
       }
@@ -463,19 +463,21 @@ bool AddressVerificator::IsInitialBsTransaction(const ClientClasses::LedgerEntry
 bool AddressVerificator::IsVerificationTransaction(const ClientClasses::LedgerEntry &entry
    , const std::shared_ptr<AddressVerificationData>& state, bool &isVerified)
 {
-   if (entry.getValue() <= (int64_t)(GetAuthAmount() * 2)) {
-      return false;
-   }
-
    assert(state->initialTxHash.getSize() != 0);
 
    bool sentByUs = false;
    bool sentToBS = false;
 
-   const auto &tx = state->txs[entry.getTxHash()];
+   auto tx = state->txs[entry.getTxHash()];
    if (!tx.isInitialized()) {
+      logger_->error("[AddressVerificator::IsVerificationTransaction] tx for hash {} is not inited"
+         , entry.getTxHash().toHexStr(true));
       return false;
    }
+   if (tx.getSumOfOutputs() != (GetAuthAmount() * 2)) {  // should be 2 outputs: 1000 to self and 1000 to BS address
+      return false;
+   }
+
    for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
       TxIn in = tx.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
@@ -611,9 +613,6 @@ bool AddressVerificator::RegisterUserAddress(const std::shared_ptr<AuthAddress>&
       pendingRegAddresses_.insert(address->GetChainedAddress().prefixed());
    }
 
-   logger_->debug("[AddressVerificator::RegisterUserAddress] add address to update Q: {}"
-      , address->GetChainedAddress().display<std::string>());
-
    AddCommandToWaitingUpdateQueue(address->GetChainedAddress().id().toBinStr(), CreateAddressValidationCommand(address));
    return true;
 }
@@ -649,7 +648,7 @@ void AddressVerificator::RegisterAddresses()
       logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses in {} with {}", addresses.size(), walletId_, regId_);
    }
    else {
-      logger_->error("[AddressVerificator::RegisterAddresses] failed to get BDM");
+      logger_->error("[AddressVerificator::RegisterAddresses] Armory not ready");
    }
 }
 
@@ -659,7 +658,6 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
    if (it == ids.end()) {
       return;
    }
-   logger_->debug("[AddressVerificator::OnRefresh] get refresh command");
 
    if (bsAddressList_.empty()) {
       logger_->error("[AddressVerificator::OnRefresh] BS address list is empty");
@@ -693,40 +691,39 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
          const auto &cbPageCnt = [this, pages, bsAddr, delegatePtr, txHashSet, cbTXs]
                                  (ReturnMessage<uint64_t> pageCnt)->void {
             try {
-               auto inPageCnt = pageCnt.get();
+               const auto &inPageCnt = pageCnt.get();
                (*pages)[bsAddr] = inPageCnt;
                for (uint64_t i = 0; i < inPageCnt; ++i) {
                   const auto &cbLedger = [this, pages, bsAddr, txHashSet, cbTXs, i]
                      (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                      try {
-                        auto le = entries.get();
-                        for (const auto &entry : le) {
+                        for (const auto &entry : entries.get()) {
                            txHashSet->insert(entry.getTxHash());
                         }
                      }
-                     catch(std::exception& e) {
-                        if(logger_ != nullptr) {
-                           logger_->error("[AddressVerificator::OnRefresh] Return " \
-                              "data error (getHistoryPage) - {} - Page {}",
-                              e.what(), i);
-                        }
+                     catch (const std::exception &e) {
+                        logger_->error("[AddressVerificator::OnRefresh] Return " \
+                           "data error (getHistoryPage) - {} - Page {}", e.what(), i);
                      }
                      (*pages)[bsAddr]--;
                      if (!(*pages)[bsAddr]) {
                         pages->erase(bsAddr);
                         if (pages->empty()) {
-                           armory_->getTXsByHash(*txHashSet, cbTXs);
+                           if (txHashSet->empty()) {
+                              logger_->error("[AddressVerificator::OnRefresh] failed to collect TX hashes");
+                           }
+                           else {
+                              armory_->getTXsByHash(*txHashSet, cbTXs);
+                           }
                         }
                      }
                   };
                   delegatePtr->getHistoryPage(i, cbLedger);
                }
             }
-            catch(std::exception& e) {
-               if(logger_ != nullptr) {
-                  logger_->error("[AddressVerificator::OnRefresh] Return data " \
-                     "error (getPageCount) - {}", e.what());
-               }
+            catch (const std::exception &e) {
+               logger_->error("[AddressVerificator::OnRefresh] Return data " \
+                  "error (getPageCount) - {}", e.what());
             }
          };
          delegate.getPageCount(cbPageCnt);
@@ -743,24 +740,20 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
       try {
          *result = utxos.get();
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
-            logger_->error("[AddressVerificator::GetVerificationInputs] Return " \
-               "data error (getSpendableZCList UTXOs) - {}", e.what());
-         }
+      catch (const std::exception &e) {
+         logger_->error("[AddressVerificator::GetVerificationInputs] Return " \
+            "data error (getSpendableZCList UTXOs) - {}", e.what());
       }
 
       const auto &cbZC = [this, cb, &result]
                          (ReturnMessage<std::vector<UTXO>> zcs)->void {
          try {
-            auto inZCUTXOs = zcs.get();
+            const auto &inZCUTXOs = zcs.get();
             result->insert(result->begin(), inZCUTXOs.begin(), inZCUTXOs.end());
          }
-         catch(std::exception& e) {
-            if(logger_ != nullptr) {
-               logger_->error("[AddressVerificator::GetVerificationInputs] " \
-                  "Return data error (getSpendableZCList ZCs) - {}", e.what());
-            }
+         catch (const std::exception &e) {
+            logger_->error("[AddressVerificator::GetVerificationInputs] " \
+               "Return data error (getSpendableZCList ZCs) - {}", e.what());
          }
 
          cb(*result);
@@ -777,19 +770,15 @@ void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> 
       std::vector<UTXO> result;
 
       try {
-         auto inUTXOs = utxos.get();
-
-         for (const auto &utxo : inUTXOs) {
+         for (const auto &utxo : utxos.get()) {
             if ((utxo.getValue() == GetAuthAmount()) && (utxo.getTxOutIndex() == 1)) {
                result.emplace_back(utxo);
             }
          }
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
-            logger_->error("[AddressVerificator::GetRevokeInputs] " \
-               "Return data error - {}", e.what());
-         }
+      catch (const std::exception &e) {
+         logger_->error("[AddressVerificator::GetRevokeInputs] " \
+            "Return data error - {}", e.what());
       }
 
       cb(result);

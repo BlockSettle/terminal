@@ -69,8 +69,7 @@ namespace bs {
                   , const std::shared_ptr<spdlog::logger> &logger = nullptr);
       PlainWallet(const std::string &filename
                   , const std::shared_ptr<spdlog::logger> &logger = nullptr);
-      PlainWallet(const std::shared_ptr<spdlog::logger> &logger = nullptr)
-         : Wallet(logger) {}
+      PlainWallet(const std::shared_ptr<spdlog::logger> &logger = nullptr);
       ~PlainWallet() override;
 
       PlainWallet(const PlainWallet&) = delete;

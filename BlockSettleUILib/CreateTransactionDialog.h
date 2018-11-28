@@ -92,8 +92,10 @@ protected slots:
    virtual void onMaxPressed();
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
 
-private:
+protected:
    void populateFeeList();
+
+private:
    void loadFees();
    void populateWalletsList();
    void startBroadcasting();
@@ -114,6 +116,7 @@ protected:
    unsigned int   pendingTXSignId_ = 0;
    bool           broadcasting_ = false;
    uint64_t       originalFee_ = 0;
+   float          originalFeePerByte_ = 0.0f;
 
    QString        offlineDir_;
    BinaryData     importedSignedTX_;

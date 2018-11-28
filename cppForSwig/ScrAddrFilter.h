@@ -157,7 +157,7 @@ protected:
 public:
 
    ScrAddrFilter(LMDBBlockDatabase* lmdb, unsigned sdbiKey)
-      : lmdb_(lmdb), sdbiKey_(sdbiKey)
+      : sdbiKey_(sdbiKey), lmdb_(lmdb)
    {
       scrAddrMap_ = std::make_shared<
          TransactionalMap<BinaryDataRef, std::shared_ptr<AddrAndHash>>>();

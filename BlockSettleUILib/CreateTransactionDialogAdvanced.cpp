@@ -37,13 +37,6 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
    selectedChangeAddress_ = bs::Address{};
 
    initUI();
-
-   connect(ui_->doubleSpinBoxFeesManualPerByte, QOverload<double>::of(&QDoubleSpinBox::valueChanged)
-      , this, &CreateTransactionDialogAdvanced::setTxFees);
-   connect(ui_->spinBoxFeesManualTotal, QOverload<int>::of(&QSpinBox::valueChanged)
-      , this, &CreateTransactionDialogAdvanced::setTxFees);
-
-   updateManualFeeControls();
 }
 
 CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
@@ -60,7 +53,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
                                                                 walletManager,
                                                                 container,
-                                                                true,
+                                                                false,
                                                                 logger,
                                                                 parent);
 
@@ -86,7 +79,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
                                                                 walletManager,
                                                                 container,
-                                                                true,
+                                                                false,
                                                                 logger,
                                                                 parent);
 
@@ -111,7 +104,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
       auto selInputs = transactionData_->GetSelectedInputs();
       selInputs->SetUseAutoSel(false);
-      int64_t totalVal = 0;
+      int64_t origFee = 0;
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          const auto &itTxOut = txOutIndices.find(txHash);
@@ -121,7 +114,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          for (const auto &txOutIdx : itTxOut->second) {
             if (prevTx.isInitialized()) {
                TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
-               totalVal += prevOut.getValue();
+               origFee += prevOut.getValue();
             }
          }
 
@@ -135,30 +128,44 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
                   cntOutputs++;
                }
             }
-            totalVal -= out.getValue();
+            origFee -= out.getValue();
          }
 
          if (!cntOutputs) {
             //!throw std::runtime_error("No input[s] found");
             return;
          }
-         if (totalVal < 0) {
+         if (origFee < 0) {
             //!throw std::runtime_error("negative TX balance");
             return;
          }
 
-         const auto &cbFee = [this, tx, totalVal](float fee) {
-            const auto txSize = tx.serializeNoWitness().getSize();
-            const float feePerByte = (float)totalVal / txSize;
-            originalFee_ = totalVal;
-            const size_t projectedTxSize = 85;  // 1 input and 1 output bech32
-            const float totalFee = std::abs(txSize * (fee - feePerByte) + projectedTxSize * fee);
-            const float newFPB = std::ceil(totalFee / (txSize + projectedTxSize));
+         const auto &cbFee = [this, tx, origFee](float fee) {
+            const auto txSize = tx.getTxWeight();
+            const float feePerByte = (float)origFee / txSize;
+            originalFee_ = origFee;
+            originalFeePerByte_ = feePerByte;
 
-            QMetaObject::invokeMethod(this, [this, totalFee, newFPB] {
-               SetMinimumFee(totalFee, newFPB);
-               onTransactionUpdated();
-            });
+            // CPFP has no enforced rules for fees. We use the following
+            // algorithm for determining the fee/byte. If the current 2-block
+            // fee is less than the fee used by the parent, stick to the current
+            // 2-block fee. If not, add the difference to the 2-block fee and
+            // use the result for the child fee. Simple but it should work. A
+            // little tinkering may be worthwhile later.
+            const float feeDiff = fee - originalFee_;
+            float newFPB = fee;
+            if (std::signbit(feeDiff) == false) { // Is the diff positive?
+               newFPB += feeDiff;
+            }
+
+            // SetMinimumFee() may need to be re-thought. RBF is the only
+            // scenario where we really need to enforce a minimum fee in concert
+            // with the minimum fee/byte. For now, the minimum fee will be set
+            // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
+            // a value that won't always be accurate is a bad idea.
+            SetMinimumFee(0, newFPB);
+            onTransactionUpdated();
+            populateFeeList();
          };
          walletsManager_->estimatedFeePerByte(2, cbFee, this);
       }
@@ -227,7 +234,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          totalVal -= out.getValue();
       }
 
-      QMetaObject::invokeMethod(this, [this, changeAddress] { SetFixedChangeAddress(changeAddress); });
+      SetFixedChangeAddress(changeAddress);
 
       // set fee
       if (totalVal < 0) {
@@ -235,10 +242,34 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          return;
       }
 
+      // RBF minimum amounts are a little tricky. The rules/policies are:
+      //
+      // - RULE: Calculate based not on the absolute TX size, but on the virtual
+      //   size, which is ceil(TX weight / 4) (e.g., 32.2 -> 33). For reference,
+      //   TX weight = Total_TX_Size + (3 * Base_TX_Size).
+      //   (Base_TX_Size = TX size w/o witness data)
+      // - RULE: The new fee/KB must meet or exceed the old one. (If replacing
+      //   multiple TXs, Core seems to calculate based on the sum of fees and
+      //   TX sizes for the old TXs.)
+      // - RULE: The new fee must be at least 1 satoshi higher than the sum of
+      //   the fees of the replaced TXs.
+      // - POLICY: The new fee must be bumped by, at a minimum, the incremental
+      //   relay fee (IRL) * the new TX's virtual size. The fee can be adjusted
+      //   in Core by the incrementalrelayfee config option. By default, the fee
+      //   is 1000 sat/KB (1 sat/B), which is what we will assume is being used.
+      //   (This may need to be a terminal config option later.)
+      //
+      // It's impossible to calculate the minimum required fee, as the user can
+      // do many different things. We'll just start by setting the minimum fee
+      // to the amount required by the RBF/IRL policy, and keep the minimum
+      // fee/byte where it is.
       originalFee_ = totalVal;
-      const auto &txSize = tx.serializeNoWitness().getSize();
-      const float feePerByte = std::ceil((float)totalVal / txSize);
-      SetMinimumFee(totalVal, feePerByte + minRelayFeePerByte_);
+      const auto &txVirtSize = std::ceil(tx.getTxWeight() / 4);
+      const float feePerByte = (float)totalVal / txVirtSize;
+      originalFeePerByte_ = feePerByte;
+      const auto &newMinFee = originalFee_ + txVirtSize;
+      SetMinimumFee(newMinFee, originalFeePerByte_);
+      populateFeeList();
 
       if (changeAddress.isNull()) {
          setUnchangeableTx();
@@ -250,14 +281,14 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
    const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
       try {
          auto inUTXOs = utxos.get();
-         QMetaObject::invokeMethod(this, [this, wallet, inUTXOs, txHashSet, cbTXs] {
+         QMetaObject::invokeMethod(this, [this, wallet, txHashSet, inUTXOs, cbTXs] {
             SetFixedWalletAndInputs(wallet, inUTXOs);
 
             armory_->getTXsByHash(txHashSet, cbTXs);
          });
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error("[CreateTransactionDialogAdvanced::setRBFinputs] " \
                "Return data error - {}", e.what());
          }
@@ -338,6 +369,13 @@ void CreateTransactionDialogAdvanced::initUI()
    contextMenu_.addAction(removeOutputAction_);
 
    connect(ui_->treeViewOutputs, &QTreeView::customContextMenuRequested, this, &CreateTransactionDialogAdvanced::showContextMenu);
+
+   connect(ui_->doubleSpinBoxFeesManualPerByte, QOverload<double>::of(&QDoubleSpinBox::valueChanged)
+      , this, &CreateTransactionDialogAdvanced::setTxFees);
+   connect(ui_->spinBoxFeesManualTotal, QOverload<int>::of(&QSpinBox::valueChanged)
+      , this, &CreateTransactionDialogAdvanced::setTxFees);
+
+   updateManualFeeControls();
 }
 
 void CreateTransactionDialogAdvanced::clear()
@@ -504,14 +542,11 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    const auto &summary = transactionData_->GetTransactionSummary();
 
    if (!changeAddressFixed_) {
-      bool changeSelectionEnabled = summary.hasChange || (summary.transactionSize == 0);
+      bool changeSelectionEnabled = summary.hasChange || (summary.txVirtSize == 0);
       ui_->changeAddrGroupBox->setEnabled(changeSelectionEnabled);
       showExistingChangeAddress(changeSelectionEnabled);
    }
 
-   if (originalFee_) {
-      SetMinimumFee(originalFee_ + minRelayFeePerByte_ * summary.transactionSize, minFeePerByte_);
-   }
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
 }
@@ -598,7 +633,7 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
 {
    const bool isSignerReady = signingContainer_ && ((signingContainer_->opMode() == SignContainer::OpMode::Offline)
       || !signingContainer_->isOffline());
-   const bool isTxValid = transactionData_->IsTransactionValid() && transactionData_->GetTransactionSummary().transactionSize;
+   const bool isTxValid = transactionData_->IsTransactionValid() && transactionData_->GetTransactionSummary().txVirtSize;
 
    ui_->pushButtonCreate->setEnabled(isTxValid
       && isSignerReady

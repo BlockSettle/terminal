@@ -400,7 +400,7 @@ private:
       auto&& a = pop_back();
       auto aI = rawBinaryToInt(a);
 
-      if (aI >= stack_.size())
+      if (aI >= (int64_t)stack_.size())
          throw ScriptException("op_pick index exceeds stack size");
 
       auto stackIter = stack_.rbegin() + aI;
@@ -412,7 +412,7 @@ private:
       auto&& a = pop_back();
       auto rollindex = rawBinaryToInt(a);
 
-      if (rollindex >= stack_.size())
+      if (rollindex >= (int64_t)stack_.size())
          throw ScriptException("op_roll index exceeds stack size");
 
       std::vector<BinaryData> dataVec;
@@ -995,7 +995,7 @@ public:
    const StackItemType type_;
 
    StackItem(StackItemType type, unsigned id) :
-      type_(type), id_(id)
+      id_(id), type_(type)
    {}
 
    virtual ~StackItem(void) = 0;
