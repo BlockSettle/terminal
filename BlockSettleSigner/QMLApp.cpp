@@ -35,7 +35,6 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    : QObject(nullptr), logger_(logger), params_(params), ctxt_(ctxt)
    , newWalletSeed_(new NewWalletSeed(params_, this))
    , notifMode_(QSystemTray)
-   , easyCodec_(std::make_shared<EasyCoDec>())
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
 #endif // BS_USE_DBUS
@@ -73,9 +72,6 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    ctxt_->setContextProperty(QStringLiteral("signerParams"), params_.get());
 
    ctxt_->setContextProperty(QStringLiteral("newWalletSeed"), newWalletSeed_);
-
-   seedValidator_ = new EasyEncValidator(easyCodec_, nullptr, 9, true);
-   ctxt_->setContextProperty(QStringLiteral("seedValidator"), seedValidator_);
 
    settingsConnections();
 

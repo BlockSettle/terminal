@@ -16,6 +16,7 @@ ColumnLayout {
     property alias line1LabelTxt: keyLine1Label.text
     property alias line2LabelTxt: keyLine2Label.text
     property alias sectionHeaderTxt: sectionHeader.text
+    property alias sectionHeaderVisible: sectionHeader.visible
 
     property int inputLablesWidth: 110
     property int rowSpacing: 5
@@ -128,10 +129,10 @@ ColumnLayout {
                 if (acceptableInput && !keyLine1.acceptableInput) {
                     keyLine1.forceActiveFocus();
                 }
-                onEditingFinished: {
-                    if (acceptableInput && keyLine1.acceptableInput) {
-                        entryComplete()
-                    }
+            }
+            onEditingFinished: {
+                if (acceptableInput && keyLine1.acceptableInput) {
+                    entryComplete()
                 }
             }
         }

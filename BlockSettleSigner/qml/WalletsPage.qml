@@ -107,11 +107,6 @@ Item {
                         Layout.fillWidth: true
                         text:   qsTr("New Wallet")
                         onClicked: {
-
-                            //var walletInfo2 = getWalletById(walletsView, qsTr("28xFzXjFU"))
-                            //var walletInfo2 = getCurrentWallet(walletsView)
-                            //console.log("id:" + walletInfo2.id + " name:" + walletInfo2.name + " rootId:" + walletInfo2.rootId + " encType:" + walletInfo2.encType + " encKey:" + walletInfo2.encKey)
-
                             // let user create a new wallet or import one from file
                             var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "WalletNewDialog")
                             dlgNew.accepted.connect(function() {

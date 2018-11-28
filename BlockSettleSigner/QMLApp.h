@@ -24,8 +24,6 @@ class WalletsProxy;
 class ZmqSecuredServerConnection;
 class DBusNotification;
 class NewWalletSeed;
-class EasyEncValidator;
-class EasyCoDec;
 
 class QMLAppObj : public QObject
 {
@@ -76,8 +74,6 @@ private:
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
    NewWalletSeed *newWalletSeed_ = nullptr;
-   std::shared_ptr<EasyCoDec> easyCodec_;
-   EasyEncValidator *seedValidator_ = nullptr;
 
    enum NotificationMode {
       QSystemTray,
