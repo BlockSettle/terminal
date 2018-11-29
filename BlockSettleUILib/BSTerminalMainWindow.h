@@ -28,10 +28,11 @@ class CCFileManager;
 class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
-class HeadlessAddressSyncer;
 class CelerMarketDataProvider;
+class HeadlessAddressSyncer;
 class OTPManager;
 class QSystemTrayIcon;
+class RequestReplyCommand;
 class SignContainer;
 class StatusBarView;
 class StatusViewBlockListener;
@@ -120,6 +121,7 @@ private:
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
 
+   std::shared_ptr<RequestReplyCommand>   cmdPuBSettings_;
    std::map<NetworkSettingType, std::pair<std::string, unsigned int>>   networkSettings_;
 
    std::shared_ptr<StatusBarView>            statusBarView_;
