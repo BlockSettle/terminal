@@ -9,6 +9,8 @@
 #include "EncryptionUtils.h"
 #include "FastLock.h"
 
+#include <math.h>
+
 #include <spdlog/spdlog.h>
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
@@ -237,13 +239,19 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
    const auto& snapshot = response.snapshot();
 
    if (snapshot.has_lastpx()) {
-      fields.emplace_back(bs::network::MDField{bs::network::MDField::PriceLast
-               , snapshot.lastpx(), QString()});
+      const auto value = snapshot.lastpx();
+      if (!std::isnan(value)) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::PriceLast
+               , value, QString()});
+      }
    }
 
    if (snapshot.has_dailyvolume()) {
-      fields.emplace_back(bs::network::MDField{bs::network::MDField::DailyVolume
-               , snapshot.dailyvolume(), QString()});
+      const auto value = snapshot.dailyvolume();
+      if (!std::isnan(value)) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::DailyVolume
+               , value, QString()});
+      }
    }
 
    if (!fields.empty()) {
