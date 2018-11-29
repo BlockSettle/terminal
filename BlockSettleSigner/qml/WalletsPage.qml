@@ -30,6 +30,13 @@ Item {
         id: walletInfo
     }
 
+    BSMessageBox {
+        id: abortBox
+        titleText: qsTr("Warning")
+        text: qsTr("Abort Wallet Creation?")
+        details: qsTr("The Wallet will not be created if you don't complete the procedure.\n\nAre you sure you want to abort the Wallet Creation process?")
+    }
+
     function getCurrentWallet(view) {
         walletInfo.id = view.model.data(view.currentIndex, WalletsModel.WalletIdRole)
         walletInfo.rootId = view.model.data(view.currentIndex, WalletsModel.RootWalletIdRole)

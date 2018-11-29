@@ -427,7 +427,7 @@ CustomDialog {
                 Flow {
                     spacing: 5
                     padding: 5
-                    height: childrenRect.height + 10
+                    height: 80
 
                     CustomButton {
                         visible: rbPassword.checked
