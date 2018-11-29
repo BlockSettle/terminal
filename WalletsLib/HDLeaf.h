@@ -187,6 +187,7 @@ namespace bs {
          const Path::Elem  addrTypeInternal = 1u;
          const AddressEntryType defaultAET_ = AddressEntryType_P2WPKH;
 
+         mutable std::string     walletId_;
          bs::wallet::Type        type_;
          std::shared_ptr<Node>   node_;
          Nodes                   rootNodes_;
