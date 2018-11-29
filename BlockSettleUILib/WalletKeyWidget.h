@@ -40,6 +40,7 @@ public:
    void setPasswordLabelAsNew();
    void setPasswordLabelAsOld();
    void setHideAuthEmailLabel(bool value);
+   void setHidePasswordWarning(bool value);
    void setHideAuthControlsOnSignClicked(bool value);
    void setHideProgressBar(bool value);
 
@@ -83,6 +84,7 @@ private:
    bool        hideAuthEmailLabel_ = false;
    bool        hideAuthControlsOnSignClicked_ = false;
    bool        hideProgressBar_ = false;
+   bool        hidePasswordWarning_ = false;
    MobileClientRequest requestType_{};
    std::vector<std::string> knownDeviceIds_;
 };
