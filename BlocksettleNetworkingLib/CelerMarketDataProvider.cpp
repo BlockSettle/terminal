@@ -9,9 +9,12 @@
 #include "EncryptionUtils.h"
 #include "FastLock.h"
 
+#include <math.h>
+
 #include <spdlog/spdlog.h>
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
+#include "com/celertech/marketdata/api/marketstatistic/DownstreamMarketStatisticProto.pb.h"
 #include "com/celertech/staticdata/api/security/DownstreamSecurityProto.pb.h"
 
 CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
@@ -77,6 +80,9 @@ void CelerMarketDataProvider::ConnectToCelerClient()
    });
    celerClient_->RegisterHandler(CelerAPI::MarketDataRequestRejectDownstreamEventType, [this](const std::string& data) {
       return this->onReqRejected(data);
+   });
+   celerClient_->RegisterHandler(CelerAPI::MarketStatisticSnapshotDownstreamEventType, [this](const std::string& data) {
+      return this->onMDStatisticsUpdate(data);
    });
 
    connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &CelerMarketDataProvider::OnConnectedToCeler);
@@ -204,24 +210,54 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
    return true;
 }
 
-bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
-   , const std::string& serverExchangeId)
+bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
 {
-   if (!IsConnectedToCeler()) {
-      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] can't register CC product while disconnected");
+   com::celertech::marketdata::api::marketstatistic::MarketStatisticSnapshotDownstreamEvent response;
+
+   if (!response.ParseFromString(data)) {
+      logger_->error("[CelerMarketDataProvider::onMDStatisticsUpdate] Failed to parse MarketDataFullSnapshotDownstreamEvent");
       return false;
    }
 
-   auto command = std::make_shared<CelerCreateCCSecurityOnMDSequence>(securityId
-      , serverExchangeId, logger_);
+   logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] get update:\n{}"
+      , response.DebugString());
 
-   logger_->debug("[CelerMarketDataProvider::RegisterCCOnCeler] registering CC on celer MD: {}"
-      , securityId);
+   if (!response.has_snapshot()) {
+      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] empty snapshot");
+      return true;
+   }
 
-   if (!celerClient_->ExecuteSequence(command)) {
-      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] failed to send command to MD server for {}"
-         , securityId);
-      return false;
+   auto security = QString::fromStdString(response.securitycode());
+   if (security.isEmpty()) {
+      security = QString::fromStdString(response.securityid());
+   }
+
+   const auto assetType = bs::network::Asset::fromCelerProductType(response.producttype());
+
+   bs::network::MDFields fields;
+
+   const auto& snapshot = response.snapshot();
+
+   if (snapshot.has_lastpx()) {
+      const auto value = snapshot.lastpx();
+      if (!std::isnan(value) && !qFuzzyIsNull(value)) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::PriceLast
+               , value, QString()});
+      }
+   }
+
+   if (snapshot.has_dailyvolume()) {
+      const auto value = snapshot.dailyvolume();
+      if (!std::isnan(value) && !qFuzzyIsNull(value)) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::DailyVolume
+               , value, QString()});
+      }
+   }
+
+   if (!fields.empty()) {
+      emit MDUpdate(assetType, security, fields);
+   } else {
+      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] no fields updated");
    }
 
    return true;
@@ -246,6 +282,29 @@ bool CelerMarketDataProvider::onReqRejected(const std::string& data)
    }
 
    emit MDReqRejected(response.securityid(), response.text());
+
+   return true;
+}
+
+bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
+   , const std::string& serverExchangeId)
+{
+   if (!IsConnectedToCeler()) {
+      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] can't register CC product while disconnected");
+      return false;
+   }
+
+   auto command = std::make_shared<CelerCreateCCSecurityOnMDSequence>(securityId
+      , serverExchangeId, logger_);
+
+   logger_->debug("[CelerMarketDataProvider::RegisterCCOnCeler] registering CC on celer MD: {}"
+      , securityId);
+
+   if (!celerClient_->ExecuteSequence(command)) {
+      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] failed to send command to MD server for {}"
+         , securityId);
+      return false;
+   }
 
    return true;
 }

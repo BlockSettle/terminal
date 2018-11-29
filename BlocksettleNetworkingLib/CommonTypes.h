@@ -75,15 +75,16 @@ namespace bs {
          static Type fromCelerProductType(com::celertech::marketdata::api::enums::producttype::ProductType pt) {
             switch (pt) {
             case com::celertech::marketdata::api::enums::producttype::SPOT:           return SpotFX;
-            case com::celertech::marketdata::api::enums::producttype::BITCOIN:            return SpotXBT;
-            // case com::celertech::marketdata::api::enums::producttype::PRIVATE_SHARE:  return PrivateMarket;
+            case com::celertech::marketdata::api::enums::producttype::BITCOIN:        return SpotXBT;
+            case com::celertech::marketdata::api::enums::producttype::PRIVATE_SHARE:  return PrivateMarket;
             default: return Undefined;
             }
          }
+
          static Type fromCelerProductType(com::celertech::marketmerchant::api::enums::producttype::ProductType pt) {
             switch (pt) {
             case com::celertech::marketmerchant::api::enums::producttype::SPOT:           return SpotFX;
-            case com::celertech::marketmerchant::api::enums::producttype::BITCOIN:            return SpotXBT;
+            case com::celertech::marketmerchant::api::enums::producttype::BITCOIN:        return SpotXBT;
             case com::celertech::marketmerchant::api::enums::producttype::PRIVATE_SHARE:  return PrivateMarket;
             default: return Undefined;
             }
