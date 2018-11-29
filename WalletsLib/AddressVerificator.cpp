@@ -709,7 +709,12 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                      if (!(*pages)[bsAddr]) {
                         pages->erase(bsAddr);
                         if (pages->empty()) {
-                           armory_->getTXsByHash(*txHashSet, cbTXs);
+                           if (txHashSet->empty()) {
+                              logger_->error("[AddressVerificator::OnRefresh] failed to collect TX hashes");
+                           }
+                           else {
+                              armory_->getTXsByHash(*txHashSet, cbTXs);
+                           }
                         }
                      }
                   };

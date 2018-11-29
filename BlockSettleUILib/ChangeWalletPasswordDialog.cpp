@@ -119,7 +119,8 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
 
    ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::HideGroupboxCaption 
       | WalletKeysSubmitWidget::SetPasswordLabelAsOld
-      | WalletKeysSubmitWidget::HideAuthConnectButton);
+      | WalletKeysSubmitWidget::HideAuthConnectButton
+      | WalletKeysSubmitWidget::HidePasswordWarning);
    ui_->widgetSubmitKeys->suspend();
    ui_->widgetSubmitKeys->init(MobileClientRequest::DeactivateWallet, wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
 

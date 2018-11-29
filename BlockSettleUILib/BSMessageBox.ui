@@ -125,7 +125,7 @@
       <item>
        <layout class="QVBoxLayout" name="textLayout" stretch="1,5">
         <property name="spacing">
-         <number>5</number>
+         <number>12</number>
         </property>
         <item>
          <widget class="QLabel" name="labelTitle">

@@ -27,6 +27,7 @@ public:
       HideAuthControlsOnSignClicked = 0x80,
       HidePubKeyFingerprint = 0x100,
       HideProgressBar = 0x200,
+      HidePasswordWarning = 0x400
    };
    Q_DECLARE_FLAGS(Flags, Flag)
 

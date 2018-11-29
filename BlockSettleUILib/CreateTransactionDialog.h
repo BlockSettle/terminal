@@ -92,8 +92,10 @@ protected slots:
    virtual void onMaxPressed();
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
 
-private:
+protected:
    void populateFeeList();
+
+private:
    void loadFees();
    void populateWalletsList();
    void startBroadcasting();

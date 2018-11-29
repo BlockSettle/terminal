@@ -49,12 +49,11 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
    // hide the details part of the message box
    hideDetails();
    adjustSize();
-   hide();
    // not sure why but this helps size the messagebox 
    // correctly based how much text it contains
    // putting it in a timer makes sure all resizing has been
    // finished by adjustSize()
-   QTimer::singleShot(20, [=] {
+   QTimer::singleShot(80, [=] {
       showDetails();
       hideDetails();
 
@@ -72,7 +71,6 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
             auto movePoint = parentCenter - myCenter;
             //qDebug() << parentRect << pos() << parentCenter << myCenter << movePoint;
              move(pos() + movePoint);
-             show();
          }
       });
    });
@@ -163,7 +161,7 @@ MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details, QWidg
 
 MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)
    : BSMessageBox(BSMessageBox::info, tr("Auth eID"),
-      tr("Signing with Auth eID"), tr("Auth eID is a convenient alternative to passwords. Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s).<br><br>You may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. Auth eID requires the user to be vigilant with devices using Auth eID. If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable.<br><br>Auth eID is not a wallet backup! No wallet data is stored with Auth eID. Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate wallet. You may then attach a password or your Auth eID account to the wallet.<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store.<br><br>For more information, please consult the <a href=\"http://pubb.blocksettle.com/PDF/AutheID%20Getting%20Started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a> guide.")
+      tr("Signing with Auth eID"), tr("Auth eID is a convenient alternative to passwords. Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s).<br><br>You may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. Auth eID requires the user to be vigilant with devices using Auth eID. If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable.<br><br>Auth eID is not a wallet backup! No wallet data is stored with Auth eID. Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate wallet. You may then attach a password or your Auth eID account to the wallet.<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store.<br><br>For more information, please consult:<br><a href=\"http://pubb.blocksettle.com/PDF/AutheID%20Getting%20Started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a> guide.")
       , parent) {
    // use rich text because of the hyperlink
    setLabelTextFormat(Qt::RichText);
