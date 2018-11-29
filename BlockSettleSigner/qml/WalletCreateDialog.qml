@@ -59,6 +59,18 @@ CustomDialog {
         AuthSignPage = 4
     }
 
+    // this function is called by abort message box in WalletsPage
+    function abort() {
+        reject()
+    }
+
+    onOpened: {
+        abortBox.accepted.connect(abort)
+    }
+    onClosed: {
+        abortBox.accepted.disconnect(abort)
+    }
+
     FocusScope {
         anchors.fill: parent
         focus: true
@@ -71,7 +83,7 @@ CustomDialog {
 
                 event.accepted = true;
             } else if (event.key === Qt.Key_Escape) {
-                root.close();
+                abortBox.open()
                 event.accepted = true;
             }
         }
@@ -337,7 +349,7 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: root.reject();
+                            abortBox.open()
                         }
                     }
                 }

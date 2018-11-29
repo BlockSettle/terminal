@@ -3,9 +3,9 @@ import QtQuick.Controls 2.3
 import QtQuick.Controls.Styles 1.4
 
 Label {
- font.pixelSize: 11
- color: "white"
- wrapMode: Text.Wrap
- padding: 5
+    font.pixelSize: 11
+    color: "white"
+    wrapMode: Text.WordWrap
+    padding: 5
 }
 

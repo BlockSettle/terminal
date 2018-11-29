@@ -4,81 +4,114 @@ import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.0
 
 CustomDialog {
+    id: root
     width: 350
-    height: 200
+    height: 210
     property alias titleText: labelTitle.text
     property alias text: labelText.text
     property alias details: labelDetails.text
+    property alias acceptButtonText: acceptButton.text
+    property alias rejectButtonText: rejectButton.text
+    property alias rejectButtonVisible: rejectButton.visible
+    property int buttonWidth: 110
+    property int type: BSMessageBox.Type.Info
+    property variant images: ["/NOTIFICATION_INFO", "/NOTIFICATION_SUCCESS", "/NOTIFICATION_QUESTION", "/NOTIFICATION_WARNING", "/NOTIFICATION_CRITICAL"]
+    property variant colors: ["#ffffff", "#38C673", "#f7b03a", "#f7b03a", "#EE2249"]
+    enum Type {
+       Info = 0,
+       Success = 1,
+       Question = 2,
+       Warning = 3,
+       Critical = 4
+    }
 
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: 10
-        width: parent.width
-        id: mainLayout
+    FocusScope {
+        id: focus
+        anchors.fill: parent
+        focus: true
 
-        RowLayout{
-            CustomHeaderPanel{
-                Layout.preferredHeight: 40
-                id: labelTitle
-                Layout.fillWidth: true
-                text: titleText
-
+        Keys.onPressed: {
+            if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
+                accept();
+            } else if (event.key === Qt.Key_Escape) {
+                if (rejectButton.visible) {
+                    reject();
+                }
             }
         }
-        RowLayout {
+
+        CustomHeaderPanel {
+            id: labelTitle
+            height: 40
             width: parent.width
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabelValue{
-                id: labelText
-                Layout.fillWidth: true
-                text: text
-            }
+            anchors.top: parent.top
+            text: titleText
         }
+
         RowLayout {
+            anchors.top: labelTitle.bottom
+            anchors.bottom: buttonBar.top
             width: parent.width
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
 
-            CustomLabelValue{
-                id: labelDetails
+            Image {
+                Layout.margins: 10
+                Layout.rightMargin: 0
+                Layout.alignment: Qt.AlignTop
+                source: images[type]
+            }
+
+            Item {
+                id: textRect
+                Layout.margins: 10
                 Layout.fillWidth: true
+                Layout.alignment: Qt.AlignTop | Qt.AlignLeft
+                Layout.preferredHeight: childrenRect.height
+
+                ColumnLayout {
+
+                    CustomLabelValue{
+                        id: labelText
+                        padding: 0
+                        Layout.preferredWidth: textRect.width
+                        color: colors[type]
+                    }
+
+                    CustomLabel{
+                        id: labelDetails
+                        Layout.preferredWidth: textRect.width
+                    }
+                }
+
             }
         }
-
         CustomButtonBar {
-            implicitHeight: childrenRect.height
-            Layout.fillWidth: true
+            id: buttonBar
+            anchors.bottom: parent.bottom
+            implicitHeight: 45
 
-
-            RowLayout {
-                anchors.fill: parent
-
-                CustomButton {
-                    visible: true
-                    Layout.fillWidth: true
-                    Layout.margins: 5
-                    text: qsTr("Cancel")
-                    onClicked: {
-                        reject()
-                    }
+            CustomButton {
+                id: rejectButton
+                width: buttonWidth
+                anchors.left: parent.left
+                anchors.bottom: parent.bottom
+                anchors.margins: 5
+                visible: true
+                text: qsTr("Cancel")
+                onClicked: {
+                    reject()
                 }
-
-                CustomButtonPrimary {
-                    Layout.fillWidth: true
-                    Layout.margins: 5
-                    text: qsTr("Continue")
-                    enabled: true
-                    onClicked: {
-                        accept()
-                    }
+            }
+            CustomButtonPrimary {
+                id: acceptButton
+                width: buttonWidth
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 5
+                text: qsTr("OK")
+                enabled: true
+                onClicked: {
+                    accept()
                 }
-
             }
         }
     }

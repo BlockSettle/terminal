@@ -14,6 +14,7 @@ CustomDialog {
     property int curPage: 1
     property bool acceptable: (curPage == 1 || seedMatch)
     property bool seedMatch: false
+
     InfoBanner {
         id: error
         bgColor:    "darkred"
@@ -31,6 +32,18 @@ CustomDialog {
         }
     }
 
+    // this function is called by abort message box in WalletsPage
+    function abort() {
+        reject()
+    }
+
+    onOpened: {
+        abortBox.accepted.connect(abort)
+    }
+    onClosed: {
+        abortBox.accepted.disconnect(abort)
+    }
+
     FocusScope {
         anchors.fill: parent
         focus: true
@@ -40,7 +53,7 @@ CustomDialog {
                 accept();
                 event.accepted = true;
             } else if (event.key === Qt.Key_Escape) {
-                reject();
+                abortBox.open()
                 event.accepted = true;
             }
         }
@@ -179,7 +192,7 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            reject();
+                            abortBox.open()
                         }
                     }
                 }
