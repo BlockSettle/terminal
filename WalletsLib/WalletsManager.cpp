@@ -114,7 +114,7 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
          if (progressDelegate) {
             progressDelegate(current);
          }
-         if (netType != wallet->networkType()) {
+         if ((netType != NetworkType::Invalid) && (netType != wallet->networkType())) {
             if (progressDelegate) { // loading in the terminal
                emit error(errorTitle, tr("Wallet %1 (from file %2) has incompatible network type")
                   .arg(QString::fromStdString(wallet->getName())).arg(file));
