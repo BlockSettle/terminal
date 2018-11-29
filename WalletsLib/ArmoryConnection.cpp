@@ -75,13 +75,13 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
 
 ArmoryConnection::~ArmoryConnection() noexcept
 {
+   maintThreadRunning_ = false;
    stopServiceThreads();
 }
 
 void ArmoryConnection::stopServiceThreads()
 {
    regThreadRunning_ = false;
-   maintThreadRunning_ = false;
    zcMaintCV_.notify_one();
 }
 
