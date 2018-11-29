@@ -885,6 +885,8 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    , NetworkType netType, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
    std::shared_ptr<bs::hd::Wallet> wallet;
+   const auto prevMode = NetworkConfig::getMode();
+   NetworkConfig::selectNetwork(netType == NetworkType::TestNet ? NETWORK_MODE_TESTNET : NETWORK_MODE_MAINNET);
    try {
       auto seed = request.privatekey().empty() ? bs::wallet::Seed(request.seed(), netType)
          : bs::wallet::Seed(netType, request.privatekey());
@@ -917,6 +919,7 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
       CreateHDWalletResponse(clientId, id, e.what());
       return false;
    }
+   NetworkConfig::selectNetwork(prevMode);
    return true;
 }
 
@@ -974,7 +977,7 @@ void HeadlessContainerListener::CreateHDWalletResponse(const std::string &client
       wlt->set_name(wallet->getName());
       wlt->set_description(wallet->getDesc());
       wlt->set_walletid(wallet->getWalletId());
-      wlt->set_nettype((wallet->getXBTGroupType() == bs::hd::CoinType::Bitcoin_test) ? headless::TestNetType : headless::MainNetType);
+      wlt->set_nettype((wallet->networkType() == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
       for (const auto &group : wallet->getGroups()) {
          auto grp = wlt->add_groups();
          grp->set_path(group->getPath().toString());
