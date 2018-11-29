@@ -220,6 +220,38 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
    logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] get update:\n{}"
       , response.DebugString());
 
+   if (!response.has_snapshot()) {
+      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] empty snapshot");
+      return true;
+   }
+
+   auto security = QString::fromStdString(response.securitycode());
+   if (security.isEmpty()) {
+      security = QString::fromStdString(response.securityid());
+   }
+
+   const auto assetType = bs::network::Asset::fromCelerProductType(response.producttype());
+
+   bs::network::MDFields fields;
+
+   const auto& snapshot = response.snapshot();
+
+   if (snapshot.has_lastpx()) {
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::PriceLast
+               , snapshot.lastpx(), QString()});
+   }
+
+   if (snapshot.has_dailyvolume()) {
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::DailyVolume
+               , snapshot.dailyvolume(), QString()});
+   }
+
+   if (!fields.empty()) {
+      emit MDUpdate(assetType, security, fields);
+   } else {
+      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] no fields updated");
+   }
+
    return true;
 }
 
