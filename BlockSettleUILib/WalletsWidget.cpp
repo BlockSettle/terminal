@@ -422,7 +422,7 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
       return false;
    }
    // get the user to confirm the seed
-   NewWalletSeedConfirmDialog dlg(QString::fromStdString(walletId)
+   NewWalletSeedConfirmDialog dlg(walletId, netType
       , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);
    result = dlg.exec();
    if (!result) {
