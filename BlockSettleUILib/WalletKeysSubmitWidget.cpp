@@ -151,7 +151,9 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    if (flags_ & HideProgressBar) {
       widget->setHideProgressBar(true);
    }
-
+   if (flags_ & HidePasswordWarning) {
+      widget->setHidePasswordWarning(true);
+   }
    ui_->groupBox->layout()->addWidget(widget);
 
    widgets_.push_back(widget);
