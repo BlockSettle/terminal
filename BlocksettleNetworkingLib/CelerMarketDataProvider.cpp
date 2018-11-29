@@ -240,7 +240,7 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
 
    if (snapshot.has_lastpx()) {
       const auto value = snapshot.lastpx();
-      if (!std::isnan(value)) {
+      if (!std::isnan(value) && !qFuzzyIsNull(value)) {
          fields.emplace_back(bs::network::MDField{bs::network::MDField::PriceLast
                , value, QString()});
       }
@@ -248,7 +248,7 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
 
    if (snapshot.has_dailyvolume()) {
       const auto value = snapshot.dailyvolume();
-      if (!std::isnan(value)) {
+      if (!std::isnan(value) && !qFuzzyIsNull(value)) {
          fields.emplace_back(bs::network::MDField{bs::network::MDField::DailyVolume
                , value, QString()});
       }
