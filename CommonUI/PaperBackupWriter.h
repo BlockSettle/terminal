@@ -32,8 +32,6 @@ public:
    void draw(QPainter &p, qreal width, qreal height);
 
 private:
-
-private:
    QString walletId_;
    QString keyLine1_;
    QString keyLine2_;
