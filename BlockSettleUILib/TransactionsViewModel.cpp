@@ -11,6 +11,152 @@
 #include <QtConcurrent/QtConcurrentRun>
 
 
+TXNode::TXNode()
+{
+   init();
+}
+
+TXNode::TXNode(int row, const TransactionsViewItem &item)
+   : row_(row), item_(std::make_shared<TransactionsViewItem>(item))
+{
+   init();
+}
+
+void TXNode::init()
+{
+   fontBold_.setBold(true);
+   colorGray_ = Qt::darkGray, colorRed_ = Qt::red, colorYellow_ = Qt::darkYellow;
+   colorGreen_ = Qt::darkGreen, colorInvalid_ = Qt::red;
+}
+
+void TXNode::clear()
+{
+   qDeleteAll(children_);
+   children_.clear();
+}
+
+TXNode *TXNode::child(int index) const
+{
+   return ((index >= nbChildren()) || (index < 0)) ? nullptr : children_[index];
+}
+
+QVariant TXNode::data(int column, int role) const
+{
+   if (!item_) {
+      return {};
+   }
+   const auto col = static_cast<TransactionsViewModel::Columns>(column);
+   if (role == Qt::DisplayRole) {
+      switch (col) {
+      case TransactionsViewModel::Columns::Date:
+         return item_->displayDateTime;
+      case TransactionsViewModel::Columns::Status:
+         return QObject::tr("   %1").arg(item_->confirmations);
+      case TransactionsViewModel::Columns::Wallet:
+         return item_->walletName;
+      case TransactionsViewModel::Columns::SendReceive:
+         return item_->dirStr;
+      case TransactionsViewModel::Columns::Comment:
+         return item_->comment;
+      case TransactionsViewModel::Columns::Amount:
+         return item_->amountStr;
+      case TransactionsViewModel::Columns::Address:
+         return UiUtils::displayAddress(item_->mainAddress);
+      case TransactionsViewModel::Columns::RbfFlag:
+         if (!item_->confirmations) {
+            if (item_->txEntry.isRBF) {
+               return QObject::tr("RBF");
+            } else if (item_->isCPFP) {
+               return QObject::tr("CPFP");
+            }
+         }
+         break;
+      case TransactionsViewModel::Columns::TxHash:
+         return QString::fromStdString(item_->txEntry.txHash.toHexStr(true));
+         /*      case Columns::MissedBlocks:
+                  return item.confirmations < 6 ? 0 : QVariant();*/
+      default:
+         return QVariant();
+      }
+   } else if (role == TransactionsViewModel::WalletRole) {
+      return qVariantFromValue(static_cast<void*>(item_->wallet.get()));
+   } else if (role == TransactionsViewModel::SortRole) {
+      switch (col) {
+      case TransactionsViewModel::Columns::Date:        return item_->txEntry.txTime;
+      case TransactionsViewModel::Columns::Status:      return item_->confirmations;
+      case TransactionsViewModel::Columns::Wallet:      return item_->walletName;
+      case TransactionsViewModel::Columns::SendReceive: return (int)item_->direction;
+      case TransactionsViewModel::Columns::Comment:     return item_->comment;
+      case TransactionsViewModel::Columns::Amount:      return QVariant::fromValue<double>(qAbs(item_->amount));
+      case TransactionsViewModel::Columns::Address:     return item_->mainAddress;
+      default:    return QVariant();
+      }
+   } else if (role == Qt::TextColorRole) {
+      switch (col) {
+      case TransactionsViewModel::Columns::Address:
+      case TransactionsViewModel::Columns::Wallet:
+         return colorGray_;
+
+      case TransactionsViewModel::Columns::Status:
+      {
+         if (item_->confirmations == 0) {
+            return colorRed_;
+         } else if (item_->confirmations < 6) {
+            return colorYellow_;
+         } else {
+            return colorGreen_;
+         }
+      }
+
+      default:
+         if (!item_->isValid) {
+            return colorInvalid_;
+         } else {
+            return QVariant();
+         }
+      }
+   } else if (role == Qt::FontRole) {
+      bool boldFont = false;
+      if (col == TransactionsViewModel::Columns::Amount) {
+         boldFont = true;
+      } else if ((col == TransactionsViewModel::Columns::Status) && (item_->confirmations < 6)) {
+         boldFont = true;
+      }
+      if (boldFont) {
+         return fontBold_;
+      }
+   } else if (role == TransactionsViewModel::FilterRole) {
+      switch (col)
+      {
+      case TransactionsViewModel::Columns::Date:        return item_->txEntry.txTime;
+      case TransactionsViewModel::Columns::Wallet:      return item_->walletID;
+      case TransactionsViewModel::Columns::SendReceive: return item_->direction;
+      case TransactionsViewModel::Columns::Address:     return item_->mainAddress;
+      case TransactionsViewModel::Columns::Comment:     return item_->comment;
+      default:    return QVariant();
+      }
+   }
+
+   return QVariant();
+}
+
+void TXNode::add(TXNode *child)
+{
+   child->parent_ = this;
+   children_.append(child);
+}
+
+void TXNode::forEach(const std::function<void(const std::shared_ptr<TransactionsViewItem> &)> &cb)
+{
+   if (item_) {
+      cb(item_);
+   }
+   for (auto child : children_) {
+      child->forEach(cb);
+   }
+}
+
+
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
                          , const std::shared_ptr<WalletsManager> &walletsManager
                              , const AsyncClient::LedgerDelegate &ledgerDelegate
@@ -46,11 +192,10 @@ void TransactionsViewModel::init()
 {
    stopped_ = false;
    initialLoadCompleted_ = true;
-   colorGray_ = Qt::darkGray, colorRed_ = Qt::red, colorYellow_ = Qt::darkYellow;
-   colorGreen_ = Qt::darkGreen, colorInvalid_ = Qt::red;
-   fontBold_.setBold(true);
    qRegisterMetaType<TransactionsViewItem>();
    qRegisterMetaType<TransactionItems>();
+
+   rootNode_ = new TXNode;
 
    if (armory_) {
       connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
@@ -71,6 +216,7 @@ void TransactionsViewModel::init()
 TransactionsViewModel::~TransactionsViewModel()
 {
    stopped_ = true;
+   delete rootNode_;
 }
 
 void TransactionsViewModel::loadAllWallets()
@@ -87,12 +233,53 @@ int TransactionsViewModel::columnCount(const QModelIndex &) const
    return static_cast<int>(Columns::last);
 }
 
+TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
+{
+   if (!index.isValid()) {
+      return rootNode_;
+   }
+   return static_cast<TXNode *>(index.internalPointer());
+}
+
 int TransactionsViewModel::rowCount(const QModelIndex &parent) const
 {
    if (parent.isValid()) {
       return 0;
    }
-   return static_cast<int>(currentPage_.size());
+   return static_cast<int>(getNode(parent)->nbChildren());
+}
+
+QModelIndex TransactionsViewModel::index(int row, int column, const QModelIndex &parent) const
+{
+   if (!hasIndex(row, column, parent)) {
+      return QModelIndex();
+   }
+
+   auto node = getNode(parent);
+   auto child = node->child(row);
+   if (child == nullptr) {
+      return QModelIndex();
+   }
+   return createIndex(row, column, static_cast<void*>(child));
+}
+
+QModelIndex TransactionsViewModel::parent(const QModelIndex &child) const
+{
+   if (!child.isValid()) {
+      return QModelIndex();
+   }
+
+   auto node = getNode(child);
+   auto parentNode = (node == nullptr) ? nullptr : node->parent();
+   if ((parentNode == nullptr) || (parentNode == rootNode_)) {
+      return QModelIndex();
+   }
+   return createIndex(parentNode->row(), 0, static_cast<void*>(parentNode));
+}
+
+bool TransactionsViewModel::hasChildren(const QModelIndex& parent) const
+{
+   return getNode(parent)->hasChildren();
 }
 
 QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
@@ -108,114 +295,7 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
       return {};
    }
 
-   const unsigned int row = index.row();
-   if (row >= currentPage_.size()) {
-      return {};
-   }
-   const auto &item = currentPage_[row];
-
-   if (role == Qt::DisplayRole) {
-      switch(col) {
-      case Columns::Date:
-         return item.displayDateTime;
-      case Columns::Status:
-         return tr("   %1").arg(item.confirmations);
-      case Columns::Wallet:
-         return item.walletName;
-      case Columns::SendReceive:
-         return item.dirStr;
-      case Columns::Comment:
-         return item.comment;
-      case Columns::Amount:
-         return item.amountStr;
-      case Columns::Address:
-         return UiUtils::displayAddress(item.mainAddress);
-      case Columns::RbfFlag:
-         if (!item.confirmations) {
-            if (item.txEntry.isRBF) {
-               return tr("RBF");
-            }
-            else if (item.isCPFP) {
-               return tr("CPFP");
-            }
-         }
-         break;
-      case Columns::TxHash:
-         return QString::fromStdString(item.txEntry.txHash.toHexStr(true));
-/*      case Columns::MissedBlocks:
-         return item.confirmations < 6 ? 0 : QVariant();*/
-      default:
-         return QVariant();
-      }
-   }
-   else if (role == WalletRole) {
-      return qVariantFromValue(static_cast<void*>(item.wallet.get()));
-   }
-   else if (role == SortRole) {
-      switch(col) {
-      case Columns::Date:        return item.txEntry.txTime;
-      case Columns::Status:      return item.confirmations;
-      case Columns::Wallet:      return item.walletName;
-      case Columns::SendReceive: return (int)item.direction;
-      case Columns::Comment:     return item.comment;
-      case Columns::Amount:      return QVariant::fromValue<double>(qAbs(item.amount));
-      case Columns::Address:     return item.mainAddress;
-      default:    return QVariant();
-      }
-   }
-   else if (role == Qt::TextColorRole) {
-      switch (col) {
-         case Columns::Address:
-         case Columns::Wallet:
-            return colorGray_;
-
-         case Columns::Status:
-         {
-            if (item.confirmations == 0) {
-               return colorRed_;
-            }
-            else if (item.confirmations < 6) {
-               return colorYellow_;
-            }
-            else {
-               return colorGreen_;
-            }
-         }
-
-         default:
-            if (!item.isValid) {
-               return colorInvalid_;
-            }
-            else {
-               return QVariant();
-            }
-      }
-   }
-   else if (role == Qt::FontRole) {
-      bool boldFont = false;
-      if (col == Columns::Amount) {
-         boldFont = true;
-      }
-      else if ((col == Columns::Status) && (item.confirmations < 6)) {
-         boldFont = true;
-      }
-      if (boldFont) {
-         return fontBold_;
-      }
-   }
-   else if (role == FilterRole) {
-      switch (col)
-      {
-         case Columns::Date:        return item.txEntry.txTime;
-         case Columns::Wallet:      return item.walletID;
-         case Columns::SendReceive: return item.direction;
-         case Columns::Address:     return item.mainAddress;
-         case Columns::Comment:     return item.comment;
-         default:    return QVariant();
-      }
-   }
-
-   return QVariant();
+   return getNode(index)->data(index.column(), role);
 }
 
 QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -256,8 +336,7 @@ void TransactionsViewModel::clear()
    beginResetModel();
    {
       QMutexLocker locker(&updateMutex_);
-      erasedPage_ = std::move(currentPage_);
-      currentPage_.clear();
+      rootNode_->clear();
       currentKeys_.clear();
    }
    endResetModel();
@@ -269,7 +348,7 @@ void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
    if (state == ArmoryConnection::State::Offline) {
       clear();
    }
-   else if ((state == ArmoryConnection::State::Ready) && currentPage_.empty()) {
+   else if ((state == ArmoryConnection::State::Ready) && !rootNode_->hasChildren()) {
       loadLedgerEntries();
    }
 }
@@ -302,10 +381,6 @@ static std::string mkTxKey(const bs::TXEntry &item)
 {
    return mkTxKey(item.txHash, item.id);
 }
-static std::string mkTxKey(const TransactionsViewItem &item)
-{
-   return mkTxKey(item.txEntry);
-}
 
 bool TransactionsViewModel::txKeyExists(const std::string &key)
 {
@@ -328,17 +403,16 @@ void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
       if (!item.wallet) {
          continue;
       }
-      const auto txKey = mkTxKey(item);
       {
          QMutexLocker locker(&updateMutex_);
-         if (txKeyExists(txKey)) {
+         if (txKeyExists(item.id())) {
             updatedEntries.push_back(entry);
             continue;
          }
-         currentKeys_.insert(txKey);
+         currentKeys_.insert(item.id());
       }
-      newTxKeys->insert(txKey);
-      newItems->emplace(txKey, std::move(item));
+      newTxKeys->insert(item.id());
+      newItems->emplace(item.id(), std::move(item));
    }
    pendingNewItems_.clear();
 
@@ -349,9 +423,8 @@ void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
                logger_->error("item is not inited");
                return;
             }
-            const auto &txKey = mkTxKey(*itemPtr);
-            newTxKeys->erase(txKey);
-            (*newItems)[txKey] = *itemPtr;
+            newTxKeys->erase(itemPtr->id());
+            (*newItems)[itemPtr->id()] = *itemPtr;
             if (newTxKeys->empty()) {
                TransactionItems items;
                items.reserve(newItems->size());
@@ -410,32 +483,32 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<bs::TXEntry> &pa
    }
    {
       QMutexLocker locker(&updateMutex_);
-      if (currentPage_.empty()) {
+      if (rootNode_->hasChildren()) {
          return;
       }
-      for (size_t i = 0; i < currentPage_.size(); i++) {
-         auto &item = currentPage_[i];
-         const auto itPage = newData.find(mkTxKey(item));
+      const auto &cbItem = [this, newData](const std::shared_ptr<TransactionsViewItem> &item) {
+         const auto itPage = newData.find(item->id());
          uint32_t newBlockNum = UINT32_MAX;
          if (itPage != newData.end()) {
             newBlockNum = itPage->second.blockNum;
-            if (item.wallet) {
-               item.isValid = item.wallet->isTxValid(itPage->second.txHash);
+            if (item->wallet) {
+               item->isValid = item->wallet->isTxValid(itPage->second.txHash);
             }
-            if (item.txEntry.value != itPage->second.value) {
-               item.txEntry = itPage->second;
-               item.amountStr.clear();
-               item.calcAmount(walletsManager_);
+            if (item->txEntry.value != itPage->second.value) {
+               item->txEntry = itPage->second;
+               item->amountStr.clear();
+               item->calcAmount(walletsManager_);
             }
          }
          if (newBlockNum != UINT32_MAX) {
-            item.confirmations = armory_->getConfirmationsNumber(newBlockNum);
-            item.txEntry.blockNum = newBlockNum;
+            item->confirmations = armory_->getConfirmationsNumber(newBlockNum);
+            item->txEntry.blockNum = newBlockNum;
          }
-      }
+      };
+      rootNode_->forEach(cbItem);
    }
    emit dataChanged(index(0, static_cast<int>(Columns::Amount))
-   , index(currentPage_.size() - 1, static_cast<int>(Columns::Status)));
+   , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
 }
 
 void TransactionsViewModel::loadLedgerEntries()
@@ -478,7 +551,7 @@ void TransactionsViewModel::loadLedgerEntries()
 void TransactionsViewModel::ledgerToTxData()
 {
    size_t count = 0;
-   const unsigned int iStart = currentPage_.size();
+   const unsigned int iStart = rootNode_->nbChildren();
    std::vector<bs::TXEntry> updatedEntries;
    beginResetModel();
    {
@@ -489,14 +562,13 @@ void TransactionsViewModel::ledgerToTxData()
             if (!item.wallet) {
                continue;
             }
-            const auto txKey = mkTxKey(item);
-            if (txKeyExists(txKey)) {
+            if (txKeyExists(item.id())) {
                updatedEntries.emplace_back(std::move(led));
             }
             else {
                count++;
-               currentKeys_.insert(txKey);
-               currentPage_.emplace_back(std::move(item));
+               currentKeys_.insert(item.id());
+               rootNode_->add(new TXNode(rootNode_->nbChildren(), item));
             }
          }
       }
@@ -511,7 +583,7 @@ void TransactionsViewModel::ledgerToTxData()
 
    if (count) {
       if (updatedEntries.empty()) {
-         emit dataLoaded(currentPage_.size());
+         emit dataLoaded(rootNode_->nbChildren());
       }
       loadTransactionDetails(iStart, count);
    }
@@ -519,15 +591,18 @@ void TransactionsViewModel::ledgerToTxData()
 
 void TransactionsViewModel::onNewItems(TransactionItems items)
 {
-   unsigned int curLastIdx = currentPage_.size();
+   unsigned int curLastIdx = rootNode_->nbChildren();
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + items.size() - 1);
    {
       QMutexLocker locker(&updateMutex_);
-      currentPage_.insert(currentPage_.end(), items.begin(), items.end());
+      for (const auto &item : items) {
+         rootNode_->add(new TXNode(rootNode_->nbChildren(), item));
+      }
    }
    endInsertRows();
 }
 
+#if 0
 int TransactionsViewModel::getItemIndex(const TransactionsViewItem &item) const
 {
    QMutexLocker locker(&updateMutex_);
@@ -539,9 +614,11 @@ int TransactionsViewModel::getItemIndex(const TransactionsViewItem &item) const
    }
    return -1;
 }
+#endif 0
 
 void TransactionsViewModel::onItemsDeleted(TransactionItems items)
 {
+#if 0
    for (const auto &item : items) {
       const int idx = getItemIndex(item);
       if (idx < 0) {
@@ -555,61 +632,53 @@ void TransactionsViewModel::onItemsDeleted(TransactionItems items)
       }
       endRemoveRows();
    }
+#endif   //0
 }
 
 void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &item, int c1, int c2)
 {
-   const auto &itemKey = mkTxKey(item);
-   for (int i = qMax<int>(0, row - 5); i < qMin<int>(currentPage_.size(), row + 5); i++) {
-      if (mkTxKey(currentPage_[i]) == itemKey) {
-         currentPage_[i] = item;
+   for (int i = qMax<int>(0, row - 5); i < qMin<int>(rootNode_->nbChildren(), row + 5); i++) {
+      if (rootNode_->child(i)->item()->id() == item.id()) {
+         rootNode_->setData(i, item);
          emit dataChanged(index(i, c1), index(i, c2));
          break;
       }
    }
 }
 
-bool TransactionsViewModel::isTransactionVerified(int transactionRow) const
-{
-   QMutexLocker locker(&updateMutex_);
-   const auto& item = currentPage_[transactionRow];
-   return armory_->isTransactionVerified(item.txEntry.blockNum);
-}
-
 TransactionsViewItem TransactionsViewModel::getItem(int row) const
 {
    QMutexLocker locker(&updateMutex_);
-   if ((row < 0) || (row >= (int)currentPage_.size())) {
+   if ((row < 0) || (row >= (int)rootNode_->nbChildren())) {
       return {};
    }
-   return currentPage_[row];
+   return *(rootNode_->child(row)->item());
 }
 
 void TransactionsViewModel::loadTransactionDetails(unsigned int iStart, size_t count)
 {
-   const auto pageSize = currentPage_.size();
-
-   std::set<int> uninitedItems;
+//   return;
+   const auto pageSize = rootNode_->nbChildren();
    {
       QMutexLocker locker(&updateMutex_);
       for (unsigned int i = iStart; i < qMin<unsigned int>(pageSize, iStart + count); i++) {
          if (stopped_) {
             break;
          }
-         auto &item = currentPage_[i];
-         if (!item.initialized) {
+         auto item = rootNode_->child(i)->item();
+         if (!item->initialized) {
             updateTransactionDetails(item, i);
          }
       }
    }
 }
 
-void TransactionsViewModel::updateTransactionDetails(TransactionsViewItem &item, int index)
+void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item, int index)
 {
    const auto &cbInited = [this, index](const TransactionsViewItem *itemPtr) {
       onRowUpdated(index, *itemPtr, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Amount));
    };
-   item.initialize(armory_, walletsManager_, cbInited);
+   item->initialize(armory_, walletsManager_, cbInited);
 }
 
 void TransactionsViewModel::updateTransactionDetails(TransactionsViewItem &item
@@ -793,6 +862,14 @@ bool TransactionsViewItem::containsInputsFrom(const Tx &inTx) const
       }
    }
    return false;
+}
+
+std::string TransactionsViewItem::id() const
+{
+   if (id_.empty()) {
+      id_ = mkTxKey(txEntry);
+   }
+   return id_;
 }
 
 bool TransactionsViewItem::isRBFeligible() const
