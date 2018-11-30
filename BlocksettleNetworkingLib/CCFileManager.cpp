@@ -125,7 +125,8 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
    }
 
    if (genAddrResp.networktype() != networkType(appSettings_)) {
-      logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] invalid network type");
+      logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] network type mismatch in reply: {}"
+         , (int)genAddrResp.networktype());
       return;
    }
 

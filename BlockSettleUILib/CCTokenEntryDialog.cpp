@@ -33,6 +33,8 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CCTokenEntryDialog::onWalletFailed);
 
+   ccFileMgr_->LoadCCDefinitionsFromPub();
+
    switch (ccFileMgr_->GetOtpEncType()) {
    case bs::wallet::EncryptionType::Auth:
       ui_->groupBoxOtpPassword->hide();
