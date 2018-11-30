@@ -39,7 +39,7 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
-   mobileClient_ = (new MobileClient(spdlog::get(""), authKeys, this));
+   mobileClient_ = (new MobileClient(logger, authKeys, this));
 
    //connect(mobileClient_, &MobileClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
    //connect(mobileClient_, &MobileClient::failed, this, &WalletKeyWidget::onAuthFailed);
