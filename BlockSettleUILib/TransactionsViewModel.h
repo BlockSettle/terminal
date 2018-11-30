@@ -64,7 +64,7 @@ class TXNode
 {
 public:
    TXNode();
-   TXNode(int row, const TransactionsViewItem &);
+   TXNode(const std::shared_ptr<TransactionsViewItem> &);
    ~TXNode() { clear(); }
 
    std::shared_ptr<TransactionsViewItem> item() const { return item_; }
@@ -72,9 +72,10 @@ public:
    bool hasChildren() const { return !children_.empty(); }
    TXNode *child(int index) const;
    TXNode *parent() const { return parent_; }
-   void clear();
+   TXNode *find(const std::string &id) const;
 
-   void setData(int index, const TransactionsViewItem &data) { *(child(index)->item_) = data; }
+   void clear();
+   void setData(const TransactionsViewItem &data) { *item_ = data; }
    void add(TXNode *child);
    int row() const { return row_; }
    QVariant data(int, int) const;
@@ -138,7 +139,6 @@ private slots:
    void refresh();
    void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
    void onNewItems(TransactionItems items);
-   void onItemsDeleted(TransactionItems items);
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
@@ -149,14 +149,13 @@ private:
    void clear();
    Q_INVOKABLE void loadLedgerEntries();
    void ledgerToTxData();
-   void loadTransactionDetails(unsigned int iStart, size_t count);
-   void updateBlockHeight(const std::vector<bs::TXEntry> &page);
+   void loadTransactionDetails(const std::vector<TXNode *> &);
+   void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
    void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item, int index);
-   void updateTransactionDetails(TransactionsViewItem &item
+   void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
       , const std::function<void(const TransactionsViewItem *itemPtr)> &cb);
-   TransactionsViewItem itemFromTransaction(const bs::TXEntry &);
+   std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
    bool txKeyExists(const std::string &key);
-   int getItemIndex(const TransactionsViewItem &) const;
 
 signals:
    void dataLoaded(int count);
@@ -205,7 +204,7 @@ public:
 private:
    TXNode   *  rootNode_;
    std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
-   std::unordered_set<std::string>     currentKeys_;
+   std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    AsyncClient::LedgerDelegate         ledgerDelegate_;
