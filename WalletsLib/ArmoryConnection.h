@@ -153,6 +153,7 @@ private:
    };
    std::unordered_map<ReqIdType, ZCData>  zcData_;
    mutable std::atomic_flag      zcLock_ = ATOMIC_FLAG_INIT;
+   std::thread                   zcThread_;
    std::condition_variable       zcMaintCV_;
    mutable std::mutex            zcMaintMutex_;
 
