@@ -1,6 +1,6 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.4
 import com.blocksettle.PasswordConfirmValidator 1.0
 import com.blocksettle.WalletSeed 1.0
 import com.blocksettle.WalletInfo 1.0
@@ -10,6 +10,10 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import "bscontrols"
 
 CustomDialog {
+    id:root
+    width: 400
+    // setting the height of this windows based on which page is currently visible, using numbers instead of enum to keep it short
+    height: curPage === 1 ? mainLayout.implicitHeight : authSignPage.implicitHeight
     property bool primaryWalletExists: false
     property string password
     property bool isPrimary:    false
@@ -22,13 +26,10 @@ CustomDialog {
     property int curPage: WalletCreateDialog.Page.Main
     property bool authNoticeShown: false
     property int countDown: 120
-    id:root
-    implicitWidth: 400
-    // setting the height of this windows based on which page is currently visible, using numbers instead of enum to keep it short
-    height: curPage === 1 ? mainLayout.implicitHeight : (curPage === 2 || curPage === 3) ? passwordNotice.implicitHeight : authSignPage.implicitHeight
 
     Component.onCompleted: {
         tfName.text = qsTr("Wallet #%1").arg(walletsProxy.walletNames.length + 1);
+
     }
 
     onCurPageChanged: {
@@ -54,9 +55,7 @@ CustomDialog {
 
     enum Page {
         Main = 1,
-        PasswordNotice = 2,
-        AuthNotice = 3,
-        AuthSignPage = 4
+        AuthSignPage = 2
     }
 
     // this function is called by abort message box in WalletsPage
@@ -64,14 +63,26 @@ CustomDialog {
         reject()
     }
 
+    // handles accept signal from msgBox which displays password and auth eid notice
+    function msgBoxAccept() {
+        // accept only when using passwort authentication
+        if (rbPassword.checked) {
+                accept()
+            }
+    }
+
     onOpened: {
         abortBox.accepted.connect(abort)
+        msgBox.accepted.connect(msgBoxAccept)
     }
     onClosed: {
         abortBox.accepted.disconnect(abort)
+        msgBox.accepted.disconnect(msgBoxAccept)
+        msgBox.usePassword = false
+        msgBox.rejectButtonVisible = false
     }
 
-    FocusScope {
+    contentItem: FocusScope {
         anchors.fill: parent
         focus: true
 
@@ -245,7 +256,13 @@ CustomDialog {
                     text:   qsTr("Auth eID")
                     onCheckedChanged: {
                         if (checked == true && !authNoticeShown) {
-                            curPage = WalletCreateDialog.Page.AuthNotice
+                            // reset message box settings
+                            msgBox.usePassword = false
+                            msgBox.rejectButtonVisible = false
+                            messageBoxInfo(qsTr("Notice!")
+                                           , qsTr("Signing with Auth eID")
+                                           , qsTr("Once you set Auth eID as signing the signing will be set locally on your mobile device.\n\nIf you lose your phone or uninstall the app you will lose your ability to sign wallet requests.\n\nThis also implies that your Auth eID cannot be hacked as it's only stored on your mobile device.\n\nKeep your backup secure as it protects your wallet forever, against hard drive loss and if you lose your mobile device which is connected to Auth eID.\n\nFor more information please consult with the Getting Started with Auth eID guide.")
+                                           )
                             authNoticeShown = true // make sure the notice is only shown once
                         }
                     }
@@ -314,7 +331,13 @@ CustomDialog {
                         enabled:    acceptable
                         onClicked: {
                             if (rbPassword.checked) {
-                                curPage = WalletCreateDialog.Page.PasswordNotice
+                                //pwdBox.open()
+                                msgBox.usePassword = true
+                                msgBox.password = newPasswordWithConfirm.text
+                                msgBox.rejectButtonVisible = true
+                                messageBoxInfo(qsTr("Notice!")
+                                               , qsTr("Please take care of your assets!")
+                                               , qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! Your Wallet and any backups are useless if you lose them. \n\nA backup protects your wallet forever, against hard drive loss and losing your passphrase. It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. Please make a backup and keep it in a safe place.\n\nPlease enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!"))
                             }
                             else {
                                 encType = WalletInfo.Auth
@@ -350,103 +373,6 @@ CustomDialog {
                         text:   qsTr("Cancel")
                         onClicked: {
                             abortBox.open()
-                        }
-                    }
-                }
-            }
-        }
-
-        // this is the Notice message box for both password and auth eid warnings
-        ColumnLayout {
-            anchors.fill: parent
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            spacing: 10
-            width: parent.width
-            visible: curPage === WalletCreateDialog.Page.PasswordNotice || curPage === WalletCreateDialog.Page.AuthNotice
-            id: passwordNotice
-
-            RowLayout{
-                CustomHeaderPanel{
-                    Layout.preferredHeight: 40
-                    Layout.fillWidth: true
-                    text:  qsTr("Notice!")
-                }
-            }
-            CustomHeader {
-                text:   rbPassword.checked ? qsTr("Please take care of your assets!") : qsTr("Signing with Auth eID")
-                Layout.fillWidth: true
-                Layout.preferredHeight: 25
-                Layout.topMargin: 5
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-            }
-            CustomLabel {
-                Layout.fillWidth: true
-                Layout.topMargin: 5
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-                text: rbPassword.checked ? qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! Your Wallet and any backups are useless if you lose them. \n\nA backup protects your wallet forever, against hard drive loss and losing your passphrase. It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. Please make a backup and keep it in a safe place.\n\nPlease enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!")
-                                         : qsTr("Once you set Auth eID as signing the signing will be set locally on your mobile device.\n\nIf you lose your phone or uninstall the app you will lose your ability to sign wallet requests.\n\nThis also implies that your Auth eID cannot be hacked as it's only stored on your mobile device.\n\nKeep your backup secure as it protects your wallet forever, against hard drive loss and if you lose your mobile device which is connected to Auth eID.\n\nFor more information please consult with the Getting Started with Auth eID guide.")
-            }
-            BSTextInput {
-                id: passwordNoticeConfirm
-                visible: rbPassword.checked
-                Layout.topMargin: 5
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-                focus: true
-                echoMode: TextField.Password
-                placeholderText: qsTr("Password")
-                Layout.fillWidth: true
-            }
-            Rectangle {
-                Layout.fillHeight: true
-            }
-
-            Rectangle {
-                Layout.fillHeight: true
-            }
-            CustomButtonBar {
-                implicitHeight: childrenRect.height
-                implicitWidth: root.width
-
-                Flow {
-                    spacing: 5
-                    padding: 5
-                    height: childrenRect.height + 10
-                    width: parent.width - buttonRowLeft - 5
-                    LayoutMirroring.enabled: true
-                    LayoutMirroring.childrenInherit: true
-                    anchors.left: parent.left   // anchor left becomes right
-
-                    CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text:   qsTr("Continue")
-                        enabled:    newPasswordWithConfirm.text === passwordNoticeConfirm.text || curPage === WalletCreateDialog.Page.AuthNotice
-                        onClicked: {
-                            // accept and close this dialog if it's password notice page
-                            if (curPage === WalletCreateDialog.Page.PasswordNotice) {
-                                accept()
-                            }
-                            // otherwise return back to WalletCreateDialog
-                            else {
-                                curPage = WalletCreateDialog.Page.Main
-                            }
-                        }
-                    }
-                }
-                Flow {
-                    spacing: 5
-                    padding: 5
-                    height: 80
-
-                    CustomButton {
-                        visible: rbPassword.checked
-                        Layout.fillWidth: true
-                        text:   qsTr("Cancel")
-                        onClicked: {
-                            curPage = WalletCreateDialog.Page.Main
                         }
                     }
                 }

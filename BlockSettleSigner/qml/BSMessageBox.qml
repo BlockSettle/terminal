@@ -1,5 +1,5 @@
 import QtQuick 2.9
-import QtQuick.Controls 2.3
+import QtQuick.Controls 2.4
 import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.0
 
@@ -16,9 +16,8 @@ CustomDialog {
     property alias rejectButtonVisible: rejectButton.visible
     property int buttonWidth: 110
     property bool usePassword: false
-    // this allows the messagebox to grow dynamically with large amount of text
-    //value of 20 is margins in textRect
-    property int newHeight: labelTitle.height + labelText.height + labelDetails.height + buttonBar.height + 20
+    property string password
+    property bool acceptable: usePassword ? (passwordInput.text.length != 0 && passwordInput.text === password) : true
     property int type: BSMessageBox.Type.Info
     property variant images: ["/NOTIFICATION_INFO", "/NOTIFICATION_SUCCESS", "/NOTIFICATION_QUESTION", "/NOTIFICATION_WARNING", "/NOTIFICATION_CRITICAL"]
     property variant colors: ["#ffffff", "#38C673", "#f7b03a", "#f7b03a", "#EE2249"]
@@ -31,6 +30,10 @@ CustomDialog {
        Critical = 4
     }
 
+    onOpened: {
+           passwordInput.text = ""
+       }
+
     contentItem: FocusScope {
         id: focus
         anchors.fill: parent
@@ -39,10 +42,12 @@ CustomDialog {
 
         Keys.onPressed: {
             if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
-                accept();
+                if (acceptable) {
+                    accept()
+                }
             } else if (event.key === Qt.Key_Escape) {
                 if (rejectButton.visible) {
-                    reject();
+                    reject()
                 }
             }
         }
@@ -136,7 +141,7 @@ CustomDialog {
                     anchors.bottom: parent.bottom
                     anchors.margins: 5
                     text: qsTr("OK")
-                    enabled: true
+                    enabled: acceptable
                     onClicked: {
                         accept()
                     }

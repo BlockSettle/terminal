@@ -57,7 +57,7 @@ Item {
         dlg.accepted.connect(function() {
             console.log("exportWatchingOnly id:" + dlg.wallet.id + " dir:" + dlg.exportDir + " pwd:" + dlg.password)
             if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
-                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet was successfully deleted."),
+                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Successfully exported watching-only copy for wallet."),
                            qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location:%3").arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
                 //ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
                 //                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
@@ -142,8 +142,6 @@ Item {
                                             // create the wallet
 
                                             if (walletsProxy.createWallet(dlgPwd.isPrimary, dlgPwd.password, dlgPwd.seed)) {
-                                                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet successfully created."),
-                                                           qsTr("Wallet ID: %1").arg(dlgPwd.seed.walletName))
                                                 //ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created").arg(dlgPwd.seed.walletName))
                                                 // open export dialog to give user a chance to export the wallet
                                                 walletInfo.id = dlgPwd.seed.walletId
@@ -152,6 +150,8 @@ Item {
                                                 walletInfo.encType = dlgPwd.encType
                                                 walletInfo.encKey = dlgPwd.encKey
                                                 exportWalletDialog(walletInfo)
+                                                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet successfully created."),
+                                                           qsTr("Wallet ID: %1").arg(dlgPwd.seed.walletName))
                                             }
                                         })
 

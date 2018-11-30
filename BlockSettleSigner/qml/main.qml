@@ -148,4 +148,8 @@ ApplicationWindow {
        msgBox.parent = parent
        msgBox.open()
    }
+
+   function messageBoxInfo(title, text, details, parent) {
+       messageBox(BSMessageBox.Type.Info, title, text, details, parent);
+   }
 }
