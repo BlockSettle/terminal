@@ -209,6 +209,8 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
          case Columns::Date:        return item.txEntry.txTime;
          case Columns::Wallet:      return item.walletID;
          case Columns::SendReceive: return item.direction;
+         case Columns::Address:     return item.mainAddress;
+         case Columns::Comment:     return item.comment;
          default:    return QVariant();
       }
    }
