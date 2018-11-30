@@ -16,6 +16,7 @@ ColumnLayout {
     property alias line1LabelTxt: keyLine1Label.text
     property alias line2LabelTxt: keyLine2Label.text
     property alias sectionHeaderTxt: sectionHeader.text
+    property alias sectionHeaderVisible: sectionHeader.visible
 
     property int inputLablesWidth: 110
     property int rowSpacing: 5
@@ -56,7 +57,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
-
+        Layout.bottomMargin: 5
         BSInputLabel {
             id: keyLine1Label
             Layout.fillWidth: true
@@ -89,22 +90,6 @@ ColumnLayout {
     }
 
     RowLayout {
-        opacity: keyLine1.validator.statusMsg === "" ? 0.0 : 1.0
-        Layout.fillWidth: true
-        Layout.leftMargin: 10
-        Layout.rightMargin: 10
-
-        BSInputLabel {
-            topPadding: 1
-            bottomPadding: 1
-            Layout.fillWidth: true
-            Layout.leftMargin: inputLablesWidth + 5
-            text:  keyLine1.validator.statusMsg
-            color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
-        }
-    }
-
-    RowLayout {
         spacing: rowSpacing
         Layout.fillWidth: true
         Layout.leftMargin: 10
@@ -128,10 +113,10 @@ ColumnLayout {
                 if (acceptableInput && !keyLine1.acceptableInput) {
                     keyLine1.forceActiveFocus();
                 }
-                onEditingFinished: {
-                    if (acceptableInput && keyLine1.acceptableInput) {
-                        entryComplete()
-                    }
+            }
+            onEditingFinished: {
+                if (acceptableInput && keyLine1.acceptableInput) {
+                    entryComplete()
                 }
             }
         }
@@ -141,13 +126,21 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
-
+        BSInputLabel {
+            opacity: keyLine1.validator.statusMsg === "" ? 0.0 : 1.0
+            topPadding: 1
+            bottomPadding: 1
+            Layout.fillWidth: true
+            Layout.leftMargin: inputLablesWidth + 5
+            text:  keyLine1.validator.statusMsg
+            color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+        }
         BSInputLabel {
             opacity: keyLine2.validator.statusMsg === "" ? 0.0 : 1.0
             topPadding: 1
             bottomPadding: 1
             Layout.fillWidth: true
-            Layout.leftMargin: inputLablesWidth + 5
+            Layout.leftMargin: 2
             text:  keyLinesIdentical ? identicalLinesErrorMsg : keyLine2.validator.statusMsg
             color: keyLine1.text === keyLine2.text || !keyLine2.acceptableInput ?
                        BSStyle.inputsInvalidColor : BSStyle.inputsValidColor

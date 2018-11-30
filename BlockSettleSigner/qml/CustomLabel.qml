@@ -6,7 +6,7 @@ Label {
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 10
     color: "#757E83"
-    wrapMode: Text.Wrap
+    wrapMode: Text.WordWrap
     topPadding: 5
     bottomPadding: 5
 }

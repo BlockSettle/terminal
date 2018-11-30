@@ -19,6 +19,8 @@
 #include "ZmqSecuredServerConnection.h"
 #include "EasyEncValidator.h"
 #include "PasswordConfirmValidator.h"
+#include "NewWalletSeed.h"
+#include "PdfBackupQmlPrinter.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -31,6 +33,7 @@ Q_DECLARE_METATYPE(TXInfo)
 QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<SignerSettings> &params
    , QQmlContext *ctxt)
    : QObject(nullptr), logger_(logger), params_(params), ctxt_(ctxt)
+   , newWalletSeed_(new NewWalletSeed(params_, this))
    , notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
@@ -51,6 +54,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
    qmlRegisterType<WalletSeed>("com.blocksettle.WalletSeed", 1, 0, "WalletSeed");
+   qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
 
@@ -66,6 +70,9 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
 
    ctxt_->setContextProperty(QStringLiteral("signerParams"), params_.get());
+
+   ctxt_->setContextProperty(QStringLiteral("newWalletSeed"), newWalletSeed_);
+
    settingsConnections();
 
    offlineProc_ = std::make_shared<OfflineProcessor>(logger_, walletsMgr_);

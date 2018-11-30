@@ -1,6 +1,6 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.4
 import com.blocksettle.PasswordConfirmValidator 1.0
 import com.blocksettle.WalletSeed 1.0
 import com.blocksettle.WalletInfo 1.0
@@ -10,24 +10,79 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import "bscontrols"
 
 CustomDialog {
+    id:root
+    width: 400
+    // setting the height of this windows based on which page is currently visible, using numbers instead of enum to keep it short
+    height: curPage === 1 ? mainLayout.implicitHeight : authSignPage.implicitHeight
     property bool primaryWalletExists: false
     property string password
     property bool isPrimary:    false
     property WalletSeed seed
+    property int encType
+    property string encKey
     property AuthSignWalletObject  authSign
-    property bool acceptable:   tfName.text.length &&
-                                newPasswordWithConfirm.acceptableInput
+    property bool acceptable:   tfName.text.length && (newPasswordWithConfirm.acceptableInput || tiAuthId.text)
     property int inputLabelsWidth: 110
+    property int curPage: WalletCreateDialog.Page.Main
+    property bool authNoticeShown: false
+    property int countDown: 120
 
-    id:root
-    implicitWidth: 400
-    implicitHeight: mainLayout.implicitHeight
+    Component.onCompleted: {
+        tfName.text = qsTr("Wallet #%1").arg(walletsProxy.walletNames.length + 1);
 
-    onSeedChanged: {
-        seed.setRandomKey()
     }
 
-    FocusScope {
+    onCurPageChanged: {
+        if (curPage === WalletCreateDialog.Page.AuthSignPage) {
+            authProgress.value = countDown = 120.0
+            authTimer.start()
+        }
+        else {
+            authTimer.stop()
+        }
+    }
+    Timer {
+        id: authTimer
+        interval: 1000; running: false; repeat: true
+        onTriggered: {
+            authProgress.value = countDown--
+            if (countDown == 0) {
+                authTimer.stop()
+                curPage = WalletCreateDialog.Page.Main
+            }
+        }
+    }
+
+    enum Page {
+        Main = 1,
+        AuthSignPage = 2
+    }
+
+    // this function is called by abort message box in WalletsPage
+    function abort() {
+        reject()
+    }
+
+    // handles accept signal from msgBox which displays password and auth eid notice
+    function msgBoxAccept() {
+        // accept only when using passwort authentication
+        if (rbPassword.checked) {
+                accept()
+            }
+    }
+
+    onOpened: {
+        abortBox.accepted.connect(abort)
+        msgBox.accepted.connect(msgBoxAccept)
+    }
+    onClosed: {
+        abortBox.accepted.disconnect(abort)
+        msgBox.accepted.disconnect(msgBoxAccept)
+        msgBox.usePassword = false
+        msgBox.rejectButtonVisible = false
+    }
+
+    contentItem: FocusScope {
         anchors.fill: parent
         focus: true
 
@@ -39,7 +94,7 @@ CustomDialog {
 
                 event.accepted = true;
             } else if (event.key === Qt.Key_Escape) {
-                root.close();
+                abortBox.open()
                 event.accepted = true;
             }
         }
@@ -51,6 +106,7 @@ CustomDialog {
             spacing: 10
             width: parent.width
             id: mainLayout
+            visible: curPage === WalletCreateDialog.Page.Main
 
             RowLayout{
                 CustomHeaderPanel{
@@ -60,7 +116,15 @@ CustomDialog {
                     text:  qsTr("Create New Wallet")
                 }
             }
-
+            CustomHeader {
+                id: headerText
+                text:   qsTr("Wallet Details")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -70,7 +134,8 @@ CustomDialog {
                 CustomRadioButton {
                     id: rbMainNet
                     text:   qsTr("MainNet")
-                    checked:    seed.mainNet
+                    Layout.leftMargin: inputLabelsWidth
+                    checked: seed ? seed.mainNet : false
                     onClicked: {
                         seed.mainNet = true
                     }
@@ -78,7 +143,7 @@ CustomDialog {
                 CustomRadioButton {
                     id: rbTestNet
                     text:   qsTr("TestNet")
-                    checked:    seed.testNet
+                    checked: seed ? seed.testNet : false
                     onClicked: {
                         seed.testNet = true
                     }
@@ -96,7 +161,25 @@ CustomDialog {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     Layout.fillWidth: true
-                    text:   qsTr("Wallet Name")
+                    text:   qsTr("Wallet ID")
+                }
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: seed ? seed.walletId : qsTr("")
+                }
+            }
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
+                    Layout.minimumWidth: inputLabelsWidth
+                    Layout.preferredWidth: inputLabelsWidth
+                    Layout.maximumWidth: inputLabelsWidth
+                    Layout.fillWidth: true
+                    text:   qsTr("Name")
                 }
                 CustomTextInput {
                     id: tfName
@@ -119,7 +202,7 @@ CustomDialog {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     Layout.fillWidth: true
-                    text:   qsTr("Wallet Description")
+                    text:   qsTr("Description")
                 }
                 CustomTextInput {
                     id: tfDesc
@@ -133,68 +216,6 @@ CustomDialog {
                     }
                 }
             }
-
-            RowLayout {
-                spacing: 5
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-
-                CustomRadioButton {
-                    id: rbPassword
-                    text:   qsTr("Password")
-                    checked:    true
-                }
-                CustomRadioButton {
-                    id: rbAuth
-                    text:   qsTr("Auth eID")
-                }
-            }
-
-            BSConfirmedPasswordInput {
-                id: newPasswordWithConfirm
-                visible:    rbPassword.checked
-                columnSpacing: 10
-                passwordLabelTxt: qsTr("Wallet Password")
-                passwordInputPlaceholder: qsTr("New Wallet Password")
-                confirmLabelTxt: qsTr("Confirm Password")
-                confirmInputPlaceholder: qsTr("Confirm New Wallet Password")
-            }
-
-            RowLayout {
-                visible:    rbAuth.checked
-                spacing: 5
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-
-                CustomTextInput {
-                    id: tiAuthId
-                    placeholderText: qsTr("Auth ID (email)")
-                }
-                CustomButton {
-                    id: btnAuth
-                    text:   !authSign ? qsTr("Sign with Auth eID") : authSign.status
-                    enabled:    !authSign && tiAuthId.text.length
-                    onClicked: {
-                        seed.encType = WalletInfo.Auth
-                        seed.encKey = tiAuthId.text
-                        authSign = auth.signWallet(tiAuthId.text, qsTr("Password for wallet %1").arg(tfName.text),
-                                                              seed.walletId)
-                        btnAuth.enabled = false
-                        authSign.success.connect(function(key) {
-                            acceptable = true
-                            password = key
-                            text = qsTr("Successfully signed")
-                        })
-                        authSign.error.connect(function(text) {
-                            authSign = null
-                            btnAuth.enabled = tiAuthId.text.length
-                        })
-                    }
-                }
-            }
-
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -207,6 +228,80 @@ CustomDialog {
                     Layout.leftMargin: inputLabelsWidth + 5
                     enabled: !primaryWalletExists
                     text:   qsTr("Primary Wallet")
+                }
+            }
+            CustomHeader {
+                id: headerText2
+                text:   qsTr("Create Wallet Keys")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomRadioButton {
+                    id: rbPassword
+                    text:   qsTr("Password")
+                    checked:    true
+                    Layout.leftMargin: inputLabelsWidth
+                }
+                CustomRadioButton {
+                    id: rbAuth
+                    text:   qsTr("Auth eID")
+                    onCheckedChanged: {
+                        if (checked == true && !authNoticeShown) {
+                            // reset message box settings
+                            msgBox.usePassword = false
+                            msgBox.rejectButtonVisible = false
+                            messageBoxInfo(qsTr("Notice!")
+                                           , qsTr("Signing with Auth eID")
+                                           , qsTr("Once you set Auth eID as signing the signing will be set locally on your mobile device.\n\nIf you lose your phone or uninstall the app you will lose your ability to sign wallet requests.\n\nThis also implies that your Auth eID cannot be hacked as it's only stored on your mobile device.\n\nKeep your backup secure as it protects your wallet forever, against hard drive loss and if you lose your mobile device which is connected to Auth eID.\n\nFor more information please consult with the Getting Started with Auth eID guide.")
+                                           )
+                            authNoticeShown = true // make sure the notice is only shown once
+                        }
+                    }
+                }
+            }
+
+            BSConfirmedPasswordInput {
+                id: newPasswordWithConfirm
+                visible:    rbPassword.checked
+                columnSpacing: 10
+                passwordLabelTxt: qsTr("Password")
+                passwordInputPlaceholder: qsTr("Wallet Password")
+                confirmLabelTxt: qsTr("Confirm Password")
+                confirmInputPlaceholder: qsTr("Confirm Wallet Password")
+            }
+
+            RowLayout {
+                id: authLayout
+                visible: rbAuth.checked
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
+                    Layout.minimumWidth: inputLabelsWidth
+                    Layout.preferredWidth: inputLabelsWidth
+                    Layout.maximumWidth: inputLabelsWidth
+                    Layout.fillWidth: true
+                    text:   qsTr("Auth eID email")
+                }
+                CustomTextInput {
+                    id: tiAuthId
+                    Layout.fillWidth: true
+                    selectByMouse: true
+                    focus: true
+                    onEditingFinished: {
+                        seed.walletName = tfName.text
+                    }
                 }
             }
 
@@ -232,10 +327,37 @@ CustomDialog {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        text:   qsTr("CONFIRM")
+                        text:   qsTr("Continue")
                         enabled:    acceptable
                         onClicked: {
-                            accept()
+                            if (rbPassword.checked) {
+                                //pwdBox.open()
+                                msgBox.usePassword = true
+                                msgBox.password = newPasswordWithConfirm.text
+                                msgBox.rejectButtonVisible = true
+                                messageBoxInfo(qsTr("Notice!")
+                                               , qsTr("Please take care of your assets!")
+                                               , qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! Your Wallet and any backups are useless if you lose them. \n\nA backup protects your wallet forever, against hard drive loss and losing your passphrase. It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. Please make a backup and keep it in a safe place.\n\nPlease enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!"))
+                            }
+                            else {
+                                encType = WalletInfo.Auth
+                                encKey = tiAuthId.text
+                                curPage = WalletCreateDialog.Page.AuthSignPage
+                                // the Auth eID sign process should start here
+                                /*
+                                authSign = auth.signWallet(tiAuthId.text, qsTr("Password for wallet %1").arg(tfName.text),
+                                                                      seed.walletId)
+                                btnAuth.enabled = false
+                                authSign.success.connect(function(key) {
+                                    acceptable = true
+                                    password = key
+                                    text = qsTr("Successfully signed")
+                                })
+                                authSign.error.connect(function(text) {
+                                    authSign = null
+                                    btnAuth.enabled = tiAuthId.text.length
+                                })*/
+                            }
                         }
                     }
                 }
@@ -250,11 +372,78 @@ CustomDialog {
                         Layout.fillWidth: true
                         text:   qsTr("Cancel")
                         onClicked: {
-                            onClicked: root.reject();
+                            abortBox.open()
                         }
                     }
                 }
             }
+        }
+
+        // this is the Auth eID sign status page
+        ColumnLayout {
+            anchors.fill: parent
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            spacing: 10
+            //width: parent.width
+            visible: curPage === WalletCreateDialog.Page.AuthSignPage
+            id: authSignPage
+
+            RowLayout{
+                CustomHeaderPanel{
+                    Layout.preferredHeight: 40
+                    Layout.fillWidth: true
+                    text:  qsTr("Sign With Auth eID")
+                }
+            }
+            CustomLabel {
+                Layout.fillWidth: true
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                horizontalAlignment: Qt.AlignCenter
+                text: qsTr("Activate Auth eID signing\nWallet ID: %1\n\n(%2)").arg(seed ? seed.walletId : qsTr("")).arg(encKey)
+            }
+
+            CustomProgressBar {
+                id: authProgress
+                Layout.fillWidth: true
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                from: 0.0
+                to: 120.0
+                value: 120.0
+            }
+            CustomLabel {
+                id: seconds
+                Layout.fillWidth: true
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                horizontalAlignment: Qt.AlignRight
+                text: qsTr("%1 seconds left").arg(countDown)
+            }
+
+            CustomButtonBar {
+                implicitHeight: childrenRect.height
+                implicitWidth: root.width
+
+                Flow {
+                    spacing: 5
+                    padding: 5
+                    height: childrenRect.height + 10
+
+                    CustomButton {
+                        Layout.fillWidth: true
+                        text:   qsTr("Cancel")
+                        onClicked: {
+                            curPage = WalletCreateDialog.Page.Main
+                        }
+                    }
+                }
+            }
+
         }
     }
 
@@ -267,16 +456,18 @@ CustomDialog {
     }
 
     onAccepted: {
-        seed.setWalletName(tfName.text)
-        seed.setWalletDesc(tfDesc.text)
+        seed.walletName = tfName.text
+        seed.walletDesc = tfDesc.text
         isPrimary = cbPrimary.checked
         if (rbPassword.checked) {
-            seed.encType = WalletInfo.Password
+            encType = WalletInfo.Password
             password = newPasswordWithConfirm.text
         }
     }
 
     onRejected: {
-        authSign.cancel()
+        if (authSign) {
+            authSign.cancel()
+        }
     }
 }

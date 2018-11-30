@@ -6,6 +6,9 @@
 #include "EncryptionUtils.h"
 
 
+class MobileClient;
+class ApplicationSettings;
+
 namespace spdlog {
    class logger;
 }
@@ -48,6 +51,7 @@ signals:
 
 private:
 //   FrejaSignWallet   freja_;
+   MobileClient *mobileClient_{};
 };
 
 

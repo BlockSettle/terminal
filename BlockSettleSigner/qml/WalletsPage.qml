@@ -30,6 +30,15 @@ Item {
         id: walletInfo
     }
 
+    BSMessageBox {
+        id: abortBox
+        type: BSMessageBox.Type.Question
+        titleText: qsTr("Warning")
+        text: qsTr("Abort Wallet Creation?")
+        details: qsTr("The Wallet will not be created if you don't complete the procedure.\n\nAre you sure you want to abort the Wallet Creation process?")
+        acceptButtonText: qsTr("Abort")
+    }
+
     function getCurrentWallet(view) {
         walletInfo.id = view.model.data(view.currentIndex, WalletsModel.WalletIdRole)
         walletInfo.rootId = view.model.data(view.currentIndex, WalletsModel.RootWalletIdRole)
@@ -37,6 +46,24 @@ Item {
         walletInfo.encKey = view.model.data(view.currentIndex, WalletsModel.EncKeyRole)
         walletInfo.encType = view.model.data(view.currentIndex, WalletsModel.IsEncryptedRole)
         return walletInfo
+    }
+
+    function exportWalletDialog(wallet) {
+        var dlg = Qt.createQmlObject("WalletExportWoDialog {}", mainWindow, "exportWoDlg")
+        dlg.wallet = wallet
+        dlg.woWalletFileName = walletsProxy.getWoWalletFile(dlg.wallet.id)
+        dlg.exportDir = decodeURIComponent(signerParams.walletsDir)
+        console.log("exportWatchingOnly id:" + wallet.id + " name:" + wallet.name + " encType:" + wallet.encType + " encKey:" + wallet.encKey)
+        dlg.accepted.connect(function() {
+            console.log("exportWatchingOnly id:" + dlg.wallet.id + " dir:" + dlg.exportDir + " pwd:" + dlg.password)
+            if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
+                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Successfully exported watching-only copy for wallet."),
+                           qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location:%3").arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
+                //ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
+                //                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
+            }
+        })
+        dlg.open()
     }
 
     ScrollView {
@@ -91,32 +118,59 @@ Item {
                         Layout.fillWidth: true
                         text:   qsTr("New Wallet")
                         onClicked: {
-                            var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "walletNewDlg")
+                            // let user create a new wallet or import one from file
+                            var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "WalletNewDialog")
                             dlgNew.accepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.RandomSeed) {
-                                    var dlg = Qt.createQmlObject("WalletCreateDialog {}", mainWindow, "walletCreateDlg")
-                                    dlg.primaryWalletExists = walletsProxy.primaryWalletExists
-                                    dlg.seed = walletsProxy.createWalletSeed()
-                                    dlg.accepted.connect(function() {
-                                        if (walletsProxy.createWallet(dlg.isPrimary, dlg.password, dlg.seed)) {
-                                            ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created")
-                                                                     .arg(dlg.seed.walletName))
+                                    newWalletSeed.generate();
+                                    // allow user to save wallet seed lines and then prompt him to enter them for verification
+                                    var dlgSeed = Qt.createQmlObject("NewWalletSeedDialog {}", mainWindow, "NewWalletSeedDialog")
+                                    dlgSeed.accepted.connect(function() {
+                                        // let user set a password or Auth eID and also name and desc. for the new wallet
+                                        var dlgPwd = Qt.createQmlObject("WalletCreateDialog {}", mainWindow, "walletCreateDlg")
+                                        dlgPwd.primaryWalletExists = walletsProxy.primaryWalletExists
+                                        dlgPwd.seed = walletsProxy.createWalletSeed()
+                                        if (!dlgPwd.seed.parsePaperKey(newWalletSeed.part1 + "\n" + newWalletSeed.part2)) {
+                                            messageBox(BSMessageBox.Type.Critical, qsTr("Error"), qsTr("Failed to parse wallet seed."), qsTr(""))
+                                            //ibFailure.displayMessage("Failed to parse wallet seed")
                                         }
+                                        else {
+                                            dlgPwd.open();
+                                        }
+
+                                        dlgPwd.accepted.connect(function(){
+                                            // create the wallet
+
+                                            if (walletsProxy.createWallet(dlgPwd.isPrimary, dlgPwd.password, dlgPwd.seed)) {
+                                                //ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created").arg(dlgPwd.seed.walletName))
+                                                // open export dialog to give user a chance to export the wallet
+                                                walletInfo.id = dlgPwd.seed.walletId
+                                                walletInfo.rootId = dlgPwd.seed.walletId
+                                                walletInfo.name = dlgPwd.seed.walletName
+                                                walletInfo.encType = dlgPwd.encType
+                                                walletInfo.encKey = dlgPwd.encKey
+                                                exportWalletDialog(walletInfo)
+                                                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet successfully created."),
+                                                           qsTr("Wallet ID: %1").arg(dlgPwd.seed.walletName))
+                                            }
+                                        })
+
                                     })
-                                    dlg.open()
+                                    dlgSeed.open()
                                 }
                                 else {
-                                    var dlg = Qt.createQmlObject("WalletImportDialog {}", mainWindow, "walletImportDlg")
-                                    dlg.primaryWalletExists = walletsProxy.primaryWalletExists
-                                    dlg.digitalBackup = (dlgNew.type === WalletNewDialog.WalletType.DigitalBackupFile)
-                                    dlg.seed = walletsProxy.createWalletSeed()
-                                    dlg.accepted.connect(function(){
-                                        if (walletsProxy.importWallet(dlg.isPrimary, dlg.seed, dlg.password)) {
-                                            ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>")
-                                                                     .arg(dlg.seed.walletName))
+                                    var dlgImp = Qt.createQmlObject("WalletImportDialog {}", mainWindow, "walletImportDlg")
+                                    dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
+                                    dlgImp.digitalBackup = (dlgNew.type === WalletNewDialog.WalletType.DigitalBackupFile)
+                                    dlgImp.seed = walletsProxy.createWalletSeed()
+                                    dlgImp.accepted.connect(function(){
+                                        if (walletsProxy.importWallet(dlgImp.isPrimary, dlgImp.seed, dlgImp.password)) {
+                                            messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet successfully imported."),
+                                                       qsTr("Wallet ID: %1").arg(dlgImp.seed.walletName))
+                                            //ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>").arg(dlgImp.seed.walletName))
                                         }
                                     })
-                                    dlg.open()
+                                    dlgImp.open()
                                 }
                             })
                             dlgNew.open()
@@ -133,7 +187,8 @@ Item {
                             dlg.accepted.connect(function() {
                                 if (walletsProxy.changePassword(dlg.walletId, dlg.oldPassword, dlg.newPassword,
                                                                 dlg.wallet.encType, dlg.wallet.encKey)) {
-                                    ibSuccess.displayMessage(qsTr("New password successfully set for %1").arg(dlg.walletName))
+                                    messageBox(BSMessageBox.Type.Success, qsTr("Password"), qsTr("New password successfully set."), qsTr("Wallet ID: %1").arg(dlg.walletName))
+                                    //ibSuccess.displayMessage(qsTr("New password successfully set for %1").arg(dlg.walletName))
                                 }
                             })
                             dlg.open()
@@ -159,8 +214,10 @@ Item {
                                         if (walletsProxy.backupPrivateKey(dlgBkp.wallet.id, dlgBkp.targetDir + "/" + dlgBkp.backupFileName
                                                                           , dlgBkp.isPrintable, dlgBkp.password)) {
                                             if (walletsProxy.deleteWallet(dlg.walletId)) {
-                                                ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
-                                                                         .arg(dlg.walletName).arg(dlg.walletId))
+                                                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet was successfully deleted."),
+                                                           qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
+                                                //ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
+                                                //                         .arg(dlg.walletName).arg(dlg.walletId))
                                             }
                                         }
                                     })
@@ -168,8 +225,10 @@ Item {
                                 }
                                 else {
                                     if (walletsProxy.deleteWallet(dlg.walletId)) {
-                                        ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
-                                                                 .arg(dlg.walletName).arg(dlg.walletId))
+                                        messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet was successfully deleted."),
+                                                   qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
+                                        //ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
+                                        //                        .arg(dlg.walletName).arg(dlg.walletId))
                                     }
                                 }
                             })
@@ -188,9 +247,10 @@ Item {
                             dlg.accepted.connect(function() {
                                 if (walletsProxy.backupPrivateKey(dlg.wallet.id, dlg.targetDir + "/" + dlg.backupFileName
                                                                   , dlg.isPrintable, dlg.password)) {
-                                    ibSuccess.displayMessage(qsTr("Backup of wallet %1 (id %2) to %3/%4 was successful")
-                                                             .arg(dlg.wallet.name).arg(dlg.wallet.id)
-                                                             .arg(dlg.targetDir).arg(dlg.backupFileName))
+                                    messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet backup was successful."),
+                                               qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location:%3").arg(dlg.walletName).arg(dlg.walletId).arg(dlg.targetDir))
+                                    //ibSuccess.displayMessage(qsTr("Backup of wallet %1 (id %2) to %3/%4 was successful")
+                                    //                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.targetDir).arg(dlg.backupFileName))
                                 }
                             })
                             dlg.open()
@@ -202,17 +262,7 @@ Item {
                         text:   qsTr("Export Watching Only Wallet")
                         enabled:    isHdRoot()
                         onClicked: {
-                            var dlg = Qt.createQmlObject("WalletExportWoDialog {}", mainWindow, "exportWoDlg")
-                            dlg.wallet = getCurrentWallet(walletsView)
-                            dlg.woWalletFileName = walletsProxy.getWoWalletFile(dlg.wallet.id)
-                            dlg.exportDir = decodeURIComponent(signerParams.walletsDir)
-                            dlg.accepted.connect(function() {
-                                if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
-                                    ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
-                                                             .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
-                                }
-                            })
-                            dlg.open()
+                            exportWalletDialog(getCurrentWallet(walletsView))
                         }
                     }
                 }

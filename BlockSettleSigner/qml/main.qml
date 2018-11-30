@@ -73,6 +73,10 @@ ApplicationWindow {
         }
     }
 
+    BSMessageBox {
+        id: msgBox
+    }
+
     footer: TabBar {
         id: tabBar
         currentIndex: swipeView.currentIndex
@@ -134,5 +138,18 @@ ApplicationWindow {
         mainWindow.requestActivate()
         mainWindow.flags |= Qt.WindowStaysOnTopHint
         mainWindow.flags &= ~Qt.WindowStaysOnTopHint
+   }
+
+   function messageBox(type, title, text, details, parent) {
+       msgBox.type = type
+       msgBox.titleText = title
+       msgBox.text = text
+       msgBox.details = details
+       msgBox.parent = parent
+       msgBox.open()
+   }
+
+   function messageBoxInfo(title, text, details, parent) {
+       messageBox(BSMessageBox.Type.Info, title, text, details, parent);
    }
 }
