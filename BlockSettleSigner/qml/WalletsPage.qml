@@ -57,8 +57,10 @@ Item {
         dlg.accepted.connect(function() {
             console.log("exportWatchingOnly id:" + dlg.wallet.id + " dir:" + dlg.exportDir + " pwd:" + dlg.password)
             if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
-                ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
-                                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
+                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet was successfully deleted."),
+                           qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location:%3").arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
+                //ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
+                //                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
             }
         })
         dlg.open()
@@ -129,7 +131,8 @@ Item {
                                         dlgPwd.primaryWalletExists = walletsProxy.primaryWalletExists
                                         dlgPwd.seed = walletsProxy.createWalletSeed()
                                         if (!dlgPwd.seed.parsePaperKey(newWalletSeed.part1 + "\n" + newWalletSeed.part2)) {
-                                            ibFailure.displayMessage("Failed to parse wallet seed")
+                                            messageBox(BSMessageBox.Type.Critical, qsTr("Error"), qsTr("Failed to parse wallet seed."), qsTr(""))
+                                            //ibFailure.displayMessage("Failed to parse wallet seed")
                                         }
                                         else {
                                             dlgPwd.open();
@@ -139,14 +142,15 @@ Item {
                                             // create the wallet
 
                                             if (walletsProxy.createWallet(dlgPwd.isPrimary, dlgPwd.password, dlgPwd.seed)) {
-                                                ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created").arg(dlgPwd.seed.walletName))
+                                                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet successfully created."),
+                                                           qsTr("Wallet ID: %1").arg(dlgPwd.seed.walletName))
+                                                //ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created").arg(dlgPwd.seed.walletName))
                                                 // open export dialog to give user a chance to export the wallet
                                                 walletInfo.id = dlgPwd.seed.walletId
                                                 walletInfo.rootId = dlgPwd.seed.walletId
                                                 walletInfo.name = dlgPwd.seed.walletName
                                                 walletInfo.encType = dlgPwd.encType
                                                 walletInfo.encKey = dlgPwd.encKey
-                                                console.log("createWallet id:" + dlgPwd.seed.walletId + " name:" + dlgPwd.seed.walletName + " encType:" + dlgPwd.encType)
                                                 exportWalletDialog(walletInfo)
                                             }
                                         })
@@ -161,8 +165,9 @@ Item {
                                     dlgImp.seed = walletsProxy.createWalletSeed()
                                     dlgImp.accepted.connect(function(){
                                         if (walletsProxy.importWallet(dlgImp.isPrimary, dlgImp.seed, dlgImp.password)) {
-                                            ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>")
-                                                                     .arg(dlgImp.seed.walletName))
+                                            messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet successfully imported."),
+                                                       qsTr("Wallet ID: %1").arg(dlgImp.seed.walletName))
+                                            //ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>").arg(dlgImp.seed.walletName))
                                         }
                                     })
                                     dlgImp.open()
@@ -182,7 +187,8 @@ Item {
                             dlg.accepted.connect(function() {
                                 if (walletsProxy.changePassword(dlg.walletId, dlg.oldPassword, dlg.newPassword,
                                                                 dlg.wallet.encType, dlg.wallet.encKey)) {
-                                    ibSuccess.displayMessage(qsTr("New password successfully set for %1").arg(dlg.walletName))
+                                    messageBox(BSMessageBox.Type.Success, qsTr("Password"), qsTr("New password successfully set."), qsTr("Wallet ID: %1").arg(dlg.walletName))
+                                    //ibSuccess.displayMessage(qsTr("New password successfully set for %1").arg(dlg.walletName))
                                 }
                             })
                             dlg.open()
@@ -208,8 +214,10 @@ Item {
                                         if (walletsProxy.backupPrivateKey(dlgBkp.wallet.id, dlgBkp.targetDir + "/" + dlgBkp.backupFileName
                                                                           , dlgBkp.isPrintable, dlgBkp.password)) {
                                             if (walletsProxy.deleteWallet(dlg.walletId)) {
-                                                ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
-                                                                         .arg(dlg.walletName).arg(dlg.walletId))
+                                                messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet was successfully deleted."),
+                                                           qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
+                                                //ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
+                                                //                         .arg(dlg.walletName).arg(dlg.walletId))
                                             }
                                         }
                                     })
@@ -217,8 +225,10 @@ Item {
                                 }
                                 else {
                                     if (walletsProxy.deleteWallet(dlg.walletId)) {
-                                        ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
-                                                                 .arg(dlg.walletName).arg(dlg.walletId))
+                                        messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet was successfully deleted."),
+                                                   qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
+                                        //ibSuccess.displayMessage(qsTr("Wallet <%1> (id %2) was deleted")
+                                        //                        .arg(dlg.walletName).arg(dlg.walletId))
                                     }
                                 }
                             })
@@ -237,9 +247,10 @@ Item {
                             dlg.accepted.connect(function() {
                                 if (walletsProxy.backupPrivateKey(dlg.wallet.id, dlg.targetDir + "/" + dlg.backupFileName
                                                                   , dlg.isPrintable, dlg.password)) {
-                                    ibSuccess.displayMessage(qsTr("Backup of wallet %1 (id %2) to %3/%4 was successful")
-                                                             .arg(dlg.wallet.name).arg(dlg.wallet.id)
-                                                             .arg(dlg.targetDir).arg(dlg.backupFileName))
+                                    messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet backup was successful."),
+                                               qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location:%3").arg(dlg.walletName).arg(dlg.walletId).arg(dlg.targetDir))
+                                    //ibSuccess.displayMessage(qsTr("Backup of wallet %1 (id %2) to %3/%4 was successful")
+                                    //                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.targetDir).arg(dlg.backupFileName))
                                 }
                             })
                             dlg.open()
