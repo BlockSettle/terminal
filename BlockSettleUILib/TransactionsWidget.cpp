@@ -94,20 +94,25 @@ public:
          }
       }
 
-      if (!searchString.isEmpty()) {
-         QModelIndex index = src->index(source_row, static_cast<int>(TransactionsViewModel::Columns::Comment));
-         if (!src->data(index, TransactionsViewModel::FilterRole).toString().contains(searchString, Qt::CaseInsensitive)) {
-            return false;
-         }
-      }
+      bool result = true;
 
       if ((startDate > 0) && (endDate > 0)) {
          QModelIndex index = src->index(source_row, static_cast<int>(TransactionsViewModel::Columns::Date));
          uint32_t txDate = src->data(index, TransactionsViewModel::FilterRole).toUInt();
-         return (startDate <= txDate) && (txDate <= endDate);
+         result = (startDate <= txDate) && (txDate <= endDate);
       }
 
-      return true;
+      if (result && !searchString.isEmpty()) {     // more columns can be added later
+         for (const auto &col : { TransactionsViewModel::Columns::Comment, TransactionsViewModel::Columns::Address }) {
+            QModelIndex index = src->index(source_row, static_cast<int>(col));
+            if (src->data(index, TransactionsViewModel::FilterRole).toString().contains(searchString, Qt::CaseInsensitive)) {
+               return true;
+            }
+         }
+         return false;
+      }
+
+      return result;
    }
 
    bool filterAcceptsColumn(int source_column, const QModelIndex &source_parent) const override
