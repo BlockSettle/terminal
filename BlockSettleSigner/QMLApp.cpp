@@ -119,7 +119,7 @@ void QMLAppObj::settingsConnections()
 void QMLAppObj::walletsLoad()
 {
    logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
+   walletsMgr_->LoadWallets(NetworkType::Invalid, params_->getWalletsDir());
    if (walletsMgr_->GetWalletsCount() > 0) {
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 

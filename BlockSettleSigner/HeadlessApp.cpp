@@ -28,7 +28,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 void HeadlessAppObj::Start()
 {
    logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
+   walletsMgr_->LoadWallets(NetworkType::Invalid, params_->getWalletsDir());
    if (!walletsMgr_->GetSettlementWallet()) {
       if (!walletsMgr_->CreateSettlementWallet(QString())) {
          logger_->error("Failed to create Settlement wallet");
