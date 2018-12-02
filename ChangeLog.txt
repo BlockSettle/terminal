@@ -1,3 +1,17 @@
+0.11.3
+Bug Fixes:
+   - fixed support for mainnet and testnet wallets
+   - few crashes fixed
+   - UI fixes for import/create wallet
+Improvements:
+   - search by comment and address
+   - loading connections settings from PuB
+   - updated MD
+   - enter password warnings
+   - TX filtering
+   - In/Out detection
+   - CPFP improved
+
 0.11.2
 Bug Fixes:
    - Fixed wallet import
