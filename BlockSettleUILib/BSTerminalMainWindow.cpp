@@ -155,6 +155,14 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
       return;
    }
 
+   const auto &priWallet = walletsManager_->GetPrimaryWallet();
+   if (priWallet) {
+      const auto &ccGroup = priWallet->getGroup(bs::hd::BlockSettle_CC);
+      if (ccGroup && (ccGroup->getNumLeaves() > 0)) {
+         ccFileManager_->LoadCCDefinitionsFromPub();
+      }
+   }
+
    Blocksettle::Communication::RequestPacket reqPkt;
    reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
    reqPkt.set_requestdata("");
@@ -485,7 +493,6 @@ void BSTerminalMainWindow::InitAssets()
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
    ccFileManager_->LoadSavedCCDefinitions();
-   ccFileManager_->LoadCCDefinitionsFromPub();
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
