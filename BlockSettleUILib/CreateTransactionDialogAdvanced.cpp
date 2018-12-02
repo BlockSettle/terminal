@@ -342,6 +342,7 @@ void CreateTransactionDialogAdvanced::initUI()
 
    ui_->pushButtonAddOutput->setEnabled(false);
    ui_->line->hide();
+   ui_->pushButtonSelectInputs->setEnabled(ui_->comboBoxWallets->count() > 0);
 
    connect(ui_->comboBoxWallets, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
 

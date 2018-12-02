@@ -22,8 +22,10 @@ public:
 
 protected:
    void showEvent(QShowEvent* event) override;
+
 private slots:
    void copyToClipboard();
+   void onClose();
 
 private:
    void UpdateSizeToAddress();

@@ -5,6 +5,7 @@
 
 #include <QDialog>
 
+#include "BtcDefinitions.h"
 #include "EasyCoDec.h"
 
 namespace Ui {
@@ -19,7 +20,7 @@ class NewWalletSeedConfirmDialog : public QDialog
    Q_OBJECT
 
 public:
-   NewWalletSeedConfirmDialog(const QString& walletId
+   NewWalletSeedConfirmDialog(const std::string &walletId, NetworkType
       , const QString &keyLine1, const QString &keyLine2, QWidget *parent = nullptr);
    ~NewWalletSeedConfirmDialog() override;
 
@@ -38,7 +39,8 @@ private:
 
    std::unique_ptr<Ui::NewWalletSeedConfirmDialog> ui_;
    bool keysAreCorrect_ = false;
-   const QString walletId_;
+   const std::string walletId_;
+   const NetworkType netType_;
    const QString keyLine1_;
    const QString keyLine2_;
    std::shared_ptr<EasyCoDec> easyCodec_;

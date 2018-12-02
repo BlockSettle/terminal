@@ -418,7 +418,16 @@ void hd::Leaf::reset()
 
 std::string hd::Leaf::GetWalletId() const
 {
-   return (inited_ && node_) ? node_->getId() : "";
+   if (!inited_) {
+      return "";
+   }
+   if (walletId_.empty() && node_) {
+      const auto prevMode = NetworkConfig::getMode();
+      NetworkConfig::selectNetwork(node_->getNetworkType() == NetworkType::TestNet ? NETWORK_MODE_TESTNET : NETWORK_MODE_MAINNET);
+      walletId_ = node_->getId();
+      NetworkConfig::selectNetwork(prevMode);
+   }
+   return walletId_;
 }
 
 std::string hd::Leaf::GetWalletDescription() const
