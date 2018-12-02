@@ -625,9 +625,11 @@ std::shared_ptr<hd::Node> hd::Nodes::decrypt(const SecureBinaryData &password) c
    }
    for (const auto &node : nodes_) {
       auto decrypted = node->decrypt(password);
-      wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (hd::Node(seed).getId() == id_) {
-         return std::move(decrypted);
+      if (decrypted != nullptr) {
+         wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
+         if (hd::Node(seed).getId() == id_) {
+            return std::move(decrypted);
+         }
       }
    }
    return nullptr;
