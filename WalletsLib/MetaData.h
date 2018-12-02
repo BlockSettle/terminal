@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <QObject>
 #include <QMutex>
-#include <QThreadPool>
+#include <QPointer>
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
@@ -244,8 +244,8 @@ namespace bs {
       virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
       virtual std::shared_ptr<spdlog::logger> getLogger() const { return logger_; }
       virtual BinaryData getRootId() const = 0;
-      virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX);
-      virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
+      virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj, uint64_t val = UINT64_MAX);
+      virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj);
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
       virtual std::string RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
@@ -379,15 +379,11 @@ namespace bs {
       };
       std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
 
-      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
-      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
+      std::map<QPointer<QObject>, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
+      std::map<QPointer<QObject>, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
 
       mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
       std::atomic_bool  heartbeatRunning_ = { false };
-
-   private slots:
-      void onZCListObjDestroyed();
-      void onSpendableObjDestroyed();
    };
 
 
