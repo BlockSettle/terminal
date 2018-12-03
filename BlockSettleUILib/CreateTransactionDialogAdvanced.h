@@ -130,6 +130,7 @@ private:
 
    bool     currentAddressValid_ = false;
    double   currentValue_ = 0;
+   bool     isRBF_ = false;
 
    UsedInputsModel         *  usedInputsModel_ = nullptr;
    TransactionOutputsModel *  outputsModel_ = nullptr;
