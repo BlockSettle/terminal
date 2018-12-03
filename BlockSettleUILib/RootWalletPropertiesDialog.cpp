@@ -256,8 +256,34 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::h
 
    ui_->balanceWidget->hide();
 
-   ui_->labelAddresses->setText(tr("Groups/Leaves"));
-   ui_->labelAddressesUsed->setText(tr("%1/%2").arg(QString::number(wallet->getNumGroups())).arg(QString::number(wallet->getNumLeaves())));
+   ui_->labelGroupsUsed->setText(tr("%1/%2").arg(QString::number(wallet->getNumGroups())).arg(QString::number(wallet->getNumLeaves())));
+   ui_->labelAddressesActive->setText(tr("Loading..."));
+   ui_->labelUTXOs->setText(tr("Loading..."));
+
+   unsigned int nbTotalAddresses = 0;
+   auto nbUTXOs = std::make_shared<std::atomic_uint>(0);
+   auto nbActAddrs = std::make_shared<std::atomic_uint>(0);
+
+   const auto &cbUTXOs = [this, nbUTXOs](std::vector<UTXO> utxos) {
+      *nbUTXOs += utxos.size();
+      QMetaObject::invokeMethod(this, [this, nbUTXOs] {
+         ui_->labelUTXOs->setText(QString::number(*nbUTXOs));
+      });
+   };
+   const auto &cbActiveAddrs = [this, nbActAddrs](size_t count) {
+      *nbActAddrs += count;
+      QMetaObject::invokeMethod(this, [this, nbActAddrs] {
+         ui_->labelAddressesActive->setText(QString::number(*nbActAddrs));
+      });
+   };
+
+   for (const auto &leaf : wallet->getLeaves()) {
+      leaf->getSpendableTxOutList(cbUTXOs, this);
+      leaf->GetActiveAddressCount(cbActiveAddrs);
+
+      nbTotalAddresses += leaf->GetUsedAddressCount();
+   }
+   ui_->labelAddressesUsed->setText(QString::number(nbTotalAddresses));
 }
 
 void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::Wallet>& wallet)
@@ -266,15 +292,28 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::W
    ui_->labelWalletName->setText(QString::fromStdString(wallet->GetWalletName()));
    ui_->labelDescription->setText(QString::fromStdString(wallet->GetWalletDescription()));
 
-   ui_->labelAddresses->setText(tr("Addresses Used"));
    ui_->labelAddressesUsed->setText(QString::number(wallet->GetUsedAddressCount()));
 
    if (wallet->isBalanceAvailable()) {
+      ui_->labelAddressesActive->setText(tr("Loading..."));
+      ui_->labelUTXOs->setText(tr("Loading..."));
+      wallet->getSpendableTxOutList([this](std::vector<UTXO> utxos) {
+         QMetaObject::invokeMethod(this, [this, size = utxos.size()] {
+            ui_->labelUTXOs->setText(QString::number(size));
+         });
+      }, this);
+      wallet->GetActiveAddressCount([this](size_t count) {
+         QMetaObject::invokeMethod(this, [this, count]{
+            ui_->labelAddressesActive->setText(QString::number(count));
+         });
+      });
       ui_->labelSpendable->setText(UiUtils::displayAmount(wallet->GetSpendableBalance()));
       ui_->labelUnconfirmed->setText(UiUtils::displayAmount(wallet->GetUnconfirmedBalance()));
       ui_->labelTotal->setText(UiUtils::displayAmount(wallet->GetTotalBalance()));
       ui_->balanceWidget->show();
    } else {
+      ui_->labelAddressesActive->setText(tr("N/A"));
+      ui_->labelUTXOs->setText(tr("N/A"));
       ui_->balanceWidget->hide();
    }
 }

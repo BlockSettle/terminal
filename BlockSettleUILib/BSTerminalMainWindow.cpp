@@ -155,13 +155,21 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
       return;
    }
 
+   const auto &priWallet = walletsManager_->GetPrimaryWallet();
+   if (priWallet) {
+      const auto &ccGroup = priWallet->getGroup(bs::hd::BlockSettle_CC);
+      if (ccGroup && (ccGroup->getNumLeaves() > 0)) {
+         ccFileManager_->LoadCCDefinitionsFromPub();
+      }
+   }
+
    Blocksettle::Communication::RequestPacket reqPkt;
    reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
    reqPkt.set_requestdata("");
 
    const auto connection = connectionManager_->CreateSecuredDataConnection();
    connection->SetServerPublicKey(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
-   auto command = std::make_shared<RequestReplyCommand>("network_settings", connection, logMgr_->logger());
+   cmdPuBSettings_ = std::make_shared<RequestReplyCommand>("network_settings", connection, logMgr_->logger());
    const auto &title = tr("Network settings");
 
    const auto &populateAppSettings = [this](std::map<NetworkSettingType, std::pair<std::string, unsigned int>> settings) {
@@ -182,7 +190,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
       }
    };
 
-   command->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
+   cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
       if (data.empty()) {
          showError(title, tr("Empty reply from BlockSettle server"));
       }
@@ -213,22 +221,16 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
       cb(networkSettings_);
       return true;
    });
-   command->SetErrorCallback([this, title](const std::string& message) {
+   cmdPuBSettings_->SetErrorCallback([this, title](const std::string& message) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] error: {}", message);
       showError(title, tr("Failed to obtain network settings from BlockSettle server"));
    });
 
-   if (!command->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
+   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePort)
       , reqPkt.SerializeAsString())) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] failed to send request");
       showError(title, tr("Failed to retrieve network settings due to invalid connection to BlockSettle server"));
-   }
-   else {
-      logMgr_->logger()->debug("[GetNetworkSettingsFromPuB] request sent");
-   }
-   if (!command->WaitForRequestedProcessed(500)) {
-      showError(title, tr("No response from BlockSettle server"));
    }
 }
 
@@ -491,7 +493,6 @@ void BSTerminalMainWindow::InitAssets()
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
    ccFileManager_->LoadSavedCCDefinitions();
-   ccFileManager_->LoadCCDefinitionsFromPub();
 }
 
 void BSTerminalMainWindow::InitPortfolioView()

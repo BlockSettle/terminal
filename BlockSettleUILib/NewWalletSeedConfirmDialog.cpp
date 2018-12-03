@@ -10,13 +10,17 @@
 #include "ui_NewWalletSeedConfirmDialog.h"
 #include "make_unique.h"
 #include "EasyEncValidator.h"
+#include "HDNode.h"
+#include "MetaData.h"
 
 
-NewWalletSeedConfirmDialog::NewWalletSeedConfirmDialog(const QString& walletId
+NewWalletSeedConfirmDialog::NewWalletSeedConfirmDialog(const std::string &walletId
+   , NetworkType netType
    , const QString &keyLine1, const QString &keyLine2, QWidget *parent) :
    QDialog(parent)
    , ui_(new Ui::NewWalletSeedConfirmDialog)
    , walletId_(walletId)
+   , netType_(netType)
    , keyLine1_(keyLine1)
    , keyLine2_(keyLine2)
    , easyCodec_(std::make_shared<EasyCoDec>())
@@ -83,7 +87,11 @@ void NewWalletSeedConfirmDialog::onKeyChanged(const QString &)
    if (inputLine1 != keyLine1 || inputLine2 != keyLine2) {
       keysAreCorrect_ = false;
    } else {
-      keysAreCorrect_ = true;
+      EasyCoDec::Data ecData;
+      ecData.part1 = inputLine1.toStdString();
+      ecData.part2 = inputLine2.toStdString();
+      const auto &seed = bs::wallet::Seed::fromEasyCodeChecksum(ecData, netType_);
+      keysAreCorrect_ = (bs::hd::Node(seed).getId() == walletId_);
    }
 
    if (inputLine1 != keyLine1) {

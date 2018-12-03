@@ -70,19 +70,20 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
       }
       logger_->debug("[ArmoryConnection::zc maintenance] stopped");
    };
-   std::thread(cbZCMaintenance).detach();
+   zcThread_ = std::thread(cbZCMaintenance);
 }
 
 ArmoryConnection::~ArmoryConnection() noexcept
 {
+   maintThreadRunning_ = false;
+   zcMaintCV_.notify_one();
    stopServiceThreads();
+   zcThread_.join();
 }
 
 void ArmoryConnection::stopServiceThreads()
 {
    regThreadRunning_ = false;
-   maintThreadRunning_ = false;
-   zcMaintCV_.notify_one();
 }
 
 bool ArmoryConnection::startLocalArmoryProcess(const ArmorySettings &settings)

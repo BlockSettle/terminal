@@ -614,23 +614,46 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr) const
    return getAddrTxN(addr, cb);
 }
 
+bool bs::Wallet::GetActiveAddressCount(const std::function<void(size_t)> &cb) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   if (addressTxNMap_.empty() || updateAddrTxN_) {
+      const auto &cbTxN = [this, cb] (ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
+         try {
+            auto inTxnMap = txnMap.get();
+            {
+               QMutexLocker lock(&addrMapsMtx_);
+               for (const auto &txn : inTxnMap) {          // std::map::insert doesn't replace elements
+                  addressTxNMap_[txn.first] = txn.second;
+               }
+               updateAddrTxN_ = false;
+            }
+            cb(addressTxNMap_.size());
+         } catch (std::exception& e) {
+            if (logger_ != nullptr) {
+               logger_->error("[bs::Wallet::GetActiveAddressCount] Return data error - {} ", e.what());
+            }
+         }
+      };
+      btcWallet_->getAddrTxnCountsFromDB(cbTxN);
+   } else {
+      cb(addressTxNMap_.size());
+   }
+   return true;
+}
+
 bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
    , QObject *obj, uint64_t val)
 {
    if (!isBalanceAvailable()) {
       return false;
    }
+
    spendableCallbacks_[obj].push_back(cb);
-   if (obj != nullptr) {
-      connect(obj, SIGNAL(destroyed()), this, SLOT(onSpendableObjDestroyed()));
-      if (spendableCallbacks_.size() > 1) {
-         return true;
-      }
-   }
-   else {
-      if (spendableCallbacks_[obj].size() > 1) {
-         return true;
-      }
+   if (spendableCallbacks_.size() > 1) {
+      return true;
    }
 
    const auto &cbTxOutList = [this, val]
@@ -655,23 +678,23 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
                txOutListObj.resize(cutOffIdx + 1);
             }
          }
-         for (const auto &cbPairs : spendableCallbacks_) {
-            if (cbPairs.first != nullptr) {
-               disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onSpendableObjDestroyed()));
+         QMetaObject::invokeMethod(this, [this, txOutListObj] {
+            for (const auto &cbPairs : spendableCallbacks_) {
+               if (cbPairs.first) {
+                  for (const auto &cb : cbPairs.second) {
+                     cb(txOutListObj);
+                  }
+               }
             }
-            for (const auto &cb : cbPairs.second) {
-               cb(txOutListObj);
-            }
-         }
+            spendableCallbacks_.clear();
+         });
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error("[bs::Wallet::getSpendableTxOutList] Return data " \
                "error {} - value {}", e.what(), val);
          }
       }
-
-      spendableCallbacks_.clear();
    };
    btcWallet_->getSpendableTxOutListForValue(val, cbTxOutList);
    return true;
@@ -726,8 +749,8 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
             cb(result);
          }
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error("[bs::Wallet::getUTXOsToSpend] Return data error " \
                "- {} - value {}", e.what(), val);
          }
@@ -737,16 +760,6 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
    return true;
 }
 
-void bs::Wallet::onSpendableObjDestroyed()
-{
-   spendableCallbacks_.erase(sender());
-}
-
-void bs::Wallet::onZCListObjDestroyed()
-{
-   zcListCallbacks_.erase(sender());
-}
-
 bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, QObject *obj)
 {
    if (!isBalanceAvailable()) {
@@ -754,37 +767,29 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
    }
 
    zcListCallbacks_[obj].push_back(cb);
-   if (obj != nullptr) {
-      connect(obj, SIGNAL(destroyed()), this, SLOT(onZCListObjDestroyed()));
-      if (zcListCallbacks_.size() > 1) {
-         return true;
-      }
-   }
-   else {
-      if (zcListCallbacks_[obj].size() > 1) {
-         return true;
-      }
+   if (zcListCallbacks_.size() > 1) {
+      return true;
    }
    const auto &cbZCList = [this](ReturnMessage<std::vector<UTXO>> utxos)-> void {
       try {
          auto inUTXOs = utxos.get();
-         for (const auto &cbPairs : zcListCallbacks_) {
-            if (cbPairs.first != nullptr) {
-               disconnect(cbPairs.first, SIGNAL(destroyed()), this, SLOT(onZCListObjDestroyed()));
+         QMetaObject::invokeMethod(this, [this, inUTXOs] {
+            for (const auto &cbPairs : zcListCallbacks_) {
+               if (cbPairs.first) {
+                  for (const auto &cb : cbPairs.second) {
+                     cb(inUTXOs);
+                  }
+               }
             }
-            for (const auto &cb : cbPairs.second) {
-               cb(inUTXOs);
-            }
-         }
+            zcListCallbacks_.clear();
+         });
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error("[bs::Wallet::getSpendableZCList] Return data error " \
                "- {}", e.what());
          }
       }
-
-      zcListCallbacks_.clear();
    };
    btcWallet_->getSpendableZCList(cbZCList);
    return true;
