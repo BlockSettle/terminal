@@ -4,6 +4,7 @@ import QtQuick.Controls.Styles 1.4
 
 Button {
     id: control
+    property bool capitalize: true
     text: parent.text
     leftPadding: 15
     rightPadding: 15
@@ -12,7 +13,7 @@ Button {
         text: control.text
         opacity: enabled ? 1.0 : 0.3
         color: "#ffffff"
-        font.capitalization: Font.AllUppercase
+        font.capitalization: capitalize ? Font.AllUppercase : Font.MixedCase
         font.pixelSize: 11
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -24,7 +25,8 @@ Button {
         implicitHeight: 35
         opacity: enabled ? 1 : 0.3
         border.color: "#247dac"
-        color: control.down ? "#247dac" : "transparent"
+        color: control.down || control.checked ? "#247dac" : "transparent"
+
         border.width: 1
     }
 }

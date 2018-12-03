@@ -8,6 +8,12 @@ import com.blocksettle.WalletsProxy 1.0
 import com.blocksettle.WalletInfo 1.0
 
 Item {
+    id: view
+    property string autheIdTitle: qsTr("Signing with Auth eID")
+    property string autheIdNotice: qsTr("Auth eID is a convenient alternative to passwords. Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s).<br><br>You may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. Auth eID requires the user to be vigilant with devices using Auth eID. If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable.<br><br>Auth eID is not a wallet backup! No wallet data is stored with Auth eID. Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate wallet. You may then attach a password or your Auth eID account to the wallet.<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store.<br><br>For more information, please consult:<br><a href=\"http://pubb.blocksettle.com/PDF/AutheID%20Getting%20Started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a> guide.")
+    property string passwordConfirmTitle: qsTr("Please take care of your assets!")
+    property string passwordConfirmNotice: qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! Your Wallet and any backups are useless if you lose them.<br><br>A backup protects your wallet forever, against hard drive loss and losing your passphrase. It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. Please make a backup and keep it in a safe place.<br><br>Please enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!")
+
     function isHdRoot() {
         var isRoot = walletsView.model.data(walletsView.currentIndex, WalletsModel.IsHDRootRole)
         return ((typeof(isRoot) != "undefined") && isRoot)
@@ -20,11 +26,9 @@ Item {
     Connections {
         target: walletsProxy
         onWalletError: {
-            ibFailure.displayMessage(errMsg)
+            messageBoxCritical(qsTr("Error"), qsTr("Unable to complete this action."), qsTr("%1").arg(errMsg))
         }
     }
-
-    id: view
 
     WalletInfo {
         id: walletInfo
@@ -34,9 +38,24 @@ Item {
         id: abortBox
         type: BSMessageBox.Type.Question
         titleText: qsTr("Warning")
-        text: qsTr("Abort Wallet Creation?")
-        details: qsTr("The Wallet will not be created if you don't complete the procedure.\n\nAre you sure you want to abort the Wallet Creation process?")
-        acceptButtonText: qsTr("Abort")
+        text: bWalletCreate ? qsTr("Abort Wallet Creation?") : qsTr("Do you want to abort Wallet Import?")
+        details: bWalletCreate ? qsTr("The Wallet will not be created if you don't complete the procedure.\n\nAre you sure you want to abort the Wallet Creation process?")
+                               : qsTr("The Wallet will not be imported if you don't complete the procedure.\n\nAre you sure you want to abort the Wallet Import process?")
+        acceptButtonText: bWalletCreate ? qsTr("Abort") : qsTr("Abort\nWallet Import")
+        property bool bWalletCreate: true
+    }
+
+    // used for display password confirm and auth eid notice
+    BSMessageBox {
+        id: noticeBox
+        type: BSMessageBox.Type.Info
+        titleText: qsTr("Notice!")
+        text: passwordNotice ? passwordConfirmTitle : autheIdTitle
+        details: passwordNotice ? passwordConfirmNotice : autheIdNotice
+        usePassword: passwordNotice
+        rejectButtonVisible: passwordNotice
+        property bool passwordNotice: false
+        textFormat: Text.RichText
     }
 
     function getCurrentWallet(view) {
@@ -58,7 +77,7 @@ Item {
             console.log("exportWatchingOnly id:" + dlg.wallet.id + " dir:" + dlg.exportDir + " pwd:" + dlg.password)
             if (walletsProxy.exportWatchingOnly(dlg.wallet.id, dlg.exportDir, dlg.password)) {
                 messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Successfully exported watching-only copy for wallet."),
-                           qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location:%3").arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
+                           qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
                 //ibSuccess.displayMessage(qsTr("Successfully exported watching-only copy for wallet %1 (id %2) to %3")
                 //                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.exportDir))
             }
@@ -121,7 +140,7 @@ Item {
                             // let user create a new wallet or import one from file
                             var dlgNew = Qt.createQmlObject("WalletNewDialog {}", mainWindow, "WalletNewDialog")
                             dlgNew.accepted.connect(function() {
-                                if (dlgNew.type === WalletNewDialog.WalletType.RandomSeed) {
+                                if (dlgNew.type === WalletNewDialog.WalletType.NewWallet) {
                                     newWalletSeed.generate();
                                     // allow user to save wallet seed lines and then prompt him to enter them for verification
                                     var dlgSeed = Qt.createQmlObject("NewWalletSeedDialog {}", mainWindow, "NewWalletSeedDialog")
@@ -142,7 +161,6 @@ Item {
                                             // create the wallet
 
                                             if (walletsProxy.createWallet(dlgPwd.isPrimary, dlgPwd.password, dlgPwd.seed)) {
-                                                //ibSuccess.displayMessage(qsTr("New wallet <%1> successfully created").arg(dlgPwd.seed.walletName))
                                                 // open export dialog to give user a chance to export the wallet
                                                 walletInfo.id = dlgPwd.seed.walletId
                                                 walletInfo.rootId = dlgPwd.seed.walletId
@@ -161,13 +179,17 @@ Item {
                                 else {
                                     var dlgImp = Qt.createQmlObject("WalletImportDialog {}", mainWindow, "walletImportDlg")
                                     dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
-                                    dlgImp.digitalBackup = (dlgNew.type === WalletNewDialog.WalletType.DigitalBackupFile)
                                     dlgImp.seed = walletsProxy.createWalletSeed()
                                     dlgImp.accepted.connect(function(){
                                         if (walletsProxy.importWallet(dlgImp.isPrimary, dlgImp.seed, dlgImp.password)) {
+                                            walletInfo.id = dlgImp.seed.walletId
+                                            walletInfo.rootId = dlgImp.seed.walletId
+                                            walletInfo.name = dlgImp.seed.walletName
+                                            walletInfo.encType = dlgImp.encType
+                                            walletInfo.encKey = dlgImp.encKey
+                                            exportWalletDialog(walletInfo)
                                             messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet successfully imported."),
                                                        qsTr("Wallet ID: %1").arg(dlgImp.seed.walletName))
-                                            //ibSuccess.displayMessage(qsTr("Successfully imported wallet <%1>").arg(dlgImp.seed.walletName))
                                         }
                                     })
                                     dlgImp.open()
@@ -248,7 +270,7 @@ Item {
                                 if (walletsProxy.backupPrivateKey(dlg.wallet.id, dlg.targetDir + "/" + dlg.backupFileName
                                                                   , dlg.isPrintable, dlg.password)) {
                                     messageBox(BSMessageBox.Type.Success, qsTr("Wallet"), qsTr("Wallet backup was successful."),
-                                               qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location:%3").arg(dlg.walletName).arg(dlg.walletId).arg(dlg.targetDir))
+                                               qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.targetDir))
                                     //ibSuccess.displayMessage(qsTr("Backup of wallet %1 (id %2) to %3/%4 was successful")
                                     //                         .arg(dlg.wallet.name).arg(dlg.wallet.id).arg(dlg.targetDir).arg(dlg.backupFileName))
                                 }

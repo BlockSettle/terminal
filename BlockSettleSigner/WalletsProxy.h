@@ -53,7 +53,7 @@ public:
    QString walletId() const;
 
 signals:
-   void error(const QString &);
+   void error(const QString &errMsg);
    void seedChanged() const;
 
 private:
