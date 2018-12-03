@@ -137,7 +137,7 @@ public:
 private slots:
    void updatePage();
    void refresh();
-   void onNewItems(TransactionItems items);
+   void onNewItems(const std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>> &);
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
@@ -156,6 +156,8 @@ private:
 
 signals:
    void dataLoaded(int count);
+   void initProgress(int start, int end);
+   void updateProgress(int value);
 
 public:
    enum class Columns

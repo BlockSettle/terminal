@@ -256,6 +256,8 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 {
    transactionsModel_ = model;
    connect(transactionsModel_.get(), &TransactionsViewModel::dataLoaded, this, &TransactionsWidget::onDataLoaded, Qt::QueuedConnection);
+   connect(transactionsModel_.get(), &TransactionsViewModel::initProgress, this, &TransactionsWidget::onProgressInited);
+   connect(transactionsModel_.get(), &TransactionsViewModel::updateProgress, this, &TransactionsWidget::onProgressUpdated);
 
    sortFilterModel_ = new TransactionsSortFilterModel(appSettings_, this);
    sortFilterModel_->setSourceModel(model.get());
@@ -285,12 +287,27 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 
 void TransactionsWidget::onDataLoaded(int count)
 {
+   ui->progressBar->hide();
+   ui->progressBar->setMaximum(0);
+   ui->progressBar->setMinimum(0);
+
    if ((count <= 0) || (ui->dateEditStart->dateTime().date().year() > 2009)) {
       return;
    }
    auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
    auto dateTime = transactionsModel_->data(index).toDateTime();
    ui->dateEditStart->setDateTime(dateTime);
+}
+
+void TransactionsWidget::onProgressInited(int start, int end)
+{
+   ui->progressBar->setMinimum(start);
+   ui->progressBar->setMaximum(end);
+}
+
+void TransactionsWidget::onProgressUpdated(int value)
+{
+   ui->progressBar->setValue(value);
 }
 
 void TransactionsWidget::setAppSettings(std::shared_ptr<ApplicationSettings> appSettings)

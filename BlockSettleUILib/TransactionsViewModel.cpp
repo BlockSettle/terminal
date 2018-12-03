@@ -5,6 +5,7 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 
+#include <QApplication>
 #include <QDateTime>
 #include <QMutexLocker>
 #include <QFutureWatcher>
@@ -440,12 +441,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
             }
             newTxKeys->erase(itemPtr->id());
             if (newTxKeys->empty()) {
-               TransactionItems items;
-               items.reserve(newItems->size());
-               for (const auto &item : *newItems) {
-                  items.push_back(*item.second);
-               }
-               QMetaObject::invokeMethod(this, [this, items] { onNewItems(items); });
+               QMetaObject::invokeMethod(this, [this, newItems] { onNewItems(*newItems); });
             }
          };
          updateTransactionDetails(item.second, cbInited);
@@ -499,12 +495,15 @@ void TransactionsViewModel::loadLedgerEntries()
    const auto &cbPageCount = [this](ReturnMessage<uint64_t> pageCnt)->void {
       try {
          auto inPageCnt = pageCnt.get();
+         emit initProgress(0, inPageCnt * 2);
          for (uint64_t pageId = 0; pageId < inPageCnt; ++pageId) {
             const auto &cbLedger = [this, pageId, inPageCnt]
                (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                try {
                  auto le = entries.get();
                  rawData_[pageId] = bs::convertTXEntries(le);
+                 emit updateProgress((int)pageId);
+                 QApplication::processEvents();
                }
                catch (exception& e) {
                   logger_->error("[TransactionsViewModel::loadLedgerEntries] " \
@@ -518,7 +517,7 @@ void TransactionsViewModel::loadLedgerEntries()
             ledgerDelegate_.getHistoryPage(pageId, cbLedger);
          }
       }
-      catch (exception& e) {
+      catch (const std::exception &e) {
          logger_->error("[TransactionsViewModel::loadLedgerEntries] Return " \
             "data error (getPageCount) - {}", e.what());
       }
@@ -531,11 +530,14 @@ void TransactionsViewModel::ledgerToTxData()
 {
    size_t newItems = 0;
    size_t updItems = 0;
+   int pageCnt = 0;
 
    for (const auto &le : rawData_) {
       const auto &rc = updateTransactionsPage(le.second);
       newItems += rc.first;
       updItems += rc.second;
+      emit updateProgress(rawData_.size() + pageCnt++);
+      QApplication::processEvents();
    }
    initialLoadCompleted_ = true;
 
@@ -544,16 +546,14 @@ void TransactionsViewModel::ledgerToTxData()
    }
 }
 
-void TransactionsViewModel::onNewItems(TransactionItems items)
+void TransactionsViewModel::onNewItems(const std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>> &newItems)
 {
-   unsigned int curLastIdx = rootNode_->nbChildren();
-   beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + items.size() - 1);
+   const unsigned int curLastIdx = rootNode_->nbChildren();
+   beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + newItems.size() - 1);
    {
-      QMutexLocker locker(&updateMutex_);
-      for (const auto &item : items) {
-         const auto &newItem = std::make_shared<TransactionsViewItem>(item);
-         currentItems_[newItem->id()] = newItem;
-         rootNode_->add(new TXNode(newItem));
+      for (const auto &newItem : newItems) {
+         currentItems_[newItem.first] = newItem.second;
+         rootNode_->add(new TXNode(newItem.second));
       }
    }
    endInsertRows();
