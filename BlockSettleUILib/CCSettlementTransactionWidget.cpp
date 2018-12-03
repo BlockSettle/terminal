@@ -130,6 +130,7 @@ void CCSettlementTransactionWidget::initSigning()
       | WalletKeysSubmitWidget::HideAuthEmailLabel
       | WalletKeysSubmitWidget::HidePubKeyFingerprint
       | WalletKeysSubmitWidget::HideProgressBar
+      | WalletKeysSubmitWidget::HidePasswordWarning
    );
    ui_->widgetSubmitKeys->init(MobileClientRequest::SettlementTransaction, settlContainer_->walletId()
       , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys()

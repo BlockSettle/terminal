@@ -43,7 +43,8 @@ void EnterWalletPassword::init(const std::string &walletId, bs::wallet::KeyRank 
          | WalletKeysSubmitWidget::HideAuthCombobox
          | WalletKeysSubmitWidget::HideGroupboxCaption
          | WalletKeysSubmitWidget::AuthProgressBarFixed
-         | WalletKeysSubmitWidget::AuthIdVisible);
+         | WalletKeysSubmitWidget::AuthIdVisible
+         | WalletKeysSubmitWidget::HidePasswordWarning);
 
       connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &EnterWalletPassword::accept);
       connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::failed, this, &EnterWalletPassword::reject);
