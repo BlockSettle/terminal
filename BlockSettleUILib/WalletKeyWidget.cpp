@@ -83,7 +83,7 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
    ui_->lineEditPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
    ui_->labelPasswordInfo->setVisible(password_);
-   ui_->labelPasswordWarning->setVisible(!hidePasswordWarning_);
+   ui_->labelPasswordWarning->setVisible(password_ && !hidePasswordWarning_);
 
    ui_->labelAuthId->setVisible(!password_ && showAuthId_);
    ui_->widgetAuthLayout->setVisible(!password_);
