@@ -137,7 +137,6 @@ public:
 private slots:
    void updatePage();
    void refresh();
-   void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
    void onNewItems(TransactionItems items);
 
    void onArmoryStateChanged(ArmoryConnection::State);
@@ -146,11 +145,10 @@ private slots:
 private:
    void init();
    void clear();
-   Q_INVOKABLE void loadLedgerEntries();
+   void loadLedgerEntries();
    void ledgerToTxData();
-   void loadTransactionDetails(const std::vector<TXNode *> &);
+   std::pair<size_t, size_t> updateTransactionsPage(const std::vector<bs::TXEntry> &);
    void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
-   void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item, int index);
    void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
       , const std::function<void(const TransactionsViewItem *itemPtr)> &cb);
    std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);

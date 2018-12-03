@@ -403,11 +403,17 @@ void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
       return;
    }
    initialLoadCompleted_ = false;
+   updateTransactionsPage(pendingNewItems_);
+   initialLoadCompleted_ = true;
+}
+
+std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
+{
    auto newItems = std::make_shared<std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>>();
    auto newTxKeys = std::make_shared<std::unordered_set<std::string>>();
    std::vector<std::shared_ptr<TransactionsViewItem>> updatedItems;
 
-   for (const auto &entry : pendingNewItems_) {
+   for (const auto &entry : page) {
       const auto item = itemFromTransaction(entry);
       if (!item->wallet) {
          continue;
@@ -448,7 +454,7 @@ void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
    if (!updatedItems.empty()) {
       updateBlockHeight(updatedItems);
    }
-   initialLoadCompleted_ = true;
+   return { newItems->size(), updatedItems.size() };
 }
 
 void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &updItems)
@@ -523,42 +529,18 @@ void TransactionsViewModel::loadLedgerEntries()
 
 void TransactionsViewModel::ledgerToTxData()
 {
-   std::vector<TXNode *> newNodes;
-   std::vector<std::shared_ptr<TransactionsViewItem>> updatedItems;
-   beginResetModel();
-   {
-      QMutexLocker locker(&updateMutex_);
-      for (const auto &le : rawData_) {
-         for (const auto &led : le.second) {
-            const auto item = itemFromTransaction(led);
-            if (!item->wallet) {
-               continue;
-            }
-            if (txKeyExists(item->id())) {
-               updatedItems.push_back(item);
-            }
-            else {
-               currentItems_[item->id()] = item;
-               auto newNode = new TXNode(item);
-               rootNode_->add(newNode);
-               newNodes.push_back(newNode);
-            }
-         }
-      }
-   }
-   endResetModel();
-   rawData_.clear();
+   size_t newItems = 0;
+   size_t updItems = 0;
 
-   if (!updatedItems.empty()) {
-      updateBlockHeight(updatedItems);
+   for (const auto &le : rawData_) {
+      const auto &rc = updateTransactionsPage(le.second);
+      newItems += rc.first;
+      updItems += rc.second;
    }
    initialLoadCompleted_ = true;
 
-   if (!newNodes.empty()) {
-      if (updatedItems.empty()) {
-         emit dataLoaded(rootNode_->nbChildren());
-      }
-      loadTransactionDetails(newNodes);
+   if (newItems && !updItems) {
+      emit dataLoaded(newItems);
    }
 }
 
@@ -577,15 +559,6 @@ void TransactionsViewModel::onNewItems(TransactionItems items)
    endInsertRows();
 }
 
-void TransactionsViewModel::onRowUpdated(int row, const TransactionsViewItem &item, int c1, int c2)
-{
-   auto node = rootNode_->find(item.id());
-   if (node) {
-      node->setData(item);
-      emit dataChanged(index(node->row(), c1), index(node->row(), c2));
-   }
-}
-
 TransactionsViewItem TransactionsViewModel::getItem(int row) const
 {
    QMutexLocker locker(&updateMutex_);
@@ -593,27 +566,6 @@ TransactionsViewItem TransactionsViewModel::getItem(int row) const
       return {};
    }
    return *(rootNode_->child(row)->item());
-}
-
-void TransactionsViewModel::loadTransactionDetails(const std::vector<TXNode *> &nodes)
-{
-   for (const auto &node : nodes) {
-      if (stopped_) {
-         break;
-      }
-      auto item = node->item();
-      if (!item->initialized) {
-         updateTransactionDetails(item, node->row());
-      }
-   }
-}
-
-void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item, int index)
-{
-   const auto &cbInited = [this, index](const TransactionsViewItem *itemPtr) {
-      onRowUpdated(index, *itemPtr, static_cast<int>(Columns::SendReceive), static_cast<int>(Columns::Amount));
-   };
-   item->initialize(armory_, walletsManager_, cbInited);
 }
 
 void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
