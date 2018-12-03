@@ -142,7 +142,6 @@ private slots:
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
-   void timerCmd();
 
 private:
    void init();
@@ -159,24 +158,6 @@ private:
 
 signals:
    void dataLoaded(int count);
-
-private:
-   struct Command {
-      enum class Type {
-         Add,
-         Delete,
-         Update
-      };
-      Type  type;
-      TransactionItems  items;
-   };
-   QTimer * cmdTimer_;
-   QMutex   cmdMutex_;
-   using CommandQueue = std::deque<Command>;
-   CommandQueue cmdQueue_;
-
-   void executeCommand(const Command &);
-   void addCommand(const Command &);
 
 public:
    enum class Columns

@@ -220,12 +220,6 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &WalletsManager::walletImportFinished, [this](const std::string &) { refresh(); });
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
-
-   cmdTimer_ = new QTimer(this);
-   cmdTimer_->setSingleShot(false);
-   cmdTimer_->setInterval(100);
-   connect(cmdTimer_, &QTimer::timeout, this, &TransactionsViewModel::timerCmd);
-   cmdTimer_->start();
 }
 
 TransactionsViewModel::~TransactionsViewModel()
@@ -439,14 +433,13 @@ void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
                return;
             }
             newTxKeys->erase(itemPtr->id());
-//!            (*newItems)[itemPtr->id()] = itemPtr;
             if (newTxKeys->empty()) {
                TransactionItems items;
                items.reserve(newItems->size());
                for (const auto &item : *newItems) {
                   items.push_back(*item.second);
                }
-               addCommand({ Command::Type::Add, items });
+               QMetaObject::invokeMethod(this, [this, items] { onNewItems(items); });
             }
          };
          updateTransactionDetails(item.second, cbInited);
@@ -456,37 +449,6 @@ void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
       updateBlockHeight(updatedItems);
    }
    initialLoadCompleted_ = true;
-}
-
-void TransactionsViewModel::timerCmd()
-{
-   CommandQueue tempQueue;
-   {
-      QMutexLocker lock(&cmdMutex_);
-      tempQueue.swap(cmdQueue_);
-   }
-   for (const auto &cmd : tempQueue) {
-      executeCommand(cmd);
-   }
-}
-
-void TransactionsViewModel::executeCommand(const Command &cmd)
-{
-   switch (cmd.type) {
-   case Command::Type::Add:
-      onNewItems(cmd.items);
-      break;
-   case Command::Type::Delete:
-      break;
-   case Command::Type::Update:
-      break;
-   }
-}
-
-void TransactionsViewModel::addCommand(const Command &cmd)
-{
-   QMutexLocker lock(&cmdMutex_);
-   cmdQueue_.emplace_back(cmd);
 }
 
 void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &updItems)
