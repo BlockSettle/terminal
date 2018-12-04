@@ -178,6 +178,8 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
 
 void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shared_ptr<bs::Wallet> &wallet)
 {
+   isRBF_ = true;
+
    std::set<BinaryData> txHashSet;
    std::map<BinaryData, std::set<uint32_t>> txOutIndices;
    for (size_t i = 0; i < tx.getNumTxIn(); i++) {
@@ -218,7 +220,8 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          const auto addressString = addr.display();
          const auto amount = UiUtils::amountToBtc(out.getValue());
 
-         // use last output as change addres
+         // We will assume that the last wallet address found in the TX is the
+         // change address.
          if (wallet->containsAddress(addr)) {
             if (!changeAddress.isEmpty()) {
                AddRecipient(changeAddress, changeAmount);
@@ -234,12 +237,18 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          totalVal -= out.getValue();
       }
 
-      SetFixedChangeAddress(changeAddress);
-
-      // set fee
+      // Error check.
       if (totalVal < 0) {
          //!throw std::runtime_error("Negative amount");
          return;
+      }
+
+      // If we did find a change address, set it in place in this TX.
+      else if (!changeAddress.isEmpty()) {
+         // If the original TX didn't use up the original inputs, force the
+         // original change address to be used. It may be desirable to change
+         // this eventually.
+         SetFixedChangeAddress(changeAddress);
       }
 
       // RBF minimum amounts are a little tricky. The rules/policies are:
@@ -270,10 +279,6 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       const auto &newMinFee = originalFee_ + txVirtSize;
       SetMinimumFee(newMinFee, originalFeePerByte_);
       populateFeeList();
-
-      if (changeAddress.isNull()) {
-         setUnchangeableTx();
-      }
 
       onTransactionUpdated();
    };
@@ -538,7 +543,13 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
 {
    CreateTransactionDialog::onTransactionUpdated();
 
-   usedInputsModel_->updateInputs(transactionData_->inputs());
+   // If RBF is active, prevent the inputs from being changed. It may be
+   // desirable to change this one day. RBF TXs can change inputs but only if
+   // all other inputs are RBF-enabled. Properly refactored, the user could
+   // select only RBF-enabled inputs that are waiting for a conf.
+   if(!isRBF_) {
+      usedInputsModel_->updateInputs(transactionData_->inputs());
+   }
 
    const auto &summary = transactionData_->GetTransactionSummary();
 
@@ -920,6 +931,7 @@ void CreateTransactionDialogAdvanced::SetPredefinedFee(const int64_t& manualFee)
    transactionData_->SetTotalFee(manualFee);
 }
 
+// Set a TX such that it can't be altered.
 void CreateTransactionDialogAdvanced::setUnchangeableTx()
 {
    ui_->comboBoxFeeSuggestions->setEnabled(false);
