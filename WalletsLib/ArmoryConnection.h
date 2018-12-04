@@ -22,6 +22,7 @@
 class ArmoryConnection;
 class QProcess;
 
+// The class is used as a callback that processes asynchronous Armory events.
 class ArmoryCallback : public RemoteCallback
 {
 public:
@@ -42,6 +43,9 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
 };
 
+// The abstracted connection between BS and Armory. When BS code needs to
+// communicate with Armory, this class is what the code should use. Only one
+// connection should exist at any given time.
 class ArmoryConnection : public QObject
 {
    friend class ArmoryCallback;
@@ -59,7 +63,6 @@ public:
 
    using ReqIdType = unsigned int;
 
-public:
    ArmoryConnection(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN
       , bool cbInMainThread = false);
    ~ArmoryConnection() noexcept;
@@ -95,6 +98,7 @@ public:
                           std::function<void(BinaryData)> callback);
 
    bool estimateFee(unsigned int nbBlocks, std::function<void(float)>);
+   bool getFeeSchedule(std::function<void(map<unsigned int, float>)> cb);
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
    bool isTransactionVerified(uint32_t blockNum) const;
@@ -129,7 +133,6 @@ private:
    bool addGetTxCallback(const BinaryData &hash, const std::function<void(Tx)> &);  // returns true if hash exists
    void callGetTxCallbacks(const BinaryData &hash, const Tx &);
 
-private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
    std::shared_ptr<ArmoryCallback>  cbRemote_;
