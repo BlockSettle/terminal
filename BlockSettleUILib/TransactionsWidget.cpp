@@ -185,9 +185,9 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
 
       if (sortFilterModel_) {
          const auto &sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
-         const auto txItem = transactionsModel_->getItem(sourceIndex);
-         if (txItem.initialized) {
-            if (txItem.isRBFeligible()) {
+         const auto &txNode = transactionsModel_->getNode(sourceIndex);
+         if (txNode && txNode->item() && txNode->item()->initialized) {
+            if (txNode->item()->isRBFeligible() && (txNode->level() < 2)) {
                contextMenu_.addAction(actionRBF_);
                actionRBF_->setData(sourceIndex);
             }
@@ -195,7 +195,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
                actionRBF_->setData(-1);
             }
 
-            if (txItem.isCPFPeligible()) {
+            if (txNode->item()->isCPFPeligible()) {
                contextMenu_.addAction(actionCPFP_);
                actionCPFP_->setData(sourceIndex);
             }

@@ -81,6 +81,7 @@ public:
    void add(TXNode *child);
    void del(int index);
    int row() const { return row_; }
+   unsigned int level() const;
    QVariant data(int, int) const;
 
    void forEach(const std::function<void(const std::shared_ptr<TransactionsViewItem> &)> &);
@@ -199,6 +200,7 @@ private:
    std::shared_ptr<bs::Wallet>         defaultWallet_;
    std::vector<bs::TXEntry>            pendingNewItems_;
    std::unordered_set<std::string>     newTxKeys_;
+   std::atomic_bool  signalOnEndLoading_{ false };
    const bool        allWallets_;
    std::atomic_bool  stopped_;
    std::atomic_bool  initialLoadCompleted_;

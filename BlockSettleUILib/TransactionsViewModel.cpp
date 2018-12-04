@@ -181,6 +181,17 @@ TXNode *TXNode::find(const std::string &id) const
    return nullptr;
 }
 
+unsigned int TXNode::level() const
+{
+   unsigned int result = 0;
+   auto parent = parent_;
+   while (parent) {
+      parent = parent->parent_;
+      result++;
+   }
+   return result;
+}
+
 
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
                          , const std::shared_ptr<WalletsManager> &walletsManager
@@ -452,7 +463,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
    auto newItems = std::make_shared<std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>>();
-   std::vector<std::shared_ptr<TransactionsViewItem>> updatedItems;
+   auto updatedItems = std::make_shared<std::vector<TransactionPtr>>() ;
 
    for (const auto &entry : page) {
       const auto item = itemFromTransaction(entry);
@@ -462,7 +473,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       {
          QMutexLocker locker(&updateMutex_);
          if (txKeyExists(item->id())) {
-            updatedItems.push_back(item);
+            updatedItems->push_back(item);
             continue;
          }
          currentItems_[item->id()] = item;
@@ -471,7 +482,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       (*newItems)[item->id()] = { item, new TXNode(item) };
    }
 
-   const auto &cbInited = [this, newItems](const TransactionsViewItem *itemPtr) {
+   const auto &cbInited = [this, newItems, updatedItems](const TransactionsViewItem *itemPtr) {
       if (!itemPtr || !itemPtr->initialized) {
          logger_->error("item is not inited");
          return;
@@ -538,6 +549,10 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          }
          if (!newItems->empty()) {
             onNewItems(*newItems);
+            if (signalOnEndLoading_ && updatedItems->empty()) {
+               signalOnEndLoading_ = false;
+               emit dataLoaded(newItems->size());
+            }
          }
       }
    };
@@ -546,10 +561,10 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          updateTransactionDetails(item.second.first, cbInited);
       }
    }
-   if (!updatedItems.empty()) {
-      updateBlockHeight(updatedItems);
+   if (!updatedItems->empty()) {
+      updateBlockHeight(*updatedItems);
    }
-   return { newItems->size(), updatedItems.size() };
+   return { newItems->size(), updatedItems->size() };
 }
 
 void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &updItems)
@@ -626,22 +641,15 @@ void TransactionsViewModel::loadLedgerEntries()
 
 void TransactionsViewModel::ledgerToTxData()
 {
-   size_t newItems = 0;
-   size_t updItems = 0;
    int pageCnt = 0;
 
+   signalOnEndLoading_ = true;
    for (const auto &le : rawData_) {
-      const auto &rc = updateTransactionsPage(le.second);
-      newItems += rc.first;
-      updItems += rc.second;
+      updateTransactionsPage(le.second);
       emit updateProgress(rawData_.size() + pageCnt++);
    }
    rawData_.clear();
    initialLoadCompleted_ = true;
-
-   if (newItems && !updItems) {
-      emit dataLoaded(newItems);
-   }
 }
 
 void TransactionsViewModel::onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &newItems)

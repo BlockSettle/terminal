@@ -122,20 +122,20 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
    }
 
    const auto sourceIndex = filter_->mapToSource(ui_->treeViewUnconfirmedTransactions->indexAt(point));
-   const auto txItem = model_->getItem(sourceIndex);
+   const auto txNode = model_->getNode(sourceIndex);
    contextMenu_.clear();
-   if (!txItem.initialized) {
+   if (!txNode || !txNode->item() || !txNode->item()->initialized) {
       return;
    }
 
-   if (txItem.isRBFeligible()) {
+   if (txNode->item()->isRBFeligible() && (txNode->level() < 2)) {
       contextMenu_.addAction(actionRBF_);
       actionRBF_->setData(sourceIndex);
    } else {
       actionRBF_->setData(-1);
    }
 
-   if (txItem.isCPFPeligible()) {
+   if (txNode->item()->isCPFPeligible()) {
       contextMenu_.addAction(actionCPFP_);
       actionCPFP_->setData(sourceIndex);
    } else {
