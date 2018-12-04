@@ -169,6 +169,11 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       qApp->clipboard()->setText(curAddress_);
    });
 
+   actionCopyTx_ = new QAction(tr("Copy Transaction"));
+   connect(actionCopyTx_, &QAction::triggered, [this]() {
+      qApp->clipboard()->setText(curTx_);
+   });
+
    actionRBF_ = new QAction(tr("Replace-By-Fee (RBF)"), this);
    connect(actionRBF_, &QAction::triggered, this, &TransactionsWidget::onCreateRBFDialog);
 
@@ -202,9 +207,12 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
                actionCPFP_->setData(-1);
             }
 
-            // if the item contains "address" work then don't allow to copy address
-            // because it either says 'no address' or '%1 output addresses'
-            if (!txItem.mainAddress.contains(tr("address"), Qt::CaseInsensitive)) {
+            // save transaction id and add context menu for copying it to clipboard
+            curTx_ = QString::fromStdString(txItem.tx.getThisHash().toHexStr(true));
+            contextMenu_.addAction(actionCopyTx_);
+
+            // allow copy address only if there is only 1 address
+            if (txItem.addressCount == 1) {
                contextMenu_.addAction(actionCopyAddr_);
             }
          }

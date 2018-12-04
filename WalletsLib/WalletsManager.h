@@ -103,7 +103,7 @@ public:
    bool GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &
       , std::function<void(bs::Transaction::Direction)>);
    bool GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &
-      , bool isReceiving, std::function<void(QString)>);
+      , bool isReceiving, std::function<void(QString, int)>);
 
    hd_wallet_type CreateWallet(const std::string& name, const std::string& description
       , bs::wallet::Seed, const QString &walletsPath, bool primary = false
@@ -163,7 +163,7 @@ private:
 
    void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
       , std::function<void(bs::Transaction::Direction)>);
-   void updateTxDescCache(const BinaryData &txHash, const QString &, std::function<void(QString)>);
+   void updateTxDescCache(const BinaryData &txHash, const QString &, int, std::function<void(QString, int)>);
 
    void invokeFeeCallbacks(unsigned int blocks, float fee);
 

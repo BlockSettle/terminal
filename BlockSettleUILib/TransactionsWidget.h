@@ -62,9 +62,11 @@ private:
    TransactionsSortFilterModel         *  sortFilterModel_;
    QMenu    contextMenu_;
    QAction  *actionCopyAddr_ = nullptr;
+   QAction  *actionCopyTx_ = nullptr;
    QAction  *actionRBF_ = nullptr;
    QAction  *actionCPFP_ = nullptr;
    QString  curAddress_;
+   QString  curTx_;
 };
 
 

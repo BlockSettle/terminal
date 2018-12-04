@@ -29,6 +29,7 @@ struct TransactionsViewItem
    Tx tx;
    bool initialized = false;
    QString mainAddress;
+   int addressCount;
    bs::Transaction::Direction direction = bs::Transaction::Unknown;
    std::shared_ptr<bs::Wallet> wallet = nullptr;
    QString dirStr;
