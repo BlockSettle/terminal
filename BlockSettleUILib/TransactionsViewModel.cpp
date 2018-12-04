@@ -493,7 +493,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
                   }
                   if (isChildOf(txNode->item(), newItem.second.first)) {
                      delRows.insert(txNode->row());
-                     auto &children = txNode->children();
+                     auto &&children = txNode->children();
                      newItem.second.second->add(txNode);
                      for (auto &child : children) {
                         newItem.second.second->add(child);
