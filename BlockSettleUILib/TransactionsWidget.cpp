@@ -208,11 +208,11 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             }
 
             // save transaction id and add context menu for copying it to clipboard
-            curTx_ = QString::fromStdString(txItem.tx.getThisHash().toHexStr(true));
+            curTx_ = QString::fromStdString(txNode->item()->txEntry.txHash.toHexStr(true));
             contextMenu_.addAction(actionCopyTx_);
 
             // allow copy address only if there is only 1 address
-            if (txItem.addressCount == 1) {
+            if (txNode->item()->addressCount == 1) {
                contextMenu_.addAction(actionCopyAddr_);
             }
          }
