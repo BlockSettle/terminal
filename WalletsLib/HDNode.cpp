@@ -290,7 +290,7 @@ std::string hd::Node::getPrivateKey() const
 
 SecureBinaryData hd::Node::privateKey() const
 {
-   if (!hasPrivKey_ || !encTypes().empty()) {
+   if (!hasPrivKey_) {
       return {};
    }
    return SecureBinaryData(node_.private_key, sizeof(node_.private_key));
@@ -349,7 +349,7 @@ std::unique_ptr<hd::Node> hd::Node::createUnique(const btc_hdnode &node, Network
 
 std::shared_ptr<hd::Node> hd::Node::derive(const Path &path, bool pubCKD) const
 {
-   if (!pubCKD && (!hasPrivKey_ || !encTypes().empty())) {
+   if (!pubCKD && !hasPrivKey_) {
       return nullptr;
    }
    btc_hdnode newNode;
@@ -620,14 +620,28 @@ std::shared_ptr<hd::Node> hd::Nodes::decrypt(const SecureBinaryData &password) c
    if ((nodes_.size() == 1) && nodes_[0]->encTypes().empty()) {
       return nodes_[0];
    }
-   if (password.isNull()) {
-      return nullptr;
-   }
+
    for (const auto &node : nodes_) {
-      auto decrypted = node->decrypt(password);
-      wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (hd::Node(seed).getId() == id_) {
-         return std::move(decrypted);
+      auto encTypes = node->encTypes();
+
+      std::shared_ptr<hd::Node> decryptedNode = nullptr;
+
+      if (encTypes.empty() || encTypes[0] == bs::wallet::EncryptionType::Unencrypted) {
+         decryptedNode = node;
+      }
+      else {
+         if (password.isNull()) {
+            continue;
+         }
+
+         decryptedNode = node->decrypt(password);
+      }
+
+      if (decryptedNode != nullptr) {
+         wallet::Seed seed(decryptedNode->getNetworkType(), decryptedNode->privateKey());
+         if (hd::Node(seed).getId() == id_) {
+            return decryptedNode;
+         }
       }
    }
    return nullptr;
