@@ -709,8 +709,9 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       }
    };
 
-   const auto cbMainAddr = [this, cbCheckIfInitializationCompleted](QString mainAddr) {
+   const auto cbMainAddr = [this, cbCheckIfInitializationCompleted](QString mainAddr, int addrCount) {
       mainAddress = mainAddr;
+      addressCount = addrCount;
       cbCheckIfInitializationCompleted();
    };
 

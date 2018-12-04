@@ -1011,7 +1011,7 @@ void BSTerminalMainWindow::onZCreceived(ArmoryConnection::ReqIdType reqId)
                delete txInfo;
             }
          };
-         const auto &cbMainAddr = [this, txInfo] (QString mainAddr) {
+         const auto &cbMainAddr = [this, txInfo] (QString mainAddr, int addrCount) {
             txInfo->mainAddress = mainAddr;
             if ((txInfo->direction != bs::Transaction::Direction::Unknown) && txInfo->wallet) {
                showZcNotification(*txInfo);

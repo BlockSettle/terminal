@@ -828,7 +828,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
 }
 
 bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_ptr<bs::Wallet> &wallet
-   , bool isReceiving, std::function<void(QString)> cb)
+   , bool isReceiving, std::function<void(QString, int)> cb)
 {
    if (!tx.isInitialized() || !armory_ || !wallet) {
       return false;
@@ -850,15 +850,15 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
    const auto &cbProcessAddresses = [this, txHash, cb](const std::set<bs::Address> &addresses) {
       switch (addresses.size()) {
       case 0:
-         updateTxDescCache(txHash, tr("no address"), cb);
+         updateTxDescCache(txHash, tr("no address"), addresses.size(), cb);
          break;
 
       case 1:
-         updateTxDescCache(txHash, (*addresses.begin()).display(), cb);
+         updateTxDescCache(txHash, (*addresses.begin()).display(), addresses.size(), cb);
          break;
 
       default:
-         updateTxDescCache(txHash, tr("%1 output addresses").arg(addresses.size()), cb);
+         updateTxDescCache(txHash, tr("%1 output addresses").arg(addresses.size()), addresses.size(), cb);
          break;
       }
    };
@@ -915,13 +915,13 @@ void WalletsManager::updateTxDirCache(const BinaryData &txHash, bs::Transaction:
    cb(dir);
 }
 
-void WalletsManager::updateTxDescCache(const BinaryData &txHash, const QString &desc, std::function<void(QString)> cb)
+void WalletsManager::updateTxDescCache(const BinaryData &txHash, const QString &desc, int addrCount, std::function<void(QString, int)> cb)
 {
    {
       FastLock lock(txDescLock_);
       txDesc_[txHash] = desc;
    }
-   cb(desc);
+   cb(desc, addrCount);
 }
 
 WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& name, const std::string& description
