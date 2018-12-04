@@ -184,12 +184,12 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       contextMenu_.addAction(actionCopyAddr_);
 
       if (sortFilterModel_) {
-         const auto sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
-         const auto txItem = transactionsModel_->getItem(sourceIndex.row());
+         const auto &sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
+         const auto txItem = transactionsModel_->getItem(sourceIndex);
          if (txItem.initialized) {
             if (txItem.isRBFeligible()) {
                contextMenu_.addAction(actionRBF_);
-               actionRBF_->setData(sourceIndex.row());
+               actionRBF_->setData(sourceIndex);
             }
             else {
                actionRBF_->setData(-1);
@@ -197,7 +197,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
 
             if (txItem.isCPFPeligible()) {
                contextMenu_.addAction(actionCPFP_);
-               actionCPFP_->setData(sourceIndex.row());
+               actionCPFP_->setData(sourceIndex);
             }
             else {
                actionCPFP_->setData(-1);
@@ -207,6 +207,8 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       contextMenu_.popup(ui->treeViewTransactions->mapToGlobal(p));
    });
    ui->treeViewTransactions->setUniformRowHeights(true);
+   ui->treeViewTransactions->setItemsExpandable(true);
+   ui->treeViewTransactions->setRootIsDecorated(true);
    ui->treeViewTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    connect(ui->typeFilterComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [&](int index) {
@@ -451,7 +453,7 @@ void TransactionsWidget::onEnterKeyInTrxPressed(const QModelIndex &index)
 
 void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 {
-   auto txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index).row());
+   auto txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index));
 
    TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
    transactionDetailDialog.exec();
@@ -460,7 +462,7 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 void TransactionsWidget::updateResultCount()
 {
    auto shown = sortFilterModel_->rowCount();
-   auto total = transactionsModel_->rowCount();
+   auto total = transactionsModel_->itemsCount();
    ui->labelResultCount->setText(tr("Displaying %L1 transactions (of %L2 total).")
       .arg(shown).arg(total));
    ui->labelResultCount->show();
@@ -468,7 +470,7 @@ void TransactionsWidget::updateResultCount()
 
 void TransactionsWidget::onCreateRBFDialog()
 {
-   auto txItem = transactionsModel_->getItem(actionRBF_->data().toInt());
+   auto txItem = transactionsModel_->getItem(actionRBF_->data().toModelIndex());
 
    const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
       try {
@@ -493,7 +495,7 @@ void TransactionsWidget::onCreateRBFDialog()
 
 void TransactionsWidget::onCreateCPFPDialog()
 {
-   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toInt());
+   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toModelIndex());
 
    const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
       try {

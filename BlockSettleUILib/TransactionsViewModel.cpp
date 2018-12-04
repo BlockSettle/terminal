@@ -17,8 +17,8 @@ TXNode::TXNode()
    init();
 }
 
-TXNode::TXNode(const std::shared_ptr<TransactionsViewItem> &item)
-   : item_(item)
+TXNode::TXNode(const std::shared_ptr<TransactionsViewItem> &item, TXNode *parent)
+   : item_(item), parent_(parent)
 {
    init();
 }
@@ -30,9 +30,11 @@ void TXNode::init()
    colorGreen_ = Qt::darkGreen, colorInvalid_ = Qt::red;
 }
 
-void TXNode::clear()
+void TXNode::clear(bool del)
 {
-   qDeleteAll(children_);
+   if (del) {
+      qDeleteAll(children_);
+   }
    children_.clear();
 }
 
@@ -148,6 +150,14 @@ void TXNode::add(TXNode *child)
    children_.append(child);
 }
 
+void TXNode::del(int index)
+{
+   children_.removeAt(index);
+   for (int i = index; i < children_.size(); ++i) {
+      children_[i]->row_--;
+   }
+}
+
 void TXNode::forEach(const std::function<void(const std::shared_ptr<TransactionsViewItem> &)> &cb)
 {
    if (item_) {
@@ -163,10 +173,9 @@ TXNode *TXNode::find(const std::string &id) const
    if (item_ && (item_->id() == id)) {
       return (TXNode *)this;
    }
-   for (auto child : children_) {
-      auto result = child->find(id);
-      if (result) {
-         return result;
+   for (const auto &child : children_) {
+      if (child->item()->id() == id) {
+         return child;
       }
    }
    return nullptr;
@@ -179,7 +188,7 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                                  , const std::shared_ptr<spdlog::logger> &logger
                                              , QObject* parent
                                     , const std::shared_ptr<bs::Wallet> &defWlt)
-   : QAbstractTableModel(parent)
+   : QAbstractItemModel(parent)
    , armory_(armory)
    , ledgerDelegate_(ledgerDelegate)
    , walletsManager_(walletsManager)
@@ -195,7 +204,7 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                          , const std::shared_ptr<WalletsManager> &walletsManager
                                  , const std::shared_ptr<spdlog::logger> &logger
                                              , QObject* parent)
-   : QAbstractTableModel(parent)
+   : QAbstractItemModel(parent)
    , armory_(armory)
    , walletsManager_(walletsManager)
    , logger_(logger)
@@ -253,10 +262,12 @@ TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
 
 int TransactionsViewModel::rowCount(const QModelIndex &parent) const
 {
-   if (parent.isValid()) {
+   const auto &node = getNode(parent);
+   if (!node) {
+      logger_->debug("failed to get node for {}", parent.row());
       return 0;
    }
-   return static_cast<int>(getNode(parent)->nbChildren());
+   return static_cast<int>(node->nbChildren());
 }
 
 QModelIndex TransactionsViewModel::index(int row, int column, const QModelIndex &parent) const
@@ -289,7 +300,12 @@ QModelIndex TransactionsViewModel::parent(const QModelIndex &child) const
 
 bool TransactionsViewModel::hasChildren(const QModelIndex& parent) const
 {
-   return getNode(parent)->hasChildren();
+   const auto &node = getNode(parent);
+   if (!node) {
+      logger_->debug("Node not found for {}", parent.row());
+      return false;
+   }
+   return node->hasChildren();
 }
 
 QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
@@ -305,7 +321,11 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
       return {};
    }
 
-   return getNode(index)->data(index.column(), role);
+   const auto &node = getNode(index);
+   if (!node) {
+      return {};
+   }
+   return node->data(index.column(), role);
 }
 
 QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -405,13 +425,33 @@ void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
    }
    initialLoadCompleted_ = false;
    updateTransactionsPage(pendingNewItems_);
+   pendingNewItems_.clear();
    initialLoadCompleted_ = true;
+}
+
+static bool isChildOf(TransactionPtr child, TransactionPtr parent)
+{
+   if (!child->initialized || !parent->initialized) {
+      return false;
+   }
+   if (child->isRBFeligible() && parent->isRBFeligible()) {
+      std::set<BinaryData> childInputs, parentInputs;
+      for (int i = 0; i < child->tx.getNumTxIn(); i++) {
+         childInputs.insert(child->tx.getTxInCopy(i).serialize());
+      }
+      for (int i = 0; i < parent->tx.getNumTxIn(); i++) {
+         parentInputs.insert(parent->tx.getTxInCopy(i).serialize());
+      }
+      if (childInputs == parentInputs) {
+         return true;
+      }
+   }
+   return false;
 }
 
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
-   auto newItems = std::make_shared<std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>>();
-   auto newTxKeys = std::make_shared<std::unordered_set<std::string>>();
+   auto newItems = std::make_shared<std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>>();
    std::vector<std::shared_ptr<TransactionsViewItem>> updatedItems;
 
    for (const auto &entry : page) {
@@ -427,24 +467,83 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          }
          currentItems_[item->id()] = item;
       }
-      newTxKeys->insert(item->id());
-      (*newItems)[item->id()] = item;
+      newTxKeys_.insert(item->id());
+      (*newItems)[item->id()] = { item, new TXNode(item) };
    }
-   pendingNewItems_.clear();
 
+   const auto &cbInited = [this, newItems](const TransactionsViewItem *itemPtr) {
+      if (!itemPtr || !itemPtr->initialized) {
+         logger_->error("item is not inited");
+         return;
+      }
+      if (newTxKeys_.empty()) {  // avoid jitter
+         logger_->debug("TX keys are already empty");
+         return;
+      }
+      newTxKeys_.erase(itemPtr->id());
+      if (newTxKeys_.empty()) {
+         std::unordered_set<std::string> deletedItems;
+         if (rootNode_->hasChildren()) {
+            std::set<int> delRows;
+            const auto &cbEachExisting = [this, newItems, &delRows](TXNode *txNode) {
+               for (auto &newItem : *newItems) {
+                  if (newItem.second.second->find(txNode->item()->id())
+                     || txNode->find(newItem.first)) {   // avoid looped graphs
+                     continue;
+                  }
+                  if (isChildOf(txNode->item(), newItem.second.first)) {
+                     delRows.insert(txNode->row());
+                     auto &children = txNode->children();
+                     newItem.second.second->add(txNode);
+                     for (auto &child : children) {
+                        newItem.second.second->add(child);
+                     }
+                     txNode->clear(false);
+                  }
+                  else if (isChildOf(newItem.second.first, txNode->item())) {
+                     // do nothing, yet
+                  }
+               }
+            };
+            {
+               QMutexLocker locker(&updateMutex_);
+               for (auto &child : rootNode_->children()) {
+                  cbEachExisting(child);
+               }
+            }
+            if (!delRows.empty()) {
+               onDelRows(delRows);
+            }
+         }
+         const auto newItemsCopy = *newItems;
+         for (auto &parentItem : *newItems) {
+            if (deletedItems.find(parentItem.first) != deletedItems.end()) {  // don't treat child-parent transitively
+               continue;
+            }
+            for (auto &childItem : newItemsCopy) {
+               if (parentItem.first == childItem.first) { // don't compare with self
+                  continue;
+               }
+               if (deletedItems.find(childItem.first) != deletedItems.end()) {
+                  continue;
+               }
+               if (isChildOf(childItem.second.first, parentItem.second.first)) {
+                  parentItem.second.second->add(childItem.second.second);
+                  deletedItems.insert(childItem.second.first->id());
+               }
+            }
+         }
+         for (const auto &delId : deletedItems) {
+            newItems->erase(delId);
+         }
+         if (!newItems->empty()) {
+            onNewItems(*newItems);
+         }
+      }
+   };
    if (!newItems->empty()) {
       for (auto &item : *newItems) {
-         const auto &cbInited = [this, newItems, newTxKeys](const TransactionsViewItem *itemPtr) {
-            if (!itemPtr || !itemPtr->initialized) {
-               logger_->error("item is not inited");
-               return;
-            }
-            newTxKeys->erase(itemPtr->id());
-            if (newTxKeys->empty()) {
-               QMetaObject::invokeMethod(this, [this, newItems] { onNewItems(*newItems); });
-            }
-         };
-         updateTransactionDetails(item.second, cbInited);
+         updateTransactionDetails(item.second.first, cbInited);
       }
    }
    if (!updatedItems.empty()) {
@@ -503,7 +602,6 @@ void TransactionsViewModel::loadLedgerEntries()
                  auto le = entries.get();
                  rawData_[pageId] = bs::convertTXEntries(le);
                  emit updateProgress((int)pageId);
-                 QApplication::processEvents();
                }
                catch (exception& e) {
                   logger_->error("[TransactionsViewModel::loadLedgerEntries] " \
@@ -537,8 +635,8 @@ void TransactionsViewModel::ledgerToTxData()
       newItems += rc.first;
       updItems += rc.second;
       emit updateProgress(rawData_.size() + pageCnt++);
-      QApplication::processEvents();
    }
+   rawData_.clear();
    initialLoadCompleted_ = true;
 
    if (newItems && !updItems) {
@@ -546,26 +644,31 @@ void TransactionsViewModel::ledgerToTxData()
    }
 }
 
-void TransactionsViewModel::onNewItems(const std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>> &newItems)
+void TransactionsViewModel::onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &newItems)
 {
-   const unsigned int curLastIdx = rootNode_->nbChildren();
+   const int curLastIdx = rootNode_->nbChildren();
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + newItems.size() - 1);
    {
+      QMutexLocker locker(&updateMutex_);
       for (const auto &newItem : newItems) {
-         currentItems_[newItem.first] = newItem.second;
-         rootNode_->add(new TXNode(newItem.second));
+         rootNode_->add(newItem.second.second);
       }
    }
    endInsertRows();
 }
 
-TransactionsViewItem TransactionsViewModel::getItem(int row) const
+void TransactionsViewModel::onDelRows(const std::set<int> &rows)
 {
-   QMutexLocker locker(&updateMutex_);
-   if ((row < 0) || (row >= (int)rootNode_->nbChildren())) {
-      return {};
+   for (const auto &row : rows) {   // optimize for contiguous ranges, if needed
+      beginRemoveRows(QModelIndex(), row, row);
+      rootNode_->del(row);
+      endRemoveRows();
    }
-   return *(rootNode_->child(row)->item());
+}
+
+TransactionsViewItem TransactionsViewModel::getItem(const QModelIndex &index) const
+{
+   return *(getNode(index)->item());
 }
 
 void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item

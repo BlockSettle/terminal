@@ -59,24 +59,27 @@ private:
    mutable std::string        id_;
 };
 typedef std::vector<TransactionsViewItem>    TransactionItems;
+typedef std::shared_ptr<TransactionsViewItem>   TransactionPtr;
 
 class TXNode
 {
 public:
    TXNode();
-   TXNode(const std::shared_ptr<TransactionsViewItem> &);
+   TXNode(const std::shared_ptr<TransactionsViewItem> &, TXNode *parent = nullptr);
    ~TXNode() { clear(); }
 
    std::shared_ptr<TransactionsViewItem> item() const { return item_; }
    size_t nbChildren() const { return children_.size(); }
    bool hasChildren() const { return !children_.empty(); }
    TXNode *child(int index) const;
+   QList<TXNode *> children() const { return children_; }
    TXNode *parent() const { return parent_; }
    TXNode *find(const std::string &id) const;
 
-   void clear();
+   void clear(bool del = true);
    void setData(const TransactionsViewItem &data) { *item_ = data; }
    void add(TXNode *child);
+   void del(int index);
    int row() const { return row_; }
    QVariant data(int, int) const;
 
@@ -98,7 +101,7 @@ Q_DECLARE_METATYPE(TransactionsViewItem)
 Q_DECLARE_METATYPE(TransactionItems)
 
 
-class TransactionsViewModel : public QAbstractTableModel
+class TransactionsViewModel : public QAbstractItemModel
 {
 Q_OBJECT
 public:
@@ -120,6 +123,7 @@ public:
    TransactionsViewModel& operator = (TransactionsViewModel&&) = delete;
 
    void loadAllWallets();
+   size_t itemsCount() const { return currentItems_.size(); }
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -131,13 +135,14 @@ public:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-   TransactionsViewItem getItem(int transactionRow) const;
+   TransactionsViewItem getItem(const QModelIndex &) const;
    TXNode *getNode(const QModelIndex &) const;
 
 private slots:
    void updatePage();
    void refresh();
-   void onNewItems(const std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>> &);
+   void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
+   void onDelRows(const std::set<int> &rows);
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
@@ -193,6 +198,7 @@ private:
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
    std::vector<bs::TXEntry>            pendingNewItems_;
+   std::unordered_set<std::string>     newTxKeys_;
    const bool        allWallets_;
    std::atomic_bool  stopped_;
    std::atomic_bool  initialLoadCompleted_;
