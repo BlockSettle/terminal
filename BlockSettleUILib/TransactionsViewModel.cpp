@@ -379,6 +379,7 @@ void TransactionsViewModel::clear()
       QMutexLocker locker(&updateMutex_);
       rootNode_->clear();
       currentItems_.clear();
+      oldestItem_ = {};
    }
    endResetModel();
    stopped_ = false;
@@ -477,6 +478,9 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
             continue;
          }
          currentItems_[item->id()] = item;
+         if (!oldestItem_.isSet() || (oldestItem_.txEntry.txTime >= item->txEntry.txTime)) {
+            oldestItem_ = *item;
+         }
       }
       newTxKeys_.insert(item->id());
       (*newItems)[item->id()] = { item, new TXNode(item) };

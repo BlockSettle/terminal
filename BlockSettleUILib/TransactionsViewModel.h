@@ -137,6 +137,7 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
    TransactionsViewItem getItem(const QModelIndex &) const;
+   TransactionsViewItem getOldestItem() const { return oldestItem_; }
    TXNode *getNode(const QModelIndex &) const;
 
 private slots:
@@ -190,6 +191,7 @@ public:
 
 private:
    TXNode   *  rootNode_;
+   TransactionsViewItem oldestItem_;
    std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
    std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
    std::shared_ptr<ArmoryConnection>   armory_;

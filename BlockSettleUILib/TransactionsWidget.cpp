@@ -296,9 +296,8 @@ void TransactionsWidget::onDataLoaded(int count)
    if ((count <= 0) || (ui->dateEditStart->dateTime().date().year() > 2009)) {
       return;
    }
-   auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
-   auto dateTime = transactionsModel_->data(index).toDateTime();
-   ui->dateEditStart->setDateTime(dateTime);
+   const auto &item = transactionsModel_->getOldestItem();
+   ui->dateEditStart->setDateTime(QDateTime::fromTime_t(item.txEntry.txTime));
 }
 
 void TransactionsWidget::onProgressInited(int start, int end)
