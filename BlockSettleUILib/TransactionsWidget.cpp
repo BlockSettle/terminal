@@ -181,7 +181,6 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       curAddress_ = transactionsModel_->data(addressIndex).toString();
 
       contextMenu_.clear();
-      contextMenu_.addAction(actionCopyAddr_);
 
       if (sortFilterModel_) {
          const auto sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
@@ -201,6 +200,12 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             }
             else {
                actionCPFP_->setData(-1);
+            }
+
+            // if the item contains "address" work then don't allow to copy address
+            // because it either says 'no address' or '%1 output addresses'
+            if (!txItem.mainAddress.contains(tr("address"), Qt::CaseInsensitive)) {
+               contextMenu_.addAction(actionCopyAddr_);
             }
          }
       }
