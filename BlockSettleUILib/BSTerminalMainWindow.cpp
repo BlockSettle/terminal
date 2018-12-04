@@ -1004,7 +1004,7 @@ void BSTerminalMainWindow::onZCreceived(ArmoryConnection::ReqIdType reqId)
             return;
          }
          auto txInfo = new TxInfo { tx, txTime, value, wallet, bs::Transaction::Direction::Unknown, QString() };
-         const auto &cbDir = [this, txInfo] (bs::Transaction::Direction dir) {
+         const auto &cbDir = [this, txInfo] (bs::Transaction::Direction dir, std::vector<bs::Address>) {
             txInfo->direction = dir;
             if (!txInfo->mainAddress.isEmpty() && txInfo->wallet) {
                showZcNotification(*txInfo);

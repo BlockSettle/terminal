@@ -43,6 +43,9 @@ struct TransactionsViewItem
    bool     isCPFP = false;
    int confirmations = 0;
 
+   BinaryData  parentId;   // universal grouping support
+   BinaryData  groupId;
+
    bool isSet() const { return (!txEntry.txHash.isNull() && !walletID.isEmpty()); }
    void initialize(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &, std::function<void(const TransactionsViewItem *)>);
