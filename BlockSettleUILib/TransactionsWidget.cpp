@@ -169,6 +169,11 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       qApp->clipboard()->setText(curAddress_);
    });
 
+   actionCopyTx_ = new QAction(tr("Copy Transaction"));
+   connect(actionCopyTx_, &QAction::triggered, [this]() {
+      qApp->clipboard()->setText(curTx_);
+   });
+
    actionRBF_ = new QAction(tr("Replace-By-Fee (RBF)"), this);
    connect(actionRBF_, &QAction::triggered, this, &TransactionsWidget::onCreateRBFDialog);
 
@@ -181,7 +186,6 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       curAddress_ = transactionsModel_->data(addressIndex).toString();
 
       contextMenu_.clear();
-      contextMenu_.addAction(actionCopyAddr_);
 
       if (sortFilterModel_) {
          const auto sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
@@ -201,6 +205,15 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             }
             else {
                actionCPFP_->setData(-1);
+            }
+
+            // save transaction id and add context menu for copying it to clipboard
+            curTx_ = QString::fromStdString(txItem.tx.getThisHash().toHexStr(true));
+            contextMenu_.addAction(actionCopyTx_);
+
+            // allow copy address only if there is only 1 address
+            if (txItem.addressCount == 1) {
+               contextMenu_.addAction(actionCopyAddr_);
             }
          }
       }
