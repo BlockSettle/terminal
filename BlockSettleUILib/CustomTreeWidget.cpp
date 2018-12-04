@@ -94,7 +94,7 @@ void CustomTreeWidget::resizeColumns() {
       // add 5px margin
       setColumnWidth(i, columnWidth(i) + 5);
       // if a column is larger than 300 then force it to 300px
-      if (columnWidth(i) > 250)
-         setColumnWidth(i, 250);
+      //if (columnWidth(i) > 250)
+      //   setColumnWidth(i, 250);
    }
 }
