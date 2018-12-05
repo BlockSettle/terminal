@@ -840,10 +840,15 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
       return false;
    }
 
+   const std::string txKey = tx.getThisHash().toBinStr() + wallet->GetWalletId();
+   const auto &itDesc = txDesc_.find(txKey);
+   if (itDesc != txDesc_.end()) {
+      cb(itDesc->second.first, itDesc->second.second);
+      return true;
+   }
+
    const bool isSettlement = (wallet->GetType() == bs::wallet::Type::Settlement);
    std::set<bs::Address> addresses;
-   const auto txHash = tx.getThisHash();
-
    for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
       TxOut out = tx.getTxOutCopy((int)i);
       const auto addr = bs::Address::fromTxOut(out);
@@ -853,18 +858,18 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
       }
    }
 
-   const auto &cbProcessAddresses = [this, txHash, cb](const std::set<bs::Address> &addresses) {
+   const auto &cbProcessAddresses = [this, txKey, cb](const std::set<bs::Address> &addresses) {
       switch (addresses.size()) {
       case 0:
-         updateTxDescCache(txHash, tr("no address"), addresses.size(), cb);
+         updateTxDescCache(txKey, tr("no address"), addresses.size(), cb);
          break;
 
       case 1:
-         updateTxDescCache(txHash, (*addresses.begin()).display(), addresses.size(), cb);
+         updateTxDescCache(txKey, (*addresses.begin()).display(), addresses.size(), cb);
          break;
 
       default:
-         updateTxDescCache(txHash, tr("%1 output addresses").arg(addresses.size()), addresses.size(), cb);
+         updateTxDescCache(txKey, tr("%1 output addresses").arg(addresses.size()), addresses.size(), cb);
          break;
       }
    };
@@ -881,7 +886,7 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
          txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
       }
 
-      const auto &cbProcess = [this, txHash, txOutIndices, wallet, cbProcessAddresses](std::vector<Tx> txs) {
+      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](std::vector<Tx> txs) {
          std::set<bs::Address> addresses;
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIndices.find(prevTx.getThisHash());
@@ -922,11 +927,11 @@ void WalletsManager::updateTxDirCache(const std::string &txKey, bs::Transaction:
    cb(dir, inAddrs);
 }
 
-void WalletsManager::updateTxDescCache(const BinaryData &txHash, const QString &desc, int addrCount, std::function<void(QString, int)> cb)
+void WalletsManager::updateTxDescCache(const std::string &txKey, const QString &desc, int addrCount, std::function<void(QString, int)> cb)
 {
    {
       FastLock lock(txDescLock_);
-      txDesc_[txHash] = desc;
+      txDesc_[txKey] = { desc, addrCount };
    }
    cb(desc, addrCount);
 }
