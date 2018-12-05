@@ -582,6 +582,8 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          treeView->scrollTo(selection[0]);
       }
    }
+   // emit update address signal to WalletsWidget
+   updateAddresses();
 }
 
 void WalletsViewModel::onWalletChanged()
