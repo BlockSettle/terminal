@@ -72,14 +72,13 @@ CustomDialog {
     }
 
     onOpened: {
+        abortBox.bWalletCreate = true
         abortBox.accepted.connect(abort)
-        msgBox.accepted.connect(msgBoxAccept)
+        noticeBox.accepted.connect(msgBoxAccept)
     }
     onClosed: {
         abortBox.accepted.disconnect(abort)
-        msgBox.accepted.disconnect(msgBoxAccept)
-        msgBox.usePassword = false
-        msgBox.rejectButtonVisible = false
+        noticeBox.accepted.disconnect(msgBoxAccept)
     }
 
     contentItem: FocusScope {
@@ -228,6 +227,10 @@ CustomDialog {
                     Layout.leftMargin: inputLabelsWidth + 5
                     enabled: !primaryWalletExists
                     text:   qsTr("Primary Wallet")
+                    //ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
+                    //ToolTip.delay: 1000
+                    //ToolTip.timeout: 5000
+                    //ToolTip.visible: hovered
                 }
             }
             CustomHeader {
@@ -256,13 +259,11 @@ CustomDialog {
                     text:   qsTr("Auth eID")
                     onCheckedChanged: {
                         if (checked == true && !authNoticeShown) {
-                            // reset message box settings
-                            msgBox.usePassword = false
-                            msgBox.rejectButtonVisible = false
-                            messageBoxInfo(qsTr("Notice!")
-                                           , qsTr("Signing with Auth eID")
-                                           , qsTr("Once you set Auth eID as signing the signing will be set locally on your mobile device.\n\nIf you lose your phone or uninstall the app you will lose your ability to sign wallet requests.\n\nThis also implies that your Auth eID cannot be hacked as it's only stored on your mobile device.\n\nKeep your backup secure as it protects your wallet forever, against hard drive loss and if you lose your mobile device which is connected to Auth eID.\n\nFor more information please consult with the Getting Started with Auth eID guide.")
-                                           )
+                            // setting to true and then false to properly size
+                            // the message box, otherwise sometimes the size is not correct
+                            noticeBox.passwordNotice = true
+                            noticeBox.passwordNotice = false
+                            noticeBox.open()
                             authNoticeShown = true // make sure the notice is only shown once
                         }
                     }
@@ -331,13 +332,9 @@ CustomDialog {
                         enabled:    acceptable
                         onClicked: {
                             if (rbPassword.checked) {
-                                //pwdBox.open()
-                                msgBox.usePassword = true
-                                msgBox.password = newPasswordWithConfirm.text
-                                msgBox.rejectButtonVisible = true
-                                messageBoxInfo(qsTr("Notice!")
-                                               , qsTr("Please take care of your assets!")
-                                               , qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! Your Wallet and any backups are useless if you lose them. \n\nA backup protects your wallet forever, against hard drive loss and losing your passphrase. It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. Please make a backup and keep it in a safe place.\n\nPlease enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!"))
+                                noticeBox.passwordNotice = true
+                                noticeBox.password = newPasswordWithConfirm.text
+                                noticeBox.open()
                             }
                             else {
                                 encType = WalletInfo.Auth

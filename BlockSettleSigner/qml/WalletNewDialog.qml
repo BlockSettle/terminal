@@ -10,9 +10,8 @@ CustomDialog {
     implicitHeight: mainLayout.implicitHeight
 
     enum WalletType {
-        RandomSeed = 1,
-        PaperBackup = 2,
-        DigitalBackupFile = 3
+        NewWallet = 1,
+        ImportWallet = 2
     }
 
     ColumnLayout {
@@ -62,27 +61,17 @@ CustomDialog {
 
                 CustomButton {
                     Layout.fillWidth: true
-                    text:   qsTr("Digital backup file")
+                    text:   qsTr("Import Wallet")
                     onClicked: {
-                        type = WalletNewDialog.WalletType.DigitalBackupFile
+                        type = WalletNewDialog.WalletType.ImportWallet
                         accept()
                     }
                 }
-
-                CustomButton {
-                    Layout.fillWidth: true
-                    text:   qsTr("Paper backup")
-                    onClicked: {
-                        type = WalletNewDialog.WalletType.PaperBackup
-                        accept()
-                    }
-                }
-
                 CustomButton {
                     Layout.fillWidth: true
                     text:   qsTr("Create New")
                     onClicked: {
-                        type = WalletNewDialog.WalletType.RandomSeed
+                        type = WalletNewDialog.WalletType.NewWallet
                         accept()
                     }
                 }

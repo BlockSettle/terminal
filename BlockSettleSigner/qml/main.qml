@@ -152,4 +152,8 @@ ApplicationWindow {
    function messageBoxInfo(title, text, details, parent) {
        messageBox(BSMessageBox.Type.Info, title, text, details, parent);
    }
+
+   function messageBoxCritical(title, text, details, parent) {
+       messageBox(BSMessageBox.Type.Critical, title, text, details, parent);
+   }
 }
