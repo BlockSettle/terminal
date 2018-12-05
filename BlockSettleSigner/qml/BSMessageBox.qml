@@ -21,7 +21,7 @@ CustomDialog {
     property int type: BSMessageBox.Type.Info
     property variant images: ["/NOTIFICATION_INFO", "/NOTIFICATION_SUCCESS", "/NOTIFICATION_QUESTION", "/NOTIFICATION_WARNING", "/NOTIFICATION_CRITICAL"]
     property variant colors: ["#ffffff", "#38C673", "#f7b03a", "#f7b03a", "#EE2249"]
-
+    property alias textFormat: labelDetails.textFormat
     enum Type {
        Info = 0,
        Success = 1,
@@ -89,6 +89,12 @@ CustomDialog {
                             id: labelDetails
                             Layout.preferredWidth: textRect.width
                             Layout.minimumHeight: 60
+                            onLinkActivated: Qt.openUrlExternally(link)
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+                                cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            }
                         }
                     }
                 }
