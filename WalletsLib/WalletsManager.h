@@ -161,7 +161,7 @@ private:
    bool SetAuthWalletFrom(const hd_wallet_type &);
    void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
 
-   void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
+   void updateTxDirCache(const std::string &txKey, bs::Transaction::Direction
       , const std::vector<bs::Address> &inAddrs, std::function<void(bs::Transaction::Direction, std::vector<bs::Address>)>);
    void updateTxDescCache(const BinaryData &txHash, const QString &, int, std::function<void(QString, int)>);
 
@@ -196,7 +196,7 @@ private:
    };
    std::unordered_map<std::string, CCInfo>   ccSecurities_;
 
-   std::map<BinaryData, std::pair<bs::Transaction::Direction, std::vector<bs::Address>>>   txDirections_;
+   std::unordered_map<std::string, std::pair<bs::Transaction::Direction, std::vector<bs::Address>>> txDirections_;
    mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;
    std::map<BinaryData, QString> txDesc_;
    mutable std::atomic_flag      txDescLock_ = ATOMIC_FLAG_INIT;
