@@ -109,6 +109,9 @@ public:
    QModelIndex parent(const QModelIndex &child) const override;
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
 
+signals:
+   void updateAddresses();
+
 private slots:
    void onWalletChanged();
    void onNewWalletAdded(const std::string &walletId);
