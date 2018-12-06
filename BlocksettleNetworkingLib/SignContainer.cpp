@@ -5,7 +5,6 @@
 #include "HDWallet.h"
 #include "HeadlessContainer.h"
 #include "OfflineSigner.h"
-#include "ZmqSecuredDataConnection.h"
 
 #include <QtcpSocket>
 #include <spdlog/spdlog.h>
