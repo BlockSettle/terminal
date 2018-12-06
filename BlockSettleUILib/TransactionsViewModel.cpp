@@ -469,7 +469,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
    auto newItems = std::make_shared<std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>>();
-   auto updatedItems = std::make_shared<std::vector<TransactionPtr>>() ;
+   auto updatedItems = std::make_shared<std::vector<TransactionPtr>>();
 
    for (const auto &entry : page) {
       const auto item = itemFromTransaction(entry);
@@ -685,7 +685,11 @@ void TransactionsViewModel::onDelRows(const std::set<int> &rows)
 
 TransactionsViewItem TransactionsViewModel::getItem(const QModelIndex &index) const
 {
-   return *(getNode(index)->item());
+   const auto &node = getNode(index);
+   if (!node) {
+      return {};
+   }
+   return *(node->item());
 }
 
 void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
