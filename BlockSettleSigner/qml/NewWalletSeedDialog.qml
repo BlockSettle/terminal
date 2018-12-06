@@ -129,7 +129,7 @@ CustomDialog {
                             seedMatch = false
 
                             // DONT COMMIT!!! ONLY FOR TESTING!!!
-                            seedMatch = true
+                            //seedMatch = true
                         }
                     }
                 }

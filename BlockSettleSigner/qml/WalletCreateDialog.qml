@@ -346,6 +346,7 @@ CustomDialog {
                                                                       seed.walletId, "")
                                 //btnAuth.enabled = false
                                 authSign.succeeded.connect(function(encKey_, password_) {
+                                    authSign = null
                                     encKey = encKey_
                                     seed.password = password_
                                     acceptable = true
@@ -358,18 +359,17 @@ CustomDialog {
                                                    , qsTr("PROTECT YOUR ROOT PRIVATE KEY!")
                                                    , qsTr("No one can help you recover your bitcoins if you forget your wallet passphrase and you don't have your Root Private Key (RPK) backup! A backup of the RPK protects your wallet forever against hard drive loss and loss of your wallet passphrase. The RPK backup also protects you from wallet theft if the wallet was encrypted and the RPK backup wasn't stolen. Please make a backup of the RPK and keep it in a secure place.\n\nPlease approve an Auth eID request one more time to indicate that you are aware of the risks of losing your passphrase!"))
 
-                                    msgBox.accepted.connect(function(){
+                                    function verifyWalletKey() {
+                                        msgBox.accepted.disconnect(verifyWalletKey)
                                         authSign = authProxy.signWallet(MobileClient.VerifyWalletKey,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
                                                                               seed.walletId, encKey)
 
                                         authSign.succeeded.connect(function(encKey_, password_) {
+                                            authSign = null
                                             accept()
                                         })
-                                    })
-
-
-
-
+                                    }
+                                    msgBox.accepted.connect(verifyWalletKey)
                                 })
                                 authSign.failed.connect(function(failed_text) {
                                     authSign = null
