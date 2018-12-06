@@ -1,6 +1,7 @@
 #include <QFile>
 #include <QVariant>
 #include <QPixmap>
+#include <QStandardPaths>
 
 #include <spdlog/spdlog.h>
 
@@ -79,7 +80,7 @@ bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPas
    }
    const bs::wallet::PasswordData pwdData = { BinaryData::CreateFromHex(newPass.toStdString()), mapEncType(encType), encKey.toStdString() };
 
-   bool result = wallet->changePassword(logger_, { pwdData }, { 1, 1 }
+   bool result = wallet->changePassword({ pwdData }, { 1, 1 }
       , BinaryData::CreateFromHex(oldPass.toStdString()), false, false, false);
 
    if (!result) {
@@ -198,6 +199,12 @@ WalletSeed *WalletsProxy::createWalletSeed() const
 {
    auto result = new WalletSeed(params_->netType(), (QObject *)this);
    return result;
+}
+
+QString WalletsProxy::defaultBackupLocation() const
+{
+   return QString::fromLatin1("file://") +
+      QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
 bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletSeed *seed)

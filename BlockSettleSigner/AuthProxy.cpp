@@ -7,7 +7,8 @@
 #include <spdlog/spdlog.h>
 
 #include "AuthProxy.h"
-
+#include "MobileClient.h"
+#include "ApplicationSettings.h"
 
 AuthProxy::AuthProxy(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
    : QObject(parent), logger_(logger)
@@ -36,11 +37,29 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
    , const QString &userId, const QString &title, const QString &walletId, QObject *parent)
    : AuthObject(parent)
 {
-/*   connect(&freja_, &FrejaSignWallet::succeeded, [this](SecureBinaryData password) {
+   ApplicationSettings settings;
+   auto authKeys = settings.GetAuthKeys();
+   mobileClient_ = (new MobileClient(logger, authKeys, this));
+
+   //connect(mobileClient_, &MobileClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
+   //connect(mobileClient_, &MobileClient::failed, this, &WalletKeyWidget::onAuthFailed);
+
+   //std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   //std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   //std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+
+   //mobileClient_->init(serverPubKey, serverHost, serverPort);
+
+   //mobileClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
+   //   , walletId_, knownDeviceIds_);
+
+/*
+   connect(&freja_, &FrejaSignWallet::succeeded, [this](SecureBinaryData password) {
       emit success(QString::fromStdString(password.toHexStr()));
    });
    connect(&freja_, &FrejaSignWallet::failed, [this](const QString &text) { emit error(text); });
    connect(&freja_, &FrejaSignWallet::statusUpdated, [this](const QString &status) { setStatus(status); });
 
-   freja_.start(userId, title, walletId.toStdString());*/
+   freja_.start(userId, title, walletId.toStdString());
+*/
 }

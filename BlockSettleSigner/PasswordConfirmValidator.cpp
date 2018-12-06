@@ -13,6 +13,10 @@ QValidator::State PasswordConfirmValidator::validate(QString &input, int &) cons
       return QValidator::State::Intermediate;
    }
 
+   if (compareTo_.size() < 6) {
+      setStatusMsg(tooShortTmpl_.arg(name_));
+      return QValidator::State::Intermediate;
+   }
    if (input.size() < compareTo_.size()) {
       setStatusMsg(dontMatchMsgTmpl_.arg(name_));
       return QValidator::State::Intermediate;

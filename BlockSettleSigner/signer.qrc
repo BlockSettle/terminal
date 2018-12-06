@@ -2,6 +2,11 @@
     <qresource prefix="/">
         <file>images/bs_logo.png</file>
         <file alias="FULL_LOGO">images/full_logo.png</file>
+        <file alias="NOTIFICATION_CRITICAL">images/notification_critical.png</file>
+        <file alias="NOTIFICATION_INFO">images/notification_info.png</file>
+        <file alias="NOTIFICATION_QUESTION">images/notification_question.png</file>
+        <file alias="NOTIFICATION_SUCCESS">images/notification_success.png</file>
+        <file alias="NOTIFICATION_WARNING">images/notification_warning.png</file>
         <file alias="TEMPLATE_WALLET_BACKUP">templates/wallet_backup.html</file>
         <file>qml/main.qml</file>
         <file>qml/AutoSignPage.qml</file>
@@ -44,5 +49,7 @@
         <file>qml/bscontrols/BSTextInput.qml</file>
         <file>qml/bscontrols/BSStyle.qml</file>
         <file>qml/bscontrols/BSEasyCodeInput.qml</file>
+        <file>qml/BSMessageBox.qml</file>
+        <file>qml/NewWalletSeedDialog.qml</file>
     </qresource>
 </RCC>

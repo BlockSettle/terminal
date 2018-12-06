@@ -53,7 +53,7 @@ public:
    QString walletId() const;
 
 signals:
-   void error(const QString &);
+   void error(const QString &errMsg);
    void seedChanged() const;
 
 private:
@@ -69,6 +69,7 @@ class WalletsProxy : public QObject
    Q_PROPERTY(bool primaryWalletExists READ primaryWalletExists NOTIFY walletsChanged)
    Q_PROPERTY(bool loaded READ walletsLoaded NOTIFY walletsChanged)
    Q_PROPERTY(QStringList walletNames READ walletNames NOTIFY walletsChanged)
+   Q_PROPERTY(QString defaultBackupLocation READ defaultBackupLocation NOTIFY walletsChanged)
 
 public:
    WalletsProxy(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<WalletsManager> &
@@ -92,6 +93,8 @@ public:
    Q_INVOKABLE WalletSeed *createWalletSeed() const;
 
    bool walletsLoaded() const { return walletsLoaded_; }
+
+   QString defaultBackupLocation() const;
 
 signals:
    void walletError(const QString &walletId, const QString &errMsg) const;

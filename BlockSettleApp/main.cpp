@@ -18,8 +18,7 @@
 #include "BSTerminalMainWindow.h"
 #include "EncryptionUtils.h"
 #include "StartupDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
+#include "BSMessageBox.h"
 #include "WalletsManager.h"
 
 
@@ -185,7 +184,7 @@ static int GuiApp(int argc, char** argv)
    lockFile.setStaleLockTime(0);
 
    if (!lockFile.tryLock()) {
-      MessageBoxInfo box(app.tr("BlockSettle Terminal")
+      BSMessageBox box(BSMessageBox::info, app.tr("BlockSettle Terminal")
          , app.tr("BlockSettle Terminal is already running")
          , app.tr("Another instance of BlockSettle Terminal is running. It may be running in the background, look for the BlockSettle icon in the system tray"));
       return box.exec();
@@ -205,7 +204,7 @@ static int GuiApp(int argc, char** argv)
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
    if (!settings->LoadApplicationSettings(app.arguments())) {
-      MessageBoxCritical errorMessage(app.tr("Error")
+      BSMessageBox errorMessage(BSMessageBox::critical, app.tr("Error")
          , app.tr("Failed to parse command line arguments")
          , settings->ErrorText());
       errorMessage.exec();
@@ -248,7 +247,7 @@ static int GuiApp(int argc, char** argv)
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
-      MessageBoxCritical(app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
+      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
       return 1;
    }
    return 0;

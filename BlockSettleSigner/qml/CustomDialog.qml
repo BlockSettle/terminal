@@ -8,6 +8,7 @@ Dialog {
 
     focus: true
     modal: true
+    closePolicy: Popup.NoAutoClose
     padding: 0
     background: Rectangle {
         color:  "#1C2835"
