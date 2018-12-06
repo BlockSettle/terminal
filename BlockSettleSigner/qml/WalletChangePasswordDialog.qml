@@ -1,4 +1,4 @@
-import QtQuick 2.9
+﻿import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.PasswordConfirmValidator 1.0
@@ -26,7 +26,7 @@ CustomDialog {
 
     onWalletChanged: {
         if (wallet.encType === WalletInfo.Auth) {
-            authSignOld = auth.signWallet(wallet.encKey, qsTr("Old password for wallet %1").arg(wallet.name),
+            authSignOld = authProxy.signWallet(wallet.encKey, qsTr("Old password for wallet %1").arg(wallet.name),
                                          wallet.rootId)
 
             authSignOld.success.connect(function(key) {
@@ -153,7 +153,7 @@ CustomDialog {
                     text:   !authSignNew ? qsTr("Sign with Auth eID") : authSignNew.status
                     enabled:    !authSignNew && tiNewAuthId.text.length
                     onClicked: {
-                        authSignNew = auth.signWallet(tiNewAuthId.text, qsTr("New password for wallet %1").arg(wallet.name),
+                        authSignNew = authProxy.signWallet(tiNewAuthId.text, qsTr("New password for wallet %1").arg(wallet.name),
                                                               wallet.rootId)
                         btnAuthNew.enabled = false
                         authSignNew.success.connect(function(key) {

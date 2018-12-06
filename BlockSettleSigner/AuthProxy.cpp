@@ -1,4 +1,4 @@
-#include <QFile>
+﻿#include <QFile>
 #include <QVariant>
 #include <QBuffer>
 #include <QByteArray>
@@ -7,17 +7,18 @@
 #include <spdlog/spdlog.h>
 
 #include "AuthProxy.h"
-#include "MobileClient.h"
 #include "ApplicationSettings.h"
 
 AuthProxy::AuthProxy(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
    : QObject(parent), logger_(logger)
 {}
 
-AuthSignWalletObject *AuthProxy::signWallet(const QString &userId, const QString &title, const QString &walletId)
+AuthSignWalletObject *AuthProxy::signWallet(MobileClient::RequestType requestType, const QString &userId,
+                                            const QString &title, const QString &walletId,
+                                            const QString &encKey)
 {
    logger_->debug("[AuthProxy] signing {} for {}: {}", walletId.toStdString(), userId.toStdString(), title.toStdString());
-   return new AuthSignWalletObject(logger_, userId, title, walletId, this);
+   return new AuthSignWalletObject(requestType, logger_, userId, title, walletId, encKey, this);
 }
 
 void AuthSignWalletObject::cancel()
@@ -33,25 +34,36 @@ void AuthObject::setStatus(const QString &status)
 }
 
 
-AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &userId, const QString &title, const QString &walletId, QObject *parent)
+AuthSignWalletObject::AuthSignWalletObject(MobileClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &logger
+   , const QString &userId, const QString &title, const QString &walletId, const QString &encKey, QObject *parent)
    : AuthObject(parent)
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
    mobileClient_ = (new MobileClient(logger, authKeys, this));
 
-   //connect(mobileClient_, &MobileClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
-   //connect(mobileClient_, &MobileClient::failed, this, &WalletKeyWidget::onAuthFailed);
+   connect(mobileClient_, &MobileClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
+       emit succeeded(QString::fromStdString(encKey), password);
+   });
+   connect(mobileClient_, &MobileClient::failed, this, [this](const QString &text){
+       emit failed(text);
+   });
+   std::string serverPubKey = settings.get<std::string>(ApplicationSettings::authServerPubKey);
+   std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
+   std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
 
-   //std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
-   //std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
-   //std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+   mobileClient_->init(serverPubKey, serverHost, serverPort);
 
-   //mobileClient_->init(serverPubKey, serverHost, serverPort);
+   std::vector<std::string> knownDeviceIds_;
+   auto deviceInfo = MobileClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
+   if (!deviceInfo.deviceId.empty()) {
+       knownDeviceIds_.push_back(deviceInfo.deviceId);
+   }
 
-   //mobileClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
-   //   , walletId_, knownDeviceIds_);
+   mobileClient_->start(requestType, userId.toStdString()
+      , walletId.toStdString(), knownDeviceIds_);
+//   mobileClient_->start(MobileClient::ActivateWallet, userId.toStdString()
+//      , walletId.toStdString(), knownDeviceIds_);
 
 /*
    connect(&freja_, &FrejaSignWallet::succeeded, [this](SecureBinaryData password) {

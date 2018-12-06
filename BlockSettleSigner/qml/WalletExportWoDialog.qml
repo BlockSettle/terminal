@@ -19,7 +19,7 @@ CustomDialog {
 
     onWalletChanged: {
         if (wallet.encType === WalletInfo.Auth) {
-            authSign = auth.signWallet(wallet.encKey, qsTr("Export watching-only wallet for %1")
+            authSign = authProxy.signWallet(wallet.encKey, qsTr("Export watching-only wallet for %1")
                                          .arg(wallet.name), wallet.rootId)
 
             authSign.success.connect(function(key) {

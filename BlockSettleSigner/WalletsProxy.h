@@ -1,4 +1,4 @@
-#ifndef __WALLETS_PROXY_H__
+﻿#ifndef __WALLETS_PROXY_H__
 #define __WALLETS_PROXY_H__
 
 #include <memory>
@@ -19,14 +19,16 @@ namespace bs {
 class SignerSettings;
 class WalletsManager;
 
+// TODO inherit from class WalletInfo ???
 class WalletSeed : public QObject
 {
    Q_OBJECT
    Q_PROPERTY(QString walletId READ walletId NOTIFY seedChanged)
    Q_PROPERTY(QString walletName READ walletName WRITE setWalletName NOTIFY seedChanged)
    Q_PROPERTY(QString walletDesc READ walletDesc WRITE setWalletDesc NOTIFY seedChanged)
-//!   Q_PROPERTY(WalletInfo::EncryptionType encType READ encType WRITE setEncType NOTIFY seedChanged)
-//!   Q_PROPERTY(QString encKey READ encKey WRITE setEncKey NOTIFY seedChanged)
+   Q_PROPERTY(WalletInfo::EncryptionType encType READ encType WRITE setEncType NOTIFY seedChanged)
+   Q_PROPERTY(QString encKey READ encKey WRITE setEncKey NOTIFY seedChanged)
+   Q_PROPERTY(SecureBinaryData password READ password WRITE setPassword NOTIFY seedChanged)
    Q_PROPERTY(bool testNet READ isTestNet WRITE setTestNet NOTIFY seedChanged)
    Q_PROPERTY(bool mainNet READ isMainNet WRITE setMainNet NOTIFY seedChanged)
 
@@ -52,6 +54,15 @@ public:
    bs::wallet::Seed seed() const { return seed_; }
    QString walletId() const;
 
+   WalletInfo::EncryptionType encType() const;
+   void setEncType(const WalletInfo::EncryptionType &encType);
+
+   QString encKey() const;
+   void setEncKey(const QString &encKey);
+
+   SecureBinaryData password() const;
+   void setPassword(const SecureBinaryData &password);
+
 signals:
    void error(const QString &errMsg);
    void seedChanged() const;
@@ -60,6 +71,9 @@ private:
    bs::wallet::Seed  seed_;
    QString           walletName_;
    QString           walletDesc_;
+   WalletInfo::EncryptionType encType_;
+   QString encKey_;
+   SecureBinaryData password_;
 };
 
 

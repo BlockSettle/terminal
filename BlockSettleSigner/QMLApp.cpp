@@ -1,4 +1,4 @@
-#include <functional>
+﻿#include <functional>
 #include <QtQml>
 #include <QQmlContext>
 #include <QGuiApplication>
@@ -6,6 +6,7 @@
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
 #include "AuthProxy.h"
+#include "MobileClient.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
 #include "HDWallet.h"
@@ -42,6 +43,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
    qRegisterMetaType<bs::wallet::TXSignRequest>();
+   qRegisterMetaType<MobileClient::RequestType>("MobileClient::RequestType");
+
    qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.Wallets", 1, 0,
       "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
    qmlRegisterUncreatableType<OfflineProcessor>("com.blocksettle.OfflineProc", 1, 0,
@@ -50,6 +53,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AuthProxy>("com.blocksettle.AuthProxy", 1, 0,
       "AuthProxy", QStringLiteral("Cannot create a AuthProxy instance"));
+   qmlRegisterUncreatableType<MobileClient>("com.blocksettle.MobileClient", 1, 0,
+      "MobileClient", QStringLiteral("Cannot create a MobileClient instance"));
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
@@ -57,6 +62,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
+
 
    walletsMgr_ = std::make_shared<WalletsManager>(logger_);
 
@@ -88,7 +94,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    });
 
    authProxy_ = std::make_shared<AuthProxy>(logger_);
-   ctxt_->setContextProperty(QStringLiteral("auth"), authProxy_.get());
+   ctxt_->setContextProperty(QStringLiteral("authProxy"), authProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);

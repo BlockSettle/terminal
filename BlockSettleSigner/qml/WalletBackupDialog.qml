@@ -21,7 +21,7 @@ CustomDialog {
 
     onWalletChanged: {
         if (wallet.encType === WalletInfo.Auth) {
-            authSign = auth.signWallet(wallet.encKey, qsTr("Backup wallet %1").arg(wallet.name),
+            authSign = authProxy.signWallet(wallet.encKey, qsTr("Backup wallet %1").arg(wallet.name),
                                          wallet.rootId)
 
             authSign.success.connect(function(key) {

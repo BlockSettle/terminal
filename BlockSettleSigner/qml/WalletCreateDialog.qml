@@ -1,4 +1,4 @@
-import QtQuick 2.9
+﻿import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.4
 import com.blocksettle.PasswordConfirmValidator 1.0
@@ -6,6 +6,7 @@ import com.blocksettle.WalletSeed 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
+import com.blocksettle.MobileClient 1.0
 
 import "bscontrols"
 
@@ -21,7 +22,7 @@ CustomDialog {
     property int encType
     property string encKey
     property AuthSignWalletObject  authSign
-    property bool acceptable:   tfName.text.length && (newPasswordWithConfirm.acceptableInput || tiAuthId.text)
+    property bool acceptable:   tfName.text.length && (newPasswordWithConfirm.acceptableInput || textInputEmail.text)
     property int inputLabelsWidth: 110
     property int curPage: WalletCreateDialog.Page.Main
     property bool authNoticeShown: false
@@ -65,10 +66,10 @@ CustomDialog {
 
     // handles accept signal from msgBox which displays password and auth eid notice
     function msgBoxAccept() {
-        // accept only when using passwort authentication
+        // accept only when using password authentication
         if (rbPassword.checked) {
-                accept()
-            }
+            accept()
+        }
     }
 
     onOpened: {
@@ -88,13 +89,13 @@ CustomDialog {
         Keys.onPressed: {
             if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
                 if (acceptable) {
-                    accept();
+                    accept()
                 }
 
                 event.accepted = true;
             } else if (event.key === Qt.Key_Escape) {
                 abortBox.open()
-                event.accepted = true;
+                event.accepted = true
             }
         }
 
@@ -296,7 +297,7 @@ CustomDialog {
                     text:   qsTr("Auth eID email")
                 }
                 CustomTextInput {
-                    id: tiAuthId
+                    id: textInputEmail
                     Layout.fillWidth: true
                     selectByMouse: true
                     focus: true
@@ -338,22 +339,42 @@ CustomDialog {
                             }
                             else {
                                 encType = WalletInfo.Auth
-                                encKey = tiAuthId.text
                                 curPage = WalletCreateDialog.Page.AuthSignPage
                                 // the Auth eID sign process should start here
-                                /*
-                                authSign = auth.signWallet(tiAuthId.text, qsTr("Password for wallet %1").arg(tfName.text),
-                                                                      seed.walletId)
-                                btnAuth.enabled = false
-                                authSign.success.connect(function(key) {
+
+                                authSign = authProxy.signWallet(MobileClient.ActivateWallet,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
+                                                                      seed.walletId, "")
+                                //btnAuth.enabled = false
+                                authSign.succeeded.connect(function(encKey_, password_) {
+                                    encKey = encKey_
+                                    seed.password = password_
                                     acceptable = true
-                                    password = key
-                                    text = qsTr("Successfully signed")
+                                    //text = qsTr("Successfully signed")
+                                    //text = qsTr("Verify")
+
+                                    msgBox.usePassword = false
+                                    msgBox.rejectButtonVisible = false
+                                    messageBoxInfo(qsTr("Notice!")
+                                                   , qsTr("PROTECT YOUR ROOT PRIVATE KEY!")
+                                                   , qsTr("No one can help you recover your bitcoins if you forget your wallet passphrase and you don't have your Root Private Key (RPK) backup! A backup of the RPK protects your wallet forever against hard drive loss and loss of your wallet passphrase. The RPK backup also protects you from wallet theft if the wallet was encrypted and the RPK backup wasn't stolen. Please make a backup of the RPK and keep it in a secure place.\n\nPlease approve an Auth eID request one more time to indicate that you are aware of the risks of losing your passphrase!"))
+
+                                    msgBox.accepted.connect(function(){
+                                        authSign = authProxy.signWallet(MobileClient.VerifyWalletKey,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
+                                                                              seed.walletId, encKey)
+
+                                        authSign.succeeded.connect(function(encKey_, password_) {
+                                            accept()
+                                        })
+                                    })
+
+
+
+
                                 })
-                                authSign.error.connect(function(text) {
+                                authSign.failed.connect(function(failed_text) {
                                     authSign = null
-                                    btnAuth.enabled = tiAuthId.text.length
-                                })*/
+                                    btnAuth.enabled = textInputEmail.text.length
+                                })
                             }
                         }
                     }
@@ -457,8 +478,13 @@ CustomDialog {
         seed.walletDesc = tfDesc.text
         isPrimary = cbPrimary.checked
         if (rbPassword.checked) {
+            seed.encType = WalletInfo.Password
             encType = WalletInfo.Password
             password = newPasswordWithConfirm.text
+        }
+        else {
+            seed.encType = WalletInfo.Auth
+            seed.encKey = encKey
         }
     }
 

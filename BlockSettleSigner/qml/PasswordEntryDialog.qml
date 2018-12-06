@@ -1,4 +1,4 @@
-import QtQuick 2.9
+﻿import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.TXInfo 1.0
@@ -22,7 +22,7 @@ CustomDialog {
 
     onTxInfoChanged: {
         if (txInfo.wallet.encType === WalletInfo.Auth) {
-            authSign = auth.signWallet(txInfo.wallet.encKey, prompt, txInfo.wallet.rootId)
+            authSign = authProxy.signWallet(txInfo.wallet.encKey, prompt, txInfo.wallet.rootId)
 
             authSign.success.connect(function(key) {
                 acceptable = true

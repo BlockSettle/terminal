@@ -1,4 +1,4 @@
-#include <QFile>
+﻿#include <QFile>
 #include <QVariant>
 #include <QPixmap>
 #include <QStandardPaths>
@@ -214,10 +214,24 @@ bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletS
       return false;
    }
    try {    //!
-      const std::vector<bs::wallet::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
-         , bs::wallet::EncryptionType::Password, {} } };
+       bs::wallet::PasswordData pwdData;
+       pwdData.encType = mapEncType(seed->encType());
+       switch (seed->encType()) {
+       case WalletInfo::Password :
+           pwdData.password = SecureBinaryData::CreateFromHex(password.toStdString());
+           break;
+       case WalletInfo::Auth :
+           pwdData.password = seed->password();
+           pwdData.encKey = SecureBinaryData(seed->encKey().toStdString());
+           break;
+       default:
+           break;
+       }
+
+       std::vector<bs::wallet::PasswordData> pwdDataVector = { pwdData };
+
       walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
-         , seed->seed(), params_->getWalletsDir(), isPrimary, pwdData, { 1, 1 });
+         , seed->seed(), params_->getWalletsDir(), isPrimary, pwdDataVector, { 1, 1 });
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
@@ -350,4 +364,34 @@ bool WalletSeed::parsePaperKey(const QString &key)
 QString WalletSeed::walletId() const
 {
    return QString::fromStdString(bs::hd::Node(seed_).getId());
+}
+
+WalletInfo::EncryptionType WalletSeed::encType() const
+{
+    return encType_;
+}
+
+void WalletSeed::setEncType(const WalletInfo::EncryptionType &encType)
+{
+    encType_ = encType;
+}
+
+QString WalletSeed::encKey() const
+{
+    return encKey_;
+}
+
+void WalletSeed::setEncKey(const QString &encKey)
+{
+    encKey_ = encKey;
+}
+
+SecureBinaryData WalletSeed::password() const
+{
+    return password_;
+}
+
+void WalletSeed::setPassword(const SecureBinaryData &password)
+{
+    password_ = password;
 }

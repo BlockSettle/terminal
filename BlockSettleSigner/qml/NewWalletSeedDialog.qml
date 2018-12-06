@@ -1,4 +1,4 @@
-
+﻿
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
@@ -127,6 +127,9 @@ CustomDialog {
                         }
                         else {
                             seedMatch = false
+
+                            // DONT COMMIT!!! ONLY FOR TESTING!!!
+                            seedMatch = true
                         }
                     }
                 }
