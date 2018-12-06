@@ -1,4 +1,4 @@
-#include "WalletKeysSubmitWidget.h"
+﻿#include "WalletKeysSubmitWidget.h"
 #include "ui_WalletKeysSubmitWidget.h"
 #include <set>
 #include <QFrame>
@@ -23,7 +23,7 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysSubmitWidget::init(MobileClientRequest requestType
+void WalletKeysSubmitWidget::init(MobileClient::RequestType requestType
    , const std::string &walletId
    , bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
