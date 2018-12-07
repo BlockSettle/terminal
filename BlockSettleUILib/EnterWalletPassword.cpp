@@ -4,7 +4,7 @@
 
 
 
-EnterWalletPassword::EnterWalletPassword(MobileClientRequest requestType, QWidget* parent)
+EnterWalletPassword::EnterWalletPassword(MobileClient::RequestType requestType, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::EnterWalletPassword())
    , requestType_(requestType)

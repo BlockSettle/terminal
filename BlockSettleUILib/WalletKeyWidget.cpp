@@ -22,7 +22,7 @@ const QColor kFailColor = Qt::red;
 }
 
 
-WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
+WalletKeyWidget::WalletKeyWidget(MobileClient::RequestType requestType, const std::string &walletId
    , int index, bool password, const std::pair<autheid::PrivateKey, autheid::PublicKey> &authKeys
    , QWidget* parent)
    : QWidget(parent)

@@ -41,14 +41,14 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
 
    connect(signingContainer_.get(), &SignContainer::PasswordChanged, this, &ChangeWalletPasswordDialog::onPasswordChanged);
 
-   deviceKeyOld_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletOldDevice
+   deviceKeyOld_ = new WalletKeyWidget(MobileClient::ActivateWalletOldDevice
       , wallet->getWalletId(), 0, false, appSettings->GetAuthKeys(), this);
    deviceKeyOld_->setFixedType(true);
    deviceKeyOld_->setEncryptionKeys(encKeys);
    deviceKeyOld_->setHideAuthConnect(true);
    deviceKeyOld_->setHideAuthCombobox(true);
 
-   deviceKeyNew_ = new WalletKeyWidget(MobileClientRequest::ActivateWalletNewDevice
+   deviceKeyNew_ = new WalletKeyWidget(MobileClient::ActivateWalletNewDevice
       , wallet->getWalletId(), 0, false, appSettings->GetAuthKeys(), this);
    deviceKeyNew_->setFixedType(true);
    deviceKeyNew_->setEncryptionKeys(encKeys);
@@ -122,13 +122,13 @@ ChangeWalletPasswordDialog::ChangeWalletPasswordDialog(const std::shared_ptr<spd
       | WalletKeysSubmitWidget::HideAuthConnectButton
       | WalletKeysSubmitWidget::HidePasswordWarning);
    ui_->widgetSubmitKeys->suspend();
-   ui_->widgetSubmitKeys->init(MobileClientRequest::DeactivateWallet, wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
+   ui_->widgetSubmitKeys->init(MobileClient::DeactivateWallet, wallet_->getWalletId(), keyRank, encTypes, encKeys, appSettings);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideGroupboxCaption
       | WalletKeysCreateWidget::SetPasswordLabelAsNew
       | WalletKeysCreateWidget::HideAuthConnectButton
       | WalletKeysCreateWidget::HideWidgetContol);
-   ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet, wallet_->getWalletId(), username, appSettings);
+   ui_->widgetCreateKeys->init(MobileClient::ActivateWallet, wallet_->getWalletId(), username, appSettings);
 
    ui_->widgetSubmitKeys->setFocus();
 
@@ -215,7 +215,7 @@ void ChangeWalletPasswordDialog::continueBasic()
       showAuthUsageInfo = false;
 
       if (oldPasswordData_[0].password.isNull()) {
-         EnterWalletPassword enterWalletPassword(MobileClientRequest::DeactivateWallet, this);
+         EnterWalletPassword enterWalletPassword(MobileClient::DeactivateWallet, this);
          enterWalletPassword.init(wallet_->getWalletId(), oldKeyRank_
             , oldPasswordData_, appSettings_, tr("Change Password"));
          int result = enterWalletPassword.exec();
@@ -239,7 +239,7 @@ void ChangeWalletPasswordDialog::continueBasic()
          }
       }
 
-      EnterWalletPassword enterWalletPassword(MobileClientRequest::ActivateWallet, this);
+      EnterWalletPassword enterWalletPassword(MobileClient::ActivateWallet, this);
       enterWalletPassword.init(wallet_->getWalletId(), ui_->widgetCreateKeys->keyRank()
          , newKeys, appSettings_, tr("Activate Auth eID signing"));
       int result = enterWalletPassword.exec();
@@ -441,7 +441,7 @@ void ChangeWalletPasswordDialog::deleteDevice(const string &deviceId)
       return;
    }
 
-   EnterWalletPassword enterWalletPassword(MobileClientRequest::DeactivateWalletDevice, this);
+   EnterWalletPassword enterWalletPassword(MobileClient::DeactivateWalletDevice, this);
    enterWalletPassword.init(wallet_->getWalletId(), newKeyRank_
       , newPasswordData_, appSettings_, tr("Deactivate device"));
    int result = enterWalletPassword.exec();

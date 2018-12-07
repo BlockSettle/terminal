@@ -122,7 +122,7 @@ void OTPImportDialog::startAuthSign()
       return;
    }
 
-   mobileClient_->start(MobileClientRequest::ActivateOTP
+   mobileClient_->start(MobileClient::ActivateOTP
       , ui_->lineEditAuthId->text().toStdString(), otpId.toStdString(), {});
 }
 

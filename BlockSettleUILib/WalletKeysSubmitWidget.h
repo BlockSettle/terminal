@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include "WalletEncryption.h"
-#include "MobileClientRequestType.h"
+#include "MobileClient.h"
 
 namespace Ui {
     class WalletKeysSubmitWidget;
@@ -35,7 +35,7 @@ public:
    ~WalletKeysSubmitWidget() override;
 
    void setFlags(Flags flags);
-   void init(MobileClientRequest requestType
+   void init(MobileClient::RequestType requestType
       , const std::string &walletId
       , bs::wallet::KeyRank
       , const std::vector<bs::wallet::EncryptionType> &
@@ -75,7 +75,7 @@ private:
    std::atomic_bool suspended_;
    Flags flags_{NoFlag};
    std::shared_ptr<ApplicationSettings> appSettings_;
-   MobileClientRequest requestType_{};
+   MobileClient::RequestType requestType_{};
    bool isKeyFinal_{false};
 };
 

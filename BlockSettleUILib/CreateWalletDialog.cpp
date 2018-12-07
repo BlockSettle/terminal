@@ -61,7 +61,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
       this, &CreateWalletDialog::onKeyTypeChanged);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideAuthConnectButton);
-   ui_->widgetCreateKeys->init(MobileClientRequest::ActivateWallet
+   ui_->widgetCreateKeys->init(MobileClient::ActivateWallet
       , walletId_, username, appSettings);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::CreateWallet);
@@ -183,7 +183,7 @@ bool checkNewWalletValidity(WalletsManager* walletsManager
          return false;
       }
 
-      EnterWalletPassword dialog(MobileClientRequest::ActivateWallet, parent);
+      EnterWalletPassword dialog(MobileClient::ActivateWallet, parent);
       dialog.init(walletId, widgetCreateKeys->keyRank(), *keys
          , appSettings, QObject::tr("Activate Auth eID Signing"), QObject::tr("Auth eID"));
       int result = dialog.exec();
