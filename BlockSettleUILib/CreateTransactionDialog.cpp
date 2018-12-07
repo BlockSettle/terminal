@@ -379,17 +379,17 @@ bool CreateTransactionDialog::CreateTransaction()
    catch (const std::runtime_error &e) {
       text = tr("Failed to broadcast transaction");
       detailedText = QString::fromStdString(e.what());
-      qDebug() << QLatin1String("[CreateTransactionDialogAdvanced::onCreatePressed] exception: ") << QString::fromStdString(e.what());
+      qDebug() << QLatin1String("[CreateTransactionDialog::CreateTransaction] exception: ") << QString::fromStdString(e.what());
    }
    catch (const std::logic_error &e) {
       text = tr("Failed to create transaction");
       detailedText = QString::fromStdString(e.what());
-      qDebug() << QLatin1String("[CreateTransactionDialogAdvanced::onCreatePressed] exception: ") << QString::fromStdString(e.what());
+      qDebug() << QLatin1String("[CreateTransactionDialog::CreateTransaction] exception: ") << QString::fromStdString(e.what());
    }
    catch (const std::exception &e) {
       text = tr("Failed to create transaction");
       detailedText = QString::fromStdString(e.what());
-      qDebug() << QLatin1String("[CreateTransactionDialogAdvanced::onCreatePressed] exception: ") << QString::fromStdString(e.what());
+      qDebug() << QLatin1String("[CreateTransactionDialog::CreateTransaction] exception: ") << QString::fromStdString(e.what());
    }
 
    stopBroadcasting();
