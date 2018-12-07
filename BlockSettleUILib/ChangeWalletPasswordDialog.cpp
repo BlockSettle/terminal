@@ -1,4 +1,4 @@
-﻿#include "ChangeWalletPasswordDialog.h"
+#include "ChangeWalletPasswordDialog.h"
 #include "ui_ChangeWalletPasswordDialog.h"
 
 #include <spdlog/spdlog.h>

@@ -1,4 +1,4 @@
-﻿#ifndef __MOBILE_CLIENT_H__
+#ifndef __MOBILE_CLIENT_H__
 #define __MOBILE_CLIENT_H__
 
 #include <botan/ecies.h>

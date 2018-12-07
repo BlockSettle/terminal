@@ -1,4 +1,4 @@
-﻿#ifndef __WALLET_KEYS_CREATE_WIDGET_H__
+#ifndef __WALLET_KEYS_CREATE_WIDGET_H__
 #define __WALLET_KEYS_CREATE_WIDGET_H__
 
 #include <QWidget>

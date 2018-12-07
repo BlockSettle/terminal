@@ -1,4 +1,4 @@
-﻿#include "WalletKeysSubmitWidget.h"
+#include "WalletKeysSubmitWidget.h"
 #include "ui_WalletKeysSubmitWidget.h"
 #include <set>
 #include <QFrame>

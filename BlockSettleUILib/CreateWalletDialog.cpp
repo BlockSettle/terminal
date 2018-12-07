@@ -1,4 +1,4 @@
-﻿#include "CreateWalletDialog.h"
+#include "CreateWalletDialog.h"
 #include "ui_CreateWalletDialog.h"
 
 #include "HDWallet.h"

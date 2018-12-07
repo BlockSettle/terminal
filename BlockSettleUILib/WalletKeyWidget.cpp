@@ -1,4 +1,4 @@
-﻿#include "WalletKeyWidget.h"
+#include "WalletKeyWidget.h"
 
 #include "ui_WalletKeyWidget.h"
 #include <QComboBox>

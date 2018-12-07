@@ -1,8 +1,7 @@
-﻿#include "MobileClient.h"
+#include "MobileClient.h"
 
 #include <spdlog/spdlog.h>
 #include <QTimer>
-#include <QCoreApplication>
 #include "ConnectionManager.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
@@ -320,29 +319,27 @@ void MobileClient::OnError(DataConnectionListener::DataConnectionError errorCode
 
 QString MobileClient::getMobileClientRequestText(RequestType requestType)
 {
-   auto app = QCoreApplication::instance();
-
    switch (requestType) {
    case ActivateWallet:
-      return app->tr("Activate Auth eID Signing");
+      return tr("Activate Auth eID Signing");
    case DeactivateWallet:
-      return app->tr("Deactivate wallet");
+      return tr("Deactivate wallet");
    case SignWallet:
-      return app->tr("Sign transaction");
+      return tr("Sign transaction");
    case BackupWallet:
-      return app->tr("Backup wallet");
+      return tr("Backup wallet");
    case ActivateWalletOldDevice:
-      return app->tr("Activate wallet (existing device)");
+      return tr("Activate wallet (existing device)");
    case ActivateWalletNewDevice:
-      return app->tr("Activate wallet (new device)");
+      return tr("Activate wallet (new device)");
    case DeactivateWalletDevice:
-      return app->tr("Deactivate wallet device");
+      return tr("Deactivate wallet device");
    case VerifyWalletKey:
-      return app->tr("Confirm Auth eID Signing");
+      return tr("Confirm Auth eID Signing");
    case ActivateOTP:
-      return app->tr("Activate OTP");
+      return tr("Activate OTP");
    case SettlementTransaction:
-      return app->tr("Sign transaction");
+      return tr("Sign transaction");
    default:
       throw std::logic_error("Invalid MobileClient::RequestType value");
    }

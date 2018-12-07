@@ -1,4 +1,4 @@
-﻿#ifndef __WALLET_KEY_WIDGET_H__
+#ifndef __WALLET_KEY_WIDGET_H__
 #define __WALLET_KEY_WIDGET_H__
 
 #include <QTimer>
