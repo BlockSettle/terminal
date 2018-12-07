@@ -5,13 +5,13 @@
 #include "AddressVerificator.h"
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
+#include "AuthSignManager.h"
 #include "CelerClient.h"
 #include "CheckRecipSigner.h"
 #include "ClientClasses.h"
 #include "ConnectionManager.h"
 #include "FastLock.h"
 #include "HDWallet.h"
-#include "OTPManager.h"
 #include "RequestReplyCommand.h"
 #include "SignContainer.h"
 #include "WalletsManager.h"
@@ -27,26 +27,23 @@ AuthAddressManager::AuthAddressManager(const std::shared_ptr<spdlog::logger> &lo
 {}
 
 void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSettings
-   , const std::shared_ptr<WalletsManager>& walletsManager
-   , const std::shared_ptr<OTPManager>& otpManager)
+   , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<AuthSignManager> &authSignManager
+   , const std::shared_ptr<SignContainer> &container)
 {
    settings_ = appSettings;
    walletsManager_ = walletsManager;
-   otpManager_ = otpManager;
+   authSignManager_ = authSignManager;
+   signingContainer_ = container;
 
    connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &AuthAddressManager::VerifyWalletAddresses);
    connect(walletsManager_.get(), &WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
-   connect(otpManager_.get(), &OTPManager::OTPImported, this, &AuthAddressManager::VerifyWalletAddresses);
 
-   SetAuthWallet();
-}
-
-void AuthAddressManager::SetSigningContainer(const std::shared_ptr<SignContainer> &container)
-{
-   signingContainer_ = container;
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &AuthAddressManager::onTXSigned);
    connect(signingContainer_.get(), &SignContainer::Error, this, &AuthAddressManager::onWalletFailed);
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &AuthAddressManager::onWalletCreated);
+
+   SetAuthWallet();
 }
 
 void AuthAddressManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr
@@ -157,16 +154,6 @@ bool AuthAddressManager::HaveAuthWallet() const
 bool AuthAddressManager::HasAuthAddr() const
 {
    return (HaveAuthWallet() && (authWallet_->GetUsedAddressCount() > 0));
-}
-
-bool AuthAddressManager::HaveOTP() const
-{
-   return otpManager_->CanSign();
-}
-
-bool AuthAddressManager::needsOTPpassword() const
-{
-   return (otpManager_ && otpManager_->IsEncrypted());
 }
 
 bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
@@ -471,7 +458,7 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
    return SubmitRequestToPB("submit_address", request.SerializeAsString());
 }
 
-bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address, const SecureBinaryData &otpPassword)
+bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address)
 {
    ConfirmAuthSubmitRequest request;
 
@@ -485,15 +472,15 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
 
    RequestPacket  packet;
 
-   const auto cbSigned = [&packet](const SecureBinaryData &sig, const std::string &otpId, unsigned int keyIndex) {
+   const auto cbSigned = [&packet](const SecureBinaryData &sig) {
       packet.set_datasignature(sig.toBinStr());
-      packet.set_otpid(otpId);
-      packet.set_keyindex(keyIndex);
+//FIXME      packet.set_otpid(otpId);
+//FIXME      packet.set_keyindex(keyIndex);
    };
 
-   if (!otpManager_->Sign(data, otpPassword, cbSigned)) {
+   if (!authSignManager_->Sign(data, cbSigned)) {
       logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] failed to OTP sign data");
-      emit OtpSignFailed();
+      emit SignFailed();
       return false;
    }
 

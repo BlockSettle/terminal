@@ -23,6 +23,7 @@ class AboutDialog;
 class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
+class AuthSignManager;
 class BSTerminalSplashScreen;
 class CCFileManager;
 class CCPortfolioModel;
@@ -30,7 +31,6 @@ class CelerClient;
 class ConnectionManager;
 class CelerMarketDataProvider;
 class HeadlessAddressSyncer;
-class OTPManager;
 class QSystemTrayIcon;
 class RequestReplyCommand;
 class SignContainer;
@@ -98,8 +98,6 @@ private slots:
    void CompleteUIOnlineView();
    void CompleteDBConnection();
 
-   void OnOTPSyncCompleted();
-
    bool createWallet(bool primary, bool reportSuccess = true);
 
    void acceptMDAgreement(const std::string &host, const std::string &port);
@@ -119,6 +117,7 @@ private:
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<AuthAddressManager>    authManager_;
+   std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
 
    std::shared_ptr<RequestReplyCommand>   cmdPuBSettings_;
@@ -132,7 +131,6 @@ private:
    std::shared_ptr<CelerClient>              celerConnection_;
    std::shared_ptr<CelerMarketDataProvider>  mdProvider_;
    std::shared_ptr<AssetManager>             assetManager_;
-   std::shared_ptr<OTPManager>               otpManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<AboutDialog>              aboutDlg_;
@@ -163,7 +161,6 @@ private slots:
    void openAuthDlgVerify(const QString &addrToVerify);
    void openConfigDialog();
    void openAccountInfoDialog();
-   void openOTPDialog();
    void openCCTokenDialog();
    void showZcNotification(const TxInfo &);
    void onZCreceived(ArmoryConnection::ReqIdType);

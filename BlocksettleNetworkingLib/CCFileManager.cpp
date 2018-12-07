@@ -4,7 +4,7 @@
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "EncryptionUtils.h"
-#include "OTPManager.h"
+#include "AuthSignManager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -18,11 +18,11 @@ using namespace Blocksettle::Communication;
 
 CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<OTPManager> &otpMgr
+   , const std::shared_ptr<AuthSignManager> &authSignMgr
    , const std::shared_ptr<ConnectionManager>& connectionManager)
    : CCPubConnection(logger, connectionManager)
    , appSettings_(appSettings)
-   , otpManager_(otpMgr)
+   , authSignManager_(authSignMgr)
 {
    connect(appSettings_.get(), &ApplicationSettings::settingChanged, this, &CCFileManager::onPubSettingsChanged
       , Qt::QueuedConnection);
@@ -65,11 +65,6 @@ void CCFileManager::ConnectToCelerClient(const std::shared_ptr<CelerClient> &cel
 bool CCFileManager::wasAddressSubmitted(const bs::Address &addr)
 {
    return celerClient_->IsCCAddressSubmitted(addr.display<std::string>());
-}
-
-bool CCFileManager::needsOTPpassword() const
-{
-   return otpManager_->IsEncrypted();
 }
 
 void CCFileManager::FillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *resp)
@@ -134,7 +129,7 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
    SaveToFile(appSettings_->get<std::string>(ApplicationSettings::ccFileName), sig);
 }
 
-bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed, OTPManager::cbPassword cb)
+bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed)
 {
    if (!celerClient_) {
       logger_->error("[CCFileManager::SubmitAddressToPuB] not connected");
@@ -148,12 +143,12 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
 
    const std::string &data = addressRequest.SerializeAsString();
    RequestPacket  request;
-   const auto cbSigned = [&request](const SecureBinaryData &sig, const std::string &otpId, unsigned int keyIndex) {
+   const auto &cbSigned = [&request](const SecureBinaryData &sig) {
       request.set_datasignature(sig.toBinStr());
-      request.set_otpid(otpId);
-      request.set_keyindex(keyIndex);
+//FIXME      request.set_otpid(otpId);
+//FIXME      request.set_keyindex(keyIndex);
    };
-   if (!otpManager_->Sign(data, cb, cbSigned)) {
+   if (!authSignManager_->Sign(data, cbSigned)) {
       logger_->debug("[CCFileManager::SubmitAddressToPuB] failed to OTP sign data");
       return false;
    }

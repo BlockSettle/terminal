@@ -19,6 +19,7 @@
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
+#include "AuthSignManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
 #include "CCFileManager.h"
@@ -41,9 +42,6 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
-#include "OTPFileInfoDialog.h"
-#include "OTPImportDialog.h"
-#include "OTPManager.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
 #include "SelectWalletDialog.h"
@@ -92,8 +90,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    initArmory();
 
-   otpManager_ = std::make_shared<OTPManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
-   connect(otpManager_.get(), &OTPManager::SyncCompleted, this, &BSTerminalMainWindow::OnOTPSyncCompleted);
+   authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_);
 
    InitSigningContainer();
    LoadWallets(splashScreen);
@@ -103,7 +100,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAssets();
 
    authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
-      , assetManager_, otpManager_, applicationSettings_, this);
+      , assetManager_, applicationSettings_, this);
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsManager_, assetManager_, celerConnection_
       , signContainer_, ui->statusbar);
@@ -383,8 +380,7 @@ void BSTerminalMainWindow::LoadWallets(BSTerminalSplashScreen& splashScreen)
 void BSTerminalMainWindow::InitAuthManager()
 {
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_);
-   authManager_->init(applicationSettings_, walletsManager_, otpManager_); //? should be merged to constructor later
-   authManager_->SetSigningContainer(signContainer_);    //? ditto
+   authManager_->init(applicationSettings_, walletsManager_, authSignManager_, signContainer_);
 
    connect(authManager_.get(), &AuthAddressManager::NeedVerify, this, &BSTerminalMainWindow::openAuthDlgVerify);
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
@@ -480,7 +476,7 @@ void BSTerminalMainWindow::saveUserAcceptedMDLicense()
 void BSTerminalMainWindow::InitAssets()
 {
    ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
-      , otpManager_, connectionManager_);
+      , authSignManager_, connectionManager_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsManager_, mdProvider_, celerConnection_);
    assetManager_->init();
 
@@ -755,7 +751,6 @@ void BSTerminalMainWindow::setupMenu()
 
    connect(ui->action_Create_New_Wallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(false); });
    connect(ui->actionAuthentication_Addresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
-   connect(ui->action_One_time_Password, &QAction::triggered, this, &BSTerminalMainWindow::openOTPDialog);
    connect(ui->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
    connect(ui->actionAccount_Information, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
    connect(ui->actionEnter_Color_Coin_token, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
@@ -767,17 +762,6 @@ void BSTerminalMainWindow::setupMenu()
 
    ui->menubar->setCornerWidget(ui->pushButtonUser);
 #endif
-}
-
-void BSTerminalMainWindow::openOTPDialog()
-{
-   if (otpManager_->CurrentUserHaveOTP()) {
-      OTPFileInfoDialog dialog(logMgr_->logger("ui"), otpManager_, applicationSettings_, this);
-      dialog.exec();
-   } else {
-      OTPImportDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
-         , applicationSettings_, this).exec();
-   }
 }
 
 void BSTerminalMainWindow::openAuthManagerDialog()
@@ -812,24 +796,6 @@ void BSTerminalMainWindow::openAccountInfoDialog()
 
 void BSTerminalMainWindow::openCCTokenDialog()
 {
-   if (!otpManager_->CurrentUserHaveOTP()) {
-      BSMessageBox createOtpReq(BSMessageBox::question, tr("One-Time Password")
-         , tr("Import one-time password")
-         , tr("Would you like to import your OTP at this time?")
-         , tr("BlockSettle has sent a one-time password to your registered postal address. The OTP is used "
-            "to confirm your identity and to establish a secure channel through which communication can occur.")
-         , this);
-      if (createOtpReq.exec() == QDialog::Accepted) {
-         OTPImportDialog otpDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
-            , applicationSettings_, this);
-         if (otpDialog.exec() != QDialog::Accepted) {
-            return;
-         }
-      }
-      else {
-         return;
-      }
-   }
    if (walletsManager_->HasPrimaryWallet() || createWallet(true, false)) {
       CCTokenEntryDialog dialog(walletsManager_, ccFileManager_, signContainer_, this);
       dialog.exec();
@@ -947,7 +913,7 @@ void BSTerminalMainWindow::createAuthWallet()
          return;
       }
 
-      if (authManager_->HaveOTP() && !walletsManager_->GetAuthWallet()) {
+      if (!walletsManager_->GetAuthWallet()) {
          BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
             , tr("Create Authentication Wallet")
             , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
@@ -1128,48 +1094,6 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
    }
 
    signContainer_->SendPassword(walletId, password, cancelledByUser);
-}
-
-void BSTerminalMainWindow::OnOTPSyncCompleted()
-{
-   if (otpManager_->CurrentUserHaveOTP()) {
-      if (!otpManager_->IsCurrentOTPLatest()) {
-         BSMessageBox removeOtpQuestion(BSMessageBox::question, tr("OTP outdated")
-            , tr("Your OTP is outdated")
-            , tr("Do you want to remove outdated OTP?")
-            , tr("Looks like new OTP was generated for your account. All future requests signed by your local OTP will be rejected.")
-            , this);
-
-         if (removeOtpQuestion.exec() == QDialog::Accepted) {
-            if (otpManager_->RemoveOTPForCurrentUser()) {
-               BSMessageBox(BSMessageBox::info, tr("OTP file removed"), tr("Old OTP file was removed."), this).exec();
-            } else {
-               BSMessageBox(BSMessageBox::critical, tr("OTP file not removed"), tr("Terminal failed to remove OTP file."), this).exec();
-            }
-         }
-      } else if (otpManager_->CountAdvancingRequired()) {
-         BSMessageBox otpDialog(BSMessageBox::question, tr("One-Time Password")
-            , tr("Update one-time password counter")
-            , tr("Would you like to update your OTP usage counter at this time?")
-            , tr("Looks like you have used your OTP on another machine. Local OTP usage counter should be advanced or your requests will be rejected.")
-            , this);
-
-         if (otpDialog.exec() == QDialog::Accepted) {
-            OTPFileInfoDialog(logMgr_->logger("ui"), otpManager_, applicationSettings_, this).exec();
-         }
-      }
-   } else if (celerConnection_->tradingAllowed() ) {
-      BSMessageBox createOtpReq(BSMessageBox::question, tr("One-Time Password")
-         , tr("Import one-time password")
-         , tr("Would you like to import your OTP at this time?")
-         , tr("BlockSettle has sent a one-time password to your registered postal address. The OTP is used "
-            "to confirm your identity and to establish a secure channel through which communication can occur.")
-         , this);
-      if (createOtpReq.exec() == QDialog::Accepted) {
-         OTPImportDialog(logMgr_->logger("ui"), otpManager_, celerConnection_->userName()
-            , applicationSettings_, this).exec();
-      }
-   }
 }
 
 void BSTerminalMainWindow::onCCInfoMissing()

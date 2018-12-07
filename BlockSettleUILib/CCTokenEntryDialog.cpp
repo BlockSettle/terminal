@@ -35,25 +35,6 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
 
    ccFileMgr_->LoadCCDefinitionsFromPub();
 
-   switch (ccFileMgr_->GetOtpEncType()) {
-   case bs::wallet::EncryptionType::Auth:
-      ui_->groupBoxOtpPassword->hide();
-      ui_->labelAuth->show();
-      break;
-
-   case bs::wallet::EncryptionType::Password:
-      ui_->labelAuth->hide();
-      ui_->groupBoxOtpPassword->show();
-      connect(ui_->lineEditOtpPassword, &QLineEdit::textEdited, this, &CCTokenEntryDialog::passwordChanged);
-      break;
-
-   case bs::wallet::EncryptionType::Unencrypted:
-   default:
-      ui_->labelAuth->hide();
-      ui_->groupBoxOtpPassword->hide();
-      passwordOk_ = true;
-      break;
-   }
    updateOkState();
 }
 
@@ -107,16 +88,9 @@ void CCTokenEntryDialog::tokenChanged()
    updateOkState();
 }
 
-void CCTokenEntryDialog::passwordChanged()
-{
-   passwordOk_ = !ui_->lineEditOtpPassword->text().isEmpty();
-   otpPassword_ = ui_->lineEditOtpPassword->text().toStdString();
-   updateOkState();
-}
-
 void CCTokenEntryDialog::updateOkState()
 {
-   ui_->pushButtonOk->setEnabled(walletOk_ && passwordOk_);
+   ui_->pushButtonOk->setEnabled(walletOk_);
 }
 
 void CCTokenEntryDialog::onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)
@@ -158,8 +132,7 @@ void CCTokenEntryDialog::accept()
    const auto address = ccWallet_->GetNewExtAddress();
    signingContainer_->SyncAddresses({ { ccWallet_, address } });
 
-   const auto &cbPasswordQuery = [this] { return otpPassword_; };
-   if (!ccFileMgr_->SubmitAddressToPuB(address, seed_, cbPasswordQuery)) {
+   if (!ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
       reject();
       BSMessageBox(BSMessageBox::critical, tr("CC Token submit failure")
          , tr("Failed to submit Private Market token to BlockSettle"), this).exec();
@@ -180,23 +153,4 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
    BSMessageBox(BSMessageBox::info, tr("Submission Successful")
       , tr("The token has been submitted, please note that it might take a while before the"
          " transaction is broadcast in the Terminal")).exec();
-}
-
-void CCTokenEntryDialog::onAuthSucceeded(SecureBinaryData password)
-{
-   otpPassword_ = password;
-   passwordOk_ = true;
-   ui_->labelAuth->setText(tr("OTP signed with Auth"));
-   updateOkState();
-}
-
-void CCTokenEntryDialog::onAuthFailed(const QString &)
-{
-   passwordOk_ = false;
-   QDialog::reject();
-}
-
-void CCTokenEntryDialog::onAuthStatusUpdated(const QString &status)
-{
-   ui_->labelAuth->setText(tr("Auth status: %1").arg(status));
 }

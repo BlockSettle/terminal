@@ -11,7 +11,6 @@
 #include <QObject>
 #include <QThreadPool>
 #include "CommonTypes.h"
-#include "OTPManager.h"
 #include "WalletEncryption.h"
 
 #include "bs_communication.pb.h"
@@ -28,7 +27,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class CelerClient;
 class ConnectionManager;
-class OTPManager;
+class AuthSignManager;
 class RequestReplyCommand;
 class ResolverFeed_AuthAddress;
 class SignContainer;
@@ -53,10 +52,10 @@ public:
    AuthAddressManager(AuthAddressManager&&) = delete;
    AuthAddressManager& operator = (AuthAddressManager&&) = delete;
 
-   void init(const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<WalletsManager>& walletsManager
-      , const std::shared_ptr<OTPManager>& otpManager);
-   void SetSigningContainer(const std::shared_ptr<SignContainer> &);
+   void init(const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<AuthSignManager> &
+      , const std::shared_ptr<SignContainer> &);
    void ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<CelerClient> &);
 
@@ -73,19 +72,17 @@ public:
 
    virtual bool HaveAuthWallet() const;
    virtual bool HasAuthAddr() const;
-   virtual bool HaveOTP() const;
 
    void CreateAuthWallet(const std::vector<bs::wallet::PasswordData> &pwdData = {}, bool signal = true);
    virtual bool CreateNewAuthAddress();
 
    virtual bool SubmitForVerification(const bs::Address &address);
-   virtual bool ConfirmSubmitForVerification(const bs::Address &address, const SecureBinaryData &otpPassword);
+   virtual bool ConfirmSubmitForVerification(const bs::Address &address);
    virtual bool CancelSubmitForVerification(const bs::Address &address);
 
    virtual bool Verify(const bs::Address &address);
    virtual bool RevokeAddress(const bs::Address &address);
 
-   virtual bool needsOTPpassword() const;
    virtual bool IsReady() const;
 
    virtual void OnDisconnectedFromCeler();
@@ -120,7 +117,7 @@ signals:
    void AuthRevokeTxSent();
 
    void AuthAddressConfirmationRequired(float validationAmount);
-   void OtpSignFailed();
+   void SignFailed();
 
 private:
    void SetAuthWallet();
@@ -163,7 +160,7 @@ protected:
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   settings_;
    std::shared_ptr<WalletsManager>        walletsManager_;
-   std::shared_ptr<OTPManager>            otpManager_;
+   std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<CelerClient>           celerClient_;
    std::shared_ptr<AddressVerificator>    addressVerificator_;
