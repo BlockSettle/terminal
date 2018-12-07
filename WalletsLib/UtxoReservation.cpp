@@ -5,23 +5,32 @@
 using namespace bs;
 
 
-std::string bs::UtxoReservation::Adapter::unreserve(const std::string &id)
+// Unreserve all UTXOs for a given reservation ID. Associated wallet ID is the
+// return value. Return the associated wallet ID. Adapter acts as a frontend for
+// the actual reservation class.
+std::string bs::UtxoReservation::Adapter::unreserve(const std::string &reserveId)
 {
    if (!parent_) {
       return {};
    }
-   return parent_->unreserve(id);
+   return parent_->unreserve(reserveId);
 }
 
-std::vector<UTXO> bs::UtxoReservation::Adapter::get(const std::string &id) const
+// Get UTXOs for a given reservation ID. Adapter acts as a frontend for the
+// actual reservation class.
+std::vector<UTXO> bs::UtxoReservation::Adapter::get(const std::string &reserveId) const
 {
    if (!parent_) {
       return {};
    }
-   return parent_->get(id);
+   return parent_->get(reserveId);
 }
 
-bool bs::UtxoReservation::Adapter::reserve(const std::string &walletId, const std::string &reserveId, const std::vector<UTXO> &utxos)
+// Reserve UTXOs for given wallet and reservation IDs. True if success, false if
+// failure. Adapter acts as a frontend for the actual reservation class.
+bool bs::UtxoReservation::Adapter::reserve(const std::string &walletId
+                                           , const std::string &reserveId
+                                           , const std::vector<UTXO> &utxos)
 {
    if (!parent_) {
       return false;
@@ -30,7 +39,11 @@ bool bs::UtxoReservation::Adapter::reserve(const std::string &walletId, const st
    return true;
 }
 
-bool bs::UtxoReservation::Adapter::filter(const std::string &walletId, std::vector<UTXO> &utxos) const
+// For a given wallet ID, filter out all associated UTXOs from a list of UTXOs.
+// True if success, false if failure. Adapter acts as a frontend for the actual
+// reservation class.
+bool bs::UtxoReservation::Adapter::filter(const std::string &walletId
+                                          , std::vector<UTXO> &utxos) const
 {
    if (!parent_) {
       return false;
@@ -38,7 +51,7 @@ bool bs::UtxoReservation::Adapter::filter(const std::string &walletId, std::vect
    return parent_->filter(walletId, utxos);
 }
 
-
+// Global UTXO reservation singleton.
 static std::shared_ptr<bs::UtxoReservation> utxoResInstance_;
 
 bs::UtxoReservation::UtxoReservation()
@@ -65,16 +78,19 @@ bs::UtxoReservation::UtxoReservation()
    }).detach();
 }
 
+// Singleton reservation.
 void bs::UtxoReservation::init()
 {
    utxoResInstance_ = std::make_shared<bs::UtxoReservation>();
 }
 
+// Singleton destruction.
 void bs::UtxoReservation::destroy()
 {
    utxoResInstance_.reset();
 }
 
+// Add an adapter to the singleton. True if success, false if failure.
 bool bs::UtxoReservation::addAdapter(const std::shared_ptr<Adapter> &a)
 {
    if (!utxoResInstance_) {
@@ -86,13 +102,15 @@ bool bs::UtxoReservation::addAdapter(const std::shared_ptr<Adapter> &a)
    return true;
 }
 
+// Remove an adapter from the singleton. True if success, false if failure.
 bool bs::UtxoReservation::delAdapter(const std::shared_ptr<Adapter> &a)
 {
    if (!utxoResInstance_ || !a) {
       return false;
    }
    FastLock lock(utxoResInstance_->flag_);
-   const auto pos = std::find(utxoResInstance_->adapters_.begin(), utxoResInstance_->adapters_.end(), a);
+   const auto pos = std::find(utxoResInstance_->adapters_.begin()
+                              , utxoResInstance_->adapters_.end(), a);
    if (pos == utxoResInstance_->adapters_.end()) {
       return false;
    }
@@ -101,7 +119,11 @@ bool bs::UtxoReservation::delAdapter(const std::shared_ptr<Adapter> &a)
    return true;
 }
 
-void bs::UtxoReservation::reserve(const std::string &walletId, const std::string &reserveId, const std::vector<UTXO> &utxos)
+// Reserve a set of UTXOs for a wallet and reservation ID. Reserve across all
+// active adapters.
+void bs::UtxoReservation::reserve(const std::string &walletId
+                                  , const std::string &reserveId
+                                  , const std::vector<UTXO> &utxos)
 {
    const auto &curTime = QDateTime::currentDateTime();
    FastLock lock(flag_);
@@ -114,6 +136,8 @@ void bs::UtxoReservation::reserve(const std::string &walletId, const std::string
    }
 }
 
+// Unreserve a set of UTXOs for a wallet and reservation ID. Return the
+// associated wallet ID. Unreserve across all active adapters.
 std::string bs::UtxoReservation::unreserve(const std::string &reserveId)
 {
    FastLock lock(flag_);
@@ -137,6 +161,7 @@ std::string bs::UtxoReservation::unreserve(const std::string &reserveId)
    return walletId;
 }
 
+// Get UTXOs for a given reservation ID.
 std::vector<UTXO> bs::UtxoReservation::get(const std::string &reserveId) const
 {
    FastLock lock(flag_);
@@ -147,7 +172,10 @@ std::vector<UTXO> bs::UtxoReservation::get(const std::string &reserveId) const
    return it->second;
 }
 
-bool bs::UtxoReservation::filter(const std::string &walletId, std::vector<UTXO> &utxos) const
+// For a given wallet ID, filter out all associated UTXOs from a list of UTXOs.
+// True if success, false if failure.
+bool bs::UtxoReservation::filter(const std::string &walletId
+                                 , std::vector<UTXO> &utxos) const
 {
    struct UtxoHasher {
       std::size_t operator()(const UTXO &utxo) const {
