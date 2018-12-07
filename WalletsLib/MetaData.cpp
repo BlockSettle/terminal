@@ -480,9 +480,21 @@ BTCNumericTypes::balance_type bs::Wallet::GetUnconfirmedBalance() const
    return unconfirmedBalance_;
 }
 
-void bs::Wallet::AddUnconfirmedBalance(BTCNumericTypes::balance_type delta)
+// Add an unconfirmed delta to the wallet balance. Assume that a negative delta
+// indicates spent coins (fees and coins actually sent outside the wallet). A
+// positive delta indicates received coins.
+void bs::Wallet::AddUnconfirmedBalance(const BTCNumericTypes::balance_type& delta
+                                       , const BTCNumericTypes::balance_type& inFees
+                                       , const BTCNumericTypes::balance_type& inChgAmt)
 {
-   unconfirmedBalance_ += delta;
+   if(delta < 0) {
+      spendableBalance_ += (delta + inFees + inChgAmt);
+      unconfirmedBalance_ += inChgAmt;
+   }
+   else {
+      spendableBalance_ += delta;
+      unconfirmedBalance_ += delta;
+   }
    totalBalance_ += delta;
 }
 

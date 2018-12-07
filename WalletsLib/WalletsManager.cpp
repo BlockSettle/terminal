@@ -1020,21 +1020,145 @@ void WalletsManager::onCCInfoLoaded()
    }
 }
 
+// Processing a ZC TX when we sent the ZC and need to get various amounts
+// (change, amount spent, etc.) requires extra work. Process the TX here.
+void WalletsManager::processZCSendTXData(Tx& inTX
+                                         , const ClientClasses::LedgerEntry inLE) {
+   // Get each Tx object associated with the Tx's TxIn object. Needed to calc
+   // the fees.
+   const auto &cbProcessTXIns = [this, inTX, inLE]
+                                (std::vector<Tx> prevTxs) mutable {
+      for (const auto &prevTx : prevTxs) {
+         prevTxMap_[prevTx.getThisHash()] = prevTx;
+      }
+
+      // We're ready to update the balances.
+      updateZCSendTXBalances(inTX, inLE);
+   };
+
+   std::set<BinaryData> prevTxHashSet; // A Tx's associated prev Tx hashes.
+
+   // While here, we need to get the prev Tx with the UTXO being spent.
+   // This is done so that we can calculate fees later.
+   for (size_t i = 0; i < inTX.getNumTxIn(); i++) {
+      TxIn in = inTX.getTxInCopy(i);
+      OutPoint op = in.getOutPoint();
+
+      // See if we've cached this TX already. If so, no need to get it again.
+      const auto &itTX = prevTxMap_.find(op.getTxHash());
+      if (itTX == prevTxMap_.end()) {
+         prevTxHashSet.insert(op.getTxHash());
+      }
+   }
+
+   // Get the TxIn-associated Tx objects from Armory if we need them. If not,
+   // just jump straight to updating the balances.
+   if (prevTxHashSet.empty()) {
+      updateZCSendTXBalances(inTX, inLE);
+   }
+   else {
+      armory_->getTXsByHash(prevTxHashSet, cbProcessTXIns);
+   }
+}
+
+// Update the actual balances here when dealing with a ZC TX we sent.
+void WalletsManager::updateZCSendTXBalances(Tx& inTX
+                                            , const ClientClasses::LedgerEntry inLE) {
+   auto wallet = GetWalletById(inLE.getID());
+
+   // Get fees & fee/byte by looping through the prev Tx set and calculating,
+   // but do it only if we spent coins.
+   uint64_t fees = 0;
+   uint64_t changeAmt = 0;
+   if(inLE.getValue() < 0) {
+      uint64_t totIn = 0;
+      for (size_t r = 0; r < inTX.getNumTxIn(); ++r) {
+         TxIn in = inTX.getTxInCopy(r);
+         OutPoint op = in.getOutPoint();
+         const auto &prevTx = prevTxMap_[op.getTxHash()];
+         if (prevTx.isInitialized()) {
+            TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
+            totIn += prevOut.getValue();
+         }
+      }
+      uint64_t fees = totIn - inTX.getSumOfOutputs();
+
+      // Get the change amount when we spend coins. Assume that the change address
+      // is the last address, and it must be in the wallet we've passed back.
+      TxOut out = inTX.getTxOutCopy(inTX.getNumTxOut() - 1);
+      if (inLE.getValue() < 0
+          && (wallet->containsAddress(out.getScrAddressStr())
+              || wallet->containsHiddenAddress(out.getScrAddressStr()))) {
+         changeAmt = out.getValue();
+      }
+
+      fees = totIn - inTX.getSumOfOutputs();
+   }
+
+   // Update final balances and perform other necessary final steps.
+   processFinalZCBalances(inLE.getValue() / BTCNumericTypes::BalanceDivider
+                          , fees / BTCNumericTypes::BalanceDivider
+                          , changeAmt / BTCNumericTypes::BalanceDivider
+                          , wallet);
+}
+
+// Deal with the final wallet balances when ZC TXs come in.
+void WalletsManager::processFinalZCBalances(const BTCNumericTypes::balance_type& delta
+                                            , const BTCNumericTypes::balance_type& inFees
+                                            , const BTCNumericTypes::balance_type& inChgAmt
+                                            , wallet_gen_type inWallet) {
+   inWallet->AddUnconfirmedBalance(delta / BTCNumericTypes::BalanceDivider
+                                   , inFees / BTCNumericTypes::BalanceDivider
+                                   , inChgAmt / BTCNumericTypes::BalanceDivider);
+}
+
+// The initial point for processing an incoming zero conf TX.
 void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
    std::vector<bs::TXEntry> ourZCentries;
+
    for (const auto led : armory_->getZCentries(reqId)) {
       auto wallet = GetWalletById(led.getID());
       if (wallet != nullptr) {
          ourZCentries.push_back(bs::convertTXEntry(led));
-         wallet->AddUnconfirmedBalance(led.getValue() / BTCNumericTypes::BalanceDivider);
-      }
-   }
-   logger_->debug("ZC received, {} own entries", ourZCentries.size());
-   if (!ourZCentries.empty()) {
+
+         // If we're receiving, things are very straightforward. Just update the
+         // balance and move on. If sending, we have more processing to do.
+         if(led.getValue() > 0) {
+            processFinalZCBalances(led.getValue(), 0, 0, wallet);
+         }
+         else {
+            // Go ahead and grab the TX from Armory. The ledger only tells us how
+            // many coins have left the wallet, and not things like fees. We need
+            // more detailed data in order to properly update the display. A more
+            // elegant solution may be to simply reserve UTXOs. It's a bit more
+            // complicated, and the TX will be cached during future calls to get
+            // it, so we'll just stick to the TX for now.
+            // get the transaction data from armory
+            const auto &cbTX = [this, led](Tx tx) {
+               if (tx.isInitialized()) {
+                  processZCSendTXData(tx, led);
+               }
+               else {
+                  logger_->error("[{}] TX not initialized for hash {}.", __func__
+                                 , led.getTxHash().toHexStr(true));
+               }
+            };
+
+            // The TXID passed to Armory *must* be in internal order!
+            if (!armory_->getTxByHash(led.getTxHash(), cbTX)) {
+               logger_->error("[{}] failed to get TX for hash {}.", __func__
+                              , led.getTxHash().toHexStr(true));
+            }
+         } // else
+      } // if
+
+      // Emit signals for the wallet and TX view models.
+      logger_->debug("[{}] ZC received - {} entries in wallet {}", __func__
+                     , ourZCentries.size(), wallet->GetWalletName());
       emit blockchainEvent();
       emit newTransactions(ourZCentries);
-   }
+   } // for
 }
 
 void WalletsManager::onBroadcastZCError(const QString &txHash, const QString &errMsg)

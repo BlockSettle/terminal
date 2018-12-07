@@ -232,10 +232,6 @@ namespace bs {
       bool operator ==(const Wallet &w) const { return (w.GetWalletId() == GetWalletId()); }
       bool operator !=(const Wallet &w) const { return (w.GetWalletId() != GetWalletId()); }
 
-      // NB: We really shouldn't expose Armory's ReturnMessage<> this far out in
-      // the API. However, because the callback has to interact directly with a
-      // BtcWallet object, it is necessary in the case below.
-
       virtual bool containsAddress(const bs::Address &addr) = 0;
       virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
       virtual bool getAddrBalance(const bs::Address &addr) const;
@@ -263,7 +259,9 @@ namespace bs {
       virtual BTCNumericTypes::balance_type GetTotalBalance() const;
       virtual void firstInit(bool force = false);
 
-      virtual void AddUnconfirmedBalance(BTCNumericTypes::balance_type delta);
+      virtual void AddUnconfirmedBalance(const BTCNumericTypes::balance_type& delta
+                                         , const BTCNumericTypes::balance_type& inFees
+                                         , const BTCNumericTypes::balance_type& inChgAmt);
       virtual bool isInitialized() const { return inited_; }
       virtual bool isWatchingOnly() const { return false; }
       virtual std::vector<wallet::EncryptionType> encryptionTypes() const { return {}; }
