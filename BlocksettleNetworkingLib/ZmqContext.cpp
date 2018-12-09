@@ -12,7 +12,9 @@ ZmqContext::ZmqContext(const std::shared_ptr<spdlog::logger>& logger)
 {
    context_.reset(zmq_ctx_new());
    if (!context_) {
-      logger_->error("[ZmqContext] failed to initialize ZeroMQ context");
+      if (logger_) {
+         logger_->error("[ZmqContext] failed to initialize ZeroMQ context");
+      }
       throw std::runtime_error("Failed to init zeromq");
    }
 }
