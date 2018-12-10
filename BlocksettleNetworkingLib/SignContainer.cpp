@@ -6,7 +6,7 @@
 #include "HeadlessContainer.h"
 #include "OfflineSigner.h"
 
-#include <QtcpSocket>
+#include <QTcpSocket>
 #include <spdlog/spdlog.h>
 
 Q_DECLARE_METATYPE(std::shared_ptr<bs::hd::Wallet>)
