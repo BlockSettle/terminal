@@ -26,7 +26,12 @@ void bs::SettlementMonitor::checkNewEntries()
       try {
          auto le = entries.get();
          if (le.empty()) {
+            logger_->debug("[SettlementMonitor::checkNewEntries] empty history page for {}"
+               , addressString_);
             return;
+         } else {
+            logger_->debug("[SettlementMonitor::checkNewEntries] get {} entries for {}"
+               , le.size(), addressString_);
          }
 
          for (const auto &entry : le) {

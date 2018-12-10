@@ -147,7 +147,11 @@ void bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
 {
    auto index = asset->getIndex();
    const auto walletId = BtcUtils::scrAddrToBase58(asset->prefixedHash()).toBinStr();
-   armory_->registerWallet(rtWallets_[index], walletId, asset->supportedAddrHashes(), [] {}, true);
+   auto reqId = armory_->registerWallet(rtWallets_[index], walletId, asset->supportedAddrHashes(), [] {}, true);
+
+   logger_->debug("[SettlementWallet::createTempWalletForAsset] start wallet registration: {}"
+      , reqId);
+
    rtWalletsById_[walletId] = index;
 }
 

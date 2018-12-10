@@ -760,6 +760,11 @@ bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &
 
 void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
 {
+   for (const auto &id : ids) {
+      logger_->debug("[ArmoryConnection::onRefresh] id: {}"
+         , id.toBinStr());
+   }
+
    if (!preOnlineRegIds_.empty()) {
       for (const auto &id : ids) {
          const auto regIdIt = preOnlineRegIds_.find(id.toBinStr());
