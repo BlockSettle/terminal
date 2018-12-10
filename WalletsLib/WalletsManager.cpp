@@ -688,7 +688,7 @@ void WalletsManager::UpdateSavedWallets(bool force)
 }
 
 bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wallet> &wallet
-   , std::function<void(bs::Transaction::Direction)> cb)
+   , std::function<void(bs::Transaction::Direction, std::vector<bs::Address>)> cb)
 {
    if (!tx.isInitialized()) {
       logger_->error("[WalletsManager::GetTransactionDirection] TX not initialized");
@@ -705,26 +705,28 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
       return false;
    }
 
-   BinaryData txHash = tx.getThisHash();
    if (wallet->GetType() == bs::wallet::Type::Authentication) {
-      cb(bs::Transaction::Auth);
+      cb(bs::Transaction::Auth, {});
       return true;
    }
    else if (wallet->GetType() == bs::wallet::Type::ColorCoin) {
-      cb(bs::Transaction::Delivery);
+      cb(bs::Transaction::Delivery, {});
       return true;
    }
 
+   const std::string txKey = tx.getThisHash().toBinStr() + wallet->GetWalletId();
    bs::Transaction::Direction dir = bs::Transaction::Direction::Unknown;
+   std::vector<bs::Address> inAddrs;
    {
       FastLock lock(txDirLock_);
-      const auto &itDirCache = txDirections_.find(txHash);
+      const auto &itDirCache = txDirections_.find(txKey);
       if (itDirCache != txDirections_.end()) {
-         dir = itDirCache->second;
+         dir = itDirCache->second.first;
+         inAddrs = itDirCache->second.second;
       }
    }
    if (dir != bs::Transaction::Direction::Unknown) {
-      cb(dir);
+      cb(dir, inAddrs);
       return true;
    }
 
@@ -739,7 +741,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
       txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
    }
 
-   const auto &cbProcess = [this, wallet, tx, txHash, txOutIndices, cb](std::vector<Tx> txs) {
+   const auto &cbProcess = [this, wallet, tx, txKey, txOutIndices, cb](std::vector<Tx> txs) {
       bool ourOuts = false;
       bool otherOuts = false;
       bool ourIns = false;
@@ -747,7 +749,9 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
       bool ccTx = false;
 
       std::vector<TxOut> txOuts;
+      std::vector<bs::Address> inAddrs;
       txOuts.reserve(tx.getNumTxIn());
+      inAddrs.reserve(tx.getNumTxIn());
 
       for (const auto &prevTx : txs) {
          const auto &itIdx = txOutIndices.find(prevTx.getThisHash());
@@ -756,12 +760,14 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
          }
          for (const auto idx : itIdx->second) {
             TxOut prevOut = prevTx.getTxOutCopy((int)idx);
-            const auto &addrWallet = GetWalletByAddress(prevOut.getScrAddressStr());
+            const bs::Address addr(prevOut.getScrAddressStr());
+            const auto &addrWallet = GetWalletByAddress(addr);
             ((addrWallet == wallet) ? ourIns : otherIns) = true;
             if (addrWallet && (addrWallet->GetType() == bs::wallet::Type::ColorCoin)) {
                ccTx = true;
             }
             txOuts.emplace_back(prevOut);
+            inAddrs.emplace_back(std::move(addr));
          }
       }
 
@@ -776,46 +782,46 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
 
       if (wallet->GetType() == bs::wallet::Type::Settlement) {
          if (ourOuts) {
-            updateTxDirCache(txHash, bs::Transaction::PayIn, cb);
+            updateTxDirCache(txKey, bs::Transaction::PayIn, inAddrs, cb);
             return;
          }
          if (txOuts.size() == 1) {
             const auto addr = txOuts[0].getScrAddressStr();
             const auto settlAE = dynamic_pointer_cast<bs::SettlementAddressEntry>(GetSettlementWallet()->getAddressEntryForAddr(addr));
             if (settlAE) {
-               const auto &cbPayout = [this, cb, txHash](bs::PayoutSigner::Type poType) {
+               const auto &cbPayout = [this, cb, txKey, inAddrs](bs::PayoutSigner::Type poType) {
                   if (poType == bs::PayoutSigner::SignedBySeller) {
-                     updateTxDirCache(txHash, bs::Transaction::Revoke, cb);
+                     updateTxDirCache(txKey, bs::Transaction::Revoke, inAddrs, cb);
                   }
                   else {
-                     updateTxDirCache(txHash, bs::Transaction::PayOut, cb);
+                     updateTxDirCache(txKey, bs::Transaction::PayOut, inAddrs, cb);
                   }
                };
                bs::PayoutSigner::WhichSignature(tx, 0, settlAE, logger_, armory_, cbPayout);
                return;
             }
          }
-         updateTxDirCache(txHash, bs::Transaction::PayOut, cb);
+         updateTxDirCache(txKey, bs::Transaction::PayOut, inAddrs, cb);
          return;
       }
 
       if (ccTx) {
-         updateTxDirCache(txHash, bs::Transaction::Payment, cb);
+         updateTxDirCache(txKey, bs::Transaction::Payment, inAddrs, cb);
          return;
       }
       if (ourOuts && ourIns && !otherOuts && !otherIns) {
-         updateTxDirCache(txHash, bs::Transaction::Internal, cb);
+         updateTxDirCache(txKey, bs::Transaction::Internal, inAddrs, cb);
          return;
       }
       if (!ourIns) {
-         updateTxDirCache(txHash, bs::Transaction::Received, cb);
+         updateTxDirCache(txKey, bs::Transaction::Received, inAddrs, cb);
          return;
       }
       if (otherOuts) {
-         updateTxDirCache(txHash, bs::Transaction::Sent, cb);
+         updateTxDirCache(txKey, bs::Transaction::Sent, inAddrs, cb);
          return;
       }
-      updateTxDirCache(txHash, bs::Transaction::Unknown, cb);
+      updateTxDirCache(txKey, bs::Transaction::Unknown, inAddrs, cb);
    };
    if (opTxHashes.empty()) {
       logger_->error("[WalletsManager::GetTransactionDirection] empty TX hashes");
@@ -834,10 +840,15 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
       return false;
    }
 
+   const std::string txKey = tx.getThisHash().toBinStr() + wallet->GetWalletId();
+   const auto &itDesc = txDesc_.find(txKey);
+   if (itDesc != txDesc_.end()) {
+      cb(itDesc->second.first, itDesc->second.second);
+      return true;
+   }
+
    const bool isSettlement = (wallet->GetType() == bs::wallet::Type::Settlement);
    std::set<bs::Address> addresses;
-   const auto txHash = tx.getThisHash();
-
    for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
       TxOut out = tx.getTxOutCopy((int)i);
       const auto addr = bs::Address::fromTxOut(out);
@@ -847,18 +858,18 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
       }
    }
 
-   const auto &cbProcessAddresses = [this, txHash, cb](const std::set<bs::Address> &addresses) {
+   const auto &cbProcessAddresses = [this, txKey, cb](const std::set<bs::Address> &addresses) {
       switch (addresses.size()) {
       case 0:
-         updateTxDescCache(txHash, tr("no address"), addresses.size(), cb);
+         updateTxDescCache(txKey, tr("no address"), addresses.size(), cb);
          break;
 
       case 1:
-         updateTxDescCache(txHash, (*addresses.begin()).display(), addresses.size(), cb);
+         updateTxDescCache(txKey, (*addresses.begin()).display(), addresses.size(), cb);
          break;
 
       default:
-         updateTxDescCache(txHash, tr("%1 output addresses").arg(addresses.size()), addresses.size(), cb);
+         updateTxDescCache(txKey, tr("%1 output addresses").arg(addresses.size()), addresses.size(), cb);
          break;
       }
    };
@@ -875,7 +886,7 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
          txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
       }
 
-      const auto &cbProcess = [this, txHash, txOutIndices, wallet, cbProcessAddresses](std::vector<Tx> txs) {
+      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](std::vector<Tx> txs) {
          std::set<bs::Address> addresses;
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIndices.find(prevTx.getThisHash());
@@ -905,21 +916,22 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
    return true;
 }
 
-void WalletsManager::updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction dir
-   , std::function<void(bs::Transaction::Direction)> cb)
+void WalletsManager::updateTxDirCache(const std::string &txKey, bs::Transaction::Direction dir
+   , const std::vector<bs::Address> &inAddrs
+   , std::function<void(bs::Transaction::Direction, std::vector<bs::Address>)> cb)
 {
    {
       FastLock lock(txDirLock_);
-      txDirections_[txHash] = dir;
+      txDirections_[txKey] = { dir, inAddrs };
    }
-   cb(dir);
+   cb(dir, inAddrs);
 }
 
-void WalletsManager::updateTxDescCache(const BinaryData &txHash, const QString &desc, int addrCount, std::function<void(QString, int)> cb)
+void WalletsManager::updateTxDescCache(const std::string &txKey, const QString &desc, int addrCount, std::function<void(QString, int)> cb)
 {
    {
       FastLock lock(txDescLock_);
-      txDesc_[txHash] = desc;
+      txDesc_[txKey] = { desc, addrCount };
    }
    cb(desc, addrCount);
 }

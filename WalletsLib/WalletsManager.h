@@ -101,7 +101,7 @@ public:
    void UnregisterSavedWallets();
 
    bool GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &
-      , std::function<void(bs::Transaction::Direction)>);
+      , std::function<void(bs::Transaction::Direction, std::vector<bs::Address> inAddrs)>);
    bool GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &
       , bool isReceiving, std::function<void(QString, int)>);
 
@@ -161,9 +161,9 @@ private:
    bool SetAuthWalletFrom(const hd_wallet_type &);
    void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
 
-   void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
-      , std::function<void(bs::Transaction::Direction)>);
-   void updateTxDescCache(const BinaryData &txHash, const QString &, int, std::function<void(QString, int)>);
+   void updateTxDirCache(const std::string &txKey, bs::Transaction::Direction
+      , const std::vector<bs::Address> &inAddrs, std::function<void(bs::Transaction::Direction, std::vector<bs::Address>)>);
+   void updateTxDescCache(const std::string &txKey, const QString &, int, std::function<void(QString, int)>);
 
    void invokeFeeCallbacks(unsigned int blocks, float fee);
 
@@ -196,9 +196,9 @@ private:
    };
    std::unordered_map<std::string, CCInfo>   ccSecurities_;
 
-   std::map<BinaryData, bs::Transaction::Direction>   txDirections_;
+   std::unordered_map<std::string, std::pair<bs::Transaction::Direction, std::vector<bs::Address>>> txDirections_;
    mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;
-   std::map<BinaryData, QString> txDesc_;
+   std::unordered_map<std::string, std::pair<QString, int>> txDesc_;
    mutable std::atomic_flag      txDescLock_ = ATOMIC_FLAG_INIT;
 
    mutable std::map<unsigned int, float>     feePerByte_;

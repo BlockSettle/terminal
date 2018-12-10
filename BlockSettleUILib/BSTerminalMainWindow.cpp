@@ -93,6 +93,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
 
    InitSigningContainer();
+
    LoadWallets(splashScreen);
    QApplication::processEvents();
 
@@ -111,10 +112,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    ui->widgetTransactions->setEnabled(false);
 
-   if (!signContainer_->Start()) {
-      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer"), tr("Failed to start local signer process")).exec();
-   }
-
+   connectSigner();
    connectArmory();
    splashScreen.SetProgress(100);
 
@@ -367,7 +365,7 @@ void BSTerminalMainWindow::LoadWallets(BSTerminalSplashScreen& splashScreen)
    walletsManager_->LoadWallets(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
       , applicationSettings_->GetHomeDir(), progressDelegate);
 
-   if (signContainer_->opMode() != SignContainer::OpMode::Offline) {
+   if (signContainer_ && (signContainer_->opMode() != SignContainer::OpMode::Offline)) {
       addrSyncer_ = std::make_shared<HeadlessAddressSyncer>(signContainer_, walletsManager_);
       connect(signContainer_.get(), &SignContainer::UserIdSet, [this] {
          addrSyncer_->SyncWallet(walletsManager_->GetAuthWallet());
@@ -394,14 +392,29 @@ void BSTerminalMainWindow::InitAuthManager()
    });
 }
 
-void BSTerminalMainWindow::InitSigningContainer()
+bool BSTerminalMainWindow::InitSigningContainer()
 {
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, connectionManager_);
+   const auto &signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
+   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
+   auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
+   if ((runMode == SignContainer::OpMode::Local)
+      && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
+      if (BSMessageBox(BSMessageBox::messageBoxType::question, tr("Signer Local Connection")
+         , tr("Another Signer (or some other program occupying port %1) is running. Would you like to continue connecting to it?").arg(signerPort)
+         , tr("If you wish to continue using GUI signer running on the same host, just select Remote Signer in settings and configure local connection")
+         , this).exec() == QDialog::Rejected) {
+         return false;
+      }
+      runMode = SignContainer::OpMode::Remote;
+      signerHost = QLatin1String("127.0.0.1");
+   }
+   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, runMode, signerHost, connectionManager_);
    if (!signContainer_) {
       showError(tr("Signer"), tr("Creation failure"));
-      return;
+      return false;
    }
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady);
+   return true;
 }
 
 void BSTerminalMainWindow::SignerReady()
@@ -460,7 +473,7 @@ void BSTerminalMainWindow::acceptMDAgreement(const std::string &host, const std:
 void BSTerminalMainWindow::updateControlEnabledState()
 {
    action_send_->setEnabled(walletsManager_->GetWalletsCount() > 0
-      && armory_->isOnline());
+      && armory_->isOnline() && signContainer_);
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -612,6 +625,16 @@ void BSTerminalMainWindow::initArmory()
 void BSTerminalMainWindow::connectArmory()
 {
    armory_->setupConnection(applicationSettings_->GetArmorySettings());
+}
+
+void BSTerminalMainWindow::connectSigner()
+{
+   if (!signContainer_) {
+      return;
+   }
+   if (!signContainer_->Start()) {
+      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer"), tr("Failed to start local signer process")).exec();
+   }
 }
 
 bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
@@ -849,7 +872,9 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ccFileManager_->ConnectToCelerClient(celerConnection_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
-   signContainer_->SetUserId(userId);
+   if (signContainer_) {
+      signContainer_->SetUserId(userId);
+   }
    walletsManager_->SetUserId(userId);
 
    setLoginButtonText(QString::fromStdString(celerConnection_->userName()));
@@ -871,7 +896,9 @@ void BSTerminalMainWindow::onUserLoggedOut()
    ui->actionWithdrawal_Request->setEnabled(false);
    ui->actionLink_Additional_Bank_Account->setEnabled(false);
 
-   signContainer_->SetUserId(BinaryData{});
+   if (signContainer_) {
+      signContainer_->SetUserId(BinaryData{});
+   }
    walletsManager_->SetUserId(BinaryData{});
    authManager_->OnDisconnectedFromCeler();
    setLoginButtonText(tr("user.name"));
@@ -970,7 +997,7 @@ void BSTerminalMainWindow::onZCreceived(ArmoryConnection::ReqIdType reqId)
             return;
          }
          auto txInfo = new TxInfo { tx, txTime, value, wallet, bs::Transaction::Direction::Unknown, QString() };
-         const auto &cbDir = [this, txInfo] (bs::Transaction::Direction dir) {
+         const auto &cbDir = [this, txInfo] (bs::Transaction::Direction dir, std::vector<bs::Address>) {
             txInfo->direction = dir;
             if (!txInfo->mainAddress.isEmpty() && txInfo->wallet) {
                showZcNotification(*txInfo);

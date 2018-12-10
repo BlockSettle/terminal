@@ -49,6 +49,8 @@ private slots:
    void onDataLoaded(int count);
    void onCreateRBFDialog();
    void onCreateCPFPDialog();
+   void onProgressInited(int start, int end);
+   void onProgressUpdated(int value);
 
 private:
    std::unique_ptr<Ui::TransactionsWidget> ui;

@@ -21,14 +21,15 @@ class IncomingTransactionFilter : public QSortFilterProxyModel
 public:
    IncomingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
 
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override
    {
       const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
       if (!txModel) {
          return false;
       }
-      const auto &txItem = txModel->getItem(source_row);
-      return (txItem.txEntry.value > 0);
+      const auto &index = txModel->index(source_row, 0, source_parent);
+      const auto &txItem = txModel->getItem(index);
+      return (txItem.isSet() && (txItem.txEntry.value > 0));
    }
 };
 
@@ -37,14 +38,15 @@ class OutgoingTransactionFilter : public QSortFilterProxyModel
 public:
    OutgoingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
 
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override
    {
       const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
       if (!txModel) {
          return false;
       }
-      const auto &txItem = txModel->getItem(source_row);
-      return (txItem.txEntry.value < 0);
+      const auto &index = txModel->index(source_row, 0, source_parent);
+      const auto &txItem = txModel->getItem(index);
+      return (txItem.isSet() && (txItem.txEntry.value < 0));
    }
 };
 
