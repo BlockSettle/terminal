@@ -10,7 +10,6 @@ enum CLIRequestType
    CheckAuthAddressMessageType = 4;
    ReloadWalletMessageType = 5;
    SendCCTokenMessageType = 6;
-   OTPUpdateMessageType = 7;
    AuthVerificationTransactionType = 8;
    AuthRevokeTransactionType = 9;
    CCDistributionTransactionType = 10;
@@ -116,13 +115,6 @@ message SendCCTokenRequest
    required string request_id = 5;
 }
 
-message OTPUpdateRequest
-{
-   required string user_id = 1;
-   required string otp_id = 2;
-   required string request_id = 3;
-}
-
 message AuthVerificationTransactionResponse
 {
    required bool transaction_broadcasted = 1;
@@ -158,7 +150,6 @@ message GetRequestsStatResopnse
 {
    required uint32 submit_auth_count = 1;
    required uint32 revoke_auth_count = 2;
-   required uint32 generate_otp_count = 3;
    required uint32 generate_cc_seed_count = 4;
    required uint32 cc_initial_distribution_count = 5;
    required uint32 fund_cc_gen_address_count = 6;
