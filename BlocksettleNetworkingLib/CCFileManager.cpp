@@ -135,29 +135,48 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       logger_->error("[CCFileManager::SubmitAddressToPuB] not connected");
       return false;
    }
+
+   const auto cbSigned = [this, address](const std::string &data, const BinaryData &invisibleData, const std::string &signature) {
+      SubmitAddrForInitialDistributionRequest addressRequest;
+      if (!addressRequest.ParseFromString(invisibleData.toBinStr())) {
+         logger_->error("[CCFileManager::SubmitAddressToPuB] failed to parse original request");
+         emit CCSubmitFailed(address.display(), tr("Failed to parse original request"));
+         return;
+      }
+      if (addressRequest.prefixedaddress() != address.display<std::string>()) {
+         logger_->error("[CCFileManager::SubmitAddressToPuB] CC address mismatch");
+         emit CCSubmitFailed(address.display(), tr("CC address mismatch"));
+         return;
+      }
+
+      RequestPacket  request;
+      request.set_datasignature(signature);
+      request.set_requesttype(SubmitCCAddrInitialDistribType);
+      request.set_requestdata(data);
+
+      logger_->debug("[CCFileManager::SubmitAddressToPuB] submitting addr {}", address.display<std::string>());
+      if (SubmitRequestToPB("submit_cc_addr", request.SerializeAsString())) {
+         emit CCInitialSubmitted(address.display());
+      }
+      else {
+         emit CCSubmitFailed(address.display(), tr("Failed to send to PB"));
+      }
+   };
+
+   const auto &cbSignFailed = [this, address](const QString &text) {
+      logger_->error("[CCFileManager::SubmitAddressToPuB] failed to sign data: {}", text.toStdString());
+      emit CCSubmitFailed(address.display(), text);
+   };
+
    SubmitAddrForInitialDistributionRequest addressRequest;
    addressRequest.set_username(celerClient_->userName());
    addressRequest.set_networktype(networkType(appSettings_));
-   addressRequest.set_prefixedaddress(address.display().toStdString());
+   addressRequest.set_prefixedaddress(address.display<std::string>());
    addressRequest.set_bsseed(seed);
 
-   const std::string &data = addressRequest.SerializeAsString();
-   RequestPacket  request;
-   const auto &cbSigned = [&request](const SecureBinaryData &sig) {
-      request.set_datasignature(sig.toBinStr());
-//FIXME      request.set_otpid(otpId);
-//FIXME      request.set_keyindex(keyIndex);
-   };
-   if (!authSignManager_->Sign(data, cbSigned)) {
-      logger_->debug("[CCFileManager::SubmitAddressToPuB] failed to OTP sign data");
-      return false;
-   }
-
-   request.set_requesttype(SubmitCCAddrInitialDistribType);
-   request.set_requestdata(data);
-
-   logger_->debug("[CCFileManager::SubmitAddressToPuB] submitting addr {}, seed {}", address.display<std::string>(), seed);
-   return SubmitRequestToPB("submit_cc_addr", request.SerializeAsString());
+   return authSignManager_->Sign(addressRequest.SerializeAsString(), tr("Private Market token")
+      , tr("Submitting CC wallet address to receive PM token")
+      , cbSigned, cbSignFailed, 90);
 }
 
 void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)

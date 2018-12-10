@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <QTimer>
 #include "ConnectionManager.h"
+#include "MobileUtils.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
 
@@ -169,6 +170,33 @@ bool MobileClient::start(RequestType requestType, const std::string &email
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
 
+bool MobileClient::sign(const BinaryData &data, const std::string &email
+   , const QString &title, const QString &description, int expiration)
+{
+   cancel();
+   email_ = email;
+
+   CreateRequest request;
+   auto signRequest = request.mutable_signature();
+   signRequest->set_type(SignatureDataProtobuf);
+   signRequest->set_invisibledata(data.toBinStr());
+
+   request.set_type(RequestSignature);
+   request.set_expiration(expiration);
+   request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
+
+   request.set_title(title.toStdString());
+   request.set_description(description.toStdString());
+   request.set_apikey(kApiKey);
+   request.set_userid(email);
+
+   QMetaObject::invokeMethod(timer_, [this] {
+      timer_->start(kConnectTimeoutSeconds * 1000);
+   });
+
+   return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
+}
+
 void MobileClient::cancel()
 {
    isConnecting_ = false;
@@ -229,6 +257,11 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    }
 
    requestId_.clear();
+
+   if (reply.has_signature()) {
+      processSignatureReply(reply.signature());
+      return;
+   }
 
    if (reply.encsecurereply().empty() || reply.deviceid().empty()) {
       emit failed(tr("Cancelled"));
@@ -365,4 +398,29 @@ int MobileClient::getMobileClientTimeout(RequestType requestType)
    default:
       return 120;
    }
+}
+
+void MobileClient::processSignatureReply(const SignatureReply &reply)
+{
+   if (reply.signaturedata().empty() || reply.sign().empty()) {
+      emit failed(tr("Missing mandatory signature data in reply"));
+      return;
+   }
+   if (reply.type() != SignatureDataProtobuf) {
+      emit failed(tr("Invalid signature serialization type"));
+      return;
+   }
+   SignatureData sigData;
+   if (!sigData.ParseFromString(reply.signaturedata())) {
+      emit failed(tr("Failed to parse signature data"));
+      return;
+   }
+   if (!reply.userpubkey().empty()) {
+      const auto &pubKey = autheid::publicKeyFromString(reply.userpubkey());
+      if (autheid::verifyData(reply.signaturedata(), reply.sign(), pubKey)) {
+         emit failed(tr("Signature validation failed"));
+         return;
+      }
+   }
+   emit signSuccess(reply.signaturedata(), sigData.invisibledata(), reply.sign());
 }

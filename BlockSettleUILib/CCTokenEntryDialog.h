@@ -28,7 +28,6 @@ public:
 
 protected:
    void accept() override;
-   void reject() override;
 
 private slots:
    void tokenChanged();
@@ -36,6 +35,8 @@ private slots:
    void onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
    void onWalletFailed(unsigned int id, std::string errMsg);
    void onCCAddrSubmitted(const QString addr);
+   void onCCInitialSubmitted(const QString addr);
+   void onCCSubmitFailed(const QString addr, const QString &err);
 
 private:
    std::unique_ptr<Ui::CCTokenEntryDialog> ui_;

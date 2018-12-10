@@ -3,15 +3,16 @@
 
 #include <functional>
 #include <memory>
-
 #include <QObject>
-
+#include "BinaryData.h"
 
 namespace spdlog {
    class logger;
 }
-class SecureBinaryData;
 class ApplicationSettings;
+class CelerClient;
+class MobileClient;
+class SecureBinaryData;
 
 
 class AuthSignManager : public QObject
@@ -20,23 +21,30 @@ Q_OBJECT
 
 public:
    AuthSignManager(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings>& appSettings);
-   AuthSignManager(const std::shared_ptr<spdlog::logger>& logger)
-      : logger_(logger) {}
-   ~AuthSignManager() noexcept = default;
+      , const std::shared_ptr<ApplicationSettings>& appSettings
+      , const std::shared_ptr<CelerClient> &);
+   ~AuthSignManager() noexcept;
 
    AuthSignManager(const AuthSignManager&) = delete;
    AuthSignManager& operator = (const AuthSignManager&) = delete;
-
    AuthSignManager(AuthSignManager&&) = delete;
    AuthSignManager& operator = (AuthSignManager&&) = delete;
 
-   using SignedCb = std::function<void (const SecureBinaryData &signature)>;
-   bool Sign(const SecureBinaryData &dataToSign, const SignedCb &);
+   using SignedCb = std::function<void (const std::string &data, const BinaryData &invisibleData, const std::string &signature)>;
+   using SignFailedCb = std::function<void(const QString &)>;
+   bool Sign(const BinaryData &dataToSign, const QString &title, const QString &desc
+      , const SignedCb &, const SignFailedCb &cbF = nullptr, int expiration = 30);
+
+private slots:
+   void onSignSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
+   void onFailed(const QString &);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<ApplicationSettings>   applicationSettings_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<CelerClient>           celerClient_;
+   std::unique_ptr<MobileClient>          mobileClient_;
+   std::pair<SignedCb, SignFailedCb>      callbacks_{nullptr, nullptr};
 };
 
 #endif // __AUTH_SIGN_MANAGER_H__

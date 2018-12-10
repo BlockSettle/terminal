@@ -1,22 +1,61 @@
 #include "AuthSignManager.h"
 
-#include "CelerClient.h"
+#include "AuthSignManager.h"
 #include "ApplicationSettings.h"
+#include "CelerClient.h"
 #include "EncryptionUtils.h"
+#include "MobileClient.h"
 
-#include <cassert>
 #include <spdlog/spdlog.h>
 
 
 AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<ApplicationSettings> &appSettings)
- : logger_(logger)
- , applicationSettings_(appSettings)
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<CelerClient> &celerClient)
+   : logger_(logger)
+   , appSettings_(appSettings)
+   , celerClient_(celerClient)
+   , mobileClient_(new MobileClient(logger, appSettings_->GetAuthKeys()))
 {
+   connect(mobileClient_.get(), &MobileClient::signSuccess, this, &AuthSignManager::onSignSuccess);
+   connect(mobileClient_.get(), &MobileClient::failed, this, &AuthSignManager::onFailed);
 }
 
-bool AuthSignManager::Sign(const SecureBinaryData &dataToSign, const SignedCb &onSigned)
+AuthSignManager::~AuthSignManager() = default;
+
+bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, const QString &desc
+   , const SignedCb &onSigned, const SignFailedCb &onSignFailed, int expiration)
 {
-   onSigned(std::string("temporary fake signature"));
+   callbacks_ = { onSigned, onSignFailed };
+   mobileClient_->init(appSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
+      , appSettings_->get<std::string>(ApplicationSettings::authServerHost)
+      , appSettings_->get<std::string>(ApplicationSettings::authServerPort));
+   const auto &userId = celerClient_->userName();
+   logger_->debug("[{}] sending sign {} request to {}", __func__, title.toStdString(), userId);
+   if (!mobileClient_->sign(dataToSign, userId, title, desc, expiration)) {
+      if (onSignFailed) {
+         onSignFailed(tr("Failed to sign with Auth eID"));
+      }
+      return false;
+   }
    return true;
+}
+
+void AuthSignManager::onFailed(const QString &text)
+{
+   logger_->error("[AuthSignManager] Auth eID failure: {}", text.toStdString());
+   if (callbacks_.second) {
+      callbacks_.second(text);
+   }
+   callbacks_ = { nullptr, nullptr };
+}
+
+void AuthSignManager::onSignSuccess(const std::string &data, const BinaryData &invisibleData
+   , const std::string &signature)
+{
+   logger_->debug("[AuthSignManager] data signed");
+   if (callbacks_.first) {
+      callbacks_.first(data, invisibleData, signature);
+   }
+   callbacks_ = { nullptr, nullptr };
 }

@@ -468,27 +468,24 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    request.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
    request.set_scripttype(mapToScriptType(address.getType()));
-   const auto &data = request.SerializeAsString();
 
-   RequestPacket  packet;
+   const auto cbSigned = [this](const std::string &data, const BinaryData &invisibleData, const std::string &signature) {
+      RequestPacket  packet;
+      packet.set_datasignature(signature);
+      packet.set_requesttype(ConfirmAuthAddressSubmitType);
+      packet.set_requestdata(data);
 
-   const auto cbSigned = [&packet](const SecureBinaryData &sig) {
-      packet.set_datasignature(sig.toBinStr());
-//FIXME      packet.set_otpid(otpId);
-//FIXME      packet.set_keyindex(keyIndex);
+      logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] confirmed auth address submission");
+      SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
    };
 
-   if (!authSignManager_->Sign(data, cbSigned)) {
-      logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] failed to OTP sign data");
+   const auto cbSignFailed = [this](const QString &text) {
+      logger_->error("[AuthAddressManager::ConfirmSubmitForVerification] failed to sign data: {}", text.toStdString());
       emit SignFailed();
-      return false;
-   }
+   };
 
-   packet.set_requesttype(ConfirmAuthAddressSubmitType);
-   packet.set_requestdata(data);
-
-   logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] confirmed auth address submission");
-   return SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
+   return authSignManager_->Sign(request.SerializeAsString(), tr("Authentication Address")
+      , tr("Submit auth address for verification"), cbSigned, cbSignFailed);
 }
 
 bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)

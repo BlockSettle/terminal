@@ -48,6 +48,8 @@ signals:
    void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
 
    void CCAddressSubmitted(const QString);
+   void CCInitialSubmitted(const QString);
+   void CCSubmitFailed(const QString address, const QString &err);
    void Loaded();
    void LoadingFailed();
 

@@ -29,6 +29,8 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    connect(ui_->lineEditToken, &QLineEdit::textEdited, this, &CCTokenEntryDialog::tokenChanged);
 
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
+   connect(ccFileMgr_.get(), &CCFileManager::CCInitialSubmitted, this, &CCTokenEntryDialog::onCCInitialSubmitted, Qt::QueuedConnection);
+   connect(ccFileMgr_.get(), &CCFileManager::CCSubmitFailed, this, &CCTokenEntryDialog::onCCSubmitFailed, Qt::QueuedConnection);
 
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CCTokenEntryDialog::onWalletFailed);
@@ -121,6 +123,7 @@ void CCTokenEntryDialog::onWalletFailed(unsigned int id, std::string errMsg)
    createWalletReqId_ = 0;
    ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1: %2")
       .arg(QString::fromStdString(ccProduct_)).arg(QString::fromStdString(errMsg)));
+
 }
 
 void CCTokenEntryDialog::accept()
@@ -132,25 +135,30 @@ void CCTokenEntryDialog::accept()
    const auto address = ccWallet_->GetNewExtAddress();
    signingContainer_->SyncAddresses({ { ccWallet_, address } });
 
-   if (!ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
-      reject();
-      BSMessageBox(BSMessageBox::critical, tr("CC Token submit failure")
-         , tr("Failed to submit Private Market token to BlockSettle"), this).exec();
-   }
-   else {
+   if (ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
       ui_->pushButtonOk->setEnabled(false);
    }
+   else {
+      onCCSubmitFailed(address.display(), tr("Submission to PB failed"));
+   }
 }
 
-void CCTokenEntryDialog::reject()
-{
-   QDialog::reject();
-}
-
-void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
+void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
 {
    QDialog::accept();
    BSMessageBox(BSMessageBox::info, tr("Submission Successful")
       , tr("The token has been submitted, please note that it might take a while before the"
          " transaction is broadcast in the Terminal")).exec();
+}
+
+void CCTokenEntryDialog::onCCInitialSubmitted(const QString)
+{
+   ui_->labelTokenHint->setText(tr("Request was sent"));
+}
+
+void CCTokenEntryDialog::onCCSubmitFailed(const QString, const QString &err)
+{
+   reject();
+   BSMessageBox(BSMessageBox::critical, tr("CC Token submit failure")
+      , tr("Failed to submit Private Market token to BlockSettle"), err, this).exec();
 }

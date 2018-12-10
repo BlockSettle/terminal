@@ -61,10 +61,13 @@ public:
       , const std::string &serverHost, const std::string &serverPort);
    bool start(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds);
+   bool sign(const BinaryData &data, const std::string &email
+      , const QString &title, const QString &description, int expiration = 30);
    void cancel();
 
 signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
+   void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
    void failed(const QString &text);
 
 private slots:
@@ -80,6 +83,8 @@ private:
    void processCreateReply(const uint8_t *payload, size_t payloadSize);
    void processResultReply(const uint8_t *payload, size_t payloadSize);
 
+   void processSignatureReply(const AutheID::RP::SignatureReply &);
+
    QString getMobileClientRequestText(RequestType requestType);
    bool isMobileClientNewDeviceNeeded(RequestType requestType);
    int getMobileClientTimeout(RequestType requestType);
@@ -87,6 +92,7 @@ private:
    static std::string toBase64(const std::string &);
    static std::vector<uint8_t> fromBase64(const std::string &);
 
+private:
    std::unique_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    std::shared_ptr<spdlog::logger> logger_;

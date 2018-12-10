@@ -90,7 +90,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    initArmory();
 
-   authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_);
+   authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
 
    InitSigningContainer();
    LoadWallets(splashScreen);
