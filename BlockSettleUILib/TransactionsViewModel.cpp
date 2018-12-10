@@ -446,6 +446,11 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
    if (!child->initialized || !parent->initialized) {
       return false;
    }
+   if (!parent->parentId.isNull() && !child->groupId.isNull()) {
+      if (child->groupId == parent->parentId) {
+         return true;
+      }
+   }
    if (child->isRBFeligible() && parent->isRBFeligible()) {
       std::set<BinaryData> childInputs, parentInputs;
       for (int i = 0; i < child->tx.getNumTxIn(); i++) {
@@ -464,7 +469,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
    auto newItems = std::make_shared<std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>>();
-   auto updatedItems = std::make_shared<std::vector<TransactionPtr>>() ;
+   auto updatedItems = std::make_shared<std::vector<TransactionPtr>>();
 
    for (const auto &entry : page) {
       const auto item = itemFromTransaction(entry);
@@ -680,7 +685,11 @@ void TransactionsViewModel::onDelRows(const std::set<int> &rows)
 
 TransactionsViewItem TransactionsViewModel::getItem(const QModelIndex &index) const
 {
-   return *(getNode(index)->item());
+   const auto &node = getNode(index);
+   if (!node) {
+      return {};
+   }
+   return *(node->item());
 }
 
 void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
@@ -699,7 +708,8 @@ void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<Trans
 
 
 void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<WalletsManager> &walletsMgr, std::function<void(const TransactionsViewItem *)> userCB)
+   , const std::shared_ptr<WalletsManager> &walletsMgr
+   , std::function<void(const TransactionsViewItem *)> userCB)
 {
    const auto cbCheckIfInitializationCompleted = [this, userCB]()
    {
@@ -735,9 +745,60 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
          }
       }
    };
-   const auto &cbDir = [this, cbInit](bs::Transaction::Direction dir) {
+   const auto &cbDir = [this, cbInit](bs::Transaction::Direction dir, std::vector<bs::Address> inAddrs) {
       direction = dir;
       dirStr = QObject::tr(bs::Transaction::toStringDir(dir));
+      if (dir == bs::Transaction::Direction::Received) {
+         if (inAddrs.size() == 1) {    // likely a settlement address
+            switch (inAddrs[0].getType()) {
+            case AddressEntryType_P2WSH:
+            case AddressEntryType_P2SH:
+            case AddressEntryType_Multisig:
+               parentId = inAddrs[0];
+               break;
+            default: break;
+            }
+         }
+      }
+      else if (dir == bs::Transaction::Direction::Sent) {
+         for (int i = 0; i < tx.getNumTxOut(); ++i) {
+            TxOut out = tx.getTxOutCopy((int)i);
+            bs::Address addr(out.getScrAddressStr());
+            switch (addr.getType()) {
+            case AddressEntryType_P2WSH:     // likely a settlement address
+            case AddressEntryType_P2SH:
+            case AddressEntryType_Multisig:
+               parentId = addr;
+               break;
+            default: break;
+            }
+            if (!parentId.isNull()) {
+               break;
+            }
+         }
+      }
+      else if (dir == bs::Transaction::Direction::PayIn) {
+         for (int i = 0; i < tx.getNumTxOut(); ++i) {
+            TxOut out = tx.getTxOutCopy((int)i);
+            bs::Address addr(out.getScrAddressStr());
+            switch (addr.getType()) {
+            case AddressEntryType_P2WSH:
+            case AddressEntryType_P2SH:
+            case AddressEntryType_Multisig:
+               groupId = addr;
+               break;
+            default: break;
+            }
+            if (!groupId.isNull()) {
+               break;
+            }
+         }
+      }
+      else if (dir == bs::Transaction::Direction::PayOut) {
+         if (inAddrs.size() == 1) {
+            groupId = inAddrs[0];
+         }
+      }
       cbInit();
    };
 
