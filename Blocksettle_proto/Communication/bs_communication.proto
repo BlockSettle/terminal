@@ -170,6 +170,7 @@ message ConfirmAuthSubmitRequest
    required AddressNetworkType networkType = 3;
    required AddressScriptType  scriptType = 4;
    required bytes  publicKey = 5;
+   required string userId = 6;
 }
 
 message ConfirmAuthSubmitResponse
