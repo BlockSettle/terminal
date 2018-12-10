@@ -21,13 +21,13 @@ class IncomingTransactionFilter : public QSortFilterProxyModel
 public:
    IncomingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
 
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   bool filterAcceptsRow(int source_row, const QModelIndex &index) const override
    {
       const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
       if (!txModel) {
          return false;
       }
-      const auto &txItem = txModel->getItem(source_row);
+      const auto &txItem = txModel->getItem(index);
       return (txItem.txEntry.value > 0);
    }
 };
@@ -37,13 +37,13 @@ class OutgoingTransactionFilter : public QSortFilterProxyModel
 public:
    OutgoingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
 
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   bool filterAcceptsRow(int source_row, const QModelIndex &index) const override
    {
       const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
       if (!txModel) {
          return false;
       }
-      const auto &txItem = txModel->getItem(source_row);
+      const auto &txItem = txModel->getItem(index);
       return (txItem.txEntry.value < 0);
    }
 };
