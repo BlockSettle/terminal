@@ -468,8 +468,9 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    request.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
    request.set_scripttype(mapToScriptType(address.getType()));
+   request.set_userid(celerClient_->userId());
 
-   const auto cbSigned = [this](const std::string &data, const BinaryData &invisibleData, const std::string &signature) {
+   const auto cbSigned = [this](const std::string &data, const BinaryData &, const std::string &signature) {
       RequestPacket  packet;
       packet.set_datasignature(signature);
       packet.set_requesttype(ConfirmAuthAddressSubmitType);
