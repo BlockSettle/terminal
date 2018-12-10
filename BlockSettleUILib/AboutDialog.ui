@@ -415,7 +415,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
              <item>
               <widget class="QLabel" name="label_4">
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;General Enquiries&lt;br/&gt;&lt;a href=&quot;mailto:hello@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;hello@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;Technical Support&lt;br/&gt;&lt;a href=&quot;mailto:support@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;support@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;Compliance&lt;br/&gt;&lt;a href=&quot;mailto:compliance@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;compliance@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Customer Support:&lt;br/&gt;Contact BlockSettle through our&lt;br/&gt;&lt;a href=&quot;http://staging.blocksettle.com/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;Client Portal&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;Technical Support:&lt;br/&gt;&lt;a href=&quot;mailto:support@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;support@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;Compliance:&lt;br/&gt;&lt;a href=&quot;mailto:compliance@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;compliance@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="textFormat">
                 <enum>Qt::RichText</enum>
@@ -550,7 +550,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
              <item>
               <widget class="QLabel" name="label_8">
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Ostergatan 21&lt;br/&gt;211 25 Malmö&lt;br/&gt;Sweden&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Storgatan 5&lt;br/&gt;211 41 Malmö&lt;br/&gt;Sweden&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="textFormat">
                 <enum>Qt::RichText</enum>

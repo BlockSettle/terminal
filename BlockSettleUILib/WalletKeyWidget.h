@@ -5,7 +5,7 @@
 #include <QWidget>
 #include "EncryptUtils.h"
 #include "EncryptionUtils.h"
-#include "MobileClientRequestType.h"
+#include "MobileClient.h"
 
 namespace Ui {
     class WalletKeyWidget;
@@ -18,7 +18,7 @@ class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
+   WalletKeyWidget(MobileClient::RequestType requestType, const std::string &walletId
       , int index, bool password
       , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
       , QWidget* parent = nullptr);
@@ -85,7 +85,7 @@ private:
    bool        hideAuthControlsOnSignClicked_ = false;
    bool        hideProgressBar_ = false;
    bool        hidePasswordWarning_ = false;
-   MobileClientRequest requestType_{};
+   MobileClient::RequestType requestType_{};
    std::vector<std::string> knownDeviceIds_;
 };
 

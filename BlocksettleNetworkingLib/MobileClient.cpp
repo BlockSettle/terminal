@@ -92,7 +92,7 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
    return connection_->send(packet.SerializeAsString());
 }
 
-bool MobileClient::start(MobileClientRequest requestType, const std::string &email
+bool MobileClient::start(RequestType requestType, const std::string &email
    , const std::string &walletId, const std::vector<std::string> &knownDeviceIds)
 {
    cancel();
@@ -140,16 +140,16 @@ bool MobileClient::start(MobileClientRequest requestType, const std::string &ema
    request.mutable_devicekey()->set_usenewdevices(newDevice);
 
    switch (requestType) {
-   case MobileClientRequest::ActivateWallet:
+   case ActivateWallet:
       request.mutable_devicekey()->set_registerkey(RegisterKeyReplace);
       break;
-   case MobileClientRequest::DeactivateWallet:
+   case DeactivateWallet:
       request.mutable_devicekey()->set_registerkey(RegisterKeyClear);
       break;
-   case MobileClientRequest::ActivateWalletNewDevice:
+   case ActivateWalletNewDevice:
       request.mutable_devicekey()->set_registerkey(RegisterKeyAdd);
       break;
-   case MobileClientRequest::DeactivateWalletDevice:
+   case DeactivateWalletDevice:
       // No need to update anything, the server will sync it as needed to known device list
       request.mutable_devicekey()->set_registerkey(RegisterKeyKeep);
       break;
@@ -315,4 +315,54 @@ void MobileClient::OnDisconnected()
 void MobileClient::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
    emit failed(tr("Connection failed"));
+}
+
+QString MobileClient::getMobileClientRequestText(RequestType requestType)
+{
+   switch (requestType) {
+   case ActivateWallet:
+      return tr("Activate Auth eID Signing");
+   case DeactivateWallet:
+      return tr("Deactivate wallet");
+   case SignWallet:
+      return tr("Sign transaction");
+   case BackupWallet:
+      return tr("Backup wallet");
+   case ActivateWalletOldDevice:
+      return tr("Activate wallet (existing device)");
+   case ActivateWalletNewDevice:
+      return tr("Activate wallet (new device)");
+   case DeactivateWalletDevice:
+      return tr("Deactivate wallet device");
+   case VerifyWalletKey:
+      return tr("Confirm Auth eID Signing");
+   case ActivateOTP:
+      return tr("Activate OTP");
+   case SettlementTransaction:
+      return tr("Sign transaction");
+   default:
+      throw std::logic_error("Invalid MobileClient::RequestType value");
+   }
+}
+
+bool MobileClient::isMobileClientNewDeviceNeeded(RequestType requestType)
+{
+   switch (requestType) {
+   case ActivateWallet:
+   case ActivateWalletNewDevice:
+   case ActivateOTP:
+      return true;
+   default:
+      return false;
+   }
+}
+
+int MobileClient::getMobileClientTimeout(RequestType requestType)
+{
+   switch (requestType) {
+   case SettlementTransaction:
+      return 30;
+   default:
+      return 120;
+   }
 }

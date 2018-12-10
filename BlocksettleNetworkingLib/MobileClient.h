@@ -6,7 +6,7 @@
 #include <QObject>
 #include "DataConnectionListener.h"
 #include "EncryptionUtils.h"
-#include "MobileClientRequestType.h"
+#include "MobileClient.h"
 #include "ZmqSecuredDataConnection.h"
 #include "EncryptUtils.h"
 #include "rp_api.pb.h"
@@ -22,6 +22,7 @@ class RequestReplyCommand;
 class MobileClient : public QObject, public DataConnectionListener
 {
    Q_OBJECT
+
 public:
    struct DeviceInfo
    {
@@ -29,6 +30,25 @@ public:
       std::string deviceId;
       std::string deviceName;
    };
+
+   enum RequestType
+   {
+      Unknown,
+      ActivateWallet,
+      DeactivateWallet,
+      SignWallet,
+      BackupWallet,
+      ActivateWalletOldDevice,
+      ActivateWalletNewDevice,
+      DeactivateWalletDevice,
+      VerifyWalletKey,
+      ActivateOTP,
+      // Private market and others with lower timeout
+      SettlementTransaction,
+
+      // Please also add new type text in getMobileClientRequestText
+   };
+   Q_ENUM(RequestType)
 
    static DeviceInfo getDeviceInfo(const std::string &encKey);
 
@@ -39,7 +59,7 @@ public:
 
    void init(const std::string &serverPubKey
       , const std::string &serverHost, const std::string &serverPort);
-   bool start(MobileClientRequest requestType, const std::string &email, const std::string &walletId
+   bool start(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds);
    void cancel();
 
@@ -59,6 +79,10 @@ private:
    bool sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type);
    void processCreateReply(const uint8_t *payload, size_t payloadSize);
    void processResultReply(const uint8_t *payload, size_t payloadSize);
+
+   QString getMobileClientRequestText(RequestType requestType);
+   bool isMobileClientNewDeviceNeeded(RequestType requestType);
+   int getMobileClientTimeout(RequestType requestType);
 
    static std::string toBase64(const std::string &);
    static std::vector<uint8_t> fromBase64(const std::string &);
@@ -81,5 +105,6 @@ private:
    bool isConnecting_{false};
    std::vector<std::string> knownDeviceIds_;
 };
+Q_DECLARE_METATYPE(MobileClient::RequestType)
 
 #endif // __MOBILE_CLIENT_H__

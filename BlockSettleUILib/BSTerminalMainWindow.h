@@ -60,12 +60,13 @@ private:
    void InitConnections();
    void initArmory();
    void connectArmory();
+   void connectSigner();
 
    void setTabStyle();
 
    void LoadWallets(BSTerminalSplashScreen& splashScreen);
    void InitAuthManager();
-   void InitSigningContainer();
+   bool InitSigningContainer();
    void InitAssets();
 
    void InitPortfolioView();

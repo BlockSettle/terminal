@@ -220,7 +220,8 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui->treeViewWallets->setItemsExpandable(true);
    ui->treeViewWallets->setRootIsDecorated(true);
    ui->treeViewWallets->setExpandsOnDoubleClick(false);
-   ui->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
+   // show the column as per BST-1520
+   //ui->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
    walletsModel_->LoadWallets();
 
    connect(ui->walletPropertiesButton, &QPushButton::clicked, this, &WalletsWidget::showSelectedWalletProperties);
@@ -248,6 +249,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 
    updateAddresses();
    connect(ui->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
+   connect(walletsModel_, &WalletsViewModel::updateAddresses, this, &WalletsWidget::updateAddresses);
    connect(walletsManager_.get(), &WalletsManager::walletBalanceChanged, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
 }
 

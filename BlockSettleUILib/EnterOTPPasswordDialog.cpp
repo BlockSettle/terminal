@@ -42,7 +42,7 @@ EnterOTPPasswordDialog::EnterOTPPasswordDialog(const std::shared_ptr<spdlog::log
       connect(authTimer_, &QTimer::timeout, this, &EnterOTPPasswordDialog::authTimer);
       authTimer_->start(1000);
 
-      mobileClient_->start(MobileClientRequest::ActivateOTP
+      mobileClient_->start(MobileClient::ActivateOTP
          , otpMgr->GetEncKey().toStdString(), otpMgr->GetShortId().toStdString(), {});
    }
    else {

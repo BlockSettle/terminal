@@ -224,7 +224,7 @@ void RFQDealerReply::onHDWalletInfo(unsigned int id
       return;
    }
 
-   EnterWalletPassword passwordDialog(MobileClientRequest::SettlementTransaction, this);
+   EnterWalletPassword passwordDialog(MobileClient::SettlementTransaction, this);
    passwordDialog.init(autoSignWalletId_, keyRank
       , encTypes, encKeys, appSettings_
       , tr("Activate Auto-Sign"));
@@ -859,8 +859,11 @@ void RFQDealerReply::disableAutoSign()
 
 void RFQDealerReply::updateAutoSignState()
 {
-   ui_->checkBoxAutoSign->setEnabled(ui_->comboBoxWalletAS->count() > 0);
-   ui_->comboBoxWalletAS->setEnabled(!ui_->checkBoxAutoSign->isChecked());
+   // use groupBoxAutoSign enabled state as well in the enabled state of these
+   // two controls because they're its children
+   bool bFlag = (ui_->comboBoxWalletAS->count() > 0) ? true : false;
+   ui_->checkBoxAutoSign->setEnabled(bFlag && ui_->groupBoxAutoSign->isEnabled());
+   ui_->comboBoxWalletAS->setEnabled(!ui_->checkBoxAutoSign->isChecked() && ui_->groupBoxAutoSign->isEnabled());
 }
 
 void RFQDealerReply::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)
@@ -1220,6 +1223,7 @@ void RFQDealerReply::onCelerConnected()
    }
    celerConnected_ = true;
    ui_->groupBoxAutoSign->setEnabled(true);
+   updateAutoSignState(); // update child control state
 }
 
 void RFQDealerReply::onCelerDisconnected()
@@ -1228,6 +1232,7 @@ void RFQDealerReply::onCelerDisconnected()
    ui_->checkBoxAQ->setEnabled(false);
    ui_->checkBoxAQ->setCheckState(Qt::Unchecked);
    ui_->groupBoxAutoSign->setEnabled(false);
+   updateAutoSignState(); // update child control state
    aqStateChanged(Qt::Unchecked);
    emit autoSignActivated({}, ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), false);
    logger_->info("Disabled auto-quoting due to Celer disconnection");
