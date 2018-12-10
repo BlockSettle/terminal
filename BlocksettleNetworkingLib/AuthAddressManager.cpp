@@ -481,7 +481,7 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
 
    const auto cbSignFailed = [this](const QString &text) {
       logger_->error("[AuthAddressManager::ConfirmSubmitForVerification] failed to sign data: {}", text.toStdString());
-      emit SignFailed();
+      emit SignFailed(text);
    };
 
    return authSignManager_->Sign(request.SerializeAsString(), tr("Authentication Address")

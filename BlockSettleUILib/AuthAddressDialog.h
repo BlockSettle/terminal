@@ -60,7 +60,7 @@ private slots:
 
    void ConfirmAuthAddressSubmission();
 
-   void onOtpSignFailed();
+   void onSignFailed(const QString &text);
 
    void onAuthVerifyTxSent();
 

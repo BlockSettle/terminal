@@ -117,7 +117,7 @@ signals:
    void AuthRevokeTxSent();
 
    void AuthAddressConfirmationRequired(float validationAmount);
-   void SignFailed();
+   void SignFailed(const QString &text);
 
 private:
    void SetAuthWallet();

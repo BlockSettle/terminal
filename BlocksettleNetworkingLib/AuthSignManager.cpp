@@ -27,9 +27,18 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
    , const SignedCb &onSigned, const SignFailedCb &onSignFailed, int expiration)
 {
    callbacks_ = { onSigned, onSignFailed };
-   mobileClient_->init(appSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
-      , appSettings_->get<std::string>(ApplicationSettings::authServerHost)
-      , appSettings_->get<std::string>(ApplicationSettings::authServerPort));
+   try {
+      mobileClient_->connect(appSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
+         , appSettings_->get<std::string>(ApplicationSettings::authServerHost)
+         , appSettings_->get<std::string>(ApplicationSettings::authServerPort));
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failed to connect: {}", __func__, e.what());
+      if (onSignFailed) {
+         onSignFailed(tr("Failed to connect to Auth eID"));
+      }
+      return false;
+   }
    const auto &userId = celerClient_->userName();
    logger_->debug("[{}] sending sign {} request to {}", __func__, title.toStdString(), userId);
    if (!mobileClient_->sign(dataToSign, userId, title, desc, expiration)) {

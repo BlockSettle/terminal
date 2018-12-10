@@ -59,11 +59,16 @@ WalletKeyWidget::WalletKeyWidget(MobileClient::RequestType requestType, const st
 
 void WalletKeyWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings, const QString& username)
 {
-   std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
-   std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
-   std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+   const auto &serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   const auto &serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   const auto &serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
 
-   mobileClient_->init(serverPubKey, serverHost, serverPort);
+   try {
+      mobileClient_->connect(serverPubKey, serverHost, serverPort);
+   }
+   catch (const std::exception &) {
+      ui_->pushButtonAuth->setEnabled(false);
+   }
 
    ui_->comboBoxAuthId->setEditText(username);
 }
@@ -138,7 +143,7 @@ void WalletKeyWidget::onAuthIdChanged(const QString &text)
 {
    ui_->labelAuthId->setText(text);
    emit encKeyChanged(index_, text.toStdString());
-   ui_->pushButtonAuth->setEnabled(!text.isNull());
+   ui_->pushButtonAuth->setEnabled(mobileClient_->isConnected() && !text.isNull());
 }
 
 void WalletKeyWidget::onAuthSignClicked()
@@ -184,7 +189,7 @@ void WalletKeyWidget::onAuthFailed(const QString &text)
 {
    
    stop();
-   ui_->pushButtonAuth->setEnabled(true);
+   ui_->pushButtonAuth->setEnabled(mobileClient_->isConnected());
    ui_->pushButtonAuth->setText(tr("Auth failed: %1 - retry").arg(text));
    ui_->widgetAuthLayout->show();
    
@@ -235,7 +240,7 @@ void WalletKeyWidget::start()
    if (!password_ && !authRunning_ && !ui_->comboBoxAuthId->currentText().isEmpty()) {
       onAuthSignClicked();
       ui_->progressBar->setValue(0);
-      ui_->pushButtonAuth->setEnabled(true);
+      ui_->pushButtonAuth->setEnabled(mobileClient_->isConnected());
    }
 }
 

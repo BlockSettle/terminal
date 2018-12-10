@@ -41,7 +41,7 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, &AuthAddressDialog::onAuthAddrSubmitSuccess, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthVerifyTxSent, this, &AuthAddressDialog::onAuthVerifyTxSent, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::SignFailed, this, &AuthAddressDialog::onOtpSignFailed, Qt::QueuedConnection);
+   connect(authAddressManager_.get(), &AuthAddressManager::SignFailed, this, &AuthAddressDialog::onSignFailed, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
    connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
@@ -135,9 +135,9 @@ void AuthAddressDialog::onAuthAddrSubmitSuccess(const QString &)
    close();
 }
 
-void AuthAddressDialog::onOtpSignFailed()
+void AuthAddressDialog::onSignFailed(const QString &err)
 {
-   showError(tr("Failed to sign request."), tr("OTP password is incorrect."));
+   showError(tr("Failed to sign request."), tr("Auth eID failed to sign: %1").arg(err));
    ConfirmAuthAddressSubmission();
 }
 
