@@ -405,43 +405,6 @@ bs::KeyPair bs::SettlementWallet::GetKeyPairFor(const bs::Address &addr, const S
    return {};
 }
 
-bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, QObject *obj)
-{
-   auto result = new std::vector<UTXO>;
-   auto walletSet = new std::unordered_set<int>;
-   for (const auto &rtWallet : rtWallets_) {
-      walletSet->insert(rtWallet.first);
-   }
-   const auto &cbZCList = [this, result, walletSet, cb](std::vector<UTXO> utxos) {
-      result->insert(result->end(), utxos.begin(), utxos.end());
-
-      for (const auto &rtWallet : rtWallets_) {
-         const auto &cbRTWlist = [this, result, walletSet, id=rtWallet.first, cb]
-                                 (ReturnMessage<std::vector<UTXO>> utxos)->void {
-            try {
-               auto inUTXOs = utxos.get();
-               result->insert(result->end(), inUTXOs.begin(), inUTXOs.end());
-            }
-            catch(std::exception& e) {
-               if(logger_ != nullptr) {
-                  getLogger()->error("[bs::SettlementWallet::getSpendableZCList] " \
-                     "Return data error - {}", e.what());
-               }
-            }
-
-            walletSet->erase(id);
-            if (walletSet->empty()) {
-               delete walletSet;
-               cb(*result);
-               delete result;
-            }
-         };
-         rtWallet.second->getSpendableZCList(cbRTWlist);
-      }
-   };
-   return bs::Wallet::getSpendableZCList(cbZCList, obj);
-}
-
 std::shared_ptr<bs::SettlementMonitorQtSignals> bs::SettlementWallet::createMonitorQtSignals(const shared_ptr<bs::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
 {

@@ -58,8 +58,6 @@ namespace bs {
       BinaryData SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const KeyPair &, const BinaryData &settlementId
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
 
-      bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj=nullptr) override;
-
       std::shared_ptr<ResolverFeed> GetResolver(const SecureBinaryData &) override { return nullptr; }   // can't resolve without external data
       std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override { return nullptr; }   // no public keys are stored
 
