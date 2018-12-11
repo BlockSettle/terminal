@@ -44,7 +44,6 @@ namespace bs {
          , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment = {});
       bool containsAddress(const bs::Address &addr) override;
 
-      bool isTempWalletId(const std::string &id) const;
       wallet::Type GetType() const override { return wallet::Type::Settlement; }
 
       static std::string fileNamePrefix() { return "settlement_"; }
@@ -92,13 +91,20 @@ namespace bs {
 
    private:
       std::shared_ptr<bs::SettlementAddressEntry> getAddressBySettlementId(const BinaryData &settlementId) const;
-      void createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset);
+      bool createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset);
 
+
+      std::shared_ptr<AsyncClient::BtcWallet> GetSettlementAddressWallet(const int addressIndex) const;
+      bool SaveSettlementAddressWallet(const std::shared_ptr<AsyncClient::BtcWallet>& wallet
+         , const int addressIndex);
+
+   private:
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
       std::map<bs::Address, std::shared_ptr<SettlementAddressEntry>>    addrEntryByAddr_;
       std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
-      std::map<int, std::shared_ptr<AsyncClient::BtcWallet>>   rtWallets_;
-      std::unordered_map<std::string, int>                     rtWalletsById_;
+
+      mutable std::atomic_flag                                 lockWalletsMap_ = ATOMIC_FLAG_INIT;
+      std::map<int, std::shared_ptr<AsyncClient::BtcWallet>>   settlementAddressWallets_;
    };
 }  //namespace bs
 
