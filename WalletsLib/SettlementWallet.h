@@ -71,14 +71,24 @@ namespace bs {
       SecureBinaryData GetPublicKeyFor(const bs::Address &) override;
       KeyPair GetKeyPairFor(const bs::Address &, const SecureBinaryData &password) override;
 
+      void RefreshWallets(const std::vector<BinaryData>& ids);
+
       // return monitor that send QT signals and subscribed to zc/new block notification via qt
-      std::shared_ptr<SettlementMonitorQtSignals> createMonitorQtSignals(const shared_ptr<SettlementAddressEntry> &addr
-         , const std::shared_ptr<spdlog::logger>& logger);
+      bool createMonitorQtSignals(const shared_ptr<SettlementAddressEntry> &addr
+         , const std::shared_ptr<spdlog::logger>& logger
+         , const std::function<void (const std::shared_ptr<SettlementMonitorQtSignals>&)>& userCB);
 
       // pure callback monitor. you should manually ask to update and set
       // callbacks to get notifications
-      std::shared_ptr<SettlementMonitorCb> createMonitorCb(const shared_ptr<SettlementAddressEntry> &addr
-         , const std::shared_ptr<spdlog::logger>& logger);
+      bool createMonitorCb(const shared_ptr<SettlementAddressEntry> &addr
+         , const std::shared_ptr<spdlog::logger>& logger
+         , const std::function<void (const std::shared_ptr<SettlementMonitorCb>&)>& userCB);
+
+   private:
+      using CreateMonitorCallback = std::function<void(const std::shared_ptr<AsyncClient::BtcWallet>&)>;
+      bool createMonitorCommon(const shared_ptr<SettlementAddressEntry> &addr
+         , const std::shared_ptr<spdlog::logger>& logger
+         , const CreateMonitorCallback& internalCB);
 
    protected:
       int addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset) override;
@@ -93,18 +103,23 @@ namespace bs {
       std::shared_ptr<bs::SettlementAddressEntry> getAddressBySettlementId(const BinaryData &settlementId) const;
       bool createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset);
 
-
       std::shared_ptr<AsyncClient::BtcWallet> GetSettlementAddressWallet(const int addressIndex) const;
-      bool SaveSettlementAddressWallet(const std::shared_ptr<AsyncClient::BtcWallet>& wallet
-         , const int addressIndex);
+
+      void CompleteMonitorCreations(int addressIndex, const std::shared_ptr<AsyncClient::BtcWallet>&);
 
    private:
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
       std::map<bs::Address, std::shared_ptr<SettlementAddressEntry>>    addrEntryByAddr_;
       std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
 
+      // all 3 collections guarded by same lock
       mutable std::atomic_flag                                 lockWalletsMap_ = ATOMIC_FLAG_INIT;
+      // wallet per address
       std::map<int, std::shared_ptr<AsyncClient::BtcWallet>>   settlementAddressWallets_;
+      // wallet that are now in phase of registration on armory side
+      std::unordered_map<std::string, std::function<void()>>   pendingWalletRegistrations_;
+      // pending requests to create monitor on wallet that is not completely registered on armory
+      std::unordered_map<int, CreateMonitorCallback>           pendingMonitorCreations_;
    };
 }  //namespace bs
 
