@@ -461,6 +461,7 @@ ELSE(WIN32)
          "-framework Security"
          "-framework SystemConfiguration"
          "-framework QuartzCore"
+         "-framework Metal"
          Qt5::QCocoaIntegrationPlugin
          Qt5::PrintSupport
          Qt5::QICOPlugin
