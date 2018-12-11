@@ -18,6 +18,13 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 add_definitions(-DNOMINMAX)
 
+# Force 64-bit builds and min target for macOS. If the min target changes,
+# update generate.py too.
+if(APPLE)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE STRING "" FORCE)
+	set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "macOS architecture to build; 64-bit is expected" FORCE)
+endif(APPLE)
+
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
 SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
