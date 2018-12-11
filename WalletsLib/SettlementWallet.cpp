@@ -145,6 +145,8 @@ std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::getAddressBySe
 
 void bs::SettlementWallet::RefreshWallets(const std::vector<BinaryData>& ids)
 {
+   bool pendingRegistrationFound = false;
+
    for (const auto& i : ids) {
       const std::string id = i.toBinStr();
 
@@ -160,7 +162,13 @@ void bs::SettlementWallet::RefreshWallets(const std::vector<BinaryData>& ids)
       }
 
       if (completeWalletRegistration) {
+         pendingRegistrationFound = true;
          completeWalletRegistration();
+      }
+   }
+   if (!pendingRegistrationFound) {
+      if (logger_) {
+         logger_->debug("[SettlementWallet::RefreshWallets] no pending registrations found");
       }
    }
 }
@@ -175,6 +183,9 @@ void bs::SettlementWallet::CompleteMonitorCreations(int addressIndex
 
       auto it = pendingMonitorCreations_.find(addressIndex);
       if (it == pendingMonitorCreations_.end()) {
+         if (logger_) {
+            logger_->debug("[SettlementWallet::CompleteMonitorCreations] no pending monitors for registered wallet");
+         }
          return;
       }
 
@@ -192,6 +203,13 @@ bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
    std::shared_ptr<AsyncClient::BtcWallet> addressWallet;
 
    auto completeWalletRegistration = [this, index, addressWallet]() {
+      if (logger_) {
+         logger_->debug("[SettlementWallet::createTempWalletForAsset] wallet registration completed");
+         if (addressWallet == nullptr) {
+            logger_->error("[SettlementWallet::createTempWalletForAsset] nullptr wallet");
+         }
+      }
+
       {
          FastLock locker{lockWalletsMap_};
          settlementAddressWallets_.emplace(index, addressWallet);
