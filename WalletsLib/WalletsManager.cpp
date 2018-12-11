@@ -28,7 +28,7 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
       connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::txBroadcastError, this, &WalletsManager::onBroadcastZCError, Qt::QueuedConnection);
       connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::newBlock, this, &WalletsManager::onRefresh, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryConnection::newBlock, this, &WalletsManager::onNewBlock, Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::refresh, this, &WalletsManager::onRefresh, Qt::QueuedConnection);
    }
 }
@@ -487,10 +487,22 @@ BTCNumericTypes::balance_type WalletsManager::GetTotalBalance() const
    return totalBalance;
 }
 
-void WalletsManager::onRefresh()
+void WalletsManager::onNewBlock()
+{
+   logger_->debug("[WalletsManager] new Block");
+   UpdateSavedWallets();
+   emit blockchainEvent();
+}
+
+void WalletsManager::onRefresh(std::vector<BinaryData> ids)
 {
    logger_->debug("[WalletsManager] Armory refresh");
    UpdateSavedWallets();
+
+   if (settlementWallet_) {
+      settlementWallet_->RefreshWallets(ids);
+   }
+
    emit blockchainEvent();
 }
 

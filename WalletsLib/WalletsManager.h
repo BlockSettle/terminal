@@ -141,7 +141,8 @@ private slots:
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);
    void onHDLeafDeleted(QString id);
-   void onRefresh();
+   void onNewBlock();
+   void onRefresh(std::vector<BinaryData> ids);
    void onStateChanged(ArmoryConnection::State);
    void onFeeObjDestroyed();
    void onWalletImported(const std::string &walletId);
