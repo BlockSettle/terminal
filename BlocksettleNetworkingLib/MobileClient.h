@@ -57,14 +57,19 @@ public:
       , QObject *parent = nullptr);
    ~MobileClient() override;
 
-   void init(const std::string &serverPubKey
+   void connect(const std::string &serverPubKey
       , const std::string &serverHost, const std::string &serverPort);
    bool start(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds);
+   bool sign(const BinaryData &data, const std::string &email
+      , const QString &title, const QString &description, int expiration = 30);
    void cancel();
+
+   bool isConnected() const;
 
 signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
+   void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
    void failed(const QString &text);
 
 private slots:
@@ -80,29 +85,23 @@ private:
    void processCreateReply(const uint8_t *payload, size_t payloadSize);
    void processResultReply(const uint8_t *payload, size_t payloadSize);
 
+   void processSignatureReply(const AutheID::RP::SignatureReply &);
+
    QString getMobileClientRequestText(RequestType requestType);
    bool isMobileClientNewDeviceNeeded(RequestType requestType);
    int getMobileClientTimeout(RequestType requestType);
 
-   static std::string toBase64(const std::string &);
-   static std::vector<uint8_t> fromBase64(const std::string &);
-
+private:
    std::unique_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    std::shared_ptr<spdlog::logger> logger_;
    std::string requestId_;
    std::string email_;
-   std::string walletId_;
-
-   std::string serverPubKey_;
-   std::string serverHost_;
-   std::string serverPort_;
 
    const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
 
    QTimer *timer_;
 
-   bool isConnecting_{false};
    std::vector<std::string> knownDeviceIds_;
 };
 Q_DECLARE_METATYPE(MobileClient::RequestType)

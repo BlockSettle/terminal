@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <QTimer>
 #include "ConnectionManager.h"
+#include "MobileUtils.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
 
@@ -50,7 +51,7 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
 {
    connectionManager_.reset(new ConnectionManager(logger));
    timer_ = new QTimer(this);
-   connect(timer_, &QTimer::timeout, this, &MobileClient::timeout);
+   QObject::connect(timer_, &QTimer::timeout, this, &MobileClient::timeout);
 }
 
 MobileClient::~MobileClient()
@@ -58,23 +59,29 @@ MobileClient::~MobileClient()
    cancel();
 }
 
-std::string MobileClient::toBase64(const std::string &s)
-{
-   return QByteArray::fromStdString(s).toBase64().toStdString();
-}
-
-std::vector<uint8_t> MobileClient::fromBase64(const std::string &s)
-{
-   const auto &str = QByteArray::fromBase64(QByteArray::fromStdString(s)).toStdString();
-   return std::vector<uint8_t>(str.begin(), str.end());
-}
-
-void MobileClient::init(const std::string &serverPubKey
+void MobileClient::connect(const std::string &serverPubKey
    , const std::string &serverHost, const std::string &serverPort)
 {
-   serverPubKey_ = serverPubKey;
-   serverHost_ = serverHost;
-   serverPort_ = serverPort;
+   connection_ = connectionManager_->CreateSecuredDataConnection();
+   if (!connection_) {
+      logger_->error("connection_ == nullptr");
+      throw std::runtime_error("invalid connection");
+   }
+
+   if (!connection_->SetServerPublicKey(serverPubKey)) {
+      logger_->error("MobileClient::SetServerPublicKey failed");
+      throw std::runtime_error("failed to set connection public key");
+   }
+
+   if (!connection_->openConnection(serverHost, serverPort, this)) {
+      logger_->error("MobileClient::openConnection failed");
+      throw std::runtime_error("failed to open connection to " + serverHost + ":" + serverPort);
+   }
+}
+
+bool MobileClient::isConnected() const
+{
+   return (connection_ && connection_->isActive());
 }
 
 bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type)
@@ -97,32 +104,7 @@ bool MobileClient::start(RequestType requestType, const std::string &email
 {
    cancel();
 
-   connection_ = connectionManager_->CreateSecuredDataConnection();
-
-   if (!connection_) {
-      logger_->error("connection_ == nullptr");
-      emit failed(tr("Internal error"));
-      return false;
-   }
-
-   bool result = connection_->SetServerPublicKey(serverPubKey_);
-   if (!result) {
-      logger_->error("MobileClient::SetServerPublicKey failed");
-      emit failed(tr("Internal error"));
-      return false;
-   }
-
-   result = connection_->openConnection(serverHost_, serverPort_, this);
-   if (!result) {
-      logger_->error("MobileClient::openConnection failed");
-      emit failed(tr("Internal error"));
-      return false;
-   }
-
-   isConnecting_ = true;
-
    email_ = email;
-   walletId_ = walletId;
 
    QString action = getMobileClientRequestText(requestType);
    bool newDevice = isMobileClientNewDeviceNeeded(requestType);
@@ -130,7 +112,7 @@ bool MobileClient::start(RequestType requestType, const std::string &email
 
    CreateRequest request;
    request.set_type(RequestDeviceKey);
-   request.mutable_devicekey()->set_keyid(walletId_);
+   request.mutable_devicekey()->set_keyid(walletId);
    request.set_expiration(timeout);
    request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
 
@@ -169,9 +151,35 @@ bool MobileClient::start(RequestType requestType, const std::string &email
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
 
+bool MobileClient::sign(const BinaryData &data, const std::string &email
+   , const QString &title, const QString &description, int expiration)
+{
+   cancel();
+   email_ = email;
+
+   CreateRequest request;
+   auto signRequest = request.mutable_signature();
+   signRequest->set_type(SignatureDataProtobuf);
+   signRequest->set_invisibledata(data.toBinStr());
+
+   request.set_type(RequestSignature);
+   request.set_expiration(expiration);
+   request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
+
+   request.set_title(title.toStdString());
+   request.set_description(description.toStdString());
+   request.set_apikey(kApiKey);
+   request.set_userid(email);
+
+   QMetaObject::invokeMethod(timer_, [this] {
+      timer_->start(kConnectTimeoutSeconds * 1000);
+   });
+
+   return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
+}
+
 void MobileClient::cancel()
 {
-   isConnecting_ = false;
    timer_->stop();
 
    if (!connection_ || requestId_.empty()) {
@@ -190,7 +198,6 @@ void MobileClient::cancel()
 
 void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize)
 {
-   isConnecting_ = false;
    QMetaObject::invokeMethod(timer_, [this] {
       timer_->stop();
    });
@@ -229,6 +236,11 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    }
 
    requestId_.clear();
+
+   if (reply.has_signature()) {
+      processSignatureReply(reply.signature());
+      return;
+   }
 
    if (reply.encsecurereply().empty() || reply.deviceid().empty()) {
       emit failed(tr("Cancelled"));
@@ -365,4 +377,29 @@ int MobileClient::getMobileClientTimeout(RequestType requestType)
    default:
       return 120;
    }
+}
+
+void MobileClient::processSignatureReply(const SignatureReply &reply)
+{
+   if (reply.signaturedata().empty() || reply.sign().empty()) {
+      emit failed(tr("Missing mandatory signature data in reply"));
+      return;
+   }
+   if (reply.type() != SignatureDataProtobuf) {
+      emit failed(tr("Invalid signature serialization type"));
+      return;
+   }
+   SignatureData sigData;
+   if (!sigData.ParseFromString(reply.signaturedata())) {
+      emit failed(tr("Failed to parse signature data"));
+      return;
+   }
+   if (!reply.userpubkey().empty()) {
+      const auto &pubKey = autheid::publicKeyFromString(reply.userpubkey());
+      if (autheid::verifyData(reply.signaturedata(), reply.sign(), pubKey)) {
+         emit failed(tr("Signature validation failed"));
+         return;
+      }
+   }
+   emit signSuccess(reply.signaturedata(), sigData.invisibledata(), reply.sign());
 }

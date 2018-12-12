@@ -108,7 +108,6 @@ enum CustomerUpdateType
    XBTBalanceUpdateType       = 11;
    ErrorNotificationType      = 12;
    XBTAddressType             = 13;
-   OTPUpdateAddressType       = 14;
    AuthAddressStateType       = 15;
    XBTWalletInfoType          = 16;
    TXBroadcastedType          = 17;

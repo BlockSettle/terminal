@@ -47,7 +47,6 @@ public:
    using wallet_gen_type = std::shared_ptr<bs::Wallet>;     // Generic wallet interface
    using hd_wallet_type = std::shared_ptr<bs::hd::Wallet>;
 
-public:
    WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryConnection> &, bool preferWatchingOnly = true);
    WalletsManager(const std::shared_ptr<spdlog::logger> &);
@@ -163,12 +162,20 @@ private:
    void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
 
    void updateTxDirCache(const std::string &txKey, bs::Transaction::Direction
-      , const std::vector<bs::Address> &inAddrs, std::function<void(bs::Transaction::Direction, std::vector<bs::Address>)>);
-   void updateTxDescCache(const std::string &txKey, const QString &, int, std::function<void(QString, int)>);
+                         , const std::vector<bs::Address> &inAddrs
+                         , std::function<void(bs::Transaction::Direction
+                         , std::vector<bs::Address>)>);
+   void updateTxDescCache(const std::string &txKey, const QString &, int
+                          , std::function<void(QString, int)>);
 
    void invokeFeeCallbacks(unsigned int blocks, float fee);
+   void processZCSendTXData(Tx& inTX, const ClientClasses::LedgerEntry inLE);
+   void updateZCSendTXBalances(Tx& inTX, const ClientClasses::LedgerEntry inLE);
+   void processFinalZCBalances(const BTCNumericTypes::balance_type& delta
+                               , const BTCNumericTypes::balance_type& inFees
+                               , const BTCNumericTypes::balance_type& inChgAmt
+                               , wallet_gen_type inWallet);
 
-private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ArmoryConnection>      armory_;
@@ -205,6 +212,9 @@ private:
    mutable std::map<unsigned int, float>     feePerByte_;
    mutable std::map<unsigned int, QDateTime> lastFeePerByte_;
    std::map<QObject *, std::map<unsigned int, std::function<void(float)>>> feeCallbacks_;
+
+   // Data captured from Armory callbacks.
+   std::map<BinaryData, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
 };
 
 #endif // __WALLETS_MANAGER_H__
