@@ -41,7 +41,7 @@ void CommandBase::parse(QJsonObject &)
 }
 
 
-void CommandBase::set_error(const QString &err)
+void CommandBase::setError(const QString &err)
 {
     this->err_ = err;
 }
@@ -50,7 +50,7 @@ void CommandBase::set_error(const QString &err)
 QString CommandBase::request()
 {
     QJsonObject ret_obj;
-    ret_obj[TypeKey] = QJsonValue(cmd_name());
+    ret_obj[TypeKey] = QJsonValue(cmdName());
     requestPri(ret_obj);
     return QJsonValue(ret_obj).toString();
 }
@@ -59,7 +59,7 @@ QString CommandBase::request()
 QString CommandBase::response()
 {
     QJsonObject ret_obj;
-    ret_obj[TypeKey] = QJsonValue(cmd_name());
+    ret_obj[TypeKey] = QJsonValue(cmdName());
     responsePri(ret_obj);
     return QJsonValue(ret_obj).toString();
 }
@@ -86,12 +86,12 @@ void CommandLogin::parse(QJsonObject &obj)
 
 void CommandPrivate::requestPri(QJsonObject &obj)
 {
-    obj[RoomKey] = QJsonValue(room);
-    obj[MessageKey] = QJsonValue(message);
+    obj[RoomKey] = QJsonValue(room_);
+    obj[MessageKey] = QJsonValue(message_);
     obj[FromKey] = QJsonValue(fromName_);
     obj[FromIdKey] = QJsonValue(static_cast<int64_t>(fromId_));
     QJsonArray ids;
-    for(const auto &v: to_vi)
+    for(const auto &v: toVi_)
         ids.push_back(QJsonValue(static_cast<int64_t>(v)));
     obj[ToIdKey] = ids;
 }
@@ -99,8 +99,8 @@ void CommandPrivate::requestPri(QJsonObject &obj)
 
 void CommandPrivate::responsePri(QJsonObject &obj)
 {
-    obj[RoomKey] = QJsonValue(room);
-    obj[MessageKey] = QJsonValue(message);
+    obj[RoomKey] = QJsonValue(room_);
+    obj[MessageKey] = QJsonValue(message_);
     obj[FromKey] = QJsonValue(fromName_);
     obj[FromIdKey] = QJsonValue(static_cast<int64_t>(fromId_));
 }
@@ -108,28 +108,28 @@ void CommandPrivate::responsePri(QJsonObject &obj)
 
 void CommandPrivate::parse(QJsonObject &obj)
 {
-    message = obj[MessageKey].toString();
-    room = obj[RoomKey].toString();
+    message_ = obj[MessageKey].toString();
+    room_ = obj[RoomKey].toString();
 }
 
 
-bool CommandPrivate::has_id(int id) const
+bool CommandPrivate::hasId(int id) const
 {
-    for(const auto &i: to_vi)
+    for(const auto &i: toVi_)
         if(i == id) return true;
     return false;
 }
 
 
-void CommandPrivate::add_id(int id)
+void CommandPrivate::addId(int id)
 {
-    if(!has_id(id)) to_vi.push_back(id);
+    if(!hasId(id)) toVi_.push_back(id);
 }
 
 
-void CommandPrivate::clear_id()
+void CommandPrivate::clearId()
 {
-    to_vi.clear();
+    toVi_.clear();
 }
 
 
@@ -202,26 +202,26 @@ void CommandContacts::parse(QJsonObject &obj)
         QJsonArray cont_js = obj[ContactsKey].toArray();
         foreach (auto arr, cont_js) {
             int id = static_cast<int>(arr[0].toInt());
-            add_contact(id, arr[1].toString());
+            addContact(id, arr[1].toString());
         }
     }
 }
 
 
-void CommandContacts::add_contact(int id, const QString &name)
+void CommandContacts::addContact(int id, const QString &name)
 {
     contacts[id] = name;
 }
 
 
-Command Command::error_cmd(int from_id, const QString &error)
+Command Command::errorCmd(int from_id, const QString &error)
 {
     Command ret(new CommandError(from_id, QString(), error));
     return ret;
 }
 
 
-bool Command::self_test()
+bool Command::selfTest()
 {
     int typeindx = 0;
     Command cmd_from_req, cmd_from_resp;
@@ -273,7 +273,7 @@ bool Command::self_test()
         }
         ret = cmd_from_req.valid();
         if(!ret) return false;
-        cmd_from_req.get<CommandBase>()->set_from(from_id, from_name);
+        cmd_from_req.get<CommandBase>()->setFrom(from_id, from_name);
         ++typeindx;
     }
     return ret;
@@ -336,7 +336,7 @@ Command::Command(int from_id, const QString &from_name, const QString &json)
             cmd = std::shared_ptr<CommandBase>(new CommandError(from_id, from_name, QStringLiteral("Type not compatible")));
             break;
         }
-        cmd->set_from(from_id, from_name);
+        cmd->setFrom(from_id, from_name);
         cmd->parse(obj);
     } catch (const std::exception &e) {
         cmd = std::shared_ptr<CommandBase>(new CommandError(from_id, from_name, QString::fromUtf8(e.what())));
@@ -412,13 +412,13 @@ void CommandRooms::parse(QJsonObject &obj)
         foreach(auto room_js, rooms_js) {
             QJsonObject room_obj = room_js.toObject();
             int id = static_cast<int>(room_obj[IdKey].toInt());
-            add_room(id, room_obj[TypeKey].toString(), room_obj[NameKey].toString());
+            addRoom(id, room_obj[TypeKey].toString(), room_obj[NameKey].toString());
         }
     }
 }
 
 
-void CommandRooms::add_room(int id, const QString &type, const QString &name)
+void CommandRooms::addRoom(int id, const QString &type, const QString &name)
 {
     rooms[id] = {type, name};
 }
@@ -426,29 +426,29 @@ void CommandRooms::add_room(int id, const QString &type, const QString &name)
 
 void CommandCreateRoom::requestPri(QJsonObject &obj)
 {
-    obj[NameKey] = QJsonValue(room);
+    obj[NameKey] = QJsonValue(room_);
 }
 
 
 void CommandCreateRoom::responsePri(QJsonObject &obj)
 {
-    obj[IdKey] = QJsonValue(static_cast<int64_t>(id_room));
-    obj[NameKey] = QJsonValue(room);
+    obj[IdKey] = QJsonValue(static_cast<int64_t>(idRoom_));
+    obj[NameKey] = QJsonValue(room_);
 }
 
 
 void CommandCreateRoom::parse(QJsonObject &obj)
 {
-    room = obj[NameKey].toString();
+    room_ = obj[NameKey].toString();
 
     if (obj.contains(IdKey))
-        id_room = static_cast<int>(obj[IdKey].toInt());
+        idRoom_ = static_cast<int>(obj[IdKey].toInt());
 }
 
 
 void CommandRemoveRoom::requestPri(QJsonObject &obj)
 {
-    obj[IdKey] = QJsonValue(static_cast<int64_t>(id_room));
+    obj[IdKey] = QJsonValue(static_cast<int64_t>(idRoom_));
 }
 
 
@@ -460,13 +460,13 @@ void CommandRemoveRoom::responsePri(QJsonObject &obj)
 
 void CommandRemoveRoom::parse(QJsonObject &obj)
 {
-    id_room = static_cast<int>(obj[IdKey].toInt());
+    idRoom_ = static_cast<int>(obj[IdKey].toInt());
 }
 
 
 void CommandJoinRoom::requestPri(QJsonObject &obj)
 {
-    obj[IdKey] = QJsonValue(static_cast<int64_t>(id_room));
+    obj[IdKey] = QJsonValue(static_cast<int64_t>(idRoom_));
 }
 
 
@@ -478,13 +478,13 @@ void CommandJoinRoom::responsePri(QJsonObject &obj)
 
 void CommandJoinRoom::parse(QJsonObject &obj)
 {
-    id_room = static_cast<int>(obj[IdKey].toInt());
+    idRoom_ = static_cast<int>(obj[IdKey].toInt());
 }
 
 
 void CommandLeaveRoom::requestPri(QJsonObject &obj)
 {
-    obj[IdKey] = QJsonValue(static_cast<int64_t>(id_room));
+    obj[IdKey] = QJsonValue(static_cast<int64_t>(idRoom_));
 }
 
 
@@ -496,7 +496,7 @@ void CommandLeaveRoom::responsePri(QJsonObject &obj)
 
 void CommandLeaveRoom::parse(QJsonObject &obj)
 {
-    id_room = static_cast<int>(obj[IdKey].toInt());
+    idRoom_ = static_cast<int>(obj[IdKey].toInt());
 }
 
 
@@ -529,13 +529,13 @@ void CommandClientStatus::parse(QJsonObject &obj)
         QJsonArray stat_arr = obj[StatusKey].toArray();
         foreach(auto stat_it, stat_arr) {
             QJsonArray stat_it_arr = stat_it.toArray();
-            add_status(stat_it_arr[0].toString(), stat_it_arr[1].toString());
+            addStatus(stat_it_arr[0].toString(), stat_it_arr[1].toString());
         }
     }
 }
 
 
-void CommandClientStatus::add_status(const QString &type, const QString &value)
+void CommandClientStatus::addStatus(const QString &type, const QString &value)
 {
     statuslist.emplace_back(type, value);
 }
