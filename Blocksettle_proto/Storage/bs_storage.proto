@@ -2,18 +2,6 @@ syntax = "proto2";
 
 package Blocksettle.Storage;
 
-message OTPFile
-{
-   required string   importDateString  = 1;
-   required string   otpId             = 2;
-   required int64    usedKeysCount     = 3;
-   required bytes    nextPrivateKey    = 4;
-   required bytes    chainCode         = 5;
-   optional bool     encrypted         = 6;
-   optional bytes    hash              = 7;
-   optional uint32   encryptionType    = 8;
-   optional string   encryptionKey     = 9;
-}
 
 message WalletBackupFile
 {
@@ -49,7 +37,6 @@ message UTXOFile
 enum ResponseEntryType
 {
    CCTokenEntryType = 1;
-   OTPReportEntryType = 2;
    AuthAddressVerificationTransactionType = 3;
    AuthRevokeTransactionType = 4;
    CCDistributionTransactionType = 5;
@@ -76,12 +63,6 @@ message CCTokenEntry {
    required string   ccProduct = 3;
    required uint32   amount = 4;
    required string   request_id = 5;
-}
-
-message OTPReportEntry {
-   required string user_id = 1;
-   required string otp_id = 2;
-   required string request_id = 3;
 }
 
 message AuthAddressSubmitMixIn {
