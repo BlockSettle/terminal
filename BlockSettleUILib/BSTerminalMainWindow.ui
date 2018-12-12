@@ -190,7 +190,7 @@
      <x>0</x>
      <y>0</y>
      <width>997</width>
-     <height>19</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -207,7 +207,6 @@
     </property>
     <addaction name="actionAccount_Information"/>
     <addaction name="actionAuthentication_Addresses"/>
-    <addaction name="action_One_time_Password"/>
     <addaction name="actionEnter_Color_Coin_token"/>
    </widget>
    <widget class="QMenu" name="menu_Help">

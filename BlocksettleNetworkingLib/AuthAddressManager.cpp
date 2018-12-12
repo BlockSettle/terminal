@@ -5,13 +5,13 @@
 #include "AddressVerificator.h"
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
+#include "AuthSignManager.h"
 #include "CelerClient.h"
 #include "CheckRecipSigner.h"
 #include "ClientClasses.h"
 #include "ConnectionManager.h"
 #include "FastLock.h"
 #include "HDWallet.h"
-#include "OTPManager.h"
 #include "RequestReplyCommand.h"
 #include "SignContainer.h"
 #include "WalletsManager.h"
@@ -27,26 +27,23 @@ AuthAddressManager::AuthAddressManager(const std::shared_ptr<spdlog::logger> &lo
 {}
 
 void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSettings
-   , const std::shared_ptr<WalletsManager>& walletsManager
-   , const std::shared_ptr<OTPManager>& otpManager)
+   , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<AuthSignManager> &authSignManager
+   , const std::shared_ptr<SignContainer> &container)
 {
    settings_ = appSettings;
    walletsManager_ = walletsManager;
-   otpManager_ = otpManager;
+   authSignManager_ = authSignManager;
+   signingContainer_ = container;
 
    connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &AuthAddressManager::VerifyWalletAddresses);
    connect(walletsManager_.get(), &WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
-   connect(otpManager_.get(), &OTPManager::OTPImported, this, &AuthAddressManager::VerifyWalletAddresses);
 
-   SetAuthWallet();
-}
-
-void AuthAddressManager::SetSigningContainer(const std::shared_ptr<SignContainer> &container)
-{
-   signingContainer_ = container;
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &AuthAddressManager::onTXSigned);
    connect(signingContainer_.get(), &SignContainer::Error, this, &AuthAddressManager::onWalletFailed);
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &AuthAddressManager::onWalletCreated);
+
+   SetAuthWallet();
 }
 
 void AuthAddressManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr
@@ -159,16 +156,6 @@ bool AuthAddressManager::HasAuthAddr() const
    return (HaveAuthWallet() && (authWallet_->GetUsedAddressCount() > 0));
 }
 
-bool AuthAddressManager::HaveOTP() const
-{
-   return otpManager_->CanSign();
-}
-
-bool AuthAddressManager::needsOTPpassword() const
-{
-   return (otpManager_ && otpManager_->IsEncrypted());
-}
-
 bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
 {
    const auto &state = GetState(address);
@@ -271,30 +258,28 @@ bool AuthAddressManager::Verify(const bs::Address &address)
 
    const auto &cbInputs = [this, address](std::vector<UTXO> inputs) {
       std::set<BinaryData> txHashSet;
-      std::map<BinaryData, UTXO> utxoMap;
+      std::vector<UTXO> utxos;
+      const auto &initialTxHash = GetInitialTxHash(address);
       for (const auto &utxo : inputs) {
-         if (utxo.getTxHash() == GetInitialTxHash(address)) {
+         if (utxo.getTxHash() == initialTxHash) {
             txHashSet.insert(utxo.getTxHash());
-            utxoMap[utxo.getTxHash()] = utxo;
+            utxos.emplace_back(std::move(utxo));
          }
       }
-      const auto &cbTXs = [this, address, utxoMap](std::vector<Tx> txs) {
+      const auto &cbTXs = [this, address, utxos](std::vector<Tx> txs) {
          for (const auto &tx : txs) {
             const bs::TxChecker txChecker(tx);
-            const auto &itUtxo = utxoMap.find(tx.getThisHash());
-            if (itUtxo == utxoMap.end()) {
-               continue;
-            }
-            const auto &cbSpender = [this, address, itUtxo](bool present) {
-               if (!present) {
-                  return;
+            for (const auto &utxo : utxos) {
+               if (txChecker.receiverIndex(address) == utxo.getTxOutIndex()) {
+                     const auto &cbSpender = [this, address, utxo](bool present) {
+                     if (!present) {
+                        return;
+                     }
+                     SendVerifyTransaction(utxo, addressVerificator_->GetAuthAmount()
+                        , address, addressVerificator_->GetAuthAmount());
+                  };
+                  txChecker.hasSpender(GetBSFundingAddress(address), armory_, cbSpender);
                }
-               const auto &verificationInput = itUtxo->second;
-               SendVerifyTransaction(verificationInput, addressVerificator_->GetAuthAmount()
-                  , address, addressVerificator_->GetAuthAmount());
-            };
-            if (txChecker.receiverIndex(address) == itUtxo->second.getTxOutIndex()) {
-               txChecker.hasSpender(GetBSFundingAddress(address), armory_, cbSpender);
             }
          }
       };
@@ -471,7 +456,7 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
    return SubmitRequestToPB("submit_address", request.SerializeAsString());
 }
 
-bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address, const SecureBinaryData &otpPassword)
+bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address)
 {
    ConfirmAuthSubmitRequest request;
 
@@ -481,27 +466,25 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    request.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
    request.set_scripttype(mapToScriptType(address.getType()));
-   const auto &data = request.SerializeAsString();
+   request.set_userid(celerClient_->userId());
 
-   RequestPacket  packet;
+   const auto cbSigned = [this](const std::string &data, const BinaryData &, const std::string &signature) {
+      RequestPacket  packet;
+      packet.set_datasignature(signature);
+      packet.set_requesttype(ConfirmAuthAddressSubmitType);
+      packet.set_requestdata(data);
 
-   const auto cbSigned = [&packet](const SecureBinaryData &sig, const std::string &otpId, unsigned int keyIndex) {
-      packet.set_datasignature(sig.toBinStr());
-      packet.set_otpid(otpId);
-      packet.set_keyindex(keyIndex);
+      logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] confirmed auth address submission");
+      SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
    };
 
-   if (!otpManager_->Sign(data, otpPassword, cbSigned)) {
-      logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] failed to OTP sign data");
-      emit OtpSignFailed();
-      return false;
-   }
+   const auto cbSignFailed = [this](const QString &text) {
+      logger_->error("[AuthAddressManager::ConfirmSubmitForVerification] failed to sign data: {}", text.toStdString());
+      emit SignFailed(text);
+   };
 
-   packet.set_requesttype(ConfirmAuthAddressSubmitType);
-   packet.set_requestdata(data);
-
-   logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] confirmed auth address submission");
-   return SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
+   return authSignManager_->Sign(request.SerializeAsString(), tr("Authentication Address")
+      , tr("Submit auth address for verification"), cbSigned, cbSignFailed);
 }
 
 bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
