@@ -734,18 +734,19 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
 
 void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
-   auto result = new std::vector<UTXO>;
-   const auto &cbInternal = [this, cb, &result]
+   auto result = std::make_shared<std::vector<UTXO>>();
+   const auto &cbInternal = [this, cb, result]
                             (ReturnMessage<std::vector<UTXO>> utxos)->void {
       try {
-         *result = utxos.get();
+         const auto &inUTXOs = utxos.get();
+         result->insert(result->end(), inUTXOs.begin(), inUTXOs.end());
       }
       catch (const std::exception &e) {
          logger_->error("[AddressVerificator::GetVerificationInputs] Return " \
             "data error (getSpendableZCList UTXOs) - {}", e.what());
       }
 
-      const auto &cbZC = [this, cb, &result]
+      const auto &cbZC = [this, cb, result]
                          (ReturnMessage<std::vector<UTXO>> zcs)->void {
          try {
             const auto &inZCUTXOs = zcs.get();
@@ -757,11 +758,10 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
          }
 
          cb(*result);
-         delete result;
       };
       internalWallet_->getSpendableZCList(cbZC);
    };
-   internalWallet_->getSpendableZCList(cbInternal);
+   internalWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbInternal);
 }
 
 void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> cb) const

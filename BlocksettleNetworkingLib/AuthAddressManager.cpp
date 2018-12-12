@@ -258,30 +258,28 @@ bool AuthAddressManager::Verify(const bs::Address &address)
 
    const auto &cbInputs = [this, address](std::vector<UTXO> inputs) {
       std::set<BinaryData> txHashSet;
-      std::map<BinaryData, UTXO> utxoMap;
+      std::vector<UTXO> utxos;
+      const auto &initialTxHash = GetInitialTxHash(address);
       for (const auto &utxo : inputs) {
-         if (utxo.getTxHash() == GetInitialTxHash(address)) {
+         if (utxo.getTxHash() == initialTxHash) {
             txHashSet.insert(utxo.getTxHash());
-            utxoMap[utxo.getTxHash()] = utxo;
+            utxos.emplace_back(std::move(utxo));
          }
       }
-      const auto &cbTXs = [this, address, utxoMap](std::vector<Tx> txs) {
+      const auto &cbTXs = [this, address, utxos](std::vector<Tx> txs) {
          for (const auto &tx : txs) {
             const bs::TxChecker txChecker(tx);
-            const auto &itUtxo = utxoMap.find(tx.getThisHash());
-            if (itUtxo == utxoMap.end()) {
-               continue;
-            }
-            const auto &cbSpender = [this, address, itUtxo](bool present) {
-               if (!present) {
-                  return;
+            for (const auto &utxo : utxos) {
+               if (txChecker.receiverIndex(address) == utxo.getTxOutIndex()) {
+                     const auto &cbSpender = [this, address, utxo](bool present) {
+                     if (!present) {
+                        return;
+                     }
+                     SendVerifyTransaction(utxo, addressVerificator_->GetAuthAmount()
+                        , address, addressVerificator_->GetAuthAmount());
+                  };
+                  txChecker.hasSpender(GetBSFundingAddress(address), armory_, cbSpender);
                }
-               const auto &verificationInput = itUtxo->second;
-               SendVerifyTransaction(verificationInput, addressVerificator_->GetAuthAmount()
-                  , address, addressVerificator_->GetAuthAmount());
-            };
-            if (txChecker.receiverIndex(address) == itUtxo->second.getTxOutIndex()) {
-               txChecker.hasSpender(GetBSFundingAddress(address), armory_, cbSpender);
             }
          }
       };
