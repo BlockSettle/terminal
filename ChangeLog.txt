@@ -1,3 +1,9 @@
+0.12.0
+Bug fixes:
+   - auth address confirm tx
+Improvements
+   - OTP removed from the system
+
 0.11.3
 Bug Fixes:
    - fixed support for mainnet and testnet wallets
