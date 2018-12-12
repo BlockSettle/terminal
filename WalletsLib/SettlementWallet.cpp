@@ -197,7 +197,7 @@ void bs::SettlementWallet::CompleteMonitorCreations(int addressIndex
 
 bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset)
 {
-   auto index = asset->getIndex();
+   auto index = asset->id();
    const auto walletId = BtcUtils::scrAddrToBase58(asset->prefixedHash()).toBinStr();
 
    std::shared_ptr<AsyncClient::BtcWallet> addressWallet;

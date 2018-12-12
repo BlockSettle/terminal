@@ -82,7 +82,7 @@ namespace bs {
       size_t getInputSize(void) const override { return getAddress().getSize() + 2 + 73 * 1/*m*/ + 40; }
 
       const BinaryData& getID(void) const override { return ae_->getID(); }
-      int getIndex() const { return ae_->getIndex(); }
+      int getIndex() const { return ae_->id(); }
 
    protected:
       std::shared_ptr<SettlementAssetEntry>  ae_;
