@@ -1152,36 +1152,39 @@ bool HeadlessContainerListener::onGetHDWalletInfo(const std::string &clientId, h
    headless::GetHDWalletInfoRequest request;
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[HeadlessContainerListener] failed to parse GetHDWalletInfoRequest");
-      GetHDWalletInfoResponse(clientId, packet.id(), {}, {}, {}, "failed to parse request");
+      GetHDWalletInfoResponse(clientId, packet.id(), {}, nullptr, "failed to parse request");
       return false;
    }
    const auto &wallet = walletsMgr_->GetHDWalletById(request.rootwalletid());
    if (!wallet) {
       logger_->error("[HeadlessContainerListener] failed to find wallet for id {}", request.rootwalletid());
-      GetHDWalletInfoResponse(clientId, packet.id(), {}, {}, {}, "failed to find wallet");
+      GetHDWalletInfoResponse(clientId, packet.id(), request.rootwalletid(), nullptr, "failed to find wallet");
       return false;
    }
-   GetHDWalletInfoResponse(clientId, packet.id(), wallet->encryptionTypes(), wallet->encryptionKeys()
-      , wallet->encryptionRank());
+   GetHDWalletInfoResponse(clientId, packet.id(), request.rootwalletid(), wallet);
    return true;
 }
 
 void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clientId, unsigned int id
-   , const std::vector<bs::wallet::EncryptionType> &encTypes, const std::vector<SecureBinaryData> &encKeys
-   , bs::wallet::KeyRank keyRank, const std::string &error)
+   , const std::string &walletId, const std::shared_ptr<bs::hd::Wallet> &wallet, const std::string &error)
 {
    headless::GetHDWalletInfoResponse response;
    if (!error.empty()) {
       response.set_error(error);
    }
-   for (const auto &encType : encTypes) {
-      response.add_enctypes(static_cast<uint32_t>(encType));
+   if (wallet) {
+      for (const auto &encType : wallet->encryptionTypes()) {
+         response.add_enctypes(static_cast<uint32_t>(encType));
+      }
+      for (const auto &encKey : wallet->encryptionKeys()) {
+         response.add_enckeys(encKey.toBinStr());
+      }
+      response.set_rankm(wallet->encryptionRank().first);
+      response.set_rankn(wallet->encryptionRank().second);
    }
-   for (const auto &encKey : encKeys) {
-      response.add_enckeys(encKey.toBinStr());
+   if (!walletId.empty()) {
+      response.set_rootwalletid(walletId);
    }
-   response.set_rankm(keyRank.first);
-   response.set_rankn(keyRank.second);
 
    headless::RequestPacket packet;
    packet.set_id(id);

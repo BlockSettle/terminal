@@ -20,6 +20,7 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
    , logger_(logger)
    , armory_(armory)
    , preferWatchingOnly_(preferWatchinOnly)
+   , offlineTxDir_(appSettings->get<QString>(ApplicationSettings::signerOfflineDir))
 {
    btc_ecc_start();
 

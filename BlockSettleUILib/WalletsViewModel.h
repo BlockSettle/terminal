@@ -117,6 +117,7 @@ private slots:
    void onNewWalletAdded(const std::string &walletId);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
+   void onHDWalletError(unsigned int id, std::string err);
    void onMissingWallets(const std::vector<std::string> &);
    void onSignerAuthenticated();
 

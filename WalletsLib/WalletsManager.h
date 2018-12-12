@@ -114,6 +114,8 @@ public:
 
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
 
+   QString OfflineTxDir() const { return offlineTxDir_; }
+
 signals:
    void walletChanged();
    void walletsReady();
@@ -214,6 +216,8 @@ private:
 
    // Data captured from Armory callbacks.
    std::map<BinaryData, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
+
+   const QString  offlineTxDir_;
 };
 
 #endif // __WALLETS_MANAGER_H__
