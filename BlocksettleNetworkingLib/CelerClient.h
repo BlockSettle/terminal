@@ -68,11 +68,6 @@ public:
 
    bool tradingAllowed() const;
 
-   std::string getUserOtpId() const;
-
-   uint64_t    getUserOtpUsedCount() const;
-   bool        setUserOtpUsedCount(uint64_t count);
-
    std::unordered_set<std::string> GetSubmittedAuthAddressSet() const;
    bool SetSubmittedAuthAddressSet(const std::unordered_set<std::string>& addressSet);
 
@@ -145,9 +140,6 @@ private:
 
    CelerProperty        submittedCCAddressListProperty_;
    std::unordered_set<std::string> submittedCCAddressSet_;
-
-   CelerProperty otpId_;
-   CelerProperty otpIndex_;
 
    int32_t     heartbeatInterval_;
 

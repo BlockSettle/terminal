@@ -23,12 +23,6 @@ CelerLoadUserInfoSequence::CelerLoadUserInfoSequence(const std::shared_ptr<spdlo
          , { false, nullptr, &CelerLoadUserInfoSequence::sendGetSubmittedAuthAddressListRequest}
          , { true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr}
 
-         , { false, nullptr, &CelerLoadUserInfoSequence::sendGetOTPIdRequest}
-         , { true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr}
-
-         , { false, nullptr, &CelerLoadUserInfoSequence::sendGetOTPIndexRequest}
-         , { true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr}
-
          , { false, nullptr, &CelerLoadUserInfoSequence::sendGetSubmittedCCAddressListRequest }
          , { true, &CelerLoadUserInfoSequence::processGetPropertyResponse, nullptr }
 
@@ -61,16 +55,6 @@ CelerMessage CelerLoadUserInfoSequence::sendGetUserIdRequest()
 CelerMessage CelerLoadUserInfoSequence::sendGetSubmittedAuthAddressListRequest()
 {
    return getPropertyRequest(CelerUserProperties::SubmittedBtcAuthAddressListPropertyName);
-}
-
-CelerMessage CelerLoadUserInfoSequence::sendGetOTPIdRequest()
-{
-   return getPropertyRequest(CelerUserProperties::OtpIdPropertyName);
-}
-
-CelerMessage CelerLoadUserInfoSequence::sendGetOTPIndexRequest()
-{
-   return getPropertyRequest(CelerUserProperties::OtpUsedKeyIndexPropertyName);
 }
 
 CelerMessage CelerLoadUserInfoSequence::sendGetSubmittedCCAddressListRequest()
