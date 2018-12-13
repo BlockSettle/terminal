@@ -1164,7 +1164,9 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 
      // Emit signals for the wallet and TX view models.
    emit blockchainEvent();
-   emit newTransactions(ourZCentries);
+   if (!ourZCentries.empty()) {
+      emit newTransactions(ourZCentries);
+   }
 }
 
 void WalletsManager::onBroadcastZCError(const QString &txHash, const QString &errMsg)
