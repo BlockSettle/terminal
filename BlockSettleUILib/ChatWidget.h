@@ -11,6 +11,11 @@ namespace Ui {
 }
 
 
+class ChatClient;
+class ChatServer;
+class ConnectionManager;
+
+
 class ChatWidget : public QWidget
 {
     Q_OBJECT
@@ -20,7 +25,9 @@ private:
 
     QScopedPointer<Ui::ChatWidget> ui;
 
-    QStringListModel *model;
+    std::shared_ptr<ChatClient> client_;
+
+    std::shared_ptr<ChatServer> server_;
 
 
 public:
@@ -28,13 +35,18 @@ public:
     explicit ChatWidget(QWidget *parent = nullptr);
     ~ChatWidget();
 
-    void init();
+    void init(const std::shared_ptr<ConnectionManager>& connectionManager);
 
     void setUserName(const QString& username);
 
     void setUserId(const QString& userId);
 
-    void addLine(const QString &txt);
+
+public slots:
+
+    void addMessage(const QString &txt);
+    void addUser(const QString &txt);
+    void addGroup(const QString &txt);
 
 };
 

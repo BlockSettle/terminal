@@ -1,13 +1,17 @@
 #include "ChatWidget.h"
 #include "ui_ChatWidget.h"
 
+#include "ChatClient.h"
+#include "ChatServer.h"
+
+#include <thread>
+
 
 ChatWidget::ChatWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ChatWidget)
 {
     ui->setupUi(this);
-    //ui->messages->setModel(new QStringListModel(this));
 }
 
 
@@ -16,15 +20,21 @@ ChatWidget::~ChatWidget()
 }
 
 
-void ChatWidget::init()
+void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager)
 {
-    // Put initialization here ...
+    server_ = std::make_shared<ChatServer>(connectionManager);
+
+    std::thread([&]{
+        server_->startServer("127.0.0.1", "20001");
+    }).detach();
+
+    client_ = std::make_shared<ChatClient>(connectionManager);
 }
 
 
 void ChatWidget::setUserName(const QString& username)
 {
-    // Connect client ...
+    client_->loginToServer("127.0.0.1", "20001", username.toStdString());
 }
 
 
@@ -34,9 +44,19 @@ void ChatWidget::setUserId(const QString& userId)
 }
 
 
-void ChatWidget::addLine(const QString &txt)
+void ChatWidget::addMessage(const QString &txt)
 {
-    int index = model->rowCount();
-    model->insertRow(index);
-    model->setData(model->index(index), txt);
+
+}
+
+
+void ChatWidget::addUser(const QString &txt)
+{
+
+}
+
+
+void ChatWidget::addGroup(const QString &txt)
+{
+
 }

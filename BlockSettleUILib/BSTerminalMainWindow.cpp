@@ -455,6 +455,9 @@ void BSTerminalMainWindow::InitConnections()
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
+
+   std::cout << "Init Chat Widget!" << std::endl;
+   InitChatView();
 }
 
 void BSTerminalMainWindow::acceptMDAgreement(const std::string &host, const std::string &port)
@@ -521,7 +524,7 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitChatView()
 {
-    ui->widgetChat->init();
+    ui->widgetChat->init(connectionManager_);
 }
 
 // Initialize widgets related to transactions.
