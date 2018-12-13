@@ -16,6 +16,24 @@ ChatWidget::~ChatWidget()
 }
 
 
+void ChatWidget::init()
+{
+    // Put initialization here ...
+}
+
+
+void ChatWidget::setUserName(const QString& username)
+{
+    // Connect client ...
+}
+
+
+void ChatWidget::setUserId(const QString& userId)
+{
+    // Connect client ...
+}
+
+
 void ChatWidget::addLine(const QString &txt)
 {
     int index = model->rowCount();

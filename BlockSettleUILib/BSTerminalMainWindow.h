@@ -71,6 +71,7 @@ private:
 
    void InitPortfolioView();
    void InitWalletsView();
+   void InitChatView();
 
    void InitOTP();
 

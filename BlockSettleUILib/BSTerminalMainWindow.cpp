@@ -50,6 +50,7 @@
 #include "TabWithShortcut.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
+#include "ChatWidget.h"
 #include "ZmqSecuredDataConnection.h"
 
 #include <spdlog/spdlog.h>
@@ -518,6 +519,11 @@ void BSTerminalMainWindow::InitWalletsView()
       , applicationSettings_, assetManager_, authManager_, armory_);
 }
 
+void BSTerminalMainWindow::InitChatView()
+{
+    ui->widgetChat->init();
+}
+
 // Initialize widgets related to transactions.
 void BSTerminalMainWindow::InitTransactionsView()
 {
@@ -840,7 +846,9 @@ void BSTerminalMainWindow::onLogin()
       if (!celerConnection_->LoginToServer(host, port, username, password)) {
          logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
       } else {
-         ui->widgetWallets->setUsername(QString::fromStdString(username));
+         auto userName = QString::fromStdString(username);
+         ui->widgetWallets->setUsername(userName);
+         ui->widgetChat->setUserName(userName);
          action_logout_->setVisible(false);
          action_login_->setEnabled(false);
 
@@ -876,6 +884,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
       signContainer_->SetUserId(userId);
    }
    walletsManager_->SetUserId(userId);
+   ui->widgetChat->setUserId(QString::fromStdString(celerConnection_->userId()));
 
    setLoginButtonText(QString::fromStdString(celerConnection_->userName()));
 
@@ -900,6 +909,7 @@ void BSTerminalMainWindow::onUserLoggedOut()
       signContainer_->SetUserId(BinaryData{});
    }
    walletsManager_->SetUserId(BinaryData{});
+   ui->widgetChat->setUserId(QString());
    authManager_->OnDisconnectedFromCeler();
    setLoginButtonText(tr("user.name"));
 }

@@ -28,6 +28,12 @@ public:
     explicit ChatWidget(QWidget *parent = nullptr);
     ~ChatWidget();
 
+    void init();
+
+    void setUserName(const QString& username);
+
+    void setUserId(const QString& userId);
+
     void addLine(const QString &txt);
 
 };
