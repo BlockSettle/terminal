@@ -9,8 +9,6 @@ std::string CelerUserProperties::GetCelerPropertyDescription(const std::string& 
       { UserIdPropertyName, "unique user ID"},
       { SubmittedBtcAuthAddressListPropertyName, "submitted auth address list"},
       { SubmittedCCAddressListPropertyName, "submitted CC address list"},
-      { OtpIdPropertyName, "OTP id"},
-      { OtpUsedKeyIndexPropertyName, "last used OTP index"},
       { MarketSessionPropertyName, "market session (system property)"},
       { SocketAccessPropertyName, "socket access (system property)"},
       { BitcoinParticipantPropertyName, "general trading"},

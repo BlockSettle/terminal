@@ -8,8 +8,6 @@ namespace CelerUserProperties {
 static const std::string UserIdPropertyName = "USER_ID";
 static const std::string SubmittedBtcAuthAddressListPropertyName = "SUBMITTED_BTC_AUTH_ADDRESS";
 static const std::string SubmittedCCAddressListPropertyName = "SUBMITTED_CC_ADDRESS";
-static const std::string OtpIdPropertyName = "OTP_ID";
-static const std::string OtpUsedKeyIndexPropertyName = "OTP_INDEX";
 static const std::string MarketSessionPropertyName = "marketmerchant.session";
 static const std::string SocketAccessPropertyName = "SOCKET_ACCESS";
 static const std::string BitcoinParticipantPropertyName = "bitcoin.participant";
