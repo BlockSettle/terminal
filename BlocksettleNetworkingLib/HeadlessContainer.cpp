@@ -313,6 +313,7 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
       emit HDWalletInfo(id, encTypes, encKeys, keyRank);
    }
    else {
+      missingWallets_.insert(response.rootwalletid());
       emit Error(id, response.error());
    }
 }

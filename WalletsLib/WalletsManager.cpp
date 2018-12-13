@@ -1152,25 +1152,33 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
                   processZCSendTXData(tx, led);
                }
                else {
-                  logger_->error("[{}] TX not initialized for hash {}.", __func__
+                  logger_->error("[WalletsManager::onZeroConfReceived] TX not initialized for hash {}."
                                  , led.getTxHash().toHexStr(true));
                }
             };
 
             // The TXID passed to Armory *must* be in internal order!
             if (!armory_->getTxByHash(led.getTxHash(), cbTX)) {
-               logger_->error("[{}] failed to get TX for hash {}.", __func__
+               logger_->error("[WalletsManager::onZeroConfReceived] failed to get TX for hash {}."
                               , led.getTxHash().toHexStr(true));
             }
          } // else
-      } // if
 
-      // Emit signals for the wallet and TX view models.
-      logger_->debug("[{}] ZC received - {} entries in wallet {}", __func__
-                     , ourZCentries.size(), wallet->GetWalletName());
-      emit blockchainEvent();
-      emit newTransactions(ourZCentries);
+         logger_->debug("[WalletsManager::onZeroConfReceived] ZC entry in wallet {}"
+                        , wallet->GetWalletName());
+
+      } // if
+      else {
+         logger_->debug("[WalletsManager::onZeroConfReceived] get ZC but wallet not found: {}"
+            , led.getID());
+      }
    } // for
+
+     // Emit signals for the wallet and TX view models.
+   emit blockchainEvent();
+   if (!ourZCentries.empty()) {
+      emit newTransactions(ourZCentries);
+   }
 }
 
 void WalletsManager::onBroadcastZCError(const QString &txHash, const QString &errMsg)
@@ -1276,6 +1284,16 @@ std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> WalletsManager:
       }
    }
    return result;
+}
+
+QString WalletsManager::OfflineTxDir() const
+{
+   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+}
+
+void WalletsManager::SetOfflineTxDir(const QString &dir)
+{
+   appSettings_->set(ApplicationSettings::signerOfflineDir, dir);
 }
 
 void WalletsManager::ResumeRescan()

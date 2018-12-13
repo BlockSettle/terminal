@@ -114,6 +114,9 @@ public:
 
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
 
+   QString OfflineTxDir() const;
+   void SetOfflineTxDir(const QString &);
+
 signals:
    void walletChanged();
    void walletsReady();
