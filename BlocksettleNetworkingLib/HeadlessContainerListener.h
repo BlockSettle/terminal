@@ -103,8 +103,8 @@ private:
       , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}, const std::shared_ptr<bs::hd::Wallet> &wallet = nullptr);
    void GetRootKeyResponse(const std::string &clientId, unsigned int id, const std::shared_ptr<bs::hd::Node> &
       , const std::string &errorOrId);
-   void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys = {}, bs::wallet::KeyRank keyRank = {}, const std::string &error = {});
+   void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
+      , const std::shared_ptr<bs::hd::Wallet> &, const std::string &error = {});
    void SyncAddrResponse(const std::string &clientId, unsigned int id, const std::set<std::string> &failedWallets
       , const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void ChangePasswordResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bool ok);
