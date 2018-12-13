@@ -7,7 +7,7 @@ ChatWidget::ChatWidget(QWidget *parent) :
     ui(new Ui::ChatWidget)
 {
     ui->setupUi(this);
-    ui->messages->setModel(new QStringListModel(this));
+    //ui->messages->setModel(new QStringListModel(this));
 }
 
 
@@ -40,4 +40,3 @@ void ChatWidget::addLine(const QString &txt)
     model->insertRow(index);
     model->setData(model->index(index), txt);
 }
-
