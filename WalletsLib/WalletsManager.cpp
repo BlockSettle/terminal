@@ -1140,24 +1140,30 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
                   processZCSendTXData(tx, led);
                }
                else {
-                  logger_->error("[{}] TX not initialized for hash {}.", __func__
+                  logger_->error("[WalletsManager::onZeroConfReceived] TX not initialized for hash {}."
                                  , led.getTxHash().toHexStr(true));
                }
             };
 
             // The TXID passed to Armory *must* be in internal order!
             if (!armory_->getTxByHash(led.getTxHash(), cbTX)) {
-               logger_->error("[{}] failed to get TX for hash {}.", __func__
+               logger_->error("[WalletsManager::onZeroConfReceived] failed to get TX for hash {}."
                               , led.getTxHash().toHexStr(true));
             }
          } // else
-      } // if
 
-      // Emit signals for the wallet and TX view models.
-      logger_->debug("[{}] ZC received - {} entries in wallet {}", __func__
-                     , ourZCentries.size(), wallet->GetWalletName());
-      emit blockchainEvent();
-      emit newTransactions(ourZCentries);
+         logger_->debug("[WalletsManager::onZeroConfReceived] ZC received - {} entries in wallet {}"
+                        , ourZCentries.size(), wallet->GetWalletName());
+
+         // Emit signals for the wallet and TX view models.
+         emit blockchainEvent();
+         emit newTransactions(ourZCentries);
+      } // if
+      else {
+         logger_->debug("[WalletsManager::onZeroConfReceived] get ZC but wallet not found: {}"
+            , led.getID());
+      }
+
    } // for
 }
 
