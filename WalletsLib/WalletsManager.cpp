@@ -1152,19 +1152,19 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
             }
          } // else
 
-         logger_->debug("[WalletsManager::onZeroConfReceived] ZC received - {} entries in wallet {}"
-                        , ourZCentries.size(), wallet->GetWalletName());
+         logger_->debug("[WalletsManager::onZeroConfReceived] ZC entry in wallet {}"
+                        , wallet->GetWalletName());
 
-         // Emit signals for the wallet and TX view models.
-         emit blockchainEvent();
-         emit newTransactions(ourZCentries);
       } // if
       else {
          logger_->debug("[WalletsManager::onZeroConfReceived] get ZC but wallet not found: {}"
             , led.getID());
       }
-
    } // for
+
+     // Emit signals for the wallet and TX view models.
+   emit blockchainEvent();
+   emit newTransactions(ourZCentries);
 }
 
 void WalletsManager::onBroadcastZCError(const QString &txHash, const QString &errMsg)
@@ -1270,6 +1270,16 @@ std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> WalletsManager:
       }
    }
    return result;
+}
+
+QString WalletsManager::OfflineTxDir() const
+{
+   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+}
+
+void WalletsManager::SetOfflineTxDir(const QString &dir)
+{
+   appSettings_->set(ApplicationSettings::signerOfflineDir, dir);
 }
 
 void WalletsManager::ResumeRescan()

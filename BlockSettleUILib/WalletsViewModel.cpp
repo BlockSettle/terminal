@@ -282,6 +282,7 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<WalletsManager> &wallet
 
    if (signContainer_) {
       connect(signContainer_.get(), &SignContainer::HDWalletInfo, this, &WalletsViewModel::onHDWalletInfo);
+      connect(signContainer_.get(), &SignContainer::Error, this, &WalletsViewModel::onHDWalletError);
       connect(signContainer_.get(), &SignContainer::MissingWallets, this, &WalletsViewModel::onMissingWallets);
       connect(signContainer_.get(), &SignContainer::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
       connect(signContainer_.get(), &SignContainer::ready, this, &WalletsViewModel::onWalletChanged);
@@ -461,6 +462,23 @@ void WalletsViewModel::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::E
    const auto walletId = hdInfoReqIds_[id];
    hdInfoReqIds_.erase(id);
    const auto state = WalletNode::State::Connected;
+   signerStates_[walletId] = state;
+   for (int i = 0; i < rootNode_->nbChildren(); i++) {
+      auto hdNode = rootNode_->child(i);
+      if (hdNode->id() == walletId) {
+         hdNode->setState(state);
+      }
+   }
+}
+
+void WalletsViewModel::onHDWalletError(unsigned int id, std::string)
+{
+   if (hdInfoReqIds_.empty() || (hdInfoReqIds_.find(id) == hdInfoReqIds_.end())) {
+      return;
+   }
+   const auto walletId = hdInfoReqIds_[id];
+   hdInfoReqIds_.erase(id);
+   const auto state = WalletNode::State::Offline;
    signerStates_[walletId] = state;
    for (int i = 0; i < rootNode_->nbChildren(); i++) {
       auto hdNode = rootNode_->child(i);

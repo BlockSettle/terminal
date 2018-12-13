@@ -282,6 +282,7 @@ message GetHDWalletInfoResponse
    uint32	rankM = 3;
    uint32	rankN = 4;
    string       error = 5;
+   string       rootWalletId = 6;
 }
 
 
