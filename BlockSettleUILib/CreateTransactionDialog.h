@@ -12,6 +12,7 @@
 #include "MetaData.h"
 
 class ArmoryConnection;
+class OfflineSigner;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -105,7 +106,7 @@ protected:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
-   std::shared_ptr<SignContainer>   offlineSigner_;
+   std::shared_ptr<OfflineSigner>   offlineSigner_;
    std::shared_ptr<SignContainer>   signer_;
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;

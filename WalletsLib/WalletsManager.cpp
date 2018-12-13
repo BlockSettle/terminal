@@ -20,7 +20,6 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
    , logger_(logger)
    , armory_(armory)
    , preferWatchingOnly_(preferWatchinOnly)
-   , offlineTxDir_(appSettings->get<QString>(ApplicationSettings::signerOfflineDir))
 {
    btc_ecc_start();
 
@@ -1271,6 +1270,16 @@ std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> WalletsManager:
       }
    }
    return result;
+}
+
+QString WalletsManager::OfflineTxDir() const
+{
+   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+}
+
+void WalletsManager::SetOfflineTxDir(const QString &dir)
+{
+   appSettings_->set(ApplicationSettings::signerOfflineDir, dir);
 }
 
 void WalletsManager::ResumeRescan()

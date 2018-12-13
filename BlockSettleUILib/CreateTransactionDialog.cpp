@@ -352,6 +352,16 @@ bool CreateTransactionDialog::CreateTransaction()
    QString text;
    QString detailedText;
 
+   if (signer_->isOffline()) {
+      const auto txDir = QFileDialog::getExistingDirectory(this, tr("Select Offline TX destination directory")
+         , walletsManager_->OfflineTxDir());
+      if (txDir.isNull()) {
+         return true;
+      }
+      offlineSigner_->SetTargetDir(txDir);
+      walletsManager_->SetOfflineTxDir(txDir);
+   }
+
    startBroadcasting();
    try {
       signer_->SyncAddresses(transactionData_->createAddresses());
