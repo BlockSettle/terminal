@@ -144,9 +144,9 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UpdateMainWindowAppearence();
 }
 
-void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(std::map<NetworkSettingType, std::pair<std::string, unsigned int>>)> &cb)
+void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(NetworkSettings)> &cb)
 {
-   if (!networkSettings_.empty()) {
+   if (networkSettings_.isSet) {
       cb(networkSettings_);
       return;
    }
@@ -168,21 +168,18 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
    cmdPuBSettings_ = std::make_shared<RequestReplyCommand>("network_settings", connection, logMgr_->logger());
    const auto &title = tr("Network settings");
 
-   const auto &populateAppSettings = [this](std::map<NetworkSettingType, std::pair<std::string, unsigned int>> settings) {
-      for (const auto &setting : settings) {
-         switch (setting.first) {
-         case NetworkSettingType::Celer:
-            applicationSettings_->set(ApplicationSettings::celerHost, QString::fromStdString(setting.second.first));
-            applicationSettings_->set(ApplicationSettings::celerPort, setting.second.second);
-            break;
-         case NetworkSettingType::MarketData:
-            applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(setting.second.first));
-            applicationSettings_->set(ApplicationSettings::mdServerPort, setting.second.second);
-            break;
-         default:
-            logMgr_->logger()->info("[GetNetworkSettingsFromPuB] unknown network setting {}", (int)setting.first);
-            break;
-         }
+   const auto &populateAppSettings = [this](NetworkSettings settings) {
+      if (!settings.celer.host.empty()) {
+         applicationSettings_->set(ApplicationSettings::celerHost, QString::fromStdString(settings.celer.host));
+         applicationSettings_->set(ApplicationSettings::celerPort, settings.celer.port);
+      }
+      if (!settings.marketData.host.empty()) {
+         applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
+         applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
+      }
+      if (!settings.chat.host.empty()) {
+         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
       }
    };
 
@@ -195,24 +192,43 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
          showError(title, tr("Invalid reply from BlockSettle server"));
          return false;
       }
-      for (int i = 0; i < response.settings_size(); ++i) {
-         const auto &setting = response.settings(i);
-         networkSettings_[static_cast<NetworkSettingType>(setting.type())] = {setting.host(), setting.port()};
-      }
 
-      if (networkSettings_.empty()) {
-         showError(title, tr("Empty network settings received from BlockSettle server"));
-         return false;
+      if (response.has_celer()) {
+         networkSettings_.celer = { response.celer().host(), response.celer().port() };
+         networkSettings_.isSet = true;
       }
-      if (networkSettings_.find(NetworkSettingType::Celer) == networkSettings_.end()) {
+      else {
          showError(title, tr("Missing Celer connection settings"));
          return false;
       }
-      if (networkSettings_.find(NetworkSettingType::MarketData) == networkSettings_.end()) {
-         showError(title, tr("Missing Market Data server connection settings"));
+
+      if (response.has_marketdata()) {
+         networkSettings_.marketData = { response.marketdata().host(), response.marketdata().port() };
+         networkSettings_.isSet = true;
+      }
+      else {
+         showError(title, tr("Missing MD connection settings"));
          return false;
       }
-      logMgr_->logger()->debug("[GetNetworkSettingsFromPuB] received {} network settings", networkSettings_.size());
+
+      if (response.has_mdhs()) {
+         networkSettings_.mdhs = { response.mdhs().host(), response.mdhs().port() };
+         networkSettings_.isSet = true;
+      }
+      else {
+         showError(title, tr("Missing MDHS connection settings"));
+//         return false;
+      }
+
+      if (response.has_chat()) {
+         networkSettings_.chat = { response.chat().host(), response.chat().port() };
+         networkSettings_.isSet = true;
+      }
+      else {
+         showError(title, tr("Missing Chat connection settings"));
+         return false;
+      }
+
       populateAppSettings(networkSettings_);
       cb(networkSettings_);
       return true;
@@ -233,11 +249,9 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(st
 void BSTerminalMainWindow::postSplashscreenActions()
 {
    if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
-      GetNetworkSettingsFromPuB([this](std::map<NetworkSettingType, std::pair<std::string, unsigned int>> networkSettings) {
-         const auto &itSettings = networkSettings.find(NetworkSettingType::MarketData);
-         if (itSettings != networkSettings.end()) {
-            const auto &setPair = itSettings->second;
-            mdProvider_->SubscribeToMD(setPair.first, std::to_string(setPair.second));
+      GetNetworkSettingsFromPuB([this](NetworkSettings networkSettings) {
+         if (!networkSettings.marketData.host.empty()) {
+            mdProvider_->SubscribeToMD(networkSettings.marketData.host, std::to_string(networkSettings.marketData.port));
          }
          else {
             showError(tr("Market Data Connection"), tr("MD connection settings not found in reply from BlockSettle server"));
@@ -836,7 +850,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
-   GetNetworkSettingsFromPuB([this](std::map<NetworkSettingType, std::pair<std::string, unsigned int>>) {});
+   GetNetworkSettingsFromPuB([this](NetworkSettings) {});
 
    LoginWindow loginDialog(applicationSettings_, this);
 

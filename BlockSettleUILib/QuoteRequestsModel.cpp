@@ -606,7 +606,7 @@ void QuoteRequestsModel::ticker() {
             grp->rfqs_.erase(grp->rfqs_.begin() + itemIndex);
             endRemoveRows();
 
-            if (grp->rfqs_.size() == 0) {
+            if ((grp->rfqs_.size() == 0) && (row >= 0)) {
                const auto m = findMarket(grp->idx_.parent_);
                beginRemoveRows(createIndex(m, 0, grp->idx_.parent_), row, row);
                data_[m]->groups_.erase(data_[m]->groups_.begin() + row);
@@ -641,6 +641,9 @@ void QuoteRequestsModel::ticker() {
    if (!data_.empty()) {
       for (size_t i = 0; i < data_.size(); ++i) {
          for (size_t j = 0; j < data_[i]->groups_.size(); ++j) {
+            if (data_[i]->groups_[j]->rfqs_.empty()) {
+               continue;
+            }
             emit dataChanged(createIndex(0, static_cast<int>(Column::Status),
                   &data_[i]->groups_[j]->rfqs_.front()->idx_),
                createIndex(static_cast<int>(data_[i]->groups_[j]->rfqs_.size() - 1),
