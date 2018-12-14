@@ -79,13 +79,6 @@ private:
    bool isMDLicenseAccepted() const;
    void saveUserAcceptedMDLicense();
 
-   enum NetworkSettingType {  // Direct protobuf value mapping
-      Celer = 1,
-      MarketData = 2,
-      MDHistory = 3
-   };
-   void GetNetworkSettingsFromPuB(const std::function<void(std::map<NetworkSettingType, std::pair<std::string, unsigned int>>)> &);
-
 private slots:
    void InitTransactionsView();
    void ArmoryIsOffline();
@@ -122,7 +115,6 @@ private:
    std::shared_ptr<ArmoryConnection>      armory_;
 
    std::shared_ptr<RequestReplyCommand>   cmdPuBSettings_;
-   std::map<NetworkSettingType, std::pair<std::string, unsigned int>>   networkSettings_;
 
    std::shared_ptr<StatusBarView>            statusBarView_;
    std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
@@ -141,6 +133,20 @@ private:
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
    bool  widgetsInited_ = false;
+
+   struct NetworkSettings {
+      struct Connection {
+         std::string host;
+         uint32_t    port;
+      };
+      Connection  celer;
+      Connection  marketData;
+      Connection  mdhs;
+      Connection  chat;
+      bool isSet{ false };
+   };
+   void GetNetworkSettingsFromPuB(const std::function<void(NetworkSettings)> &);
+   NetworkSettings   networkSettings_;
 
    struct TxInfo {
       Tx       tx;
