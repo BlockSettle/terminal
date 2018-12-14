@@ -202,6 +202,9 @@ bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
 
    std::shared_ptr<AsyncClient::BtcWallet> addressWallet;
 
+   FastLock locker{lockWalletsMap_};
+   auto reqId = armory_->registerWallet(addressWallet, walletId, asset->supportedAddrHashes(), [] {}, true);
+
    auto completeWalletRegistration = [this, index, addressWallet]() {
       if (logger_) {
          logger_->debug("[SettlementWallet::createTempWalletForAsset] wallet registration completed");
@@ -217,9 +220,6 @@ bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
 
       CompleteMonitorCreations(index, addressWallet);
    };
-
-   FastLock locker{lockWalletsMap_};
-   auto reqId = armory_->registerWallet(addressWallet, walletId, asset->supportedAddrHashes(), [] {}, true);
 
    if (reqId.empty()) {
       if (logger_ != nullptr) {
