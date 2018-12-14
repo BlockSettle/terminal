@@ -4,6 +4,11 @@ import shutil
 import subprocess
 import sys
 
+# Set the minimum macOS target environment. Applies to prereqs and to BS code.
+# If the min target changes, update CMakeLists.txt too.
+if sys.platform == "darwin":
+   os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.12'
+
 sys.path.insert(0, 'common')
 sys.path.insert(0, os.path.join('common', 'build_scripts'))
 
