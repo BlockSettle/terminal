@@ -51,6 +51,8 @@ public:
       celerPort,
       mdServerHost,
       mdServerPort,
+      chatServerHost,
+      chatServerPort,
       celerUsername,
       signerHost,
       signerPort,
