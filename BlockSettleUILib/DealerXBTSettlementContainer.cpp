@@ -73,11 +73,6 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       settlIdStr_ = settlAddr_->getAsset()->settlementId().toHexStr();
    }
 
-   settlMonitor_ = settlWallet_->createMonitorCb(settlAddr_, logger);
-   if (settlMonitor_ == nullptr) {
-      throw std::runtime_error("failed to create Settlement monitor");
-   }
-
    addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory_, settlIdStr_
       , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
@@ -169,9 +164,16 @@ void DealerXBTSettlementContainer::activate()
    addrVerificator_->RegisterBSAuthAddresses();
    addrVerificator_->RegisterAddresses();
 
-   settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
-   , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
-   , [this](bs::PayoutSigner::Type) {});
+   auto createMonitorCB = [this](const std::shared_ptr<bs::SettlementMonitorCb>& monitor)
+   {
+      settlMonitor_ = monitor;
+
+      settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
+         , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
+         , [this](bs::PayoutSigner::Type) {});
+   };
+
+   settlWallet_->createMonitorCb(settlAddr_, logger_, createMonitorCB);
 }
 
 void DealerXBTSettlementContainer::deactivate()

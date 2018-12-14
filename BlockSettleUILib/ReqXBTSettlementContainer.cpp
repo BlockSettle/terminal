@@ -226,14 +226,16 @@ void ReqXBTSettlementContainer::activate()
 
    fee_ = transactionData_->GetTransactionSummary().totalFee;
 
-   monitor_ = walletsMgr_->GetSettlementWallet()->createMonitorCb(settlAddr_, logger_);
-   if (monitor_ == nullptr) {
-      logger_->error("[ReqXBTSettlementContainer::activate] failed to create Settlement monitor");
-      return;
-   }
-   monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
+   auto createMonitorCB = [this](const std::shared_ptr<bs::SettlementMonitorCb>& monitor)
+   {
+      monitor_ = monitor;
+
+      monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
       , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
       , [this](bs::PayoutSigner::Type) {});
+   };
+
+   walletsMgr_->GetSettlementWallet()->createMonitorCb(settlAddr_, logger_, createMonitorCB);
 }
 
 void ReqXBTSettlementContainer::deactivate()
