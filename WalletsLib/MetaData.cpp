@@ -496,6 +496,11 @@ void bs::Wallet::AddUnconfirmedBalance(const BTCNumericTypes::balance_type& delt
       unconfirmedBalance_ += delta;
    }
    totalBalance_ += delta;
+
+   // Emit signal to update GUI (address details).
+   updateAddrBalance_ = true;
+   updateAddrTxN_ = true;
+   emit updateAddr();
 }
 
 BTCNumericTypes::balance_type bs::Wallet::GetTotalBalance() const
@@ -526,8 +531,8 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
          }
          catch(std::exception& e) {
             if(logger_ != nullptr) {
-               logger_->error("[bs::Wallet::getAddrBalance] Return data error ", \
-                  "- {}", e.what());
+               logger_->error("[getAddrBalance (cbAddrBalance)] Return data " \
+                              "error - {}", e.what());
             }
          }
 

@@ -6,11 +6,14 @@
 #include <memory>
 #include <QAbstractTableModel>
 
+
 class WalletsManager;
 namespace bs {
    class Wallet;
 }
 
+// Table for address detail list. Used for address & wallet detail widgets. Not
+// used for blockchain explorer address widget.
 class AddressListModel : public QAbstractTableModel
 {
    Q_OBJECT

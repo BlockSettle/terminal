@@ -61,14 +61,14 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
             }
          }
          if (!zcToDelete.empty()) {
-            logger_->debug("[{}] erasing {} ZC entries", __func__
-               , zcToDelete.size());
+            logger_->debug("[ArmoryConnection] erasing {} ZC entries"
+                           , zcToDelete.size());
             for (const auto &reqId : zcToDelete) {
                zcData_.erase(reqId);
             }
          }
       }
-      logger_->debug("[{}] stopped", __func__);
+      logger_->debug("[ArmoryConnection] stopped");
    };
    zcThread_ = std::thread(cbZCMaintenance);
 }

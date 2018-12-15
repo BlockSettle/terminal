@@ -325,6 +325,7 @@ namespace bs {
       void addressAdded();
       void walletReset();
       void walletReady(const QString &id);
+      void updateAddr();
 
       void addrBalanceReceived(const bs::Address &, std::vector<uint64_t>) const;
       void addrTxNReceived(const bs::Address &, uint32_t) const;
