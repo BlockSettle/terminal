@@ -1,3 +1,5 @@
+#define SPDLOG_DEBUG_ON
+
 #include "ChatWidget.h"
 #include "ui_ChatWidget.h"
 
@@ -5,6 +7,9 @@
 #include "ChatServer.h"
 
 #include <thread>
+#include <spdlog/spdlog.h>
+
+#include <QDebug>
 
 
 ChatWidget::ChatWidget(QWidget *parent) :
@@ -20,21 +25,39 @@ ChatWidget::~ChatWidget()
 }
 
 
-void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager)
+void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
+                      , const std::shared_ptr<ApplicationSettings> &appSettings
+                      , const std::shared_ptr<spdlog::logger>& logger)
 {
-    server_ = std::make_shared<ChatServer>(connectionManager);
+    logger_ = logger;
 
-    std::thread([&]{
-        server_->startServer("127.0.0.1", "20001");
-    }).detach();
+    qDebug() << "ChatWidget::init!";
+    server_ = std::make_shared<ChatServer>(connectionManager, appSettings, logger);
 
-    client_ = std::make_shared<ChatClient>(connectionManager);
+    serverPublicKey_ = server_->getPublicKey();
+
+    server_->startServer("127.0.0.1", "20001");
+
+    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger, serverPublicKey_);
 }
 
 
 void ChatWidget::setUserName(const QString& username)
 {
-    client_->loginToServer("127.0.0.1", "20001", username.toStdString());
+    qDebug() << "Try to login!";
+    try
+    {
+        client_->loginToServer("127.0.0.1", "20001", username.toStdString());
+    }
+    catch (std::exception& e)
+    {
+        qDebug() << "Caught an exception: " << e.what();
+    }
+    catch (...)
+    {
+        qDebug() << "Unexpected error!";
+    }
+
 }
 
 

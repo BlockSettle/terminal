@@ -15,6 +15,7 @@ namespace spdlog {
 
 class ConnectionManager;
 class ZmqSecuredDataConnection;
+class ApplicationSettings;
 
 
 class ChatClient : public QObject
@@ -23,7 +24,11 @@ class ChatClient : public QObject
     Q_OBJECT
 
 public:
-    ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager);
+    ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
+               , const std::shared_ptr<ApplicationSettings> &appSettings
+               , const std::shared_ptr<spdlog::logger>& logger
+               , const std::string& serverPublicKey);
+
     ~ChatClient() noexcept override = default;
 
     ChatClient(const ChatClient&) = delete;
@@ -52,7 +57,9 @@ signals:
 
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
+   std::string                            serverPublicKey_;
 
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 

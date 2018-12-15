@@ -538,7 +538,7 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitChatView()
 {
-    ui->widgetChat->init(connectionManager_);
+    ui->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
 }
 
 // Initialize widgets related to transactions.
