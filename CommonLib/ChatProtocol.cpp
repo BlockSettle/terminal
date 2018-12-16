@@ -9,6 +9,10 @@
 #include <QStringLiteral>
 
 
+using namespace Chat;
+
+
+static const QString VersionKey = QStringLiteral("version");
 static const QString NameKey = QStringLiteral("name");
 static const QString TypeKey = QStringLiteral("type");
 static const QString TextKey = QStringLiteral("text");
@@ -21,6 +25,143 @@ static const QString IdKey = QStringLiteral("id");
 static const QString ToIdKey = QStringLiteral("toid");
 static const QString FromIdKey = QStringLiteral("fromid");
 static const QString StatusKey = QStringLiteral("status");
+
+
+static std::map<std::string, RequestType> RequestTypeFromString
+{
+        { "RequestHeartbeatPing"    ,   RequestType::RequestHeartbeatPing   }
+    ,   { "RequestLogin"            ,   RequestType::RequestLogin           }
+    ,   { "RequestLogout"           ,   RequestType::RequestLogout          }
+    ,   { "RequestReceiveMessages"  ,   RequestType::RequestReceiveMessages }
+    ,   { "RequestSendMessage"      ,   RequestType::RequestSendMessage     }
+};
+
+
+static std::map<RequestType, std::string> RequestTypeToString
+{
+        { RequestType::RequestHeartbeatPing     ,  "RequestHeartbeatPing"   }
+    ,   { RequestType::RequestLogin             ,  "RequestLogin"           }
+    ,   { RequestType::RequestLogout            ,  "RequestLogout"          }
+    ,   { RequestType::RequestReceiveMessages   ,  "RequestReceiveMessages" }
+    ,   { RequestType::RequestSendMessage       ,  "RequestSendMessage"     }
+};
+
+
+static std::map<std::string, ResponseType> ResponseTypeFromString
+{
+        { "ResponseError"           ,   ResponseType::ResponseError             }
+    ,   { "ResponseHeartbeatPong"   ,   ResponseType::ResponseHeartbeatPong     }
+    ,   { "ResponseLogin"           ,   ResponseType::ResponseLogin             }
+    ,   { "ResponseMessages"        ,   ResponseType::ResponseMessages          }
+    ,   { "ResponseSuccess"         ,   ResponseType::ResponseSuccess           }
+};
+
+
+static std::map<ResponseType, std::string> ResponseTypeToString
+{
+        { ResponseType::ResponseError           ,  "ResponseError"             }
+    ,   { ResponseType::ResponseHeartbeatPong   ,  "ResponseHeartbeatPong"     }
+    ,   { ResponseType::ResponseLogin           ,  "ResponseLogin"             }
+    ,   { ResponseType::ResponseMessages        ,  "ResponseMessages"          }
+    ,   { ResponseType::ResponseSuccess         ,  "ResponseSuccess"           }
+};
+
+
+template <typename T>
+QJsonObject Message<T>::toJson() const
+{
+    QJsonObject data;
+
+    data[VersionKey] = QString::fromStdString(version_);
+
+    return data;
+}
+
+
+std::shared_ptr<Request> Request::fromJSON(const std::string& jsonData)
+{
+    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+
+    RequestType requestType = RequestTypeFromString[data[TypeKey].toString().toStdString()];
+
+    switch (requestType)
+    {
+        case RequestType::RequestHeartbeatPing:
+            return std::make_shared<HeartbeatPingRequest>(data[IdKey].toString().toStdString());
+
+        default:
+            break;
+    }
+
+    return std::shared_ptr<Request>();
+}
+
+
+std::string Request::getData() const
+{
+    QJsonObject data = Request::toJson();
+    return QJsonValue(data).toString().toStdString();
+}
+
+
+QJsonObject Request::toJson() const
+{
+    QJsonObject data = Message<RequestType>::toJson();
+
+    data[TypeKey] = QString::fromStdString(RequestTypeToString[messageType_]);
+    data[IdKey] = QString::fromStdString(clientId_);
+
+    return data;
+}
+
+
+std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
+{
+    return std::shared_ptr<Response>();
+}
+
+
+HeartbeatPingRequest::HeartbeatPingRequest(const std::string& clientId)
+    : Request (RequestType::RequestHeartbeatPing, clientId)
+{
+
+}
+
+
+std::string HeartbeatPingRequest::getData() const
+{
+    auto data = QJsonDocument(Request::toJson());
+    QString serializedData = QString::fromUtf8(data.toJson());
+    return serializedData.toStdString();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void CommandBase::requestPri(QJsonObject &obj)

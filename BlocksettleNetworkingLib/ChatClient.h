@@ -13,6 +13,12 @@ namespace spdlog {
 }
 
 
+namespace Chat
+{
+    class Request;
+}
+
+
 class ConnectionManager;
 class ZmqSecuredDataConnection;
 class ApplicationSettings;
@@ -48,6 +54,8 @@ public:
 
 private:
     void sendHeartbeat();
+
+    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
 signals:
    void OnConnectedToServer();

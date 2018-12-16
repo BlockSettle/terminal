@@ -70,44 +70,40 @@ void ChatServer::generateKeys()
 
 void ChatServer::startServer(const std::string& hostname, const std::string& port)
 {
-    qDebug() << "ChatServer starting with host " << hostname.c_str() << ":" << port.c_str() << " ...";
     if (!connection_->BindConnection(hostname, port, this))
     {
-        qDebug() << "Error Binding connection " << hostname.c_str() << ":" << port.c_str() << " ...";
+        logger_->error("Error Binding connection \"{0}\" : \"{1}\" ...", hostname.c_str(), port.c_str());
     }
 
-//    SPDLOG_DEBUG(logger_, "[ChatServer] startServer");
+    logger_->debug("[ChatServer::startServer] Started successfully");
 }
 
 
 void ChatServer::OnDataFromClient(const std::string& clientId, const std::string& data)
 {
-    qDebug() << "[ChatServer]: OnDataFromClient" << clientId.c_str() << data.c_str();
-//    logger_->debug("[ChatServer::OnDataFromClient]");
+    logger_->debug("[ChatServer::OnDataFromClient: \"{0}\"] \"{1}\"", clientId, data);
 }
 
 
 void ChatServer::OnClientConnected(const std::string& clientId)
 {
-    qDebug() << "[ChatServer]: OnClientConnected" << clientId.c_str();
-    logger_->debug("[ChatServer::OnClientConnected]");
+    logger_->debug("[ChatServer::OnClientConnected] {}", clientId);
 }
 
 
 void ChatServer::OnClientDisconnected(const std::string& clientId)
 {
-    qDebug() << "[ChatServer]: OnClientDisconnected" << clientId.c_str();
-    logger_->debug("[ChatServer::OnClientConnected]");
+    logger_->debug("[ChatServer::OnClientConnected] {}", clientId);
 }
 
 
-void ChatServer::OnPeerConnected(const std::string &)
+void ChatServer::OnPeerConnected(const std::string& peerId)
 {
-    logger_->debug("[ChatServer::OnClientConnected]");
+    logger_->debug("[ChatServer::OnPeerConnected] {}", peerId);
 }
 
 
-void ChatServer::OnPeerDisconnected(const std::string &)
+void ChatServer::OnPeerDisconnected(const std::string& peerId)
 {
-    logger_->debug("[ChatServer::OnClientConnected]");
+    logger_->debug("[ChatServer::OnPeerDisconnected] {}", peerId);
 }

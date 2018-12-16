@@ -11,6 +11,125 @@
 #include <QString>
 
 
+namespace Chat
+{
+
+    template <typename T>
+    class Message
+    {
+    public:
+
+        Message(T messageType)
+            : messageType_(messageType)
+        {
+
+        }
+
+        virtual ~Message() = default;
+
+        std::string getVersion() const { return version_; }
+
+        virtual QJsonObject toJson() const;
+
+
+    protected:
+
+        T messageType_;
+
+        std::string version_;
+
+    };
+
+
+    enum class RequestType
+    {
+        RequestHeartbeatPing
+    ,   RequestLogin
+    ,   RequestLogout
+    ,   RequestSendMessage
+    ,   RequestReceiveMessages
+
+    };
+
+
+    class Request : public Message<RequestType>
+    {
+    public:
+
+        Request(RequestType requestType, const std::string& clientId)
+            : Message<RequestType> (requestType)
+            , clientId_(clientId)
+        {
+
+        }
+
+        virtual ~Request() override = default;
+
+        static std::shared_ptr<Request> fromJSON(const std::string& jsonData);
+
+        virtual std::string getData() const;
+
+        QJsonObject toJson() const override;
+
+
+    protected:
+
+        std::string     clientId_;
+
+    };
+
+
+    enum class ResponseType
+    {
+        ResponseHeartbeatPong
+    ,   ResponseLogin
+    ,   ResponseMessages
+    ,   ResponseSuccess
+    ,   ResponseError
+
+    };
+
+
+    class Response  : public Message<ResponseType>
+    {
+    public:
+
+        Response(ResponseType responseType);
+
+        virtual ~Response() = default;
+
+        static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+
+
+    protected:
+
+    };
+
+
+
+    class HeartbeatPingRequest : public Request
+    {
+    public:
+
+        HeartbeatPingRequest(const std::string& clientId);
+        virtual std::string getData() const;
+
+    };
+
+
+    class HeartbeatPongResponse : public Response
+    {
+    public:
+
+        HeartbeatPongResponse();
+        virtual std::string getData() const;
+
+    };
+
+}
+
+
+
 static const QString CmdNames[] = {
     QStringLiteral("er"), // error
     QStringLiteral("in"), // login
