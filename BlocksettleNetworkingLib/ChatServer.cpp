@@ -1,5 +1,3 @@
-#define SPDLOG_DEBUG_ON
-
 #include "ChatServer.h"
 
 #include "ZmqSecuredServerConnection.h"
@@ -68,6 +66,21 @@ void ChatServer::generateKeys()
 }
 
 
+void ChatServer::OnHeartbeatPing(Chat::HeartbeatPingRequest& request)
+{
+    logger_->debug("[ChatServer::OnHeartbeatPing] \"{}\"", request.getClientId());
+
+    auto heartbeatResponse = std::make_shared<Chat::HeartbeatPongResponse>();
+    connection_->SendDataToClient(request.getClientId(), heartbeatResponse->getData());
+}
+
+
+void ChatServer::OnLogin(Chat::LoginRequest& request)
+{
+    logger_->debug("[ChatServer::OnLogin] \"{}\"", request.getAuthId());
+}
+
+
 void ChatServer::startServer(const std::string& hostname, const std::string& port)
 {
     if (!connection_->BindConnection(hostname, port, this))
@@ -81,7 +94,11 @@ void ChatServer::startServer(const std::string& hostname, const std::string& por
 
 void ChatServer::OnDataFromClient(const std::string& clientId, const std::string& data)
 {
-    logger_->debug("[ChatServer::OnDataFromClient: \"{0}\"] \"{1}\"", clientId, data);
+    auto requestObject = Chat::Request::fromJSON(clientId, data);
+
+    logger_->debug("[ChatServer::OnDataFromClient: \"{0}\"] \"{1}\"", requestObject->getClientId(), data);
+
+    requestObject->handle(*this);
 }
 
 

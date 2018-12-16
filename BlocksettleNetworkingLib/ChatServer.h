@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "ServerConnectionListener.h"
+#include "ChatProtocol.h"
 
 
 namespace spdlog {
@@ -18,6 +19,7 @@ class ApplicationSettings;
 
 
 class ChatServer : public ServerConnectionListener
+                 , public Chat::RequestHandler
 {
 public:
 
@@ -34,6 +36,8 @@ public:
 
     void startServer(const std::string& hostname, const std::string& port);
 
+    std::string getPublicKey() const;
+
 
     void OnDataFromClient(const std::string& clientId, const std::string& data) override;
 
@@ -43,7 +47,8 @@ public:
     void OnPeerConnected(const std::string &) override;
     void OnPeerDisconnected(const std::string &) override;
 
-    std::string getPublicKey() const;
+    void OnHeartbeatPing(Chat::HeartbeatPingRequest& request) override;
+    void OnLogin(Chat::LoginRequest& request) override;
 
 
 private:
@@ -51,6 +56,7 @@ private:
     void generateKeys();
 
 private:
+
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
