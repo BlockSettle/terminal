@@ -81,6 +81,13 @@ void ChatServer::OnLogin(Chat::LoginRequest& request)
 }
 
 
+void ChatServer::OnSendMessage(Chat::SendMessageRequest& request)
+{
+    logger_->debug("Received message from client: \"{0}\": \"{1}\""
+                   , request.getSenderId(), request.getMessageData());
+}
+
+
 void ChatServer::startServer(const std::string& hostname, const std::string& port)
 {
     if (!connection_->BindConnection(hostname, port, this))

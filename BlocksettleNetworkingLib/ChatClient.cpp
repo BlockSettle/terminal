@@ -1,5 +1,3 @@
-#define SPDLOG_DEBUG_ON
-
 #include "ChatClient.h"
 #include "ChatProtocol.h"
 
@@ -7,6 +5,7 @@
 
 #include "ZmqSecuredDataConnection.h"
 #include "ConnectionManager.h"
+#include "ApplicationSettings.h"
 
 
 #include <QDebug>
@@ -25,7 +24,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 {
     connectionManager_ = std::make_shared<ConnectionManager>(logger_);
 
-    heartbeatTimer_->setInterval(5 * 1000);
+    heartbeatTimer_->setInterval(30 * 1000);
     heartbeatTimer_->setSingleShot(false);
 
     connect(heartbeatTimer_.get(), &QTimer::timeout, this, &ChatClient::sendHeartbeat);
@@ -41,6 +40,8 @@ void ChatClient::loginToServer(const std::string& hostname, const std::string& p
        return;
     }
 
+    currentUserId_ = login;
+
     connection_ = connectionManager_->CreateSecuredDataConnection();
     connection_->SetServerPublicKey(serverPublicKey_);
     if (!connection_->openConnection(hostname, port, this))
@@ -50,6 +51,17 @@ void ChatClient::loginToServer(const std::string& hostname, const std::string& p
     }
 
     heartbeatTimer_->start();
+}
+
+
+void ChatClient::logout()
+{
+    if (!connection_.get()) {
+       logger_->error("[ChatClient::logout] Disconnected already.");
+       return;
+    }
+
+    connection_.reset();
 }
 
 
@@ -70,15 +82,23 @@ void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 
 void ChatClient::sendHeartbeat()
 {
-    auto request = std::make_shared<Chat::HeartbeatPingRequest>("user1");
-    auto data = request->getData();
+    auto request = std::make_shared<Chat::HeartbeatPingRequest>("");
     sendRequest(request);
+}
+
+
+void ChatClient::OnHeartbeatPong(Chat::HeartbeatPongResponse& response)
+{
+    logger_->debug("[ChatClient::OnHeartbeatPong] {}", response.getData());
 }
 
 
 void ChatClient::OnDataReceived(const std::string& data)
 {
     logger_->debug("[ChatClient::OnDataReceived] {}", data);
+
+    auto heartbeatResponse = Chat::Response::fromJSON(data);
+    heartbeatResponse->handle(*this);
 }
 
 
@@ -97,4 +117,15 @@ void ChatClient::OnDisconnected()
 void ChatClient::OnError(DataConnectionError errorCode)
 {
     logger_->debug("[ChatClient::OnError] {}", errorCode);
+}
+
+
+void ChatClient::sendMessage(const QString& message)
+{
+    std::string msg = message.toStdString();
+
+    logger_->debug("[ChatClient::sendMessage] {}", msg);
+
+    auto request = std::make_shared<Chat::SendMessageRequest>("", currentUserId_, "user2", msg);
+    sendRequest(request);
 }

@@ -6,6 +6,7 @@
 #include <QTimer>
 
 #include "DataConnectionListener.h"
+#include "ChatProtocol.h"
 
 
 namespace spdlog {
@@ -26,6 +27,7 @@ class ApplicationSettings;
 
 class ChatClient : public QObject
                  , public DataConnectionListener
+                 , public Chat::ResponseHandler
 {
     Q_OBJECT
 
@@ -46,6 +48,10 @@ public:
     void loginToServer(const std::string& hostname, const std::string& port
         , const std::string& login/*, const std::string& password*/);
 
+    void logout();
+
+    void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
+
 public:
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -63,6 +69,11 @@ signals:
    void OnConnectionError(int errorCode);
 
 
+public slots:
+
+   void sendMessage(const QString& message);
+
+
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
@@ -72,6 +83,8 @@ private:
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 
    QScopedPointer<QTimer>                 heartbeatTimer_;
+
+   std::string                            currentUserId_;
 
 };
 

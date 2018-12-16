@@ -19,6 +19,8 @@ namespace bs {
    class LogManager;
 }
 
+class ChatServer;
+
 class AboutDialog;
 class AssetManager;
 class AuthAddressDialog;
@@ -130,6 +132,7 @@ private:
    std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<HeadlessAddressSyncer>    addrSyncer_;
+   std::shared_ptr<ChatServer>               chatServer_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 

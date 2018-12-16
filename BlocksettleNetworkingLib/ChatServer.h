@@ -49,6 +49,7 @@ public:
 
     void OnHeartbeatPing(Chat::HeartbeatPingRequest& request) override;
     void OnLogin(Chat::LoginRequest& request) override;
+    void OnSendMessage(Chat::SendMessageRequest& request) override;
 
 
 private:

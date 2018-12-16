@@ -21,6 +21,28 @@ namespace Chat
     class ResponseHandler;
 
 
+    enum class RequestType
+    {
+        RequestHeartbeatPing
+    ,   RequestLogin
+    ,   RequestLogout
+    ,   RequestSendMessage
+    ,   RequestReceiveMessages
+
+    };
+
+
+    enum class ResponseType
+    {
+        ResponseHeartbeatPong
+    ,   ResponseLogin
+    ,   ResponseMessages
+    ,   ResponseSuccess
+    ,   ResponseError
+
+    };
+
+
     template <typename T>
     class Message
     {
@@ -59,17 +81,6 @@ namespace Chat
     };
 
 
-    enum class RequestType
-    {
-        RequestHeartbeatPing
-    ,   RequestLogin
-    ,   RequestLogout
-    ,   RequestSendMessage
-    ,   RequestReceiveMessages
-
-    };
-
-
     class Request : public Message<RequestType>
     {
     public:
@@ -97,17 +108,6 @@ namespace Chat
     protected:
 
         std::string     clientId_;
-
-    };
-
-
-    enum class ResponseType
-    {
-        ResponseHeartbeatPong
-    ,   ResponseLogin
-    ,   ResponseMessages
-    ,   ResponseSuccess
-    ,   ResponseError
 
     };
 
@@ -168,6 +168,32 @@ namespace Chat
     };
 
 
+    class SendMessageRequest : public Request
+    {
+    public:
+
+        SendMessageRequest(const std::string& clientId
+                           , const std::string& senderId
+                           , const std::string& receiverId
+                           , const std::string& messageData);
+
+        QJsonObject toJson() const override;
+
+        void handle(RequestHandler& handler) override;
+
+        std::string getSenderId() const { return senderId_; }
+        std::string getReceiverId() const { return receiverId_; }
+        std::string getMessageData() const { return messageData_; }
+
+    private:
+
+        std::string senderId_;
+        std::string receiverId_;
+        std::string messageData_;
+
+    };
+
+
     class HeartbeatPongResponse : public Response
     {
     public:
@@ -188,6 +214,8 @@ namespace Chat
         virtual void OnHeartbeatPing(HeartbeatPingRequest& request) = 0;
 
         virtual void OnLogin(LoginRequest& request) = 0;
+
+        virtual void OnSendMessage(SendMessageRequest& request) = 0;
     };
 
 

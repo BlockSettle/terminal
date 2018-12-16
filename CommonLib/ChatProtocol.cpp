@@ -21,8 +21,8 @@ static const QString ContactsKey = QStringLiteral("fromid");
 static const QString IdKey = QStringLiteral("id");
 static const QString AuthIdKey = QStringLiteral("authid");
 static const QString PasswordKey = QStringLiteral("passwd");
-static const QString ToIdKey = QStringLiteral("toid");
-static const QString FromIdKey = QStringLiteral("fromid");
+static const QString ReceiverIdKey = QStringLiteral("toid");
+static const QString SenderIdKey = QStringLiteral("fromid");
 static const QString StatusKey = QStringLiteral("status");
 
 
@@ -93,6 +93,14 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
                         clientId
                       , data[AuthIdKey].toString().toStdString()
                       , data[PasswordKey].toString().toStdString());
+
+        case RequestType::RequestSendMessage:
+            return std::make_shared<SendMessageRequest>(
+                        clientId
+                      , data[SenderIdKey].toString().toStdString()
+                      , data[ReceiverIdKey].toString().toStdString()
+                      , data[MessageKey].toString().toStdString());
+
         default:
             break;
     }
@@ -197,11 +205,41 @@ QJsonObject LoginRequest::toJson() const
     data[PasswordKey] = QString::fromStdString(password_);
 
     return data;
-
 }
 
 
 void LoginRequest::handle(RequestHandler& handler)
 {
     handler.OnLogin(*this);
+}
+
+
+SendMessageRequest::SendMessageRequest(const std::string& clientId
+                   , const std::string& senderId
+                   , const std::string& receiverId
+                   , const std::string& messageData)
+    : Request(RequestType::RequestSendMessage, clientId)
+    , senderId_(senderId)
+    , receiverId_(receiverId)
+    , messageData_(messageData)
+{
+
+}
+
+
+QJsonObject SendMessageRequest::toJson() const
+{
+    QJsonObject data = Request::toJson();
+
+    data[SenderIdKey] = QString::fromStdString(senderId_);
+    data[ReceiverIdKey] = QString::fromStdString(receiverId_);
+    data[MessageKey] = QString::fromStdString(messageData_);
+
+    return data;
+}
+
+
+void SendMessageRequest::handle(RequestHandler& handler)
+{
+
 }
