@@ -119,7 +119,7 @@ void QMLAppObj::settingsConnections()
 void QMLAppObj::walletsLoad()
 {
    logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(NetworkType::Invalid, params_->getWalletsDir());
+   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
    if (walletsMgr_->GetWalletsCount() > 0) {
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
@@ -320,7 +320,7 @@ void QMLAppObj::OnlineProcessing()
    }
 
    listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , params_->getWalletsDir().toStdString(), params_->pwHash().toStdString(), true);
+      , params_->getWalletsDir().toStdString(), params_->netType(), params_->pwHash().toStdString(), true);
    listener_->SetLimits(params_->limits());
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);

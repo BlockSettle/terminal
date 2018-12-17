@@ -29,6 +29,9 @@ static const QString walletsDirHelp = QObject::tr("Directory where wallets resid
 static const QString testnetName = QString::fromStdString("testnet");
 static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
 
+static const QString mainnetName = QString::fromStdString("mainnet");
+static const QString mainnetHelp = QObject::tr("Set bitcoin network type to mainnet");
+
 static const QString pwhashName = QString::fromStdString("pwhash");
 static const QString pwhashHelp = QObject::tr("Password hash (first 8 bytes of SHA256 in hex)");
 
@@ -208,6 +211,7 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addOption({ logName, logHelp, QObject::tr("log") });
    parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
+   parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    parser.addOption({ signName, signHelp, QObject::tr("filename") });
    parser.addOption({ headlessName, headlessHelp });
@@ -248,7 +252,10 @@ void SignerSettings::parseArguments(const QStringList &args)
       set(WalletsDir, parser.value(walletsDirName), false);
    }
 
-   if (parser.isSet(testnetName)) {
+   if (parser.isSet(mainnetName)) {
+      set(TestNet, false, false);
+   }
+   else if (parser.isSet(testnetName)) {
       set(TestNet, true, false);
    }
 
