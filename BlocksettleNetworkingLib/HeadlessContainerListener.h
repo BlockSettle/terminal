@@ -34,6 +34,7 @@ public:
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<WalletsManager> &walletsMgr
       , const std::string &walletsPath
+      , NetworkType
       , const std::string &pwHash = {}
       , bool hasUI = false
       , bool backupEnabled = true);
@@ -130,6 +131,7 @@ private:
    std::shared_ptr<WalletsManager>     walletsMgr_;
    const std::string                   walletsPath_;
    const std::string                   backupPath_;
+   const NetworkType                   netType_;
    SignContainer::Limits               limits_;
    const std::string                   pwHash_;
    const bool                          hasUI_;
