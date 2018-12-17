@@ -4,6 +4,9 @@ import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.2
 import com.blocksettle.OfflineProc 1.0
 
+import "StyledControls"
+import "BsStyles"
+
 Item {
     id: view
 
@@ -207,7 +210,7 @@ Item {
                                 - btns.height - column.spacing * 4
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                color: "#1c2835"
+                color: BSStyle.backgroundColor
             }
 
             CustomButtonBar {

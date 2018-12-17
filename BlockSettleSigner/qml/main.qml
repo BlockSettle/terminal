@@ -4,23 +4,35 @@ import QtQuick.Layouts 1.3
 import QtQuick.Window 2.1
 import Qt.labs.settings 1.0
 import com.blocksettle.TXInfo 1.0
+import com.blocksettle.WalletSeed 1.0
+import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.AuthProxy 1.0
+import com.blocksettle.MobileClient 1.0
+
+import "StyledControls"
+import "BsStyles"
+import "BsControls"
+import "js/helper.js" as JsHelper
 
 
 ApplicationWindow {
-    visible: true
-    title: qsTr("BlockSettle Signer")
-    width: 640
-    height: 480
     id: mainWindow
 
+    visible: true
+    title: qsTr("BlockSettle Signer")
+    width: 800
+    height: 600
+    minimumWidth: 800
+    minimumHeight: 600
+
     background: Rectangle {
-        color: "#1c2835"
+        color: BSStyle.backgroundColor
     }
     overlay.modal: Rectangle {
-        color: "#737373"
+        color: BSStyle.backgroundModalColor
     }
     overlay.modeless: Rectangle {
-        color: "#939393"
+        color: BSStyle.backgroundModeLessColor
     }
 
     Settings {
@@ -73,10 +85,6 @@ ApplicationWindow {
         }
     }
 
-    BSMessageBox {
-        id: msgBox
-    }
-
     footer: TabBar {
         id: tabBar
         currentIndex: swipeView.currentIndex
@@ -119,11 +127,18 @@ ApplicationWindow {
     signal passwordEntered(string walletId, string password, bool cancelledByUser)
 
     function createPasswordDialog(prompt, txInfo) {
+        console.log("QML createPasswordDialog")
         var dlg = Qt.createQmlObject("PasswordEntryDialog {}", mainWindow, "passwordDlg")
         dlg.prompt = prompt
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
-            passwordEntered(txInfo.wallet.id, dlg.password, false)
+            if (txInfo.wallet.encType === WalletInfo.Password) {
+                passwordEntered(txInfo.wallet.id, dlg.password, false)
+            }
+            else {
+                passwordEntered(txInfo.wallet.id, dlg.seed.password, false)
+            }
+
         })
         dlg.rejected.connect(function() {
             passwordEntered(txInfo.wallet.id, '', dlg.cancelledByUser)
@@ -131,29 +146,4 @@ ApplicationWindow {
         mainWindow.requestActivate()
         dlg.open()
     }
-
-   function raiseWindow() {
-        mainWindow.show()
-        mainWindow.raise()
-        mainWindow.requestActivate()
-        mainWindow.flags |= Qt.WindowStaysOnTopHint
-        mainWindow.flags &= ~Qt.WindowStaysOnTopHint
-   }
-
-   function messageBox(type, title, text, details, parent) {
-       msgBox.type = type
-       msgBox.titleText = title
-       msgBox.text = text
-       msgBox.details = details
-       msgBox.parent = parent
-       msgBox.open()
-   }
-
-   function messageBoxInfo(title, text, details, parent) {
-       messageBox(BSMessageBox.Type.Info, title, text, details, parent);
-   }
-
-   function messageBoxCritical(title, text, details, parent) {
-       messageBox(BSMessageBox.Type.Critical, title, text, details, parent);
-   }
 }

@@ -3,6 +3,9 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.EasyEncValidator 1.0
 
+import "../StyledControls"
+import "../BsStyles"
+
 ColumnLayout {
     id: topLayout
 
@@ -41,7 +44,7 @@ ColumnLayout {
         Layout.leftMargin: 10
         Layout.rightMargin: 10
 
-        BSInputLabel {
+        CustomLabel {
             id: sectionHeader
             Layout.leftMargin: inputLablesWidth
             Layout.fillWidth: true
@@ -58,7 +61,7 @@ ColumnLayout {
         Layout.leftMargin: 10
         Layout.rightMargin: 10
         Layout.bottomMargin: 5
-        BSInputLabel {
+        CustomLabel {
             id: keyLine1Label
             Layout.fillWidth: true
             Layout.minimumWidth: inputLablesWidth
@@ -67,7 +70,7 @@ ColumnLayout {
             text: qsTr("Recovery key Line 1:")
         }
 
-        BSTextInput {
+        CustomTextInput {
             id: keyLine1
             Layout.fillWidth: true
             selectByMouse: true
@@ -94,7 +97,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
-        BSInputLabel {
+        CustomLabel {
             id: keyLine2Label
             Layout.fillWidth: true
             Layout.minimumWidth: inputLablesWidth
@@ -103,7 +106,7 @@ ColumnLayout {
             text: qsTr("Recovery Key Line 2:")
         }
 
-        BSTextInput {
+        CustomTextInput {
             id: keyLine2
             Layout.fillWidth: true
             validator: EasyEncValidator { id: line2Validator; name: qsTr("Line 2") }
@@ -126,7 +129,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
-        BSInputLabel {
+        CustomLabel {
             opacity: keyLine1.validator.statusMsg === "" ? 0.0 : 1.0
             topPadding: 1
             bottomPadding: 1
@@ -135,7 +138,7 @@ ColumnLayout {
             text:  keyLine1.validator.statusMsg
             color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
-        BSInputLabel {
+        CustomLabel {
             opacity: keyLine2.validator.statusMsg === "" ? 0.0 : 1.0
             topPadding: 1
             bottomPadding: 1
