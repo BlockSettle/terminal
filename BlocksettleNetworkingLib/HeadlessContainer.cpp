@@ -1145,6 +1145,10 @@ HeadlessAddressSyncer::HeadlessAddressSyncer(const std::shared_ptr<SignContainer
 
 void HeadlessAddressSyncer::onWalletsUpdated()
 {
+   if (!signingContainer_->isReady()) {
+      wasOffline_ = true;
+      return;
+   }
    signingContainer_->SyncAddresses(walletsMgr_->GetAddressesInAllWallets());
 }
 
