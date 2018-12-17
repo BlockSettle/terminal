@@ -5,6 +5,9 @@ import QtQml.Models 2.3
 import QtQuick.Window 2.3
 import com.blocksettle.Wallets 1.0
 
+import "StyledControls"
+import "BsStyles"
+
 TreeView {
     model:  walletsModel
     objectName: "walletsView"
@@ -31,9 +34,9 @@ TreeView {
     }
 
     style: TreeViewStyle {
-        backgroundColor:    "#1C2835"
+        backgroundColor: BSStyle.backgroundColor
         alternateBackgroundColor: "#32000000"
-        textColor: "#ffffff"
+        textColor: BSStyle.textColor
         frame: Item {}
         headerDelegate: Rectangle {
             height: textItem.implicitHeight * 1.2

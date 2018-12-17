@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
 import QtQuick.Controls.Styles 1.4
+import "../BsStyles"
 
 Button {
     leftPadding: 10
@@ -8,10 +9,8 @@ Button {
     width: parent.width
     height: parent.height
 
-
-
     background: Rectangle {
-        color: "#0A1619"
+        color: BSStyle.dialogHeaderColor
         width: parent.width
         height: parent.height
     }
@@ -20,9 +19,8 @@ Button {
         height: parent.height
         text:  parent.text
         font.capitalization: Font.AllUppercase
-        color: "#ffffff"
+        color: BSStyle.textColor
         font.pixelSize: 11
         verticalAlignment: Text.AlignVCenter
     }
-
 }

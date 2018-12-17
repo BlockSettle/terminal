@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
 import QtQuick.Controls.Styles 1.4
+import "../BsStyles"
 
 Switch {
     id: control
@@ -12,7 +13,7 @@ Switch {
         text: control.text
         font: control.font
         opacity: enabled ? 1.0 : 0.3
-        color: control.checked ? "#22C064" : (signerStatus.socketOk ? "#EC0A35" : "#f6a724")
+        color: control.checked ? BSStyle.switchGreenColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }
@@ -23,16 +24,16 @@ Switch {
         x: control.width - width - control.rightPadding
         y: parent.height / 2 - height / 2
         radius: 13
-        color: control.checked ? "#22C064" : "transparent"
-        border.color: control.checked ? "#22C064" : (signerStatus.socketOk ? "#EC0A35" : "#f6a724")
+        color: control.checked ? BSStyle.switchGreenColor : "transparent"
+        border.color: control.checked ? BSStyle.switchGreenColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
 
         Rectangle {
             x: control.checked ? parent.width - width : 0
             width: 26
             height: 26
             radius: 13
-            color: control.checked ? "#ffffff" : (signerStatus.socketOk ? "#EC0A35" : "#f6a724")
-            border.color: control.checked ? (control.down ? "#22C064" : "#38C673") : "#1c2835"
+            color: control.checked ? BSStyle.textColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
+            border.color: control.checked ? (control.down ? BSStyle.switchGreenColor : BSStyle.switchGreenColor) : BSStyle.backgroundColor
         }
     }
 
@@ -40,6 +41,6 @@ Switch {
         implicitWidth: 100
         implicitHeight: 26
         visible:  control.down
-        color: "transparent"
+        color: BSStyle.switchBgColor
     }
 }

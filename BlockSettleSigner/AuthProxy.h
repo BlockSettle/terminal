@@ -4,9 +4,9 @@
 #include <memory>
 #include <QObject>
 #include "EncryptionUtils.h"
+#include "MobileClient.h"
 
 
-class MobileClient;
 class ApplicationSettings;
 
 namespace spdlog {
@@ -41,13 +41,16 @@ class AuthSignWalletObject : public AuthObject
 
 public:
    AuthSignWalletObject() : AuthObject(nullptr) {}
-   AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &, const QString &userId
-      , const QString &title, const QString &walletId, QObject *parent = nullptr);
+
+   // TODO refactor: encKey already contains userId
+   AuthSignWalletObject(MobileClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &, const QString &userId
+      , const QString &title, const QString &walletId, const QString &encKey, QObject *parent = nullptr);
 
    Q_INVOKABLE void cancel();
 
 signals:
-   void success(QString password) const;
+   void succeeded(const QString &encKey, const SecureBinaryData &password) const;
+   void failed(const QString &text) const;
 
 private:
 //   FrejaSignWallet   freja_;
@@ -61,8 +64,17 @@ class AuthProxy : public QObject
 public:
    AuthProxy(const std::shared_ptr<spdlog::logger> &, QObject *parent = nullptr);
 
-   Q_INVOKABLE AuthSignWalletObject *signWallet(const QString &userId, const QString &title
-      , const QString &walletId);
+   // TODO refactor: encKey already contains userId
+   Q_INVOKABLE AuthSignWalletObject *signWallet(MobileClient::RequestType requestType
+                                                , const QString &userId
+                                                , const QString &title
+                                                , const QString &walletId
+                                                , const QString &encKey);
+
+   Q_INVOKABLE AuthSignWalletObject *signWallet(MobileClient::RequestType requestType,
+                                                const QString &title,
+                                                const QString &walletId,
+                                                const QString &encKey);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

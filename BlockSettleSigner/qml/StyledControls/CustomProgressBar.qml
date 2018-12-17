@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
 import QtQuick.Controls.Styles 1.4
+import "../BsStyles"
 
 ProgressBar {
     id: control
@@ -10,7 +11,7 @@ ProgressBar {
     background: Rectangle {
         implicitWidth: 200
         implicitHeight: 6
-        color: "#000000"
+        color: BSStyle.progressBarBgColor
         radius: 3
     }
 
@@ -22,7 +23,7 @@ ProgressBar {
             width: control.visualPosition * parent.width
             height: parent.height
             radius: 2
-            color: "#22C064"
+            color: BSStyle.progressBarColor
         }
     }
 }
