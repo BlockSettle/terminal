@@ -1,7 +1,10 @@
-﻿import QtQuick 2.9
+import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import com.blocksettle.PasswordConfirmValidator 1.0
+
+import "../StyledControls"
+import "../BsStyles"
 
 ColumnLayout {
     id: topLayout
@@ -25,7 +28,7 @@ ColumnLayout {
         Layout.rightMargin: 10
         Layout.alignment: Qt.AlignTop
 
-        BSInputLabel {
+        CustomLabel {
             id: passwordLabel
             elide: Label.ElideRight
             text: qsTr("Password:")
@@ -36,7 +39,7 @@ ColumnLayout {
             Layout.fillWidth: true
         }
 
-        BSTextInput {
+        CustomTextInput {
             id: passwordInput
             focus: true
             echoMode: TextField.Password
@@ -51,7 +54,7 @@ ColumnLayout {
         Layout.rightMargin: 10
         Layout.alignment: Qt.AlignTop
 
-        BSInputLabel {
+        CustomLabel {
             id: confirmPasswordLabel
             elide: Label.ElideRight
             text: qsTr("Confirm Password:")
@@ -62,7 +65,7 @@ ColumnLayout {
             Layout.fillWidth: true
         }
 
-        BSTextInput {
+        CustomTextInput {
             id: confirmPasswordInput
             focus: true
             echoMode: TextField.Password
@@ -81,7 +84,7 @@ ColumnLayout {
         Layout.leftMargin: 10
         Layout.rightMargin: 10
 
-        BSInputLabel {
+        CustomLabel {
             topPadding: 1
             bottomPadding: 1
             Layout.fillWidth: true

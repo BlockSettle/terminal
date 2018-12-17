@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
 import QtQuick.Controls.Styles 1.4
+import "../BsStyles"
 
 ComboBox {
     id: control
@@ -10,7 +11,7 @@ ComboBox {
     contentItem: Text {
         leftPadding: 7
         rightPadding: control.indicator.width + control.spacing
-        color: "white"
+        color: BSStyle.comboBoxItemTextHighlightedColor
         text: control.displayText
         font: control.font
 
@@ -41,20 +42,18 @@ ComboBox {
             context.lineTo(8,7);
             context.lineTo(1, 0);
             context.closePath();
-            context.fillStyle = "white";
+            context.fillStyle = BSStyle.comboBoxItemTextHighlightedColor;
             context.fill();
         }
     }
 
     background: Rectangle {
         implicitWidth: 120
-        color:"transparent"
+        color: BSStyle.comboBoxBgColor
         implicitHeight: 40
-        border.color: "#757E83"
+        border.color: BSStyle.inputsBorderColor
         border.width: control.visualFocus ? 2 : 1
         radius: 2
-
-
     }
 
     delegate: ItemDelegate {
@@ -63,7 +62,7 @@ ComboBox {
 
         contentItem: Text {
             text: modelData
-            color: menuItem.highlighted ? "white" : "white"
+            color: menuItem.highlighted ? BSStyle.comboBoxItemTextColor : BSStyle.comboBoxItemTextHighlightedColor
             font: control.font
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
@@ -71,8 +70,7 @@ ComboBox {
         highlighted: control.highlightedIndex === index
 
         background: Rectangle {
-            color: menuItem.highlighted ? "#247dac" : "#17262b"
-
+            color: menuItem.highlighted ? BSStyle.comboBoxItemBgHighlightedColor : BSStyle.comboBoxItemBgColor
         }
     }
 
@@ -93,7 +91,8 @@ ComboBox {
 
 
         background: Rectangle {
-            border.color: "#757E83"
+            color: BSStyle.comboBoxItemBgColor
+            border.color: BSStyle.inputsBorderColor
             radius: 0
         }
     }

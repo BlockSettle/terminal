@@ -3,6 +3,9 @@ import QtQuick.Controls 2.2
 import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.3
 
+import "StyledControls"
+import "BsStyles"
+
 Item {
     DirSelectionDialog {
         id:     ldrWalletsDirDlg
@@ -101,7 +104,7 @@ Item {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     text:   signerParams.walletsDir
-                    color: "#ffffff"
+                    color: BSStyle.textColor
 
                 }
 

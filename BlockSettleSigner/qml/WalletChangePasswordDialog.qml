@@ -5,11 +5,14 @@ import com.blocksettle.PasswordConfirmValidator 1.0
 import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.WalletSeed 1.0
+import com.blocksettle.MobileClient 1.0
 
-import "bscontrols"
+import "BsControls"
+import "StyledControls"
+import "js/helper.js" as JsHelper
 
-
-CustomDialog {
+CustomTitleDialogWindow {
     id: changeWalletPasswordDialog
 
     property WalletInfo wallet
@@ -21,12 +24,12 @@ CustomDialog {
     property AuthSignWalletObject  authSignOld
     property AuthSignWalletObject  authSignNew
 
-    implicitWidth: 400
-    implicitHeight: mainLayout.implicitHeight
+    title:   qsTr("Change Password for Wallet <%1>").arg(wallet.name)
+    width: 400
 
     onWalletChanged: {
         if (wallet.encType === WalletInfo.Auth) {
-            authSignOld = auth.signWallet(wallet.encKey, qsTr("Old password for wallet %1").arg(wallet.name),
+            authSignOld = authProxy.signWallet(wallet.encKey, qsTr("Old password for wallet %1").arg(wallet.name),
                                          wallet.rootId)
 
             authSignOld.success.connect(function(key) {
@@ -34,201 +37,147 @@ CustomDialog {
                 labelAuthStatus.text = qsTr("Old password ok")
             })
             authSignOld.error.connect(function(text) {
-                changeWalletPasswordDialog.reject()
+                changeWalletPasswordDialog.rejectAnimated()
             })
         }
     }
 
-    FocusScope {
-        anchors.fill: parent
-        focus: true
+    cContentItem: ColumnLayout {
+        id: mainLayout
+        spacing: 10
 
-        Keys.onPressed: {
-            if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
-                if (acceptable) {
-                    accept();
-                }
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
 
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Escape) {
-                changeWalletPasswordDialog.close();
-                event.accepted = true;
+            CustomLabel {
+                visible:    wallet.encType === WalletInfo.Password
+                elide: Label.ElideRight
+                text: qsTr("Current password")
+                wrapMode: Text.WordWrap
+                Layout.minimumWidth: 110
+                Layout.preferredWidth: 110
+                Layout.maximumWidth: 110
+                Layout.fillWidth: true
+            }
+            CustomTextInput {
+                id: tfOldPassword
+                visible: wallet.encType === WalletInfo.Password
+                focus: true
+                placeholderText: qsTr("Old Password")
+                echoMode: TextField.Password
+                Layout.fillWidth: true
+            }
+
+            CustomLabel {
+                id: labelAuth
+                visible: wallet.encType === WalletInfo.Auth
+                text: qsTr("Sign with Auth eID")
+            }
+            CustomLabel {
+                id: labelAuthStatus
+                visible: wallet.encType === WalletInfo.Auth
+                text: authSignOld.status
             }
         }
 
-        ColumnLayout {
-
-            id: mainLayout
+        RowLayout {
+            spacing: 5
             Layout.fillWidth: true
-            spacing: 10
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
 
-            RowLayout{
-                CustomHeaderPanel{
-                    id: panelHeader
-                    Layout.preferredHeight: 40
-                    Layout.fillWidth: true
-                    text:   qsTr("Change Password for Wallet %1").arg(wallet.name)
-
-                }
+            CustomRadioButton {
+                id: rbPassword
+                text: qsTr("Password")
+                checked: true
             }
-
-            RowLayout {
-                spacing: 5
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-
-                CustomLabel {
-                    visible:    wallet.encType === WalletInfo.Password
-                    elide: Label.ElideRight
-                    text: qsTr("Current password")
-                    wrapMode: Text.WordWrap
-                    Layout.minimumWidth: 110
-                    Layout.preferredWidth: 110
-                    Layout.maximumWidth: 110
-                    Layout.fillWidth: true
-                }
-                CustomTextInput {
-                    id: tfOldPassword
-                    visible: wallet.encType === WalletInfo.Password
-                    focus: true
-                    placeholderText: qsTr("Old Password")
-                    echoMode: TextField.Password
-                    Layout.fillWidth: true
-                }
-
-                CustomLabel {
-                    id: labelAuth
-                    visible: wallet.encType === WalletInfo.Auth
-                    text: qsTr("Sign with Auth eID")
-                }
-                CustomLabel {
-                    id: labelAuthStatus
-                    visible: wallet.encType === WalletInfo.Auth
-                    text: authSignOld.status
-                }
+            CustomRadioButton {
+                id: rbAuth
+                text: qsTr("Auth eID")
+                checked: false
             }
+        }
 
-            RowLayout {
-                spacing: 5
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
+        BSConfirmedPasswordInput {
+            id: newPasswordWithConfirm
+            columnSpacing: 10
+            visible: rbPassword.checked
+            passwordLabelTxt: qsTr("New Password")
+            passwordInputPlaceholder: qsTr("New Password")
+            confirmLabelTxt: qsTr("Confirm New")
+            confirmInputPlaceholder: qsTr("Confirm New Password")
+        }
 
-                CustomRadioButton {
-                    id: rbPassword
-                    text: qsTr("Password")
-                    checked: true
-                }
-                CustomRadioButton {
-                    id: rbAuth
-                    text: qsTr("Auth eID")
-                    checked: false
-                }
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            visible:    rbAuth.checked
+
+            CustomTextInput {
+                id: tiNewAuthId
+                placeholderText: qsTr("New Auth ID (email)")
             }
-
-            BSConfirmedPasswordInput {
-                id: newPasswordWithConfirm
-                columnSpacing: 10
-                visible: rbPassword.checked
-                passwordLabelTxt: qsTr("New Password")
-                passwordInputPlaceholder: qsTr("New Password")
-                confirmLabelTxt: qsTr("Confirm New")
-                confirmInputPlaceholder: qsTr("Confirm New Password")
-            }
-
-            RowLayout {
-                spacing: 5
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-                visible:    rbAuth.checked
-
-                CustomTextInput {
-                    id: tiNewAuthId
-                    placeholderText: qsTr("New Auth ID (email)")
-                }
-                CustomButton {
-                    id: btnAuthNew
-                    text:   !authSignNew ? qsTr("Sign with Auth eID") : authSignNew.status
-                    enabled:    !authSignNew && tiNewAuthId.text.length
-                    onClicked: {
-                        authSignNew = auth.signWallet(tiNewAuthId.text, qsTr("New password for wallet %1").arg(wallet.name),
-                                                              wallet.rootId)
-                        btnAuthNew.enabled = false
-                        authSignNew.success.connect(function(key) {
-                            acceptable = true
-                            newPassword = key
-                            text = qsTr("Successfully signed")
-                        })
-                        authSignNew.error.connect(function(text) {
-                            authSignNew = null
-                            btnAuthNew.enabled = tiNewAuthId.text.length
-                        })
-                    }
-                }
-            }
-
-            CustomButtonBar {
-                implicitHeight: childrenRect.height
-                implicitWidth: changeWalletPasswordDialog.width
-                id: rowButtons
-
-                Flow {
-                    id: buttonRow
-                    spacing: 5
-                    padding: 5
-                    height: childrenRect.height + 10
-                    width: parent.width - buttonRowLeft - 5
-                    LayoutMirroring.enabled: true
-                    LayoutMirroring.childrenInherit: true
-                    anchors.left: parent.left   // anchor left becomes right
-
-
-                    CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text:   qsTr("CONFIRM")
-                        enabled: acceptable
-                        onClicked: {
-                            accept()
-                        }
-                    }
-                }
-
-                Flow {
-                    id: buttonRowLeft
-                    spacing: 5
-                    padding: 5
-                    height: childrenRect.height + 10
-
-
-                    CustomButton {
-                        Layout.fillWidth: true
-                        text:   qsTr("Cancel")
-                        onClicked: {
-                            onClicked: changeWalletPasswordDialog.reject();
-                        }
-                    }
-
+            CustomButton {
+                id: btnAuthNew
+                text:   !authSignNew ? qsTr("Sign with Auth eID") : authSignNew.status
+                enabled:    !authSignNew && tiNewAuthId.text.length
+                onClicked: {
+                    authSignNew = authProxy.signWallet(MobileClient.ActivateWallet, tiNewAuthId.text, qsTr("New password for wallet %1").arg(wallet.name),
+                                                          wallet.rootId)
+                    btnAuthNew.enabled = false
+                    authSignNew.success.connect(function(key) {
+                        acceptable = true
+                        newPassword = key
+                        text = qsTr("Successfully signed")
+                    })
+                    authSignNew.error.connect(function(text) {
+                        authSignNew = null
+                        btnAuthNew.enabled = tiNewAuthId.text.length
+                    })
                 }
             }
         }
     }
 
-    function toHex(str) {
-        var hex = '';
-        for(var i = 0; i < str.length; i++) {
-            hex += ''+str.charCodeAt(i).toString(16);
+    cFooterItem: RowLayout {
+        CustomButtonBar {
+            Layout.fillWidth: true
+
+            id: rowButtons
+
+            CustomButton {
+                anchors.left: parent.left
+                anchors.bottom: parent.bottom
+                text:   qsTr("Cancel")
+                onClicked: {
+                    rejectAnimated()
+                }
+            }
+
+            CustomButtonPrimary {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                text:   qsTr("CONFIRM")
+                enabled: acceptable
+                onClicked: {
+                    acceptAnimated()
+                }
+            }
         }
-        return hex;
+
     }
 
     onAccepted: {
         if (wallet.encType === WalletInfo.Password) {
-            oldPassword = toHex(tfOldPassword.text)
+            oldPassword = JsHelper.toHex(tfOldPassword.text)
         }
         if (rbPassword.checked) {
-            newPassword = toHex(newPasswordWithConfirm.text)
+            newPassword = JsHelper.toHex(newPasswordWithConfirm.text)
         }
         else if (rbAuth.checked) {
             wallet.encType = WalletInfo.Auth

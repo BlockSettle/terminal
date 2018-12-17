@@ -5,6 +5,8 @@ import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
 import com.blocksettle.WalletsProxy 1.0
 
+import "StyledControls"
+
 Item {
     ScrollView {
         anchors.fill: parent
