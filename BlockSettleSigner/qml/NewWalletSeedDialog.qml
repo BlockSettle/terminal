@@ -107,7 +107,7 @@ CustomTitleDialogWindow {
                         seedMatch = false
 
                         // seedMatch = true!!! ONLY FOR TESTING!!!
-                        seedMatch = true
+                        // seedMatch = true
                     }
                 }
             }
