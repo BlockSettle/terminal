@@ -71,7 +71,7 @@ AuthSignWalletObject::AuthSignWalletObject(MobileClient::RequestType requestType
    std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
    std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
 
-   mobileClient_->init(serverPubKey, serverHost, serverPort);
+   mobileClient_->connect(serverPubKey, serverHost, serverPort);
 
    std::vector<std::string> knownDeviceIds;
    auto deviceInfo = MobileClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
