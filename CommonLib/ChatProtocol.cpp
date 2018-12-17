@@ -24,6 +24,7 @@ static const QString PasswordKey = QStringLiteral("passwd");
 static const QString ReceiverIdKey = QStringLiteral("toid");
 static const QString SenderIdKey = QStringLiteral("fromid");
 static const QString StatusKey = QStringLiteral("status");
+static const QString UsersKey = QStringLiteral("users");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
@@ -33,6 +34,7 @@ static std::map<std::string, RequestType> RequestTypeFromString
     ,   { "RequestLogout"           ,   RequestType::RequestLogout          }
     ,   { "RequestReceiveMessages"  ,   RequestType::RequestReceiveMessages }
     ,   { "RequestSendMessage"      ,   RequestType::RequestSendMessage     }
+    ,   { "RequestOnlineUsers"      ,   RequestType::RequestOnlineUsers     }
 };
 
 
@@ -43,6 +45,7 @@ static std::map<RequestType, std::string> RequestTypeToString
     ,   { RequestType::RequestLogout            ,  "RequestLogout"          }
     ,   { RequestType::RequestReceiveMessages   ,  "RequestReceiveMessages" }
     ,   { RequestType::RequestSendMessage       ,  "RequestSendMessage"     }
+    ,   { RequestType::RequestOnlineUsers       ,  "RequestOnlineUsers"     }
 };
 
 
@@ -53,6 +56,7 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
     ,   { "ResponseLogin"           ,   ResponseType::ResponseLogin             }
     ,   { "ResponseMessages"        ,   ResponseType::ResponseMessages          }
     ,   { "ResponseSuccess"         ,   ResponseType::ResponseSuccess           }
+    ,   { "ResponseUsersList"       ,   ResponseType::ResponseUsersList         }
 };
 
 
@@ -63,6 +67,7 @@ static std::map<ResponseType, std::string> ResponseTypeToString
     ,   { ResponseType::ResponseLogin           ,  "ResponseLogin"             }
     ,   { ResponseType::ResponseMessages        ,  "ResponseMessages"          }
     ,   { ResponseType::ResponseSuccess         ,  "ResponseSuccess"           }
+    ,   { ResponseType::ResponseUsersList       ,  "ResponseUsersList"         }
 };
 
 
@@ -100,6 +105,11 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
                       , data[SenderIdKey].toString().toStdString()
                       , data[ReceiverIdKey].toString().toStdString()
                       , data[MessageKey].toString().toStdString());
+
+        case RequestType::RequestOnlineUsers:
+            return std::make_shared<OnlineUsersRequest>(
+                        clientId
+                      , data[AuthIdKey].toString().toStdString());
 
         default:
             break;
@@ -152,6 +162,16 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
         case ResponseType::ResponseHeartbeatPong:
             return std::make_shared<HeartbeatPongResponse>();
 
+        case ResponseType::ResponseUsersList:
+        {
+            std::vector<std::string> usersList;
+            QJsonArray usersArray = data[UsersKey].toArray();
+            foreach(auto userId, usersArray) {
+                usersList.push_back(userId.toString().toStdString());
+            }
+            return std::make_shared<UsersListResponse>(std::move(usersList));
+        }
+
         default:
             break;
     }
@@ -183,6 +203,36 @@ HeartbeatPongResponse::HeartbeatPongResponse()
 void HeartbeatPongResponse::handle(ResponseHandler& handler)
 {
     handler.OnHeartbeatPong(*this);
+}
+
+
+UsersListResponse::UsersListResponse(std::vector<std::string> usersList)
+    : Response(ResponseType::ResponseUsersList)
+    , usersList_(usersList)
+{
+
+}
+
+
+QJsonObject UsersListResponse::toJson() const
+{
+    QJsonObject data = Response::toJson();
+
+    QJsonArray usersJson;
+
+    std::for_each(usersList_.begin(), usersList_.end(), [&](const std::string& userId){
+        usersJson << QString::fromStdString(userId);
+    });
+
+    data[UsersKey] = usersJson;
+
+    return data;
+}
+
+
+void UsersListResponse::handle(ResponseHandler& handler)
+{
+    handler.OnUsersList(*this);
 }
 
 
@@ -241,5 +291,30 @@ QJsonObject SendMessageRequest::toJson() const
 
 void SendMessageRequest::handle(RequestHandler& handler)
 {
+    handler.OnSendMessage(*this);
+}
 
+
+OnlineUsersRequest::OnlineUsersRequest(const std::string& clientId
+                   , const std::string& authId)
+    : Request(RequestType::RequestOnlineUsers, clientId)
+    , authId_(authId)
+{
+
+}
+
+
+QJsonObject OnlineUsersRequest::toJson() const
+{
+    QJsonObject data = Request::toJson();
+
+    data[AuthIdKey] = QString::fromStdString(authId_);
+
+    return data;
+}
+
+
+void OnlineUsersRequest::handle(RequestHandler& handler)
+{
+    handler.OnOnlineUsers(*this);
 }

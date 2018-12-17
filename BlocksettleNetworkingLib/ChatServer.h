@@ -3,6 +3,8 @@
 
 
 #include <memory>
+#include <map>
+#include <vector>
 
 #include "ServerConnectionListener.h"
 #include "ChatProtocol.h"
@@ -26,7 +28,7 @@ public:
     ChatServer(const std::shared_ptr<ConnectionManager>& connectionManager
                , const std::shared_ptr<ApplicationSettings> &appSettings
                , const std::shared_ptr<spdlog::logger>& logger);
-    ~ChatServer() noexcept = default;
+    ~ChatServer() noexcept override = default;
 
     ChatServer(const ChatServer&) = delete;
     ChatServer& operator = (const ChatServer&) = delete;
@@ -50,11 +52,13 @@ public:
     void OnHeartbeatPing(Chat::HeartbeatPingRequest& request) override;
     void OnLogin(Chat::LoginRequest& request) override;
     void OnSendMessage(Chat::SendMessageRequest& request) override;
+    void OnOnlineUsers(Chat::OnlineUsersRequest& request) override;
 
 
 private:
 
     void generateKeys();
+
 
 private:
 
@@ -66,6 +70,9 @@ private:
 
    std::string privateKey_;
    std::string publicKey_;
+
+   std::map<std::string, bool>                      clientsOnline_;
+   std::map<std::string, std::vector<std::string>>  messages_;
 
 };
 

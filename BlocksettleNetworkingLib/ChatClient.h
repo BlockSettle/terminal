@@ -51,6 +51,8 @@ public:
     void logout();
 
     void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
+    void OnUsersList(Chat::UsersListResponse& response) override;
+
 
 public:
    void OnDataReceived(const std::string& data) override;

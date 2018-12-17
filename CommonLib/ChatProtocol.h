@@ -28,6 +28,7 @@ namespace Chat
     ,   RequestLogout
     ,   RequestSendMessage
     ,   RequestReceiveMessages
+    ,   RequestOnlineUsers
 
     };
 
@@ -39,6 +40,7 @@ namespace Chat
     ,   ResponseMessages
     ,   ResponseSuccess
     ,   ResponseError
+    ,   ResponseUsersList
 
     };
 
@@ -194,6 +196,25 @@ namespace Chat
     };
 
 
+    class OnlineUsersRequest : public Request
+    {
+    public:
+
+        OnlineUsersRequest(const std::string& clientId
+                           , const std::string& authId);
+
+        QJsonObject toJson() const override;
+
+        void handle(RequestHandler& handler) override;
+
+        std::string getAuthId() const { return authId_; }
+
+    private:
+
+        std::string authId_;
+    };
+
+
     class HeartbeatPongResponse : public Response
     {
     public:
@@ -201,6 +222,25 @@ namespace Chat
         HeartbeatPongResponse();
 
         void handle(ResponseHandler& handler) override;
+    };
+
+
+    class UsersListResponse : public Response
+    {
+    public:
+
+        UsersListResponse(std::vector<std::string> usersList);
+
+        void handle(ResponseHandler& handler) override;
+
+        std::vector<std::string> getUsersList() const { return usersList_; }
+
+        QJsonObject toJson() const override;
+
+
+    private:
+
+        std::vector<std::string> usersList_;
     };
 
 
@@ -216,6 +256,8 @@ namespace Chat
         virtual void OnLogin(LoginRequest& request) = 0;
 
         virtual void OnSendMessage(SendMessageRequest& request) = 0;
+
+        virtual void OnOnlineUsers(OnlineUsersRequest& request) = 0;
     };
 
 
@@ -228,6 +270,7 @@ namespace Chat
 
         virtual void OnHeartbeatPong(HeartbeatPongResponse& response) = 0;
 
+        virtual void OnUsersList(UsersListResponse& response) = 0;
     };
 
 }

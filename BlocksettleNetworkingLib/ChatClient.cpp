@@ -50,6 +50,12 @@ void ChatClient::loginToServer(const std::string& hostname, const std::string& p
         connection_.reset();
     }
 
+    auto loginRequest = std::make_shared<Chat::LoginRequest>("", login, "");
+    sendRequest(loginRequest);
+
+    auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", login);
+    sendRequest(usersListRequest);
+
     heartbeatTimer_->start();
 }
 
@@ -60,6 +66,10 @@ void ChatClient::logout()
        logger_->error("[ChatClient::logout] Disconnected already.");
        return;
     }
+
+    currentUserId_ = "";
+
+    // Intentionally don't logout from server for testing reasons ...
 
     connection_.reset();
 }
@@ -90,6 +100,12 @@ void ChatClient::sendHeartbeat()
 void ChatClient::OnHeartbeatPong(Chat::HeartbeatPongResponse& response)
 {
     logger_->debug("[ChatClient::OnHeartbeatPong] {}", response.getData());
+}
+
+
+void ChatClient::OnUsersList(Chat::UsersListResponse& response)
+{
+    logger_->debug("Received users list from server: {}", response.getData());
 }
 
 

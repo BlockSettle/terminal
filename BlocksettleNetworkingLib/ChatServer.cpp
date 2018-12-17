@@ -78,6 +78,8 @@ void ChatServer::OnHeartbeatPing(Chat::HeartbeatPingRequest& request)
 void ChatServer::OnLogin(Chat::LoginRequest& request)
 {
     logger_->debug("[ChatServer::OnLogin] \"{}\"", request.getAuthId());
+
+    clientsOnline_[request.getAuthId()] = true;
 }
 
 
@@ -85,6 +87,29 @@ void ChatServer::OnSendMessage(Chat::SendMessageRequest& request)
 {
     logger_->debug("Received message from client: \"{0}\": \"{1}\""
                    , request.getSenderId(), request.getMessageData());
+
+    clientsOnline_[request.getSenderId()] = true;
+
+    auto& history = messages_[request.getReceiverId()];
+    history.push_back(request.getMessageData());
+}
+
+
+void ChatServer::OnOnlineUsers(Chat::OnlineUsersRequest& request)
+{
+    logger_->debug("Received request for online users list from \"{0}\""
+                   , request.getAuthId());
+
+    std::vector<std::string> usersList;
+
+    for (auto const& clientOnlinePair : clientsOnline_) {
+        if (clientOnlinePair.second) {
+            usersList.push_back(clientOnlinePair.first);
+        }
+    }
+
+    auto usersListResponse = std::make_shared<Chat::UsersListResponse>(usersList);
+    connection_->SendDataToClient(request.getClientId(), usersListResponse->getData());
 }
 
 
