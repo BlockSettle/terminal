@@ -5,6 +5,8 @@
 #include <QStringListModel>
 #include <QScopedPointer>
 
+#include "ChatUsersViewModel.h"
+
 
 namespace Ui {
     class ChatWidget;
@@ -29,10 +31,10 @@ class ChatWidget : public QWidget
 
 private:
 
-    QScopedPointer<Ui::ChatWidget> ui;
+    QScopedPointer<Ui::ChatWidget> ui_;
+    QScopedPointer<ChatUsersViewModel> usersViewModel_;
 
     std::shared_ptr<ChatClient> client_;
-
     std::shared_ptr<ChatServer> server_;
 
     std::shared_ptr<spdlog::logger> logger_;
@@ -57,18 +59,10 @@ public:
     void logout();
 
 
-public slots:
-
-    void populateUsers();
-
-    void addMessage(const QString &txt);
-    void addUser(const QString &txt);
-    void addGroup(const QString &txt);
-
-
 private slots:
 
     void onSendButtonClicked();
+    void onUserDoubleClicked(const QModelIndex& index);
 
 };
 

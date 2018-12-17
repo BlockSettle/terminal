@@ -237,6 +237,8 @@ namespace Chat
 
         QJsonObject toJson() const override;
 
+        static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+
 
     private:
 

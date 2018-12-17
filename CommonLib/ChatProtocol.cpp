@@ -163,14 +163,7 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
             return std::make_shared<HeartbeatPongResponse>();
 
         case ResponseType::ResponseUsersList:
-        {
-            std::vector<std::string> usersList;
-            QJsonArray usersArray = data[UsersKey].toArray();
-            foreach(auto userId, usersArray) {
-                usersList.push_back(userId.toString().toStdString());
-            }
-            return std::make_shared<UsersListResponse>(std::move(usersList));
-        }
+            return UsersListResponse::fromJSON(jsonData);
 
         default:
             break;
@@ -233,6 +226,19 @@ QJsonObject UsersListResponse::toJson() const
 void UsersListResponse::handle(ResponseHandler& handler)
 {
     handler.OnUsersList(*this);
+}
+
+
+std::shared_ptr<Response> UsersListResponse::fromJSON(const std::string& jsonData)
+{
+    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+
+    std::vector<std::string> usersList;
+    QJsonArray usersArray = data[UsersKey].toArray();
+    foreach(auto userId, usersArray) {
+        usersList.push_back(userId.toString().toStdString());
+    }
+    return std::make_shared<UsersListResponse>(std::move(usersList));
 }
 
 

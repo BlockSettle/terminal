@@ -68,6 +68,7 @@ void ChatClient::logout()
     }
 
     currentUserId_ = "";
+    heartbeatTimer_->stop();
 
     // Intentionally don't logout from server for testing reasons ...
 
@@ -106,6 +107,15 @@ void ChatClient::OnHeartbeatPong(Chat::HeartbeatPongResponse& response)
 void ChatClient::OnUsersList(Chat::UsersListResponse& response)
 {
     logger_->debug("Received users list from server: {}", response.getData());
+
+    auto users = response.getUsersList();
+    QList<QString> usersList;
+    foreach(auto userId, users) {
+        emit OnUserUpdate(QString::fromStdString(userId));
+        //usersList << QString::fromStdString(userId);
+    }
+
+    //emit OnUsersListUpdated(usersList);
 }
 
 

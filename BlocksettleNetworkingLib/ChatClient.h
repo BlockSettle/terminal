@@ -69,6 +69,8 @@ signals:
    void OnConnectedToServer();
    void OnConnectionClosed();
    void OnConnectionError(int errorCode);
+   void OnUsersListUpdated(const QList<QString>& usersList);
+   void OnUserUpdate(const QString& userId);
 
 
 public slots:
