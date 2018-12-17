@@ -103,7 +103,7 @@ class RemoteSigner : public HeadlessContainer
    Q_OBJECT
 public:
    RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
-      , const QString &port
+      , const QString &port, NetworkType
       , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash = {}
       , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
@@ -119,7 +119,7 @@ protected slots:
    void onAuthenticated();
    void onConnected();
    void onDisconnected();
-   void onConnError();
+   void onConnError(const QString &err);
    void onPacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
@@ -129,6 +129,7 @@ private:
 protected:
    const QString        host_;
    const QString        port_;
+   const NetworkType    netType_;
    const QString        pwHash_;
    const std::string    connPubKey_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;

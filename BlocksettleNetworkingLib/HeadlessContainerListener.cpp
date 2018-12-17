@@ -10,25 +10,10 @@
 
 using namespace Blocksettle::Communication;
 
-class NetConfigScopedChange
-{
-public:
-   explicit NetConfigScopedChange(NetworkType netType) : prevMode_(NetworkConfig::getMode()) {
-      NetworkConfig::selectNetwork(netType == NetworkType::TestNet ? NETWORK_MODE_TESTNET : NETWORK_MODE_MAINNET);
-   }
-   ~NetConfigScopedChange() {
-      NetworkConfig::selectNetwork(prevMode_);
-   }
-
-private:
-   const NETWORK_MODE   prevMode_;
-};
-
-
 HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<ServerConnection> &conn
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<WalletsManager> &walletsMgr
-   , const std::string &walletsPath
+   , const std::string &walletsPath, NetworkType netType
    , const std::string &pwHash, bool hasUI, bool backupEnabled)
    : QObject(nullptr), ServerConnectionListener()
    , connection_(conn)
@@ -36,6 +21,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , walletsMgr_(walletsMgr)
    , walletsPath_(walletsPath)
    , backupPath_(walletsPath + "/../backup")
+   , netType_(netType)
    , pwHash_(pwHash)
    , hasUI_(hasUI)
    , backupEnabled_{backupEnabled}
@@ -90,6 +76,15 @@ void HeadlessContainerListener::SetLimits(const SignContainer::Limits &limits)
    limits_ = limits;
 }
 
+static NetworkType mapNetworkType(headless::NetworkType netType)
+{
+   switch (netType) {
+   case headless::MainNetType:   return NetworkType::MainNet;
+   case headless::TestNetType:   return NetworkType::TestNet;
+   default:    return NetworkType::Invalid;
+   }
+}
+
 void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 {
    logger_->debug("[HeadlessContainerListener] client {} connected", clientId);
@@ -133,6 +128,11 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
          AuthResponse(clientId, packet, "failed to parse request");
          return;
       }
+      if (mapNetworkType(request.nettype()) != netType_) {
+         logger_->warn("[HeadlessContainerListener] remote network type mismatch");
+         AuthResponse(clientId, packet, "wrong network type");
+         return;
+      }
       if (!pwHash_.empty() && (pwHash_ != request.password())) {
          logger_->error("[HeadlessContainerListener] wrong auth password");
          AuthResponse(clientId, packet, "wrong pasasword");
@@ -170,6 +170,7 @@ void HeadlessContainerListener::AuthResponse(const std::string &clientId, headle
    else {
       response.set_error(errMsg);
    }
+   response.set_nettype((netType_ == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
    packet.set_data(response.SerializeAsString());
    if (!sendData(packet.SerializeAsString(), clientId)) {
       logger_->error("[HeadlessContainerListener] failed to send response auth packet");
@@ -845,15 +846,12 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
          logger_->error("[HeadlessContainerListener] no password for encrypted wallet");
          CreateHDWalletResponse(clientId, id, "password required, but empty received");
       }
-      {
-         NetConfigScopedChange netChange(hdWallet->networkType());
-         const auto &rootNode = hdWallet->getRootNode(pass);
-         if (rootNode) {
-            leafNode = rootNode->derive(path);
-         } else {
-            logger_->error("[HeadlessContainerListener] failed to decrypt root node");
-            CreateHDWalletResponse(clientId, id, "root node decryption failed");
-         }
+      const auto &rootNode = hdWallet->getRootNode(pass);
+      if (rootNode) {
+         leafNode = rootNode->derive(path);
+      } else {
+         logger_->error("[HeadlessContainerListener] failed to decrypt root node");
+         CreateHDWalletResponse(clientId, id, "root node decryption failed");
       }
 
       if (leafNode) {
@@ -901,8 +899,11 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
 bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsigned int id, const headless::NewHDWallet &request
    , NetworkType netType, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
+   if (netType != netType_) {
+      CreateHDWalletResponse(clientId, id, "network type mismatch");
+      return false;
+   }
    std::shared_ptr<bs::hd::Wallet> wallet;
-   NetConfigScopedChange netChange(netType);
    try {
       auto seed = request.privatekey().empty() ? bs::wallet::Seed(request.seed(), netType)
          : bs::wallet::Seed(netType, request.privatekey());
@@ -936,15 +937,6 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
       return false;
    }
    return true;
-}
-
-static NetworkType mapNetworkType(headless::NetworkType netType)
-{
-   switch (netType) {
-   case headless::MainNetType:   return NetworkType::MainNet;
-   case headless::TestNetType:   return NetworkType::TestNet;
-   default:    return NetworkType::Invalid;
-   }
 }
 
 bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, headless::RequestPacket &packet)
@@ -1115,7 +1107,6 @@ bool HeadlessContainerListener::onGetRootKey(const std::string &clientId, headle
    }
 
    logger_->info("Requested private key for wallet {}", request.rootwalletid());
-   NetConfigScopedChange netChange(wallet->networkType());
    const auto &decrypted = wallet->getRootNode(BinaryData::CreateFromHex(request.password()));
    if (!decrypted) {
       logger_->error("[HeadlessContainerListener] failed to get/decrypt root node for {}", request.rootwalletid());
@@ -1322,7 +1313,6 @@ void HeadlessContainerListener::activateAutoSign(const std::string &walletId, co
          deactivateAutoSign(walletId, "empty password");
          return;
       }
-      NetConfigScopedChange netChange(wallet->networkType());
       const auto decrypted = wallet->getRootNode(password);
       if (!decrypted) {
          deactivateAutoSign(walletId, "failed to decrypt root node");

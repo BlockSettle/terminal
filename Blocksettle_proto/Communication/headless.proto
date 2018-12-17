@@ -54,6 +54,7 @@ enum NetworkType
 message AuthenticationRequest
 {
    string   password = 1;  // probably not needed here
+   NetworkType  netType = 2;
 }
 
 message AuthenticationReply
@@ -63,6 +64,7 @@ message AuthenticationReply
       string   error = 2;
    }
    bool     hasUI = 3;
+   NetworkType  netType = 4;
 }
 
 

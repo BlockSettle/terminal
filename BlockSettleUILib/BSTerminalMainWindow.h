@@ -88,6 +88,7 @@ private slots:
       , bs::wallet::KeyRank);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
+   void onSignerConnError(const QString &);
 
    void CompleteUIOnlineView();
    void CompleteDBConnection();
