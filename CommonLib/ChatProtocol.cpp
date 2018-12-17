@@ -73,6 +73,16 @@ static std::map<ResponseType, std::string> ResponseTypeToString
 
 
 template <typename T>
+std::string serializeData(const T* thisPtr)
+{
+    auto data = QJsonDocument(thisPtr->toJson());
+    QString serializedData = QString::fromUtf8(data.toJson());
+    return serializedData.toStdString();
+}
+
+
+
+template <typename T>
 QJsonObject Message<T>::toJson() const
 {
     QJsonObject data;
@@ -118,7 +128,7 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
 std::string Request::getData() const
 {
-    return Message<RequestType>::serializeData(this);
+    return serializeData(this);
 }
 
 
@@ -144,7 +154,7 @@ QJsonObject Response::toJson() const
 
 std::string Response::getData() const
 {
-    return Message<ResponseType>::serializeData(this);
+    return serializeData(this);
 }
 
 
@@ -267,15 +277,55 @@ void LoginRequest::handle(RequestHandler& handler)
 }
 
 
-SendMessageRequest::SendMessageRequest(const std::string& clientId
-                   , const std::string& senderId
-                   , const std::string& receiverId
-                   , const std::string& dateTime
-                   , const std::string& messageData)
-    : Request(RequestType::RequestSendMessage, clientId)
-    , senderId_(senderId)
+
+MessageData::MessageData(const QString& senderId
+                        , const QString& receiverId
+                        , const QDateTime& dateTime
+                        , const QString& messageData)
+    : senderId_(senderId)
     , receiverId_(receiverId)
     , dateTime_(dateTime)
+    , messageData_(messageData)
+{
+
+}
+
+
+QJsonObject MessageData::toJson() const
+{
+    QJsonObject data;
+
+    data[SenderIdKey] = senderId_;
+    data[ReceiverIdKey] = receiverId_;
+    data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
+    data[MessageKey] = messageData_;
+
+    return data;
+}
+
+
+std::string MessageData::toJsonString() const
+{
+    return serializeData(this);
+}
+
+
+MessageData MessageData::fromJSON(const std::string& jsonData)
+{
+    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+
+    QString senderId = data[SenderIdKey].toString();
+    QString receiverId = data[ReceiverIdKey].toString();
+    QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toInt());
+    QString messageData = data[MessageKey].toString();
+
+    return MessageData(senderId, receiverId, dtm, messageData);
+}
+
+
+SendMessageRequest::SendMessageRequest(const std::string& clientId
+                                       , const std::string& messageData)
+    : Request(RequestType::RequestSendMessage, clientId)
     , messageData_(messageData)
 {
 
@@ -286,9 +336,6 @@ QJsonObject SendMessageRequest::toJson() const
 {
     QJsonObject data = Request::toJson();
 
-    data[SenderIdKey] = QString::fromStdString(senderId_);
-    data[ReceiverIdKey] = QString::fromStdString(receiverId_);
-    data[DateTimeKey] = QString::fromStdString(dateTime_);
     data[MessageKey] = QString::fromStdString(messageData_);
 
     return data;
@@ -300,9 +347,6 @@ std::shared_ptr<Request> SendMessageRequest::fromJSON(const std::string& clientI
     QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
     return std::make_shared<SendMessageRequest>(
                             clientId
-                          , data[SenderIdKey].toString().toStdString()
-                          , data[ReceiverIdKey].toString().toStdString()
-                          , data[DateTimeKey].toString().toStdString()
                           , data[MessageKey].toString().toStdString());
 }
 

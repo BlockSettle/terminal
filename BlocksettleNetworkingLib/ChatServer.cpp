@@ -85,12 +85,18 @@ void ChatServer::OnLogin(Chat::LoginRequest& request)
 
 void ChatServer::OnSendMessage(Chat::SendMessageRequest& request)
 {
+    Chat::MessageData msgData = Chat::MessageData::fromJSON(request.getMessageData());
+
+    std::string senderId = msgData.getSenderId().toStdString();
+    std::string receiverId = msgData.getReceiverId().toStdString();
+
     logger_->debug("Received message from client: \"{0}\": \"{1}\""
-                   , request.getSenderId(), request.getMessageData());
+                   , senderId
+                   , msgData.getMessageData().toStdString());
 
-    clientsOnline_[request.getSenderId()] = true;
+    clientsOnline_[senderId] = true;
 
-    auto& history = messages_[request.getReceiverId()];
+    auto& history = messages_[receiverId];
     history.push_back(request.getMessageData());
 }
 

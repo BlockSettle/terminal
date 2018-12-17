@@ -13,6 +13,7 @@
 #include <QJsonObject>
 
 #include <QString>
+#include <QDateTime>
 
 
 namespace Chat
@@ -62,16 +63,6 @@ namespace Chat
         std::string getVersion() const { return version_; }
 
         virtual QJsonObject toJson() const;
-
-
-    protected:
-
-        static std::string serializeData(const Message<T>* thisPtr)
-        {
-            auto data = QJsonDocument(thisPtr->toJson());
-            QString serializedData = QString::fromUtf8(data.toJson());
-            return serializedData.toStdString();
-        }
 
 
     protected:
@@ -170,14 +161,40 @@ namespace Chat
     };
 
 
+    class MessageData
+    {
+    public:
+
+        MessageData(const QString& senderId
+                    , const QString& receiverId
+                    , const QDateTime& dateTime
+                    , const QString& messageData);
+
+        QString getSenderId() const { return senderId_; }
+        QString getReceiverId() const { return receiverId_; }
+        QDateTime getDateTime() const { return dateTime_; }
+        QString getMessageData() const { return messageData_; }
+
+        QJsonObject toJson() const;
+        std::string toJsonString() const;
+        static MessageData fromJSON(const std::string& jsonData);
+
+
+    private:
+
+        QString senderId_;
+        QString receiverId_;
+        QDateTime dateTime_;
+        QString messageData_;
+
+    };
+
+
     class SendMessageRequest : public Request
     {
     public:
 
         SendMessageRequest(const std::string& clientId
-                           , const std::string& senderId
-                           , const std::string& receiverId
-                           , const std::string& dateTime
                            , const std::string& messageData);
 
         QJsonObject toJson() const override;
@@ -187,16 +204,11 @@ namespace Chat
 
         void handle(RequestHandler& handler) override;
 
-        std::string getSenderId() const { return senderId_; }
-        std::string getReceiverId() const { return receiverId_; }
-        std::string getDateTime() const { return dateTime_; }
-        std::string getMessageData() const { return messageData_; }
+        const std::string& getMessageData() const { return messageData_; }
+
 
     private:
 
-        std::string senderId_;
-        std::string receiverId_;
-        std::string dateTime_;
         std::string messageData_;
 
     };

@@ -150,13 +150,16 @@ void ChatClient::OnError(DataConnectionError errorCode)
 
 void ChatClient::sendMessage(const QString& message)
 {
-    std::string msg = message.toStdString();
+//    std::string msg = message.toStdString();
 
-    logger_->debug("[ChatClient::sendMessage] {}", msg);
+    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
-    auto request = std::make_shared<Chat::SendMessageRequest>(""
-                , currentUserId_, currentChatId_
-                , std::to_string(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch()), msg);
+    Chat::MessageData msg(QString::fromStdString(currentUserId_)
+                          , QString::fromStdString(currentChatId_)
+                          , QDateTime::currentDateTimeUtc()
+                          , message);
+
+    auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());
 
     sendRequest(request);
 }
