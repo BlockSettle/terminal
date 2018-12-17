@@ -7,6 +7,7 @@
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
 
+#include <QDateTime>
 
 #include <QDebug>
 
@@ -41,6 +42,7 @@ void ChatClient::loginToServer(const std::string& hostname, const std::string& p
     }
 
     currentUserId_ = login;
+    currentChatId_ = currentUserId_;
 
     connection_ = connectionManager_->CreateSecuredDataConnection();
     connection_->SetServerPublicKey(serverPublicKey_);
@@ -152,6 +154,16 @@ void ChatClient::sendMessage(const QString& message)
 
     logger_->debug("[ChatClient::sendMessage] {}", msg);
 
-    auto request = std::make_shared<Chat::SendMessageRequest>("", currentUserId_, "user2", msg);
+    auto request = std::make_shared<Chat::SendMessageRequest>(""
+                , currentUserId_, currentChatId_
+                , std::to_string(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch()), msg);
+
     sendRequest(request);
+}
+
+
+void ChatClient::setCurrentPrivateChat(const QString& userId)
+{
+    currentChatId_ = userId.toStdString();
+    logger_->debug("Current chat changed: {}", currentChatId_);
 }

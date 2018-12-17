@@ -76,6 +76,7 @@ signals:
 public slots:
 
    void sendMessage(const QString& message);
+   void setCurrentPrivateChat(const QString& userId);
 
 
 private:
@@ -89,6 +90,7 @@ private:
    QScopedPointer<QTimer>                 heartbeatTimer_;
 
    std::string                            currentUserId_;
+   std::string                            currentChatId_;
 
 };
 

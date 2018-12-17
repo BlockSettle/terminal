@@ -25,6 +25,7 @@ static const QString ReceiverIdKey = QStringLiteral("toid");
 static const QString SenderIdKey = QStringLiteral("fromid");
 static const QString StatusKey = QStringLiteral("status");
 static const QString UsersKey = QStringLiteral("users");
+static const QString DateTimeKey = QStringLiteral("datetm");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
@@ -100,11 +101,7 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
                       , data[PasswordKey].toString().toStdString());
 
         case RequestType::RequestSendMessage:
-            return std::make_shared<SendMessageRequest>(
-                        clientId
-                      , data[SenderIdKey].toString().toStdString()
-                      , data[ReceiverIdKey].toString().toStdString()
-                      , data[MessageKey].toString().toStdString());
+            return SendMessageRequest::fromJSON(clientId, jsonData);
 
         case RequestType::RequestOnlineUsers:
             return std::make_shared<OnlineUsersRequest>(
@@ -273,10 +270,12 @@ void LoginRequest::handle(RequestHandler& handler)
 SendMessageRequest::SendMessageRequest(const std::string& clientId
                    , const std::string& senderId
                    , const std::string& receiverId
+                   , const std::string& dateTime
                    , const std::string& messageData)
     : Request(RequestType::RequestSendMessage, clientId)
     , senderId_(senderId)
     , receiverId_(receiverId)
+    , dateTime_(dateTime)
     , messageData_(messageData)
 {
 
@@ -289,9 +288,22 @@ QJsonObject SendMessageRequest::toJson() const
 
     data[SenderIdKey] = QString::fromStdString(senderId_);
     data[ReceiverIdKey] = QString::fromStdString(receiverId_);
+    data[DateTimeKey] = QString::fromStdString(dateTime_);
     data[MessageKey] = QString::fromStdString(messageData_);
 
     return data;
+}
+
+
+std::shared_ptr<Request> SendMessageRequest::fromJSON(const std::string& clientId, const std::string& jsonData)
+{
+    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+    return std::make_shared<SendMessageRequest>(
+                            clientId
+                          , data[SenderIdKey].toString().toStdString()
+                          , data[ReceiverIdKey].toString().toStdString()
+                          , data[DateTimeKey].toString().toStdString()
+                          , data[MessageKey].toString().toStdString());
 }
 
 

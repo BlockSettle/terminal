@@ -6,6 +6,7 @@
 #include <QScopedPointer>
 
 #include "ChatUsersViewModel.h"
+#include "ChatMessagesViewModel.h"
 
 
 namespace Ui {
@@ -33,6 +34,7 @@ private:
 
     QScopedPointer<Ui::ChatWidget> ui_;
     QScopedPointer<ChatUsersViewModel> usersViewModel_;
+    QScopedPointer<ChatMessagesViewModel> messagesViewModel_;
 
     std::shared_ptr<ChatClient> client_;
     std::shared_ptr<ChatServer> server_;

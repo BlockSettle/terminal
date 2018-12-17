@@ -177,20 +177,26 @@ namespace Chat
         SendMessageRequest(const std::string& clientId
                            , const std::string& senderId
                            , const std::string& receiverId
+                           , const std::string& dateTime
                            , const std::string& messageData);
 
         QJsonObject toJson() const override;
+
+        static std::shared_ptr<Request> fromJSON(const std::string& clientId
+                                                 , const std::string& jsonData);
 
         void handle(RequestHandler& handler) override;
 
         std::string getSenderId() const { return senderId_; }
         std::string getReceiverId() const { return receiverId_; }
+        std::string getDateTime() const { return dateTime_; }
         std::string getMessageData() const { return messageData_; }
 
     private:
 
         std::string senderId_;
         std::string receiverId_;
+        std::string dateTime_;
         std::string messageData_;
 
     };

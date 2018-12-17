@@ -32,33 +32,45 @@ void ChatWidget::init(const std::shared_ptr<ChatServer>& chatServer
     logger_ = logger;
     server_ = chatServer;
     serverPublicKey_ = server_->getPublicKey();
-    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger, serverPublicKey_);
+
+    client_ = std::make_shared<ChatClient>(connectionManager
+                                           , appSettings
+                                           , logger
+                                           , serverPublicKey_);
 
     usersViewModel_.reset(new ChatUsersViewModel());
     ui_->treeViewUsers->setModel(usersViewModel_.get());
+
+    messagesViewModel_.reset(new ChatMessagesViewModel());
+    ui_->tableViewMessages->setModel(messagesViewModel_.get());
 
     usersViewModel_->connect(client_.get(), SIGNAL(OnUserUpdate(const QString&))
                             , SLOT(onUserUpdate(const QString&)));
 
     connect(ui_->send, SIGNAL(clicked()), SLOT(onSendButtonClicked()));
     connect(ui_->text, SIGNAL(returnPressed()), SLOT(onSendButtonClicked()));
-
-
     connect(ui_->treeViewUsers, SIGNAL(doubleClicked(const QModelIndex&))
         , SLOT(onUserDoubleClicked(const QModelIndex&)));
+
 }
 
 
 void ChatWidget::onUserDoubleClicked(const QModelIndex& index)
 {
-    ui_->labelActiveChat->setText(tr("Block Settle Chat #") + usersViewModel_->resolveUser(index));
+    QString userId = usersViewModel_->resolveUser(index);
+    ui_->labelActiveChat->setText(tr("Block Settle Chat #") + userId);
+    messagesViewModel_->onLeaveRoom();
+    client_->setCurrentPrivateChat(userId);
 }
 
 
 void ChatWidget::onSendButtonClicked()
 {
-    client_->sendMessage(ui_->text->text());
+    QString messageText = ui_->text->text();
+    client_->sendMessage(messageText);
     ui_->text->clear();
+
+    messagesViewModel_->onMessage(QDateTime::currentDateTimeUtc(), messageText);
 }
 
 

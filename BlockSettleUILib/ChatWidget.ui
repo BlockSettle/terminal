@@ -93,7 +93,17 @@
              </widget>
             </item>
             <item>
-             <widget class="QTableView" name="tableViewMessages"/>
+             <widget class="QTableView" name="tableViewMessages">
+              <property name="showGrid">
+               <bool>false</bool>
+              </property>
+              <attribute name="horizontalHeaderStretchLastSection">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="verticalHeaderVisible">
+               <bool>false</bool>
+              </attribute>
+             </widget>
             </item>
            </layout>
           </item>
