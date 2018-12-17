@@ -228,10 +228,8 @@ bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletS
            break;
        }
 
-       std::vector<bs::wallet::PasswordData> pwdDataVector = { pwdData };
-
        walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
-                                 , seed->seed(), params_->getWalletsDir(), isPrimary, pwdDataVector, { 1, 1 });
+                                 , seed->seed(), params_->getWalletsDir(), isPrimary, { pwdData }, { 1, 1 });
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
