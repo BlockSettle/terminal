@@ -435,6 +435,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
       return false;
    }
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady);
+   connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError);
    return true;
 }
 
@@ -708,6 +709,11 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
    QMetaObject::invokeMethod(this, [this, title, text] {
       BSMessageBox(BSMessageBox::critical, title, text, this).exec();
    });
+}
+
+void BSTerminalMainWindow::onSignerConnError(const QString &err)
+{
+   showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(err));
 }
 
 void BSTerminalMainWindow::onReceive()

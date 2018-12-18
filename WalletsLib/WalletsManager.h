@@ -143,7 +143,8 @@ private slots:
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);
    void onHDLeafDeleted(QString id);
-   void onRefresh();
+   void onNewBlock();
+   void onRefresh(std::vector<BinaryData> ids);
    void onStateChanged(ArmoryConnection::State);
    void onFeeObjDestroyed();
    void onWalletImported(const std::string &walletId);
@@ -171,12 +172,6 @@ private:
                           , std::function<void(QString, int)>);
 
    void invokeFeeCallbacks(unsigned int blocks, float fee);
-   void processZCSendTXData(Tx& inTX, const ClientClasses::LedgerEntry inLE);
-   void updateZCSendTXBalances(Tx& inTX, const ClientClasses::LedgerEntry inLE);
-   void processFinalZCBalances(const BTCNumericTypes::balance_type& delta
-                               , const BTCNumericTypes::balance_type& inFees
-                               , const BTCNumericTypes::balance_type& inChgAmt
-                               , wallet_gen_type inWallet);
 
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;

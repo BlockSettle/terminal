@@ -21,14 +21,22 @@
 using namespace Blocksettle::Communication;
 Q_DECLARE_METATYPE(headless::RequestPacket)
 
+static NetworkType mapNetworkType(headless::NetworkType netType)
+{
+   switch (netType) {
+   case headless::MainNetType:   return NetworkType::MainNet;
+   case headless::TestNetType:   return NetworkType::TestNet;
+   default:    return NetworkType::Invalid;
+   }
+}
 
 class HeadlessListener : public QObject, public DataConnectionListener
 {
    Q_OBJECT
 public:
    HeadlessListener(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<DataConnection> &conn)
-      : logger_(logger), connection_(conn) {
+      , const std::shared_ptr<DataConnection> &conn, NetworkType netType)
+      : logger_(logger), connection_(conn), netType_(netType) {
    }
 
    void OnDataReceived(const std::string& data) override {
@@ -39,7 +47,7 @@ public:
       }
       if (packet.id() > id_) {
          logger_->error("[HeadlessListener] reply id inconsistency: {} > {}", packet.id(), id_);
-         emit error();
+         emit error(tr("reply id inconsistency"));
          return;
       }
       if ((packet.type() != headless::AuthenticationRequestType)
@@ -51,7 +59,7 @@ public:
             return;
          }
          logger_->error("[HeadlessListener] {} auth ticket mismatch!", packet.type());
-         emit error();
+         emit error(tr("auth ticket mismatch"));
          return;
       }
 
@@ -63,15 +71,21 @@ public:
       if (packet.type() == headless::AuthenticationRequestType) {
          if (!authTicket_.isNull()) {
             logger_->error("[HeadlessListener] already authenticated");
-            emit error();
+            emit error(tr("already authenticated"));
             return;
          }
          headless::AuthenticationReply response;
          if (!response.ParseFromString(packet.data())) {
             logger_->error("[HeadlessListener] failed to parse auth reply");
-            emit error();
+            emit error(tr("failed to parse auth reply"));
             return;
          }
+         if (mapNetworkType(response.nettype()) != netType_) {
+            logger_->error("[HeadlessListener] network type mismatch");
+            emit error(tr("network type mismatch"));
+            return;
+         }
+
          if (!response.authticket().empty()) {
             authTicket_ = response.authticket();
             hasUI_ = response.hasui();
@@ -80,7 +94,7 @@ public:
          }
          else {
             logger_->error("[HeadlessListener] authentication failure: {}", response.error());
-            emit error();
+            emit error(QString::fromStdString(response.error()));
             return;
          }
       }
@@ -101,7 +115,7 @@ public:
 
    void OnError(DataConnectionError errorCode) override {
       logger_->debug("[HeadlessListener] error {}", errorCode);
-      emit error();
+      emit error(tr("error #%1").arg(QString::number(errorCode)));
    }
 
    HeadlessContainer::RequestId Send(headless::RequestPacket packet, bool updateId = true) {
@@ -128,12 +142,13 @@ signals:
    void authFailed();
    void connected();
    void disconnected();
-   void error();
+   void error(const QString &err);
    void PacketReceived(headless::RequestPacket);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<DataConnection>  connection_;
+   const NetworkType                netType_;
    HeadlessContainer::RequestId     id_ = 0;
    SecureBinaryData  authTicket_;
    bool     hasUI_ = false;
@@ -792,11 +807,11 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 
 
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &host, const QString &port
+   , const QString &host, const QString &port, NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash
    , OpMode opMode)
    : HeadlessContainer(logger, opMode)
-   , host_(host), port_(port), pwHash_(pwHash)
+   , host_(host), port_(port), netType_(netType), pwHash_(pwHash)
    , connPubKey_("t>ituO$mt-[Fl}&IE%EicU@L&LvC%8i$$nS3YFm}")
    , connectionManager_{connectionManager}
 {}
@@ -820,7 +835,7 @@ bool RemoteSigner::Start()
 
    {
       std::lock_guard<std::mutex> lock(mutex_);
-      listener_ = std::make_shared<HeadlessListener>(logger_, connection_);
+      listener_ = std::make_shared<HeadlessListener>(logger_, connection_, netType_);
       connect(listener_.get(), &HeadlessListener::connected, this, &RemoteSigner::onConnected, Qt::QueuedConnection);
       connect(listener_.get(), &HeadlessListener::authenticated, this, &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
       connect(listener_.get(), &HeadlessListener::authFailed, [this] { authPending_ = false; });
@@ -876,7 +891,7 @@ void RemoteSigner::Authenticate()
 
    if (!listener_) {
       mutex_.unlock();
-      emit connectionError();
+      emit connectionError(tr("listener missing on authenticate"));
       return;
    }
    if (listener_->isAuthenticated() || authPending_) {
@@ -889,6 +904,7 @@ void RemoteSigner::Authenticate()
    authPending_ = true;
    headless::AuthenticationRequest request;
    request.set_password(pwHash_.toStdString());
+   request.set_nettype((netType_ == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
 
    headless::RequestPacket packet;
    packet.set_type(headless::AuthenticationRequestType);
@@ -947,9 +963,9 @@ void RemoteSigner::onDisconnected()
    emit disconnected();
 }
 
-void RemoteSigner::onConnError()
+void RemoteSigner::onConnError(const QString &err)
 {
-   emit connectionError();
+   emit connectionError(err);
 }
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
@@ -1009,7 +1025,7 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger, const QString &homeDir, NetworkType netType
    , const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash, double asSpendLimit)
-   : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, connectionManager, pwHash, OpMode::Local)
+   : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType, connectionManager, pwHash, OpMode::Local)
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
@@ -1037,6 +1053,9 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger, const QS
    case NetworkType::TestNet:
    case NetworkType::RegTest:
       args_ << QString::fromStdString("--testnet");
+      break;
+   case NetworkType::MainNet:
+      args_ << QString::fromStdString("--mainnet");
       break;
    default: break;
    }
@@ -1074,7 +1093,7 @@ bool LocalSigner::Start()
 #endif
    if (!QFile::exists(signerAppPath)) {
       logger_->error("[HeadlessContainer] Signer binary {} not found", signerAppPath.toStdString());
-      emit connectionError();
+      emit connectionError(tr("missing signer binary"));
       emit ready();
       return false;
    }
@@ -1126,6 +1145,10 @@ HeadlessAddressSyncer::HeadlessAddressSyncer(const std::shared_ptr<SignContainer
 
 void HeadlessAddressSyncer::onWalletsUpdated()
 {
+   if (!signingContainer_->isReady()) {
+      wasOffline_ = true;
+      return;
+   }
    signingContainer_->SyncAddresses(walletsMgr_->GetAddressesInAllWallets());
 }
 

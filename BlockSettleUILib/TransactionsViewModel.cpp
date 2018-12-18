@@ -468,8 +468,10 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
 
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
-   auto newItems = std::make_shared<std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>>();
+   auto newItems = new std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>;
    auto updatedItems = std::make_shared<std::vector<TransactionPtr>>();
+   auto newTxKeys = new std::unordered_set<std::string>();
+   auto keysMutex = std::make_shared<QMutex>();
 
    for (const auto &entry : page) {
       const auto item = itemFromTransaction(entry);
@@ -487,21 +489,23 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
             oldestItem_ = *item;
          }
       }
-      newTxKeys_.insert(item->id());
+      newTxKeys->insert(item->id());
       (*newItems)[item->id()] = { item, new TXNode(item) };
    }
 
-   const auto &cbInited = [this, newItems, updatedItems](const TransactionsViewItem *itemPtr) {
+   const auto &cbInited = [this, newItems, newTxKeys, keysMutex, updatedItems]
+         (const TransactionsViewItem *itemPtr) {
       if (!itemPtr || !itemPtr->initialized) {
          logger_->error("item is not inited");
          return;
       }
-      if (newTxKeys_.empty()) {  // avoid jitter
-         logger_->debug("TX keys are already empty");
+      if (newTxKeys->empty()) {
+         logger_->warn("TX keys already empty");
          return;
       }
-      newTxKeys_.erase(itemPtr->id());
-      if (newTxKeys_.empty()) {
+      QMutexLocker locker(keysMutex.get());
+      newTxKeys->erase(itemPtr->id());
+      if (newTxKeys->empty()) {
          std::unordered_set<std::string> deletedItems;
          if (rootNode_->hasChildren()) {
             std::set<int> delRows;
@@ -565,15 +569,22 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          }
       }
    };
+
+   const auto sizeNew = newItems->size();
    if (!newItems->empty()) {
       for (auto &item : *newItems) {
          updateTransactionDetails(item.second.first, cbInited);
       }
    }
+   else {
+      delete newItems;
+      delete newTxKeys;
+   }
+
    if (!updatedItems->empty()) {
       updateBlockHeight(*updatedItems);
    }
-   return { newItems->size(), updatedItems->size() };
+   return { sizeNew, updatedItems->size() };
 }
 
 void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &updItems)
@@ -711,8 +722,10 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
    , const std::shared_ptr<WalletsManager> &walletsMgr
    , std::function<void(const TransactionsViewItem *)> userCB)
 {
-   const auto cbCheckIfInitializationCompleted = [this, userCB]()
-   {
+   const auto cbCheckIfInitializationCompleted = [this, userCB] {
+      if (initialized) {
+         return;
+      }
       if (!dirStr.isEmpty() && !mainAddress.isEmpty() && !amountStr.isEmpty()) {
          initialized = true;
          userCB(this);
@@ -728,11 +741,13 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
    const auto cbInit = [this, walletsMgr, cbMainAddr, cbCheckIfInitializationCompleted] {
       if (amountStr.isEmpty() && txHashes.empty()) {
          calcAmount(walletsMgr);
-         if (mainAddress.isEmpty()) {
-            walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr);
-         }
       }
-      cbCheckIfInitializationCompleted();
+      if (mainAddress.isEmpty()) {
+         walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr);
+      }
+      else {
+         cbCheckIfInitializationCompleted();
+      }
    };
 
    const auto cbTXs = [this, cbInit](std::vector<Tx> txs) {

@@ -230,7 +230,7 @@ static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
 
    // Estimate the virtual size for the inputs. Because we can't analyze the
    // exact sig size until there's an actual signature, always play it safe and
-   // round up the estimated weight by assuming sigs will be at max size. 
+   // round up the estimated weight by assuming sigs will be at max size.
    for (auto& utxo : inputs) {
       const auto scrType = BtcUtils::getTxOutScriptType(utxo.getScript());
       switch (scrType) {
@@ -526,8 +526,8 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
          }
          catch(std::exception& e) {
             if(logger_ != nullptr) {
-               logger_->error("[bs::Wallet::getAddrBalance] Return data error ", \
-                  "- {}", e.what());
+               logger_->error("[getAddrBalance (cbAddrBalance)] Return data " \
+                              "error - {}", e.what());
             }
          }
 

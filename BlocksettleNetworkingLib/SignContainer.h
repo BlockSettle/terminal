@@ -107,7 +107,7 @@ signals:
    void connected();
    void disconnected();
    void authenticated();
-   void connectionError();
+   void connectionError(const QString &err);
    void ready();
    void Error(RequestId id, std::string error);
    void TXSigned(RequestId id, BinaryData signedTX, std::string error, bool cancelledByUser);

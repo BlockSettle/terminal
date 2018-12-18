@@ -143,12 +143,94 @@ std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::getAddressBySe
    return nullptr;
 }
 
-void bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset)
+void bs::SettlementWallet::RefreshWallets(const std::vector<BinaryData>& ids)
 {
-   auto index = asset->getIndex();
+   bool pendingRegistrationFound = false;
+
+   for (const auto& i : ids) {
+      const std::string id = i.toBinStr();
+
+      std::function<void()> completeWalletRegistration{};
+
+      {
+         FastLock locker{lockWalletsMap_};
+         auto it = pendingWalletRegistrations_.find(id);
+         if (it != pendingWalletRegistrations_.end()) {
+            completeWalletRegistration = it->second;
+            pendingWalletRegistrations_.erase(it);
+         }
+      }
+
+      if (completeWalletRegistration) {
+         pendingRegistrationFound = true;
+         completeWalletRegistration();
+      }
+   }
+   if (!pendingRegistrationFound) {
+      if (logger_) {
+         logger_->debug("[SettlementWallet::RefreshWallets] no pending registrations found");
+      }
+   }
+}
+
+void bs::SettlementWallet::CompleteMonitorCreations(int addressIndex
+   , const std::shared_ptr<AsyncClient::BtcWallet>& addressWallet)
+{
+   CreateMonitorCallback createMonitorCB{};
+
+   {
+      FastLock locker{lockWalletsMap_};
+
+      auto it = pendingMonitorCreations_.find(addressIndex);
+      if (it == pendingMonitorCreations_.end()) {
+         if (logger_) {
+            logger_->debug("[SettlementWallet::CompleteMonitorCreations] no pending monitors for registered wallet");
+         }
+         return;
+      }
+
+      createMonitorCB = it->second;
+   }
+
+   createMonitorCB(addressWallet);
+}
+
+bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset)
+{
+   auto index = asset->id();
    const auto walletId = BtcUtils::scrAddrToBase58(asset->prefixedHash()).toBinStr();
-   armory_->registerWallet(rtWallets_[index], walletId, asset->supportedAddrHashes(), [] {}, true);
-   rtWalletsById_[walletId] = index;
+
+   std::shared_ptr<AsyncClient::BtcWallet> addressWallet;
+
+   FastLock locker{lockWalletsMap_};
+   auto reqId = armory_->registerWallet(addressWallet, walletId, asset->supportedAddrHashes(), [] {}, true);
+
+   auto completeWalletRegistration = [this, index, addressWallet]() {
+      if (logger_) {
+         logger_->debug("[SettlementWallet::createTempWalletForAsset] wallet registration completed");
+         if (addressWallet == nullptr) {
+            logger_->error("[SettlementWallet::createTempWalletForAsset] nullptr wallet");
+         }
+      }
+
+      {
+         FastLock locker{lockWalletsMap_};
+         settlementAddressWallets_.emplace(index, addressWallet);
+      }
+
+      CompleteMonitorCreations(index, addressWallet);
+   };
+
+   if (reqId.empty()) {
+      if (logger_ != nullptr) {
+         logger_->error("[SettlementWallet::createTempWalletForAsset] failed to start wallet registration in armory");
+      }
+      return false;
+   }
+
+   pendingWalletRegistrations_.emplace(reqId, completeWalletRegistration);
+
+   return true;
 }
 
 std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::newAddress(const BinaryData &settlementId, const BinaryData &buyAuthPubKey
@@ -237,20 +319,15 @@ bool bs::SettlementWallet::containsAddress(const bs::Address &addr)
    return false;
 }
 
-bool bs::SettlementWallet::isTempWalletId(const std::string &id) const
-{
-   return rtWalletsById_.find(id) != rtWalletsById_.end();
-}
-
 bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> &addr, std::function<void(UTXO)> cb
    , bool allowZC)
 {
-   const auto &rtWallet = rtWallets_[addr->getIndex()];
-   if (rtWallet == nullptr) {
+   const auto addressWallet = GetSettlementAddressWallet(addr->getIndex());
+   if (addressWallet == nullptr) {
       return false;
    }
 
-   const auto &cbSpendable = [this, cb, allowZC, rtWallet]
+   const auto &cbSpendable = [this, cb, allowZC, addressWallet]
                              (ReturnMessage<std::vector<UTXO>> inputs)->void {
       try {
          auto inUTXOs = inputs.get();
@@ -272,7 +349,7 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
                      }
                   }
                };
-               rtWallet->getSpendableZCList(cbZC);
+               addressWallet->getSpendableZCList(cbZC);
             }
          }
          else if (inUTXOs.size() == 1) {
@@ -286,7 +363,8 @@ bool bs::SettlementWallet::GetInputFor(const shared_ptr<SettlementAddressEntry> 
          }
       }
    };
-   rtWallet->getSpendableTxOutListForValue(UINT64_MAX, cbSpendable);
+
+   addressWallet->getSpendableTxOutListForValue(UINT64_MAX, cbSpendable);
    return true;
 }
 
@@ -401,59 +479,72 @@ bs::KeyPair bs::SettlementWallet::GetKeyPairFor(const bs::Address &addr, const S
    return {};
 }
 
-bool bs::SettlementWallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, QObject *obj)
+bool bs::SettlementWallet::createMonitorQtSignals(const shared_ptr<SettlementAddressEntry> &addr
+   , const std::shared_ptr<spdlog::logger>& logger
+   , const std::function<void (const std::shared_ptr<SettlementMonitorQtSignals>&)>& userCB)
 {
-   auto result = new std::vector<UTXO>;
-   auto walletSet = new std::unordered_set<int>;
-   for (const auto &rtWallet : rtWallets_) {
-      walletSet->insert(rtWallet.first);
-   }
-   const auto &cbZCList = [this, result, walletSet, cb](std::vector<UTXO> utxos) {
-      result->insert(result->end(), utxos.begin(), utxos.end());
-
-      for (const auto &rtWallet : rtWallets_) {
-         const auto &cbRTWlist = [this, result, walletSet, id=rtWallet.first, cb]
-                                 (ReturnMessage<std::vector<UTXO>> utxos)->void {
-            try {
-               auto inUTXOs = utxos.get();
-               result->insert(result->end(), inUTXOs.begin(), inUTXOs.end());
-            }
-            catch(std::exception& e) {
-               if(logger_ != nullptr) {
-                  getLogger()->error("[bs::SettlementWallet::getSpendableZCList] " \
-                     "Return data error - {}", e.what());
-               }
-            }
-
-            walletSet->erase(id);
-            if (walletSet->empty()) {
-               delete walletSet;
-               cb(*result);
-               delete result;
-            }
-         };
-         rtWallet.second->getSpendableZCList(cbRTWlist);
-      }
+   auto createMonitorCB = [this, addr, logger, userCB](const std::shared_ptr<AsyncClient::BtcWallet>& addressWallet)
+   {
+      userCB(std::make_shared<bs::SettlementMonitorQtSignals>(addressWallet, armory_, addr, logger));
    };
-   return bs::Wallet::getSpendableZCList(cbZCList, obj);
+
+   return createMonitorCommon(addr, logger, createMonitorCB);
 }
 
-std::shared_ptr<bs::SettlementMonitorQtSignals> bs::SettlementWallet::createMonitorQtSignals(const shared_ptr<bs::SettlementAddressEntry> &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
+bool bs::SettlementWallet::createMonitorCb(const shared_ptr<SettlementAddressEntry> &addr
+   , const std::shared_ptr<spdlog::logger>& logger
+   , const std::function<void (const std::shared_ptr<SettlementMonitorCb>&)>& userCB)
 {
-   const auto rtWallet = rtWallets_[addr->getIndex()];
-   if (rtWallet == nullptr) {
-      return nullptr;
-   }
-   return std::make_shared<bs::SettlementMonitorQtSignals>(rtWallet, armory_, addr, logger);
+   auto createMonitorCB = [this, addr, logger, userCB](const std::shared_ptr<AsyncClient::BtcWallet>& addressWallet)
+   {
+      userCB(std::make_shared<bs::SettlementMonitorCb>(addressWallet, armory_, addr, logger));
+   };
+
+   return createMonitorCommon(addr, logger, createMonitorCB);
 }
 
-std::shared_ptr<bs::SettlementMonitorCb> bs::SettlementWallet::createMonitorCb(const shared_ptr<SettlementAddressEntry> &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
+bool bs::SettlementWallet::createMonitorCommon(const shared_ptr<SettlementAddressEntry> &addr
+   , const std::shared_ptr<spdlog::logger>& logger
+   , const CreateMonitorCallback& createMonitorCB)
 {
-   const auto rtWallet = rtWallets_[addr->getIndex()];
-   if (rtWallet == nullptr) {
-      return nullptr;
+   const auto addressIndex = addr->getIndex();
+
+   std::shared_ptr<AsyncClient::BtcWallet> addressWallet = nullptr;
+
+   {
+      FastLock locker{lockWalletsMap_};
+
+      auto it = settlementAddressWallets_.find(addressIndex);
+      if (settlementAddressWallets_.end() != it) {
+         addressWallet = it->second;
+      } else {
+         // sanity check. only single monitor for address allowed
+         if (pendingMonitorCreations_.find(addressIndex) != pendingMonitorCreations_.end()) {
+            // use logger passed as parameter
+            logger->error("[SettlementWallet::createMonitorCommon] multiple monitors on same address are not allowed");
+            return false;
+         }
+
+         pendingMonitorCreations_.emplace(addressIndex, createMonitorCB);
+      }
    }
-   return std::make_shared<bs::SettlementMonitorCb>(rtWallet, armory_, addr, logger);
+
+   // wallet was registered, so we could create monitor
+   if (addressWallet != nullptr) {
+      createMonitorCB(addressWallet);
+   }
+
+   return true;
+}
+
+std::shared_ptr<AsyncClient::BtcWallet> bs::SettlementWallet::GetSettlementAddressWallet(const int addressIndex) const
+{
+   FastLock locker{lockWalletsMap_};
+
+   auto it = settlementAddressWallets_.find(addressIndex);
+   if (settlementAddressWallets_.end() != it) {
+      return it->second;
+   }
+
+   return nullptr;
 }

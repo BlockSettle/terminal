@@ -87,7 +87,7 @@ void ExplorerWidget::onSearchStarted()
 
       // Pass the address to the address widget and load the wallet, which kicks
       // off address processing and UI loading.
-      ui_->Address->populateDataFor(bsAddress);
+      ui_->Address->setQueryAddr(bsAddress);
       ui_->searchBox->clear();
    }
    else if(userStr.length() == 64 &&
@@ -139,7 +139,7 @@ void ExplorerWidget::onAddressClicked(QString addressId)
    // There really should be an error case here, but for now, assume addr is
    // valid. (It would be very bad if Armory fed up bad addresses!)
    // TO DO: Add a check for wallets that have already been loaded?
-   ui_->Address->populateDataFor(bsAddress);
+   ui_->Address->setQueryAddr(bsAddress);
 }
 
 void ExplorerWidget::onReset()

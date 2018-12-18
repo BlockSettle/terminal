@@ -17,12 +17,10 @@ CustomTreeWidget::CustomTreeWidget(QWidget *parent)
       this, &CustomTreeWidget::onItemEntered);
    connect(this->header(), &QHeaderView::entered,
       this, &CustomTreeWidget::onHeaderEntered);
-   connect(this, &QTreeWidget::itemClicked,
-      this, &CustomTreeWidget::onItemClicked);
 }
 
 void CustomTreeWidget::mouseReleaseEvent(QMouseEvent *ev) {
-   // will use left click in to open address page 
+   // will use left click in to open address page
    if (ev->button() == Qt::LeftButton) {
       //QTreeWidgetItem *item = itemAt(ev->pos());
    }
@@ -38,10 +36,6 @@ void CustomTreeWidget::mouseReleaseEvent(QMouseEvent *ev) {
       });
    }
    QTreeWidget::mouseReleaseEvent(ev);
-}
-
-void CustomTreeWidget::onItemClicked(QTreeWidgetItem * item, int column) {
-   qDebug() << "onItemClicked" << column;
 }
 
 void CustomTreeWidget::leaveEvent(QEvent *ev) {

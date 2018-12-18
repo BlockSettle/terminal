@@ -2,7 +2,6 @@
 #include "WalletsManager.h"
 #include "UiUtils.h"
 
-
 bool AddressListModel::AddressRow::isMultiLineComment() const
 {
    const auto commentLines = comment.split(QLatin1Char('\n'));
@@ -33,9 +32,12 @@ AddressListModel::AddressListModel(std::shared_ptr<WalletsManager> walletsManage
    , addrType_(addrType)
    , processing_(false)
 {
-   connect(walletsManager.get(), &WalletsManager::walletsReady, this, &AddressListModel::updateData);
-//   connect(walletsManager.get(), &WalletsManager::walletChanged, this, &AddressListModel::updateData);
-   connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &AddressListModel::updateData);
+   connect(walletsManager.get(), &WalletsManager::walletsReady, this
+           , &AddressListModel::updateData);
+//   connect(walletsManager.get(), &WalletsManager::walletChanged, this
+//           , &AddressListModel::updateData);
+   connect(walletsManager.get(), &WalletsManager::blockchainEvent, this
+           , &AddressListModel::updateData);
 }
 
 bool AddressListModel::setWallets(const Wallets &wallets)
@@ -46,7 +48,9 @@ bool AddressListModel::setWallets(const Wallets &wallets)
 
    wallets_ = wallets;
    for (const auto &wallet : wallets_) {
-      connect(wallet.get(), &bs::Wallet::addressAdded, this, &AddressListModel::updateData, static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
+      connect(wallet.get(), &bs::Wallet::addressAdded, this
+              , &AddressListModel::updateData
+              , static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
    }
 
    updateData();
@@ -142,35 +146,51 @@ void AddressListModel::updateWalletData()
    addrBalances->resize(addressRows_.size());
 
    for (size_t i = 0; i < addressRows_.size(); ++i) {
+      // Callback for address's # of TXs.
       const auto &cbTxN = [this, addrTxNs, i, nbTxNs](uint32_t txn) {
          --(*nbTxNs);
          if (i >= addressRows_.size()) {
             return;
          }
          (*addrTxNs)[i] = txn;
+
+         // On the final address, set the TX count for all addresses and emit
+         // any required signals.
          if (*nbTxNs <= 0) {
-            for (size_t i = 0; i < std::min(addressRows_.size(), addrTxNs->size()); ++i) {
+            for (size_t i = 0;
+                 i < std::min(addressRows_.size(), addrTxNs->size());
+                 ++i) {
                addressRows_[i].transactionCount = (*addrTxNs)[i];
             }
-            emit dataChanged(index(0, ColumnTxCount), index(addressRows_.size()-1, ColumnTxCount));
+            emit dataChanged(index(0, ColumnTxCount)
+                             , index(addressRows_.size()-1, ColumnTxCount));
             emit updated();
          }
       };
 
+      // Callback for address's balance.
       const auto &cbBalance = [this, addrBalances, i, nbBalances](std::vector<uint64_t> balances) {
          --(*nbBalances);
          if (i >= addressRows_.size()) {
             return;
          }
          (*addrBalances)[i] = balances[0];
+
+         // On the final address, set the balance for all addresses and emit
+         // any required signals.
          if (*nbBalances <= 0) {
-            for (size_t i = 0; i < std::min(addressRows_.size(), addrBalances->size()); ++i) {
+            for (size_t i = 0;
+                 i < std::min(addressRows_.size(), addrBalances->size());
+                 ++i) {
                addressRows_[i].balance = (*addrBalances)[i];
             }
-            emit dataChanged(index(0, ColumnBalance), index(addressRows_.size() - 1, ColumnBalance));
+            emit dataChanged(index(0, ColumnBalance)
+                             , index(addressRows_.size() - 1, ColumnBalance));
             emit updated();
          }
       };
+
+      // Get an address's balance & # of TXs from Armory via the wallet.
       const auto &wallet = addressRows_[i].wallet;
       const auto &address = addressRows_[i].address;
       if (wallet) {

@@ -5,7 +5,7 @@
 #include <QDateTime>
 #include <QDebug>
 
-AddressDetailsWidget::AddressDetailsWidget(QWidget *parent) 
+AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::AddressDetailsWidget)
 {
@@ -33,13 +33,14 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
    armory_ = armory;
    logger_ = inLogger;
 
-   connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
-   connect(armory_.get(), &ArmoryConnection::newBlock, this, &AddressDetailsWidget::onNewBlock, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryConnection::refresh, this
+           , &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
 }
 
-void AddressDetailsWidget::populateDataFor(const bs::Address &inAddrVal)
+// Set the address to be queried and perform initial setup.
+void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
 {
-   // In case we've been here earlier, clear all the text.
+   // In case we've been here before, clear all the text.
    clear();
 
    // Armory can't directly take an address and return all the required data.
@@ -68,8 +69,8 @@ void AddressDetailsWidget::loadTransactions()
 
       auto tx = txMap_[curTXEntry.first];
       if (!tx.isInitialized()) {
-         logger_->warn("[AddressDetailsWidget::loadTransactions] TX with hash {} is not found or not inited"
-            , curTXEntry.first.toHexStr(true));
+         logger_->warn("[{}] TX with hash {} is not found or not inited"
+            , __func__, curTXEntry.first.toHexStr(true));
          continue;
       }
 
@@ -84,8 +85,8 @@ void AddressDetailsWidget::loadTransactions()
             totIn += prevOut.getValue();
          }
          else {
-            logger_->warn("[AddressDetailsWidget::loadTransactions] prev TX with hash {} is not found or not inited"
-               , op.getTxHash().toHexStr(true));
+            logger_->warn("[{}] prev TX with hash {} is not found or is not"
+               "initialized", __func__, op.getTxHash().toHexStr(true));
          }
       }
       uint64_t fees = totIn - tx.getSumOfOutputs();
@@ -120,15 +121,11 @@ void AddressDetailsWidget::loadTransactions()
    }
 
    // Set up the display for total rcv'd/spent.
+   ui_->balance->setText(UiUtils::displayAmount(totRcvd - totSpent));
    ui_->totalReceived->setText(UiUtils::displayAmount(totRcvd));
    ui_->totalSent->setText(UiUtils::displayAmount(totSpent));
 
    tree->resizeColumns();
-}
-
-void AddressDetailsWidget::onNewBlock(unsigned int)
-{
-   loadTransactions();
 }
 
 // This function sets the confirmation column to the correct color based
@@ -248,39 +245,51 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate)
          armory_->getTXsByHash(txHashSet, cbCollectTXs);
       }
    };
-   delegate.getHistoryPage(0, cbLedger);  // ? should we use more than 0 pageId?
+
+   auto delegatePtr = std::make_shared<AsyncClient::LedgerDelegate>(delegate);
+   const auto &cbPageCnt = [this, delegatePtr, cbLedger]
+                           (ReturnMessage<uint64_t> pageCnt)->void {
+      try {
+         const auto &inPageCnt = pageCnt.get();
+         for(uint64_t i = 0; i < inPageCnt; i++) {
+            delegatePtr->getHistoryPage(i, cbLedger);
+         }
+      }
+      catch (const std::exception &e) {
+         logger_->error("[AddressDetailsWidget::getTxData] Return data " \
+            "error (getPageCount) - {}", e.what());
+      }
+   };
+   delegate.getPageCount(cbPageCnt);
 }
 
+// Function that grabs the TX data for the address. Used in callback.
 void AddressDetailsWidget::refresh(const std::shared_ptr<bs::PlainWallet> &wallet)
 {
-   logger_->debug("[AddressDetailsWidget::refresh] get refresh command for {}", wallet->GetWalletId());
+   logger_->debug("[{}] get refresh command for {}", __func__
+                  , wallet->GetWalletId());
    if (wallet->GetUsedAddressCount() != 1) {
-      logger_->debug("[AddressDetailsWidget::refresh] dummy wallet {} contains invalid amount addresses ({})"
-         , wallet->GetWalletId(), wallet->GetUsedAddressCount());
+      logger_->debug("[{}}] dummy wallet {} contains invalid amount of "
+                     "addresses ({})", __func__, wallet->GetWalletId()
+                     , wallet->GetUsedAddressCount());
       return;
    }
 
-   // Once this callback runs, the data is safe to grab.
-   const auto &cbBalance = [this, wallet](std::vector<uint64_t> balances) {
-      double curBalance = wallet->GetTxBalance(balances[0]);
-      ui_->balance->setText(UiUtils::displayAmount(curBalance));
-
-      const auto &cbLedgerDelegate = [this](AsyncClient::LedgerDelegate delegate) {
-         getTxData(delegate);
-      };
-      const auto addr = wallet->GetUsedAddressList()[0];
-      if (!armory_->getLedgerDelegateForAddress(wallet->GetWalletId(),
-         addr, cbLedgerDelegate)) {
-         logger_->debug("[AddressDetailsWidget::OnRefresh] Failed to get "
-            "ledger delegate for wallet ID {} - address {}",
-            wallet->GetWalletId(), addr.display<std::string>());
-      }
+   // Process TX data for the "first" (i.e., only) address in the wallet.
+   const auto &cbLedgerDelegate = [this](AsyncClient::LedgerDelegate delegate) {
+      getTxData(delegate);
    };
-   wallet->UpdateBalanceFromDB(cbBalance);
-
+   const auto addr = wallet->GetUsedAddressList()[0];
+   if(!armory_->getLedgerDelegateForAddress(wallet->GetWalletId(), addr
+      , cbLedgerDelegate)) {
+      logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
+                     "get ledger delegate for wallet ID {} - address {}"
+                     , wallet->GetWalletId(), addr.display<std::string>());
+   }
 }
 
-// Called when Armory has finished registering a wallet.
+// Called when Armory has finished registering a wallet. Kicks off the function
+// that grabs the address's TX data.
 void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
 {
    // Make sure Armory is telling us about our wallet. Refreshes occur for
@@ -293,6 +302,7 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
    }
 }
 
+// Clear out all address details.
 void AddressDetailsWidget::clear()
 {
    for (const auto &dummyWallet : dummyWallets_) {
