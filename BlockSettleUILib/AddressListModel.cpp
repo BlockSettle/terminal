@@ -51,8 +51,6 @@ bool AddressListModel::setWallets(const Wallets &wallets)
       connect(wallet.get(), &bs::Wallet::addressAdded, this
               , &AddressListModel::updateData
               , static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
-      connect(wallet.get(), &bs::Wallet::updateAddr, this
-              , &AddressListModel::updateData);
    }
 
    updateData();

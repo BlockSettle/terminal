@@ -6,7 +6,6 @@
 #include <memory>
 #include <QAbstractTableModel>
 
-
 class WalletsManager;
 namespace bs {
    class Wallet;
