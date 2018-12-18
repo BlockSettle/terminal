@@ -248,7 +248,22 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate)
          armory_->getTXsByHash(txHashSet, cbCollectTXs);
       }
    };
-   delegate.getHistoryPage(0, cbLedger);  // ? should we use more than 0 pageId?
+
+   auto delegatePtr = std::make_shared<AsyncClient::LedgerDelegate>(delegate);
+   const auto &cbPageCnt = [this, delegatePtr, cbLedger]
+                           (ReturnMessage<uint64_t> pageCnt)->void {
+      try {
+         const auto &inPageCnt = pageCnt.get();
+         for(uint64_t i = 0; i < inPageCnt; i++) {
+            delegatePtr->getHistoryPage(i, cbLedger);
+         }
+      }
+      catch (const std::exception &e) {
+         logger_->error("[AddressDetailsWidget::getTxData] Return data " \
+            "error (getPageCount) - {}", e.what());
+      }
+   };
+   delegate.getPageCount(cbPageCnt);
 }
 
 void AddressDetailsWidget::refresh(const std::shared_ptr<bs::PlainWallet> &wallet)
