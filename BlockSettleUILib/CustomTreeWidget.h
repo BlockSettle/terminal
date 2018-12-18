@@ -19,7 +19,6 @@ signals:
 protected slots:
    void onItemEntered(QTreeWidgetItem *, int);
    void onHeaderEntered(const QModelIndex &);
-   void onItemClicked(QTreeWidgetItem * item, int column);
 
 protected:
    void mouseReleaseEvent(QMouseEvent *ev);
