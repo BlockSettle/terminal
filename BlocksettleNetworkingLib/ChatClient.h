@@ -52,6 +52,7 @@ public:
 
     void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
     void OnUsersList(Chat::UsersListResponse& response) override;
+    void OnMessages(Chat::MessagesResponse& response) override;
 
 
 public:
@@ -71,6 +72,7 @@ signals:
    void OnConnectionError(int errorCode);
    void OnUsersListUpdated(const QList<QString>& usersList);
    void OnUserUpdate(const QString& userId);
+   void OnMessageUpdate(const QDateTime& dateTime, const QString& text);
 
 
 public slots:

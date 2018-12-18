@@ -52,6 +52,9 @@ void ChatWidget::init(const std::shared_ptr<ChatServer>& chatServer
     connect(ui_->treeViewUsers, SIGNAL(doubleClicked(const QModelIndex&))
         , SLOT(onUserDoubleClicked(const QModelIndex&)));
 
+    messagesViewModel_->connect(client_.get(), SIGNAL(OnMessageUpdate(const QDateTime&, const QString&))
+                                , SLOT(onMessage(const QDateTime&, const QString&)));
+
 }
 
 
@@ -67,10 +70,14 @@ void ChatWidget::onUserDoubleClicked(const QModelIndex& index)
 void ChatWidget::onSendButtonClicked()
 {
     QString messageText = ui_->text->text();
-    client_->sendMessage(messageText);
-    ui_->text->clear();
 
-    messagesViewModel_->onMessage(QDateTime::currentDateTimeUtc(), messageText);
+    if (!messageText.isEmpty())
+    {
+        client_->sendMessage(messageText);
+        ui_->text->clear();
+
+        messagesViewModel_->onMessage(QDateTime::currentDateTimeUtc(), messageText);
+    }
 }
 
 
@@ -104,5 +111,6 @@ void ChatWidget::setUserId(const QString& userId)
 void ChatWidget::logout()
 {
     ui_->stackedWidget->setCurrentIndex(0);
+    messagesViewModel_->onLeaveRoom();
     client_->logout();
 }

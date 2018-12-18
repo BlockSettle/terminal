@@ -66,12 +66,18 @@ void ChatServer::generateKeys()
 }
 
 
+void ChatServer::sendResponse(const std::string& clientId, const std::shared_ptr<Chat::Response>& response)
+{
+    connection_->SendDataToClient(clientId, response->getData());
+}
+
+
 void ChatServer::OnHeartbeatPing(Chat::HeartbeatPingRequest& request)
 {
     logger_->debug("[ChatServer::OnHeartbeatPing] \"{}\"", request.getClientId());
 
     auto heartbeatResponse = std::make_shared<Chat::HeartbeatPongResponse>();
-    connection_->SendDataToClient(request.getClientId(), heartbeatResponse->getData());
+    sendResponse(request.getClientId(), heartbeatResponse);
 }
 
 
@@ -96,8 +102,8 @@ void ChatServer::OnSendMessage(Chat::SendMessageRequest& request)
 
     clientsOnline_[senderId] = true;
 
-    auto& history = messages_[receiverId];
-    history.push_back(request.getMessageData());
+    auto message = Chat::MessageData::fromJSON(request.getMessageData());
+    messages_.push_back(message);
 }
 
 
@@ -115,7 +121,28 @@ void ChatServer::OnOnlineUsers(Chat::OnlineUsersRequest& request)
     }
 
     auto usersListResponse = std::make_shared<Chat::UsersListResponse>(usersList);
-    connection_->SendDataToClient(request.getClientId(), usersListResponse->getData());
+    sendResponse(request.getClientId(), usersListResponse);
+}
+
+
+void ChatServer::OnRequestMessages(Chat::MessagesRequest& request)
+{
+    logger_->debug("Received request for messages chat \"{0}\""
+                   , request.getSenderId());
+
+    std::vector<std::string> responseMessages;
+
+    std::for_each(messages_.begin(), messages_.end(), [&](const Chat::MessageData& msg) {
+        if ((msg.getSenderId().toStdString() == request.getSenderId()
+                && msg.getReceiverId().toStdString() == request.getReceiverId())
+                || (msg.getSenderId().toStdString() == request.getReceiverId()
+                && msg.getReceiverId().toStdString() == request.getSenderId())) {
+            responseMessages.push_back(msg.toJsonString());
+        }
+    });
+
+    auto messagesResponse = std::make_shared<Chat::MessagesResponse>(std::move(responseMessages));
+    sendResponse(request.getClientId(), messagesResponse);
 }
 
 

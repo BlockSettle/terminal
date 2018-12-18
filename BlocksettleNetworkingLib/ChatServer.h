@@ -53,11 +53,13 @@ public:
     void OnLogin(Chat::LoginRequest& request) override;
     void OnSendMessage(Chat::SendMessageRequest& request) override;
     void OnOnlineUsers(Chat::OnlineUsersRequest& request) override;
+    void OnRequestMessages(Chat::MessagesRequest& request) override;
 
 
 private:
 
     void generateKeys();
+    void sendResponse(const std::string& clientId, const std::shared_ptr<Chat::Response>& response);
 
 
 private:
@@ -71,8 +73,8 @@ private:
    std::string privateKey_;
    std::string publicKey_;
 
-   std::map<std::string, bool>                      clientsOnline_;
-   std::map<std::string, std::vector<std::string>>  messages_;
+   std::map<std::string, bool>      clientsOnline_;
+   std::vector<Chat::MessageData>   messages_;
 
 };
 

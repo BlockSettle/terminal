@@ -110,7 +110,7 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
 {
     logger_->debug("Received users list from server: {}", response.getData());
 
-    auto users = response.getUsersList();
+    auto users = response.getDataList();
     QList<QString> usersList;
     foreach(auto userId, users) {
         emit OnUserUpdate(QString::fromStdString(userId));
@@ -118,6 +118,20 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
     }
 
     //emit OnUsersListUpdated(usersList);
+}
+
+
+void ChatClient::OnMessages(Chat::MessagesResponse& response)
+{
+    logger_->debug("Received messages from server: {}", response.getData());
+
+    auto messages = response.getDataList();
+
+    std::for_each(messages.begin(), messages.end(), [&](const std::string& msgData) {
+
+        auto receivedMessage = Chat::MessageData::fromJSON(msgData);
+        emit OnMessageUpdate(receivedMessage.getDateTime(), receivedMessage.getMessageData());
+    });
 }
 
 
@@ -160,7 +174,6 @@ void ChatClient::sendMessage(const QString& message)
                           , message);
 
     auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());
-
     sendRequest(request);
 }
 
@@ -169,4 +182,7 @@ void ChatClient::setCurrentPrivateChat(const QString& userId)
 {
     currentChatId_ = userId.toStdString();
     logger_->debug("Current chat changed: {}", currentChatId_);
+
+    auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
+    sendRequest(request);
 }
