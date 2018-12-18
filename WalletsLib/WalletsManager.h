@@ -172,12 +172,6 @@ private:
                           , std::function<void(QString, int)>);
 
    void invokeFeeCallbacks(unsigned int blocks, float fee);
-   void processZCSendTXData(Tx& inTX, const ClientClasses::LedgerEntry inLE);
-   void updateZCSendTXBalances(Tx& inTX, const ClientClasses::LedgerEntry inLE);
-   void processFinalZCBalances(const BTCNumericTypes::balance_type& delta
-                               , const BTCNumericTypes::balance_type& inFees
-                               , const BTCNumericTypes::balance_type& inChgAmt
-                               , wallet_gen_type inWallet);
 
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
