@@ -2,10 +2,12 @@
 #include "ChatProtocol.h"
 
 #include <spdlog/spdlog.h>
+#include "botan/base64.h"
 
 #include "ZmqSecuredDataConnection.h"
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
+#include "EncryptUtils.h"
 
 #include <QDateTime>
 
@@ -41,7 +43,8 @@ void ChatClient::loginToServer(const std::string& hostname, const std::string& p
        return;
     }
 
-    currentUserId_ = login;
+    auto bytesHash = autheid::getSHA256(login.c_str(), login.size());
+    currentUserId_ = Botan::base64_encode(bytesHash.data(), 8);
     currentChatId_ = currentUserId_;
 
     connection_ = connectionManager_->CreateSecuredDataConnection();
@@ -52,10 +55,10 @@ void ChatClient::loginToServer(const std::string& hostname, const std::string& p
         connection_.reset();
     }
 
-    auto loginRequest = std::make_shared<Chat::LoginRequest>("", login, "");
+    auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, "");
     sendRequest(loginRequest);
 
-    auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", login);
+    auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", currentUserId_);
     sendRequest(usersListRequest);
 
     heartbeatTimer_->start();
@@ -113,11 +116,25 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
     auto users = response.getDataList();
     QList<QString> usersList;
     foreach(auto userId, users) {
-        emit OnUserUpdate(QString::fromStdString(userId));
-        //usersList << QString::fromStdString(userId);
-    }
 
-    //emit OnUsersListUpdated(usersList);
+        if (userId == currentUserId_)
+        {
+            emit OnUserUpdate(QStringLiteral("[Me]:") + QString::fromStdString(userId));
+        }
+        else
+        {
+            emit OnUserUpdate(QString::fromStdString(userId));
+        }
+    }
+}
+
+
+QString ChatClient::prependMessage(const QString& messageText, const QString& senderId)
+{
+    QString displayMessage = QStringLiteral("[")
+            + ( senderId.isEmpty() ? QString::fromStdString(currentUserId_) : senderId )
+            + QStringLiteral("]: ") + messageText;
+    return displayMessage;
 }
 
 
@@ -130,7 +147,10 @@ void ChatClient::OnMessages(Chat::MessagesResponse& response)
     std::for_each(messages.begin(), messages.end(), [&](const std::string& msgData) {
 
         auto receivedMessage = Chat::MessageData::fromJSON(msgData);
-        emit OnMessageUpdate(receivedMessage.getDateTime(), receivedMessage.getMessageData());
+
+        emit OnMessageUpdate(receivedMessage.getDateTime()
+                             , prependMessage(receivedMessage.getMessageData()
+                                              , receivedMessage.getSenderId()));
     });
 }
 

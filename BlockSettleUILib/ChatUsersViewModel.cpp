@@ -45,6 +45,13 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 }
 
 
+void ChatUsersViewModel::clear()
+{
+    indexByUser_.clear();
+    userByIndex_.clear();
+}
+
+
 void ChatUsersViewModel::onUserUpdate(const QString& userId)
 {
     qDebug() << "onUserUpdate " << userId;

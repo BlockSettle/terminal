@@ -61,6 +61,8 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
+   QString prependMessage(const QString& messageText, const QString& senderId = QString());
+
 private:
     void sendHeartbeat();
 

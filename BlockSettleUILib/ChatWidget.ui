@@ -39,7 +39,7 @@
       </layout>
      </widget>
      <widget class="QWidget" name="pageActive">
-      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,4,4">
+      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,6,2">
        <item>
         <widget class="QFrame" name="roomsFrame">
          <property name="headerPanel" stdset="0">

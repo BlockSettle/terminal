@@ -2,8 +2,8 @@
 
 #include <sstream>
 
-
 #include <QStringLiteral>
+#include <QDebug>
 
 
 using namespace Chat;
@@ -358,7 +358,7 @@ MessageData MessageData::fromJSON(const std::string& jsonData)
 
     QString senderId = data[SenderIdKey].toString();
     QString receiverId = data[ReceiverIdKey].toString();
-    QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toInt());
+    QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
     QString messageData = data[MessageKey].toString();
 
     return MessageData(senderId, receiverId, dtm, messageData);

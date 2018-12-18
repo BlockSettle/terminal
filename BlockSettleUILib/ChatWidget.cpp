@@ -76,7 +76,7 @@ void ChatWidget::onSendButtonClicked()
         client_->sendMessage(messageText);
         ui_->text->clear();
 
-        messagesViewModel_->onMessage(QDateTime::currentDateTimeUtc(), messageText);
+        messagesViewModel_->onMessage(QDateTime::currentDateTime(), client_->prependMessage(messageText));
     }
 }
 
@@ -85,9 +85,9 @@ void ChatWidget::setUserName(const QString& username)
 {
     try
     {
-        logger_->debug("Set user name {} - before", username.toStdString());
+        logger_->debug("Set user name {}", username.toStdString());
+        usersViewModel_->clear();
         client_->loginToServer("127.0.0.1", "20001", username.toStdString());
-        logger_->debug("Set user name {} - after", username.toStdString());
         ui_->stackedWidget->setCurrentIndex(1);
     }
     catch (std::exception& e)
@@ -104,7 +104,7 @@ void ChatWidget::setUserName(const QString& username)
 
 void ChatWidget::setUserId(const QString& userId)
 {
-
+    logger_->debug("Set user ID {}", userId.toStdString());
 }
 
 
