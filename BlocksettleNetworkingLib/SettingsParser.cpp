@@ -51,7 +51,10 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
 
       for (SettingsParam *param : params_) {
          if (settings.contains(param->name())) {
-            param->value_ = settings.value(param->name()).toString();
+            bool result = param->setValue(settings.value(param->name()));
+            if (!result) {
+               return false;
+            }
          }
          unknownKeys.erase(param->name());
       }
@@ -67,7 +70,13 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
 
    for (SettingsParam *param : params_) {
       if (parser.isSet(param->name())) {
-         param->value_ = parser.value(param->name());
+         QVariant value = parser.value(param->name());
+         bool result = param->setValue(value);
+         if (!result) {
+            logger_->error("invalid value '{}' for key '{}' in settings file"
+               , value.toString().toStdString(), param->name().toStdString());
+            return false;
+         }
       }
    }
 
@@ -81,4 +90,33 @@ void SettingsParser::addParam(SettingsParser::SettingsParam &param
    param.value_ = QLatin1String(defValue);
    param.desc_ = descr;
    params_.push_back(&param);
+}
+
+void SettingsParser::addParam(SettingsParser::SettingsParam &param, const char *name, int defValue, const char *descr)
+{
+   addParam(param, name, QString::number(defValue).toStdString().c_str(), descr);
+}
+
+void SettingsParser::addParam(SettingsParser::SettingsParam &param, const char *name, bool defValue, const char *descr)
+{
+   addParam(param, name, int(defValue), descr);
+}
+
+bool SettingsParser::SettingsParam::setValue(const QVariant &value)
+{
+   value_ = value.toString();
+   return true;
+}
+
+bool SettingsParser::BoolSettingsParam::setValue(const QVariant &value)
+{
+   value_ = value.toBool();
+   return true;
+}
+
+bool SettingsParser::IntSettingsParam::setValue(const QVariant &value)
+{
+   bool ok = false;
+   value_ = value.toInt(&ok);
+   return ok;
 }
