@@ -20,6 +20,7 @@
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
 #include "AuthSignManager.h"
+#include "AutheIDClient.h"
 #include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
 #include "CCFileManager.h"
@@ -466,6 +467,8 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
+   autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_->GetAuthKeys());
+
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
@@ -845,6 +848,48 @@ void BSTerminalMainWindow::openCCTokenDialog()
    }
 }
 
+void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
+{
+    try {
+       autheIDConnection_->connectToAuthServer(applicationSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
+          , applicationSettings_->get<std::string>(ApplicationSettings::authServerHost)
+          , applicationSettings_->get<std::string>(ApplicationSettings::authServerPort));
+    }
+    catch (const std::exception &e) {
+       logMgr_->logger("ui")->error("[{}] failed to connect: {}", __func__, e.what());
+       return;
+    }
+
+    if (autheIDConnection_->authenticate(email))
+    {
+        logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer success.");
+
+        //loginWithCeler();
+    }
+    else
+    {
+        logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer failed");
+    }
+}
+
+void BSTerminalMainWindow::loginWithCeler(const std::string& username, const std::string& password)
+{
+    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
+    const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
+
+    if (!celerConnection_->LoginToServer(host, port, username, password)) {
+       logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
+    } else {
+       ui->widgetWallets->setUsername(QString::fromStdString(username));
+       action_logout_->setVisible(false);
+       action_login_->setEnabled(false);
+
+       // set button text to this temporary text until the login
+       // completes and button text is changed to the username
+       setLoginButtonText(tr("Logging in..."));
+    }
+}
+
 void BSTerminalMainWindow::onLogin()
 {
    GetNetworkSettingsFromPuB([this](NetworkSettings) {});
@@ -852,21 +897,14 @@ void BSTerminalMainWindow::onLogin()
    LoginWindow loginDialog(applicationSettings_, this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
-      const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
-      const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
-      const std::string username = loginDialog.getUsername().toStdString();
-      const std::string password = loginDialog.getPassword().toStdString();
-
-      if (!celerConnection_->LoginToServer(host, port, username, password)) {
-         logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
-      } else {
-         ui->widgetWallets->setUsername(QString::fromStdString(username));
-         action_logout_->setVisible(false);
-         action_login_->setEnabled(false);
-
-         // set button text to this temporary text until the login
-         // completes and button text is changed to the username
-         setLoginButtonText(tr("Logging in..."));
+      if (loginDialog.isAutheID())
+      {
+          loginWithAuthEID(loginDialog.getUsername().toStdString());
+      }
+      else
+      {
+          loginWithCeler(loginDialog.getUsername().toStdString()
+                         , loginDialog.getPassword().toStdString());
       }
    }
 }

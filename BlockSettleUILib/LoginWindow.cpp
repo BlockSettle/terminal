@@ -12,8 +12,7 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
    : QDialog(parent)
    , ui_(new Ui::LoginWindow())
    , settings_(settings)
-// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
-//   , frejaAuth_(spdlog::get(""))
+   , autheID_(false)
 {
    ui_->setupUi(this);
    ui_->loginVersionLabel->setText(tr("Version %1").arg(QString::fromStdString(AboutDialog::version())));
@@ -75,11 +74,12 @@ QString LoginWindow::getPassword() const
 
 void LoginWindow::onAuthPressed()
 {
-   ui_->pushButtonAuth->setEnabled(false);
-// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
-//   if (!frejaAuth_.start(ui_->lineEditUsername->text().toLower())) {
-//      ui_->pushButtonAuth->setEnabled(true);
-//   }
+    autheID_ = true;
+    if (ui_->checkBoxRememberUsername->isChecked()) {
+       settings_->set(ApplicationSettings::jwtUsername, ui_->lineEditUsername->text());
+    }
+    accept();
+    ui_->pushButtonAuth->setEnabled(false);
 }
 
 void LoginWindow::onAuthSucceeded(const QString &userId, const QString &details)
