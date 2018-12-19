@@ -824,7 +824,7 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
          }
       });
    } else {
-      const auto &addNode = [&rootNodes, decrypted, newPass, keyRank](const std::vector<int> &combi) {
+      const auto &addNode = [this, &rootNodes, decrypted, newPass, keyRank](const std::vector<int> &combi) {
          if (keyRank.first == 1) {
             const auto &passData = newPass[combi[0]];
             rootNodes.emplace_back(decrypted->encrypt(passData.password, { passData.encType }
@@ -851,8 +851,14 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
             for (const auto &encKey : encKeys) {
                mergedEncKeys.emplace_back(encKey);
             }
-            rootNodes.emplace_back(decrypted->encrypt(xorPass, mergedEncTypes, mergedEncKeys));
+            const auto &encrypted = decrypted->encrypt(xorPass, mergedEncTypes, mergedEncKeys);
+            if (!encrypted) {
+               LOG(logger_, error, "Wallet::changePassword: failed to encrypt node");
+               return false;
+            }
+            rootNodes.emplace_back(encrypted);
          }
+         return true;
       };
 
       std::vector<int> combiIndices;
@@ -860,9 +866,13 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
       for (int i = 0; i < keyRank.second; ++i) {
          combiIndices.push_back(i);
       }
-      addNode(combiIndices);
+      if (!addNode(combiIndices)) {
+         return false;
+      }
       while (nextCombi(combiIndices, keyRank.second, keyRank.first)) {
-         addNode(combiIndices);
+         if (!addNode(combiIndices)) {
+            return false;
+         }
       }
    }
 
