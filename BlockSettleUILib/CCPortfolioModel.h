@@ -52,6 +52,8 @@ private slots:
    void onFXBalanceLoaded();
    void onFXBalanceCleared();
 
+   void onFXBalanceChanged(const std::string& currency);
+
    void onXBTPriceChanged(const std::string& currency);
    void onCCPriceChanged(const std::string& currency);
 

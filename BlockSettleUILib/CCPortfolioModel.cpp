@@ -78,8 +78,13 @@ public:
    XBTAssetNode& operator = (XBTAssetNode&&) = delete;
 
 public:
-   void SetXBTAmount(double amount) {
-      amount_ = amount;
+   bool SetXBTAmount(double amount) {
+      if (amount_ != amount) {
+         amount_ = amount;
+         return true;
+      }
+
+      return false;
    }
 
 public:
@@ -115,13 +120,23 @@ public:
    FXAssetNode& operator = (FXAssetNode&&) = delete;
 
 public:
-   void SetFXAmount(double amount) {
-      amount_ = amount;
+   bool SetFXAmount(double amount) {
+      if (amount_ != amount) {
+         amount_ = amount;
+         return true;
+      }
+
+      return false;
    }
 
    // set to 0, and XBT value will be empty
-   void SetPrice(double price) {
-      price_ = price;
+   bool SetPrice(double price) {
+      if (price_ != price) {
+         price_ = price;
+         return true;
+      }
+
+      return false;
    }
 
 public:
@@ -130,7 +145,7 @@ public:
    }
 
    bool HasXBTValue() const override {
-      return !qFuzzyIsNull(price_);
+      return !qFuzzyIsNull(price_) && !qFuzzyIsNull(amount_);
    }
 
    QString GetBalance() const override { return UiUtils::displayCurrencyAmount(amount_); }
@@ -484,6 +499,8 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& wallet
       , this, &CCPortfolioModel::onFXBalanceCleared, Qt::QueuedConnection);
    connect(assetManager_.get(), &AssetManager::xbtPriceChanged
       , this, &CCPortfolioModel::onXBTPriceChanged, Qt::QueuedConnection);
+   connect(assetManager_.get(), &AssetManager::xbtPriceChanged
+      , this, &CCPortfolioModel::onFXBalanceChanged, Qt::QueuedConnection);
 }
 
 int CCPortfolioModel::columnCount(const QModelIndex & parent) const
@@ -631,9 +648,6 @@ AssetNode* CCPortfolioModel::getNodeByIndex(const QModelIndex& index) const
 
 void CCPortfolioModel::onFXBalanceLoaded()
 {
-   // load list of FX products
-   // create nodes
-   // set balances
    auto fxGroup = root_->GetFXGroup();
 
    // insert under root
@@ -663,7 +677,36 @@ void CCPortfolioModel::onFXBalanceCleared()
    }
 }
 
-
 void CCPortfolioModel::onXBTPriceChanged(const std::string& currency)
 {
+   if (root_->HaveFXGroup()) {
+      auto fxGroup = root_->GetFXGroup();
+
+      auto fxNode = fxGroup->GetFXNode(currency);
+      assert(fxNode != nullptr);
+
+      const double balance = assetManager_->getBalance(currency);
+      const double price = assetManager_->getPrice(currency);
+      const bool priceChanged = fxNode->SetPrice(price);
+      const bool balanceChanged = fxNode->SetFXAmount(balance);
+
+      if (fxNode->HasXBTValue() && (priceChanged || balanceChanged)) {
+         dataChanged(index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , {Qt::DisplayRole});
+
+         auto parentIndex = createIndex(fxGroup->getRow(), 0, static_cast<void*>(fxGroup));
+
+         dataChanged(index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+            , index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+            , {Qt::DisplayRole});
+      }
+   }
+}
+
+void CCPortfolioModel::onFXBalanceChanged(const std::string& currency)
+{
+   if (currency != bs::network::XbtCurrency) {
+      onXBTPriceChanged(currency);
+   }
 }
