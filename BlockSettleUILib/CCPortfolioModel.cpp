@@ -180,13 +180,23 @@ public:
    CCAssetNode& operator = (CCAssetNode&&) = delete;
 
 public:
-   void SetCCAmount(double amount) {
-      amount_ = amount;
+   bool SetCCAmount(double amount) {
+      if (amount_ != amount) {
+         amount_ = amount;
+         return true;
+      }
+
+      return false;
    }
 
    // set to 0, and XBT value will be empty
-   void SetPrice(double price) {
-      price_ = price;
+   bool SetPrice(double price) {
+      if (price_ != price) {
+         price_ = price;
+         return true;
+      }
+
+      return false;
    }
 
 public:
@@ -377,6 +387,11 @@ public:
    {
       AddChild(new CCAssetNode(name, this));
    }
+
+   CCAssetNode* GetCCNode(const std::string& name)
+   {
+      return dynamic_cast<CCAssetNode*>(getNodeByName(name));
+   }
 };
 
 class FXAssetGroupNode : public AssetGroupNode
@@ -452,6 +467,11 @@ public:
       }
    }
 
+   bool HaveXBTGroup() const
+   {
+      return xbtGroup_ != nullptr;
+   }
+
    XBTAssetGroupNode* GetXBTGroup()
    {
       if (xbtGroup_ == nullptr) {
@@ -460,6 +480,11 @@ public:
       }
 
       return xbtGroup_;
+   }
+
+   bool HaveCCGroup() const
+   {
+      return ccGroup_ != nullptr;
    }
 
    CCAssetGroupNode* GetCCGroup()
@@ -501,6 +526,9 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& wallet
       , this, &CCPortfolioModel::onXBTPriceChanged, Qt::QueuedConnection);
    connect(assetManager_.get(), &AssetManager::xbtPriceChanged
       , this, &CCPortfolioModel::onFXBalanceChanged, Qt::QueuedConnection);
+
+   connect(assetManager_.get(), &AssetManager::ccPriceChanged
+      , this, &CCPortfolioModel::onCCPriceChanged, Qt::QueuedConnection);
 }
 
 int CCPortfolioModel::columnCount(const QModelIndex & parent) const
@@ -708,5 +736,30 @@ void CCPortfolioModel::onFXBalanceChanged(const std::string& currency)
 {
    if (currency != bs::network::XbtCurrency) {
       onXBTPriceChanged(currency);
+   }
+}
+
+void CCPortfolioModel::onCCPriceChanged(const std::string& currency)
+{
+   if (root_->HaveCCGroup()) {
+      auto ccGroup = root_->GetCCGroup();
+      auto ccNode = ccGroup->GetCCNode(currency);
+
+      if (ccNode != nullptr) {
+         const double newPrice = assetManager_->getPrice(currency);
+         const bool priceChanged = ccNode->SetPrice(newPrice);
+
+         if (priceChanged) {
+            dataChanged(index(ccGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , index(ccGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , {Qt::DisplayRole});
+
+         auto parentIndex = createIndex(ccGroup->getRow(), 0, static_cast<void*>(ccGroup));
+
+         dataChanged(index(ccNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+            , index(ccNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+            , {Qt::DisplayRole});
+         }
+      }
    }
 }
