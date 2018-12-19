@@ -49,11 +49,11 @@ public:
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
 
 private slots:
-   void updateBlockchainData();
-   void onFxBalanceLoaded();
-   void onFxBalanceCleared();
-   void onXBTPriceChanged(const std::string &currency);
-   void onCCPriceChaned();
+   void onFXBalanceLoaded();
+   void onFXBalanceCleared();
+
+   void onXBTPriceChanged(const std::string& currency);
+   void onCCPriceChanged(const std::string& currency);
 
 private:
    std::shared_ptr<AssetManager>       assetManager_;

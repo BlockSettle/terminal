@@ -142,7 +142,8 @@ public:
          : QString{};
    }
 
-   double GetXBTAmount() const override { return amount_/price_; }
+   // price is inverted in AssetManager
+   double GetXBTAmount() const override { return amount_ * price_; }
 
 private:
    double amount_ = 0;
@@ -208,7 +209,7 @@ public:
     {}
    ~AssetGroupNode() noexcept override
    {
-      qDeleteAll(childs_);
+      qDeleteAll(children_);
    }
 
    AssetGroupNode(const AssetGroupNode&) = delete;
@@ -221,8 +222,8 @@ public:
    virtual void AddAsset(const QString& name) = 0;
 
    AssetNode* getChild(int row) const override {
-      if ((row > 0) && (row < childs_.size())) {
-         return childs_[row];
+      if ((row >= 0) && (row < children_.size())) {
+         return children_[row];
       }
 
       return nullptr;
@@ -234,16 +235,43 @@ protected:
       int index = childrenCount();
       nameToIndex_.emplace(newChild->GetName().toStdString(), index);
       newChild->setRow(index);
-      childs_.append(newChild);
+      children_.append(newChild);
+   }
+
+   void RemoveChild(AssetNode* childToRemove)
+   {
+      int index = childToRemove->getRow();
+      if ((index >= 0) && (index < children_.size())) {
+         children_.removeAt(index);
+
+         for (int i=index; i<children_.size(); ++i) {
+            children_[i]->setRow(i);
+            nameToIndex_[children_[i]->GetName().toStdString()] = i;
+         }
+
+         delete childToRemove;
+      } else {
+         throw std::logic_error("Removing child with invalid index");
+      }
+   }
+
+   AssetNode* getNodeByName(const std::string& name)
+   {
+      auto it = nameToIndex_.find(name);
+      if (it == nameToIndex_.end()) {
+         return nullptr;
+      }
+
+      return children_[it->second];
    }
 
 public:
    bool HasChildren() const override {
-      return !childs_.isEmpty();
+      return !children_.isEmpty();
    }
 
    int childrenCount() const override {
-      return childs_.size();
+      return children_.size();
    }
 
    bool HasBalance() const override {
@@ -257,8 +285,8 @@ public:
          return false;
       }
 
-      for (int i=0; i < childs_.size(); ++i) {
-         if (childs_[i]->HasXBTValue()) {
+      for (int i=0; i < children_.size(); ++i) {
+         if (children_[i]->HasXBTValue()) {
             return true;
          }
       }
@@ -275,8 +303,8 @@ public:
    {
       double result = 0;
 
-      for (int i=0; i < childs_.size(); ++i) {
-         const auto child = childs_[i];
+      for (int i=0; i < children_.size(); ++i) {
+         const auto child = children_[i];
 
          if (child->HasXBTValue()) {
             result += child->GetXBTAmount();
@@ -287,7 +315,7 @@ public:
    }
 
 private:
-   QList<AssetNode*>                      childs_;
+   QList<AssetNode*>                      children_;
    std::unordered_map<std::string, int>   nameToIndex_;
 };
 
@@ -308,6 +336,11 @@ public:
    void AddAsset(const QString& name) override
    {
       AddChild(new XBTAssetNode(name, this));
+   }
+
+   XBTAssetNode* GetXBTNode(const std::string& name)
+   {
+      return dynamic_cast<XBTAssetNode*>(getNodeByName(name));
    }
 };
 
@@ -349,13 +382,21 @@ public:
    {
       AddChild(new FXAssetNode(name, this));
    }
+
+   FXAssetNode* GetFXNode(const std::string& name)
+   {
+      return dynamic_cast<FXAssetNode*>(getNodeByName(name));
+   }
 };
 
 class RootAssetGroupNode : public AssetGroupNode
 {
 public:
-   RootAssetGroupNode()
+   RootAssetGroupNode(const QString& xbtGroupName, const QString& ccGroupName, const QString& fxGroupName)
       : AssetGroupNode(QString::fromStdString("root"), nullptr)
+      , xbtGroupName_{xbtGroupName}
+      , ccGroupName_{ccGroupName}
+      , fxGroupName_{fxGroupName}
    {
       setRow(0);
    }
@@ -368,37 +409,62 @@ public:
    RootAssetGroupNode(RootAssetGroupNode&&) = delete;
    RootAssetGroupNode& operator = (RootAssetGroupNode&&) = delete;
 
-   void AddXBTWallet(const QString& name)
-   {}
-
-   void AddCCAsset(const QString& name)
-   {}
-
-   void AddFXAset(const QString& name)
-   {}
-
-   void AddXBTGroup(const QString& xbtGroupName)
-   {
-      AddChild(new XBTAssetGroupNode(xbtGroupName, this));
-   }
-
-   void AddCCGroup(const QString& ccGroupName)
-   {
-      AddChild(new CCAssetGroupNode(ccGroupName, this));
-   }
-
-   void AddFXGroup(const QString& fxGroupName)
-   {
-      AddChild(new FXAssetGroupNode(fxGroupName, this));
-   }
-
-   void RemoveFXGroup()
-   {}
-
    void AddAsset(const QString& name) override
    {
       throw std::logic_error("RootAssetGroupNode::AddAsset should never be called directly");
    }
+
+   FXAssetGroupNode* GetFXGroup()
+   {
+      if (fxGroup_ == nullptr) {
+         fxGroup_ = new FXAssetGroupNode(fxGroupName_, this);
+         AddChild(fxGroup_);
+      }
+
+      return fxGroup_;
+   }
+
+   bool HaveFXGroup() const
+   {
+      return fxGroup_ != nullptr;
+   }
+
+   void RemoveFXGroup()
+   {
+      if (fxGroup_ != nullptr) {
+         RemoveChild(fxGroup_);
+         fxGroup_ = nullptr;
+      }
+   }
+
+   XBTAssetGroupNode* GetXBTGroup()
+   {
+      if (xbtGroup_ == nullptr) {
+         xbtGroup_ = new XBTAssetGroupNode(xbtGroupName_, this);
+         AddChild(xbtGroup_);
+      }
+
+      return xbtGroup_;
+   }
+
+   CCAssetGroupNode* GetCCGroup()
+   {
+      if (ccGroup_ == nullptr) {
+         ccGroup_ = new CCAssetGroupNode(ccGroupName_, this);
+         AddChild(ccGroup_);
+      }
+
+      return ccGroup_;
+   }
+
+private:
+   const QString xbtGroupName_;
+   const QString ccGroupName_;
+   const QString fxGroupName_;
+
+   FXAssetGroupNode     *fxGroup_ = nullptr;
+   XBTAssetGroupNode    *xbtGroup_ = nullptr;
+   CCAssetGroupNode     *ccGroup_ = nullptr;
 };
 
 //==============================================================================
@@ -410,8 +476,14 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& wallet
  , assetManager_{assetManager}
  , walletsManager_{walletsManager}
 {
-   root_ = std::make_shared<RootAssetGroupNode>();
-   root_->AddXBTGroup(tr("XBT"));
+   root_ = std::make_shared<RootAssetGroupNode>(tr("XBT"), tr("Private Shares"), tr("Cash"));
+
+   connect(assetManager_.get(), &AssetManager::fxBalanceLoaded
+      , this, &CCPortfolioModel::onFXBalanceLoaded, Qt::QueuedConnection);
+   connect(assetManager_.get(), &AssetManager::fxBalanceCleared
+      , this, &CCPortfolioModel::onFXBalanceCleared, Qt::QueuedConnection);
+   connect(assetManager_.get(), &AssetManager::xbtPriceChanged
+      , this, &CCPortfolioModel::onXBTPriceChanged, Qt::QueuedConnection);
 }
 
 int CCPortfolioModel::columnCount(const QModelIndex & parent) const
@@ -555,4 +627,43 @@ AssetNode* CCPortfolioModel::getNodeByIndex(const QModelIndex& index) const
    }
 
    return static_cast<AssetNode*>(index.internalPointer());
+}
+
+void CCPortfolioModel::onFXBalanceLoaded()
+{
+   // load list of FX products
+   // create nodes
+   // set balances
+   auto fxGroup = root_->GetFXGroup();
+
+   // insert under root
+   beginInsertRows(QModelIndex{}, fxGroup->getRow(), fxGroup->getRow());
+
+   auto currencyList = assetManager_->currencies();
+   for (const auto& symbolName : currencyList) {
+      fxGroup->AddAsset(QString::fromStdString(symbolName));
+
+      const double balance = assetManager_->getBalance(symbolName);
+      const double price = assetManager_->getPrice(symbolName);
+
+      auto fxNode = fxGroup->GetFXNode(symbolName);
+      fxNode->SetFXAmount(balance);
+      fxNode->SetPrice(price);
+   }
+
+   endInsertRows();
+}
+
+void CCPortfolioModel::onFXBalanceCleared()
+{
+   if (root_->HaveFXGroup()) {
+      beginResetModel();
+      root_->RemoveFXGroup();
+      endResetModel();
+   }
+}
+
+
+void CCPortfolioModel::onXBTPriceChanged(const std::string& currency)
+{
 }

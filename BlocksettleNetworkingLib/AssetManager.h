@@ -52,10 +52,13 @@ public:
    std::string GetAssignedAccount() const { return assignedAccount_; }
 
 signals:
-   void priceChanged(const std::string& currency);
-   void balanceChanged(const std::string& currency);
+   void ccPriceChanged(const std::string& currency);
+   void xbtPriceChanged(const std::string& currency);
+
    void fxBalanceLoaded();
    void fxBalanceCleared();
+
+   void balanceChanged(const std::string& currency);
 
    void totalChanged();
    void securitiesReceived();

@@ -23,7 +23,8 @@ AssetManager::AssetManager(const std::shared_ptr<spdlog::logger>& logger
  , mdProvider_(mdProvider)
  , celerClient_(celerClient)
 {
-   connect(this, &AssetManager::priceChanged, [this] { emit totalChanged(); });
+   connect(this, &AssetManager::ccPriceChanged, [this] { emit totalChanged(); });
+   connect(this, &AssetManager::xbtPriceChanged, [this] { emit totalChanged(); });
    connect(this, &AssetManager::balanceChanged, [this] { emit totalChanged(); });
 }
 
@@ -235,7 +236,11 @@ void AssetManager::onMDUpdate(bs::network::Asset::Type at, const QString &securi
          productPrice = 1 / productPrice;
       }
       prices_[ccy] = productPrice;
-      emit priceChanged(ccy);
+      if (at == bs::network::Asset::PrivateMarket) {
+         emit ccPriceChanged(ccy);
+      } else {
+         emit xbtPriceChanged(ccy);
+      }
    }
 }
 
