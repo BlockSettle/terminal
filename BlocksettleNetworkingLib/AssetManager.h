@@ -55,6 +55,7 @@ signals:
    void priceChanged(const std::string& currency);
    void balanceChanged(const std::string& currency);
    void fxBalanceLoaded();
+   void fxBalanceCleared();
 
    void totalChanged();
    void securitiesReceived();

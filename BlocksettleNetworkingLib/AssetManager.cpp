@@ -329,6 +329,7 @@ void AssetManager::onCelerDisconnected()
    balances_.clear();
    currencies_.clear();
    emit securitiesChanged();
+   emit fxBalanceCleared();
    emit totalChanged();
 }
 

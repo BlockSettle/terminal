@@ -4,210 +4,555 @@
 #include "UiUtils.h"
 #include "WalletsManager.h"
 
-QStandardItem* amountItem(const QString& text, bool bold = false)
+#include <QFont>
+
+#include <stdexcept>
+#include <unordered_map>
+
+class AssetNode
 {
-   QFont font;
-   font.setBold(bold);
+public:
+   AssetNode(const QString& name, AssetNode* parent)
+      : name_{name}
+      , parent_{parent}
+      , row_{-1}
+   {}
 
-   QStandardItem* item = new QStandardItem(text);
-   item->setTextAlignment(Qt::AlignRight);
-   item->setFont(font);
+   virtual ~AssetNode() noexcept = default;
 
-   return item;
-}
+   AssetNode(const AssetNode&) = delete;
+   AssetNode& operator = (const AssetNode&) = delete;
 
-CCPortfolioModel::CCPortfolioModel(std::shared_ptr<WalletsManager> walletsManager, std::shared_ptr<AssetManager> assetManager, QObject* parent)
-   : QStandardItemModel(parent)
-   , walletsManager_(walletsManager)
-   , assetManager_(assetManager)
-   , cashGroupName_(tr("Cash"))
+   AssetNode(AssetNode&&) = delete;
+   AssetNode& operator = (AssetNode&&) = delete;
+
+   bool isRoot() const { return parent_ == nullptr; }
+
+   AssetNode* getParent() const { return parent_; }
+   int getRow() const { return row_; }
+   void setRow( const int row) { row_ = row; }
+
+   virtual AssetNode* getChild(int row) const { return nullptr; }
+
+public:
+   virtual bool HasChildren() const {
+      return false;
+   }
+
+   virtual int childrenCount() const { return 0; }
+
+   QString GetName() const {
+      return name_;
+   }
+
+   virtual bool HasBalance() const {
+      return true;
+   }
+   virtual QString GetBalance() const = 0;
+
+   virtual bool HasXBTValue() const = 0;
+   virtual QString GetXBTValueString() const = 0;
+
+   virtual double GetXBTAmount() const = 0;
+
+private:
+   const QString  name_;
+   AssetNode*     parent_;
+   int            row_;
+};
+
+//==============================================================================
+// Specific group nodes. Difference in balance representation
+
+class XBTAssetNode : public AssetNode
 {
-   connect(walletsManager.get(), &WalletsManager::walletsReady, this, &CCPortfolioModel::updateBlockchainData);
-   connect(walletsManager.get(), &WalletsManager::walletChanged, this, &CCPortfolioModel::updateBlockchainData);
-   connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &CCPortfolioModel::updateBlockchainData);
-   setHorizontalHeaderLabels({tr("Asset"), tr("Balance"), tr("Value (XBT)")});
-   horizontalHeaderItem(1)->setTextAlignment(Qt::AlignRight);
-   horizontalHeaderItem(2)->setTextAlignment(Qt::AlignRight);
+public:
+   XBTAssetNode(const QString& name, AssetNode* parent)
+      : AssetNode(name, parent) {}
+   ~XBTAssetNode() noexcept override = default;
 
-   fontBold_.setBold(true);
+   XBTAssetNode(const XBTAssetNode&) = delete;
+   XBTAssetNode& operator = (const XBTAssetNode&) = delete;
 
-   QList<QStandardItem*> xbtItems;
-   xbtItems << new QStandardItem(UiUtils::XbtCurrency);
-   xbtItems.last()->setFont(fontBold_);
-   xbtItems << new QStandardItem();
-   xbtItems << amountItem(UiUtils::displayAmount(walletsManager_->GetSpendableBalance()), true);
-   appendRow(xbtItems);
-   fillXbtWallets(xbtItems[0]);
+   XBTAssetNode(XBTAssetNode&&) = delete;
+   XBTAssetNode& operator = (XBTAssetNode&&) = delete;
 
-   connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &CCPortfolioModel::reloadSecurities);
-   connect(assetManager_.get(), &AssetManager::securitiesReceived, this, &CCPortfolioModel::reloadSecurities);
-   connect(assetManager_.get(), &AssetManager::balanceChanged, this, &CCPortfolioModel::updateCashAccountBalance);
-   connect(assetManager_.get(), &AssetManager::priceChanged, [this](const std::string &currency) {
-      if (assetManager_->getCCLotSize(currency)) {
-         updatePrivateShare(currency, shareItems_);
+public:
+   void SetXBTAmount(double amount) {
+      amount_ = amount;
+   }
+
+public:
+   bool HasBalance() const override {
+      return false;
+   }
+
+   bool HasXBTValue() const override {
+      return true;
+   }
+
+   QString GetBalance() const override { return QString{}; }
+   QString GetXBTValueString() const override { return UiUtils::displayAmount(amount_);}
+
+   double GetXBTAmount() const override { return amount_; }
+
+private:
+   double amount_ = -1;
+};
+
+
+class FXAssetNode : public AssetNode
+{
+public:
+   FXAssetNode(const QString& name, AssetNode* parent)
+      : AssetNode(name, parent) {}
+   ~FXAssetNode() noexcept override = default;
+
+   FXAssetNode(const FXAssetNode&) = delete;
+   FXAssetNode& operator = (const FXAssetNode&) = delete;
+
+   FXAssetNode(FXAssetNode&&) = delete;
+   FXAssetNode& operator = (FXAssetNode&&) = delete;
+
+public:
+   void SetFXAmount(double amount) {
+      amount_ = amount;
+   }
+
+   // set to 0, and XBT value will be empty
+   void SetPrice(double price) {
+      price_ = price;
+   }
+
+public:
+   bool HasBalance() const override {
+      return true;
+   }
+
+   bool HasXBTValue() const override {
+      return !qFuzzyIsNull(price_);
+   }
+
+   QString GetBalance() const override { return UiUtils::displayCurrencyAmount(amount_); }
+
+   QString GetXBTValueString() const override
+   {
+      return HasXBTValue()
+         ? UiUtils::displayAmount( GetXBTAmount() )
+         : QString{};
+   }
+
+   double GetXBTAmount() const override { return amount_/price_; }
+
+private:
+   double amount_ = 0;
+   double price_ = 0;
+};
+
+
+class CCAssetNode : public AssetNode
+{
+public:
+   CCAssetNode(const QString& name, AssetNode* parent)
+      : AssetNode(name, parent) {}
+   ~CCAssetNode() noexcept override = default;
+
+   CCAssetNode(const CCAssetNode&) = delete;
+   CCAssetNode& operator = (const CCAssetNode&) = delete;
+
+   CCAssetNode(CCAssetNode&&) = delete;
+   CCAssetNode& operator = (CCAssetNode&&) = delete;
+
+public:
+   void SetCCAmount(double amount) {
+      amount_ = amount;
+   }
+
+   // set to 0, and XBT value will be empty
+   void SetPrice(double price) {
+      price_ = price;
+   }
+
+public:
+   bool HasBalance() const override {
+      return true;
+   }
+
+   bool HasXBTValue() const override {
+      return !qFuzzyIsNull(price_);
+   }
+
+   QString GetBalance() const override { return UiUtils::displayCCAmount(amount_); }
+
+   QString GetXBTValueString() const override
+   {
+      return HasXBTValue()
+         ? UiUtils::displayAmount(GetXBTAmount())
+         : QString{};
+   }
+
+   double GetXBTAmount() const override { return amount_ * price_; }
+
+private:
+   double amount_ = 0;
+   double price_ = 0;
+};
+
+//==============================================================================
+
+class AssetGroupNode : public AssetNode
+{
+public:
+   AssetGroupNode(const QString& name, AssetNode* parent)
+    : AssetNode(name, parent)
+    {}
+   ~AssetGroupNode() noexcept override
+   {
+      qDeleteAll(childs_);
+   }
+
+   AssetGroupNode(const AssetGroupNode&) = delete;
+   AssetGroupNode& operator = (const AssetGroupNode&) = delete;
+
+   AssetGroupNode(AssetGroupNode&&) = delete;
+   AssetGroupNode& operator = (AssetGroupNode&&) = delete;
+
+public:
+   virtual void AddAsset(const QString& name) = 0;
+
+   AssetNode* getChild(int row) const override {
+      if ((row > 0) && (row < childs_.size())) {
+         return childs_[row];
       }
-      else {
-         updateCashAccountBalance(currency);
+
+      return nullptr;
+   }
+
+protected:
+   void AddChild(AssetNode* newChild)
+   {
+      int index = childrenCount();
+      nameToIndex_.emplace(newChild->GetName().toStdString(), index);
+      newChild->setRow(index);
+      childs_.append(newChild);
+   }
+
+public:
+   bool HasChildren() const override {
+      return !childs_.isEmpty();
+   }
+
+   int childrenCount() const override {
+      return childs_.size();
+   }
+
+   bool HasBalance() const override {
+      return false;
+   }
+   QString GetBalance() const override { return QString{}; }
+
+   bool HasXBTValue() const override
+   {
+      if (!HasChildren()) {
+         return false;
       }
-   });
-   connect(assetManager_.get(), &AssetManager::totalChanged, this, &CCPortfolioModel::updateCashTotalBalance);
 
-   updateBlockchainData();
-}
-
-void CCPortfolioModel::updateCashTotalBalance()
-{
-   if (cashItems_.empty()) {
-      return;
-   }
-   cashItems_.last()->setText(UiUtils::displayAmount(assetManager_->getCashTotal()));
-}
-
-void CCPortfolioModel::updateCashAccountBalance(const std::string &currency)
-{
-   if (currency == bs::network::XbtCurrency) {
-      return;
-   }
-
-   if (cashItems_.empty()) {
-      cashItems_ << new QStandardItem(cashGroupName_);
-      cashItems_.last()->setFont(fontBold_);
-      cashItems_ << new QStandardItem();
-      cashItems_ << amountItem(tr("Not available"), true);
-      appendRow(cashItems_);
-   }
-   const double balance = assetManager_->getBalance(currency);
-   const double price = assetManager_->getPrice(currency);
-   int index = -1;
-
-   for (int i = 0; i < cashItems_.first()->rowCount(); i++) {
-      if (cashItems_.first()->child(i, 0)->text().toStdString() == currency) {
-         index = i;
-         break;
-      }
-   }
-
-   if (index < 0) {
-      QList<QStandardItem*> currencyItems;
-      currencyItems << new QStandardItem(QString::fromStdString(currency));
-      currencyItems << amountItem(UiUtils::displayCurrencyAmount(balance));
-      currencyItems << amountItem(UiUtils::displayAmount(price * balance));
-
-      index = cashItems_.first()->rowCount();
-      cashItems_.first()->appendRow(currencyItems);
-   }
-
-   cashItems_.first()->child(index, 1)->setText(UiUtils::displayCurrencyAmount(balance));
-   cashItems_.first()->child(index, 2)->setText(UiUtils::displayAmount(price * balance));
-}
-
-void CCPortfolioModel::reloadSecurities()
-{
-   const auto &currencies = assetManager_->currencies();
-   if (currencies.empty()) {
-      cashItems_.clear();
-      int cashRow = -1;
-      for (int row = 0; row < rowCount(); row++) {
-         if (item(row)->text() == cashGroupName_) {
-            cashRow = row;
-            break;
+      for (int i=0; i < childs_.size(); ++i) {
+         if (childs_[i]->HasXBTValue()) {
+            return true;
          }
       }
-      if (cashRow >= 0) {
-         removeRow(cashRow);
-      }
+
+      return false;
    }
-   else {
-      for (const auto &cur : currencies) {
-         updateCashAccountBalance(cur);
-      }
-      updateCashTotalBalance();
+
+   QString GetXBTValueString() const override
+   {
+      return UiUtils::displayAmount(GetXBTAmount());
    }
+
+   double GetXBTAmount() const override
+   {
+      double result = 0;
+
+      for (int i=0; i < childs_.size(); ++i) {
+         const auto child = childs_[i];
+
+         if (child->HasXBTValue()) {
+            result += child->GetXBTAmount();
+         }
+      }
+
+      return result;
+   }
+
+private:
+   QList<AssetNode*>                      childs_;
+   std::unordered_map<std::string, int>   nameToIndex_;
+};
+
+class XBTAssetGroupNode : public AssetGroupNode
+{
+public:
+   XBTAssetGroupNode(const QString& xbtGroupName, AssetNode* parent)
+    : AssetGroupNode(xbtGroupName, parent)
+   {}
+   ~XBTAssetGroupNode() noexcept override = default;
+
+   XBTAssetGroupNode(const XBTAssetGroupNode&) = delete;
+   XBTAssetGroupNode& operator = (const XBTAssetGroupNode&) = delete;
+
+   XBTAssetGroupNode(XBTAssetGroupNode&&) = delete;
+   XBTAssetGroupNode& operator = (XBTAssetGroupNode&&) = delete;
+
+   void AddAsset(const QString& name) override
+   {
+      AddChild(new XBTAssetNode(name, this));
+   }
+};
+
+class CCAssetGroupNode : public AssetGroupNode
+{
+public:
+   CCAssetGroupNode(const QString& xbtGroupName, AssetNode* parent)
+    : AssetGroupNode(xbtGroupName, parent)
+   {}
+   ~CCAssetGroupNode() noexcept override = default;
+
+   CCAssetGroupNode(const CCAssetGroupNode&) = delete;
+   CCAssetGroupNode& operator = (const CCAssetGroupNode&) = delete;
+
+   CCAssetGroupNode(CCAssetGroupNode&&) = delete;
+   CCAssetGroupNode& operator = (CCAssetGroupNode&&) = delete;
+
+   void AddAsset(const QString& name) override
+   {
+      AddChild(new CCAssetNode(name, this));
+   }
+};
+
+class FXAssetGroupNode : public AssetGroupNode
+{
+public:
+   FXAssetGroupNode(const QString& xbtGroupName, AssetNode* parent)
+    : AssetGroupNode(xbtGroupName, parent)
+   {}
+   ~FXAssetGroupNode() noexcept override = default;
+
+   FXAssetGroupNode(const FXAssetGroupNode&) = delete;
+   FXAssetGroupNode& operator = (const FXAssetGroupNode&) = delete;
+
+   FXAssetGroupNode(FXAssetGroupNode&&) = delete;
+   FXAssetGroupNode& operator = (FXAssetGroupNode&&) = delete;
+
+   void AddAsset(const QString& name) override
+   {
+      AddChild(new FXAssetNode(name, this));
+   }
+};
+
+class RootAssetGroupNode : public AssetGroupNode
+{
+public:
+   RootAssetGroupNode()
+      : AssetGroupNode(QString::fromStdString("root"), nullptr)
+   {
+      setRow(0);
+   }
+
+   ~RootAssetGroupNode() noexcept override = default;
+
+   RootAssetGroupNode(const RootAssetGroupNode&) = delete;
+   RootAssetGroupNode& operator = (const RootAssetGroupNode&) = delete;
+
+   RootAssetGroupNode(RootAssetGroupNode&&) = delete;
+   RootAssetGroupNode& operator = (RootAssetGroupNode&&) = delete;
+
+   void AddXBTWallet(const QString& name)
+   {}
+
+   void AddCCAsset(const QString& name)
+   {}
+
+   void AddFXAset(const QString& name)
+   {}
+
+   void AddXBTGroup(const QString& xbtGroupName)
+   {
+      AddChild(new XBTAssetGroupNode(xbtGroupName, this));
+   }
+
+   void AddCCGroup(const QString& ccGroupName)
+   {
+      AddChild(new CCAssetGroupNode(ccGroupName, this));
+   }
+
+   void AddFXGroup(const QString& fxGroupName)
+   {
+      AddChild(new FXAssetGroupNode(fxGroupName, this));
+   }
+
+   void RemoveFXGroup()
+   {}
+
+   void AddAsset(const QString& name) override
+   {
+      throw std::logic_error("RootAssetGroupNode::AddAsset should never be called directly");
+   }
+};
+
+//==============================================================================
+
+CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& walletsManager
+      , const std::shared_ptr<AssetManager>& assetManager
+      , QObject *parent)
+ : QAbstractItemModel(parent)
+ , assetManager_{assetManager}
+ , walletsManager_{walletsManager}
+{
+   root_ = std::make_shared<RootAssetGroupNode>();
+   root_->AddXBTGroup(tr("XBT"));
 }
 
-void CCPortfolioModel::updatePrivateShares()
+int CCPortfolioModel::columnCount(const QModelIndex & parent) const
 {
-   const auto &privShares = assetManager_->privateShares();
-   if (privShares.empty()) {
-      return;
-   }
-
-   if (shareItems_.empty()) {
-      shareItems_ << new QStandardItem(tr("Private Shares"));
-      shareItems_.last()->setFont(fontBold_);
-      shareItems_ << new QStandardItem();
-      shareItems_ << amountItem(tr("Not available"), true);
-      shareItems_.last()->setText(UiUtils::displayAmount(assetManager_->getCCTotal()));
-      appendRow(shareItems_);
-
-      connect(assetManager_.get(), &AssetManager::totalChanged, [this]() {
-         shareItems_.last()->setText(UiUtils::displayAmount(assetManager_->getCCTotal()));
-      });
-   }
-
-   for (const auto &privShare : privShares) {
-      updatePrivateShare(privShare, shareItems_);
-   }
+   return PortfolioColumns::PortfolioColumnsCount;
 }
 
-void CCPortfolioModel::updatePrivateShare(const std::string &cc, QList<QStandardItem*> &shareItems)
+QVariant CCPortfolioModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-   if (shareItems.empty()) {
-      return;
+   if (orientation != Qt::Horizontal) {
+      return QVariant{};
    }
 
-   int index = -1;
-   for (int i = 0; i < shareItems.first()->rowCount(); i++) {
-      if (shareItems.first()->child(i, 0)->text().toStdString() == cc) {
-         index = i;
-         break;
+   if (role == Qt::DisplayRole) {
+      switch(section) {
+      case PortfolioColumns::AssetNameColumn:
+         return tr("Asset");
+      case PortfolioColumns::BalanceColumn:
+         return tr("Balance");
+      case PortfolioColumns::XBTValueColumn:
+         return tr("Value (XBT)");
+      default:
+         return QVariant{};
+      }
+   } else if (role == Qt::TextAlignmentRole) {
+      switch(section) {
+      case PortfolioColumns::AssetNameColumn:
+         return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
+      case PortfolioColumns::BalanceColumn:
+         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+      case PortfolioColumns::XBTValueColumn:
+         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+      default:
+         return QVariant{};
       }
    }
 
-   if (index < 0) {
-      QList<QStandardItem*> singleShareItems;
-      singleShareItems << new QStandardItem(QString::fromStdString(cc));
-      singleShareItems << amountItem(tr("Not available"));
-      singleShareItems << amountItem(tr("Not available"));
-
-      index = shareItems.first()->rowCount();
-      shareItems.first()->appendRow(singleShareItems);
-   }
-
-   if (index >= 0) {
-      const auto balance = assetManager_->getBalance(cc);
-      shareItems.first()->child(index, 1)->setText(UiUtils::displayCCAmount(balance));
-      shareItems.first()->child(index, 2)->setText(UiUtils::displayAmount(balance * assetManager_->getPrice(cc)));
-   }
+   return QVariant{};
 }
 
-void CCPortfolioModel::updateBlockchainData()
+QVariant CCPortfolioModel::data(const QModelIndex& index, int role) const
 {
-   item(0,2)->setText(UiUtils::displayAmount(walletsManager_->GetSpendableBalance()));
+   auto node = getNodeByIndex(index);
 
-   const auto xbtItem = item(0,0);
-   xbtItem->removeRows(0, xbtItem->rowCount());
-   fillXbtWallets(xbtItem);
-
-   updatePrivateShares();
-}
-
-void CCPortfolioModel::fillXbtWallets(QStandardItem *item)
-{
-   for (size_t i = 0; i < walletsManager_->GetWalletsCount(); i++) {
-      const auto &wallet = walletsManager_->GetWallet(i);
-      if (!wallet || (wallet->GetType() != bs::wallet::Type::Bitcoin)) {
-         continue;
+   if (role == Qt::DisplayRole) {
+      switch(index.column()) {
+      case PortfolioColumns::AssetNameColumn:
+         return node->GetName();
+      case PortfolioColumns::BalanceColumn:
+         if (node->HasBalance()) {
+            return node->GetBalance();
+         } else {
+            return QVariant{};
+         }
+      case PortfolioColumns::XBTValueColumn:
+         if (node->HasXBTValue()) {
+            return node->GetXBTValueString();
+         } else {
+            return QVariant{};
+         }
+      default:
+         return QVariant{};
       }
-      QList<QStandardItem*> walletItems;
-      walletItems << new QStandardItem(QString::fromStdString(wallet->GetWalletName()));
-      walletItems << new QStandardItem();
-      walletItems << amountItem(UiUtils::displayAmount(wallet->GetSpendableBalance()));
-      item->appendRow(walletItems);
+   } else if (role == Qt::TextAlignmentRole) {
+      switch(index.column()) {
+      case PortfolioColumns::AssetNameColumn:
+         return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
+      case PortfolioColumns::BalanceColumn:
+         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+      case PortfolioColumns::XBTValueColumn:
+         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+      default:
+         return QVariant{};
+      }
+   } else if (role == Qt::FontRole) {
+      switch(index.column()) {
+      case PortfolioColumns::XBTValueColumn:
+         if (node->HasChildren()) {
+            QFont font;
+            font.setBold(true);
+            return font;
+         }
+         // fall through
+      default:
+         return QVariant{};
+      }
    }
+
+   return QVariant{};
+}
+
+QModelIndex CCPortfolioModel::index(int row, int column, const QModelIndex & parentIndex) const
+{
+   if (!hasIndex(row, column, parentIndex)) {
+      return QModelIndex{};
+   }
+
+   auto node = getNodeByIndex(parentIndex);
+   auto child = node->getChild(row);
+   if (child == nullptr) {
+      return QModelIndex{};
+   }
+   return createIndex(row, column, static_cast<void*>(child));
+}
+
+QModelIndex CCPortfolioModel::parent(const QModelIndex& childIndex) const
+{
+   if (!childIndex.isValid()) {
+      return QModelIndex{};
+   }
+
+   auto node = getNodeByIndex(childIndex);
+   auto parentNode = node->getParent();
+
+   if ((parentNode == nullptr) || (parentNode == root_.get())) {
+      return QModelIndex{};
+   }
+
+   return createIndex(parentNode->getRow(), 0, static_cast<void*>(parentNode));
+}
+
+int CCPortfolioModel::rowCount(const QModelIndex & parentIndex) const
+{
+   return getNodeByIndex(parentIndex)->childrenCount();
 }
 
 std::shared_ptr<AssetManager> CCPortfolioModel::assetManager()
 {
    return assetManager_;
+}
+
+bool CCPortfolioModel::hasChildren(const QModelIndex& parentIndex) const
+{
+   return getNodeByIndex(parentIndex)->HasChildren();
+}
+
+AssetNode* CCPortfolioModel::getNodeByIndex(const QModelIndex& index) const
+{
+   if (!index.isValid()) {
+      return root_.get();
+   }
+
+   return static_cast<AssetNode*>(index.internalPointer());
 }
