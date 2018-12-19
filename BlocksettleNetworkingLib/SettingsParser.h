@@ -5,6 +5,7 @@
 #include <vector>
 #include <QString>
 
+class QVariant;
 namespace spdlog
 {
 class logger;
@@ -25,11 +26,35 @@ public:
       QString name() const { return QLatin1String(name_); }
       QString desc() const { return QLatin1String(desc_); }
 
-   private:
+   protected:
       friend class SettingsParser;
+
+      virtual bool setValue(const QVariant &value);
+
       const char* name_{};
       const char* desc_{};
+
       QString value_;
+   };
+
+   class IntSettingsParam : public SettingsParam {
+   public:
+      int operator()() const { return value_; }
+
+   protected:
+      bool setValue(const QVariant &value) override;
+
+      int value_{};
+   };
+
+   class BoolSettingsParam : public SettingsParam {
+   public:
+      bool operator()() const { return value_; }
+
+   protected:
+      bool setValue(const QVariant &value) override;
+
+      bool value_{};
    };
 
    SettingsParam SettingsFile;
@@ -39,9 +64,10 @@ public:
 
    bool LoadSettings(const QStringList& argList);
 
-
 protected:
    void addParam(SettingsParam &param, const char* name, const char* defValue, const char* descr);
+   void addParam(SettingsParam &param, const char* name, int defValue, const char* descr);
+   void addParam(SettingsParam &param, const char* name, bool defValue, const char* descr);
 
    std::shared_ptr<spdlog::logger> logger_;
    std::vector<SettingsParam*> params_;
