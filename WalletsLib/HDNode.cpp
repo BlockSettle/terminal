@@ -9,8 +9,6 @@
 
 using namespace bs;
 
-const static size_t kMaxKeySize = 32;
-
 
 hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
 {
@@ -516,7 +514,7 @@ static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = BTC_AE
    return result;
 }
 
-static SecureBinaryData LimitData(const SecureBinaryData &key, size_t limit = kMaxKeySize)
+static SecureBinaryData LimitData(const SecureBinaryData &key, size_t limit = BTC_AES::MAX_KEYLENGTH)
 {
    if (key.getSize() <= limit) {
       return key;
