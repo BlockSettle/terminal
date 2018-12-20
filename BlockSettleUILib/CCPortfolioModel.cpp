@@ -360,13 +360,34 @@ public:
 
    void AddAsset(const QString& name) override
    {
-      AddChild(new XBTAssetNode(name, this));
+      std::string walletName = name.toStdString();
+
+      if (walletNames_.find(walletName) == walletNames_.end()) {
+         walletNames_.emplace(std::move(walletName));
+         AddChild(new XBTAssetNode(name, this));
+      }
+   }
+
+   void RemoveWallet(const std::string& walletName)
+   {
+      if (walletNames_.find(walletName) != walletNames_.end()) {
+         walletNames_.erase(walletName);
+         RemoveChild(getNodeByName(walletName));
+      }
+   }
+
+   std::unordered_set<std::string> GetWalletNames() const
+   {
+      return walletNames_;
    }
 
    XBTAssetNode* GetXBTNode(const std::string& name)
    {
       return dynamic_cast<XBTAssetNode*>(getNodeByName(name));
    }
+
+private:
+   std::unordered_set<std::string> walletNames_;
 };
 
 class CCAssetGroupNode : public AssetGroupNode
@@ -472,6 +493,14 @@ public:
       return xbtGroup_ != nullptr;
    }
 
+   void RemoveXBTGroup()
+   {
+      if (xbtGroup_ != nullptr) {
+         RemoveChild(xbtGroup_);
+         xbtGroup_ = nullptr;
+      }
+   }
+
    XBTAssetGroupNode* GetXBTGroup()
    {
       if (xbtGroup_ == nullptr) {
@@ -524,11 +553,16 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& wallet
       , this, &CCPortfolioModel::onFXBalanceCleared, Qt::QueuedConnection);
    connect(assetManager_.get(), &AssetManager::xbtPriceChanged
       , this, &CCPortfolioModel::onXBTPriceChanged, Qt::QueuedConnection);
-   connect(assetManager_.get(), &AssetManager::xbtPriceChanged
+   connect(assetManager_.get(), &AssetManager::balanceChanged
       , this, &CCPortfolioModel::onFXBalanceChanged, Qt::QueuedConnection);
-
    connect(assetManager_.get(), &AssetManager::ccPriceChanged
       , this, &CCPortfolioModel::onCCPriceChanged, Qt::QueuedConnection);
+
+   connect(walletsManager.get(), &WalletsManager::walletsReady, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager.get(), &WalletsManager::walletsLoaded, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager.get(), &WalletsManager::walletChanged, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager.get(), &WalletsManager::walletImportFinished, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &CCPortfolioModel::updateXBTBalance);
 }
 
 int CCPortfolioModel::columnCount(const QModelIndex & parent) const
@@ -754,12 +788,115 @@ void CCPortfolioModel::onCCPriceChanged(const std::string& currency)
             , index(ccGroup->getRow(), PortfolioColumns::XBTValueColumn)
             , {Qt::DisplayRole});
 
-         auto parentIndex = createIndex(ccGroup->getRow(), 0, static_cast<void*>(ccGroup));
+            auto parentIndex = createIndex(ccGroup->getRow(), 0, static_cast<void*>(ccGroup));
 
-         dataChanged(index(ccNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
-            , index(ccNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
-            , {Qt::DisplayRole});
+            dataChanged(index(ccNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+               , index(ccNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+               , {Qt::DisplayRole});
          }
+      }
+   }
+}
+
+void CCPortfolioModel::reloadXBTWalletsList()
+{
+   if (walletsManager_->GetWalletsCount() == 0) {
+      if (root_->HaveXBTGroup()) {
+         beginResetModel();
+         root_->RemoveXBTGroup();
+         endResetModel();
+      }
+   } else {
+      std::unordered_set<std::string> displayedWallets{};
+
+      std::vector<std::string>           walletsToAdd{};
+
+      const size_t walletsCount = walletsManager_->GetWalletsCount();
+      walletsToAdd.reserve(walletsCount);
+
+      if (root_->HaveXBTGroup()) {
+         displayedWallets = root_->GetXBTGroup()->GetWalletNames();
+      }
+
+      for (size_t i=0; i<walletsManager_->GetWalletsCount(); ++i) {
+         const auto wallet = walletsManager_->GetWallet(i);
+         if (wallet == nullptr) {
+            break;
+         }
+
+         if (wallet->GetType() != bs::wallet::Type::Bitcoin) {
+            continue;
+         }
+
+         auto walletName = wallet->GetWalletName();
+         if (displayedWallets.find(walletName) == displayedWallets.end()) {
+            walletsToAdd.emplace_back(std::move(walletName));
+         } else {
+            displayedWallets.erase(walletName);
+         }
+      }
+
+      if (!walletsToAdd.empty() || !displayedWallets.empty()) {
+         beginResetModel();
+
+         auto xbtGroup = root_->GetXBTGroup();
+
+         // remove first if required
+         for ( const auto &walletName : displayedWallets) {
+            xbtGroup->RemoveWallet(walletName);
+         }
+
+         for ( const auto &walletName : walletsToAdd) {
+            xbtGroup->AddAsset(QString::fromStdString(walletName));
+         }
+
+         if (!xbtGroup->HasChildren()) {
+            root_->RemoveXBTGroup();
+         }
+
+         endResetModel();
+      }
+   }
+   updateXBTBalance();
+}
+
+void CCPortfolioModel::updateXBTBalance()
+{
+   if (root_->HaveXBTGroup()) {
+      auto xbtGroup = root_->GetXBTGroup();
+
+      bool balanceUpdated = false;
+
+      auto parentIndex = createIndex(xbtGroup->getRow(), 0, static_cast<void*>(xbtGroup));
+
+      for (size_t i=0; i<walletsManager_->GetWalletsCount(); ++i) {
+         auto wallet = walletsManager_->GetWallet(i);
+         if (wallet == nullptr) {
+            break;
+         }
+
+         if (wallet->GetType() != bs::wallet::Type::Bitcoin) {
+            continue;
+         }
+
+         auto walletName = wallet->GetWalletName();
+         auto xbtNode = xbtGroup->GetXBTNode(walletName);
+         if (xbtNode != nullptr) {
+            const double balance = wallet->GetSpendableBalance();
+            if (xbtNode->SetXBTAmount(balance)) {
+               dataChanged(index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+                  , index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+                  , {Qt::DisplayRole});
+
+               balanceUpdated = true;
+            }
+         }
+      }
+
+      if (balanceUpdated) {
+         dataChanged(index(xbtGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , index(xbtGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , {Qt::DisplayRole});
       }
    }
 }

@@ -57,6 +57,9 @@ private slots:
    void onXBTPriceChanged(const std::string& currency);
    void onCCPriceChanged(const std::string& currency);
 
+   void reloadXBTWalletsList();
+   void updateXBTBalance();
+
 private:
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<WalletsManager>     walletsManager_;
