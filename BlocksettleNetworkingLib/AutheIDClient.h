@@ -41,6 +41,7 @@ private:
 
    bool sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type);
    void processResultReply(const uint8_t *payload, size_t payloadSize);
+   void processCreateReply(const uint8_t *payload, size_t payloadSize);
    void cancel();
 
 signals:

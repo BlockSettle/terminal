@@ -854,6 +854,7 @@ void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
        autheIDConnection_->connectToAuthServer(applicationSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
           , applicationSettings_->get<std::string>(ApplicationSettings::authServerHost)
           , applicationSettings_->get<std::string>(ApplicationSettings::authServerPort));
+       logMgr_->logger("ui")->debug("[BSTerminalMainWindow::loginWithAuthEID] connectToAuthServer success.");
     }
     catch (const std::exception &e) {
        logMgr_->logger("ui")->error("[{}] failed to connect: {}", __func__, e.what());
@@ -862,7 +863,7 @@ void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
 
     if (autheIDConnection_->authenticate(email))
     {
-        logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer success.");
+        logMgr_->logger("ui")->debug("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer success.");
 
         //loginWithCeler();
     }
