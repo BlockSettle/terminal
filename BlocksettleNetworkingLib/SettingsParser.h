@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 #include <QString>
+#include <QVariant>
 
-class QVariant;
 namespace spdlog
 {
 class logger;
@@ -20,41 +20,55 @@ class logger;
 class SettingsParser
 {
 public:
-   class SettingsParam {
+   class BaseSettingsParam {
    public:
-      QString operator()() const { return value_; }
-      QString name() const { return QLatin1String(name_); }
-      QString desc() const { return QLatin1String(desc_); }
+      const QString &name() { return name_; }
+      const QString &desc() { return desc_; }
+      const QString &defValue() { return desc_; }
 
    protected:
       friend class SettingsParser;
 
-      virtual bool setValue(const QVariant &value);
+      virtual bool setValue(const QVariant &value) = 0;
 
-      const char* name_{};
-      const char* desc_{};
-
-      QString value_;
+      QString name_;
+      QString desc_;
+      QVariant defValue_;
    };
 
-   class IntSettingsParam : public SettingsParam {
+   template<class T>
+   class TemplSettingsParam : public BaseSettingsParam
+   {
    public:
-      int operator()() const { return value_; }
+      const T &operator()() const { return value_; }
 
    protected:
-      bool setValue(const QVariant &value) override;
+      bool setValue(const QVariant &value) override
+      {
+         if (!value.canConvert<T>()) {
+            return false;
+         }
+         value_ = value.value<T>();
+         return true;
+      }
 
-      int value_{};
+      T value_;
    };
 
-   class BoolSettingsParam : public SettingsParam {
-   public:
-      bool operator()() const { return value_; }
+   using SettingsParam = TemplSettingsParam<QString>;
+   using IntSettingsNoCheckParam = TemplSettingsParam<int>;
+   using BoolSettingsParam = TemplSettingsParam<bool>;
 
+   class IntSettingsParam : public IntSettingsNoCheckParam {
    protected:
-      bool setValue(const QVariant &value) override;
-
-      bool value_{};
+      bool setValue(const QVariant &value) override
+      {
+         // QVariant::canConvert<int> returns true even if original string was invalid.
+         // Let's use more strict version.
+         bool ok = false;
+         value_ = value.toInt(&ok);
+         return ok;
+      }
    };
 
    SettingsParam SettingsFile;
@@ -65,12 +79,21 @@ public:
    bool LoadSettings(const QStringList& argList);
 
 protected:
-   void addParam(SettingsParam &param, const char* name, const char* defValue, const char* descr);
-   void addParam(SettingsParam &param, const char* name, int defValue, const char* descr);
-   void addParam(SettingsParam &param, const char* name, bool defValue, const char* descr);
+   template<class T>
+   void addParam(BaseSettingsParam &param, const char* name, const T &defValue, const char* descr)
+   {
+      addParamVariant(param, name, QVariant::fromValue(defValue), descr);
+   }
+
+   void addParam(SettingsParam &param, const char* name, const char *defValue, const char* descr)
+   {
+      addParamVariant(param, name, QLatin1String(defValue), descr);
+   }
+
+   void addParamVariant(BaseSettingsParam &param, const char* name, const QVariant &defValue, const char* descr);
 
    std::shared_ptr<spdlog::logger> logger_;
-   std::vector<SettingsParam*> params_;
+   std::vector<BaseSettingsParam*> params_;
 };
 
 #endif // __SETTINGS_PARSER_H__
