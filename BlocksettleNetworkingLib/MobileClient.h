@@ -63,6 +63,7 @@ public:
       , const std::vector<std::string> &knownDeviceIds);
    bool sign(const BinaryData &data, const std::string &email
       , const QString &title, const QString &description, int expiration = 30);
+   bool authenticate(const std::string& email);
    void cancel();
 
    bool isConnected() const;
@@ -70,6 +71,7 @@ public:
 signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
    void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
+   void authSuccess(const std::string &jwt);
    void failed(const QString &text);
 
 private slots:
@@ -97,6 +99,7 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
    std::string requestId_;
    std::string email_;
+   bool resultAuth_;
 
    const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
 

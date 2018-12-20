@@ -48,6 +48,7 @@ MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
    : QObject(parent)
    , logger_(logger)
    , authKeys_(authKeys)
+   , resultAuth_(false)
 {
    connectionManager_.reset(new ConnectionManager(logger));
    timer_ = new QTimer(this);
@@ -151,6 +152,29 @@ bool MobileClient::start(RequestType requestType, const std::string &email
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
 
+bool MobileClient::authenticate(const std::string& email)
+{
+     cancel();
+     email_ = email;
+     resultAuth_ = true;
+
+     CreateRequest request;
+     auto signRequest = request.mutable_signature();
+     signRequest->set_type(SignatureDataProtobuf);
+
+     request.set_title("Some title!");
+     request.set_type(RequestAuthenticate);
+     request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
+     request.set_apikey(kApiKey);
+     request.set_userid(email);
+
+     QMetaObject::invokeMethod(timer_, [this] {
+         timer_->start(kConnectTimeoutSeconds * 1000);
+     });
+
+     return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
+}
+
 bool MobileClient::sign(const BinaryData &data, const std::string &email
    , const QString &title, const QString &description, int expiration)
 {
@@ -240,6 +264,20 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    if (reply.has_signature()) {
       processSignatureReply(reply.signature());
       return;
+   }
+
+   if (resultAuth_)
+   {
+       std::string jwtToken = reply.authenticate().jwt();
+       if (!jwtToken.empty())
+       {
+            emit authSuccess(jwtToken);
+       }
+       else
+       {
+            emit failed(tr("Not authenticated"));
+       }
+       return;
    }
 
    if (reply.encsecurereply().empty() || reply.deviceid().empty()) {

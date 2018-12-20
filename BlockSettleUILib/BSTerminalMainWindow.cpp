@@ -467,7 +467,7 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_->GetAuthKeys());
+   autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_);
 
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
@@ -850,26 +850,16 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
 {
-    try {
-       autheIDConnection_->connectToAuthServer(applicationSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
-          , applicationSettings_->get<std::string>(ApplicationSettings::authServerHost)
-          , applicationSettings_->get<std::string>(ApplicationSettings::authServerPort));
-       logMgr_->logger("ui")->debug("[BSTerminalMainWindow::loginWithAuthEID] connectToAuthServer success.");
-    }
-    catch (const std::exception &e) {
-       logMgr_->logger("ui")->error("[{}] failed to connect: {}", __func__, e.what());
-       return;
-    }
-
     if (autheIDConnection_->authenticate(email))
     {
-        logMgr_->logger("ui")->debug("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer success.");
+        setLoginButtonText(tr("Logging in..."));
+        //logMgr_->logger("ui")->debug("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer success.");
 
         //loginWithCeler();
     }
     else
     {
-        logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer failed");
+        //logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer failed");
     }
 }
 
