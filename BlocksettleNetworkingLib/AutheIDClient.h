@@ -32,19 +32,20 @@ public:
     bool authenticate(const std::string email);
 
 signals:
-   void failed(const QString &text);
+    void authDone(const std::string email);
+    void authFailed();
 
 private slots:
-   void onAuthSuccess(const std::string &jwt);
-   void onFailed(const QString &);
+    void onAuthSuccess(const std::string &jwt);
+    void onFailed(const QString &);
 
 private:
-   std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::unique_ptr<MobileClient>          mobileClient_;
+    std::shared_ptr<spdlog::logger>        logger_;
+    std::shared_ptr<ApplicationSettings>   appSettings_;
+    std::unique_ptr<MobileClient>          mobileClient_;
 
-   std::string requestId_;
-   std::string email_;
+    std::string requestId_;
+    std::string email_;
 };
 
 #endif

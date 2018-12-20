@@ -39,17 +39,28 @@ bool AutheIDClient::authenticate(const std::string email)
     }
 
     logger_->debug("Requested authentication for {0} ...", email_);
-    return mobileClient_->authenticate(email);
+
+    if (!mobileClient_->authenticate(email))
+    {
+        logger_->error("Authentication failed for {0}", email_);
+        return false;
+    }
+
+    return true;
 }
 
 
 void AutheIDClient::onFailed(const QString &text)
 {
     logger_->error("Authentication failed for {0}: {1}", email_, text.toStdString());
+
+    emit authFailed();
 }
 
 
 void AutheIDClient::onAuthSuccess(const std::string &jwt)
 {
     logger_->debug("Authentication passed for {0}(JWT): {1}", email_, jwt);
+
+    emit authDone(email_);
 }

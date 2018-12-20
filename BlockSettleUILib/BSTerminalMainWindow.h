@@ -176,6 +176,9 @@ private slots:
    void onZCreceived(ArmoryConnection::ReqIdType);
    void onArmoryStateChanged(ArmoryConnection::State);
 
+   void onAutheIDDone(const std::string& email);
+   void onAutheIDFailed();
+
    void onLogin();
    void onLogout();
 

@@ -468,6 +468,8 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
    autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_);
+   connect(autheIDConnection_.get(), &AutheIDClient::authDone, this, &BSTerminalMainWindow::onAutheIDDone);
+   connect(autheIDConnection_.get(), &AutheIDClient::authFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
 
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
@@ -853,13 +855,10 @@ void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
     if (autheIDConnection_->authenticate(email))
     {
         setLoginButtonText(tr("Logging in..."));
-        //logMgr_->logger("ui")->debug("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer success.");
-
-        //loginWithCeler();
     }
     else
     {
-        //logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginWithAuthEID] LoginToServer failed");
+        onAutheIDFailed();
     }
 }
 
@@ -879,6 +878,21 @@ void BSTerminalMainWindow::loginWithCeler(const std::string& username, const std
        // completes and button text is changed to the username
        setLoginButtonText(tr("Logging in..."));
     }
+}
+
+void BSTerminalMainWindow::onAutheIDDone(const std::string& email)
+{
+    setLoginButtonText(QString::fromStdString(email));
+
+    std::string username = "celertest.customer_601@mailinator.com";
+    std::string password = "celertest.customer_601@mailinator.com";
+
+    loginWithCeler(username, password);
+}
+
+void BSTerminalMainWindow::onAutheIDFailed()
+{
+    setLoginButtonText(tr("user.name"));
 }
 
 void BSTerminalMainWindow::onLogin()
