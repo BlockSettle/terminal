@@ -61,7 +61,6 @@ signals:
    void balanceChanged(const std::string& currency);
 
    void totalChanged();
-   void securitiesReceived();
    void securitiesChanged();
 
  public slots:

@@ -257,8 +257,16 @@ public:
 protected:
    void AddChild(AssetNode* newChild)
    {
+      const auto childName = newChild->GetName().toStdString();
+
+      if (getNodeByName(childName) != nullptr) {
+         delete newChild;
+         return;
+      }
+
       int index = childrenCount();
-      nameToIndex_.emplace(newChild->GetName().toStdString(), index);
+      nameToIndex_.emplace(childName, index);
+      nodeNames_.emplace(childName);
       newChild->setRow(index);
       children_.append(newChild);
    }
@@ -268,6 +276,11 @@ protected:
       int index = childToRemove->getRow();
       if ((index >= 0) && (index < children_.size())) {
          children_.removeAt(index);
+
+         const auto nodeName = childToRemove->GetName().toStdString();
+
+         nameToIndex_.erase(nodeName);
+         nodeNames_.erase(nodeName);
 
          for (int i=index; i<children_.size(); ++i) {
             children_[i]->setRow(i);
@@ -288,6 +301,11 @@ protected:
       }
 
       return children_[it->second];
+   }
+
+   std::unordered_set<std::string> getNodeNames() const
+   {
+      return nodeNames_;
    }
 
 public:
@@ -342,6 +360,7 @@ public:
 private:
    QList<AssetNode*>                      children_;
    std::unordered_map<std::string, int>   nameToIndex_;
+   std::unordered_set<std::string>        nodeNames_;
 };
 
 class XBTAssetGroupNode : public AssetGroupNode
@@ -360,34 +379,23 @@ public:
 
    void AddAsset(const QString& name) override
    {
-      std::string walletName = name.toStdString();
-
-      if (walletNames_.find(walletName) == walletNames_.end()) {
-         walletNames_.emplace(std::move(walletName));
-         AddChild(new XBTAssetNode(name, this));
-      }
+      AddChild(new XBTAssetNode(name, this));
    }
 
    void RemoveWallet(const std::string& walletName)
    {
-      if (walletNames_.find(walletName) != walletNames_.end()) {
-         walletNames_.erase(walletName);
-         RemoveChild(getNodeByName(walletName));
-      }
+      RemoveChild(getNodeByName(walletName));
    }
 
    std::unordered_set<std::string> GetWalletNames() const
    {
-      return walletNames_;
+      return getNodeNames();
    }
 
    XBTAssetNode* GetXBTNode(const std::string& name)
    {
       return dynamic_cast<XBTAssetNode*>(getNodeByName(name));
    }
-
-private:
-   std::unordered_set<std::string> walletNames_;
 };
 
 class CCAssetGroupNode : public AssetGroupNode
@@ -412,6 +420,16 @@ public:
    CCAssetNode* GetCCNode(const std::string& name)
    {
       return dynamic_cast<CCAssetNode*>(getNodeByName(name));
+   }
+
+   std::unordered_set<std::string> GetCCNames() const
+   {
+      return getNodeNames();
+   }
+
+   void RemoveWallet(const std::string& walletName)
+   {
+      RemoveChild(getNodeByName(walletName));
    }
 };
 
@@ -514,6 +532,14 @@ public:
    bool HaveCCGroup() const
    {
       return ccGroup_ != nullptr;
+   }
+
+   void RemoveCCGroup()
+   {
+      if (ccGroup_ != nullptr) {
+         RemoveChild(ccGroup_);
+         ccGroup_ = nullptr;
+      }
    }
 
    CCAssetGroupNode* GetCCGroup()
@@ -858,6 +884,8 @@ void CCPortfolioModel::reloadXBTWalletsList()
       }
    }
    updateXBTBalance();
+
+   reloadCCWallets();
 }
 
 void CCPortfolioModel::updateXBTBalance()
@@ -900,3 +928,59 @@ void CCPortfolioModel::updateXBTBalance()
       }
    }
 }
+
+void CCPortfolioModel::reloadCCWallets()
+{
+   if (walletsManager_->GetWalletsCount() == 0) {
+      if (root_->HaveCCGroup()) {
+         beginResetModel();
+         root_->RemoveCCGroup();
+         endResetModel();
+      }
+   } else {
+      std::unordered_set<std::string>  displayedWallets{};
+
+      std::vector<std::string>         walletsToAdd{};
+
+      const auto privateShares = assetManager_->privateShares();
+      walletsToAdd.reserve(privateShares.size());
+
+      if (root_->HaveCCGroup()) {
+         displayedWallets = root_->GetCCGroup()->GetCCNames();
+      }
+
+      for (const auto& walletName : privateShares) {
+         if (displayedWallets.find(walletName) == displayedWallets.end()) {
+            walletsToAdd.emplace_back(std::move(walletName));
+         } else {
+            displayedWallets.erase(walletName);
+         }
+      }
+
+      if (!walletsToAdd.empty() || !displayedWallets.empty()) {
+         beginResetModel();
+
+         auto ccGroup = root_->GetCCGroup();
+
+         // remove first if required
+         for ( const auto &walletName : displayedWallets) {
+            ccGroup->RemoveWallet(walletName);
+         }
+
+         for ( const auto &walletName : walletsToAdd) {
+            ccGroup->AddAsset(QString::fromStdString(walletName));
+         }
+
+         if (!ccGroup->HasChildren()) {
+            root_->RemoveCCGroup();
+         }
+
+         endResetModel();
+      }
+   }
+
+   updateCCBalance();
+}
+
+void CCPortfolioModel::updateCCBalance()
+{}

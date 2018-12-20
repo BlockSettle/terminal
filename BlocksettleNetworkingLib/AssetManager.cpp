@@ -181,13 +181,11 @@ void AssetManager::onMDSecurityReceived(const std::string &security, const bs::n
 void AssetManager::onMDSecuritiesReceived()
 {
    securitiesReceived_ = true;
-   emit securitiesReceived();
 }
 
 void AssetManager::onCCSecurityReceived(bs::network::CCSecurityDef ccSD)
 {
    ccSecurities_[ccSD.product] = ccSD;
-   prices_[ccSD.product] = ccSD.nbSatoshis / BTCNumericTypes::BalanceDivider;
 
    bs::network::SecurityDef sd = { bs::network::Asset::PrivateMarket};
    securities_[ccSD.securityId] = sd;

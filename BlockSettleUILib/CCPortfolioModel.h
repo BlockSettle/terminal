@@ -60,6 +60,9 @@ private slots:
    void reloadXBTWalletsList();
    void updateXBTBalance();
 
+   void reloadCCWallets();
+   void updateCCBalance();
+
 private:
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<WalletsManager>     walletsManager_;
