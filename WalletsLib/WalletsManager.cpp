@@ -789,6 +789,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
          ((addrWallet == wallet) ? ourOuts : otherOuts) = true;
          if (addrWallet && (addrWallet->GetType() == bs::wallet::Type::ColorCoin)) {
             ccTx = true;
+            break;
          }
       }
 
@@ -812,6 +813,10 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
                bs::PayoutSigner::WhichSignature(tx, 0, settlAE, logger_, armory_, cbPayout);
                return;
             }
+            logger_->warn("[WalletsManager::GetTransactionDirection] failed to get settlement AE");
+         }
+         else {
+            logger_->warn("[WalletsManager::GetTransactionDirection] more than one settlement output");
          }
          updateTxDirCache(txKey, bs::Transaction::PayOut, inAddrs, cb);
          return;
