@@ -81,7 +81,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
       | WalletKeysCreateWidget::HideAuthConnectButton);
-   ui_->widgetCreateKeys->init(MobileClient::ActivateWallet, walletId_, username, appSettings);
+   ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet, walletId_, username, appSettings);
 
    adjustSize();
    setMinimumSize(size());

@@ -224,7 +224,7 @@ void RFQDealerReply::onHDWalletInfo(unsigned int id
       return;
    }
 
-   EnterWalletPassword passwordDialog(MobileClient::SettlementTransaction, this);
+   EnterWalletPassword passwordDialog(AutheIDClient::SettlementTransaction, this);
    passwordDialog.init(autoSignWalletId_, keyRank
       , encTypes, encKeys, appSettings_
       , tr("Activate Auto-Sign"));
