@@ -16,9 +16,9 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
 {
    QCommandLineParser parser;
 
-   for (SettingsParam *param : params_) {
+   for (BaseSettingsParam *param : params_) {
       // Current param value is default value, show it in the help
-      QString defaultValueHelp = (*param)();
+      QString defaultValueHelp = param->defValue();
       if (defaultValueHelp.isEmpty()) {
          defaultValueHelp = QLatin1String("<empty>");
       }
@@ -49,9 +49,12 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
       auto allKeys = settings.allKeys();
       std::set<QString> unknownKeys(allKeys.begin(), allKeys.end());
 
-      for (SettingsParam *param : params_) {
+      for (BaseSettingsParam *param : params_) {
          if (settings.contains(param->name())) {
-            param->value_ = settings.value(param->name()).toString();
+            bool result = param->setValue(settings.value(param->name()));
+            if (!result) {
+               return false;
+            }
          }
          unknownKeys.erase(param->name());
       }
@@ -65,20 +68,27 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
       }
    }
 
-   for (SettingsParam *param : params_) {
+   for (BaseSettingsParam *param : params_) {
       if (parser.isSet(param->name())) {
-         param->value_ = parser.value(param->name());
+         QVariant value = parser.value(param->name());
+         bool result = param->setValue(value);
+         if (!result) {
+            logger_->error("invalid value '{}' for key '{}' in settings file"
+               , value.toString().toStdString(), param->name().toStdString());
+            return false;
+         }
       }
    }
 
    return true;
 }
 
-void SettingsParser::addParam(SettingsParser::SettingsParam &param
-   , const char *name, const char *defValue, const char *descr)
+void SettingsParser::addParamVariant(SettingsParser::BaseSettingsParam &param
+   , const char *name, const QVariant &defValue, const char *descr)
 {
-   param.name_ = name;
-   param.value_ = QLatin1String(defValue);
-   param.desc_ = descr;
+   param.name_ = QLatin1String(name);
+   param.defValue_ = defValue;
+   param.desc_ = QLatin1String(descr);
+   param.setValue(defValue);
    params_.push_back(&param);
 }

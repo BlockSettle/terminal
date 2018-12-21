@@ -1,11 +1,13 @@
-#include "MobileClient.h"
+#include "AutheIDClient.h"
 
 #include <spdlog/spdlog.h>
 #include <QTimer>
+
 #include "ConnectionManager.h"
 #include "MobileUtils.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
+#include "ApplicationSettings.h"
 
 using namespace AutheID::RP;
 
@@ -15,14 +17,13 @@ namespace
 
    const int kKeySize = 32;
 
-   // Obtained from http://185.213.153.44:8181/key
    const std::string kApiKey = "Pj+Q9SsZloftMkmE7EhA8v2Bz1ZC9aOmUkAKTBW9hagJ";
 
    static const char kSeparatorSymbol = ':';
 
 }
 
-MobileClient::DeviceInfo MobileClient::getDeviceInfo(const std::string &encKey)
+AutheIDClient::DeviceInfo AutheIDClient::getDeviceInfo(const std::string &encKey)
 {
    DeviceInfo result;
 
@@ -42,24 +43,25 @@ MobileClient::DeviceInfo MobileClient::getDeviceInfo(const std::string &encKey)
    return result;
 }
 
-MobileClient::MobileClient(const std::shared_ptr<spdlog::logger> &logger
+AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::pair<autheid::PrivateKey, autheid::PublicKey> &authKeys
    , QObject *parent)
    : QObject(parent)
    , logger_(logger)
    , authKeys_(authKeys)
+   , resultAuth_(false)
 {
    connectionManager_.reset(new ConnectionManager(logger));
    timer_ = new QTimer(this);
-   QObject::connect(timer_, &QTimer::timeout, this, &MobileClient::timeout);
+   QObject::connect(timer_, &QTimer::timeout, this, &AutheIDClient::timeout);
 }
 
-MobileClient::~MobileClient()
+AutheIDClient::~AutheIDClient()
 {
    cancel();
 }
 
-void MobileClient::connect(const std::string &serverPubKey
+void AutheIDClient::connect(const std::string &serverPubKey
    , const std::string &serverHost, const std::string &serverPort)
 {
    connection_ = connectionManager_->CreateSecuredDataConnection();
@@ -69,22 +71,22 @@ void MobileClient::connect(const std::string &serverPubKey
    }
 
    if (!connection_->SetServerPublicKey(serverPubKey)) {
-      logger_->error("MobileClient::SetServerPublicKey failed");
+      logger_->error("AutheIDClient::SetServerPublicKey failed");
       throw std::runtime_error("failed to set connection public key");
    }
 
    if (!connection_->openConnection(serverHost, serverPort, this)) {
-      logger_->error("MobileClient::openConnection failed");
+      logger_->error("AutheIDClient::openConnection failed");
       throw std::runtime_error("failed to open connection to " + serverHost + ":" + serverPort);
    }
 }
 
-bool MobileClient::isConnected() const
+bool AutheIDClient::isConnected() const
 {
    return (connection_ && connection_->isActive());
 }
 
-bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type)
+bool AutheIDClient::sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type)
 {
    ClientPacket packet;
    packet.set_type(type);
@@ -99,16 +101,16 @@ bool MobileClient::sendToAuthServer(const std::string &payload, const AutheID::R
    return connection_->send(packet.SerializeAsString());
 }
 
-bool MobileClient::start(RequestType requestType, const std::string &email
+bool AutheIDClient::start(RequestType requestType, const std::string &email
    , const std::string &walletId, const std::vector<std::string> &knownDeviceIds)
 {
    cancel();
 
    email_ = email;
 
-   QString action = getMobileClientRequestText(requestType);
-   bool newDevice = isMobileClientNewDeviceNeeded(requestType);
-   int timeout = getMobileClientTimeout(requestType);
+   QString action = getAutheIDClientRequestText(requestType);
+   bool newDevice = isAutheIDClientNewDeviceNeeded(requestType);
+   int timeout = getAutheIDClientTimeout(requestType);
 
    CreateRequest request;
    request.set_type(RequestDeviceKey);
@@ -151,7 +153,48 @@ bool MobileClient::start(RequestType requestType, const std::string &email
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
 
-bool MobileClient::sign(const BinaryData &data, const std::string &email
+bool AutheIDClient::authenticate(const std::string& email, const std::shared_ptr<ApplicationSettings> &appSettings)
+{
+   try {
+      if (!isConnected())
+      {
+         connect(appSettings->get<std::string>(ApplicationSettings::authServerPubKey)
+           , appSettings->get<std::string>(ApplicationSettings::authServerHost)
+           , appSettings->get<std::string>(ApplicationSettings::authServerPort));
+      }
+      return requestAuth(email);
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failed to connect: {}", __func__, e.what());
+      emit failed(tr("Failed to connect to Auth eID"));
+      return false;
+   }
+}
+
+bool AutheIDClient::requestAuth(const std::string& email)
+{
+   cancel();
+   email_ = email;
+   resultAuth_ = true;
+
+   CreateRequest request;
+   auto signRequest = request.mutable_signature();
+   signRequest->set_type(SignatureDataProtobuf);
+
+   request.set_title("Terminal Login");
+   request.set_type(RequestAuthenticate);
+   request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
+   request.set_apikey(kApiKey);
+   request.set_userid(email);
+
+   QMetaObject::invokeMethod(timer_, [this] {
+      timer_->start(kConnectTimeoutSeconds * 1000);
+   });
+
+   return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
+}
+
+bool AutheIDClient::sign(const BinaryData &data, const std::string &email
    , const QString &title, const QString &description, int expiration)
 {
    cancel();
@@ -178,7 +221,7 @@ bool MobileClient::sign(const BinaryData &data, const std::string &email
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
 
-void MobileClient::cancel()
+void AutheIDClient::cancel()
 {
    timer_->stop();
 
@@ -196,7 +239,7 @@ void MobileClient::cancel()
    requestId_.clear();
 }
 
-void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize)
+void AutheIDClient::processCreateReply(const uint8_t *payload, size_t payloadSize)
 {
    QMetaObject::invokeMethod(timer_, [this] {
       timer_->stop();
@@ -222,7 +265,7 @@ void MobileClient::processCreateReply(const uint8_t *payload, size_t payloadSize
    sendToAuthServer(request.SerializeAsString(), PayloadResult);
 }
 
-void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize)
+void AutheIDClient::processResultReply(const uint8_t *payload, size_t payloadSize)
 {
    ResultReply reply;
    if (!reply.ParseFromArray(payload, payloadSize)) {
@@ -240,6 +283,20 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    if (reply.has_signature()) {
       processSignatureReply(reply.signature());
       return;
+   }
+
+   if (resultAuth_)
+   {
+       std::string jwtToken = reply.authenticate().jwt();
+       if (!jwtToken.empty())
+       {
+            emit authSuccess(jwtToken);
+       }
+       else
+       {
+            emit failed(tr("Not authenticated"));
+       }
+       return;
    }
 
    if (reply.encsecurereply().empty() || reply.deviceid().empty()) {
@@ -273,7 +330,7 @@ void MobileClient::processResultReply(const uint8_t *payload, size_t payloadSize
    emit succeeded(encKey, SecureBinaryData(deviceKey));
 }
 
-void MobileClient::OnDataReceived(const std::string &data)
+void AutheIDClient::OnDataReceived(const std::string &data)
 {
    ServerPacket packet;
    if (!packet.ParseFromString(data)) {
@@ -309,27 +366,27 @@ void MobileClient::OnDataReceived(const std::string &data)
    }
 }
 
-void MobileClient::timeout()
+void AutheIDClient::timeout()
 {
    cancel();
    logger_->error("Connection to AuthServer failed, no answer received");
    emit failed(tr("Server offline"));
 }
 
-void MobileClient::OnConnected()
+void AutheIDClient::OnConnected()
 {
 }
 
-void MobileClient::OnDisconnected()
+void AutheIDClient::OnDisconnected()
 {
 }
 
-void MobileClient::OnError(DataConnectionListener::DataConnectionError errorCode)
+void AutheIDClient::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
    emit failed(tr("Connection failed"));
 }
 
-QString MobileClient::getMobileClientRequestText(RequestType requestType)
+QString AutheIDClient::getAutheIDClientRequestText(RequestType requestType)
 {
    switch (requestType) {
    case ActivateWallet:
@@ -353,11 +410,11 @@ QString MobileClient::getMobileClientRequestText(RequestType requestType)
    case SettlementTransaction:
       return tr("Sign transaction");
    default:
-      throw std::logic_error("Invalid MobileClient::RequestType value");
+      throw std::logic_error("Invalid AutheIDClient::RequestType value");
    }
 }
 
-bool MobileClient::isMobileClientNewDeviceNeeded(RequestType requestType)
+bool AutheIDClient::isAutheIDClientNewDeviceNeeded(RequestType requestType)
 {
    switch (requestType) {
    case ActivateWallet:
@@ -369,7 +426,7 @@ bool MobileClient::isMobileClientNewDeviceNeeded(RequestType requestType)
    }
 }
 
-int MobileClient::getMobileClientTimeout(RequestType requestType)
+int AutheIDClient::getAutheIDClientTimeout(RequestType requestType)
 {
    switch (requestType) {
    case SettlementTransaction:
@@ -379,7 +436,7 @@ int MobileClient::getMobileClientTimeout(RequestType requestType)
    }
 }
 
-void MobileClient::processSignatureReply(const SignatureReply &reply)
+void AutheIDClient::processSignatureReply(const SignatureReply &reply)
 {
    if (reply.signaturedata().empty() || reply.sign().empty()) {
       emit failed(tr("Missing mandatory signature data in reply"));

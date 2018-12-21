@@ -5,20 +5,20 @@
 #include <QWidget>
 #include "EncryptUtils.h"
 #include "EncryptionUtils.h"
-#include "MobileClient.h"
+#include "AutheIDClient.h"
 
 namespace Ui {
     class WalletKeyWidget;
 }
 class QPropertyAnimation;
-class MobileClient;
+class AutheIDClient;
 class ApplicationSettings;
 
 class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(MobileClient::RequestType requestType, const std::string &walletId
+   WalletKeyWidget(AutheIDClient::RequestType requestType, const std::string &walletId
       , int index, bool password
       , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
       , QWidget* parent = nullptr);
@@ -75,7 +75,7 @@ private:
 
    QTimer      timer_;
    float       timeLeft_;
-   MobileClient *mobileClient_{};
+   AutheIDClient *autheIDClient_{};
 
    bool        hideAuthConnect_ = false;
    bool        hideAuthCombobox_ = false;
@@ -85,7 +85,7 @@ private:
    bool        hideAuthControlsOnSignClicked_ = false;
    bool        hideProgressBar_ = false;
    bool        hidePasswordWarning_ = false;
-   MobileClient::RequestType requestType_{};
+   AutheIDClient::RequestType requestType_{};
    std::vector<std::string> knownDeviceIds_;
 };
 

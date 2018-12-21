@@ -88,7 +88,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.44")) },
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
       { pubBridgePubKey,         SettingDef(QString(), QLatin1String("AEJL[u[3-i>v#4D?v3Te!B}S0nO7cG!QOsmI*--g")) },
-      { authServerHost,          SettingDef(QLatin1String("AuthServerHost"), QLatin1String("185.213.153.44")) },
+      { authServerHost,          SettingDef(QLatin1String("AuthServerHost"), QLatin1String("zmq.autheid.com")) },
       { authServerPort,          SettingDef(QLatin1String("AuthServerPort"), 9094) },
       { authServerPubKey,        SettingDef(QString(), QLatin1String("(=?/gEARFR3jjIi>>JBGtv=uKW/)ujUm#%wq#v}f")) },
       { celerHost,               SettingDef(QString(), QLatin1String("104.155.117.179")) },

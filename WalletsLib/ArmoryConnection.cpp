@@ -503,9 +503,10 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
          txCache_.put(hash, retTx);
          callGetTxCallbacks(hash, retTx);
       }
-      catch(std::exception& e) {
+      catch (const std::exception &e) {
          logger_->error("[{}] Return data error - {} - hash {}", __func__
                         , e.what(), hash.toHexStr());
+         callGetTxCallbacks(hash, {});
       }
    };
    bdv_->getTxByHash(hash, cbUpdateCache);

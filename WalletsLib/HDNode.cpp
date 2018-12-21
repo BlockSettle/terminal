@@ -514,29 +514,32 @@ static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = BTC_AE
    return result;
 }
 
+static SecureBinaryData LimitData(const SecureBinaryData &key, size_t limit = BTC_AES::MAX_KEYLENGTH)
+{
+   if (key.getSize() <= limit) {
+      return key;
+   }
+   return key.getSliceCopy(0, limit);
+}
+
 std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
 {
    if (encTypes_.empty()) {
       return nullptr;
    }
    auto result = createUnique(node_, netType_);
-   try {
-      auto key = PadData(password);
-      SecureBinaryData privKey(node_.private_key, sizeof(node_.private_key));
-      CryptoAES crypto;
-      const auto decrypted = crypto.DecryptCBC(privKey, key, iv_);
-      if (decrypted.getSize() != privKey.getSize()) {
-         throw std::runtime_error("encrypted key size mismatch");
-      }
-      memcpy(result->node_.private_key, decrypted.getPtr(), decrypted.getSize());
-
-      if (!seed_.isNull()) {
-         SecureBinaryData seed = seed_;
-         result->seed_ = crypto.DecryptCBC(seed, key, iv_);
-      }
+   const auto key = PadData(LimitData(password));
+   SecureBinaryData privKey(node_.private_key, sizeof(node_.private_key));
+   CryptoAES crypto;
+   const auto decrypted = crypto.DecryptCBC(privKey, key, iv_);
+   if (decrypted.getSize() != privKey.getSize()) {
+      throw std::runtime_error("encrypted key size mismatch");
    }
-   catch (const std::exception &e) {
-      return nullptr;
+   memcpy(result->node_.private_key, decrypted.getPtr(), decrypted.getSize());
+
+   if (!seed_.isNull()) {
+      SecureBinaryData seed = seed_;
+      result->seed_ = crypto.DecryptCBC(seed, key, iv_);
    }
    return result;
 }
@@ -553,23 +556,18 @@ std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password
    result->encKeys_ = encKeys;
    result->seed_.clear();
    memset(result->node_.private_key, 0, sizeof(result->node_.private_key));
-   try {
-      auto key = PadData(password);
-      CryptoAES crypto;
-      SecureBinaryData privKey = privateKey();
-      auto encrypted = crypto.EncryptCBC(privKey, key, result->iv_);
-      if (encrypted.getSize() != privKey.getSize()) {
-         throw std::runtime_error("encrypted key size mismatch");
-      }
-      memcpy(result->node_.private_key, encrypted.getPtr(), encrypted.getSize());
-
-      if (!seed_.isNull()) {
-         SecureBinaryData seed = PadData(seed_);
-         result->seed_ = crypto.EncryptCBC(seed, key, result->iv_);
-      }
+   const auto key = PadData(LimitData(password));
+   CryptoAES crypto;
+   SecureBinaryData privKey = privateKey();
+   auto encrypted = crypto.EncryptCBC(privKey, key, result->iv_);
+   if (encrypted.getSize() != privKey.getSize()) {
+      throw std::runtime_error("encrypted key size mismatch");
    }
-   catch (...) {
-      return nullptr;
+   memcpy(result->node_.private_key, encrypted.getPtr(), encrypted.getSize());
+
+   if (!seed_.isNull()) {
+      SecureBinaryData seed = PadData(seed_);
+      result->seed_ = crypto.EncryptCBC(seed, key, result->iv_);
    }
    return result;
 }

@@ -20,6 +20,7 @@
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
 #include "AuthSignManager.h"
+#include "AutheIDClient.h"
 #include "BSMarketDataProvider.h"
 #include "BSTerminalSplashScreen.h"
 #include "CCFileManager.h"
@@ -468,6 +469,10 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
+   autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_->GetAuthKeys());
+   connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &BSTerminalMainWindow::onAutheIDDone);
+   connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &BSTerminalMainWindow::onAutheIDFailed);
+
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
@@ -874,6 +879,51 @@ void BSTerminalMainWindow::openCCTokenDialog()
    }
 }
 
+void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
+{
+   if (autheIDConnection_->authenticate(email, applicationSettings_))
+   {
+      setLoginButtonText(tr("Logging in..."));
+   }
+   else
+   {
+      onAutheIDFailed();
+   }
+}
+
+void BSTerminalMainWindow::loginWithCeler(const std::string& username, const std::string& password)
+{
+   const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
+   const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
+
+   if (!celerConnection_->LoginToServer(host, port, username, password)) {
+      logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
+   } else {
+      ui->widgetWallets->setUsername(QString::fromStdString(username));
+      action_logout_->setVisible(false);
+      action_login_->setEnabled(false);
+
+      // set button text to this temporary text until the login
+      // completes and button text is changed to the username
+      setLoginButtonText(tr("Logging in..."));
+   }
+}
+
+void BSTerminalMainWindow::onAutheIDDone(const std::string& email)
+{
+   setLoginButtonText(QString::fromStdString(email));
+
+   std::string username = "celertest.customer_601@mailinator.com";
+   std::string password = "celertest.customer_601@mailinator.com";
+
+   loginWithCeler(username, password);
+}
+
+void BSTerminalMainWindow::onAutheIDFailed()
+{
+   setLoginButtonText(tr("user.name"));
+}
+
 void BSTerminalMainWindow::onLogin()
 {
    GetNetworkSettingsFromPuB([this](NetworkSettings) {});
@@ -881,22 +931,15 @@ void BSTerminalMainWindow::onLogin()
    LoginWindow loginDialog(applicationSettings_, this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
-      const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
-      const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
-      const std::string username = loginDialog.getUsername().toStdString();
-      const std::string password = loginDialog.getPassword().toStdString();
-
-      if (!celerConnection_->LoginToServer(host, port, username, password)) {
-         logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
-      } else {
-         ui->widgetWallets->setUsername(QString::fromStdString(username));
-         action_logout_->setVisible(false);
-         action_login_->setEnabled(false);
-
-         // set button text to this temporary text until the login
-         // completes and button text is changed to the username
-         setLoginButtonText(tr("Logging in..."));
-      }
+     if (loginDialog.isAutheID())
+     {
+        loginWithAuthEID(loginDialog.getUsername().toStdString());
+     }
+     else
+     {
+        loginWithCeler(loginDialog.getUsername().toStdString()
+                   , loginDialog.getPassword().toStdString());
+     }
    }
 }
 
@@ -1155,7 +1198,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
-         EnterWalletPassword passwordDialog(MobileClient::SignWallet, this);
+         EnterWalletPassword passwordDialog(AutheIDClient::SignWallet, this);
          passwordDialog.init(rootWallet ? rootWallet->getWalletId() : walletId
             , keyRank, encTypes, encKeys, applicationSettings_, QString::fromStdString(prompt));
          if (passwordDialog.exec() == QDialog::Accepted) {
