@@ -21,6 +21,10 @@ void bs::TxAddressChecker::containsInputAddress(Tx tx, std::function<void(bool)>
    OutPoint op = in.getOutPoint();
 
    const auto &cbTX = [this, op, cb, lotsize, value](Tx prevTx) {
+      if (!prevTx.isInitialized()) {
+         cb(false);
+         return;
+      }
       const TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
       const auto txAddr = bs::Address::fromTxOut(prevOut);
       const auto prevOutVal = prevOut.getValue();
