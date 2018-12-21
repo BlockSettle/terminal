@@ -59,19 +59,19 @@ AuthSignWalletObject::AuthSignWalletObject(AutheIDClient::RequestType requestTyp
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
-   AutheIDClient_ = (new AutheIDClient(logger, authKeys, this));
+   autheIDClient_ = (new AutheIDClient(logger, authKeys, this));
 
-   connect(AutheIDClient_, &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
+   connect(autheIDClient_, &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
        emit succeeded(QString::fromStdString(encKey), password);
    });
-   connect(AutheIDClient_, &AutheIDClient::failed, this, [this](const QString &text){
+   connect(autheIDClient_, &AutheIDClient::failed, this, [this](const QString &text){
        emit failed(text);
    });
    std::string serverPubKey = settings.get<std::string>(ApplicationSettings::authServerPubKey);
    std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
    std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
 
-   AutheIDClient_->connect(serverPubKey, serverHost, serverPort);
+   autheIDClient_->connect(serverPubKey, serverHost, serverPort);
 
    std::vector<std::string> knownDeviceIds;
    auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
@@ -81,7 +81,7 @@ AuthSignWalletObject::AuthSignWalletObject(AutheIDClient::RequestType requestTyp
        knownDeviceIds.push_back(deviceInfo.deviceId);
    }
 
-   AutheIDClient_->start(requestType, userId.toStdString()
+   autheIDClient_->start(requestType, userId.toStdString()
       , walletId.toStdString(), knownDeviceIds);
 
 }

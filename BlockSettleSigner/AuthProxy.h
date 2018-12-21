@@ -54,7 +54,7 @@ signals:
 
 private:
 //   FrejaSignWallet   freja_;
-   AutheIDClient *AutheIDClient_{};
+   AutheIDClient *autheIDClient_{};
 };
 
 
