@@ -852,7 +852,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
 {
-    if (autheIDConnection_->authenticate(email))
+    if (autheIDConnection_->authenticate(email, applicationSettings_))
     {
         setLoginButtonText(tr("Logging in..."));
     }

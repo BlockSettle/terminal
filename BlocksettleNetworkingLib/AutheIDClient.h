@@ -18,6 +18,7 @@ namespace spdlog {
 class QTimer;
 class ConnectionManager;
 class RequestReplyCommand;
+class ApplicationSettings;
 
 class AutheIDClient : public QObject, public DataConnectionListener
 {
@@ -63,7 +64,7 @@ public:
       , const std::vector<std::string> &knownDeviceIds);
    bool sign(const BinaryData &data, const std::string &email
       , const QString &title, const QString &description, int expiration = 30);
-   bool authenticate(const std::string& email);
+   bool authenticate(const std::string& email, const std::shared_ptr<ApplicationSettings> &appSettings);
    void cancel();
 
    bool isConnected() const;
@@ -83,6 +84,7 @@ private:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
+   bool requestAuth(const std::string& email);
    bool sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type);
    void processCreateReply(const uint8_t *payload, size_t payloadSize);
    void processResultReply(const uint8_t *payload, size_t payloadSize);

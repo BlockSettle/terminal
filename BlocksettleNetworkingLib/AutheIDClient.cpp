@@ -2,10 +2,12 @@
 
 #include <spdlog/spdlog.h>
 #include <QTimer>
+
 #include "ConnectionManager.h"
 #include "MobileUtils.h"
 #include "RequestReplyCommand.h"
 #include "ZmqSecuredDataConnection.h"
+#include "ApplicationSettings.h"
 
 using namespace AutheID::RP;
 
@@ -152,7 +154,25 @@ bool AutheIDClient::start(RequestType requestType, const std::string &email
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
 }
 
-bool AutheIDClient::authenticate(const std::string& email)
+bool AutheIDClient::authenticate(const std::string& email, const std::shared_ptr<ApplicationSettings> &appSettings)
+{
+    try {
+       if (!isConnected())
+       {
+           connect(appSettings->get<std::string>(ApplicationSettings::authServerPubKey)
+              , appSettings->get<std::string>(ApplicationSettings::authServerHost)
+              , appSettings->get<std::string>(ApplicationSettings::authServerPort));
+       }
+       return requestAuth(email);
+    }
+    catch (const std::exception &e) {
+       logger_->error("[{}] failed to connect: {}", __func__, e.what());
+       emit failed(tr("Failed to connect to Auth eID"));
+       return false;
+    }
+}
+
+bool AutheIDClient::requestAuth(const std::string& email)
 {
    cancel();
    email_ = email;
