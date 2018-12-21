@@ -6,7 +6,7 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletSeed 1.0
-import com.blocksettle.MobileClient 1.0
+import com.blocksettle.AutheIDClient 1.0
 
 import "StyledControls"
 import "BsControls"
@@ -35,7 +35,7 @@ CustomTitleDialogWindow {
     onTxInfoChanged: {
         console.log("QML onTxInfoChanged")
         if (txInfo.wallet.encType === WalletInfo.Auth) {
-            authSign = authProxy.signWallet(MobileClient.SignWallet, prompt,
+            authSign = authProxy.signWallet(AutheIDClient.SignWallet, prompt,
                                             txInfo.wallet.rootId, txInfo.wallet.encKey)
 
             authSign.succeeded.connect(function(encKey_, password_) {

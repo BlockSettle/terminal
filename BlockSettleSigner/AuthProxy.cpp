@@ -13,7 +13,7 @@ AuthProxy::AuthProxy(const std::shared_ptr<spdlog::logger> &logger, QObject *par
    : QObject(parent), logger_(logger)
 {}
 
-AuthSignWalletObject *AuthProxy::signWallet(MobileClient::RequestType requestType
+AuthSignWalletObject *AuthProxy::signWallet(AutheIDClient::RequestType requestType
                                             , const QString &userId
                                             , const QString &title
                                             , const QString &walletId
@@ -23,12 +23,12 @@ AuthSignWalletObject *AuthProxy::signWallet(MobileClient::RequestType requestTyp
    return new AuthSignWalletObject(requestType, logger_, userId, title, walletId, encKey, this);
 }
 
-AuthSignWalletObject *AuthProxy::signWallet(MobileClient::RequestType requestType
+AuthSignWalletObject *AuthProxy::signWallet(AutheIDClient::RequestType requestType
                                             , const QString &title
                                             , const QString &walletId
                                             , const QString &encKey)
 {
-    std::string userId = MobileClient::getDeviceInfo(encKey.toStdString()).userId;
+    std::string userId = AutheIDClient::getDeviceInfo(encKey.toStdString()).userId;
     logger_->debug("[AuthProxy] signing {} for {}: {}", walletId.toStdString(), userId, title.toStdString());
 
     return new AuthSignWalletObject(requestType,
@@ -53,35 +53,35 @@ void AuthObject::setStatus(const QString &status)
 }
 
 
-AuthSignWalletObject::AuthSignWalletObject(MobileClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &logger
+AuthSignWalletObject::AuthSignWalletObject(AutheIDClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &logger
    , const QString &userId, const QString &title, const QString &walletId, const QString &encKey, QObject *parent)
    : AuthObject(parent)
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
-   mobileClient_ = (new MobileClient(logger, authKeys, this));
+   autheIDClient_ = (new AutheIDClient(logger, authKeys, this));
 
-   connect(mobileClient_, &MobileClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
+   connect(autheIDClient_, &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
        emit succeeded(QString::fromStdString(encKey), password);
    });
-   connect(mobileClient_, &MobileClient::failed, this, [this](const QString &text){
+   connect(autheIDClient_, &AutheIDClient::failed, this, [this](const QString &text){
        emit failed(text);
    });
    std::string serverPubKey = settings.get<std::string>(ApplicationSettings::authServerPubKey);
    std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
    std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
 
-   mobileClient_->connect(serverPubKey, serverHost, serverPort);
+   autheIDClient_->connect(serverPubKey, serverHost, serverPort);
 
    std::vector<std::string> knownDeviceIds;
-   auto deviceInfo = MobileClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
+   auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
 
    // deviceInfo is empty for ActivateWallet and is not empty for another requests
    if (!deviceInfo.deviceId.empty()) {
        knownDeviceIds.push_back(deviceInfo.deviceId);
    }
 
-   mobileClient_->start(requestType, userId.toStdString()
+   autheIDClient_->start(requestType, userId.toStdString()
       , walletId.toStdString(), knownDeviceIds);
 
 }

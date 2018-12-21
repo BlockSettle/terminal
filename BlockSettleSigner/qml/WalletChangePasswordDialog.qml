@@ -6,7 +6,7 @@ import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.WalletSeed 1.0
-import com.blocksettle.MobileClient 1.0
+import com.blocksettle.AutheIDClient 1.0
 
 import "BsControls"
 import "StyledControls"
@@ -127,7 +127,7 @@ CustomTitleDialogWindow {
                 text:   !authSignNew ? qsTr("Sign with Auth eID") : authSignNew.status
                 enabled:    !authSignNew && tiNewAuthId.text.length
                 onClicked: {
-                    authSignNew = authProxy.signWallet(MobileClient.ActivateWallet, tiNewAuthId.text, qsTr("New password for wallet %1").arg(wallet.name),
+                    authSignNew = authProxy.signWallet(AutheIDClient.ActivateWallet, tiNewAuthId.text, qsTr("New password for wallet %1").arg(wallet.name),
                                                           wallet.rootId)
                     btnAuthNew.enabled = false
                     authSignNew.success.connect(function(key) {
