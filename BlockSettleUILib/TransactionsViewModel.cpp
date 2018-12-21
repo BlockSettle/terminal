@@ -451,7 +451,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
          return true;
       }
    }
-   if (child->isRBFeligible() && parent->isRBFeligible()) {
+   if (!child->confirmations && child->txEntry.isRBF && !parent->confirmations && parent->txEntry.isRBF) {
       std::set<BinaryData> childInputs, parentInputs;
       for (int i = 0; i < child->tx.getNumTxIn(); i++) {
          childInputs.insert(child->tx.getTxInCopy(i).serialize());
@@ -613,11 +613,24 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
          if (newBlockNum != UINT32_MAX) {
             item->confirmations = armory_->getConfirmationsNumber(newBlockNum);
             item->txEntry.blockNum = newBlockNum;
+            onItemConfirmed(item);
          }
       }
    }
    emit dataChanged(index(0, static_cast<int>(Columns::Amount))
    , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
+}
+
+void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
+{
+   if (item->txEntry.isRBF && (item->confirmations == 1)) {
+      const auto node = rootNode_->find(item->id());
+      if (node && node->hasChildren()) {
+         beginRemoveRows(index(node->row(), 0), 0, node->nbChildren() - 1);
+         node->clear();
+         endRemoveRows();
+      }
+   }
 }
 
 void TransactionsViewModel::loadLedgerEntries()

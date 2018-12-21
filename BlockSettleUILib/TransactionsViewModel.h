@@ -152,6 +152,7 @@ private slots:
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
+   void onItemConfirmed(const TransactionPtr);
 
 private:
    void init();
