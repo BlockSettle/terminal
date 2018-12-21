@@ -883,9 +883,10 @@ void CCPortfolioModel::reloadXBTWalletsList()
          endResetModel();
       }
    }
-   updateXBTBalance();
 
    reloadCCWallets();
+
+   updateXBTBalance();
 }
 
 void CCPortfolioModel::updateXBTBalance()
@@ -927,6 +928,8 @@ void CCPortfolioModel::updateXBTBalance()
             , {Qt::DisplayRole});
       }
    }
+
+   updateCCBalance();
 }
 
 void CCPortfolioModel::reloadCCWallets()
@@ -978,9 +981,38 @@ void CCPortfolioModel::reloadCCWallets()
          endResetModel();
       }
    }
-
-   updateCCBalance();
 }
 
 void CCPortfolioModel::updateCCBalance()
-{}
+{
+   if (root_->HaveXBTGroup()) {
+      auto ccGroup = root_->GetCCGroup();
+
+      bool balanceUpdated = false;
+
+      auto parentIndex = createIndex(ccGroup->getRow(), 0, static_cast<void*>(ccGroup));
+
+      const auto privateShares = assetManager_->privateShares();
+
+      for (const auto &ccName : privateShares) {
+         auto ccNode = ccGroup->GetCCNode(ccName);
+         if (ccNode != nullptr) {
+            const double balance = assetManager_->getBalance(ccName);
+
+            if (ccNode->SetCCAmount(balance)) {
+               dataChanged(index(ccNode->getRow(), PortfolioColumns::BalanceColumn, parentIndex)
+                  , index(ccNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+                  , {Qt::DisplayRole});
+
+               balanceUpdated = true;
+            }
+         }
+      }
+
+      if (balanceUpdated) {
+         dataChanged(index(ccGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , index(ccGroup->getRow(), PortfolioColumns::XBTValueColumn)
+            , {Qt::DisplayRole});
+      }
+   }
+}
