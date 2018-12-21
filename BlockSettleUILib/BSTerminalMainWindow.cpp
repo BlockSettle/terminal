@@ -467,9 +467,9 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_);
-   connect(autheIDConnection_.get(), &AutheIDClient::authDone, this, &BSTerminalMainWindow::onAutheIDDone);
-   connect(autheIDConnection_.get(), &AutheIDClient::authFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
+   autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_->GetAuthKeys());
+   connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &BSTerminalMainWindow::onAutheIDDone);
+   connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &BSTerminalMainWindow::onAutheIDFailed);
 
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
@@ -1167,7 +1167,7 @@ void BSTerminalMainWindow::onPasswordRequested(std::string walletId, std::string
       if (!walletName.isEmpty()) {
          const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletId);
 
-         EnterWalletPassword passwordDialog(MobileClient::SignWallet, this);
+         EnterWalletPassword passwordDialog(AutheIDClient::SignWallet, this);
          passwordDialog.init(rootWallet ? rootWallet->getWalletId() : walletId
             , keyRank, encTypes, encKeys, applicationSettings_, QString::fromStdString(prompt));
          if (passwordDialog.exec() == QDialog::Accepted) {

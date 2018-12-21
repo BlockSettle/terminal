@@ -1,51 +1,112 @@
 #ifndef __AUTH_EID_CLIENT_H__
 #define __AUTH_EID_CLIENT_H__
 
+#include <botan/ecies.h>
+#include <botan/auto_rng.h>
 #include <QObject>
-#include <QTimer>
-
 #include "DataConnectionListener.h"
+#include "EncryptionUtils.h"
+#include "AutheIDClient.h"
 #include "ZmqSecuredDataConnection.h"
 #include "EncryptUtils.h"
-
 #include "rp_api.pb.h"
-
 
 namespace spdlog {
    class logger;
 }
 
+class QTimer;
 class ConnectionManager;
-class ApplicationSettings;
-class MobileClient;
+class RequestReplyCommand;
 
-
-class AutheIDClient : public QObject
+class AutheIDClient : public QObject, public DataConnectionListener
 {
-    Q_OBJECT
+   Q_OBJECT
 
 public:
-    AutheIDClient(const std::shared_ptr<spdlog::logger>& logger
-                  , const std::shared_ptr<ApplicationSettings>& appSettings);
-    ~AutheIDClient() noexcept override;
+   struct DeviceInfo
+   {
+      std::string userId;
+      std::string deviceId;
+      std::string deviceName;
+   };
 
-    bool authenticate(const std::string email);
+   enum RequestType
+   {
+      Unknown,
+      ActivateWallet,
+      DeactivateWallet,
+      SignWallet,
+      BackupWallet,
+      ActivateWalletOldDevice,
+      ActivateWalletNewDevice,
+      DeactivateWalletDevice,
+      VerifyWalletKey,
+      ActivateOTP,
+      // Private market and others with lower timeout
+      SettlementTransaction,
+
+      // Please also add new type text in getAutheIDClientRequestText
+   };
+   Q_ENUM(RequestType)
+
+   static DeviceInfo getDeviceInfo(const std::string &encKey);
+
+   AutheIDClient(const std::shared_ptr<spdlog::logger> &
+      , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
+      , QObject *parent = nullptr);
+   ~AutheIDClient() override;
+
+   void connect(const std::string &serverPubKey
+      , const std::string &serverHost, const std::string &serverPort);
+   bool start(RequestType requestType, const std::string &email, const std::string &walletId
+      , const std::vector<std::string> &knownDeviceIds);
+   bool sign(const BinaryData &data, const std::string &email
+      , const QString &title, const QString &description, int expiration = 30);
+   bool authenticate(const std::string& email);
+   void cancel();
+
+   bool isConnected() const;
 
 signals:
-    void authDone(const std::string email);
-    void authFailed();
+   void succeeded(const std::string& encKey, const SecureBinaryData &password);
+   void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
+   void authSuccess(const std::string &jwt);
+   void failed(const QString &text);
 
 private slots:
-    void onAuthSuccess(const std::string &jwt);
-    void onFailed(const QString &);
+   void timeout();
 
 private:
-    std::shared_ptr<spdlog::logger>        logger_;
-    std::shared_ptr<ApplicationSettings>   appSettings_;
-    std::unique_ptr<MobileClient>          mobileClient_;
+   void OnDataReceived(const std::string& data) override;
+   void OnConnected() override;
+   void OnDisconnected() override;
+   void OnError(DataConnectionError errorCode) override;
 
-    std::string requestId_;
-    std::string email_;
+   bool sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type);
+   void processCreateReply(const uint8_t *payload, size_t payloadSize);
+   void processResultReply(const uint8_t *payload, size_t payloadSize);
+
+   void processSignatureReply(const AutheID::RP::SignatureReply &);
+
+   QString getAutheIDClientRequestText(RequestType requestType);
+   bool isAutheIDClientNewDeviceNeeded(RequestType requestType);
+   int getAutheIDClientTimeout(RequestType requestType);
+
+private:
+   std::unique_ptr<ConnectionManager> connectionManager_;
+   std::shared_ptr<ZmqSecuredDataConnection> connection_;
+   std::shared_ptr<spdlog::logger> logger_;
+   std::string requestId_;
+   std::string email_;
+   bool resultAuth_;
+
+   const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
+
+   QTimer *timer_;
+
+   std::vector<std::string> knownDeviceIds_;
 };
+Q_DECLARE_METATYPE(AutheIDClient::RequestType)
 
-#endif
+#endif // __AUTH_EID_CLIENT_H__

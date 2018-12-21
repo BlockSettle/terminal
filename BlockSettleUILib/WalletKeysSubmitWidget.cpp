@@ -23,7 +23,7 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysSubmitWidget::init(MobileClient::RequestType requestType
+void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
    , const std::string &walletId
    , bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
