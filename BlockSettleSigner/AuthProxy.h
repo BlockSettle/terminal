@@ -4,7 +4,7 @@
 #include <memory>
 #include <QObject>
 #include "EncryptionUtils.h"
-#include "MobileClient.h"
+#include "AutheIDClient.h"
 
 
 class ApplicationSettings;
@@ -43,7 +43,7 @@ public:
    AuthSignWalletObject() : AuthObject(nullptr) {}
 
    // TODO refactor: encKey already contains userId
-   AuthSignWalletObject(MobileClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &, const QString &userId
+   AuthSignWalletObject(AutheIDClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &, const QString &userId
       , const QString &title, const QString &walletId, const QString &encKey, QObject *parent = nullptr);
 
    Q_INVOKABLE void cancel();
@@ -54,7 +54,7 @@ signals:
 
 private:
 //   FrejaSignWallet   freja_;
-   MobileClient *mobileClient_{};
+   AutheIDClient *AutheIDClient_{};
 };
 
 
@@ -65,13 +65,13 @@ public:
    AuthProxy(const std::shared_ptr<spdlog::logger> &, QObject *parent = nullptr);
 
    // TODO refactor: encKey already contains userId
-   Q_INVOKABLE AuthSignWalletObject *signWallet(MobileClient::RequestType requestType
+   Q_INVOKABLE AuthSignWalletObject *signWallet(AutheIDClient::RequestType requestType
                                                 , const QString &userId
                                                 , const QString &title
                                                 , const QString &walletId
                                                 , const QString &encKey);
 
-   Q_INVOKABLE AuthSignWalletObject *signWallet(MobileClient::RequestType requestType,
+   Q_INVOKABLE AuthSignWalletObject *signWallet(AutheIDClient::RequestType requestType,
                                                 const QString &title,
                                                 const QString &walletId,
                                                 const QString &encKey);

@@ -8,7 +8,7 @@ import com.blocksettle.WalletsProxy 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletSeed 1.0
-import com.blocksettle.MobileClient 1.0
+import com.blocksettle.AutheIDClient 1.0
 
 import "StyledControls"
 import "BsStyles"

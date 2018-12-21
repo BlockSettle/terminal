@@ -6,7 +6,7 @@
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
 #include "AuthProxy.h"
-#include "MobileClient.h"
+#include "AutheIDClient.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
 #include "HDWallet.h"
@@ -43,7 +43,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
    qRegisterMetaType<bs::wallet::TXSignRequest>();
-   qRegisterMetaType<MobileClient::RequestType>("MobileClient::RequestType");
+   qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<WalletInfo::EncryptionType>("WalletInfo::EncryptionType");
 
 
@@ -55,8 +55,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AuthProxy>("com.blocksettle.AuthProxy", 1, 0,
       "AuthProxy", QStringLiteral("Cannot create a AuthProxy instance"));
-   qmlRegisterUncreatableType<MobileClient>("com.blocksettle.MobileClient", 1, 0,
-      "MobileClient", QStringLiteral("Cannot create a MobileClient instance"));
+   qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
+      "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");

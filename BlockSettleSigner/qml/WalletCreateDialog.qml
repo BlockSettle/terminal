@@ -6,7 +6,7 @@ import com.blocksettle.WalletSeed 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
-import com.blocksettle.MobileClient 1.0
+import com.blocksettle.AutheIDClient 1.0
 
 import "BsControls"
 import "StyledControls"
@@ -260,7 +260,7 @@ CustomTitleDialogWindow {
                         // auth eID
                         encType = WalletInfo.Auth
 
-                        var authActivate = authProxy.signWallet(MobileClient.ActivateWallet,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
+                        var authActivate = authProxy.signWallet(AutheIDClient.ActivateWallet,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
                                                                 seed.walletId, "")
                         var activateProgress = Qt.createComponent("BsControls/BSEidProgressBox.qml").createObject(mainWindow);
                         activateProgress.title = qsTr("Activate Auth eID signing")
@@ -285,7 +285,7 @@ CustomTitleDialogWindow {
                             var confirmEidDialog = Qt.createComponent("BsControls/BSEidConfirmBox.qml").createObject(mainWindow);
                             confirmEidDialog.open()
                             confirmEidDialog.accepted.connect(function(){
-                                var authConfirm = authProxy.signWallet(MobileClient.VerifyWalletKey,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
+                                var authConfirm = authProxy.signWallet(AutheIDClient.VerifyWalletKey,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
                                                                        seed.walletId, encKey)
 
                                 var confirmProgress = Qt.createComponent("BsControls/BSEidProgressBox.qml").createObject(mainWindow);
