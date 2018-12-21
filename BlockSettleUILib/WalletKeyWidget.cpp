@@ -30,7 +30,7 @@ WalletKeyWidget::WalletKeyWidget(AutheIDClient::RequestType requestType, const s
    , walletId_(walletId), index_(index)
    , password_(password)
 //   , prompt_(prompt)
-   , AutheIDClient_(new AutheIDClient(spdlog::get(""), authKeys, this))
+   , autheIDClient_(new AutheIDClient(spdlog::get(""), authKeys, this))
    , requestType_(requestType)
 {
    ui_->setupUi(this);
@@ -50,8 +50,8 @@ WalletKeyWidget::WalletKeyWidget(AutheIDClient::RequestType requestType, const s
    connect(ui_->comboBoxAuthId, SIGNAL(currentIndexChanged(QString)), this, SLOT(onAuthIdChanged(QString)));
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &WalletKeyWidget::onAuthSignClicked);
 
-   connect(AutheIDClient_, &AutheIDClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
-   connect(AutheIDClient_, &AutheIDClient::failed, this, &WalletKeyWidget::onAuthFailed);
+   connect(autheIDClient_, &AutheIDClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
+   connect(autheIDClient_, &AutheIDClient::failed, this, &WalletKeyWidget::onAuthFailed);
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &WalletKeyWidget::onTimer);
@@ -64,7 +64,7 @@ void WalletKeyWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    const auto &serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
 
    try {
-      AutheIDClient_->connect(serverPubKey, serverHost, serverPort);
+      autheIDClient_->connect(serverPubKey, serverHost, serverPort);
    }
    catch (const std::exception &) {
       ui_->pushButtonAuth->setEnabled(false);
@@ -143,7 +143,7 @@ void WalletKeyWidget::onAuthIdChanged(const QString &text)
 {
    ui_->labelAuthId->setText(text);
    emit encKeyChanged(index_, text.toStdString());
-   ui_->pushButtonAuth->setEnabled(AutheIDClient_->isConnected() && !text.isNull());
+   ui_->pushButtonAuth->setEnabled(autheIDClient_->isConnected() && !text.isNull());
 }
 
 void WalletKeyWidget::onAuthSignClicked()
@@ -161,7 +161,7 @@ void WalletKeyWidget::onAuthSignClicked()
    timer_.start();
    authRunning_ = true;
 
-   AutheIDClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
+   autheIDClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
       , walletId_, knownDeviceIds_);
    ui_->pushButtonAuth->setText(tr("Cancel Auth request"));
    ui_->comboBoxAuthId->setEnabled(false);
@@ -189,7 +189,7 @@ void WalletKeyWidget::onAuthFailed(const QString &text)
 {
    
    stop();
-   ui_->pushButtonAuth->setEnabled(AutheIDClient_->isConnected());
+   ui_->pushButtonAuth->setEnabled(autheIDClient_->isConnected());
    ui_->pushButtonAuth->setText(tr("Auth failed: %1 - retry").arg(text));
    ui_->widgetAuthLayout->show();
    
@@ -230,7 +230,7 @@ void WalletKeyWidget::stop()
 void WalletKeyWidget::cancel()
 {
    if (!password_) {
-      AutheIDClient_->cancel();
+      autheIDClient_->cancel();
       stop();
    }
 }
@@ -240,7 +240,7 @@ void WalletKeyWidget::start()
    if (!password_ && !authRunning_ && !ui_->comboBoxAuthId->currentText().isEmpty()) {
       onAuthSignClicked();
       ui_->progressBar->setValue(0);
-      ui_->pushButtonAuth->setEnabled(AutheIDClient_->isConnected());
+      ui_->pushButtonAuth->setEnabled(autheIDClient_->isConnected());
    }
 }
 

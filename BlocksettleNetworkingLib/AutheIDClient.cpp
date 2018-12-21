@@ -155,20 +155,20 @@ bool AutheIDClient::start(RequestType requestType, const std::string &email
 
 bool AutheIDClient::authenticate(const std::string& email, const std::shared_ptr<ApplicationSettings> &appSettings)
 {
-    try {
-       if (!isConnected())
-       {
-           connect(appSettings->get<std::string>(ApplicationSettings::authServerPubKey)
-              , appSettings->get<std::string>(ApplicationSettings::authServerHost)
-              , appSettings->get<std::string>(ApplicationSettings::authServerPort));
-       }
-       return requestAuth(email);
-    }
-    catch (const std::exception &e) {
-       logger_->error("[{}] failed to connect: {}", __func__, e.what());
-       emit failed(tr("Failed to connect to Auth eID"));
-       return false;
-    }
+   try {
+      if (!isConnected())
+      {
+         connect(appSettings->get<std::string>(ApplicationSettings::authServerPubKey)
+           , appSettings->get<std::string>(ApplicationSettings::authServerHost)
+           , appSettings->get<std::string>(ApplicationSettings::authServerPort));
+      }
+      return requestAuth(email);
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failed to connect: {}", __func__, e.what());
+      emit failed(tr("Failed to connect to Auth eID"));
+      return false;
+   }
 }
 
 bool AutheIDClient::requestAuth(const std::string& email)
@@ -188,7 +188,7 @@ bool AutheIDClient::requestAuth(const std::string& email)
    request.set_userid(email);
 
    QMetaObject::invokeMethod(timer_, [this] {
-       timer_->start(kConnectTimeoutSeconds * 1000);
+      timer_->start(kConnectTimeoutSeconds * 1000);
    });
 
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);

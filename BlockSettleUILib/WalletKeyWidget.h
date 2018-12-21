@@ -75,7 +75,7 @@ private:
 
    QTimer      timer_;
    float       timeLeft_;
-   AutheIDClient *AutheIDClient_{};
+   AutheIDClient *autheIDClient_{};
 
    bool        hideAuthConnect_ = false;
    bool        hideAuthCombobox_ = false;
