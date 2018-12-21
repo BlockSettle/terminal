@@ -1,6 +1,5 @@
 #include <algorithm>
-#include <QMutexLocker>
-#include <spdlog/spdlog.h>
+
 #include "AssetManager.h"
 #include "CelerClient.h"
 #include "CelerFindSubledgersForAccountSequence.h"
@@ -13,6 +12,9 @@
 
 #include "com/celertech/piggybank/api/subledger/DownstreamSubLedgerProto.pb.h"
 
+#include <QMutexLocker>
+
+#include <spdlog/spdlog.h>
 
 AssetManager::AssetManager(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<WalletsManager>& walletsManager
@@ -237,7 +239,7 @@ void AssetManager::onMDUpdate(bs::network::Asset::Type at, const QString &securi
       if (at == bs::network::Asset::PrivateMarket) {
          emit ccPriceChanged(ccy);
       } else {
-         emit xbtPriceChanged(ccy);
+         sendUpdatesOnXBTPrice(ccy);
       }
    }
 }
@@ -356,4 +358,26 @@ void AssetManager::onAccountBalanceLoaded(const std::string& currency, double va
    }
    balances_[currency] = value;
    emit balanceChanged(currency);
+}
+
+void AssetManager::sendUpdatesOnXBTPrice(const std::string& ccy)
+{
+   auto currentTime = QDateTime::currentDateTimeUtc();
+   bool emitUpdate = false;
+
+   auto it = xbtPriceUpdateTimes_.find(ccy);
+
+   if (it == xbtPriceUpdateTimes_.end()) {
+      emitUpdate = true;
+      xbtPriceUpdateTimes_.emplace(ccy, currentTime);
+   } else {
+      if (it->second.secsTo(currentTime) >= 30) {
+         it->second = currentTime;
+         emitUpdate = true;
+      }
+   }
+
+   if (emitUpdate) {
+      emit xbtPriceChanged(ccy);
+   }
 }
