@@ -66,6 +66,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    setupShortcuts();
 
+   loginButtonText_ = tr("user.name");
+
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
    }
@@ -580,6 +582,7 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       createWallet(!walletsManager_->HasPrimaryWallet());
    }
    updateControlEnabledState();
+   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -618,12 +621,38 @@ void BSTerminalMainWindow::UpdateMainWindowAppearence()
    }
 }
 
+bool BSTerminalMainWindow::isUserLoggedIn() const
+{
+   return celerConnection_->IsConnected();
+}
+
+bool BSTerminalMainWindow::isArmoryConnected() const
+{
+   return armory_->state() == ArmoryConnection::State::Ready;
+}
+
+void BSTerminalMainWindow::updateLoginActionState()
+{
+   if (!isUserLoggedIn()) {
+      if (!isArmoryConnected()) {
+         action_login_->setEnabled(false);
+         ui->pushButtonUser->setEnabled(false);
+         ui->pushButtonUser->setToolTip(tr("Armory connection required to login"));
+      } else {
+         action_login_->setEnabled(true);
+         ui->pushButtonUser->setEnabled(true);
+         ui->pushButtonUser->setToolTip(QString{});
+      }
+   }
+}
+
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    walletsManager_->UnregisterSavedWallets();
    connectArmory();
    updateControlEnabledState();
+   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -921,7 +950,9 @@ void BSTerminalMainWindow::onUserLoggedOut()
    }
    walletsManager_->SetUserId(BinaryData{});
    authManager_->OnDisconnectedFromCeler();
-   setLoginButtonText(tr("user.name"));
+   setLoginButtonText(loginButtonText_);
+
+   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::onCelerConnected()
@@ -1242,7 +1273,7 @@ void BSTerminalMainWindow::setupShortcuts()
 }
 
 void BSTerminalMainWindow::onButtonUserClicked() {
-   if (ui->pushButtonUser->text() == tr("user.name")) {
+   if (ui->pushButtonUser->text() == loginButtonText_) {
       onLogin();
    } else {
       if (BSMessageBox(BSMessageBox::question, tr("User Logout"), tr("You are about to logout")

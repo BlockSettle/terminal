@@ -198,6 +198,14 @@ private:
 
    void createAdvancedTxDialog(const std::string &selectedWalletId);
    void createAuthWallet();
+
+   bool isUserLoggedIn() const;
+   bool isArmoryConnected() const;
+
+   void updateLoginActionState();
+
+private:
+   QString loginButtonText_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
