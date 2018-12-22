@@ -865,10 +865,11 @@ void BSTerminalMainWindow::openCCTokenDialog()
    }
 }
 
-void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
+void BSTerminalMainWindow::loginWithAutheID(const std::string& email)
 {
    if (autheIDConnection_->authenticate(email, applicationSettings_))
    {
+      currentUserLogin_ = QString::fromStdString(email);
       setLoginButtonText(tr("Logging in..."));
    }
    else
@@ -879,6 +880,20 @@ void BSTerminalMainWindow::loginWithAuthEID(const std::string& email)
 
 void BSTerminalMainWindow::loginWithCeler(const std::string& username, const std::string& password)
 {
+    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
+    const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
+
+    if (!celerConnection_->LoginToServer(host, port, username, password)) {
+       logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
+    } else {
+       auto userName = QString::fromStdString(username);
+       action_logout_->setVisible(false);
+       action_login_->setEnabled(false);
+    }
+}
+
+void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::string& password)
+{
    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
    const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
 
@@ -886,6 +901,7 @@ void BSTerminalMainWindow::loginWithCeler(const std::string& username, const std
       logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
    } else {
       auto userName = QString::fromStdString(username);
+      currentUserLogin_ = userName;
       ui->widgetWallets->setUsername(userName);
       ui->widgetChat->setUserName(userName);
       action_logout_->setVisible(false);
@@ -897,9 +913,9 @@ void BSTerminalMainWindow::loginWithCeler(const std::string& username, const std
    }
 }
 
-void BSTerminalMainWindow::onAutheIDDone(const std::string& email)
+void BSTerminalMainWindow::onAutheIDDone(const std::string& jwt)
 {
-   setLoginButtonText(QString::fromStdString(email));
+   ui->widgetChat->setUserName(currentUserLogin_);
 
    std::string username = "celertest.customer_601@mailinator.com";
    std::string password = "celertest.customer_601@mailinator.com";
@@ -921,12 +937,12 @@ void BSTerminalMainWindow::onLogin()
    if (loginDialog.exec() == QDialog::Accepted) {
       if (loginDialog.isAutheID())
       {
-         loginWithAuthEID(loginDialog.getUsername().toStdString());
+         loginWithAutheID(loginDialog.getUsername().toStdString());
       }
       else
       {
-         loginWithCeler(loginDialog.getUsername().toStdString()
-                   , loginDialog.getPassword().toStdString());
+         loginToCeler(loginDialog.getUsername().toStdString()
+                      , loginDialog.getPassword().toStdString());
       }
    }
 }
@@ -957,9 +973,8 @@ void BSTerminalMainWindow::onUserLoggedIn()
       signContainer_->SetUserId(userId);
    }
    walletsManager_->SetUserId(userId);
-   ui->widgetChat->setUserId(QString::fromStdString(celerConnection_->userId()));
 
-   setLoginButtonText(QString::fromStdString(celerConnection_->userName()));
+   setLoginButtonText(currentUserLogin_);
 
    if (!mdProvider_->IsConnectionActive()) {
       mdProvider_->SubscribeToMD(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)

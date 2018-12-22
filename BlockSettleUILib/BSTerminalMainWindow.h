@@ -138,6 +138,7 @@ private:
    std::shared_ptr<ChatServer>               chatServer_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
+   QString                                   currentUserLogin_;
 
    bool  widgetsInited_ = false;
 
@@ -208,8 +209,9 @@ private:
    void createAdvancedTxDialog(const std::string &selectedWalletId);
    void createAuthWallet();
 
-   void loginWithAuthEID(const std::string& email);
+   void loginWithAutheID(const std::string& email);
    void loginWithCeler(const std::string& username, const std::string& password);
+   void loginToCeler(const std::string& username, const std::string& password);
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
