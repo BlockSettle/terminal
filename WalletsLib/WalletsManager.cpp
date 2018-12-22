@@ -1048,6 +1048,24 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
          logger_->debug("[{}] ZC entry in wallet {}", __func__
                         , wallet->GetWalletName());
 
+         // Get the ZC UTXOs for the wallet. We need to save a copy for UTXO
+         // filtering and balance correction purposes.
+         const auto &cbZCList = [this, wallet](ReturnMessage<std::vector<UTXO>> utxos)-> void {
+            try {
+               auto inUTXOs = utxos.get();
+               for(auto& utxo: inUTXOs) {
+                  wallet->addZCUTXOForFilter(utxo);
+               }
+            }
+            catch (const std::exception &e) {
+               if (logger_ != nullptr) {
+                  logger_->error("[WalletsManager::onZeroConfReceived] Return data error " \
+                     "- {}", e.what());
+               }
+            }
+         };
+         wallet->getSpendableZCList(cbZCList, this);
+
          // We have an affected wallet. Update it!
          ourZCentries.push_back(bs::convertTXEntry(led));
          wallet->UpdateBalanceFromDB();

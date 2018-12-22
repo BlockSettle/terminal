@@ -782,7 +782,8 @@ hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
    return path;
 }
 
-bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb, QObject *obj, uint64_t val)
+bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
+                                     , QObject *obj, uint64_t val, const bool& startup)
 {
    const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
       std::vector<UTXO> result;
@@ -800,7 +801,7 @@ bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb, Q
       }
       cb(result);
    };
-   return bs::Wallet::getSpendableTxOutList(cbTxOutList, obj, val);
+   return bs::Wallet::getSpendableTxOutList(cbTxOutList, obj, val, startup);
 }
 
 std::string hd::Leaf::GetAddressIndex(const bs::Address &addr)
@@ -1219,7 +1220,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
          };
          findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
       };
-      hd::Leaf::getSpendableTxOutList(cbRefresh, this);
+      hd::Leaf::getSpendableTxOutList(cbRefresh, this, false);
    }
 
    const auto &cbRefreshZC = [this](std::vector<UTXO> utxos) {
@@ -1236,7 +1237,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
       };
       findInvalidUTXOs(utxos, cbUpdateZcBalance);
    };
-   hd::Leaf::getSpendableZCList(cbRefreshZC, this);
+   hd::Leaf::getSpendableZCList(cbRefreshZC, this, false);
 }
 
 void hd::CCLeaf::validationProc()
@@ -1409,7 +1410,9 @@ std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
    return result;
 }
 
-bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb, QObject *obj, uint64_t val)
+bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
+                                       , QObject *obj, uint64_t val
+                                       , const bool& startup)
 {
    if (validationStarted_ && !validationEnded_) {
       return false;
@@ -1417,10 +1420,11 @@ bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb,
    const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
       cb(filterUTXOs(txOutList));
    };
-   return hd::Leaf::getSpendableTxOutList(cbTxOutList, obj, val);
+   return hd::Leaf::getSpendableTxOutList(cbTxOutList, obj, val, startup);
 }
 
-bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, QObject *obj)
+bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
+                                    , QObject *obj, const bool& startup)
 {
    if (validationStarted_ && !validationEnded_) {
       return false;
@@ -1428,7 +1432,7 @@ bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb, Q
    const auto &cbZCList = [this, cb](std::vector<UTXO> txOutList) {
       cb(filterUTXOs(txOutList));
    };
-   return hd::Leaf::getSpendableZCList(cbZCList, obj);
+   return hd::Leaf::getSpendableZCList(cbZCList, obj, startup);
 }
 
 bool hd::CCLeaf::isBalanceAvailable() const
