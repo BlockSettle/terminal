@@ -27,7 +27,7 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysCreateWidget::init(MobileClient::RequestType requestType
+void WalletKeysCreateWidget::init(AutheIDClient::RequestType requestType
    , const std::string &walletId, const QString& username
    , const std::shared_ptr<ApplicationSettings>& appSettings)
 {

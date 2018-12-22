@@ -97,6 +97,7 @@ public:
       SubscribeToMDOnStart,
       MDLicenseAccepted,
       authPrivKey,
+      jwtUsername,
       _last
    };
 

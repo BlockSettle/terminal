@@ -5,7 +5,7 @@
 #include <QDialog>
 #include "EncryptionUtils.h"
 #include "MetaData.h"
-#include "MobileClient.h"
+#include "AutheIDClient.h"
 
 namespace Ui {
     class ChangeWalletPasswordDialog;

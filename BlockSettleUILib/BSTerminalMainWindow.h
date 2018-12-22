@@ -26,6 +26,7 @@ class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
 class AuthSignManager;
+class AutheIDClient;
 class BSTerminalSplashScreen;
 class CCFileManager;
 class CCPortfolioModel;
@@ -126,6 +127,7 @@ private:
    std::shared_ptr<CCPortfolioModel>         portfolioModel_;
    std::shared_ptr<ConnectionManager>        connectionManager_;
    std::shared_ptr<CelerClient>              celerConnection_;
+   std::shared_ptr<AutheIDClient>            autheIDConnection_;
    std::shared_ptr<CelerMarketDataProvider>  mdProvider_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
@@ -178,6 +180,9 @@ private slots:
    void onZCreceived(ArmoryConnection::ReqIdType);
    void onArmoryStateChanged(ArmoryConnection::State);
 
+   void onAutheIDDone(const std::string& email);
+   void onAutheIDFailed();
+
    void onLogin();
    void onLogout();
 
@@ -202,6 +207,9 @@ private:
 
    void createAdvancedTxDialog(const std::string &selectedWalletId);
    void createAuthWallet();
+
+   void loginWithAuthEID(const std::string& email);
+   void loginWithCeler(const std::string& username, const std::string& password);
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
