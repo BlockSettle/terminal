@@ -15,7 +15,6 @@ namespace
 
    const int kKeySize = 32;
 
-   // Obtained from http://185.213.153.44:8181/key
    const std::string kApiKey = "Pj+Q9SsZloftMkmE7EhA8v2Bz1ZC9aOmUkAKTBW9hagJ";
 
    static const char kSeparatorSymbol = ':';
