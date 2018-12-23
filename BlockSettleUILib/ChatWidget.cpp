@@ -2,7 +2,6 @@
 #include "ui_ChatWidget.h"
 
 #include "ChatClient.h"
-#include "ChatServer.h"
 #include "ChatUsersViewModel.h"
 #include "ApplicationSettings.h"
 

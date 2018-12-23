@@ -53,7 +53,6 @@
 #include "WalletsManager.h"
 #include "ChatWidget.h"
 #include "ZmqSecuredDataConnection.h"
-#include "ChatServer.h"
 
 #include <spdlog/spdlog.h>
 
