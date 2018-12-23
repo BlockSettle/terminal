@@ -4,7 +4,7 @@
 #include "ApplicationSettings.h"
 #include "CelerClient.h"
 #include "EncryptionUtils.h"
-#include "MobileClient.h"
+#include "AutheIDClient.h"
 
 #include <spdlog/spdlog.h>
 
@@ -15,10 +15,10 @@ AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
    : logger_(logger)
    , appSettings_(appSettings)
    , celerClient_(celerClient)
-   , mobileClient_(new MobileClient(logger, appSettings_->GetAuthKeys()))
+   , autheIDClient_(new AutheIDClient(logger, appSettings_->GetAuthKeys()))
 {
-   connect(mobileClient_.get(), &MobileClient::signSuccess, this, &AuthSignManager::onSignSuccess);
-   connect(mobileClient_.get(), &MobileClient::failed, this, &AuthSignManager::onFailed);
+   connect(autheIDClient_.get(), &AutheIDClient::signSuccess, this, &AuthSignManager::onSignSuccess);
+   connect(autheIDClient_.get(), &AutheIDClient::failed, this, &AuthSignManager::onFailed);
 }
 
 AuthSignManager::~AuthSignManager() = default;
@@ -28,7 +28,7 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
 {
    callbacks_ = { onSigned, onSignFailed };
    try {
-      mobileClient_->connect(appSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
+      autheIDClient_->connect(appSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
          , appSettings_->get<std::string>(ApplicationSettings::authServerHost)
          , appSettings_->get<std::string>(ApplicationSettings::authServerPort));
    }
@@ -41,7 +41,7 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
    }
    const auto &userId = celerClient_->userName();
    logger_->debug("[{}] sending sign {} request to {}", __func__, title.toStdString(), userId);
-   if (!mobileClient_->sign(dataToSign, userId, title, desc, expiration)) {
+   if (!autheIDClient_->sign(dataToSign, userId, title, desc, expiration)) {
       if (onSignFailed) {
          onSignFailed(tr("Failed to sign with Auth eID"));
       }
