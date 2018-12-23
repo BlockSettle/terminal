@@ -27,6 +27,7 @@ from build_scripts.openssl_settings       import OpenSslSettings
 from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
+from build_scripts.cppjwt_settings        import CppJwtSettings
 
 def generate_project(build_mode, build_server, build_test_tools):
    project_settings = Settings(build_mode)
@@ -57,6 +58,7 @@ def generate_project(build_mode, build_server, build_test_tools):
       LibChaCha20Poly1305Settings(project_settings),
       WebsocketsSettings(project_settings),
       BotanSettings(project_settings),
+      CppJwtSettings(project_settings),
       ]
 
    if build_test_tools:
