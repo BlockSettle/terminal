@@ -17,12 +17,10 @@
 
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                        , const std::shared_ptr<ApplicationSettings> &appSettings
-                       , const std::shared_ptr<spdlog::logger>& logger
-                       , const std::string& serverPublicKey)
+                       , const std::shared_ptr<spdlog::logger>& logger)
     : connectionManager_(connectionManager)
     , appSettings_(appSettings)
     , logger_(logger)
-    , serverPublicKey_(serverPublicKey)
     , heartbeatTimer_(new QTimer(this))
 {
     connectionManager_ = std::make_shared<ConnectionManager>(logger_);
@@ -35,21 +33,21 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 }
 
 
-void ChatClient::loginToServer(const std::string& hostname, const std::string& port
-    , const std::string& login/*, const std::string& password*/)
+void ChatClient::loginToServer(const std::string& email)
 {
     if (connection_) {
        logger_->error("[ChatClient::loginToServer] connecting with not purged connection");
        return;
     }
 
-    auto bytesHash = autheid::getSHA256(login.c_str(), login.size());
+    auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
     currentUserId_ = Botan::base64_encode(bytesHash.data(), 8);
     currentChatId_ = currentUserId_;
 
     connection_ = connectionManager_->CreateSecuredDataConnection();
-    connection_->SetServerPublicKey(serverPublicKey_);
-    if (!connection_->openConnection(hostname, port, this))
+    connection_->SetServerPublicKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
+    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
+                                     , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
     {
         logger_->error("[ChatClient::loginToServer] failed to open ZMQ data connection");
         connection_.reset();

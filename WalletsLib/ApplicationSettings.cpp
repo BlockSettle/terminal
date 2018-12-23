@@ -97,6 +97,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { mdServerPort,            SettingDef(QString(), 16005) },
       { chatServerHost,          SettingDef(QString(), QLatin1String("185.213.153.45")) },
       { chatServerPort,          SettingDef(QString(), 9400) },
+      { chatServerPubKey,        SettingDef(QString(), QLatin1String("@:2IFYqVXa}+eRpKW9Q310j4cB%%nKe8$-v6bSOg")) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
       { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },

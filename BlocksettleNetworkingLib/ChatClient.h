@@ -34,8 +34,7 @@ class ChatClient : public QObject
 public:
     ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                , const std::shared_ptr<ApplicationSettings> &appSettings
-               , const std::shared_ptr<spdlog::logger>& logger
-               , const std::string& serverPublicKey);
+               , const std::shared_ptr<spdlog::logger>& logger);
 
     ~ChatClient() noexcept override = default;
 
@@ -45,8 +44,7 @@ public:
     ChatClient(ChatClient&&) = delete;
     ChatClient& operator = (ChatClient&&) = delete;
 
-    void loginToServer(const std::string& hostname, const std::string& port
-        , const std::string& login/*, const std::string& password*/);
+    void loginToServer(const std::string& email);
 
     void logout();
 
@@ -87,7 +85,6 @@ private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
-   std::string                            serverPublicKey_;
 
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 

@@ -53,6 +53,7 @@ public:
       mdServerPort,
       chatServerHost,
       chatServerPort,
+      chatServerPubKey,
       celerUsername,
       signerHost,
       signerPort,

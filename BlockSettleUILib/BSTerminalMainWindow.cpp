@@ -89,10 +89,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UiUtils::setupIconFont(this);
    NotificationCenter::createInstance(applicationSettings_, ui.get(), sysTrayIcon_, this);
 
-   chatServer_ = std::make_shared<ChatServer>(nullptr
-                                              , applicationSettings_
-                                              , logMgr_->logger("ChatServer"));
-   chatServer_->startServer("127.0.0.1", "20001");
+//   chatServer_ = std::make_shared<ChatServer>(nullptr
+//                                              , applicationSettings_
+//                                              , logMgr_->logger("ChatServer"));
+//   chatServer_->startServer("127.0.0.1", "20001");
 
    InitConnections();
 
@@ -550,7 +550,7 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitChatView()
 {
-    ui->widgetChat->init(chatServer_, connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+    ui->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
 }
 
 // Initialize widgets related to transactions.

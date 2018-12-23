@@ -49,8 +49,7 @@ public:
     explicit ChatWidget(QWidget *parent = nullptr);
     ~ChatWidget();
 
-    void init(const std::shared_ptr<ChatServer>& chatServer
-              , const std::shared_ptr<ConnectionManager>& connectionManager
+    void init(const std::shared_ptr<ConnectionManager>& connectionManager
               , const std::shared_ptr<ApplicationSettings> &appSettings
               , const std::shared_ptr<spdlog::logger>& logger);
 

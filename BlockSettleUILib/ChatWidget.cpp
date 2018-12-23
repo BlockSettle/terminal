@@ -4,6 +4,7 @@
 #include "ChatClient.h"
 #include "ChatServer.h"
 #include "ChatUsersViewModel.h"
+#include "ApplicationSettings.h"
 
 #include <thread>
 #include <spdlog/spdlog.h>
@@ -11,9 +12,9 @@
 #include <QDebug>
 
 
-ChatWidget::ChatWidget(QWidget *parent) :
-    QWidget(parent),
-    ui_(new Ui::ChatWidget)
+ChatWidget::ChatWidget(QWidget *parent)
+    : QWidget(parent)
+    , ui_(new Ui::ChatWidget)
 {
     ui_->setupUi(this);
 }
@@ -24,19 +25,15 @@ ChatWidget::~ChatWidget()
 }
 
 
-void ChatWidget::init(const std::shared_ptr<ChatServer>& chatServer
-                      , const std::shared_ptr<ConnectionManager>& connectionManager
+void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
                       , const std::shared_ptr<ApplicationSettings> &appSettings
                       , const std::shared_ptr<spdlog::logger>& logger)
 {
     logger_ = logger;
-    server_ = chatServer;
-    serverPublicKey_ = server_->getPublicKey();
 
     client_ = std::make_shared<ChatClient>(connectionManager
                                            , appSettings
-                                           , logger
-                                           , serverPublicKey_);
+                                           , logger);
 
     usersViewModel_.reset(new ChatUsersViewModel());
     ui_->treeViewUsers->setModel(usersViewModel_.get());
@@ -87,7 +84,7 @@ void ChatWidget::setUserName(const QString& username)
     {
         logger_->debug("Set user name {}", username.toStdString());
         usersViewModel_->clear();
-        client_->loginToServer("127.0.0.1", "20001", username.toStdString());
+        client_->loginToServer(username.toStdString());
         ui_->stackedWidget->setCurrentIndex(1);
     }
     catch (std::exception& e)

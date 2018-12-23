@@ -25,8 +25,8 @@ ChatServer::ChatServer(const std::shared_ptr<ConnectionManager>& connectionManag
 
     connection_->SetKeyPair(publicKey_, privateKey_);
 
-    qDebug() << "ChatServer constructed! Public Key: "
-             << publicKey_.c_str() << " Private Key:" << privateKey_.c_str();
+    logger_->debug("Chat server started.");
+
 }
 
 
@@ -38,29 +38,22 @@ std::string ChatServer::getPublicKey() const
 
 void ChatServer::generateKeys()
 {
-    char pubKey[41];
-    char prKey[41];
+//    char pubKey[41];
+//    char prKey[41];
 
-    int result = zmq_curve_keypair(pubKey, prKey);
-    if (result != 0) {
-       if (logger_) {
-          logger_->error("[ZmqSecuredDataConnection::SetServerPublicKey] failed to generate key pair: {}"
-             , zmq_strerror(zmq_errno()));
-       }
-    }
+//    int result = zmq_curve_keypair(pubKey, prKey);
+//    if (result != 0) {
+//       if (logger_) {
+//          logger_->error("[ZmqSecuredDataConnection::SetServerPublicKey] failed to generate key pair: {}"
+//             , zmq_strerror(zmq_errno()));
+//       }
+//    }
 
-    publicKey_ = std::string(pubKey, 40);
-    privateKey_ = std::string(prKey, 40);
+//    publicKey_ = std::string(pubKey, 40);
+//    privateKey_ = std::string(prKey, 40);
 
-//    auto authPrivKey = autheid::generateSecureRandom(40);
-//    const std::string sPrivKey(authPrivKey.begin(), authPrivKey.end());
-//    privateKey_ = BinaryData(sPrivKey).toHexStr();
-
-//    qDebug() << "Generated private key:" << privateKey_.c_str() << "length=" << privateKey_.size();
-
-//    auto authPubKey = autheid::getPublicKey(authPrivKey);
-//    const std::string sPubKey(authPubKey.begin(), authPubKey.end());
-//    publicKey_ = BinaryData(sPubKey).toHexStr();
+    publicKey_  = "@:2IFYqVXa}+eRpKW9Q310j4cB%%nKe8$-v6bSOg";
+    privateKey_ = "uPwwR001@P:Ik!]PxnPw1{hdzJxh7hG5}IUK%oJ6";
 
     qDebug() << "Generated public key:" << publicKey_.c_str() << "length=" << publicKey_.size();
 }
