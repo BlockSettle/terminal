@@ -11,7 +11,7 @@ namespace spdlog {
 }
 class ApplicationSettings;
 class CelerClient;
-class MobileClient;
+class AutheIDClient;
 class SecureBinaryData;
 
 
@@ -43,7 +43,7 @@ private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<CelerClient>           celerClient_;
-   std::unique_ptr<MobileClient>          mobileClient_;
+   std::unique_ptr<AutheIDClient>          autheIDClient_;
    std::pair<SignedCb, SignFailedCb>      callbacks_{nullptr, nullptr};
 };
 

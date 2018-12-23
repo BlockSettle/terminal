@@ -21,6 +21,8 @@ public:
    QString getUsername() const;
    QString getPassword() const;
 
+   bool isAutheID() const { return autheID_; }
+
 private slots:
    void onLoginPressed();
    void onTextChanged();
@@ -33,6 +35,7 @@ private slots:
 private:
    std::unique_ptr<Ui::LoginWindow> ui_;
    std::shared_ptr<ApplicationSettings> settings_;
+   bool autheID_;
 };
 
 #endif // __LOGIN_WINDOW_H__
