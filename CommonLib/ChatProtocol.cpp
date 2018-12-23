@@ -20,6 +20,7 @@ static const QString FromKey        = QStringLiteral("from");
 static const QString ContactsKey    = QStringLiteral("fromid");
 static const QString IdKey          = QStringLiteral("id");
 static const QString AuthIdKey      = QStringLiteral("authid");
+static const QString JwtKey         = QStringLiteral("jwt");
 static const QString PasswordKey    = QStringLiteral("passwd");
 static const QString ReceiverIdKey  = QStringLiteral("toid");
 static const QString SenderIdKey    = QStringLiteral("fromid");
@@ -294,10 +295,10 @@ void MessagesResponse::handle(ResponseHandler& handler)
 
 LoginRequest::LoginRequest(const std::string& clientId
                            , const std::string& authId
-                           , const std::string& password)
+                           , const std::string& jwt)
     : Request (RequestType::RequestLogin, clientId)
     , authId_(authId)
-    , password_(password)
+    , jwt_(jwt)
 {
 
 }
@@ -308,7 +309,7 @@ QJsonObject LoginRequest::toJson() const
     QJsonObject data = Request::toJson();
 
     data[AuthIdKey] = QString::fromStdString(authId_);
-    data[PasswordKey] = QString::fromStdString(password_);
+    data[JwtKey] = QString::fromStdString(jwt_);
 
     return data;
 }

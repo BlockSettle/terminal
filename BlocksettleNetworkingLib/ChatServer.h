@@ -73,6 +73,8 @@ private:
    std::string privateKey_;
    std::string publicKey_;
 
+   std::string publicKeyAutheID_;
+
    std::map<std::string, bool>      clientsOnline_;
    std::vector<Chat::MessageData>   messages_;
 

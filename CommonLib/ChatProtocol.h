@@ -146,17 +146,17 @@ namespace Chat
 
         LoginRequest(const std::string& clientId
                      , const std::string& authId
-                     , const std::string& password);
+                     , const std::string& jwt);
         QJsonObject toJson() const override;
 
         void handle(RequestHandler& handler) override;
 
         std::string getAuthId() const { return authId_; }
-        std::string getPassword() const { return password_; }
+        std::string getJWT() const { return jwt_; }
 
     private:
         std::string authId_;
-        std::string password_;
+        std::string jwt_;
     };
 
 

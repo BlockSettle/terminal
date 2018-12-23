@@ -482,7 +482,6 @@ void BSTerminalMainWindow::InitConnections()
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
 
-   std::cout << "Init Chat Widget!" << std::endl;
    InitChatView();
 }
 
@@ -903,7 +902,6 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
       auto userName = QString::fromStdString(username);
       currentUserLogin_ = userName;
       ui->widgetWallets->setUsername(userName);
-      ui->widgetChat->setUserName(userName);
       action_logout_->setVisible(false);
       action_login_->setEnabled(false);
 
@@ -915,7 +913,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
 
 void BSTerminalMainWindow::onAutheIDDone(const std::string& jwt)
 {
-   ui->widgetChat->setUserName(currentUserLogin_);
+   ui->widgetChat->login(currentUserLogin_.toStdString(), jwt);
 
    std::string username = "celertest.customer_601@mailinator.com";
    std::string password = "celertest.customer_601@mailinator.com";

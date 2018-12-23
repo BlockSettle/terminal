@@ -53,9 +53,7 @@ public:
               , const std::shared_ptr<ApplicationSettings> &appSettings
               , const std::shared_ptr<spdlog::logger>& logger);
 
-    void setUserName(const QString& username);
-
-    void setUserId(const QString& userId);
+    void login(const std::string& email, const std::string& jwt);
 
     void logout();
 

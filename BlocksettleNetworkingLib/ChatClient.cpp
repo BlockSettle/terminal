@@ -33,8 +33,14 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 }
 
 
-void ChatClient::loginToServer(const std::string& email)
-{
+void ChatClient::loginToServer(const std::string& email, const std::string& jwt)
+{    
+    if (jwt.empty())
+    {
+        logger_->error("[ChatClient::loginToServer] Login failed. Empty JWT provided ...");
+        return;
+    }
+
     if (connection_) {
        logger_->error("[ChatClient::loginToServer] connecting with not purged connection");
        return;
@@ -46,14 +52,14 @@ void ChatClient::loginToServer(const std::string& email)
 
     connection_ = connectionManager_->CreateSecuredDataConnection();
     connection_->SetServerPublicKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
-    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
+    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)/*"127.0.0.1"*/
                                      , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
     {
         logger_->error("[ChatClient::loginToServer] failed to open ZMQ data connection");
         connection_.reset();
     }
 
-    auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, "");
+    auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, jwt);
     sendRequest(loginRequest);
 
     auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", currentUserId_);

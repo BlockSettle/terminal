@@ -55,6 +55,14 @@ void ChatServer::generateKeys()
     publicKey_  = "@:2IFYqVXa}+eRpKW9Q310j4cB%%nKe8$-v6bSOg";
     privateKey_ = "uPwwR001@P:Ik!]PxnPw1{hdzJxh7hG5}IUK%oJ6";
 
+    publicKeyAutheID_ = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv4wt5SHJdlq4ru51yOyo\
+RgWqot7fkmd8Ud8+8mApgSl0s5kAf8NndeErR80jv8TtNjSIA6F61BTewaBg1aLT\
+sudhCaQZJNKxeQbSLCuabP3WqZa7YFkMpUwLIJV5Cp9cYrxXlnuYyp02RUnAk39n\
+UYXoCNJPt1AJPTzn4nz4UGf2qHW9WaUF5PAqe70cOyi3iGzfObRy1RRpDKgTs6SW\
+NnHspIxatnxISdffMNyXt7ud/OxtylIGDAN+Jj+FawWRoou5aSKUrBUe1SbdK+D4\
+Ktb20AgzmDEkIjgqDVwf8SRnH+Q2qduBRSlV/n2bGx6bYHOMvWy5b9MYkMD+GuLC\
+gwIDAQAB";
+
     qDebug() << "Generated public key:" << publicKey_.c_str() << "length=" << publicKey_.size();
 }
 
@@ -79,6 +87,10 @@ void ChatServer::OnLogin(Chat::LoginRequest& request)
     logger_->debug("[ChatServer::OnLogin] \"{}\"", request.getAuthId());
 
     clientsOnline_[request.getAuthId()] = true;
+
+    logger_->debug("Requested verification of JWT: {}", request.getJWT());
+
+    logger_->debug("Verification key: {}", appSettings_->get<std::string>(ApplicationSettings::authServerPubKey));
 }
 
 
@@ -144,6 +156,7 @@ void ChatServer::startServer(const std::string& hostname, const std::string& por
     if (!connection_->BindConnection(hostname, port, this))
     {
         logger_->error("Error Binding connection \"{0}\" : \"{1}\" ...", hostname.c_str(), port.c_str());
+        return;
     }
 
     logger_->debug("[ChatServer::startServer] Started successfully");

@@ -78,13 +78,13 @@ void ChatWidget::onSendButtonClicked()
 }
 
 
-void ChatWidget::setUserName(const QString& username)
+void ChatWidget::login(const std::string& email, const std::string& jwt)
 {
     try
     {
-        logger_->debug("Set user name {}", username.toStdString());
+        logger_->debug("Set user name {}", email);
         usersViewModel_->clear();
-        client_->loginToServer(username.toStdString());
+        client_->loginToServer(email, jwt);
         ui_->stackedWidget->setCurrentIndex(1);
     }
     catch (std::exception& e)
@@ -96,12 +96,6 @@ void ChatWidget::setUserName(const QString& username)
         logger_->error("Unknown error ...");
     }
 
-}
-
-
-void ChatWidget::setUserId(const QString& userId)
-{
-    logger_->debug("Set user ID {}", userId.toStdString());
 }
 
 
