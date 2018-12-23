@@ -58,7 +58,7 @@ struct TransactionsViewItem
    std::string id() const;
 
 private:
-   std::set<BinaryData>       txHashes;
+   bool     txHashesReceived{ false };
    std::map<BinaryData, Tx>   txIns;
    mutable std::string        id_;
 };

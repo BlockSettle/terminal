@@ -561,17 +561,17 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
       }
       else {
          if (addGetTxCallback(hash, cbUpdateTx)) {
-            return true;
+            continue;
          }
          bdv_->getTxByHash(hash, [this, hash](ReturnMessage<Tx> tx)->void {
             try {
                auto retTx = tx.get();
                callGetTxCallbacks(hash, retTx);
             }
-            catch(std::exception& e) {
-               // Switch endian on print to RPC byte order
+            catch (const std::exception &e) {
                logger_->error("[{}] Return data error - {} - Hash {}", __func__
                               , e.what(), hash.toHexStr(true));
+               callGetTxCallbacks(hash, {});
             }
          });
       }
