@@ -98,18 +98,19 @@ void ChatServer::OnLogin(Chat::LoginRequest& request)
 
 void ChatServer::OnSendMessage(Chat::SendMessageRequest& request)
 {
-    Chat::MessageData msgData = Chat::MessageData::fromJSON(request.getMessageData());
+    auto message = Chat::MessageData::fromJSON(request.getMessageData());
 
-    std::string senderId = msgData.getSenderId().toStdString();
-    std::string receiverId = msgData.getReceiverId().toStdString();
+    std::string senderId = message->getSenderId().toStdString();
+    std::string receiverId = message->getReceiverId().toStdString();
 
     logger_->debug("Received message from client: \"{0}\": \"{1}\""
                    , senderId
-                   , msgData.getMessageData().toStdString());
+                   , message->getMessageData().toStdString());
 
     clientsOnline_[senderId] = true;
 
-    auto message = Chat::MessageData::fromJSON(request.getMessageData());
+    messagesBySender_.insert(std::make_pair(senderId, message));
+    messagesByReceiver_.insert(std::make_pair(receiverId, message));
     messages_.push_back(message);
 }
 
@@ -139,14 +140,30 @@ void ChatServer::OnRequestMessages(Chat::MessagesRequest& request)
 
     std::vector<std::string> responseMessages;
 
-    std::for_each(messages_.begin(), messages_.end(), [&](const Chat::MessageData& msg) {
-        if ((msg.getSenderId().toStdString() == request.getSenderId()
-                && msg.getReceiverId().toStdString() == request.getReceiverId())
-                || (msg.getSenderId().toStdString() == request.getReceiverId()
-                && msg.getReceiverId().toStdString() == request.getSenderId())) {
-            responseMessages.push_back(msg.toJsonString());
+    std::set<std::shared_ptr<Chat::MessageData>> messagesFiltered;
+    auto insertLambda = [&](MessagesByUserT::value_type& value) {
+        auto msg = value.second;
+        if ((msg->getSenderId().toStdString() == request.getSenderId()
+                && msg->getReceiverId().toStdString() == request.getReceiverId())
+                || (msg->getSenderId().toStdString() == request.getReceiverId()
+                && msg->getReceiverId().toStdString() == request.getSenderId())) {
+            if (messagesFiltered.insert(msg).second) {
+                responseMessages.push_back(msg->toJsonString());
+            }
         }
-    });
+    };
+
+    auto searchItBeginEnd = messagesBySender_.equal_range(request.getSenderId());
+    std::for_each(searchItBeginEnd.first, searchItBeginEnd.second, insertLambda);
+
+    searchItBeginEnd = messagesBySender_.equal_range(request.getReceiverId());
+    std::for_each(searchItBeginEnd.first, searchItBeginEnd.second, insertLambda);
+
+    searchItBeginEnd = messagesByReceiver_.equal_range(request.getReceiverId());
+    std::for_each(searchItBeginEnd.first, searchItBeginEnd.second, insertLambda);
+
+    searchItBeginEnd = messagesByReceiver_.equal_range(request.getSenderId());
+    std::for_each(searchItBeginEnd.first, searchItBeginEnd.second, insertLambda);
 
     auto messagesResponse = std::make_shared<Chat::MessagesResponse>(std::move(responseMessages));
     sendResponse(request.getClientId(), messagesResponse);

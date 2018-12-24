@@ -20,6 +20,9 @@ class ZmqSecuredServerConnection;
 class ApplicationSettings;
 
 
+typedef std::multimap<std::string, std::shared_ptr<Chat::MessageData>> MessagesByUserT;
+
+
 class ChatServer : public ServerConnectionListener
                  , public Chat::RequestHandler
 {
@@ -75,8 +78,10 @@ private:
 
    std::string publicKeyAutheID_;
 
-   std::map<std::string, bool>      clientsOnline_;
-   std::vector<Chat::MessageData>   messages_;
+   std::map<std::string, bool>  clientsOnline_;
+   MessagesByUserT              messagesBySender_;
+   MessagesByUserT              messagesByReceiver_;
+   std::vector<std::shared_ptr<Chat::MessageData>> messages_;
 
 };
 
