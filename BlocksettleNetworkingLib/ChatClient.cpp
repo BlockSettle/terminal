@@ -115,7 +115,7 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
    QList<QString> usersList;
    foreach(auto userId, users) {
 
-      emit OnUserUpdate(QString::fromStdString(userId));
+      emit UserUpdate(QString::fromStdString(userId));
    }
 }
 
@@ -139,9 +139,9 @@ void ChatClient::OnMessages(Chat::MessagesResponse& response)
 
       auto receivedMessage = Chat::MessageData::fromJSON(msgData);
 
-      emit OnMessageUpdate(receivedMessage->getDateTime()
+      emit MessageUpdate(receivedMessage->getDateTime()
                       , prependMessage(receivedMessage->getMessageData()
-                                   , receivedMessage->getSenderId()));
+                      , receivedMessage->getSenderId()));
    });
 }
 
@@ -173,7 +173,7 @@ void ChatClient::OnError(DataConnectionError errorCode)
 }
 
 
-void ChatClient::sendMessage(const QString& message)
+void ChatClient::onSendMessage(const QString& message)
 {
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
@@ -187,7 +187,7 @@ void ChatClient::sendMessage(const QString& message)
 }
 
 
-void ChatClient::setCurrentPrivateChat(const QString& userId)
+void ChatClient::onSetCurrentPrivateChat(const QString& userId)
 {
    currentChatId_ = userId.toStdString();
    logger_->debug("Current chat changed: {}", currentChatId_);

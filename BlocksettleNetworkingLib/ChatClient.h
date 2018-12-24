@@ -67,18 +67,17 @@ private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
 signals:
-   void OnConnectedToServer();
-   void OnConnectionClosed();
-   void OnConnectionError(int errorCode);
-   void OnUsersListUpdated(const QList<QString>& usersList);
-   void OnUserUpdate(const QString& userId);
-   void OnMessageUpdate(const QDateTime& dateTime, const QString& text);
+   void ConnectedToServer();
+   void ConnectionClosed();
+   void ConnectionError(int errorCode);
+   void UserUpdate(const QString& userId);
+   void MessageUpdate(const QDateTime& dateTime, const QString& text);
 
 
 public slots:
 
-   void sendMessage(const QString& message);
-   void setCurrentPrivateChat(const QString& userId);
+   void onSendMessage(const QString& message);
+   void onSetCurrentPrivateChat(const QString& userId);
 
 
 private:

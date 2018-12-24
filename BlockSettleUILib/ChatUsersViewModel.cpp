@@ -45,10 +45,12 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 }
 
 
-void ChatUsersViewModel::clear()
+void ChatUsersViewModel::onClear()
 {
+   beginResetModel();
    indexByUser_.clear();
    userByIndex_.clear();
+   endResetModel();
 }
 
 

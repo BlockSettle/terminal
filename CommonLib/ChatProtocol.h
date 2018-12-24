@@ -93,7 +93,7 @@ namespace Chat
          : Message<ResponseType> (responseType)
       {
       }
-      virtual ~Response() override = default;
+      ~Response() override = default;
       virtual std::string getData() const;
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);

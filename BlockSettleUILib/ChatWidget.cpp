@@ -38,13 +38,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    messagesViewModel_.reset(new ChatMessagesViewModel());
    ui_->tableViewMessages->setModel(messagesViewModel_.get());
 
-   connect(client_.get(), &ChatClient::OnUserUpdate
+   connect(client_.get(), &ChatClient::UserUpdate
            , usersViewModel_.get(), &ChatUsersViewModel::onUserUpdate);
 
    connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
-   connect(client_.get(), &ChatClient::OnMessageUpdate, messagesViewModel_.get()
+   connect(client_.get(), &ChatClient::MessageUpdate, messagesViewModel_.get()
                         , &ChatMessagesViewModel::onMessage);
 }
 
@@ -54,7 +54,7 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
    QString userId = usersViewModel_->resolveUser(index);
    ui_->labelActiveChat->setText(tr("Block Settle Chat #") + userId);
    messagesViewModel_->onLeaveRoom();
-   client_->setCurrentPrivateChat(userId);
+   client_->onSetCurrentPrivateChat(userId);
 }
 
 
@@ -64,7 +64,7 @@ void ChatWidget::onSendButtonClicked()
 
    if (!messageText.isEmpty())
    {
-      client_->sendMessage(messageText);
+      client_->onSendMessage(messageText);
       ui_->text->clear();
 
       messagesViewModel_->onMessage(QDateTime::currentDateTime(), client_->prependMessage(messageText));
@@ -77,7 +77,7 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
    try
    {
       logger_->debug("Set user name {}", email);
-      usersViewModel_->clear();
+      usersViewModel_->onClear();
       std::string id = client_->loginToServer(email, jwt);
       ui_->stackedWidget->setCurrentIndex(1);
       return id;

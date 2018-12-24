@@ -34,7 +34,7 @@ public:
 
 public slots:
    void onUserUpdate(const QString& userId);
-   void clear();
+   void onClear();
 
 private:
    QMap<QString, int> indexByUser_;
