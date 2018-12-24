@@ -243,8 +243,8 @@ namespace bs {
       virtual BinaryData getRootId() const = 0;
       virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
                                          , QObject *obj
-                                         , uint64_t val = UINT64_MAX
-                                         , const bool& startup = false);
+                                         , const bool& startup = false
+                                         , uint64_t val = UINT64_MAX);
       virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
                                       , QObject *obj
                                       , const bool& startup = false);

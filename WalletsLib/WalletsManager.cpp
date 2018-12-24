@@ -1037,7 +1037,13 @@ void WalletsManager::onCCInfoLoaded()
    }
 }
 
-// The initial point for processing an incoming zero conf TX.
+// The initial point for processing an incoming zero conf TX. Important notes:
+//
+// - When getting the ZC list from Armory, previous ZCs won't clear out until
+//   they have been confirmed.
+// - If a TX has multiple instances of the same address, each instance will get
+//   its own UTXO object while sharing the same UTXO hash.
+// - There's no immediate way to determine if the UTXO entry is for change.
 void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
    std::vector<bs::TXEntry> ourZCentries;

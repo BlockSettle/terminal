@@ -783,7 +783,8 @@ hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 }
 
 bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
-                                     , QObject *obj, uint64_t val, const bool& startup)
+                                     , QObject *obj, const bool& startup
+                                     , uint64_t val)
 {
    const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
       std::vector<UTXO> result;
@@ -801,7 +802,7 @@ bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
       }
       cb(result);
    };
-   return bs::Wallet::getSpendableTxOutList(cbTxOutList, obj, val, startup);
+   return bs::Wallet::getSpendableTxOutList(cbTxOutList, obj, startup, val);
 }
 
 std::string hd::Leaf::GetAddressIndex(const bs::Address &addr)
@@ -1192,11 +1193,11 @@ void hd::CCLeaf::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
    if (checker_ && !validationStarted_) {
       validationEnded_ = false;
-      validationProc();
+      validationProc(false);
    }
 }
 
-void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
+void hd::CCLeaf::refreshInvalidUTXOs(const bool& initValidation, const bool& ZConly)
 {
    {
       QMutexLocker lock(&addrMapsMtx_);
@@ -1220,7 +1221,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
          };
          findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
       };
-      hd::Leaf::getSpendableTxOutList(cbRefresh, this, false);
+      hd::Leaf::getSpendableTxOutList(cbRefresh, this, initValidation);
    }
 
    const auto &cbRefreshZC = [this](std::vector<UTXO> utxos) {
@@ -1237,10 +1238,10 @@ void hd::CCLeaf::refreshInvalidUTXOs(bool ZConly)
       };
       findInvalidUTXOs(utxos, cbUpdateZcBalance);
    };
-   hd::Leaf::getSpendableZCList(cbRefreshZC, this, false);
+   hd::Leaf::getSpendableZCList(cbRefreshZC, this, initValidation);
 }
 
-void hd::CCLeaf::validationProc()
+void hd::CCLeaf::validationProc(const bool& initValidation)
 {
    validationStarted_ = true;
    if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
@@ -1248,7 +1249,7 @@ void hd::CCLeaf::validationProc()
       return;
    }
    validationEnded_ = true;
-   refreshInvalidUTXOs();
+   refreshInvalidUTXOs(initValidation);
    hd::Leaf::firstInit();
 
    if (!validationStarted_) {
@@ -1381,8 +1382,8 @@ void hd::CCLeaf::firstInit(bool force)
       validationStarted_ = false;
    }
    if (checker_ && !validationStarted_) {
-      validationEnded_ = false;
-      validationProc();
+//      validationEnded_ = false;
+      validationProc(true);
    }
 }
 
@@ -1396,7 +1397,7 @@ void hd::CCLeaf::onStateChanged(ArmoryConnection::State state)
 void hd::CCLeaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
    hd::Leaf::onZeroConfReceived(reqId);
-   refreshInvalidUTXOs(true);
+   refreshInvalidUTXOs(false, true);
 }
 
 std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
@@ -1411,8 +1412,8 @@ std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
 }
 
 bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
-                                       , QObject *obj, uint64_t val
-                                       , const bool& startup)
+                                       , QObject *obj, const bool& startup
+                                       , uint64_t val)
 {
    if (validationStarted_ && !validationEnded_) {
       return false;
@@ -1420,7 +1421,7 @@ bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
    const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
       cb(filterUTXOs(txOutList));
    };
-   return hd::Leaf::getSpendableTxOutList(cbTxOutList, obj, val, startup);
+   return hd::Leaf::getSpendableTxOutList(cbTxOutList, obj, startup, val);
 }
 
 bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
