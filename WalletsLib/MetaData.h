@@ -228,7 +228,7 @@ namespace bs {
          logger_ = logger;
       }
 
-      virtual void addZCUTXOForFilter(UTXO& newZCUTXO) { zcUTXOs_.push_back(newZCUTXO); }
+      virtual void addZCUTXOForFilter(const UTXO &newZCUTXO) { zcUTXOs_.push_back(newZCUTXO); }
 
       bool operator ==(const Wallet &w) const { return (w.GetWalletId() == GetWalletId()); }
       bool operator !=(const Wallet &w) const { return (w.GetWalletId() != GetWalletId()); }
