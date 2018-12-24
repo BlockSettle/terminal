@@ -12,18 +12,18 @@
 
 class ChatMessagesViewModel : public QAbstractTableModel
 {
-    Q_OBJECT
+   Q_OBJECT
 
 public:
 
-    ChatMessagesViewModel(QObject* parent = nullptr);
-    ~ChatMessagesViewModel() noexcept override = default;
+   ChatMessagesViewModel(QObject* parent = nullptr);
+   ~ChatMessagesViewModel() noexcept override = default;
 
-    ChatMessagesViewModel(const ChatMessagesViewModel&) = delete;
-    ChatMessagesViewModel& operator = (const ChatMessagesViewModel&) = delete;
+   ChatMessagesViewModel(const ChatMessagesViewModel&) = delete;
+   ChatMessagesViewModel& operator = (const ChatMessagesViewModel&) = delete;
 
-    ChatMessagesViewModel(ChatMessagesViewModel&&) = delete;
-    ChatMessagesViewModel& operator = (ChatMessagesViewModel&&) = delete;
+   ChatMessagesViewModel(ChatMessagesViewModel&&) = delete;
+   ChatMessagesViewModel& operator = (ChatMessagesViewModel&&) = delete;
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;

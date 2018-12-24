@@ -1,5 +1,5 @@
-#ifndef CHATWIDGET_H
-#define CHATWIDGET_H
+#ifndef __CHAT_WIDGET_H__
+#define __CHAT_WIDGET_H__
 
 #include <QWidget>
 #include <QStringListModel>
@@ -10,59 +10,56 @@
 
 
 namespace Ui {
-    class ChatWidget;
+   class ChatWidget;
 }
 
 
 namespace spdlog {
-    class logger;
+   class logger;
 }
 
 
 class ChatClient;
-class ChatServer;
 class ConnectionManager;
 class ApplicationSettings;
 
 
 class ChatWidget : public QWidget
 {
-    Q_OBJECT
+   Q_OBJECT
 
 
 private:
 
-    QScopedPointer<Ui::ChatWidget> ui_;
-    QScopedPointer<ChatUsersViewModel> usersViewModel_;
-    QScopedPointer<ChatMessagesViewModel> messagesViewModel_;
+   QScopedPointer<Ui::ChatWidget> ui_;
+   QScopedPointer<ChatUsersViewModel> usersViewModel_;
+   QScopedPointer<ChatMessagesViewModel> messagesViewModel_;
 
-    std::shared_ptr<ChatClient> client_;
-    std::shared_ptr<ChatServer> server_;
+   std::shared_ptr<ChatClient>      client_;
+   std::shared_ptr<spdlog::logger>  logger_;
 
-    std::shared_ptr<spdlog::logger> logger_;
-
-    std::string serverPublicKey_;
+   std::string serverPublicKey_;
 
 
 public:
 
-    explicit ChatWidget(QWidget *parent = nullptr);
-    ~ChatWidget();
+   explicit ChatWidget(QWidget *parent = nullptr);
+   ~ChatWidget() override;
 
-    void init(const std::shared_ptr<ConnectionManager>& connectionManager
-              , const std::shared_ptr<ApplicationSettings> &appSettings
-              , const std::shared_ptr<spdlog::logger>& logger);
+   void init(const std::shared_ptr<ConnectionManager>& connectionManager
+           , const std::shared_ptr<ApplicationSettings> &appSettings
+           , const std::shared_ptr<spdlog::logger>& logger);
 
-    std::string login(const std::string& email, const std::string& jwt);
+   std::string login(const std::string& email, const std::string& jwt);
 
-    void logout();
+   void logout();
 
 
 private slots:
 
-    void onSendButtonClicked();
-    void onUserDoubleClicked(const QModelIndex& index);
+   void onSendButtonClicked();
+   void onUserClicked(const QModelIndex& index);
 
 };
 
-#endif // CHATWIDGET_H
+#endif // __CHAT_WIDGET_H__

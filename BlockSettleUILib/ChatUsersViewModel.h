@@ -11,19 +11,19 @@
 
 class ChatUsersViewModel : public QAbstractTableModel
 {
-    Q_OBJECT
+   Q_OBJECT
 
 public:
-    ChatUsersViewModel(QObject* parent = nullptr);
-    ~ChatUsersViewModel() noexcept override = default;
+   ChatUsersViewModel(QObject* parent = nullptr);
+   ~ChatUsersViewModel() noexcept override = default;
 
-    ChatUsersViewModel(const ChatUsersViewModel&) = delete;
-    ChatUsersViewModel& operator = (const ChatUsersViewModel&) = delete;
+   ChatUsersViewModel(const ChatUsersViewModel&) = delete;
+   ChatUsersViewModel& operator = (const ChatUsersViewModel&) = delete;
 
-    ChatUsersViewModel(ChatUsersViewModel&&) = delete;
-    ChatUsersViewModel& operator = (ChatUsersViewModel&&) = delete;
+   ChatUsersViewModel(ChatUsersViewModel&&) = delete;
+   ChatUsersViewModel& operator = (ChatUsersViewModel&&) = delete;
 
-    QString resolveUser(const QModelIndex& index);
+   QString resolveUser(const QModelIndex& index);
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;

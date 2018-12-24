@@ -65,9 +65,6 @@ static const QString ArmoryDefaultIP = QLatin1String("127.0.0.1");
 static const int ArmoryDefaultMainPort = 9001;
 static const int ArmoryDefaultTestPort = 19001;
 
-static const QString ChatServerHost = QLatin1String("chatServerHost");
-static const QString ChatServerPort = QLatin1String("chatServerPort");
-
 
 ApplicationSettings::ApplicationSettings(const QString &appName
    , const QString& rootDir)
@@ -307,8 +304,6 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    parser.addOption({ armoryDBIPName, armoryDBIPHelp, QLatin1String("dbip") });
    parser.addOption({ armoryDBPortName, armoryDBPortHelp, QLatin1String("dbport") });
    parser.addOption({ nonSpendZeroConfName, nonSpendZeroConfHelp });
-   parser.addOption({ ChatServerPort, QLatin1String(""), QLatin1String("chatServerPort") });
-   parser.addOption({ ChatServerHost, QLatin1String(""), QLatin1String("chatServerHost") });
 
    if (!parser.parse(argList)) {
       errorText_ = parser.errorText();
@@ -354,14 +349,6 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    }
    set(ignoreAllZC, parser.isSet(nonSpendZeroConfName));
 
-   if (parser.isSet(ChatServerHost)) {
-      set(chatServerHost, parser.value(ChatServerHost));
-   }
-
-   if (parser.isSet(ChatServerPort)) {
-      set(chatServerPort, parser.value(ChatServerPort));
-   }
-
    settings_.sync();
 
    return true;
@@ -384,9 +371,6 @@ void ApplicationSettings::SetDefaultSettings(bool toFile)
    reset(minimizeToTray, toFile);
    reset(closeToTray, toFile);
    reset(notifyOnTX, toFile);
-
-   reset(chatServerHost, toFile);
-   reset(chatServerPort, toFile);
 
    reset(logDefault);
    reset(logMessages);

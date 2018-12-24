@@ -9,189 +9,189 @@
 using namespace Chat;
 
 
-static const QString VersionKey     = QStringLiteral("version");
-static const QString NameKey        = QStringLiteral("name");
-static const QString TypeKey        = QStringLiteral("type");
-static const QString TextKey        = QStringLiteral("text");
-static const QString RoomKey        = QStringLiteral("room");
-static const QString RoomsKey       = QStringLiteral("rooms");
-static const QString MessageKey     = QStringLiteral("message");
-static const QString FromKey        = QStringLiteral("from");
-static const QString ContactsKey    = QStringLiteral("fromid");
-static const QString IdKey          = QStringLiteral("id");
-static const QString AuthIdKey      = QStringLiteral("authid");
-static const QString JwtKey         = QStringLiteral("jwt");
-static const QString PasswordKey    = QStringLiteral("passwd");
+static const QString VersionKey    = QStringLiteral("version");
+static const QString NameKey      = QStringLiteral("name");
+static const QString TypeKey      = QStringLiteral("type");
+static const QString TextKey      = QStringLiteral("text");
+static const QString RoomKey      = QStringLiteral("room");
+static const QString RoomsKey      = QStringLiteral("rooms");
+static const QString MessageKey    = QStringLiteral("message");
+static const QString FromKey      = QStringLiteral("from");
+static const QString ContactsKey   = QStringLiteral("fromid");
+static const QString IdKey        = QStringLiteral("id");
+static const QString AuthIdKey     = QStringLiteral("authid");
+static const QString JwtKey       = QStringLiteral("jwt");
+static const QString PasswordKey   = QStringLiteral("passwd");
 static const QString ReceiverIdKey  = QStringLiteral("toid");
-static const QString SenderIdKey    = QStringLiteral("fromid");
-static const QString StatusKey      = QStringLiteral("status");
-static const QString UsersKey       = QStringLiteral("users");
-static const QString DateTimeKey    = QStringLiteral("datetm");
-static const QString DataKey        = QStringLiteral("data");
+static const QString SenderIdKey   = QStringLiteral("fromid");
+static const QString StatusKey     = QStringLiteral("status");
+static const QString UsersKey      = QStringLiteral("users");
+static const QString DateTimeKey   = QStringLiteral("datetm");
+static const QString DataKey      = QStringLiteral("data");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-        { "RequestHeartbeatPing"    ,   RequestType::RequestHeartbeatPing   }
-    ,   { "RequestLogin"            ,   RequestType::RequestLogin           }
-    ,   { "RequestLogout"           ,   RequestType::RequestLogout          }
-    ,   { "RequestMessages"         ,   RequestType::RequestMessages        }
-    ,   { "RequestSendMessage"      ,   RequestType::RequestSendMessage     }
-    ,   { "RequestOnlineUsers"      ,   RequestType::RequestOnlineUsers     }
+      { "RequestHeartbeatPing"   ,   RequestType::RequestHeartbeatPing   }
+   ,   { "RequestLogin"         ,   RequestType::RequestLogin         }
+   ,   { "RequestLogout"         ,   RequestType::RequestLogout        }
+   ,   { "RequestMessages"       ,   RequestType::RequestMessages      }
+   ,   { "RequestSendMessage"     ,   RequestType::RequestSendMessage    }
+   ,   { "RequestOnlineUsers"     ,   RequestType::RequestOnlineUsers    }
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-        { RequestType::RequestHeartbeatPing     ,  "RequestHeartbeatPing"   }
-    ,   { RequestType::RequestLogin             ,  "RequestLogin"           }
-    ,   { RequestType::RequestLogout            ,  "RequestLogout"          }
-    ,   { RequestType::RequestMessages          ,  "RequestMessages"        }
-    ,   { RequestType::RequestSendMessage       ,  "RequestSendMessage"     }
-    ,   { RequestType::RequestOnlineUsers       ,  "RequestOnlineUsers"     }
+      { RequestType::RequestHeartbeatPing    ,  "RequestHeartbeatPing"   }
+   ,   { RequestType::RequestLogin          ,  "RequestLogin"         }
+   ,   { RequestType::RequestLogout         ,  "RequestLogout"        }
+   ,   { RequestType::RequestMessages        ,  "RequestMessages"      }
+   ,   { RequestType::RequestSendMessage      ,  "RequestSendMessage"    }
+   ,   { RequestType::RequestOnlineUsers      ,  "RequestOnlineUsers"    }
 };
 
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-        { "ResponseError"           ,   ResponseType::ResponseError             }
-    ,   { "ResponseHeartbeatPong"   ,   ResponseType::ResponseHeartbeatPong     }
-    ,   { "ResponseLogin"           ,   ResponseType::ResponseLogin             }
-    ,   { "ResponseMessages"        ,   ResponseType::ResponseMessages          }
-    ,   { "ResponseSuccess"         ,   ResponseType::ResponseSuccess           }
-    ,   { "ResponseUsersList"       ,   ResponseType::ResponseUsersList         }
+      { "ResponseError"         ,   ResponseType::ResponseError          }
+   ,   { "ResponseHeartbeatPong"   ,   ResponseType::ResponseHeartbeatPong    }
+   ,   { "ResponseLogin"         ,   ResponseType::ResponseLogin          }
+   ,   { "ResponseMessages"      ,   ResponseType::ResponseMessages        }
+   ,   { "ResponseSuccess"       ,   ResponseType::ResponseSuccess         }
+   ,   { "ResponseUsersList"      ,   ResponseType::ResponseUsersList       }
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-        { ResponseType::ResponseError           ,  "ResponseError"             }
-    ,   { ResponseType::ResponseHeartbeatPong   ,  "ResponseHeartbeatPong"     }
-    ,   { ResponseType::ResponseLogin           ,  "ResponseLogin"             }
-    ,   { ResponseType::ResponseMessages        ,  "ResponseMessages"          }
-    ,   { ResponseType::ResponseSuccess         ,  "ResponseSuccess"           }
-    ,   { ResponseType::ResponseUsersList       ,  "ResponseUsersList"         }
+      { ResponseType::ResponseError         ,  "ResponseError"          }
+   ,   { ResponseType::ResponseHeartbeatPong   ,  "ResponseHeartbeatPong"    }
+   ,   { ResponseType::ResponseLogin         ,  "ResponseLogin"          }
+   ,   { ResponseType::ResponseMessages      ,  "ResponseMessages"        }
+   ,   { ResponseType::ResponseSuccess       ,  "ResponseSuccess"         }
+   ,   { ResponseType::ResponseUsersList      ,  "ResponseUsersList"       }
 };
 
 
 template <typename T>
 std::string serializeData(const T* thisPtr)
 {
-    auto data = QJsonDocument(thisPtr->toJson());
-    QString serializedData = QString::fromUtf8(data.toJson());
-    return serializedData.toStdString();
+   auto data = QJsonDocument(thisPtr->toJson());
+   QString serializedData = QString::fromUtf8(data.toJson());
+   return serializedData.toStdString();
 }
 
 
 template <typename T>
 QJsonObject Message<T>::toJson() const
 {
-    QJsonObject data;
+   QJsonObject data;
 
-    data[VersionKey] = QString::fromStdString(version_);
+   data[VersionKey] = QString::fromStdString(version_);
 
-    return data;
+   return data;
 }
 
 
 std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-    RequestType requestType = RequestTypeFromString[data[TypeKey].toString().toStdString()];
+   RequestType requestType = RequestTypeFromString[data[TypeKey].toString().toStdString()];
 
-    switch (requestType)
-    {
-        case RequestType::RequestHeartbeatPing:
-            return std::make_shared<HeartbeatPingRequest>(clientId);
+   switch (requestType)
+   {
+      case RequestType::RequestHeartbeatPing:
+         return std::make_shared<HeartbeatPingRequest>(clientId);
 
-        case RequestType::RequestLogin:
-            return std::make_shared<LoginRequest>(
-                        clientId
-                      , data[AuthIdKey].toString().toStdString()
-                      , data[JwtKey].toString().toStdString());
+      case RequestType::RequestLogin:
+         return std::make_shared<LoginRequest>(
+                  clientId
+                 , data[AuthIdKey].toString().toStdString()
+                 , data[JwtKey].toString().toStdString());
 
-        case RequestType::RequestSendMessage:
-            return SendMessageRequest::fromJSON(clientId, jsonData);
+      case RequestType::RequestSendMessage:
+         return SendMessageRequest::fromJSON(clientId, jsonData);
 
-        case RequestType::RequestOnlineUsers:
-            return std::make_shared<OnlineUsersRequest>(
-                        clientId
-                      , data[AuthIdKey].toString().toStdString());
+      case RequestType::RequestOnlineUsers:
+         return std::make_shared<OnlineUsersRequest>(
+                  clientId
+                 , data[AuthIdKey].toString().toStdString());
 
-        case RequestType::RequestMessages:
-            return std::make_shared<MessagesRequest>(
-                        clientId
-                      , data[SenderIdKey].toString().toStdString()
-                      , data[ReceiverIdKey].toString().toStdString());
+      case RequestType::RequestMessages:
+         return std::make_shared<MessagesRequest>(
+                  clientId
+                 , data[SenderIdKey].toString().toStdString()
+                 , data[ReceiverIdKey].toString().toStdString());
 
-        default:
-            break;
-    }
+      default:
+         break;
+   }
 
-    return std::shared_ptr<Request>();
+   return std::shared_ptr<Request>();
 }
 
 
 std::string Request::getData() const
 {
-    return serializeData(this);
+   return serializeData(this);
 }
 
 
 QJsonObject Request::toJson() const
 {
-    QJsonObject data = Message<RequestType>::toJson();
+   QJsonObject data = Message<RequestType>::toJson();
 
-    data[TypeKey] = QString::fromStdString(RequestTypeToString[messageType_]);
+   data[TypeKey] = QString::fromStdString(RequestTypeToString[messageType_]);
 
-    return data;
+   return data;
 }
 
 
 QJsonObject Response::toJson() const
 {
-    QJsonObject data = Message<ResponseType>::toJson();
+   QJsonObject data = Message<ResponseType>::toJson();
 
-    data[TypeKey] = QString::fromStdString(ResponseTypeToString[messageType_]);
+   data[TypeKey] = QString::fromStdString(ResponseTypeToString[messageType_]);
 
-    return data;
+   return data;
 }
 
 
 std::string Response::getData() const
 {
-    return serializeData(this);
+   return serializeData(this);
 }
 
 
 std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-    ResponseType responseType = ResponseTypeFromString[data[TypeKey].toString().toStdString()];
+   ResponseType responseType = ResponseTypeFromString[data[TypeKey].toString().toStdString()];
 
-    switch (responseType)
-    {
-        case ResponseType::ResponseHeartbeatPong:
-            return std::make_shared<HeartbeatPongResponse>();
+   switch (responseType)
+   {
+      case ResponseType::ResponseHeartbeatPong:
+         return std::make_shared<HeartbeatPongResponse>();
 
-        case ResponseType::ResponseUsersList:
-            return UsersListResponse::fromJSON(jsonData);
+      case ResponseType::ResponseUsersList:
+         return UsersListResponse::fromJSON(jsonData);
 
-        case ResponseType::ResponseMessages:
-            return MessagesResponse::fromJSON(jsonData);
+      case ResponseType::ResponseMessages:
+         return MessagesResponse::fromJSON(jsonData);
 
-        default:
-            break;
-    }
+      default:
+         break;
+   }
 
-    return std::shared_ptr<Response>();
+   return std::shared_ptr<Response>();
 }
 
 
 HeartbeatPingRequest::HeartbeatPingRequest(const std::string& clientId)
-    : Request (RequestType::RequestHeartbeatPing, clientId)
+   : Request (RequestType::RequestHeartbeatPing, clientId)
 {
 
 }
@@ -199,12 +199,12 @@ HeartbeatPingRequest::HeartbeatPingRequest(const std::string& clientId)
 
 void HeartbeatPingRequest::handle(RequestHandler& handler)
 {
-    handler.OnHeartbeatPing(*this);
+   handler.OnHeartbeatPing(*this);
 }
 
 
 HeartbeatPongResponse::HeartbeatPongResponse()
-    : Response(ResponseType::ResponseHeartbeatPong)
+   : Response(ResponseType::ResponseHeartbeatPong)
 {
 
 }
@@ -212,13 +212,13 @@ HeartbeatPongResponse::HeartbeatPongResponse()
 
 void HeartbeatPongResponse::handle(ResponseHandler& handler)
 {
-    handler.OnHeartbeatPong(*this);
+   handler.OnHeartbeatPong(*this);
 }
 
 
 ListResponse::ListResponse(ResponseType responseType, std::vector<std::string> dataList)
-    : Response(responseType)
-    , dataList_(dataList)
+   : Response(responseType)
+   , dataList_(dataList)
 {
 
 }
@@ -226,35 +226,35 @@ ListResponse::ListResponse(ResponseType responseType, std::vector<std::string> d
 
 QJsonObject ListResponse::toJson() const
 {
-    QJsonObject data = Response::toJson();
+   QJsonObject data = Response::toJson();
 
-    QJsonArray listJson;
+   QJsonArray listJson;
 
-    std::for_each(dataList_.begin(), dataList_.end(), [&](const std::string& userId){
-        listJson << QString::fromStdString(userId);
-    });
+   std::for_each(dataList_.begin(), dataList_.end(), [&](const std::string& userId){
+      listJson << QString::fromStdString(userId);
+   });
 
-    data[DataKey] = listJson;
+   data[DataKey] = listJson;
 
-    return data;
+   return data;
 }
 
 
 std::vector<std::string> ListResponse::fromJSON(const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-    std::vector<std::string> dataList;
-    QJsonArray usersArray = data[DataKey].toArray();
-    foreach(auto userId, usersArray) {
-        dataList.push_back(userId.toString().toStdString());
-    }
-    return dataList;
+   std::vector<std::string> dataList;
+   QJsonArray usersArray = data[DataKey].toArray();
+   foreach(auto userId, usersArray) {
+      dataList.push_back(userId.toString().toStdString());
+   }
+   return dataList;
 }
 
 
 UsersListResponse::UsersListResponse(std::vector<std::string> dataList)
-    : ListResponse (ResponseType::ResponseUsersList, dataList)
+   : ListResponse (ResponseType::ResponseUsersList, dataList)
 {
 
 }
@@ -262,19 +262,19 @@ UsersListResponse::UsersListResponse(std::vector<std::string> dataList)
 
 void UsersListResponse::handle(ResponseHandler& handler)
 {
-    handler.OnUsersList(*this);
+   handler.OnUsersList(*this);
 }
 
 
 std::shared_ptr<Response> UsersListResponse::fromJSON(const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-    return std::make_shared<UsersListResponse>(ListResponse::fromJSON(jsonData));
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<UsersListResponse>(ListResponse::fromJSON(jsonData));
 }
 
 
 MessagesResponse::MessagesResponse(std::vector<std::string> dataList)
-    : ListResponse (ResponseType::ResponseMessages, dataList)
+   : ListResponse (ResponseType::ResponseMessages, dataList)
 {
 
 }
@@ -282,23 +282,23 @@ MessagesResponse::MessagesResponse(std::vector<std::string> dataList)
 
 std::shared_ptr<Response> MessagesResponse::fromJSON(const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-    return std::make_shared<MessagesResponse>(ListResponse::fromJSON(jsonData));
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<MessagesResponse>(ListResponse::fromJSON(jsonData));
 }
 
 
 void MessagesResponse::handle(ResponseHandler& handler)
 {
-    handler.OnMessages(*this);
+   handler.OnMessages(*this);
 }
 
 
 LoginRequest::LoginRequest(const std::string& clientId
-                           , const std::string& authId
-                           , const std::string& jwt)
-    : Request (RequestType::RequestLogin, clientId)
-    , authId_(authId)
-    , jwt_(jwt)
+                     , const std::string& authId
+                     , const std::string& jwt)
+   : Request (RequestType::RequestLogin, clientId)
+   , authId_(authId)
+   , jwt_(jwt)
 {
 
 }
@@ -306,29 +306,29 @@ LoginRequest::LoginRequest(const std::string& clientId
 
 QJsonObject LoginRequest::toJson() const
 {
-    QJsonObject data = Request::toJson();
+   QJsonObject data = Request::toJson();
 
-    data[AuthIdKey] = QString::fromStdString(authId_);
-    data[JwtKey] = QString::fromStdString(jwt_);
+   data[AuthIdKey] = QString::fromStdString(authId_);
+   data[JwtKey] = QString::fromStdString(jwt_);
 
-    return data;
+   return data;
 }
 
 
 void LoginRequest::handle(RequestHandler& handler)
 {
-    handler.OnLogin(*this);
+   handler.OnLogin(*this);
 }
 
 
 MessageData::MessageData(const QString& senderId
-                        , const QString& receiverId
-                        , const QDateTime& dateTime
-                        , const QString& messageData)
-    : senderId_(senderId)
-    , receiverId_(receiverId)
-    , dateTime_(dateTime)
-    , messageData_(messageData)
+                  , const QString& receiverId
+                  , const QDateTime& dateTime
+                  , const QString& messageData)
+   : senderId_(senderId)
+   , receiverId_(receiverId)
+   , dateTime_(dateTime)
+   , messageData_(messageData)
 {
 
 }
@@ -336,40 +336,40 @@ MessageData::MessageData(const QString& senderId
 
 QJsonObject MessageData::toJson() const
 {
-    QJsonObject data;
+   QJsonObject data;
 
-    data[SenderIdKey] = senderId_;
-    data[ReceiverIdKey] = receiverId_;
-    data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
-    data[MessageKey] = messageData_;
+   data[SenderIdKey] = senderId_;
+   data[ReceiverIdKey] = receiverId_;
+   data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
+   data[MessageKey] = messageData_;
 
-    return data;
+   return data;
 }
 
 
 std::string MessageData::toJsonString() const
 {
-    return serializeData(this);
+   return serializeData(this);
 }
 
 
 std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-    QString senderId = data[SenderIdKey].toString();
-    QString receiverId = data[ReceiverIdKey].toString();
-    QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
-    QString messageData = data[MessageKey].toString();
+   QString senderId = data[SenderIdKey].toString();
+   QString receiverId = data[ReceiverIdKey].toString();
+   QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
+   QString messageData = data[MessageKey].toString();
 
-    return std::make_shared<MessageData>(senderId, receiverId, dtm, messageData);
+   return std::make_shared<MessageData>(senderId, receiverId, dtm, messageData);
 }
 
 
 SendMessageRequest::SendMessageRequest(const std::string& clientId
-                                       , const std::string& messageData)
-    : Request(RequestType::RequestSendMessage, clientId)
-    , messageData_(messageData)
+                              , const std::string& messageData)
+   : Request(RequestType::RequestSendMessage, clientId)
+   , messageData_(messageData)
 {
 
 }
@@ -377,33 +377,33 @@ SendMessageRequest::SendMessageRequest(const std::string& clientId
 
 QJsonObject SendMessageRequest::toJson() const
 {
-    QJsonObject data = Request::toJson();
+   QJsonObject data = Request::toJson();
 
-    data[MessageKey] = QString::fromStdString(messageData_);
+   data[MessageKey] = QString::fromStdString(messageData_);
 
-    return data;
+   return data;
 }
 
 
 std::shared_ptr<Request> SendMessageRequest::fromJSON(const std::string& clientId, const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-    return std::make_shared<SendMessageRequest>(
-                            clientId
-                          , data[MessageKey].toString().toStdString());
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<SendMessageRequest>(
+                     clientId
+                    , data[MessageKey].toString().toStdString());
 }
 
 
 void SendMessageRequest::handle(RequestHandler& handler)
 {
-    handler.OnSendMessage(*this);
+   handler.OnSendMessage(*this);
 }
 
 
 OnlineUsersRequest::OnlineUsersRequest(const std::string& clientId
-                   , const std::string& authId)
-    : Request(RequestType::RequestOnlineUsers, clientId)
-    , authId_(authId)
+               , const std::string& authId)
+   : Request(RequestType::RequestOnlineUsers, clientId)
+   , authId_(authId)
 {
 
 }
@@ -411,26 +411,26 @@ OnlineUsersRequest::OnlineUsersRequest(const std::string& clientId
 
 QJsonObject OnlineUsersRequest::toJson() const
 {
-    QJsonObject data = Request::toJson();
+   QJsonObject data = Request::toJson();
 
-    data[AuthIdKey] = QString::fromStdString(authId_);
+   data[AuthIdKey] = QString::fromStdString(authId_);
 
-    return data;
+   return data;
 }
 
 
 void OnlineUsersRequest::handle(RequestHandler& handler)
 {
-    handler.OnOnlineUsers(*this);
+   handler.OnOnlineUsers(*this);
 }
 
 
 MessagesRequest::MessagesRequest(const std::string& clientId
-                                 , const std::string& senderId
-                                 , const std::string& receiverId)
-    : Request(RequestType::RequestMessages, clientId)
-    , senderId_(senderId)
-    , receiverId_(receiverId)
+                         , const std::string& senderId
+                         , const std::string& receiverId)
+   : Request(RequestType::RequestMessages, clientId)
+   , senderId_(senderId)
+   , receiverId_(receiverId)
 {
 
 }
@@ -438,16 +438,16 @@ MessagesRequest::MessagesRequest(const std::string& clientId
 
 QJsonObject MessagesRequest::toJson() const
 {
-    QJsonObject data = Request::toJson();
+   QJsonObject data = Request::toJson();
 
-    data[SenderIdKey] = QString::fromStdString(senderId_);
-    data[ReceiverIdKey] = QString::fromStdString(receiverId_);
+   data[SenderIdKey] = QString::fromStdString(senderId_);
+   data[ReceiverIdKey] = QString::fromStdString(receiverId_);
 
-    return data;
+   return data;
 }
 
 
 void MessagesRequest::handle(RequestHandler& handler)
 {
-    handler.OnRequestMessages(*this);
+   handler.OnRequestMessages(*this);
 }

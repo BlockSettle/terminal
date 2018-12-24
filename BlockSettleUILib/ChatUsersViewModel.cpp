@@ -7,63 +7,61 @@
 
 
 ChatUsersViewModel::ChatUsersViewModel(QObject* parent)
-    : QAbstractTableModel(parent)
+   : QAbstractTableModel(parent)
 {
 }
 
 
 QString ChatUsersViewModel::resolveUser(const QModelIndex& index)
 {
-    return userByIndex_[index.row()];
+   return userByIndex_[index.row()];
 }
 
 
 int ChatUsersViewModel::columnCount(const QModelIndex &parent) const
 {
-    return 1;
+   return 1;
 }
 
 
 int ChatUsersViewModel::rowCount(const QModelIndex &parent) const
 {
-    return userByIndex_.count();
+   return userByIndex_.count();
 }
 
 
 QVariant ChatUsersViewModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    return QVariant();
+   return QVariant();
 }
 
 
 QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 {
-    if (role == Qt::DisplayRole) {
-        return userByIndex_[index.row()];
-    }
-    return QVariant();
+   if (role == Qt::DisplayRole) {
+      return userByIndex_[index.row()];
+   }
+   return QVariant();
 }
 
 
 void ChatUsersViewModel::clear()
 {
-    indexByUser_.clear();
-    userByIndex_.clear();
+   indexByUser_.clear();
+   userByIndex_.clear();
 }
 
 
 void ChatUsersViewModel::onUserUpdate(const QString& userId)
 {
-    qDebug() << "onUserUpdate " << userId;
+   if (indexByUser_.contains(userId))
+   {
+      return;
+   }
 
-    if (indexByUser_.contains(userId))
-    {
-        return;
-    }
-
-    indexByUser_[userId] = userByIndex_.count();
-    userByIndex_.append(userId);
-
-    emit beginResetModel();
-    emit endResetModel();
+   auto rowIdx = static_cast<int>(userByIndex_.size());
+   beginInsertRows(QModelIndex(), rowIdx, rowIdx);
+   indexByUser_[userId] = userByIndex_.count();
+   userByIndex_.append(userId);
+   endInsertRows();
 }

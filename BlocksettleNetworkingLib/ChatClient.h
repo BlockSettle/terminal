@@ -16,7 +16,7 @@ namespace spdlog {
 
 namespace Chat
 {
-    class Request;
+   class Request;
 }
 
 
@@ -26,31 +26,31 @@ class ApplicationSettings;
 
 
 class ChatClient : public QObject
-                 , public DataConnectionListener
-                 , public Chat::ResponseHandler
+             , public DataConnectionListener
+             , public Chat::ResponseHandler
 {
-    Q_OBJECT
+   Q_OBJECT
 
 public:
-    ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
-               , const std::shared_ptr<ApplicationSettings> &appSettings
-               , const std::shared_ptr<spdlog::logger>& logger);
+   ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
+            , const std::shared_ptr<ApplicationSettings> &appSettings
+            , const std::shared_ptr<spdlog::logger>& logger);
 
-    ~ChatClient() noexcept override = default;
+   ~ChatClient() noexcept override = default;
 
-    ChatClient(const ChatClient&) = delete;
-    ChatClient& operator = (const ChatClient&) = delete;
+   ChatClient(const ChatClient&) = delete;
+   ChatClient& operator = (const ChatClient&) = delete;
 
-    ChatClient(ChatClient&&) = delete;
-    ChatClient& operator = (ChatClient&&) = delete;
+   ChatClient(ChatClient&&) = delete;
+   ChatClient& operator = (ChatClient&&) = delete;
 
-    std::string loginToServer(const std::string& email, const std::string& jwt);
+   std::string loginToServer(const std::string& email, const std::string& jwt);
 
-    void logout();
+   void logout();
 
-    void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
-    void OnUsersList(Chat::UsersListResponse& response) override;
-    void OnMessages(Chat::MessagesResponse& response) override;
+   void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
+   void OnUsersList(Chat::UsersListResponse& response) override;
+   void OnMessages(Chat::MessagesResponse& response) override;
 
 
 public:
@@ -62,9 +62,9 @@ public:
    QString prependMessage(const QString& messageText, const QString& senderId = QString());
 
 private:
-    void sendHeartbeat();
+   void sendHeartbeat();
 
-    void sendRequest(const std::shared_ptr<Chat::Request>& request);
+   void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
 signals:
    void OnConnectedToServer();
@@ -82,16 +82,16 @@ public slots:
 
 
 private:
-   std::shared_ptr<ConnectionManager>     connectionManager_;
+   std::shared_ptr<ConnectionManager>    connectionManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<spdlog::logger>      logger_;
 
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 
-   QScopedPointer<QTimer>                 heartbeatTimer_;
+   QScopedPointer<QTimer>             heartbeatTimer_;
 
-   std::string                            currentUserId_;
-   std::string                            currentChatId_;
+   std::string                     currentUserId_;
+   std::string                     currentChatId_;
 
 };
 
