@@ -176,8 +176,7 @@ namespace Chat
 
         QJsonObject toJson() const;
         std::string toJsonString() const;
-        static MessageData fromJSON(const std::string& jsonData);
-
+        static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
 
     private:
 

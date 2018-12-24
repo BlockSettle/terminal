@@ -88,11 +88,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UiUtils::setupIconFont(this);
    NotificationCenter::createInstance(applicationSettings_, ui.get(), sysTrayIcon_, this);
 
-//   chatServer_ = std::make_shared<ChatServer>(nullptr
-//                                              , applicationSettings_
-//                                              , logMgr_->logger("ChatServer"));
-//   chatServer_->startServer("127.0.0.1", "20001");
-
    InitConnections();
 
    initArmory();
@@ -901,6 +896,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
       auto userName = QString::fromStdString(username);
       currentUserLogin_ = userName;
       ui->widgetWallets->setUsername(userName);
+      currentUserLogin_ += QString::fromStdString("(" + ui->widgetChat->login(currentUserLogin_.toStdString(), "") + ")");
       action_logout_->setVisible(false);
       action_login_->setEnabled(false);
 
@@ -912,7 +908,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
 
 void BSTerminalMainWindow::onAutheIDDone(const std::string& jwt)
 {
-   ui->widgetChat->login(currentUserLogin_.toStdString(), jwt);
+   currentUserLogin_ += QString::fromStdString("(" + ui->widgetChat->login(currentUserLogin_.toStdString(), "") + ")");
 
    std::string username = "celertest.customer_601@mailinator.com";
    std::string password = "celertest.customer_601@mailinator.com";

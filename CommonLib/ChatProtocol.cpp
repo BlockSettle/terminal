@@ -109,7 +109,7 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
             return std::make_shared<LoginRequest>(
                         clientId
                       , data[AuthIdKey].toString().toStdString()
-                      , data[PasswordKey].toString().toStdString());
+                      , data[JwtKey].toString().toStdString());
 
         case RequestType::RequestSendMessage:
             return SendMessageRequest::fromJSON(clientId, jsonData);
@@ -353,7 +353,7 @@ std::string MessageData::toJsonString() const
 }
 
 
-MessageData MessageData::fromJSON(const std::string& jsonData)
+std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
 {
     QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
@@ -362,7 +362,7 @@ MessageData MessageData::fromJSON(const std::string& jsonData)
     QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
     QString messageData = data[MessageKey].toString();
 
-    return MessageData(senderId, receiverId, dtm, messageData);
+    return std::make_shared<MessageData>(senderId, receiverId, dtm, messageData);
 }
 
 

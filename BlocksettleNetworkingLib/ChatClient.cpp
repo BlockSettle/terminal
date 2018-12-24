@@ -33,17 +33,11 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 }
 
 
-void ChatClient::loginToServer(const std::string& email, const std::string& jwt)
+std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt)
 {    
-    if (jwt.empty())
-    {
-        logger_->error("[ChatClient::loginToServer] Login failed. Empty JWT provided ...");
-        return;
-    }
-
     if (connection_) {
        logger_->error("[ChatClient::loginToServer] connecting with not purged connection");
-       return;
+       return std::string();
     }
 
     auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
@@ -52,7 +46,7 @@ void ChatClient::loginToServer(const std::string& email, const std::string& jwt)
 
     connection_ = connectionManager_->CreateSecuredDataConnection();
     connection_->SetServerPublicKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
-    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)/*"127.0.0.1"*/
+    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
                                      , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
     {
         logger_->error("[ChatClient::loginToServer] failed to open ZMQ data connection");
@@ -66,6 +60,7 @@ void ChatClient::loginToServer(const std::string& email, const std::string& jwt)
     sendRequest(usersListRequest);
 
     heartbeatTimer_->start();
+    return currentUserId_;
 }
 
 
@@ -121,14 +116,7 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
     QList<QString> usersList;
     foreach(auto userId, users) {
 
-        if (userId == currentUserId_)
-        {
-            emit OnUserUpdate(QStringLiteral("[Me]:") + QString::fromStdString(userId));
-        }
-        else
-        {
-            emit OnUserUpdate(QString::fromStdString(userId));
-        }
+        emit OnUserUpdate(QString::fromStdString(userId));
     }
 }
 
@@ -152,9 +140,9 @@ void ChatClient::OnMessages(Chat::MessagesResponse& response)
 
         auto receivedMessage = Chat::MessageData::fromJSON(msgData);
 
-        emit OnMessageUpdate(receivedMessage.getDateTime()
-                             , prependMessage(receivedMessage.getMessageData()
-                                              , receivedMessage.getSenderId()));
+        emit OnMessageUpdate(receivedMessage->getDateTime()
+                             , prependMessage(receivedMessage->getMessageData()
+                                              , receivedMessage->getSenderId()));
     });
 }
 

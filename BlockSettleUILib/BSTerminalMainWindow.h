@@ -135,11 +135,10 @@ private:
    std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<HeadlessAddressSyncer>    addrSyncer_;
-   std::shared_ptr<ChatServer>               chatServer_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
-   QString                                   currentUserLogin_;
 
+   QString currentUserLogin_;
    bool  widgetsInited_ = false;
 
    struct NetworkSettings {

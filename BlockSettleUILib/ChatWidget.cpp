@@ -45,7 +45,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
     connect(ui_->send, SIGNAL(clicked()), SLOT(onSendButtonClicked()));
     connect(ui_->text, SIGNAL(returnPressed()), SLOT(onSendButtonClicked()));
-    connect(ui_->treeViewUsers, SIGNAL(doubleClicked(const QModelIndex&))
+    connect(ui_->treeViewUsers, SIGNAL(clicked(const QModelIndex&))
         , SLOT(onUserDoubleClicked(const QModelIndex&)));
 
     messagesViewModel_->connect(client_.get(), SIGNAL(OnMessageUpdate(const QDateTime&, const QString&))
@@ -77,14 +77,15 @@ void ChatWidget::onSendButtonClicked()
 }
 
 
-void ChatWidget::login(const std::string& email, const std::string& jwt)
+std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
     try
     {
         logger_->debug("Set user name {}", email);
         usersViewModel_->clear();
-        client_->loginToServer(email, jwt);
+        std::string id = client_->loginToServer(email, jwt);
         ui_->stackedWidget->setCurrentIndex(1);
+        return id;
     }
     catch (std::exception& e)
     {
@@ -94,7 +95,7 @@ void ChatWidget::login(const std::string& email, const std::string& jwt)
     {
         logger_->error("Unknown error ...");
     }
-
+    return std::string();
 }
 
 

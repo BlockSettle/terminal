@@ -53,7 +53,7 @@ public:
               , const std::shared_ptr<ApplicationSettings> &appSettings
               , const std::shared_ptr<spdlog::logger>& logger);
 
-    void login(const std::string& email, const std::string& jwt);
+    std::string login(const std::string& email, const std::string& jwt);
 
     void logout();
 

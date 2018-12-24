@@ -44,7 +44,7 @@ public:
     ChatClient(ChatClient&&) = delete;
     ChatClient& operator = (ChatClient&&) = delete;
 
-    void loginToServer(const std::string& email, const std::string& jwt);
+    std::string loginToServer(const std::string& email, const std::string& jwt);
 
     void logout();
 
