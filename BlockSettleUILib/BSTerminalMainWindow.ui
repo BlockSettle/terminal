@@ -133,7 +133,7 @@
        <enum>Qt::NoFocus</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>6</number>
       </property>
       <property name="movable">
        <bool>false</bool>
@@ -180,6 +180,11 @@
         <string>EXPLORER</string>
        </attribute>
       </widget>
+      <widget class="ChatWidget" name="widgetChat">
+       <attribute name="title">
+        <string>CHAT</string>
+       </attribute>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -190,7 +195,7 @@
      <x>0</x>
      <y>0</y>
      <width>997</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -597,6 +602,12 @@
    <class>ExplorerWidget</class>
    <extends>QWidget</extends>
    <header>ExplorerWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ChatWidget</class>
+   <extends>QWidget</extends>
+   <header>ChatWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
