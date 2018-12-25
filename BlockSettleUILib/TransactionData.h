@@ -75,6 +75,7 @@ public:
    void SetTotalFee(uint64_t fee);
 
    bool IsTransactionValid() const;
+   bool InputsLoadedFromArmory() const;
 
    size_t GetRecipientsCount() const;
    std::vector<unsigned int> GetRecipientIdList() const;
@@ -167,6 +168,8 @@ private:
 
    bool transactionUpdateEnabled_ = true;
    bool transactionUpdateRequired_ = false;
+
+   bool inputsLoaded_ = false;
 };
 
 #endif // __TRANSACTION_DATA_H__

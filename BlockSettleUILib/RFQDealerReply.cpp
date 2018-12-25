@@ -1152,19 +1152,19 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
       const auto txUpdated = [this, qrn, price, cbSubmit, transData]()
       {
          logger_->debug("[RFQDealerReply::onAQReply TX CB] : tx updated for {} - {}"
-            , qrn.quoteRequestId, (transData->IsTransactionValid() ? "tx valid" : "tx invalid"));
+            , qrn.quoteRequestId, (transData->InputsLoadedFromArmory() ? "inputs loaded" : "inputs not loaded"));
 
-         if (transData->IsTransactionValid()) {
+         if (transData->InputsLoadedFromArmory()) {
             // remove circular reference in CB.
             transData->SetCallback({});
             aq_->setTxData(qrn.quoteRequestId, transData);
             submitReply(transData, qrn, price, cbSubmit);
          }
       };
-      transData->SetCallback(txUpdated);
 
-      const auto &cbFee = [this, qrn, price, transData, cbSubmit](float feePerByte) {
+      const auto &cbFee = [this, qrn, price, transData, cbSubmit, txUpdated](float feePerByte) {
          transData->SetFeePerByte(feePerByte);
+         transData->SetCallback(txUpdated);
          // should force update
          transData->enableTransactionUpdate();
       };
