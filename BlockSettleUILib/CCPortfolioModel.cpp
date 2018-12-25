@@ -12,8 +12,9 @@
 class AssetNode
 {
 public:
-   AssetNode(const QString& name, AssetNode* parent)
+   AssetNode(const QString& name, const QString& nodeId, AssetNode* parent)
       : name_{name}
+      , id_{nodeId}
       , parent_{parent}
       , row_{-1}
    {}
@@ -45,6 +46,10 @@ public:
       return name_;
    }
 
+   QString GetNodeId() const {
+      return id_;
+   }
+
    virtual bool HasBalance() const {
       return true;
    }
@@ -57,6 +62,7 @@ public:
 
 private:
    const QString  name_;
+   const QString  id_;
    AssetNode*     parent_;
    int            row_;
 };
@@ -67,8 +73,8 @@ private:
 class XBTAssetNode : public AssetNode
 {
 public:
-   XBTAssetNode(const QString& name, AssetNode* parent)
-      : AssetNode(name, parent) {}
+   XBTAssetNode(const QString& walletName, const QString& walletId, AssetNode* parent)
+      : AssetNode(walletName, walletId, parent) {}
    ~XBTAssetNode() noexcept override = default;
 
    XBTAssetNode(const XBTAssetNode&) = delete;
@@ -110,7 +116,7 @@ class FXAssetNode : public AssetNode
 {
 public:
    FXAssetNode(const QString& name, AssetNode* parent)
-      : AssetNode(name, parent) {}
+      : AssetNode(name, name, parent) {}
    ~FXAssetNode() noexcept override = default;
 
    FXAssetNode(const FXAssetNode&) = delete;
@@ -170,7 +176,7 @@ class CCAssetNode : public AssetNode
 {
 public:
    CCAssetNode(const QString& name, AssetNode* parent)
-      : AssetNode(name, parent) {}
+      : AssetNode(name, name, parent) {}
    ~CCAssetNode() noexcept override = default;
 
    CCAssetNode(const CCAssetNode&) = delete;
@@ -230,8 +236,9 @@ class AssetGroupNode : public AssetNode
 {
 public:
    AssetGroupNode(const QString& name, AssetNode* parent)
-    : AssetNode(name, parent)
+    : AssetNode(name, name, parent)
     {}
+
    ~AssetGroupNode() noexcept override
    {
       qDeleteAll(children_);
@@ -244,8 +251,6 @@ public:
    AssetGroupNode& operator = (AssetGroupNode&&) = delete;
 
 public:
-   virtual void AddAsset(const QString& name) = 0;
-
    AssetNode* getChild(int row) const override {
       if ((row >= 0) && (row < children_.size())) {
          return children_[row];
@@ -257,16 +262,16 @@ public:
 protected:
    void AddChild(AssetNode* newChild)
    {
-      const auto childName = newChild->GetName().toStdString();
+      const auto childId = newChild->GetNodeId().toStdString();
 
-      if (getNodeByName(childName) != nullptr) {
+      if (getNodeById(childId) != nullptr) {
          delete newChild;
          return;
       }
 
       int index = childrenCount();
-      nameToIndex_.emplace(childName, index);
-      nodeNames_.emplace(childName);
+      idToIndex_.emplace(childId, index);
+      nodeIDs_.emplace(childId);
       newChild->setRow(index);
       children_.append(newChild);
    }
@@ -277,14 +282,14 @@ protected:
       if ((index >= 0) && (index < children_.size())) {
          children_.removeAt(index);
 
-         const auto nodeName = childToRemove->GetName().toStdString();
+         const auto nodeId = childToRemove->GetNodeId().toStdString();
 
-         nameToIndex_.erase(nodeName);
-         nodeNames_.erase(nodeName);
+         idToIndex_.erase(nodeId);
+         nodeIDs_.erase(nodeId);
 
          for (int i=index; i<children_.size(); ++i) {
             children_[i]->setRow(i);
-            nameToIndex_[children_[i]->GetName().toStdString()] = i;
+            idToIndex_[children_[i]->GetNodeId().toStdString()] = i;
          }
 
          delete childToRemove;
@@ -293,19 +298,19 @@ protected:
       }
    }
 
-   AssetNode* getNodeByName(const std::string& name)
+   AssetNode* getNodeById(const std::string& id)
    {
-      auto it = nameToIndex_.find(name);
-      if (it == nameToIndex_.end()) {
+      auto it = idToIndex_.find(id);
+      if (it == idToIndex_.end()) {
          return nullptr;
       }
 
       return children_[it->second];
    }
 
-   std::unordered_set<std::string> getNodeNames() const
+   std::unordered_set<std::string> getNodeIdSet() const
    {
-      return nodeNames_;
+      return nodeIDs_;
    }
 
 public:
@@ -359,8 +364,8 @@ public:
 
 private:
    QList<AssetNode*>                      children_;
-   std::unordered_map<std::string, int>   nameToIndex_;
-   std::unordered_set<std::string>        nodeNames_;
+   std::unordered_map<std::string, int>   idToIndex_;
+   std::unordered_set<std::string>        nodeIDs_;
 };
 
 class XBTAssetGroupNode : public AssetGroupNode
@@ -377,24 +382,24 @@ public:
    XBTAssetGroupNode(XBTAssetGroupNode&&) = delete;
    XBTAssetGroupNode& operator = (XBTAssetGroupNode&&) = delete;
 
-   void AddAsset(const QString& name) override
+   void AddAsset(const QString& walletName, const QString& walletId)
    {
-      AddChild(new XBTAssetNode(name, this));
+      AddChild(new XBTAssetNode(walletName, walletId, this));
    }
 
-   void RemoveWallet(const std::string& walletName)
+   void RemoveWallet(const std::string& walletId)
    {
-      RemoveChild(getNodeByName(walletName));
+      RemoveChild(getNodeById(walletId));
    }
 
-   std::unordered_set<std::string> GetWalletNames() const
+   std::unordered_set<std::string> GetWalletIds() const
    {
-      return getNodeNames();
+      return getNodeIdSet();
    }
 
-   XBTAssetNode* GetXBTNode(const std::string& name)
+   XBTAssetNode* GetXBTNode(const std::string& walletId)
    {
-      return dynamic_cast<XBTAssetNode*>(getNodeByName(name));
+      return dynamic_cast<XBTAssetNode*>(getNodeById(walletId));
    }
 };
 
@@ -412,24 +417,24 @@ public:
    CCAssetGroupNode(CCAssetGroupNode&&) = delete;
    CCAssetGroupNode& operator = (CCAssetGroupNode&&) = delete;
 
-   void AddAsset(const QString& name) override
+   void AddAsset(const QString& name)
    {
       AddChild(new CCAssetNode(name, this));
    }
 
    CCAssetNode* GetCCNode(const std::string& name)
    {
-      return dynamic_cast<CCAssetNode*>(getNodeByName(name));
+      return dynamic_cast<CCAssetNode*>(getNodeById(name));
    }
 
    std::unordered_set<std::string> GetCCNames() const
    {
-      return getNodeNames();
+      return getNodeIdSet();
    }
 
-   void RemoveWallet(const std::string& walletName)
+   void RemoveWallet(const std::string& id)
    {
-      RemoveChild(getNodeByName(walletName));
+      RemoveChild(getNodeById(id));
    }
 };
 
@@ -447,14 +452,14 @@ public:
    FXAssetGroupNode(FXAssetGroupNode&&) = delete;
    FXAssetGroupNode& operator = (FXAssetGroupNode&&) = delete;
 
-   void AddAsset(const QString& name) override
+   void AddAsset(const QString& name)
    {
       AddChild(new FXAssetNode(name, this));
    }
 
    FXAssetNode* GetFXNode(const std::string& name)
    {
-      return dynamic_cast<FXAssetNode*>(getNodeByName(name));
+      return dynamic_cast<FXAssetNode*>(getNodeById(name));
    }
 };
 
@@ -477,11 +482,6 @@ public:
 
    RootAssetGroupNode(RootAssetGroupNode&&) = delete;
    RootAssetGroupNode& operator = (RootAssetGroupNode&&) = delete;
-
-   void AddAsset(const QString& name) override
-   {
-      throw std::logic_error("RootAssetGroupNode::AddAsset should never be called directly");
-   }
 
    FXAssetGroupNode* GetFXGroup()
    {
@@ -833,15 +833,21 @@ void CCPortfolioModel::reloadXBTWalletsList()
          endResetModel();
       }
    } else {
-      std::unordered_set<std::string> displayedWallets{};
+      std::unordered_set<std::string>  displayedWallets{};
 
-      std::vector<std::string>           walletsToAdd{};
+      struct walletInfo
+      {
+         std::string walletName;
+         std::string walletId;
+      };
+
+      std::vector<walletInfo>           walletsToAdd{};
 
       const size_t walletsCount = walletsManager_->GetWalletsCount();
       walletsToAdd.reserve(walletsCount);
 
       if (root_->HaveXBTGroup()) {
-         displayedWallets = root_->GetXBTGroup()->GetWalletNames();
+         displayedWallets = root_->GetXBTGroup()->GetWalletIds();
       }
 
       for (size_t i=0; i<walletsManager_->GetWalletsCount(); ++i) {
@@ -855,10 +861,12 @@ void CCPortfolioModel::reloadXBTWalletsList()
          }
 
          auto walletName = wallet->GetWalletName();
-         if (displayedWallets.find(walletName) == displayedWallets.end()) {
-            walletsToAdd.emplace_back(std::move(walletName));
+         auto walletId = wallet->GetWalletId();
+
+         if (displayedWallets.find(walletId) == displayedWallets.end()) {
+            walletsToAdd.emplace_back(walletInfo{std::move(walletName), std::move(walletId)});
          } else {
-            displayedWallets.erase(walletName);
+            displayedWallets.erase(walletId);
          }
       }
 
@@ -868,12 +876,13 @@ void CCPortfolioModel::reloadXBTWalletsList()
          auto xbtGroup = root_->GetXBTGroup();
 
          // remove first if required
-         for ( const auto &walletName : displayedWallets) {
-            xbtGroup->RemoveWallet(walletName);
+         for ( const auto &walletId : displayedWallets) {
+            xbtGroup->RemoveWallet(walletId);
          }
 
-         for ( const auto &walletName : walletsToAdd) {
-            xbtGroup->AddAsset(QString::fromStdString(walletName));
+         for ( const auto &walletInfo : walletsToAdd) {
+            xbtGroup->AddAsset(QString::fromStdString(walletInfo.walletName)
+               , QString::fromStdString(walletInfo.walletId));
          }
 
          if (!xbtGroup->HasChildren()) {
@@ -908,8 +917,8 @@ void CCPortfolioModel::updateXBTBalance()
             continue;
          }
 
-         auto walletName = wallet->GetWalletName();
-         auto xbtNode = xbtGroup->GetXBTNode(walletName);
+         auto walletId = wallet->GetWalletId();
+         auto xbtNode = xbtGroup->GetXBTNode(walletId);
          if (xbtNode != nullptr) {
             const double balance = wallet->GetSpendableBalance();
             if (xbtNode->SetXBTAmount(balance)) {
