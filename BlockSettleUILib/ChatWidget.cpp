@@ -16,6 +16,7 @@ ChatWidget::ChatWidget(QWidget *parent)
    , ui_(new Ui::ChatWidget)
 {
    ui_->setupUi(this);
+   ui_->stackedWidget->setCurrentIndex(0);
 }
 
 

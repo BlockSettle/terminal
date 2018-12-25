@@ -40,10 +40,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings, Q
    }
 
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &LoginWindow::onAuthPressed);
-// FIX - FrejaAuth object (FrejaREST.h) removed - Not sure how to resolve this
-//   connect(&frejaAuth_, &FrejaAuth::succeeded, this, &LoginWindow::onAuthSucceeded);
-//   connect(&frejaAuth_, &FrejaAuth::failed, this, &LoginWindow::onAuthFailed);
-//   connect(&frejaAuth_, &FrejaAuth::statusUpdated, this, &LoginWindow::onAuthStatusUpdated);
 }
 
 LoginWindow::~LoginWindow() = default;
@@ -74,12 +70,12 @@ QString LoginWindow::getPassword() const
 
 void LoginWindow::onAuthPressed()
 {
-    autheID_ = true;
-    if (ui_->checkBoxRememberUsername->isChecked()) {
-       settings_->set(ApplicationSettings::jwtUsername, ui_->lineEditUsername->text());
-    }
-    accept();
-    ui_->pushButtonAuth->setEnabled(false);
+   autheID_ = true;
+   if (ui_->checkBoxRememberUsername->isChecked()) {
+       settings_->set(ApplicationSettings::celerUsername, ui_->lineEditUsername->text());
+   }
+   accept();
+   ui_->pushButtonAuth->setEnabled(false);
 }
 
 void LoginWindow::onAuthSucceeded(const QString &userId, const QString &details)
@@ -91,6 +87,7 @@ void LoginWindow::onAuthSucceeded(const QString &userId, const QString &details)
    ui_->pushButtonAuth->update();
    ui_->pushButtonAuth->setText(tr("Successfully authenticated"));
 }
+
 void LoginWindow::onAuthFailed(const QString &userId, const QString &text)
 {
    auto palette = ui_->pushButtonAuth->palette();

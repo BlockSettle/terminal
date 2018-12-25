@@ -900,20 +900,6 @@ void BSTerminalMainWindow::loginWithAutheID(const std::string& email)
    }
 }
 
-void BSTerminalMainWindow::loginWithCeler(const std::string& username, const std::string& password)
-{
-    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
-    const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
-
-    if (!celerConnection_->LoginToServer(host, port, username, password)) {
-       logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
-    } else {
-       auto userName = QString::fromStdString(username);
-       action_logout_->setVisible(false);
-       action_login_->setEnabled(false);
-    }
-}
-
 void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::string& password)
 {
    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
@@ -925,7 +911,6 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
       auto userName = QString::fromStdString(username);
       currentUserLogin_ = userName;
       ui->widgetWallets->setUsername(userName);
-      currentUserLogin_ += QString::fromStdString("(" + ui->widgetChat->login(currentUserLogin_.toStdString(), "") + ")");
       action_logout_->setVisible(false);
       action_login_->setEnabled(false);
 
@@ -937,17 +922,16 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
 
 void BSTerminalMainWindow::onAutheIDDone(const std::string& jwt)
 {
-   currentUserLogin_ += QString::fromStdString("(" + ui->widgetChat->login(currentUserLogin_.toStdString(), "") + ")");
-
-   std::string username = "celertest.customer_601@mailinator.com";
-   std::string password = "celertest.customer_601@mailinator.com";
-
-   loginWithCeler(username, password);
+   auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), jwt);
+   setLoginButtonText(currentUserLogin_ + QString::fromStdString("( Chat user: " + id + " )"));
 }
 
 void BSTerminalMainWindow::onAutheIDFailed()
 {
-   setLoginButtonText(tr("user.name"));
+   BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr("Auth eID username was rejected"), this);
+   loginErrorBox.exec();
+
+   setLoginButtonText(loginButtonText_);
 }
 
 void BSTerminalMainWindow::onLogin()
@@ -973,7 +957,15 @@ void BSTerminalMainWindow::onLogout()
 {
    ui->widgetWallets->setUsername(QString());
    ui->widgetChat->logout();
-   celerConnection_->CloseConnection();
+
+   if (celerConnection_->IsConnected())
+   {
+      celerConnection_->CloseConnection();
+   }
+   else
+   {
+       setLoginButtonText(loginButtonText_);
+   }
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()
@@ -1019,7 +1011,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
       signContainer_->SetUserId(BinaryData{});
    }
    walletsManager_->SetUserId(BinaryData{});
-   ui->widgetChat->logout();
    authManager_->OnDisconnectedFromCeler();
    setLoginButtonText(loginButtonText_);
 

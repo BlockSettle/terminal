@@ -43,7 +43,8 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
 
    connection_ = connectionManager_->CreateSecuredDataConnection();
    connection_->SetServerPublicKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
-   if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
+   if (!connection_->openConnection(//appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
+                                    "127.0.0.1"
                             , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
    {
       logger_->error("[ChatClient::loginToServer] failed to open ZMQ data connection");
