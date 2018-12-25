@@ -5,9 +5,9 @@
 #include <QQuickPaintedItem>
 
 #include "PaperBackupWriter.h"
+#include "QWalletInfo.h"
 
 #include <memory>
-
 
 //
 // QmlPdfBackup
@@ -18,9 +18,7 @@ class QmlPdfBackup : public QQuickPaintedItem
 {
    Q_OBJECT
 
-   Q_PROPERTY(QString walletId READ walletId WRITE setWalletId)
-   Q_PROPERTY(QString part1 READ part1 WRITE setPart1)
-   Q_PROPERTY(QString part2 READ part2 WRITE setPart2)
+   Q_PROPERTY(bs::wallet::QSeed* seed READ seed WRITE setSeed NOTIFY seedChanged)
    Q_PROPERTY(qreal preferedHeight READ preferedHeight NOTIFY preferedHeightChanged)
 
 signals:
@@ -31,25 +29,30 @@ public:
    ~QmlPdfBackup() noexcept override = default;
 
    void paint(QPainter *painter) override;
-
-   const QString& walletId() const;
-   void setWalletId(const QString &id);
-
-   const QString& part1() const;
-   void setPart1(const QString &p1);
-
-   const QString& part2() const;
-   void setPart2(const QString &p2);
+   void componentComplete();
 
    qreal preferedHeight() const;
 
+   bs::wallet::QSeed *seed() const;
+   void setSeed(bs::wallet::QSeed *seed);
+
+   Q_INVOKABLE void save();
+   Q_INVOKABLE void print();
 private slots:
    void onWidthChanged();
+   void onSeedChanged();
+
+signals:
+   void seedChanged();
+
+   void printFailed();
+   void printSucceed();
+
+   void saveFailed(const QString &filePath);
+   void saveSucceed(const QString &filePath);
 
 private:
-   QString walletId_;
-   QString part1_;
-   QString part2_;
+   bs::wallet::QSeed *seed_;
    std::unique_ptr<WalletBackupPdfWriter> pdf_;
    qreal kTotalHeightInches = 11;
    qreal kTotalWidthInches = 8.27;

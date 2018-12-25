@@ -35,7 +35,7 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   const std::shared_ptr<SignerSettings>        params_;
+   const std::shared_ptr<SignerSettings>        settings_;
    std::shared_ptr<WalletsManager>              walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;

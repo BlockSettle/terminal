@@ -1,6 +1,5 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
-import QtQuick.Controls.Styles 1.4
 import "../BsStyles"
 
 Button {
@@ -15,7 +14,7 @@ Button {
         opacity: enabled ? 1.0 : 0.3
         color: BSStyle.textColor
         font.capitalization: Font.AllUppercase
-        font.pixelSize: 11
+        font.pixelSize: 12
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight

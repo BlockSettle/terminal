@@ -3,24 +3,51 @@
 #include "UiUtils.h"
 
 #include <QPainter>
-
+#include <QPrinter>
+#include <QPrintDialog>
+#include <QDir>
+#include <QStandardPaths>
+#include <QFileDialog>
 
 //
 // QmlPdfBackup
 //
 
+
 QmlPdfBackup::QmlPdfBackup(QQuickItem *parent)
    : QQuickPaintedItem(parent)
-   , pdf_(new WalletBackupPdfWriter(walletId_, part1_, part2_,
-      QPixmap(QLatin1String(":/FULL_LOGO")),
-      UiUtils::getQRCode(part1_ + QLatin1Literal("\n") + part2_)))
+   , seed_(new bs::wallet::QSeed(this))
+   , pdf_(new WalletBackupPdfWriter(QString(), QString(), QString(),
+                                    QPixmap(QLatin1String(":/FULL_LOGO")),
+                                    UiUtils::getQRCode(QString())))
 {
    connect(this, &QQuickPaintedItem::widthChanged, this, &QmlPdfBackup::onWidthChanged);
+   connect(this, &QmlPdfBackup::seedChanged, this, &QmlPdfBackup::onSeedChanged);
 }
 
 void QmlPdfBackup::onWidthChanged()
 {
    emit preferedHeightChanged();
+}
+
+void QmlPdfBackup::onSeedChanged()
+{
+   pdf_.reset(new WalletBackupPdfWriter(seed_->walletId(), seed_->part1(), seed_->part2(),
+                                        QPixmap(QLatin1String(":/FULL_LOGO")),
+                                        UiUtils::getQRCode(seed_->part1() + QLatin1Literal("\n") + seed_->part2())));
+
+   update();
+}
+
+bs::wallet::QSeed *QmlPdfBackup::seed() const
+{
+   return seed_;
+}
+
+void QmlPdfBackup::setSeed(bs::wallet::QSeed *seed)
+{
+   seed_ = seed;
+   emit seedChanged();
 }
 
 void QmlPdfBackup::paint(QPainter *painter)
@@ -38,8 +65,8 @@ void QmlPdfBackup::paint(QPainter *painter)
    painter->fillRect(0, 0, viewportWidth, viewportHeight, Qt::white);
 
    painter->setViewport(viewportMargin, viewportMargin
-     , viewportWidth - 2 * viewportMargin
-     , viewportHeight - 2 * viewportMargin);
+                        , viewportWidth - 2 * viewportMargin
+                        , viewportHeight - 2 * viewportMargin);
 
    painter->setWindow(0, 0, windowWidth, windowHeight);
 
@@ -53,50 +80,63 @@ qreal QmlPdfBackup::preferedHeight() const
    return (width() * kTotalHeightInches / kTotalWidthInches);
 }
 
-const QString& QmlPdfBackup::walletId() const
+void QmlPdfBackup::componentComplete()
 {
-   return walletId_;
+   QQuickItem::componentComplete();
+   emit seedChanged();
 }
 
-void QmlPdfBackup::setWalletId(const QString &id)
+void QmlPdfBackup::save()
 {
-   walletId_ = id;
+   QDir documentsDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+   QString filePath = documentsDir.filePath(QString::fromLatin1("backup_wallet_%1.pdf").arg(seed_->walletId()));
 
-   pdf_.reset(new WalletBackupPdfWriter(walletId_, part1_, part2_,
-         QPixmap(QLatin1String(":/FULL_LOGO")),
-         UiUtils::getQRCode(part1_ + QLatin1Literal("\n") + part2_)));
+   QFileDialog dlg;
+   dlg.setFileMode(QFileDialog::AnyFile);
+   filePath = dlg.getSaveFileName(nullptr,
+      tr("Select file for backup"), filePath, QLatin1String("*.pdf"));
 
-   update();
+   if (filePath.isEmpty()) {
+      return;
+   }
+
+   bool result = pdf_->write(filePath);
+
+   if (!result) {
+      emit saveFailed(filePath);
+   }
+   else {
+      emit saveSucceed(filePath);
+   }
 }
 
-const QString& QmlPdfBackup::part1() const
+void QmlPdfBackup::print()
 {
-   return part1_;
+   QPrinter printer(QPrinter::PrinterResolution);
+
+   printer.setOutputFormat(QPrinter::NativeFormat);
+
+   // Check if printers installed because QPrintDialog won't work otherwise.
+   // See https://bugreports.qt.io/browse/QTBUG-36112
+   // Happens on macOS with Qt 5.11.1
+   if (printer.outputFormat() != QPrinter::NativeFormat) {
+      emit printFailed();
+      return;
+   }
+
+   // QPrintDialog doesn't want to work in QML,
+   // use QPrinterInfo to get all available printers
+   // and create Ui so that user can select the printer to use
+   QPrintDialog dialog(&printer);
+   dialog.setWindowTitle(tr("Print Wallet Seed"));
+   dialog.setPrintRange(QAbstractPrintDialog::CurrentPage);
+   dialog.setMinMax(1, 1);
+
+   int result = dialog.exec();
+   if (result != QDialog::Accepted) {
+      return;
+   }
+
+   pdf_->print(&printer);
 }
 
-void QmlPdfBackup::setPart1(const QString &p1)
-{
-   part1_ = p1;
-
-   pdf_.reset(new WalletBackupPdfWriter(walletId_, part1_, part2_,
-         QPixmap(QLatin1String(":/FULL_LOGO")),
-         UiUtils::getQRCode(part1_ + QLatin1Literal("\n") + part2_)));
-
-   update();
-}
-
-const QString& QmlPdfBackup::part2() const
-{
-   return part2_;
-}
-
-void QmlPdfBackup::setPart2(const QString &p2)
-{
-   part2_ = p2;
-
-   pdf_.reset(new WalletBackupPdfWriter(walletId_, part1_, part2_,
-         QPixmap(QLatin1String(":/FULL_LOGO")),
-         UiUtils::getQRCode(part1_ + QLatin1Literal("\n") + part2_)));
-
-   update();
-}

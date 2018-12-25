@@ -8,6 +8,14 @@ PasswordConfirmValidator::PasswordConfirmValidator(QObject* parent) :
 
 QValidator::State PasswordConfirmValidator::validate(QString &input, int &) const
 {
+   // accept only ascii chars
+   for (const QChar &c : input) {
+      if (c.unicode() > 127) {
+         setStatusMsg(invalidCharTmpl_.arg(name_));
+         return QValidator::State::Invalid;
+      }
+   }
+
    if (input.isEmpty() || compareTo_.isEmpty()) {
       setStatusMsg({});
       return QValidator::State::Intermediate;
@@ -32,7 +40,7 @@ QValidator::State PasswordConfirmValidator::validate(QString &input, int &) cons
       }
    }
 
-   if (input.size() > compareTo_.size()) {
+   if (input.size() < compareTo_.size()) {
       setStatusMsg(tooLongTmpl_.arg(name_));
       return QValidator::State::Intermediate;
    }

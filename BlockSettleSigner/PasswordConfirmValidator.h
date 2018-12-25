@@ -37,6 +37,7 @@ private:
     QString compareTo_;
     QString name_ = tr("Password");
 
+    QString invalidCharTmpl_ = QString::fromStdString("%1s ") + tr("must contain only english alphanumeric characters and special symbols.");
     QString tooShortTmpl_ = QString::fromStdString("%1s ") + tr("must be minimum of six (6) characters.");
     QString dontMatchMsgTmpl_ = QString::fromStdString("%1s ") +  tr("do not match!");
     QString tooLongTmpl_ = tr("Confirmation") + QString::fromStdString(" %1 ") + tr("too long!");

@@ -1,6 +1,5 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.4
-import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.0
 
 import "../StyledControls"
@@ -17,8 +16,6 @@ BSMessageBox {
 
     title: qsTr("Sign With Auth eID")
     customText: qsTr("")
-    customDetails: qsTr("%1 seconds left").arg(countDown)
-
     labelText.color: BSStyle.dialogTitleGreenColor
 
     Timer {
@@ -37,6 +34,16 @@ BSMessageBox {
 
     messageDialogContentItem: ColumnLayout {
         Layout.fillWidth: true
+        CustomLabel {
+            id: countDownLabel
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            color: BSStyle.progressBarColor
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("%1 seconds left").arg(countDown)
+        }
+
         CustomProgressBar {
             id: authProgress
             Layout.fillWidth: true

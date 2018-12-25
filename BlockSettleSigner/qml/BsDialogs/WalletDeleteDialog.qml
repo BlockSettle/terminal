@@ -2,7 +2,7 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 
-import "StyledControls"
+import "../StyledControls"
 
 CustomTitleDialogWindow {
     id: root
@@ -14,6 +14,7 @@ CustomTitleDialogWindow {
     property bool   backup: chkBackup.checked
 
     implicitWidth: 400
+    implicitHeight: 250
     focus: true
     title: qsTr("Delete Wallet")
     rejectable: true
@@ -59,6 +60,10 @@ CustomTitleDialogWindow {
                     checked: isRootWallet
                 }
             }
+        }
+
+        Rectangle {
+            Layout.fillHeight: true
         }
     }
 

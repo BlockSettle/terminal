@@ -1,6 +1,5 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
-import QtQuick.Controls.Styles 1.4
 import "../BsStyles"
 
 RadioButton {
@@ -8,8 +7,8 @@ RadioButton {
     text: parent.text
 
     indicator: Rectangle {
-        implicitWidth: 22
-        implicitHeight: 22
+        implicitWidth: 16
+        implicitHeight: 16
         x: control.leftPadding
         y: parent.height / 2 - height / 2
         radius: 11
@@ -19,8 +18,8 @@ RadioButton {
         Rectangle {
             width: 8
             height: 8
-            x: 7
-            y: 7
+            x: 4
+            y: 4
             radius: 7
             color: control.checked ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsUncheckedColor
             visible: control.checked

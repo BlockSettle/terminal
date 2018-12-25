@@ -8,3 +8,4 @@ BSEidConfirmBox 1.0 BSEidConfirmBox.qml
 BSEidNoticeBox 1.0 BSEidNoticeBox.qml
 BSEidProgressBox 1.0 BSEidProgressBox.qml
 BSAbortBox 1.0 BSAbortBox.qml
+BSWalletDetailsFrame 1.0 BSWalletDetailsFrame.qml

@@ -5,62 +5,17 @@
 #include <QObject>
 #include <QStringList>
 #include "MetaData.h"
+//#include "HDWallet.h"
+
 
 namespace bs {
-   class Wallet;
+   //class Wallet;
    namespace hd {
       class Wallet;
+      class WalletInfo;
    }
 }
 class WalletsManager;
-
-
-class WalletInfo : public QObject
-{
-   Q_OBJECT
-   Q_PROPERTY(QString id READ id WRITE setId NOTIFY dataChanged)
-   Q_PROPERTY(QString name READ name WRITE setName NOTIFY dataChanged)
-   Q_PROPERTY(QString rootId READ rootId WRITE setRootId NOTIFY dataChanged)
-   Q_PROPERTY(EncryptionType encType READ encType WRITE setEncType NOTIFY dataChanged)
-   Q_PROPERTY(QString encKey READ encKey WRITE setEncKey NOTIFY dataChanged)
-
-public:
-   WalletInfo(QObject *parent = nullptr) : QObject(parent) {}
-   WalletInfo(const std::shared_ptr<WalletsManager> &, const std::string &walletId, QObject *parent = nullptr);
-
-   enum EncryptionType {
-      Unencrypted,
-      Password,
-      Auth
-   };
-   Q_ENUMS(EncryptionType)
-
-   void initFromWallet(const bs::Wallet *, const std::string &rootId = {});
-
-   QString id() const { return id_; }
-   void setId(const QString &);
-   QString name() const { return name_; }
-   void setName(const QString &);
-   QString rootId() const { return rootId_; }
-   void setRootId(const QString &);
-   EncryptionType encType() const { return encType_; }
-   void setEncType(int);
-   QString encKey() const { return encKey_; }
-   void setEncKey(const QString &);
-
-signals:
-   void dataChanged();
-
-private:
-   void initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &);
-
-private:
-   QString  id_;
-   QString  rootId_;
-   QString  name_;
-   QString  encKey_;
-   EncryptionType encType_ = Unencrypted;
-};
 
 class TXInfo : public QObject
 {
@@ -76,7 +31,7 @@ class TXInfo : public QObject
    Q_PROPERTY(double changeAmount READ changeAmount NOTIFY dataChanged)
    Q_PROPERTY(double inputAmount READ inputAmount NOTIFY dataChanged)
    Q_PROPERTY(bool hasChange READ hasChange NOTIFY dataChanged)
-   Q_PROPERTY(WalletInfo *wallet READ wallet NOTIFY dataChanged)
+   Q_PROPERTY(bs::hd::WalletInfo *wallet READ wallet NOTIFY dataChanged)
    Q_PROPERTY(QString txId READ txId NOTIFY dataChanged)
 
 public:
@@ -93,7 +48,7 @@ public:
    double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }
    bool hasChange() const { return (txReq_.change.value > 0); }
    double changeAmount() const { return txReq_.change.value / BTCNumericTypes::BalanceDivider; }
-   WalletInfo *wallet() const { return walletInfo_; }
+   bs::hd::WalletInfo *wallet() const { return walletInfo_; }
    double inputAmount() const;
    QString txId() const { return QString::fromStdString(txReq_.txId().toBinStr()); }
 
@@ -106,7 +61,7 @@ private:
 private:
    std::shared_ptr<WalletsManager>  walletsMgr_;
    const bs::wallet::TXSignRequest  txReq_;
-   WalletInfo  *  walletInfo_;
+   bs::hd::WalletInfo  *walletInfo_;
 };
 
 #endif // __TX_INFO_H__

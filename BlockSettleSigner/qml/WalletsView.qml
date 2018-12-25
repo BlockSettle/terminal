@@ -3,7 +3,8 @@ import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.4
 import QtQml.Models 2.3
 import QtQuick.Window 2.3
-import com.blocksettle.Wallets 1.0
+
+import com.blocksettle.WalletsViewModel 1.0
 
 import "StyledControls"
 import "BsStyles"

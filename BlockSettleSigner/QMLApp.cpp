@@ -20,8 +20,9 @@
 #include "ZmqSecuredServerConnection.h"
 #include "EasyEncValidator.h"
 #include "PasswordConfirmValidator.h"
-#include "NewWalletSeed.h"
 #include "PdfBackupQmlPrinter.h"
+#include "QmlFactory.h"
+#include "QWalletInfo.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -30,11 +31,9 @@
 Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(TXInfo)
 
-
 QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<SignerSettings> &params
    , QQmlContext *ctxt)
-   : QObject(nullptr), logger_(logger), params_(params), ctxt_(ctxt)
-   , newWalletSeed_(new NewWalletSeed(params_, this))
+   : QObject(nullptr), logger_(logger), settings_(params), ctxt_(ctxt)
    , notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
@@ -44,50 +43,74 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 
    qRegisterMetaType<bs::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
-   qRegisterMetaType<WalletInfo::EncryptionType>("WalletInfo::EncryptionType");
+   //qRegisterMetaType<WalletInfo::EncryptionType>("WalletInfo::EncryptionType");
+   qRegisterMetaType<bs::wallet::QEncryptionType>("QEncryptionType");
+   qRegisterMetaType<bs::wallet::QSeed>("QSeed");
 
-
-   qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.Wallets", 1, 0,
+   qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
       "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
    qmlRegisterUncreatableType<OfflineProcessor>("com.blocksettle.OfflineProc", 1, 0,
       "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
-   qmlRegisterUncreatableType<AuthProxy>("com.blocksettle.AuthProxy", 1, 0,
-      "AuthProxy", QStringLiteral("Cannot create a AuthProxy instance"));
    qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
+
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
-   qmlRegisterType<WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
-   qmlRegisterType<WalletSeed>("com.blocksettle.WalletSeed", 1, 0, "WalletSeed");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
 
+   qmlRegisterType<bs::hd::WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
+   qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
+   qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
+
+   qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
+      "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
+
+
+
+//   qmlRegisterUncreatableMetaObject(
+//     bs::staticMetaObject, // static meta object
+//     "com.blocksettle.NsBs.namespace",                // import statement (can be any string)
+//     1, 0,                          // major and minor version of the import
+//     "NsBs",                 // name in QML (does not have to match C++ name)
+//     QStringLiteral("Error: com.blocksettle.NsBs: only enums")            // error in case someone tries to create a MyNamespace object
+//   );
+
+   qmlRegisterUncreatableMetaObject(
+     bs::wallet::staticMetaObject, // static meta object
+     "com.blocksettle.NsWallet.namespace",                // import statement (can be any string)
+     1, 0,                          // major and minor version of the import
+     "NsWallet",                 // name in QML (does not have to match C++ name)
+     QStringLiteral("Error: namespace.bs.NsWallet: only enums")            // error in case someone tries to create a MyNamespace object
+   );
 
    walletsMgr_ = std::make_shared<WalletsManager>(logger_);
 
    walletsModel_ = new QmlWalletsViewModel(walletsMgr_, ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
 
-   statusUpdater_ = std::make_shared<QMLStatusUpdater>(params_);
+   statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_);
    connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
 
    ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
 
-   ctxt_->setContextProperty(QStringLiteral("signerParams"), params_.get());
-
-   ctxt_->setContextProperty(QStringLiteral("newWalletSeed"), newWalletSeed_);
+   ctxt_->setContextProperty(QStringLiteral("signerSettings"), settings_.get());
 
    settingsConnections();
+
+   qmlFactory_ = std::make_shared<QmlFactory>(walletsMgr_, logger_);
+   ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
+
 
    offlineProc_ = std::make_shared<OfflineProcessor>(logger_, walletsMgr_);
    connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
    ctxt_->setContextProperty(QStringLiteral("offlineProc"), offlineProc_.get());
 
-   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_, params_);
+   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_, settings_);
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
@@ -95,8 +118,6 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
       }
    });
 
-   authProxy_ = std::make_shared<AuthProxy>(logger_);
-   ctxt_->setContextProperty(QStringLiteral("authProxy"), authProxy_.get());
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
@@ -115,19 +136,19 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 
 void QMLAppObj::settingsConnections()
 {
-   connect(params_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
-   connect(params_.get(), &SignerSettings::walletsDirChanged, this, &QMLAppObj::onWalletsDirChanged);
-   connect(params_.get(), &SignerSettings::listenSocketChanged, this, &QMLAppObj::onListenSocketChanged);
-   connect(params_.get(), &SignerSettings::passwordChanged, this, &QMLAppObj::onListenSocketChanged);
-   connect(params_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
-   connect(params_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
-   connect(params_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
+   connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
+   connect(settings_.get(), &SignerSettings::walletsDirChanged, this, &QMLAppObj::onWalletsDirChanged);
+   connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLAppObj::onListenSocketChanged);
+   connect(settings_.get(), &SignerSettings::passwordChanged, this, &QMLAppObj::onListenSocketChanged);
+   connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
+   connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
+   connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
 }
 
 void QMLAppObj::walletsLoad()
 {
-   logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
+   logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
+   walletsMgr_->LoadWallets(settings_->netType(), settings_->getWalletsDir());
    if (walletsMgr_->GetWalletsCount() > 0) {
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
@@ -150,7 +171,7 @@ void QMLAppObj::Start()
    walletsLoad();
 
    try {
-      if (!params_->offline()) {
+      if (!settings_->offline()) {
          OnlineProcessing();
       }
    }
@@ -180,7 +201,7 @@ void QMLAppObj::disconnect()
 
 void QMLAppObj::onOfflineChanged()
 {
-   if (params_->offline()) {
+   if (settings_->offline()) {
       logger_->info("Going offline");
       disconnect();
    }
@@ -197,7 +218,7 @@ void QMLAppObj::onWalletsDirChanged()
 
 void QMLAppObj::onListenSocketChanged()
 {
-   if (params_->offline()) {
+   if (settings_->offline()) {
       return;
    }
    logger_->info("Restarting listening socket");
@@ -208,7 +229,7 @@ void QMLAppObj::onListenSocketChanged()
 void QMLAppObj::onLimitsChanged()
 {
    if (listener_) {
-      listener_->SetLimits(params_->limits());
+      listener_->SetLimits(settings_->limits());
    }
 }
 
@@ -317,27 +338,27 @@ void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 
 void QMLAppObj::OnlineProcessing()
 {
-   logger_->debug("Going online with socket {}:{}, network {}", params_->listenAddress().toStdString()
-      , params_->port().toStdString(), (params_->testNet() ? "testnet" : "mainnet"));
+   logger_->debug("Going online with socket {}:{}, network {}", settings_->listenAddress().toStdString()
+      , settings_->port().toStdString(), (settings_->testNet() ? "testnet" : "mainnet"));
 
    const ConnectionManager connMgr(logger_);
    connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(params_->publicKey().toStdString(), params_->privateKey().toStdString())) {
+   if (!connection_->SetKeyPair(settings_->publicKey().toStdString(), settings_->privateKey().toStdString())) {
       logger_->error("Failed to establish secure connection");
       throw std::runtime_error("secure connection problem");
    }
 
    listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , params_->getWalletsDir().toStdString(), params_->netType(), params_->pwHash().toStdString(), true);
-   listener_->SetLimits(params_->limits());
+      , settings_->getWalletsDir().toStdString(), settings_->netType(), settings_->pwHash().toStdString(), true);
+   listener_->SetLimits(settings_->limits());
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
    connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(listener_.get(), &HeadlessContainerListener::cancelSignTx,
       this, &QMLAppObj::onCancelSignTx);
 
-   if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
-      logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());
+   if (!connection_->BindConnection(settings_->listenAddress().toStdString(), settings_->port().toStdString(), listener_.get())) {
+      logger_->error("Failed to bind to {}:{}", settings_->listenAddress().toStdString(), settings_->port().toStdString());
       statusUpdater_->setSocketOk(false);
       return;
    }

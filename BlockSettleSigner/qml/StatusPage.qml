@@ -53,7 +53,7 @@ Item {
                     text:   signerStatus.socketOk ? "" : qsTr("Failed to bind")
                     checked: !signerStatus.offline
                     onClicked: {
-                        signerParams.offline = !checked
+                        signerSettings.offline = !checked
                     }
                 }
 
@@ -122,7 +122,7 @@ Item {
 
                     }
                     CustomLabelValue {
-                        text:   signerParams.testNet ? qsTr("Testnet") : qsTr("Mainnet")
+                        text:   signerSettings.testNet ? qsTr("Testnet") : qsTr("Mainnet")
                         Layout.alignment: Qt.AlignRight
                         wrapMode: Text.NoWrap
                     }

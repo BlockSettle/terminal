@@ -3,8 +3,11 @@
 
 #include <memory>
 #include <QObject>
+#include "MetaData.h"
+#include "WalletEncryption.h"
 #include "EncryptionUtils.h"
 #include "AutheIDClient.h"
+#include "QWalletInfo.h"
 
 
 class ApplicationSettings;
@@ -32,7 +35,7 @@ protected:
    void setStatus(const QString &);
 
 private:
-   QString  status_;
+   QString status_;
 };
 
 class AuthSignWalletObject : public AuthObject
@@ -40,11 +43,16 @@ class AuthSignWalletObject : public AuthObject
    Q_OBJECT
 
 public:
-   AuthSignWalletObject() : AuthObject(nullptr) {}
+   AuthSignWalletObject(QObject *parent = nullptr) {}
 
-   // TODO refactor: encKey already contains userId
-   AuthSignWalletObject(AutheIDClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &, const QString &userId
-      , const QString &title, const QString &walletId, const QString &encKey, QObject *parent = nullptr);
+   AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &
+                        , QObject *parent = nullptr);
+
+   // used for wallet creation and signing
+   void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo);
+
+   // used for device removing
+   void removeDevice(int index, bs::hd::WalletInfo *walletInfo);
 
    Q_INVOKABLE void cancel();
 
@@ -53,31 +61,8 @@ signals:
    void failed(const QString &text) const;
 
 private:
-//   FrejaSignWallet   freja_;
-   AutheIDClient *autheIDClient_{};
+   AutheIDClient *autheIDClient_ {};
 };
 
-
-class AuthProxy : public QObject
-{
-   Q_OBJECT
-public:
-   AuthProxy(const std::shared_ptr<spdlog::logger> &, QObject *parent = nullptr);
-
-   // TODO refactor: encKey already contains userId
-   Q_INVOKABLE AuthSignWalletObject *signWallet(AutheIDClient::RequestType requestType
-                                                , const QString &userId
-                                                , const QString &title
-                                                , const QString &walletId
-                                                , const QString &encKey);
-
-   Q_INVOKABLE AuthSignWalletObject *signWallet(AutheIDClient::RequestType requestType,
-                                                const QString &title,
-                                                const QString &walletId,
-                                                const QString &encKey);
-
-private:
-   std::shared_ptr<spdlog::logger>  logger_;
-};
 
 #endif // __AUTH_PROXY_H__

@@ -1,11 +1,10 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
+
 import com.blocksettle.TXInfo 1.0
 import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
-import com.blocksettle.WalletSeed 1.0
 import com.blocksettle.AutheIDClient 1.0
 
 import "StyledControls"
@@ -15,7 +14,6 @@ import "js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     property string prompt
     property TXInfo txInfo
-    property WalletSeed seed: WalletSeed{}
     property string password
     property bool   acceptable: false
     property bool   cancelledByUser: false
@@ -25,7 +23,7 @@ CustomTitleDialogWindow {
     title: qsTr("Wallet Password Confirmation")
 
     function confirmClicked() {
-        if (txInfo.wallet.encType === WalletInfo.Password) {
+        if (txInfo.walletInfo.encType === NsWallet.Password) {
             //password = JsHelper.toHex(tfPassword.text)
             password = tfPassword.text
         }
@@ -34,9 +32,9 @@ CustomTitleDialogWindow {
 
     onTxInfoChanged: {
         console.log("QML onTxInfoChanged")
-        if (txInfo.wallet.encType === WalletInfo.Auth) {
+        if (txInfo.walletInfo.encType === NsWallet.Auth) {
             authSign = authProxy.signWallet(AutheIDClient.SignWallet, prompt,
-                                            txInfo.wallet.rootId, txInfo.wallet.encKey)
+                                            txInfo.walletInfo.rootId, txInfo.walletInfo.encKey)
 
             authSign.succeeded.connect(function(encKey_, password_) {
                 console.log("authSign.succeeded.connect " + encKey_)
@@ -69,8 +67,8 @@ CustomTitleDialogWindow {
         CustomLabel {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
-            visible: !txInfo.nbInputs && txInfo.wallet.name.length
-            text:   qsTr("Wallet %1").arg(txInfo.wallet.name)
+            visible: !txInfo.nbInputs && txInfo.walletInfo.name.length
+            text:   qsTr("Wallet %1").arg(txInfo.walletInfo.name)
         }
 
         GridLayout {
@@ -93,7 +91,7 @@ CustomTitleDialogWindow {
                 text:   qsTr("Sending Wallet")
             }
             CustomLabelValue {
-                text:   txInfo.wallet.name
+                text:   txInfo.walletInfo.name
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -202,7 +200,7 @@ CustomTitleDialogWindow {
 
             CustomTextInput {
                 id: tfPassword
-                visible: txInfo.wallet.encType === WalletInfo.Password
+                visible: txInfo.walletInfo.encType === NsWallet.Password
                 focus: true
                 placeholderText: qsTr("Password")
                 echoMode: TextField.Password
@@ -211,7 +209,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 id: labelAuth
-                visible: txInfo.wallet.encType === WalletInfo.Auth
+                visible: txInfo.walletInfo.encType === NsWallet.Auth
                 text: authSign.status
             }
         }

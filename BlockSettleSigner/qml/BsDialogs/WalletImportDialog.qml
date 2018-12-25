@@ -2,16 +2,18 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 import QtQuick.Dialogs 1.2
+
 import com.blocksettle.PasswordConfirmValidator 1.0
-import com.blocksettle.WalletSeed 1.0
+import com.blocksettle.QSeed 1.0
 import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
+import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.NsWallet.namespace 1.0
 
-import "BsControls"
-import "StyledControls"
-import "js/helper.js" as JsHelper
+import "../BsControls"
+import "../StyledControls"
+import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
     id: root
@@ -19,78 +21,46 @@ CustomTitleDialogWindow {
     property bool primaryWalletExists: false
     property string password
     property bool isPrimary: false
-    property WalletSeed seed
-    property int encType
-    property string encKey
-    property AuthSignWalletObject  authSign
+    property QSeed seed: QSeed{}
+    property WalletInfo walletInfo: WalletInfo{}
+    property var passwordData: QPasswordData{}
+
     property bool acceptable: (curPage === 1 && walletSelected) ||
                               (curPage === 2 && importAcceptable)
 
-    property bool walletSelected: rbPaperBackup.checked ? rootKeyInput.acceptableInput : lblDBFile.text !== "..."
-    property bool importAcceptable: tfName.text.length &&
-                                    (newPasswordWithConfirm.acceptableInput && rbPassword.checked ||
-                                     textInputEmail.text && rbAuth.checked)
+    property bool digitalBackupAcceptable: false
+    property bool walletSelected: rbPaperBackup.checked ? rootKeyInput.acceptableInput : digitalBackupAcceptable
+    property bool importAcceptable: tfName.text.length
+                                    && (newPasswordWithConfirm.acceptableInput && rbPassword.checked
+                                        || textInputEmail.text && rbAuth.checked)
     property int inputLabelsWidth: 105
     property int curPage: WalletImportDialog.Page.Select
     property bool authNoticeShown: false
 
     title: qsTr("Import Wallet")
+    width: 400
+    height: 400
 
     enum Page {
         Select = 1,
         Import = 2
     }
 
-    Connections {
-        target: seed
-        onError: {
-            JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse backup."), qsTr("Error: %1").arg(errMsg))
-        }
-    }
-
-    ButtonGroup {
-        id: btnGroup
+    onWalletInfoChanged: {
+        tfName.text = walletInfo.name
+        tfDesc.text = walletInfo.desc
     }
 
     cContentItem: ColumnLayout {
         id: mainLayout
         spacing: 10
-        anchors.fill: root
 
         ColumnLayout {
             id: selectLayout
             visible: curPage === WalletImportDialog.Page.Select
 
-            RowLayout {
-                visible: false // WO wallet cannot be imported in signer
-                spacing: 0
-                Layout.fillWidth: true
-                Layout.margins: 10
-
-                CustomButton {
-                    id: btnFull
-                    implicitWidth: 90
-                    implicitHeight: 20
-                    text: qsTr("Full")
-                    capitalize: false
-                    checkable: true
-                    ButtonGroup.group: btnGroup
-                    checked: true
-                }
-                CustomButton {
-                    id: btnWatchOnly
-                    implicitWidth: 90
-                    implicitHeight: 20
-                    text: qsTr("Watch-Only")
-                    capitalize: false
-                    checkable: true
-                    ButtonGroup.group: btnGroup
-                }
-            }
-
             ColumnLayout {
                 id: fullImportLayout
-                visible: !btnWatchOnly.checked
 
                 CustomLabel {
                     Layout.fillWidth: true
@@ -105,12 +75,12 @@ CustomTitleDialogWindow {
 
                     CustomRadioButton {
                         id: rbPaperBackup
-                        text:   qsTr("Paper Backup")
+                        text: qsTr("Paper Backup")
                         checked:    true
                     }
                     CustomRadioButton {
                         id: rbFileBackup
-                        text:   qsTr("Digital Backup File")
+                        text: qsTr("Digital Backup File")
                     }
                 }
 
@@ -124,8 +94,9 @@ CustomTitleDialogWindow {
                     line1LabelTxt: qsTr("Root Key Line 1")
                     line2LabelTxt: qsTr("Root Key Line 2")
                     onEntryComplete: {
-                        if (!seed.parsePaperKey(privateRootKey)) {
-                            ibFailure.displayMessage("Failed to parse paper backup key")
+                        seed = qmlFactory.createSeedFromPaperBackupT(rootKeyInput.privateRootKey, signerSettings.testNet)
+                        if (seed.networkType === NsWallet.Invalid) {
+                            JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse paper backup key."), "")
                         }
                     }
                 }
@@ -134,7 +105,7 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
                 text: qsTr("File Location to Restore")
-                visible: !rbPaperBackup.checked || btnWatchOnly.checked
+                visible: !rbPaperBackup.checked
             }
             RowLayout {
                 spacing: 5
@@ -142,7 +113,7 @@ CustomTitleDialogWindow {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
                 Layout.bottomMargin: 10
-                visible: !rbPaperBackup.checked || btnWatchOnly.checked
+                visible: !rbPaperBackup.checked
 
                 CustomLabel {
                     Layout.fillWidth: true
@@ -155,9 +126,9 @@ CustomTitleDialogWindow {
                 CustomLabel {
                     id:     lblDBFile
                     Layout.fillWidth: true
+                    Layout.preferredWidth: 200
                     text:   "..."
                     wrapMode: Label.Wrap
-                    Layout.preferredWidth: 200
                 }
                 CustomButton {
                     text:   qsTr("Select")
@@ -181,30 +152,6 @@ CustomTitleDialogWindow {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
 
-                CustomRadioButton {
-                    id: rbMainNet
-                    text:   qsTr("MainNet")
-                    checked:    seed.mainNet
-                    onClicked: {
-                        seed.mainNet = true
-                    }
-                }
-                CustomRadioButton {
-                    id: rbTestNet
-                    text:   qsTr("TestNet")
-                    checked:    seed.testNet
-                    onClicked: {
-                        seed.testNet = true
-                    }
-                }
-            }
-
-            RowLayout {
-                spacing: 5
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-
                 CustomLabel {
                     Layout.fillWidth: true
                     Layout.minimumWidth: inputLabelsWidth
@@ -217,9 +164,6 @@ CustomTitleDialogWindow {
                     selectByMouse: true
                     Layout.fillWidth: true
                     focus: true
-                    onEditingFinished: {
-                        seed.walletName = tfName.text
-                    }
                 }
             }
 
@@ -241,9 +185,6 @@ CustomTitleDialogWindow {
                     id: tfDesc
                     selectByMouse: true
                     Layout.fillWidth: true
-                    onEditingFinished: {
-                        seed.walletDesc = tfDesc.text
-                    }
                 }
             }
             RowLayout {
@@ -279,7 +220,7 @@ CustomTitleDialogWindow {
                     onCheckedChanged: {
                         if (checked) {
                             // show notice dialog
-                            var noticeEidDialog = Qt.createComponent("BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
+                            var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
                             noticeEidDialog.open()
                         }
                     }
@@ -315,13 +256,13 @@ CustomTitleDialogWindow {
                     Layout.fillWidth: true
                     selectByMouse: true
                     focus: true
-                    onEditingFinished: {
-                        seed.walletName = tfName.text
-                    }
                 }
             }
         }
 
+        Rectangle {
+            Layout.fillHeight: true
+        }
     }
 
     cFooterItem: RowLayout {
@@ -346,70 +287,55 @@ CustomTitleDialogWindow {
                 onClicked: {
                     if (curPage === 1) {
                         curPage = 2
+
+                        if (rbPaperBackup.checked) {
+                            seed = qmlFactory.createSeedFromPaperBackupT(rootKeyInput.privateRootKey, signerSettings.testNet)
+                        }
+                        else {
+                            seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)
+                            walletInfo = qmlFactory.createWalletInfoFromDigitalBackup(lblDBFile.text)
+                        }
                     }
                     else {
+                        walletInfo.name = tfName.text
+                        walletInfo.desc = tfDesc.text
+                        walletInfo.walletId = seed.walletId
+                        isPrimary = cbPrimary.checked
+
                         if (rbPassword.checked) {
                             // password
-                            var checkPasswordDialog = Qt.createComponent("BsControls/BSPasswordInput.qml").createObject(mainWindow);
-                            checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.text
+                            passwordData.encType = NsWallet.Password
+                            passwordData.encKey = ""
+                            passwordData.textPassword = newPasswordWithConfirm.password
+
+
+                            var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
+                            checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                             checkPasswordDialog.open()
                             checkPasswordDialog.accepted.connect(function(){
-                                acceptAnimated()
+                                var ok = walletsProxy.createWallet(isPrimary
+                                                               , seed
+                                                               , walletInfo
+                                                               , passwordData)
+
+                                var mb = JsHelper.resultBox(BSResultBox.WalletImport, ok, walletInfo)
+                                if (ok) mb.accepted.connect(acceptAnimated)
                             })
                         }
                         else {
                             // auth eID
-                            encType = WalletInfo.Auth
+                            JsHelper.activateeIdAuth(textInputEmail.text
+                                                     , walletInfo
+                                                     , function(newPasswordData){
+                                                         var ok = walletsProxy.createWallet(isPrimary
+                                                                                        , seed
+                                                                                        , walletInfo
+                                                                                        , newPasswordData)
 
-                            var authActivate = authProxy.signWallet(AutheIDClient.ActivateWallet,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
-                                                                    seed.walletId, "")
-                            var activateProgress = Qt.createComponent("BsControls/BSEidProgressBox.qml").createObject(mainWindow);
-                            activateProgress.title = qsTr("Activate Auth eID signing")
-                            activateProgress.customDetails = qsTr("Wallet ID: %1").arg(seed ? seed.walletId : qsTr(""))
-                            activateProgress.customText = qsTr("%1").arg(textInputEmail.text)
-                            activateProgress.open()
-                            activateProgress.rejected.connect(function() {
-                                authActivate.destroy()
-                            })
+                                                         var mb = JsHelper.resultBox(BSResultBox.WalletImport, ok, walletInfo)
+                                                         if (ok) mb.accepted.connect(acceptAnimated)
+                                                     })
 
-                            authActivate.succeeded.connect(function(encKey_, password_) {
-                                activateProgress.acceptAnimated()
-                                authActivate.destroy()
-
-                                encKey = encKey_
-                                seed.password = password_
-                                //acceptable = true
-
-                                var confirmEidDialog = Qt.createComponent("BsControls/BSEidConfirmBox.qml").createObject(mainWindow);
-                                confirmEidDialog.open()
-                                confirmEidDialog.accepted.connect(function(){
-                                    var authConfirm = authProxy.signWallet(AutheIDClient.VerifyWalletKey,  textInputEmail.text, qsTr("Password for wallet %1").arg(tfName.text),
-                                                                           seed.walletId, encKey)
-
-                                    var confirmProgress = Qt.createComponent("BsControls/BSEidProgressBox.qml").createObject(mainWindow);
-                                    confirmProgress.title = qsTr("Verify Auth eID signing")
-                                    confirmProgress.customDetails = qsTr("Wallet ID: %1").arg(seed ? seed.walletId : qsTr(""))
-                                    confirmProgress.customText = encKey
-                                    confirmProgress.open()
-                                    confirmProgress.rejected.connect(function() {
-                                        authConfirm.destroy()
-                                    })
-
-                                    authConfirm.succeeded.connect(function(encKey_, password_) {
-                                        confirmProgress.acceptAnimated()
-                                        authConfirm.destroy()
-                                        acceptAnimated()
-                                    })
-                                    authConfirm.failed.connect(function(encKey_, password_) {
-                                        confirmProgress.rejectAnimated()
-                                        authConfirm.destroy()
-                                    })
-                                })
-                            })
-                            authActivate.failed.connect(function(failed_text) {
-                                activateProgress.rejectAnimated()
-                                authActivate.destroy()
-                            })
                         }
 
                     }
@@ -419,24 +345,6 @@ CustomTitleDialogWindow {
         }
 
 
-    }
-
-    onAccepted: {
-        if (rbPassword.checked) {
-            password = newPasswordWithConfirm.text
-            seed.encType = WalletInfo.Password
-            encType = WalletInfo.Password
-        }
-        else {
-            seed.encType = WalletInfo.Auth
-            seed.encKey = encKey
-        }
-
-        isPrimary = cbPrimary.checked
-    }
-
-    onRejected: {
-        authSign.cancel()
     }
 
     Loader {
@@ -459,13 +367,16 @@ CustomTitleDialogWindow {
                     filePath = filePath.replace(/(^file:\/{2})/, "") // this might be done like this to work in ubuntu? not sure...
                 }
                 lblDBFile.text = decodeURIComponent(filePath)
-                if (!seed.parseDigitalBackupFile(lblDBFile.text)) {
-                    lblDBFile.text = "..."
-                    // not showing a message box here because seed with send a signal with error message which will be shown anyways
-                    //ibFailure.displayMessage(qsTr("Failed to parse digital backup from %1").arg(lblDBFile.text))
-                    //messageBoxCritical(qsTr("Error"), qsTr("Failed to parse digital backup."), qsTr("Path: '%1'").arg(lblDBFile.text))
-                } else if (tfName.text.length === 0) {
-                    tfName.text = seed.walletName
+                // seed will be stored to Seed::privKey_
+                seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)
+                walletInfo = qmlFactory.createWalletInfoFromDigitalBackup(lblDBFile.text)
+
+                if (seed.networkType === NsWallet.Invalid) {
+                    digitalBackupAcceptable = false
+                    JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse digital backup."), qsTr("Path: '%1'").arg(lblDBFile.text))
+                }
+                else {
+                    digitalBackupAcceptable = true
                 }
             }
         }
