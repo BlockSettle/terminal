@@ -451,7 +451,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
          return true;
       }
    }
-   if (child->isRBFeligible() && parent->isRBFeligible()) {
+   if (!child->confirmations && child->txEntry.isRBF && !parent->confirmations && parent->txEntry.isRBF) {
       std::set<BinaryData> childInputs, parentInputs;
       for (int i = 0; i < child->tx.getNumTxIn(); i++) {
          childInputs.insert(child->tx.getTxInCopy(i).serialize());
@@ -613,11 +613,24 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
          if (newBlockNum != UINT32_MAX) {
             item->confirmations = armory_->getConfirmationsNumber(newBlockNum);
             item->txEntry.blockNum = newBlockNum;
+            onItemConfirmed(item);
          }
       }
    }
    emit dataChanged(index(0, static_cast<int>(Columns::Amount))
    , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
+}
+
+void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
+{
+   if (item->txEntry.isRBF && (item->confirmations == 1)) {
+      const auto node = rootNode_->find(item->id());
+      if (node && node->hasChildren()) {
+         beginRemoveRows(index(node->row(), 0), 0, node->nbChildren() - 1);
+         node->clear();
+         endRemoveRows();
+      }
+   }
 }
 
 void TransactionsViewModel::loadLedgerEntries()
@@ -738,27 +751,27 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       cbCheckIfInitializationCompleted();
    };
 
-   const auto cbInit = [this, walletsMgr, cbMainAddr, cbCheckIfInitializationCompleted] {
-      if (amountStr.isEmpty() && txHashes.empty()) {
+   const auto cbInit = [this, walletsMgr, cbMainAddr, cbCheckIfInitializationCompleted, userCB] {
+      if (amountStr.isEmpty() && txHashesReceived) {
          calcAmount(walletsMgr);
       }
       if (mainAddress.isEmpty()) {
-         walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr);
+         if (!walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr)) {
+            userCB(nullptr);
+         }
       }
       else {
          cbCheckIfInitializationCompleted();
       }
    };
 
-   const auto cbTXs = [this, cbInit](std::vector<Tx> txs) {
+   const auto cbTXs = [this, cbInit, userCB](std::vector<Tx> txs) {
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
-         txHashes.erase(txHash);
          txIns[txHash] = tx;
-         if (txHashes.empty()) {
-            cbInit();
-         }
       }
+      txHashesReceived = true;
+      cbInit();
    };
    const auto &cbDir = [this, cbInit](bs::Transaction::Direction dir, std::vector<bs::Address> inAddrs) {
       direction = dir;
@@ -817,8 +830,9 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       cbInit();
    };
 
-   const auto cbTX = [this, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr](Tx newTx) {
+   const auto cbTX = [this, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr, userCB](Tx newTx) {
       if (!newTx.isInitialized()) {
+         userCB(nullptr);
          return;
       }
       if (comment.isEmpty()) {
@@ -841,16 +855,27 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
             }
          }
          if (txHashSet.empty()) {
-            cbInit();
+            txHashesReceived = true;
          }
          else {
-            txHashes = txHashSet;
-            armory->getTXsByHash(txHashSet, cbTXs);
+            if (!armory->getTXsByHash(txHashSet, cbTXs)) {
+               userCB(nullptr);
+            }
          }
+      }
+      else {
+         txHashesReceived = true;
       }
 
       if (dirStr.isEmpty()) {
-         walletsMgr->GetTransactionDirection(tx, wallet, cbDir);
+         if (!walletsMgr->GetTransactionDirection(tx, wallet, cbDir)) {
+            userCB(nullptr);
+         }
+      }
+      else {
+         if (txHashesReceived) {
+            cbInit();
+         }
       }
    };
 
@@ -860,7 +885,9 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       if (tx.isInitialized()) {
          cbTX(tx);
       } else {
-         armory->getTxByHash(txEntry.txHash, cbTX);
+         if (!armory->getTxByHash(txEntry.txHash, cbTX)) {
+            userCB(nullptr);
+         }
       }
    }
 }
@@ -881,10 +908,7 @@ static bool isSpecialWallet(const std::shared_ptr<bs::Wallet> &wallet)
 
 void TransactionsViewItem::calcAmount(const std::shared_ptr<WalletsManager> &walletsManager)
 {
-   if (wallet) {
-      if (!tx.isInitialized()) {
-         return;
-      }
+   if (wallet && tx.isInitialized()) {
       bool hasSpecialAddr = false;
       int64_t outputVal = 0;
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {

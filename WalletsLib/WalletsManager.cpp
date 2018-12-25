@@ -789,6 +789,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
          ((addrWallet == wallet) ? ourOuts : otherOuts) = true;
          if (addrWallet && (addrWallet->GetType() == bs::wallet::Type::ColorCoin)) {
             ccTx = true;
+            break;
          }
       }
 
@@ -812,6 +813,10 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
                bs::PayoutSigner::WhichSignature(tx, 0, settlAE, logger_, armory_, cbPayout);
                return;
             }
+            logger_->warn("[WalletsManager::GetTransactionDirection] failed to get settlement AE");
+         }
+         else {
+            logger_->warn("[WalletsManager::GetTransactionDirection] more than one settlement output");
          }
          updateTxDirCache(txKey, bs::Transaction::PayOut, inAddrs, cb);
          return;
@@ -1032,7 +1037,13 @@ void WalletsManager::onCCInfoLoaded()
    }
 }
 
-// The initial point for processing an incoming zero conf TX.
+// The initial point for processing an incoming zero conf TX. Important notes:
+//
+// - When getting the ZC list from Armory, previous ZCs won't clear out until
+//   they have been confirmed.
+// - If a TX has multiple instances of the same address, each instance will get
+//   its own UTXO object while sharing the same UTXO hash.
+// - There's no immediate way to determine if the UTXO entry is for change.
 void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
    std::vector<bs::TXEntry> ourZCentries;
@@ -1042,6 +1053,24 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
       if (wallet != nullptr) {
          logger_->debug("[{}] ZC entry in wallet {}", __func__
                         , wallet->GetWalletName());
+
+         // Get the ZC UTXOs for the wallet. We need to save a copy for UTXO
+         // filtering and balance correction purposes.
+         const auto &cbZCList = [this, wallet](ReturnMessage<std::vector<UTXO>> utxos)-> void {
+            try {
+               auto inUTXOs = utxos.get();
+               for(auto& utxo: inUTXOs) {
+                  wallet->addZCUTXOForFilter(utxo);
+               }
+            }
+            catch (const std::exception &e) {
+               if (logger_ != nullptr) {
+                  logger_->error("[WalletsManager::onZeroConfReceived] Return data error " \
+                     "- {}", e.what());
+               }
+            }
+         };
+         wallet->getSpendableZCList(cbZCList, this);
 
          // We have an affected wallet. Update it!
          ourZCentries.push_back(bs::convertTXEntry(led));

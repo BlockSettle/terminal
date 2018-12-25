@@ -58,7 +58,7 @@ struct TransactionsViewItem
    std::string id() const;
 
 private:
-   std::set<BinaryData>       txHashes;
+   bool     txHashesReceived{ false };
    std::map<BinaryData, Tx>   txIns;
    mutable std::string        id_;
 };
@@ -152,6 +152,7 @@ private slots:
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
+   void onItemConfirmed(const TransactionPtr);
 
 private:
    void init();

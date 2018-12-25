@@ -19,6 +19,8 @@ namespace bs {
    class LogManager;
 }
 
+class ChatServer;
+
 class AboutDialog;
 class AssetManager;
 class AuthAddressDialog;
@@ -72,6 +74,7 @@ private:
 
    void InitPortfolioView();
    void InitWalletsView();
+   void InitChatView();
 
    void InitOTP();
 
@@ -135,6 +138,7 @@ private:
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
+   QString currentUserLogin_;
    bool  widgetsInited_ = false;
 
    struct NetworkSettings {
@@ -209,9 +213,11 @@ private:
 
    void updateLoginActionState();
 
-   void loginWithAuthEID(const std::string& email);
+   void loginWithAutheID(const std::string& email);
    void loginWithCeler(const std::string& username, const std::string& password);
+   void loginToCeler(const std::string& username, const std::string& password);
 
+private:
    QString loginButtonText_;
 };
 
