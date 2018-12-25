@@ -61,6 +61,9 @@ public:
    TransactionData(TransactionData&&) = delete;
    TransactionData& operator = (TransactionData&&) = delete;
 
+   // should be used only if you could not set CB in ctor
+   void SetCallback(onTransactionChanged changedCallback);
+
    bool SetWallet(const std::shared_ptr<bs::Wallet> &, uint32_t topBlock
       , bool resetInputs = false, const std::function<void()> &cbInputsReset = nullptr);
    bool SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &, const std::vector<UTXO> &, uint32_t topBlock);

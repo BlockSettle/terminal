@@ -1118,21 +1118,25 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
    };
 
    std::shared_ptr<TransactionData> transData;
+
    if (qrn.assetType != bs::network::Asset::SpotFX) {
       auto wallet = getCurrentWallet();
       if (!wallet) {
          wallet = walletsManager_->GetDefaultWallet();
       }
-      transData = std::make_shared<TransactionData>();
+
+      transData = std::make_shared<TransactionData>(TransactionData::onTransactionChanged{}, true, true);
+
+      transData->disableTransactionUpdate();
       transData->SetWallet(wallet, armory_->topBlock());
+
       if (qrn.assetType == bs::network::Asset::PrivateMarket) {
          const auto &cc = qrn.product;
          const auto& ccWallet = getCCWallet(cc);
          if (qrn.side == bs::network::Side::Buy) {
             transData->SetSigningWallet(ccWallet);
             curWallet_ = wallet;
-         }
-         else {
+         } else {
             if (!ccWallet) {
                ui_->checkBoxAQ->setChecked(false);
                BSMessageBox(BSMessageBox::critical, tr("Auto Quoting")
@@ -1145,11 +1149,28 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          }
       }
 
+      const auto txUpdated = [this, qrn, price, cbSubmit, transData]()
+      {
+         logger_->debug("[RFQDealerReply::onAQReply TX CB] : tx updated for {} - {}"
+            , qrn.quoteRequestId, (transData->IsTransactionValid() ? "tx valid" : "tx invalid"));
+
+         if (transData->IsTransactionValid()) {
+            // remove circular reference in CB.
+            transData->SetCallback({});
+            aq_->setTxData(qrn.quoteRequestId, transData);
+            submitReply(transData, qrn, price, cbSubmit);
+         }
+      };
+      transData->SetCallback(txUpdated);
+
       const auto &cbFee = [this, qrn, price, transData, cbSubmit](float feePerByte) {
          transData->SetFeePerByte(feePerByte);
-         aq_->setTxData(qrn.quoteRequestId, transData);
-         submitReply(transData, qrn, price, cbSubmit);
+         // should force update
+         transData->enableTransactionUpdate();
       };
+
+      logger_->debug("[RFQDealerReply::onAQReply] start fee estimation for quote: {}"
+         , qrn.quoteRequestId);
       walletsManager_->estimatedFeePerByte(2, cbFee, this);
       return;
    }

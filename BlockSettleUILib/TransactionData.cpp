@@ -33,6 +33,16 @@ TransactionData::~TransactionData()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
+void TransactionData::SetCallback(onTransactionChanged changedCallback)
+{
+   // we should be able to clear callback
+   if (changedCallback_ && !changedCallback) {
+      throw std::logic_error("callback should not be changed if set in ctor");
+   }
+
+   changedCallback_ = changedCallback;
+}
+
 bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint32_t topBlock
    , bool resetInputs, const std::function<void()> &cbInputsReset)
 {
