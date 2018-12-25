@@ -208,9 +208,17 @@ private:
    void createAdvancedTxDialog(const std::string &selectedWalletId);
    void createAuthWallet();
 
+   bool isUserLoggedIn() const;
+   bool isArmoryConnected() const;
+
+   void updateLoginActionState();
+
    void loginWithAutheID(const std::string& email);
    void loginWithCeler(const std::string& username, const std::string& password);
    void loginToCeler(const std::string& username, const std::string& password);
+
+private:
+   QString loginButtonText_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
