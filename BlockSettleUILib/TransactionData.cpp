@@ -35,11 +35,6 @@ TransactionData::~TransactionData()
 
 void TransactionData::SetCallback(onTransactionChanged changedCallback)
 {
-   // we should be able to clear callback
-   if (changedCallback_ && !changedCallback) {
-      throw std::logic_error("callback should not be changed if set in ctor");
-   }
-
    changedCallback_ = changedCallback;
 }
 
@@ -125,8 +120,9 @@ void TransactionData::InvalidateTransactionData()
    usedUTXO_.clear();
    memset((void*)&summary_, 0, sizeof(summary_));
 
+   UpdateTransactionData();
+
    if (transactionUpdateEnabled_) {
-      UpdateTransactionData();
       if (changedCallback_) {
          changedCallback_();
       }

@@ -1155,10 +1155,12 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
             , qrn.quoteRequestId, (transData->InputsLoadedFromArmory() ? "inputs loaded" : "inputs not loaded"));
 
          if (transData->InputsLoadedFromArmory()) {
+            aq_->setTxData(qrn.quoteRequestId, transData);
+            // submit reply will change transData, but we should not get this notifications
+            transData->disableTransactionUpdate();
+            submitReply(transData, qrn, price, cbSubmit);
             // remove circular reference in CB.
             transData->SetCallback({});
-            aq_->setTxData(qrn.quoteRequestId, transData);
-            submitReply(transData, qrn, price, cbSubmit);
          }
       };
 
