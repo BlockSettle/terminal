@@ -1,3 +1,10 @@
+0.12.3
+Improvements:
+   - Added trivial private chat
+Bug fixes:
+   - TX list fix for missing ZCs
+   - Unconfirmed RBFs are removed from TX list on first conf
+
 0.12.2
 Improvements:
    - Don't allow wrong network type signer-terminal connections
