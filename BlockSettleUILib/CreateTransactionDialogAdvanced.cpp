@@ -657,12 +657,10 @@ void CreateTransactionDialogAdvanced::validateAddOutputButton()
 
 void CreateTransactionDialogAdvanced::validateCreateButton()
 {
-   const bool isSignerReady = signingContainer_ && ((signingContainer_->opMode() == SignContainer::OpMode::Offline)
-      || !signingContainer_->isOffline());
    const bool isTxValid = transactionData_->IsTransactionValid() && transactionData_->GetTransactionSummary().txVirtSize;
 
+   updateCreateButtonText();
    ui_->pushButtonCreate->setEnabled(isTxValid
-      && isSignerReady
       && !broadcasting_
       && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
          || (selectedChangeAddress_.isValid())));
