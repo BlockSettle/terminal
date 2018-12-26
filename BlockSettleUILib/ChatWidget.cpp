@@ -124,7 +124,7 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
    {
       logger_->debug("Set user name {}", email);
       usersViewModel_->onClear();
-      std::string userId = client_->loginToServer(email, jwt);
+      const std::string userId = client_->loginToServer(email, jwt);
       currentUserId_ = QString::fromStdString(userId);
       currentChatId_ = currentUserId_;
       ui_->stackedWidget->setCurrentIndex(1);
