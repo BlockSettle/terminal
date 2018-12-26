@@ -72,7 +72,7 @@ void LoginWindow::onAuthPressed()
 {
    autheID_ = true;
    if (ui_->checkBoxRememberUsername->isChecked()) {
-       settings_->set(ApplicationSettings::celerUsername, ui_->lineEditUsername->text());
+      settings_->set(ApplicationSettings::celerUsername, ui_->lineEditUsername->text());
    }
    accept();
    ui_->pushButtonAuth->setEnabled(false);

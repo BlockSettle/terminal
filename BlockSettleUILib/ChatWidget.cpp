@@ -93,28 +93,28 @@ void ChatWidget::onSendButtonClicked()
 
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
-    auto selection = ui_->treeViewUsers->selectionModel();
-    if (selection)
-    {
-       QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
-       selection->select(selectedUserIdx, QItemSelectionModel::Select);
-       ui_->tableViewMessages->scrollToBottom();
-    }
+   auto selection = ui_->treeViewUsers->selectionModel();
+   if (selection)
+   {
+      QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
+      selection->select(selectedUserIdx, QItemSelectionModel::Select);
+      ui_->tableViewMessages->scrollToBottom();
+   }
 }
 
 
 void ChatWidget::switchToChat(const QString& chatId)
 {
-    ui_->labelActiveChat->setText(tr("Block Settle Chat #") + currentChatId_);
-    client_->onSetCurrentPrivateChat(currentChatId_);
-    messagesViewModel_->onSwitchToChat(currentChatId_);
+   ui_->labelActiveChat->setText(tr("Block Settle Chat #") + currentChatId_);
+   client_->onSetCurrentPrivateChat(currentChatId_);
+   messagesViewModel_->onSwitchToChat(currentChatId_);
 
-    auto selection = ui_->treeViewUsers->selectionModel();
-    if (selection)
-    {
-        QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
-        selection->select(selectedUserIdx, QItemSelectionModel::Select);
-    }
+   auto selection = ui_->treeViewUsers->selectionModel();
+   if (selection)
+   {
+      QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
+      selection->select(selectedUserIdx, QItemSelectionModel::Select);
+   }
 }
 
 
@@ -147,10 +147,10 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 
 void ChatWidget::onLoginFailed()
 {
-    ui_->stackedWidget->setCurrentIndex(0);
-    currentChatId_ = QString();
+   ui_->stackedWidget->setCurrentIndex(0);
+   currentChatId_ = QString();
 
-    emit LoginFailed();
+   emit LoginFailed();
 }
 
 
