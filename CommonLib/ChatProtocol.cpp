@@ -182,6 +182,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       case ResponseType::ResponseMessages:
          return MessagesResponse::fromJSON(jsonData);
 
+      case ResponseType::ResponseLogin:
+         return LoginResponse::fromJSON(jsonData);
+
       default:
          break;
    }

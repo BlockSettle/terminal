@@ -51,7 +51,7 @@ public:
    void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
    void OnUsersList(Chat::UsersListResponse& response) override;
    void OnMessages(Chat::MessagesResponse& response) override;
-
+   void OnLoginReturned(Chat::LoginResponse& response) override;
 
 public:
    void OnDataReceived(const std::string& data) override;
@@ -69,6 +69,8 @@ signals:
    void ConnectedToServer();
    void ConnectionClosed();
    void ConnectionError(int errorCode);
+
+   void LoginFailed();
 
    void UsersBeginUpdate(int count);
    void UserUpdate(const QString& userId);

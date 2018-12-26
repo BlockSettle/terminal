@@ -545,7 +545,9 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitChatView()
 {
-    ui->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+   ui->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+
+   connect(ui->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
 }
 
 // Initialize widgets related to transactions.

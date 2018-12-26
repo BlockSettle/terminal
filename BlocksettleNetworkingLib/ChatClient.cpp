@@ -54,11 +54,21 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
    auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, jwt);
    sendRequest(loginRequest);
 
-   // [TODO]: Request users list after successfull login
-   sendHeartbeat();
-
-   heartbeatTimer_->start();
    return currentUserId_;
+}
+
+
+void ChatClient::OnLoginReturned(Chat::LoginResponse& response)
+{
+    if (response.getStatus() == Chat::LoginResponse::Status::LoginOk)
+    {
+        sendHeartbeat();
+        heartbeatTimer_->start();
+    }
+    else
+    {
+        emit LoginFailed();
+    }
 }
 
 
@@ -165,8 +175,8 @@ void ChatClient::OnDataReceived(const std::string& data)
 {
    logger_->debug("[ChatClient::OnDataReceived] {}", data);
 
-   auto heartbeatResponse = Chat::Response::fromJSON(data);
-   heartbeatResponse->handle(*this);
+   auto response = Chat::Response::fromJSON(data);
+   response->handle(*this);
 }
 
 

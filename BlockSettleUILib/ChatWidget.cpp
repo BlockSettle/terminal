@@ -42,6 +42,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
 
+   connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
+
    connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
@@ -129,6 +131,15 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
       logger_->error("Unknown error ...");
    }
    return std::string();
+}
+
+
+void ChatWidget::onLoginFailed()
+{
+    ui_->stackedWidget->setCurrentIndex(0);
+    currentUserId_ = QString();
+
+    emit LoginFailed();
 }
 
 

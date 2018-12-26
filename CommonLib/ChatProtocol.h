@@ -220,6 +220,9 @@ namespace Chat
       void handle(ResponseHandler& handler) override;
       QJsonObject toJson() const override;
 
+      std::string getUserId() const { return userId_; }
+      Status getStatus() const { return status_; }
+
    private:
       std::string userId_;
       Status status_;

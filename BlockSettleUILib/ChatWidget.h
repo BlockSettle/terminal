@@ -63,6 +63,11 @@ private slots:
    void onSendButtonClicked();
    void onUserClicked(const QModelIndex& index);
    void onMessagesUpdated(const QModelIndex& parent, int start, int end);
+   void onLoginFailed();
+
+signals:
+
+   void LoginFailed();
 
 };
 
