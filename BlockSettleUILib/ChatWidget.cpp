@@ -87,9 +87,6 @@ void ChatWidget::onSendButtonClicked()
    {
       client_->onSendMessage(messageText);
       ui_->text->clear();
-
-      messagesViewModel_->onSingleMessageUpdate(QDateTime::currentDateTime(), client_->prependMessage(messageText));
-      ui_->tableViewMessages->scrollToBottom();
    }
 }
 
@@ -99,6 +96,7 @@ void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end
     auto selection = ui_->treeViewUsers->selectionModel();
     QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentUserId_);
     selection->select(selectedUserIdx, QItemSelectionModel::Select);
+    ui_->tableViewMessages->scrollToBottom();
 }
 
 

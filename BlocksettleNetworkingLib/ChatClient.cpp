@@ -78,14 +78,14 @@ void ChatClient::logout()
 {
    loggedIn_ = false;
    currentUserId_ = "";
-   heartbeatTimer_->stop();
 
    if (!connection_.get()) {
       logger_->error("[ChatClient::logout] Disconnected already.");
       return;
    }
 
-   // [TODO]: Add bye request
+   auto request = std::make_shared<Chat::LogoutRequest>("", currentUserId_, "");
+   sendRequest(request);
 
    connection_.reset();
 }
@@ -108,8 +108,11 @@ void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 
 void ChatClient::sendHeartbeat()
 {
-   auto request = std::make_shared<Chat::HeartbeatPingRequest>(currentUserId_);
-   sendRequest(request);
+   if (loggedIn_ && connection_->isActive())
+   {
+      auto request = std::make_shared<Chat::HeartbeatPingRequest>(currentUserId_);
+      sendRequest(request);
+   }
 }
 
 

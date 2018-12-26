@@ -86,9 +86,7 @@ void ChatMessagesViewModel::onSingleMessageUpdate(const QDateTime& date, const Q
 
 void ChatMessagesViewModel::onMessagesBeginUpdate(int count)
 {
-   beginResetModel();
-   messages_.clear();
-   beginInsertRows(QModelIndex(), 0, count);
+   beginInsertRows(QModelIndex(), messages_.size(), messages_.size() + count);
 }
 
 
@@ -101,5 +99,4 @@ void ChatMessagesViewModel::onSequentialMessageUpdate(const QDateTime& date, con
 void ChatMessagesViewModel::onMessagesEndUpdate()
 {
    endInsertRows();
-   endResetModel();
 }
