@@ -296,10 +296,11 @@ void MessagesResponse::handle(ResponseHandler& handler)
 }
 
 
-LoginRequest::LoginRequest(const std::string& clientId
+BaseLoginRequest::BaseLoginRequest(RequestType requestType
+                     , const std::string& clientId
                      , const std::string& authId
                      , const std::string& jwt)
-   : Request (RequestType::RequestLogin, clientId)
+   : Request (requestType, clientId)
    , authId_(authId)
    , jwt_(jwt)
 {
@@ -307,7 +308,7 @@ LoginRequest::LoginRequest(const std::string& clientId
 }
 
 
-QJsonObject LoginRequest::toJson() const
+QJsonObject BaseLoginRequest::toJson() const
 {
    QJsonObject data = Request::toJson();
 
@@ -321,6 +322,12 @@ QJsonObject LoginRequest::toJson() const
 void LoginRequest::handle(RequestHandler& handler)
 {
    handler.OnLogin(*this);
+}
+
+
+void LogoutRequest::handle(RequestHandler& handler)
+{
+   handler.OnLogout(*this);
 }
 
 

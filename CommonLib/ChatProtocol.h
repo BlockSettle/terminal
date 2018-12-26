@@ -109,21 +109,49 @@ namespace Chat
    };
 
 
-   class LoginRequest : public Request
+   class BaseLoginRequest : public Request
+   {
+   public:
+
+      BaseLoginRequest(RequestType requestType
+                , const std::string& clientId
+                , const std::string& authId
+                , const std::string& jwt);
+      QJsonObject toJson() const override;
+      std::string getAuthId() const { return authId_; }
+      std::string getJWT() const { return jwt_; }
+
+   protected:
+      std::string authId_;
+      std::string jwt_;
+   };
+
+
+   class LoginRequest : public BaseLoginRequest
    {
    public:
 
       LoginRequest(const std::string& clientId
-                , const std::string& authId
-                , const std::string& jwt);
-      QJsonObject toJson() const override;
+                  , const std::string& authId
+                  , const std::string& jwt)
+         : BaseLoginRequest (RequestType::RequestLogin, clientId, authId, jwt)
+      {
+      }
       void handle(RequestHandler& handler) override;
-      std::string getAuthId() const { return authId_; }
-      std::string getJWT() const { return jwt_; }
+   };
 
-   private:
-      std::string authId_;
-      std::string jwt_;
+
+   class LogoutRequest : public BaseLoginRequest
+   {
+   public:
+
+      LogoutRequest(const std::string& clientId
+                  , const std::string& authId
+                  , const std::string& jwt)
+         : BaseLoginRequest (RequestType::RequestLogout, clientId, authId, jwt)
+      {
+      }
+      void handle(RequestHandler& handler) override;
    };
 
 
@@ -266,6 +294,7 @@ namespace Chat
       virtual ~RequestHandler() = default;
       virtual void OnHeartbeatPing(HeartbeatPingRequest& request) = 0;
       virtual void OnLogin(LoginRequest& request) = 0;
+      virtual void OnLogout(LogoutRequest& request) = 0;
       virtual void OnSendMessage(SendMessageRequest& request) = 0;
       virtual void OnOnlineUsers(OnlineUsersRequest& request) = 0;
       virtual void OnRequestMessages(MessagesRequest& request) = 0;
