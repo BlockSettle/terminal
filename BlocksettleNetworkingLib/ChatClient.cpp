@@ -24,7 +24,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    , logger_(logger)
    , heartbeatTimer_(new QTimer(this))
 {
-   heartbeatTimer_->setInterval(3 * 1000);
+   heartbeatTimer_->setInterval(30 * 1000);
    heartbeatTimer_->setSingleShot(false);
    heartbeatTimer_->start();
 
@@ -108,17 +108,8 @@ void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 
 void ChatClient::sendHeartbeat()
 {
-   if (loggedIn_)
-   {
-       auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", currentUserId_);
-       sendRequest(usersListRequest);
-
-       auto messagesRequest = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
-       sendRequest(messagesRequest);
-   }
-
-//   auto request = std::make_shared<Chat::HeartbeatPingRequest>("");
-//   sendRequest(request);
+   auto request = std::make_shared<Chat::HeartbeatPingRequest>(currentUserId_);
+   sendRequest(request);
 }
 
 
@@ -131,7 +122,6 @@ void ChatClient::OnHeartbeatPong(Chat::HeartbeatPongResponse& response)
 void ChatClient::OnUsersList(Chat::UsersListResponse& response)
 {
    logger_->debug("Received users list from server: {}", response.getData());
-
 
    auto users = response.getDataList();
 
