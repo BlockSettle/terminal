@@ -59,7 +59,6 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   QString prependMessage(const QString& messageText, const QString& senderId = QString());
    void sendHeartbeat();
 
 private:
@@ -76,9 +75,7 @@ signals:
    void UserUpdate(const QString& userId);
    void UsersEndUpdate();
 
-   void MessagesBeginUpdate(int count);
-   void MessageUpdate(const QDateTime& dateTime, const QString& text);
-   void MessagesEndUpdate();
+   void MessagesUpdate(const std::vector<std::string>& messages);
 
 
 public slots:

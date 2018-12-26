@@ -11,6 +11,9 @@
 #include <QDebug>
 
 
+Q_DECLARE_METATYPE(std::vector<std::string>)
+
+
 ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChatWidget)
@@ -29,6 +32,9 @@ ChatWidget::ChatWidget(QWidget *parent)
 
    messagesViewModel_.reset(new ChatMessagesViewModel());
    ui_->tableViewMessages->setModel(messagesViewModel_.get());
+
+   qRegisterMetaType<std::vector<std::string>>();
+
 }
 
 
@@ -55,12 +61,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::UserUpdate
            , usersViewModel_.get(), &ChatUsersViewModel::onUserUpdate);
 
-   connect(client_.get(), &ChatClient::MessagesBeginUpdate, messagesViewModel_.get()
-                        , &ChatMessagesViewModel::onMessagesBeginUpdate);
-   connect(client_.get(), &ChatClient::MessagesEndUpdate, messagesViewModel_.get()
-                        , &ChatMessagesViewModel::onMessagesEndUpdate);
-   connect(client_.get(), &ChatClient::MessageUpdate, messagesViewModel_.get()
-                        , &ChatMessagesViewModel::onSequentialMessageUpdate);
+   connect(client_.get(), &ChatClient::MessagesUpdate, messagesViewModel_.get()
+                        , &ChatMessagesViewModel::onMessagesUpdate);
 
    connect(messagesViewModel_.get(), &ChatMessagesViewModel::rowsInserted,
            this, &ChatWidget::onMessagesUpdated);
@@ -72,10 +74,8 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
    if (!index.isValid())
        return;
 
-   currentUserId_ = usersViewModel_->resolveUser(index);
-   ui_->labelActiveChat->setText(tr("Block Settle Chat #") + currentUserId_);
-   client_->onSetCurrentPrivateChat(currentUserId_);
-   ui_->tableViewMessages->scrollToBottom();
+   currentChatId_ = usersViewModel_->resolveUser(index);
+   switchToChat(currentChatId_);
 }
 
 
@@ -87,6 +87,12 @@ void ChatWidget::onSendButtonClicked()
    {
       client_->onSendMessage(messageText);
       ui_->text->clear();
+
+      if (currentUserId_ != currentChatId_)
+      {
+         messagesViewModel_->onSingleMessageUpdate(QDateTime::currentDateTime(), messageText);
+         ui_->tableViewMessages->scrollToBottom();
+      }
    }
 }
 
@@ -94,9 +100,23 @@ void ChatWidget::onSendButtonClicked()
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
     auto selection = ui_->treeViewUsers->selectionModel();
-    QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentUserId_);
+    QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
     selection->select(selectedUserIdx, QItemSelectionModel::Select);
-    ui_->tableViewMessages->scrollToBottom();
+}
+
+
+void ChatWidget::switchToChat(const QString& chatId)
+{
+    ui_->labelActiveChat->setText(tr("Block Settle Chat #") + currentChatId_);
+    client_->onSetCurrentPrivateChat(currentChatId_);
+    messagesViewModel_->onSwitchToChat(currentChatId_);
+
+    auto selection = ui_->treeViewUsers->selectionModel();
+    if (selection)
+    {
+        QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
+        selection->select(selectedUserIdx, QItemSelectionModel::Select);
+    }
 }
 
 
@@ -108,15 +128,10 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
       usersViewModel_->onClear();
       std::string userId = client_->loginToServer(email, jwt);
       currentUserId_ = QString::fromStdString(userId);
+      currentChatId_ = currentUserId_;
       ui_->stackedWidget->setCurrentIndex(1);
 
-      ui_->labelActiveChat->setText(tr("Block Settle Chat #") + currentUserId_);
-      client_->onSetCurrentPrivateChat(QString::fromStdString(userId));
-      ui_->tableViewMessages->scrollToBottom();
-
-      auto selection = ui_->treeViewUsers->selectionModel();
-      QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentUserId_);
-      selection->select(selectedUserIdx, QItemSelectionModel::Select);
+      switchToChat(currentChatId_);
 
       return userId;
    }
@@ -135,7 +150,7 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 void ChatWidget::onLoginFailed()
 {
     ui_->stackedWidget->setCurrentIndex(0);
-    currentUserId_ = QString();
+    currentChatId_ = QString();
 
     emit LoginFailed();
 }
@@ -145,5 +160,5 @@ void ChatWidget::logout()
 {
    ui_->stackedWidget->setCurrentIndex(0);
    client_->logout();
-   currentUserId_ = QString();
+   currentChatId_ = QString();
 }

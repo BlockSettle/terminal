@@ -40,6 +40,7 @@ private:
 
    std::string serverPublicKey_;
 
+   QString currentChatId_;
    QString currentUserId_;
 
 
@@ -57,9 +58,10 @@ public:
 
    void logout();
 
+private:
+   void switchToChat(const QString& chatId);
 
 private slots:
-
    void onSendButtonClicked();
    void onUserClicked(const QModelIndex& index);
    void onMessagesUpdated(const QModelIndex& parent, int start, int end);

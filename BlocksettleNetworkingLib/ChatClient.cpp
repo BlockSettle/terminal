@@ -64,7 +64,9 @@ void ChatClient::OnLoginReturned(Chat::LoginResponse& response)
     if (response.getStatus() == Chat::LoginResponse::Status::LoginOk)
     {
         loggedIn_ = true;
-        sendHeartbeat();
+
+        auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
+        sendRequest(request);
     }
     else
     {
@@ -139,33 +141,13 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
 }
 
 
-QString ChatClient::prependMessage(const QString& messageText, const QString& senderId)
-{
-   QString displayMessage = QStringLiteral("[")
-         + ( senderId.isEmpty() ? QString::fromStdString(currentUserId_) : senderId )
-         + QStringLiteral("]: ") + messageText;
-   return displayMessage;
-}
-
-
 void ChatClient::OnMessages(Chat::MessagesResponse& response)
 {
    logger_->debug("Received messages from server: {}", response.getData());
 
    auto messages = response.getDataList();
 
-   emit MessagesBeginUpdate(static_cast<int>(messages.size()));
-
-   std::for_each(messages.begin(), messages.end(), [&](const std::string& msgData) {
-
-      auto receivedMessage = Chat::MessageData::fromJSON(msgData);
-
-      emit MessageUpdate(receivedMessage->getDateTime()
-                      , prependMessage(receivedMessage->getMessageData()
-                      , receivedMessage->getSenderId()));
-   });
-
-   emit MessagesEndUpdate();
+   emit MessagesUpdate(std::move(messages));
 }
 
 
