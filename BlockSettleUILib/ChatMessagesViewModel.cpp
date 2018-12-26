@@ -70,22 +70,36 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
             break;
       }
    }
+
    return QVariant();
 }
 
 
-void ChatMessagesViewModel::onLeaveRoom()
-{
-   beginResetModel();
-   messages_.clear();
-   endResetModel();
-}
-
-
-void ChatMessagesViewModel::onMessage(const QDateTime& date, const QString& messageText)
+void ChatMessagesViewModel::onSingleMessageUpdate(const QDateTime& date, const QString& messageText)
 {
    auto rowIdx = static_cast<int>(messages_.size());
    beginInsertRows(QModelIndex(), rowIdx, rowIdx);
    messages_.push_back(std::make_pair(date, messageText));
    endInsertRows();
+}
+
+
+void ChatMessagesViewModel::onMessagesBeginUpdate(int count)
+{
+   beginResetModel();
+   messages_.clear();
+   beginInsertRows(QModelIndex(), 0, count);
+}
+
+
+void ChatMessagesViewModel::onSequentialMessageUpdate(const QDateTime& date, const QString& messageText)
+{
+   messages_.push_back(std::make_pair(date, messageText));
+}
+
+
+void ChatMessagesViewModel::onMessagesEndUpdate()
+{
+   endInsertRows();
+   endResetModel();
 }

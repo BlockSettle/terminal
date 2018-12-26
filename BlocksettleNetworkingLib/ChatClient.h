@@ -60,18 +60,23 @@ public:
    void OnError(DataConnectionError errorCode) override;
 
    QString prependMessage(const QString& messageText, const QString& senderId = QString());
-
-private:
    void sendHeartbeat();
 
+private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
 signals:
    void ConnectedToServer();
    void ConnectionClosed();
    void ConnectionError(int errorCode);
+
+   void UsersBeginUpdate(int count);
    void UserUpdate(const QString& userId);
+   void UsersEndUpdate();
+
+   void MessagesBeginUpdate(int count);
    void MessageUpdate(const QDateTime& dateTime, const QString& text);
+   void MessagesEndUpdate();
 
 
 public slots:

@@ -33,8 +33,11 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 public slots:
-   void onLeaveRoom();
-   void onMessage(const QDateTime&, const QString& messageText);
+   void onMessagesBeginUpdate(int count);
+   void onSequentialMessageUpdate(const QDateTime&, const QString& messageText);
+   void onMessagesEndUpdate();
+
+   void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
 
 private:
    std::vector<std::pair<QDateTime, QString>> messages_;

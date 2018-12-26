@@ -2,7 +2,7 @@
 #define __CHAT_USERS_VIEW_MODEL__
 
 
-#include <QAbstractTableModel>
+#include <QAbstractItemModel>
 #include <QMap>
 #include <QVector>
 
@@ -24,6 +24,7 @@ public:
    ChatUsersViewModel& operator = (ChatUsersViewModel&&) = delete;
 
    QString resolveUser(const QModelIndex& index);
+   QModelIndex resolveUser(const QString& userId);
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -33,8 +34,10 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 public slots:
-   void onUserUpdate(const QString& userId);
    void onClear();
+   void onUsersBeginUpdate(int count);
+   void onUserUpdate(const QString& userId);
+   void onUsersEndUpdate();
 
 private:
    QMap<QString, int> indexByUser_;

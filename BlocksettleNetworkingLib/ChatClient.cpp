@@ -18,12 +18,13 @@
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                   , const std::shared_ptr<ApplicationSettings> &appSettings
                   , const std::shared_ptr<spdlog::logger>& logger)
+
    : connectionManager_(connectionManager)
    , appSettings_(appSettings)
    , logger_(logger)
    , heartbeatTimer_(new QTimer(this))
 {
-   heartbeatTimer_->setInterval(30 * 1000);
+   heartbeatTimer_->setInterval(3 * 1000);
    heartbeatTimer_->setSingleShot(false);
 
    connect(heartbeatTimer_.get(), &QTimer::timeout, this, &ChatClient::sendHeartbeat);
@@ -55,8 +56,7 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
    sendRequest(loginRequest);
 
    // [TODO]: Request users list after successfull login
-   auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", currentUserId_);
-   sendRequest(usersListRequest);
+   sendHeartbeat();
 
    heartbeatTimer_->start();
    return currentUserId_;
@@ -97,8 +97,14 @@ void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 
 void ChatClient::sendHeartbeat()
 {
-   auto request = std::make_shared<Chat::HeartbeatPingRequest>("");
-   sendRequest(request);
+   auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", currentUserId_);
+   sendRequest(usersListRequest);
+
+   auto messagesRequest = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
+   sendRequest(messagesRequest);
+
+//   auto request = std::make_shared<Chat::HeartbeatPingRequest>("");
+//   sendRequest(request);
 }
 
 
@@ -112,12 +118,17 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
 {
    logger_->debug("Received users list from server: {}", response.getData());
 
+
    auto users = response.getDataList();
-   QList<QString> usersList;
+
+   emit UsersBeginUpdate(static_cast<int>(users.size()));
+
    foreach(auto userId, users) {
 
       emit UserUpdate(QString::fromStdString(userId));
    }
+
+   emit UsersEndUpdate();
 }
 
 
@@ -136,6 +147,8 @@ void ChatClient::OnMessages(Chat::MessagesResponse& response)
 
    auto messages = response.getDataList();
 
+   emit MessagesBeginUpdate(static_cast<int>(messages.size()));
+
    std::for_each(messages.begin(), messages.end(), [&](const std::string& msgData) {
 
       auto receivedMessage = Chat::MessageData::fromJSON(msgData);
@@ -144,6 +157,8 @@ void ChatClient::OnMessages(Chat::MessagesResponse& response)
                       , prependMessage(receivedMessage->getMessageData()
                       , receivedMessage->getSenderId()));
    });
+
+   emit MessagesEndUpdate();
 }
 
 

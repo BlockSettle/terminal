@@ -9,68 +9,68 @@
 using namespace Chat;
 
 
-static const QString VersionKey    = QStringLiteral("version");
+static const QString VersionKey   = QStringLiteral("version");
 static const QString NameKey      = QStringLiteral("name");
 static const QString TypeKey      = QStringLiteral("type");
 static const QString TextKey      = QStringLiteral("text");
 static const QString RoomKey      = QStringLiteral("room");
-static const QString RoomsKey      = QStringLiteral("rooms");
-static const QString MessageKey    = QStringLiteral("message");
+static const QString RoomsKey     = QStringLiteral("rooms");
+static const QString MessageKey   = QStringLiteral("message");
 static const QString FromKey      = QStringLiteral("from");
-static const QString ContactsKey   = QStringLiteral("fromid");
+static const QString ContactsKey  = QStringLiteral("fromid");
 static const QString IdKey        = QStringLiteral("id");
-static const QString AuthIdKey     = QStringLiteral("authid");
+static const QString AuthIdKey    = QStringLiteral("authid");
 static const QString JwtKey       = QStringLiteral("jwt");
-static const QString PasswordKey   = QStringLiteral("passwd");
+static const QString PasswordKey  = QStringLiteral("passwd");
 static const QString ReceiverIdKey  = QStringLiteral("toid");
-static const QString SenderIdKey   = QStringLiteral("fromid");
-static const QString StatusKey     = QStringLiteral("status");
-static const QString UsersKey      = QStringLiteral("users");
-static const QString DateTimeKey   = QStringLiteral("datetm");
+static const QString SenderIdKey  = QStringLiteral("fromid");
+static const QString StatusKey    = QStringLiteral("status");
+static const QString UsersKey     = QStringLiteral("users");
+static const QString DateTimeKey  = QStringLiteral("datetm");
 static const QString DataKey      = QStringLiteral("data");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-      { "RequestHeartbeatPing"   ,   RequestType::RequestHeartbeatPing   }
-   ,   { "RequestLogin"         ,   RequestType::RequestLogin         }
-   ,   { "RequestLogout"         ,   RequestType::RequestLogout        }
-   ,   { "RequestMessages"       ,   RequestType::RequestMessages      }
-   ,   { "RequestSendMessage"     ,   RequestType::RequestSendMessage    }
-   ,   { "RequestOnlineUsers"     ,   RequestType::RequestOnlineUsers    }
+       { "RequestHeartbeatPing" ,   RequestType::RequestHeartbeatPing  }
+   ,   { "RequestLogin"         ,   RequestType::RequestLogin          }
+   ,   { "RequestLogout"        ,   RequestType::RequestLogout         }
+   ,   { "RequestMessages"      ,   RequestType::RequestMessages       }
+   ,   { "RequestSendMessage"   ,   RequestType::RequestSendMessage    }
+   ,   { "RequestOnlineUsers"   ,   RequestType::RequestOnlineUsers    }
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-      { RequestType::RequestHeartbeatPing    ,  "RequestHeartbeatPing"   }
+       { RequestType::RequestHeartbeatPing  ,  "RequestHeartbeatPing" }
    ,   { RequestType::RequestLogin          ,  "RequestLogin"         }
    ,   { RequestType::RequestLogout         ,  "RequestLogout"        }
-   ,   { RequestType::RequestMessages        ,  "RequestMessages"      }
-   ,   { RequestType::RequestSendMessage      ,  "RequestSendMessage"    }
-   ,   { RequestType::RequestOnlineUsers      ,  "RequestOnlineUsers"    }
+   ,   { RequestType::RequestMessages       ,  "RequestMessages"      }
+   ,   { RequestType::RequestSendMessage    ,  "RequestSendMessage"   }
+   ,   { RequestType::RequestOnlineUsers    ,  "RequestOnlineUsers"   }
 };
 
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-      { "ResponseError"         ,   ResponseType::ResponseError          }
-   ,   { "ResponseHeartbeatPong"   ,   ResponseType::ResponseHeartbeatPong    }
+       { "ResponseError"         ,   ResponseType::ResponseError          }
+   ,   { "ResponseHeartbeatPong" ,   ResponseType::ResponseHeartbeatPong  }
    ,   { "ResponseLogin"         ,   ResponseType::ResponseLogin          }
-   ,   { "ResponseMessages"      ,   ResponseType::ResponseMessages        }
-   ,   { "ResponseSuccess"       ,   ResponseType::ResponseSuccess         }
-   ,   { "ResponseUsersList"      ,   ResponseType::ResponseUsersList       }
+   ,   { "ResponseMessages"      ,   ResponseType::ResponseMessages       }
+   ,   { "ResponseSuccess"       ,   ResponseType::ResponseSuccess        }
+   ,   { "ResponseUsersList"     ,   ResponseType::ResponseUsersList      }
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-      { ResponseType::ResponseError         ,  "ResponseError"          }
-   ,   { ResponseType::ResponseHeartbeatPong   ,  "ResponseHeartbeatPong"    }
-   ,   { ResponseType::ResponseLogin         ,  "ResponseLogin"          }
-   ,   { ResponseType::ResponseMessages      ,  "ResponseMessages"        }
-   ,   { ResponseType::ResponseSuccess       ,  "ResponseSuccess"         }
-   ,   { ResponseType::ResponseUsersList      ,  "ResponseUsersList"       }
+       { ResponseType::ResponseError         ,  "ResponseError"         }
+   ,   { ResponseType::ResponseHeartbeatPong ,  "ResponseHeartbeatPong" }
+   ,   { ResponseType::ResponseLogin         ,  "ResponseLogin"         }
+   ,   { ResponseType::ResponseMessages      ,  "ResponseMessages"      }
+   ,   { ResponseType::ResponseSuccess       ,  "ResponseSuccess"       }
+   ,   { ResponseType::ResponseUsersList     ,  "ResponseUsersList"     }
 };
 
 
