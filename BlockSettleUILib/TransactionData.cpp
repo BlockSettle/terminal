@@ -33,6 +33,16 @@ TransactionData::~TransactionData()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
+void TransactionData::SetCallback(onTransactionChanged changedCallback)
+{
+   changedCallback_ = changedCallback;
+}
+
+bool TransactionData::InputsLoadedFromArmory() const
+{
+   return inputsLoaded_;
+}
+
 bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint32_t topBlock
    , bool resetInputs, const std::function<void()> &cbInputsReset)
 {
@@ -41,9 +51,15 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
    }
    if (wallet != wallet_) {
       wallet_ = wallet;
+      inputsLoaded_ = false;
+
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
          , swTransactionsOnly_, confirmedInputs_
-         , [this]{ InvalidateTransactionData(); }, cbInputsReset);
+         , [this]()
+         {
+            inputsLoaded_ = true;
+            InvalidateTransactionData();
+         }, cbInputsReset);
 
       coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
             return this->selectedInputs_->GetSelectedTransactions();
@@ -104,8 +120,9 @@ void TransactionData::InvalidateTransactionData()
    usedUTXO_.clear();
    memset((void*)&summary_, 0, sizeof(summary_));
 
+   UpdateTransactionData();
+
    if (transactionUpdateEnabled_) {
-      UpdateTransactionData();
       if (changedCallback_) {
          changedCallback_();
       }
@@ -126,7 +143,7 @@ void TransactionData::enableTransactionUpdate()
    transactionUpdateEnabled_ = true;
    if (transactionUpdateRequired_) {
       transactionUpdateRequired_ = false;
-      UpdateTransactionData();
+      InvalidateTransactionData();
    }
 }
 
