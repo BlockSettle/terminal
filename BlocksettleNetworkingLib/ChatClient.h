@@ -89,8 +89,8 @@ public slots:
 
 private:
    std::shared_ptr<ConnectionManager>    connectionManager_;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<spdlog::logger>      logger_;
+   std::shared_ptr<ApplicationSettings>  appSettings_;
+   std::shared_ptr<spdlog::logger>       logger_;
 
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 
@@ -98,6 +98,7 @@ private:
 
    std::string                     currentUserId_;
    std::string                     currentChatId_;
+   std::atomic_bool                loggedIn_;
 
 };
 

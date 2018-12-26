@@ -26,6 +26,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 {
    heartbeatTimer_->setInterval(3 * 1000);
    heartbeatTimer_->setSingleShot(false);
+   heartbeatTimer_->start();
 
    connect(heartbeatTimer_.get(), &QTimer::timeout, this, &ChatClient::sendHeartbeat);
 }
@@ -62,11 +63,12 @@ void ChatClient::OnLoginReturned(Chat::LoginResponse& response)
 {
     if (response.getStatus() == Chat::LoginResponse::Status::LoginOk)
     {
+        loggedIn_ = true;
         sendHeartbeat();
-        heartbeatTimer_->start();
     }
     else
     {
+        loggedIn_ = false;
         emit LoginFailed();
     }
 }
@@ -74,15 +76,15 @@ void ChatClient::OnLoginReturned(Chat::LoginResponse& response)
 
 void ChatClient::logout()
 {
+   loggedIn_ = false;
+   currentUserId_ = "";
+   heartbeatTimer_->stop();
+
    if (!connection_.get()) {
       logger_->error("[ChatClient::logout] Disconnected already.");
       return;
    }
 
-   currentUserId_ = "";
-   heartbeatTimer_->stop();
-
-   // Intentionally don't logout from server for testing reasons ...
    // [TODO]: Add bye request
 
    connection_.reset();
@@ -106,11 +108,14 @@ void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 
 void ChatClient::sendHeartbeat()
 {
-   auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", currentUserId_);
-   sendRequest(usersListRequest);
+   if (loggedIn_)
+   {
+       auto usersListRequest = std::make_shared<Chat::OnlineUsersRequest>("", currentUserId_);
+       sendRequest(usersListRequest);
 
-   auto messagesRequest = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
-   sendRequest(messagesRequest);
+       auto messagesRequest = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
+       sendRequest(messagesRequest);
+   }
 
 //   auto request = std::make_shared<Chat::HeartbeatPingRequest>("");
 //   sendRequest(request);
