@@ -70,11 +70,7 @@ signals:
    void ConnectionError(int errorCode);
 
    void LoginFailed();
-
-   void UsersBeginUpdate(int count);
-   void UserUpdate(const QString& userId);
-   void UsersEndUpdate();
-
+   void UsersUpdate(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::string>& messages);
 
 

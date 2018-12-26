@@ -54,35 +54,22 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 void ChatUsersViewModel::onClear()
 {
    beginResetModel();
-   indexByUser_.clear();
    userByIndex_.clear();
+   indexByUser_.clear();
    endResetModel();
 }
 
 
-void ChatUsersViewModel::onUsersBeginUpdate(int count)
+void ChatUsersViewModel::onUsersUpdate(const std::vector<std::string>& users)
 {
-   beginResetModel();
-   indexByUser_.clear();
-   userByIndex_.clear();
-   beginInsertRows(QModelIndex(), 0, count);
-}
+    onClear();
 
+    beginInsertRows(QModelIndex(), 0, users.size());
+    foreach(auto userId, users) {
 
-void ChatUsersViewModel::onUserUpdate(const QString& userId)
-{
-   if (indexByUser_.contains(userId))
-   {
-      return;
-   }
-
-   indexByUser_[userId] = userByIndex_.count();
-   userByIndex_.append(userId);
-}
-
-
-void ChatUsersViewModel::onUsersEndUpdate()
-{
-   endInsertRows();
-   endResetModel();
+        auto insertingUser = QString::fromStdString(userId);
+        indexByUser_[insertingUser] = userByIndex_.size();
+        userByIndex_.append(insertingUser);
+    }
+    endInsertRows();
 }

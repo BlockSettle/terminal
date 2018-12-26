@@ -35,9 +35,7 @@ public:
 
 public slots:
    void onClear();
-   void onUsersBeginUpdate(int count);
-   void onUserUpdate(const QString& userId);
-   void onUsersEndUpdate();
+   void onUsersUpdate(const std::vector<std::string>& users);
 
 private:
    QMap<QString, int> indexByUser_;

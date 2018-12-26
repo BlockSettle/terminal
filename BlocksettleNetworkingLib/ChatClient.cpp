@@ -130,14 +130,7 @@ void ChatClient::OnUsersList(Chat::UsersListResponse& response)
 
    auto users = response.getDataList();
 
-   emit UsersBeginUpdate(static_cast<int>(users.size()));
-
-   foreach(auto userId, users) {
-
-      emit UserUpdate(QString::fromStdString(userId));
-   }
-
-   emit UsersEndUpdate();
+   emit UsersUpdate(std::move(users));
 }
 
 

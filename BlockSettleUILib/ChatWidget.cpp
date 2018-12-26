@@ -54,13 +54,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
 
-   connect(client_.get(), &ChatClient::UsersBeginUpdate
-           , usersViewModel_.get(), &ChatUsersViewModel::onUsersBeginUpdate);
-   connect(client_.get(), &ChatClient::UsersEndUpdate
-           , usersViewModel_.get(), &ChatUsersViewModel::onUsersEndUpdate);
-   connect(client_.get(), &ChatClient::UserUpdate
-           , usersViewModel_.get(), &ChatUsersViewModel::onUserUpdate);
-
+   connect(client_.get(), &ChatClient::UsersUpdate
+           , usersViewModel_.get(), &ChatUsersViewModel::onUsersUpdate);
    connect(client_.get(), &ChatClient::MessagesUpdate, messagesViewModel_.get()
                         , &ChatMessagesViewModel::onMessagesUpdate);
 
@@ -91,7 +86,6 @@ void ChatWidget::onSendButtonClicked()
       if (currentUserId_ != currentChatId_)
       {
          messagesViewModel_->onSingleMessageUpdate(QDateTime::currentDateTime(), messageText);
-         ui_->tableViewMessages->scrollToBottom();
       }
    }
 }
@@ -100,8 +94,12 @@ void ChatWidget::onSendButtonClicked()
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
     auto selection = ui_->treeViewUsers->selectionModel();
-    QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
-    selection->select(selectedUserIdx, QItemSelectionModel::Select);
+    if (selection)
+    {
+       QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
+       selection->select(selectedUserIdx, QItemSelectionModel::Select);
+       ui_->tableViewMessages->scrollToBottom();
+    }
 }
 
 
