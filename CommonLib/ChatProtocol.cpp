@@ -106,8 +106,8 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return std::make_shared<HeartbeatPingRequest>(clientId);
 
       case RequestType::RequestLogin:
-         return std::make_shared<LoginRequest>(
-                  clientId
+        return std::make_shared<LoginRequest>(
+                   clientId
                  , data[AuthIdKey].toString().toStdString()
                  , data[JwtKey].toString().toStdString());
 
@@ -116,14 +116,20 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
       case RequestType::RequestOnlineUsers:
          return std::make_shared<OnlineUsersRequest>(
-                  clientId
+                   clientId
                  , data[AuthIdKey].toString().toStdString());
 
       case RequestType::RequestMessages:
          return std::make_shared<MessagesRequest>(
-                  clientId
+                   clientId
                  , data[SenderIdKey].toString().toStdString()
                  , data[ReceiverIdKey].toString().toStdString());
+
+      case RequestType::RequestLogout:
+         return std::make_shared<LogoutRequest>(
+                   clientId
+                 , data[AuthIdKey].toString().toStdString()
+                 , data[JwtKey].toString().toStdString());
 
       default:
          break;

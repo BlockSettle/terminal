@@ -112,7 +112,6 @@ namespace Chat
    class BaseLoginRequest : public Request
    {
    public:
-
       BaseLoginRequest(RequestType requestType
                 , const std::string& clientId
                 , const std::string& authId
@@ -130,7 +129,6 @@ namespace Chat
    class LoginRequest : public BaseLoginRequest
    {
    public:
-
       LoginRequest(const std::string& clientId
                   , const std::string& authId
                   , const std::string& jwt)
@@ -144,7 +142,6 @@ namespace Chat
    class LogoutRequest : public BaseLoginRequest
    {
    public:
-
       LogoutRequest(const std::string& clientId
                   , const std::string& authId
                   , const std::string& jwt)
