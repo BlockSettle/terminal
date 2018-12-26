@@ -205,6 +205,27 @@ namespace Chat
    };
 
 
+   class LoginResponse : public Response
+   {
+   public:
+
+      enum class Status
+      {
+           LoginOk
+         , LoginFailed
+      };
+
+      LoginResponse(const std::string& userId, Status status);
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      void handle(ResponseHandler& handler) override;
+      QJsonObject toJson() const override;
+
+   private:
+      std::string userId_;
+      Status status_;
+   };
+
+
    class ListResponse : public Response
    {
    public:
@@ -255,6 +276,7 @@ namespace Chat
       virtual void OnHeartbeatPong(HeartbeatPongResponse& response) = 0;
       virtual void OnUsersList(UsersListResponse& response) = 0;
       virtual void OnMessages(MessagesResponse& response) = 0;
+      virtual void OnLoginReturned(LoginResponse& response) = 0;
    };
 
 }
