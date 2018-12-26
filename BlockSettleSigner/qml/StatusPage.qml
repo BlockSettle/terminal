@@ -13,10 +13,10 @@ Item {
     ScrollView {
         anchors.fill: parent
         Layout.fillWidth: true
-        clip:   true
+        clip: true
 
         ColumnLayout {
-            width:  parent.parent.width
+            width: parent.parent.width
             id: column
 
             Behavior on height {
@@ -25,7 +25,7 @@ Item {
 
             GridLayout {
                 id: grid1
-                columns:    2
+                columns: 2
                 Layout.fillWidth: true
                 Layout.topMargin: 5
                 Layout.leftMargin: 10
@@ -33,7 +33,7 @@ Item {
 
                 CustomHeader {
                     Layout.columnSpan: 2
-                    text:   qsTr("Controls")
+                    text: qsTr("Controls")
                     height: 25
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
@@ -44,16 +44,16 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Online mode")
+                        text: qsTr("Online mode")
                     }
                 }
 
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
-                    text:   signerStatus.socketOk ? "" : qsTr("Failed to bind")
+                    text: signerStatus.socketOk ? "" : qsTr("Failed to bind")
                     checked: !signerStatus.offline
                     onClicked: {
-                        signerParams.offline = !checked
+                        signerSettings.offline = !checked
                     }
                 }
 
@@ -63,14 +63,14 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Auto sign")
+                        text: qsTr("Auto sign")
                     }
                 }
 
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
-                    visible:    !signerStatus.offline
-                    checked:    signerStatus.autoSignActive
+                    visible: !signerStatus.offline
+                    checked: signerStatus.autoSignActive
                     onClicked: {
                         if (checked) {
                             signerStatus.activateAutoSign()
@@ -90,7 +90,7 @@ Item {
 
                 GridLayout {
                     id: gridDashboard
-                    columns:    2
+                    columns: 2
                     Layout.leftMargin: 10
                     Layout.rightMargin: 10
 
@@ -98,31 +98,31 @@ Item {
                     CustomHeader {
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
-                        text:   qsTr("Details")
+                        text: qsTr("Details")
                         Layout.preferredHeight: 25
                     }
 
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Listen socket")
+                        text: qsTr("Listen socket")
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        text:   (signerStatus.offline ? qsTr("Closed") : signerStatus.listenSocket)
-                        color:  (signerStatus.offline ? "white" : (signerStatus.socketOk ? "white" : "red"))
+                        text: (signerStatus.offline ? qsTr("Closed") : signerStatus.listenSocket)
+                        color: (signerStatus.offline ? "white" : (signerStatus.socketOk ? "white" : "red"))
                         Layout.alignment: Qt.AlignRight
                         wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Network type")
+                        text: qsTr("Network type")
                         Layout.preferredHeight: 25
 
                     }
                     CustomLabelValue {
-                        text:   signerParams.testNet ? qsTr("Testnet") : qsTr("Mainnet")
+                        text: signerSettings.testNet ? qsTr("Testnet") : qsTr("Mainnet")
                         Layout.alignment: Qt.AlignRight
                         wrapMode: Text.NoWrap
                     }
@@ -135,7 +135,7 @@ Item {
                     CustomLabel {
                         visible: signerStatus.offline || !signerStatus.connections
                         Layout.alignment: Qt.AlignRight
-                        text:   qsTr("None")
+                        text: qsTr("None")
                         padding: 5
                         wrapMode: Text.NoWrap
                     }
@@ -148,7 +148,7 @@ Item {
                         Repeater {
                             model: signerStatus.connectedClients
                             CustomLabelValue {
-                                text:   modelData
+                                text: modelData
                                 Layout.alignment: Qt.AlignRight
                                 wrapMode: Text.NoWrap
                             }
@@ -156,34 +156,34 @@ Item {
                     }
 
                     CustomLabel {
-                        text:   qsTr("Transaction[s] signed")
+                        text: qsTr("Transaction[s] signed")
                         Layout.fillWidth: true
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        text:   Number(signerStatus.txSignedCount)
-                        opacity:  signerStatus.txSignedCount > 0 ? 1 : 0.5
+                        text: Number(signerStatus.txSignedCount)
+                        opacity: signerStatus.txSignedCount > 0 ? 1 : 0.5
                         Layout.alignment: Qt.AlignRight
                         wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
-                        text:   qsTr("Manual spend limit")
+                        text: qsTr("Manual spend limit")
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        text:   qsTr("%1 of %2").arg(signerStatus.manualSignSpent.toFixed(8))
+                        text: qsTr("%1 of %2").arg(signerStatus.manualSignSpent.toFixed(8))
                         .arg(signerStatus.manualSignUnlimited ? qsTr("Unlimited") : signerStatus.manualSignLimit.toFixed(8))
                         Layout.alignment: Qt.AlignRight
                         wrapMode: Text.NoWrap
                     }
 
                     CustomLabel {
-                        text:   qsTr("Auto-Sign spend limit")
+                        text: qsTr("Auto-Sign spend limit")
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        text:   (signerStatus.offline ? qsTr("0.00000000 of Unlimited") :
+                        text: (signerStatus.offline ? qsTr("0.00000000 of Unlimited") :
                             qsTr("%1 of %2").arg(signerStatus.autoSignSpent.toFixed(8))
                                 .arg(signerStatus.autoSignUnlimited ? qsTr("Unlimited") :
                                     signerStatus.autoSignLimit.toFixed(8)))
@@ -192,11 +192,11 @@ Item {
                     }
 
                     CustomLabel {
-                        text:   qsTr("Auto-Sign time limit");
+                        text: qsTr("Auto-Sign time limit");
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        text:   (signerStatus.offline ? qsTr("None of Unlimited") : qsTr("%1 of %2")
+                        text: (signerStatus.offline ? qsTr("None of Unlimited") : qsTr("%1 of %2")
                         .arg(signerStatus.autoSignTimeSpent ? signerStatus.autoSignTimeSpent : qsTr("None"))
                         .arg(signerStatus.autoSignTimeLimit ? signerStatus.autoSignTimeLimit : qsTr("Unlimited")))
                         Layout.alignment: Qt.AlignRight
@@ -251,14 +251,14 @@ Item {
     }
 
     Loader {
-        id:     ldrOfflineFileDlg
+        id: ldrOfflineFileDlg
         active: false
         sourceComponent: FileDialog {
-            id:             dlgOfflineFile
-            visible:        false
-            title:          qsTr("Select TX request file")
-            nameFilters:    ["Offline TX requests (*.bin)", "All files (*)"]
-            folder:         shortcuts.documents
+            id: dlgOfflineFile
+            visible: false
+            title: qsTr("Select TX request file")
+            nameFilters: ["Offline TX requests (*.bin)", "All files (*)"]
+            folder: shortcuts.documents
 
             onAccepted: {
                 var filePath = fileUrl.toString()

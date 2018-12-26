@@ -68,7 +68,8 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
       { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
-      { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) }
+      { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
+      { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) }
    };
    parseArguments(args);
 }
@@ -193,6 +194,9 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
       break;
    case LimitManualPwKeep:
       emit limitManualPwKeepChanged();
+      break;
+   case HideEidInfoBox:
+      emit hideEidInfoBoxChanged();
       break;
    default: break;
    }

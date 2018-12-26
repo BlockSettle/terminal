@@ -49,12 +49,18 @@ static int HeadlessApp(int argc, char **argv)
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
+Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
 #elif defined (Q_OS_MAC)
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
+Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
 #elif defined (Q_OS_LINUX)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
+Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #endif
+
+Q_IMPORT_PLUGIN(QICOPlugin)
+
 Q_IMPORT_PLUGIN(QtQuick2Plugin)
 Q_IMPORT_PLUGIN(QtQuick2DialogsPlugin)
 Q_IMPORT_PLUGIN(QtQuick2DialogsPrivatePlugin)
@@ -95,7 +101,9 @@ static int QMLApp(int argc, char **argv)
    app.setOrganizationDomain(QLatin1String("blocksettle.com"));
    app.setOrganizationName(QLatin1String("blocksettle"));
    app.setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
-   app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
+
+   // ToDo: support 2.0 styles
+   // app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
 
    // we need this only for desktop app
    const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);

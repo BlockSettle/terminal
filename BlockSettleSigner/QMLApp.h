@@ -11,7 +11,6 @@
 namespace spdlog {
    class logger;
 }
-class AuthProxy;
 class HeadlessContainerListener;
 class OfflineProcessor;
 class QmlWalletsViewModel;
@@ -23,7 +22,7 @@ class WalletsManager;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
 class DBusNotification;
-class NewWalletSeed;
+class QmlFactory;
 
 class QMLAppObj : public QObject
 {
@@ -61,7 +60,7 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<SignerSettings>  params_;
+   std::shared_ptr<SignerSettings>  settings_;
    QQmlContext                *     ctxt_;
    std::shared_ptr<WalletsManager>  walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
@@ -69,11 +68,10 @@ private:
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
-   std::shared_ptr<AuthProxy>                   authProxy_;
+   std::shared_ptr<QmlFactory>                  qmlFactory_;
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
-   NewWalletSeed *newWalletSeed_ = nullptr;
 
    enum NotificationMode {
       QSystemTray,

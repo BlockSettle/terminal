@@ -3,34 +3,35 @@ import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.4
 import QtQml.Models 2.3
 import QtQuick.Window 2.3
-import com.blocksettle.Wallets 1.0
+
+import com.blocksettle.WalletsViewModel 1.0
 
 import "StyledControls"
 import "BsStyles"
 
 TreeView {
-    model:  walletsModel
+    model: walletsModel
     objectName: "walletsView"
 
     TableViewColumn {
-        title:  qsTr("Name")
-        role:   "name"
-        width:  parent.width / 3.5
+        title: qsTr("Name")
+        role: "name"
+        width: parent.width / 3.5
     }
     TableViewColumn {
-        title:  qsTr("Description")
-        role:   "desc"
-        width:  parent.width / 4
+        title: qsTr("Description")
+        role: "desc"
+        width: parent.width / 4
     }
     TableViewColumn {
-        title:  qsTr("ID")
-        role:   "walletId"
-        width:  parent.width / 5
+        title: qsTr("ID")
+        role: "walletId"
+        width: parent.width / 5
     }
     TableViewColumn {
-        title:  qsTr("Encrypted?")
-        role:   "state"
-        width:  parent.width / 4
+        title: qsTr("Encrypted?")
+        role: "state"
+        width: parent.width / 4
     }
 
     style: TreeViewStyle {
@@ -40,16 +41,16 @@ TreeView {
         frame: Item {}
         headerDelegate: Rectangle {
             height: textItem.implicitHeight * 1.2
-            width:  textItem.implicitWidth
+            width: textItem.implicitWidth
             color: "transparent"
             Text {
-                id:     textItem
+                id: textItem
                 anchors.fill: parent
                 anchors.leftMargin: 12
-                verticalAlignment:  Text.AlignVCenter
+                verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: styleData.textAlignment
-                text:   styleData.value
-                color:  textColor
+                text: styleData.value
+                color: textColor
             }
         }
     }

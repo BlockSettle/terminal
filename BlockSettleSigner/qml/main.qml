@@ -3,15 +3,19 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.1
 import Qt.labs.settings 1.0
+
 import com.blocksettle.TXInfo 1.0
-import com.blocksettle.WalletSeed 1.0
 import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.AuthProxy 1.0
 import com.blocksettle.AutheIDClient 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
+import com.blocksettle.QSeed 1.0
+import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.NsWallet.namespace 1.0
 
 import "StyledControls"
 import "BsStyles"
 import "BsControls"
+import "BsDialogs"
 import "js/helper.js" as JsHelper
 
 
@@ -36,31 +40,31 @@ ApplicationWindow {
     }
 
     Settings {
-        id:         settings
-        category:   "GUI"
-        property alias x:       mainWindow.x
-        property alias y:       mainWindow.y
-        property alias width:   mainWindow.width
-        property alias height:  mainWindow.height
-        property alias tabIdx:  swipeView.currentIndex
+        id: settings
+        category: "GUI"
+        property alias x: mainWindow.x
+        property alias y: mainWindow.y
+        property alias width: mainWindow.width
+        property alias height: mainWindow.height
+        property alias tabIdx: swipeView.currentIndex
     }
 
     InfoBanner {
         id: ibSuccess
-        bgColor:    "darkgreen"
+        bgColor: "darkgreen"
     }
     InfoBanner {
         id: ibFailure
-        bgColor:    "darkred"
+        bgColor: "darkred"
     }
 
     DirSelectionDialog {
-        id:     ldrWoWalletDirDlg
-        title:  qsTr("Select watching only wallet target directory")
+        id: ldrWoWalletDirDlg
+        title: qsTr("Select watching only wallet target directory")
     }
     DirSelectionDialog {
-        id:     ldrDirDlg
-        title:  qsTr("Select directory")
+        id: ldrDirDlg
+        title: qsTr("Select directory")
     }
 
     SwipeView {
@@ -95,26 +99,26 @@ ApplicationWindow {
             }
 
         CustomTabButton {
-            id:     btnStatus
-            text:   qsTr("Dashboard")
+            id: btnStatus
+            text: qsTr("Dashboard")
 
         }
 
         CustomTabButton {
-            id:     btnSettings
-            text:   qsTr("Settings")
+            id: btnSettings
+            text: qsTr("Settings")
 
         }
 
         CustomTabButton {
-            id:     btnAutoSign
-            text:   qsTr("Auto-Sign")
+            id: btnAutoSign
+            text: qsTr("Auto-Sign")
 
         }
 
         CustomTabButton {
-            id:     btnWallets
-            text:   qsTr("Wallets")
+            id: btnWallets
+            text: qsTr("Wallets")
 
         }
     }
@@ -132,18 +136,19 @@ ApplicationWindow {
         dlg.prompt = prompt
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
-            if (txInfo.wallet.encType === WalletInfo.Password) {
-                passwordEntered(txInfo.wallet.id, dlg.password, false)
+            if (txInfo.walletInfo.encType === NsWallet.Password) {
+                passwordEntered(txInfo.walletInfo.walletId, dlg.password, false)
             }
             else {
-                passwordEntered(txInfo.wallet.id, dlg.seed.password, false)
+                passwordEntered(txInfo.walletInfo.walletId, dlg.seed.password, false)
             }
 
         })
         dlg.rejected.connect(function() {
-            passwordEntered(txInfo.wallet.id, '', dlg.cancelledByUser)
+            passwordEntered(txInfo.walletInfo.walletId, '', dlg.cancelledByUser)
         })
         mainWindow.requestActivate()
         dlg.open()
     }
+
 }

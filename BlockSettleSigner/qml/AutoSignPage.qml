@@ -1,8 +1,8 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
-import QtQuick.Controls.Styles 1.4
 import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
+
 import com.blocksettle.WalletsProxy 1.0
 
 import "StyledControls"
@@ -10,13 +10,13 @@ import "StyledControls"
 Item {
     ScrollView {
         anchors.fill: parent
-        clip:   true
+        clip: true
 
         ColumnLayout {
-            width:  parent.parent.width
+            width: parent.parent.width
 
             GridLayout {
-                columns:    2
+                columns: 2
                 Layout.fillWidth: true
                 Layout.topMargin: 5
                 Layout.leftMargin: 10
@@ -24,7 +24,7 @@ Item {
 
                 CustomHeader {
                     Layout.columnSpan: 2
-                    text:   qsTr("Controls")
+                    text: qsTr("Controls")
                     height: 25
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
@@ -36,7 +36,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Wallet")
+                        text: qsTr("Wallet")
                     }
                 }
 
@@ -44,11 +44,11 @@ Item {
                     active: walletsProxy.loaded
                     sourceComponent: CustomComboBox {
                         width: 200
-                        enabled:    !signerStatus.autoSignActive
+                        enabled: !signerStatus.autoSignActive
                         model: walletsProxy.walletNames
-                        currentIndex: walletsProxy.indexOfWalletId(signerParams.autoSignWallet)
+                        currentIndex: walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
                         onActivated: {
-                            signerParams.autoSignWallet = walletsProxy.walletIdForIndex(currentIndex)
+                            signerSettings.autoSignWallet = walletsProxy.walletIdForIndex(currentIndex)
                         }
                     }
                 }
@@ -59,14 +59,14 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text:   qsTr("Auto Sign")
+                        text: qsTr("Auto Sign")
                     }
                 }
 
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
-                    visible:    !signerStatus.offline
-                    checked:    signerStatus.autoSignActive
+                    visible: !signerStatus.offline
+                    checked: signerStatus.autoSignActive
                     onClicked: {
                         if (checked) {
                             signerStatus.activateAutoSign()
@@ -84,16 +84,16 @@ Item {
                 CustomHeader {
                     Layout.fillWidth: true
                     Layout.columnSpan: 2
-                    text:   qsTr("Details")
+                    text: qsTr("Details")
                     Layout.preferredHeight: 25
                 }
 
                 CustomLabel {
-                    text:   qsTr("XBT spend limit")
+                    text: qsTr("XBT spend limit")
                 }
                 CustomTextInput {
                     Layout.fillWidth: true
-                    text:   signerParams.autoSignUnlimited ? qsTr("Unlimited") : signerParams.limitAutoSignXbt
+                    text: signerSettings.autoSignUnlimited ? qsTr("Unlimited") : signerSettings.limitAutoSignXbt
                     selectByMouse: true
                     id: limitAutoSignXbt
                     validator: RegExpValidator {
@@ -101,25 +101,25 @@ Item {
                     }
                     onEditingFinished: {
                         if (text !== qsTr("Unlimited")) {
-                            signerParams.limitAutoSignXbt = text
+                            signerSettings.limitAutoSignXbt = text
                         }
                     }
                 }
 
                 CustomLabel {
-                    text:   qsTr("Time limit")
+                    text: qsTr("Time limit")
                 }
                 CustomTextInput {
                     Layout.fillWidth: true
                     placeholderText: "e.g. 1h or 15m or 600s or combined"
                     selectByMouse: true
-                    text:   signerParams.limitAutoSignTime ? signerParams.limitAutoSignTime : qsTr("Unlimited")
+                    text: signerSettings.limitAutoSignTime ? signerSettings.limitAutoSignTime : qsTr("Unlimited")
                     id: limitAutoSignTime
                     validator: RegExpValidator {
                         regExp: /^(?:\d+(h|hour|m|min|minute|s|sec|second)?\s*)*$/
                     }
                     onEditingFinished: {
-                        signerParams.limitAutoSignTime = text
+                        signerSettings.limitAutoSignTime = text
                     }
                 }
             }
@@ -127,12 +127,12 @@ Item {
     }
 
     function storeSettings() {
-        if (signerParams.limitAutoSignXbt != limitAutoSignXbt.text) {
+        if (signerSettings.limitAutoSignXbt != limitAutoSignXbt.text) {
             if (limitAutoSignXbt.text !== qsTr("Unlimited")) {
-                signerParams.limitAutoSignXbt = limitAutoSignXbt.text
+                signerSettings.limitAutoSignXbt = limitAutoSignXbt.text
             }
         }
 
-        signerParams.limitAutoSignTime = limitAutoSignTime.text
+        signerSettings.limitAutoSignTime = limitAutoSignTime.text
     }
 }

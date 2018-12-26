@@ -18,7 +18,7 @@
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignerSettings> &params)
-   : logger_(logger), params_(params)
+   : logger_(logger), settings_(params)
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
@@ -27,8 +27,8 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 
 void HeadlessAppObj::Start()
 {
-   logger_->debug("Loading wallets from dir <{}>", params_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(params_->netType(), params_->getWalletsDir());
+   logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
+   walletsMgr_->LoadWallets(settings_->netType(), settings_->getWalletsDir());
    if (!walletsMgr_->GetSettlementWallet()) {
       if (!walletsMgr_->CreateSettlementWallet(QString())) {
          logger_->error("Failed to create Settlement wallet");
@@ -42,7 +42,7 @@ void HeadlessAppObj::Start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
    }
 
-   if (params_->offline()) {
+   if (settings_->offline()) {
       OfflineProcessing();
    }
    else {
@@ -52,21 +52,21 @@ void HeadlessAppObj::Start()
 
 void HeadlessAppObj::OnlineProcessing()
 {
-   logger_->debug("Using command socket {}:{}, network {}", params_->listenAddress().toStdString()
-      , params_->port().toStdString(), (params_->testNet() ? "testnet" : "mainnet"));
+   logger_->debug("Using command socket {}:{}, network {}", settings_->listenAddress().toStdString()
+      , settings_->port().toStdString(), (settings_->testNet() ? "testnet" : "mainnet"));
 
    const ConnectionManager connMgr(logger_);
    connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(params_->publicKey().toStdString(), params_->privateKey().toStdString())) {
+   if (!connection_->SetKeyPair(settings_->publicKey().toStdString(), settings_->privateKey().toStdString())) {
       logger_->error("Failed to establish secure connection");
       throw std::runtime_error("secure connection problem");
    }
 
    listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , params_->getWalletsDir().toStdString(), params_->netType(), params_->pwHash().toStdString());
-   listener_->SetLimits(params_->limits());
-   if (!connection_->BindConnection(params_->listenAddress().toStdString(), params_->port().toStdString(), listener_.get())) {
-      logger_->error("Failed to bind to {}:{}", params_->listenAddress().toStdString(), params_->port().toStdString());
+      , settings_->getWalletsDir().toStdString(), settings_->netType(), settings_->pwHash().toStdString());
+   listener_->SetLimits(settings_->limits());
+   if (!connection_->BindConnection(settings_->listenAddress().toStdString(), settings_->port().toStdString(), listener_.get())) {
+      logger_->error("Failed to bind to {}:{}", settings_->listenAddress().toStdString(), settings_->port().toStdString());
       throw std::runtime_error("failed to bind listening socket");
    }
 }
@@ -88,8 +88,8 @@ void HeadlessAppObj::OfflineProcessing()
    };
 
    offlineProc_ = std::make_shared<OfflineProcessor>(logger_, walletsMgr_, cbCLI);
-   if (!params_->requestFiles().empty()) {
-      offlineProc_->ProcessFiles(params_->requestFiles());
+   if (!settings_->requestFiles().empty()) {
+      offlineProc_->ProcessFiles(settings_->requestFiles());
       emit finished();
    }
 }

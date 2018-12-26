@@ -1,13 +1,14 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
-import QtQuick.Controls.Styles 1.4
 import "../BsStyles"
 
 TabButton {
     id: control
     text: parent.text
+    property alias cText: text_
 
     contentItem: Text {
+        id: text_
         text: control.text
         font.capitalization: Font.AllUppercase
         font.pixelSize: 12

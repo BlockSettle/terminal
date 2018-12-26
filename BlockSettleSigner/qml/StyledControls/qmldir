@@ -18,4 +18,5 @@ CustomSwitch 1.0 CustomSwitch.qml
 CustomTabButton 1.0 CustomTabButton.qml
 CustomTextArea 1.0 CustomTextArea.qml
 CustomTextInput 1.0 CustomTextInput.qml
+CustomPasswordTextInput 1.0 CustomPasswordTextInput.qml
 CustomTitleDialogWindow 1.0 CustomTitleDialogWindow.qml

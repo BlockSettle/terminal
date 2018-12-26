@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
+
 import com.blocksettle.EasyEncValidator 1.0
 
 import "../StyledControls"
@@ -21,7 +22,7 @@ ColumnLayout {
     property alias sectionHeaderTxt: sectionHeader.text
     property alias sectionHeaderVisible: sectionHeader.visible
 
-    property int inputLablesWidth: 110
+    property int inputLabelsWidth: 110
     property int rowSpacing: 5
     property int columnSpacing: topLayout.spacing
 
@@ -46,11 +47,11 @@ ColumnLayout {
 
         CustomLabel {
             id: sectionHeader
-            Layout.leftMargin: inputLablesWidth
+            Layout.leftMargin: inputLabelsWidth
             Layout.fillWidth: true
-            Layout.minimumWidth: inputLablesWidth
-            Layout.preferredWidth: inputLablesWidth
-            Layout.maximumWidth: inputLablesWidth
+            Layout.minimumWidth: inputLabelsWidth
+            Layout.preferredWidth: inputLabelsWidth
+            Layout.maximumWidth: inputLabelsWidth
             text: qsTr("Enter Recovery Code: ")
         }
     }
@@ -64,9 +65,9 @@ ColumnLayout {
         CustomLabel {
             id: keyLine1Label
             Layout.fillWidth: true
-            Layout.minimumWidth: inputLablesWidth
-            Layout.preferredWidth: inputLablesWidth
-            Layout.maximumWidth: inputLablesWidth
+            Layout.minimumWidth: inputLabelsWidth
+            Layout.preferredWidth: inputLabelsWidth
+            Layout.maximumWidth: inputLabelsWidth
             text: qsTr("Recovery key Line 1:")
         }
 
@@ -100,9 +101,9 @@ ColumnLayout {
         CustomLabel {
             id: keyLine2Label
             Layout.fillWidth: true
-            Layout.minimumWidth: inputLablesWidth
-            Layout.preferredWidth: inputLablesWidth
-            Layout.maximumWidth: inputLablesWidth
+            Layout.minimumWidth: inputLabelsWidth
+            Layout.preferredWidth: inputLabelsWidth
+            Layout.maximumWidth: inputLabelsWidth
             text: qsTr("Recovery Key Line 2:")
         }
 
@@ -134,8 +135,8 @@ ColumnLayout {
             topPadding: 1
             bottomPadding: 1
             Layout.fillWidth: true
-            Layout.leftMargin: inputLablesWidth + 5
-            text:  keyLine1.validator.statusMsg
+            Layout.leftMargin: inputLabelsWidth + 5
+            text: keyLine1.validator.statusMsg
             color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
         CustomLabel {
@@ -144,7 +145,7 @@ ColumnLayout {
             bottomPadding: 1
             Layout.fillWidth: true
             Layout.leftMargin: 2
-            text:  keyLinesIdentical ? identicalLinesErrorMsg : keyLine2.validator.statusMsg
+            text: keyLinesIdentical ? identicalLinesErrorMsg : keyLine2.validator.statusMsg
             color: keyLine1.text === keyLine2.text || !keyLine2.acceptableInput ?
                        BSStyle.inputsInvalidColor : BSStyle.inputsValidColor
         }

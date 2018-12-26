@@ -25,6 +25,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString limitManualPwKeep READ limitManualPwKeepStr WRITE setLimitManualPwKeepStr NOTIFY limitManualPwKeepChanged)
    Q_PROPERTY(QString dirDocuments READ dirDocuments NOTIFY dirDocumentsChanged)
    Q_PROPERTY(QString autoSignWallet READ autoSignWallet WRITE setAutoSignWallet NOTIFY autoSignWalletChanged)
+   Q_PROPERTY(bool hideEidInfoBox READ hideEidInfoBox WRITE setHideEidInfoBox NOTIFY hideEidInfoBoxChanged)
 
 public:
    SignerSettings(const QStringList &args = {}, const QString &fileName = QLatin1String("signer.ini"));
@@ -48,7 +49,8 @@ public:
       LimitManualXBT,
       LimitAutoSignXBT,
       LimitAutoSignTime,
-      LimitManualPwKeep
+      LimitManualPwKeep,
+      HideEidInfoBox
    };
 
    QString publicKey() const { return get(ConnPubKey).toString(); }
@@ -72,6 +74,7 @@ public:
    QString limitManualPwKeepStr() const { return secondsToIntervalStr(limitManualPwKeep()); }
    QStringList requestFiles() const { return reqFiles_; }
    SignContainer::Limits limits() const;
+   bool hideEidInfoBox() const { return get(HideEidInfoBox).toBool(); }
 
    QString dirDocuments() const;
 
@@ -86,11 +89,13 @@ public:
    void setLimitAutoSignXbt(const double val) { setXbtLimit(val, LimitAutoSignXBT); }
    void setLimitAutoSignTimeStr(const QString &val) { set(LimitAutoSignTime, intervalStrToSeconds(val)); }
    void setLimitManualPwKeepStr(const QString &val) { set(LimitManualPwKeep, intervalStrToSeconds(val)); }
+   void setHideEidInfoBox(bool val) { set(HideEidInfoBox, val); }
 
    void reset(Setting s, bool toFile = true);     // Reset setting to default value
 
    static QString secondsToIntervalStr(int);
    static int intervalStrToSeconds(const QString &);
+
 
 signals:
    void offlineChanged();
@@ -104,6 +109,7 @@ signals:
    void limitManualPwKeepChanged();
    void dirDocumentsChanged();
    void autoSignWalletChanged();
+   void hideEidInfoBoxChanged();
 
 private:
    QVariant get(Setting s) const;

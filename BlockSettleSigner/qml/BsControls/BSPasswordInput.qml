@@ -1,6 +1,5 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.4
-import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.11
 
 import "../StyledControls"
@@ -37,7 +36,7 @@ BSMessageBox {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
             Layout.preferredWidth: 105
-            text:   qsTr("Password")
+            text: qsTr("Password")
         }
         CustomTextInput {
             id: passwordInput

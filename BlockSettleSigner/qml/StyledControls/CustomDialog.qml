@@ -1,6 +1,5 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
-import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.0
 
 import "../BsStyles"
@@ -27,6 +26,13 @@ CustomDialogWindow {
         closeTimer.start()
         closeAnimation.start()
     }
+
+    function closeAnimated(result){
+        if (result) acceptAnimated()
+        else rejectAnimated()
+    }
+
+
     property int animationDuration: 100
 
     default property alias cContentItem: customContentContainer.data
@@ -110,6 +116,7 @@ CustomDialogWindow {
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 0
+            spacing: 0
 
             RowLayout {
                 id: customHeaderContainer

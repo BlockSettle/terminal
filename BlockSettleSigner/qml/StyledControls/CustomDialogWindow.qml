@@ -1,6 +1,5 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
-import QtQuick.Controls.Styles 1.4
 import "../BsStyles"
 
 // styled dialog popup
@@ -11,9 +10,11 @@ Dialog {
     focus: true
     modal: true
     closePolicy: Popup.NoAutoClose
-    padding: 0
+    spacing: 0
+
     background: Rectangle {
-        color:  BSStyle.backgroundColor
+        color: BSStyle.backgroundColor
         border.color: BSStyle.dialogHeaderColor
+        border.pixelAligned: true
     }
 }

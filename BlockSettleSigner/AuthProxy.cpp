@@ -9,40 +9,12 @@
 #include "AuthProxy.h"
 #include "ApplicationSettings.h"
 
-AuthProxy::AuthProxy(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
-   : QObject(parent), logger_(logger)
-{}
-
-AuthSignWalletObject *AuthProxy::signWallet(AutheIDClient::RequestType requestType
-                                            , const QString &userId
-                                            , const QString &title
-                                            , const QString &walletId
-                                            , const QString &encKey)
-{
-   logger_->debug("[AuthProxy] signing {} for {}: {}", walletId.toStdString(), userId.toStdString(), title.toStdString());
-   return new AuthSignWalletObject(requestType, logger_, userId, title, walletId, encKey, this);
-}
-
-AuthSignWalletObject *AuthProxy::signWallet(AutheIDClient::RequestType requestType
-                                            , const QString &title
-                                            , const QString &walletId
-                                            , const QString &encKey)
-{
-    std::string userId = AutheIDClient::getDeviceInfo(encKey.toStdString()).userId;
-    logger_->debug("[AuthProxy] signing {} for {}: {}", walletId.toStdString(), userId, title.toStdString());
-
-    return new AuthSignWalletObject(requestType,
-                                    logger_,
-                                    QString::fromStdString(userId),
-                                    title,
-                                    walletId,
-                                    encKey,
-                                    this);
-}
 
 void AuthSignWalletObject::cancel()
 {
-//   freja_.stop(true);
+   if (autheIDClient_) {
+      autheIDClient_->cancel();
+   }
 }
 
 
@@ -53,9 +25,8 @@ void AuthObject::setStatus(const QString &status)
 }
 
 
-AuthSignWalletObject::AuthSignWalletObject(AutheIDClient::RequestType requestType, const std::shared_ptr<spdlog::logger> &logger
-   , const QString &userId, const QString &title, const QString &walletId, const QString &encKey, QObject *parent)
-   : AuthObject(parent)
+AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
+   : AuthObject(nullptr)
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
@@ -72,16 +43,80 @@ AuthSignWalletObject::AuthSignWalletObject(AutheIDClient::RequestType requestTyp
    std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
 
    autheIDClient_->connect(serverPubKey, serverHost, serverPort);
+}
 
+
+
+void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
+{
    std::vector<std::string> knownDeviceIds;
-   auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
+   std::vector<std::string> userIds;
+   // send auth to all devices stored in encKeys
+   for (const QString& encKey: walletInfo->encKeys()) {
+      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
 
-   // deviceInfo is empty for ActivateWallet and is not empty for another requests
-   if (!deviceInfo.deviceId.empty()) {
-       knownDeviceIds.push_back(deviceInfo.deviceId);
+      // deviceInfo is empty for ActivateWallet and is not empty for another requests
+      if (!deviceInfo.deviceId.empty()) {
+          knownDeviceIds.push_back(deviceInfo.deviceId);
+      }
+
+      if (!deviceInfo.userId.empty()) {
+         userIds.push_back(deviceInfo.userId);
+      }
    }
 
-   autheIDClient_->start(requestType, userId.toStdString()
-      , walletId.toStdString(), knownDeviceIds);
+   if (userIds.empty()) {
+      emit failed(tr("Error parsing encKeys: email not found"));
+      return;
+   }
 
+   autheIDClient_->start(requestType
+                         , userIds[0]
+                         , walletInfo->walletId().toStdString()
+                         , knownDeviceIds);
 }
+
+void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo)
+{
+   // used only for removing existing devices
+   // index is device index which should be removed
+
+   if (walletInfo->encKeys().size() == 1) {
+      emit failed(tr("Can't remove last device"));
+      return;
+   }
+
+   if (index >= walletInfo->encKeys().size() || index < 0) {
+      emit failed(tr("Incorrect index to delete"));
+      return;
+   }
+
+   std::vector<std::string> knownDeviceIds;
+   std::vector<std::string> userIds;
+   // send auth to all devices stored in encKeys except device to be removed
+   for (int i = 0; i < walletInfo->encKeys().size(); ++i) {
+      if (index == i) continue;
+
+      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(walletInfo->encKeys().at(i).toStdString()).toBinStr());
+
+      if (!deviceInfo.deviceId.empty()) {
+          knownDeviceIds.push_back(deviceInfo.deviceId);
+      }
+
+      if (!deviceInfo.userId.empty()) {
+         userIds.push_back(deviceInfo.userId);
+      }
+   }
+
+   if (userIds.empty()) {
+      emit failed(tr("Error parsing encKeys: email not found"));
+      return;
+   }
+
+   // currently we supports only sigle account for whole wallet, thus email stored in userIds[0]
+   autheIDClient_->start(AutheIDClient::DeactivateWalletDevice
+                         , userIds[0]
+                         , walletInfo->walletId().toStdString()
+                         , knownDeviceIds);
+}
+
