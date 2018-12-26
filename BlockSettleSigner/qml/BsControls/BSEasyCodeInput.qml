@@ -136,7 +136,7 @@ ColumnLayout {
             bottomPadding: 1
             Layout.fillWidth: true
             Layout.leftMargin: inputLabelsWidth + 5
-            text:  keyLine1.validator.statusMsg
+            text: keyLine1.validator.statusMsg
             color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
         CustomLabel {
@@ -145,7 +145,7 @@ ColumnLayout {
             bottomPadding: 1
             Layout.fillWidth: true
             Layout.leftMargin: 2
-            text:  keyLinesIdentical ? identicalLinesErrorMsg : keyLine2.validator.statusMsg
+            text: keyLinesIdentical ? identicalLinesErrorMsg : keyLine2.validator.statusMsg
             color: keyLine1.text === keyLine2.text || !keyLine2.acceptableInput ?
                        BSStyle.inputsInvalidColor : BSStyle.inputsValidColor
         }

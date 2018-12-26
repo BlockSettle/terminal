@@ -43,7 +43,6 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 
    qRegisterMetaType<bs::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
-   //qRegisterMetaType<WalletInfo::EncryptionType>("WalletInfo::EncryptionType");
    qRegisterMetaType<bs::wallet::QEncryptionType>("QEncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
 

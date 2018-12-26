@@ -36,7 +36,7 @@ BSMessageBox {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
             Layout.preferredWidth: 105
-            text:   qsTr("Password")
+            text: qsTr("Password")
         }
         CustomTextInput {
             id: passwordInput

@@ -27,7 +27,7 @@ Button {
         implicitHeight: 35
         opacity: control.enabled ? 1 : 0.3
         border.color: BSStyle.buttonsBorderColor
-        color: control.highlighted ? BSStyle.buttonsPrimaryMainColor :  BSStyle.buttonsMainColor
+        color: control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor
         border.width: 1
     }
 
@@ -36,7 +36,7 @@ Button {
             name: ""
             PropertyChanges {
                 target: rect
-                color: control.highlighted ? BSStyle.buttonsPrimaryMainColor :  BSStyle.buttonsMainColor
+                color: control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor
             }
         },
         State {
@@ -44,7 +44,7 @@ Button {
             when: control.pressed
             PropertyChanges {
                 target: rect
-                color: control.highlighted ? BSStyle.buttonsPrimaryPressedColor :  BSStyle.buttonsPressedColor
+                color: control.highlighted ? BSStyle.buttonsPrimaryPressedColor : BSStyle.buttonsPressedColor
             }
         },
         State {
@@ -52,7 +52,7 @@ Button {
             when: control.hovered
             PropertyChanges {
                 target: rect
-                color: control.highlighted ? BSStyle.buttonsPrimaryHoveredColor :  BSStyle.buttonsHoveredColor
+                color: control.highlighted ? BSStyle.buttonsPrimaryHoveredColor : BSStyle.buttonsHoveredColor
             }
         },
         State {

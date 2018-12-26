@@ -97,7 +97,7 @@ ColumnLayout {
             bottomPadding: 1
             Layout.fillWidth: true
             Layout.leftMargin: labelsWidth + 5
-            text:  passwordInput.validator.statusMsg
+            text: passwordInput.validator.statusMsg
             color: passwordInput.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor;
         }
     }

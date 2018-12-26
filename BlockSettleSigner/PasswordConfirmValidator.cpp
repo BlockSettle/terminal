@@ -10,7 +10,7 @@ QValidator::State PasswordConfirmValidator::validate(QString &input, int &) cons
 {
    // accept only ascii chars
    for (const QChar &c : input) {
-      if (c.unicode() > 127) {
+      if (c.unicode() <= 31 || c.unicode() >= 127) {
          setStatusMsg(invalidCharTmpl_.arg(name_));
          return QValidator::State::Invalid;
       }
@@ -40,8 +40,8 @@ QValidator::State PasswordConfirmValidator::validate(QString &input, int &) cons
       }
    }
 
-   if (input.size() < compareTo_.size()) {
-      setStatusMsg(tooLongTmpl_.arg(name_));
+   if (input.size() != compareTo_.size()) {
+      setStatusMsg(dontMatchMsgTmpl_.arg(name_));
       return QValidator::State::Intermediate;
    }
 

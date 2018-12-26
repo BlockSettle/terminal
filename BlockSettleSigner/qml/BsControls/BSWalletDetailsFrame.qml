@@ -18,7 +18,7 @@ ColumnLayout {
     property int inputsWidth
 
     CustomHeader {
-        text:   qsTr("Wallet Details")
+        text: qsTr("Wallet Details")
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -38,7 +38,7 @@ ColumnLayout {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text:   qsTr("Wallet name")
+            text: qsTr("Wallet name")
         }
         CustomLabel {
             Layout.fillWidth: true
@@ -58,7 +58,7 @@ ColumnLayout {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text:   qsTr("Wallet ID")
+            text: qsTr("Wallet ID")
         }
         CustomLabel {
             Layout.fillWidth: true
@@ -67,7 +67,7 @@ ColumnLayout {
     }
 
     //                    CustomHeader {
-    //                        text:   qsTr("Current Encryption")
+    //                        text: qsTr("Current Encryption")
     //                        Layout.fillWidth: true
     //                        Layout.preferredHeight: 25
     //                        Layout.topMargin: 5

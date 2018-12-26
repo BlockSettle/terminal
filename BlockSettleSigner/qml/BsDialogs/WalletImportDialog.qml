@@ -76,7 +76,7 @@ CustomTitleDialogWindow {
                     CustomRadioButton {
                         id: rbPaperBackup
                         text: qsTr("Paper Backup")
-                        checked:    true
+                        checked: true
                     }
                     CustomRadioButton {
                         id: rbFileBackup
@@ -124,14 +124,14 @@ CustomTitleDialogWindow {
                 }
 
                 CustomLabel {
-                    id:     lblDBFile
+                    id: lblDBFile
                     Layout.fillWidth: true
                     Layout.preferredWidth: 200
-                    text:   "..."
+                    text: "..."
                     wrapMode: Label.Wrap
                 }
                 CustomButton {
-                    text:   qsTr("Select")
+                    text: qsTr("Select")
                     onClicked: {
                         if (!ldrDBFileDlg.item) {
                             ldrDBFileDlg.active = true;
@@ -157,7 +157,7 @@ CustomTitleDialogWindow {
                     Layout.minimumWidth: inputLabelsWidth
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
-                    text:   qsTr("Wallet Name")
+                    text: qsTr("Wallet Name")
                 }
                 CustomTextInput {
                     id: tfName
@@ -179,7 +179,7 @@ CustomTitleDialogWindow {
                     Layout.minimumWidth: inputLabelsWidth
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
-                    text:   qsTr("Wallet Description")
+                    text: qsTr("Wallet Description")
                 }
                 CustomTextInput {
                     id: tfDesc
@@ -200,7 +200,7 @@ CustomTitleDialogWindow {
                     Layout.fillWidth: true
                     Layout.leftMargin: inputLabelsWidth + 5
                     enabled: !primaryWalletExists
-                    text:   qsTr("Primary Wallet")
+                    text: qsTr("Primary Wallet")
                 }
             }
             RowLayout {
@@ -211,17 +211,19 @@ CustomTitleDialogWindow {
 
                 CustomRadioButton {
                     id: rbPassword
-                    text:   qsTr("Password")
-                    checked:    true
+                    text: qsTr("Password")
+                    checked: true
                 }
                 CustomRadioButton {
                     id: rbAuth
-                    text:   qsTr("Auth eID")
+                    text: qsTr("Auth eID")
                     onCheckedChanged: {
                         if (checked) {
                             // show notice dialog
-                            var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
-                            noticeEidDialog.open()
+                            if (!signerSettings.hideEidInfoBox) {
+                                var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
+                                noticeEidDialog.open()
+                            }
                         }
                     }
                 }
@@ -272,7 +274,7 @@ CustomTitleDialogWindow {
             CustomButton {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
-                text:   qsTr("Cancel")
+                text: qsTr("Cancel")
                 onClicked: {
                     JsHelper.openAbortBox(root, abortBoxType)
                 }
@@ -281,7 +283,7 @@ CustomTitleDialogWindow {
             CustomButtonPrimary {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text:   qsTr("Import")
+                text: qsTr("Import")
                 enabled: acceptable
 
                 onClicked: {
@@ -348,14 +350,14 @@ CustomTitleDialogWindow {
     }
 
     Loader {
-        id:     ldrDBFileDlg
+        id: ldrDBFileDlg
         active: false
         sourceComponent: FileDialog {
-            id:             dlgDBFile
-            visible:        false
-            title:          qsTr("Select Digital Backup file")
-            nameFilters:    ["Digital Backup files (*.wdb)", "All files (*)"]
-            folder:         shortcuts.documents
+            id: dlgDBFile
+            visible: false
+            title: qsTr("Select Digital Backup file")
+            nameFilters: ["Digital Backup files (*.wdb)", "All files (*)"]
+            folder: shortcuts.documents
 
             onAccepted: {
                 var filePath = fileUrl.toString()

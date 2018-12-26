@@ -39,7 +39,7 @@ Switch {
     background: Rectangle {
         implicitWidth: 100
         implicitHeight: 26
-        visible:  control.down
+        visible: control.down
         color: BSStyle.switchBgColor
     }
 }

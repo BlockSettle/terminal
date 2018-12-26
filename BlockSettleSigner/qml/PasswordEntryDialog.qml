@@ -68,13 +68,13 @@ CustomTitleDialogWindow {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
             visible: !txInfo.nbInputs && txInfo.walletInfo.name.length
-            text:   qsTr("Wallet %1").arg(txInfo.walletInfo.name)
+            text: qsTr("Wallet %1").arg(txInfo.walletInfo.name)
         }
 
         GridLayout {
             id: gridDashboard
             visible: txInfo.nbInputs
-            columns:    2
+            columns: 2
             Layout.leftMargin: 10
             Layout.rightMargin: 10
             rowSpacing: 0
@@ -82,31 +82,31 @@ CustomTitleDialogWindow {
             CustomHeader {
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
-                text:   qsTr("Details")
+                text: qsTr("Details")
                 Layout.preferredHeight: 25
             }
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Sending Wallet")
+                text: qsTr("Sending Wallet")
             }
             CustomLabelValue {
-                text:   txInfo.walletInfo.name
+                text: txInfo.walletInfo.name
                 Layout.alignment: Qt.AlignRight
             }
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("No. of Inputs")
+                text: qsTr("No. of Inputs")
             }
             CustomLabelValue {
-                text:   txInfo.nbInputs
+                text: txInfo.nbInputs
                 Layout.alignment: Qt.AlignRight
             }
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Receiving Address(es)")
+                text: qsTr("Receiving Address(es)")
                 verticalAlignment: Text.AlignTop
                 Layout.fillHeight: true
             }
@@ -115,9 +115,9 @@ CustomTitleDialogWindow {
                 Layout.leftMargin: 0
                 Layout.rightMargin: 0
                 Repeater {
-                    model:  txInfo.recvAddresses
+                    model: txInfo.recvAddresses
                     CustomLabelValue {
-                        text:   modelData
+                        text: modelData
                         Layout.alignment: Qt.AlignRight
                     }
                 }
@@ -125,46 +125,46 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Transaction Size")
+                text: qsTr("Transaction Size")
             }
             CustomLabelValue {
-                text:   txInfo.txVirtSize
+                text: txInfo.txVirtSize
                 Layout.alignment: Qt.AlignRight
             }
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Input Amount")
+                text: qsTr("Input Amount")
             }
             CustomLabelValue {
-                text:   txInfo.inputAmount.toFixed(8)
+                text: txInfo.inputAmount.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Return Amount")
+                text: qsTr("Return Amount")
             }
             CustomLabelValue {
-                text:   txInfo.changeAmount.toFixed(8)
+                text: txInfo.changeAmount.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Transaction Fee")
+                text: qsTr("Transaction Fee")
             }
             CustomLabelValue {
-                text:   txInfo.fee.toFixed(8)
+                text: txInfo.fee.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
 
             CustomLabel {
                 Layout.fillWidth: true
-                text:   qsTr("Transaction Amount")
+                text: qsTr("Transaction Amount")
             }
             CustomLabelValue {
-                text:   txInfo.total.toFixed(8)
+                text: txInfo.total.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
         }
@@ -177,7 +177,7 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 Layout.fillWidth: true
-                text:   qsTr("Password Confirmation")
+                text: qsTr("Password Confirmation")
                 Layout.preferredHeight: 25
             }
         }
@@ -223,9 +223,9 @@ CustomTitleDialogWindow {
             Timer {
                 id: timer
                 property real timeLeft: 120
-                interval:   500
-                running:    true
-                repeat:     true
+                interval: 500
+                running: true
+                repeat: true
                 onTriggered: {
                     timeLeft -= 0.5
                     if (timeLeft <= 0) {
@@ -252,7 +252,7 @@ CustomTitleDialogWindow {
                 Layout.bottomMargin: 10
                 Layout.fillWidth: true
                 to: 120
-                value:  timer.timeLeft
+                value: timer.timeLeft
             }
         }
 
@@ -263,7 +263,7 @@ CustomTitleDialogWindow {
             Layout.fillWidth: true
 
             CustomButton {
-                text:   qsTr("Cancel")
+                text: qsTr("Cancel")
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
@@ -273,7 +273,7 @@ CustomTitleDialogWindow {
             }
 
             CustomButtonPrimary {
-                text:   qsTr("CONFIRM")
+                text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable

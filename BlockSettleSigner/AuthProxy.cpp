@@ -12,7 +12,9 @@
 
 void AuthSignWalletObject::cancel()
 {
-   if (autheIDClient_) autheIDClient_->cancel();
+   if (autheIDClient_) {
+      autheIDClient_->cancel();
+   }
 }
 
 
@@ -111,6 +113,7 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
       return;
    }
 
+   // currently we supports only sigle account for whole wallet, thus email stored in userIds[0]
    autheIDClient_->start(AutheIDClient::DeactivateWalletDevice
                          , userIds[0]
                          , walletInfo->walletId().toStdString()

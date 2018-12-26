@@ -18,7 +18,7 @@ CustomTitleDialogWindow {
         ImportWallet = 2
     }
 
-    cContentItem:  RowLayout {
+    cContentItem: RowLayout {
         width: parent.width
         spacing: 5
         Layout.fillWidth: true
@@ -27,7 +27,7 @@ CustomTitleDialogWindow {
 
         CustomLabelValue{
             Layout.fillWidth: true
-            text:   qsTr("Please select where you would like to create a new wallet from...")
+            text: qsTr("Please select where you would like to create a new wallet from...")
         }
     }
 
@@ -46,7 +46,7 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 id: importButon
-                text:   qsTr("Import Wallet")
+                text: qsTr("Import Wallet")
                 anchors.right: createButon.left
                 anchors.bottom: parent.bottom
                 onClicked: {
@@ -57,7 +57,7 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 id: createButon
-                text:   qsTr("Create New")
+                text: qsTr("Create New")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {

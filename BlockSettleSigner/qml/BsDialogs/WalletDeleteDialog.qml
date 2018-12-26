@@ -34,7 +34,7 @@ CustomTitleDialogWindow {
             CustomLabelValue {
                 Layout.fillWidth: true
                 width: parent.width
-                text:   isRootWallet
+                text: isRootWallet
                         ? qsTr("Are you sure you wish to irrevocably delete the entire wallet <%1> and all associated wallet files from your computer?").arg(walletName)
                         : ( rootName.length ? qsTr("Are you sure you wish to delete leaf wallet <%1> from HD wallet <%2>?").arg(walletName).arg(rootName)
                                             : qsTr("Are you sure you wish to delete wallet <%1>?").arg(walletName) )
@@ -50,13 +50,13 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
 
                 CustomCheckBox {
-                    id:     chkConfirm
-                    text:   qsTr("I understand all the risks of wallet deletion")
+                    id: chkConfirm
+                    text: qsTr("I understand all the risks of wallet deletion")
                 }
                 CustomCheckBox {
-                    visible:    isRootWallet
-                    id:     chkBackup
-                    text:   qsTr("Backup Wallet")
+                    visible: isRootWallet
+                    id: chkBackup
+                    text: qsTr("Backup Wallet")
                     checked: isRootWallet
                 }
             }
@@ -72,7 +72,7 @@ CustomTitleDialogWindow {
             Layout.fillWidth: true
 
             CustomButton {
-                text:   qsTr("Cancel")
+                text: qsTr("Cancel")
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
@@ -81,7 +81,7 @@ CustomTitleDialogWindow {
             }
 
             CustomButtonPrimary {
-                text:   qsTr("CONFIRM")
+                text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: chkConfirm.checked

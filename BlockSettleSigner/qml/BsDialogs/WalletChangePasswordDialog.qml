@@ -89,7 +89,7 @@ CustomDialog {
                 CustomTabButton {
                     id: addTabButton
                     enabled: walletInfo.encType === NsWallet.Auth
-                    text:  "Add Device"
+                    text: "Add Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
                 }
@@ -120,7 +120,7 @@ CustomDialog {
                     }
 
                     CustomHeader {
-                        text:   qsTr("New Encryption")
+                        text: qsTr("New Encryption")
                         Layout.fillWidth: true
                         Layout.preferredHeight: 25
                         Layout.topMargin: 5
@@ -153,6 +153,15 @@ CustomDialog {
                             id: rbAuth
                             text: qsTr("Auth eID")
                             checked: false
+                            onCheckedChanged: {
+                                if (checked) {
+                                    // show notice dialog
+                                    if (!signerSettings.hideEidInfoBox) {
+                                        var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
+                                        noticeEidDialog.open()
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -304,7 +313,7 @@ CustomDialog {
             CustomButton {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
-                text:   qsTr("Cancel")
+                text: qsTr("Cancel")
                 onClicked: {
                     rejectAnimated()
                 }

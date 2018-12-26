@@ -10,7 +10,7 @@ Button {
     }
 
     contentItem: Text {
-        text:  parent.text
+        text: parent.text
         font.capitalization: Font.AllUppercase
         color: BSStyle.textColor
         font.pixelSize: 12

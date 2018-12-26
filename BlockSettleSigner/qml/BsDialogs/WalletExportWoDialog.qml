@@ -21,7 +21,7 @@ CustomTitleDialogWindow {
     property bool acceptable:(walletInfo.encType === NsWallet.Unencrypted)
                              || walletInfo.encType === NsWallet.Auth
                              || walletDetailsFrame.password.length
-    property string exportDir:  Qt.resolvedUrl(".")
+    property string exportDir: Qt.resolvedUrl(".")
     property AuthSignWalletObject authSign
 
     title: walletInfo ? qsTr("Export Watching-Only Copy of %1").arg(walletInfo.name) : ""
@@ -68,12 +68,12 @@ CustomTitleDialogWindow {
                 Layout.minimumWidth: 110
                 Layout.preferredWidth: 110
                 Layout.maximumWidth: 110
-                text:   qsTr("Export to file:")
+                text: qsTr("Export to file:")
                 Layout.fillWidth: true
                 verticalAlignment: Text.AlignTop
             }
             CustomLabelValue {
-                text:   qsTr("%1/%2").arg(exportDir).arg(woWalletFileName)
+                text: qsTr("%1/%2").arg(exportDir).arg(woWalletFileName)
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
@@ -87,7 +87,7 @@ CustomTitleDialogWindow {
             Layout.rightMargin: 10
 
             CustomButton {
-                text:   qsTr("Select Target Dir")
+                text: qsTr("Select Target Dir")
                 Layout.minimumWidth: 80
                 Layout.preferredWidth: 80
                 Layout.maximumWidth: 80
@@ -115,14 +115,14 @@ CustomTitleDialogWindow {
         CustomButtonBar {
             Layout.fillWidth: true
             CustomButton {
-                text:   qsTr("Cancel")
+                text: qsTr("Cancel")
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: rejectAnimated()
             }
             CustomButtonPrimary {
                 enabled: acceptable
-                text:   qsTr("CONFIRM")
+                text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {

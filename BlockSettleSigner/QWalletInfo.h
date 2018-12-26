@@ -169,6 +169,8 @@ public:
    // currently we supports only sigle enc type for whole wallet: either Password or eID Auth
    // this function returns encType based on first passwordDataList_ value
    bs::wallet::QEncryptionType encType();
+
+   // currently we supports only sigle account for whole wallet, thus email stored in encKeys_.at(0)
    Q_INVOKABLE QString email();
 
 signals:

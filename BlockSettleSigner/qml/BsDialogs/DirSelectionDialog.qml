@@ -8,10 +8,10 @@ Loader {
     property string title
 
     sourceComponent: FileDialog {
-        visible:        false
-        title:          title
-        selectFolder:   true
-        folder:         "file:///" + startFromFolder
+        visible: false
+        title: title
+        selectFolder: true
+        folder: "file:///" + startFromFolder
 
         onAccepted: {
             var tmp = fileUrl.toString()

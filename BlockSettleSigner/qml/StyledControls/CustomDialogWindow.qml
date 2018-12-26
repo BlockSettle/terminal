@@ -13,7 +13,7 @@ Dialog {
     spacing: 0
 
     background: Rectangle {
-        color:  BSStyle.backgroundColor
+        color: BSStyle.backgroundColor
         border.color: BSStyle.dialogHeaderColor
         border.pixelAligned: true
     }

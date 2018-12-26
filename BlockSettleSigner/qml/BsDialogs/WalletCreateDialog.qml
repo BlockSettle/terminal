@@ -21,7 +21,7 @@ CustomTitleDialogWindow {
     id: root
 
     property bool primaryWalletExists: false
-    property bool isPrimary:    false
+    property bool isPrimary: false
 
     property int inputLabelsWidth: 110
 
@@ -44,7 +44,7 @@ CustomTitleDialogWindow {
 
         CustomHeader {
             id: headerText
-            text:   qsTr("Wallet Details")
+            text: qsTr("Wallet Details")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
             Layout.topMargin: 5
@@ -63,7 +63,7 @@ CustomTitleDialogWindow {
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
-                text:   qsTr("Wallet ID")
+                text: qsTr("Wallet ID")
             }
             CustomLabel {
                 Layout.fillWidth: true
@@ -81,7 +81,7 @@ CustomTitleDialogWindow {
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
-                text:   qsTr("Name")
+                text: qsTr("Name")
             }
             CustomTextInput {
                 id: tfName
@@ -102,7 +102,7 @@ CustomTitleDialogWindow {
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
-                text:   qsTr("Description")
+                text: qsTr("Description")
             }
             CustomTextInput {
                 id: tfDesc
@@ -123,17 +123,23 @@ CustomTitleDialogWindow {
                 id: cbPrimary
                 Layout.fillWidth: true
                 Layout.leftMargin: inputLabelsWidth + 5
-                enabled: !primaryWalletExists
-                text:   qsTr("Primary Wallet")
-                //ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular walletInfo.")
-                //ToolTip.delay: 1000
-                //ToolTip.timeout: 5000
-                //ToolTip.visible: hovered
+                text: qsTr("Primary Wallet")
+
+                ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
+                ToolTip.delay: 150
+                ToolTip.timeout: 5000
+                ToolTip.visible: cbPrimary.hovered
+
+                // workaround on https://bugreports.qt.io/browse/QTBUG-30801
+                // enabled: !primaryWalletExists
+                onCheckedChanged: {
+                    if (primaryWalletExists) checked = false;
+                }
             }
         }
         CustomHeader {
             id: headerText2
-            text:   qsTr("Create Wallet Keys")
+            text: qsTr("Create Wallet Keys")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
             Layout.topMargin: 5
@@ -158,8 +164,10 @@ CustomTitleDialogWindow {
                 onCheckedChanged: {
                     if (checked) {
                         // show notice dialog
-                        var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
-                        noticeEidDialog.open()
+                        if (!signerSettings.hideEidInfoBox) {
+                            var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
+                            noticeEidDialog.open()
+                        }
                     }
                 }
             }
@@ -167,7 +175,7 @@ CustomTitleDialogWindow {
 
         BSConfirmedPasswordInput {
             id: newPasswordWithConfirm
-            visible:    rbPassword.checked
+            visible: rbPassword.checked
             columnSpacing: 10
             passwordLabelTxt: qsTr("Password")
             passwordInputPlaceholder: qsTr("Wallet Password")
@@ -187,7 +195,7 @@ CustomTitleDialogWindow {
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
-                text:   qsTr("Auth eID email")
+                text: qsTr("Auth eID email")
             }
             CustomTextInput {
                 id: textInputEmail
@@ -214,7 +222,7 @@ CustomTitleDialogWindow {
                 }
             }
             CustomButtonPrimary {
-                text:   qsTr("Continue")
+                text: qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: !walletsProxy.walletNameExists(tfName.text)

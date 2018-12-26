@@ -18,10 +18,10 @@ CustomTitleDialogWindow {
 
     property WalletInfo walletInfo: WalletInfo{}
     property string targetDir
-    property string backupFileExt:  "." + (isPrintable ? "pdf" : "wdb")
+    property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
     property string backupFileName: "backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + backupFileExt
-    property bool   isPrintable:    false
-    property bool   acceptable:     (walletInfo.encType === NsWallet.Unencrypted)
+    property bool   isPrintable: false
+    property bool   acceptable: (walletInfo.encType === NsWallet.Unencrypted)
                                     || walletInfo.encType === NsWallet.Auth
                                     || walletDetailsFrame.password.length
 
@@ -71,7 +71,7 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 CustomRadioButton {
                     text: qsTr("Digital backup file")
-                    checked:    !isPrintable
+                    checked: !isPrintable
                     onClicked: {
                         isPrintable = false
                     }
@@ -98,7 +98,7 @@ CustomTitleDialogWindow {
                 Layout.alignment: Qt.AlignTop
             }
             CustomLabelValue {
-                text:   qsTr("%1/%2").arg(targetDir).arg(backupFileName)
+                text: qsTr("%1/%2").arg(targetDir).arg(backupFileName)
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
                 Layout.preferredWidth: 300
@@ -140,7 +140,7 @@ CustomTitleDialogWindow {
             id: rowButtons
 
             CustomButton {
-                text:   qsTr("Cancel")
+                text: qsTr("Cancel")
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {

@@ -48,10 +48,10 @@ Item {
     ScrollView {
         id: scrollView
         anchors.fill: parent
-        clip:   true
+        clip: true
 
         ColumnLayout {
-            id:     colWallets
+            id: colWallets
             width: view.width
             spacing: 5
 
@@ -69,7 +69,7 @@ Item {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        text:   qsTr("New Wallet")
+                        text: qsTr("New Wallet")
                         onClicked: {
                             // let user create a new wallet or import one from file
                             var dlgNew = Qt.createComponent("BsDialogs/WalletNewDialog.qml").createObject(mainWindow)
@@ -103,8 +103,8 @@ Item {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        text:   qsTr("Manage Encryption")
-                        enabled:    isHdRoot()
+                        text: qsTr("Manage Encryption")
+                        enabled: isHdRoot()
                         onClicked: {
                             var dlg = Qt.createComponent("BsDialogs/WalletChangePasswordDialog.qml").createObject(mainWindow)
                             dlg.walletInfo = getCurrentWalletInfo()
@@ -114,8 +114,8 @@ Item {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        enabled:    isHdRoot()
-                        text:   qsTr("Delete Wallet")
+                        enabled: isHdRoot()
+                        text: qsTr("Delete Wallet")
                         onClicked: {
                             var walletId = walletsView.model.data(walletsView.currentIndex, WalletsModel.WalletIdRole)
                             var walletName = walletsView.model.data(walletsView.currentIndex, WalletsModel.NameRole)
@@ -154,8 +154,8 @@ Item {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        text:   qsTr("Backup Private Key")
-                        enabled:    isHdRoot()
+                        text: qsTr("Backup Private Key")
+                        enabled: isHdRoot()
                         onClicked: {
                             var dlg = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
                             dlg.walletInfo = getCurrentWalletInfo()
@@ -166,8 +166,8 @@ Item {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        text:   qsTr("Export Watching Only Wallet")
-                        enabled:    isHdRoot()
+                        text: qsTr("Export Watching Only Wallet")
+                        enabled: isHdRoot()
                         onClicked: {
                             var dlg = Qt.createComponent("BsDialogs/WalletExportWoDialog.qml").createObject(mainWindow)
                             dlg.walletInfo = getCurrentWalletInfo()
@@ -179,10 +179,10 @@ Item {
 
             CustomHeader {
                 id: header
-                text:   qsTr("Wallet List")
+                text: qsTr("Wallet List")
                 height: 25
                 checkable: true
-                checked:   true
+                checked: true
                 down: true
                 Layout.fillWidth: true
                 Layout.preferredHeight: 25

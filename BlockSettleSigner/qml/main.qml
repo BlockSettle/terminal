@@ -40,34 +40,31 @@ ApplicationWindow {
     }
 
     Settings {
-        id:         settings
-        category:   "GUI"
-        property alias x:       mainWindow.x
-        property alias y:       mainWindow.y
-        property alias width:   mainWindow.width
-        property alias height:  mainWindow.height
-        property alias tabIdx:  swipeView.currentIndex
+        id: settings
+        category: "GUI"
+        property alias x: mainWindow.x
+        property alias y: mainWindow.y
+        property alias width: mainWindow.width
+        property alias height: mainWindow.height
+        property alias tabIdx: swipeView.currentIndex
     }
-//    WalletExportWoDialog {
-
-//    }
 
     InfoBanner {
         id: ibSuccess
-        bgColor:    "darkgreen"
+        bgColor: "darkgreen"
     }
     InfoBanner {
         id: ibFailure
-        bgColor:    "darkred"
+        bgColor: "darkred"
     }
 
     DirSelectionDialog {
-        id:     ldrWoWalletDirDlg
-        title:  qsTr("Select watching only wallet target directory")
+        id: ldrWoWalletDirDlg
+        title: qsTr("Select watching only wallet target directory")
     }
     DirSelectionDialog {
-        id:     ldrDirDlg
-        title:  qsTr("Select directory")
+        id: ldrDirDlg
+        title: qsTr("Select directory")
     }
 
     SwipeView {
@@ -102,26 +99,26 @@ ApplicationWindow {
             }
 
         CustomTabButton {
-            id:     btnStatus
-            text:   qsTr("Dashboard")
+            id: btnStatus
+            text: qsTr("Dashboard")
 
         }
 
         CustomTabButton {
-            id:     btnSettings
-            text:   qsTr("Settings")
+            id: btnSettings
+            text: qsTr("Settings")
 
         }
 
         CustomTabButton {
-            id:     btnAutoSign
-            text:   qsTr("Auto-Sign")
+            id: btnAutoSign
+            text: qsTr("Auto-Sign")
 
         }
 
         CustomTabButton {
-            id:     btnWallets
-            text:   qsTr("Wallets")
+            id: btnWallets
+            text: qsTr("Wallets")
 
         }
     }

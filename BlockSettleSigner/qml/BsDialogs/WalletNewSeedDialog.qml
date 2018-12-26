@@ -114,9 +114,7 @@ CustomTitleDialogWindow {
                     }
                     else {
                         seedMatch = false
-
-                        // seedMatch = true!!! ONLY FOR TESTING!!!
-                        seedMatch = true
+                        // seedMatch = true  // !!! ONLY FOR TESTING!!!
                     }
                 }
             }
@@ -132,7 +130,7 @@ CustomTitleDialogWindow {
             CustomButton {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
-                text:   qsTr("Cancel")
+                text: qsTr("Cancel")
                 onClicked: {
                     JsHelper.openAbortBox(root, abortBoxType)
                 }
@@ -142,7 +140,7 @@ CustomTitleDialogWindow {
                 id: btnContinue
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text:   qsTr("Continue")
+                text: qsTr("Continue")
                 enabled: acceptable
                 onClicked: {
                     if (curPage == 1) {
@@ -157,7 +155,7 @@ CustomTitleDialogWindow {
                 id: btnPrint
                 anchors.right: btnContinue.left
                 anchors.bottom: parent.bottom
-                text:   qsTr("Print")
+                text: qsTr("Print")
                 visible: curPage == 1
                 onClicked: {
                     pdf.print();
@@ -168,7 +166,7 @@ CustomTitleDialogWindow {
                 id: btnSave
                 anchors.right: btnPrint.left
                 anchors.bottom: parent.bottom
-                text:   qsTr("Save")
+                text: qsTr("Save")
                 visible: curPage == 1
                 onClicked: {
                     pdf.save();
