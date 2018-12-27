@@ -13,7 +13,7 @@ CustomDialogWindow {
     property bool abortConfirmation: false
     property int abortBoxType
 
-    // suggested to use these functions to close dialog oppup with animation
+    // suggested to use these functions to close dialog popup with animation
     //
     function acceptAnimated(){
         closeTimer.acceptRet = true

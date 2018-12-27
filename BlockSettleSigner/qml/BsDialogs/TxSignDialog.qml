@@ -22,48 +22,8 @@ CustomTitleDialogWindow {
     property bool   acceptable: walletInfo.encType === NsWallet.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign
-    //property string encKey
 
     title: qsTr("Wallet Password Confirmation")
-
-//    function confirmClicked() {
-//        if (txInfo.walletInfo.encType === NsWallet.Password) {
-//            //password = JsHelper.toHex(tfPassword.text)
-//            passwordData.textPassword = tfPassword.text
-//            passwordData.encType = NsWallet.Password
-//        }
-//        acceptAnimated()
-//    }
-
-//    onTxInfoChanged: {
-//        console.log("QML onTxInfoChanged")
-//        if (txInfo.walletInfo.encType === NsWallet.Auth) {
-//            JsHelper.requesteIdAuth(AutheIDClient.SignWallet
-//                                    , walletInfo
-//                                    , function(pd){
-//                                        passwordData = pd
-//                                        acceptAnimated()
-//                                    })
-
-
-////            authSign = authProxy.signWallet(AutheIDClient.SignWallet, prompt,
-////                                            txInfo.walletInfo.rootId, txInfo.walletInfo.encKey)
-
-////            authSign.succeeded.connect(function(encKey_, password_) {
-////                console.log("authSign.succeeded.connect " + encKey_)
-////                console.log("authSign.succeeded.connect " + password_)
-
-////                acceptable = true
-////                passwordData.binaryPassword =
-////                encKey = encKey_
-////                seed.password = password_
-////                acceptAnimated()
-////            })
-////            authSign.failed.connect(function(text) {
-////                rejectAnimated()
-////            })
-//        }
-//    }
 
     Connections {
         target: qmlAppObj
@@ -295,14 +255,7 @@ CustomTitleDialogWindow {
                 enabled: tfPassword.text.length || acceptable
                 id: confirmButton
                 onClicked: {
-                    //confirmClicked();
-
-                    console.log("TxSignDialog.qml onClicked walletId " + txInfo.walletInfo.walletId)
-                    console.log("TxSignDialog.qml onClicked encType " + txInfo.walletInfo.encType)
-                    console.log("TxSignDialog.qml onClicked walletInfo " + txInfo.walletInfo)
-
                     if (txInfo.walletInfo.encType === NsWallet.Password) {
-                        //password = JsHelper.toHex(tfPassword.text)
                         passwordData.textPassword = tfPassword.text
                         passwordData.encType = NsWallet.Password
                         acceptAnimated()

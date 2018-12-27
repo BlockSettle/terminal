@@ -143,13 +143,6 @@ ApplicationWindow {
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
             passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData, false)
-//            if (txInfo.walletInfo.encType === NsWallet.Password) {
-//                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.textPassword, false)
-//            }
-//            else {
-//                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.binaryPassword, false)
-//            }
-
         })
         dlg.rejected.connect(function() {
             passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData, true)
