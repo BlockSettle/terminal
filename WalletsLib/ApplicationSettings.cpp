@@ -83,7 +83,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("185.213.153.37")) },
-      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 7681) },
+      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 81) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.44")) },
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
