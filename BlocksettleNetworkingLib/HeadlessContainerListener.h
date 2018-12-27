@@ -125,6 +125,8 @@ private:
 
    bool CheckSpendLimit(uint64_t value, bool autoSign, const std::string &walletId);
 
+   SecureBinaryData authTicket(const std::string &clientId) const;
+
 private:
    std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
@@ -135,7 +137,7 @@ private:
    SignContainer::Limits               limits_;
    const std::string                   pwHash_;
    const bool                          hasUI_;
-   SecureBinaryData                    authTicket_;
+   std::unordered_map<std::string, SecureBinaryData>  authTickets_;
    std::unordered_set<std::string>     connectedClients_;
 
    std::unordered_map<std::string, std::vector<PasswordReceivedCb>>  passwordCallbacks_;

@@ -41,7 +41,7 @@ bool HeadlessContainerListener::disconnect(const std::string &clientId)
 {
    headless::RequestPacket packet;
    packet.set_data("");
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(headless::DisconnectionRequestType);
    const auto &serializedPkt = packet.SerializeAsString();
 
@@ -50,7 +50,10 @@ bool HeadlessContainerListener::disconnect(const std::string &clientId)
       OnClientDisconnected(clientId);
    }
    if (clientId.empty()) {
-      authTicket_.clear();
+      authTickets_.clear();
+   }
+   else {
+      authTickets_.erase(clientId);
    }
    return rc;
 }
@@ -104,9 +107,10 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
       return;
    }
 
+   const auto authTkt = authTicket(clientId);
    if ((packet.type() != headless::AuthenticationRequestType)
-      && (authTicket_.isNull() || (SecureBinaryData(packet.authticket()) != authTicket_))) {
-      if (packet.authticket().empty() && authTicket_.isNull()) {
+      && (authTkt.isNull() || (SecureBinaryData(packet.authticket()) != authTkt))) {
+      if (packet.authticket().empty() && authTkt.isNull()) {
          logger_->info("[HeadlessContainerListener] request {} ignored due to empty auth ticket", packet.type());
       }
       else {
@@ -117,7 +121,7 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
    }
 
    if (packet.type() == headless::AuthenticationRequestType) {
-      if (!authTicket_.isNull()) {
+      if (!authTkt.isNull()) {
          logger_->warn("[HeadlessContainerListener] already authenticated");
 //         AuthResponse(clientId, packet, "already authenticated");
       }
@@ -139,7 +143,7 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
          return;
       }
 
-      authTicket_ = SecureBinaryData().GenerateRandom(8);
+      authTickets_[clientId] = SecureBinaryData().GenerateRandom(8);
       AuthResponse(clientId, packet);
    }
    else {
@@ -157,12 +161,21 @@ void HeadlessContainerListener::OnPeerDisconnected(const std::string &ip)
    emit peerDisconnected(QString::fromStdString(ip));
 }
 
+SecureBinaryData HeadlessContainerListener::authTicket(const std::string &clientId) const
+{
+   const auto itTicket = authTickets_.find(clientId);
+   if (itTicket == authTickets_.end()) {
+      return {};
+   }
+   return itTicket->second;
+}
+
 void HeadlessContainerListener::AuthResponse(const std::string &clientId, headless::RequestPacket packet
    , const std::string &errMsg)
 {
    headless::AuthenticationReply response;
    if (errMsg.empty()) {
-      response.set_authticket(authTicket_.toBinStr());
+      response.set_authticket(authTicket(clientId).toBinStr());
       if (hasUI_) {
          response.set_hasui(true);
       }
@@ -519,7 +532,7 @@ void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsi
 
    headless::RequestPacket packet;
    packet.set_id(id);
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(reqType);
    packet.set_data(response.SerializeAsString());
 
@@ -693,7 +706,7 @@ bool HeadlessContainerListener::RequestPassword(const std::string &clientId, con
       }
 
       headless::RequestPacket packet;
-      packet.set_authticket(authTicket_.toBinStr());
+      packet.set_authticket(authTicket(clientId).toBinStr());
       packet.set_type(headless::PasswordRequestType);
       packet.set_data(request.SerializeAsString());
       return sendData(packet.SerializeAsString(), clientId);
@@ -710,7 +723,7 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
 
    connect(walletsMgr_.get(), &WalletsManager::authWalletChanged, [this, clientId] {
       headless::RequestPacket packet;
-      packet.set_authticket(authTicket_.toBinStr());
+      packet.set_authticket(authTicket(clientId).toBinStr());
       packet.set_type(headless::SetUserIdRequestType);
       sendData(packet.SerializeAsString(), clientId);
    });
@@ -805,7 +818,7 @@ void HeadlessContainerListener::SyncAddrResponse(const std::string &clientId, un
 
    headless::RequestPacket packet;
    packet.set_id(id);
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(headless::SyncAddressRequestType);
    packet.set_data(response.SerializeAsString());
 
@@ -1004,7 +1017,7 @@ void HeadlessContainerListener::CreateHDWalletResponse(const std::string &client
 
    headless::RequestPacket packet;
    packet.set_id(id);
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(headless::CreateHDWalletRequestType);
    packet.set_data(response.SerializeAsString());
 
@@ -1129,7 +1142,7 @@ void HeadlessContainerListener::GetRootKeyResponse(const std::string &clientId, 
 
    headless::RequestPacket packet;
    packet.set_id(id);
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(headless::GetRootKeyRequestType);
    packet.set_data(response.SerializeAsString());
 
@@ -1179,7 +1192,7 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
 
    headless::RequestPacket packet;
    packet.set_id(id);
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(headless::GetHDWalletInfoRequestType);
    packet.set_data(response.SerializeAsString());
 
@@ -1234,7 +1247,7 @@ void HeadlessContainerListener::ChangePasswordResponse(const std::string &client
 
    headless::RequestPacket packet;
    packet.set_id(id);
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(headless::ChangePasswordRequestType);
    packet.set_data(response.SerializeAsString());
 
@@ -1255,7 +1268,7 @@ void HeadlessContainerListener::AutoSignActiveResponse(const std::string &wallet
 
    headless::RequestPacket packet;
    packet.set_id(id);
-   packet.set_authticket(authTicket_.toBinStr());
+   packet.set_authticket(authTicket(clientId).toBinStr());
    packet.set_type(headless::SetLimitsRequestType);
    packet.set_data(response.SerializeAsString());
 
