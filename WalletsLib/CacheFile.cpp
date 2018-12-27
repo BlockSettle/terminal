@@ -3,8 +3,11 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include "CacheFile.h"
 
-// We need at least 100 MiB on the drive in order for LMDB to work.
-#define DBMAPSIZE 100000000
+// We need at least 150 MiB on the drive in order for LMDB to work. Add some
+// buffer because, while LMDB does bump the DB map size if half the size is hit
+// within a cycle, it's possible (albeit unlikely) that expansion can occur so
+// quickly that the storage is exhausted.
+#define DBMAPSIZE 150000000
 
 CacheFile::CacheFile(const std::string &filename, size_t nbElemLimit)
    : QObject(nullptr)

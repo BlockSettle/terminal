@@ -1,6 +1,7 @@
 #ifndef __CC_PORTFOLIO_MODEL__
 #define __CC_PORTFOLIO_MODEL__
 
+#include <memory>
 #include <QAbstractItemModel>
 
 class AssetGroupNode;

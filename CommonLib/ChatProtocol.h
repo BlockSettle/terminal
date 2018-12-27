@@ -109,21 +109,46 @@ namespace Chat
    };
 
 
-   class LoginRequest : public Request
+   class BaseLoginRequest : public Request
    {
    public:
-
-      LoginRequest(const std::string& clientId
+      BaseLoginRequest(RequestType requestType
+                , const std::string& clientId
                 , const std::string& authId
                 , const std::string& jwt);
       QJsonObject toJson() const override;
-      void handle(RequestHandler& handler) override;
       std::string getAuthId() const { return authId_; }
       std::string getJWT() const { return jwt_; }
 
-   private:
+   protected:
       std::string authId_;
       std::string jwt_;
+   };
+
+
+   class LoginRequest : public BaseLoginRequest
+   {
+   public:
+      LoginRequest(const std::string& clientId
+                  , const std::string& authId
+                  , const std::string& jwt)
+         : BaseLoginRequest (RequestType::RequestLogin, clientId, authId, jwt)
+      {
+      }
+      void handle(RequestHandler& handler) override;
+   };
+
+
+   class LogoutRequest : public BaseLoginRequest
+   {
+   public:
+      LogoutRequest(const std::string& clientId
+                  , const std::string& authId
+                  , const std::string& jwt)
+         : BaseLoginRequest (RequestType::RequestLogout, clientId, authId, jwt)
+      {
+      }
+      void handle(RequestHandler& handler) override;
    };
 
 
@@ -205,6 +230,30 @@ namespace Chat
    };
 
 
+   class LoginResponse : public Response
+   {
+   public:
+
+      enum class Status
+      {
+           LoginOk
+         , LoginFailed
+      };
+
+      LoginResponse(const std::string& userId, Status status);
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      void handle(ResponseHandler& handler) override;
+      QJsonObject toJson() const override;
+
+      std::string getUserId() const { return userId_; }
+      Status getStatus() const { return status_; }
+
+   private:
+      std::string userId_;
+      Status status_;
+   };
+
+
    class ListResponse : public Response
    {
    public:
@@ -242,6 +291,7 @@ namespace Chat
       virtual ~RequestHandler() = default;
       virtual void OnHeartbeatPing(HeartbeatPingRequest& request) = 0;
       virtual void OnLogin(LoginRequest& request) = 0;
+      virtual void OnLogout(LogoutRequest& request) = 0;
       virtual void OnSendMessage(SendMessageRequest& request) = 0;
       virtual void OnOnlineUsers(OnlineUsersRequest& request) = 0;
       virtual void OnRequestMessages(MessagesRequest& request) = 0;
@@ -255,6 +305,7 @@ namespace Chat
       virtual void OnHeartbeatPong(HeartbeatPongResponse& response) = 0;
       virtual void OnUsersList(UsersListResponse& response) = 0;
       virtual void OnMessages(MessagesResponse& response) = 0;
+      virtual void OnLoginReturned(LoginResponse& response) = 0;
    };
 
 }

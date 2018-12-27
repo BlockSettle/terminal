@@ -18,6 +18,12 @@ QString ChatUsersViewModel::resolveUser(const QModelIndex& index)
 }
 
 
+QModelIndex ChatUsersViewModel::resolveUser(const QString& userId)
+{
+    return index(indexByUser_[userId], 0);
+}
+
+
 int ChatUsersViewModel::columnCount(const QModelIndex &parent) const
 {
    return 1;
@@ -48,22 +54,21 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 void ChatUsersViewModel::onClear()
 {
    beginResetModel();
-   indexByUser_.clear();
    userByIndex_.clear();
+   indexByUser_.clear();
    endResetModel();
 }
 
 
-void ChatUsersViewModel::onUserUpdate(const QString& userId)
+void ChatUsersViewModel::onUsersUpdate(const std::vector<std::string>& users)
 {
-   if (indexByUser_.contains(userId))
-   {
-      return;
-   }
+   onClear();
 
-   auto rowIdx = static_cast<int>(userByIndex_.size());
-   beginInsertRows(QModelIndex(), rowIdx, rowIdx);
-   indexByUser_[userId] = userByIndex_.count();
-   userByIndex_.append(userId);
+   beginInsertRows(QModelIndex(), 0, users.size());
+   foreach(auto userId, users) {
+      auto insertingUser = QString::fromStdString(userId);
+      indexByUser_[insertingUser] = userByIndex_.size();
+      userByIndex_.append(insertingUser);
+   }
    endInsertRows();
 }

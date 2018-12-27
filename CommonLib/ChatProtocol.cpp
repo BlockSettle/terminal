@@ -9,68 +9,68 @@
 using namespace Chat;
 
 
-static const QString VersionKey    = QStringLiteral("version");
+static const QString VersionKey   = QStringLiteral("version");
 static const QString NameKey      = QStringLiteral("name");
 static const QString TypeKey      = QStringLiteral("type");
 static const QString TextKey      = QStringLiteral("text");
 static const QString RoomKey      = QStringLiteral("room");
-static const QString RoomsKey      = QStringLiteral("rooms");
-static const QString MessageKey    = QStringLiteral("message");
+static const QString RoomsKey     = QStringLiteral("rooms");
+static const QString MessageKey   = QStringLiteral("message");
 static const QString FromKey      = QStringLiteral("from");
-static const QString ContactsKey   = QStringLiteral("fromid");
+static const QString ContactsKey  = QStringLiteral("fromid");
 static const QString IdKey        = QStringLiteral("id");
-static const QString AuthIdKey     = QStringLiteral("authid");
+static const QString AuthIdKey    = QStringLiteral("authid");
 static const QString JwtKey       = QStringLiteral("jwt");
-static const QString PasswordKey   = QStringLiteral("passwd");
+static const QString PasswordKey  = QStringLiteral("passwd");
 static const QString ReceiverIdKey  = QStringLiteral("toid");
-static const QString SenderIdKey   = QStringLiteral("fromid");
-static const QString StatusKey     = QStringLiteral("status");
-static const QString UsersKey      = QStringLiteral("users");
-static const QString DateTimeKey   = QStringLiteral("datetm");
+static const QString SenderIdKey  = QStringLiteral("fromid");
+static const QString StatusKey    = QStringLiteral("status");
+static const QString UsersKey     = QStringLiteral("users");
+static const QString DateTimeKey  = QStringLiteral("datetm");
 static const QString DataKey      = QStringLiteral("data");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-      { "RequestHeartbeatPing"   ,   RequestType::RequestHeartbeatPing   }
-   ,   { "RequestLogin"         ,   RequestType::RequestLogin         }
-   ,   { "RequestLogout"         ,   RequestType::RequestLogout        }
-   ,   { "RequestMessages"       ,   RequestType::RequestMessages      }
-   ,   { "RequestSendMessage"     ,   RequestType::RequestSendMessage    }
-   ,   { "RequestOnlineUsers"     ,   RequestType::RequestOnlineUsers    }
+       { "RequestHeartbeatPing" ,   RequestType::RequestHeartbeatPing  }
+   ,   { "RequestLogin"         ,   RequestType::RequestLogin          }
+   ,   { "RequestLogout"        ,   RequestType::RequestLogout         }
+   ,   { "RequestMessages"      ,   RequestType::RequestMessages       }
+   ,   { "RequestSendMessage"   ,   RequestType::RequestSendMessage    }
+   ,   { "RequestOnlineUsers"   ,   RequestType::RequestOnlineUsers    }
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-      { RequestType::RequestHeartbeatPing    ,  "RequestHeartbeatPing"   }
+       { RequestType::RequestHeartbeatPing  ,  "RequestHeartbeatPing" }
    ,   { RequestType::RequestLogin          ,  "RequestLogin"         }
    ,   { RequestType::RequestLogout         ,  "RequestLogout"        }
-   ,   { RequestType::RequestMessages        ,  "RequestMessages"      }
-   ,   { RequestType::RequestSendMessage      ,  "RequestSendMessage"    }
-   ,   { RequestType::RequestOnlineUsers      ,  "RequestOnlineUsers"    }
+   ,   { RequestType::RequestMessages       ,  "RequestMessages"      }
+   ,   { RequestType::RequestSendMessage    ,  "RequestSendMessage"   }
+   ,   { RequestType::RequestOnlineUsers    ,  "RequestOnlineUsers"   }
 };
 
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-      { "ResponseError"         ,   ResponseType::ResponseError          }
-   ,   { "ResponseHeartbeatPong"   ,   ResponseType::ResponseHeartbeatPong    }
+       { "ResponseError"         ,   ResponseType::ResponseError          }
+   ,   { "ResponseHeartbeatPong" ,   ResponseType::ResponseHeartbeatPong  }
    ,   { "ResponseLogin"         ,   ResponseType::ResponseLogin          }
-   ,   { "ResponseMessages"      ,   ResponseType::ResponseMessages        }
-   ,   { "ResponseSuccess"       ,   ResponseType::ResponseSuccess         }
-   ,   { "ResponseUsersList"      ,   ResponseType::ResponseUsersList       }
+   ,   { "ResponseMessages"      ,   ResponseType::ResponseMessages       }
+   ,   { "ResponseSuccess"       ,   ResponseType::ResponseSuccess        }
+   ,   { "ResponseUsersList"     ,   ResponseType::ResponseUsersList      }
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-      { ResponseType::ResponseError         ,  "ResponseError"          }
-   ,   { ResponseType::ResponseHeartbeatPong   ,  "ResponseHeartbeatPong"    }
-   ,   { ResponseType::ResponseLogin         ,  "ResponseLogin"          }
-   ,   { ResponseType::ResponseMessages      ,  "ResponseMessages"        }
-   ,   { ResponseType::ResponseSuccess       ,  "ResponseSuccess"         }
-   ,   { ResponseType::ResponseUsersList      ,  "ResponseUsersList"       }
+       { ResponseType::ResponseError         ,  "ResponseError"         }
+   ,   { ResponseType::ResponseHeartbeatPong ,  "ResponseHeartbeatPong" }
+   ,   { ResponseType::ResponseLogin         ,  "ResponseLogin"         }
+   ,   { ResponseType::ResponseMessages      ,  "ResponseMessages"      }
+   ,   { ResponseType::ResponseSuccess       ,  "ResponseSuccess"       }
+   ,   { ResponseType::ResponseUsersList     ,  "ResponseUsersList"     }
 };
 
 
@@ -106,8 +106,8 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return std::make_shared<HeartbeatPingRequest>(clientId);
 
       case RequestType::RequestLogin:
-         return std::make_shared<LoginRequest>(
-                  clientId
+        return std::make_shared<LoginRequest>(
+                   clientId
                  , data[AuthIdKey].toString().toStdString()
                  , data[JwtKey].toString().toStdString());
 
@@ -116,14 +116,20 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
       case RequestType::RequestOnlineUsers:
          return std::make_shared<OnlineUsersRequest>(
-                  clientId
+                   clientId
                  , data[AuthIdKey].toString().toStdString());
 
       case RequestType::RequestMessages:
          return std::make_shared<MessagesRequest>(
-                  clientId
+                   clientId
                  , data[SenderIdKey].toString().toStdString()
                  , data[ReceiverIdKey].toString().toStdString());
+
+      case RequestType::RequestLogout:
+         return std::make_shared<LogoutRequest>(
+                   clientId
+                 , data[AuthIdKey].toString().toStdString()
+                 , data[JwtKey].toString().toStdString());
 
       default:
          break;
@@ -181,6 +187,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseMessages:
          return MessagesResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseLogin:
+         return LoginResponse::fromJSON(jsonData);
 
       default:
          break;
@@ -293,10 +302,11 @@ void MessagesResponse::handle(ResponseHandler& handler)
 }
 
 
-LoginRequest::LoginRequest(const std::string& clientId
+BaseLoginRequest::BaseLoginRequest(RequestType requestType
+                     , const std::string& clientId
                      , const std::string& authId
                      , const std::string& jwt)
-   : Request (RequestType::RequestLogin, clientId)
+   : Request (requestType, clientId)
    , authId_(authId)
    , jwt_(jwt)
 {
@@ -304,7 +314,7 @@ LoginRequest::LoginRequest(const std::string& clientId
 }
 
 
-QJsonObject LoginRequest::toJson() const
+QJsonObject BaseLoginRequest::toJson() const
 {
    QJsonObject data = Request::toJson();
 
@@ -318,6 +328,12 @@ QJsonObject LoginRequest::toJson() const
 void LoginRequest::handle(RequestHandler& handler)
 {
    handler.OnLogin(*this);
+}
+
+
+void LogoutRequest::handle(RequestHandler& handler)
+{
+   handler.OnLogout(*this);
 }
 
 
@@ -450,4 +466,39 @@ QJsonObject MessagesRequest::toJson() const
 void MessagesRequest::handle(RequestHandler& handler)
 {
    handler.OnRequestMessages(*this);
+}
+
+
+LoginResponse::LoginResponse(const std::string& userId, Status status)
+   : Response (ResponseType::ResponseLogin)
+   , userId_(userId)
+   , status_(status)
+{
+
+}
+
+
+QJsonObject LoginResponse::toJson() const
+{
+   QJsonObject data = Response::toJson();
+
+   data[SenderIdKey] = QString::fromStdString(userId_);
+   data[StatusKey] = static_cast<int>(status_);
+
+   return data;
+}
+
+
+std::shared_ptr<Response> LoginResponse::fromJSON(const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<LoginResponse>(
+                   data[SenderIdKey].toString().toStdString()
+                 , static_cast<Status>(data[StatusKey].toInt()));
+}
+
+
+void LoginResponse::handle(ResponseHandler& handler)
+{
+   handler.OnLoginReturned(*this);
 }
