@@ -128,7 +128,7 @@ ApplicationWindow {
         autoSignPage.storeSettings();
     }
 
-    signal passwordEntered(string walletId, string password, bool cancelledByUser)
+    signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
 
     function createTxSignDialog(prompt, txInfo) {
         // called from QMLAppObj::requestPassword
@@ -142,16 +142,17 @@ ApplicationWindow {
         dlg.prompt = prompt
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
-            if (txInfo.walletInfo.encType === NsWallet.Password) {
-                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.textPassword, false)
-            }
-            else {
-                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.binaryPassword, false)
-            }
+            passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData, false)
+//            if (txInfo.walletInfo.encType === NsWallet.Password) {
+//                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.textPassword, false)
+//            }
+//            else {
+//                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.binaryPassword, false)
+//            }
 
         })
         dlg.rejected.connect(function() {
-            passwordEntered(txInfo.walletInfo.walletId, '', dlg.cancelledByUser)
+            passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData, true)
         })
         mainWindow.requestActivate()
         dlg.open()

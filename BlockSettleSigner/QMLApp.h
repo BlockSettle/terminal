@@ -8,6 +8,12 @@
 #include <QSystemTrayIcon>
 
 
+namespace bs {
+namespace wallet {
+   class QPasswordData;
+}
+}
+
 namespace spdlog {
    class logger;
 }
@@ -39,7 +45,9 @@ signals:
    void cancelSignTx(const QString &txId);
 
 private slots:
-   void onPasswordAccepted(const QString &walletId, const QString &password, bool cancelledByUser);
+   void onPasswordAccepted(const QString &walletId
+                           , bs::wallet::QPasswordData *passwordData
+                           , bool cancelledByUser);
    void onOfflinePassword(const bs::wallet::TXSignRequest &);
    void onPasswordRequested(const bs::wallet::TXSignRequest &, const QString &prompt);
    void onAutoSignPwdRequested(const std::string &walletId);
