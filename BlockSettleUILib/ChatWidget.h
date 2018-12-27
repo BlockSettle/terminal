@@ -40,6 +40,9 @@ private:
 
    std::string serverPublicKey_;
 
+   QString currentChatId_;
+   QString currentUserId_;
+
 
 public:
 
@@ -50,15 +53,23 @@ public:
            , const std::shared_ptr<ApplicationSettings> &appSettings
            , const std::shared_ptr<spdlog::logger>& logger);
 
+
    std::string login(const std::string& email, const std::string& jwt);
 
    void logout();
 
+private:
+   void switchToChat(const QString& chatId);
 
 private slots:
-
    void onSendButtonClicked();
    void onUserClicked(const QModelIndex& index);
+   void onMessagesUpdated(const QModelIndex& parent, int start, int end);
+   void onLoginFailed();
+
+signals:
+
+   void LoginFailed();
 
 };
 

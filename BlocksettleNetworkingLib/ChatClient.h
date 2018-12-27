@@ -51,7 +51,7 @@ public:
    void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
    void OnUsersList(Chat::UsersListResponse& response) override;
    void OnMessages(Chat::MessagesResponse& response) override;
-
+   void OnLoginReturned(Chat::LoginResponse& response) override;
 
 public:
    void OnDataReceived(const std::string& data) override;
@@ -59,19 +59,19 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   QString prependMessage(const QString& messageText, const QString& senderId = QString());
-
-private:
    void sendHeartbeat();
 
+private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
 signals:
    void ConnectedToServer();
    void ConnectionClosed();
    void ConnectionError(int errorCode);
-   void UserUpdate(const QString& userId);
-   void MessageUpdate(const QDateTime& dateTime, const QString& text);
+
+   void LoginFailed();
+   void UsersUpdate(const std::vector<std::string>& users);
+   void MessagesUpdate(const std::vector<std::string>& messages);
 
 
 public slots:
@@ -82,8 +82,8 @@ public slots:
 
 private:
    std::shared_ptr<ConnectionManager>    connectionManager_;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<spdlog::logger>      logger_;
+   std::shared_ptr<ApplicationSettings>  appSettings_;
+   std::shared_ptr<spdlog::logger>       logger_;
 
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 
@@ -91,6 +91,7 @@ private:
 
    std::string                     currentUserId_;
    std::string                     currentChatId_;
+   std::atomic_bool                loggedIn_;
 
 };
 
