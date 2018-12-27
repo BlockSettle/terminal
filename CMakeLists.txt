@@ -365,6 +365,7 @@ IF(WIN32)
 IF(WIN32)
    SET(OS_SPECIFIC_LIBS
       Ws2_32
+      Wtsapi32
       Iphlpapi
       imm32
       winmm
