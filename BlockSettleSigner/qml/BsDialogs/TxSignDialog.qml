@@ -196,7 +196,7 @@ CustomTitleDialogWindow {
 
             Timer {
                 id: timer
-                property real timeLeft: 300
+                property real timeLeft: 120
                 interval: 500
                 running: true
                 repeat: true

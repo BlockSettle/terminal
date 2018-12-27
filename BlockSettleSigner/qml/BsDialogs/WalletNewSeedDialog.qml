@@ -16,7 +16,7 @@ CustomTitleDialogWindow {
     id: root
 
     property int curPage: 1
-    property bool acceptableNext: (curPage == 1 || seedMatch)
+    property bool acceptable: (curPage == 1 || seedMatch)
     property bool seedMatch: false
     property QSeed seed: QSeed{}
 
@@ -141,7 +141,7 @@ CustomTitleDialogWindow {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 text: qsTr("Continue")
-                enabled: acceptableNext
+                enabled: acceptable
                 onClicked: {
                     if (curPage == 1) {
                         curPage = 2;
