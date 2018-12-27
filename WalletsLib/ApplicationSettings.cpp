@@ -82,7 +82,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { satoshiPort,             SettingDef(QString(), -1) },
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
-      { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("185.213.153.37")) },
+      { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("armory.blocksettle.com")) },
       { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 81) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.44")) },

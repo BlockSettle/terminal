@@ -58,12 +58,12 @@ signals:
    void cancelSignTx(const BinaryData &txId);
 
 public slots:
-   void passwordReceived(const std::string &walletId, const SecureBinaryData &password,
-      bool cancelledByUser);
-   void activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
-   void deactivateAutoSign(const std::string &walleteId, const std::string &reason = {});
+   void activateAutoSign(const std::string &clientId, const std::string &walletId, const SecureBinaryData &password);
+   void deactivateAutoSign(const std::string &clientId = {}, const std::string &walletId = {}, const std::string &reason = {});
    void addPendingAutoSignReq(const std::string &walletId);
    bool isAutoSignActive(const std::string &walletId) const;
+   void passwordReceived(const std::string &walletId
+      , const SecureBinaryData &password, bool cancelledByUser);
 
 private slots:
    void onXbtSpent(const qint64 value, bool autoSign);
@@ -78,6 +78,8 @@ protected:
 private:
    using PasswordReceivedCb = std::function<void(const SecureBinaryData &password, bool cancelledByUser)>;
    using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
+   void passwordReceived(const std::string &clientId, const std::string &walletId
+      , const SecureBinaryData &password, bool cancelledByUser);
 
    bool sendData(const std::string &data, const std::string &clientId = {});
    bool onRequestPacket(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
@@ -85,7 +87,7 @@ private:
       , bool partial = false);
    bool onSignPayoutTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSignMultiTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
-   bool onPasswordReceived(Blocksettle::Communication::headless::RequestPacket &packet);
+   bool onPasswordReceived(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSyncAddress(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCreateHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
@@ -109,8 +111,8 @@ private:
    void SyncAddrResponse(const std::string &clientId, unsigned int id, const std::set<std::string> &failedWallets
       , const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void ChangePasswordResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bool ok);
-   void AutoSignActiveResponse(const std::string &walletId, bool active, const std::string &error = {}
-      , const std::string &clientId = {}, unsigned int id = 0);
+   void AutoSignActiveResponse(const std::string &clientId, const std::string &walletId, bool active
+      , const std::string &error = {}, unsigned int id = 0);
 
    bool CreateHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDLeaf &request
       , const std::vector<bs::wallet::PasswordData> &pwdData);

@@ -58,7 +58,8 @@ public:
             }
             return;
          }
-         logger_->error("[HeadlessListener] {} auth ticket mismatch!", packet.type());
+         logger_->error("[HeadlessListener] {} auth ticket mismatch ({} vs {})!", packet.type()
+            , authTicket_.toHexStr(), BinaryData(packet.authticket()).toHexStr());
          emit error(tr("auth ticket mismatch"));
          return;
       }
