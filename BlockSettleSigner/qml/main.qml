@@ -133,7 +133,8 @@ ApplicationWindow {
     function createTxSignDialog(prompt, txInfo) {
         // called from QMLAppObj::requestPassword
         console.log("QML createTxSignDialog")
-        console.log("walletInfo id" + txInfo.walletInfo.walletId)
+        console.log("walletInfo walletId" + txInfo.walletInfo.walletId)
+        console.log("walletInfo rootId" + txInfo.walletInfo.rootId)
 
         var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
         dlg.walletInfo = txInfo.walletInfo
@@ -142,10 +143,10 @@ ApplicationWindow {
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {
             if (txInfo.walletInfo.encType === NsWallet.Password) {
-                passwordEntered(txInfo.walletInfo.walletId, dlg.password, false)
+                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.textPassword, false)
             }
             else {
-                passwordEntered(txInfo.walletInfo.walletId, dlg.seed.password, false)
+                passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData.binaryPassword, false)
             }
 
         })

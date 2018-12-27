@@ -148,6 +148,7 @@ public:
    static WalletInfo fromDigitalBackup(const QString &filename);
    void initFromWallet(const bs::Wallet *, const std::string &rootId = {});
    void initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &);
+   void initEncKeys(const std::shared_ptr<bs::hd::Wallet> &rootWallet);
 
    QString walletId() const { return walletId_; }
    void setWalletId(const QString &walletId);

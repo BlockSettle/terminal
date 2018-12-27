@@ -31,8 +31,9 @@ WalletInfo::WalletInfo(const std::shared_ptr<WalletsManager> &walletsMgr
    const auto &wallet = walletsMgr->GetWalletById(walletId.toStdString());
    if (wallet) {
       const auto &rootWallet = walletsMgr->GetHDRootForLeaf(wallet->GetWalletId());
-      initFromRootWallet(rootWallet);
-      //initFromWallet(wallet.get(), rootWallet->getWalletId());
+      //initFromRootWallet(rootWallet);
+      initFromWallet(wallet.get(), rootWallet->getWalletId());
+      initEncKeys(rootWallet);
    }
    else {
       const auto &hdWallet = walletsMgr->GetHDWalletById(walletId.toStdString());
@@ -40,6 +41,7 @@ WalletInfo::WalletInfo(const std::shared_ptr<WalletsManager> &walletsMgr
          throw std::runtime_error("failed to find wallet id " + walletId.toStdString());
       }
       initFromRootWallet(hdWallet);
+      initEncKeys(hdWallet);
    }
 
    if (walletsManager_) {
@@ -108,18 +110,16 @@ void WalletInfo::initFromWallet(const bs::Wallet *wallet, const std::string &roo
    emit walletChanged();
 }
 
-void WalletInfo::setDesc(const QString &desc)
-{
-   if (desc_ == desc) return;
-   desc_ = desc;
-   emit walletChanged();
-}
-
 void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootWallet)
 {
    walletId_ = QString::fromStdString(rootWallet->getWalletId());
    name_ = QString::fromStdString(rootWallet->getName());
    rootId_ = QString::fromStdString(rootWallet->getWalletId());
+   emit walletChanged();
+}
+
+void WalletInfo::initEncKeys(const std::shared_ptr<Wallet> &rootWallet)
+{
 
    for (const SecureBinaryData &encKey : rootWallet->encryptionKeys()) {
       encKeys_.push_back(QString::fromStdString(encKey.toBinStr()));
@@ -128,6 +128,13 @@ void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootW
    for (const EncryptionType &encType : rootWallet->encryptionTypes()) {
       encTypes_.push_back(static_cast<bs::wallet::QEncryptionType>(encType));
    }
+}
+
+void WalletInfo::setDesc(const QString &desc)
+{
+   if (desc_ == desc) return;
+   desc_ = desc;
+   emit walletChanged();
 }
 
 void WalletInfo::setWalletId(const QString &walletId)
