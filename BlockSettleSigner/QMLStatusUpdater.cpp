@@ -46,7 +46,7 @@ void QMLStatusUpdater::clearConnections()
 void QMLStatusUpdater::deactivateAutoSign()
 {
    if (listener_) {
-      listener_->deactivateAutoSign({});
+      listener_->deactivateAutoSign();
    }
 }
 
