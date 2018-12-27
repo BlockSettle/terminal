@@ -62,14 +62,13 @@ void ChatUsersViewModel::onClear()
 
 void ChatUsersViewModel::onUsersUpdate(const std::vector<std::string>& users)
 {
-    onClear();
+   onClear();
 
-    beginInsertRows(QModelIndex(), 0, users.size());
-    foreach(auto userId, users) {
-
-        auto insertingUser = QString::fromStdString(userId);
-        indexByUser_[insertingUser] = userByIndex_.size();
-        userByIndex_.append(insertingUser);
-    }
-    endInsertRows();
+   beginInsertRows(QModelIndex(), 0, users.size());
+   foreach(auto userId, users) {
+      auto insertingUser = QString::fromStdString(userId);
+      indexByUser_[insertingUser] = userByIndex_.size();
+      userByIndex_.append(insertingUser);
+   }
+   endInsertRows();
 }

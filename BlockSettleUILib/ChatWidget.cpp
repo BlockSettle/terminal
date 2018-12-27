@@ -105,7 +105,7 @@ void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end
 
 void ChatWidget::switchToChat(const QString& chatId)
 {
-   ui_->labelActiveChat->setText(tr("Block Settle Chat #") + currentChatId_);
+   ui_->labelActiveChat->setText(tr("Chat #") + currentChatId_);
    client_->onSetCurrentPrivateChat(currentChatId_);
    messagesViewModel_->onSwitchToChat(currentChatId_);
 

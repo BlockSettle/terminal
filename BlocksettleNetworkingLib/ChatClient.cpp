@@ -61,18 +61,17 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
 
 void ChatClient::OnLoginReturned(Chat::LoginResponse& response)
 {
-    if (response.getStatus() == Chat::LoginResponse::Status::LoginOk)
-    {
-        loggedIn_ = true;
-
-        auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
-        sendRequest(request);
-    }
-    else
-    {
-        loggedIn_ = false;
-        emit LoginFailed();
-    }
+   if (response.getStatus() == Chat::LoginResponse::Status::LoginOk)
+   {
+      loggedIn_ = true;
+      auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
+      sendRequest(request);
+   }
+   else
+   {
+      loggedIn_ = false;
+      emit LoginFailed();
+   }
 }
 
 

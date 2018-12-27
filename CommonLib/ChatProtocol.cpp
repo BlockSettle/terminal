@@ -480,25 +480,25 @@ LoginResponse::LoginResponse(const std::string& userId, Status status)
 
 QJsonObject LoginResponse::toJson() const
 {
-    QJsonObject data = Response::toJson();
+   QJsonObject data = Response::toJson();
 
-    data[SenderIdKey] = QString::fromStdString(userId_);
-    data[StatusKey] = static_cast<int>(status_);
+   data[SenderIdKey] = QString::fromStdString(userId_);
+   data[StatusKey] = static_cast<int>(status_);
 
-    return data;
+   return data;
 }
 
 
 std::shared_ptr<Response> LoginResponse::fromJSON(const std::string& jsonData)
 {
-    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-    return std::make_shared<LoginResponse>(
-                      data[SenderIdKey].toString().toStdString()
-                    , static_cast<Status>(data[StatusKey].toInt()));
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<LoginResponse>(
+                   data[SenderIdKey].toString().toStdString()
+                 , static_cast<Status>(data[StatusKey].toInt()));
 }
 
 
 void LoginResponse::handle(ResponseHandler& handler)
 {
-    handler.OnLoginReturned(*this);
+   handler.OnLoginReturned(*this);
 }
