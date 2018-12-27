@@ -103,7 +103,7 @@ public:
    // copy constructors and operator= uses parent implementation
    QSeed(const Seed &seed) : Seed(seed){}
    QSeed(const QSeed &other) : QSeed(static_cast<Seed>(other)) {}
-   QSeed& QSeed::operator= (const QSeed &other) { Seed::operator=(other); return *this;}
+   QSeed& operator= (const QSeed &other) { Seed::operator=(other); return *this;}
 
    static QSeed fromPaperKey(const QString &key, QNetworkType netType);
    static QSeed fromDigitalBackup(const QString &filename, QNetworkType netType);
@@ -142,7 +142,7 @@ public:
    WalletInfo(const std::shared_ptr<WalletsManager> &, const QString &walletId, QObject *parent = nullptr);
 
    WalletInfo(const WalletInfo &other);
-   WalletInfo& WalletInfo::operator= (const WalletInfo &other);
+   WalletInfo& operator= (const WalletInfo &other);
 
    static WalletInfo fromDigitalBackup(const QString &filename);
    void initFromWallet(const bs::Wallet *, const std::string &rootId = {});
