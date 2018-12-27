@@ -47,7 +47,7 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
 
 
 
-void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
+bool AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
 {
    std::vector<std::string> knownDeviceIds;
    std::vector<std::string> userIds;
@@ -66,14 +66,15 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
    }
 
    if (userIds.empty()) {
-      emit failed(tr("Error parsing encKeys: email not found"));
-      return;
+      //emit failed(tr("Error parsing encKeys: email not found"));
+      return false;
    }
 
    autheIDClient_->start(requestType
                          , userIds[0]
                          , walletInfo->walletId().toStdString()
                          , knownDeviceIds);
+   return true;
 }
 
 void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo)

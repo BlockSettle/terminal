@@ -18,7 +18,7 @@ CustomTitleDialogWindow {
     property string prompt
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo
-    property QPasswordData passwordData
+    property QPasswordData passwordData: QPasswordData{}
     property bool   acceptable: walletInfo.encType === NsWallet.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign
@@ -297,13 +297,17 @@ CustomTitleDialogWindow {
                 onClicked: {
                     //confirmClicked();
 
+                    console.log("TxSignDialog.qml onClicked walletId " + txInfo.walletInfo.walletId)
+                    console.log("TxSignDialog.qml onClicked encType " + txInfo.walletInfo.encType)
+                    console.log("TxSignDialog.qml onClicked walletInfo " + txInfo.walletInfo)
+
                     if (txInfo.walletInfo.encType === NsWallet.Password) {
                         //password = JsHelper.toHex(tfPassword.text)
                         passwordData.textPassword = tfPassword.text
                         passwordData.encType = NsWallet.Password
                         acceptAnimated()
                     }
-                    else {
+                    else if (txInfo.walletInfo.encType === NsWallet.Auth) {
                         JsHelper.requesteIdAuth(AutheIDClient.SignWallet
                                                 , walletInfo
                                                 , function(pd){
@@ -311,6 +315,10 @@ CustomTitleDialogWindow {
                                                     acceptAnimated()
                                                 })
 
+                    }
+                    else {
+                        passwordData.encType = NsWallet.Unencrypted
+                        acceptAnimated()
                     }
                 }
             }

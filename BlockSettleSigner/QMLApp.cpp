@@ -248,7 +248,7 @@ void QMLAppObj::SetRootObject(QObject *obj)
 void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password,
    bool cancelledByUser)
 {
-   SecureBinaryData decodedPwd = BinaryData::CreateFromHex(password.toStdString());
+   SecureBinaryData decodedPwd = password.toStdString();
    logger_->debug("Password for wallet {} was accepted ({})", walletId.toStdString(), password.size());
    if (listener_) {
       listener_->passwordReceived(walletId.toStdString(), decodedPwd, cancelledByUser);

@@ -129,6 +129,7 @@ class WalletInfo : public QObject
    Q_OBJECT
 
    Q_PROPERTY(QString walletId READ walletId WRITE setWalletId NOTIFY walletChanged)
+   Q_PROPERTY(QString rootId READ rootId WRITE setRootId NOTIFY walletChanged)
    Q_PROPERTY(QString name READ name WRITE setName NOTIFY walletChanged)
    Q_PROPERTY(QString desc READ desc WRITE setDesc NOTIFY walletChanged)
    Q_PROPERTY(QStringList encKeys READ encKeys WRITE setEncKeys NOTIFY walletChanged)

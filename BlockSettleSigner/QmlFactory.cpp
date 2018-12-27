@@ -5,6 +5,9 @@ using namespace bs::hd;
 using namespace bs::wallet;
 
 
+// todo
+// check authObject->signWallet results, return null object, emit error signal
+
 AuthSignWalletObject *QmlFactory::createAutheIDSignObject(AutheIDClient::RequestType requestType
                                                           , WalletInfo *walletInfo)
 {

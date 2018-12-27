@@ -26,6 +26,9 @@ void TXInfo::init()
    }
    else {
       walletInfo_ = new WalletInfo(walletsMgr_, QString::fromStdString(txReq_.walletId), this);
+
+      // walletInfo_ will be pushed to qml, currently qml uses only walletId instead of rootId field
+      //walletInfo_->setWalletId(walletInfo_->rootId());
    }
    emit dataChanged();
 }
