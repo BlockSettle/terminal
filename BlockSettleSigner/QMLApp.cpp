@@ -294,7 +294,7 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
    if (alert && trayIcon_) {
       QString notifPrompt = prompt;
       if (!txReq.walletId.empty()) {
-         notifPrompt = tr("Enter password for %1").arg(txInfo->wallet()->name());
+         notifPrompt = tr("Enter password for %1").arg(txInfo->walletInfo()->name());
       }
 
       if (notifMode_ == QSystemTray) {
@@ -309,7 +309,7 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
 #endif // BS_USE_DBUS
    }
 
-   QMetaObject::invokeMethod(rootObj_, "createPasswordDialog", Q_ARG(QVariant, prompt)
+   QMetaObject::invokeMethod(rootObj_, "createTxSignDialog", Q_ARG(QVariant, prompt)
       , Q_ARG(QVariant, QVariant::fromValue(txInfo)));
 }
 

@@ -130,9 +130,14 @@ ApplicationWindow {
 
     signal passwordEntered(string walletId, string password, bool cancelledByUser)
 
-    function createPasswordDialog(prompt, txInfo) {
-        console.log("QML createPasswordDialog")
-        var dlg = Qt.createQmlObject("PasswordEntryDialog {}", mainWindow, "passwordDlg")
+    function createTxSignDialog(prompt, txInfo) {
+        // called from QMLAppObj::requestPassword
+        console.log("QML createTxSignDialog")
+        console.log("walletInfo id" + txInfo.walletInfo.walletId)
+
+        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = txInfo.walletInfo
+
         dlg.prompt = prompt
         dlg.txInfo = txInfo
         dlg.accepted.connect(function() {

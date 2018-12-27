@@ -160,6 +160,7 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
         authObject.destroy()
     })
     authObject.failed.connect(function(errorText) {
+        console.log("authObject.failed.connect(function(errorText)) " + errorText)
         messageBox(BSMessageBox.Type.Critical
                                      , qsTr("Wallet")
                                      , qsTr("eID request failed with error: \n") + errorText

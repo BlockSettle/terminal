@@ -3,53 +3,67 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 
 import com.blocksettle.TXInfo 1.0
-import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
+import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.QSeed 1.0
+import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.NsWallet.namespace 1.0
 
-import "StyledControls"
-import "BsControls"
-import "js/helper.js" as JsHelper
+import "../StyledControls"
+import "../BsControls"
+import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
     property string prompt
+    property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo
-    property string password
-    property bool   acceptable: false
+    property QPasswordData passwordData
+    property bool   acceptable: walletInfo.encType === NsWallet.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign
-    property string encKey
+    //property string encKey
 
     title: qsTr("Wallet Password Confirmation")
 
-    function confirmClicked() {
-        if (txInfo.walletInfo.encType === NsWallet.Password) {
-            //password = JsHelper.toHex(tfPassword.text)
-            password = tfPassword.text
-        }
-        acceptAnimated()
-    }
+//    function confirmClicked() {
+//        if (txInfo.walletInfo.encType === NsWallet.Password) {
+//            //password = JsHelper.toHex(tfPassword.text)
+//            passwordData.textPassword = tfPassword.text
+//            passwordData.encType = NsWallet.Password
+//        }
+//        acceptAnimated()
+//    }
 
-    onTxInfoChanged: {
-        console.log("QML onTxInfoChanged")
-        if (txInfo.walletInfo.encType === NsWallet.Auth) {
-            authSign = authProxy.signWallet(AutheIDClient.SignWallet, prompt,
-                                            txInfo.walletInfo.rootId, txInfo.walletInfo.encKey)
+//    onTxInfoChanged: {
+//        console.log("QML onTxInfoChanged")
+//        if (txInfo.walletInfo.encType === NsWallet.Auth) {
+//            JsHelper.requesteIdAuth(AutheIDClient.SignWallet
+//                                    , walletInfo
+//                                    , function(pd){
+//                                        passwordData = pd
+//                                        acceptAnimated()
+//                                    })
 
-            authSign.succeeded.connect(function(encKey_, password_) {
-                console.log("authSign.succeeded.connect " + encKey_)
-                console.log("authSign.succeeded.connect " + password_)
 
-                acceptable = true
-                encKey = encKey_
-                seed.password = password_
-                acceptAnimated()
-            })
-            authSign.failed.connect(function(text) {
-                rejectAnimated()
-            })
-        }
-    }
+////            authSign = authProxy.signWallet(AutheIDClient.SignWallet, prompt,
+////                                            txInfo.walletInfo.rootId, txInfo.walletInfo.encKey)
+
+////            authSign.succeeded.connect(function(encKey_, password_) {
+////                console.log("authSign.succeeded.connect " + encKey_)
+////                console.log("authSign.succeeded.connect " + password_)
+
+////                acceptable = true
+////                passwordData.binaryPassword =
+////                encKey = encKey_
+////                seed.password = password_
+////                acceptAnimated()
+////            })
+////            authSign.failed.connect(function(text) {
+////                rejectAnimated()
+////            })
+//        }
+//    }
 
     Connections {
         target: qmlAppObj
@@ -198,7 +212,7 @@ CustomTitleDialogWindow {
                 elide: Label.ElideRight
             }
 
-            CustomTextInput {
+            CustomPasswordTextInput {
                 id: tfPassword
                 visible: txInfo.walletInfo.encType === NsWallet.Password
                 focus: true
@@ -222,7 +236,7 @@ CustomTitleDialogWindow {
 
             Timer {
                 id: timer
-                property real timeLeft: 120
+                property real timeLeft: 300
                 interval: 500
                 running: true
                 repeat: true
@@ -230,6 +244,8 @@ CustomTitleDialogWindow {
                     timeLeft -= 0.5
                     if (timeLeft <= 0) {
                         stop()
+                        // assume non signed tx is cancelled tx
+                        cancelledByUser = true
                         rejectAnimated()
                     }
                 }
@@ -279,7 +295,23 @@ CustomTitleDialogWindow {
                 enabled: tfPassword.text.length || acceptable
                 id: confirmButton
                 onClicked: {
-                    confirmClicked();
+                    //confirmClicked();
+
+                    if (txInfo.walletInfo.encType === NsWallet.Password) {
+                        //password = JsHelper.toHex(tfPassword.text)
+                        passwordData.textPassword = tfPassword.text
+                        passwordData.encType = NsWallet.Password
+                        acceptAnimated()
+                    }
+                    else {
+                        JsHelper.requesteIdAuth(AutheIDClient.SignWallet
+                                                , walletInfo
+                                                , function(pd){
+                                                    passwordData = pd
+                                                    acceptAnimated()
+                                                })
+
+                    }
                 }
             }
         }
