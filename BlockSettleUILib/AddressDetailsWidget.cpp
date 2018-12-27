@@ -174,7 +174,7 @@ void AddressDetailsWidget::onTxClicked(QTreeWidgetItem *item, int column)
 
 // Used in refresh. The callback used when getting a ledger delegate (pages)
 // from Armory. Processes the data as needed.
-void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate)
+void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate)
 {
    // The callback that handles previous Tx objects attached to the TxIn objects
    // and processes them. Once done, the UI can be changed.
@@ -246,13 +246,12 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate)
       }
    };
 
-   auto delegatePtr = std::make_shared<AsyncClient::LedgerDelegate>(delegate);
-   const auto &cbPageCnt = [this, delegatePtr, cbLedger]
+   const auto &cbPageCnt = [this, delegate, cbLedger]
                            (ReturnMessage<uint64_t> pageCnt)->void {
       try {
          const auto &inPageCnt = pageCnt.get();
          for(uint64_t i = 0; i < inPageCnt; i++) {
-            delegatePtr->getHistoryPage(i, cbLedger);
+            delegate->getHistoryPage(i, cbLedger);
          }
       }
       catch (const std::exception &e) {
@@ -260,7 +259,7 @@ void AddressDetailsWidget::getTxData(AsyncClient::LedgerDelegate delegate)
             "error (getPageCount) - {}", e.what());
       }
    };
-   delegate.getPageCount(cbPageCnt);
+   delegate->getPageCount(cbPageCnt);
 }
 
 // Function that grabs the TX data for the address. Used in callback.
@@ -276,7 +275,7 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::PlainWallet> &walle
    }
 
    // Process TX data for the "first" (i.e., only) address in the wallet.
-   const auto &cbLedgerDelegate = [this](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegate = [this](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       getTxData(delegate);
    };
    const auto addr = wallet->GetUsedAddressList()[0];

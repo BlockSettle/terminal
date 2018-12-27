@@ -195,10 +195,10 @@ unsigned int TXNode::level() const
 
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
                          , const std::shared_ptr<WalletsManager> &walletsManager
-                             , const AsyncClient::LedgerDelegate &ledgerDelegate
-                                 , const std::shared_ptr<spdlog::logger> &logger
-                                             , QObject* parent
-                                    , const std::shared_ptr<bs::Wallet> &defWlt)
+                         , const std::shared_ptr<AsyncClient::LedgerDelegate> &ledgerDelegate
+                         , const std::shared_ptr<spdlog::logger> &logger
+                         , QObject* parent
+                         , const std::shared_ptr<bs::Wallet> &defWlt)
    : QAbstractItemModel(parent)
    , armory_(armory)
    , ledgerDelegate_(ledgerDelegate)
@@ -227,7 +227,6 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
 void TransactionsViewModel::init()
 {
    stopped_ = false;
-   initialLoadCompleted_ = true;
    qRegisterMetaType<TransactionsViewItem>();
    qRegisterMetaType<TransactionItems>();
 
@@ -251,11 +250,13 @@ TransactionsViewModel::~TransactionsViewModel()
 
 void TransactionsViewModel::loadAllWallets()
 {
-   const auto &cbWalletsLD = [this](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbWalletsLD = [this](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       ledgerDelegate_ = delegate;
       QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
    };
-   armory_->getWalletsLedgerDelegate(cbWalletsLD);
+   if (initialLoadCompleted_) {
+      armory_->getWalletsLedgerDelegate(cbWalletsLD);
+   }
 }
 
 int TransactionsViewModel::columnCount(const QModelIndex &) const
@@ -388,10 +389,11 @@ void TransactionsViewModel::clear()
 void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
 {
    if (state == ArmoryConnection::State::Offline) {
+      ledgerDelegate_.reset();
       clear();
    }
    else if ((state == ArmoryConnection::State::Ready) && !rootNode_->hasChildren()) {
-      loadLedgerEntries();
+      loadAllWallets();
    }
 }
 
@@ -635,10 +637,11 @@ void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
 
 void TransactionsViewModel::loadLedgerEntries()
 {
-   if (!initialLoadCompleted_) {
+   if (!initialLoadCompleted_ || !ledgerDelegate_) {
       return;
    }
    initialLoadCompleted_ = false;
+
    const auto &cbPageCount = [this](ReturnMessage<uint64_t> pageCnt)->void {
       try {
          auto inPageCnt = pageCnt.get();
@@ -660,7 +663,7 @@ void TransactionsViewModel::loadLedgerEntries()
                   ledgerToTxData();
                }
             };
-            ledgerDelegate_.getHistoryPage(pageId, cbLedger);
+            ledgerDelegate_->getHistoryPage(pageId, cbLedger);
          }
       }
       catch (const std::exception &e) {
@@ -669,7 +672,7 @@ void TransactionsViewModel::loadLedgerEntries()
       }
    };
 
-   ledgerDelegate_.getPageCount(cbPageCount);
+   ledgerDelegate_->getPageCount(cbPageCount);
 }
 
 void TransactionsViewModel::ledgerToTxData()

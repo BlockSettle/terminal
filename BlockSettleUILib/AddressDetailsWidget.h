@@ -51,7 +51,7 @@ private slots:
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
    void setOutputColor(QTreeWidgetItem *item);
-   void getTxData(AsyncClient::LedgerDelegate inDelegate);
+   void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
    void refresh(const std::shared_ptr<bs::PlainWallet> &);
 
 private:

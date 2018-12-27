@@ -125,7 +125,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       onError();
    }
    else {
-      const auto &cbLedgerDelegate = [this, armory](AsyncClient::LedgerDelegate delegate) {
+      const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
          initModels(delegate);
       };
       if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate, this)) {
@@ -147,7 +147,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
 
 AddressDetailDialog::~AddressDetailDialog() = default;
 
-void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
+void AddressDetailDialog::initModels(const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate)
 {
    TransactionsViewModel* model = new TransactionsViewModel(armory_
                                                             , walletsManager_

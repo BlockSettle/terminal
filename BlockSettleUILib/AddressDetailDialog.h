@@ -42,7 +42,7 @@ private slots:
 
 private:
    void onError();
-   Q_INVOKABLE void initModels(AsyncClient::LedgerDelegate);
+   Q_INVOKABLE void initModels(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
 
 private:
    std::unique_ptr <Ui::AddressDetailDialog> ui_;
