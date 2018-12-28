@@ -676,38 +676,44 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
          auto txOutListObj = txOutList.get();
-         if(startup == false) {
-            processNewUTXOs(startup);
-         }
-
-         if (utxoAdapter_) {
-            utxoAdapter_->filter(txOutListObj);
-         }
-         if (val != UINT64_MAX) {
-            uint64_t sum = 0;
-            int cutOffIdx = -1;
-            for (size_t i = 0; i < txOutListObj.size(); i++) {
-               const auto &utxo = txOutListObj[i];
-               sum += utxo.getValue();
-               if (sum >= val) {
-                  cutOffIdx = i;
-                  break;
-               }
+         const auto &cbProcess = [this, val, txOutListObj] {
+            std::vector<UTXO> txOutListCopy = txOutListObj;
+            if (utxoAdapter_) {
+               utxoAdapter_->filter(txOutListCopy);
             }
-            if (cutOffIdx >= 0) {
-               txOutListObj.resize(cutOffIdx + 1);
-            }
-         }
-         QMetaObject::invokeMethod(this, [this, txOutListObj] {
-            for (const auto &cbPairs : spendableCallbacks_) {
-               if (cbPairs.first) {
-                  for (const auto &cb : cbPairs.second) {
-                     cb(txOutListObj);
+            if (val != UINT64_MAX) {
+               uint64_t sum = 0;
+               int cutOffIdx = -1;
+               for (size_t i = 0; i < txOutListCopy.size(); i++) {
+                  const auto &utxo = txOutListCopy[i];
+                  sum += utxo.getValue();
+                  if (sum >= val) {
+                     cutOffIdx = i;
+                     break;
                   }
                }
+               if (cutOffIdx >= 0) {
+                  txOutListCopy.resize(cutOffIdx + 1);
+               }
             }
-            spendableCallbacks_.clear();
-         });
+            QMetaObject::invokeMethod(this, [this, txOutListCopy] {
+               for (const auto &cbPairs : spendableCallbacks_) {
+                  if (cbPairs.first) {
+                     for (const auto &cb : cbPairs.second) {
+                        cb(txOutListCopy);
+                     }
+                  }
+               }
+               spendableCallbacks_.clear();
+            });
+         };
+
+         if (startup == false) {
+            processNewUTXOs(startup, cbProcess);
+         }
+         else {
+            cbProcess();
+         }
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {
@@ -798,20 +804,24 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
-         if(startup == false) {
-            processNewUTXOs(startup);
-         }
-
-         QMetaObject::invokeMethod(this, [this, inUTXOs] {
-            for (const auto &cbPairs : zcListCallbacks_) {
-               if (cbPairs.first) {
-                  for (const auto &cb : cbPairs.second) {
-                     cb(inUTXOs);
+         const auto &cbProcess = [this, inUTXOs] {
+            QMetaObject::invokeMethod(this, [this, inUTXOs] {
+               for (const auto &cbPairs : zcListCallbacks_) {
+                  if (cbPairs.first) {
+                     for (const auto &cb : cbPairs.second) {
+                        cb(inUTXOs);
+                     }
                   }
                }
-            }
-            zcListCallbacks_.clear();
-         });
+               zcListCallbacks_.clear();
+            });
+         };
+         if (startup == false) {
+            processNewUTXOs(startup, cbProcess);
+         }
+         else {
+            cbProcess();
+         }
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {
@@ -1362,106 +1372,101 @@ void bs::Wallet::onNewBlock()
    processNewUTXOs(false);
 }
 
-void bs::Wallet::processNewUTXOs(const bool& startup) {
+void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()> &cbComplete)
+{
    if(logger_ != nullptr) {
       logger_->debug("[bs::Wallet::onNewBlock] New Block");
    }
    auto curHeight = armory_->topBlock();
 
-   const auto &cbTxOutList = [this, startup, curHeight]
-                             (ReturnMessage<std::vector<UTXO>> txOutList) {
-      try {
-         auto txOutListObj = txOutList.get();
-
-         // See if there are any UTXOs that are now safe to remove from the
-         // "young" list. If so, stop filtering them.
-         std::vector<std::string> utxosToUnreserve;
-         for(auto youngUTXO : youngUTXOs_) {
-            if(curHeight - youngUTXO.first.txHeight_ >= SAFE_NUM_CONFS &&
-               startup == false) {
-               if(IsExternalAddress(bs::Address::fromUTXO(youngUTXO.first)) == false) {
-                  utxosToUnreserve.push_back(youngUTXO.second);
-               }
-               youngUTXOs_.erase(youngUTXO.first);
+   const auto &cbTxOutList = [this, startup, cbComplete, curHeight]
+                             (std::vector<UTXO> txOutListObj) {
+      // See if there are any UTXOs that are now safe to remove from the
+      // "young" list. If so, stop filtering them.
+      std::vector<std::string> utxosToUnreserve;
+      for (auto youngUTXO : youngUTXOs_) {
+         if (curHeight - youngUTXO.first.txHeight_ >= SAFE_NUM_CONFS &&
+            startup == false) {
+            if (IsExternalAddress(bs::Address::fromUTXO(youngUTXO.first)) == false) {
+               utxosToUnreserve.push_back(youngUTXO.second);
             }
+            youngUTXOs_.erase(youngUTXO.first);
          }
-         for(auto curUTXOResID : utxosToUnreserve) {
-            utxoAdapter_->unreserve(curUTXOResID);
-         }
+      }
+      for (auto curUTXOResID : utxosToUnreserve) {
+         utxoAdapter_->unreserve(curUTXOResID);
+      }
 
-         // Determine if any ZC UTXOs were confirmed. If so, process them. Right
-         // now, if RBF is used to replace a UTXO, the UTXO will sit in the
-         // unconfirmed map until the terminal is rebooted. Fixing this case
-         // eventually should be considered. While highly unlikely, it is
-         // possible to flood the network and perform a DOS attack.
-         std::map<UTXO, std::string> utxosToReserve;
-         for(UTXO& inUTXO : txOutListObj) {
-            if(startup == true) {
-               // If we're starting up, just grab any "young" UTXOs for
-               // bootstrapping purposes.
-               if(curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
-                  youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
-                  if(IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
-                     utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
-                  }
-                  else {
-                     // Make sure this is called *after* UpdateBalanceFromDB.
-                     const auto adjustAmt =
-                        static_cast<BTCNumericTypes::balance_type>(inUTXO.value_) /
-                        BTCNumericTypes::BalanceDivider;
-                     spendableBalance_ += adjustAmt;
-                     unconfirmedBalance_ -= adjustAmt;
-                  }
+      // Determine if any ZC UTXOs were confirmed. If so, process them. Right
+      // now, if RBF is used to replace a UTXO, the UTXO will sit in the
+      // unconfirmed map until the terminal is rebooted. Fixing this case
+      // eventually should be considered. While highly unlikely, it is
+      // possible to flood the network and perform a DOS attack.
+      std::map<UTXO, std::string> utxosToReserve;
+      for (UTXO& inUTXO : txOutListObj) {
+         if(startup == true) {
+            // If we're starting up, just grab any "young" UTXOs for
+            // bootstrapping purposes.
+            if (curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
+               youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
+               if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
+                  utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
+               }
+               else {
+                  // Make sure this is called *after* UpdateBalanceFromDB.
+                  const auto adjustAmt =
+                     static_cast<BTCNumericTypes::balance_type>(inUTXO.value_) /
+                     BTCNumericTypes::BalanceDivider;
+                  spendableBalance_ += adjustAmt;
+                  unconfirmedBalance_ -= adjustAmt;
                }
             }
-            else {
-               // If not starting up, check if a ZC UTXO has been confirmed.
-               for(auto itZCUTXO = zcUTXOs_.begin(); itZCUTXO != zcUTXOs_.end(); ) {
-                  if(inUTXO.script_ == itZCUTXO->script_) {
-                     // A ZC UTXO has been found!
-                     itZCUTXO = zcUTXOs_.erase(itZCUTXO);
-                     if(curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
-                        youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
-                        if(IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
-                           utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
-                        }
-                        else {
-                           const auto adjustAmt =
-                              static_cast<BTCNumericTypes::balance_type>(inUTXO.value_) /
-                              BTCNumericTypes::BalanceDivider;
-                           spendableBalance_ += adjustAmt;
-                           unconfirmedBalance_ -= adjustAmt;
-                        }
+         }
+         else {
+            // If not starting up, check if a ZC UTXO has been confirmed.
+            for (auto itZCUTXO = zcUTXOs_.begin(); itZCUTXO != zcUTXOs_.end(); ) {
+               if (inUTXO.script_ == itZCUTXO->script_) {
+                  // A ZC UTXO has been found!
+                  itZCUTXO = zcUTXOs_.erase(itZCUTXO);
+                  if (curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
+                     youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
+                     if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
+                        utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
+                     }
+                     else {
+                        const auto adjustAmt =
+                           static_cast<BTCNumericTypes::balance_type>(inUTXO.value_) /
+                           BTCNumericTypes::BalanceDivider;
+                        spendableBalance_ += adjustAmt;
+                        unconfirmedBalance_ -= adjustAmt;
                      }
                   }
-                  else {
-                     ++itZCUTXO;
-                  }
-               } // for
-            } // else
-         } // for
+               }
+               else {
+                  ++itZCUTXO;
+               }
+            } // for
+         } // else
+      } // for
+      if (cbComplete) {
+         cbComplete();
+      }
+   }; // callback
 
-         // Reserve UTXOs only for external addresses. We can't just pass in the
-         // raw vector because the reservation ID is different for every UTXO.
-         // So, create a one-entry vector for each entry.
-         for(auto utxoRes : utxosToReserve) {
-            // Reserve UTXOs only for external addresses.
-            if(IsExternalAddress(bs::Address::fromUTXO(utxoRes.first)) == true) {
-               utxoAdapter_->reserve(GetWalletId(), utxoRes.second
-                                     , {utxoRes.first});
-            }
-         }
-      } // try
+   const auto &cbWrap = [this, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
+      try {
+         const auto txOutListObj = txOutList.get();
+         QMetaObject::invokeMethod(this, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
+      }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {
             logger_->error("[bs::Wallet::onNewBlock] Return data " \
                "error {}", e.what());
          }
       }
-   }; // callback
-
+   };
    // Get all the UTXOs and process them.
-   btcWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbTxOutList);
+   btcWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbWrap);
 }
 
 bool operator ==(const bs::Wallet &a, const bs::Wallet &b)
