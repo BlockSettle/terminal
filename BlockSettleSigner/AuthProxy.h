@@ -49,7 +49,7 @@ public:
                         , QObject *parent = nullptr);
 
    // used for wallet creation and signing
-   void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo);
+   bool signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo);
 
    // used for device removing
    void removeDevice(int index, bs::hd::WalletInfo *walletInfo);

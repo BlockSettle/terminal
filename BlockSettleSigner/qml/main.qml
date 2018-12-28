@@ -128,24 +128,25 @@ ApplicationWindow {
         autoSignPage.storeSettings();
     }
 
-    signal passwordEntered(string walletId, string password, bool cancelledByUser)
+    signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
 
-    function createPasswordDialog(prompt, txInfo) {
-        console.log("QML createPasswordDialog")
-        var dlg = Qt.createQmlObject("PasswordEntryDialog {}", mainWindow, "passwordDlg")
+    function createTxSignDialog(prompt, txInfo) {
+        // called from QMLAppObj::requestPassword
+        console.log("QML createTxSignDialog")
+        console.log("walletInfo walletId" + txInfo.walletInfo.walletId)
+        console.log("walletInfo rootId" + txInfo.walletInfo.rootId)
+
+        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = txInfo.walletInfo
+
         dlg.prompt = prompt
         dlg.txInfo = txInfo
-        dlg.accepted.connect(function() {
-            if (txInfo.walletInfo.encType === NsWallet.Password) {
-                passwordEntered(txInfo.walletInfo.walletId, dlg.password, false)
-            }
-            else {
-                passwordEntered(txInfo.walletInfo.walletId, dlg.seed.password, false)
-            }
 
+        dlg.accepted.connect(function() {
+            passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData, false)
         })
         dlg.rejected.connect(function() {
-            passwordEntered(txInfo.walletInfo.walletId, '', dlg.cancelledByUser)
+            passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData, true)
         })
         mainWindow.requestActivate()
         dlg.open()

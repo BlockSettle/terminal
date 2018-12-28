@@ -33,10 +33,10 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
    autheIDClient_ = (new AutheIDClient(logger, authKeys, this));
 
    connect(autheIDClient_, &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
-       emit succeeded(QString::fromStdString(encKey), password);
+      emit succeeded(QString::fromStdString(encKey), password);
    });
    connect(autheIDClient_, &AutheIDClient::failed, this, [this](const QString &text){
-       emit failed(text);
+      emit failed(text);
    });
    std::string serverPubKey = settings.get<std::string>(ApplicationSettings::authServerPubKey);
    std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
@@ -47,7 +47,7 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
 
 
 
-void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
+bool AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
 {
    std::vector<std::string> knownDeviceIds;
    std::vector<std::string> userIds;
@@ -57,7 +57,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
 
       // deviceInfo is empty for ActivateWallet and is not empty for another requests
       if (!deviceInfo.deviceId.empty()) {
-          knownDeviceIds.push_back(deviceInfo.deviceId);
+         knownDeviceIds.push_back(deviceInfo.deviceId);
       }
 
       if (!deviceInfo.userId.empty()) {
@@ -66,14 +66,15 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
    }
 
    if (userIds.empty()) {
-      emit failed(tr("Error parsing encKeys: email not found"));
-      return;
+      //emit failed(tr("Error parsing encKeys: email not found"));
+      return false;
    }
 
    autheIDClient_->start(requestType
                          , userIds[0]
-                         , walletInfo->walletId().toStdString()
-                         , knownDeviceIds);
+         , walletInfo->rootId().toStdString()
+         , knownDeviceIds);
+   return true;
 }
 
 void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo)
@@ -100,7 +101,7 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
       auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(walletInfo->encKeys().at(i).toStdString()).toBinStr());
 
       if (!deviceInfo.deviceId.empty()) {
-          knownDeviceIds.push_back(deviceInfo.deviceId);
+         knownDeviceIds.push_back(deviceInfo.deviceId);
       }
 
       if (!deviceInfo.userId.empty()) {
@@ -116,7 +117,7 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
    // currently we supports only sigle account for whole wallet, thus email stored in userIds[0]
    autheIDClient_->start(AutheIDClient::DeactivateWalletDevice
                          , userIds[0]
-                         , walletInfo->walletId().toStdString()
-                         , knownDeviceIds);
+         , walletInfo->rootId().toStdString()
+         , knownDeviceIds);
 }
 

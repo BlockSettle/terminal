@@ -129,6 +129,7 @@ class WalletInfo : public QObject
    Q_OBJECT
 
    Q_PROPERTY(QString walletId READ walletId WRITE setWalletId NOTIFY walletChanged)
+   Q_PROPERTY(QString rootId READ rootId WRITE setRootId NOTIFY walletChanged)
    Q_PROPERTY(QString name READ name WRITE setName NOTIFY walletChanged)
    Q_PROPERTY(QString desc READ desc WRITE setDesc NOTIFY walletChanged)
    Q_PROPERTY(QStringList encKeys READ encKeys WRITE setEncKeys NOTIFY walletChanged)
@@ -147,6 +148,7 @@ public:
    static WalletInfo fromDigitalBackup(const QString &filename);
    void initFromWallet(const bs::Wallet *, const std::string &rootId = {});
    void initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &);
+   void initEncKeys(const std::shared_ptr<bs::hd::Wallet> &rootWallet);
 
    QString walletId() const { return walletId_; }
    void setWalletId(const QString &walletId);

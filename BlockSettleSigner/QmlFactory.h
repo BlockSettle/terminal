@@ -2,6 +2,8 @@
 #define QMLFACTORY_H
 
 #include <QObject>
+#include <QQmlEngine>
+
 #include "QWalletInfo.h"
 
 class QmlFactory : public QObject
@@ -16,35 +18,62 @@ public:
       , QObject(parent) {}
 
    // QSeed
-   Q_INVOKABLE bs::wallet::QPasswordData *createPasswordData()
-   { return new bs::wallet::QPasswordData(); }
+   Q_INVOKABLE bs::wallet::QPasswordData *createPasswordData() {
+      auto pd = new bs::wallet::QPasswordData();
+      QQmlEngine::setObjectOwnership(pd, QQmlEngine::JavaScriptOwnership);
+      return pd;
+   }
 
-   Q_INVOKABLE bs::wallet::QSeed *createSeed(bool isTestNet)
-   { return new bs::wallet::QSeed(isTestNet); }
+   Q_INVOKABLE bs::wallet::QSeed *createSeed(bool isTestNet){
+      auto seed = new bs::wallet::QSeed(isTestNet);
+      QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
+      return seed;
+   }
 
-   Q_INVOKABLE bs::wallet::QSeed *createSeedFromPaperBackup(const QString &key, bs::wallet::QNetworkType netType)
-   { return new bs::wallet::QSeed(bs::wallet::QSeed::fromPaperKey(key, netType)); }
+   Q_INVOKABLE bs::wallet::QSeed *createSeedFromPaperBackup(const QString &key, bs::wallet::QNetworkType netType) {
+      auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromPaperKey(key, netType));
+      QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
+      return seed;
+   }
 
-   Q_INVOKABLE bs::wallet::QSeed *createSeedFromPaperBackupT(const QString &key, bool isTestNet)
-   { return new bs::wallet::QSeed(bs::wallet::QSeed::fromPaperKey(key
-                                                                  , isTestNet ? bs::wallet::QNetworkType::TestNet : bs::wallet::QNetworkType::MainNet)); }
+   Q_INVOKABLE bs::wallet::QSeed *createSeedFromPaperBackupT(const QString &key, bool isTestNet) {
+      auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromPaperKey(key
+                                        , isTestNet ? bs::wallet::QNetworkType::TestNet : bs::wallet::QNetworkType::MainNet));
+      QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
+      return seed;
+   }
 
-   Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackup(const QString &filename, bs::wallet::QNetworkType netType)
-   { return new bs::wallet::QSeed(bs::wallet::QSeed::fromDigitalBackup(filename, netType)); }
+   Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackup(const QString &filename, bs::wallet::QNetworkType netType) {
+      auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromDigitalBackup(filename, netType));
+      QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
+      return seed;
+   }
 
-   Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackupT(const QString &filename, bool isTestNet)
-   { return new bs::wallet::QSeed(bs::wallet::QSeed::fromDigitalBackup(filename
-                                                                       , isTestNet ? bs::wallet::QNetworkType::TestNet : bs::wallet::QNetworkType::MainNet)); }
+   Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackupT(const QString &filename, bool isTestNet) {
+      auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromDigitalBackup(filename
+                                                                             , isTestNet ? bs::wallet::QNetworkType::TestNet : bs::wallet::QNetworkType::MainNet));
+      QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
+      return seed;
+   }
 
    // WalletInfo
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo()
-   { return new bs::hd::WalletInfo(); }
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo() {
+      auto wi = new bs::hd::WalletInfo();
+      QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
+      return wi;
+   }
 
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const QString &walletId)
-   { return new bs::hd::WalletInfo(walletsMgr_, walletId, this); }
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const QString &walletId) {
+      auto wi = new bs::hd::WalletInfo(walletsMgr_, walletId, this);
+      QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
+      return wi;
+   }
 
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename)
-   { return new bs::hd::WalletInfo(bs::hd::WalletInfo::fromDigitalBackup(filename)); }
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename) {
+      auto wi = new bs::hd::WalletInfo(bs::hd::WalletInfo::fromDigitalBackup(filename));
+      QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
+      return wi;
+   }
 
 
 

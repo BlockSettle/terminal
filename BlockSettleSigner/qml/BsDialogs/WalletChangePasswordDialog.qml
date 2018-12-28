@@ -117,6 +117,10 @@ CustomDialog {
                         id: walletDetailsFrame
                         walletInfo: walletInfo
                         inputsWidth: 250
+                        nextFocusItem: newPasswordInput.tfPasswordInput
+                        KeyNavigation.tab: newPasswordInput.tfPasswordInput
+                        Keys.onEnterPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
+                        Keys.onReturnPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
                     }
 
                     CustomHeader {
@@ -174,6 +178,10 @@ CustomDialog {
                         passwordInputPlaceholder: qsTr("New Password")
                         confirmLabelTxt: qsTr("Confirm New")
                         confirmInputPlaceholder: qsTr("Confirm New Password")
+                        nextFocusItem: btnAccept
+                        onConfirmInputEnterPressed: {
+                            if (acceptable) btnAccept.onClicked()
+                        }
                     }
 
                     RowLayout {
@@ -311,6 +319,7 @@ CustomDialog {
         CustomButtonBar {
             Layout.fillWidth: true
             CustomButton {
+                id: btnCancel
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 text: qsTr("Cancel")
@@ -320,6 +329,7 @@ CustomDialog {
             }
 
             CustomButtonPrimary {
+                id: btnAccept
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 text: {
@@ -360,6 +370,7 @@ CustomDialog {
                                                                                                                              , oldPwEidData
                                                                                                                              , newPwEidData)
                                                                                         var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, ok, walletInfo)
+                                                                                        mb.accepted.connect(function(){ acceptAnimated() })
                                                                                     }) // function(new passwordData)
 
                                                         }
@@ -387,6 +398,7 @@ CustomDialog {
                                                                                             , oldPasswordData
                                                                                             , newPwEidData)
                                                             var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, ok, walletInfo)
+                                                            mb.accepted.connect(function(){ acceptAnimated() })
                                                         })
                              }
                         }
@@ -410,5 +422,12 @@ CustomDialog {
                 }
             }
         }
+    }
+
+    onAccepted: {
+        walletInfo.destroy()
+    }
+    onRejected: {
+        walletInfo.destroy()
     }
 }

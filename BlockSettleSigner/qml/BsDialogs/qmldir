@@ -9,3 +9,4 @@ WalletExportWoDialog 1.0 WalletExportWoDialog.qml
 WalletImportDialog 1.0 WalletImportDialog.qml
 WalletNewDialog 1.0 WalletNewDialog.qml
 WalletNewSeedDialog 1.0 WalletNewSeedDialog.qml
+TxSignDialog 1.0 TxSignDialog.qml

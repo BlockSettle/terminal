@@ -12,7 +12,6 @@
         <file>qml/AutoSignPage.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
-        <file>qml/PasswordEntryDialog.qml</file>
         <file>qml/SettingsGrid.qml</file>
         <file>qml/SettingsPage.qml</file>
         <file>qml/StatusPage.qml</file>
@@ -64,5 +63,6 @@
         <file>qml/StyledControls/CustomPasswordTextInput.qml</file>
         <file>qml/BsControls/BSWalletDetailsFrame.qml</file>
         <file>qml/BsControls/BSResultBox.qml</file>
+        <file>qml/BsDialogs/TxSignDialog.qml</file>
     </qresource>
 </RCC>

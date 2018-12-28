@@ -136,12 +136,13 @@ function raiseWindow() {
 
 
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
+    console.log("requesteIdAuth: " + walletInfo.rootId)
     var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo)
 
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.title = qsTr("Password for wallet %1").arg(walletInfo.name)
-    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.walletId)
+    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
     authProgress.customText = qsTr("%1").arg(walletInfo.email())
     authProgress.open()
     authProgress.rejected.connect(function() {
@@ -160,12 +161,13 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
         authObject.destroy()
     })
     authObject.failed.connect(function(errorText) {
+        console.log("authObject.failed.connect(function(errorText)) " + errorText)
         messageBox(BSMessageBox.Type.Critical
                                      , qsTr("Wallet")
                                      , qsTr("eID request failed with error: \n") + errorText
                                      , qsTr("Wallet Name: %1\nWallet ID: %2")
                                      .arg(walletInfo.name)
-                                     .arg(walletInfo.walletId))
+                                     .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
@@ -173,14 +175,14 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
 }
 
 function removeEidDevice (index, walletInfo, onSuccess) {
-    console.log("function removeEidDevice: " + walletInfo.walletId)
+    console.log("function removeEidDevice: " + walletInfo.rootId)
 
     var authObject = qmlFactory.createRemoveEidObject(index, walletInfo)
 
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.title = qsTr("Password for wallet %1").arg(walletInfo.name)
-    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.walletId)
+    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
     authProgress.customText = qsTr("%1").arg(walletInfo.email())
     authProgress.open()
     authProgress.rejected.connect(function() {
@@ -204,7 +206,7 @@ function removeEidDevice (index, walletInfo, onSuccess) {
                                      , qsTr("eID request failed with error: \n") + errorText
                                      , qsTr("Wallet Name: %1\nWallet ID: %2")
                                      .arg(walletInfo.name)
-                                     .arg(walletInfo.walletId))
+                                     .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
@@ -218,7 +220,7 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.title = qsTr("Activate wallet")
-    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.walletId)
+    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
     authProgress.customText = qsTr("%1").arg(email)
     authProgress.open()
     authProgress.rejected.connect(function() {
@@ -242,7 +244,7 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
                                      , qsTr("eID request failed with error: \n") + errorText
                                      , qsTr("Wallet Name: %1\nWallet ID: %2")
                                      .arg(walletInfo.name)
-                                     .arg(walletInfo.walletId))
+                                     .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()

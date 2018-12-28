@@ -16,21 +16,22 @@ QValidator::State PasswordConfirmValidator::validate(QString &input, int &) cons
       }
    }
 
-   if (input.isEmpty() || compareTo_.isEmpty()) {
+   if (!input.isEmpty() && input.size() < 6) {
+      setStatusMsg(tooShortTmpl_.arg(name_));
+      return QValidator::State::Intermediate;
+   }
+
+   if (input.size() > 6 || compareTo_.isEmpty()) {
       setStatusMsg({});
       return QValidator::State::Intermediate;
    }
 
-   if (compareTo_.size() < 6) {
-      setStatusMsg(tooShortTmpl_.arg(name_));
-      return QValidator::State::Intermediate;
-   }
-   if (input.size() < compareTo_.size()) {
+   if (input.size() != compareTo_.size()) {
       setStatusMsg(dontMatchMsgTmpl_.arg(name_));
       return QValidator::State::Intermediate;
    }
 
-   if ( input.size() == compareTo_.size()) {
+   if (input.size() == compareTo_.size()) {
       if (input == compareTo_) {
          setStatusMsg(validTmpl_.arg(name_));
          return QValidator::State::Acceptable;
@@ -40,10 +41,7 @@ QValidator::State PasswordConfirmValidator::validate(QString &input, int &) cons
       }
    }
 
-   if (input.size() != compareTo_.size()) {
-      setStatusMsg(dontMatchMsgTmpl_.arg(name_));
-      return QValidator::State::Intermediate;
-   }
+
 
    //control should never get here, but just in case:
    return QValidator::State::Intermediate;

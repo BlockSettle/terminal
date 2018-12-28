@@ -13,8 +13,8 @@
 
 namespace bs {
    namespace wallet {
-      QNetworkType toQNetworkType(NetworkType netType) {return static_cast<QNetworkType>(netType);}
-      NetworkType fromQNetworkType(bs::wallet::QNetworkType netType) {return static_cast<NetworkType>(netType);}
+      QNetworkType toQNetworkType(NetworkType netType) { return static_cast<QNetworkType>(netType); }
+      NetworkType fromQNetworkType(bs::wallet::QNetworkType netType) { return static_cast<NetworkType>(netType); }
    }
 }
 
@@ -32,6 +32,7 @@ WalletInfo::WalletInfo(const std::shared_ptr<WalletsManager> &walletsMgr
    if (wallet) {
       const auto &rootWallet = walletsMgr->GetHDRootForLeaf(wallet->GetWalletId());
       initFromWallet(wallet.get(), rootWallet->getWalletId());
+      initEncKeys(rootWallet);
    }
    else {
       const auto &hdWallet = walletsMgr->GetHDWalletById(walletId.toStdString());
@@ -39,6 +40,7 @@ WalletInfo::WalletInfo(const std::shared_ptr<WalletsManager> &walletsMgr
          throw std::runtime_error("failed to find wallet id " + walletId.toStdString());
       }
       initFromRootWallet(hdWallet);
+      initEncKeys(hdWallet);
    }
 
    if (walletsManager_) {
@@ -99,18 +101,12 @@ WalletInfo WalletInfo::fromDigitalBackup(const QString &filename)
 
 void WalletInfo::initFromWallet(const bs::Wallet *wallet, const std::string &rootId)
 {
-   if (!wallet) return;
+   if (!wallet)
+      return;
 
    walletId_ = QString::fromStdString(wallet->GetWalletId());
    rootId_ = QString::fromStdString(rootId);
    name_ = QString::fromStdString(wallet->GetWalletName());
-   emit walletChanged();
-}
-
-void WalletInfo::setDesc(const QString &desc)
-{
-   if (desc_ == desc) return;
-   desc_ = desc;
    emit walletChanged();
 }
 
@@ -119,7 +115,11 @@ void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootW
    walletId_ = QString::fromStdString(rootWallet->getWalletId());
    name_ = QString::fromStdString(rootWallet->getName());
    rootId_ = QString::fromStdString(rootWallet->getWalletId());
+   emit walletChanged();
+}
 
+void WalletInfo::initEncKeys(const std::shared_ptr<Wallet> &rootWallet)
+{
    for (const SecureBinaryData &encKey : rootWallet->encryptionKeys()) {
       encKeys_.push_back(QString::fromStdString(encKey.toBinStr()));
    }
@@ -129,16 +129,29 @@ void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootW
    }
 }
 
+void WalletInfo::setDesc(const QString &desc)
+{
+   if (desc_ == desc)
+      return;
+
+   desc_ = desc;
+   emit walletChanged();
+}
+
 void WalletInfo::setWalletId(const QString &walletId)
 {
-   if (walletId_ == walletId) return;
+   if (walletId_ == walletId)
+      return;
+
    walletId_ = walletId;
    emit walletChanged();
 }
 
 void WalletInfo::setRootId(const QString &rootId)
 {
-   if (rootId_ == rootId) return;
+   if (rootId_ == rootId)
+      return;
+
    rootId_ = rootId;
    emit walletChanged();
 }
@@ -150,7 +163,9 @@ QEncryptionType WalletInfo::encType()
 
 QString WalletInfo::email()
 {
-   if (encKeys_.isEmpty()) return QString();
+   if (encKeys_.isEmpty())
+      return QString();
+
    return QString::fromStdString(AutheIDClient::getDeviceInfo(encKeys_.at(0).toStdString()).userId);
 }
 
@@ -168,7 +183,9 @@ void WalletInfo::setEncTypes(const QList<QEncryptionType> &encTypes)
 
 void WalletInfo::setName(const QString &name)
 {
-   if (name_ == name) return;
+   if (name_ == name)
+      return;
+
    name_ = name;
    emit walletChanged();
 }

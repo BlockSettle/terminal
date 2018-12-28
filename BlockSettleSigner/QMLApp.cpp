@@ -241,20 +241,21 @@ void QMLAppObj::SetRootObject(QObject *obj)
          QMetaObject::invokeMethod(walletsView, "expandAll");
       }
    });
-   connect(rootObj_, SIGNAL(passwordEntered(QString, QString, bool)),
-      this, SLOT(onPasswordAccepted(QString, QString, bool)));
+   connect(rootObj_, SIGNAL(passwordEntered(QString, bs::wallet::QPasswordData *, bool)),
+      this, SLOT(onPasswordAccepted(QString, bs::wallet::QPasswordData *, bool)));
 }
 
-void QMLAppObj::onPasswordAccepted(const QString &walletId, const QString &password,
-   bool cancelledByUser)
+void QMLAppObj::onPasswordAccepted(const QString &walletId
+                                   , bs::wallet::QPasswordData *passwordData
+                                   , bool cancelledByUser)
 {
-   SecureBinaryData decodedPwd = BinaryData::CreateFromHex(password.toStdString());
-   logger_->debug("Password for wallet {} was accepted ({})", walletId.toStdString(), password.size());
+   //SecureBinaryData decodedPwd = passwordData->password;
+   logger_->debug("Password for wallet {} was accepted", walletId.toStdString());
    if (listener_) {
-      listener_->passwordReceived(walletId.toStdString(), decodedPwd, cancelledByUser);
+      listener_->passwordReceived(walletId.toStdString(), passwordData->password, cancelledByUser);
    }
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
-      offlineProc_->passwordEntered(walletId.toStdString(), decodedPwd);
+      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password);
       offlinePasswordRequests_.erase(walletId.toStdString());
    }
 }
@@ -294,7 +295,7 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
    if (alert && trayIcon_) {
       QString notifPrompt = prompt;
       if (!txReq.walletId.empty()) {
-         notifPrompt = tr("Enter password for %1").arg(txInfo->wallet()->name());
+         notifPrompt = tr("Enter password for %1").arg(txInfo->walletInfo()->name());
       }
 
       if (notifMode_ == QSystemTray) {
@@ -309,7 +310,7 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
 #endif // BS_USE_DBUS
    }
 
-   QMetaObject::invokeMethod(rootObj_, "createPasswordDialog", Q_ARG(QVariant, prompt)
+   QMetaObject::invokeMethod(rootObj_, "createTxSignDialog", Q_ARG(QVariant, prompt)
       , Q_ARG(QVariant, QVariant::fromValue(txInfo)));
 }
 
