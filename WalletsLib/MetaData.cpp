@@ -1384,14 +1384,18 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
       // See if there are any UTXOs that are now safe to remove from the
       // "young" list. If so, stop filtering them.
       std::vector<std::string> utxosToUnreserve;
-      for (auto youngUTXO : youngUTXOs_) {
+      std::vector<UTXO> erasedUTXOs;
+      for (const auto &youngUTXO : youngUTXOs_) {
          if (curHeight - youngUTXO.first.txHeight_ >= SAFE_NUM_CONFS &&
             startup == false) {
             if (IsExternalAddress(bs::Address::fromUTXO(youngUTXO.first)) == false) {
                utxosToUnreserve.push_back(youngUTXO.second);
             }
-            youngUTXOs_.erase(youngUTXO.first);
+            erasedUTXOs.push_back(youngUTXO.first);
          }
+      }
+      for (const auto &erasedUTXO : erasedUTXOs) {
+         youngUTXOs_.erase(erasedUTXO);
       }
       for (auto curUTXOResID : utxosToUnreserve) {
          utxoAdapter_->unreserve(curUTXOResID);
