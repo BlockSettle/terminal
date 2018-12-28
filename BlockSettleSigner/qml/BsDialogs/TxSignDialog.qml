@@ -160,7 +160,7 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 Layout.fillWidth: true
-                text: qsTr("Password Confirmation")
+                text: txInfo.walletInfo.encType !== NsWallet.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
                 Layout.preferredHeight: 25
             }
         }
@@ -223,6 +223,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 text: qsTr("On completion just press [Enter] or [Return]")
+                visible: txInfo.walletInfo.encType !== NsWallet.Auth
                 Layout.fillWidth: true
             }
             CustomLabelValue {
@@ -259,7 +260,7 @@ CustomTitleDialogWindow {
 
             CustomButtonPrimary {
                 id: btnConfirm
-                text: qsTr("CONFIRM")
+                text: txInfo.walletInfo.encType === NsWallet.Password ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable

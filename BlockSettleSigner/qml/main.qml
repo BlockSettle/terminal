@@ -141,9 +141,6 @@ ApplicationWindow {
 
         dlg.prompt = prompt
         dlg.txInfo = txInfo
-        if (dlg.walletInfo.encType === NsWallet.Auth) {
-            dlg.clickConfirmBtn()
-        }
 
         dlg.accepted.connect(function() {
             passwordEntered(txInfo.walletInfo.walletId, dlg.passwordData, false)
