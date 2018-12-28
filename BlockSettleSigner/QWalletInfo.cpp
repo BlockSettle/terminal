@@ -31,7 +31,6 @@ WalletInfo::WalletInfo(const std::shared_ptr<WalletsManager> &walletsMgr
    const auto &wallet = walletsMgr->GetWalletById(walletId.toStdString());
    if (wallet) {
       const auto &rootWallet = walletsMgr->GetHDRootForLeaf(wallet->GetWalletId());
-      //initFromRootWallet(rootWallet);
       initFromWallet(wallet.get(), rootWallet->getWalletId());
       initEncKeys(rootWallet);
    }

@@ -25,6 +25,10 @@ CustomTitleDialogWindow {
 
     title: qsTr("Wallet Password Confirmation")
 
+    function clickConfirmBtn(){
+        btnConfirm.clicked()
+    }
+
     Connections {
         target: qmlAppObj
 
@@ -34,6 +38,11 @@ CustomTitleDialogWindow {
             }
         }
     }
+
+//    onWalletInfoChanged: {
+//        if (walletInfo.encType === NsWallet.Auth) btnConfirm.clicked()
+//    }
+
 
     cContentItem: ColumnLayout {
         spacing: 10
@@ -249,11 +258,11 @@ CustomTitleDialogWindow {
             }
 
             CustomButtonPrimary {
+                id: btnConfirm
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable
-                id: confirmButton
                 onClicked: {
                     if (txInfo.walletInfo.encType === NsWallet.Password) {
                         passwordData.textPassword = tfPassword.text

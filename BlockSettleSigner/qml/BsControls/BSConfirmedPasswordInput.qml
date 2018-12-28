@@ -10,6 +10,7 @@ import "../BsStyles"
 ColumnLayout {
     id: topLayout
 
+    property var nextFocusItem
     property int labelsWidth: 110
     property int inputsWidth: 250
     property int rowSpacing: 5
@@ -21,7 +22,10 @@ ColumnLayout {
     property alias passwordInputPlaceholder: passwordInput.placeholderText
     property alias confirmLabelTxt: confirmPasswordLabel.text
     property alias confirmInputPlaceholder: passwordInput.placeholderText
+    property alias tfPasswordInput: passwordInput
+    property alias tfPasswordConfirm: confirmPasswordInput
 
+    signal confirmInputEnterPressed()
 
     RowLayout {
         spacing: rowSpacing
@@ -47,6 +51,9 @@ ColumnLayout {
             maximumLength: 32
             Layout.fillWidth: true
             implicitWidth: inputsWidth
+            KeyNavigation.tab: confirmPasswordInput
+            Keys.onEnterPressed: { confirmPasswordInput.forceActiveFocus() }
+            Keys.onReturnPressed: { confirmPasswordInput.forceActiveFocus() }
             validator: PasswordConfirmValidator {
                 compareTo: confirmPasswordInput.text
             }
@@ -79,6 +86,15 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitWidth: inputsWidth
             validator: PasswordConfirmValidator {}
+            KeyNavigation.tab: nextFocusItem
+            Keys.onEnterPressed: {
+                confirmPasswordInput.focus = nextFocusItem
+                confirmInputEnterPressed()
+            }
+            Keys.onReturnPressed: {
+                confirmInputEnterPressed()
+                confirmPasswordInput.focus = nextFocusItem
+            }
         }
     }
 

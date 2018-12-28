@@ -59,7 +59,8 @@ CustomTitleDialogWindow {
                     id: labelText_
                     padding: 15
                     Layout.preferredWidth: root.width - image.width - 10
-                    color: colors[type]
+                    //color: colors[type]
+                    color: BSStyle.dialogTitleWhiteColor
                     Layout.minimumHeight: 40
                     text: customText
                 }

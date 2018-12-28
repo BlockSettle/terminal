@@ -5,11 +5,8 @@
 #include <QObject>
 #include <QStringList>
 #include "MetaData.h"
-//#include "HDWallet.h"
-
 
 namespace bs {
-   //class Wallet;
    namespace hd {
       class Wallet;
       class WalletInfo;

@@ -16,6 +16,7 @@ ColumnLayout {
     property WalletInfo walletInfo : WalletInfo {}
     property alias password: passwordInput.text
     property int inputsWidth
+    property var nextFocusItem
 
     CustomHeader {
         text: qsTr("Wallet Details")
@@ -98,6 +99,9 @@ ColumnLayout {
             placeholderText: qsTr("Old Password")
             Layout.fillWidth: true
             Layout.preferredWidth: inputsWidth
+            KeyNavigation.tab: nextFocusItem
+            Keys.onEnterPressed: { nextFocusItem.forceActiveFocus() }
+            Keys.onReturnPressed: { nextFocusItem.forceActiveFocus() }
         }
 
         CustomLabel {
