@@ -14,7 +14,6 @@
 #include <QDebug>
 
 
-
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                   , const std::shared_ptr<ApplicationSettings> &appSettings
                   , const std::shared_ptr<spdlog::logger>& logger)
@@ -30,7 +29,6 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 
    connect(heartbeatTimer_.get(), &QTimer::timeout, this, &ChatClient::sendHeartbeat);
 }
-
 
 std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt)
 {
@@ -58,22 +56,18 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
    return currentUserId_;
 }
 
-
-void ChatClient::OnLoginReturned(Chat::LoginResponse& response)
+void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 {
-   if (response.getStatus() == Chat::LoginResponse::Status::LoginOk)
-   {
+   if (response.getStatus() == Chat::LoginResponse::Status::LoginOk) {
       loggedIn_ = true;
       auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
       sendRequest(request);
    }
-   else
-   {
+   else {
       loggedIn_ = false;
       emit LoginFailed();
    }
 }
-
 
 void ChatClient::logout()
 {
@@ -91,7 +85,6 @@ void ChatClient::logout()
    connection_.reset();
 }
 
-
 void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 {
    auto requestData = request->getData();
@@ -106,42 +99,31 @@ void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
    connection_->send(requestData);
 }
 
-
 void ChatClient::sendHeartbeat()
 {
-   if (loggedIn_ && connection_->isActive())
-   {
-      auto request = std::make_shared<Chat::HeartbeatPingRequest>(currentUserId_);
-      sendRequest(request);
+   if (loggedIn_ && connection_->isActive()) {
+      sendRequest(std::make_shared<Chat::HeartbeatPingRequest>(currentUserId_));
    }
 }
 
-
-void ChatClient::OnHeartbeatPong(Chat::HeartbeatPongResponse& response)
+void ChatClient::OnHeartbeatPong(const Chat::HeartbeatPongResponse &response)
 {
    logger_->debug("[ChatClient::OnHeartbeatPong] {}", response.getData());
 }
 
-
-void ChatClient::OnUsersList(Chat::UsersListResponse& response)
+void ChatClient::OnUsersList(const Chat::UsersListResponse &response)
 {
    logger_->debug("Received users list from server: {}", response.getData());
 
-   auto users = response.getDataList();
-
-   emit UsersUpdate(std::move(users));
+   emit UsersUpdate(response.getDataList());
 }
 
-
-void ChatClient::OnMessages(Chat::MessagesResponse& response)
+void ChatClient::OnMessages(const Chat::MessagesResponse &response)
 {
    logger_->debug("Received messages from server: {}", response.getData());
 
-   auto messages = response.getDataList();
-
-   emit MessagesUpdate(std::move(messages));
+   emit MessagesUpdate(response.getDataList());
 }
-
 
 void ChatClient::OnDataReceived(const std::string& data)
 {
@@ -151,26 +133,22 @@ void ChatClient::OnDataReceived(const std::string& data)
    response->handle(*this);
 }
 
-
 void ChatClient::OnConnected()
 {
    logger_->debug("[ChatClient::OnConnected]");
 }
-
 
 void ChatClient::OnDisconnected()
 {
    logger_->debug("[ChatClient::OnDisconnected]");
 }
 
-
 void ChatClient::OnError(DataConnectionError errorCode)
 {
    logger_->debug("[ChatClient::OnError] {}", errorCode);
 }
 
-
-void ChatClient::onSendMessage(const QString& message)
+void ChatClient::onSendMessage(const QString &message)
 {
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
@@ -182,7 +160,6 @@ void ChatClient::onSendMessage(const QString& message)
    auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());
    sendRequest(request);
 }
-
 
 void ChatClient::onSetCurrentPrivateChat(const QString& userId)
 {

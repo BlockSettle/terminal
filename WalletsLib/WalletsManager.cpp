@@ -163,12 +163,7 @@ void WalletsManager::LoadWallets(NetworkType netType, const QString &walletsPath
             , tr("The Terminal has detected a signing wallet, not a watching-only wallet. Please consider replacing"
                " the signing wallet with a watching-only wallet."));
       }
-      for (const auto &hdWallet : hdSigningWallets) {
-         if (hdWallet->isPrimary() && HasPrimaryWallet()) {
-            logger_->error("Wallet {} ({}) is not loaded - multiple primary wallets are not supported!"
-               , hdWallet->getName(), hdWallet->getWalletId());
-            continue;
-         }
+      for (const auto &hdWallet : hdSigningWallets) { // No check for primary wallets duplication here
          SaveWallet(hdWallet);
       }
    }

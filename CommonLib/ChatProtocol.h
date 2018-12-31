@@ -78,7 +78,7 @@ namespace Chat
       virtual std::string getData() const;
       QJsonObject toJson() const override;
       virtual std::string getClientId() const { return clientId_; }
-      virtual void handle(RequestHandler& handler) = 0;
+      virtual void handle(RequestHandler &) = 0;
 
    protected:
       std::string    clientId_;
@@ -97,7 +97,7 @@ namespace Chat
       virtual std::string getData() const;
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
-      virtual void handle(ResponseHandler& handler) = 0;
+      virtual void handle(ResponseHandler &) = 0;
    };
 
 
@@ -105,9 +105,8 @@ namespace Chat
    {
    public:
       HeartbeatPingRequest(const std::string& clientId);
-      void handle(RequestHandler& handler) override;
+      void handle(RequestHandler &) override;
    };
-
 
    class BaseLoginRequest : public Request
    {
@@ -135,9 +134,8 @@ namespace Chat
          : BaseLoginRequest (RequestType::RequestLogin, clientId, authId, jwt)
       {
       }
-      void handle(RequestHandler& handler) override;
+      void handle(RequestHandler &) override;
    };
-
 
    class LogoutRequest : public BaseLoginRequest
    {
@@ -148,7 +146,7 @@ namespace Chat
          : BaseLoginRequest (RequestType::RequestLogout, clientId, authId, jwt)
       {
       }
-      void handle(RequestHandler& handler) override;
+      void handle(RequestHandler &) override;
    };
 
 
@@ -183,13 +181,12 @@ namespace Chat
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId
                                      , const std::string& jsonData);
-      void handle(RequestHandler& handler) override;
+      void handle(RequestHandler &) override;
       const std::string& getMessageData() const { return messageData_; }
 
    private:
       std::string messageData_;
    };
-
 
    class OnlineUsersRequest : public Request
    {
@@ -197,13 +194,12 @@ namespace Chat
       OnlineUsersRequest(const std::string& clientId
                      , const std::string& authId);
       QJsonObject toJson() const override;
-      void handle(RequestHandler& handler) override;
+      void handle(RequestHandler &) override;
       std::string getAuthId() const { return authId_; }
 
    private:
       std::string authId_;
    };
-
 
    class MessagesRequest : public Request
    {
@@ -212,7 +208,7 @@ namespace Chat
                   , const std::string& senderId
                   , const std::string& receiverId);
       QJsonObject toJson() const override;
-      void handle(RequestHandler& handler) override;
+      void handle(RequestHandler &) override;
       std::string getSenderId() const { return senderId_; }
       std::string getReceiverId() const { return receiverId_; }
 
@@ -226,23 +222,20 @@ namespace Chat
    {
    public:
       HeartbeatPongResponse();
-      void handle(ResponseHandler& handler) override;
+      void handle(ResponseHandler &) override;
    };
-
 
    class LoginResponse : public Response
    {
    public:
-
-      enum class Status
-      {
+      enum class Status {
            LoginOk
          , LoginFailed
       };
 
       LoginResponse(const std::string& userId, Status status);
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
-      void handle(ResponseHandler& handler) override;
+      void handle(ResponseHandler &) override;
       QJsonObject toJson() const override;
 
       std::string getUserId() const { return userId_; }
@@ -252,7 +245,6 @@ namespace Chat
       std::string userId_;
       Status status_;
    };
-
 
    class ListResponse : public Response
    {
@@ -266,22 +258,20 @@ namespace Chat
       std::vector<std::string> dataList_;
    };
 
-
    class UsersListResponse : public ListResponse
    {
    public:
       UsersListResponse(std::vector<std::string> dataList);
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
-      void handle(ResponseHandler& handler) override;
+      void handle(ResponseHandler &) override;
    };
-
 
    class MessagesResponse : public ListResponse
    {
    public:
       MessagesResponse(std::vector<std::string> dataList);
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
-      void handle(ResponseHandler& handler) override;
+      void handle(ResponseHandler &) override;
    };
 
 
@@ -289,23 +279,22 @@ namespace Chat
    {
    public:
       virtual ~RequestHandler() = default;
-      virtual void OnHeartbeatPing(HeartbeatPingRequest& request) = 0;
-      virtual void OnLogin(LoginRequest& request) = 0;
-      virtual void OnLogout(LogoutRequest& request) = 0;
-      virtual void OnSendMessage(SendMessageRequest& request) = 0;
-      virtual void OnOnlineUsers(OnlineUsersRequest& request) = 0;
-      virtual void OnRequestMessages(MessagesRequest& request) = 0;
+      virtual void OnHeartbeatPing(const HeartbeatPingRequest& request) = 0;
+      virtual void OnLogin(const LoginRequest &) = 0;
+      virtual void OnLogout(const LogoutRequest &) = 0;
+      virtual void OnSendMessage(const SendMessageRequest &) = 0;
+      virtual void OnOnlineUsers(const OnlineUsersRequest &) = 0;
+      virtual void OnRequestMessages(const MessagesRequest &) = 0;
    };
-
 
    class ResponseHandler
    {
    public:
       virtual ~ResponseHandler() = default;
-      virtual void OnHeartbeatPong(HeartbeatPongResponse& response) = 0;
-      virtual void OnUsersList(UsersListResponse& response) = 0;
-      virtual void OnMessages(MessagesResponse& response) = 0;
-      virtual void OnLoginReturned(LoginResponse& response) = 0;
+      virtual void OnHeartbeatPong(const HeartbeatPongResponse &) = 0;
+      virtual void OnUsersList(const UsersListResponse &) = 0;
+      virtual void OnMessages(const MessagesResponse &) = 0;
+      virtual void OnLoginReturned(const LoginResponse &) = 0;
    };
 
 }

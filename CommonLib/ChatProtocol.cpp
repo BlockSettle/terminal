@@ -82,7 +82,6 @@ std::string serializeData(const T* thisPtr)
    return serializedData.toStdString();
 }
 
-
 template <typename T>
 QJsonObject Message<T>::toJson() const
 {
@@ -138,12 +137,10 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
    return std::shared_ptr<Request>();
 }
 
-
 std::string Request::getData() const
 {
    return serializeData(this);
 }
-
 
 QJsonObject Request::toJson() const
 {
@@ -164,12 +161,10 @@ QJsonObject Response::toJson() const
    return data;
 }
 
-
 std::string Response::getData() const
 {
    return serializeData(this);
 }
-
 
 std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 {
@@ -202,9 +197,7 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 HeartbeatPingRequest::HeartbeatPingRequest(const std::string& clientId)
    : Request (RequestType::RequestHeartbeatPing, clientId)
 {
-
 }
-
 
 void HeartbeatPingRequest::handle(RequestHandler& handler)
 {
@@ -215,9 +208,7 @@ void HeartbeatPingRequest::handle(RequestHandler& handler)
 HeartbeatPongResponse::HeartbeatPongResponse()
    : Response(ResponseType::ResponseHeartbeatPong)
 {
-
 }
-
 
 void HeartbeatPongResponse::handle(ResponseHandler& handler)
 {
@@ -229,9 +220,7 @@ ListResponse::ListResponse(ResponseType responseType, std::vector<std::string> d
    : Response(responseType)
    , dataList_(dataList)
 {
-
 }
-
 
 QJsonObject ListResponse::toJson() const
 {
@@ -247,7 +236,6 @@ QJsonObject ListResponse::toJson() const
 
    return data;
 }
-
 
 std::vector<std::string> ListResponse::fromJSON(const std::string& jsonData)
 {
@@ -267,13 +255,10 @@ UsersListResponse::UsersListResponse(std::vector<std::string> dataList)
 {
 
 }
-
-
 void UsersListResponse::handle(ResponseHandler& handler)
 {
    handler.OnUsersList(*this);
 }
-
 
 std::shared_ptr<Response> UsersListResponse::fromJSON(const std::string& jsonData)
 {
@@ -285,9 +270,7 @@ std::shared_ptr<Response> UsersListResponse::fromJSON(const std::string& jsonDat
 MessagesResponse::MessagesResponse(std::vector<std::string> dataList)
    : ListResponse (ResponseType::ResponseMessages, dataList)
 {
-
 }
-
 
 std::shared_ptr<Response> MessagesResponse::fromJSON(const std::string& jsonData)
 {
@@ -295,12 +278,10 @@ std::shared_ptr<Response> MessagesResponse::fromJSON(const std::string& jsonData
    return std::make_shared<MessagesResponse>(ListResponse::fromJSON(jsonData));
 }
 
-
 void MessagesResponse::handle(ResponseHandler& handler)
 {
    handler.OnMessages(*this);
 }
-
 
 BaseLoginRequest::BaseLoginRequest(RequestType requestType
                      , const std::string& clientId
@@ -346,9 +327,7 @@ MessageData::MessageData(const QString& senderId
    , dateTime_(dateTime)
    , messageData_(messageData)
 {
-
 }
-
 
 QJsonObject MessageData::toJson() const
 {
@@ -361,7 +340,6 @@ QJsonObject MessageData::toJson() const
 
    return data;
 }
-
 
 std::string MessageData::toJsonString() const
 {
@@ -409,7 +387,6 @@ std::shared_ptr<Request> SendMessageRequest::fromJSON(const std::string& clientI
                     , data[MessageKey].toString().toStdString());
 }
 
-
 void SendMessageRequest::handle(RequestHandler& handler)
 {
    handler.OnSendMessage(*this);
@@ -421,9 +398,7 @@ OnlineUsersRequest::OnlineUsersRequest(const std::string& clientId
    : Request(RequestType::RequestOnlineUsers, clientId)
    , authId_(authId)
 {
-
 }
-
 
 QJsonObject OnlineUsersRequest::toJson() const
 {
@@ -433,7 +408,6 @@ QJsonObject OnlineUsersRequest::toJson() const
 
    return data;
 }
-
 
 void OnlineUsersRequest::handle(RequestHandler& handler)
 {
@@ -448,9 +422,7 @@ MessagesRequest::MessagesRequest(const std::string& clientId
    , senderId_(senderId)
    , receiverId_(receiverId)
 {
-
 }
-
 
 QJsonObject MessagesRequest::toJson() const
 {
@@ -461,7 +433,6 @@ QJsonObject MessagesRequest::toJson() const
 
    return data;
 }
-
 
 void MessagesRequest::handle(RequestHandler& handler)
 {
@@ -474,9 +445,7 @@ LoginResponse::LoginResponse(const std::string& userId, Status status)
    , userId_(userId)
    , status_(status)
 {
-
 }
-
 
 QJsonObject LoginResponse::toJson() const
 {
@@ -488,7 +457,6 @@ QJsonObject LoginResponse::toJson() const
    return data;
 }
 
-
 std::shared_ptr<Response> LoginResponse::fromJSON(const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
@@ -496,7 +464,6 @@ std::shared_ptr<Response> LoginResponse::fromJSON(const std::string& jsonData)
                    data[SenderIdKey].toString().toStdString()
                  , static_cast<Status>(data[StatusKey].toInt()));
 }
-
 
 void LoginResponse::handle(ResponseHandler& handler)
 {

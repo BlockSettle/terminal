@@ -48,12 +48,11 @@ public:
 
    void logout();
 
-   void OnHeartbeatPong(Chat::HeartbeatPongResponse& response) override;
-   void OnUsersList(Chat::UsersListResponse& response) override;
-   void OnMessages(Chat::MessagesResponse& response) override;
-   void OnLoginReturned(Chat::LoginResponse& response) override;
+   void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
+   void OnUsersList(const Chat::UsersListResponse &) override;
+   void OnMessages(const Chat::MessagesResponse &) override;
+   void OnLoginReturned(const Chat::LoginResponse &) override;
 
-public:
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
    void OnDisconnected() override;
@@ -73,12 +72,9 @@ signals:
    void UsersUpdate(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::string>& messages);
 
-
 public slots:
-
    void onSendMessage(const QString& message);
    void onSetCurrentPrivateChat(const QString& userId);
-
 
 private:
    std::shared_ptr<ConnectionManager>    connectionManager_;
@@ -91,8 +87,7 @@ private:
 
    std::string                     currentUserId_;
    std::string                     currentChatId_;
-   std::atomic_bool                loggedIn_;
-
+   std::atomic_bool                loggedIn_{ false };
 };
 
-#endif
+#endif   // __CHAT_CLIENT_H__
