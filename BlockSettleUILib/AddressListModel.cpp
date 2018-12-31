@@ -174,7 +174,12 @@ void AddressListModel::updateWalletData()
          if (i >= addressRows_.size()) {
             return;
          }
-         (*addrBalances)[i] = balances[0];
+         if (balances.size() == 3) {
+            (*addrBalances)[i] = balances[0];
+         }
+         else {
+            (*addrBalances)[i] = 0;
+         }
 
          // On the final address, set the balance for all addresses and emit
          // any required signals.
@@ -195,10 +200,12 @@ void AddressListModel::updateWalletData()
       const auto &address = addressRows_[i].address;
       if (wallet) {
          if (!wallet->getAddrTxN(address, cbTxN)) {
-            return;
+            cbTxN(0);
+            continue;
          }
          if (!wallet->getAddrBalance(address, cbBalance)) {
-            return;
+            cbBalance({});
+            continue;
          }
       }
    }
