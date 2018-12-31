@@ -125,17 +125,17 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
       headless::AuthenticationRequest request;
       if (!request.ParseFromString(packet.data())) {
          logger_->error("[HeadlessContainerListener] failed to parse auth request");
-         AuthResponse(clientId, packet, "failed to parse request");
+         AuthResponse(clientId, packet, "Failed to parse request");
          return;
       }
       if (mapNetworkType(request.nettype()) != netType_) {
          logger_->warn("[HeadlessContainerListener] remote network type mismatch");
-         AuthResponse(clientId, packet, "wrong network type");
+         AuthResponse(clientId, packet, "Wrong Bitcoin network type");
          return;
       }
       if (!pwHash_.empty() && (pwHash_ != request.password())) {
          logger_->error("[HeadlessContainerListener] wrong auth password");
-         AuthResponse(clientId, packet, "wrong pasasword");
+         AuthResponse(clientId, packet, "Wrong Signer connection password");
          return;
       }
 
