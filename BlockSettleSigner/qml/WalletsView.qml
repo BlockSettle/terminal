@@ -29,7 +29,7 @@ TreeView {
         width: parent.width / 5
     }
     TableViewColumn {
-        title: qsTr("Encrypted?")
+        title: qsTr("Encryption Method")
         role: "state"
         width: parent.width / 4
     }

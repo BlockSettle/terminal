@@ -63,7 +63,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
-                        text: qsTr("Auto sign")
+                        text: qsTr("Auto-Sign")
                     }
                 }
 
