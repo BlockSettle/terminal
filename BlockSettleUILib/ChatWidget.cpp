@@ -8,11 +8,8 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 
-#include <QDebug>
-
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
-
 
 ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
@@ -37,9 +34,7 @@ ChatWidget::ChatWidget(QWidget *parent)
 
 }
 
-
 ChatWidget::~ChatWidget() = default;
-
 
 void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
                  , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -73,35 +68,29 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
    switchToChat(currentChatId_);
 }
 
-
 void ChatWidget::onSendButtonClicked()
 {
    QString messageText = ui_->text->text();
 
-   if (!messageText.isEmpty())
-   {
+   if (!messageText.isEmpty()) {
       client_->onSendMessage(messageText);
       ui_->text->clear();
 
-      if (currentUserId_ != currentChatId_)
-      {
+      if (currentUserId_ != currentChatId_) {
          messagesViewModel_->onSingleMessageUpdate(QDateTime::currentDateTime(), messageText);
       }
    }
 }
 
-
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
    auto selection = ui_->treeViewUsers->selectionModel();
-   if (selection)
-   {
+   if (selection) {
       QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
       selection->select(selectedUserIdx, QItemSelectionModel::Select);
       ui_->tableViewMessages->scrollToBottom();
    }
 }
-
 
 void ChatWidget::switchToChat(const QString& chatId)
 {
@@ -110,40 +99,36 @@ void ChatWidget::switchToChat(const QString& chatId)
    messagesViewModel_->onSwitchToChat(currentChatId_);
 
    auto selection = ui_->treeViewUsers->selectionModel();
-   if (selection)
-   {
+   if (selection) {
       QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
       selection->select(selectedUserIdx, QItemSelectionModel::Select);
    }
 }
 
-
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
-   try
-   {
+   try {
       logger_->debug("Set user name {}", email);
       usersViewModel_->onClear();
       const std::string userId = client_->loginToServer(email, jwt);
       currentUserId_ = QString::fromStdString(userId);
-      currentChatId_ = currentUserId_;
+//!      currentChatId_ = currentUserId_;
       ui_->stackedWidget->setCurrentIndex(1);
+      ui_->labelUserName->setText(currentUserId_);
 
-      switchToChat(currentChatId_);
+// need to save previous active chat in config
+//!      switchToChat(currentChatId_);
 
       return userId;
    }
-   catch (std::exception& e)
-   {
+   catch (std::exception& e) {
       logger_->error("Caught an exception: {}" , e.what());
    }
-   catch (...)
-   {
+   catch (...) {
       logger_->error("Unknown error ...");
    }
    return std::string();
 }
-
 
 void ChatWidget::onLoginFailed()
 {
@@ -152,7 +137,6 @@ void ChatWidget::onLoginFailed()
 
    emit LoginFailed();
 }
-
 
 void ChatWidget::logout()
 {

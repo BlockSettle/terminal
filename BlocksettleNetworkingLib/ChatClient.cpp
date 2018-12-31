@@ -11,8 +11,6 @@
 
 #include <QDateTime>
 
-#include <QDebug>
-
 
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                   , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -21,13 +19,18 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    : connectionManager_(connectionManager)
    , appSettings_(appSettings)
    , logger_(logger)
-   , heartbeatTimer_(new QTimer(this))
 {
-   heartbeatTimer_->setInterval(30 * 1000);
-   heartbeatTimer_->setSingleShot(false);
-   heartbeatTimer_->start();
+   heartbeatTimer_.setInterval(30 * 1000);
+   heartbeatTimer_.setSingleShot(false);
+   connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
+   heartbeatTimer_.start();
+}
 
-   connect(heartbeatTimer_.get(), &QTimer::timeout, this, &ChatClient::sendHeartbeat);
+ChatClient::~ChatClient()
+{
+   if (loggedIn_) {
+      logout();
+   }
 }
 
 std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt)
@@ -38,7 +41,7 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
    }
 
    auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
-   currentUserId_ = Botan::base64_encode(bytesHash.data(), 8);
+   currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
    currentChatId_ = currentUserId_;
 
    connection_ = connectionManager_->CreateSecuredDataConnection();
@@ -72,9 +75,8 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 void ChatClient::logout()
 {
    loggedIn_ = false;
-   currentUserId_ = "";
 
-   if (!connection_.get()) {
+   if (!connection_) {
       logger_->error("[ChatClient::logout] Disconnected already.");
       return;
    }
@@ -82,6 +84,7 @@ void ChatClient::logout()
    auto request = std::make_shared<Chat::LogoutRequest>("", currentUserId_, "");
    sendRequest(request);
 
+   currentUserId_.clear();
    connection_.reset();
 }
 

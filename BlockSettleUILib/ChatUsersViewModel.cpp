@@ -23,12 +23,10 @@ QModelIndex ChatUsersViewModel::resolveUser(const QString& userId)
     return index(indexByUser_[userId], 0);
 }
 
-
 int ChatUsersViewModel::columnCount(const QModelIndex &parent) const
 {
    return 1;
 }
-
 
 int ChatUsersViewModel::rowCount(const QModelIndex &parent) const
 {
