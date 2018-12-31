@@ -578,7 +578,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
 
    const auto sizeNew = newItems->size();
    if (!newItems->empty()) {
-      for (auto &item : *newItems) {
+      for (auto item : *newItems) {
          updateTransactionDetails(item.second.first, cbInited);
       }
    }
