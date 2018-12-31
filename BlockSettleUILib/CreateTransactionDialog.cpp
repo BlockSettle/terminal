@@ -89,27 +89,38 @@ void CreateTransactionDialog::init()
 
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::TXSigned, this, &CreateTransactionDialog::onTXSigned);
+      connect(signingContainer_.get(), &SignContainer::disconnected, this, &CreateTransactionDialog::updateCreateButtonText);
+      connect(signingContainer_.get(), &SignContainer::authenticated, this, &CreateTransactionDialog::onSignerAuthenticated);
       signer_ = signingContainer_;
-      updateCreateButtonText();
    }
+   updateCreateButtonText();
    lineEditAddress()->setFocus();
 }
 
 void CreateTransactionDialog::updateCreateButtonText()
 {
-   if (signer_->opMode() == SignContainer::OpMode::Offline) {
-      if (HaveSignedImportedTransaction()) {
-         pushButtonCreate()->setText(tr("Broadcast"));
-      } else {
-         pushButtonCreate()->setText(tr("Export"));
-      }
-   } else {
-      if (signer_->isOffline()) {
-         pushButtonCreate()->setText(tr("Unable to sign"));
-      } else {
-         pushButtonCreate()->setText(tr("Broadcast"));
-      }
+   if (!signer_) {
+      pushButtonCreate()->setEnabled(false);
+      return;
    }
+   if (HaveSignedImportedTransaction()) {
+      pushButtonCreate()->setText(tr("Broadcast"));
+      if (signer_->isOffline() || (signer_->opMode() == SignContainer::OpMode::Offline)) {
+         pushButtonCreate()->setEnabled(false);
+      }
+      return;
+   }
+   if (signer_->isOffline() || (signer_->opMode() == SignContainer::OpMode::Offline)) {
+      signer_ = offlineSigner_;
+      pushButtonCreate()->setText(tr("Export"));
+   } else {
+      pushButtonCreate()->setText(tr("Broadcast"));
+   }
+}
+
+void CreateTransactionDialog::onSignerAuthenticated()
+{
+   selectedWalletChanged(-1);
 }
 
 void CreateTransactionDialog::clear()
@@ -156,7 +167,7 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   auto selectedWalletIndex = UiUtils::fillWalletsComboBox(comboBoxWallets(), walletsManager_, signingContainer_);
+   auto selectedWalletIndex = UiUtils::fillWalletsComboBox(comboBoxWallets(), walletsManager_);
    selectedWalletChanged(selectedWalletIndex);
 }
 
@@ -236,7 +247,9 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       pushButtonCreate()->setText(tr("Broadcast"));
       signer_ = signingContainer_;
    }
-   transactionData_->SetWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
+   if (transactionData_->GetWallet() != currentWallet) {
+      transactionData_->SetWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
+   }
 }
 
 void CreateTransactionDialog::onTransactionUpdated()
@@ -264,6 +277,8 @@ void CreateTransactionDialog::onTransactionUpdated()
          changeLabel()->setText(UiUtils::displayAmount(0.0));
       }
    }
+
+   pushButtonCreate()->setEnabled(transactionData_->IsTransactionValid());
 }
 
 void CreateTransactionDialog::onMaxPressed()

@@ -74,8 +74,6 @@ protected:
 
    virtual bool HaveSignedImportedTransaction() const { return false; }
 
-   void updateCreateButtonText();
-
    std::vector<bs::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
    bool CreateTransaction();
@@ -92,6 +90,8 @@ protected slots:
       , const std::function<void()> &cbInputsReset = nullptr);
    virtual void onMaxPressed();
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void updateCreateButtonText();
+   void onSignerAuthenticated();
 
 protected:
    void populateFeeList();
