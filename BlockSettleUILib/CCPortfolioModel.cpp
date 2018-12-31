@@ -771,7 +771,10 @@ void CCPortfolioModel::onXBTPriceChanged(const std::string& currency)
       auto fxGroup = root_->GetFXGroup();
 
       auto fxNode = fxGroup->GetFXNode(currency);
-      assert(fxNode != nullptr);
+//!      assert(fxNode != nullptr);    // produces crash on login to Celer
+      if (!fxNode) {    //! workaround
+         return;
+      }
 
       const double balance = assetManager_->getBalance(currency);
       const double price = assetManager_->getPrice(currency);

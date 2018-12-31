@@ -1263,7 +1263,8 @@ void hd::CCLeaf::validationProc(const bool& initValidation)
    }
 
    for (const auto &addr : GetUsedAddressList()) {
-      const auto &cbLedger = [this, addr, addressesToCheck](AsyncClient::LedgerDelegate ledger) {
+      const auto &cbLedger = [this, addr, addressesToCheck]
+                              (const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger) {
          if (!validationStarted_) {
             return;
          }
@@ -1295,6 +1296,7 @@ void hd::CCLeaf::validationProc(const bool& initValidation)
                emit walletReset();
             }
          };
+
          const auto &cbHistory = [this, cbCheck, addr, addressesToCheck]
          (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
             try {
@@ -1311,7 +1313,20 @@ void hd::CCLeaf::validationProc(const bool& initValidation)
                }
             }
          };
-         ledger.getHistoryPage(0, cbHistory);  //? Shouldn't we continue past the first page?
+         const auto &cbPages = [this,  cbHistory, ledger] (ReturnMessage<uint64_t> pages) {
+            try {
+               const auto pageCnt = pages.get();
+               for (uint32_t pageId = 0; pageId < pageCnt; ++pageId) {
+                  ledger->getHistoryPage(pageId, cbHistory);
+               }
+            }
+            catch (const std::exception &e) {
+               if (logger_) {
+                  logger_->error("[hd::CCLeaf::validationProc] cbPages failed: {}", e.what());
+               }
+            }
+         };
+         ledger->getPageCount(cbPages);
       };
       armory_->getLedgerDelegateForAddress(GetWalletId(), addr, cbLedger, this);
    }

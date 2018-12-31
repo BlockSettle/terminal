@@ -585,16 +585,16 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
 
 void BSTerminalMainWindow::CompleteUIOnlineView()
 {
-   transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_
-                                                               , walletsManager_
-                                                         , logMgr_->logger("ui")
-                                                                , this);
+   if (!transactionsModel_) {
+      transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_
+         , walletsManager_, logMgr_->logger("ui"), this);
 
-   InitTransactionsView();
-   transactionsModel_->loadAllWallets();
+      InitTransactionsView();
+      transactionsModel_->loadAllWallets();
 
-   if (walletsManager_->GetWalletsCount() == 0) {
-      createWallet(!walletsManager_->HasPrimaryWallet());
+      if (walletsManager_->GetWalletsCount() == 0) {
+         createWallet(!walletsManager_->HasPrimaryWallet());
+      }
    }
    updateControlEnabledState();
    updateLoginActionState();

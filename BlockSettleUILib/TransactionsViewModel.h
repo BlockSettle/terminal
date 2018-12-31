@@ -112,7 +112,7 @@ Q_OBJECT
 public:
     TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<WalletsManager> &
-                          , const AsyncClient::LedgerDelegate &
+                          , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent
                           , const std::shared_ptr<bs::Wallet> &defWlt);
@@ -201,7 +201,7 @@ private:
    std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
-   AsyncClient::LedgerDelegate         ledgerDelegate_;
+   std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
@@ -209,7 +209,7 @@ private:
    std::atomic_bool  signalOnEndLoading_{ false };
    const bool        allWallets_;
    std::atomic_bool  stopped_;
-   std::atomic_bool  initialLoadCompleted_;
+   std::atomic_bool  initialLoadCompleted_{ true };
 };
 
 #endif // __TRANSACTIONS_VIEW_MODEL_H__

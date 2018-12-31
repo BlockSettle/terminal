@@ -338,7 +338,7 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
 }
 
 bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &addr
-   , std::function<void(AsyncClient::LedgerDelegate)> cb, QObject *context)
+   , std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> cb, QObject *context)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -348,7 +348,7 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
    const auto &cbWrap = [this, cb, context, contextSmartPtr, walletId, addr]
                         (ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
       try {
-         auto ld = delegate.get();
+         auto ld = std::make_shared<AsyncClient::LedgerDelegate>(delegate.get());
          if (cbInMainThread_) {
             QMetaObject::invokeMethod(this, [cb, ld, context, contextSmartPtr]{
                if (context) {
@@ -364,7 +364,7 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
             cb(ld);
          }
       }
-      catch(std::exception& e) {
+      catch (const std::exception &e) {
          logger_->error("[{}] Return data error - {} - Wallet {} - Address {}"
                         , __func__, e.what(), walletId
                         , addr.display().toStdString());
@@ -374,46 +374,7 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
    return true;
 }
 
-bool ArmoryConnection::getLedgerDelegatesForAddresses(const std::string &walletId,
-                                       const std::vector<bs::Address> addresses,
-     std::function<void(std::map<bs::Address, AsyncClient::LedgerDelegate>)> cb)
-{
-   if (!bdv_ || (state_ != State::Ready)) {
-      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
-      return false;
-   }
-
-   auto addrSet = std::make_shared<std::set<bs::Address>>();
-   auto result = std::make_shared<std::map<bs::Address, AsyncClient::LedgerDelegate>>();
-   for (const auto &addr : addresses) {
-      addrSet->insert(addr);
-      const auto &cbProcess = [this, addrSet, result, addr, cb, walletId]
-                              (ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
-         try {
-            auto ld = delegate.get();
-            addrSet->erase(addr);
-            (*result)[addr] = ld;
-         }
-         catch(std::exception& e) {
-            logger_->error("[{}] Return data error - {} - Wallet {}", __func__
-                           , e.what(), walletId);
-         }
-
-         if (addrSet->empty()) {
-            if (cbInMainThread_) {
-               QMetaObject::invokeMethod(this, [cb, result] { cb(*result); });
-            }
-            else {
-               cb(*result);
-            }
-         }
-      };
-      bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbProcess);
-   }
-   return true;
-}
-
-bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(AsyncClient::LedgerDelegate)> cb)
+bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -421,23 +382,17 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(AsyncClient::
    }
    const auto &cbWrap = [this, cb](ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
       try {
-         auto ld = delegate.get();
+         auto ld = std::make_shared< AsyncClient::LedgerDelegate>(delegate.get());
          if (cbInMainThread_) {
             QMetaObject::invokeMethod(this, [this, cb, ld]{
-               try {
-                  cb(ld);
-               }
-               catch(const std::exception& e) {
-                  logger_->error("[{}] Return data error - {}", __func__
-                                 , e.what());
-               }
+               cb(ld);
             });
          }
          else {
             cb(ld);
          }
       }
-      catch(std::exception& e) {
+      catch (const std::exception &e) {
          logger_->error("[{}] Return data error - {}", __func__, e.what());
       }
    };
