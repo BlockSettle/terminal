@@ -93,8 +93,8 @@ public:
    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override
    {
       if (left.column() == AddressListModel::ColumnBalance && right.column() == AddressListModel::ColumnBalance) {
-         QVariant leftData = sourceModel()->data(left);
-         QVariant rightData = sourceModel()->data(right);
+         QVariant leftData = sourceModel()->data(left, AddressListModel::SortRole);
+         QVariant rightData = sourceModel()->data(right, AddressListModel::SortRole);
 
          if (leftData != rightData) {
             if (leftData.type() == QVariant::String && rightData.type() == QVariant::String) {
@@ -105,14 +105,19 @@ public:
                double rightDoubleValue = rightData.toString().toDouble(&rightConverted);
 
                if (leftConverted && rightConverted) {
-                  return leftDoubleValue < rightDoubleValue;
+                  return (leftDoubleValue < rightDoubleValue);
                }
+            }
+            else {
+               return (leftData < rightData);
             }
          } else {
             const QModelIndex lTxnIndex = sourceModel()->index(left.row(), AddressListModel::ColumnTxCount);
             const QModelIndex rTxnIndex = sourceModel()->index(right.row(), AddressListModel::ColumnTxCount);
-            if (lTxnIndex.data() != rTxnIndex.data()) {
-               return (sourceModel()->data(lTxnIndex) < sourceModel()->data(rTxnIndex));
+            const auto lData = sourceModel()->data(lTxnIndex, AddressListModel::SortRole);
+            const auto rData = sourceModel()->data(rTxnIndex, AddressListModel::SortRole);
+            if (lData != rData) {
+               return (lData < rData);
             }
          }
       }
@@ -245,7 +250,6 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
    ui->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 
    updateAddresses();
    connect(ui->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
@@ -324,16 +328,17 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
    const auto addressIndex = addressModel_->index(index.row(), static_cast<int>(AddressListModel::ColumnAddress));
    curAddress_ = bs::Address(addressModel_->data(addressIndex).toString());
    curWallet_ = walletsManager_->GetWalletByAddress(curAddress_);
-   if (curWallet_) {
-      curAddress_ = curWallet_->GetUsedAddressList()[addressIndex.row()];
-   }
 
+   if (!curWallet_) {
+      logger_->warn("Failed to find wallet for address {}", curAddress_.display<std::string>());
+      return;
+   }
    auto contextMenu = new QMenu(this);
-   contextMenu->addAction(actCopyAddr_);
 
-   if (curWallet_) {
-      contextMenu->addAction(actEditComment_);
+   if ((curWallet_->GetType() == bs::wallet::Type::Bitcoin) || (GetSelectedWallets().size() == 1)) {
+      contextMenu->addAction(actCopyAddr_);
    }
+   contextMenu->addAction(actEditComment_);
 
    const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances) {
       if ((curWallet_ == walletsManager_->GetSettlementWallet()) && walletsManager_->GetAuthWallet()
@@ -374,7 +379,6 @@ void WalletsWidget::updateAddresses()
    }
    addressModel_->setWallets(selectedWallets);
    prevSelectedWallets_ = selectedWallets;
-   ui->treeViewAddresses->hideColumn(AddressListModel::ColumnWallet);
 }
 
 void WalletsWidget::onWalletBalanceChanged(std::string walletId)

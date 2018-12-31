@@ -503,6 +503,8 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       }
       if (newTxKeys->empty()) {
          logger_->warn("TX keys already empty");
+         delete newItems;
+         delete newTxKeys;
          return;
       }
       QMutexLocker locker(keysMutex.get());
@@ -569,12 +571,14 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
                emit dataLoaded(newItems->size());
             }
          }
+         delete newItems;
+         delete newTxKeys;
       }
    };
 
    const auto sizeNew = newItems->size();
    if (!newItems->empty()) {
-      for (auto &item : *newItems) {
+      for (auto item : *newItems) {
          updateTransactionDetails(item.second.first, cbInited);
       }
    }
