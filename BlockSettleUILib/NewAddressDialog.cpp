@@ -21,7 +21,8 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::Wallet>& wallet
 
    QString displayAddress = address_.display();
    ui_->lineEditNewAddress->setText(displayAddress);
-   ui_->labelQRCode->setPixmap(UiUtils::getQRCode(displayAddress));
+   const QString addrURI = QLatin1String("bitcoin:") + displayAddress;
+   ui_->labelQRCode->setPixmap(UiUtils::getQRCode(addrURI, 128));
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
