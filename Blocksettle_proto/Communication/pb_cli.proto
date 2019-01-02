@@ -179,4 +179,5 @@ message CreateCelerUserResponse
 {
    required bool     create_user_result = 1;
    required string   user_email = 2;
+   optional string   error_message = 3;
 }
