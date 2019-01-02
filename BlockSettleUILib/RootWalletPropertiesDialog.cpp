@@ -155,7 +155,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
          , tr("Confirm wallet file overwrite")
          , tr("Wallet file <b>%1</b> already exists in %2. Overwrite it?").arg(QString::fromStdString(walletFileName)).arg(dir)
          , this);
-      if (request.exec() == QDialog::Accepted) {
+      if (request.exec() == QDialog::Rejected) {
          return;
       }
       QFile::remove(target);
@@ -163,7 +163,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
    if (QFile::copy(appSettings_->GetHomeDir() + QString::fromStdString("/" + walletFileName), target)) {
       BSMessageBox(BSMessageBox::success, title, tr("Wallet created")
-         , tr("Created wallet file <b>%1</b> in <span>%2</span>")
+         , tr("Created watch-only wallet file <b>%1</b> in <span>%2</span>")
             .arg(QString::fromStdString(walletFileName))
             .arg(dir)
          , this).exec();
