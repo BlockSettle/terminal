@@ -134,7 +134,8 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       }
    }
 
-   ui_->labelQR->setPixmap(UiUtils::getQRCode(addressString, 128));
+   const QString addrURI = QLatin1String("bitcoin:") + addressString;
+   ui_->labelQR->setPixmap(UiUtils::getQRCode(addrURI, 128));
 
    ui_->inputAddressesWidget->setContextMenuPolicy(Qt::CustomContextMenu);
    ui_->outputAddressesWidget->setContextMenuPolicy(Qt::CustomContextMenu);

@@ -169,7 +169,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       qApp->clipboard()->setText(curAddress_);
    });
 
-   actionCopyTx_ = new QAction(tr("Copy Transaction"));
+   actionCopyTx_ = new QAction(tr("Copy &Transaction Hash"));
    connect(actionCopyTx_, &QAction::triggered, [this]() {
       qApp->clipboard()->setText(curTx_);
    });
