@@ -11,8 +11,6 @@
 
 #include <memory>
 
-#include <spdlog/spdlog.h>
-
 #include "ApplicationSettings.h"
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
@@ -20,7 +18,6 @@
 #include "StartupDialog.h"
 #include "BSMessageBox.h"
 #include "WalletsManager.h"
-
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
@@ -186,7 +183,8 @@ static int GuiApp(int argc, char** argv)
    if (!lockFile.tryLock()) {
       BSMessageBox box(BSMessageBox::info, app.tr("BlockSettle Terminal")
          , app.tr("BlockSettle Terminal is already running")
-         , app.tr("Another instance of BlockSettle Terminal is running. It may be running in the background, look for the BlockSettle icon in the system tray"));
+         , app.tr("Stop the other BlockSettle Terminal instance. If no other " \
+         "instance is running, delete the lockfile (%1).").arg(lockFilePath));
       return box.exec();
    }
 
