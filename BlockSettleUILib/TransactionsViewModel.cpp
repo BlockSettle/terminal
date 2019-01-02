@@ -470,9 +470,9 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
 
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
-   auto newItems = new std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>;
+   auto newItems = std::make_shared<std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>>();
    auto updatedItems = std::make_shared<std::vector<TransactionPtr>>();
-   auto newTxKeys = new std::unordered_set<std::string>();
+   auto newTxKeys = std::make_shared<std::unordered_set<std::string>>();
    auto keysMutex = std::make_shared<QMutex>();
 
    for (const auto &entry : page) {
@@ -503,8 +503,6 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       }
       if (newTxKeys->empty()) {
          logger_->warn("TX keys already empty");
-         delete newItems;
-         delete newTxKeys;
          return;
       }
       QMutexLocker locker(keysMutex.get());
@@ -571,8 +569,6 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
                emit dataLoaded(newItems->size());
             }
          }
-         delete newItems;
-         delete newTxKeys;
       }
    };
 
@@ -581,10 +577,6 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       for (auto item : *newItems) {
          updateTransactionDetails(item.second.first, cbInited);
       }
-   }
-   else {
-      delete newItems;
-      delete newTxKeys;
    }
 
    if (!updatedItems->empty()) {
