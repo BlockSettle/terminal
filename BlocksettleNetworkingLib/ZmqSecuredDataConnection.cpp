@@ -2,38 +2,40 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+#include "ZMQHelperFunctions.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
 
-ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog::logger>& logger, bool monitored)
+ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog::logger>& logger
+                                                   , bool monitored)
  : ZmqDataConnection(logger, monitored)
 {}
 
-bool ZmqSecuredDataConnection::SetServerPublicKey(const std::string& key)
+bool ZmqSecuredDataConnection::SetServerPublicKey(const BinaryData& key)
 {
-   if (key.size() != 40) {
+   // The incoming key buffer length may need to change later, once the server
+   // key is read from a file. For now, we're assuming it's read from a buffer.
+   if (key.getSize() != 40) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::SetServerPublicKey] invalid length of server public key: {}"
-            , key.size());
+         logger_->error("[ZmqSecuredDataConnection::{}] invalid length of "
+            "server public key: {}", __func__, key.getSize());
       }
       return false;
    }
 
-   char pubKey[41];
-   char prKey[41];
-
-   int result = zmq_curve_keypair(pubKey, prKey);
-   if (result != 0) {
+   std::pair<BinaryData, SecureBinaryData> inKeyPair;
+   int result = bs::network::getCurveZMQKeyPair(inKeyPair);
+   if (result == -1) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::SetServerPublicKey] failed to generate key pair: {}"
-            , zmq_strerror(zmq_errno()));
+         logger_->error("[ZmqSecuredDataConnection::{}] failed to generate key "
+            "pair: {}", __func__, zmq_strerror(zmq_errno()));
       }
       return false;
    }
 
-   publicKey_ = std::string(pubKey, 41);
-   privateKey_ = std::string(prKey, 41);
+   publicKey_ = inKeyPair.first;
+   privateKey_ = inKeyPair.second;
    serverPublicKey_ = key;
 
    return true;
@@ -41,44 +43,53 @@ bool ZmqSecuredDataConnection::SetServerPublicKey(const std::string& key)
 
 bool ZmqSecuredDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr& s)
 {
-   if (serverPublicKey_.empty()) {
+   if (serverPublicKey_.getSize() == 0) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] server public key is not set");
+         logger_->error("[ZmqSecuredDataConnection::{}] server public key is "
+            "not set", __func__);
       }
       return false;
    }
 
-   int result = zmq_setsockopt (s.get(), ZMQ_CURVE_SERVERKEY, serverPublicKey_.c_str(), 41);
+   int result = zmq_setsockopt(s.get(), ZMQ_CURVE_SERVERKEY
+                               , serverPublicKey_.toBinStr().c_str()
+                               , CURVEZMQPUBKEYBUFFERSIZE);
    if (result != 0) {
-      logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] failed to set server public key: {}"
-         , zmq_strerror(zmq_errno()));
+      logger_->error("[ZmqSecuredDataConnection::{}] failed to set server "
+         "public key: {}", __func__, zmq_strerror(zmq_errno()));
       return false;
    }
 
-   result = zmq_setsockopt (s.get(), ZMQ_CURVE_PUBLICKEY, publicKey_.c_str(), 41);
+   result = zmq_setsockopt(s.get(), ZMQ_CURVE_PUBLICKEY
+                           , publicKey_.toBinStr().c_str()
+                           , CURVEZMQPUBKEYBUFFERSIZE);
    if (result != 0) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] failed to set client public key: {}"
-            , zmq_strerror(zmq_errno()));
+         logger_->error("[ZmqSecuredDataConnection::{}] failed to set client "
+            "public key: {}", __func__, zmq_strerror(zmq_errno()));
       }
       return false;
    }
 
-   result = zmq_setsockopt (s.get(), ZMQ_CURVE_SECRETKEY, privateKey_.c_str(), 41);
+   result = zmq_setsockopt(s.get(), ZMQ_CURVE_SECRETKEY
+                           , privateKey_.toBinStr().c_str()
+                           , CURVEZMQPRVKEYBUFFERSIZE);
    if (result != 0) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] failed to set client private key: {}"
-            , zmq_strerror(zmq_errno()));
+         logger_->error("[ZmqSecuredDataConnection::{}] failed to set client "
+            "private key: {}", __func__ , zmq_strerror(zmq_errno()));
       }
       return false;
    }
 
    int lingerPeriod = 0;
-   result = zmq_setsockopt (s.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod));
+   result = zmq_setsockopt(s.get(), ZMQ_LINGER, &lingerPeriod
+                           , sizeof(lingerPeriod));
    if (result != 0) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] {} failed to set linger interval: {}"
-            , connectionName_, zmq_strerror(zmq_errno()));
+         logger_->error("[ZmqSecuredDataConnection::{}] {} failed to set "
+            "linger interval: {}", __func__ , connectionName_
+            , zmq_strerror(zmq_errno()));
       }
       return false;
    }
@@ -98,8 +109,9 @@ bool ZmqSecuredDataConnection::recvData()
    int result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
    if (result == -1) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::recvData] {} failed to recv data frame from stream: {}"
-            , connectionName_, zmq_strerror(zmq_errno()));
+         logger_->error("[ZmqSecuredDataConnection::{}] {} failed to recv data "
+            "frame from stream: {}" , __func__, connectionName_
+            , zmq_strerror(zmq_errno()));
       }
       return false;
    }
@@ -116,10 +128,10 @@ bool ZmqSecuredDataConnection::send(const std::string& data)
       FastLock locker(lockSocket_);
       result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
    }
-   if (result != data.size()) {
+   if (result != (int)data.size()) {
       if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::send] {} failed to send data: {}"
-            , connectionName_, zmq_strerror(zmq_errno()));
+         logger_->error("[ZmqSecuredDataConnection::{}] {} failed to send "
+            "data: {}", __func__, connectionName_, zmq_strerror(zmq_errno()));
       }
       return false;
    }

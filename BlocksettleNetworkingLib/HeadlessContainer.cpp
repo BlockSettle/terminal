@@ -824,8 +824,10 @@ bool RemoteSigner::Start()
    }
 
    connection_ = connectionManager_->CreateSecuredDataConnection(true);
-   if (!connection_->SetServerPublicKey(connPubKey_)) {
-      logger_->error("[HeadlessContainer] Failed to set connection pubkey");
+   BinaryData inSrvPubKey(connPubKey_);
+   if (!connection_->SetServerPublicKey(inSrvPubKey)) {
+      logger_->error("[RemoteSigner::{}] Failed to set connection pubkey"
+         , __func__);
       connection_ = nullptr;
       return false;
    }

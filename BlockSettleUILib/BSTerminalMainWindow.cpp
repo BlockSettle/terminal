@@ -167,7 +167,8 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(Ne
    reqPkt.set_requestdata("");
 
    const auto connection = connectionManager_->CreateSecuredDataConnection();
-   connection->SetServerPublicKey(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
+   BinaryData inSrvPubKey(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
+   connection->SetServerPublicKey(inSrvPubKey);
    cmdPuBSettings_ = std::make_shared<RequestReplyCommand>("network_settings", connection, logMgr_->logger());
    const auto &title = tr("Network settings");
 
