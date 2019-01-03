@@ -163,10 +163,9 @@ class QmlWalletsViewModel : public WalletsViewModel
    Q_OBJECT
 public:
    QmlWalletsViewModel(const std::shared_ptr<WalletsManager>& walletsMgr
-                       , const std::string &defaultWalletId
                        , QObject *parent = nullptr
                        , bool showOnlyRegular = false)
-      : WalletsViewModel(walletsMgr, defaultWalletId, nullptr, parent, showOnlyRegular) {}
+      : WalletsViewModel(walletsMgr, "", nullptr, parent, showOnlyRegular) {}
    ~QmlWalletsViewModel() override = default;
 
    enum Roles {
