@@ -737,7 +737,8 @@ bool AuthAddressManager::SendGetBSAddressListRequest()
 bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
    const auto connection = connectionManager_->CreateSecuredDataConnection();
-   connection->SetServerPublicKey(settings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
+   BinaryData inSrvPubKey(settings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
+   connection->SetServerPublicKey(inSrvPubKey);
    auto command = std::make_shared<RequestReplyCommand>(name, connection, logger_);
 
    command->SetReplyCallback([command, this](const std::string& data) {

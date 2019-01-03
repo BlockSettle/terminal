@@ -61,23 +61,24 @@ AutheIDClient::~AutheIDClient()
    cancel();
 }
 
-void AutheIDClient::connect(const std::string &serverPubKey
+void AutheIDClient::connect(const BinaryData& serverPubKey
    , const std::string &serverHost, const std::string &serverPort)
 {
    connection_ = connectionManager_->CreateSecuredDataConnection();
    if (!connection_) {
-      logger_->error("connection_ == nullptr");
+      logger_->error("[{}] connection_ == nullptr", __func__);
       throw std::runtime_error("invalid connection");
    }
 
    if (!connection_->SetServerPublicKey(serverPubKey)) {
-      logger_->error("AutheIDClient::SetServerPublicKey failed");
+      logger_->error("[{}] failed", __func__);
       throw std::runtime_error("failed to set connection public key");
    }
 
    if (!connection_->openConnection(serverHost, serverPort, this)) {
-      logger_->error("AutheIDClient::openConnection failed");
-      throw std::runtime_error("failed to open connection to " + serverHost + ":" + serverPort);
+      logger_->error("[{}] failed", __func__);
+      throw std::runtime_error("failed to open connection to " + serverHost + \
+                               ":" + serverPort);
    }
 }
 

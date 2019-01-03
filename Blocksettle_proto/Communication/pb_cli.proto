@@ -18,6 +18,7 @@ enum CLIRequestType
    FundCCGATransactionType = 13;
    GetRequestsStatType = 14;
    GetPendingSettlementsInfo = 15;
+   CreateCelerUserType = 16;
 }
 
 enum ArmoryConnectionState
@@ -69,6 +70,7 @@ message PBStatusResponse
    optional string LandfallVersion = 10;
 
    required ArmoryConnectionState armoryConnectionState = 12;
+   required string uptime = 13;
 }
 
 message ErrorMessage
@@ -166,5 +168,16 @@ message GetPendingSettlementsResponse
 
    repeated ProductStatistics cc_trades = 2;
    repeated ProductStatistics xbt_trades = 3;
+}
 
+message CreateCelerUserRequest
+{
+   required string user_email = 1;
+}
+
+message CreateCelerUserResponse
+{
+   required bool     create_user_result = 1;
+   required string   user_email = 2;
+   optional string   error_message = 3;
 }
