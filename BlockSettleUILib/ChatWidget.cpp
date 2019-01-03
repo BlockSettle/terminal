@@ -49,11 +49,15 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
 
-   connect(client_.get(), &ChatClient::UsersUpdate
-           , usersViewModel_.get(), &ChatUsersViewModel::onUsersUpdate);
+   connect(client_.get(), &ChatClient::UsersReplace
+           , usersViewModel_.get(), &ChatUsersViewModel::onUsersReplace);
+   connect(client_.get(), &ChatClient::UsersAdd
+      , usersViewModel_.get(), &ChatUsersViewModel::onUsersAdd);
+   connect(client_.get(), &ChatClient::UsersDel
+      , usersViewModel_.get(), &ChatUsersViewModel::onUsersDel);
+
    connect(client_.get(), &ChatClient::MessagesUpdate, messagesViewModel_.get()
                         , &ChatMessagesViewModel::onMessagesUpdate);
-
    connect(messagesViewModel_.get(), &ChatMessagesViewModel::rowsInserted,
            this, &ChatWidget::onMessagesUpdated);
 }
@@ -64,60 +68,43 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
    if (!index.isValid())
        return;
 
-   currentChatId_ = usersViewModel_->resolveUser(index);
-   switchToChat(currentChatId_);
+   switchToUser(index);
 }
 
 void ChatWidget::onSendButtonClicked()
 {
    QString messageText = ui_->text->text();
 
-   if (!messageText.isEmpty()) {
-      client_->onSendMessage(messageText);
+   if (!messageText.isEmpty() && !currentChat_.isEmpty()) {
+      client_->onSendMessage(messageText, currentChat_);
       ui_->text->clear();
 
-      if (currentUserId_ != currentChatId_) {
-         messagesViewModel_->onSingleMessageUpdate(QDateTime::currentDateTime(), messageText);
-      }
+      messagesViewModel_->onSingleMessageUpdate(QDateTime::currentDateTime(), messageText);
    }
 }
 
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
-   auto selection = ui_->treeViewUsers->selectionModel();
-   if (selection) {
-      QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
-      selection->select(selectedUserIdx, QItemSelectionModel::Select);
-      ui_->tableViewMessages->scrollToBottom();
-   }
+   ui_->tableViewMessages->scrollToBottom();
 }
 
-void ChatWidget::switchToChat(const QString& chatId)
+void ChatWidget::switchToUser(const QModelIndex &index)
 {
-   ui_->labelActiveChat->setText(tr("Chat #") + currentChatId_);
-   client_->onSetCurrentPrivateChat(currentChatId_);
-   messagesViewModel_->onSwitchToChat(currentChatId_);
+   currentChat_ = usersViewModel_->resolveUser(index);
 
-   auto selection = ui_->treeViewUsers->selectionModel();
-   if (selection) {
-      QModelIndex selectedUserIdx = usersViewModel_->resolveUser(currentChatId_);
-      selection->select(selectedUserIdx, QItemSelectionModel::Select);
-   }
+   ui_->labelActiveChat->setText(tr("Chat #") + currentChat_);
+   messagesViewModel_->onSwitchToChat(currentChat_);
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
    try {
       logger_->debug("Set user name {}", email);
-      usersViewModel_->onClear();
-      const std::string userId = client_->loginToServer(email, jwt);
-      currentUserId_ = QString::fromStdString(userId);
-//!      currentChatId_ = currentUserId_;
+      usersViewModel_->onUsersReplace({});
+      const auto userId = client_->loginToServer(email, jwt);
       ui_->stackedWidget->setCurrentIndex(1);
-      ui_->labelUserName->setText(currentUserId_);
-
-// need to save previous active chat in config
-//!      switchToChat(currentChatId_);
+      ui_->labelUserName->setText(QString::fromStdString(userId));
+      messagesViewModel_->setOwnUserId(userId);
 
       return userId;
    }
@@ -133,7 +120,6 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 void ChatWidget::onLoginFailed()
 {
    ui_->stackedWidget->setCurrentIndex(0);
-   currentChatId_ = QString();
 
    emit LoginFailed();
 }
@@ -142,5 +128,4 @@ void ChatWidget::logout()
 {
    ui_->stackedWidget->setCurrentIndex(0);
    client_->logout();
-   currentChatId_ = QString();
 }

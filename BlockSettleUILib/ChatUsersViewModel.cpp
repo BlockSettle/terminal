@@ -1,9 +1,5 @@
 #include "ChatUsersViewModel.h"
-
 #include "ChatClient.h"
-
-
-#include <QDebug>
 
 
 ChatUsersViewModel::ChatUsersViewModel(QObject* parent)
@@ -11,16 +7,9 @@ ChatUsersViewModel::ChatUsersViewModel(QObject* parent)
 {
 }
 
-
-QString ChatUsersViewModel::resolveUser(const QModelIndex& index)
+QString ChatUsersViewModel::resolveUser(const QModelIndex &index) const
 {
-   return userByIndex_[index.row()];
-}
-
-
-QModelIndex ChatUsersViewModel::resolveUser(const QString& userId)
-{
-    return index(indexByUser_[userId], 0);
+   return QString::fromStdString(users_[index.row()]);
 }
 
 int ChatUsersViewModel::columnCount(const QModelIndex &parent) const
@@ -30,43 +19,53 @@ int ChatUsersViewModel::columnCount(const QModelIndex &parent) const
 
 int ChatUsersViewModel::rowCount(const QModelIndex &parent) const
 {
-   return userByIndex_.count();
+   return users_.size();
 }
-
 
 QVariant ChatUsersViewModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
    return QVariant();
 }
 
-
 QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 {
    if (role == Qt::DisplayRole) {
-      return userByIndex_[index.row()];
+      return resolveUser(index);
    }
    return QVariant();
 }
 
-
-void ChatUsersViewModel::onClear()
+void ChatUsersViewModel::onUsersReplace(const std::vector<std::string> &users)
 {
    beginResetModel();
-   userByIndex_.clear();
-   indexByUser_.clear();
+   users_.clear();
+   users_.reserve(users.size());
+
+   for (const auto &userId : users) {
+      users_.emplace_back(std::move(userId));
+   }
    endResetModel();
 }
 
-
-void ChatUsersViewModel::onUsersUpdate(const std::vector<std::string>& users)
+void ChatUsersViewModel::onUsersAdd(const std::vector<std::string> &users)
 {
-   onClear();
-
-   beginInsertRows(QModelIndex(), 0, users.size());
-   foreach(auto userId, users) {
-      auto insertingUser = QString::fromStdString(userId);
-      indexByUser_[insertingUser] = userByIndex_.size();
-      userByIndex_.append(insertingUser);
+   beginInsertRows(QModelIndex(), users_.size(), users_.size() + users.size() - 1);
+   for (const auto &userId : users) {
+      users_.emplace_back(std::move(userId));
    }
    endInsertRows();
+}
+
+void ChatUsersViewModel::onUsersDel(const std::vector<std::string> &users)
+{
+   for (const auto &userId : users) {
+      for (size_t i = 0; i < users_.size(); ++i) {
+         if (users_[i] == userId) {
+            beginRemoveRows(QModelIndex(), i, i);
+            users_.erase(users_.begin() + i);
+            endRemoveRows();
+            break;
+         }
+      }
+   }
 }

@@ -55,8 +55,7 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   void onSendMessage(const QString& message);
-   void onSetCurrentPrivateChat(const QString& userId);
+   void onSendMessage(const QString& message, const QString &receiver);
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
@@ -67,7 +66,9 @@ signals:
    void ConnectionError(int errorCode);
 
    void LoginFailed();
-   void UsersUpdate(const std::vector<std::string>& users);
+   void UsersReplace(const std::vector<std::string>& users);
+   void UsersAdd(const std::vector<std::string>& users);
+   void UsersDel(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::string>& messages);
 
 private slots:
@@ -83,7 +84,6 @@ private:
    QTimer            heartbeatTimer_;
 
    std::string       currentUserId_;
-   std::string       currentChatId_;
    std::atomic_bool  loggedIn_{ false };
 };
 

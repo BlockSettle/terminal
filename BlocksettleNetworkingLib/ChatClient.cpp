@@ -42,7 +42,6 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
 
    auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
    currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
-   currentChatId_ = currentUserId_;
 
    connection_ = connectionManager_->CreateSecuredDataConnection();
    BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
@@ -64,7 +63,7 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 {
    if (response.getStatus() == Chat::LoginResponse::Status::LoginOk) {
       loggedIn_ = true;
-      auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
+      auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentUserId_);
       sendRequest(request);
    }
    else {
@@ -118,8 +117,17 @@ void ChatClient::OnHeartbeatPong(const Chat::HeartbeatPongResponse &response)
 void ChatClient::OnUsersList(const Chat::UsersListResponse &response)
 {
    logger_->debug("Received users list from server: {}", response.getData());
-
-   emit UsersUpdate(response.getDataList());
+   switch (response.command()) {
+   case Chat::UsersListResponse::Command::Replace:
+      emit UsersReplace(response.getDataList());
+      break;
+   case Chat::UsersListResponse::Command::Add:
+      emit UsersAdd(response.getDataList());
+      break;
+   case Chat::UsersListResponse::Command::Delete:
+      emit UsersDel(response.getDataList());
+      break;
+   }
 }
 
 void ChatClient::OnMessages(const Chat::MessagesResponse &response)
@@ -152,24 +160,13 @@ void ChatClient::OnError(DataConnectionError errorCode)
    logger_->debug("[ChatClient::OnError] {}", errorCode);
 }
 
-void ChatClient::onSendMessage(const QString &message)
+void ChatClient::onSendMessage(const QString &message, const QString &receiver)
 {
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
-   Chat::MessageData msg(QString::fromStdString(currentUserId_)
-                    , QString::fromStdString(currentChatId_)
-                    , QDateTime::currentDateTimeUtc()
-                    , message);
+   Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
+                    , QDateTime::currentDateTimeUtc(), message);
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());
-   sendRequest(request);
-}
-
-void ChatClient::onSetCurrentPrivateChat(const QString& userId)
-{
-   currentChatId_ = userId.toStdString();
-   logger_->debug("Current chat changed: {}", currentChatId_);
-
-   auto request = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentChatId_);
    sendRequest(request);
 }
