@@ -54,7 +54,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::UsersAdd
       , usersViewModel_.get(), &ChatUsersViewModel::onUsersAdd);
    connect(client_.get(), &ChatClient::UsersDel
-      , usersViewModel_.get(), &ChatUsersViewModel::onUsersDel);
+      , this, &ChatWidget::onUsersDeleted);
 
    connect(client_.get(), &ChatClient::MessagesUpdate, messagesViewModel_.get()
                         , &ChatMessagesViewModel::onMessagesUpdate);
@@ -62,13 +62,22 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
            this, &ChatWidget::onMessagesUpdated);
 }
 
-
 void ChatWidget::onUserClicked(const QModelIndex& index)
 {
-   if (!index.isValid())
-       return;
+   currentChat_ = usersViewModel_->resolveUser(index);
 
-   switchToUser(index);
+   ui_->text->setEnabled(!currentChat_.isEmpty());
+   ui_->labelActiveChat->setText(tr("Chat #") + currentChat_);
+   messagesViewModel_->onSwitchToChat(currentChat_);
+}
+
+void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
+{
+   usersViewModel_->onUsersDel(users);
+
+   if (std::find(users.cbegin(), users.cend(), currentChat_.toStdString()) != users.cend()) {
+      onUserClicked({});
+   }
 }
 
 void ChatWidget::onSendButtonClicked()
@@ -86,14 +95,6 @@ void ChatWidget::onSendButtonClicked()
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
    ui_->tableViewMessages->scrollToBottom();
-}
-
-void ChatWidget::switchToUser(const QModelIndex &index)
-{
-   currentChat_ = usersViewModel_->resolveUser(index);
-
-   ui_->labelActiveChat->setText(tr("Chat #") + currentChat_);
-   messagesViewModel_->onSwitchToChat(currentChat_);
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)

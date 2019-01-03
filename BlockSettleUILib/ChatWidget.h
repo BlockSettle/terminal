@@ -40,12 +40,10 @@ private slots:
    void onUserClicked(const QModelIndex& index);
    void onMessagesUpdated(const QModelIndex& parent, int start, int end);
    void onLoginFailed();
+   void onUsersDeleted(const std::vector<std::string> &);
 
 signals:
    void LoginFailed();
-
-private:
-   void switchToUser(const QModelIndex &);
 
 private:
    QScopedPointer<Ui::ChatWidget> ui_;

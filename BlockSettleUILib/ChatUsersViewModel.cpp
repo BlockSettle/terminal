@@ -9,6 +9,9 @@ ChatUsersViewModel::ChatUsersViewModel(QObject* parent)
 
 QString ChatUsersViewModel::resolveUser(const QModelIndex &index) const
 {
+   if ((index.row() < 0) || (index.row() >= users_.size())) {
+      return {};
+   }
    return QString::fromStdString(users_[index.row()]);
 }
 
