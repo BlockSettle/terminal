@@ -53,6 +53,8 @@ AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
 {
    connectionManager_.reset(new ConnectionManager(logger));
    timer_ = new QTimer(this);
+   timer_->setSingleShot(true);
+
    QObject::connect(timer_, &QTimer::timeout, this, &AutheIDClient::timeout);
 }
 
