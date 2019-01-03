@@ -9,9 +9,18 @@ import com.blocksettle.WalletsViewModel 1.0
 import "StyledControls"
 import "BsStyles"
 
+
 TreeView {
     model: walletsModel
     objectName: "walletsView"
+
+    selectionMode: SelectionMode.SingleSelection
+    selection: treeViewSelectionModel
+
+    ItemSelectionModel {
+        id: treeViewSelectionModel
+        model: walletsModel
+    }
 
     TableViewColumn {
         title: qsTr("Name")

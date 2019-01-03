@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
+import QtQml.Models 2.3
 
 import com.blocksettle.WalletsViewModel 1.0
 import com.blocksettle.WalletsProxy 1.0
@@ -24,11 +25,11 @@ Item {
     property string autheIdNotice: qsTr("Auth eID is a convenient alternative to passwords. Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s).<br><br>You may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. Auth eID requires the user to be vigilant with devices using Auth eID. If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable.<br><br>Auth eID is not a wallet backup! No wallet data is stored with Auth eID. Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate walletInfo. You may then attach a password or your Auth eID account to the walletInfo.<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store.<br><br>For more information, please consult:<br><a href=\"http://pubb.blocksettle.com/PDF/AutheID%20Getting%20Started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a> guide.")
 
     function isHdRoot() {
-        var isRoot = walletsView.model.data(walletsView.currentIndex, WalletsModel.IsHDRootRole)
+        var isRoot = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.IsHDRootRole)
         return ((typeof(isRoot) != "undefined") && isRoot)
     }
     function isAnyWallet() {
-        var walletId = walletsView.model.data(walletsView.currentIndex, WalletsModel.WalletIdRole)
+        var walletId = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole)
         return ((typeof(walletId) != "undefined") && walletId.length)
     }
 
@@ -40,9 +41,18 @@ Item {
                                         , qsTr("%1").arg(errMsg))
         }
     }
+    Connections {
+        target: walletsView.model
+        onModelReset: {
+            // when model resetted selectionChanged signal is not emitted
+            // button states needs to be updated after model reset, this emitted signal will do that
+            var idx = walletsView.model.index(-1,-1);
+            walletsView.selection.currentChanged(idx, idx)
+        }
+    }
 
     function getCurrentWalletInfo() {
-        return qmlFactory.createWalletInfo(walletsView.model.data(walletsView.currentIndex, WalletsModel.WalletIdRole))
+        return qmlFactory.createWalletInfo(walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole))
     }
 
     ScrollView {
@@ -117,8 +127,8 @@ Item {
                         enabled: isHdRoot()
                         text: qsTr("Delete Wallet")
                         onClicked: {
-                            var walletId = walletsView.model.data(walletsView.currentIndex, WalletsModel.WalletIdRole)
-                            var walletName = walletsView.model.data(walletsView.currentIndex, WalletsModel.NameRole)
+                            var walletId = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole)
+                            var walletName = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.NameRole)
                             var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
                             dlg.walletId = walletId
                             dlg.walletName = walletName

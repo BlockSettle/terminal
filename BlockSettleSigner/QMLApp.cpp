@@ -88,7 +88,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 
    walletsMgr_ = std::make_shared<WalletsManager>(logger_);
 
-   walletsModel_ = new QmlWalletsViewModel(walletsMgr_, ctxt_->engine());
+   walletsModel_ = new QmlWalletsViewModel(walletsMgr_,"", ctxt_->engine(), true);
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
 
    statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_);

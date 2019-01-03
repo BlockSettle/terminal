@@ -37,10 +37,13 @@ WalletInfo::WalletInfo(const std::shared_ptr<WalletsManager> &walletsMgr
    else {
       const auto &hdWallet = walletsMgr->GetHDWalletById(walletId.toStdString());
       if (!hdWallet) {
-         throw std::runtime_error("failed to find wallet id " + walletId.toStdString());
+         // TODO: may be add isValid() function
+         // throw std::runtime_error("failed to find wallet id " + walletId.toStdString());
       }
-      initFromRootWallet(hdWallet);
-      initEncKeys(hdWallet);
+      else {
+         initFromRootWallet(hdWallet);
+         initEncKeys(hdWallet);
+      }
    }
 
    if (walletsManager_) {
