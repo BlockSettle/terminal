@@ -260,7 +260,7 @@ void ZmqDataConnection::listenFunction()
             }
             for (const auto &sendBuf : tmpBuf) {
                int result = zmq_send(dataSocket_.get(), socketId_.c_str(), socketId_.size(), ZMQ_SNDMORE);
-               if (result != socketId_.size()) {
+               if (result != (int)socketId_.size()) {
                   if (logger_) {
                      logger_->error("[ZmqDataConnection::sendRawData] {} failed to send socket id {}"
                         , connectionName_, zmq_strerror(zmq_errno()));
@@ -269,7 +269,7 @@ void ZmqDataConnection::listenFunction()
                }
 
                result = zmq_send(dataSocket_.get(), sendBuf.data(), sendBuf.size(), ZMQ_SNDMORE);
-               if (result != sendBuf.size()) {
+               if (result != (int)sendBuf.size()) {
                   if (logger_) {
                      logger_->error("[ZmqDataConnection::sendRawData] {} failed to send data frame {}"
                         , connectionName_, zmq_strerror(zmq_errno()));

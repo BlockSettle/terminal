@@ -42,7 +42,8 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
    currentChatId_ = currentUserId_;
 
    connection_ = connectionManager_->CreateSecuredDataConnection();
-   connection_->SetServerPublicKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
+   BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
+   connection_->SetServerPublicKey(inSrvPubKey);
    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
                             , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
    {

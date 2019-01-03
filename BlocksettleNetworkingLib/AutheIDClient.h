@@ -58,8 +58,8 @@ public:
       , QObject *parent = nullptr);
    ~AutheIDClient() override;
 
-   void connect(const std::string &serverPubKey
-      , const std::string &serverHost, const std::string &serverPort);
+   void connect(const BinaryData& serverPubKey, const std::string &serverHost
+      , const std::string &serverPort);
    bool start(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds);
    bool sign(const BinaryData &data, const std::string &email

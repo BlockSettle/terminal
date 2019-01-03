@@ -78,3 +78,21 @@ std::string bs::network::peerAddressString(int socket)
       return "Not detected";
    }
 }
+
+// A function that returns a new CurveZMQ keypair. While each binary key will be
+// 32 bytes, the keys will be returned Z85-encoded and will be 41 bytes (40 byte
+// Z85-encoded string + null char).
+// IN:     Logger object (spdlog::logger pointer)
+// OUT:    Public/Private key pair buffer (<BinaryData, SecureBinaryData>)
+// RETURN: -2 (Setup failure), -1 (ZMQ failure), 0 (Success)
+int bs::network::getCurveZMQKeyPair(std::pair<BinaryData, SecureBinaryData>& outKeyPair)
+{
+   BinaryData pubKey(CURVEZMQPUBKEYBUFFERSIZE);
+   SecureBinaryData prvKey(CURVEZMQPRVKEYBUFFERSIZE);
+
+   // Generate the keypair and overwrite the incoming pair.
+   int retVal = zmq_curve_keypair(pubKey.getCharPtr(), prvKey.getCharPtr());
+   outKeyPair = std::make_pair(pubKey, prvKey);
+
+   return retVal;
+}
