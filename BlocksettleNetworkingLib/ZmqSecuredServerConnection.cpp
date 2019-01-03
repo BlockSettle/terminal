@@ -61,24 +61,7 @@ bool ZmqSecuredServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr& da
       return false;
    }
 
-   std::string serverIdentity = "bs_public_bridge";
-   result = zmq_setsockopt (dataSocket.get(), ZMQ_IDENTITY
-      , serverIdentity.c_str(), serverIdentity.size());
-   if (result != 0) {
-      logger_->error("[ZmqSecuredServerConnection::ConfigDataSocket] {} failed to set server identity {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   int lingerPeriod = 0;
-   result = zmq_setsockopt (dataSocket.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod));
-   if (result != 0) {
-      logger_->error("[ZmqSecuredServerConnection::ConfigDataSocket] {} failed to set linger interval: {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   return true;
+   return ZmqServerConnection::ConfigDataSocket(dataSocket);
 }
 
 bool ZmqSecuredServerConnection::ReadFromDataSocket()
@@ -123,7 +106,7 @@ bool ZmqSecuredServerConnection::ReadFromDataSocket()
    return true;
 }
 
-bool ZmqSecuredServerConnection::SendDataToClient(const std::string& clientId, const std::string& data)
+bool ZmqSecuredServerConnection::SendDataToClient(const std::string& clientId, const std::string& data, const SendResultCb &cb)
 {
-   return QueueDataToSend(clientId, data, false);
+   return QueueDataToSend(clientId, data, cb, false);
 }
