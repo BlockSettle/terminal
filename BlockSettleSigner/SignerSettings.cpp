@@ -7,7 +7,6 @@
 #include "BtcUtils.h"
 #include "SignerSettings.h"
 
-
 static const QString pubKeyName = QString::fromStdString("pubkey");
 static const QString pubKeyHelp = QObject::tr("Public key for secured connection");
 
@@ -44,6 +43,8 @@ static const QString headlessHelp = QObject::tr("Run without UI");
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
+static const QString genCurveZMQName = QString::fromStdString("gen_curvezmq_keys");
+static const QString genCurveZMQHelp = QObject::tr("Generate CurveZMQ keys (used for pubkey/privkey settings)");
 
 SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
    : QObject(nullptr)
@@ -57,6 +58,7 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
    settingDefs_ = {
       { OfflineMode,       SettingDef(QStringLiteral("Offline"), false)},
       { TestNet,           SettingDef(QStringLiteral("TestNet"), false) },
+      { CurveZMQ,          SettingDef(QStringLiteral("GetCurveZMQ"), false) },
       { WalletsDir,        SettingDef(QStringLiteral("WalletsDir")) },
       { AutoSignWallet,    SettingDef(QStringLiteral("AutoSignWallet")) },
       { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_signer.log")) },
@@ -170,6 +172,9 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
       emit testNetChanged();
       emit walletsDirChanged();
       break;
+   case CurveZMQ:
+      emit genCurveZMQKeyPair();
+      break;
    case WalletsDir:
       emit walletsDirChanged();
       break;
@@ -218,6 +223,7 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    parser.addOption({ signName, signHelp, QObject::tr("filename") });
+   parser.addOption({ genCurveZMQName, genCurveZMQHelp });
    parser.addOption({ headlessName, headlessHelp });
 
    parser.process(args);
@@ -261,6 +267,10 @@ void SignerSettings::parseArguments(const QStringList &args)
    }
    else if (parser.isSet(testnetName)) {
       set(TestNet, true, false);
+   }
+
+   if (parser.isSet(genCurveZMQName)) {
+      set(CurveZMQ, true, false);
    }
 
    if (parser.isSet(autoSignLimitName)) {

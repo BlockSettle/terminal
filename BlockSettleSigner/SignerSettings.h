@@ -7,12 +7,12 @@
 
 class QSettings;
 
-
 class SignerSettings : public QObject
 {
    Q_OBJECT
    Q_PROPERTY(bool offline READ offline WRITE setOffline NOTIFY offlineChanged)
    Q_PROPERTY(bool testNet READ testNet WRITE setTestNet NOTIFY testNetChanged)
+   Q_PROPERTY(bool curveZMQ READ curveZMQ WRITE setCurveZMQ NOTIFY genCurveZMQKeyPair)
    Q_PROPERTY(QString walletsDir READ getWalletsDir WRITE setWalletsDir NOTIFY walletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
@@ -38,6 +38,7 @@ public:
    enum Setting {
       OfflineMode,
       TestNet,
+      CurveZMQ,
       WalletsDir,
       AutoSignWallet,
       LogFileName,
@@ -55,6 +56,7 @@ public:
 
    QString publicKey() const { return get(ConnPubKey).toString(); }
    QString privateKey() const { return get(ConnPrivKey).toString(); }
+   bool curveZMQ() const { return get(CurveZMQ).toBool(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
    QString logFileName() const { return get(LogFileName).toString(); }
@@ -80,6 +82,7 @@ public:
 
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
+   void setCurveZMQ(const bool val) { set(CurveZMQ, val); }
    void setWalletsDir(const QString &);
    void setAutoSignWallet(const QString &val) { set(AutoSignWallet, val); }
    void setListenAddress(const QString &val) { set(ListenAddress, val); }
@@ -96,10 +99,10 @@ public:
    static QString secondsToIntervalStr(int);
    static int intervalStrToSeconds(const QString &);
 
-
 signals:
    void offlineChanged();
    void testNetChanged();
+   void genCurveZMQKeyPair();
    void walletsDirChanged();
    void listenSocketChanged();
    void passwordChanged();
@@ -119,7 +122,6 @@ private:
    void settingChanged(Setting, const QVariant &val);
    void setXbtLimit(const double val, Setting);
 
-private:
    struct SettingDef {
       QString  path;
       QVariant defVal;

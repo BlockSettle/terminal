@@ -7,6 +7,7 @@
 #include <QtQuickControls2/QQuickStyle>
 #include <QSplashScreen>
 #include <QTimer>
+#include <QFileInfo>
 #include <memory>
 #include <iostream>
 #include <spdlog/spdlog.h>
@@ -14,10 +15,48 @@
 #include "HeadlessApp.h"
 #include "SignerSettings.h"
 #include "QMLApp.h"
+#include "ZMQHelperFunctions.h"
+#include "zmq.h"
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
+
+// Generate a random CurveZMQ keypair and write the keys to files.
+int generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
+                                 , const QString& absLogFilePath) {
+   QFileInfo absPathInfo(absLogFilePath);
+   QString absPath = absPathInfo.absolutePath();
+   QString prvFilePath = absPath + QString::fromStdString("/curveZMQ.prv");
+   QString pubFilePath = absPath + QString::fromStdString("/curveZMQ.pub");
+
+   // Generate the keys.
+   std::pair<BinaryData, SecureBinaryData> inKeyPair;
+   int retVal = bs::network::getCurveZMQKeyPair(inKeyPair);
+   if(retVal != 0) {
+      inLogger->error("[{}] Failure to generate CurveZMQ files - Error = {}"
+         , __func__, zmq_strerror(zmq_errno()));
+      return retVal;
+   }
+
+   // Write the files. We'll overwrite anything already present.
+   QFile pubFile(pubFilePath);
+   pubFile.open(QIODevice::WriteOnly);
+   pubFile.write(inKeyPair.first.toBinStr().c_str()
+                 , inKeyPair.first.toBinStr().length());
+   pubFile.close();
+   QFile prvFile(prvFilePath);
+   prvFile.open(QIODevice::WriteOnly);
+   prvFile.write(inKeyPair.second.toBinStr().c_str()
+                 , inKeyPair.second.toBinStr().length());
+   prvFile.close();
+
+   inLogger->info("[{}] CurveZMQ files written", __func__);
+   inLogger->info("[{}] Private key file - {}", prvFilePath.toStdString());
+   inLogger->info("[{}] Public key file - {}", pubFilePath.toStdString());
+
+   return retVal;
+}
 
 static int HeadlessApp(int argc, char **argv)
 {
@@ -33,6 +72,11 @@ static int HeadlessApp(int argc, char **argv)
       logger->set_pattern("%D %H:%M:%S.%e (%t)[%L]: %v");
       logger->set_level(spdlog::level::debug);
       logger->flush_on(spdlog::level::debug);
+
+      // Functions only if the user actually wants it.
+      if(settings->curveZMQ()) {
+         generateCurveZMQKeyPairFiles(logger, settings->logFileName());
+      }
 
       HeadlessAppObj appObj(logger, settings);
       QObject::connect(&appObj, &HeadlessAppObj::finished, &app, &QCoreApplication::quit);
@@ -127,6 +171,11 @@ static int QMLApp(int argc, char **argv)
       logger->set_pattern("[%L](%t): %v");
       logger->set_level(spdlog::level::debug);
       logger->flush_on(spdlog::level::debug);
+   }
+
+   // Functions only if the user actually wants it.
+   if(settings->curveZMQ()) {
+      generateCurveZMQKeyPairFiles(logger, settings->logFileName());
    }
 
    try {
