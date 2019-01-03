@@ -10,25 +10,23 @@
 #include <memory>
 
 
-typedef std::vector<std::pair<QDateTime, QString>> MessagesHistory;
-
-
 class ChatMessagesViewModel : public QAbstractTableModel
 {
    Q_OBJECT
 
 public:
-
    ChatMessagesViewModel(QObject* parent = nullptr);
    ~ChatMessagesViewModel() noexcept override = default;
 
    ChatMessagesViewModel(const ChatMessagesViewModel&) = delete;
    ChatMessagesViewModel& operator = (const ChatMessagesViewModel&) = delete;
-
    ChatMessagesViewModel(ChatMessagesViewModel&&) = delete;
    ChatMessagesViewModel& operator = (ChatMessagesViewModel&&) = delete;
 
 public:
+   void setOwnUserId(const std::string &userId) { ownUserId_ = QString::fromStdString(userId); }
+
+protected:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
@@ -36,7 +34,6 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 private:
-   void ensureChatId(const QString& chatId);
    QString prependMessage(const QString& messageText, const QString& senderId = QString());
 
 public slots:
@@ -45,8 +42,10 @@ public slots:
    void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
 
 private:
+   using MessagesHistory = std::vector<std::pair<QDateTime, QString>>;
    QMap<QString, MessagesHistory> messages_;
-   QString currentChatId_;
+   QString   currentChatId_;
+   QString   ownUserId_;
 };
 
 #endif

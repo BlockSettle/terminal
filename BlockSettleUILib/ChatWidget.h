@@ -12,13 +12,9 @@
 namespace Ui {
    class ChatWidget;
 }
-
-
 namespace spdlog {
    class logger;
 }
-
-
 class ChatClient;
 class ConnectionManager;
 class ApplicationSettings;
@@ -28,24 +24,7 @@ class ChatWidget : public QWidget
 {
    Q_OBJECT
 
-
-private:
-
-   QScopedPointer<Ui::ChatWidget> ui_;
-   QScopedPointer<ChatUsersViewModel> usersViewModel_;
-   QScopedPointer<ChatMessagesViewModel> messagesViewModel_;
-
-   std::shared_ptr<ChatClient>      client_;
-   std::shared_ptr<spdlog::logger>  logger_;
-
-   std::string serverPublicKey_;
-
-   QString currentChatId_;
-   QString currentUserId_;
-
-
 public:
-
    explicit ChatWidget(QWidget *parent = nullptr);
    ~ChatWidget() override;
 
@@ -53,13 +32,8 @@ public:
            , const std::shared_ptr<ApplicationSettings> &appSettings
            , const std::shared_ptr<spdlog::logger>& logger);
 
-
    std::string login(const std::string& email, const std::string& jwt);
-
    void logout();
-
-private:
-   void switchToChat(const QString& chatId);
 
 private slots:
    void onSendButtonClicked();
@@ -68,9 +42,21 @@ private slots:
    void onLoginFailed();
 
 signals:
-
    void LoginFailed();
 
+private:
+   void switchToUser(const QModelIndex &);
+
+private:
+   QScopedPointer<Ui::ChatWidget> ui_;
+   QScopedPointer<ChatUsersViewModel> usersViewModel_;
+   QScopedPointer<ChatMessagesViewModel> messagesViewModel_;
+
+   std::shared_ptr<ChatClient>      client_;
+   std::shared_ptr<spdlog::logger>  logger_;
+
+   std::string serverPublicKey_;
+   QString  currentChat_;
 };
 
 #endif // __CHAT_WIDGET_H__

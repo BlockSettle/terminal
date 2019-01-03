@@ -28,6 +28,7 @@ static const QString StatusKey    = QStringLiteral("status");
 static const QString UsersKey     = QStringLiteral("users");
 static const QString DateTimeKey  = QStringLiteral("datetm");
 static const QString DataKey      = QStringLiteral("data");
+static const QString CommandKey = QStringLiteral("cmd");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
@@ -250,11 +251,11 @@ std::vector<std::string> ListResponse::fromJSON(const std::string& jsonData)
 }
 
 
-UsersListResponse::UsersListResponse(std::vector<std::string> dataList)
-   : ListResponse (ResponseType::ResponseUsersList, dataList)
+UsersListResponse::UsersListResponse(std::vector<std::string> dataList, Command cmd)
+   : ListResponse(ResponseType::ResponseUsersList, dataList), cmd_(cmd)
 {
-
 }
+
 void UsersListResponse::handle(ResponseHandler& handler)
 {
    handler.OnUsersList(*this);
@@ -263,7 +264,16 @@ void UsersListResponse::handle(ResponseHandler& handler)
 std::shared_ptr<Response> UsersListResponse::fromJSON(const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-   return std::make_shared<UsersListResponse>(ListResponse::fromJSON(jsonData));
+   const auto cmd = static_cast<Command>(data[CommandKey].toInt());
+   return std::make_shared<UsersListResponse>(ListResponse::fromJSON(jsonData), cmd);
+}
+
+QJsonObject UsersListResponse::toJson() const
+{
+   auto data = ListResponse::toJson();
+   data[CommandKey] = static_cast<int>(cmd_);
+
+   return data;
 }
 
 
