@@ -7,11 +7,12 @@
 #include "BtcUtils.h"
 #include "SignerSettings.h"
 
-static const QString pubKeyName = QString::fromStdString("pubkey");
-static const QString pubKeyHelp = QObject::tr("Public key for secured connection");
 
-static const QString privKeyName = QString::fromStdString("privkey");
-static const QString privKeyHelp = QObject::tr("Private key for secured connection");
+static const QString headlessPubKeyName = QString::fromStdString("headlesspubkey");
+static const QString headlessPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for headless connections");
+
+static const QString headlessPrvKeyName = QString::fromStdString("headlessprvkey");
+static const QString headlessPrvKeyHelp = QObject::tr("Private key file (CurveZMQ) for headless connections");
 
 static const QString listenName = QString::fromStdString("listen");
 static const QString listenHelp = QObject::tr("IP address to listen on");
@@ -43,8 +44,6 @@ static const QString headlessHelp = QObject::tr("Run without UI");
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
-static const QString genCurveZMQName = QString::fromStdString("gen_curvezmq_keys");
-static const QString genCurveZMQHelp = QObject::tr("Generate CurveZMQ keys (used for pubkey/privkey settings)");
 
 SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
    : QObject(nullptr)
@@ -58,14 +57,13 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
    settingDefs_ = {
       { OfflineMode,       SettingDef(QStringLiteral("Offline"), false)},
       { TestNet,           SettingDef(QStringLiteral("TestNet"), false) },
-      { CurveZMQ,          SettingDef(QStringLiteral("GetCurveZMQ"), false) },
       { WalletsDir,        SettingDef(QStringLiteral("WalletsDir")) },
       { AutoSignWallet,    SettingDef(QStringLiteral("AutoSignWallet")) },
       { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_signer.log")) },
       { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
       { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
-      { ConnPubKey,        SettingDef(QStringLiteral("ConnPubKey"), QStringLiteral("t>ituO$mt-[Fl}&IE%EicU@L&LvC%8i$$nS3YFm}")) },
-      { ConnPrivKey,       SettingDef(QStringLiteral("ConnPrivKey"), QStringLiteral("bjPNYGx5q<?O:Nc2h[LDoKk&&Ydxuq-[onOF-=Nw")) },
+      { HeadlessPubKey,    SettingDef(QStringLiteral("HeadlessPubKey"), QString::fromStdString(writableDir_ + "/headless_conn_srv.pub")) },
+      { HeadlessPrvKey,    SettingDef(QStringLiteral("HeadlessPrvKey"), QString::fromStdString(writableDir_ + "/headless_conn_srv.prv")) },
       { PasswordHash,      SettingDef(QStringLiteral("PasswordHash")) },
       { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
@@ -172,9 +170,6 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
       emit testNetChanged();
       emit walletsDirChanged();
       break;
-   case CurveZMQ:
-      emit genCurveZMQKeyPair();
-      break;
    case WalletsDir:
       emit walletsDirChanged();
       break;
@@ -214,8 +209,8 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addHelpOption();
    parser.addOption({ listenName, listenHelp, QObject::tr("ip/host") });
    parser.addOption({ portName, portHelp, QObject::tr("port") });
-   parser.addOption({ pubKeyName, pubKeyHelp, QObject::tr("key") });
-   parser.addOption({ privKeyName, privKeyHelp, QObject::tr("key") });
+   parser.addOption({ headlessPubKeyName, headlessPubKeyHelp, QObject::tr("key") });
+   parser.addOption({ headlessPrvKeyName, headlessPrvKeyHelp, QObject::tr("key") });
    parser.addOption({ pwhashName, pwhashHelp, QObject::tr("hash") });
    parser.addOption({ logName, logHelp, QObject::tr("log") });
    parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
@@ -223,7 +218,6 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    parser.addOption({ signName, signHelp, QObject::tr("filename") });
-   parser.addOption({ genCurveZMQName, genCurveZMQHelp });
    parser.addOption({ headlessName, headlessHelp });
 
    parser.process(args);
@@ -236,18 +230,18 @@ void SignerSettings::parseArguments(const QStringList &args)
       set(ListenPort, parser.value(portName), false);
    }
 
-   if (parser.isSet(pubKeyName)) {
-      if (parser.value(pubKeyName).length() != 40) {
-         throw std::runtime_error("invalid pubkey size");
+   if (parser.isSet(headlessPubKeyName)) {
+      if (parser.value(headlessPubKeyName).length() != 40) {
+         throw std::runtime_error("invalid headless pub key size");
       }
-      set(ConnPubKey, parser.value(pubKeyName), false);
+      set(HeadlessPubKey, parser.value(headlessPubKeyName), false);
    }
 
-   if (parser.isSet(privKeyName)) {
-      if (parser.value(privKeyName).length() != 40) {
-         throw std::runtime_error("invalid privkey size");
+   if (parser.isSet(headlessPrvKeyName)) {
+      if (parser.value(headlessPrvKeyName).length() != 40) {
+         throw std::runtime_error("invalid headless prv key size");
       }
-      set(ConnPrivKey, parser.value(privKeyName), false);
+      set(HeadlessPrvKey, parser.value(headlessPrvKeyName), false);
    }
 
    if (parser.isSet(pwhashName)) {
@@ -267,10 +261,6 @@ void SignerSettings::parseArguments(const QStringList &args)
    }
    else if (parser.isSet(testnetName)) {
       set(TestNet, true, false);
-   }
-
-   if (parser.isSet(genCurveZMQName)) {
-      set(CurveZMQ, true, false);
    }
 
    if (parser.isSet(autoSignLimitName)) {

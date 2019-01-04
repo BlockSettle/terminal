@@ -7,12 +7,12 @@
 
 class QSettings;
 
+
 class SignerSettings : public QObject
 {
    Q_OBJECT
    Q_PROPERTY(bool offline READ offline WRITE setOffline NOTIFY offlineChanged)
    Q_PROPERTY(bool testNet READ testNet WRITE setTestNet NOTIFY testNetChanged)
-   Q_PROPERTY(bool curveZMQ READ curveZMQ WRITE setCurveZMQ NOTIFY genCurveZMQKeyPair)
    Q_PROPERTY(QString walletsDir READ getWalletsDir WRITE setWalletsDir NOTIFY walletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
@@ -38,14 +38,13 @@ public:
    enum Setting {
       OfflineMode,
       TestNet,
-      CurveZMQ,
       WalletsDir,
       AutoSignWallet,
       LogFileName,
       ListenAddress,
       ListenPort,
-      ConnPubKey,
-      ConnPrivKey,
+      HeadlessPubKey,
+      HeadlessPrvKey,
       PasswordHash,
       LimitManualXBT,
       LimitAutoSignXBT,
@@ -54,9 +53,8 @@ public:
       HideEidInfoBox
    };
 
-   QString publicKey() const { return get(ConnPubKey).toString(); }
-   QString privateKey() const { return get(ConnPrivKey).toString(); }
-   bool curveZMQ() const { return get(CurveZMQ).toBool(); }
+   QString headlessPubKeyFile() const { return get(HeadlessPubKey).toString(); }
+   QString headlessPrvKeyFile() const { return get(HeadlessPrvKey).toString(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
    QString logFileName() const { return get(LogFileName).toString(); }
@@ -82,7 +80,6 @@ public:
 
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
-   void setCurveZMQ(const bool val) { set(CurveZMQ, val); }
    void setWalletsDir(const QString &);
    void setAutoSignWallet(const QString &val) { set(AutoSignWallet, val); }
    void setListenAddress(const QString &val) { set(ListenAddress, val); }
@@ -102,7 +99,6 @@ public:
 signals:
    void offlineChanged();
    void testNetChanged();
-   void genCurveZMQKeyPair();
    void walletsDirChanged();
    void listenSocketChanged();
    void passwordChanged();

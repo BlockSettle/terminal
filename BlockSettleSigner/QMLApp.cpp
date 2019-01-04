@@ -338,27 +338,36 @@ void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 
 void QMLAppObj::OnlineProcessing()
 {
-   logger_->debug("Going online with socket {}:{}, network {}", settings_->listenAddress().toStdString()
-      , settings_->port().toStdString(), (settings_->testNet() ? "testnet" : "mainnet"));
+   logger_->debug("Going online with socket {}:{}, network {}"
+      , settings_->listenAddress().toStdString()
+      , settings_->port().toStdString()
+      , (settings_->testNet() ? "testnet" : "mainnet"));
 
    const ConnectionManager connMgr(logger_);
    connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(settings_->publicKey().toStdString(), settings_->privateKey().toStdString())) {
+   if (!connection_->SetKeyPair(settings_->headlessPubKeyFile()
+      , settings_->headlessPrvKeyFile())) {
       logger_->error("Failed to establish secure connection");
       throw std::runtime_error("secure connection problem");
    }
 
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , settings_->getWalletsDir().toStdString(), settings_->netType(), settings_->pwHash().toStdString(), true);
+   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
+      , walletsMgr_, settings_->getWalletsDir().toStdString()
+      , settings_->netType(), settings_->pwHash().toStdString(), true);
    listener_->SetLimits(settings_->limits());
    statusUpdater_->SetListener(listener_);
-   connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
-   connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
-   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx,
-      this, &QMLAppObj::onCancelSignTx);
+   connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this
+      , &QMLAppObj::onPasswordRequested);
+   connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd
+      , this, &QMLAppObj::onAutoSignPwdRequested);
+   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx, this
+      , &QMLAppObj::onCancelSignTx);
 
-   if (!connection_->BindConnection(settings_->listenAddress().toStdString(), settings_->port().toStdString(), listener_.get())) {
-      logger_->error("Failed to bind to {}:{}", settings_->listenAddress().toStdString(), settings_->port().toStdString());
+   if (!connection_->BindConnection(settings_->listenAddress().toStdString()
+      , settings_->port().toStdString(), listener_.get())) {
+      logger_->error("Failed to bind to {}:{}"
+         , settings_->listenAddress().toStdString()
+         , settings_->port().toStdString());
       statusUpdater_->setSocketOk(false);
       return;
    }

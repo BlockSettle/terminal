@@ -8,6 +8,7 @@
 #include <QSplashScreen>
 #include <QTimer>
 #include <QFileInfo>
+#include <QStandardPaths>
 #include <memory>
 #include <iostream>
 #include <spdlog/spdlog.h>
@@ -24,12 +25,8 @@ Q_DECLARE_METATYPE(BinaryData)
 
 // Generate a random CurveZMQ keypair and write the keys to files.
 int generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
-                                 , const QString& absLogFilePath) {
-   QFileInfo absPathInfo(absLogFilePath);
-   QString absPath = absPathInfo.absolutePath();
-   QString prvFilePath = absPath + QString::fromStdString("/curveZMQ.prv");
-   QString pubFilePath = absPath + QString::fromStdString("/curveZMQ.pub");
-
+                                 , const QString& pubFilePath
+                                 , const QString& prvFilePath) {
    // Generate the keys.
    std::pair<BinaryData, SecureBinaryData> inKeyPair;
    int retVal = bs::network::getCurveZMQKeyPair(inKeyPair);
@@ -51,11 +48,39 @@ int generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
                  , inKeyPair.second.toBinStr().length());
    prvFile.close();
 
-   inLogger->info("[{}] CurveZMQ files written", __func__);
-   inLogger->info("[{}] Private key file - {}", prvFilePath.toStdString());
-   inLogger->info("[{}] Public key file - {}", pubFilePath.toStdString());
+   if(inLogger) {
+      inLogger->info("[{}] CurveZMQ files written.", __func__);
+      inLogger->info("[{}] Public key file - {}", pubFilePath.toStdString());
+      inLogger->info("[{}] Private key file - {}", prvFilePath.toStdString());
+   }
 
    return retVal;
+}
+
+int buildHeadlessConnFiles(std::shared_ptr<SignerSettings> inSettings
+                           , std::shared_ptr<spdlog::logger> inLogger) {
+   QFileInfo pubFileInfo(inSettings->headlessPubKeyFile());
+   QFileInfo prvFileInfo(inSettings->headlessPrvKeyFile());
+   if(inLogger) {
+      inLogger->info("[{}] Loading headless connection keypair files."
+         , __func__);
+      inLogger->info("[{}] Headless connection public key file - {}"
+         , __func__, inSettings->headlessPubKeyFile().toStdString());
+      inLogger->info("[{}] Headless connection private key file - {}"
+         , __func__, inSettings->headlessPrvKeyFile().toStdString());
+   }
+
+   if(!pubFileInfo.exists() || pubFileInfo.isDir()
+      || !prvFileInfo.exists() || prvFileInfo.isDir()) {
+      if(inLogger) {
+         inLogger->info("[{}] Headless connection keypair doesn't exist. "
+            "Generating new keypair.", __func__);
+      }
+      generateCurveZMQKeyPairFiles(inLogger, pubFileInfo.absoluteFilePath()
+         , prvFileInfo.absoluteFilePath());
+   }
+
+   return 0;
 }
 
 static int HeadlessApp(int argc, char **argv)
@@ -67,19 +92,20 @@ static int HeadlessApp(int argc, char **argv)
 
    try {
       const auto settings = std::make_shared<SignerSettings>(app.arguments());
-      auto logger = spdlog::basic_logger_mt("app_logger", settings->logFileName().toStdString());
+      auto logger = spdlog::basic_logger_mt("app_logger"
+                                            , settings->logFileName().toStdString());
       // [date time.miliseconds] [level](thread id): text
       logger->set_pattern("%D %H:%M:%S.%e (%t)[%L]: %v");
       logger->set_level(spdlog::level::debug);
       logger->flush_on(spdlog::level::debug);
 
-      // Functions only if the user actually wants it.
-      if(settings->curveZMQ()) {
-         generateCurveZMQKeyPairFiles(logger, settings->logFileName());
-      }
+      // Go ahead and build the headless connection encryption files, even if we
+      // don't use them. If they already exist, we'll leave them alone.
+      buildHeadlessConnFiles(settings, logger);
 
       HeadlessAppObj appObj(logger, settings);
-      QObject::connect(&appObj, &HeadlessAppObj::finished, &app, &QCoreApplication::quit);
+      QObject::connect(&appObj, &HeadlessAppObj::finished, &app
+                       , &QCoreApplication::quit);
       QTimer::singleShot(0, &appObj, &HeadlessAppObj::Start);
 
       return app.exec();
@@ -173,10 +199,9 @@ static int QMLApp(int argc, char **argv)
       logger->flush_on(spdlog::level::debug);
    }
 
-   // Functions only if the user actually wants it.
-   if(settings->curveZMQ()) {
-      generateCurveZMQKeyPairFiles(logger, settings->logFileName());
-   }
+   // Go ahead and build the headless connection encryption files, even if we
+   // don't use them. If they already exist, we'll leave them alone.
+   buildHeadlessConnFiles(settings, logger);
 
    try {
       QQmlApplicationEngine engine;

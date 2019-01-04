@@ -52,21 +52,28 @@ void HeadlessAppObj::Start()
 
 void HeadlessAppObj::OnlineProcessing()
 {
-   logger_->debug("Using command socket {}:{}, network {}", settings_->listenAddress().toStdString()
-      , settings_->port().toStdString(), (settings_->testNet() ? "testnet" : "mainnet"));
+   logger_->debug("Using command socket {}:{}, network {}"
+      , settings_->listenAddress().toStdString()
+      , settings_->port().toStdString()
+      , (settings_->testNet() ? "testnet" : "mainnet"));
 
    const ConnectionManager connMgr(logger_);
    connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(settings_->publicKey().toStdString(), settings_->privateKey().toStdString())) {
+   if (!connection_->SetKeyPair(settings_->headlessPubKeyFile()
+      , settings_->headlessPrvKeyFile())) {
       logger_->error("Failed to establish secure connection");
       throw std::runtime_error("secure connection problem");
    }
 
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , settings_->getWalletsDir().toStdString(), settings_->netType(), settings_->pwHash().toStdString());
+   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
+      , walletsMgr_, settings_->getWalletsDir().toStdString()
+      , settings_->netType(), settings_->pwHash().toStdString());
    listener_->SetLimits(settings_->limits());
-   if (!connection_->BindConnection(settings_->listenAddress().toStdString(), settings_->port().toStdString(), listener_.get())) {
-      logger_->error("Failed to bind to {}:{}", settings_->listenAddress().toStdString(), settings_->port().toStdString());
+   if (!connection_->BindConnection(settings_->listenAddress().toStdString()
+      , settings_->port().toStdString(), listener_.get())) {
+      logger_->error("Failed to bind to {}:{}"
+         , settings_->listenAddress().toStdString()
+         , settings_->port().toStdString());
       throw std::runtime_error("failed to bind listening socket");
    }
 }
