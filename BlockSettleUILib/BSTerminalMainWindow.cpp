@@ -56,7 +56,8 @@
 
 #include <spdlog/spdlog.h>
 
-BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings, BSTerminalSplashScreen& splashScreen, QWidget* parent)
+BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
+   , BSTerminalSplashScreen& splashScreen, QWidget* parent)
    : QMainWindow(parent)
    , ui(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
@@ -427,9 +428,10 @@ bool BSTerminalMainWindow::InitSigningContainer()
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
    }
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, runMode, signerHost, connectionManager_);
+   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_
+      , runMode, signerHost, connectionManager_);
    if (!signContainer_) {
-      showError(tr("Signer"), tr("Creation failure"));
+      showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
       return false;
    }
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady);
@@ -692,8 +694,10 @@ void BSTerminalMainWindow::connectSigner()
    if (!signContainer_) {
       return;
    }
-   if (!signContainer_->Start()) {
-      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer"), tr("Failed to start local signer process")).exec();
+
+   if(!signContainer_->Start()) {
+      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer Connection")
+         , tr("Failed to start signer connection.")).exec();
    }
 }
 

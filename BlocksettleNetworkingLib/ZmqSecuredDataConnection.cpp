@@ -10,34 +10,32 @@
 ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog::logger>& logger
                                                    , bool monitored)
  : ZmqDataConnection(logger, monitored)
-{}
-
-bool ZmqSecuredDataConnection::SetServerPublicKey(const BinaryData& key)
 {
-   // The incoming key buffer length may need to change later, once the server
-   // key is read from a file. For now, we're assuming it's read from a buffer.
-   if (key.getSize() != 40) {
-      if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::{}] invalid length of "
-            "server public key: {}", __func__, key.getSize());
-      }
-      return false;
-   }
-
-   std::pair<BinaryData, SecureBinaryData> inKeyPair;
+   std::pair<SecureBinaryData, SecureBinaryData> inKeyPair;
    int result = bs::network::getCurveZMQKeyPair(inKeyPair);
    if (result == -1) {
       if (logger_) {
          logger_->error("[ZmqSecuredDataConnection::{}] failed to generate key "
             "pair: {}", __func__, zmq_strerror(zmq_errno()));
       }
-      return false;
+      return;
    }
 
    publicKey_ = inKeyPair.first;
    privateKey_ = inKeyPair.second;
-   serverPublicKey_ = key;
+}
 
+bool ZmqSecuredDataConnection::SetServerPublicKey(const BinaryData& key)
+{
+   if (key.getSize() != CURVEZMQPUBKEYBUFFERSIZE) {
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] invalid length of "
+            "server public key ({} bytes).", __func__, key.getSize());
+      }
+      return false;
+   }
+
+   serverPublicKey_ = key;
    return true;
 }
 
