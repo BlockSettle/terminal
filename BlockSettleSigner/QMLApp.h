@@ -66,7 +66,6 @@ private:
    void requestPassword(const bs::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
    void disconnect();
 
-private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<SignerSettings>  settings_;
    QQmlContext                *     ctxt_;
@@ -80,6 +79,8 @@ private:
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
+   SecureBinaryData                             zmqPubKey_;
+   SecureBinaryData                             zmqPrvKey_;
 
    enum NotificationMode {
       QSystemTray,

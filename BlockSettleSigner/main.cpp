@@ -28,7 +28,7 @@ int generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
                                  , const QString& pubFilePath
                                  , const QString& prvFilePath) {
    // Generate the keys.
-   std::pair<BinaryData, SecureBinaryData> inKeyPair;
+   std::pair<SecureBinaryData, SecureBinaryData> inKeyPair;
    int retVal = bs::network::getCurveZMQKeyPair(inKeyPair);
    if(retVal != 0) {
       inLogger->error("[{}] Failure to generate CurveZMQ files - Error = {}"

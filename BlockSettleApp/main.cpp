@@ -18,6 +18,7 @@
 #include "StartupDialog.h"
 #include "BSMessageBox.h"
 #include "WalletsManager.h"
+#include "ZMQHelperFunctions.h"
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
@@ -225,8 +226,15 @@ static int GuiApp(int argc, char** argv)
    splashScreen.show();
    app.processEvents();
 
+   // Get the remote server key location. Ideally, we'd load the key here. The
+   // problem is that the user may run the app in offline mode. If they do, why
+   // make them load a key they don't need? So, we pass the proverbial buck from
+   // here, in case we ever need to make the path user-configurable later.
+   QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+   QString srvFilePath = logDir.path() + QString::fromStdString("/headless_conn_srv.pub");
+
    try {
-      BSTerminalMainWindow mainWindow(settings, splashScreen);
+      BSTerminalMainWindow mainWindow(settings, splashScreen, srvFilePath);
 
 #if defined (Q_OS_MAC)
       QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);

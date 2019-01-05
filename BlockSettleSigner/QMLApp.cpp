@@ -23,6 +23,7 @@
 #include "PdfBackupQmlPrinter.h"
 #include "QmlFactory.h"
 #include "QWalletInfo.h"
+#include "ZMQHelperFunctions.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -31,8 +32,8 @@
 Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(TXInfo)
 
-QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<SignerSettings> &params
-   , QQmlContext *ctxt)
+QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<SignerSettings> &params, QQmlContext *ctxt)
    : QObject(nullptr), logger_(logger), settings_(params), ctxt_(ctxt)
    , notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
@@ -40,6 +41,22 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 #endif // BS_USE_DBUS
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
+
+   // Get the ZMQ server public key.
+   SecureBinaryData tempPubKey(CURVEZMQPUBKEYBUFFERSIZE);
+   if(!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), tempPubKey
+      , true, logger_)) {
+      return;
+   }
+   zmqPubKey_ = tempPubKey;
+
+   // Get the ZMQ server private key.
+   SecureBinaryData tempPrvKey(CURVEZMQPRVKEYBUFFERSIZE);
+   if(!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), tempPrvKey
+      , false, logger_)) {
+      return;
+   }
+   zmqPrvKey_ = tempPrvKey;
 
    qRegisterMetaType<bs::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
@@ -345,8 +362,7 @@ void QMLAppObj::OnlineProcessing()
 
    const ConnectionManager connMgr(logger_);
    connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(settings_->headlessPubKeyFile()
-      , settings_->headlessPrvKeyFile())) {
+   if (!connection_->SetKeyPair(zmqPubKey_, zmqPrvKey_)) {
       logger_->error("Failed to establish secure connection");
       throw std::runtime_error("secure connection problem");
    }
