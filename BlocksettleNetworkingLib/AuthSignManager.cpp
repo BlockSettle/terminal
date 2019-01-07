@@ -26,7 +26,8 @@ AuthSignManager::~AuthSignManager() = default;
 bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, const QString &desc
    , const SignedCb &onSigned, const SignFailedCb &onSignFailed, int expiration)
 {
-   callbacks_ = { onSigned, onSignFailed };
+   onSignedCB_ = onSigned;
+   onSignFailedCB_ = onSignFailed;
    try {
       autheIDClient_->connect(appSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
          , appSettings_->get<std::string>(ApplicationSettings::authServerHost)
@@ -53,18 +54,20 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
 void AuthSignManager::onFailed(const QString &text)
 {
    logger_->error("[AuthSignManager] Auth eID failure: {}", text.toStdString());
-   if (callbacks_.second) {
-      callbacks_.second(text);
+   if (onSignFailedCB_) {
+      onSignFailedCB_(text);
    }
-   callbacks_ = { nullptr, nullptr };
+   onSignedCB_ = {};
+   onSignFailedCB_ = {};
 }
 
 void AuthSignManager::onSignSuccess(const std::string &data, const BinaryData &invisibleData
    , const std::string &signature)
 {
    logger_->debug("[AuthSignManager] data signed");
-   if (callbacks_.first) {
-      callbacks_.first(data, invisibleData, signature);
+   if (onSignedCB_) {
+      onSignedCB_(data, invisibleData, signature);
    }
-   callbacks_ = { nullptr, nullptr };
+   onSignedCB_ = {};
+   onSignFailedCB_ = {};
 }

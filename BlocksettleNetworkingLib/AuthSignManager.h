@@ -43,8 +43,9 @@ private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<CelerClient>           celerClient_;
-   std::unique_ptr<AutheIDClient>          autheIDClient_;
-   std::pair<SignedCb, SignFailedCb>      callbacks_{nullptr, nullptr};
+   std::unique_ptr<AutheIDClient>         autheIDClient_;
+   SignedCb                               onSignedCB_;
+   SignFailedCb                           onSignFailedCB_;
 };
 
 #endif // __AUTH_SIGN_MANAGER_H__
