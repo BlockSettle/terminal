@@ -54,6 +54,7 @@ struct BDV_Notification_NewBlock : public BDV_Notification
 {
    Blockchain::ReorganizationState reorgState_;
    std::shared_ptr<ZcPurgePacket> zcPurgePacket_;
+   std::shared_ptr<ZeroConfSharedStateSnapshot> zcState_;
 
    BDV_Notification_NewBlock(
       const Blockchain::ReorganizationState& ref, 
@@ -72,7 +73,7 @@ struct BDV_Notification_NewBlock : public BDV_Notification
 struct BDV_Notification_ZC : public BDV_Notification
 {
    const ZeroConfContainer::NotificationPacket packet_;
-   std::map<BinaryData, LedgerEntry> leMap_;
+   std::vector<LedgerEntry> leVec_;
 
    BDV_Notification_ZC(ZeroConfContainer::NotificationPacket& packet) :
       BDV_Notification(packet.bdvID_), packet_(std::move(packet))

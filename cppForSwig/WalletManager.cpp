@@ -182,7 +182,7 @@ int WalletContainer::detectHighestUsedIndex()
    {
       auto& addr = addrCountPair.first;
       auto& ID = wallet_->getAssetIDForAddr(addr);
-      auto asset = wallet_->getAssetForID(ID);
+      auto asset = wallet_->getAssetForID(ID.first);
       if (asset->getIndex() > topIndex)
          topIndex = asset->getIndex();
    }
@@ -276,7 +276,7 @@ void CoinSelectionInstance::decorateUTXOs(
    {
       auto&& scrAddr = utxo.getRecipientScrAddr();
       auto& ID = walletPtr->getAssetIDForAddr(scrAddr);
-      auto addrPtr = walletPtr->getAddressEntryForID(ID);
+      auto addrPtr = walletPtr->getAddressEntryForID(ID.first, ID.second);
 
       utxo.txinRedeemSizeBytes_ = addrPtr->getInputSize();
 
@@ -378,8 +378,16 @@ shared_ptr<ScriptRecipient> CoinSelectionInstance::createRecipient(
       rec = make_shared<Recipient_P2SH>(
          hash.getSliceRef(1, hash.getSize() - 1), value);
    }
+   else if(scrType == SCRIPT_PREFIX_P2WPKH || scrType == SCRIPT_PREFIX_P2WSH)
+   {
+      auto&& hashVal = hash.getSliceCopy(1, hash.getSize() - 1);
+      rec = make_shared<Recipient_Bech32>(
+         hashVal, value);
+   }
    else
-      throw CoinSelectionException("unexpected recipient script type");
+   {
+      throw ScriptRecipientException("unexpected script type");
+   }
 
    return rec;
 }

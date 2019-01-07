@@ -117,12 +117,16 @@ struct DerivationScheme_BIP32 : public DerivationScheme
 
 private:
    SecureBinaryData chainCode_;
+   const unsigned depth_;
+   const unsigned leafId_;
 
 public:
    //tors
-   DerivationScheme_BIP32(SecureBinaryData& chainCode) :
+   DerivationScheme_BIP32(SecureBinaryData& chainCode,
+      unsigned depth, unsigned leafId) :
       DerivationScheme(DerSchemeType_BIP32),
-      chainCode_(std::move(chainCode))
+      chainCode_(std::move(chainCode)),
+      depth_(depth), leafId_(leafId)
    {}
 
    //locals

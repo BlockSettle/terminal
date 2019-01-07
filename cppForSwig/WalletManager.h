@@ -173,22 +173,6 @@ public:
    const map<BinaryData, uint32_t>& getAddrTxnCountsFromDB(void)
    {
       auto&& countmap = swigWallet_->getAddrTxnCountsFromDB();
-
-      for (auto count : countmap)
-      {
-         if (count.first.getSize() == 0)
-            continue;
-
-         //save count
-         countMap_[count.first] = count.second;
-
-         //fetch the asset in wallet
-         auto& assetID = wallet_->getAssetIDForAddr(count.first);
-         auto addrType = wallet_->getAddrTypeForID(assetID);
-
-         wallet_->getAddressEntryForID(assetID, addrType);
-      }
-
       return countMap_;
    }
    
@@ -275,7 +259,7 @@ public:
       return wallet_->hasScrAddr(scrAddr);
    }
 
-   const BinaryData& getAssetIDForAddr(const BinaryData& scrAddr)
+   const std::pair<BinaryData, AddressEntryType>& getAssetIDForAddr(const BinaryData& scrAddr)
    {
       return wallet_->getAssetIDForAddr(scrAddr);
    }
@@ -283,7 +267,7 @@ public:
    const BinaryData& getScriptHashPreimage(const BinaryData& hash)
    {
       auto& assetID = wallet_->getAssetIDForAddr(hash);
-      auto addrPtr = wallet_->getAddressEntryForID(assetID);
+      auto addrPtr = wallet_->getAddressEntryForID(assetID.first, assetID.second);
       return addrPtr->getPreimage();
    }
 
@@ -401,6 +385,9 @@ public:
          recipient = make_shared<Recipient_P2SH>(txOutRef.scriptRef_, value);
       else if (txOutRef.type_ == SCRIPT_PREFIX_OPRETURN)
          recipient = make_shared<Recipient_OPRETURN>(txOutRef.scriptRef_);
+      else if (txOutRef.type_ == SCRIPT_PREFIX_P2WSH ||
+         txOutRef.type_ == SCRIPT_PREFIX_P2WPKH)
+         recipient = make_shared<Recipient_Bech32>(txOutRef.scriptRef_, value);
       else
          throw WalletException("unexpected output type");
 

@@ -263,7 +263,7 @@ public:
    void extendPrivateChainToIndex(const BinaryData&, unsigned);
 
    bool hasScrAddr(const BinaryData& scrAddr);
-   const BinaryData& getAssetIDForAddr(const BinaryData& scrAddr);
+   const std::pair<BinaryData, AddressEntryType>& getAssetIDForAddr(const BinaryData& scrAddr);
    AddressEntryType getAddrTypeForID(const BinaryData& ID);
    std::shared_ptr<AddressEntry> getAddressEntryForID(
       const BinaryData&, AddressEntryType aeType = AddressEntryType_Default);
@@ -331,6 +331,7 @@ public:
    //locals
    void changeMasterPassphrase(const SecureBinaryData&);
    const SecureBinaryData& getPublicRoot(void) const;
+   std::shared_ptr<AssetEntry> getAccountRoot(const BinaryData& accountID) const;
    const SecureBinaryData& getArmory135Chaincode(void) const;
    
    std::shared_ptr<AssetEntry> getMainAccountAssetForIndex(unsigned) const;
@@ -354,17 +355,18 @@ public:
       SecureBinaryData& chainCode,
       unsigned lookup);
 
-   static std::shared_ptr<AssetWallet_Single> createFromPrivateRoot_BIP32(
+   static std::shared_ptr<AssetWallet_Single> createFromSeed_BIP32(
       const std::string& folder,
-      const SecureBinaryData& privateRoot,
+      const SecureBinaryData& seed,
       const std::vector<unsigned>& derivationPath,
       const SecureBinaryData& passphrase,
       unsigned lookup);
 
-   static std::shared_ptr<AssetWallet_Single> createFromPublicRoot_BIP32(
+   static std::shared_ptr<AssetWallet_Single> createFromBase58_BIP32(
       const std::string& folder,
-      SecureBinaryData& privateRoot,
-      SecureBinaryData& chainCode,
+      const SecureBinaryData& b58,
+      const std::vector<unsigned>& derivationPath,
+      const SecureBinaryData& passphrase,
       unsigned lookup);
 };
 

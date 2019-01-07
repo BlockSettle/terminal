@@ -9,6 +9,7 @@
 #include "DBUtils.h"
 #include "Accounts.h"
 #include "DecryptedDataContainer.h"
+#include "BIP32_Node.h"
 
 using namespace std;
 
@@ -268,13 +269,16 @@ void AssetAccount::extendPublicChain(unsigned count)
    ReentrantLock lock(this);
 
    //add *count* entries to address chain
-   if (assets_.size() == 0)
-      throw AccountException("empty asset map");
+   shared_ptr<AssetEntry> assetPtr = nullptr;
+   if (assets_.size() != 0)
+      assetPtr = assets_.rbegin()->second;
+   else
+      assetPtr = root_;
 
    if (count == 0)
       return;
 
-   extendPublicChain(assets_.rbegin()->second, count);
+   extendPublicChain(assetPtr, count);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -302,7 +306,7 @@ void AssetAccount::extendPublicChain(
 
    auto&& assetVec = extendPublicChain(assetPtr,
       assetPtr->getIndex() + 1, 
-      assetPtr->getIndex() + 1 + count);
+      assetPtr->getIndex() + count);
 
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
@@ -359,7 +363,14 @@ void AssetAccount::extendPrivateChain(
    unsigned count)
 {
    ReentrantLock lock(this);
-   auto topAsset = getLastAssetWithPrivateKey();
+   shared_ptr<AssetEntry> topAsset = nullptr;
+   
+   try
+   {
+      topAsset = getLastAssetWithPrivateKey();
+   }
+   catch(runtime_error&)
+   {}
 
    extendPrivateChain(ddc, topAsset, count);
 }
@@ -371,12 +382,20 @@ void AssetAccount::extendPrivateChainToIndex(
 {
    ReentrantLock lock(this);
 
-   auto topAsset = getLastAssetWithPrivateKey();
-   auto topIndex = topAsset->getIndex();
+   shared_ptr<AssetEntry> topAsset = nullptr;
+   int topIndex = 0;
+
+   try
+   {
+      topAsset = getLastAssetWithPrivateKey();
+      topIndex = topAsset->getIndex();
+   }
+   catch(runtime_error&)
+   {}
 
    if (id > topIndex)
    {
-      auto count = id - topAsset->getIndex();
+      auto count = id - topIndex;
       extendPrivateChain(ddc, topAsset, count);
    }
 }
@@ -390,11 +409,14 @@ void AssetAccount::extendPrivateChain(
       return;
 
    ReentrantLock lock(this);
-   auto privAsset = getLastAssetWithPrivateKey();
    auto lastIndex = getLastComputedIndex();
 
+   unsigned assetIndex = 0;
+   if (assetPtr != nullptr)
+      assetIndex = assetPtr->getIndex();
+
    auto&& assetVec = extendPrivateChain(ddc, assetPtr, 
-      assetPtr->getIndex() + 1, assetPtr->getIndex() + 1 + count);
+      assetIndex + 1, assetIndex + count);
 
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
@@ -424,7 +446,7 @@ void AssetAccount::extendPrivateChain(
 
    updateOnDiskAssets();
 
-   if (privAsset->getIndex() + count > lastIndex)
+   if (assetIndex + count > lastIndex)
       updateHashMap_ = true;
 }
 
@@ -552,7 +574,7 @@ shared_ptr<AssetEntry> AssetAccount::getAssetForIndex(unsigned id) const
 void AssetAccount::updateAddressHashMap(
    const set<AddressEntryType>& typeSet)
 {
-   if (updateHashMap_ = false)
+   if (updateHashMap_ == false)
       return;
 
    ReentrantLock lock(this);
@@ -665,10 +687,14 @@ void AddressAccount::make_new(
    case AccountTypeEnum_BIP32_Legacy:
    case AccountTypeEnum_BIP32_SegWit:
    {
+      auto accBip32 = dynamic_pointer_cast<AccountType_BIP32>(accType);
+      if (accBip32 == nullptr)
+         throw runtime_error("unexpected account type");
+
       ID_ = accType->getAccountID();
 
       //asset account lambda
-      auto createNewAccount = [&accType, &decrData, this](
+      auto createNewAccount = [&accBip32, &decrData, this](
          unsigned node_id,
          unique_ptr<Cypher> cypher_copy)->shared_ptr<AssetAccount>
       {
@@ -678,37 +704,39 @@ void AddressAccount::make_new(
          shared_ptr<AssetEntry_Single> rootAsset;
          SecureBinaryData chaincode; 
 
-         if (accType->isWatchingOnly())
+         BIP32_Node node;
+
+         if (accBip32->isWatchingOnly())
          {
             //WO
-            auto& root = accType->getPublicRoot();
+            node.initFromPublicKey(
+               accBip32->getDepth(), accBip32->getLeafID(),
+               accBip32->getPublicRoot(), accBip32->getChaincode());
+            node.derivePublic(node_id);
 
-            //derive to final node
-            auto&& derived_pair = CryptoECDSA::bip32_derive_public_key(
-               root, accType->getChaincode(), node_id);
-            chaincode = move(derived_pair.second);
+            chaincode = node.moveChaincode();
+            auto pubkey = node.movePublicKey();
 
             rootAsset = make_shared<AssetEntry_Single>(
                -1, full_account_id,
-               derived_pair.first, nullptr);
+               pubkey, nullptr);
          }
          else
          {
             //full wallet
-            auto& root = accType->getPrivateRoot();
+            node.initFromPrivateKey(
+               accBip32->getDepth(), accBip32->getLeafID(),
+               accBip32->getPrivateRoot(), accBip32->getChaincode());
+            node.derivePrivate(node_id);
 
-            //derive to final node
-            auto&& derived_pair =
-               CryptoECDSA::bip32_derive_private_key(
-               root, accType->getChaincode(), node_id);
-            chaincode = move(derived_pair.second);
+            chaincode = node.moveChaincode();
+            auto pubkey = node.movePublicKey();
 
-            //compute pubkey
-            auto&& pubkey = CryptoECDSA().ComputePublicKey(derived_pair.first);
+            ReentrantLock lock(decrData.get());
 
             //encrypt private root
             auto&& encrypted_root =
-               decrData->encryptData(cypher_copy.get(), derived_pair.first);
+               decrData->encryptData(cypher_copy.get(), node.getPrivateKey());
 
             //create assets
             auto priv_asset = make_shared<Asset_PrivateKey>(
@@ -723,7 +751,7 @@ void AddressAccount::make_new(
          if (chaincode.getSize() == 0)
             throw AccountException("invalid chaincode");
          auto derScheme = make_shared<DerivationScheme_BIP32>(
-            chaincode);
+            chaincode, node.getDepth(), node.getLeafID());
 
          //instantiate account
          auto asset_account = make_shared<AssetAccount>(
@@ -745,6 +773,70 @@ void AddressAccount::make_new(
             node,
             move(cypher->getCopy()));
          addAccount(account_obj);
+      }
+
+      break;
+   }
+
+   case AccountTypeEnum_BIP32_Custom:
+   {
+      auto accBip32 = dynamic_pointer_cast<AccountType_BIP32>(accType);
+      if (accBip32 == nullptr)
+         throw runtime_error("unexpected account type");
+
+      ID_ = accType->getAccountID();
+      auto&& account_id = WRITE_UINT32_BE(0);
+      auto&& full_account_id = ID_ + account_id;
+
+      if (accType->isWatchingOnly())
+      {
+         //wo
+         auto rootPub = accType->getPublicRoot();
+         auto rootAsset = make_shared<AssetEntry_Single>(
+            -1, full_account_id,
+            rootPub,
+            nullptr);
+
+         auto chaincode_copy = accType->getChaincode();
+         auto derScheme = make_shared<DerivationScheme_BIP32>(
+            chaincode_copy, accBip32->getDepth(), accBip32->getLeafID());
+
+         auto asset_account = make_shared<AssetAccount>(
+            account_id, ID_,
+            rootAsset, derScheme,
+            dbEnv_, db_);
+         addAccount(asset_account);
+      }
+      else
+      {
+         //full wallet
+         auto& root = accType->getPrivateRoot();
+         auto&& rootpub = CryptoECDSA().ComputePublicKey(root);
+
+         ReentrantLock lock(decrData.get());
+
+         //encrypt private root
+         auto&& cypher_copy = cypher->getCopy();
+         auto&& encrypted_root =
+            decrData->encryptData(cypher_copy.get(), root);
+
+         //create assets
+         auto priv_asset = make_shared<Asset_PrivateKey>(
+            -1, encrypted_root, move(cypher_copy));
+         auto rootAsset = make_shared<AssetEntry_Single>(
+            -1, full_account_id,
+            rootpub,
+            priv_asset);
+
+         auto chaincode_copy = accType->getChaincode();
+         auto derScheme = make_shared<DerivationScheme_BIP32>(
+            chaincode_copy, accBip32->getDepth(), accBip32->getLeafID());
+
+         auto asset_account = make_shared<AssetAccount>(
+            account_id, ID_,
+            rootAsset, derScheme,
+            dbEnv_, db_);
+         addAccount(asset_account);
       }
 
       break;
@@ -997,7 +1089,8 @@ shared_ptr<AssetEntry> AddressAccount::getAssetForID(const BinaryData& ID) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const BinaryData& AddressAccount::getAssetIDForAddr(const BinaryData& scrAddr)
+const pair<BinaryData, AddressEntryType>& 
+   AddressAccount::getAssetIDPairForAddr(const BinaryData& scrAddr)
 {
    updateAddressHashMap();
 
@@ -1021,14 +1114,17 @@ void AddressAccount::updateAddressHashMap()
       {
          for (auto& hash : assetHash.second)
          {
-            addressHashes_.insert(make_pair(hash.second, assetHash.first));
+            auto&& inner_pair = make_pair(hash.second, hash.first);
+            auto&& outer_pair = make_pair(hash.second, move(inner_pair));
+            addressHashes_.emplace(outer_pair);
          }
       }
    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const map<BinaryData, BinaryData>& AddressAccount::getAddressHashMap()
+const map<BinaryData, pair<BinaryData, AddressEntryType>>& 
+   AddressAccount::getAddressHashMap()
 {
    updateAddressHashMap();
    return addressHashes_;
@@ -1056,6 +1152,13 @@ shared_ptr<AssetEntry> AddressAccount::getOutterAssetForIndex(unsigned id) const
 {
    auto account = getOuterAccount();
    return account->getAssetForIndex(id);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetEntry> AddressAccount::getOutterAssetRoot() const
+{
+   auto account = getOuterAccount();
+   return account->getRoot();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1117,42 +1220,38 @@ void AccountType_BIP32::deriveFromRoot()
       if (chainCode_.getSize() == 0)
          throw AccountException("empty chaincode");
 
-      auto pubkey = publicRoot_;
-      auto chaincode = chainCode_;
+      BIP32_Node node;
+      node.initFromPublicKey(depth_, leafId_,
+         publicRoot_, chainCode_);
 
       for (auto& index : derivationPath_)
-      {
-         auto&& derived_pair =
-            CryptoECDSA::bip32_derive_public_key(pubkey, chaincode, index);
+         node.derivePublic(index);
 
-         pubkey = move(derived_pair.first);
-         chaincode = move(derived_pair.second);
-      }
-
-      derivedRoot_ = pubkey;
-      derivedChaincode_ = chaincode;
+      derivedRoot_ = node.movePublicKey();
+      derivedChaincode_ = node.moveChaincode();
+      depth_ = node.getDepth();
+      leafId_ = node.getLeafID();
    }
    else
    {
       if (privateRoot_.getSize() == 0)
          throw AccountException("empty private root");
 
-      auto&& master_root = CryptoECDSA::bip32_seed_to_master_root(privateRoot_);
-      auto privkey = master_root.first;
-      auto chaincode = master_root.second;
+      if (chainCode_.getSize() == 0)
+         throw AccountException("empty chaincode");
+         
+      BIP32_Node node;
+      node.initFromPrivateKey(
+         depth_, leafId_, privateRoot_, chainCode_);
 
       //derive
       for (auto& index : derivationPath_)
-      {
-         auto&& derived_pair =
-            CryptoECDSA::bip32_derive_private_key(privkey, chaincode, index);
+         node.derivePrivate(index);
 
-         privkey = move(derived_pair.first);
-         chaincode = move(derived_pair.second);
-      }
-
-      derivedRoot_ = privkey;
-      derivedChaincode_ = chaincode;
+      derivedRoot_ = node.movePrivateKey();
+      derivedChaincode_ = node.moveChaincode();
+      depth_ = node.getDepth();
+      leafId_ = node.getLeafID();
    }
 }
 
