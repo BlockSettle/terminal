@@ -226,15 +226,8 @@ static int GuiApp(int argc, char** argv)
    splashScreen.show();
    app.processEvents();
 
-   // Get the remote server key location. Ideally, we'd load the key here. The
-   // problem is that the user may run the app in offline mode. If they do, why
-   // make them load a key they don't need? So, we pass the proverbial buck from
-   // here, in case we ever need to make the path user-configurable later.
-   QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-   QString srvFilePath = logDir.path() + QString::fromStdString("/headless_conn_srv.pub");
-
    try {
-      BSTerminalMainWindow mainWindow(settings, splashScreen, srvFilePath);
+      BSTerminalMainWindow mainWindow(settings, splashScreen);
 
 #if defined (Q_OS_MAC)
       QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
