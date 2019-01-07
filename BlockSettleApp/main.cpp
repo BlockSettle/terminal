@@ -18,6 +18,7 @@
 #include "StartupDialog.h"
 #include "BSMessageBox.h"
 #include "WalletsManager.h"
+#include "ZMQHelperFunctions.h"
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)

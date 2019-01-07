@@ -23,6 +23,7 @@
 #include "PdfBackupQmlPrinter.h"
 #include "QmlFactory.h"
 #include "QWalletInfo.h"
+#include "ZMQHelperFunctions.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -32,8 +33,8 @@ Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(TXInfo)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
-QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<SignerSettings> &params
-   , QQmlContext *ctxt)
+QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<SignerSettings> &params, QQmlContext *ctxt)
    : QObject(nullptr), logger_(logger), settings_(params), ctxt_(ctxt)
    , notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
@@ -41,6 +42,22 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger, const std::s
 #endif // BS_USE_DBUS
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
+
+   // Get the ZMQ server public key.
+   SecureBinaryData tempPubKey;
+   if(!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), tempPubKey
+      , true, logger_)) {
+      return;
+   }
+   zmqPubKey_ = tempPubKey;
+
+   // Get the ZMQ server private key.
+   SecureBinaryData tempPrvKey;
+   if(!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), tempPrvKey
+      , false, logger_)) {
+      return;
+   }
+   zmqPrvKey_ = tempPrvKey;
 
    qRegisterMetaType<bs::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
@@ -346,27 +363,35 @@ void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 
 void QMLAppObj::OnlineProcessing()
 {
-   logger_->debug("Going online with socket {}:{}, network {}", settings_->listenAddress().toStdString()
-      , settings_->port().toStdString(), (settings_->testNet() ? "testnet" : "mainnet"));
+   logger_->debug("Going online with socket {}:{}, network {}"
+      , settings_->listenAddress().toStdString()
+      , settings_->port().toStdString()
+      , (settings_->testNet() ? "testnet" : "mainnet"));
 
    const ConnectionManager connMgr(logger_);
    connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(settings_->publicKey().toStdString(), settings_->privateKey().toStdString())) {
+   if (!connection_->SetKeyPair(zmqPubKey_, zmqPrvKey_)) {
       logger_->error("Failed to establish secure connection");
       throw std::runtime_error("secure connection problem");
    }
 
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_, walletsMgr_
-      , settings_->getWalletsDir().toStdString(), settings_->netType(), settings_->pwHash().toStdString(), true);
+   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
+      , walletsMgr_, settings_->getWalletsDir().toStdString()
+      , settings_->netType(), settings_->pwHash().toStdString(), true);
    listener_->SetLimits(settings_->limits());
    statusUpdater_->SetListener(listener_);
-   connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this, &QMLAppObj::onPasswordRequested);
-   connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
-   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx,
-      this, &QMLAppObj::onCancelSignTx);
+   connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this
+      , &QMLAppObj::onPasswordRequested);
+   connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd
+      , this, &QMLAppObj::onAutoSignPwdRequested);
+   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx, this
+      , &QMLAppObj::onCancelSignTx);
 
-   if (!connection_->BindConnection(settings_->listenAddress().toStdString(), settings_->port().toStdString(), listener_.get())) {
-      logger_->error("Failed to bind to {}:{}", settings_->listenAddress().toStdString(), settings_->port().toStdString());
+   if (!connection_->BindConnection(settings_->listenAddress().toStdString()
+      , settings_->port().toStdString(), listener_.get())) {
+      logger_->error("Failed to bind to {}:{}"
+         , settings_->listenAddress().toStdString()
+         , settings_->port().toStdString());
       statusUpdater_->setSocketOk(false);
       return;
    }
