@@ -1,33 +1,37 @@
 #include "TXInfo.h"
 #include "HDWallet.h"
 #include "QWalletInfo.h"
+#include "QmlFactory.h"
 #include "WalletsManager.h"
 
 using namespace bs::hd;
 
 
-TXInfo::TXInfo(const std::shared_ptr<WalletsManager> &walletsMgr, const bs::wallet::TXSignRequest &txReq)
-   : QObject(), walletsMgr_(walletsMgr), txReq_(txReq)
+TXInfo::TXInfo(const bs::wallet::TXSignRequest &txReq)
+   : QObject(), txReq_(txReq)
 {
    init();
 }
 
 void TXInfo::init()
 {
-   if (txReq_.wallet) {
-      const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(txReq_.wallet->GetWalletId());
-      if (rootWallet) {
-         walletInfo_ = new bs::hd::WalletInfo(this);
-         walletInfo_->initFromWallet(txReq_.wallet, rootWallet->getWalletId());
-      }
-      else {
-         throw std::runtime_error("no root wallet for leaf " + txReq_.wallet->GetWalletId());
-      }
-   }
-   else {
-      walletInfo_ = new WalletInfo(walletsMgr_, QString::fromStdString(txReq_.walletId), this);
-   }
-   emit dataChanged();
+//   if (txReq_.wallet) {
+//      const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(txReq_.wallet->GetWalletId());
+//      if (rootWallet) {
+//         walletInfo_ = new bs::hd::WalletInfo(txReq_.wallet);
+
+//         walletInfo_ = new bs::hd::WalletInfo(this);
+//         walletInfo_->initFromWallet(txReq_.wallet, rootWallet->getWalletId());
+//      }
+//      else {
+//         throw std::runtime_error("no root wallet for leaf " + txReq_.wallet->GetWalletId());
+//      }
+//   }
+//   else {
+//      //walletInfo_ = new WalletInfo(walletsMgr_, QString::fromStdString(txReq_.walletId), this);
+//      walletInfo_ = new WalletInfo(walletsMgr_, QString::fromStdString(txReq_.walletId), this);
+//   }
+//   emit dataChanged();
 }
 
 QStringList TXInfo::recvAddresses() const

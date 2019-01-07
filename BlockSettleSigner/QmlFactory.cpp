@@ -1,5 +1,6 @@
 #include "QmlFactory.h"
 #include "AuthProxy.h"
+#include "WalletsManager.h"
 
 using namespace bs::hd;
 using namespace bs::wallet;
@@ -7,6 +8,40 @@ using namespace bs::wallet;
 
 // todo
 // check authObject->signWallet results, return null object, emit error signal
+
+WalletInfo *QmlFactory::createWalletInfo() {
+   auto wi = new bs::hd::WalletInfo();
+   QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
+   return wi;
+}
+
+WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) {
+   bs::hd::WalletInfo *wi = nullptr;
+
+   const auto &wallet = walletsMgr_->GetWalletById(walletId.toStdString());
+   if (wallet) {
+      const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(wallet->GetWalletId());
+      wi = new bs::hd::WalletInfo(wallet, rootWallet);
+   }
+   else {
+      const auto &hdWallet = walletsMgr_->GetHDWalletById(walletId.toStdString());
+      if (!hdWallet) {
+         wi = new bs::hd::WalletInfo();
+      }
+      else {
+         wi = new bs::hd::WalletInfo(hdWallet);
+      }
+   }
+
+   QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
+   return wi;
+}
+
+WalletInfo *QmlFactory::createWalletInfoFromDigitalBackup(const QString &filename) {
+   auto wi = new bs::hd::WalletInfo(bs::hd::WalletInfo::fromDigitalBackup(filename));
+   QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
+   return wi;
+}
 
 AuthSignWalletObject *QmlFactory::createAutheIDSignObject(AutheIDClient::RequestType requestType
                                                           , WalletInfo *walletInfo)

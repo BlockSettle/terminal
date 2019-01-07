@@ -6,10 +6,10 @@
 #include "HDWallet.h"
 #include "MetaData.h"
 #include "WalletEncryption.h"
-#include "AutheIDClient.h"
+//#include "AutheIDClient.h"
 
-class WalletsManager;
-class AuthSignWalletObject;
+// WalletsManager;
+//class AuthSignWalletObject;
 
 namespace bs {
 namespace wallet {
@@ -140,7 +140,10 @@ class WalletInfo : public QObject
    //   Q_PROPERTY(QString rootId READ rootId WRITE setRootId NOTIFY rootIdChanged)
 public:
    WalletInfo(QObject *parent = nullptr) : QObject(parent) {}
-   WalletInfo(const std::shared_ptr<WalletsManager> &, const QString &walletId, QObject *parent = nullptr);
+   //WalletInfo(const QString &walletId, QObject *parent = nullptr);
+
+   WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent = nullptr);
+   WalletInfo(std::shared_ptr<bs::Wallet> wallet, std::shared_ptr<bs::hd::Wallet> rootHdWallet, QObject *parent = nullptr);
 
    WalletInfo(const WalletInfo &other);
    WalletInfo& operator= (const WalletInfo &other);
@@ -185,7 +188,7 @@ private:
    QString    name_, desc_;
    QList<QString> encKeys_;
    QList<bs::wallet::QEncryptionType> encTypes_;
-   std::shared_ptr<WalletsManager> walletsManager_;
+   //std::shared_ptr<WalletsManager> walletsManager_;
 };
 
 
