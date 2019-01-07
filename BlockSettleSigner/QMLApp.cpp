@@ -43,7 +43,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
    // Get the ZMQ server public key.
-   SecureBinaryData tempPubKey(CURVEZMQPUBKEYBUFFERSIZE);
+   SecureBinaryData tempPubKey;
    if(!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), tempPubKey
       , true, logger_)) {
       return;
@@ -51,7 +51,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
    zmqPubKey_ = tempPubKey;
 
    // Get the ZMQ server private key.
-   SecureBinaryData tempPrvKey(CURVEZMQPRVKEYBUFFERSIZE);
+   SecureBinaryData tempPrvKey;
    if(!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), tempPrvKey
       , false, logger_)) {
       return;
