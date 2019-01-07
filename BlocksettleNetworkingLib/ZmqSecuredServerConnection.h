@@ -21,8 +21,8 @@ public:
    bool SetKeyPair(const SecureBinaryData& zmqPubKey
       , const SecureBinaryData& zmqPrvKey);
 
-   bool SendDataToClient(const std::string& clientId
-      , const std::string& data) override;
+   bool SendDataToClient(const std::string& clientId, const std::string& data
+      , const SendResultCb &cb = nullptr) override;
 
 protected:
    ZmqContext::sock_ptr CreateDataSocket() override;
