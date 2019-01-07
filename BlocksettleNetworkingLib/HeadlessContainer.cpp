@@ -837,7 +837,6 @@ bool RemoteSigner::Start()
          QThread::msleep(250);
       }
 
-      zmqSrvPubKey_ = SecureBinaryData(CURVEZMQPUBKEYBUFFERSIZE);
       if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true, logger_)) {
          logger_->error("[RemoteSigner::{}] failed to read connection public key", __func__);
          return false;
