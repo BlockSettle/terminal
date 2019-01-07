@@ -197,6 +197,7 @@ try
          auto&& notifPtr =
             make_unique<BDV_Notification_NewBlock>(
                move(reorgState), purgePacket);
+         notifPtr->zcState_ = bdm->zeroConfCont_->getSnapshot();
          bdm->notificationStack_.push_back(move(notifPtr));
 
          return true;

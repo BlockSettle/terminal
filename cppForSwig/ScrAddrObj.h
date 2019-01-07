@@ -43,9 +43,10 @@ struct ScanAddressStruct
 {
    std::set<BinaryData> invalidatedZcKeys_;
    std::map<BinaryData, BinaryData> minedTxioKeys_;
+   std::shared_ptr< ZeroConfSharedStateSnapshot> zcState_;
 
    std::map<BinaryData, std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>>>> zcMap_;
-   std::map<BinaryData, LedgerEntry> zcLedgers_;
+   std::map<BinaryData, std::map<BinaryData, LedgerEntry>> zcLedgers_;
    std::shared_ptr<std::map<BinaryData, std::shared_ptr<std::set<BinaryDataRef>>>> newKeysAndScrAddr_;
 };
 
@@ -181,9 +182,7 @@ public:
       db_(nullptr),
       bc_(nullptr),
       totalTxioCount_(0), utxos_(this)
-   {
-      relevantTxIO_.clear();
-   }
+   {}
 
    ScrAddrObj(LMDBBlockDatabase *db, Blockchain *bc, ZeroConfContainer *zc,
       BinaryDataRef addr);
@@ -202,7 +201,7 @@ public:
    // only a convenience, if you want to be able to calculate numConf from
    // the Utxos in the list.  If you don't care (i.e. you only want to 
    // know what TxOuts are available to spend, you can pass in 0 for currBlk
-   uint64_t getFullBalance() const;
+   uint64_t getFullBalance(unsigned updateID = UINT32_MAX) const;
    uint64_t getSpendableBalance(uint32_t currBlk) const;
    uint64_t getUnconfirmedBalance(uint32_t currBlk) const;
 
@@ -212,18 +211,10 @@ public:
    std::vector<LedgerEntry> getTxLedgerAsVector(
       const std::map<BinaryData, LedgerEntry>* leMap) const;
 
-   std::map<BinaryData, TxIOPair> &   getTxIOMap(void) { return relevantTxIO_; }
-   const std::map<BinaryData, TxIOPair> & getTxIOMap(void) const
-                           { return relevantTxIO_; }
-
-   void addTxIO(TxIOPair & txio, bool isZeroConf=false);
-
    void clearBlkData(void);
 
    bool operator== (const ScrAddrObj& rhs) const
    { return (scrAddr_ == rhs.scrAddr_); }
-
-   void updateTxIOMap(std::map<BinaryData, TxIOPair>& txio_map);
 
    void scanZC(const ScanAddressStruct&, std::function<bool(const BinaryDataRef)>,
       int32_t);
@@ -246,14 +237,11 @@ public:
    const std::map<uint32_t, uint32_t>& getHistSSHsummary(void) const
    { return hist_.getSSHsummary(); }
 
-   void fetchDBScrAddrData(uint32_t startBlock, 
-                           uint32_t endBlock,
-                           int32_t updateID);
-
    std::map<BinaryData, TxIOPair> getHistoryForScrAddr(
       uint32_t startBlock, uint32_t endBlock,
       bool update,
       bool withMultisig = false) const;
+   std::map<BinaryData, TxIOPair> getTxios(void) const;
 
    size_t getPageCount(void) const { return hist_.getPageCount(); }
    std::vector<LedgerEntry> getHistoryPageById(uint32_t id);
@@ -300,9 +288,7 @@ private:
    
    BinaryDataRef scrAddr_; //this includes the prefix byte!
 
-   // Each address will store a list of pointers to its transactions
-   std::map<BinaryData, TxIOPair> relevantTxIO_;
-   
+   // Each address will store a list of pointers to its transactions   
    mutable uint64_t totalTxioCount_=0;
    mutable uint32_t lastSeenBlock_=0;
 
@@ -315,8 +301,10 @@ private:
    pagedUTXOs   utxos_;
 
    std::map<BinaryData, std::set<BinaryData> > validZCKeys_;
+   std::map<BinaryData, TxIOPair> zcTxios_;
 
-   int32_t updateID_ = 0;
+   mutable int32_t updateID_ = 0;
+   mutable uint64_t internalBalance_ = 0;
 };
 
 #endif

@@ -9,6 +9,7 @@
 #include "ReentrantLock.h"
 #include "DerivationScheme.h"
 #include "DecryptedDataContainer.h"
+#include "BIP32_Node.h"
 
 using namespace std;
 
@@ -48,8 +49,11 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(BinaryDataRef data)
       //get chaincode;
       auto len = brr.get_var_int();
       auto&& chainCode = SecureBinaryData(brr.get_BinaryDataRef(len));
+
+      auto depth = brr.get_uint32_t();
+      auto leafID = brr.get_uint32_t();
       derScheme = make_shared<DerivationScheme_BIP32>(
-         chainCode);
+         chainCode, depth, leafID);
 
       break;
    }
@@ -172,8 +176,11 @@ vector<shared_ptr<AssetEntry>>
          account_id, id_int);
    };
 
-   if (ddc == nullptr)
+   if (ddc == nullptr || firstAsset == nullptr)
+   {
+      LOGERR << "missing asset, cannot extent private chain";
       throw AssetUnavailableException();
+   }
 
    ReentrantLock lock(ddc.get());
 
@@ -219,27 +226,21 @@ shared_ptr<AssetEntry_Single>
    if (index > 0x7FFFFFFF)
       throw DerivationSchemeException("illegal: hard derivation");
 
-   //chain the private key
-   auto&& nextPrivkeySBD = CryptoECDSA::bip32_derive_private_key(
-      privKeyData, chainCode_, index);
-
-   //compute its pubkey
-   auto&& nextPubkey = CryptoECDSA().ComputePublicKey(nextPrivkeySBD.first);
+   BIP32_Node node;
+   node.initFromPrivateKey(depth_, leafId_, privKeyData, chainCode_);
+   node.derivePrivate(index);
 
    //encrypt the new privkey
    auto&& newCypher = cypher->getCopy(); //copying a cypher cycles the IV
    auto&& encryptedNextPrivKey = ddc->encryptData(
-      newCypher.get(), nextPrivkeySBD.first);
-
-   //clear the unencrypted privkey object
-   nextPrivkeySBD.first.clear();
-   nextPrivkeySBD.second.clear();
+      newCypher.get(), node.getPrivateKey());
 
    //instantiate new encrypted key object
    auto nextPrivKey = make_shared<Asset_PrivateKey>(
       index, encryptedNextPrivKey, move(newCypher));
 
    //instantiate and return new asset entry
+   auto nextPubkey = node.movePublicKey();
    return make_shared<AssetEntry_Single>(
       index, accountID, nextPubkey, nextPrivKey);
 }
@@ -300,12 +301,14 @@ shared_ptr<AssetEntry_Single>
    if (index > 0x7FFFFFFF)
       throw DerivationSchemeException("illegal: hard derivation");
 
-   auto&& nextPubkey = CryptoECDSA::bip32_derive_public_key(
-      pubKey, chainCode_, index);
+   BIP32_Node node;
+   node.initFromPublicKey(depth_, leafId_, pubKey, chainCode_);
+   node.derivePublic(index);
 
+   auto nextPubKey = node.movePublicKey();
    return make_shared<AssetEntry_Single>(
       index, accountID,
-      nextPubkey.first, nullptr);
+      nextPubKey, nullptr);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -346,6 +349,8 @@ BinaryData DerivationScheme_BIP32::serialize() const
    bw.put_uint8_t(DERIVATIONSCHEME_BIP32);
    bw.put_var_int(chainCode_.getSize());
    bw.put_BinaryData(chainCode_);
+   bw.put_uint32_t(depth_);
+   bw.put_uint32_t(leafId_);
 
    BinaryWriter final;
    final.put_var_int(bw.getSize());

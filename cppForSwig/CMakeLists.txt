@@ -9,6 +9,7 @@ SET (SOURCES
    AssetEncryption.cpp
    AsyncClient.cpp
    BinaryData.cpp
+   BIP32_Node.cpp
    BlockDataManagerConfig.cpp
    BtcUtils.cpp
    ClientClasses.cpp

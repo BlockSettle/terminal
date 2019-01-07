@@ -78,14 +78,14 @@ uint64_t BtcWallet::getFullBalance() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-uint64_t BtcWallet::getFullBalanceFromDB() const
+uint64_t BtcWallet::getFullBalanceFromDB(unsigned updateID) const
 {
    uint64_t balance = 0;
 
    auto addrMap = scrAddrMap_.get();
 
    for (auto& scrAddr : *addrMap)
-      balance += scrAddr.second->getFullBalance();
+      balance += scrAddr.second->getFullBalance(updateID);
 
    return balance;
 }
@@ -125,7 +125,7 @@ map<BinaryData, tuple<uint64_t, uint64_t, uint64_t>>
       if (sa.second->updateID_ <= lastPulledBalancesID_)
          continue;
 
-      auto full = sa.second->getFullBalance();
+      auto full = sa.second->getFullBalance(UINT32_MAX);
       auto spendable = sa.second->getSpendableBalance(blockHeight);
       auto unconf = sa.second->getUnconfirmedBalance(blockHeight);
 
@@ -356,7 +356,7 @@ vector<AddressBookEntry> BtcWallet::createAddressBook(void)
 
    for (auto& saPair : *scrAddrMap)
    {
-      auto& txioMap = saPair.second->relevantTxIO_;
+      auto&& txioMap = saPair.second->getTxios();
 
       for (auto& txioPair : txioMap)
       {
@@ -475,13 +475,7 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
          updateAfterReorg(scanInfo.startBlock_);
          
       auto&& tx = bdvPtr_->getDB()->beginTransaction(SSH, LMDB::ReadOnly);
-
-      auto addrMap = scrAddrMap_.get();
-      for (auto& scrAddrPair : *addrMap)
-         scrAddrPair.second->fetchDBScrAddrData(
-            scanInfo.prevTopBlockHeight_, scanInfo.endBlock_, updateID);
-
-      balance_ = getFullBalanceFromDB();
+      balance_ = getFullBalanceFromDB(updateID);
    }
   
    if (scanInfo.saStruct_.zcMap_.size() != 0 ||
@@ -507,12 +501,13 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
                if (iter == ledgerMap.end())
                   continue;
 
-               scanInfo.saStruct_.zcLedgers_.insert(
-                  make_pair(iter->first, iter->second));
+               auto& walletZcLedgers = 
+                  scanInfo.saStruct_.zcLedgers_[walletID()];
+               walletZcLedgers.insert(*iter);
             }
          }
 
-         balance_ = getFullBalanceFromDB();
+         balance_ = getFullBalanceFromDB(updateID);
          updateID_ = updateID;
 
          //return false because no new block was parsed
