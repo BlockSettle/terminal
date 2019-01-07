@@ -100,9 +100,19 @@ int bs::network::getCurveZMQKeyPair(std::pair<SecureBinaryData, SecureBinaryData
    return retVal;
 }
 
+// Function that reads a file with a Z85-encoded CurveZMQ key. The key will be
+// 40 bytes + a null char.
+//
+// IN:  ZMQ key file path (const QString&)
+//      Boolean indicator if key is pub or prv (const bool&)
+//      Logger (const std::shared_ptr<spdlog::logger>&)
+// OUT: A key buffer that will be initialized (SecureBinaryData&)
+// RET: Boolean indicator of the read success.
 bool bs::network::readZMQKeyFile(const QString& zmqKeyFilePath
    , SecureBinaryData& zmqKey, const bool& isPub
    , const std::shared_ptr<spdlog::logger>& logger) {
+   qint64 targFileSize = isPub ? CURVEZMQPUBKEYBUFFERSIZE : CURVEZMQPRVKEYBUFFERSIZE;
+   zmqKey = SecureBinaryData(targFileSize);
    SecureBinaryData junkBuf(32);
 
    // Read the private key file and make sure it's properly formatted.
@@ -115,7 +125,6 @@ bool bs::network::readZMQKeyFile(const QString& zmqKeyFilePath
       return false;
    }
 
-   qint64 targFileSize = isPub ? CURVEZMQPUBKEYBUFFERSIZE : CURVEZMQPRVKEYBUFFERSIZE;
    if(zmqFile.size() != targFileSize) {
       if(logger) {
          logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file size "
