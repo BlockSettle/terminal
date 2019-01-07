@@ -534,15 +534,19 @@ bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std:
          for (const auto &queuedCb : cbBal_) {
             const auto &it = addressBalanceMap_.find(queuedCb.first.id());
             if (it != addressBalanceMap_.end()) {
-               queuedCb.second(it->second);
+               for (const auto &cb : queuedCb.second) {
+                  cb(it->second);
+               }
             }
             else {
-               queuedCb.second({ 0, 0, 0 });
+               for (const auto &cb : queuedCb.second) {
+                  cb({ 0, 0, 0 });
+               }
             }
          }
          cbBal_.clear();
       };
-      cbBal_[addr] = cb;
+      cbBal_[addr].push_back(cb);
       if (cbBal_.size() == 1) {
          btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
       }
@@ -584,8 +588,8 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t
                updateAddrTxN_ = false;
             }
          }
-         catch(std::exception& e) {
-            if(logger_ != nullptr) {
+         catch (const std::exception &e) {
+            if (logger_ != nullptr) {
                logger_->error("[bs::Wallet::getAddrTxN] Return data error - {} ", \
                   "- Address {}", e.what(), addr.display().toStdString());
             }
@@ -594,15 +598,19 @@ bool bs::Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t
          for (const auto &queuedCb : cbTxN_) {
             const auto &it = addressTxNMap_.find(queuedCb.first.id());
             if (it != addressTxNMap_.end()) {
-               queuedCb.second(it->second);
+               for (const auto &cb : queuedCb.second) {
+                  cb(it->second);
+               }
             }
             else {
-               queuedCb.second(0);
+               for (const auto &cb : queuedCb.second) {
+                  cb(0);
+               }
             }
          }
          cbTxN_.clear();
       };
-      cbTxN_[addr] = cb;
+      cbTxN_[addr].push_back(cb);
       if (cbTxN_.size() == 1) {
          btcWallet_->getAddrTxnCountsFromDB(cbTxN);
       }

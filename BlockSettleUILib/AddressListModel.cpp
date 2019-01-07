@@ -34,8 +34,6 @@ AddressListModel::AddressListModel(std::shared_ptr<WalletsManager> walletsManage
 {
    connect(walletsManager.get(), &WalletsManager::walletsReady, this
            , &AddressListModel::updateData);
-//   connect(walletsManager.get(), &WalletsManager::walletChanged, this
-//           , &AddressListModel::updateData);
    connect(walletsManager.get(), &WalletsManager::blockchainEvent, this
            , &AddressListModel::updateData);
 }
@@ -157,10 +155,10 @@ void AddressListModel::updateWalletData()
          // On the final address, set the TX count for all addresses and emit
          // any required signals.
          if (*nbTxNs <= 0) {
-            for (size_t i = 0;
-                 i < std::min(addressRows_.size(), addrTxNs->size());
-                 ++i) {
-               addressRows_[i].transactionCount = (*addrTxNs)[i];
+            for (size_t j = 0;
+                 j < std::min(addressRows_.size(), addrTxNs->size());
+                 ++j) {
+               addressRows_[j].transactionCount = (*addrTxNs)[j];
             }
             emit dataChanged(index(0, ColumnTxCount)
                              , index(addressRows_.size()-1, ColumnTxCount));
@@ -184,10 +182,10 @@ void AddressListModel::updateWalletData()
          // On the final address, set the balance for all addresses and emit
          // any required signals.
          if (*nbBalances <= 0) {
-            for (size_t i = 0;
-                 i < std::min(addressRows_.size(), addrBalances->size());
-                 ++i) {
-               addressRows_[i].balance = (*addrBalances)[i];
+            for (size_t j = 0;
+                 j < std::min(addressRows_.size(), addrBalances->size());
+                 ++j) {
+               addressRows_[j].balance = (*addrBalances)[j];
             }
             emit dataChanged(index(0, ColumnBalance)
                              , index(addressRows_.size() - 1, ColumnBalance));
