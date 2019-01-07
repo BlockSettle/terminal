@@ -23,8 +23,7 @@ public:
    ChatUsersViewModel(ChatUsersViewModel&&) = delete;
    ChatUsersViewModel& operator = (ChatUsersViewModel&&) = delete;
 
-   QString resolveUser(const QModelIndex& index);
-   QModelIndex resolveUser(const QString& userId);
+   QString resolveUser(const QModelIndex &) const;
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -34,12 +33,12 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 public slots:
-   void onClear();
-   void onUsersUpdate(const std::vector<std::string>& users);
+   void onUsersReplace(const std::vector<std::string> &);
+   void onUsersAdd(const std::vector<std::string> &);
+   void onUsersDel(const std::vector<std::string> &);
 
 private:
-   QMap<QString, int> indexByUser_;
-   QVector<QString> userByIndex_;
+   std::vector<std::string>   users_;
 };
 
 

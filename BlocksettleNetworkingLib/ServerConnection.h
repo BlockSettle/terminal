@@ -3,8 +3,9 @@
 
 #include "ServerConnectionListener.h"
 
-#include <string>
+#include <functional>
 #include <memory>
+#include <string>
 
 class ServerConnection
 {
@@ -24,8 +25,10 @@ public:
 
    virtual std::string GetClientInfo(const std::string &clientId) const = 0;
 
-   virtual bool SendDataToClient(const std::string& clientId, const std::string& data) = 0;
-   virtual bool SendDataToAllClients(const std::string& ) { return false; }
+   using SendResultCb = std::function<void(const std::string &clientId, const std::string &data, bool)>;
+   virtual bool SendDataToClient(const std::string& clientId, const std::string& data
+      , const SendResultCb &cb = nullptr) = 0;
+   virtual bool SendDataToAllClients(const std::string&, const SendResultCb &cb = nullptr) { return false; }
 };
 
 #endif // __SERVER_CONNECTION_H__
