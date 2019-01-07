@@ -43,8 +43,8 @@ public:
       LogFileName,
       ListenAddress,
       ListenPort,
-      ConnPubKey,
-      ConnPrivKey,
+      HeadlessPubKey,
+      HeadlessPrvKey,
       PasswordHash,
       LimitManualXBT,
       LimitAutoSignXBT,
@@ -53,8 +53,8 @@ public:
       HideEidInfoBox
    };
 
-   QString publicKey() const { return get(ConnPubKey).toString(); }
-   QString privateKey() const { return get(ConnPrivKey).toString(); }
+   QString headlessPubKeyFile() const { return get(HeadlessPubKey).toString(); }
+   QString headlessPrvKeyFile() const { return get(HeadlessPrvKey).toString(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
    QString logFileName() const { return get(LogFileName).toString(); }
@@ -96,7 +96,6 @@ public:
    static QString secondsToIntervalStr(int);
    static int intervalStrToSeconds(const QString &);
 
-
 signals:
    void offlineChanged();
    void testNetChanged();
@@ -119,7 +118,6 @@ private:
    void settingChanged(Setting, const QVariant &val);
    void setXbtLimit(const double val, Setting);
 
-private:
    struct SettingDef {
       QString  path;
       QVariant defVal;
