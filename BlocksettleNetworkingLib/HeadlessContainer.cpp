@@ -823,7 +823,7 @@ bool RemoteSigner::Start()
    }
 
    // If the ZMQ server public key hasn't been loaded yet, do it here.
-   if(zmqSrvPubKey_.getSize() == 0) {
+   if (zmqSrvPubKey_.getSize() == 0) {
       // Read the server key file. For now, assume the location is fixed. We may
       // want to make the location dynamic later. In addition, there's a race
       // condition of sorts when starting out. If the server pub key exists,
@@ -833,13 +833,13 @@ bool RemoteSigner::Start()
       QString zmqSrvPubKeyPath = logDir.path() + \
          QString::fromStdString("/headless_conn_srv.pub");
       QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
-      if(!zmqSrvPubKeyFile.exists()) {
+      if (!zmqSrvPubKeyFile.exists()) {
          QThread::msleep(250);
       }
 
-      zmqSrvPubKey_ = SecureBinaryData(CURVEZMQPUBKEYBUFFERSIZE);
-      if(!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true
-         , logger_)) {
+      auto zmqSrvPubKey = SecureBinaryData(CURVEZMQPUBKEYBUFFERSIZE);
+      if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true, logger_)) {
+         logger_->error("[RemoteSigner::{}] failed to read connection public key", __func__);
          return false;
       }
    }
