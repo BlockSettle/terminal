@@ -19,7 +19,8 @@ public:
 public:
    bool SetKeyPair(const std::string& publicKey, const std::string& privateKey);
 
-   bool SendDataToClient(const std::string& clientId, const std::string& data) override;
+   bool SendDataToClient(const std::string& clientId, const std::string& data
+      , const SendResultCb &cb = nullptr) override;
 
 protected:
    ZmqContext::sock_ptr CreateDataSocket() override;
