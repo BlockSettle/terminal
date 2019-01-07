@@ -90,15 +90,15 @@ static int HeadlessApp(int argc, char **argv)
    app.setOrganizationDomain(QLatin1String("blocksettle.com"));
    app.setOrganizationName(QLatin1String("blocksettle"));
 
-   try {
-      const auto settings = std::make_shared<SignerSettings>(app.arguments());
-      auto logger = spdlog::basic_logger_mt("app_logger"
-                                            , settings->logFileName().toStdString());
-      // [date time.miliseconds] [level](thread id): text
-      logger->set_pattern("%D %H:%M:%S.%e (%t)[%L]: %v");
-      logger->set_level(spdlog::level::debug);
-      logger->flush_on(spdlog::level::debug);
+   const auto settings = std::make_shared<SignerSettings>(app.arguments());
+   auto logger = spdlog::basic_logger_mt("app_logger"
+      , settings->logFileName().toStdString());
+   // [date time.miliseconds] [level](thread id): text
+   logger->set_pattern("%D %H:%M:%S.%e (%t)[%L]: %v");
+   logger->set_level(spdlog::level::debug);
+   logger->flush_on(spdlog::level::debug);
 
+   try {
       // Go ahead and build the headless connection encryption files, even if we
       // don't use them. If they already exist, we'll leave them alone.
       buildHeadlessConnFiles(settings, logger);
@@ -111,7 +111,10 @@ static int HeadlessApp(int argc, char **argv)
       return app.exec();
    }
    catch (const std::exception &e) {
-      std::cerr << "Failed to start headless process: " << e.what() << std::endl;
+      std::string errMsg = "Failed to start headless process: ";
+      errMsg.append(e.what());
+      logger->error("{}", errMsg);
+      std::cerr << errMsg << std::endl;
       return 1;
    }
    return 0;
