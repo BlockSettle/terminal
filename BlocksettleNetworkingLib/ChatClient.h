@@ -35,17 +35,14 @@ public:
    ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
             , const std::shared_ptr<ApplicationSettings> &appSettings
             , const std::shared_ptr<spdlog::logger>& logger);
-
-   ~ChatClient() noexcept override = default;
+   ~ChatClient() noexcept override;
 
    ChatClient(const ChatClient&) = delete;
    ChatClient& operator = (const ChatClient&) = delete;
-
    ChatClient(ChatClient&&) = delete;
    ChatClient& operator = (ChatClient&&) = delete;
 
    std::string loginToServer(const std::string& email, const std::string& jwt);
-
    void logout();
 
    void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
@@ -58,7 +55,7 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   void sendHeartbeat();
+   void onSendMessage(const QString& message, const QString &receiver);
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
@@ -69,12 +66,13 @@ signals:
    void ConnectionError(int errorCode);
 
    void LoginFailed();
-   void UsersUpdate(const std::vector<std::string>& users);
+   void UsersReplace(const std::vector<std::string>& users);
+   void UsersAdd(const std::vector<std::string>& users);
+   void UsersDel(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::string>& messages);
 
-public slots:
-   void onSendMessage(const QString& message);
-   void onSetCurrentPrivateChat(const QString& userId);
+private slots:
+   void sendHeartbeat();
 
 private:
    std::shared_ptr<ConnectionManager>    connectionManager_;
@@ -83,11 +81,10 @@ private:
 
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 
-   QScopedPointer<QTimer>             heartbeatTimer_;
+   QTimer            heartbeatTimer_;
 
-   std::string                     currentUserId_;
-   std::string                     currentChatId_;
-   std::atomic_bool                loggedIn_{ false };
+   std::string       currentUserId_;
+   std::atomic_bool  loggedIn_{ false };
 };
 
 #endif   // __CHAT_CLIENT_H__

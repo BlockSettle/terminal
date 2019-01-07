@@ -136,7 +136,8 @@ protected:
 
 std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger> &
    , const std::shared_ptr<ApplicationSettings> &, SignContainer::OpMode
-   , const QString &host, const std::shared_ptr<ConnectionManager> &);
+   , const QString &host
+   , const std::shared_ptr<ConnectionManager> & connectionManager);
 
 bool SignerConnectionExists(const QString &host, const QString &port);
 

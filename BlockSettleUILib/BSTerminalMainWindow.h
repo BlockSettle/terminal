@@ -47,7 +47,8 @@ class BSTerminalMainWindow : public QMainWindow
 Q_OBJECT
 
 public:
-   BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings, BSTerminalSplashScreen& splashScreen, QWidget* parent = nullptr);
+   BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
+      , BSTerminalSplashScreen& splashScreen, QWidget* parent = nullptr);
    ~BSTerminalMainWindow() override;
 
    void postSplashscreenActions();
