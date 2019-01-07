@@ -1,5 +1,6 @@
-#include "ZMQHelperFunctions.h"
+#include <QFile>
 
+#include "ZMQHelperFunctions.h"
 #include "MessageHolder.h"
 
 #ifndef WIN32
@@ -85,14 +86,55 @@ std::string bs::network::peerAddressString(int socket)
 // IN:     Logger object (spdlog::logger pointer)
 // OUT:    Public/Private key pair buffer (<BinaryData, SecureBinaryData>)
 // RETURN: -2 (Setup failure), -1 (ZMQ failure), 0 (Success)
-int bs::network::getCurveZMQKeyPair(std::pair<BinaryData, SecureBinaryData>& outKeyPair)
+int bs::network::getCurveZMQKeyPair(std::pair<SecureBinaryData, SecureBinaryData>& outKeyPair)
 {
-   BinaryData pubKey(CURVEZMQPUBKEYBUFFERSIZE);
+   SecureBinaryData pubKey(CURVEZMQPUBKEYBUFFERSIZE);
    SecureBinaryData prvKey(CURVEZMQPRVKEYBUFFERSIZE);
 
    // Generate the keypair and overwrite the incoming pair.
    int retVal = zmq_curve_keypair(pubKey.getCharPtr(), prvKey.getCharPtr());
-   outKeyPair = std::make_pair(pubKey, prvKey);
+   outKeyPair.first = pubKey;
+   outKeyPair.second = prvKey;
+//   outKeyPair = std::make_pair(pubKey, prvKey);
 
    return retVal;
+}
+
+bool bs::network::readZMQKeyFile(const QString& zmqKeyFilePath
+   , SecureBinaryData& zmqKey, const bool& isPub
+   , const std::shared_ptr<spdlog::logger>& logger) {
+   SecureBinaryData junkBuf(32);
+
+   // Read the private key file and make sure it's properly formatted.
+   QFile zmqFile(zmqKeyFilePath);
+   if(!zmqFile.open(QIODevice::ReadOnly)) {
+      if(logger) {
+         logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file ({}) "
+            "cannot be opened.", __func__, zmqKeyFilePath.toStdString());
+      }
+      return false;
+   }
+
+   qint64 targFileSize = isPub ? CURVEZMQPUBKEYBUFFERSIZE : CURVEZMQPRVKEYBUFFERSIZE;
+   if(zmqFile.size() != targFileSize) {
+      if(logger) {
+         logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file size "
+            "({} bytes) should be {} bytes.", __func__, zmqFile.size()
+            , isPub ? CURVEZMQPUBKEYBUFFERSIZE : CURVEZMQPRVKEYBUFFERSIZE);
+      }
+      return false;
+   }
+
+   zmqFile.read(zmqKey.getCharPtr(), targFileSize);
+   if(zmq_z85_decode(junkBuf.getPtr(), zmqKey.getCharPtr()) == NULL) {
+      if(logger) {
+         logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file ({}) "
+            "is not a Z85-formatted key file.", __func__
+            , zmqKeyFilePath.toStdString());
+      }
+      return false;
+   }
+   zmqFile.close();
+
+   return true;
 }
