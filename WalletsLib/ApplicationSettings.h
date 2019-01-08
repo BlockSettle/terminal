@@ -51,6 +51,9 @@ public:
       celerPort,
       mdServerHost,
       mdServerPort,
+      chatServerHost,
+      chatServerPort,
+      chatServerPubKey,
       celerUsername,
       signerHost,
       signerPort,
@@ -95,6 +98,7 @@ public:
       SubscribeToMDOnStart,
       MDLicenseAccepted,
       authPrivKey,
+      jwtUsername,
       _last
    };
 

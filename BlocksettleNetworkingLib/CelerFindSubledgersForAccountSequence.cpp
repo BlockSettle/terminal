@@ -76,7 +76,9 @@ bool CelerFindSubledgersForAccountSequence::processFindSubledgersResponse(const 
          return false;
       }
 
-      balancePairs_.emplace_back(subledger.currency(), subledger.netposition());
+      if (subledger.currency() != "USD") {
+         balancePairs_.emplace_back(subledger.currency(), subledger.netposition());
+      }
    }
 
    return true;

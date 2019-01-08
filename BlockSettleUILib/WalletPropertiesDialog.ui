@@ -516,10 +516,10 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="minimumSize">
+                 <property name="maximumSize">
                   <size>
-                   <width>100</width>
-                   <height>0</height>
+                   <width>90</width>
+                   <height>16777215</height>
                   </size>
                  </property>
                  <property name="text">
@@ -529,11 +529,33 @@
                </item>
                <item>
                 <widget class="QLabel" name="labelAddressesUsed">
+                 <property name="maximumSize">
+                  <size>
+                   <width>50</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
                  <property name="text">
-                  <string>TextLabel</string>
+                  <string>Loading...</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                  </property>
                  <property name="whiteLabel" stdset="0">
                   <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_11">
+                 <property name="minimumSize">
+                  <size>
+                   <width>80</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -572,10 +594,10 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="minimumSize">
+                 <property name="maximumSize">
                   <size>
-                   <width>100</width>
-                   <height>0</height>
+                   <width>90</width>
+                   <height>16777215</height>
                   </size>
                  </property>
                  <property name="text">
@@ -585,14 +607,36 @@
                </item>
                <item>
                 <widget class="QLabel" name="labelAddressesActive">
+                 <property name="maximumSize">
+                  <size>
+                   <width>50</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
                  <property name="text">
                   <string>Loading...</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                  </property>
                  <property name="wordWrap">
                   <bool>true</bool>
                  </property>
                  <property name="whiteLabel" stdset="0">
                   <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_12">
+                 <property name="minimumSize">
+                  <size>
+                   <width>80</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -631,10 +675,10 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="minimumSize">
+                 <property name="maximumSize">
                   <size>
-                   <width>100</width>
-                   <height>0</height>
+                   <width>90</width>
+                   <height>16777215</height>
                   </size>
                  </property>
                  <property name="text">
@@ -644,15 +688,51 @@
                </item>
                <item>
                 <widget class="QLabel" name="labelUTXOs">
+                 <property name="maximumSize">
+                  <size>
+                   <width>50</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
                  <property name="text">
                   <string>Loading...</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                  </property>
                  <property name="whiteLabel" stdset="0">
                   <bool>true</bool>
                  </property>
                 </widget>
                </item>
+               <item>
+                <widget class="QLabel" name="label_13">
+                 <property name="minimumSize">
+                  <size>
+                   <width>80</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
               </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_14">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_15">
+              <property name="text">
+               <string/>
+              </property>
              </widget>
             </item>
            </layout>

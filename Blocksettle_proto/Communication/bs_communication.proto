@@ -7,7 +7,6 @@ enum RequestType
    SubmitAuthAddressForVerificationType = 1;
    GetBSFundingAddressListType          = 2;
    ErrorMessageResponseType             = 3;
-   GenerateOTPRequestType               = 4;
    GetCCGenesisAddressesType            = 5;
    SubmitCCAddrInitialDistribType       = 6;
    GenerateCCSeedRequestType            = 7;
@@ -42,9 +41,7 @@ message RequestPacket
    required RequestType requestType = 1;
    required bytes       requestData = 2;
    optional bytes       dataSignature = 3;
-   optional bytes       otpId = 4;
-   optional int64       keyIndex = 5;
-   optional bytes	unsignedMixIn = 6;
+   optional bytes	unsignedMixIn = 4;
 }
 
 message ResponsePacket
@@ -106,13 +103,6 @@ message ClientAddress
    optional string mainPhone = 8;
    optional string company = 9;
    optional string countryCode = 10;
-}
-
-message GenerateOTPRequest
-{
-   required string userName = 1;
-   required string userId = 2;
-   optional ClientAddress address = 3;
 }
 
 message GetCCGenesisAddressesRequest
@@ -180,6 +170,7 @@ message ConfirmAuthSubmitRequest
    required AddressNetworkType networkType = 3;
    required AddressScriptType  scriptType = 4;
    required bytes  publicKey = 5;
+   required string userId = 6;
 }
 
 message ConfirmAuthSubmitResponse
@@ -197,20 +188,16 @@ message FundCCGenAddrRequest
 }
 
 
-enum NetworkSettingType
-{
-   CelerConnType = 1;
-   MDConnType = 2;
-   MDHSConnType = 3;
-}
-
 message GetNetworkSettingsResponse
 {
    message ConnectionData
    {
-      required NetworkSettingType type = 1;
-      required string host = 2;
-      required uint32 port = 3;
+      required string host = 1;
+      required uint32 port = 2;
    }
-   repeated ConnectionData settings = 1;
+
+   optional ConnectionData celer = 1;
+   optional ConnectionData marketData = 2;
+   optional ConnectionData mdhs = 3;
+   optional ConnectionData chat = 4;
 }

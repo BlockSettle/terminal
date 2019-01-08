@@ -169,6 +169,11 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       qApp->clipboard()->setText(curAddress_);
    });
 
+   actionCopyTx_ = new QAction(tr("Copy &Transaction Hash"));
+   connect(actionCopyTx_, &QAction::triggered, [this]() {
+      qApp->clipboard()->setText(curTx_);
+   });
+
    actionRBF_ = new QAction(tr("Replace-By-Fee (RBF)"), this);
    connect(actionRBF_, &QAction::triggered, this, &TransactionsWidget::onCreateRBFDialog);
 
@@ -181,32 +186,42 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
       curAddress_ = transactionsModel_->data(addressIndex).toString();
 
       contextMenu_.clear();
-      contextMenu_.addAction(actionCopyAddr_);
 
       if (sortFilterModel_) {
-         const auto sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
-         const auto txItem = transactionsModel_->getItem(sourceIndex.row());
-         if (txItem.initialized) {
-            if (txItem.isRBFeligible()) {
+         const auto &sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
+         const auto &txNode = transactionsModel_->getNode(sourceIndex);
+         if (txNode && txNode->item() && txNode->item()->initialized) {
+            if (txNode->item()->isRBFeligible() && (txNode->level() < 2)) {
                contextMenu_.addAction(actionRBF_);
-               actionRBF_->setData(sourceIndex.row());
+               actionRBF_->setData(sourceIndex);
             }
             else {
                actionRBF_->setData(-1);
             }
 
-            if (txItem.isCPFPeligible()) {
+            if (txNode->item()->isCPFPeligible()) {
                contextMenu_.addAction(actionCPFP_);
-               actionCPFP_->setData(sourceIndex.row());
+               actionCPFP_->setData(sourceIndex);
             }
             else {
                actionCPFP_->setData(-1);
+            }
+
+            // save transaction id and add context menu for copying it to clipboard
+            curTx_ = QString::fromStdString(txNode->item()->txEntry.txHash.toHexStr(true));
+            contextMenu_.addAction(actionCopyTx_);
+
+            // allow copy address only if there is only 1 address
+            if (txNode->item()->addressCount == 1) {
+               contextMenu_.addAction(actionCopyAddr_);
             }
          }
       }
       contextMenu_.popup(ui->treeViewTransactions->mapToGlobal(p));
    });
    ui->treeViewTransactions->setUniformRowHeights(true);
+   ui->treeViewTransactions->setItemsExpandable(true);
+   ui->treeViewTransactions->setRootIsDecorated(true);
    ui->treeViewTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    connect(ui->typeFilterComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [&](int index) {
@@ -256,6 +271,8 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 {
    transactionsModel_ = model;
    connect(transactionsModel_.get(), &TransactionsViewModel::dataLoaded, this, &TransactionsWidget::onDataLoaded, Qt::QueuedConnection);
+   connect(transactionsModel_.get(), &TransactionsViewModel::initProgress, this, &TransactionsWidget::onProgressInited);
+   connect(transactionsModel_.get(), &TransactionsViewModel::updateProgress, this, &TransactionsWidget::onProgressUpdated);
 
    sortFilterModel_ = new TransactionsSortFilterModel(appSettings_, this);
    sortFilterModel_->setSourceModel(model.get());
@@ -285,12 +302,26 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 
 void TransactionsWidget::onDataLoaded(int count)
 {
+   ui->progressBar->hide();
+   ui->progressBar->setMaximum(0);
+   ui->progressBar->setMinimum(0);
+
    if ((count <= 0) || (ui->dateEditStart->dateTime().date().year() > 2009)) {
       return;
    }
-   auto index = transactionsModel_->index(count - 1, static_cast<int>(TransactionsViewModel::Columns::Date));
-   auto dateTime = transactionsModel_->data(index).toDateTime();
-   ui->dateEditStart->setDateTime(dateTime);
+   const auto &item = transactionsModel_->getOldestItem();
+   ui->dateEditStart->setDateTime(QDateTime::fromTime_t(item.txEntry.txTime));
+}
+
+void TransactionsWidget::onProgressInited(int start, int end)
+{
+   ui->progressBar->setMinimum(start);
+   ui->progressBar->setMaximum(end);
+}
+
+void TransactionsWidget::onProgressUpdated(int value)
+{
+   ui->progressBar->setValue(value);
 }
 
 void TransactionsWidget::setAppSettings(std::shared_ptr<ApplicationSettings> appSettings)
@@ -434,7 +465,7 @@ void TransactionsWidget::onEnterKeyInTrxPressed(const QModelIndex &index)
 
 void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 {
-   auto txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index).row());
+   auto txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index));
 
    TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
    transactionDetailDialog.exec();
@@ -443,7 +474,7 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 void TransactionsWidget::updateResultCount()
 {
    auto shown = sortFilterModel_->rowCount();
-   auto total = transactionsModel_->rowCount();
+   auto total = transactionsModel_->itemsCount();
    ui->labelResultCount->setText(tr("Displaying %L1 transactions (of %L2 total).")
       .arg(shown).arg(total));
    ui->labelResultCount->show();
@@ -451,7 +482,7 @@ void TransactionsWidget::updateResultCount()
 
 void TransactionsWidget::onCreateRBFDialog()
 {
-   auto txItem = transactionsModel_->getItem(actionRBF_->data().toInt());
+   auto txItem = transactionsModel_->getItem(actionRBF_->data().toModelIndex());
 
    const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
       try {
@@ -476,7 +507,7 @@ void TransactionsWidget::onCreateRBFDialog()
 
 void TransactionsWidget::onCreateCPFPDialog()
 {
-   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toInt());
+   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toModelIndex());
 
    const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
       try {

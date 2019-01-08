@@ -70,7 +70,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
    }
    
    if (key.encType == bs::wallet::EncryptionType::Auth) {
-      EnterWalletPassword dialog(MobileClientRequest::VerifyWalletKey, this);
+      EnterWalletPassword dialog(AutheIDClient::VerifyWalletKey, this);
       dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Confirm Auth eID Signing"), tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {

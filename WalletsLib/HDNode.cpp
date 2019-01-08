@@ -290,7 +290,7 @@ std::string hd::Node::getPrivateKey() const
 
 SecureBinaryData hd::Node::privateKey() const
 {
-   if (!hasPrivKey_ || !encTypes().empty()) {
+   if (!hasPrivKey_) {
       return {};
    }
    return SecureBinaryData(node_.private_key, sizeof(node_.private_key));
@@ -349,7 +349,7 @@ std::unique_ptr<hd::Node> hd::Node::createUnique(const btc_hdnode &node, Network
 
 std::shared_ptr<hd::Node> hd::Node::derive(const Path &path, bool pubCKD) const
 {
-   if (!pubCKD && (!hasPrivKey_ || !encTypes().empty())) {
+   if (!pubCKD && !hasPrivKey_) {
       return nullptr;
    }
    btc_hdnode newNode;
@@ -514,29 +514,32 @@ static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = BTC_AE
    return result;
 }
 
+static SecureBinaryData LimitData(const SecureBinaryData &key, size_t limit = BTC_AES::MAX_KEYLENGTH)
+{
+   if (key.getSize() <= limit) {
+      return key;
+   }
+   return key.getSliceCopy(0, limit);
+}
+
 std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
 {
    if (encTypes_.empty()) {
       return nullptr;
    }
    auto result = createUnique(node_, netType_);
-   try {
-      auto key = PadData(password);
-      SecureBinaryData privKey(node_.private_key, sizeof(node_.private_key));
-      CryptoAES crypto;
-      const auto decrypted = crypto.DecryptCBC(privKey, key, iv_);
-      if (decrypted.getSize() != privKey.getSize()) {
-         throw std::runtime_error("encrypted key size mismatch");
-      }
-      memcpy(result->node_.private_key, decrypted.getPtr(), decrypted.getSize());
-
-      if (!seed_.isNull()) {
-         SecureBinaryData seed = seed_;
-         result->seed_ = crypto.DecryptCBC(seed, key, iv_);
-      }
+   const auto key = PadData(LimitData(password));
+   SecureBinaryData privKey(node_.private_key, sizeof(node_.private_key));
+   CryptoAES crypto;
+   const auto decrypted = crypto.DecryptCBC(privKey, key, iv_);
+   if (decrypted.getSize() != privKey.getSize()) {
+      throw std::runtime_error("encrypted key size mismatch");
    }
-   catch (const std::exception &e) {
-      return nullptr;
+   memcpy(result->node_.private_key, decrypted.getPtr(), decrypted.getSize());
+
+   if (!seed_.isNull()) {
+      SecureBinaryData seed = seed_;
+      result->seed_ = crypto.DecryptCBC(seed, key, iv_);
    }
    return result;
 }
@@ -553,23 +556,18 @@ std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password
    result->encKeys_ = encKeys;
    result->seed_.clear();
    memset(result->node_.private_key, 0, sizeof(result->node_.private_key));
-   try {
-      auto key = PadData(password);
-      CryptoAES crypto;
-      SecureBinaryData privKey = privateKey();
-      auto encrypted = crypto.EncryptCBC(privKey, key, result->iv_);
-      if (encrypted.getSize() != privKey.getSize()) {
-         throw std::runtime_error("encrypted key size mismatch");
-      }
-      memcpy(result->node_.private_key, encrypted.getPtr(), encrypted.getSize());
-
-      if (!seed_.isNull()) {
-         SecureBinaryData seed = PadData(seed_);
-         result->seed_ = crypto.EncryptCBC(seed, key, result->iv_);
-      }
+   const auto key = PadData(LimitData(password));
+   CryptoAES crypto;
+   SecureBinaryData privKey = privateKey();
+   auto encrypted = crypto.EncryptCBC(privKey, key, result->iv_);
+   if (encrypted.getSize() != privKey.getSize()) {
+      throw std::runtime_error("encrypted key size mismatch");
    }
-   catch (...) {
-      return nullptr;
+   memcpy(result->node_.private_key, encrypted.getPtr(), encrypted.getSize());
+
+   if (!seed_.isNull()) {
+      SecureBinaryData seed = PadData(seed_);
+      result->seed_ = crypto.EncryptCBC(seed, key, result->iv_);
    }
    return result;
 }
@@ -620,14 +618,28 @@ std::shared_ptr<hd::Node> hd::Nodes::decrypt(const SecureBinaryData &password) c
    if ((nodes_.size() == 1) && nodes_[0]->encTypes().empty()) {
       return nodes_[0];
    }
-   if (password.isNull()) {
-      return nullptr;
-   }
+
    for (const auto &node : nodes_) {
-      auto decrypted = node->decrypt(password);
-      wallet::Seed seed(decrypted->getNetworkType(), decrypted->privateKey());
-      if (hd::Node(seed).getId() == id_) {
-         return std::move(decrypted);
+      auto encTypes = node->encTypes();
+
+      std::shared_ptr<hd::Node> decryptedNode = nullptr;
+
+      if (encTypes.empty() || encTypes[0] == bs::wallet::EncryptionType::Unencrypted) {
+         decryptedNode = node;
+      }
+      else {
+         if (password.isNull()) {
+            continue;
+         }
+
+         decryptedNode = node->decrypt(password);
+      }
+
+      if (decryptedNode != nullptr) {
+         wallet::Seed seed(decryptedNode->getNetworkType(), decryptedNode->privateKey());
+         if (hd::Node(seed).getId() == id_) {
+            return decryptedNode;
+         }
       }
    }
    return nullptr;

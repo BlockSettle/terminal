@@ -38,7 +38,8 @@ bool CCPubConnection::LoadCCDefinitionsFromPub()
 bool CCPubConnection::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
    const auto connection = connectionManager_->CreateSecuredDataConnection();
-   connection->SetServerPublicKey(GetPuBKey());
+   BinaryData inSrvPubKey(GetPuBKey());
+   connection->SetServerPublicKey(inSrvPubKey);
    auto command = std::make_shared<RequestReplyCommand>(name, connection, logger_);
 
    command->SetReplyCallback([command, this](const std::string& data) {

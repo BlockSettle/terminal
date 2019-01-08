@@ -7,21 +7,19 @@
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "AuthAddressViewModel.h"
-#include "EnterOTPPasswordDialog.h"
 #include "BSMessageBox.h"
 #include "UiUtils.h"
 
 
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<OTPManager> &otpMgr
+   , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AuthAddressDialog())
    , logger_(logger)
    , authAddressManager_(authAddressManager)
    , assetManager_(assetMgr)
-   , otpManager_(otpMgr)
    , settings_(settings)
 {
    ui_->setupUi(this);
@@ -43,7 +41,7 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, &AuthAddressDialog::onAuthAddrSubmitSuccess, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthVerifyTxSent, this, &AuthAddressDialog::onAuthVerifyTxSent, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::OtpSignFailed, this, &AuthAddressDialog::onOtpSignFailed, Qt::QueuedConnection);
+   connect(authAddressManager_.get(), &AuthAddressManager::SignFailed, this, &AuthAddressDialog::onSignFailed, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
    connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
@@ -137,9 +135,9 @@ void AuthAddressDialog::onAuthAddrSubmitSuccess(const QString &)
    close();
 }
 
-void AuthAddressDialog::onOtpSignFailed()
+void AuthAddressDialog::onSignFailed(const QString &err)
 {
-   showError(tr("Failed to sign request."), tr("OTP password is incorrect."));
+   showError(tr("Failed to sign request."), tr("Auth eID failed to sign: %1").arg(err));
    ConfirmAuthAddressSubmission();
 }
 
@@ -215,7 +213,7 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
          case AddressVerificationState::NotSubmitted:
             ui_->pushButtonVerify->setEnabled(false);
             ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(authAddressManager_->HaveOTP() && lastSubmittedAddress_.isNull());
+            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
             ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::VerificationFailed:
@@ -335,20 +333,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 
 void AuthAddressDialog::ConfirmAuthAddressSubmission()
 {
-   SecureBinaryData otpPassword = {};
-
-   if (authAddressManager_->needsOTPpassword()) {
-      EnterOTPPasswordDialog passwordDialog(logger_, otpManager_
-         , tr("Authentication Address Submission"), settings_, this);
-      if (passwordDialog.exec() != QDialog::Accepted) {
-         authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
-         lastSubmittedAddress_ = bs::Address{};
-         return;
-      }
-      otpPassword = SecureBinaryData(passwordDialog.GetPassword());
-   }
-
-   authAddressManager_->ConfirmSubmitForVerification(lastSubmittedAddress_, otpPassword);
+   authAddressManager_->ConfirmSubmitForVerification(lastSubmittedAddress_);
 }
 
 void AuthAddressDialog::submitSelectedAddress()

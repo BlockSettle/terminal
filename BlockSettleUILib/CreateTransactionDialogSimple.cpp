@@ -170,13 +170,6 @@ void CreateTransactionDialogSimple::showAdvanced()
    accept();
 }
 
-void CreateTransactionDialogSimple::onTransactionUpdated()
-{
-   CreateTransactionDialog::onTransactionUpdated();
-
-   ui_->pushButtonCreate->setEnabled(transactionData_->IsTransactionValid());
-}
-
 bs::Address CreateTransactionDialogSimple::getChangeAddress() const
 {
    bs::Address result;

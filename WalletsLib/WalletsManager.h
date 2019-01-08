@@ -47,7 +47,6 @@ public:
    using wallet_gen_type = std::shared_ptr<bs::Wallet>;     // Generic wallet interface
    using hd_wallet_type = std::shared_ptr<bs::hd::Wallet>;
 
-public:
    WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryConnection> &, bool preferWatchingOnly = true);
    WalletsManager(const std::shared_ptr<spdlog::logger> &);
@@ -101,9 +100,9 @@ public:
    void UnregisterSavedWallets();
 
    bool GetTransactionDirection(Tx, const std::shared_ptr<bs::Wallet> &
-      , std::function<void(bs::Transaction::Direction)>);
+      , std::function<void(bs::Transaction::Direction, std::vector<bs::Address> inAddrs)>);
    bool GetTransactionMainAddress(const Tx &, const std::shared_ptr<bs::Wallet> &
-      , bool isReceiving, std::function<void(QString)>);
+      , bool isReceiving, std::function<void(QString, int)>);
 
    hd_wallet_type CreateWallet(const std::string& name, const std::string& description
       , bs::wallet::Seed, const QString &walletsPath, bool primary = false
@@ -114,6 +113,9 @@ public:
    bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
 
    std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> GetAddressesInAllWallets() const;
+
+   QString OfflineTxDir() const;
+   void SetOfflineTxDir(const QString &);
 
 signals:
    void walletChanged();
@@ -141,7 +143,8 @@ private slots:
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);
    void onHDLeafDeleted(QString id);
-   void onRefresh();
+   void onNewBlock();
+   void onRefresh(std::vector<BinaryData> ids);
    void onStateChanged(ArmoryConnection::State);
    void onFeeObjDestroyed();
    void onWalletImported(const std::string &walletId);
@@ -161,13 +164,15 @@ private:
    bool SetAuthWalletFrom(const hd_wallet_type &);
    void AddWallet(const wallet_gen_type& wallet, bool isHDLeaf = false);
 
-   void updateTxDirCache(const BinaryData &txHash, bs::Transaction::Direction
-      , std::function<void(bs::Transaction::Direction)>);
-   void updateTxDescCache(const BinaryData &txHash, const QString &, std::function<void(QString)>);
+   void updateTxDirCache(const std::string &txKey, bs::Transaction::Direction
+                         , const std::vector<bs::Address> &inAddrs
+                         , std::function<void(bs::Transaction::Direction
+                         , std::vector<bs::Address>)>);
+   void updateTxDescCache(const std::string &txKey, const QString &, int
+                          , std::function<void(QString, int)>);
 
    void invokeFeeCallbacks(unsigned int blocks, float fee);
 
-private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ArmoryConnection>      armory_;
@@ -196,14 +201,17 @@ private:
    };
    std::unordered_map<std::string, CCInfo>   ccSecurities_;
 
-   std::map<BinaryData, bs::Transaction::Direction>   txDirections_;
+   std::unordered_map<std::string, std::pair<bs::Transaction::Direction, std::vector<bs::Address>>> txDirections_;
    mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;
-   std::map<BinaryData, QString> txDesc_;
+   std::unordered_map<std::string, std::pair<QString, int>> txDesc_;
    mutable std::atomic_flag      txDescLock_ = ATOMIC_FLAG_INIT;
 
    mutable std::map<unsigned int, float>     feePerByte_;
    mutable std::map<unsigned int, QDateTime> lastFeePerByte_;
    std::map<QObject *, std::map<unsigned int, std::function<void(float)>>> feeCallbacks_;
+
+   // Data captured from Armory callbacks.
+   std::map<BinaryData, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
 };
 
 #endif // __WALLETS_MANAGER_H__

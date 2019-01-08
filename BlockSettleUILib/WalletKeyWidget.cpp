@@ -9,7 +9,7 @@
 #include <QRadioButton>
 #include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
-#include "MobileClient.h"
+#include "AutheIDClient.h"
 
 namespace
 {
@@ -22,7 +22,7 @@ const QColor kFailColor = Qt::red;
 }
 
 
-WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::string &walletId
+WalletKeyWidget::WalletKeyWidget(AutheIDClient::RequestType requestType, const std::string &walletId
    , int index, bool password, const std::pair<autheid::PrivateKey, autheid::PublicKey> &authKeys
    , QWidget* parent)
    : QWidget(parent)
@@ -30,7 +30,7 @@ WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::str
    , walletId_(walletId), index_(index)
    , password_(password)
 //   , prompt_(prompt)
-   , mobileClient_(new MobileClient(spdlog::get(""), authKeys, this))
+   , autheIDClient_(new AutheIDClient(spdlog::get(""), authKeys, this))
    , requestType_(requestType)
 {
    ui_->setupUi(this);
@@ -50,8 +50,8 @@ WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::str
    connect(ui_->comboBoxAuthId, SIGNAL(currentIndexChanged(QString)), this, SLOT(onAuthIdChanged(QString)));
    connect(ui_->pushButtonAuth, &QPushButton::clicked, this, &WalletKeyWidget::onAuthSignClicked);
 
-   connect(mobileClient_, &MobileClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
-   connect(mobileClient_, &MobileClient::failed, this, &WalletKeyWidget::onAuthFailed);
+   connect(autheIDClient_, &AutheIDClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
+   connect(autheIDClient_, &AutheIDClient::failed, this, &WalletKeyWidget::onAuthFailed);
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &WalletKeyWidget::onTimer);
@@ -59,11 +59,16 @@ WalletKeyWidget::WalletKeyWidget(MobileClientRequest requestType, const std::str
 
 void WalletKeyWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings, const QString& username)
 {
-   std::string serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
-   std::string serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
-   std::string serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
+   const auto &serverPubKey = appSettings->get<std::string>(ApplicationSettings::authServerPubKey);
+   const auto &serverHost = appSettings->get<std::string>(ApplicationSettings::authServerHost);
+   const auto &serverPort = appSettings->get<std::string>(ApplicationSettings::authServerPort);
 
-   mobileClient_->init(serverPubKey, serverHost, serverPort);
+   try {
+      autheIDClient_->connect(serverPubKey, serverHost, serverPort);
+   }
+   catch (const std::exception &) {
+      ui_->pushButtonAuth->setEnabled(false);
+   }
 
    ui_->comboBoxAuthId->setEditText(username);
 }
@@ -83,7 +88,7 @@ void WalletKeyWidget::onTypeChanged()
    ui_->labelPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
    ui_->lineEditPasswordConfirm->setVisible(password_ && !encryptionKeysSet_);
    ui_->labelPasswordInfo->setVisible(password_);
-   ui_->labelPasswordWarning->setVisible(!hidePasswordWarning_);
+   ui_->labelPasswordWarning->setVisible(password_ && !encryptionKeysSet_ && !hidePasswordWarning_);
 
    ui_->labelAuthId->setVisible(!password_ && showAuthId_);
    ui_->widgetAuthLayout->setVisible(!password_);
@@ -138,7 +143,7 @@ void WalletKeyWidget::onAuthIdChanged(const QString &text)
 {
    ui_->labelAuthId->setText(text);
    emit encKeyChanged(index_, text.toStdString());
-   ui_->pushButtonAuth->setEnabled(!text.isNull());
+   ui_->pushButtonAuth->setEnabled(autheIDClient_->isConnected() && !text.isNull());
 }
 
 void WalletKeyWidget::onAuthSignClicked()
@@ -156,7 +161,7 @@ void WalletKeyWidget::onAuthSignClicked()
    timer_.start();
    authRunning_ = true;
 
-   mobileClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
+   autheIDClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
       , walletId_, knownDeviceIds_);
    ui_->pushButtonAuth->setText(tr("Cancel Auth request"));
    ui_->comboBoxAuthId->setEnabled(false);
@@ -184,7 +189,7 @@ void WalletKeyWidget::onAuthFailed(const QString &text)
 {
    
    stop();
-   ui_->pushButtonAuth->setEnabled(true);
+   ui_->pushButtonAuth->setEnabled(autheIDClient_->isConnected());
    ui_->pushButtonAuth->setText(tr("Auth failed: %1 - retry").arg(text));
    ui_->widgetAuthLayout->show();
    
@@ -225,7 +230,7 @@ void WalletKeyWidget::stop()
 void WalletKeyWidget::cancel()
 {
    if (!password_) {
-      mobileClient_->cancel();
+      autheIDClient_->cancel();
       stop();
    }
 }
@@ -235,7 +240,7 @@ void WalletKeyWidget::start()
    if (!password_ && !authRunning_ && !ui_->comboBoxAuthId->currentText().isEmpty()) {
       onAuthSignClicked();
       ui_->progressBar->setValue(0);
-      ui_->pushButtonAuth->setEnabled(true);
+      ui_->pushButtonAuth->setEnabled(autheIDClient_->isConnected());
    }
 }
 
@@ -245,6 +250,7 @@ void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &enc
    if (password_) {
       ui_->labelPasswordConfirm->hide();
       ui_->lineEditPasswordConfirm->hide();
+      ui_->labelPasswordWarning->hide();
    }
    if (encKeys.empty()) {
       return;
@@ -253,7 +259,7 @@ void WalletKeyWidget::setEncryptionKeys(const std::vector<SecureBinaryData> &enc
 
    knownDeviceIds_.clear();
    for (const auto &encKey : encKeys) {
-      auto deviceInfo = MobileClient::getDeviceInfo(encKey.toBinStr());
+      auto deviceInfo = AutheIDClient::getDeviceInfo(encKey.toBinStr());
       if (!deviceInfo.deviceId.empty()) {
          knownDeviceIds_.push_back(deviceInfo.deviceId);
       }

@@ -25,7 +25,7 @@ public:
 
    void init(const std::shared_ptr<ArmoryConnection> &armory,
              const std::shared_ptr<spdlog::logger> &inLogger);
-   void populateDataFor(const bs::Address& inAddrVal);
+   void setQueryAddr(const bs::Address& inAddrVal);
    void loadTransactions();
    void clear();
 
@@ -47,12 +47,11 @@ signals:
 private slots:
    void onTxClicked(QTreeWidgetItem *item, int column);
    void OnRefresh(std::vector<BinaryData> ids);
-   void onNewBlock(unsigned int);
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
    void setOutputColor(QTreeWidgetItem *item);
-   void getTxData(AsyncClient::LedgerDelegate inDelegate);
+   void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
    void refresh(const std::shared_ptr<bs::PlainWallet> &);
 
 private:

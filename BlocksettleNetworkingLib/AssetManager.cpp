@@ -1,6 +1,5 @@
 #include <algorithm>
-#include <QMutexLocker>
-#include <spdlog/spdlog.h>
+
 #include "AssetManager.h"
 #include "CelerClient.h"
 #include "CelerFindSubledgersForAccountSequence.h"
@@ -13,6 +12,9 @@
 
 #include "com/celertech/piggybank/api/subledger/DownstreamSubLedgerProto.pb.h"
 
+#include <QMutexLocker>
+
+#include <spdlog/spdlog.h>
 
 AssetManager::AssetManager(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<WalletsManager>& walletsManager
@@ -23,7 +25,8 @@ AssetManager::AssetManager(const std::shared_ptr<spdlog::logger>& logger
  , mdProvider_(mdProvider)
  , celerClient_(celerClient)
 {
-   connect(this, &AssetManager::priceChanged, [this] { emit totalChanged(); });
+   connect(this, &AssetManager::ccPriceChanged, [this] { emit totalChanged(); });
+   connect(this, &AssetManager::xbtPriceChanged, [this] { emit totalChanged(); });
    connect(this, &AssetManager::balanceChanged, [this] { emit totalChanged(); });
 }
 
@@ -180,13 +183,11 @@ void AssetManager::onMDSecurityReceived(const std::string &security, const bs::n
 void AssetManager::onMDSecuritiesReceived()
 {
    securitiesReceived_ = true;
-   emit securitiesReceived();
 }
 
 void AssetManager::onCCSecurityReceived(bs::network::CCSecurityDef ccSD)
 {
    ccSecurities_[ccSD.product] = ccSD;
-   prices_[ccSD.product] = ccSD.nbSatoshis / BTCNumericTypes::BalanceDivider;
 
    bs::network::SecurityDef sd = { bs::network::Asset::PrivateMarket};
    securities_[ccSD.securityId] = sd;
@@ -235,7 +236,11 @@ void AssetManager::onMDUpdate(bs::network::Asset::Type at, const QString &securi
          productPrice = 1 / productPrice;
       }
       prices_[ccy] = productPrice;
-      emit priceChanged(ccy);
+      if (at == bs::network::Asset::PrivateMarket) {
+         emit ccPriceChanged(ccy);
+      } else {
+         sendUpdatesOnXBTPrice(ccy);
+      }
    }
 }
 
@@ -329,6 +334,7 @@ void AssetManager::onCelerDisconnected()
    balances_.clear();
    currencies_.clear();
    emit securitiesChanged();
+   emit fxBalanceCleared();
    emit totalChanged();
 }
 
@@ -352,4 +358,26 @@ void AssetManager::onAccountBalanceLoaded(const std::string& currency, double va
    }
    balances_[currency] = value;
    emit balanceChanged(currency);
+}
+
+void AssetManager::sendUpdatesOnXBTPrice(const std::string& ccy)
+{
+   auto currentTime = QDateTime::currentDateTimeUtc();
+   bool emitUpdate = false;
+
+   auto it = xbtPriceUpdateTimes_.find(ccy);
+
+   if (it == xbtPriceUpdateTimes_.end()) {
+      emitUpdate = true;
+      xbtPriceUpdateTimes_.emplace(ccy, currentTime);
+   } else {
+      if (it->second.secsTo(currentTime) >= 30) {
+         it->second = currentTime;
+         emitUpdate = true;
+      }
+   }
+
+   if (emitUpdate) {
+      emit xbtPriceChanged(ccy);
+   }
 }

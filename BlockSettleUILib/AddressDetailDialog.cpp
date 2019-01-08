@@ -21,14 +21,15 @@ class IncomingTransactionFilter : public QSortFilterProxyModel
 public:
    IncomingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
 
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override
    {
       const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
       if (!txModel) {
          return false;
       }
-      const auto &txItem = txModel->getItem(source_row);
-      return (txItem.txEntry.value > 0);
+      const auto &index = txModel->index(source_row, 0, source_parent);
+      const auto &txItem = txModel->getItem(index);
+      return (txItem.isSet() && (txItem.txEntry.value > 0));
    }
 };
 
@@ -37,14 +38,15 @@ class OutgoingTransactionFilter : public QSortFilterProxyModel
 public:
    OutgoingTransactionFilter(QObject* parent) : QSortFilterProxyModel(parent) {}
 
-   bool filterAcceptsRow(int source_row, const QModelIndex &) const override
+   bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override
    {
       const auto txModel = qobject_cast<TransactionsViewModel *>(sourceModel());
       if (!txModel) {
          return false;
       }
-      const auto &txItem = txModel->getItem(source_row);
-      return (txItem.txEntry.value < 0);
+      const auto &index = txModel->index(source_row, 0, source_parent);
+      const auto &txItem = txModel->getItem(index);
+      return (txItem.isSet() && (txItem.txEntry.value < 0));
    }
 };
 
@@ -123,7 +125,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       onError();
    }
    else {
-      const auto &cbLedgerDelegate = [this, armory](AsyncClient::LedgerDelegate delegate) {
+      const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
          initModels(delegate);
       };
       if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate, this)) {
@@ -132,7 +134,8 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       }
    }
 
-   ui_->labelQR->setPixmap(UiUtils::getQRCode(addressString, 128));
+   const QString addrURI = QLatin1String("bitcoin:") + addressString;
+   ui_->labelQR->setPixmap(UiUtils::getQRCode(addrURI, 128));
 
    ui_->inputAddressesWidget->setContextMenuPolicy(Qt::CustomContextMenu);
    ui_->outputAddressesWidget->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -145,7 +148,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
 
 AddressDetailDialog::~AddressDetailDialog() = default;
 
-void AddressDetailDialog::initModels(AsyncClient::LedgerDelegate delegate)
+void AddressDetailDialog::initModels(const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate)
 {
    TransactionsViewModel* model = new TransactionsViewModel(armory_
                                                             , walletsManager_

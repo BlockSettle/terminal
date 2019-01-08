@@ -29,31 +29,14 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &wa
    connect(ui_->lineEditToken, &QLineEdit::textEdited, this, &CCTokenEntryDialog::tokenChanged);
 
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
+   connect(ccFileMgr_.get(), &CCFileManager::CCInitialSubmitted, this, &CCTokenEntryDialog::onCCInitialSubmitted, Qt::QueuedConnection);
+   connect(ccFileMgr_.get(), &CCFileManager::CCSubmitFailed, this, &CCTokenEntryDialog::onCCSubmitFailed, Qt::QueuedConnection);
 
    connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
    connect(signingContainer_.get(), &SignContainer::Error, this, &CCTokenEntryDialog::onWalletFailed);
 
    ccFileMgr_->LoadCCDefinitionsFromPub();
 
-   switch (ccFileMgr_->GetOtpEncType()) {
-   case bs::wallet::EncryptionType::Auth:
-      ui_->groupBoxOtpPassword->hide();
-      ui_->labelAuth->show();
-      break;
-
-   case bs::wallet::EncryptionType::Password:
-      ui_->labelAuth->hide();
-      ui_->groupBoxOtpPassword->show();
-      connect(ui_->lineEditOtpPassword, &QLineEdit::textEdited, this, &CCTokenEntryDialog::passwordChanged);
-      break;
-
-   case bs::wallet::EncryptionType::Unencrypted:
-   default:
-      ui_->labelAuth->hide();
-      ui_->groupBoxOtpPassword->hide();
-      passwordOk_ = true;
-      break;
-   }
    updateOkState();
 }
 
@@ -107,16 +90,9 @@ void CCTokenEntryDialog::tokenChanged()
    updateOkState();
 }
 
-void CCTokenEntryDialog::passwordChanged()
-{
-   passwordOk_ = !ui_->lineEditOtpPassword->text().isEmpty();
-   otpPassword_ = ui_->lineEditOtpPassword->text().toStdString();
-   updateOkState();
-}
-
 void CCTokenEntryDialog::updateOkState()
 {
-   ui_->pushButtonOk->setEnabled(walletOk_ && passwordOk_);
+   ui_->pushButtonOk->setEnabled(walletOk_);
 }
 
 void CCTokenEntryDialog::onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)
@@ -147,6 +123,7 @@ void CCTokenEntryDialog::onWalletFailed(unsigned int id, std::string errMsg)
    createWalletReqId_ = 0;
    ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1: %2")
       .arg(QString::fromStdString(ccProduct_)).arg(QString::fromStdString(errMsg)));
+
 }
 
 void CCTokenEntryDialog::accept()
@@ -158,23 +135,15 @@ void CCTokenEntryDialog::accept()
    const auto address = ccWallet_->GetNewExtAddress();
    signingContainer_->SyncAddresses({ { ccWallet_, address } });
 
-   const auto &cbPasswordQuery = [this] { return otpPassword_; };
-   if (!ccFileMgr_->SubmitAddressToPuB(address, seed_, cbPasswordQuery)) {
-      reject();
-      BSMessageBox(BSMessageBox::critical, tr("CC Token submit failure")
-         , tr("Failed to submit Private Market token to BlockSettle"), this).exec();
-   }
-   else {
+   if (ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
       ui_->pushButtonOk->setEnabled(false);
    }
+   else {
+      onCCSubmitFailed(address.display(), tr("Submission to PB failed"));
+   }
 }
 
-void CCTokenEntryDialog::reject()
-{
-   QDialog::reject();
-}
-
-void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
+void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
 {
    QDialog::accept();
    BSMessageBox(BSMessageBox::info, tr("Submission Successful")
@@ -182,21 +151,14 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
          " transaction is broadcast in the Terminal")).exec();
 }
 
-void CCTokenEntryDialog::onAuthSucceeded(SecureBinaryData password)
+void CCTokenEntryDialog::onCCInitialSubmitted(const QString)
 {
-   otpPassword_ = password;
-   passwordOk_ = true;
-   ui_->labelAuth->setText(tr("OTP signed with Auth"));
-   updateOkState();
+   ui_->labelTokenHint->setText(tr("Request was sent"));
 }
 
-void CCTokenEntryDialog::onAuthFailed(const QString &)
+void CCTokenEntryDialog::onCCSubmitFailed(const QString, const QString &err)
 {
-   passwordOk_ = false;
-   QDialog::reject();
-}
-
-void CCTokenEntryDialog::onAuthStatusUpdated(const QString &status)
-{
-   ui_->labelAuth->setText(tr("Auth status: %1").arg(status));
+   reject();
+   BSMessageBox(BSMessageBox::critical, tr("CC Token submit failure")
+      , tr("Failed to submit Private Market token to BlockSettle"), err, this).exec();
 }

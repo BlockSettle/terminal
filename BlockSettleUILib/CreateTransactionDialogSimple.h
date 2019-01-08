@@ -57,7 +57,6 @@ private slots:
 
 private:
    void initUI();
-   void onTransactionUpdated() override;
 
    std::unique_ptr<Ui::CreateTransactionDialogSimple> ui_;
    unsigned int   recipientId_ = 0;

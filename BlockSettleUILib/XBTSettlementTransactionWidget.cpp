@@ -136,13 +136,13 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged(AddressVer
    switch (state) {
    case AddressVerificationState::Verified: {
          text = sValid_;
-         ui_->widgetSubmitKeys->init(MobileClientRequest::SettlementTransaction, settlContainer_->walletId()
+         ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletId()
             , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys(), appSettings_);
          ui_->widgetSubmitKeys->setFocus();
          // tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security)).arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out"))
 
          if (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary()) {
-            ui_->widgetSubmitKeysAuth->init(MobileClientRequest::SettlementTransaction
+            ui_->widgetSubmitKeysAuth->init(AutheIDClient::SettlementTransaction
                , settlContainer_->authWalletId(), settlContainer_->authKeyRank(), settlContainer_->authEncTypes()
                , settlContainer_->authEncKeys(), appSettings_);
          }

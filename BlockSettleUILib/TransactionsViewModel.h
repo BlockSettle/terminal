@@ -29,6 +29,7 @@ struct TransactionsViewItem
    Tx tx;
    bool initialized = false;
    QString mainAddress;
+   int addressCount;
    bs::Transaction::Direction direction = bs::Transaction::Unknown;
    std::shared_ptr<bs::Wallet> wallet = nullptr;
    QString dirStr;
@@ -42,6 +43,10 @@ struct TransactionsViewItem
    bool     isCPFP = false;
    int confirmations = 0;
 
+   BinaryData  parentId;   // universal grouping support
+   BinaryData  groupId;
+
+   bool isSet() const { return (!txEntry.txHash.isNull() && !walletID.isEmpty()); }
    void initialize(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &, std::function<void(const TransactionsViewItem *)>);
    void calcAmount(const std::shared_ptr<WalletsManager> &);
@@ -49,24 +54,65 @@ struct TransactionsViewItem
 
    bool isRBFeligible() const;
    bool isCPFPeligible() const;
-private:
-   std::set<BinaryData>       txHashes;
-   std::map<BinaryData, Tx>   txIns;
 
+   std::string id() const;
+
+private:
+   bool     txHashesReceived{ false };
+   std::map<BinaryData, Tx>   txIns;
+   mutable std::string        id_;
 };
 typedef std::vector<TransactionsViewItem>    TransactionItems;
+typedef std::shared_ptr<TransactionsViewItem>   TransactionPtr;
+
+class TXNode
+{
+public:
+   TXNode();
+   TXNode(const std::shared_ptr<TransactionsViewItem> &, TXNode *parent = nullptr);
+   ~TXNode() { clear(); }
+
+   std::shared_ptr<TransactionsViewItem> item() const { return item_; }
+   size_t nbChildren() const { return children_.size(); }
+   bool hasChildren() const { return !children_.empty(); }
+   TXNode *child(int index) const;
+   QList<TXNode *> children() const { return children_; }
+   TXNode *parent() const { return parent_; }
+   TXNode *find(const std::string &id) const;
+
+   void clear(bool del = true);
+   void setData(const TransactionsViewItem &data) { *item_ = data; }
+   void add(TXNode *child);
+   void del(int index);
+   int row() const { return row_; }
+   unsigned int level() const;
+   QVariant data(int, int) const;
+
+   void forEach(const std::function<void(const std::shared_ptr<TransactionsViewItem> &)> &);
+
+private:
+   void init();
+
+private:
+   std::shared_ptr<TransactionsViewItem>  item_;
+   QList<TXNode *>   children_;
+   int      row_ = 0;
+   TXNode*  parent_ = nullptr;
+   QFont    fontBold_;
+   QColor   colorGray_, colorRed_, colorYellow_, colorGreen_, colorInvalid_;
+};
 
 Q_DECLARE_METATYPE(TransactionsViewItem)
 Q_DECLARE_METATYPE(TransactionItems)
 
 
-class TransactionsViewModel : public QAbstractTableModel
+class TransactionsViewModel : public QAbstractItemModel
 {
 Q_OBJECT
 public:
     TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<WalletsManager> &
-                          , const AsyncClient::LedgerDelegate &
+                          , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent
                           , const std::shared_ptr<bs::Wallet> &defWlt);
@@ -82,62 +128,48 @@ public:
    TransactionsViewModel& operator = (TransactionsViewModel&&) = delete;
 
    void loadAllWallets();
+   size_t itemsCount() const { return currentItems_.size(); }
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+   QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+   QModelIndex parent(const QModelIndex &child) const override;
+   bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
 
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-   bool isTransactionVerified(int transactionRow) const;
 
-   TransactionsViewItem getItem(int transactionRow) const;
+   TransactionsViewItem getItem(const QModelIndex &) const;
+   TransactionsViewItem getOldestItem() const { return oldestItem_; }
+   TXNode *getNode(const QModelIndex &) const;
 
 private slots:
    void updatePage();
    void refresh();
-   void onRowUpdated(int index, const TransactionsViewItem &item, int colStart, int colEnd);
-   void onNewItems(TransactionItems items);
-   void onItemsDeleted(TransactionItems items);
+   void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
+   void onDelRows(const std::set<int> &rows);
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);
-   void timerCmd();
+   void onItemConfirmed(const TransactionPtr);
 
 private:
    void init();
    void clear();
-   Q_INVOKABLE void loadLedgerEntries();
+   void loadLedgerEntries();
    void ledgerToTxData();
-   void loadTransactionDetails(unsigned int iStart, size_t count);
-   void updateBlockHeight(const std::vector<bs::TXEntry> &page);
-   void updateTransactionDetails(TransactionsViewItem &item, int index);
-   void updateTransactionDetails(TransactionsViewItem &item
+   std::pair<size_t, size_t> updateTransactionsPage(const std::vector<bs::TXEntry> &);
+   void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
+   void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
       , const std::function<void(const TransactionsViewItem *itemPtr)> &cb);
-   TransactionsViewItem itemFromTransaction(const bs::TXEntry &);
+   std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
    bool txKeyExists(const std::string &key);
-   int getItemIndex(const TransactionsViewItem &) const;
 
 signals:
    void dataLoaded(int count);
-
-private:
-   struct Command {
-      enum class Type {
-         Add,
-         Delete,
-         Update
-      };
-      Type  type;
-      TransactionItems  items;
-   };
-   QTimer * cmdTimer_;
-   QMutex   cmdMutex_;
-   using CommandQueue = std::deque<Command>;
-   CommandQueue cmdQueue_;
-
-   void executeCommand(const Command &);
-   void addCommand(const Command &);
+   void initProgress(int start, int end);
+   void updateProgress(int value);
 
 public:
    enum class Columns
@@ -163,22 +195,21 @@ public:
    };
 
 private:
-   TransactionItems                    currentPage_;
-   TransactionItems                    erasedPage_;
+   TXNode   *  rootNode_;
+   TransactionsViewItem oldestItem_;
    std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
-   std::unordered_set<std::string>     currentKeys_;
+   std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
-   AsyncClient::LedgerDelegate         ledgerDelegate_;
+   std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
    std::shared_ptr<WalletsManager>     walletsManager_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
    std::vector<bs::TXEntry>            pendingNewItems_;
+   std::atomic_bool  signalOnEndLoading_{ false };
    const bool        allWallets_;
    std::atomic_bool  stopped_;
-   QFont             fontBold_;
-   QColor            colorGray_, colorRed_, colorYellow_, colorGreen_, colorInvalid_;
-   std::atomic_bool  initialLoadCompleted_;
+   std::atomic_bool  initialLoadCompleted_{ true };
 };
 
 #endif // __TRANSACTIONS_VIEW_MODEL_H__

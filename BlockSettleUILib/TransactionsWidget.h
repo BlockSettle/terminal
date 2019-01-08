@@ -49,6 +49,8 @@ private slots:
    void onDataLoaded(int count);
    void onCreateRBFDialog();
    void onCreateCPFPDialog();
+   void onProgressInited(int start, int end);
+   void onProgressUpdated(int value);
 
 private:
    std::unique_ptr<Ui::TransactionsWidget> ui;
@@ -62,9 +64,11 @@ private:
    TransactionsSortFilterModel         *  sortFilterModel_;
    QMenu    contextMenu_;
    QAction  *actionCopyAddr_ = nullptr;
+   QAction  *actionCopyTx_ = nullptr;
    QAction  *actionRBF_ = nullptr;
    QAction  *actionCPFP_ = nullptr;
    QString  curAddress_;
+   QString  curTx_;
 };
 
 

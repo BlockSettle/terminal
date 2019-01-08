@@ -307,9 +307,9 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
             "error - {}", e.what());
       }
    };
-   const auto &cbLedgerDelegate = [this, state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegate = [this, state, cbLedger](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       state->nbTransactions = 0;
-      delegate.getHistoryPage(0, cbLedger);
+      delegate->getHistoryPage(0, cbLedger);
    };
    if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
       const auto &prefixedAddress = state->address->GetChainedAddress().id();
@@ -381,9 +381,9 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
             "data error - {}", e.what());
       }
    };
-   const auto &cbLedgerDelegate = [state, cbLedger](AsyncClient::LedgerDelegate delegate) {
+   const auto &cbLedgerDelegate = [state, cbLedger](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       state->entries.clear();
-      delegate.getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
+      delegate->getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
    };
    if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
       logger_->error("[AddressVerificator::CheckBSAddressState] Could not validate address. Looks like armory is offline.");
@@ -686,9 +686,8 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
    }
    for (const auto &bsAddr : bsAddressList_) {
       const auto &cbDelegate = [this, cbTXs, pages, txHashSet, bsAddr]
-                               (AsyncClient::LedgerDelegate delegate)->void {
-         auto delegatePtr = std::make_shared<AsyncClient::LedgerDelegate>(delegate);
-         const auto &cbPageCnt = [this, pages, bsAddr, delegatePtr, txHashSet, cbTXs]
+                               (const std::shared_ptr<AsyncClient::LedgerDelegate> delegate)->void {
+         const auto &cbPageCnt = [this, pages, bsAddr, delegate, txHashSet, cbTXs]
                                  (ReturnMessage<uint64_t> pageCnt)->void {
             try {
                const auto &inPageCnt = pageCnt.get();
@@ -718,7 +717,7 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                         }
                      }
                   };
-                  delegatePtr->getHistoryPage(i, cbLedger);
+                  delegate->getHistoryPage(i, cbLedger);
                }
             }
             catch (const std::exception &e) {
@@ -726,7 +725,7 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
                   "error (getPageCount) - {}", e.what());
             }
          };
-         delegate.getPageCount(cbPageCnt);
+         delegate->getPageCount(cbPageCnt);
       };
       armory_->getLedgerDelegateForAddress(walletId_, bsAddr, cbDelegate);
    }
@@ -734,18 +733,19 @@ void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
 
 void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UTXO>)> cb) const
 {
-   auto result = new std::vector<UTXO>;
-   const auto &cbInternal = [this, cb, &result]
+   auto result = std::make_shared<std::vector<UTXO>>();
+   const auto &cbInternal = [this, cb, result]
                             (ReturnMessage<std::vector<UTXO>> utxos)->void {
       try {
-         *result = utxos.get();
+         const auto &inUTXOs = utxos.get();
+         result->insert(result->end(), inUTXOs.begin(), inUTXOs.end());
       }
       catch (const std::exception &e) {
          logger_->error("[AddressVerificator::GetVerificationInputs] Return " \
             "data error (getSpendableZCList UTXOs) - {}", e.what());
       }
 
-      const auto &cbZC = [this, cb, &result]
+      const auto &cbZC = [this, cb, result]
                          (ReturnMessage<std::vector<UTXO>> zcs)->void {
          try {
             const auto &inZCUTXOs = zcs.get();
@@ -757,11 +757,10 @@ void AddressVerificator::GetVerificationInputs(std::function<void(std::vector<UT
          }
 
          cb(*result);
-         delete result;
       };
       internalWallet_->getSpendableZCList(cbZC);
    };
-   internalWallet_->getSpendableZCList(cbInternal);
+   internalWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbInternal);
 }
 
 void AddressVerificator::GetRevokeInputs(std::function<void(std::vector<UTXO>)> cb) const

@@ -17,12 +17,10 @@ CustomTreeWidget::CustomTreeWidget(QWidget *parent)
       this, &CustomTreeWidget::onItemEntered);
    connect(this->header(), &QHeaderView::entered,
       this, &CustomTreeWidget::onHeaderEntered);
-   connect(this, &QTreeWidget::itemClicked,
-      this, &CustomTreeWidget::onItemClicked);
 }
 
 void CustomTreeWidget::mouseReleaseEvent(QMouseEvent *ev) {
-   // will use left click in to open address page 
+   // will use left click in to open address page
    if (ev->button() == Qt::LeftButton) {
       //QTreeWidgetItem *item = itemAt(ev->pos());
    }
@@ -38,10 +36,6 @@ void CustomTreeWidget::mouseReleaseEvent(QMouseEvent *ev) {
       });
    }
    QTreeWidget::mouseReleaseEvent(ev);
-}
-
-void CustomTreeWidget::onItemClicked(QTreeWidgetItem * item, int column) {
-   qDebug() << "onItemClicked" << column;
 }
 
 void CustomTreeWidget::leaveEvent(QEvent *ev) {
@@ -91,10 +85,12 @@ void CustomTreeWidget::resizeColumns() {
    // adjust the column widths based on existing data
    for (int i = 0; i < columnCount(); ++i) {
       resizeColumnToContents(i);
-      // add 5px margin
-      setColumnWidth(i, columnWidth(i) + 5);
+      // add 5px margin except for last column
+      if (i < columnCount() - 1) {
+         setColumnWidth(i, columnWidth(i) + 5);
+      }
       // if a column is larger than 300 then force it to 300px
-      if (columnWidth(i) > 250)
-         setColumnWidth(i, 250);
+      //if (columnWidth(i) > 250)
+      //   setColumnWidth(i, 250);
    }
 }

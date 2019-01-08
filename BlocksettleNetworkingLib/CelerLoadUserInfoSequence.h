@@ -27,8 +27,6 @@ public:
 private:
    CelerMessage sendGetUserIdRequest();
    CelerMessage sendGetSubmittedAuthAddressListRequest();
-   CelerMessage sendGetOTPIdRequest();
-   CelerMessage sendGetOTPIndexRequest();
    CelerMessage sendGetSubmittedCCAddressListRequest();
    CelerMessage sendGetBitcoinParticipantRequest();
    CelerMessage sendGetBitcoinDealerRequest();

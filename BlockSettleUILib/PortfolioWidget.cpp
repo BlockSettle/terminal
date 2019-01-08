@@ -108,7 +108,7 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {
    if (filter_) {
       QModelIndex sourceIndex = filter_->mapToSource(index);
-      auto txItem = model_->getItem(sourceIndex.row());
+      auto txItem = model_->getItem(sourceIndex);
 
       TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
       transactionDetailDialog.exec();
@@ -122,22 +122,22 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
    }
 
    const auto sourceIndex = filter_->mapToSource(ui_->treeViewUnconfirmedTransactions->indexAt(point));
-   const auto txItem = model_->getItem(sourceIndex.row());
+   const auto txNode = model_->getNode(sourceIndex);
    contextMenu_.clear();
-   if (!txItem.initialized) {
+   if (!txNode || !txNode->item() || !txNode->item()->initialized) {
       return;
    }
 
-   if (txItem.isRBFeligible()) {
+   if (txNode->item()->isRBFeligible() && (txNode->level() < 2)) {
       contextMenu_.addAction(actionRBF_);
-      actionRBF_->setData(sourceIndex.row());
+      actionRBF_->setData(sourceIndex);
    } else {
       actionRBF_->setData(-1);
    }
 
-   if (txItem.isCPFPeligible()) {
+   if (txNode->item()->isCPFPeligible()) {
       contextMenu_.addAction(actionCPFP_);
-      actionCPFP_->setData(sourceIndex.row());
+      actionCPFP_->setData(sourceIndex);
    } else {
       actionCPFP_->setData(-1);
    }
@@ -149,7 +149,7 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
 
 void PortfolioWidget::onCreateRBFDialog()
 {
-   auto txItem = model_->getItem(actionRBF_->data().toInt());
+   auto txItem = model_->getItem(actionRBF_->data().toModelIndex());
 
    const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
       try {
@@ -174,7 +174,7 @@ void PortfolioWidget::onCreateRBFDialog()
 
 void PortfolioWidget::onCreateCPFPDialog()
 {
-   auto txItem = model_->getItem(actionCPFP_->data().toInt());
+   auto txItem = model_->getItem(actionCPFP_->data().toModelIndex());
 
    const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
       try {

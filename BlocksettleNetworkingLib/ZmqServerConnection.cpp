@@ -332,17 +332,18 @@ std::string ZmqServerConnection::GetClientInfo(const std::string &clientId) cons
    return "Unknown";
 }
 
-bool ZmqServerConnection::QueueDataToSend(const std::string& clientId, const std::string& data, bool sendMore)
+bool ZmqServerConnection::QueueDataToSend(const std::string& clientId, const std::string& data
+   , const SendResultCb &cb, bool sendMore)
 {
    {
       FastLock locker{dataQueueLock_};
-      dataQueue_.emplace_back( DataToSend{clientId, data, sendMore});
+      dataQueue_.emplace_back( DataToSend{clientId, data, cb, sendMore});
    }
 
    return SendDataCommand();
 }
 
-bool ZmqServerConnection::SendDataToDataSocket()
+void ZmqServerConnection::SendDataToDataSocket()
 {
    std::deque<DataToSend> pendingData;
 
@@ -354,22 +355,28 @@ bool ZmqServerConnection::SendDataToDataSocket()
    for (const auto &dataPacket : pendingData) {
       int result = zmq_send(dataSocket_.get(), dataPacket.clientId.c_str(), dataPacket.clientId.size(), ZMQ_SNDMORE);
       if (result != dataPacket.clientId.size()) {
-         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send client id {}. {} packets dropped"
-            , connectionName_, zmq_strerror(zmq_errno())
-            , pendingData.size());
-         return false;
+         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send client id {}"
+            , connectionName_, zmq_strerror(zmq_errno()));
+         if (dataPacket.cb) {
+            dataPacket.cb(dataPacket.clientId, dataPacket.data, false);
+         }
+         continue;
       }
 
       result = zmq_send(dataSocket_.get(), dataPacket.data.data(), dataPacket.data.size(), (dataPacket.sendMore ? ZMQ_SNDMORE : 0));
       if (result != dataPacket.data.size()) {
-         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send data frame {}. {} packets dropped"
-            , connectionName_, zmq_strerror(zmq_errno())
-            , pendingData.size());
-         return false;
+         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send data frame {} to {}"
+            , connectionName_, zmq_strerror(zmq_errno()), dataPacket.clientId);
+         if (dataPacket.cb) {
+            dataPacket.cb(dataPacket.clientId, dataPacket.data, false);
+         }
+         continue;
+      }
+
+      if (dataPacket.cb) {
+         dataPacket.cb(dataPacket.clientId, dataPacket.data, true);
       }
    }
-
-   return true;
 }
 
 bool ZmqServerConnection::SetZMQTransport(ZMQTransport transport)
@@ -383,4 +390,31 @@ bool ZmqServerConnection::SetZMQTransport(ZMQTransport transport)
       logger_->error("[ZmqServerConnection::SetZMQTransport] undefined transport");
       return false;
    }
+}
+
+bool ZmqServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr &dataSocket)
+{
+   int immediate = immediate_ ? 1 : 0;
+   if (zmq_setsockopt(dataSocket.get(), ZMQ_IMMEDIATE, &immediate, sizeof(immediate)) != 0) {
+      logger_->error("[ZmqServerConnection::ConfigDataSocket] {} failed to set immediate flag: {}"
+         , connectionName_, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   if (!identity_.empty()) {
+      if (zmq_setsockopt(dataSocket.get(), ZMQ_IDENTITY, identity_.c_str(), identity_.size()) != 0) {
+         logger_->error("[ZmqServerConnection::ConfigDataSocket] {} failed to set server identity {}"
+            , connectionName_, zmq_strerror(zmq_errno()));
+         return false;
+      }
+   }
+
+   int lingerPeriod = 0;
+   if (zmq_setsockopt(dataSocket.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod)) != 0) {
+      logger_->error("[ZmqServerConnection::ConfigDataSocket] {} failed to set linger interval {}: {}"
+         , connectionName_, lingerPeriod, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   return true;
 }

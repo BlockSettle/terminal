@@ -12,6 +12,7 @@
 #include "MetaData.h"
 
 class ArmoryConnection;
+class OfflineSigner;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -73,8 +74,6 @@ protected:
 
    virtual bool HaveSignedImportedTransaction() const { return false; }
 
-   void updateCreateButtonText();
-
    std::vector<bs::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
    bool CreateTransaction();
@@ -91,6 +90,8 @@ protected slots:
       , const std::function<void()> &cbInputsReset = nullptr);
    virtual void onMaxPressed();
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void updateCreateButtonText();
+   void onSignerAuthenticated();
 
 protected:
    void populateFeeList();
@@ -105,6 +106,8 @@ protected:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
+   std::shared_ptr<OfflineSigner>   offlineSigner_;
+   std::shared_ptr<SignContainer>   signer_;
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;
 

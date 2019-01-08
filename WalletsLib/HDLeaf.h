@@ -113,7 +113,9 @@ namespace bs {
          std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
-         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj, uint64_t val = UINT64_MAX) override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
+                                    , QObject *obj, const bool& startup = false
+                                    , uint64_t val = UINT64_MAX) override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -224,15 +226,17 @@ namespace bs {
       private:
          bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
          std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
-            , AddressEntryType ae_type = AddressEntryType_Default);
+                         , AddressEntryType ae_type = AddressEntryType_Default);
          Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
          Path::Elem getAddressIndex(const bs::Address &addr) const;
          void onScanComplete();
          void onSaveToWallet(const std::vector<PooledAddress> &);
-         void topUpAddressPool(size_t intAddresses = 0, size_t extAddresses = 0);
+         void topUpAddressPool(size_t intAddresses = 0
+                               , size_t extAddresses = 0);
          Path::Elem getLastAddrPoolIndex(Path::Elem) const;
 
-         static void serializeAddr(BinaryWriter &bw, Path::Elem index, AddressEntryType, const Path &);
+         static void serializeAddr(BinaryWriter &bw, Path::Elem index
+                                   , AddressEntryType, const Path &);
          bool deserialize(const BinaryData &ser, Nodes rootNodes);
       };
 
@@ -276,14 +280,19 @@ namespace bs {
          void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
          void firstInit(bool force) override;
 
-         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *, uint64_t val = UINT64_MAX) override;
-         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *) override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
+                                    , QObject *, const bool& startup = false
+                                    , uint64_t val = UINT64_MAX) override;
+         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
+                                 , QObject *
+                                 , const bool& startup = false) override;
          bool isBalanceAvailable() const override;
          BTCNumericTypes::balance_type GetSpendableBalance() const override;
          BTCNumericTypes::balance_type GetUnconfirmedBalance() const override;
          BTCNumericTypes::balance_type GetTotalBalance() const override;
          bool getAddrBalance(const bs::Address &) const override;
-         bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
+         bool getAddrBalance(const bs::Address &addr
+                   , std::function<void(std::vector<uint64_t>)>) const override;
 
          BTCNumericTypes::balance_type GetTxBalance(int64_t) const override;
          QString displayTxValue(int64_t val) const override;
@@ -297,11 +306,13 @@ namespace bs {
          void onStateChanged(ArmoryConnection::State);
 
       private:
-         void validationProc();
-         void findInvalidUTXOs(const std::vector<UTXO> &, std::function<void (const std::vector<UTXO> &)>);
-         void refreshInvalidUTXOs(bool ZConly = false);
+         void validationProc(const bool& initValidation);
+         void findInvalidUTXOs(const std::vector<UTXO> &
+                               , std::function<void (const std::vector<UTXO> &)>);
+         void refreshInvalidUTXOs(const bool& initValidation
+                                  , const bool& ZConly = false);
          BTCNumericTypes::balance_type correctBalance(BTCNumericTypes::balance_type
-            , bool applyCorrection = true) const;
+                                           , bool applyCorrection = true) const;
          std::vector<UTXO> filterUTXOs(const std::vector<UTXO> &) const;
 
          std::shared_ptr<TxAddressChecker>   checker_;

@@ -17,19 +17,6 @@ ZmqContext::sock_ptr ZmqStreamServerConnection::CreateDataSocket()
    return context_->CreateStreamSocket();
 }
 
-bool ZmqStreamServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket)
-{
-   int lingerPeriod = 0;
-   int result = zmq_setsockopt (dataSocket.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod));
-   if (result != 0) {
-      logger_->error("[ZmqStreamServerConnection::ConfigDataSocket] {} failed to set linger interval: {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   return true;
-}
-
 bool ZmqStreamServerConnection::ReadFromDataSocket()
 {
    // it is client connection. since it is a stream, we will get two frames
@@ -95,31 +82,38 @@ void ZmqStreamServerConnection::onDataFrameReceived(const std::string& clientId,
    }
 }
 
-bool ZmqStreamServerConnection::sendRawData(const std::string& clientId, const std::string& rawData)
+bool ZmqStreamServerConnection::sendRawData(const std::string& clientId, const std::string& rawData, const SendResultCb &cb)
 {
    if (!isActive()) {
       logger_->error("[ZmqStreamServerConnection::sendRawData] cound not send. not connected");
       return false;
    }
 
-   QueueDataToSend(clientId, rawData, true);
+   QueueDataToSend(clientId, rawData, cb, true);
 
    return true;
 }
 
-bool ZmqStreamServerConnection::SendDataToClient(const std::string& clientId, const std::string& data)
+bool ZmqStreamServerConnection::SendDataToClient(const std::string& clientId, const std::string& data, const SendResultCb &cb)
 {
    auto connection = findConnection(clientId);
    if (connection == nullptr) {
       logger_->error("[ZmqStreamServerConnection::SendDataToClient] {} send data to closed connection {}"
          , connectionName_, clientId);
+      if (cb) {
+         cb(clientId, data, false);
+      }
       return false;
    }
 
-   return connection->send(data);
+   const bool result = connection->send(data);
+   if (cb) {
+      cb(clientId, data, result);
+   }
+   return result;
 }
 
-bool ZmqStreamServerConnection::SendDataToAllClients(const std::string& data)
+bool ZmqStreamServerConnection::SendDataToAllClients(const std::string& data, const SendResultCb &cb)
 {
    logger_->debug("[ZmqStreamServerConnection::SendDataToAllClients] start sending");
 
@@ -127,8 +121,12 @@ bool ZmqStreamServerConnection::SendDataToAllClients(const std::string& data)
 
    FastLock locker(connectionsLockFlag_);
    for (auto & it : activeConnections_) {
-      if (it.second->send(data)) {
+      const bool result = it.second->send(data);
+      if (result) {
          successCount++;
+      }
+      if (cb) {
+         cb(it.first, data, result);
       }
    }
 

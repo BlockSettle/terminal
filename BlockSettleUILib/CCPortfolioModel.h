@@ -1,61 +1,74 @@
 #ifndef __CC_PORTFOLIO_MODEL__
 #define __CC_PORTFOLIO_MODEL__
 
-#include <QStandardItemModel>
-
-#include <string>
-#include <vector>
 #include <memory>
-#include <QFont>
+#include <QAbstractItemModel>
 
-class WalletsManager;
+class AssetGroupNode;
 class AssetManager;
+class AssetNode;
+class RootAssetGroupNode;
+class WalletsManager;
 
-class CCPortfolioModel : public QStandardItemModel
+class CCPortfolioModel : public QAbstractItemModel
 {
-Q_OBJECT
 public:
-   CCPortfolioModel(std::shared_ptr<WalletsManager> walletsManager, std::shared_ptr<AssetManager> assetManager, QObject *parent = nullptr);
-   ~CCPortfolioModel() noexcept = default;
+   CCPortfolioModel(const std::shared_ptr<WalletsManager>& walletsManager
+      , const std::shared_ptr<AssetManager>& assetManager
+      , QObject *parent = nullptr);
+   ~CCPortfolioModel() noexcept override = default;
 
-public:
+   CCPortfolioModel(const CCPortfolioModel&) = delete;
+   CCPortfolioModel& operator = (const CCPortfolioModel&) = delete;
+
+   CCPortfolioModel(CCPortfolioModel&&) = delete;
+   CCPortfolioModel& operator = (CCPortfolioModel&&) = delete;
+
    std::shared_ptr<AssetManager> assetManager();
 
+private:
+   enum PortfolioColumns
+   {
+      AssetNameColumn,
+      BalanceColumn,
+      XBTValueColumn,
+      PortfolioColumnsCount
+   };
+
+   AssetNode* getNodeByIndex(const QModelIndex& index) const;
+
+public:
+   int columnCount(const QModelIndex & parent = QModelIndex()) const override;
+   int rowCount(const QModelIndex & parent = QModelIndex()) const override;
+
+   QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+   QVariant data(const QModelIndex& index, int role) const override;
+
+   QModelIndex index(int row, int column, const QModelIndex & parent = QModelIndex()) const override;
+
+   QModelIndex parent(const QModelIndex& child) const override;
+   bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
+
 private slots:
-   void updateBlockchainData();
+   void onFXBalanceLoaded();
+   void onFXBalanceCleared();
+
+   void onFXBalanceChanged(const std::string& currency);
+
+   void onXBTPriceChanged(const std::string& currency);
+   void onCCPriceChanged(const std::string& currency);
+
+   void reloadXBTWalletsList();
+   void updateXBTBalance();
+
+   void reloadCCWallets();
+   void updateCCBalance();
 
 private:
-   enum class CCPortfolioColumns : int
-   {
-      CCName,
-      NetPos,
-      LastPrice,
-      NetValue,
-      ColumnsCount
-   };
+   std::shared_ptr<AssetManager>       assetManager_;
+   std::shared_ptr<WalletsManager>     walletsManager_;
 
-   enum class TopLevelRows : int
-   {
-      Xbt,
-      Cash,
-      Shares
-   };
-
-   double xbtBalance_;
-   std::shared_ptr<WalletsManager> walletsManager_;
-   std::shared_ptr<AssetManager> assetManager_;
-   QFont fontBold_;
-   QList<QStandardItem*>   shareItems_;
-   QList<QStandardItem*>   cashItems_;
-   const QString           cashGroupName_;
-
-private:
-   void fillXbtWallets(QStandardItem *item);
-   void updatePrivateShares();
-   void updateCashAccountBalance(const std::string &currency);
-   void updatePrivateShare(const std::string &cc, QList<QStandardItem*> &);
-   void reloadSecurities();
-   void updateCashTotalBalance();
+   std::shared_ptr<RootAssetGroupNode> root_ = nullptr;
 };
 
 #endif // __CC_PORTFOLIO_MODEL__
