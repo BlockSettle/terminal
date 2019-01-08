@@ -579,7 +579,7 @@ void Payload_Version::setVersionHeaderIPv4(uint32_t version, uint64_t services,
    vheader_.addr_recv_.setIPv4(services, recvaddr);
    vheader_.addr_from_.setIPv4(services, fromaddr);
 
-   auto&& randombytes = SecureBinaryData().GenerateRandom(8);
+   auto&& randombytes = CryptoPRNG::generateRandom(8);
    vheader_.nonce_ = *(uint64_t*)randombytes.getPtr();
 }
 

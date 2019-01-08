@@ -7,7 +7,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "Transactions.h"
-#include "cryptopp/oids.h"
 #include "make_unique.h"
 
 using namespace std;

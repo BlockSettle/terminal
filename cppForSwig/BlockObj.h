@@ -299,10 +299,6 @@ public:
    bool hasFilePos(void) const { return blkFileNum_ != UINT32_MAX; }
 
    /////////////////////////////////////////////////////////////////////////////
-   // Just in case we ever want to calculate a difficulty-1 header via CPU...
-   int64_t findNonce(const char* inDiffStr);
-
-   /////////////////////////////////////////////////////////////////////////////
    void unserialize(uint8_t const * ptr, uint32_t size);
    void unserialize(BinaryData const & str) { unserialize(str.getRef()); }
    void unserialize(BinaryDataRef const & str);

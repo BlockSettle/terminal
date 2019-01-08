@@ -78,7 +78,7 @@ const string BlockDataManagerConfig::defaultRegtestBlkFileLocation_ =
 
 ////////////////////////////////////////////////////////////////////////////////
 BlockDataManagerConfig::BlockDataManagerConfig() :
-   cookie_(SecureBinaryData().GenerateRandom(32).toHexStr())
+   cookie_(CryptoPRNG::generateRandom(32).toHexStr())
 {
    selectNetwork(NETWORK_MODE_MAINNET);
 }
@@ -118,7 +118,7 @@ void BlockDataManagerConfig::selectNetwork(NETWORK_MODE mode)
       rpcPort_ = portToString(RPC_PORT_MAINNET);
       
       if (!customListenPort_)
-         listenPort_ = portToString(LISTEN_PORT_TESTNET);
+         listenPort_ = portToString(LISTEN_PORT_MAINNET);
       
       if(!customBtcPort_)
          btcPort_ = portToString(NODE_PORT_MAINNET);
@@ -141,7 +141,7 @@ void BlockDataManagerConfig::selectNetwork(NETWORK_MODE mode)
 
    case NETWORK_MODE_REGTEST:
    {
-      rpcPort_ = portToString(RPC_PORT_TESTNET);
+      rpcPort_ = portToString(RPC_PORT_REGTEST);
 
       if (!customListenPort_)
          listenPort_ = portToString(LISTEN_PORT_REGTEST);

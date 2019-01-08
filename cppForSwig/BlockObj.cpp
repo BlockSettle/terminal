@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <thread>
 
-#include "cryptopp/integer.h"
 #include "BinaryData.h"
 #include "BtcUtils.h"
 #include "BlockObj.h"
@@ -88,91 +87,6 @@ void BlockHeader::pprintAlot(ostream & os)
    cout << "this*:    " << this << endl;
    cout << "TotSize:  " << getBlockSize() << endl;
    cout << "Tx Count: " << numTx_ << endl;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Due to SWIG complications, passing in a value by reference really isn't
-// feasible. Therefore, we'll use int64 and pass back -1 if we don't find a
-// nonce.
-int64_t BlockHeader::findNonce(const char* inDiffStr)
-{
-   const BinaryData playHeader(serialize());
-   const CryptoPP::Integer minBDiff("FFFF0000000000000000000000000000000000000000000000000000h");
-   const CryptoPP::Integer inDiff(inDiffStr);
-
-   if(inDiff > minBDiff) {
-      cout << "Difficulty " << inDiffStr << " is too high for Bitcoin (bdiff)." << endl;
-   }
-   else {
-      volatile bool stopNow=false;
-
-      std::mutex lockSolution;
-      bool hasSolution=false;
-
-      const auto computer = [&] (uint32_t startAt, uint32_t stopAt)->int64_t
-      {
-         BinaryData hashResult(32);
-         for(uint32_t nonce=startAt; nonce<stopAt; nonce++)
-         {
-            *(uint32_t*)(playHeader.getPtr()+76) = nonce;
-            BtcUtils::getHash256_NoSafetyCheck(playHeader.getPtr(), HEADER_SIZE,
-                                               hashResult);
-            const CryptoPP::Integer hashRes((hashResult.swapEndian()).getPtr(),
-                                            hashResult.getSize());
-
-            if(hashRes < inDiff)
-            {
-               unique_lock<mutex> l(lockSolution);
-               cout << "NONCE FOUND! " << nonce << endl;
-               unserialize(playHeader);
-               cout << "Raw Header: " << serialize().toHexStr() << endl;
-               pprint();
-               cout << "Hash:       " << hashResult.toHexStr() << endl;
-               hasSolution=true;
-               stopNow=true;
-               return nonce;
-            }
-
-            if (stopNow)
-            {
-               break;
-            }
-
-            if(startAt==0 && nonce % 10000000 == 0)
-            {
-               cout << ".";
-               cout.flush();
-            }
-         }
-
-         //needs a return val for windows to build
-         return -1;
-      };
-
-      const unsigned numThreads = thread::hardware_concurrency();
-      vector<thread> threads;
-      threads.reserve(numThreads);
-
-      for (unsigned i=0; i < numThreads; i++)
-      {
-         threads.emplace_back(
-            computer,
-            (uint32_t)(-1)/numThreads*i,
-            (uint32_t)(-1)/numThreads*(i+1)
-         );
-      }
-      for (unsigned i=0; i < numThreads; i++)
-         threads[i].join();
-
-      if (!hasSolution) {
-         cout << "No nonce found!" << endl;
-      }
-      // We have to change the coinbase script, recompute merkle root, and then
-      // can cycle through all the nonces again.
-   }
-
-   // If we've landed here for one reason or another, we've failed. Return 0.
-   return -1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
