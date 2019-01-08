@@ -20,21 +20,20 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignerSettings> &params)
    : logger_(logger), settings_(params)
 {
-   logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
-
    // Get the ZMQ server public key.
-   if(!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), zmqPubKey_
+   if (!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), zmqPubKey_
       , true, logger)) {
-      return;
+      throw std::runtime_error("failed to read connection public key");
    }
 
    // Get the ZMQ server private key.
-   if(!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), zmqPrvKey_
+   if (!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), zmqPrvKey_
       , false, logger)) {
-      return;
+      throw std::runtime_error("failed to read connection private key");
    }
 
    walletsMgr_ = std::make_shared<WalletsManager>(logger);
+   logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
 
 void HeadlessAppObj::Start()

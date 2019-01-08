@@ -45,17 +45,17 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    // Get the ZMQ server public key.
    SecureBinaryData tempPubKey;
-   if(!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), tempPubKey
+   if (!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), tempPubKey
       , true, logger_)) {
-      return;
+      throw std::runtime_error("failed to read connection public key");
    }
    zmqPubKey_ = tempPubKey;
 
    // Get the ZMQ server private key.
    SecureBinaryData tempPrvKey;
-   if(!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), tempPrvKey
+   if (!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), tempPrvKey
       , false, logger_)) {
-      return;
+      throw std::runtime_error("failed to read connection private key");
    }
    zmqPrvKey_ = tempPrvKey;
 
@@ -85,8 +85,6 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-
-
 
 //   qmlRegisterUncreatableMetaObject(
 //     bs::staticMetaObject, // static meta object
@@ -134,7 +132,6 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
          emit loadingComplete();
       }
    });
-
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);

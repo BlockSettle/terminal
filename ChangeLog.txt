@@ -1,3 +1,9 @@
+0.12.5
+Improvements:
+   - Signer connection now uses random key
+Bug fixes:
+   - Fix other ZMQ connections after improvement above
+
 0.12.4
 Improvements:
    - Allow multiple terminal connections to one signer
