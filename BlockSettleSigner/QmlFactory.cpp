@@ -55,6 +55,7 @@ AuthSignWalletObject *QmlFactory::createAutheIDSignObject(AutheIDClient::Request
 {
    logger_->debug("[QmlFactory] signing {}", walletInfo->walletId().toStdString());
    AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, this);
+   authObject->connectToServer();
    authObject->signWallet(requestType, walletInfo);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
@@ -65,19 +66,9 @@ AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &userId
 {
    logger_->debug("[QmlFactory] activate wallet {} for {}", walletInfo->walletId().toStdString(), userId.toStdString());
    AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, this);
-
-   try {
-      walletInfo->setEncKeys(QStringList() << (userId + QStringLiteral("::")));
-      authObject->connectToServer();
-      authObject->signWallet(AutheIDClient::ActivateWallet, walletInfo);
-   }
-   catch (const std::exception &e) {
-      logger_->error("Failed to create AuthEidClient: {}", e.what());
-      QTimer::singleShot(0, [&](){
-         emit authObject->error(QString::fromStdString(e.what()));
-      });
-   }
-
+   walletInfo->setEncKeys(QStringList() << (userId + QStringLiteral("::")));
+   authObject->connectToServer();
+   authObject->signWallet(AutheIDClient::ActivateWallet, walletInfo);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
 }
@@ -87,6 +78,7 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
 {
    logger_->debug("[QmlFactory] remove device for {}, device index: {}", walletInfo->walletId().toStdString(), index);
    AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, this);
+   authObject->connectToServer();
    authObject->removeDevice(index, walletInfo);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;

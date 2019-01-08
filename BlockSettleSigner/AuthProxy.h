@@ -31,7 +31,6 @@ public:
 
 signals:
    void statusChanged();
-   void error(QString errMsg) const;
 
 protected:
    QString status() const { return status_; }

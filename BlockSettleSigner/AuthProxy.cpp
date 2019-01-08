@@ -48,7 +48,15 @@ void AuthSignWalletObject::connectToServer()
    std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
    std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
 
-   autheIDClient_->connect(serverPubKey, serverHost, serverPort);
+   try {
+      autheIDClient_->connect(serverPubKey, serverHost, serverPort);
+   }
+   catch (const std::exception &e) {
+      logger_->error("AuthEidClient failed to connect: {}", e.what());
+      QTimer::singleShot(0, [=](){
+         emit failed(QString::fromStdString(e.what()));
+      });
+   }
 }
 
 void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
@@ -69,16 +77,21 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
       }
    }
 
-   if (userIds.empty()) {
-      throw std::runtime_error("Error parsing encKeys: email not found");
-//      //emit failed(tr("Error parsing encKeys: email not found"));
-//      return false;
+   try {
+      if (userIds.empty()) {
+         throw std::runtime_error("Auth eID email not found");
+      }
+      autheIDClient_->start(requestType
+                            , userIds[0]
+                            , walletInfo->rootId().toStdString()
+                            , knownDeviceIds);
    }
-
-   autheIDClient_->start(requestType
-                         , userIds[0]
-                         , walletInfo->rootId().toStdString()
-                         , knownDeviceIds);
+   catch (const std::exception &e) {
+      logger_->error("AuthEidClient failed to sign wallet: {}", e.what());
+      QTimer::singleShot(0, [=](){
+         emit failed(QString::fromStdString(e.what()));
+      });
+   }
 }
 
 void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo)
@@ -113,17 +126,21 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
       }
    }
 
-   if (userIds.empty()) {
-      throw std::runtime_error("Error parsing encKeys: email not found");
-
-//      emit failed(tr("Error parsing encKeys: email not found"));
-//      return;
+   try {
+      if (userIds.empty()) {
+         throw std::runtime_error("Auth eID email not found");
+      }
+      // currently we supports only single account for whole wallet, thus email stored in userIds[0]
+      autheIDClient_->start(AutheIDClient::DeactivateWalletDevice
+                            , userIds[0]
+                            , walletInfo->rootId().toStdString()
+                            , knownDeviceIds);
    }
-
-   // currently we supports only single account for whole wallet, thus email stored in userIds[0]
-   autheIDClient_->start(AutheIDClient::DeactivateWalletDevice
-                         , userIds[0]
-                         , walletInfo->rootId().toStdString()
-                         , knownDeviceIds);
+   catch (const std::exception &e) {
+      logger_->error("AuthEidClient failed to sign wallet: {}", e.what());
+      QTimer::singleShot(0, [=](){
+         emit failed(QString::fromStdString(e.what()));
+      });
+   }
 }
 
