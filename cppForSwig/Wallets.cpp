@@ -218,7 +218,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::
    auto&& masterID_long = BtcUtils::getHMAC256(
       pubkey, SecureBinaryData(hmacMasterMsg));
    auto&& masterID = BtcUtils::computeID(masterID_long);
-   string masterIDStr(masterID.getCharPtr(), masterID.getSize());
+   string masterIDStr(masterID.getCharPtr());
 
    //create wallet file and dbenv
    stringstream pathSS;
@@ -245,7 +245,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::
    
    //create kdf and master encryption key
    auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
-   auto&& masterKeySBD = SecureBinaryData().GenerateRandom(32);
+   auto&& masterKeySBD = CryptoPRNG::generateRandom(32);
    DecryptedEncryptionKey masterEncryptionKey(masterKeySBD);
    masterEncryptionKey.deriveKey(kdfPtr);
    auto&& masterEncryptionKeyId = masterEncryptionKey.getId(kdfPtr->getId());
@@ -409,7 +409,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromSeed_BIP32(
 
    //create kdf and master encryption key
    auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
-   auto&& masterKeySBD = SecureBinaryData().GenerateRandom(32);
+   auto&& masterKeySBD = CryptoPRNG::generateRandom(32);
    DecryptedEncryptionKey masterEncryptionKey(masterKeySBD);
    masterEncryptionKey.deriveKey(kdfPtr);
    auto&& masterEncryptionKeyId = masterEncryptionKey.getId(kdfPtr->getId());
@@ -523,7 +523,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromBase58_BIP32(
 
    //create kdf and master encryption key
    auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
-   auto&& masterKeySBD = SecureBinaryData().GenerateRandom(32);
+   auto&& masterKeySBD = CryptoPRNG::generateRandom(32);
    DecryptedEncryptionKey masterEncryptionKey(masterKeySBD);
    masterEncryptionKey.deriveKey(kdfPtr);
    auto&& masterEncryptionKeyId = masterEncryptionKey.getId(kdfPtr->getId());
@@ -853,7 +853,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
    }
 
    //encrypt master key, create object and set it
-   metaPtr->defaultEncryptionKey_ = move(SecureBinaryData().GenerateRandom(32));
+   metaPtr->defaultEncryptionKey_ = move(CryptoPRNG::generateRandom(32));
    auto defaultKey = metaPtr->getDefaultEncryptionKey();
    auto defaultEncryptionKeyPtr = make_unique<DecryptedEncryptionKey>(defaultKey);
    defaultEncryptionKeyPtr->deriveKey(masterKdf);
@@ -918,7 +918,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
    }
 
 
-   /**insert the original entries**/
+   //insert the original entries
    {
       LMDBEnv::Transaction tx(walletPtr->dbEnv_.get(), LMDB::ReadWrite);
       walletPtr->putHeaderData(

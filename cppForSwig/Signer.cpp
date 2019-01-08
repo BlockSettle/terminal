@@ -1672,12 +1672,19 @@ void SignerProxyFromSigner::setLambda(
       auto&& sig = signer->sign(script, privKey, SHD, index);
 
       //convert to DER
+#ifndef LIBBTC_ONLY
       auto&& derSig = BtcUtils::rsToDerSig(sig.getRef());
 
       //append sighash byte
       derSig.append(spender->getSigHashByte());
-
       return SecureBinaryData(derSig);
+#else
+      //append sighash byte
+      SecureBinaryData sbd_hashbyte(1);
+      *sbd_hashbyte.getPtr() = spender->getSigHashByte();
+      sig.append(sbd_hashbyte);
+      return sig;
+#endif
    };
 
    signerLambda_ = signerLBD;

@@ -1663,7 +1663,7 @@ shared_ptr<Message> Clients::registerBDV(
    }
 
    if (bdvID.size() == 0)
-      bdvID = SecureBinaryData().GenerateRandom(10).toHexStr();
+      bdvID = CryptoPRNG::generateRandom(10).toHexStr();
    auto newBDV = make_shared<BDV_Server_Object>(bdvID, bdmT_);
 
    auto notiflbd = [this](unique_ptr<BDV_Notification> notifPtr)

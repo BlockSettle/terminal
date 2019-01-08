@@ -519,7 +519,7 @@ string AsyncClient::BtcWallet::registerAddresses(
    command->set_flag(isNew);
    command->set_walletid(walletID_);
 
-   auto&& registrationId = SecureBinaryData().GenerateRandom(5).toHexStr();
+   auto&& registrationId = CryptoPRNG::generateRandom(5).toHexStr();
    command->set_hash(registrationId);
 
    for (auto& addr : addrVec)
@@ -713,7 +713,7 @@ string AsyncClient::Lockbox::registerAddresses(
    command->set_flag(isNew);
    command->set_walletid(walletID_);
    
-   auto&& registrationId = SecureBinaryData().GenerateRandom(5).toHexStr();
+   auto&& registrationId = CryptoPRNG::generateRandom(5).toHexStr();
    command->set_hash(registrationId);
 
    for (auto& addr : addrVec)
