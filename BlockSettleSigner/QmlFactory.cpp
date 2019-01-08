@@ -16,16 +16,23 @@ WalletInfo *QmlFactory::createWalletInfo() {
 }
 
 WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) {
+   // ? move logic to WalletsManager ?
    bs::hd::WalletInfo *wi = nullptr;
 
    const auto &wallet = walletsMgr_->GetWalletById(walletId.toStdString());
    if (wallet) {
-      const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(wallet->GetWalletId());
+      const std::shared_ptr<bs::hd::Wallet> &rootWallet = walletsMgr_->GetHDRootForLeaf(wallet->GetWalletId());
       wi = new bs::hd::WalletInfo(wallet, rootWallet);
+      connect(rootWallet.get(), &bs::hd::Wallet::encryptionChanged, wi, [rootWallet, wi](){
+         if (rootWallet) {
+            wi->initEncKeys(rootWallet);
+         }
+      });
    }
    else {
       const auto &hdWallet = walletsMgr_->GetHDWalletById(walletId.toStdString());
       if (!hdWallet) {
+         // wallet not found
          wi = new bs::hd::WalletInfo();
       }
       else {
@@ -58,8 +65,19 @@ AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &userId
 {
    logger_->debug("[QmlFactory] activate wallet {} for {}", walletInfo->walletId().toStdString(), userId.toStdString());
    AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, this);
-   walletInfo->setEncKeys(QStringList() << (userId + QStringLiteral("::")));
-   authObject->signWallet(AutheIDClient::ActivateWallet, walletInfo);
+
+   try {
+      walletInfo->setEncKeys(QStringList() << (userId + QStringLiteral("::")));
+      authObject->connectToServer();
+      authObject->signWallet(AutheIDClient::ActivateWallet, walletInfo);
+   }
+   catch (const std::exception &e) {
+      logger_->error("Failed to create AuthEidClient: {}", e.what());
+      QTimer::singleShot(0, [&](){
+         emit authObject->error(QString::fromStdString(e.what()));
+      });
+   }
+
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
 }

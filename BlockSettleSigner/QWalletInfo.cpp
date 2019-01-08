@@ -132,14 +132,18 @@ void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootW
 
 void WalletInfo::initEncKeys(const std::shared_ptr<Wallet> &rootWallet)
 {
-   for (const SecureBinaryData &encKey : rootWallet->encryptionKeys()) {
-      encKeys_.push_back(QString::fromStdString(encKey.toBinStr()));
-   }
+   encKeys_.clear();
+   setEncKeys(rootWallet->encryptionKeys());
+   setEncTypes(rootWallet->encryptionTypes());
 
-   for (const EncryptionType &encType : rootWallet->encryptionTypes()) {
-      encTypes_.push_back(static_cast<bs::wallet::QEncryptionType>(encType));
-   }
-   emit walletChanged();
+//   for (const SecureBinaryData &encKey : rootWallet->encryptionKeys()) {
+//      encKeys_.push_back(QString::fromStdString(encKey.toBinStr()));
+//   }
+
+//   for (const EncryptionType &encType : rootWallet->encryptionTypes()) {
+//      encTypes_.push_back(static_cast<bs::wallet::QEncryptionType>(encType));
+//   }
+//   emit walletChanged();
 }
 
 void WalletInfo::setDesc(const QString &desc)
@@ -180,6 +184,24 @@ QString WalletInfo::email()
       return QString();
 
    return QString::fromStdString(AutheIDClient::getDeviceInfo(encKeys_.at(0).toStdString()).userId);
+}
+
+void WalletInfo::setEncKeys(const std::vector<SecureBinaryData> &encKeys)
+{
+   encKeys_.clear();
+   for (const SecureBinaryData &encKey : encKeys) {
+      encKeys_.push_back(QString::fromStdString(encKey.toBinStr()));
+   }
+   emit walletChanged();
+}
+
+void WalletInfo::setEncTypes(const std::vector<EncryptionType> &encTypes)
+{
+   encTypes_.clear();
+   for (const EncryptionType &encType : encTypes) {
+      encTypes_.push_back(static_cast<bs::wallet::QEncryptionType>(encType));
+   }
+   emit walletChanged();
 }
 
 void WalletInfo::setEncKeys(const QList<QString> &encKeys)

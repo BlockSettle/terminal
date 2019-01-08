@@ -26,11 +26,16 @@ void AuthObject::setStatus(const QString &status)
 
 
 AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
-   : AuthObject(nullptr)
+   : AuthObject(logger)
+{
+
+}
+
+void AuthSignWalletObject::connectToServer()
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
-   autheIDClient_ = (new AutheIDClient(logger, authKeys, this));
+   autheIDClient_ = (new AutheIDClient(logger_, authKeys, this));
 
    connect(autheIDClient_, &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
@@ -38,6 +43,7 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
    connect(autheIDClient_, &AutheIDClient::failed, this, [this](const QString &text){
       emit failed(text);
    });
+
    std::string serverPubKey = settings.get<std::string>(ApplicationSettings::authServerPubKey);
    std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
    std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
@@ -45,9 +51,7 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
    autheIDClient_->connect(serverPubKey, serverHost, serverPort);
 }
 
-
-
-bool AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
+void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
 {
    std::vector<std::string> knownDeviceIds;
    std::vector<std::string> userIds;
@@ -66,15 +70,15 @@ bool AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
    }
 
    if (userIds.empty()) {
-      //emit failed(tr("Error parsing encKeys: email not found"));
-      return false;
+      throw std::runtime_error("Error parsing encKeys: email not found");
+//      //emit failed(tr("Error parsing encKeys: email not found"));
+//      return false;
    }
 
    autheIDClient_->start(requestType
                          , userIds[0]
-         , walletInfo->rootId().toStdString()
-         , knownDeviceIds);
-   return true;
+                         , walletInfo->rootId().toStdString()
+                         , knownDeviceIds);
 }
 
 void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo)
@@ -110,14 +114,16 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
    }
 
    if (userIds.empty()) {
-      emit failed(tr("Error parsing encKeys: email not found"));
-      return;
+      throw std::runtime_error("Error parsing encKeys: email not found");
+
+//      emit failed(tr("Error parsing encKeys: email not found"));
+//      return;
    }
 
-   // currently we supports only sigle account for whole wallet, thus email stored in userIds[0]
+   // currently we supports only single account for whole wallet, thus email stored in userIds[0]
    autheIDClient_->start(AutheIDClient::DeactivateWalletDevice
                          , userIds[0]
-         , walletInfo->rootId().toStdString()
-         , knownDeviceIds);
+                         , walletInfo->rootId().toStdString()
+                         , knownDeviceIds);
 }
 

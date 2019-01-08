@@ -171,12 +171,16 @@ public:
    Q_INVOKABLE QList<bs::wallet::QEncryptionType> encTypes() const { return encTypes_; }
    void setEncTypes(const QList<bs::wallet::QEncryptionType> &encTypes);
 
-   // currently we supports only sigle enc type for whole wallet: either Password or eID Auth
+   // currently we supports only single enc type for whole wallet: either Password or eID Auth
    // this function returns encType based on first passwordDataList_ value
    bs::wallet::QEncryptionType encType();
 
-   // currently we supports only sigle account for whole wallet, thus email stored in encKeys_.at(0)
+   // currently we supports only single account for whole wallet, thus email stored in encKeys_.at(0)
    Q_INVOKABLE QString email();
+
+public slots:
+   void setEncKeys(const std::vector<SecureBinaryData> &encKeys);
+   void setEncTypes(const std::vector<wallet::EncryptionType> &encTypes);
 
 signals:
    void walletChanged();
