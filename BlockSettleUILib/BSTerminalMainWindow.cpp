@@ -167,11 +167,14 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(Ne
    reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
    reqPkt.set_requestdata("");
 
+   const auto &title = tr("Network settings");
    const auto connection = connectionManager_->CreateSecuredDataConnection();
    BinaryData inSrvPubKey(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
-   connection->SetServerPublicKey(inSrvPubKey);
+   if (!connection->SetServerPublicKey(inSrvPubKey)) {
+      showError(title, tr("Failed to set PuB connection public key"));
+      return;
+   }
    cmdPuBSettings_ = std::make_shared<RequestReplyCommand>("network_settings", connection, logMgr_->logger());
-   const auto &title = tr("Network settings");
 
    const auto &populateAppSettings = [this](NetworkSettings settings) {
       if (!settings.celer.host.empty()) {

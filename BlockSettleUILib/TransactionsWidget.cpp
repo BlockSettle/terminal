@@ -119,7 +119,7 @@ public:
    {
       Q_UNUSED(source_parent);
 /*      const auto col = static_cast<TransactionsViewModel::Columns>(source_column);
-      return (col != TransactionsViewModel::Columns::RbfFlag) && (col != TransactionsViewModel::Columns::MissedBlocks);*/
+      return (col != TransactionsViewModel::Columns::MissedBlocks);*/
       return true;   // strange, but it works properly only this way
    }
 
@@ -295,7 +295,6 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 
    ui->treeViewTransactions->setSortingEnabled(true);
    ui->treeViewTransactions->setModel(sortFilterModel_);
-   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::RbfFlag));
    ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
 //   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
 }
