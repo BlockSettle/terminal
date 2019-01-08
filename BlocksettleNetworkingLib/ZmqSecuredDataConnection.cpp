@@ -50,8 +50,8 @@ bool ZmqSecuredDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr& s
    }
 
    int result = zmq_setsockopt(s.get(), ZMQ_CURVE_SERVERKEY
-                               , serverPublicKey_.toBinStr().c_str()
-                               , CURVEZMQPUBKEYBUFFERSIZE);
+                               , serverPublicKey_.toCharPtr()
+                               , serverPublicKey_.getSize());
    if (result != 0) {
       logger_->error("[ZmqSecuredDataConnection::{}] failed to set server "
          "public key: {}", __func__, zmq_strerror(zmq_errno()));
@@ -59,8 +59,8 @@ bool ZmqSecuredDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr& s
    }
 
    result = zmq_setsockopt(s.get(), ZMQ_CURVE_PUBLICKEY
-                           , publicKey_.toBinStr().c_str()
-                           , CURVEZMQPUBKEYBUFFERSIZE);
+                           , publicKey_.toCharPtr()
+                           , publicKey_.getSize());
    if (result != 0) {
       if (logger_) {
          logger_->error("[ZmqSecuredDataConnection::{}] failed to set client "
@@ -70,8 +70,8 @@ bool ZmqSecuredDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr& s
    }
 
    result = zmq_setsockopt(s.get(), ZMQ_CURVE_SECRETKEY
-                           , privateKey_.toBinStr().c_str()
-                           , CURVEZMQPRVKEYBUFFERSIZE);
+                           , privateKey_.toCharPtr()
+                           , privateKey_.getSize());
    if (result != 0) {
       if (logger_) {
          logger_->error("[ZmqSecuredDataConnection::{}] failed to set client "

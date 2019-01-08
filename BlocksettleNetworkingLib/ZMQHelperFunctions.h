@@ -6,8 +6,8 @@
 #include <spdlog/spdlog.h>
 #include "EncryptionUtils.h"
 
-#define CURVEZMQPUBKEYBUFFERSIZE 41
-#define CURVEZMQPRVKEYBUFFERSIZE 41
+#define CURVEZMQPUBKEYBUFFERSIZE 40
+#define CURVEZMQPRVKEYBUFFERSIZE 40
 
 namespace bs
 {
