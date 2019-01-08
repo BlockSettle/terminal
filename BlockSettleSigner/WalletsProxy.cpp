@@ -77,7 +77,7 @@ bool WalletsProxy::changePassword(const QString &walletId
       return false;
    }
 
-   //emit walletsMgr_.get()->walletChanged();
+   emit walletsMgr_.get()->walletChanged();
    return true;
 }
 
@@ -113,7 +113,7 @@ bool WalletsProxy::addEidDevice(const QString &walletId
       return false;
    }
 
-   //emit walletsMgr_.get()->walletChanged();
+   emit walletsMgr_.get()->walletChanged();
    return true;
 }
 
@@ -169,7 +169,7 @@ bool WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
       emit walletError(walletId, tr("Failed to add new device"));
       return false;
    }
-   //emit walletsMgr_.get()->walletChanged();
+   emit walletsMgr_.get()->walletChanged();
    return true;
 }
 
@@ -334,7 +334,7 @@ bool WalletsProxy::deleteWallet(const QString &walletId)
 
    if (!ok) emit walletError(walletId, tr("Failed to find wallet with id %1").arg(walletId));
 
-   //emit walletsMgr_.get()->walletChanged();
+   emit walletsMgr_.get()->walletChanged();
    return ok;
 }
 

@@ -8,9 +8,6 @@
 #include "WalletEncryption.h"
 #include "QWalletInfo.h"
 #include "AutheIDClient.h"
-//#include "QQmlEngine"
-//#include "WalletsManager.h"
-//#include "AuthProxy.h"
 
 namespace bs {
    namespace wallet {
@@ -21,36 +18,6 @@ namespace bs {
 
 using namespace bs::hd;
 using namespace bs::wallet;
-
-//WalletInfo::WalletInfo(const QString &walletId, QObject *parent)
-//   : QObject(parent)
-//   , walletId_(walletId)
-//{
-//   const auto &wallet = walletsMgr->GetWalletById(walletId.toStdString());
-//   if (wallet) {
-//      const auto &rootWallet = walletsMgr->GetHDRootForLeaf(wallet->GetWalletId());
-//      initFromWallet(wallet.get(), rootWallet->getWalletId());
-//      initEncKeys(rootWallet);
-//   }
-//   else {
-//      const auto &hdWallet = walletsMgr->GetHDWalletById(walletId.toStdString());
-//      if (!hdWallet) {
-//         // TODO: may be add isValid() function
-//         // throw std::runtime_error("failed to find wallet id " + walletId.toStdString());
-//      }
-//      else {
-//         initFromRootWallet(hdWallet);
-//         initEncKeys(hdWallet);
-//      }
-//   }
-
-////   if (walletsManager_) {
-////      connect(walletsManager_.get(), &WalletsManager::walletChanged, this, [&](){
-////         *this = WalletInfo(walletsManager_, walletId_, this->parent());
-////         emit walletChanged();
-////      });
-//   //   }
-//}
 
 WalletInfo::WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent)
 {
@@ -69,11 +36,6 @@ WalletInfo::WalletInfo(const WalletInfo &other)
    , name_(other.name_), desc_(other.desc_)
    , encKeys_(other.encKeys_), encTypes_(other.encTypes_)
 {
-//   if (walletsManager_) {
-//      connect(walletsManager_.get(), &WalletsManager::walletChanged, this, [&](){
-//         emit walletChanged();
-//      });
-//   }
 }
 
 WalletInfo &bs::hd::WalletInfo::WalletInfo::operator =(const WalletInfo &other)
@@ -84,13 +46,6 @@ WalletInfo &bs::hd::WalletInfo::WalletInfo::operator =(const WalletInfo &other)
    desc_ = other.desc_;
    encKeys_ = other.encKeys_;
    encTypes_ = other.encTypes_;
-   //walletsManager_ = other.walletsManager_;
-
-//   if (walletsManager_) {
-//      connect(walletsManager_.get(), &WalletsManager::walletChanged, this, [&](){
-//         emit walletChanged();
-//      });
-//   }
 
    return *this;
 }
@@ -135,15 +90,6 @@ void WalletInfo::initEncKeys(const std::shared_ptr<Wallet> &rootWallet)
    encKeys_.clear();
    setEncKeys(rootWallet->encryptionKeys());
    setEncTypes(rootWallet->encryptionTypes());
-
-//   for (const SecureBinaryData &encKey : rootWallet->encryptionKeys()) {
-//      encKeys_.push_back(QString::fromStdString(encKey.toBinStr()));
-//   }
-
-//   for (const EncryptionType &encType : rootWallet->encryptionTypes()) {
-//      encTypes_.push_back(static_cast<bs::wallet::QEncryptionType>(encType));
-//   }
-//   emit walletChanged();
 }
 
 void WalletInfo::setDesc(const QString &desc)

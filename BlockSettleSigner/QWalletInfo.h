@@ -6,10 +6,7 @@
 #include "HDWallet.h"
 #include "MetaData.h"
 #include "WalletEncryption.h"
-//#include "AutheIDClient.h"
 
-// WalletsManager;
-//class AuthSignWalletObject;
 
 namespace bs {
 namespace wallet {
@@ -137,10 +134,8 @@ class WalletInfo : public QObject
    // currently we using only single encription type for whole wallet
    Q_PROPERTY(bs::wallet::QEncryptionType encType READ encType NOTIFY walletChanged)
 
-   //   Q_PROPERTY(QString rootId READ rootId WRITE setRootId NOTIFY rootIdChanged)
 public:
    WalletInfo(QObject *parent = nullptr) : QObject(parent) {}
-   //WalletInfo(const QString &walletId, QObject *parent = nullptr);
 
    WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent = nullptr);
    WalletInfo(std::shared_ptr<bs::Wallet> wallet, std::shared_ptr<bs::hd::Wallet> rootHdWallet, QObject *parent = nullptr);
@@ -167,9 +162,11 @@ public:
 
    QList<QString> encKeys() const { return encKeys_; }
    void setEncKeys(const QList<QString> &encKeys);
+   void setEncKeys(const std::vector<SecureBinaryData> &encKeys);
 
    Q_INVOKABLE QList<bs::wallet::QEncryptionType> encTypes() const { return encTypes_; }
    void setEncTypes(const QList<bs::wallet::QEncryptionType> &encTypes);
+   void setEncTypes(const std::vector<wallet::EncryptionType> &encTypes);
 
    // currently we supports only single enc type for whole wallet: either Password or eID Auth
    // this function returns encType based on first passwordDataList_ value
@@ -178,13 +175,8 @@ public:
    // currently we supports only single account for whole wallet, thus email stored in encKeys_.at(0)
    Q_INVOKABLE QString email();
 
-public slots:
-   void setEncKeys(const std::vector<SecureBinaryData> &encKeys);
-   void setEncTypes(const std::vector<wallet::EncryptionType> &encTypes);
-
 signals:
    void walletChanged();
-
 
 private:
    QString    walletId_;
@@ -192,7 +184,6 @@ private:
    QString    name_, desc_;
    QList<QString> encKeys_;
    QList<bs::wallet::QEncryptionType> encTypes_;
-   //std::shared_ptr<WalletsManager> walletsManager_;
 };
 
 

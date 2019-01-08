@@ -30,7 +30,7 @@
 #endif // BS_USE_DBUS
 
 Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
-Q_DECLARE_METATYPE(TXInfo)
+Q_DECLARE_METATYPE(bs::wallet::TXInfo)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
 QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
@@ -74,7 +74,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
 
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
-   qmlRegisterType<TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
+   qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
@@ -304,7 +304,7 @@ void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
 
 void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
 {
-   TXInfo *txInfo = new TXInfo(txReq);
+   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
    bs::hd::WalletInfo *walletInfo = qmlFactory_.get()->createWalletInfo(txReq.walletId);
