@@ -884,7 +884,7 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
 
    updatePersistence();
    LOG(logger_, info, "Wallet::changePassword: success");
-   emit encryptionChanged();
+   emit metaDataChanged();
    return true;
 }
 
