@@ -312,6 +312,8 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
    AuthAddressConfirmDialog confirmDlg{lastSubmittedAddress_, authAddressManager_, this};
 
    confirmDlg.exec();
+
+   lastSubmittedAddress_ = bs::Address{};
 }
 
 void AuthAddressDialog::submitSelectedAddress()
