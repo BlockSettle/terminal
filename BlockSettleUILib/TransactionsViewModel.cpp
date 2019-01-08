@@ -65,7 +65,7 @@ QVariant TXNode::data(int column, int role) const
          return item_->amountStr;
       case TransactionsViewModel::Columns::Address:
          return UiUtils::displayAddress(item_->mainAddress);
-      case TransactionsViewModel::Columns::RbfFlag:
+      case TransactionsViewModel::Columns::Flag:
          if (!item_->confirmations) {
             if (item_->txEntry.isRBF) {
                return QObject::tr("RBF");
@@ -327,7 +327,7 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
    if (role == Qt::TextAlignmentRole) {
       switch (col) {
       case Columns::Amount:   return Qt::AlignRight;
-      case Columns::RbfFlag:  return Qt::AlignCenter;
+      case Columns::Flag:     return Qt::AlignCenter;
       default:  break;
       }
       return {};
@@ -351,8 +351,8 @@ QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientat
       case Columns::Comment:        return tr("Comment");
       case Columns::Address:        return tr("Address");
       case Columns::Amount:         return tr("Amount");
-      case Columns::RbfFlag:        return tr("Flag");
-      case Columns::TxHash:           return tr("Hash");
+      case Columns::Flag:           return tr("Flag");
+      case Columns::TxHash:         return tr("Hash");
 //      case Columns::MissedBlocks:   return tr("Missed Blocks");
       default:    return QVariant();
       }

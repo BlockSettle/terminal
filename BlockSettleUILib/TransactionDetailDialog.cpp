@@ -31,8 +31,15 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
       ui_->labelDirection->setText(tr(bs::Transaction::toString(item->direction)));
       ui_->labelAddress->setText(item->mainAddress);
 
-      if (item->txEntry.blockNum != std::numeric_limits<uint32_t>::max()) {
+      if (item->confirmations > 0) {
          ui_->labelHeight->setText(QString::number(item->txEntry.blockNum));
+      }
+      else {
+         if (item->txEntry.isRBF) {
+            ui_->labelFlag->setText(tr("RBF eligible"));
+         } else if (item->isCPFP) {
+            ui_->labelFlag->setText(tr("CPFP eligible"));
+         }
       }
 
       if (item->tx.isInitialized()) {
