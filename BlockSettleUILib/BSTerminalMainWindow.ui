@@ -133,7 +133,7 @@
        <enum>Qt::NoFocus</enum>
       </property>
       <property name="currentIndex">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="movable">
        <bool>false</bool>
@@ -195,7 +195,7 @@
      <x>0</x>
      <y>0</y>
      <width>997</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

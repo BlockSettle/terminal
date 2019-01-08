@@ -1,7 +1,9 @@
 #ifndef __ZMQ_SECURED_SERVER_CONNECTION_H__
 #define __ZMQ_SECURED_SERVER_CONNECTION_H__
 
+#include <QString>
 #include "ZmqServerConnection.h"
+#include "EncryptionUtils.h"
 
 class ZmqSecuredServerConnection : public ZmqServerConnection
 {
@@ -16,10 +18,11 @@ public:
    ZmqSecuredServerConnection(ZmqSecuredServerConnection&&) = delete;
    ZmqSecuredServerConnection& operator = (ZmqSecuredServerConnection&&) = delete;
 
-public:
-   bool SetKeyPair(const std::string& publicKey, const std::string& privateKey);
+   bool SetKeyPair(const SecureBinaryData& zmqPubKey
+      , const SecureBinaryData& zmqPrvKey);
 
-   bool SendDataToClient(const std::string& clientId, const std::string& data) override;
+   bool SendDataToClient(const std::string& clientId, const std::string& data
+      , const SendResultCb &cb = nullptr) override;
 
 protected:
    ZmqContext::sock_ptr CreateDataSocket() override;
@@ -28,8 +31,8 @@ protected:
    bool ReadFromDataSocket() override;
 
 private:
-   std::string publicKey_;
-   std::string privateKey_;
+   SecureBinaryData publicKey_;
+   SecureBinaryData privateKey_;
 };
 
 #endif // __ZMQ_SECURED_SERVER_CONNECTION_H__

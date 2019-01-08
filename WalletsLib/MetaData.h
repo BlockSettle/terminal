@@ -375,8 +375,8 @@ namespace bs {
       mutable std::map<BinaryData, uint32_t>                addressTxNMap_;
       mutable std::atomic_bool   updateAddrBalance_;
       mutable std::atomic_bool   updateAddrTxN_;
-      mutable std::map<bs::Address, std::function<void(std::vector<uint64_t>)>>  cbBal_;
-      mutable std::map<bs::Address, std::function<void(uint32_t)>>               cbTxN_;
+      mutable std::map<bs::Address, std::vector<std::function<void(std::vector<uint64_t>)>>> cbBal_;
+      mutable std::map<bs::Address, std::vector<std::function<void(uint32_t)>>>              cbTxN_;
 
    private:
       class UtxoFilterAdapter : public bs::UtxoReservation::Adapter

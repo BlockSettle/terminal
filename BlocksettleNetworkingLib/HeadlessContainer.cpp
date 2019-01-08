@@ -7,6 +7,7 @@
 #include "SettlementWallet.h"
 #include "WalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
+#include "ZMQHelperFunctions.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -16,7 +17,6 @@
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/spdlog.h>
-
 
 using namespace Blocksettle::Communication;
 Q_DECLARE_METATYPE(headless::RequestPacket)
@@ -809,25 +809,44 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &host, const QString &port, NetworkType netType
-   , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash
-   , OpMode opMode)
-   : HeadlessContainer(logger, opMode)
+   , const std::shared_ptr<ConnectionManager>& connectionManager
+   , const QString &pwHash, OpMode opMode) : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType), pwHash_(pwHash)
-   , connPubKey_("t>ituO$mt-[Fl}&IE%EicU@L&LvC%8i$$nS3YFm}")
    , connectionManager_{connectionManager}
 {}
 
+// Establish the remote connection to the signer.
 bool RemoteSigner::Start()
 {
    if (connection_) {
       return true;
    }
 
+   // If the ZMQ server public key hasn't been loaded yet, do it here.
+   if (zmqSrvPubKey_.getSize() == 0) {
+      // Read the server key file. For now, assume the location is fixed. We may
+      // want to make the location dynamic later. In addition, there's a race
+      // condition of sorts when starting out. If the server pub key exists,
+      // proceed. If not, give the signer a little time to create the key. 50 ms
+      // seems reasonable on a VM but we'll add some padding to be safe.
+      QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+      QString zmqSrvPubKeyPath = logDir.path() + \
+         QString::fromStdString("/headless_conn_srv.pub");
+      QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
+      if (!zmqSrvPubKeyFile.exists()) {
+         QThread::msleep(250);
+      }
+
+      if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true, logger_)) {
+         logger_->error("[RemoteSigner::{}] failed to read connection public key", __func__);
+         return false;
+      }
+   }
+
    connection_ = connectionManager_->CreateSecuredDataConnection(true);
-   BinaryData inSrvPubKey(connPubKey_);
-   if (!connection_->SetServerPublicKey(inSrvPubKey)) {
-      logger_->error("[RemoteSigner::{}] Failed to set connection pubkey"
-         , __func__);
+   if (!connection_->SetServerPublicKey(zmqSrvPubKey_)) {
+      logger_->error("[RemoteSigner::{}] Failed to set signer connection "
+         "public key", __func__);
       connection_ = nullptr;
       return false;
    }
@@ -1025,10 +1044,12 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 }
 
 
-LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger, const QString &homeDir, NetworkType netType
-   , const QString &port
-   , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash, double asSpendLimit)
-   : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType, connectionManager, pwHash, OpMode::Local)
+LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
+   , const QString &homeDir, NetworkType netType, const QString &port
+   , const std::shared_ptr<ConnectionManager>& connectionManager
+   , const QString &pwHash, double asSpendLimit)
+   : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
+   , connectionManager, pwHash, OpMode::Local)
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
@@ -1076,6 +1097,7 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger, const QS
 
 bool LocalSigner::Start()
 {
+   // If there's a previous headless process, stop it.
    KillHeadlessProcess();
    headlessProcess_ = std::make_shared<QProcess>();
    connect(headlessProcess_.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished)
@@ -1109,6 +1131,7 @@ bool LocalSigner::Start()
       emit ready();
       return false;
    }
+
    QFile pidFile(pidFileName);
    if (pidFile.open(QIODevice::WriteOnly)) {
       const auto pidStr = QString::number(headlessProcess_->processId()).toStdString();

@@ -254,16 +254,26 @@ namespace Chat
       static std::vector<std::string> fromJSON(const std::string& jsonData);
       QJsonObject toJson() const override;
 
-   private:
+   protected:
       std::vector<std::string> dataList_;
    };
 
    class UsersListResponse : public ListResponse
    {
    public:
-      UsersListResponse(std::vector<std::string> dataList);
+      enum class Command {
+         Replace = 0,
+         Add,
+         Delete
+      };
+      UsersListResponse(std::vector<std::string> dataList, Command cmd = Command::Replace);
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      QJsonObject toJson() const override;
       void handle(ResponseHandler &) override;
+      Command command() const { return cmd_; }
+
+   private:
+      Command  cmd_;
    };
 
    class MessagesResponse : public ListResponse

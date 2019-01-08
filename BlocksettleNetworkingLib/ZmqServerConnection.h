@@ -36,6 +36,9 @@ public:
 
    bool SetZMQTransport(ZMQTransport transport);
 
+   void SetImmediate(bool flag = true) { immediate_ = flag; }
+   void SetIdentity(const std::string &id) { identity_ = id; }
+
 protected:
    bool isActive() const;
 
@@ -46,11 +49,12 @@ protected:
    void notifyListenerOnDisconnectedClient(const std::string& clientId);
 
    virtual ZmqContext::sock_ptr CreateDataSocket() = 0;
-   virtual bool ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket) = 0;
+   virtual bool ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket);
 
    virtual bool ReadFromDataSocket() = 0;
 
-   virtual bool QueueDataToSend(const std::string& clientId, const std::string& data, bool sendMore);
+   virtual bool QueueDataToSend(const std::string& clientId, const std::string& data
+      , const SendResultCb &cb, bool sendMore);
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -83,13 +87,14 @@ private:
 
    struct DataToSend
    {
-      std::string clientId;
-      std::string data;
-      bool        sendMore;
+      std::string    clientId;
+      std::string    data;
+      SendResultCb   cb;
+      bool           sendMore;
    };
 
    bool SendDataCommand();
-   bool SendDataToDataSocket();
+   void SendDataToDataSocket();
 
 private:
    std::thread                      listenThread_;
@@ -108,6 +113,9 @@ private:
    std::unordered_map<int, std::string> connectedPeers_;
 
    std::string                      monitorConnectionName_;
+
+   bool        immediate_{ false };
+   std::string identity_;
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__

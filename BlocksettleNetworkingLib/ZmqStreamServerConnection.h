@@ -30,15 +30,16 @@ public:
    ZmqStreamServerConnection(ZmqStreamServerConnection&&) = delete;
    ZmqStreamServerConnection& operator = (ZmqStreamServerConnection&&) = delete;
 
-   bool SendDataToClient(const std::string& clientId, const std::string& data) override;
-   bool SendDataToAllClients(const std::string& data) override;
+   bool SendDataToClient(const std::string& clientId, const std::string& data
+      , const SendResultCb &cb = nullptr) override;
+   bool SendDataToAllClients(const std::string& data, const SendResultCb &cb = nullptr) override;
 protected:
    ZmqContext::sock_ptr CreateDataSocket() override;
-   bool ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket) override;
 
    bool ReadFromDataSocket() override;
 
-   bool sendRawData(const std::string& clientId, const std::string& rawData);
+   bool sendRawData(const std::string& clientId, const std::string& rawData
+      , const SendResultCb &cb = nullptr);
 
    virtual server_connection_ptr CreateActiveConnection() = 0;
 
