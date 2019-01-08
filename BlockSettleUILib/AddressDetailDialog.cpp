@@ -70,7 +70,6 @@ public:
          && col != TransactionsViewModel::Columns::Address
          && col != TransactionsViewModel::Columns::Comment
          && col != TransactionsViewModel::Columns::SendReceive
-         && col != TransactionsViewModel::Columns::RbfFlag
          /*&& col != TransactionsViewModel::Columns::MissedBlocks*/;
    }
 };
