@@ -2,8 +2,6 @@ CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
 
 PROJECT(${CRYPTO_LIB_NAME})
 
-add_definitions(-DLIBBTC_ONLY)
-
 SET (SOURCES
    Accounts.cpp
    Addresses.cpp

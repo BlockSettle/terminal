@@ -413,9 +413,9 @@ void WalletsWidget::onNewWallet()
 bool WalletsWidget::CreateNewWallet(bool primary, bool report)
 {
    NetworkType netType = appSettings_->get<NetworkType>(ApplicationSettings::netType);
-   
-   bs::wallet::Seed walletSeed(netType, SecureBinaryData().GenerateRandom(32));
-   
+
+   bs::wallet::Seed walletSeed(netType, CryptoPRNG::generateRandom(32));
+
    EasyCoDec::Data easyData = walletSeed.toEasyCodeChecksum();
 
    std::string walletId = bs::hd::Node(walletSeed).getId();

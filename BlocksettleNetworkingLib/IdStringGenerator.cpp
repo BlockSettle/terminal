@@ -14,5 +14,5 @@ std::string IdStringGenerator::getNextId()
 
 std::string IdStringGenerator::getUniqueSeed() const
 {
-   return userName_ + "/" + SecureBinaryData().GenerateRandom(4).toHexStr();
+   return userName_ + "/" + CryptoPRNG::generateRandom(4).toHexStr();
 }

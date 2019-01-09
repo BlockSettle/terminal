@@ -144,7 +144,7 @@ const BinaryData &bs::SettlementAssetEntry::p2wshScript() const
 {
    if (p2wshScript_.isNull()) {
       const auto hash256 = BtcUtils::getSha256(script());
-      Recipient_PW2SH recipient(hash256, 0);
+      Recipient_P2WSH recipient(hash256, 0);
       const auto &script = recipient.getSerializedScript();
       p2wshScript_ = script.getSliceCopy(9, script.getSize() - 9);
    }

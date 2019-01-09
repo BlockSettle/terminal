@@ -84,7 +84,8 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 void AddressListModel::updateData()
 {
    bool expected = false;
-   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
+   bool desired = false;
+   if (!std::atomic_compare_exchange_strong(&processing_, &expected, desired)) {
       return;
    }
    beginResetModel();
@@ -212,7 +213,8 @@ void AddressListModel::updateWalletData()
 void AddressListModel::removeEmptyIntAddresses()
 {
    bool expected = false;
-   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
+   bool desired = false;
+   if (!std::atomic_compare_exchange_strong(&processing_, &expected, desired)) {
       return;
    }
 
