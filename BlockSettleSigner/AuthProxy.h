@@ -1,14 +1,15 @@
 #ifndef __AUTH_PROXY_H__
 #define __AUTH_PROXY_H__
 
-#include <memory>
-#include <QObject>
-#include "MetaData.h"
-#include "WalletEncryption.h"
-#include "EncryptionUtils.h"
 #include "AutheIDClient.h"
+#include "EncryptionUtils.h"
+#include "MetaData.h"
 #include "QWalletInfo.h"
+#include "WalletEncryption.h"
 
+#include <memory>
+
+#include <QObject>
 
 class ApplicationSettings;
 
@@ -61,7 +62,7 @@ signals:
    void failed(const QString &text) const;
 
 private:
-   AutheIDClient *autheIDClient_ {};
+   std::shared_ptr<AutheIDClient> autheIDClient_;
 };
 
 

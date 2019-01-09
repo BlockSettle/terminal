@@ -30,12 +30,12 @@ AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger>
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
-   autheIDClient_ = (new AutheIDClient(logger, authKeys, this));
+   autheIDClient_ = std::make_shared<AutheIDClient>(logger, authKeys, this);
 
-   connect(autheIDClient_, &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
+   connect(autheIDClient_.get(), &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
    });
-   connect(autheIDClient_, &AutheIDClient::failed, this, [this](const QString &text){
+   connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](const QString &text){
       emit failed(text);
    });
    std::string serverPubKey = settings.get<std::string>(ApplicationSettings::authServerPubKey);
