@@ -26,20 +26,36 @@ void BIP32_Node::init()
       chaincode_.clear();
    chaincode_.resize(BTC_BIP32_CHAINCODE_SIZE);
    memset(chaincode_.getPtr(), 0, BTC_BIP32_CHAINCODE_SIZE);
-
-   node_.depth = 0;
-   node_.child_num = 0;
-   node_.fingerprint = 0;
-
-   assign();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BIP32_Node::assign()
+void BIP32_Node::setupNode(btc_hdnode* node) const
 {
-   node_.chain_code = chaincode_.getPtr();
-   node_.private_key = privkey_.getPtr();
-   node_.public_key = pubkey_.getPtr();
+   if(chaincode_.getSize() > 0)
+      memcpy(node->chain_code, chaincode_.getPtr(), BTC_BIP32_CHAINCODE_SIZE);
+
+   if (privkey_.getSize() > 0)
+      memcpy(node->private_key, privkey_.getPtr(), BTC_ECKEY_PKEY_LENGTH);
+
+   if (pubkey_.getSize() > 0)
+      memcpy(node->public_key, pubkey_.getPtr(), BTC_ECKEY_COMPRESSED_LENGTH);
+
+   node->depth = depth_;
+   node->child_num = child_num_;
+   node->fingerprint = fingerprint_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BIP32_Node::setupFromNode(btc_hdnode* node)
+{
+   init();
+   memcpy(chaincode_.getPtr(), node->chain_code, BTC_BIP32_CHAINCODE_SIZE);
+   memcpy(privkey_.getPtr(), node->private_key, BTC_ECKEY_PKEY_LENGTH);
+   memcpy(pubkey_.getPtr(), node->public_key, BTC_ECKEY_COMPRESSED_LENGTH);
+
+   depth_ = node->depth;
+   child_num_ = node->child_num;
+   fingerprint_ = node->fingerprint;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,15 +68,18 @@ SecureBinaryData BIP32_Node::encodeBase58() const
    char* result_char = new char[result_len];
    memset(result_char, 0, result_len);
 
-   if (privkey_.getSize() == BTC_ECKEY_PKEY_LENGTH)
+   btc_hdnode node;
+   setupNode(&node);
+
+   if (!isPublic())
    {
       btc_hdnode_serialize_private(
-         &node_, NetworkConfig::get_chain_params(), result_char, result_len);
+         &node, NetworkConfig::get_chain_params(), result_char, result_len);
    }
    else if (pubkey_.getSize() == BTC_ECKEY_COMPRESSED_LENGTH)
    {
       btc_hdnode_serialize_public(
-         &node_, NetworkConfig::get_chain_params(), result_char, result_len);
+         &node, NetworkConfig::get_chain_params(), result_char, result_len);
    }
    else
    {
@@ -69,7 +88,7 @@ SecureBinaryData BIP32_Node::encodeBase58() const
    }
 
    if (strlen(result_char) == 0)
-   throw std::runtime_error("failed to serialized bip32 string");
+      throw std::runtime_error("failed to serialized bip32 string");
 
    SecureBinaryData result((uint8_t*)result_char, strlen(result_char));
    delete[] result_char;
@@ -79,25 +98,29 @@ SecureBinaryData BIP32_Node::encodeBase58() const
 ////////////////////////////////////////////////////////////////////////////////
 void BIP32_Node::decodeBase58(const char* str)
 {
+   btc_hdnode node;
+
    //b58 decode
    if(!btc_hdnode_deserialize(
-      str, NetworkConfig::get_chain_params(), &node_))
+      str, NetworkConfig::get_chain_params(), &node))
       throw std::runtime_error("invalid bip32 serialized string");
+
+   setupFromNode(&node);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void BIP32_Node::initFromSeed(const SecureBinaryData& seed)
 {
-   init();
-   if (!btc_hdnode_from_seed(seed.getPtr(), seed.getSize(), &node_))
+   btc_hdnode node;
+   if (!btc_hdnode_from_seed(seed.getPtr(), seed.getSize(), &node))
       throw std::runtime_error("failed to setup seed");
+
+   setupFromNode(&node);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void BIP32_Node::initFromBase58(const SecureBinaryData& b58)
 {
-   init();
-
    //sbd doesnt 0 terminate strings as it is not specialized for char strings,
    //have to set it manually since libbtc b58 code derives string length from
    //strlen
@@ -118,14 +141,16 @@ void BIP32_Node::initFromPrivateKey(uint8_t depth, unsigned leaf_id,
    if (chaincode.getSize() != BTC_BIP32_CHAINCODE_SIZE)
       throw std::runtime_error("unexpected chaincode size");
 
-   init();
-   memcpy(privkey_.getPtr(), privKey.getPtr(), BTC_ECKEY_PKEY_LENGTH);
-   memcpy(chaincode_.getPtr(), chaincode.getPtr(), BTC_BIP32_CHAINCODE_SIZE);
+   btc_hdnode node;
+   memcpy(node.chain_code, chaincode.getPtr(), BTC_BIP32_CHAINCODE_SIZE);
+   memcpy(node.private_key, privKey.getPtr(), BTC_ECKEY_PKEY_LENGTH);
 
-   node_.depth = depth;
-   node_.child_num = leaf_id;
+   node.depth = depth;
+   node.child_num = leaf_id;
 
-   btc_hdnode_fill_public_key(&node_);
+   btc_hdnode_fill_public_key(&node);
+
+   setupFromNode(&node);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -142,22 +167,32 @@ void BIP32_Node::initFromPublicKey(uint8_t depth, unsigned leaf_id,
    memcpy(pubkey_.getPtr(), pubKey.getPtr(), BTC_ECKEY_COMPRESSED_LENGTH);
    memcpy(chaincode_.getPtr(), chaincode.getPtr(), BTC_BIP32_CHAINCODE_SIZE);
 
-   node_.depth = depth;
-   node_.child_num = leaf_id;
+   depth_ = depth;
+   child_num_ = leaf_id;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void BIP32_Node::derivePrivate(unsigned id)
 {
-   if (!btc_hdnode_private_ckd(&node_, id))
+   btc_hdnode node;
+   setupNode(&node);
+
+   if (!btc_hdnode_private_ckd(&node, id))
       throw std::runtime_error("failed to derive bip32 private key");
+
+   setupFromNode(&node);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void BIP32_Node::derivePublic(unsigned id)
 {
-   if (!btc_hdnode_public_ckd(&node_, id))
+   btc_hdnode node;
+   setupNode(&node);
+
+   if (!btc_hdnode_public_ckd(&node, id))
       throw std::runtime_error("failed to derive bip32 public key");
+
+   setupFromNode(&node);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -167,33 +202,9 @@ BIP32_Node BIP32_Node::getPublicCopy() const
    copy.initFromPublicKey(
       getDepth(), getLeafID(), getPublicKey(), getChaincode());
 
-   copy.node_ = node_;
-   copy.privkey_.clear();
-   copy.assign();
-
+   copy.fingerprint_ = fingerprint_;
    return copy;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-/*void BIP32_Node::setPublicKey(const SecureBinaryData& key)
-{
-   pubkey_ = key;
-   assign();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void BIP32_Node::setPrivateKey(const SecureBinaryData& key)
-{
-   privkey_ = key;
-   assign();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void BIP32_Node::setChaincode(const SecureBinaryData& key)
-{
-   chaincode_ = key;
-   assign();
-}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 bool BIP32_Node::isPublic() const

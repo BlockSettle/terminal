@@ -20,13 +20,17 @@ private:
    SecureBinaryData privkey_;
    SecureBinaryData pubkey_;
 
-   btc_hdnode node_;
+   uint32_t depth_ = 0;
+   uint32_t fingerprint_ = 0;
+   uint32_t child_num_ = 0;
 
 private:
    SecureBinaryData encodeBase58(void) const;
    void decodeBase58(const char*);
    void init(void);
-   void assign(void);
+
+   void setupNode(btc_hdnode*) const;
+   void setupFromNode(btc_hdnode*);
 
 public:
    BIP32_Node(void)
@@ -41,9 +45,9 @@ public:
 
    //gets
    SecureBinaryData getBase58(void) const { return encodeBase58(); }
-   uint8_t getDepth(void) const { return node_.depth; }
-   uint32_t getFingerPrint(void) const { return node_.fingerprint; }
-   unsigned getLeafID(void) const { return node_.child_num; }
+   uint8_t getDepth(void) const { return depth_; }
+   uint32_t getFingerPrint(void) const { return fingerprint_; }
+   unsigned getLeafID(void) const { return child_num_; }
    BIP32_Node getPublicCopy(void) const;
 
    const SecureBinaryData& getChaincode(void) const { return chaincode_; }
@@ -53,11 +57,6 @@ public:
    SecureBinaryData&& moveChaincode(void) { return std::move(chaincode_); }
    SecureBinaryData&& movePrivateKey(void) { return std::move(privkey_); }
    SecureBinaryData&& movePublicKey(void) { return std::move(pubkey_); }
-
-   //sets
-   /*void setPublicKey(const SecureBinaryData&);
-   void setPrivateKey(const SecureBinaryData&);
-   void setChaincode(const SecureBinaryData&);*/
 
    //derivation
    void derivePrivate(unsigned);
