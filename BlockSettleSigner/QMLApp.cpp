@@ -327,12 +327,14 @@ void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QS
    #endif // BS_USE_DBUS
       }
 
-      QMetaObject::invokeMethod(rootObj_, "createTxSignDialog", Q_ARG(QVariant, prompt)
-         , Q_ARG(QVariant, QVariant::fromValue(txInfo))
-         , Q_ARG(QVariant, QVariant::fromValue(walletInfo)));
+      QMetaObject::invokeMethod(rootObj_, "createTxSignDialog"
+                                , Q_ARG(QVariant, prompt)
+                                , Q_ARG(QVariant, QVariant::fromValue(txInfo))
+                                , Q_ARG(QVariant, QVariant::fromValue(walletInfo)));
    }
    else {
       logger_->error("Wallet {} not found", txReq.walletId);
+      emit offlineProc_->signFailure();
    }
 }
 

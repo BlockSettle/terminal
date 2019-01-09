@@ -23,12 +23,22 @@ WalletInfo::WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent
 {
    initFromRootWallet(hdWallet);
    initEncKeys(hdWallet);
+
+   connect(hdWallet.get(), &bs::hd::Wallet::metaDataChanged, this, [this, hdWallet](){
+      initFromRootWallet(hdWallet);
+      initEncKeys(hdWallet);
+   });
 }
 
 WalletInfo::WalletInfo(std::shared_ptr<bs::Wallet> wallet, std::shared_ptr<bs::hd::Wallet> rootHdWallet, QObject *parent)
 {
    initFromWallet(wallet.get(), rootHdWallet->getWalletId());
    initEncKeys(rootHdWallet);
+
+   connect(rootHdWallet.get(), &bs::hd::Wallet::metaDataChanged, this, [this, rootHdWallet](){
+      initFromRootWallet(rootHdWallet);
+      initEncKeys(rootHdWallet);
+   });
 }
 
 WalletInfo::WalletInfo(const WalletInfo &other)

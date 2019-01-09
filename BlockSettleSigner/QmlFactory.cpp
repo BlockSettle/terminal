@@ -23,11 +23,6 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) {
    if (wallet) {
       const std::shared_ptr<bs::hd::Wallet> &rootWallet = walletsMgr_->GetHDRootForLeaf(wallet->GetWalletId());
       wi = new bs::hd::WalletInfo(wallet, rootWallet);
-      connect(rootWallet.get(), &bs::hd::Wallet::metaDataChanged, wi, [rootWallet, wi](){
-         if (rootWallet) {
-            wi->initEncKeys(rootWallet);
-         }
-      });
    }
    else {
       const auto &hdWallet = walletsMgr_->GetHDWalletById(walletId.toStdString());
