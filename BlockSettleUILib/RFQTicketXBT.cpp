@@ -678,7 +678,7 @@ void RFQTicketXBT::submitButtonClicked()
 
    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    // just in case if 2 customers submit RFQ in exactly same ms
-   rfq.requestId = "blocksettle:" + SecureBinaryData().GenerateRandom(8).toHexStr() +  std::to_string(timestamp.count());
+   rfq.requestId = "blocksettle:" + CryptoPRNG::generateRandom(8).toHexStr() +  std::to_string(timestamp.count());
 
   switch (currentGroupType_) {
    case ProductGroupType::GroupNotSelected:
@@ -775,7 +775,7 @@ double RFQTicketXBT::estimatedFee() const
 
    const auto balance = transactionData_->GetTransactionSummary().availableBalance;
    const auto maxVal = transactionData_->CalculateMaxAmount(
-      bs::Address(SecureBinaryData().GenerateRandom(20), AddressEntryType_P2WPKH));
+      bs::Address(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH));
    if (maxVal <= 0) {
       return 0;
    }

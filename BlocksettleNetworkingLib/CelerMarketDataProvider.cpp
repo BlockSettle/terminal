@@ -43,7 +43,7 @@ bool CelerMarketDataProvider::StartMDConnection(const std::string &host, const s
 
    ConnectToCelerClient();
 
-   const std::string credentials = SecureBinaryData().GenerateRandom(32).toHexStr();
+   const std::string credentials = CryptoPRNG::generateRandom(32).toHexStr();
 
    // login password could be any string
    if (!celerClient_->LoginToServer(host, port, credentials, credentials)) {

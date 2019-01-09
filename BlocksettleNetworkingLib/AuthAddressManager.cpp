@@ -77,7 +77,7 @@ bool AuthAddressManager::setup()
       return true;
    }
 
-   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, SecureBinaryData().GenerateRandom(8).toHexStr()
+   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, CryptoPRNG::generateRandom(8).toHexStr()
       , [this](const std::shared_ptr<AuthAddress> addr, AddressVerificationState state)
    {
       if (!addressVerificator_) {
