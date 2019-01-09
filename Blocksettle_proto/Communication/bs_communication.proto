@@ -12,8 +12,9 @@ enum RequestType
    GenerateCCSeedRequestType            = 7;
    RevokeAuthAddressRequestType         = 8;
    ConfirmAuthAddressSubmitType         = 9;
-   FundCCGenAddrRequestType		= 10;
-   GetNetworkSettingsType               = 11;
+   CancelAuthAddressSubmitType          = 10;
+   FundCCGenAddrRequestType		       = 11;
+   GetNetworkSettingsType               = 12;
 }
 
 enum AddressNetworkType
@@ -83,7 +84,7 @@ message SubmitAuthAddressForVerificationResponse
    optional bytes                publicKey = 5;
    optional string               errorMessage = 6;
    optional bool                 requestConfirmation = 7;
-   optional float 		 validationAmount = 8;
+   optional float 		         validationAmount = 8;
 }
 
 message ErrorMessageResponse
@@ -174,6 +175,19 @@ message ConfirmAuthSubmitRequest
 }
 
 message ConfirmAuthSubmitResponse
+{
+   required string address = 1;
+   optional string errorMsg = 2;
+}
+
+message CancelAuthAddressSubmitRequest
+{
+   required string userName = 1;
+   required string address  = 2;
+   required string userId   = 3;
+}
+
+message CancelAuthAddressSubmitResponse
 {
    required string address = 1;
    optional string errorMsg = 2;
