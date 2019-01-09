@@ -86,7 +86,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitWidth: inputsWidth
             validator: PasswordConfirmValidator {}
-            KeyNavigation.tab: nextFocusItem
+            KeyNavigation.tab: nextFocusItem === undefined ? null : nextFocusItem
             Keys.onEnterPressed: {
                 confirmPasswordInput.focus = nextFocusItem
                 confirmInputEnterPressed()
