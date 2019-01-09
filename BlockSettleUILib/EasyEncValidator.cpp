@@ -1,13 +1,16 @@
 #include "EncryptionUtils.h"
 #include "EasyEncValidator.h"
 #include "MetaData.h"
+#include <QDebug>
 
 QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
 {
+   qDebug() << input;
    if (input.isEmpty()) {
       setStatusMsg({});
       return QValidator::State::Intermediate;
    }
+
    bool lastPos = (pos == input.length());
    QString tmpInput = input.trimmed().toLower().remove(QChar::Space);
    QString newInput;
@@ -31,6 +34,13 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
    input = newInput;
    if (lastPos) {
       pos = newPos;
+   }
+
+   QString inputWithoutSpaces = input;
+   inputWithoutSpaces.replace(QStringLiteral(" "), QStringLiteral(""));
+   if (inputWithoutSpaces.size() < numWords_ * wordSize_){
+      setStatusMsg({});
+      return QValidator::State::Intermediate;
    }
    if (!isValidKeyFormat(input)) {
       setStatusMsg(invalidMsgTmpl_.arg(name_));
