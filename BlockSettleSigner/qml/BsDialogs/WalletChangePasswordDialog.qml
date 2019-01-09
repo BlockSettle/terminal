@@ -359,7 +359,7 @@ CustomDialog {
                                                                                                  , oldPwEidData
                                                                                                  , newPasswordData)
                                                             var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, ok, walletInfo)
-
+                                                            mb.accepted.connect(function(){ acceptAnimated() })
                                                         }
                                                         else {
                                                             // change to another eid account

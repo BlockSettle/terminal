@@ -136,7 +136,6 @@ function raiseWindow() {
 
 
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
-    console.log("requesteIdAuth: " + walletInfo.rootId)
     var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo)
 
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);

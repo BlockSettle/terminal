@@ -4,8 +4,7 @@
 #include <memory>
 #include <QObject>
 #include "MetaData.h"
-#include "TXInfo.h"
-
+#include "QWalletInfo.h"
 
 namespace spdlog {
    class logger;
@@ -18,7 +17,6 @@ namespace bs {
 }
 class SignerSettings;
 class WalletsManager;
-#include "QWalletInfo.h"
 
 
 class WalletsProxy : public QObject

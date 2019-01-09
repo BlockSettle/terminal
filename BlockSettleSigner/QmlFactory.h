@@ -5,6 +5,8 @@
 #include <QQmlEngine>
 
 #include "QWalletInfo.h"
+#include "WalletsManager.h"
+#include "AuthProxy.h"
 
 class QmlFactory : public QObject
 {
@@ -57,23 +59,10 @@ public:
    }
 
    // WalletInfo
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo() {
-      auto wi = new bs::hd::WalletInfo();
-      QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
-      return wi;
-   }
-
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const QString &walletId) {
-      auto wi = new bs::hd::WalletInfo(walletsMgr_, walletId, this);
-      QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
-      return wi;
-   }
-
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename) {
-      auto wi = new bs::hd::WalletInfo(bs::hd::WalletInfo::fromDigitalBackup(filename));
-      QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
-      return wi;
-   }
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo();
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const QString &walletId);
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const std::string &walletId) { return createWalletInfo(QString::fromStdString(walletId)); }
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename);
 
 
 
