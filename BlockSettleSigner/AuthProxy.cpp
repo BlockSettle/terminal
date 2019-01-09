@@ -35,12 +35,12 @@ void AuthSignWalletObject::connectToServer()
 {
    ApplicationSettings settings;
    auto authKeys = settings.GetAuthKeys();
-   autheIDClient_ = (new AutheIDClient(logger_, authKeys, this));
+   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, authKeys, this);
 
-   connect(autheIDClient_, &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
+   connect(autheIDClient_.get(), &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
    });
-   connect(autheIDClient_, &AutheIDClient::failed, this, [this](const QString &text){
+   connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](const QString &text){
       emit failed(text);
    });
 
@@ -53,9 +53,10 @@ void AuthSignWalletObject::connectToServer()
    }
    catch (const std::exception &e) {
       logger_->error("AuthEidClient failed to connect: {}", e.what());
-      QTimer::singleShot(0, [=](){
+      QMetaObject::invokeMethod(this, [this, e](){
          emit failed(QString::fromStdString(e.what()));
-      });
+      },
+      Qt::QueuedConnection);
    }
 }
 
@@ -88,9 +89,10 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
    }
    catch (const std::exception &e) {
       logger_->error("AuthEidClient failed to sign wallet: {}", e.what());
-      QTimer::singleShot(0, [=](){
+      QMetaObject::invokeMethod(this, [this, e](){
          emit failed(QString::fromStdString(e.what()));
-      });
+      },
+      Qt::QueuedConnection);
    }
 }
 
@@ -138,9 +140,10 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
    }
    catch (const std::exception &e) {
       logger_->error("AuthEidClient failed to sign wallet: {}", e.what());
-      QTimer::singleShot(0, [=](){
+      QMetaObject::invokeMethod(this, [this, e](){
          emit failed(QString::fromStdString(e.what()));
-      });
+      },
+      Qt::QueuedConnection);
    }
 }
 
