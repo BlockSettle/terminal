@@ -1,11 +1,9 @@
 #include "EncryptionUtils.h"
 #include "EasyEncValidator.h"
 #include "MetaData.h"
-#include <QDebug>
 
 QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
 {
-   qDebug() << input;
    if (input.isEmpty()) {
       setStatusMsg({});
       return QValidator::State::Intermediate;
@@ -96,6 +94,16 @@ EasyEncValidator::ValidationResult EasyEncValidator::validateKey(const QString &
 QString EasyEncValidator::getStatusMsg() const
 {
    return statusMsg_;
+}
+
+size_t EasyEncValidator::getWordSize() const
+{
+   return wordSize_;
+}
+
+size_t EasyEncValidator::getNumWords() const
+{
+   return numWords_;
 }
 
 QString EasyEncValidator::getName() const
