@@ -18,6 +18,9 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 add_definitions(-DNOMINMAX)
 
+# Force Armory to ignore Crypto++ and use libbtc instead.
+add_definitions(-DLIBBTC_ONLY)
+
 # Force 64-bit builds and min target for macOS. If the min target changes,
 # update generate.py too.
 if(APPLE)
@@ -417,7 +420,7 @@ IF(WIN32)
          Qt5EventDispatcherSupport.lib
          Qt5ThemeSupport.lib
          Qt5WindowsUIAutomationSupport.lib
-         Qt5AccessibilitySupport.lib 
+         Qt5AccessibilitySupport.lib
          Qt5Charts.lib)
       LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
       SET(QT_QUICK_LIBS
