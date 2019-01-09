@@ -55,12 +55,8 @@ private slots:
    void onAuthMgrInfo(const QString &text);
 
    void onAuthAddressConfirmationRequired(float validationAmount);
-   void onAuthAddrSubmitError(const QString &address, const QString &error);
-   void onAuthAddrSubmitSuccess(const QString &address);
 
    void ConfirmAuthAddressSubmission();
-
-   void onSignFailed(const QString &text);
 
    void onAuthVerifyTxSent();
 

@@ -415,6 +415,9 @@ void AuthAddressManager::OnDataReceived(const std::string& data)
    case RequestType::ConfirmAuthAddressSubmitType:
       ProcessConfirmAuthAddressSubmit(response.responsedata(), sigVerified);
       break;
+   case RequestType::CancelAuthAddressSubmitType:
+      ProcessCancelAuthSubmitResponse(response.responsedata());
+      break;
    default:
       logger_->error("[AuthAddressManager::OnDataReceived] unrecognized response type from public bridge: {}", response.responsetype());
       break;
@@ -456,7 +459,7 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
    return SubmitRequestToPB("submit_address", request.SerializeAsString());
 }
 
-bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address)
+bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address, int expireTimeoutSeconds)
 {
    ConfirmAuthSubmitRequest request;
 
@@ -484,27 +487,25 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    };
 
    return authSignManager_->Sign(request.SerializeAsString(), tr("Authentication Address")
-      , tr("Submit auth address for verification"), cbSigned, cbSignFailed);
+      , tr("Submit auth address for verification"), cbSigned, cbSignFailed, expireTimeoutSeconds);
 }
 
 bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
 {
-   ConfirmAuthSubmitRequest request;
+   CancelAuthAddressSubmitRequest request;
 
    request.set_username(celerClient_->userName());
    request.set_address(address.display<std::string>());
-   request.set_publickey("");
-   request.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
-      ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
-   request.set_scripttype(mapToScriptType(address.getType()));
-   const auto &data = request.SerializeAsString();
+   request.set_userid(celerClient_->userId());
 
    RequestPacket  packet;
 
-   packet.set_requesttype(ConfirmAuthAddressSubmitType);
-   packet.set_requestdata(data);
+   packet.set_requesttype(CancelAuthAddressSubmitType);
+   packet.set_requestdata(request.SerializeAsString());
 
-   logger_->debug("[AuthAddressManager::CancelSubmitForVerification] confirmed auth address submission");
+   logger_->debug("[AuthAddressManager::CancelSubmitForVerification] cancel submission of {}"
+      , address.display<std::string>());
+
    return SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
 }
 
@@ -546,7 +547,7 @@ void AuthAddressManager::ProcessSubmitAuthAddressResponse(const std::string& res
       if (response.requestconfirmation()) {
          emit AuthAddressConfirmationRequired(response.validationamount());
       } else {
-         logger_->debug("[AuthAddressManager::ProcessSubmitAuthAddressResponse] address submitted. No erification required");
+         logger_->debug("[AuthAddressManager::ProcessSubmitAuthAddressResponse] address submitted. No verification required");
       }
    }
    else {
@@ -579,6 +580,24 @@ void AuthAddressManager::ProcessConfirmAuthAddressSubmit(const std::string &resp
       SetState(address, AddressVerificationState::Submitted);
       emit AddressListUpdated();
       emit AuthAddrSubmitSuccess(address.display());
+   }
+}
+
+void AuthAddressManager::ProcessCancelAuthSubmitResponse(const std::string& responseData)
+{
+   CancelAuthAddressSubmitResponse response;
+   if (!response.ParseFromString(responseData)) {
+      logger_->error("[AuthAddressManager::ProcessCancelAuthSubmitResponse] failed to parse response");
+      return;
+   }
+
+   const bs::Address address(response.address());
+   if (response.has_errormsg()) {
+
+   } else {
+      SetState(address, AddressVerificationState::NotSubmitted);
+      emit AddressListUpdated();
+      emit AuthAddressSubmitCancelled(address.display());
    }
 }
 

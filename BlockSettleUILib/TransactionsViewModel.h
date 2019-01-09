@@ -181,7 +181,7 @@ public:
       Address,
       Amount,
       Status,
-      RbfFlag,
+      Flag,
 //      MissedBlocks,
       Comment,
       TxHash,

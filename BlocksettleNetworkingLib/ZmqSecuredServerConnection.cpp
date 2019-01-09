@@ -35,14 +35,14 @@ bool ZmqSecuredServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr& da
    }
 
    int isServer = 1;
-   int result = zmq_setsockopt (dataSocket.get(), ZMQ_CURVE_SERVER, &isServer, sizeof(isServer));
+   int result = zmq_setsockopt(dataSocket.get(), ZMQ_CURVE_SERVER, &isServer, sizeof(isServer));
    if (result != 0) {
       logger_->error("[ZmqSecuredServerConnection::ConfigDataSocket] {} failed to config socket to be a server : {}"
          , connectionName_, zmq_strerror(zmq_errno()));
       return false;
    }
 
-   result = zmq_setsockopt (dataSocket.get(), ZMQ_CURVE_SECRETKEY, privateKey_.getCharPtr(), 41);
+   result = zmq_setsockopt(dataSocket.get(), ZMQ_CURVE_SECRETKEY, privateKey_.getCharPtr(), privateKey_.getSize());
    if (result != 0) {
       logger_->error("[ZmqSecuredServerConnection::ConfigDataSocket] {} failed to set server private key: {}"
          , connectionName_, zmq_strerror(zmq_errno()));

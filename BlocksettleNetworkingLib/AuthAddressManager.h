@@ -77,7 +77,7 @@ public:
    virtual bool CreateNewAuthAddress();
 
    virtual bool SubmitForVerification(const bs::Address &address);
-   virtual bool ConfirmSubmitForVerification(const bs::Address &address);
+   virtual bool ConfirmSubmitForVerification(const bs::Address &address, int expireTimeoutSeconds);
    virtual bool CancelSubmitForVerification(const bs::Address &address);
 
    virtual bool Verify(const bs::Address &address);
@@ -112,7 +112,9 @@ signals:
    void Error(const QString &errorText);
    void Info(const QString &info);
    void AuthAddrSubmitError(const QString &address, const QString &error);
+   void AuthConfirmSubmitError(const QString &address, const QString &error);
    void AuthAddrSubmitSuccess(const QString &address);
+   void AuthAddressSubmitCancelled(const QString &address);
    void AuthVerifyTxSent();
    void AuthRevokeTxSent();
 
@@ -133,6 +135,8 @@ private:
    void ProcessSubmitAuthAddressResponse(const std::string& response, bool sigVerified);
    void ProcessConfirmAuthAddressSubmit(const std::string &response, bool sigVerified);
    void ProcessBSAddressListResponse(const std::string& response, bool sigVerified);
+
+   void ProcessCancelAuthSubmitResponse(const std::string& response);
 
    void ProcessErrorResponse(const std::string& response) const;
 

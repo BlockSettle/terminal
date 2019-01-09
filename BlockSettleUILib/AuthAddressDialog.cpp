@@ -3,13 +3,14 @@
 
 #include <spdlog/spdlog.h>
 #include <QItemSelection>
+
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
+#include "AuthAddressConfirmDialog.h"
 #include "AuthAddressManager.h"
 #include "AuthAddressViewModel.h"
 #include "BSMessageBox.h"
 #include "UiUtils.h"
-
 
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -37,11 +38,8 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::AddrStateChanged, this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitError, this, &AuthAddressDialog::onAuthAddrSubmitError, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, &AuthAddressDialog::onAuthAddrSubmitSuccess, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthVerifyTxSent, this, &AuthAddressDialog::onAuthVerifyTxSent, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::SignFailed, this, &AuthAddressDialog::onSignFailed, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
    connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
@@ -117,28 +115,6 @@ void AuthAddressDialog::showError(const QString &text, const QString &details)
 void AuthAddressDialog::showInfo(const QString &title, const QString &text)
 {
    BSMessageBox(BSMessageBox::info, title, text).exec();
-}
-
-void AuthAddressDialog::onAuthAddrSubmitError(const QString &, const QString &)
-{
-   BSMessageBox(BSMessageBox::info, tr("Submission Aborted")
-      , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will have been returned.")).exec();
-   close();
-}
-
-void AuthAddressDialog::onAuthAddrSubmitSuccess(const QString &)
-{
-   BSMessageBox(BSMessageBox::info, tr("Submission Successful")
-      , tr("Your Authentication Address has now been submitted.")
-      , tr("Please allow BlockSettle 24 hours to fund your Authentication Address.")).exec();
-   close();
-}
-
-void AuthAddressDialog::onSignFailed(const QString &err)
-{
-   showError(tr("Failed to sign request."), tr("Auth eID failed to sign: %1").arg(err));
-   ConfirmAuthAddressSubmission();
 }
 
 void AuthAddressDialog::setAddressToVerify(const QString &addr)
@@ -333,7 +309,11 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 
 void AuthAddressDialog::ConfirmAuthAddressSubmission()
 {
-   authAddressManager_->ConfirmSubmitForVerification(lastSubmittedAddress_);
+   AuthAddressConfirmDialog confirmDlg{lastSubmittedAddress_, authAddressManager_, this};
+
+   confirmDlg.exec();
+
+   lastSubmittedAddress_ = bs::Address{};
 }
 
 void AuthAddressDialog::submitSelectedAddress()

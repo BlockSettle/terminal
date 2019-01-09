@@ -53,6 +53,8 @@ AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
 {
    connectionManager_.reset(new ConnectionManager(logger));
    timer_ = new QTimer(this);
+   timer_->setSingleShot(true);
+
    QObject::connect(timer_, &QTimer::timeout, this, &AutheIDClient::timeout);
 }
 
@@ -215,8 +217,8 @@ bool AutheIDClient::sign(const BinaryData &data, const std::string &email
    request.set_apikey(kApiKey);
    request.set_userid(email);
 
-   QMetaObject::invokeMethod(timer_, [this] {
-      timer_->start(kConnectTimeoutSeconds * 1000);
+   QMetaObject::invokeMethod(timer_, [this, expiration] {
+      timer_->start(expiration * 1000);
    });
 
    return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
@@ -224,7 +226,9 @@ bool AutheIDClient::sign(const BinaryData &data, const std::string &email
 
 void AutheIDClient::cancel()
 {
-   timer_->stop();
+   QMetaObject::invokeMethod(timer_, [this] {
+      timer_->stop();
+   });
 
    if (!connection_ || requestId_.empty()) {
       return;
@@ -439,6 +443,10 @@ int AutheIDClient::getAutheIDClientTimeout(RequestType requestType)
 
 void AutheIDClient::processSignatureReply(const SignatureReply &reply)
 {
+   QMetaObject::invokeMethod(timer_, [this] {
+      timer_->stop();
+   });
+
    if (reply.signaturedata().empty() || reply.sign().empty()) {
       emit failed(tr("Missing mandatory signature data in reply"));
       return;

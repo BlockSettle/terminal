@@ -84,6 +84,7 @@ namespace bs {
          void leafAdded(QString id);
          void leafDeleted(QString id);
          void scanComplete(const std::string &walletId);
+         void metaDataChanged();
 
       private slots:
          void onGroupChanged();
