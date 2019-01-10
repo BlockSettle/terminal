@@ -837,8 +837,10 @@ bool RemoteSigner::Start()
          QThread::msleep(250);
       }
 
-      if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true, logger_)) {
-         logger_->error("[RemoteSigner::{}] failed to read connection public key", __func__);
+      if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true
+         , logger_)) {
+         logger_->error("[RemoteSigner::{}] failed to read headless connection "
+            "public key ({})", __func__, zmqSrvPubKeyPath.toStdString());
          return false;
       }
    }
@@ -887,7 +889,8 @@ void RemoteSigner::ConnectHelper()
          emit connected();
       }
       else {
-         logger_->error("[HeadlessContainer] Failed to open connection to headless container");
+         logger_->error("[HeadlessContainer] Failed to open connection to "
+            "headless container");
          return;
       }
    }
