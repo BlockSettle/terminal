@@ -43,8 +43,8 @@ public:
       LogFileName,
       ListenAddress,
       ListenPort,
-      HeadlessPubKey,
-      HeadlessPrvKey,
+      ZMQPubKey,
+      ZMQPrvKey,
       PasswordHash,
       LimitManualXBT,
       LimitAutoSignXBT,
@@ -53,8 +53,8 @@ public:
       HideEidInfoBox
    };
 
-   QString headlessPubKeyFile() const { return get(HeadlessPubKey).toString(); }
-   QString headlessPrvKeyFile() const { return get(HeadlessPrvKey).toString(); }
+   QString zmqPubKeyFile() const { return get(ZMQPubKey).toString(); }
+   QString zmqPrvKeyFile() const { return get(ZMQPrvKey).toString(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
    QString logFileName() const { return get(LogFileName).toString(); }

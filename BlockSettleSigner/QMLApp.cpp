@@ -45,17 +45,17 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    // Get the ZMQ server public key.
    SecureBinaryData tempPubKey;
-   if (!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), tempPubKey
+   if (!bs::network::readZMQKeyFile(params->zmqPubKeyFile(), tempPubKey
       , true, logger_)) {
-      throw std::runtime_error("failed to read connection public key");
+      throw std::runtime_error("failed to read ZMQ server public key");
    }
    zmqPubKey_ = tempPubKey;
 
    // Get the ZMQ server private key.
    SecureBinaryData tempPrvKey;
-   if (!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), tempPrvKey
+   if (!bs::network::readZMQKeyFile(params->zmqPrvKeyFile(), tempPrvKey
       , false, logger_)) {
-      throw std::runtime_error("failed to read connection private key");
+      throw std::runtime_error("failed to read ZMQ server private key");
    }
    zmqPrvKey_ = tempPrvKey;
 

@@ -21,15 +21,15 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    : logger_(logger), settings_(params)
 {
    // Get the ZMQ server public key.
-   if (!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), zmqPubKey_
+   if (!bs::network::readZMQKeyFile(params->zmqPubKeyFile(), zmqPubKey_
       , true, logger)) {
-      throw std::runtime_error("failed to read connection public key");
+      throw std::runtime_error("failed to read ZMQ server public key");
    }
 
    // Get the ZMQ server private key.
-   if (!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), zmqPrvKey_
+   if (!bs::network::readZMQKeyFile(params->zmqPrvKeyFile(), zmqPrvKey_
       , false, logger)) {
-      throw std::runtime_error("failed to read connection private key");
+      throw std::runtime_error("failed to read ZMQ server private key");
    }
 
    walletsMgr_ = std::make_shared<WalletsManager>(logger);
