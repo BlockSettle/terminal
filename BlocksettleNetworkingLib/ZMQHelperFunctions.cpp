@@ -148,8 +148,8 @@ bool bs::network::readZMQKeyFile(const QString& zmqKeyFilePath
    if (zmqKey.getSize() != targetFileSize) {
       if (logger) {
          logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file ({}) "
-            "is of wrong size: {} vs {}", __func__
-            , zmqKey.getSize(), targetFileSize);
+            "is {} bytes, not {} bytes", __func__, zmqKey.getSize()
+            , targetFileSize);
       }
       return false;
    }
