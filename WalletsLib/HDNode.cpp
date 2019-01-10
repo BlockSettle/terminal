@@ -8,10 +8,6 @@
 
 using namespace bs;
 
-// libbtc doesn't have a proper #define for AES max key len, so we'll make one.
-// (NOTE: This is a hack until it can be properly upstreamed with Armory.)
-#define AES_MAX_KEY_LEN AES_BLOCK_SIZE*2
-
 hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
 {
    isAbsolute_ = (path_[0] == hd::purpose);
