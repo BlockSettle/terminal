@@ -292,9 +292,6 @@ CustomDialog {
 
                             onClicked: {
                                 // remove device
-                                console.log("walletInfo.encKeys.length " + walletInfo.encKeys.length)
-                                console.log("walletInfo.encKeys.length " + walletInfo.encKeys)
-
                                 if (walletInfo.encKeys.length < 2) {
                                     JsHelper.messageBoxCritical("Wallet encryption", "Can't remove last device")
                                     return

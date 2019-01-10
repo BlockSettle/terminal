@@ -430,7 +430,6 @@ CustomTitleDialogWindow {
 
             onAccepted: {
                 var filePath = fileUrl.toString()
-                console.log(filePath)
                 if (Qt.platform.os === "windows") {
                     filePath = filePath.replace(/(^file:\/{3})/, "")
                 }

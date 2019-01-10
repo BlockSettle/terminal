@@ -132,9 +132,6 @@ ApplicationWindow {
 
     function createTxSignDialog(prompt, txInfo, walletInfo) {
         // called from QMLAppObj::requestPassword
-        console.log("QML createTxSignDialog")
-        console.log("walletInfo walletId" + walletInfo.walletId)
-        console.log("walletInfo rootId" + walletInfo.rootId)
 
         var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
         dlg.walletInfo = walletInfo
@@ -151,5 +148,4 @@ ApplicationWindow {
         mainWindow.requestActivate()
         dlg.open()
     }
-
 }
