@@ -6,9 +6,11 @@
 #include "EncryptionUtils.h"
 #include "make_unique.h"
 
-
 using namespace bs;
 
+// libbtc doesn't have a proper #define for AES max key len, so we'll make one.
+// (NOTE: This is a hack until it can be properly upstreamed with Armory.)
+#define AES_MAX_KEY_LEN AES_BLOCK_SIZE*2
 
 hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
 {
@@ -504,7 +506,8 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
    return result;
 }
 
-static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = 16)
+static SecureBinaryData PadData(const SecureBinaryData &key
+   , size_t pad = AES_BLOCK_SIZE)
 {
    const auto keyRem = key.getSize() % pad;
    auto result = key;
@@ -514,7 +517,8 @@ static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = 16)
    return result;
 }
 
-static SecureBinaryData LimitData(const SecureBinaryData &key, size_t limit = 32)
+static SecureBinaryData LimitData(const SecureBinaryData &key
+   , size_t limit = AES_MAX_KEY_LEN)
 {
    if (key.getSize() <= limit) {
       return key;
