@@ -1,4 +1,4 @@
-﻿#include "AddressDetailsWidget.h"
+#include "AddressDetailsWidget.h"
 #include "ui_AddressDetailsWidget.h"
 #include "UiUtils.h"
 
