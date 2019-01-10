@@ -24,28 +24,73 @@ Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
 
 // Generate a random CurveZMQ keypair and write the keys to files.
+// IN:  Logger (std::shared_ptr<spdlog::logger>)
+//      Path where to check/write public key file (const QString&)
+//      Path where to check/write private key file (const QString&)
+// OUT: None
+// RET: 0 is success, -1 if not
 int generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
                                  , const QString& pubFilePath
                                  , const QString& prvFilePath) {
    // Generate the keys.
    std::pair<SecureBinaryData, SecureBinaryData> inKeyPair;
-   int retVal = bs::network::getCurveZMQKeyPair(inKeyPair);
-   if(retVal != 0) {
-      inLogger->error("[{}] Failure to generate CurveZMQ files - Error = {}"
-         , __func__, zmq_strerror(zmq_errno()));
-      return retVal;
+   if(bs::network::getCurveZMQKeyPair(inKeyPair) != 0) {
+      if(inLogger) {
+         inLogger->error("[{}] Failure to generate CurveZMQ data - Error = {}"
+            , __func__, zmq_strerror(zmq_errno()));
+      }
+      return -1;
    }
 
-   // Write the files. We'll overwrite anything already present.
+   // Write the files. We'll overwrite anything already present (necessary when
+   // either pub/prv key file is missing, so that the keys match).
    QFile pubFile(pubFilePath);
-   pubFile.open(QIODevice::WriteOnly);
-   pubFile.write(inKeyPair.first.toBinStr().c_str()
-                 , inKeyPair.first.toBinStr().length());
+   if(!pubFile.open(QIODevice::WriteOnly)) {
+      if(inLogger) {
+         inLogger->error("[{}] Failure to open CurveZMQ public file ({})"
+            ,__func__, pubFilePath.toStdString());
+      }
+      return -1;
+   }
+   if(pubFile.write(inKeyPair.first.toBinStr().c_str()
+      , inKeyPair.first.toBinStr().length()) != CURVEZMQPUBKEYBUFFERSIZE) {
+      if(inLogger) {
+         inLogger->error("[{}] Failure to properly write to CurveZMQ public "
+            "file ({})", __func__, pubFilePath.toStdString());
+      }
+      pubFile.close();
+      return -1;
+   }
    pubFile.close();
+
+   // Limit permissions for the private file. It should only be accessible by
+   // the current account, and nobody else.
    QFile prvFile(prvFilePath);
-   prvFile.open(QIODevice::WriteOnly);
-   prvFile.write(inKeyPair.second.toBinStr().c_str()
-                 , inKeyPair.second.toBinStr().length());
+   if(!prvFile.open(QIODevice::WriteOnly)) {
+      if(inLogger) {
+         inLogger->error("[{}] Failure to open CurveZMQ private file ({})"
+            , __func__, prvFilePath.toStdString());
+      }
+      return -1;
+   }
+   if(!QFile::setPermissions(prvFilePath
+         , QFileDevice::WriteOwner | QFileDevice::ReadOwner)) {
+      if(inLogger) {
+         inLogger->error("[{}] Failure to open CurveZMQ private file ({})"
+            , __func__, prvFilePath.toStdString());
+      }
+      prvFile.close();
+      return -1;
+   }
+   if(prvFile.write(inKeyPair.second.toBinStr().c_str()
+      , inKeyPair.second.toBinStr().length()) != CURVEZMQPRVKEYBUFFERSIZE) {
+      if(inLogger) {
+         inLogger->error("[{}] Failure to properly write to CurveZMQ private "
+            "file ({})", __func__, prvFilePath.toStdString());
+      }
+      prvFile.close();
+      return -1;
+   }
    prvFile.close();
 
    if(inLogger) {
@@ -54,9 +99,15 @@ int generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
       inLogger->info("[{}] Private key file - {}", prvFilePath.toStdString());
    }
 
-   return retVal;
+   return 0;
 }
 
+// Function that build headless connection pub/prv CurveZMQ files if the files
+// don't already exist.
+// IN:  Signer command line settings (std::shared_ptr<SignerSettings>)
+//      Logger (std::shared_ptr<spdlog::logger>)
+// OUT: None
+// RET: 0 is success, -1 if not
 int buildHeadlessConnFiles(std::shared_ptr<SignerSettings> inSettings
                            , std::shared_ptr<spdlog::logger> inLogger) {
    QFileInfo pubFileInfo(inSettings->headlessPubKeyFile());
@@ -76,8 +127,10 @@ int buildHeadlessConnFiles(std::shared_ptr<SignerSettings> inSettings
          inLogger->info("[{}] Headless connection keypair doesn't exist. "
             "Generating new keypair.", __func__);
       }
-      generateCurveZMQKeyPairFiles(inLogger, pubFileInfo.absoluteFilePath()
-         , prvFileInfo.absoluteFilePath());
+      if(generateCurveZMQKeyPairFiles(inLogger, pubFileInfo.absoluteFilePath()
+         , prvFileInfo.absoluteFilePath()) != 0) {
+         return -1;
+      }
    }
 
    return 0;
@@ -99,9 +152,15 @@ static int HeadlessApp(int argc, char **argv)
    logger->flush_on(spdlog::level::debug);
 
    try {
-      // Go ahead and build the headless connection encryption files, even if we
-      // don't use them. If they already exist, we'll leave them alone.
-      buildHeadlessConnFiles(settings, logger);
+      // Go ahead and build the headless connection encryption files, even if
+      // they're not used.
+      if(buildHeadlessConnFiles(settings, logger) != 0) {
+         if(logger) {
+            logger->info("[{}] Headless connection keypair files could not be "
+               "generated. The headless connection can not be created."
+               , __func__);
+         }
+      }
 
       HeadlessAppObj appObj(logger, settings);
       QObject::connect(&appObj, &HeadlessAppObj::finished, &app
@@ -187,15 +246,17 @@ static int QMLApp(int argc, char **argv)
    const auto settings = std::make_shared<SignerSettings>(app.arguments());
    std::shared_ptr<spdlog::logger> logger;
    try {
-      logger = spdlog::basic_logger_mt("app_logger", settings->logFileName().toStdString());
+      logger = spdlog::basic_logger_mt("app_logger"
+         , settings->logFileName().toStdString());
       // [date time.miliseconds] [level](thread id): text
       logger->set_pattern("%D %H:%M:%S.%e [%L](%t): %v");
       logger->set_level(spdlog::level::debug);
       logger->flush_on(spdlog::level::debug);
    }
    catch (const spdlog::spdlog_ex &e) {
-      std::cerr << "Failed to create logger in " << settings->logFileName().toStdString()
-         << ": " << e.what() << " - logging to console" << std::endl;
+      std::cerr << "Failed to create logger in "
+         << settings->logFileName().toStdString() << ": " << e.what()
+         << " - logging to console" << std::endl;
       logger = spdlog::stdout_logger_mt("app_logger");
       logger->set_pattern("[%L](%t): %v");
       logger->set_level(spdlog::level::debug);
@@ -204,12 +265,14 @@ static int QMLApp(int argc, char **argv)
 
    // Go ahead and build the headless connection encryption files, even if we
    // don't use them. If they already exist, we'll leave them alone.
+   logger->info("Starting BS Signer...");
    buildHeadlessConnFiles(settings, logger);
 
    try {
       QQmlApplicationEngine engine;
       QMLAppObj appObj(logger, settings, engine.rootContext());
-      QObject::connect(&appObj, &QMLAppObj::loadingComplete, &splashScreen, &QSplashScreen::close);
+      QObject::connect(&appObj, &QMLAppObj::loadingComplete, &splashScreen
+         , &QSplashScreen::close);
       QTimer::singleShot(0, &appObj, &QMLAppObj::Start);
 
       engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
@@ -220,7 +283,7 @@ static int QMLApp(int argc, char **argv)
       return app.exec();
    }
    catch (const std::exception &e) {
-      logger->critical("Failed to start: {}", e.what());
+      logger->critical("Failed to start signer: {}", e.what());
       std::cerr << "Failed to start signer:" << e.what() << std::endl;
       return -1;
    }

@@ -46,7 +46,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
    SecureBinaryData tempPubKey;
    if (!bs::network::readZMQKeyFile(params->headlessPubKeyFile(), tempPubKey
       , true, logger_)) {
-      throw std::runtime_error("failed to read connection public key");
+      throw std::runtime_error("failed to read headless connection public key");
    }
    zmqPubKey_ = tempPubKey;
 
@@ -54,7 +54,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
    SecureBinaryData tempPrvKey;
    if (!bs::network::readZMQKeyFile(params->headlessPrvKeyFile(), tempPrvKey
       , false, logger_)) {
-      throw std::runtime_error("failed to read connection private key");
+      throw std::runtime_error("failed to read headless connection private key");
    }
    zmqPrvKey_ = tempPrvKey;
 
