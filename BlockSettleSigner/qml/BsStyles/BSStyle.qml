@@ -33,7 +33,8 @@ QtObject {
     property color progressBarBgColor: "black"
 
     property color switchBgColor: "transparent"
-    property color switchGreenColor: "#22C064"
+    //property color switchGreenColor: "#22C064"
+    property color switchGreenColor: "#247dac"
     property color switchOrangeColor: "#f6a724"
     property color switchRedColor: "#EC0A35"
 

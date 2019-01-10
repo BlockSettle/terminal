@@ -140,9 +140,13 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
 
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
-    authProgress.title = qsTr("Password for wallet %1").arg(walletInfo.name)
-    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
-    authProgress.customText = qsTr("%1").arg(walletInfo.email())
+//    authProgress.title = qsTr("Password for wallet %1").arg(walletInfo.name)
+//    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
+//    authProgress.customText = qsTr("%1").arg(walletInfo.email())
+    authProgress.email = walletInfo.email()
+    authProgress.walletId = walletInfo.rootId
+    authProgress.walletName = walletInfo.name
+
     authProgress.open()
     authProgress.rejected.connect(function() {
         authObject.destroy()
@@ -180,9 +184,14 @@ function removeEidDevice (index, walletInfo, onSuccess) {
 
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
-    authProgress.title = qsTr("Password for wallet %1").arg(walletInfo.name)
-    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
-    authProgress.customText = qsTr("%1").arg(walletInfo.email())
+//    authProgress.title = qsTr("Password for wallet %1").arg(walletInfo.name)
+//    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
+//    authProgress.customText = qsTr("%1").arg(walletInfo.email())
+
+    authProgress.email = walletInfo.email()
+    authProgress.walletId = walletInfo.rootId
+    authProgress.walletName = walletInfo.name
+
     authProgress.open()
     authProgress.rejected.connect(function() {
         authObject.destroy()
@@ -218,9 +227,14 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
 
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
-    authProgress.title = qsTr("Activate wallet")
-    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
-    authProgress.customText = qsTr("%1").arg(email)
+//    authProgress.title = qsTr("Activate wallet")
+//    authProgress.customDetails = qsTr("Wallet ID: %1").arg(walletInfo.rootId)
+//    authProgress.customText = qsTr("%1").arg(email)
+
+    authProgress.email = walletInfo.email()
+    authProgress.walletId = walletInfo.rootId
+    authProgress.walletName = walletInfo.name
+
     authProgress.open()
     authProgress.rejected.connect(function() {
         authObject.destroy()

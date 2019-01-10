@@ -88,12 +88,12 @@ ColumnLayout {
             validator: PasswordConfirmValidator {}
             KeyNavigation.tab: nextFocusItem === undefined ? null : nextFocusItem
             Keys.onEnterPressed: {
-                confirmPasswordInput.focus = nextFocusItem
+                confirmPasswordInput.focus = nextFocusItem === undefined ? null : nextFocusItem
                 confirmInputEnterPressed()
             }
             Keys.onReturnPressed: {
                 confirmInputEnterPressed()
-                confirmPasswordInput.focus = nextFocusItem
+                confirmPasswordInput.focus = nextFocusItem === undefined ? null : nextFocusItem
             }
         }
     }

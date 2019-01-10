@@ -39,7 +39,9 @@ CustomTitleDialogWindow {
 
     title: qsTr("Import Wallet")
     width: 400
-    height: 400
+    height: 470
+    abortConfirmation: true
+    abortBoxType: BSAbortBox.AbortType.WalletImport
 
     enum Page {
         Select = 1,
@@ -58,6 +60,16 @@ CustomTitleDialogWindow {
         ColumnLayout {
             id: selectLayout
             visible: curPage === WalletImportDialog.Page.Select
+
+            CustomHeader {
+                id: headerText
+                text: qsTr("Import Details")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
 
             ColumnLayout {
                 id: fullImportLayout
@@ -145,6 +157,35 @@ CustomTitleDialogWindow {
         ColumnLayout {
             id: importLayout
             visible: curPage === WalletImportDialog.Page.Import
+            spacing: 10
+
+            CustomHeader {
+                text: qsTr("Wallet Details")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
+
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
+                    Layout.minimumWidth: inputLabelsWidth
+                    Layout.preferredWidth: inputLabelsWidth
+                    Layout.maximumWidth: inputLabelsWidth
+                    Layout.fillWidth: true
+                    text: qsTr("Wallet ID")
+                }
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: seed ? seed.walletId : qsTr("")
+                }
+            }
 
             RowLayout {
                 spacing: 5
@@ -157,13 +198,15 @@ CustomTitleDialogWindow {
                     Layout.minimumWidth: inputLabelsWidth
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
-                    text: qsTr("Wallet Name")
+                    text: qsTr("Name")
                 }
                 CustomTextInput {
                     id: tfName
                     selectByMouse: true
                     Layout.fillWidth: true
                     focus: true
+                    Keys.onEnterPressed: tfDesc.forceActiveFocus()
+                    Keys.onReturnPressed: tfDesc.forceActiveFocus()
                 }
             }
 
@@ -179,14 +222,18 @@ CustomTitleDialogWindow {
                     Layout.minimumWidth: inputLabelsWidth
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
-                    text: qsTr("Wallet Description")
+                    text: qsTr("Description")
                 }
                 CustomTextInput {
                     id: tfDesc
                     selectByMouse: true
                     Layout.fillWidth: true
+                    Keys.onEnterPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : textInputEmail.forceActiveFocus()
+                    Keys.onReturnPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : textInputEmail.forceActiveFocus()
+                    KeyNavigation.tab: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput : textInputEmail
                 }
             }
+
             RowLayout {
                 spacing: 5
                 Layout.alignment: Qt.AlignTop
@@ -203,6 +250,17 @@ CustomTitleDialogWindow {
                     text: qsTr("Primary Wallet")
                 }
             }
+
+            CustomHeader {
+                id: headerText2
+                text: qsTr("Encryption")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
+
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -213,6 +271,7 @@ CustomTitleDialogWindow {
                     id: rbPassword
                     text: qsTr("Password")
                     checked: true
+                    Layout.leftMargin: inputLabelsWidth
                 }
                 CustomRadioButton {
                     id: rbAuth
@@ -237,6 +296,9 @@ CustomTitleDialogWindow {
                 passwordInputPlaceholder: qsTr("New Wallet Password")
                 confirmLabelTxt: qsTr("Confirm Password")
                 confirmInputPlaceholder: qsTr("Confirm New Wallet Password")
+                onConfirmInputEnterPressed: {
+                    if (btnAccept.enabled) btnAccept.onClicked()
+                }
             }
 
             RowLayout {
@@ -258,6 +320,12 @@ CustomTitleDialogWindow {
                     Layout.fillWidth: true
                     selectByMouse: true
                     focus: true
+                    Keys.onEnterPressed: {
+                        if (btnAccept.enabled) btnAccept.onClicked()
+                    }
+                    Keys.onReturnPressed: {
+                        if (btnAccept.enabled) btnAccept.onClicked()
+                    }
                 }
             }
         }
@@ -281,6 +349,7 @@ CustomTitleDialogWindow {
             }
 
             CustomButtonPrimary {
+                id: btnAccept
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 text: qsTr("Import")

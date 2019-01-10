@@ -18,28 +18,52 @@ Switch {
     }
 
     indicator: Rectangle {
-        implicitWidth: 48
-        implicitHeight: 26
+        id: border_
+        implicitWidth: 40
+        implicitHeight: 20
         x: control.width - width - control.rightPadding
         y: parent.height / 2 - height / 2
-        radius: 13
+        radius: 10
         color: control.checked ? BSStyle.switchGreenColor : "transparent"
         border.color: control.checked ? BSStyle.switchGreenColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
 
         Rectangle {
+            id: circle_
             x: control.checked ? parent.width - width : 0
-            width: 26
-            height: 26
-            radius: 13
+            width: 20
+            height: 20
+            radius: 10
             color: control.checked ? BSStyle.textColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
             border.color: control.checked ? (control.down ? BSStyle.switchGreenColor : BSStyle.switchGreenColor) : BSStyle.backgroundColor
         }
     }
 
     background: Rectangle {
-        implicitWidth: 100
-        implicitHeight: 26
+        implicitWidth: 80
+        implicitHeight: 20
         visible: control.down
         color: BSStyle.switchBgColor
     }
+
+//    states: [
+//        State {
+//            name: "checked"
+//            when: control.checked
+//        },
+//        State {
+//            name: "uncheked"
+//            when: !control.checked
+//        }
+//    ]
+
+//    transitions: [
+//        Transition {
+//            to: "checked"
+//            NumberAnimation {
+//                target: circle_
+//                properties: "color"
+//                duration: 300
+//            }
+//        }
+//    ]
 }

@@ -133,7 +133,7 @@ CustomTitleDialogWindow {
                         if (walletsProxy.exportWatchingOnly(walletInfo.walletId, exportDir, passwordData)) {
                             var mb = JsHelper.messageBox(BSMessageBox.Type.Success
                                        , qsTr("Wallet")
-                                       , qsTr("Successfully exported watching-only copy for walletInfo.")
+                                       , qsTr("Watching-Only wallet successfully exported.")
                                        , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
 
                             mb.accepted.connect(function(){ acceptAnimated() })
@@ -146,7 +146,7 @@ CustomTitleDialogWindow {
                                                     if (walletsProxy.exportWatchingOnly(walletInfo.walletId, exportDir, passwordData)) {
                                                         var mb = JsHelper.messageBox(BSMessageBox.Type.Success
                                                                    , qsTr("Wallet")
-                                                                   , qsTr("Successfully exported watching-only copy for walletInfo.")
+                                                                   , qsTr("Watching-Only wallet successfully exported.")
                                                                    , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
 
                                                         mb.accepted.connect(function(){ acceptAnimated() })

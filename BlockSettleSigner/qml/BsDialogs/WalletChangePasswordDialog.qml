@@ -117,10 +117,10 @@ CustomDialog {
                         id: walletDetailsFrame
                         walletInfo: walletInfo
                         inputsWidth: 250
-                        nextFocusItem: newPasswordInput.tfPasswordInput
-                        KeyNavigation.tab: newPasswordInput.tfPasswordInput
-                        Keys.onEnterPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
-                        Keys.onReturnPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
+                        nextFocusItem: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
+                        KeyNavigation.tab: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
+                        //Keys.onEnterPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
+                        //Keys.onReturnPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
                     }
 
                     CustomHeader {
@@ -180,7 +180,7 @@ CustomDialog {
                         confirmInputPlaceholder: qsTr("Confirm New Password")
                         nextFocusItem: btnAccept
                         onConfirmInputEnterPressed: {
-                            if (acceptable) btnAccept.onClicked()
+                            if (btnAccept.enabled) btnAccept.onClicked()
                         }
                     }
 
@@ -205,6 +205,12 @@ CustomDialog {
                             Layout.preferredWidth: inputsWidth_
                             selectByMouse: true
                             focus: true
+                            Keys.onEnterPressed: {
+                                if (btnAccept.enabled) btnAccept.onClicked()
+                            }
+                            Keys.onReturnPressed: {
+                                if (btnAccept.enabled) btnAccept.onClicked()
+                            }
                         }
                     }
 

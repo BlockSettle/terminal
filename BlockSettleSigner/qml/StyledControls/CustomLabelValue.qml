@@ -7,5 +7,6 @@ Label {
     color: "white"
     wrapMode: Text.WordWrap
     padding: 5
+    onLinkActivated: Qt.openUrlExternally(link)
 }
 
