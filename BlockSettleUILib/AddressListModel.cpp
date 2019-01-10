@@ -84,7 +84,7 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 void AddressListModel::updateData()
 {
    bool expected = false;
-   bool desired = false;
+   bool desired = true;
    if (!std::atomic_compare_exchange_strong(&processing_, &expected, desired)) {
       return;
    }

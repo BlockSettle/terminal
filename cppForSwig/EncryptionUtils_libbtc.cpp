@@ -178,7 +178,7 @@ SecureBinaryData CryptoECDSA::ComputePublicKey(
    SecureBinaryData result(BTC_ECKEY_UNCOMPRESSED_LENGTH);
 
    btc_pubkey_init(&pubkey);
-   btc_pubkey_from_key(&pkey, &pubkey);
+   btc_pubkey_from_key_uncompressed(&pkey, &pubkey);
    memcpy(result.getPtr(), pubkey.pubkey, BTC_ECKEY_UNCOMPRESSED_LENGTH);
 
    return result;

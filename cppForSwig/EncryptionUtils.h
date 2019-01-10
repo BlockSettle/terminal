@@ -103,6 +103,12 @@
 #define BTC_SIGNER    CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA256>::Signer
 #define BTC_DETSIGNER CryptoPP::ECDSA_DetSign<CryptoPP::ECP, CryptoPP::SHA256>::DetSigner
 #define BTC_VERIFIER  CryptoPP::ECDSA<CryptoPP::ECP, CryptoPP::SHA256>::Verifier
+
+// Make some libbtc-specific #defines and #includes as needed.
+#else
+// libbtc doesn't have some #defines AES bits, so we'll make them.
+#define AES_MIN_KEY_LEN AES_BLOCK_SIZE
+#define AES_MAX_KEY_LEN AES_BLOCK_SIZE*2
 #endif
 
 
