@@ -119,7 +119,7 @@ CustomTitleDialogWindow {
                 else {
                     seedMatch = false
                 }
-                seedMatch = true  // !!! ONLY FOR TESTING!!!
+                //seedMatch = true  // !!! ONLY FOR TESTING!!!
             }
         }
 
