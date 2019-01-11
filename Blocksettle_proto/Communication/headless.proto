@@ -53,8 +53,7 @@ enum NetworkType
 
 message AuthenticationRequest
 {
-   string   password = 1;  // probably not needed here
-   NetworkType  netType = 2;
+   NetworkType  netType = 1;
 }
 
 message AuthenticationReply
