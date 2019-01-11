@@ -363,8 +363,5 @@ Item {
         if (signerSettings.listenAddress !== listenAddress.text) {
             signerSettings.listenAddress = listenAddress.text
         }
-//        if (signerSettings.password !== password.text) {
-//            signerSettings.password = password.text
-//        }
     }
 }

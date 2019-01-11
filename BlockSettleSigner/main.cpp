@@ -223,7 +223,6 @@ Q_IMPORT_PLUGIN(QtQuickLayoutsPlugin)
 Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
-//Q_IMPORT_PLUGIN(QtLabsPlatformPlugin)
 
 /*class SignerApplication : public QApplication
 {

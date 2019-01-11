@@ -24,7 +24,6 @@
 #include "QmlFactory.h"
 #include "QWalletInfo.h"
 #include "ZMQHelperFunctions.h"
-#include <QDebug>
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
