@@ -128,10 +128,10 @@ ApplicationWindow {
         }
     }
 
-//    onClosing: {
-//        settingsPage.storeSettings();
-//        autoSignPage.storeSettings();
-//    }
+    onClosing: {
+        settingsPage.storeSettings();
+        autoSignPage.storeSettings();
+    }
 
     signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
 
