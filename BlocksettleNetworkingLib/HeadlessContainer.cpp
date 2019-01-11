@@ -810,8 +810,8 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &host, const QString &port, NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const QString &pwHash, OpMode opMode) : HeadlessContainer(logger, opMode)
-   , host_(host), port_(port), netType_(netType), pwHash_(pwHash)
+   , OpMode opMode) : HeadlessContainer(logger, opMode)
+   , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
 {}
 
@@ -839,16 +839,16 @@ bool RemoteSigner::Start()
 
       if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true
          , logger_)) {
-         logger_->error("[RemoteSigner::{}] failed to read headless connection "
-            "public key ({})", __func__, zmqSrvPubKeyPath.toStdString());
+         logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
+            "key ({})", __func__, zmqSrvPubKeyPath.toStdString());
          return false;
       }
    }
 
    connection_ = connectionManager_->CreateSecuredDataConnection(true);
    if (!connection_->SetServerPublicKey(zmqSrvPubKey_)) {
-      logger_->error("[RemoteSigner::{}] Failed to set signer connection "
-         "public key", __func__);
+      logger_->error("[RemoteSigner::{}] Failed to set ZMQ server public key"
+         , __func__);
       connection_ = nullptr;
       return false;
    }
@@ -928,7 +928,6 @@ void RemoteSigner::Authenticate()
 
    authPending_ = true;
    headless::AuthenticationRequest request;
-   request.set_password(pwHash_.toStdString());
    request.set_nettype((netType_ == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
 
    headless::RequestPacket packet;
@@ -1050,9 +1049,9 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const QString &pwHash, double asSpendLimit)
+   , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, pwHash, OpMode::Local)
+   , connectionManager, OpMode::Local)
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
@@ -1090,9 +1089,6 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    args_ << QLatin1String("--listen") << QLatin1String("127.0.0.1");
    args_ << QLatin1String("--port") << port_;
    args_ << QLatin1String("--dirwallets") << walletsCopyDir;
-   if (!pwHash_.isEmpty()) {
-      args_ << QLatin1String("--pwhash") << pwHash;
-   }
    if (asSpendLimit > 0) {
       args_ << QLatin1String("--auto_sign_spend_limit") << QString::number(asSpendLimit, 'f', 8);
    }
