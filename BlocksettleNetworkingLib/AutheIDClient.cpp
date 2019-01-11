@@ -9,7 +9,7 @@
 #include "ZmqSecuredDataConnection.h"
 #include "ApplicationSettings.h"
 
-using namespace AutheID::RP;
+using namespace autheid::rp;
 
 namespace
 {
@@ -89,7 +89,7 @@ bool AutheIDClient::isConnected() const
    return (connection_ && connection_->isActive());
 }
 
-bool AutheIDClient::sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type)
+bool AutheIDClient::sendToAuthServer(const std::string &payload, const PayloadType type)
 {
    ClientPacket packet;
    packet.set_type(type);

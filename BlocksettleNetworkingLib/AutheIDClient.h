@@ -9,7 +9,7 @@
 #include "AutheIDClient.h"
 #include "ZmqSecuredDataConnection.h"
 #include "EncryptUtils.h"
-#include "rp_api.pb.h"
+#include "rp.pb.h"
 
 namespace spdlog {
    class logger;
@@ -85,11 +85,11 @@ private:
    void OnError(DataConnectionError errorCode) override;
 
    bool requestAuth(const std::string& email);
-   bool sendToAuthServer(const std::string &payload, const AutheID::RP::PayloadType type);
+   bool sendToAuthServer(const std::string &payload, const autheid::rp::PayloadType type);
    void processCreateReply(const uint8_t *payload, size_t payloadSize);
    void processResultReply(const uint8_t *payload, size_t payloadSize);
 
-   void processSignatureReply(const AutheID::RP::SignatureReply &);
+   void processSignatureReply(const autheid::rp::SignatureReply &);
 
    QString getAutheIDClientRequestText(RequestType requestType);
    bool isAutheIDClientNewDeviceNeeded(RequestType requestType);
