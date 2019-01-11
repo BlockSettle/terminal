@@ -234,7 +234,11 @@ CustomDialog {
                     padding: 20
                     topPadding: 30
                     wrapMode: Text.WordWrap
-                    text: "Add the ability to sign transactions from your other Auth eID devices.\n\n\n Only one signature from one device will be required to sign requests.\n\n\n First you'll have to follow the Add Device instructions in your Auth eID app.\n When completed please proceed here.\n\n\n Once you press Add Device your activated Auth eID will receive a signing request for adding device.\n Once you sign the request a new signing request will be sent to your new device."
+                    text: "Add the ability to sign transactions from your other Auth eID devices.\
+\n\n\n Only one signature from one device will be required to sign requests.\
+\n\n\n First you'll have to follow the Add Device instructions in your Auth eID app.\n When completed please proceed here.\
+\n\n\n Once you press Add Device your activated Auth eID will receive a signing request for adding device.\
+\n Once you sign the request a new signing request will be sent to your new device."
                 }
 
             }
