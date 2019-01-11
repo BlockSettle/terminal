@@ -21,27 +21,26 @@ QValidator::State PasswordConfirmValidator::validate(QString &input, int &) cons
       return QValidator::State::Intermediate;
    }
 
-   if (input.size() > 6 || compareTo_.isEmpty()) {
-      setStatusMsg({});
-      return QValidator::State::Intermediate;
-   }
-
-   if (input.size() != compareTo_.size()) {
-      setStatusMsg(dontMatchMsgTmpl_.arg(name_));
-      return QValidator::State::Intermediate;
-   }
-
-   if (input.size() == compareTo_.size()) {
+   if (input.size() == compareTo_.size() && input.size() >= 6) {
       if (input == compareTo_) {
          setStatusMsg(validTmpl_.arg(name_));
          return QValidator::State::Acceptable;
-      } else {
+      }
+      else {
          setStatusMsg(dontMatchMsgTmpl_.arg(name_));
          return  QValidator::State::Intermediate;
       }
    }
 
+   if (input.size() != compareTo_.size() && !compareTo_.isEmpty()) {
+      setStatusMsg(dontMatchMsgTmpl_.arg(name_));
+      return QValidator::State::Intermediate;
+   }
 
+   if (input.size() >= 6 || compareTo_.isEmpty()) {
+      setStatusMsg({});
+      return QValidator::State::Intermediate;
+   }
 
    //control should never get here, but just in case:
    return QValidator::State::Intermediate;

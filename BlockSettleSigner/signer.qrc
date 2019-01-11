@@ -42,7 +42,6 @@
         <file>qml/BsStyles/BSStyle.qml</file>
         <file>qml/BsStyles/qmldir</file>
         <file>qml/BsControls/BSPasswordInput.qml</file>
-        <file>qml/BsControls/BSEidConfirmBox.qml</file>
         <file>qml/BsControls/BSEidNoticeBox.qml</file>
         <file>qml/BsControls/BSEidProgressBox.qml</file>
         <file>qml/BsControls/BSAbortBox.qml</file>

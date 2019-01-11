@@ -40,10 +40,10 @@ CustomTitleDialogWindow {
         target: pdf
 
         onSaveSucceed: function(path){
-            JsHelper.messageBox(BSMessageBox.Success, "Create Wallet", "Wallet pdf seed saved", path)
+            JsHelper.messageBox(BSMessageBox.Success, "Create Wallet", "Paper Root Private Key successfully saved", path)
         }
         onSaveFailed: function(path) {
-            JsHelper.messageBox(BSMessageBox.Critical, "Create Wallet", "Failed to save seed pdf", path)
+            JsHelper.messageBox(BSMessageBox.Critical, "Create Wallet", "Failed to save Paper Root Private Key", path)
         }
 
         onPrintSucceed: {
@@ -93,7 +93,7 @@ CustomTitleDialogWindow {
 
 
         CustomLabel {
-            text: qsTr("Your seed is important! If you lose your seed, your bitcoin assets will be permanently lost.\nTo make sure that you have properly saved your seed, please retype it here.")
+            text: qsTr("Your seed is important! If you lose your seed, your bitcoin assets will be permanently lost. To make sure that you have properly saved your seed, please retype it here.")
             id: labelVerify
             horizontalAlignment: Qt.AlignLeft
             Layout.fillWidth: true
@@ -114,9 +114,12 @@ CustomTitleDialogWindow {
                     }
                     else {
                         seedMatch = false
-                        // seedMatch = true  // !!! ONLY FOR TESTING!!!
                     }
                 }
+                else {
+                    seedMatch = false
+                }
+                //seedMatch = true  // !!! ONLY FOR TESTING!!!
             }
         }
 

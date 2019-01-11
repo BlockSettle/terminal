@@ -89,6 +89,8 @@ CustomTitleDialogWindow {
                 selectByMouse: true
                 focus: true
                 color: walletsProxy.walletNameExists(tfName.text) ? BSStyle.inputsInvalidColor : BSStyle.inputsFontColor
+                Keys.onEnterPressed: tfDesc.forceActiveFocus()
+                Keys.onReturnPressed: tfDesc.forceActiveFocus()
             }
         }
         RowLayout {
@@ -111,6 +113,9 @@ CustomTitleDialogWindow {
                 validator: RegExpValidator {
                     regExp: /^[^\\\\/?:*<>|]*$/
                 }
+                Keys.onEnterPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : textInputEmail.forceActiveFocus()
+                Keys.onReturnPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : textInputEmail.forceActiveFocus()
+                KeyNavigation.tab: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput : textInputEmail
             }
         }
         RowLayout {
@@ -139,7 +144,7 @@ CustomTitleDialogWindow {
         }
         CustomHeader {
             id: headerText2
-            text: qsTr("Create Wallet Keys")
+            text: qsTr("Encryption")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
             Layout.topMargin: 5
@@ -181,6 +186,9 @@ CustomTitleDialogWindow {
             passwordInputPlaceholder: qsTr("Wallet Password")
             confirmLabelTxt: qsTr("Confirm Password")
             confirmInputPlaceholder: qsTr("Confirm Wallet Password")
+            onConfirmInputEnterPressed: {
+                if (btnAccept.enabled) btnAccept.onClicked()
+            }
         }
 
         RowLayout {
@@ -202,6 +210,12 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 selectByMouse: true
                 focus: true
+                Keys.onEnterPressed: {
+                    if (btnAccept.enabled) btnAccept.onClicked()
+                }
+                Keys.onReturnPressed: {
+                    if (btnAccept.enabled) btnAccept.onClicked()
+                }
             }
         }
 
@@ -222,6 +236,7 @@ CustomTitleDialogWindow {
                 }
             }
             CustomButtonPrimary {
+                id: btnAccept
                 text: qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom

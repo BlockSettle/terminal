@@ -19,6 +19,31 @@ Item {
             width: parent.parent.width
             id: column
 
+            CustomButtonBar {
+                Layout.fillWidth: true
+                implicitHeight: childrenRect.height
+                id: btns
+
+                Flow {
+                    id: buttonRow
+                    spacing: 5
+                    padding: 5
+                    width: parent.width
+
+                    CustomButton {
+                        id: btnSignOfflineTx
+                        text: qsTr("Sign Offline From File")
+                        width: parent.width - 10
+                        onClicked: {
+                            if (!ldrOfflineFileDlg.item) {
+                                ldrOfflineFileDlg.active = true
+                            }
+                            ldrOfflineFileDlg.item.open();
+                        }
+                    }
+                }
+            }
+
             Behavior on height {
                 NumberAnimation { duration: 500 }
             }
@@ -211,31 +236,6 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 color: BSStyle.backgroundColor
-            }
-
-            CustomButtonBar {
-                Layout.fillWidth: true
-                implicitHeight: childrenRect.height
-                id: btns
-
-                Flow {
-                    id: buttonRow
-                    spacing: 5
-                    padding: 5
-                    width: parent.width
-
-                    CustomButton {
-                        id: btnSignOfflineTx
-                        text: qsTr("Sign Offline From File")
-                        width: parent.width - 10
-                        onClicked: {
-                            if (!ldrOfflineFileDlg.item) {
-                                ldrOfflineFileDlg.active = true
-                            }
-                            ldrOfflineFileDlg.item.open();
-                        }
-                    }
-                }
             }
         }
     }
