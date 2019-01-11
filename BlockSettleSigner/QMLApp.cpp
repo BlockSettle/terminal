@@ -153,7 +153,6 @@ void QMLAppObj::settingsConnections()
    connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
    connect(settings_.get(), &SignerSettings::walletsDirChanged, this, &QMLAppObj::onWalletsDirChanged);
    connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLAppObj::onListenSocketChanged);
-   connect(settings_.get(), &SignerSettings::passwordChanged, this, &QMLAppObj::onListenSocketChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
@@ -376,7 +375,7 @@ void QMLAppObj::OnlineProcessing()
 
    listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
       , walletsMgr_, settings_->getWalletsDir().toStdString()
-      , settings_->netType(), settings_->pwHash().toStdString(), true);
+      , settings_->netType(), true);
    listener_->SetLimits(settings_->limits());
    statusUpdater_->SetListener(listener_);
    connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this
