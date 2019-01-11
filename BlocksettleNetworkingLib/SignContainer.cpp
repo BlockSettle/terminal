@@ -26,7 +26,6 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    , const std::shared_ptr<ConnectionManager>& connectionManager)
 {
    const auto &port = appSettings->get<QString>(ApplicationSettings::signerPort);
-   const auto &pwHash = appSettings->get<QString>(ApplicationSettings::signerPassword);
    const auto netType = appSettings->get<NetworkType>(ApplicationSettings::netType);
 
    switch (runMode)
@@ -38,7 +37,7 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
       }
 
       return std::make_shared<LocalSigner>(logger, appSettings->GetHomeDir()
-         , netType, port, connectionManager, pwHash
+         , netType, port, connectionManager
          , appSettings->get<double>(ApplicationSettings::autoSignSpendLimit));
 
    case SignContainer::OpMode::Remote:
@@ -48,7 +47,7 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
       }
 
       return std::make_shared<RemoteSigner>(logger, host, port, netType
-         , connectionManager, pwHash);
+         , connectionManager);
 
    case SignContainer::OpMode::Offline:
       return std::make_shared<OfflineSigner>(logger
