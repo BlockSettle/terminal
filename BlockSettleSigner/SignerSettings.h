@@ -16,7 +16,6 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString walletsDir READ getWalletsDir WRITE setWalletsDir NOTIFY walletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
-   Q_PROPERTY(QString password READ pwHash WRITE setPassword NOTIFY passwordChanged)
    Q_PROPERTY(bool autoSignUnlimited READ autoSignUnlimited NOTIFY limitAutoSignXbtChanged)
    Q_PROPERTY(bool manualSignUnlimited READ manualSignUnlimited NOTIFY limitManualXbtChanged)
    Q_PROPERTY(double limitManualXbt READ limitManualXbt WRITE setLimitManualXbt NOTIFY limitManualXbtChanged)
@@ -45,7 +44,6 @@ public:
       ListenPort,
       ZMQPubKey,
       ZMQPrvKey,
-      PasswordHash,
       LimitManualXBT,
       LimitAutoSignXBT,
       LimitAutoSignTime,
@@ -62,7 +60,6 @@ public:
    NetworkType netType() const { return (testNet() ? NetworkType::TestNet : NetworkType::MainNet); }
    QString getWalletsDir() const;
    QString autoSignWallet() const { return get(AutoSignWallet).toString(); }
-   QString pwHash() const { return get(PasswordHash).toString(); }
    bool offline() const { return get(OfflineMode).toBool(); }
    double limitManualXbt() const { return get(LimitManualXBT).toULongLong() / BTCNumericTypes::BalanceDivider; }
    double limitAutoSignXbt() const { return get(LimitAutoSignXBT).toULongLong() / BTCNumericTypes::BalanceDivider; }
@@ -84,7 +81,6 @@ public:
    void setAutoSignWallet(const QString &val) { set(AutoSignWallet, val); }
    void setListenAddress(const QString &val) { set(ListenAddress, val); }
    void setPort(const QString &val) { set(ListenPort, val); }
-   void setPassword(const QString &password);
    void setLimitManualXbt(const double val) { setXbtLimit(val, LimitManualXBT); }
    void setLimitAutoSignXbt(const double val) { setXbtLimit(val, LimitAutoSignXBT); }
    void setLimitAutoSignTimeStr(const QString &val) { set(LimitAutoSignTime, intervalStrToSeconds(val)); }
@@ -101,7 +97,6 @@ signals:
    void testNetChanged();
    void walletsDirChanged();
    void listenSocketChanged();
-   void passwordChanged();
    void limitManualXbtChanged();
    void limitAutoSignXbtChanged();
    void limitAutoSignTimeChanged();

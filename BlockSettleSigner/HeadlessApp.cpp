@@ -77,7 +77,7 @@ void HeadlessAppObj::OnlineProcessing()
 
    listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
       , walletsMgr_, settings_->getWalletsDir().toStdString()
-      , settings_->netType(), settings_->pwHash().toStdString());
+      , settings_->netType());
    listener_->SetLimits(settings_->limits());
    if (!connection_->BindConnection(settings_->listenAddress().toStdString()
       , settings_->port().toStdString(), listener_.get())) {
