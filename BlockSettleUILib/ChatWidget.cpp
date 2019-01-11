@@ -19,8 +19,14 @@ ChatWidget::ChatWidget(QWidget *parent)
    ui_->stackedWidget->setCurrentIndex(0);
 
    ui_->tableViewMessages->verticalHeader()->hide();
+   ui_->tableViewMessages->verticalHeader()->setDefaultSectionSize(15);
+   ui_->tableViewMessages->verticalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+
    ui_->tableViewMessages->horizontalHeader()->hide();
+   ui_->tableViewMessages->horizontalHeader()->setDefaultSectionSize(50);
+   ui_->tableViewMessages->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
    ui_->tableViewMessages->setSelectionBehavior(QAbstractItemView::SelectRows);
+
 
    ui_->treeViewUsers->header()->hide();
 
@@ -31,6 +37,75 @@ ChatWidget::ChatWidget(QWidget *parent)
    ui_->tableViewMessages->setModel(messagesViewModel_.get());
 
    qRegisterMetaType<std::vector<std::string>>();
+
+
+   // 
+   std::string label_color = "rgb(11, 22, 25)";
+   std::string back_color = "rgb(28, 40, 53)";
+   std::string send_button_color = "rgb(36, 125, 172)";
+   ui_->tableViewMessages->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->tableViewMessages->show();
+
+   ui_->treeView_ChatRooms->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->treeView_ChatRooms->show();
+
+   ui_->treeViewUsers->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->treeViewUsers->show();
+
+   ui_->roomsFrame->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->roomsFrame->show();
+
+   ui_->chatFrame->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->chatFrame->show();
+
+   ui_->usersFrame->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->usersFrame->show();
+
+   //
+
+   ui_->text->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->text->show();
+
+   ui_->send->setStyleSheet(QString::fromStdString("background-color:" + send_button_color + ";"));
+   ui_->send->show();
+
+   //
+
+   ui_->label->setStyleSheet(QString::fromStdString("background-color:" + label_color + ";"));
+   ui_->label->show();
+
+   ui_->label_3->setStyleSheet(QString::fromStdString("background-color:" + label_color + ";"));
+   ui_->label_3->show();
+
+   ui_->labelActiveChat->setStyleSheet(QString::fromStdString("background-color:" + label_color + ";"));
+   ui_->labelActiveChat->show();
+
+   ui_->label_4->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->label_4->show();
+
+   ui_->label_5->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->label_5->show();
+
+   ui_->labelUserName->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->labelUserName->show();
+
+   //
+
+   ui_->stackedWidget->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->stackedWidget->show();
+
+
+
+   ui_->page->setStyleSheet(QString::fromStdString("background-color:" + back_color + ";"));
+   ui_->page->show();
+
+
+   ui_->pageActive->setStyleSheet(QString::fromStdString("background-color:rgb(183, 187, 189);"));
+   ui_->pageActive->show();
+
+   ui_->tableViewMessages->setRowHeight(0, 10);
+   ui_->tableViewMessages->setColumnWidth(1, 75);
+
 
 }
 
@@ -67,7 +142,7 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
    currentChat_ = usersViewModel_->resolveUser(index);
 
    ui_->text->setEnabled(!currentChat_.isEmpty());
-   ui_->labelActiveChat->setText(tr("Chat #") + currentChat_);
+   ui_->labelActiveChat->setText(tr("CHAT #") + currentChat_);
    messagesViewModel_->onSwitchToChat(currentChat_);
 }
 

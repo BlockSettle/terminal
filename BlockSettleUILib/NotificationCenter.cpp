@@ -32,7 +32,6 @@ void NotificationCenter::destroyInstance()
 {
    globalInstance = nullptr;
 }
-
 void NotificationCenter::notify(bs::ui::NotifyType nt, const bs::ui::NotifyMessage &msg)
 {
    if (!globalInstance) {
@@ -85,6 +84,9 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 
    case bs::ui::NotifyType::BlockchainTX:
       return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true, true };
+   
+   case bs::ui::NotifyType::NewMessage:
+      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat), true, true };
 
    default: break;
    }

@@ -1,5 +1,6 @@
 #include "ChatMessagesViewModel.h"
 #include "ChatClient.h"
+#include "NotificationCenter.h"
 
 
 ChatMessagesViewModel::ChatMessagesViewModel(QObject* parent)
@@ -9,7 +10,7 @@ ChatMessagesViewModel::ChatMessagesViewModel(QObject* parent)
 
 int ChatMessagesViewModel::columnCount(const QModelIndex &parent) const
 {
-   return 2;
+   return 3;
 }
 
 int ChatMessagesViewModel::rowCount(const QModelIndex &parent) const
@@ -24,6 +25,9 @@ QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientat
          return tr("Time");
 
       case 1:
+         return tr("User");
+      
+      case 2:
          return tr("Message");
 
       default:
@@ -34,6 +38,16 @@ QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientat
 
 QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
 {
+   if (index.column() == 0) {
+      if(role == Qt::TextAlignmentRole)
+         return Qt::AlignLeft;
+   }
+   if (index.column() == 1) {
+      if(role == Qt::TextAlignmentRole)
+         return Qt::AlignLeft;
+      if(role == Qt::TextColorRole)
+         return QVariant::fromValue(QColor(Qt::gray));
+   }
    if (role == Qt::DisplayRole) {
       if (messages_[currentChatId_].empty()) {
           return QVariant();
@@ -42,7 +56,7 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
       switch (index.column()) {
          case 0:
          {
-            auto dateTime = messages_[currentChatId_][index.row()].first;
+            auto dateTime = std::get<0>(messages_[currentChatId_][index.row()]);
 
             if (dateTime.date() == QDate::currentDate()) {
                return dateTime.time().toString(QString::fromUtf8("hh:mm"));
@@ -53,7 +67,10 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
          }
 
          case 1:
-            return messages_[currentChatId_][index.row()].second;
+            return std::get<1>(messages_[currentChatId_][index.row()]);
+         
+         case 2:
+            return std::get<2>(messages_[currentChatId_][index.row()]);
 
          default:
             break;
@@ -73,21 +90,19 @@ void ChatMessagesViewModel::onSingleMessageUpdate(const QDateTime& date, const Q
 {
    auto rowIdx = static_cast<int>(messages_[currentChatId_].size());
    beginInsertRows(QModelIndex(), rowIdx, rowIdx);
-   messages_[currentChatId_].push_back(std::make_pair(date, prependMessage(messageText)));
+   messages_[currentChatId_].push_back(prependMessage(date, messageText));
    endInsertRows();
 }
 
-QString ChatMessagesViewModel::prependMessage(const QString& messageText, const QString& senderId)
+std::tuple<QDateTime, QString, QString> ChatMessagesViewModel::prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId)
 {
    static const auto ownSender = tr("you");
    QString sender = senderId.isEmpty() ? ownSender : senderId;
    if (sender == ownUserId_) {
       sender = ownSender;
    }
-   QString displayMessage = QStringLiteral("[") + sender + QStringLiteral("]: ") + messageText;
-   return displayMessage;
+   return { date, QStringLiteral("[") + sender + QStringLiteral("]: "), messageText};
 }
-
 void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::string>& messages)
 {
    if (messages.size() == 0)
@@ -97,16 +112,17 @@ void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::string>& mes
       const auto receivedMessage = Chat::MessageData::fromJSON(msg);
       const auto senderId = receivedMessage->getSenderId();
       const auto dateTime = receivedMessage->getDateTime();
-      const auto msgText = prependMessage(receivedMessage->getMessageData(), senderId);
+      const auto msgTuple = prependMessage(dateTime, receivedMessage->getMessageData(), senderId);
 
       if (senderId == currentChatId_) {
          const int beginRow = messages_[currentChatId_].size();
          beginInsertRows(QModelIndex(), beginRow, beginRow);
-         messages_[currentChatId_].push_back({dateTime, msgText });
+         messages_[currentChatId_].push_back(msgTuple);
          endInsertRows();
       }
       else {
-         messages_[senderId].push_back({ dateTime, msgText });
+         messages_[senderId].push_back(msgTuple);
       }
+      NotificationCenter::notify(bs::ui::NotifyType::NewMessage, { tr("New message") });
    }
 }

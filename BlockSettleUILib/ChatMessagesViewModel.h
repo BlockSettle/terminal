@@ -6,7 +6,7 @@
 #include <QMap>
 #include <QVector>
 #include <QDateTime>
-
+#include <tuple>
 #include <memory>
 
 
@@ -34,7 +34,7 @@ protected:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 private:
-   QString prependMessage(const QString& messageText, const QString& senderId = QString());
+   std::tuple<QDateTime, QString, QString> prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId = QString());
 
 public slots:
    void onSwitchToChat(const QString& chatId);
@@ -42,7 +42,7 @@ public slots:
    void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
 
 private:
-   using MessagesHistory = std::vector<std::pair<QDateTime, QString>>;
+   using MessagesHistory = std::vector<std::tuple<QDateTime, QString, QString>>;
    QMap<QString, MessagesHistory> messages_;
    QString   currentChatId_;
    QString   ownUserId_;
