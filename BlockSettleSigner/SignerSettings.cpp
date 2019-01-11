@@ -183,6 +183,12 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    case PasswordHash:
       emit passwordChanged();
       break;
+   case ZMQPubKey:
+      emit zmqPubKeyFileChanged();
+      break;
+   case ZMQPrvKey:
+      emit zmqPrvKeyFileChanged();
+      break;
    case LimitManualXBT:
       emit limitManualXbtChanged();
       break;
@@ -309,6 +315,22 @@ void SignerSettings::setPassword(const QString &password)
    }
    const auto hash = BtcUtils::getSha256(password.toStdString());
    set(PasswordHash, QString::fromStdString(hash.getSliceCopy(0, 8).toHexStr()));
+}
+
+void SignerSettings::setZmqPubKeyFile(const QString &file)
+{
+   if (file == get(ZMQPubKey).toString()) {
+      return;
+   }
+   set(ZMQPubKey, file);
+}
+
+void SignerSettings::setZmqPrvKeyFile(const QString &file)
+{
+   if (file == get(ZMQPrvKey).toString()) {
+      return;
+   }
+   set(ZMQPrvKey, file);
 }
 
 void SignerSettings::setWalletsDir(const QString &val)

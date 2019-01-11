@@ -24,6 +24,7 @@
 #include "QmlFactory.h"
 #include "QWalletInfo.h"
 #include "ZMQHelperFunctions.h"
+#include <QDebug>
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -43,64 +44,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
-   // Get the ZMQ server public key.
-   SecureBinaryData tempPubKey;
-   if (!bs::network::readZMQKeyFile(params->zmqPubKeyFile(), tempPubKey
-      , true, logger_)) {
-      throw std::runtime_error("failed to read ZMQ server public key");
-   }
-   zmqPubKey_ = tempPubKey;
-
-   // Get the ZMQ server private key.
-   SecureBinaryData tempPrvKey;
-   if (!bs::network::readZMQKeyFile(params->zmqPrvKeyFile(), tempPrvKey
-      , false, logger_)) {
-      throw std::runtime_error("failed to read ZMQ server private key");
-   }
-   zmqPrvKey_ = tempPrvKey;
-
-   qRegisterMetaType<bs::wallet::TXSignRequest>();
-   qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
-   qRegisterMetaType<bs::wallet::QEncryptionType>("QEncryptionType");
-   qRegisterMetaType<bs::wallet::QSeed>("QSeed");
-
-   qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
-      "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
-   qmlRegisterUncreatableType<OfflineProcessor>("com.blocksettle.OfflineProc", 1, 0,
-      "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
-   qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
-      "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
-   qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
-      "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
-
-   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
-   qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
-   qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
-   qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
-   qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
-
-   qmlRegisterType<bs::hd::WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
-   qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
-   qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
-
-   qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
-      "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-
-//   qmlRegisterUncreatableMetaObject(
-//     bs::staticMetaObject, // static meta object
-//     "com.blocksettle.NsBs.namespace",                // import statement (can be any string)
-//     1, 0,                          // major and minor version of the import
-//     "NsBs",                 // name in QML (does not have to match C++ name)
-//     QStringLiteral("Error: com.blocksettle.NsBs: only enums")            // error in case someone tries to create a MyNamespace object
-//   );
-
-   qmlRegisterUncreatableMetaObject(
-     bs::wallet::staticMetaObject, // static meta object
-     "com.blocksettle.NsWallet.namespace",                // import statement (can be any string)
-     1, 0,                          // major and minor version of the import
-     "NsWallet",                 // name in QML (does not have to match C++ name)
-     QStringLiteral("Error: namespace.bs.NsWallet: only enums")            // error in case someone tries to create a MyNamespace object
-   );
+   registerQtTypes();
 
    walletsMgr_ = std::make_shared<WalletsManager>(logger_);
 
@@ -136,6 +80,13 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
+
+   connect(settings_.get(), &SignerSettings::zmqPubKeyFileChanged, [this](){
+      initZmqKeys();
+   });
+   connect(settings_.get(), &SignerSettings::zmqPrvKeyFileChanged, [this](){
+      initZmqKeys();
+   });
 
 #ifdef BS_USE_DBUS
    if (dbus_->isValid()) {
@@ -181,6 +132,8 @@ void QMLAppObj::walletsLoad()
 
 void QMLAppObj::Start()
 {
+   initZmqKeys();
+
    trayIcon_->show();
    walletsLoad();
 
@@ -207,10 +160,105 @@ void QMLAppObj::Start()
 
 void QMLAppObj::disconnect()
 {
-   listener_->disconnect();
+   if (listener_)
+      listener_->disconnect();
+
    listener_ = nullptr;
    connection_ = nullptr;
-   statusUpdater_->clearConnections();
+
+   if (statusUpdater_)
+      statusUpdater_->clearConnections();
+}
+
+void QMLAppObj::initZmqKeys()
+{
+   // Get the ZMQ server public key.
+   SecureBinaryData tempPubKey;
+   SecureBinaryData tempPrvKey;
+
+   bool isZmqPubKeyOk = bs::network::readZMQKeyFile(settings_->zmqPubKeyFile()
+                                                    , zmqPubKey_
+                                                    , true
+                                                    , logger_);
+   bool isZmqPrvKeyOk = bs::network::readZMQKeyFile(settings_->zmqPrvKeyFile()
+                                                    , zmqPrvKey_
+                                                    , true
+                                                    , logger_);
+   QString errorString;
+   if (!isZmqPubKeyOk)  {
+      errorString.append(QStringLiteral("Failed to read ZMQ server public key\n"));
+   }
+   if (!isZmqPrvKeyOk)  {
+      errorString.append(QStringLiteral("Failed to read ZMQ server private key"));
+   }
+
+   QString detailsString;
+   if (!isZmqPubKeyOk)  {
+      detailsString.append(QStringLiteral("Public key: ") + settings_->zmqPubKeyFile() + QStringLiteral("\n\n"));
+   }
+   if (!isZmqPrvKeyOk)  {
+      detailsString.append(QStringLiteral("Private key: ") + settings_->zmqPrvKeyFile());
+   }
+
+   if (!isZmqPubKeyOk || !isZmqPrvKeyOk) {
+      QMetaObject::invokeMethod(this, [this, errorString, detailsString](){
+         QMetaObject::invokeMethod(rootObj_, "messageBoxCritical"
+                                   , Q_ARG(QVariant, QStringLiteral("Error"))
+                                   , Q_ARG(QVariant, QVariant::fromValue(errorString))
+                                   , Q_ARG(QVariant, QVariant::fromValue(detailsString)));
+      },
+      Qt::QueuedConnection);
+   }
+
+   // reset connection
+   disconnect();
+   onOfflineChanged();
+}
+
+void QMLAppObj::registerQtTypes()
+{
+   qRegisterMetaType<bs::wallet::TXSignRequest>();
+   qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
+   qRegisterMetaType<bs::wallet::QEncryptionType>("QEncryptionType");
+   qRegisterMetaType<bs::wallet::QSeed>("QSeed");
+
+   qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
+      "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
+   qmlRegisterUncreatableType<OfflineProcessor>("com.blocksettle.OfflineProc", 1, 0,
+      "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
+   qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
+      "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
+   qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
+      "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
+
+   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
+   qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
+   qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
+   qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
+   qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
+
+   qmlRegisterType<bs::hd::WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
+   qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
+   qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
+
+   qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
+      "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
+
+//   qmlRegisterUncreatableMetaObject(
+//     bs::staticMetaObject, // static meta object
+//     "com.blocksettle.NsBs.namespace",                // import statement (can be any string)
+//     1, 0,                          // major and minor version of the import
+//     "NsBs",                 // name in QML (does not have to match C++ name)
+//     QStringLiteral("Error: com.blocksettle.NsBs: only enums")            // error in case someone tries to create a MyNamespace object
+//   );
+
+   qmlRegisterUncreatableMetaObject(
+     bs::wallet::staticMetaObject, // static meta object
+     "com.blocksettle.NsWallet.namespace",                // import statement (can be any string)
+     1, 0,                          // major and minor version of the import
+     "NsWallet",                 // name in QML (does not have to match C++ name)
+     QStringLiteral("Error: namespace.bs.NsWallet: only enums")            // error in case someone tries to create a MyNamespace object
+   );
 }
 
 void QMLAppObj::onOfflineChanged()

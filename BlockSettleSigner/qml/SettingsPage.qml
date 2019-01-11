@@ -1,10 +1,12 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
+import QtQuick.Dialogs 1.2
 
 import "StyledControls"
 import "BsStyles"
 import "BsDialogs"
+import "js/helper.js" as JsHelper
 
 Item {
     DirSelectionDialog {
@@ -146,27 +148,101 @@ Item {
                 }
             }
 
-            SettingsGrid {
-                id: gridNetwork
+            RowLayout {
+                id: row4
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("Connection password")
+                    text: qsTr("ZMQ Private Key")
                     Layout.minimumWidth: 125
                     Layout.preferredWidth: 125
                     Layout.maximumWidth: 125
                 }
-                CustomTextInput {
-                    placeholderText: qsTr("Password")
-                    echoMode: TextField.Password
-                    text: signerSettings.password
+
+                CustomLabel {
+                    Layout.alignment: Qt.AlignLeft
                     Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: signerSettings.zmqPrvKeyFile
+                    color: BSStyle.textColor
+
+                }
+
+                CustomButton {
+                    text: qsTr("Select")
+                    Layout.minimumWidth: 80
+                    Layout.preferredWidth: 80
+                    Layout.maximumWidth: 80
+                    Layout.maximumHeight: 26
                     Layout.rightMargin: 6
-                    selectByMouse: true
-                    id: password
-                    onEditingFinished: {
-                        signerSettings.password = text
+                    onClicked: {
+                        zmqPrivKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPrvKeyFile)
+                        zmqPrivKeyDlg.open()
+                        zmqPrivKeyDlg.accepted.connect(function(){
+                            signerSettings.zmqPrvKeyFile = JsHelper.fileUrlToPath(zmqPrivKeyDlg.fileUrl)
+                        })
+                    }
+                    FileDialog {
+                        id: zmqPrivKeyDlg
+                        visible: false
+                        title: "Select ZMQ Private Key"
+                        selectFolder: false
                     }
                 }
+            }
+
+            RowLayout {
+                id: row5
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    text: qsTr("ZMQ Public Key")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
+                }
+
+                CustomLabel {
+                    Layout.alignment: Qt.AlignLeft
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: signerSettings.zmqPubKeyFile
+                    color: BSStyle.textColor
+
+                }
+
+                CustomButton {
+                    text: qsTr("Select")
+                    Layout.minimumWidth: 80
+                    Layout.preferredWidth: 80
+                    Layout.maximumWidth: 80
+                    Layout.maximumHeight: 26
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
+                        zmqPubKeyDlg.open()
+                        zmqPubKeyDlg.accepted.connect(function(){
+                            signerSettings.zmqPubKeyFile = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
+                        })
+                    }
+                    FileDialog {
+                        id: zmqPubKeyDlg
+                        visible: false
+                        title: "Select ZMQ Public Key"
+                        selectFolder: false
+                    }
+                }
+            }
+
+
+            SettingsGrid {
+                id: gridNetwork
 
                 CustomLabel {
                     text: qsTr("Listen IP address")
@@ -276,7 +352,7 @@ Item {
     function storeSettings() {
         signerSettings.limitManualPwKeep = limitManualPwKeep.text
 
-        if (signerSettings.limitManualXbt != limitManualXbt.text) {
+        if (signerSettings.limitManualXbt !== limitManualXbt.text) {
             if (limitManualXbt.text !== qsTr("Unlimited")) {
                 signerSettings.limitManualXbt = limitManualXbt.text
             }
@@ -287,8 +363,8 @@ Item {
         if (signerSettings.listenAddress !== listenAddress.text) {
             signerSettings.listenAddress = listenAddress.text
         }
-        if (signerSettings.password !== password.text) {
-            signerSettings.password = password.text
-        }
+//        if (signerSettings.password !== password.text) {
+//            signerSettings.password = password.text
+//        }
     }
 }

@@ -36,8 +36,8 @@ function messageBoxInfo(title, text, details, parent) {
     messageBox(BSMessageBox.Type.Info, title, text, details, parent);
 }
 
-function messageBoxCritical(title, text, details, parent) {
-    messageBox(BSMessageBox.Type.Critical, title, text, details, parent);
+function messageBoxCritical(title, text, details) {
+    messageBox(BSMessageBox.Type.Critical, title, text, details);
 }
 
 function raiseWindow() {
@@ -165,4 +165,18 @@ function parseEncKeyToEmail(encKey) {
 }
 function parseEncKeyToDeviceName(encKey) {
     return encKey.split(':')[2]
+}
+
+function fileUrlToPath(fileUrl) {
+    var tmp = fileUrl.toString()
+    tmp = tmp.replace(/(^file:\/{3})/, "")
+    tmp = decodeURIComponent(tmp)
+    return tmp
+}
+function folderOfFile(fileUrl) {
+    var tmp = fileUrl.toString()
+    tmp = tmp.replace(/(^file:\/{3})/, "")
+    tmp = decodeURIComponent(tmp)
+    tmp =  tmp.slice(0, tmp.lastIndexOf("/"))
+    return tmp;
 }
