@@ -7,9 +7,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "BtcUtils.h"
-#include "cryptopp/hmac.h"
-#include "cryptopp/sha.h"
-#include "cryptopp/base64.h"
 #include "EncryptionUtils.h"
 #include "BlockDataManagerConfig.h"
 #include "bech32/ref/c++/segwit_addr.h"
@@ -18,20 +15,21 @@ using namespace std;
 
 const BinaryData BtcUtils::BadAddress_ = BinaryData::CreateFromHex("0000000000000000000000000000000000000000");
 const BinaryData BtcUtils::EmptyHash_  = BinaryData::CreateFromHex("0000000000000000000000000000000000000000000000000000000000000000");
-const string BtcUtils::base58Chars_ = string("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
+const string BtcUtils::base64Chars_ = string("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
 ////////////////////////////////////////////////////////////////////////////////
-const map<char, uint8_t> BtcUtils::base58Vals_ = {
-   { '1', 0 }, { '2', 1 }, { '3', 2 }, { '4', 3 }, { '5', 4 }, { '6', 5 },
-   { '7', 6 }, { '8', 7 }, { '9', 8 }, { 'A', 9 }, { 'B', 10 }, { 'C', 11 },
-   { 'D', 12 }, { 'E', 13 }, { 'F', 14 }, { 'G', 15 }, { 'H', 16 }, { 'J', 17 },
-   { 'K', 18 }, { 'L', 19 }, { 'M', 20 }, { 'N', 21 }, { 'P', 22 }, { 'Q', 23 },
-   { 'R', 24 }, { 'S', 25 }, { 'T', 26 }, { 'U', 27 }, { 'V', 28 }, { 'W', 29 },
-   { 'X', 30 }, { 'Y', 31 }, { 'Z', 32 }, { 'a', 33 }, { 'b', 34 }, { 'c', 35 },
-   { 'd', 36 }, { 'e', 37 }, { 'f', 38 }, { 'g', 39 }, { 'h', 40 }, { 'i', 41 },
-   { 'j', 42 }, { 'k', 43 }, { 'm', 44 }, { 'n', 45 }, { 'o', 46 }, { 'p', 47 }, 
-   { 'q', 48 }, { 'r', 49 }, { 's', 50 }, { 't', 51 }, { 'u', 52 }, { 'v', 53 }, 
-   { 'w', 54 }, { 'x', 55 }, { 'y', 56 }, { 'z', 57 }
+const map<char, uint8_t> BtcUtils::base64Vals_ = {
+   { 'A', 0 }, { 'B', 1 }, { 'C', 2 }, { 'D', 3 }, { 'E', 4 }, { 'F', 5 },
+   { 'G', 6 }, { 'H', 7 }, { 'I', 8 }, { 'J', 9 }, { 'K', 10 }, { 'L', 11 },
+   { 'M', 12 }, { 'N', 13 }, { 'O', 14 }, { 'P', 15 }, { 'Q', 16 }, { 'R', 17 },
+   { 'S', 18 }, { 'T', 19 }, { 'U', 20 }, { 'V', 21 }, { 'W', 22 }, { 'X', 23 },
+   { 'Y', 24 }, { 'Z', 25 }, { 'a', 26 }, { 'b', 27 }, { 'c', 28 }, { 'd', 29 },
+   { 'e', 30 }, { 'f', 31 }, { 'g', 32 }, { 'h', 33 }, { 'i', 34 }, { 'j', 35 },
+   { 'k', 36 }, { 'l', 37 }, { 'm', 38 }, { 'n', 39 }, { 'o', 40 }, { 'p', 41 },
+   { 'q', 42 }, { 'r', 43 }, { 's', 44 }, { 't', 45 }, { 'u', 46 }, { 'v', 47 }, 
+   { 'w', 48 }, { 'x', 49 }, { 'y', 50 }, { 'z', 51 }, { '0', 52 }, { '1', 53 }, 
+   { '2', 54 }, { '3', 55 }, { '4', 56 }, { '5', 57 }, { '6', 58 }, { '7', 59 },
+   { '8', 60 }, { '9', 61 }, { '+', 62 }, { '/', 63 }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -133,16 +131,20 @@ SecureBinaryData BtcUtils::getHMAC512(const string& key,
 void BtcUtils::getHMAC256(const uint8_t* keyptr, size_t keylen,
    const char* msgptr, size_t msglen, uint8_t* digest)
 {
-   CryptoPP::HMAC<CryptoPP::SHA256> hmac(keyptr, keylen);
-   hmac.CalculateDigest(digest, (const byte*)msgptr, msglen);
+   BinaryDataRef key_bdr(keyptr, keylen);
+   BinaryDataRef msg_bdr((uint8_t*)msgptr, msglen);
+
+   CryptoSHA2::getHMAC256(key_bdr, msg_bdr, digest);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void BtcUtils::getHMAC512(const void* keyptr, size_t keylen,
    const void* msgptr, size_t msglen, void* digest)
 {
-   CryptoPP::HMAC<CryptoPP::SHA512> hmac((uint8_t*)keyptr, keylen);
-   hmac.CalculateDigest((uint8_t*)digest, (const byte*)msgptr, msglen);
+   BinaryDataRef key_bdr((uint8_t*)keyptr, keylen);
+   BinaryDataRef msg_bdr((uint8_t*)msgptr, msglen);
+
+   CryptoSHA2::getHMAC512(key_bdr, msg_bdr, (uint8_t*)digest);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -186,6 +188,7 @@ BinaryData BtcUtils::computeDataId(const SecureBinaryData& data,
    return id.getSliceCopy(16, 16);
 }
 
+#ifndef LIBBTC_ONLY
 ////////////////////////////////////////////////////////////////////////////////
 BinaryData BtcUtils::rsToDerSig(BinaryDataRef bdr)
 {
@@ -252,6 +255,7 @@ BinaryData BtcUtils::rsToDerSig(BinaryDataRef bdr)
 
    return bw.getData();
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 BinaryData BtcUtils::getTxOutScrAddr(BinaryDataRef script,
@@ -416,24 +420,82 @@ TxOutScriptRef BtcUtils::getTxOutScrAddrNoCopy(BinaryDataRef script)
 ////////////////////////////////////////////////////////////////////////////////
 string BtcUtils::base64_encode(const string& in)
 {
-   string output;
-   CryptoPP::Base64Encoder base64e(
-      new CryptoPP::StringSink(output), false, in.size() + 1);
-   base64e.Put((const byte*)in.c_str(), in.size());
-   base64e.MessageEnd();
+   size_t main_count = in.size() / 3;
+   string result;
+   result.reserve(main_count * 4 + 5);
 
-   return output;
+   auto ptr = (const uint8_t*)in.c_str();
+   for (unsigned i = 0; i < main_count; i++)
+   {
+      uint32_t bits24 = ptr[i * 3] << 24 | ptr[i*3+1] << 16 | ptr[i*3+2] << 8;
+      for (unsigned y = 0; y < 4; y++)
+      {
+         unsigned val = (bits24 & 0xFC000000) >> 26;
+         result.append(1, base64Chars_.c_str()[val]);
+         bits24 <<= 6;
+      }
+   }
+
+   //padding
+   size_t left_over = in.size() - main_count * 3;
+   if (left_over == 0)
+      return result;
+
+   uint32_t bits24;
+   if (left_over == 1)
+      bits24 = ptr[main_count * 3] << 24;
+   else
+      bits24 = ptr[main_count * 3] << 24 | ptr[main_count * 3 + 1] << 16;
+
+   for (unsigned i = 0; i <= left_over; i++)
+   {
+      unsigned val = (bits24 & 0xFC000000) >> 26;
+      result.append(1, base64Chars_.c_str()[val]);
+      bits24 <<= 6;
+   }
+
+   result.append(3 - left_over, '=');
+   
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 string BtcUtils::base64_decode(const string& in)
 {
-   string output;
-   CryptoPP::Base64Decoder base64e(new CryptoPP::StringSink(output));
-   base64e.Put((const byte*)in.c_str(), in.size());
-   base64e.MessageEnd();
+   size_t count = in.size() / 4;
+   string result;
+   result.resize(count * 3 + 4);
+   auto ptr = in.c_str();
+   auto result_ptr = (uint8_t*)result.c_str();
 
-   return output;
+   size_t len = 0;
+   for (unsigned i = 0; i < count; i++)
+   {
+      uint32_t val = 0;
+      for (unsigned y = 0; y < 4; y++)
+      {
+         auto val8 = ptr[i * 4 + y];
+         auto iter = base64Vals_.find(val8);
+         if (iter == base64Vals_.end())
+         {
+            if (val8 == '=')
+               break;
+            throw runtime_error("invalid b64 character");
+         }
+
+         uint32_t bits = iter->second << (26 - (6 * y));
+         val |= bits;
+         ++len;
+      }
+
+      result_ptr[i * 3] = (val & 0xFF000000) >> 24;
+      result_ptr[i * 3 + 1] = (val & 0x00FF0000) >> 16;
+      result_ptr[i * 3 + 2] = (val & 0x0000FF00) >> 8;
+   }
+
+   result_ptr[len] = 0;
+   result.resize(len+1);
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

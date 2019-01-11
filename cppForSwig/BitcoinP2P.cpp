@@ -579,7 +579,7 @@ void Payload_Version::setVersionHeaderIPv4(uint32_t version, uint64_t services,
    vheader_.addr_recv_.setIPv4(services, recvaddr);
    vheader_.addr_from_.setIPv4(services, fromaddr);
 
-   auto&& randombytes = SecureBinaryData().GenerateRandom(8);
+   auto&& randombytes = CryptoPRNG::generateRandom(8);
    vheader_.nonce_ = *(uint64_t*)randombytes.getPtr();
 }
 
@@ -933,7 +933,7 @@ void BitcoinP2P::connectLoop(void)
          version.setVersionHeaderIPv4(70012, services, timestamp,
             node_addr_, clientsocketaddr);
 
-         version.userAgent_ = "Armory:0.96.4";
+         version.userAgent_ = "Armory:0.96.5";
          version.startHeight_ = -1;
 
          sendMessage(move(version));

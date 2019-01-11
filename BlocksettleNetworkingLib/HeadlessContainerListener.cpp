@@ -142,7 +142,7 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
          return;
       }
 
-      const auto authTicket = SecureBinaryData().GenerateRandom(8);;
+      const auto authTicket = CryptoPRNG::generateRandom(8);
       logger_->debug("[HeadlessContainerListener] setting authTicket {} for {}", authTicket.toHexStr(), toHex(clientId));
       authTickets_[clientId] = authTicket;
       AuthResponse(clientId, packet);

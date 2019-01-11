@@ -24,6 +24,7 @@
 
 #define RPC_PORT_MAINNET 8332
 #define RPC_PORT_TESTNET 18332
+#define RPC_PORT_REGTEST 18443
 
 enum BDMPhase
 {

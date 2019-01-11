@@ -28,7 +28,9 @@ BinaryData KeyDerivationFunction_Romix::computeID() const
    bw.put_uint32_t(iterations_);
    bw.put_uint32_t(memTarget_);
 
-   return BtcUtils::getHash256(bw.getData());
+   BinaryData bd(32);
+   CryptoSHA2::getHash256(bw.getData(), bd.getPtr());
+   return bd;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

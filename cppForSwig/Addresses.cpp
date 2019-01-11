@@ -549,7 +549,7 @@ shared_ptr<ScriptRecipient> AddressEntry_P2WSH::getRecipient(
    uint64_t value) const
 {
    auto& hash = getHash();
-   return make_shared<Recipient_PW2SH>(hash, value);
+   return make_shared<Recipient_P2WSH>(hash, value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

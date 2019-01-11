@@ -377,7 +377,7 @@ std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
          return std::make_shared<Recipient_P2PKH>(unprefixed(), value);
 
       case AddressEntryType_P2WSH:
-         return std::make_shared<Recipient_PW2SH>(unprefixed(), value);
+         return std::make_shared<Recipient_P2WSH>(unprefixed(), value);
 
       case AddressEntryType_P2SH:
          return std::make_shared<Recipient_P2SH>(unprefixed(), value);

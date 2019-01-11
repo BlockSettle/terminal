@@ -69,7 +69,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
    bool refresh = false;
 
    ScanWalletStruct scanData;
-   map<BinaryData, LedgerEntry>* leMapPtr = nullptr;
+   vector<LedgerEntry>* leVecPtr = nullptr;
 
    switch (action->action_type())
    {
@@ -113,6 +113,9 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
             reorgNotif->zcPurgePacket_->minedTxioKeys_;
       }
 
+      //carry zc state
+      scanData.saStruct_.zcState_ = reorgNotif->zcState_;
+
       prevTopBlock = reorgState.prevTop_->getBlockHeight() + 1;
 
       break;
@@ -135,7 +138,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
             zcAction->packet_.purgePacket_->invalidatedZcKeys_;
       }
 
-      leMapPtr = &zcAction->leMap_;
+      leVecPtr = &zcAction->leVec_;
       prevTopBlock = startBlock = endBlock = blockchain().top()->getBlockHeight();
 
       break;
@@ -185,10 +188,16 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       scanData.startBlock_ = *sbIter;
       group.scanWallets(scanData, updateID_);
 
-      if (leMapPtr != nullptr)
-         leMapPtr->insert(scanData.saStruct_.zcLedgers_.begin(),
-                          scanData.saStruct_.zcLedgers_.end());
       sbIter++;
+   }
+
+   if (leVecPtr != nullptr)
+   {
+      for (auto& walletLedgerMap : scanData.saStruct_.zcLedgers_)
+      {
+         for(auto& lePair : walletLedgerMap.second)
+            leVecPtr->push_back(lePair.second);
+      }
    }
 
    lastScanned_ = endBlock;

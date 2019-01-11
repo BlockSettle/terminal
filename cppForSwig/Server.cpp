@@ -78,7 +78,7 @@ int WebSocketServer::callback(
 
    case LWS_CALLBACK_ESTABLISHED:
    {
-      auto&& bdid = SecureBinaryData().GenerateRandom(8);
+      auto&& bdid = CryptoPRNG::generateRandom(8);
       session_data->id_ = *(uint64_t*)bdid.getPtr();
 
       auto instance = WebSocketServer::getInstance();
