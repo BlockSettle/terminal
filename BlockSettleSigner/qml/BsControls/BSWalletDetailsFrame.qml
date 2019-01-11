@@ -99,7 +99,7 @@ ColumnLayout {
             placeholderText: qsTr("Old Password")
             Layout.fillWidth: true
             Layout.preferredWidth: inputsWidth
-            KeyNavigation.tab: nextFocusItem
+            KeyNavigation.tab: nextFocusItem === undefined ? null : nextFocusItem
             Keys.onEnterPressed: { nextFocusItem.forceActiveFocus() }
             Keys.onReturnPressed: { nextFocusItem.forceActiveFocus() }
         }

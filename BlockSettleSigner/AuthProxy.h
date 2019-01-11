@@ -27,13 +27,16 @@ public:
    AuthObject(QObject *parent = nullptr)
       : QObject(parent) {}
 
+   AuthObject(std::shared_ptr<spdlog::logger> logger, QObject *parent = nullptr)
+      : logger_(logger), QObject(parent) {}
+
 signals:
    void statusChanged();
-   void error(QString errMsg) const;
 
 protected:
    QString status() const { return status_; }
    void setStatus(const QString &);
+   std::shared_ptr<spdlog::logger> logger_;
 
 private:
    QString status_;
@@ -49,8 +52,10 @@ public:
    AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &
                         , QObject *parent = nullptr);
 
+   void connectToServer();
+
    // used for wallet creation and signing
-   bool signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo);
+   void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo);
 
    // used for device removing
    void removeDevice(int index, bs::hd::WalletInfo *walletInfo);

@@ -50,8 +50,8 @@ CustomTitleDialogWindow {
         CustomLabel {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
-            visible: !txInfo.nbInputs && txInfo.walletInfo.name.length
-            text: qsTr("Wallet %1").arg(txInfo.walletInfo.name)
+            visible: !txInfo.nbInputs && walletInfo.name.length
+            text: qsTr("Wallet %1").arg(walletInfo.name)
         }
 
         GridLayout {
@@ -74,7 +74,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Sending Wallet")
             }
             CustomLabelValue {
-                text: txInfo.walletInfo.name
+                text: walletInfo.name
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -160,7 +160,7 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 Layout.fillWidth: true
-                text: txInfo.walletInfo.encType !== NsWallet.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
+                text: walletInfo.encType !== NsWallet.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
                 Layout.preferredHeight: 25
             }
         }
@@ -183,7 +183,7 @@ CustomTitleDialogWindow {
 
             CustomPasswordTextInput {
                 id: tfPassword
-                visible: txInfo.walletInfo.encType === NsWallet.Password
+                visible: walletInfo.encType === NsWallet.Password
                 focus: true
                 placeholderText: qsTr("Password")
                 echoMode: TextField.Password
@@ -192,7 +192,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 id: labelAuth
-                visible: txInfo.walletInfo.encType === NsWallet.Auth
+                visible: walletInfo.encType === NsWallet.Auth
                 text: authSign.status
             }
         }
@@ -223,7 +223,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 text: qsTr("On completion just press [Enter] or [Return]")
-                visible: txInfo.walletInfo.encType !== NsWallet.Auth
+                visible: walletInfo.encType !== NsWallet.Auth
                 Layout.fillWidth: true
             }
             CustomLabelValue {
@@ -260,17 +260,17 @@ CustomTitleDialogWindow {
 
             CustomButtonPrimary {
                 id: btnConfirm
-                text: txInfo.walletInfo.encType === NsWallet.Password ? qsTr("CONFIRM") : qsTr("Continue")
+                text: walletInfo.encType === NsWallet.Password ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable
                 onClicked: {
-                    if (txInfo.walletInfo.encType === NsWallet.Password) {
+                    if (walletInfo.encType === NsWallet.Password) {
                         passwordData.textPassword = tfPassword.text
                         passwordData.encType = NsWallet.Password
                         acceptAnimated()
                     }
-                    else if (txInfo.walletInfo.encType === NsWallet.Auth) {
+                    else if (walletInfo.encType === NsWallet.Auth) {
                         JsHelper.requesteIdAuth(AutheIDClient.SignWallet
                                                 , walletInfo
                                                 , function(pd){

@@ -8,11 +8,11 @@
 #include "SignerSettings.h"
 
 
-static const QString headlessPubKeyName = QString::fromStdString("headlesspubkey");
-static const QString headlessPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for headless connections");
+static const QString zmqPubKeyName = QString::fromStdString("zmqpubkey");
+static const QString zmqPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for ZMQ connections");
 
-static const QString headlessPrvKeyName = QString::fromStdString("headlessprvkey");
-static const QString headlessPrvKeyHelp = QObject::tr("Private key file (CurveZMQ) for headless connections");
+static const QString zmqPrvKeyName = QString::fromStdString("zmqprvkey");
+static const QString zmqPrvKeyHelp = QObject::tr("Private key file (CurveZMQ) for ZMQ connections");
 
 static const QString listenName = QString::fromStdString("listen");
 static const QString listenHelp = QObject::tr("IP address to listen on");
@@ -62,8 +62,8 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
       { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_signer.log")) },
       { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
       { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
-      { HeadlessPubKey,    SettingDef(QStringLiteral("HeadlessPubKey"), QString::fromStdString(writableDir_ + "/headless_conn_srv.pub")) },
-      { HeadlessPrvKey,    SettingDef(QStringLiteral("HeadlessPrvKey"), QString::fromStdString(writableDir_ + "/headless_conn_srv.prv")) },
+      { ZMQPubKey,    SettingDef(QStringLiteral("ZMQPubKey"), QString::fromStdString(writableDir_ + "/headless_conn_srv.pub")) },
+      { ZMQPrvKey,    SettingDef(QStringLiteral("ZMQPrvKey"), QString::fromStdString(writableDir_ + "/headless_conn_srv.prv")) },
       { PasswordHash,      SettingDef(QStringLiteral("PasswordHash")) },
       { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
@@ -209,8 +209,8 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addHelpOption();
    parser.addOption({ listenName, listenHelp, QObject::tr("ip/host") });
    parser.addOption({ portName, portHelp, QObject::tr("port") });
-   parser.addOption({ headlessPubKeyName, headlessPubKeyHelp, QObject::tr("key") });
-   parser.addOption({ headlessPrvKeyName, headlessPrvKeyHelp, QObject::tr("key") });
+   parser.addOption({ zmqPubKeyName, zmqPubKeyHelp, QObject::tr("key") });
+   parser.addOption({ zmqPrvKeyName, zmqPrvKeyHelp, QObject::tr("key") });
    parser.addOption({ pwhashName, pwhashHelp, QObject::tr("hash") });
    parser.addOption({ logName, logHelp, QObject::tr("log") });
    parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
@@ -230,18 +230,18 @@ void SignerSettings::parseArguments(const QStringList &args)
       set(ListenPort, parser.value(portName), false);
    }
 
-   if (parser.isSet(headlessPubKeyName)) {
-      if (parser.value(headlessPubKeyName).length() != 40) {
-         throw std::runtime_error("invalid headless pub key size");
+   if (parser.isSet(zmqPubKeyName)) {
+      if (parser.value(zmqPubKeyName).length() != 40) {
+         throw std::runtime_error("invalid ZMQ connection pub key size");
       }
-      set(HeadlessPubKey, parser.value(headlessPubKeyName), false);
+      set(ZMQPubKey, parser.value(zmqPubKeyName), false);
    }
 
-   if (parser.isSet(headlessPrvKeyName)) {
-      if (parser.value(headlessPrvKeyName).length() != 40) {
-         throw std::runtime_error("invalid headless prv key size");
+   if (parser.isSet(zmqPrvKeyName)) {
+      if (parser.value(zmqPrvKeyName).length() != 40) {
+         throw std::runtime_error("invalid ZMQ connection prv key size");
       }
-      set(HeadlessPrvKey, parser.value(headlessPrvKeyName), false);
+      set(ZMQPrvKey, parser.value(zmqPrvKeyName), false);
    }
 
    if (parser.isSet(pwhashName)) {
