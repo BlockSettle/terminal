@@ -41,7 +41,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 12 )
-SET(BS_VERSION_PATCH 5 )
+SET(BS_VERSION_PATCH 6 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -101,6 +101,7 @@ FIND_PACKAGE(Qt5Qml REQUIRED)
 FIND_PACKAGE(Qt5Quick REQUIRED)
 FIND_PACKAGE(Qt5QuickControls2 REQUIRED)
 FIND_PACKAGE(Qt5Charts REQUIRED)
+FIND_PACKAGE(Qt5Sql REQUIRED)
 
 IF ( UNIX AND NOT APPLE )
    FIND_PACKAGE(Qt5DBus REQUIRED)
@@ -393,7 +394,10 @@ IF(WIN32)
          Qt5WindowsUIAutomationSupportd.lib
          Qt5AccessibilitySupportd.lib
          Qt5Chartsd.lib )
-      LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
+      LIST(APPEND OS_SPECIFIC_LIBS
+         msvcrtd
+         ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
+      )
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quickd.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgetsd.lib
@@ -422,7 +426,10 @@ IF(WIN32)
          Qt5WindowsUIAutomationSupport.lib
          Qt5AccessibilitySupport.lib
          Qt5Charts.lib)
-      LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
+      LIST(APPEND OS_SPECIFIC_LIBS
+         msvcrt
+         ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
+      )
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quick.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgets.lib
@@ -487,6 +494,9 @@ ELSE(WIN32)
             libQt5EdidSupport_debug.a
             libQt5Charts_debug.a
             )
+         LIST (APPEND OS_SPECIFIC_LIBS
+            ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite_debug.a
+         )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin_debug.a
@@ -518,6 +528,9 @@ ELSE(WIN32)
             libQt5EdidSupport.a
             libQt5Charts.a
             )
+         LIST (APPEND OS_SPECIFIC_LIBS
+            ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
+         )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
@@ -556,7 +569,10 @@ ELSE(WIN32)
          libQt5AccessibilitySupport.a
          libQt5EdidSupport.a )
 
-      LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+      LIST(APPEND QT_LINUX_LIBS
+         ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
+         ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
+      )
 
       IF(NOT EXISTS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
          MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a")
