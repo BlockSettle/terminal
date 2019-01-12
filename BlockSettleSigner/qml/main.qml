@@ -39,6 +39,11 @@ ApplicationWindow {
         color: BSStyle.backgroundModeLessColor
     }
 
+    // attached to use from c++
+    function messageBoxCritical(title, text, details) {
+        return JsHelper.messageBoxCritical(title, text, details)
+    }
+
     Settings {
         id: settings
         category: "GUI"

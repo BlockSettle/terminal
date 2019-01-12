@@ -66,6 +66,9 @@ private:
    void requestPassword(const bs::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
    void disconnect();
 
+   void initZmqKeys();
+   void registerQtTypes();
+
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<SignerSettings>  settings_;
    QQmlContext                *     ctxt_;

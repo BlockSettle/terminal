@@ -176,6 +176,12 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    case ListenPort:
       emit listenSocketChanged();
       break;
+   case ZMQPubKey:
+      emit zmqPubKeyFileChanged();
+      break;
+   case ZMQPrvKey:
+      emit zmqPrvKeyFileChanged();
+      break;
    case LimitManualXBT:
       emit limitManualXbtChanged();
       break;
@@ -288,6 +294,22 @@ SignContainer::Limits SignerSettings::limits() const
 QString SignerSettings::dirDocuments() const
 {
    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+}
+
+void SignerSettings::setZmqPubKeyFile(const QString &file)
+{
+   if (file == get(ZMQPubKey).toString()) {
+      return;
+   }
+   set(ZMQPubKey, file);
+}
+
+void SignerSettings::setZmqPrvKeyFile(const QString &file)
+{
+   if (file == get(ZMQPrvKey).toString()) {
+      return;
+   }
+   set(ZMQPrvKey, file);
 }
 
 void SignerSettings::setWalletsDir(const QString &val)
