@@ -92,7 +92,7 @@ public:
    // for qml
    QSeed(bool isTestNet)
       : Seed(isTestNet ? NetworkType::TestNet : NetworkType::MainNet
-                         , SecureBinaryData().GenerateRandom(32)) {}
+                         , CryptoPRNG::generateRandom(32)) {}
 
    QSeed(const QString &seed, QNetworkType netType)
       : Seed(seed.toStdString(), fromQNetworkType(netType)) {}
