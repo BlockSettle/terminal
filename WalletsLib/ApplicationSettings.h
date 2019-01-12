@@ -34,8 +34,6 @@ public:
 
    enum Setting {
       initialized,
-      ignoreAllZC,
-      satoshiPort,
       runArmoryLocally,
       netType,
       armoryDbIp,
@@ -54,6 +52,9 @@ public:
       chatServerHost,
       chatServerPort,
       chatServerPubKey,
+      chatPrivKey,
+      chatPubKey,
+      chatDbFile,
       celerUsername,
       signerHost,
       signerPort,
@@ -69,7 +70,6 @@ public:
       bsPublicKey,
       logDefault,
       logMessages,
-      otpFileName,
       ccFileName,
       txCacheFileName,
       nbBackupFilesKeep,
@@ -127,8 +127,6 @@ public:
    QString GetSettingsPath() const;
 
    QString  GetHomeDir() const;
-   QString  GetBitcoinsDir() const;
-   int GetSatoshiPort() const;
    QString  GetBackupDir() const;
 
    ArmorySettings GetArmorySettings() const;

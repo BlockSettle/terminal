@@ -12,8 +12,6 @@ struct ArmorySettings
 {
    NetworkType netType;
 
-   bool ignoreAllZC;
-
    SocketType socketType;
 
    std::string armoryDBIp;

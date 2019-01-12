@@ -28,7 +28,6 @@ static const QString SettingsCompanyName = QLatin1String("BlockSettle");
 
 static const QString LogFileName = QLatin1String("bs_terminal.log");
 static const QString LogMsgFileName = QLatin1String("bs_terminal_messages.log");
-static const QString OTPFileName = QLatin1String("terminal.otp");
 static const QString CCFileName = QLatin1String("ccgenaddr.signed");
 static const QString TxCacheFileName = QLatin1String("transactions.cache");
 
@@ -39,8 +38,6 @@ static const QString dataDirName = QLatin1String("datadir");
 static const QString dataDirHelp = QLatin1String("Change the directory that Armory calls home");
 static const QString satoshiDataDirName = QLatin1String("satoshi-datadir");
 static const QString satoshiDataDirHelp = QLatin1String("The Bitcoin-Core/bitcoind home directory");
-static const QString satoshiPortName = QLatin1String("satoshi-port");
-static const QString satoshiPortHelp = QLatin1String("For Bitcoin-Core instances operating on a non-standard port");
 static const QString blockDBDirName = QLatin1String("dbdir");
 static const QString blockDBDirHelp = QLatin1String("Location to store blocks database (defaults to --datadir");
 static const QString testnetName = QLatin1String("testnet");
@@ -78,8 +75,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
 
    settingDefs_ = {
       { initialized,             SettingDef(QLatin1String("SettingsAccepted"), false) },
-      { ignoreAllZC,             SettingDef(QString(), false) },
-      { satoshiPort,             SettingDef(QString(), -1) },
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("armory.blocksettle.com")) },
@@ -98,6 +93,9 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { chatServerHost,          SettingDef(QString(), QLatin1String("185.213.153.45")) },
       { chatServerPort,          SettingDef(QString(), 9400) },
       { chatServerPubKey,        SettingDef(QString(), QLatin1String("@:2IFYqVXa}+eRpKW9Q310j4cB%%nKe8$-v6bSOg")) },
+      { chatPrivKey,             SettingDef(QString()) },
+      { chatPubKey,              SettingDef(QString()) },
+      { chatDbFile,              SettingDef(QString(), AppendToWritableDir(QLatin1String("chat.db"))) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
       { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },
@@ -113,7 +111,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { bsPublicKey,             SettingDef(QString(), QLatin1String("042aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fafa1270ccdc2cd285b5d90ddd3ef6f39c4c43efea52d75adadd16c6132e3ef880")) },
       { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String("trace")) },
       { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QString()) },
-      { otpFileName,             SettingDef(QString(), AppendToWritableDir(OTPFileName))},
       { ccFileName,              SettingDef(QString(), AppendToWritableDir(CCFileName))},
       { txCacheFileName,         SettingDef(QString(), AppendToWritableDir(TxCacheFileName)) },
       { nbBackupFilesKeep,       SettingDef(QString(), 10) },
@@ -300,7 +297,6 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    parser.addOption({ dataDirName , dataDirHelp, QLatin1String("ddir") });
    parser.addOption({ satoshiDataDirName , satoshiDataDirHelp, QLatin1String("btcdir") });
    parser.addOption({ blockDBDirName , blockDBDirHelp, QLatin1String("dbdir") });
-   parser.addOption({ satoshiPortName, satoshiPortHelp, QLatin1String("satoshiport") });
    parser.addOption({ armoryDBIPName, armoryDBIPHelp, QLatin1String("dbip") });
    parser.addOption({ armoryDBPortName, armoryDBPortHelp, QLatin1String("dbport") });
    parser.addOption({ nonSpendZeroConfName, nonSpendZeroConfHelp });
@@ -337,17 +333,12 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    SetBitcoinsDir(parser.value(satoshiDataDirName));
    SetDBDir(parser.value(blockDBDirName));
 
-   if (parser.isSet(satoshiPortName)) {
-      set(satoshiPort, parser.value(satoshiPortName).toInt(), false);
-   }
-
    if (parser.isSet(armoryDBIPName)) {
       set(armoryDbIp, parser.value(armoryDBIPName));
    }
    if (parser.isSet(armoryDBPortName)) {
       set(armoryDbPort, parser.value(armoryDBPortName).toInt());
    }
-   set(ignoreAllZC, parser.isSet(nonSpendZeroConfName));
 
    settings_.sync();
 
@@ -356,8 +347,6 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 
 void ApplicationSettings::SetDefaultSettings(bool toFile)
 {
-   reset(ignoreAllZC, toFile);
-   reset(satoshiPort, toFile);
    reset(pubBridgeHost, toFile);
    reset(pubBridgePort, toFile);
 
@@ -429,16 +418,11 @@ QString ApplicationSettings::GetDefaultBitcoinsDir() const
    }
 }
 
-QString ApplicationSettings::GetBitcoinsDir() const
+QString ApplicationSettings::GetBitcoinBlocksDir() const
 {
    const QString dir = bitcoinsDir_.isEmpty() ? GetDefaultBitcoinsDir() : bitcoinsDir_;
    QDir().mkpath(dir);
-   return dir;
-}
-
-QString ApplicationSettings::GetBitcoinBlocksDir() const
-{
-   return QDir::cleanPath(GetBitcoinsDir() + QDir::separator() + blockDirName);
+   return QDir::cleanPath(dir + QDir::separator() + blockDirName);
 }
 
 void ApplicationSettings::SetBitcoinsDir(const QString& path)
@@ -464,20 +448,6 @@ void ApplicationSettings::SetDBDir(const QString &path)
 {
    if (!path.isEmpty()) {
       dbDir_ = QDir::cleanPath(path);
-   }
-}
-
-int ApplicationSettings::GetSatoshiPort() const
-{
-   if (!isDefault(satoshiPort)) {
-      return get<int>(satoshiPort);
-   }
-   switch (get<NetworkType>(netType)) {
-   case NetworkType::TestNet:
-   case NetworkType::RegTest:
-      return DefaultTestnetSatoshiPort;
-   default:
-      return DefaultSatoshiPort;
    }
 }
 
@@ -520,7 +490,6 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    ArmorySettings settings;
 
    settings.netType = get<NetworkType>(netType);
-   settings.ignoreAllZC = get<bool>(ApplicationSettings::ignoreAllZC);
    settings.runLocally = get<bool>(ApplicationSettings::runArmoryLocally);
    if (settings.runLocally) {
       settings.armoryDBIp = "127.0.0.1";

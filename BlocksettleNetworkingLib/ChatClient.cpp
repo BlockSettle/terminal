@@ -5,12 +5,15 @@
 #include "botan/base64.h"
 
 #include "ZmqSecuredDataConnection.h"
+#include "ChatDB.h"
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
 #include "EncryptUtils.h"
 
 #include <QDateTime>
 
+Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
 
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                   , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -20,6 +23,14 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    , appSettings_(appSettings)
    , logger_(logger)
 {
+   qRegisterMetaType<std::shared_ptr<Chat::MessageData>>();
+   qRegisterMetaType<std::vector<std::shared_ptr<Chat::MessageData>>>();
+
+   chatDb_ = std::make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
+   if (!chatDb_->loadKeys(pubKeys_)) {
+      throw std::runtime_error("failed to load chat public keys");
+   }
+
    heartbeatTimer_.setInterval(30 * 1000);
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
@@ -77,7 +88,7 @@ void ChatClient::logout()
    loggedIn_ = false;
 
    if (!connection_) {
-      logger_->error("[ChatClient::logout] Disconnected already.");
+      logger_->error("[ChatClient::logout] Disconnected already");
       return;
    }
 
@@ -90,15 +101,12 @@ void ChatClient::logout()
 
 void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 {
-   auto requestData = request->getData();
+   const auto requestData = request->getData();
+   logger_->debug("[ChatClient::sendRequest] {}", requestData);
 
-   logger_->debug("[ChatClient::sendRequest] \"{}\"", requestData.c_str());
-
-   if (!connection_->isActive())
-   {
+   if (!connection_->isActive()) {
       logger_->error("Connection is not alive!");
    }
-
    connection_->send(requestData);
 }
 
@@ -133,8 +141,21 @@ void ChatClient::OnUsersList(const Chat::UsersListResponse &response)
 void ChatClient::OnMessages(const Chat::MessagesResponse &response)
 {
    logger_->debug("Received messages from server: {}", response.getData());
+   std::vector<std::shared_ptr<Chat::MessageData>> messages;
+   for (const auto &msgStr : response.getDataList()) {
+      const auto msg = Chat::MessageData::fromJSON(msgStr);
+      chatDb_->add(*msg);
 
-   emit MessagesUpdate(response.getDataList());
+      if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
+         if (!msg->decrypt(ownPrivKey_)) {
+            logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
+            msg->setFlag(Chat::MessageData::State::Invalid);
+         }
+      }
+      messages.push_back(msg);
+   }
+
+   emit MessagesUpdate(messages);
 }
 
 void ChatClient::OnDataReceived(const std::string& data)
@@ -165,8 +186,34 @@ void ChatClient::onSendMessage(const QString &message, const QString &receiver)
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
    Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
-                    , QDateTime::currentDateTimeUtc(), message);
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc(), message);
+   chatDb_->add(msg);
+
+   const auto &itPub = pubKeys_.find(receiver);
+   if (itPub != pubKeys_.end()) {
+      if (!msg.encrypt(itPub->second)) {
+         logger_->error("[ChatClient::sendMessage] failed to encrypt message {}"
+            , msg.getId().toStdString());
+      }
+   }
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());
    sendRequest(request);
+}
+
+void ChatClient::retrieveUserMessages(const QString &userId)
+{
+   auto messages = chatDb_->getUserMessages(userId);
+   if (!messages.empty()) {
+      for (auto &msg : messages) {
+         if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
+            if (!msg->decrypt(ownPrivKey_)) {
+               logger_->error("Failed to decrypt msg from DB {}", msg->getId().toStdString());
+               msg->setFlag(Chat::MessageData::State::Invalid);
+            }
+         }
+      }
+      emit MessagesUpdate(messages);
+   }
 }
