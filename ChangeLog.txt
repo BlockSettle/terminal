@@ -1,3 +1,7 @@
+0.12.6
+Improvements:
+   - Added SQLite DB for chat data persistency
+
 0.12.5
 Improvements:
    - Signer connection now uses random key
