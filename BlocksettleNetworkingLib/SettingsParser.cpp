@@ -86,9 +86,13 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
 void SettingsParser::addParamVariant(SettingsParser::BaseSettingsParam &param
    , const char *name, const QVariant &defValue, const char *descr)
 {
+   if (paramsNames_.find(name) != paramsNames_.end()) {
+      throw std::logic_error(fmt::format("duplicated parameter name detected ({})", name));
+   }
    param.name_ = QLatin1String(name);
    param.defValue_ = defValue;
    param.desc_ = QLatin1String(descr);
    param.setValue(defValue);
    params_.push_back(&param);
+   paramsNames_.insert(name);
 }
