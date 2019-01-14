@@ -100,7 +100,7 @@ void BIP32_Node::decodeBase58(const char* str)
 {
    btc_hdnode node;
 
-   //b58 decode
+   //b58 decode 
    if(!btc_hdnode_deserialize(
       str, NetworkConfig::get_chain_params(), &node))
       throw std::runtime_error("invalid bip32 serialized string");

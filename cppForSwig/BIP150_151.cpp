@@ -21,7 +21,7 @@
 #include "btc/ripemd160.h"
 #include "btc/base58.h"
 #include "BtcUtils.h"
-//#include "log.h"
+#include "log.h"
 #include "BIP150_151.h"
 
 // Because libbtc doesn't export its libsecp256k1 context, and we need one for
@@ -39,7 +39,7 @@ uint32_t ipType_ = 0;
 // Need to initialize things, and not just for BIP 151 once libbtc is used more.
 
 // Startup code for BIP 151. Used for initialization of underlying libraries.
-// 
+//
 // IN:  None
 // OUT: None
 // RET: N/A
@@ -57,7 +57,7 @@ void startupBIP151CTX()
 }
 
 // Startup code for BIP 151. Used for shutdown of underlying libraries.
-// 
+//
 // IN:  None
 // OUT: None
 // RET: N/A
@@ -70,7 +70,7 @@ void shutdownBIP151CTX()
 }
 
 // Overridden constructor for a BIP 151 session. Sets the session direction.
-// 
+//
 // IN:  sessOut - Indicates session direction.
 // OUT: None
 // RET: N/A
@@ -102,7 +102,7 @@ isOutgoing_(sessOut)
 
 // Function that generates the symmetric keys required by the BIP 151
 // ciphersuite and performs any related setup.
-// 
+//
 // IN:  peerPubKey  (The peer's public key - Assume the key is validated)
 // OUT: N/A
 // RET: -1 if not successful, 0 if successful.
@@ -120,8 +120,8 @@ const int BIP151Session::genSymKeys(const uint8_t* peerPubKey)
       if(secp256k1_ec_pubkey_parse(secp256k1_ecdh_ctx, &peerECDHPK, peerPubKey,
                                    BIP151PUBKEYSIZE) != 1)
       {
-/*         LOGERR << "BIP 151 - Peer public key for session " << getSessionIDHex()
-            << " is invalid.";*/
+         LOGERR << "BIP 151 - Peer public key for session " << getSessionIDHex()
+            << " is invalid.";
          return retVal;
       }
 
@@ -139,7 +139,7 @@ const int BIP151Session::genSymKeys(const uint8_t* peerPubKey)
       if(secp256k1_ec_pubkey_tweak_mul(secp256k1_ecdh_ctx, &peerECDHPK,
                                        genSymECDHPrivKey_.privkey) != 1)
       {
-//         LOGERR << "BIP 151 - ECDH failed.";
+         LOGERR << "BIP 151 - ECDH failed.";
          return -1;
       }
 
@@ -167,7 +167,7 @@ const int BIP151Session::genSymKeys(const uint8_t* peerPubKey)
 // Function checking to see if we need to perform a rekey. Will occur if too
 // many bytes have been sent using the current ciphersuite (mandatory in the
 // spec) or if enough time has lapsed (optional in the spec).
-// 
+//
 // IN:  None
 // OUT: None
 // RET: True if a rekey is required, false if not.
@@ -183,11 +183,11 @@ const bool BIP151Session::rekeyNeeded()
       retVal = true;
    }
    return retVal;
-}   
+}
 
 // Public function used to kick off symmetric key setup. Any setup directly
 // related to symmetric keys should be handled here.
-// 
+//
 // IN:  peerPubKey  (The peer's public key - Needs to be validated)
 // OUT: None
 // RET: -1 if failure, 0 if success.
@@ -228,7 +228,7 @@ const int BIP151Session::symKeySetup(const uint8_t* peerPubKey,
 
 // A helper function that calculates the ChaCha20Poly1305 keys based on the BIP
 // 151 spec.
-// 
+//
 // IN:  sesECDHKey (The session's ECDH key - libbtc formatting)
 // OUT: None
 // RET: None
@@ -252,7 +252,7 @@ void BIP151Session::calcChaCha20Poly1305Keys(const btc_key& sesECDHKey)
 
 // A helper function that calculates the session ID. See the "Symmetric
 // Encryption Cipher Keys" section of the BIP 151 spec.
-// 
+//
 // IN:  sesECDHKey (The session's ECDH key - libbtc formatting)
 // OUT: None
 // RET: None
@@ -275,7 +275,7 @@ void BIP151Session::calcSessionID(const btc_key& sesECDHKey)
 // should be called when the other side wishes for a rekey or when we hit a
 // policy limit (e.g., time or bytes sent by us). Rekey checks should be
 // performed elsewhere.
-// 
+//
 // IN:  None
 // OUT: None
 // RET: N/A
@@ -322,7 +322,7 @@ void BIP151Session::sessionRekey(const bool& bip151Rekey,
 
 // A function that checks to see if an incoming encack message is requesting a
 // rekey. See the "Re-Keying" section of the BIP 151 spec.
-// 
+//
 // IN:  inMsg - Pointer to a message to check for a rekey request.
 //      inMsgSize - incoming message size. Must be 33 bytes.
 // OUT: None
@@ -367,7 +367,7 @@ const int BIP151Session::encPayload(uint8_t* cipherData,
                              AUTHASSOCDATAFIELDLEN,
                              CHACHAPOLY1305_AEAD_ENC) == -1)
    {
-//      LOGERR << "Encryption at sequence number " << seqNum_ << " failed.";
+      LOGERR << "Encryption at sequence number " << seqNum_ << " failed.";
    }
    else
    {
@@ -415,7 +415,7 @@ const int BIP151Session::decPayload(const uint8_t* cipherData,
                              AUTHASSOCDATAFIELDLEN,
                              CHACHAPOLY1305_AEAD_DEC) == -1)
    {
-//      LOGERR << "Decryption at sequence number " << seqNum_ << " failed.";
+      LOGERR << "Decryption at sequence number " << seqNum_ << " failed.";
    }
    else
    {
@@ -428,7 +428,7 @@ const int BIP151Session::decPayload(const uint8_t* cipherData,
 }
 
 // FIX Internal function that actually does the ChaCha20Poly1305 rekeying.
-// 
+//
 // IN:  keySize - The size of the key to be updated.
 // OUT: keyToUpdate - The updated key (ChaCha20 or Poly1305).
 // RET: None
@@ -476,7 +476,7 @@ void BIP151Session::chacha20Poly1305Rekey(uint8_t* keyToUpdate,
 
 // A helper function that confirms whether or not we have a valid ciphersuite,
 // and sets an internal variable.
-// 
+//
 // IN:  inCipher - The incoming cipher type.
 // OUT: None
 // RET: -1 if failure, 0 if success
@@ -490,15 +490,15 @@ const int BIP151Session::setCipherType(const BIP151SymCiphers& inCipher)
    }
    else
    {
-/*      LOGERR << "BIP 151 - Invalid ciphersuite type ("
-         << static_cast<int>(inCipher) << ")";*/
+      LOGERR << "BIP 151 - Invalid ciphersuite type ("
+         << static_cast<int>(inCipher) << ")";
    }
    return retVal;
 }
 
 // A helper function that confirms whether or not we have a valid ciphersuite,
 // and sets an internal variable.
-// 
+//
 // IN:  inCipher - The incoming cipher type.
 // OUT: None
 // RET: True if valid, false if not valid.
@@ -516,7 +516,7 @@ const bool BIP151Session::isCipherValid(const BIP151SymCiphers& inCipher)
 
 // A helper function that returns the public key used to generate the ECDH key
 // that will eventually generate the symmetric BIP 151 key set.
-// 
+//
 // IN:  None
 // OUT: tempECDHPubKey - A compressed public key to be used in ECDH.
 // RET: None
@@ -547,8 +547,8 @@ const int BIP151Session::getEncinitData(uint8_t* initBuffer,
    }
    if(initBufferSize != ENCINITMSGSIZE)
    {
-/*      LOGERR << "BIP 151 - encinit data buffer is not " << ENCINITMSGSIZE
-         << " bytes.";*/
+      LOGERR << "BIP 151 - encinit data buffer is not " << ENCINITMSGSIZE
+         << " bytes.";
       return retVal;
    }
 
@@ -561,7 +561,7 @@ const int BIP151Session::getEncinitData(uint8_t* initBuffer,
                                  &ourPubKey,
                                  genSymECDHPrivKey_.privkey))
    {
-//      LOGERR << "BIP 151 - Invalid public key creation. Closing connection.";
+      LOGERR << "BIP 151 - Invalid public key creation. Closing connection.";
       return retVal;
    }
    secp256k1_ec_pubkey_serialize(secp256k1_ecdh_ctx,
@@ -589,13 +589,13 @@ const int BIP151Session::getEncackData(uint8_t* ackBuffer,
 
    if(!encinit_)
    {
-//      LOGERR << "BIP 151 - Getting encack data before an encinit has arrived.";
+      LOGERR << "BIP 151 - Getting encack data before an encinit has arrived.";
       return retVal;
    }
    if(ackBufferSize != BIP151PUBKEYSIZE)
    {
-/*      LOGERR << "BIP 151 - encack data buffer is not " << BIP151PUBKEYSIZE
-         << " bytes.";*/
+      LOGERR << "BIP 151 - encack data buffer is not " << BIP151PUBKEYSIZE
+         << " bytes.";
       return retVal;
    }
 
@@ -608,7 +608,7 @@ const int BIP151Session::getEncackData(uint8_t* ackBuffer,
                                  &ourPubKey,
                                  genSymECDHPrivKey_.privkey))
    {
-//      LOGERR << "BIP 151 - Invalid encack public key creation.";
+      LOGERR << "BIP 151 - Invalid encack public key creation.";
       return retVal;
    }
    secp256k1_ec_pubkey_serialize(secp256k1_ecdh_ctx,
@@ -624,7 +624,7 @@ const int BIP151Session::getEncackData(uint8_t* ackBuffer,
 }
 
 // A helper function that returns a hex string of the session ID.
-// 
+//
 // IN:  None
 // OUT: None
 // RET: A const string with the session ID hex string.
@@ -637,7 +637,7 @@ const std::string BIP151Session::getSessionIDHex() const
 }
 
 // Default BIP 151 connection constructor.
-// 
+//
 // IN:  None
 // OUT: None
 // RET: N/A
@@ -667,7 +667,7 @@ BIP151Connection::BIP151Connection(btc_key* inSymECDHPrivKeyIn,
 }
 
 // The function that handles incoming "encinit" messages.
-// 
+//
 // IN:  inMsg - Buffer with the encinit msg contents. nullptr if we're sending.
 //      inMsgSize - Size of the incomnig message.
 //      outDir - Boolean indicating if the message is outgoing or incoming.
@@ -677,12 +677,12 @@ const int BIP151Connection::processEncinit(const uint8_t* inMsg,
                                            const size_t& inMsgSize,
                                            const bool outDir)
 {
-   
+
    int retVal = -1;
    if(inMsgSize != ENCINITMSGSIZE)
    {
-/*      LOGERR << "BIP 151 - encinit message size isn't " << ENCINITMSGSIZE
-         << " bytes. Will shut down connection.";*/
+      LOGERR << "BIP 151 - encinit message size isn't " << ENCINITMSGSIZE
+         << " bytes. Will shut down connection.";
       return retVal;
    }
 
@@ -692,8 +692,8 @@ const int BIP151Connection::processEncinit(const uint8_t* inMsg,
    {
       if(inSes_.encinitSeen())
       {
-/*         LOGERR << "BIP 151 - Have already seen encinit (session ID "
-            << inSes_.getSessionIDHex() << ") - Closing the connection.";*/
+         LOGERR << "BIP 151 - Have already seen encinit (session ID "
+            << inSes_.getSessionIDHex() << ") - Closing the connection.";
          return retVal;
       }
 
@@ -714,16 +714,16 @@ const int BIP151Connection::processEncinit(const uint8_t* inMsg,
    }
    else
    {
-/*      LOGERR << "BIP 151 - Received an encinit message on outgoing session "
+      LOGERR << "BIP 151 - Received an encinit message on outgoing session "
          << outSes_.getSessionIDHex() << ". This should not happen. Closing the "
-         << "connection.";*/
+         << "connection.";
    }
 
    return retVal;
 }
 
 // The function that handles incoming and outgoing "encack" payloads.
-// 
+//
 // IN:  inMsg - Buffer with the encack msg contents.
 //      inMsgSize - Size of the incoming buffer. Must be 33 bytes.
 //      outDir - Boolean indicating if the message is outgoing or incoming.
@@ -736,8 +736,8 @@ const int BIP151Connection::processEncack(const uint8_t* inMsg,
    int retVal = -1;
    if(inMsgSize != BIP151PUBKEYSIZE)
    {
-/*      LOGERR << "BIP 151 - encack message size isn't " << BIP151PUBKEYSIZE
-         << " bytes. Will shut down connection.";*/
+      LOGERR << "BIP 151 - encack message size isn't " << BIP151PUBKEYSIZE
+         << " bytes. Will shut down connection.";
       return retVal;
    }
 
@@ -748,16 +748,16 @@ const int BIP151Connection::processEncack(const uint8_t* inMsg,
       // Valid only if we've already seen an encinit.
       if(!outSes_.encinitSeen())
       {
-/*         LOGERR << "BIP 151 - Received an encack message before an encinit. "
-            << "Closing connection.";*/
+         LOGERR << "BIP 151 - Received an encack message before an encinit. "
+            << "Closing connection.";
          return retVal;
       }
 
       // We should never receive a rekey, just an initial keying.
       if(outSes_.inMsgIsRekey(inMsg, inMsgSize) == 0)
       {
-/*         LOGERR << "BIP 151 - Received a rekey message on outgoing session ID "
-            << outSes_.getSessionIDHex() << "). Closing connection.";*/
+         LOGERR << "BIP 151 - Received a rekey message on outgoing session ID "
+            << outSes_.getSessionIDHex() << "). Closing connection.";
          return retVal;
       }
 
@@ -772,9 +772,9 @@ const int BIP151Connection::processEncack(const uint8_t* inMsg,
       // Incoming sessions should only see rekeys.
       if(inSes_.inMsgIsRekey(inMsg, inMsgSize) != 0)
       {
-/*         LOGERR << "BIP 151 - Received a non-rekey encack message on incoming "
+         LOGERR << "BIP 151 - Received a non-rekey encack message on incoming "
             << "session ID " << inSes_.getSessionIDHex() << ". This should not "
-            << "happen. Closing the connection.";*/
+            << "happen. Closing the connection.";
       }
       else
       {
@@ -817,8 +817,8 @@ const int BIP151Connection::assemblePacket(const uint8_t* plainData,
 
    if(outSes_.encPayload(cipherData, cipherSize, plainData, plainSize) != 0)
    {
-/*      LOGERR << "BIP 151 - Session ID " << outSes_.getSessionIDHex()
-         << " encryption failed (seq num " << outSes_.getSeqNum() - 1 << ").";*/
+      LOGERR << "BIP 151 - Session ID " << outSes_.getSessionIDHex()
+         << " encryption failed (seq num " << outSes_.getSeqNum() - 1 << ").";
       return retVal;
    }
 
@@ -843,8 +843,8 @@ const int BIP151Connection::decryptPacket(const uint8_t* cipherData,
 
    if(inSes_.decPayload(cipherData, cipherSize, plainData, plainSize) != 0)
    {
-/*      LOGERR << "BIP 151 - Session ID " << inSes_.getSessionIDHex()
-         << " decryption failed (seq num " << inSes_.getSeqNum() - 1 << ").";*/
+      LOGERR << "BIP 151 - Session ID " << inSes_.getSessionIDHex()
+         << " decryption failed (seq num " << inSes_.getSeqNum() - 1 << ").";
       return retVal;
    }
 
@@ -914,7 +914,7 @@ const int BIP151Connection::bip151RekeyConn(uint8_t* encackBuf,
 }
 
 // Function that returns the connection's input or output session ID.
-// 
+//
 // IN:  dirIsOut - Bool indicating if the direction is outbound.
 // OUT: None
 // RET: A pointer to a 32 byte array with the session ID.
@@ -947,8 +947,8 @@ const int BIP151Connection::processAuthchallenge(const uint8_t* inMsg,
    int retVal = -1;
    if(inMsgSize != BIP151PRVKEYSIZE)
    {
-/*      LOGERR << "BIP 150 - Incoming AUTHCHALLENGE message size isn't "
-         << BIP151PRVKEYSIZE << " bytes. Will shut down connection.";*/
+      LOGERR << "BIP 150 - Incoming AUTHCHALLENGE message size isn't "
+         << BIP151PRVKEYSIZE << " bytes. Will shut down connection.";
       return bip150SM_.errorSM(retVal);
    }
    BinaryData authchallengePayload(inMsg, inMsgSize);
@@ -973,8 +973,8 @@ const int BIP151Connection::processAuthreply(const uint8_t* inMsg,
    int retVal = -1;
    if(inMsgSize != BIP151PRVKEYSIZE*2)
    {
-/*      LOGERR << "BIP 150 - Incoming AUTHREPLY message size isn't "
-         << BIP151PRVKEYSIZE*2 << " bytes. Will shut down connection.";*/
+      LOGERR << "BIP 150 - Incoming AUTHREPLY message size isn't "
+         << BIP151PRVKEYSIZE*2 << " bytes. Will shut down connection.";
       return bip150SM_.errorSM(retVal);
    }
    BinaryData authreplyPayload(inMsg, inMsgSize);
@@ -995,8 +995,8 @@ const int BIP151Connection::processAuthpropose(const uint8_t* inMsg,
    int retVal = -1;
    if(inMsgSize != BIP151PRVKEYSIZE)
    {
-/*      LOGERR << "BIP 150 - Incoming AUTHPROPOSE message size isn't "
-         << BIP151PRVKEYSIZE << " bytes. Will shut down connection.";*/
+      LOGERR << "BIP 150 - Incoming AUTHPROPOSE message size isn't "
+         << BIP151PRVKEYSIZE << " bytes. Will shut down connection.";
       return bip150SM_.errorSM(retVal);
    }
    BinaryData authproposePayload(inMsg, inMsgSize);
@@ -1071,7 +1071,7 @@ const int BIP151Connection::getRekeyBuf(uint8_t* encackBuf,
    // If the connection isn't complete yet, the function fails.
    if(connectionComplete() == false)
    {
-//      LOGERR << "BIP 151 - Attempting a rekey before connection is completed.";
+      LOGERR << "BIP 151 - Attempting a rekey before connection is completed.";
       return retVal;
    }
 
@@ -1160,8 +1160,8 @@ const int BIP151Message::setEncStruct(uint8_t* plaintextData,
    uint32_t msgSize = inData.get_uint32_t();
    if(msgSize != inData.getSizeRemaining())
    {
-/*      LOGERR << "BIP 151 - Incoming message size (" << msgSize << ") does not "
-         << "match the data buffer size (" << inData.getSizeRemaining() << ").";*/
+      LOGERR << "BIP 151 - Incoming message size (" << msgSize << ") does not "
+         << "match the data buffer size (" << inData.getSizeRemaining() << ").";
       return retVal;
    }
 
@@ -1251,7 +1251,7 @@ const size_t BIP151Message::messageSizeHint()
 // DBs and to let users know 150 is ready. Call alongside BIP 151 startup. It is
 // safe to call this function if switching to a new IP version mid-stream,
 // although it's not recommended except for test purposes.
-// 
+//
 // IN:  ipVer - The IP version to be used. Valid values are 4, 6, and 20 (20
 //              indicates that Armory will use Tor).
 //      dataDir - The directory that stores the relevant key material.
@@ -1277,10 +1277,10 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
       auFilename = "authorized-peers-v6";
       break;
    case 20: // Tor
-//      LOGERR << "BIP 150 - Tor is not currently supported.";
+      LOGERR << "BIP 150 - Tor is not currently supported.";
       break;
    default:
-//      LOGERR << "BIP 150 - Startup got bad IP version " << ::ipType_ << ".";
+      LOGERR << "BIP 150 - Startup got bad IP version " << ::ipType_ << ".";
       return;
    }
 
@@ -1291,8 +1291,8 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
    std::ifstream kuFile(absKU);
    if(kuFile.fail() == true)
    {
-/*      LOGERR << "BIP 150 - ID key file " << absKU << " does not exist. "
-         << "BIP 150 will not function.";*/
+      LOGERR << "BIP 150 - ID key file " << absKU << " does not exist. "
+         << "BIP 150 will not function.";
       return;
    }
    std::string inLine;
@@ -1325,8 +1325,8 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
                                  binaryIP.data()) == 0)
 #endif
       {
-/*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
-            << "to the known users DB. Armory will skip the entry.";*/
+         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
+            << "to the known users DB. Armory will skip the entry.";
          continue;
       }
 #ifdef WIN32
@@ -1339,8 +1339,8 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
                                       binaryIP.data()) == 0)
 #endif
       {
-/*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
-            << "to the known users DB. Armory will skip the entry.";*/
+         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
+            << "to the known users DB. Armory will skip the entry.";
          continue;
       }
 
@@ -1349,15 +1349,15 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
                         10);
       if(port < 1 || port > 65535)
       {
-/*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
-            << "to the known users DB. Armory will skip the entry.";*/
+         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
+            << "to the known users DB. Armory will skip the entry.";
          continue;
       }
 
       if(keyType != "comp-secp256k1")
       {
-/*         LOGERR << "BIP 150 - Attempted to add invalid key type " << keyType
-            << "to the known users DB. Armory will skip the entry.";*/
+         LOGERR << "BIP 150 - Attempted to add invalid key type " << keyType
+            << "to the known users DB. Armory will skip the entry.";
          continue;
       }
 
@@ -1369,8 +1369,8 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
                                    pubkeyBin.getPtr(),
                                    BIP151PUBKEYSIZE) != 1)
       {
-/*         LOGERR << "BIP 150 - Attempted to add invalid key " << keyType
-            << "to the known users DB. Armory will skip the entry.";*/
+         LOGERR << "BIP 150 - Attempted to add invalid key " << keyType
+            << "to the known users DB. Armory will skip the entry.";
          continue;
       }
 
@@ -1380,7 +1380,7 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
 
    if(numLines == 0)
    {
-//      LOGERR << "BIP 150 - The known users DB is empty.";
+      LOGERR << "BIP 150 - The known users DB is empty.";
    }
 
    // authorized-user file format:
@@ -1400,8 +1400,8 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
       // - Make sure the key is a compressed public key.
       if(keyType != "comp-secp256k1")
       {
-/*         LOGERR << "BIP 150 - Attempted to add invalid key type " << keyType
-            << "to the authorized users DB. Armory will skip the entry.";*/
+         LOGERR << "BIP 150 - Attempted to add invalid key type " << keyType
+            << "to the authorized users DB. Armory will skip the entry.";
          continue;
       }
 
@@ -1413,8 +1413,8 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
                                    pubkeyBin.getPtr(),
                                    BIP151PUBKEYSIZE) != 1)
       {
-/*         LOGERR << "BIP 150 - Attempted to add invalid key " << keyType
-            << "to the authorized users DB. Armory will skip the entry.";*/
+         LOGERR << "BIP 150 - Attempted to add invalid key " << keyType
+            << "to the authorized users DB. Armory will skip the entry.";
          continue;
       }
 
@@ -1424,7 +1424,7 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
 
    if(numLines == 0)
    {
-//      LOGERR << "BIP 150 - The authorized users DB is empty.";
+      LOGERR << "BIP 150 - The authorized users DB is empty.";
    }
 
    // id-key.pub file format:
@@ -1440,8 +1440,8 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
                                 pubkeyBin.getPtr(),
                                 BIP151PUBKEYSIZE) != 1)
    {
-/*      LOGERR << "BIP 150 - Attempted to add invalid public ID key to the "
-         << "system (invalid length). BIP 150 will not be activated.";*/
+      LOGERR << "BIP 150 - Attempted to add invalid public ID key to the "
+         << "system (invalid length). BIP 150 will not be activated.";
       return;
    }
 
@@ -1450,15 +1450,15 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
    ::pubIDKey_.compressed = true;
    if(btc_pubkey_is_valid(&::pubIDKey_) == false)
    {
-/*      LOGERR << "BIP 150 - Attempted to add invalid public ID key to the "
-         << "system (invalid value). BIP 150 will not be activated.";*/
+      LOGERR << "BIP 150 - Attempted to add invalid public ID key to the "
+         << "system (invalid value). BIP 150 will not be activated.";
       return;
    }
 }
 
 // Overridden constructor for a BIP 150 state machine session. Sets the internal
 // variables. Must be used instead of the default constructor.
-// 
+//
 // IN:  incomingSes - 151 connection's incoming session.
 //      outgoingSes - 151 connection's outgoing session.
 // OUT: None
@@ -1477,10 +1477,10 @@ BIP150StateMachine::BIP150StateMachine(BIP151Session* incomingSes,
       prvIDFilename = "identity-key-ipv6";
       break;
    case 20: // Tor
-//      LOGERR << "BIP 150 - Tor is not currently supported.";
+      LOGERR << "BIP 150 - Tor is not currently supported.";
       break;
    default:
-//      LOGERR << "BIP 150 - State machine got bad IP version " << ::ipType_ << ".";
+      LOGERR << "BIP 150 - State machine got bad IP version " << ::ipType_ << ".";
       return;
    }
 
@@ -1493,8 +1493,8 @@ BIP150StateMachine::BIP150StateMachine(BIP151Session* incomingSes,
    BinaryData prvKeyBin = READHEX(inKey);
    if(prvKeyBin.getSize() != 32)
    {
-/*      LOGERR << "BIP 150 - Attempted to add invalid private ID key to the "
-         << "system (invalid length). BIP 150 will not be activated.";*/
+      LOGERR << "BIP 150 - Attempted to add invalid private ID key to the "
+         << "system (invalid length). BIP 150 will not be activated.";
       return;
    }
    std::copy(prvKeyBin.getPtr(), prvKeyBin.getPtr() + 32, prvIDKey.privkey);
@@ -1502,14 +1502,14 @@ BIP150StateMachine::BIP150StateMachine(BIP151Session* incomingSes,
     // Validate the private key and confirm that it matches the public key.
    if(btc_privkey_is_valid(&prvIDKey) == false)
    {
-/*      LOGERR << "BIP 150 - Attempted to add invalid private ID key to the "
-         << "system (invalid value). BIP 150 will not be activated.";*/
+      LOGERR << "BIP 150 - Attempted to add invalid private ID key to the "
+         << "system (invalid value). BIP 150 will not be activated.";
       return;
    }
    if(btc_privkey_verify_pubkey(&prvIDKey, &::pubIDKey_) == false)
    {
-/*      LOGERR << "BIP 150 - Attempted to add invalid private ID key to the "
-         << "system (pub/pri mismatch). BIP 150 will not be activated.";*/
+      LOGERR << "BIP 150 - Attempted to add invalid private ID key to the "
+         << "system (pub/pri mismatch). BIP 150 will not be activated.";
       return;
    }
 }
@@ -1545,8 +1545,8 @@ const int BIP150StateMachine::getAuthchallengeData(uint8_t* buf,
       // Make sure the current state is acceptable before proceeding.
       if(curState_ != BIP150State::PROPOSE)
       {
-/*         LOGERR << "BIP 150 - Attempting to process AUTHCHALLENGE (2) message "
-            << "when state is not correct. Setting BIP 150 to error state.";*/
+         LOGERR << "BIP 150 - Attempting to process AUTHCHALLENGE (2) message "
+            << "when state is not correct. Setting BIP 150 to error state.";
          return errorSM(retVal);
       }
       curState_ = BIP150State::CHALLENGE2;
@@ -1555,14 +1555,14 @@ const int BIP150StateMachine::getAuthchallengeData(uint8_t* buf,
 
    if(checkSes->handshakeComplete() == false)
    {
-/*      LOGERR << "BIP 150 - Cannot get AUTHCHALLENGE data before BIP 151 "
-         << "handshake is complete.";*/
+      LOGERR << "BIP 150 - Cannot get AUTHCHALLENGE data before BIP 151 "
+         << "handshake is complete.";
       return errorSM(retVal);
    }
    if(bufSize != BIP151PRVKEYSIZE)
    {
-/*      LOGERR << "BIP 150 - AUTHCHALLENGE data buffer is not " << BIP151PRVKEYSIZE
-         << " bytes.";*/
+      LOGERR << "BIP 150 - AUTHCHALLENGE data buffer is not " << BIP151PRVKEYSIZE
+         << " bytes.";
       return errorSM(retVal);
    }
 
@@ -1574,8 +1574,8 @@ const int BIP150StateMachine::getAuthchallengeData(uint8_t* buf,
          ::knownPeers_.find(targetIPPort);
       if(foundKey == ::knownPeers_.end())
       {
-/*         LOGERR << "BIP 150 - Unable to find IP:Port " << targetIPPort
-            << " in known-peers list.";*/
+         LOGERR << "BIP 150 - Unable to find IP:Port " << targetIPPort
+            << " in known-peers list.";
          return errorSM(retVal);
       }
 
@@ -1637,8 +1637,8 @@ const int BIP150StateMachine::getAuthreplyData(uint8_t* buf,
       // Make sure the current state is acceptable before proceeding.
       if(curState_ != BIP150State::CHALLENGE1)
       {
-/*         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (1) message "
-            << "when state is not correct. Setting BIP 150 to error state.";*/
+         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (1) message "
+            << "when state is not correct. Setting BIP 150 to error state.";
          return errorSM(retVal);
       }
       curState_ = BIP150State::REPLY1;
@@ -1648,8 +1648,8 @@ const int BIP150StateMachine::getAuthreplyData(uint8_t* buf,
       // Make sure the current state is acceptable before proceeding.
       if(curState_ != BIP150State::CHALLENGE2)
       {
-/*         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (2) message "
-            << "when state is not correct. Setting BIP 150 to error state.";*/
+         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (2) message "
+            << "when state is not correct. Setting BIP 150 to error state.";
          return errorSM(retVal);
       }
       curState_ = BIP150State::REPLY2;
@@ -1657,15 +1657,15 @@ const int BIP150StateMachine::getAuthreplyData(uint8_t* buf,
 
    if(outSes_->handshakeComplete() == false)
    {
-/*      LOGERR << "BIP 150 - Cannot get AUTHREPLY data before BIP 151 handshake "
-         << "is complete.";*/
+      LOGERR << "BIP 150 - Cannot get AUTHREPLY data before BIP 151 handshake "
+         << "is complete.";
       return errorSM(retVal);
    }
 
    if(bufSize != BIP151PRVKEYSIZE*2)
    {
-/*      LOGERR << "BIP 150 - AUTHPROPOSE data buffer is not "
-         << BIP151PRVKEYSIZE*2 << " bytes.";*/
+      LOGERR << "BIP 150 - AUTHPROPOSE data buffer is not "
+         << BIP151PRVKEYSIZE*2 << " bytes.";
       return errorSM(retVal);
    }
 
@@ -1681,7 +1681,7 @@ const int BIP150StateMachine::getAuthreplyData(uint8_t* buf,
                               buf,
                               &resSize) == false)
       {
-//         LOGERR << "BIP 150 - Unable to sign AUTHREPLY data.";
+         LOGERR << "BIP 150 - Unable to sign AUTHREPLY data.";
          return errorSM(retVal);
       }
 
@@ -1720,8 +1720,8 @@ const int BIP150StateMachine::getAuthproposeData(uint8_t* buf,
    // Make sure the current state is acceptable before proceeding.
    if(curState_ != BIP150State::REPLY1)
    {
-/*      LOGERR << "BIP 150 - Attempting to process AUTHREPLY message when "
-         << "state is not correct. Setting BIP 150 to error state.";*/
+      LOGERR << "BIP 150 - Attempting to process AUTHREPLY message when "
+         << "state is not correct. Setting BIP 150 to error state.";
       return errorSM(retVal);
    }
    assert(bufSize == BIP151PRVKEYSIZE);
@@ -1730,15 +1730,15 @@ const int BIP150StateMachine::getAuthproposeData(uint8_t* buf,
 
    if(outSes_->handshakeComplete() == false)
    {
-/*      LOGERR << "BIP 150 - Cannot get AUTHPROPOSE data before BIP 151 "
-         << "handshake is complete.";*/
+      LOGERR << "BIP 150 - Cannot get AUTHPROPOSE data before BIP 151 "
+         << "handshake is complete.";
       return errorSM(retVal);
    }
 
    if(bufSize != BIP151PRVKEYSIZE)
    {
-/*      LOGERR << "BIP 150 - AUTHPROPOSE data buffer is not " << BIP151PRVKEYSIZE
-         << " bytes.";*/
+      LOGERR << "BIP 150 - AUTHPROPOSE data buffer is not " << BIP151PRVKEYSIZE
+         << " bytes.";
       return errorSM(retVal);
    }
 
@@ -1752,7 +1752,7 @@ const int BIP150StateMachine::getAuthproposeData(uint8_t* buf,
 }
 
 // The function that handles incoming AUTHCHALLENGE messages.
-// 
+//
 // IN:  inData - The incoming hash.
 //      requesterSent - Indicates whether the responder (step 1) or requester
 //                      (step 4) is processing the data.
@@ -1777,8 +1777,8 @@ const int BIP150StateMachine::processAuthchallenge(const BinaryData& inData,
       // Make sure the current state is acceptable before proceeding.
       if(curState_ != BIP150State::PROPOSE)
       {
-/*         LOGERR << "BIP 150 - Attempting to process AUTHCHALLENGE (2) message "
-            << "when state is not correct. Setting BIP 150 to error state.";*/
+         LOGERR << "BIP 150 - Attempting to process AUTHCHALLENGE (2) message "
+            << "when state is not correct. Setting BIP 150 to error state.";
          return errorSM(retVal);
       }
       curState_ = BIP150State::CHALLENGE2;
@@ -1790,13 +1790,13 @@ const int BIP150StateMachine::processAuthchallenge(const BinaryData& inData,
    std::array<uint8_t, BIP151PRVKEYSIZE> challengeHash;
    if(buildHashData(challengeHash.data(), hashKey->pubkey, false) == -1)
    {
-//      LOGERR << "BIP 150 - Unable to process AUTHCHALLENGE message.";
+      LOGERR << "BIP 150 - Unable to process AUTHCHALLENGE message.";
       return errorSM(retVal);
    }
 
    if(memcmp(inData.getPtr(), challengeHash.data(), BIP151PRVKEYSIZE) != 0)
    {
-//      LOGERR << "BIP 150 - AUTHCHALLENGE message cannot be verified.";
+      LOGERR << "BIP 150 - AUTHCHALLENGE message cannot be verified.";
       return errorSM(1);
    }
 
@@ -1805,7 +1805,7 @@ const int BIP150StateMachine::processAuthchallenge(const BinaryData& inData,
 }
 
 // The function that handles incoming AUTHCHALLENGE messages.
-// 
+//
 // IN:  inData - The incoming signature.
 //      requesterSent - Indicates whether the requester (step 2) or responder
 //                      (step 5) is processing the data.
@@ -1826,8 +1826,8 @@ const int BIP150StateMachine::processAuthreply(BinaryData& inData,
       // Make sure the current state is acceptable before proceeding.
       if(curState_ != BIP150State::CHALLENGE1)
       {
-/*         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (1) message "
-            << "when state is not correct. Setting BIP 150 to error state.";*/
+         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (1) message "
+            << "when state is not correct. Setting BIP 150 to error state.";
          return errorSM(retVal);
       }
       curState_ = BIP150State::REPLY1;
@@ -1838,8 +1838,8 @@ const int BIP150StateMachine::processAuthreply(BinaryData& inData,
       // Make sure the current state is acceptable before proceeding.
       if(curState_ != BIP150State::CHALLENGE2)
       {
-/*         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (2) message "
-            << "when state is not correct. Setting BIP 150 to error state.";*/
+         LOGERR << "BIP 150 - Attempting to process AUTHREPLY (2) message "
+            << "when state is not correct. Setting BIP 150 to error state.";
          return errorSM(retVal);
       }
       curState_ = BIP150State::REPLY2;
@@ -1858,7 +1858,7 @@ const int BIP150StateMachine::processAuthreply(BinaryData& inData,
                                         derSig.data(),
                                         &derSigSize) == false)
    {
-//      LOGERR << "BIP 150 - AUTHREPLY unable to convert signature to DER.";
+      LOGERR << "BIP 150 - AUTHREPLY unable to convert signature to DER.";
       retVal = 1;
       return errorSM(retVal);
    }
@@ -1880,7 +1880,7 @@ const int BIP150StateMachine::processAuthreply(BinaryData& inData,
    }
    else
    {
-//      LOGERR << "BIP 150 - AUTHREPLY signature cannot be verified.";
+      LOGERR << "BIP 150 - AUTHREPLY signature cannot be verified.";
       retVal = 1;
       return errorSM(retVal);
    }
@@ -1889,7 +1889,7 @@ const int BIP150StateMachine::processAuthreply(BinaryData& inData,
 }
 
 // The function that handles incoming AUTHPROPOSE messages.
-// 
+//
 // IN:  inData - The incoming hash.
 // OUT: None
 // RET: -1 if unsuccessful (bad code setup), 0 if successful, 1 if unsuccessful
@@ -1902,8 +1902,8 @@ const int BIP150StateMachine::processAuthpropose(const BinaryData& inData)
    // Make sure the current state is acceptable before proceeding.
    if(curState_ != BIP150State::REPLY1)
    {
-/*      LOGERR << "BIP 150 - Attempting to process AUTHPROPOSE message when "
-         << "state is not correct. Setting BIP 150 to error state.";*/
+      LOGERR << "BIP 150 - Attempting to process AUTHPROPOSE message when "
+         << "state is not correct. Setting BIP 150 to error state.";
       return errorSM(retVal);
    }
    curState_ = BIP150State::PROPOSE;
@@ -1931,7 +1931,7 @@ const int BIP150StateMachine::processAuthpropose(const BinaryData& inData)
    // If we found a valid key, save it for later processing purposes.
    if(validKey.empty() == true)
    {
-//      LOGERR << "BIP 150 - Unable to verify AUTHPROPOSE message.";
+      LOGERR << "BIP 150 - Unable to verify AUTHPROPOSE message.";
       return errorSM(1);
    }
    else
@@ -2020,8 +2020,8 @@ const int BIP150StateMachine::buildHashData(uint8_t* outHash,
       hashData[32] = 'r';
       break;
    default:
-/*      LOGERR << "BIP 150 - Wrong state when trying to deal with an "
-         << "AUTHCHALLENGE or AUTHPROPOSE message's hash.";*/
+      LOGERR << "BIP 150 - Wrong state when trying to deal with an "
+         << "AUTHCHALLENGE or AUTHPROPOSE message's hash.";
       return retVal;
    }
    std::copy(pubKey, pubKey + BIP151PUBKEYSIZE, &hashData[33]);
@@ -2051,7 +2051,7 @@ void BIP150StateMachine::resetSM()
 }
 
 // Function that sets the error state for the state machine. Must be called
-// whenever an error state occurs. 
+// whenever an error state occurs.
 //
 // IN:  None
 // OUT: outVal - The error state value to return.

@@ -9,6 +9,7 @@ SET (SOURCES
    AssetEncryption.cpp
    AsyncClient.cpp
    BinaryData.cpp
+   BIP150_151.cpp
    BIP32_Node.cpp
    BlockDataManagerConfig.cpp
    BtcUtils.cpp
@@ -19,6 +20,7 @@ SET (SOURCES
    DerivationScheme.cpp
    EncryptionUtils.cpp
    EncryptionUtils_libbtc.cpp
+   hkdf.cpp
    HttpMessage.cpp
    JSON_codec.cpp
    KDF.cpp
@@ -45,6 +47,9 @@ SET (SOURCES
    ${MDB_DIR}/lmdbpp.cpp
    bech32/ref/c++/bech32.cpp
    bech32/ref/c++/segwit_addr.cpp
+   chacha20poly1305/chacha.c
+   chacha20poly1305/chachapoly_aead.c
+   chacha20poly1305/poly1305.c
    )
 
 IF (WIN32)
@@ -61,6 +66,7 @@ SET (HEADERS
    AsyncClient.h
    BDVCodec.h
    BinaryData.h
+   BIP150_151.h
    BIP32_Node.h
    BlockDataManagerConfig.h
    BtcUtils.h
@@ -70,6 +76,7 @@ SET (HEADERS
    DecryptedDataContainer.h
    DerivationScheme.h
    EncryptionUtils.h
+   hkdf.h
    HttpMessage.h
    JSON_codec.h
    lmdb_wrapper.h
