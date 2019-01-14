@@ -63,7 +63,7 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 id: headerText
-                text: qsTr("Import Details")
+                text: qsTr("Backup Type")
                 Layout.fillWidth: true
                 Layout.preferredHeight: 25
                 Layout.topMargin: 5
@@ -74,11 +74,6 @@ CustomTitleDialogWindow {
             ColumnLayout {
                 id: fullImportLayout
 
-                CustomLabel {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 10
-                    text: qsTr("Backup Type")
-                }
                 RowLayout {
                     spacing: 5
                     Layout.fillWidth: true
@@ -87,13 +82,33 @@ CustomTitleDialogWindow {
 
                     CustomRadioButton {
                         id: rbPaperBackup
+                        Layout.leftMargin: inputLabelsWidth
                         text: qsTr("Paper Backup")
                         checked: true
                     }
                     CustomRadioButton {
                         id: rbFileBackup
-                        text: qsTr("Digital Backup File")
+                        text: qsTr("Digital Backup")
                     }
+                }
+
+                CustomHeader {
+                    text: qsTr("Root Private Key")
+                    visible: rbPaperBackup.checked
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 25
+                    Layout.topMargin: 5
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                }
+                CustomHeader {
+                    text: qsTr("File Location")
+                    visible: rbFileBackup.checked
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 25
+                    Layout.topMargin: 5
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
                 }
 
                 BSEasyCodeInput {
@@ -102,7 +117,7 @@ CustomTitleDialogWindow {
                     rowSpacing: 0
                     columnSpacing: 0
                     Layout.margins: 5
-                    sectionHeaderTxt: qsTr("Enter Root Private Key")
+                    //sectionHeaderTxt: qsTr("Enter Root Private Key")
                     line1LabelTxt: qsTr("Root Key Line 1")
                     line2LabelTxt: qsTr("Root Key Line 2")
                     onEntryComplete: {
@@ -183,7 +198,7 @@ CustomTitleDialogWindow {
                 }
                 CustomLabel {
                     Layout.fillWidth: true
-                    text: seed ? seed.walletId : qsTr("")
+                    text: seed.walletId
                 }
             }
 

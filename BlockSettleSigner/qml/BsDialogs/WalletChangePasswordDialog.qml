@@ -175,9 +175,7 @@ CustomDialog {
                         columnSpacing: 10
                         visible: rbPassword.checked
                         passwordLabelTxt: qsTr("New Password")
-                        passwordInputPlaceholder: qsTr("New Password")
                         confirmLabelTxt: qsTr("Confirm New")
-                        confirmInputPlaceholder: qsTr("Confirm New Password")
                         nextFocusItem: btnAccept
                         onConfirmInputEnterPressed: {
                             if (btnAccept.enabled) btnAccept.onClicked()

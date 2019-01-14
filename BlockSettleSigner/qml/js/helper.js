@@ -133,7 +133,7 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
 
     authProgress.open()
     authProgress.rejected.connect(function() {
-        authObject.destroy()
+        if (authObject !== undefined) authObject.destroy()
     })
 
     authObject.succeeded.connect(function(encKey_, password_) {
