@@ -43,8 +43,8 @@ CelerMessage CelerSubscribeToMDSequence::subscribeToMD()
 
    request.set_settlementtype("SP");
 
-   logger_->debug("[CelerSubscribeToMDSequence::subscribeToMD] sending MarketDataSubscriptionRequest\n{}"
-      , request.DebugString());
+   logger_->debug("[CelerSubscribeToMDSequence::subscribeToMD] sending MarketDataSubscriptionRequest for {}"
+      , currencyPair_);
 
    CelerMessage message;
    message.messageType = CelerAPI::MarketDataSubscriptionRequestType;
@@ -67,8 +67,8 @@ CelerMessage CelerSubscribeToMDSequence::subscribeToMDStatistics()
    request.set_assettype(bs::network::Asset::toCelerMDAssetType(assetType_));
    request.set_exchangecode("XCEL");
 
-   logger_->debug("[CelerSubscribeToMDSequence::subscribeToMDStatistics] subscribe request:\n{}"
-      , request.DebugString());
+   logger_->debug("[CelerSubscribeToMDSequence::subscribeToMDStatistics] subscribe request : {}"
+      , currencyPair_);
 
    CelerMessage message;
    message.messageType = CelerAPI::MarketStatisticRequestType;
