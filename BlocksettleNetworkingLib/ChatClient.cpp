@@ -188,7 +188,10 @@ void ChatClient::onSendMessage(const QString &message, const QString &receiver)
    Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
       , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
       , QDateTime::currentDateTimeUtc(), message);
-   chatDb_->add(msg);
+
+   auto localEncMsg = msg;
+   //TODO: encrypt with own public key
+   chatDb_->add(localEncMsg);
 
    const auto &itPub = pubKeys_.find(receiver);
    if (itPub != pubKeys_.end()) {
