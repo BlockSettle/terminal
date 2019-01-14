@@ -1,5 +1,6 @@
 #include "ChatMessagesViewModel.h"
 #include "ChatClient.h"
+#include "ChatProtocol.h"
 
 
 ChatMessagesViewModel::ChatMessagesViewModel(QObject* parent)
@@ -66,6 +67,7 @@ void ChatMessagesViewModel::onSwitchToChat(const QString& chatId)
 {
    beginResetModel();
    currentChatId_ = chatId;
+   messages_.clear();
    endResetModel();
 }
 
@@ -88,18 +90,14 @@ QString ChatMessagesViewModel::prependMessage(const QString& messageText, const 
    return displayMessage;
 }
 
-void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::string>& messages)
+void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages)
 {
-   if (messages.size() == 0)
-      return;
-
    for (const auto &msg : messages) {
-      const auto receivedMessage = Chat::MessageData::fromJSON(msg);
-      const auto senderId = receivedMessage->getSenderId();
-      const auto dateTime = receivedMessage->getDateTime();
-      const auto msgText = prependMessage(receivedMessage->getMessageData(), senderId);
+      const auto senderId = msg->getSenderId();
+      const auto dateTime = msg->getDateTime();
+      const auto msgText = prependMessage(msg->getMessageData(), senderId);
 
-      if (senderId == currentChatId_) {
+      if ((senderId == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
          const int beginRow = messages_[currentChatId_].size();
          beginInsertRows(QModelIndex(), beginRow, beginRow);
          messages_[currentChatId_].push_back({dateTime, msgText });

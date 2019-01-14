@@ -2,13 +2,15 @@
 #define __CHAT_MESSAGES_VIEW_MODEL_H__
 
 
+#include <memory>
 #include <QAbstractTableModel>
 #include <QMap>
 #include <QVector>
 #include <QDateTime>
 
-#include <memory>
-
+namespace Chat {
+   class MessageData;
+}
 
 class ChatMessagesViewModel : public QAbstractTableModel
 {
@@ -38,7 +40,7 @@ private:
 
 public slots:
    void onSwitchToChat(const QString& chatId);
-   void onMessagesUpdate(const std::vector<std::string>& messages);
+   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
    void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
 
 private:

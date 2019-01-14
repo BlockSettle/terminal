@@ -4,6 +4,7 @@
 
 #include <QStringLiteral>
 #include <QDebug>
+#include "EncryptionUtils.h"
 
 
 using namespace Chat;
@@ -328,14 +329,12 @@ void LogoutRequest::handle(RequestHandler& handler)
 }
 
 
-MessageData::MessageData(const QString& senderId
-                  , const QString& receiverId
-                  , const QDateTime& dateTime
-                  , const QString& messageData)
-   : senderId_(senderId)
-   , receiverId_(receiverId)
-   , dateTime_(dateTime)
-   , messageData_(messageData)
+MessageData::MessageData(const QString& senderId, const QString& receiverId
+      , const QString &id, const QDateTime& dateTime
+      , const QString& messageData, int state)
+   : senderId_(senderId), receiverId_(receiverId)
+   , id_(id), dateTime_(dateTime)
+   , messageData_(messageData), state_(state)
 {
 }
 
@@ -347,6 +346,7 @@ QJsonObject MessageData::toJson() const
    data[ReceiverIdKey] = receiverId_;
    data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
    data[MessageKey] = messageData_;
+   data[StatusKey] = state_;
 
    return data;
 }
@@ -356,7 +356,6 @@ std::string MessageData::toJsonString() const
    return serializeData(this);
 }
 
-
 std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
@@ -365,8 +364,26 @@ std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
    QString receiverId = data[ReceiverIdKey].toString();
    QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
    QString messageData = data[MessageKey].toString();
+   QString id = QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr());
 
-   return std::make_shared<MessageData>(senderId, receiverId, dtm, messageData);
+   return std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData);
+}
+
+void MessageData::setFlag(const State state)
+{
+   state_ |= (int)state;
+}
+
+bool MessageData::decrypt(const SecureBinaryData &privKey)
+{
+   state_ &= ~(int)State::Encrypted;
+   return true;
+}
+
+bool MessageData::encrypt(const BinaryData &pubKey)
+{
+   state_ |= (int)State::Encrypted;
+   return true;
 }
 
 
@@ -375,9 +392,7 @@ SendMessageRequest::SendMessageRequest(const std::string& clientId
    : Request(RequestType::RequestSendMessage, clientId)
    , messageData_(messageData)
 {
-
 }
-
 
 QJsonObject SendMessageRequest::toJson() const
 {

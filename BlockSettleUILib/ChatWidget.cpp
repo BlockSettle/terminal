@@ -68,7 +68,9 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
 
    ui_->text->setEnabled(!currentChat_.isEmpty());
    ui_->labelActiveChat->setText(tr("Chat #") + currentChat_);
+
    messagesViewModel_->onSwitchToChat(currentChat_);
+   client_->retrieveUserMessages(currentChat_);
 }
 
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
