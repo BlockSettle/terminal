@@ -163,16 +163,15 @@ bool TransactionData::UpdateTransactionData()
    // computing TX sizes and fees. We're assuming all TXs created will use
    // SegWit. It's a safe assumption moving forward.
    for (auto& utxo : transactions) {
-      utxo.txinRedeemSizeBytes_ = \
-         bs::wallet::getInputScrSize(wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
-      try
-      {
-         utxo.witnessDataSizeBytes_ = \
-            wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr())->getWitnessDataSize();
-         utxo.isInputSW_ = true;
+      auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
+      if (aefa != nullptr) {
+         utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(aefa);
+         try {
+            utxo.witnessDataSizeBytes_ = aefa->getWitnessDataSize();
+            utxo.isInputSW_ = true;
+         }
+         catch (const std::runtime_error& re) { }
       }
-      catch (runtime_error&)
-      { }
    }
 
    uint64_t availableBalance = 0;
