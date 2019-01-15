@@ -12,7 +12,7 @@ Switch {
         text: control.text
         font: control.font
         opacity: enabled ? 1.0 : 0.3
-        color: control.checked ? BSStyle.switchGreenColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
+        color: control.checked ? BSStyle.switchCheckedColor : (signerStatus.socketOk ? BSStyle.switchUncheckedColor : BSStyle.switchOrangeColor)
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }
@@ -24,8 +24,8 @@ Switch {
         x: control.width - width - control.rightPadding
         y: parent.height / 2 - height / 2
         radius: 10
-        color: control.checked ? BSStyle.switchGreenColor : "transparent"
-        border.color: control.checked ? BSStyle.switchGreenColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
+        color: control.checked ? BSStyle.switchCheckedColor : "transparent"
+        border.color: control.checked ? BSStyle.switchCheckedColor : (signerStatus.socketOk ? BSStyle.switchUncheckedColor : BSStyle.switchOrangeColor)
 
         Rectangle {
             id: circle_
@@ -33,8 +33,8 @@ Switch {
             width: 20
             height: 20
             radius: 10
-            color: control.checked ? BSStyle.textColor : (signerStatus.socketOk ? BSStyle.switchRedColor : BSStyle.switchOrangeColor)
-            border.color: control.checked ? (control.down ? BSStyle.switchGreenColor : BSStyle.switchGreenColor) : BSStyle.backgroundColor
+            color: control.checked ? BSStyle.textColor : (signerStatus.socketOk ? BSStyle.switchUncheckedColor : BSStyle.switchOrangeColor)
+            border.color: control.checked ? (control.down ? BSStyle.switchCheckedColor : BSStyle.switchCheckedColor) : BSStyle.backgroundColor
         }
     }
 

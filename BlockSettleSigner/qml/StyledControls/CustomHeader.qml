@@ -5,6 +5,7 @@ import "../BsStyles"
 Button {
     leftPadding: 0
 
+    property color textColor: BSStyle.textColor
     background: Rectangle {
         color: "transparent"
     }
@@ -12,7 +13,7 @@ Button {
     contentItem: Text {
         text: parent.text
         font.capitalization: Font.AllUppercase
-        color: BSStyle.textColor
+        color: textColor
         font.pixelSize: 12
 
     }

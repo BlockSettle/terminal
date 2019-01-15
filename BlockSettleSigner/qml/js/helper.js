@@ -180,3 +180,17 @@ function folderOfFile(fileUrl) {
     tmp =  tmp.slice(0, tmp.lastIndexOf("/"))
     return tmp;
 }
+
+function openTextFile(fileUrl) {
+    var request = new XMLHttpRequest();
+    request.open("GET", fileUrl, false);
+    request.send(null);
+    return request.responseText;
+}
+
+function saveTextFile(fileUrl, text) {
+    var request = new XMLHttpRequest();
+    request.open("PUT", fileUrl, false);
+    request.send(text);
+    return request.status;
+}

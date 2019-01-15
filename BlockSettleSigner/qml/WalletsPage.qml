@@ -174,7 +174,7 @@ Item {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        text: qsTr("Export Watching Only Wallet")
+                        text: qsTr("Export w/o Wallet")
                         enabled: isHdRoot()
                         onClicked: {
                             var dlg = Qt.createComponent("BsDialogs/WalletExportWoDialog.qml").createObject(mainWindow)

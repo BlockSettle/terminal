@@ -19,8 +19,8 @@ ColumnLayout {
 
     property alias line1LabelTxt: keyLine1Label.text
     property alias line2LabelTxt: keyLine2Label.text
-    property alias sectionHeaderTxt: sectionHeader.text
-    property alias sectionHeaderVisible: sectionHeader.visible
+//    property alias sectionHeaderTxt: sectionHeader.text
+//    property alias sectionHeaderVisible: sectionHeader.visible
 
     property int inputLabelsWidth: 110
     property int rowSpacing: 5
@@ -39,22 +39,23 @@ ColumnLayout {
     signal entryComplete()
 
 
-    RowLayout {
-        spacing: rowSpacing
-        Layout.fillWidth: true
-        Layout.leftMargin: 10
-        Layout.rightMargin: 10
+//    RowLayout {
+//        spacing: rowSpacing
+//        Layout.fillWidth: true
+//        Layout.leftMargin: 10
+//        Layout.rightMargin: 10
+//        Layout.preferredHeight: 0
 
-        CustomLabel {
-            id: sectionHeader
-            Layout.leftMargin: inputLabelsWidth
-            Layout.fillWidth: true
-            Layout.minimumWidth: inputLabelsWidth
-            Layout.preferredWidth: inputLabelsWidth
-            Layout.maximumWidth: inputLabelsWidth
-            text: qsTr("Enter Recovery Code: ")
-        }
-    }
+//        CustomLabel {
+//            id: sectionHeader
+//            Layout.leftMargin: inputLabelsWidth
+//            Layout.fillWidth: true
+//            //Layout.minimumWidth: inputLabelsWidth
+//            //Layout.preferredWidth: inputLabelsWidth
+//            //Layout.maximumWidth: inputLabelsWidth
+//            //text: qsTr(" ")
+//        }
+//    }
 
     RowLayout {
         spacing: rowSpacing

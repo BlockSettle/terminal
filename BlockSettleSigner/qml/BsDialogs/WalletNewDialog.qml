@@ -57,7 +57,7 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 id: createButon
-                text: qsTr("Create New")
+                text: qsTr("Create Wallet")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {

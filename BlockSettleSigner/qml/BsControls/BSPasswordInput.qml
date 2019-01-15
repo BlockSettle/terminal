@@ -15,6 +15,7 @@ CustomTitleDialogWindow {
 
     title: qsTr("Notice!")
     width: 350
+    rejectable: true
 
     cContentItem: ColumnLayout {
         Layout.fillWidth: true
@@ -38,10 +39,12 @@ Your Wallet and any backups are useless if you lose them.\
 It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. \
 Please make a backup and keep it in a safe place.\
 <br><br>Please enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!")
-                padding: 5
+                padding: 10
                 textFormat: Text.RichText
-                Layout.preferredWidth: root.width
-                horizontalAlignment: Text.AlignHCenter
+                Layout.preferredWidth: root.width - 20
+                horizontalAlignment: Text.AlignLeft
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
 
                 onLinkActivated: Qt.openUrlExternally(link)
                 MouseArea {
@@ -67,7 +70,7 @@ Please make a backup and keep it in a safe place.\
                     Layout.bottomMargin: 5
                     Layout.leftMargin: 10
                     Layout.rightMargin: 10
-                    Layout.preferredWidth: 105
+                    Layout.preferredWidth: 110
                     text: qsTr("Password")
                 }
                 CustomTextInput {
@@ -80,6 +83,13 @@ Please make a backup and keep it in a safe place.\
                     echoMode: TextField.Password
                     //placeholderText: qsTr("Password")
                     Layout.fillWidth: true
+
+                    Keys.onEnterPressed: {
+                        if (btnAccept.enabled) btnAccept.onClicked()
+                    }
+                    Keys.onReturnPressed: {
+                        if (btnAccept.enabled) btnAccept.onClicked()
+                    }
                 }
             }
         }
@@ -104,7 +114,7 @@ Please make a backup and keep it in a safe place.\
             }
 
             CustomButtonPrimary {
-                id: acceptButton_
+                id: btnAccept
                 enabled: passwordCorrect
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom

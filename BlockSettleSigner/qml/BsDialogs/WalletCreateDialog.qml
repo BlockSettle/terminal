@@ -133,12 +133,12 @@ CustomTitleDialogWindow {
                 ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
                 ToolTip.delay: 150
                 ToolTip.timeout: 5000
-                ToolTip.visible: cbPrimary.hovered
+                ToolTip.visible: cbPrimary.hovered && primaryWalletExists
 
                 // workaround on https://bugreports.qt.io/browse/QTBUG-30801
                 // enabled: !primaryWalletExists
                 onCheckedChanged: {
-                    if (primaryWalletExists) checked = false;
+                    if (primaryWalletExists) cbPrimary.checked = false;
                 }
             }
         }
@@ -183,9 +183,7 @@ CustomTitleDialogWindow {
             visible: rbPassword.checked
             columnSpacing: 10
             passwordLabelTxt: qsTr("Password")
-            passwordInputPlaceholder: qsTr("Wallet Password")
             confirmLabelTxt: qsTr("Confirm Password")
-            confirmInputPlaceholder: qsTr("Confirm Wallet Password")
             onConfirmInputEnterPressed: {
                 if (btnAccept.enabled) btnAccept.onClicked()
             }

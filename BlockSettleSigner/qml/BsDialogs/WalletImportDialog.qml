@@ -33,7 +33,7 @@ CustomTitleDialogWindow {
     property bool importAcceptable: tfName.text.length
                                     && (newPasswordWithConfirm.acceptableInput && rbPassword.checked
                                         || textInputEmail.text && rbAuth.checked)
-    property int inputLabelsWidth: 105
+    property int inputLabelsWidth: 110
     property int curPage: WalletImportDialog.Page.Select
     property bool authNoticeShown: false
 
@@ -42,6 +42,10 @@ CustomTitleDialogWindow {
     height: 470
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
+
+    onEnterPressed: {
+        if (btnAccept.enabled) btnAccept.onClicked()
+    }
 
     enum Page {
         Select = 1,
@@ -128,12 +132,12 @@ CustomTitleDialogWindow {
                     }
                 }
             }
-            CustomLabel {
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                text: qsTr("File Location to Restore")
-                visible: !rbPaperBackup.checked
-            }
+//            CustomLabel {
+//                Layout.fillWidth: true
+//                Layout.leftMargin: 10
+//                text: qsTr("File Location to Restore")
+//                visible: !rbPaperBackup.checked
+//            }
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -148,6 +152,8 @@ CustomTitleDialogWindow {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     text: qsTr("Digital backup")
+                    verticalAlignment: Text.AlignTop
+                    Layout.alignment: Qt.AlignTop
                 }
 
                 CustomLabel {
@@ -159,6 +165,7 @@ CustomTitleDialogWindow {
                 }
                 CustomButton {
                     text: qsTr("Select")
+                    Layout.alignment: Qt.AlignTop
                     onClicked: {
                         if (!ldrDBFileDlg.item) {
                             ldrDBFileDlg.active = true;
@@ -306,11 +313,8 @@ CustomTitleDialogWindow {
                 id: newPasswordWithConfirm
                 visible: rbPassword.checked
                 columnSpacing: 10
-                rowSpacing: 0
                 passwordLabelTxt: qsTr("Wallet Password")
-                passwordInputPlaceholder: qsTr("New Wallet Password")
                 confirmLabelTxt: qsTr("Confirm Password")
-                confirmInputPlaceholder: qsTr("Confirm New Wallet Password")
                 onConfirmInputEnterPressed: {
                     if (btnAccept.enabled) btnAccept.onClicked()
                 }

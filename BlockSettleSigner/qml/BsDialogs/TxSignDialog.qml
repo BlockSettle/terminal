@@ -24,6 +24,7 @@ CustomTitleDialogWindow {
     property AuthSignWalletObject  authSign
 
     title: qsTr("Wallet Password Confirmation")
+    rejectable: true
 
     function clickConfirmBtn(){
         btnConfirm.clicked()
@@ -186,8 +187,13 @@ CustomTitleDialogWindow {
                 visible: walletInfo.encType === NsWallet.Password
                 focus: true
                 placeholderText: qsTr("Password")
-                echoMode: TextField.Password
                 Layout.fillWidth: true
+                Keys.onEnterPressed: {
+                    if (btnConfirm.enabled) btnConfirm.onClicked()
+                }
+                Keys.onReturnPressed: {
+                    if (btnConfirm.enabled) btnConfirm.onClicked()
+                }
             }
 
             CustomLabel {

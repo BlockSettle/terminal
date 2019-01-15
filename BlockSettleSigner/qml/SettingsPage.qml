@@ -1,7 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
-import QtQuick.Dialogs 1.2
+import QtQuick.Dialogs 1.3
 
 import "StyledControls"
 import "BsStyles"
@@ -218,26 +218,52 @@ Item {
                 }
 
                 CustomButton {
-                    text: qsTr("Select")
+                    text: qsTr("Export")
                     Layout.minimumWidth: 80
                     Layout.preferredWidth: 80
                     Layout.maximumWidth: 80
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
-                        zmqPubKeyDlg.open()
-                        zmqPubKeyDlg.accepted.connect(function(){
-                            signerSettings.zmqPubKeyFile = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
+                        zmqExportPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
+                        zmqExportPubKeyDlg.open()
+                        zmqExportPubKeyDlg.accepted.connect(function(){
+                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.zmqPubKeyFile)
+                            JsHelper.saveTextFile(zmqExportPubKeyDlg.fileUrl, zmqPubKey)
                         })
                     }
                     FileDialog {
-                        id: zmqPubKeyDlg
+                        id: zmqExportPubKeyDlg
                         visible: false
                         title: "Select ZMQ Public Key"
                         selectFolder: false
+                        selectExisting: false
+                        nameFilters: [ "Key files (*.pub)", "All files (*)" ]
+                        selectedNameFilter: "*.pub"
                     }
                 }
+
+//                CustomButton {
+//                    text: qsTr("Select")
+//                    Layout.minimumWidth: 80
+//                    Layout.preferredWidth: 80
+//                    Layout.maximumWidth: 80
+//                    Layout.maximumHeight: 26
+//                    Layout.rightMargin: 6
+//                    onClicked: {
+//                        zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
+//                        zmqPubKeyDlg.open()
+//                        zmqPubKeyDlg.accepted.connect(function(){
+//                            signerSettings.zmqPubKeyFile = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
+//                        })
+//                    }
+//                    FileDialog {
+//                        id: zmqPubKeyDlg
+//                        visible: false
+//                        title: "Select ZMQ Public Key"
+//                        selectFolder: false
+//                    }
+//                }
             }
 
 
