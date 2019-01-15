@@ -492,7 +492,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          }
       }
       newTxKeys->insert(item->id());
-      (*newItems)[item->id()] = { item, new TXNode(item) };
+      newItems->insert({ item->id(), { item, new TXNode(item) } });
    }
 
    const auto &cbInited = [this, newItems, newTxKeys, keysMutex, updatedItems]
@@ -572,9 +572,10 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       }
    };
 
-   const auto sizeNew = newItems->size();
-   if (!newItems->empty()) {
-      for (auto item : *newItems) {
+   const auto newItemsCopy = *newItems;
+   const auto sizeNew = newItemsCopy.size();
+   if (!newItemsCopy.empty()) {
+      for (auto item : newItemsCopy) {
          updateTransactionDetails(item.second.first, cbInited);
       }
    }
