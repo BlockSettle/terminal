@@ -6,9 +6,7 @@
 #include "EncryptionUtils.h"
 #include "make_unique.h"
 
-
 using namespace bs;
-
 
 hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
 {
@@ -500,11 +498,12 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
    if (!result) {
       throw std::runtime_error("no keys found");
    }
-   
+
    return result;
 }
 
-static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = BTC_AES::BLOCKSIZE)
+static SecureBinaryData PadData(const SecureBinaryData &key
+   , size_t pad = AES_BLOCK_SIZE)
 {
    const auto keyRem = key.getSize() % pad;
    auto result = key;
@@ -514,7 +513,8 @@ static SecureBinaryData PadData(const SecureBinaryData &key, size_t pad = BTC_AE
    return result;
 }
 
-static SecureBinaryData LimitData(const SecureBinaryData &key, size_t limit = BTC_AES::MAX_KEYLENGTH)
+static SecureBinaryData LimitData(const SecureBinaryData &key
+   , size_t limit = AES_MAX_KEY_LEN)
 {
    if (key.getSize() <= limit) {
       return key;

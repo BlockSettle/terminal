@@ -8,11 +8,12 @@
 
 #include <cassert>
 #include <fstream>
-#ifdef WIN32
+#if defined(WIN32) || defined(_MSC_VER)
 #include <Ws2tcpip.h>
 #else
 #include <arpa/inet.h>
 #endif
+ 
 #include "hkdf.h"
 #include "btc/ecc.h"
 #include "btc/hash.h"
@@ -399,7 +400,7 @@ const int BIP151Session::decPayload(const uint8_t* cipherData,
 {
    int retVal = -1;
    uint32_t decryptedLen = 0;
-   assert(cipherSize <= plainSize);
+   assert(cipherSize <= (plainSize + POLY1305MACLEN));
 
    chacha20poly1305_get_length(&sessionCTX_,
                                &decryptedLen,
@@ -1316,21 +1317,27 @@ void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
       std::string rawIP = ipPort.substr(0, ipPort.rfind(':'));
 #ifdef WIN32
       if(ipVer == 4 && InetPton(AF_INET,
+                                rawIP.c_str(),
+                                binaryIP.data()) == 0)
+#else
+      if(ipVer == 4 && inet_pton(AF_INET,
                                  rawIP.c_str(),
                                  binaryIP.data()) == 0)
-#else
-      if (ipVer == 4 && inet_pton(AF_INET,
-         rawIP.c_str(),
-         binaryIP.data()) == 0)
 #endif
       {
 /*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
             << "to the known users DB. Armory will skip the entry.";*/
          continue;
       }
-      else if(ipVer == 6 && inet_pton(AF_INET6,
+#ifdef WIN32
+      else if(ipVer == 6 && InetPton(AF_INET6,
                                      rawIP.c_str(),
                                      binaryIP.data()) == 0)
+#else
+      else if(ipVer == 6 && inet_pton(AF_INET6,
+                                      rawIP.c_str(),
+                                      binaryIP.data()) == 0)
+#endif
       {
 /*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
             << "to the known users DB. Armory will skip the entry.";*/

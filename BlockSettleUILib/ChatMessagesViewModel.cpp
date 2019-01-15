@@ -1,7 +1,7 @@
 #include "ChatMessagesViewModel.h"
 #include "ChatClient.h"
+#include "ChatProtocol.h"
 #include "NotificationCenter.h"
-
 
 ChatMessagesViewModel::ChatMessagesViewModel(QObject* parent)
    : QAbstractTableModel(parent)
@@ -21,13 +21,13 @@ int ChatMessagesViewModel::rowCount(const QModelIndex &parent) const
 QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
    switch (section) {
-      case 0:
+      case ChatMessageColumns::Time:
          return tr("Time");
 
-      case 1:
+      case ChatMessageColumns::User:
          return tr("User");
       
-      case 2:
+      case ChatMessageColumns::Message:
          return tr("Message");
 
       default:
@@ -75,6 +75,8 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
          default:
             break;
       }
+
+
    }
    return QVariant();
 }
@@ -83,6 +85,7 @@ void ChatMessagesViewModel::onSwitchToChat(const QString& chatId)
 {
    beginResetModel();
    currentChatId_ = chatId;
+   messages_.clear();
    endResetModel();
 }
 
@@ -94,7 +97,7 @@ void ChatMessagesViewModel::onSingleMessageUpdate(const QDateTime& date, const Q
    endInsertRows();
 }
 
-std::tuple<QDateTime, QString, QString> ChatMessagesViewModel::prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId)
+ChatMessagesViewModel::ChatMessageParts ChatMessagesViewModel::prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId)
 {
    static const auto ownSender = tr("you");
    QString sender = senderId.isEmpty() ? ownSender : senderId;
@@ -103,18 +106,16 @@ std::tuple<QDateTime, QString, QString> ChatMessagesViewModel::prependMessage(co
    }
    return { date, QStringLiteral("[") + sender + QStringLiteral("]: "), messageText};
 }
-void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::string>& messages)
+
+void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages)
 {
-   if (messages.size() == 0)
-      return;
-
    for (const auto &msg : messages) {
-      const auto receivedMessage = Chat::MessageData::fromJSON(msg);
-      const auto senderId = receivedMessage->getSenderId();
-      const auto dateTime = receivedMessage->getDateTime();
-      const auto msgTuple = prependMessage(dateTime, receivedMessage->getMessageData(), senderId);
+      const auto dateTime = msg->getDateTime();
+      const auto receivedMessage = msg->getMessageData();
+      const auto senderId = msg->getSenderId();
+      const auto msgTuple = prependMessage(dateTime, receivedMessage, senderId);
 
-      if (senderId == currentChatId_) {
+      if ((senderId == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
          const int beginRow = messages_[currentChatId_].size();
          beginInsertRows(QModelIndex(), beginRow, beginRow);
          messages_[currentChatId_].push_back(msgTuple);
@@ -123,6 +124,6 @@ void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::string>& mes
       else {
          messages_[senderId].push_back(msgTuple);
       }
-      NotificationCenter::notify(bs::ui::NotifyType::NewMessage, { tr("New message") });
+      NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
    }
 }

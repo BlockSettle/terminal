@@ -63,7 +63,19 @@ shared_ptr<ScriptRecipient> ScriptRecipient::deserialize(
    else if (byte0 == 34 && byte1 == 0 && byte2 == 32)
    {
       auto&& hash256 = brr_script.get_BinaryData(32);
-      result_ptr = make_shared<Recipient_PW2SH>(hash256, value);
+      result_ptr = make_shared<Recipient_P2WSH>(hash256, value);
+   }
+   else
+   {
+      //is this an OP_RETURN?
+      if (byte0 == script.getSize() - 1 && byte1 == OP_RETURN)
+      {
+         if(byte2 == OP_PUSHDATA1)
+            byte2 = brr_script.get_uint8_t();
+
+         auto&& opReturnMessage = brr_script.get_BinaryData(byte2);
+         result_ptr = make_shared<Recipient_OPRETURN>(opReturnMessage);
+      }
    }
 
    if (result_ptr == nullptr)
@@ -1660,12 +1672,19 @@ void SignerProxyFromSigner::setLambda(
       auto&& sig = signer->sign(script, privKey, SHD, index);
 
       //convert to DER
+#ifndef LIBBTC_ONLY
       auto&& derSig = BtcUtils::rsToDerSig(sig.getRef());
 
       //append sighash byte
       derSig.append(spender->getSigHashByte());
-
       return SecureBinaryData(derSig);
+#else
+      //append sighash byte
+      SecureBinaryData sbd_hashbyte(1);
+      *sbd_hashbyte.getPtr() = spender->getSigHashByte();
+      sig.append(sbd_hashbyte);
+      return sig;
+#endif
    };
 
    signerLambda_ = signerLBD;

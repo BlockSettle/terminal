@@ -143,14 +143,14 @@ public:
       Cypher(CypherType_AES, kdfId, encryptionKeyId)
    {
       //init IV
-      iv_ = std::move(SecureBinaryData().GenerateRandom(BTC_AES::BLOCKSIZE));
+      iv_ = std::move(CryptoPRNG::generateRandom(16));
    }
 
    Cypher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId,
       SecureBinaryData& iv) :
       Cypher(CypherType_AES, kdfId, encryptionKeyId)
    {
-      if (iv.getSize() != BTC_AES::BLOCKSIZE)
+      if (iv.getSize() != 16)
          throw CypherException("invalid iv length");
 
       iv_ = std::move(iv);

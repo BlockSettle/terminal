@@ -29,13 +29,12 @@
 #include <stdexcept>
 
 #include "BinaryData.h"
-#include "cryptopp/cryptlib.h"
-#include "cryptopp/sha.h"
-#include "cryptopp/integer.h"
-#include "cryptopp/ripemd.h"
 #include "UniversalTimer.h"
 #include "log.h"
 #include "NetworkConfig.h"
+#include "EncryptionUtils.h"
+
+#include "btc/base58.h"
 
 #define HEADER_SIZE 80
 #define COIN 100000000ULL
@@ -279,8 +278,8 @@ public:
 class BtcUtils
 {
    static const BinaryData        BadAddress_;
-   static const std::string base58Chars_;
-   static const std::map<char, uint8_t> base58Vals_;
+   static const std::string base64Chars_;
+   static const std::map<char, uint8_t> base64Vals_;
 
 public:
    static const BinaryData        EmptyHash_;
@@ -464,11 +463,11 @@ public:
                          size_t len, 
                          BinaryData& hashOutput)
    {
-      CryptoPP::SHA256 sha256_;
       if (hashOutput.getSize() != 32)
          hashOutput.resize(32);
 
-      sha256_.CalculateDigest(hashOutput.getPtr(), data, len);
+      BinaryDataRef dataBdr(data, len);
+      CryptoSHA2::getSha256(dataBdr, hashOutput.getPtr());
    }
    
    /////////////////////////////////////////////////////////////////////////////
@@ -484,35 +483,21 @@ public:
                           size_t          nBytes,
                           BinaryData &    hashOutput)
    {
-      CryptoPP::SHA256 sha256_;
-      if(hashOutput.getSize() != 32)
+      if (hashOutput.getSize() != 32)
          hashOutput.resize(32);
 
-      sha256_.CalculateDigest(hashOutput.getPtr(), strToHash, nBytes);
-      sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
-   }
-
-   /////////////////////////////////////////////////////////////////////////////
-   static void getHash256_NoSafetyCheck(
-                          uint8_t const * strToHash,
-                          uint32_t        nBytes,
-                          BinaryData &    hashOutput)
-   {
-      CryptoPP::SHA256 sha256_;
-
-      sha256_.CalculateDigest(hashOutput.getPtr(), strToHash, nBytes);
-      sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
+      BinaryDataRef dataBdr(strToHash, nBytes);
+      CryptoSHA2::getHash256(dataBdr, hashOutput.getPtr());
    }
 
    /////////////////////////////////////////////////////////////////////////////
    static BinaryData getHash256(uint8_t const * strToHash,
                                 uint32_t        nBytes)
    {
-      CryptoPP::SHA256 sha256_;
-
       BinaryData hashOutput(32);
-      sha256_.CalculateDigest(hashOutput.getPtr(), strToHash, nBytes);
-      sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
+      BinaryDataRef dataBdr(strToHash, nBytes);
+
+      CryptoSHA2::getHash256(dataBdr, hashOutput.getPtr());
       return hashOutput;
    }
 
@@ -552,29 +537,14 @@ public:
                           size_t          nBytes,
                           BinaryData &    hashOutput)
    {
-      CryptoPP::SHA256 sha256_;
-      CryptoPP::RIPEMD160 ripemd160_;
-      BinaryData bd32(32);
       if(hashOutput.getSize() != 20)
          hashOutput.resize(20);
 
-      sha256_.CalculateDigest(bd32.getPtr(), strToHash, nBytes);
-      ripemd160_.CalculateDigest(hashOutput.getPtr(), bd32.getPtr(), 32);
-   }
+      BinaryDataRef bdr(strToHash, nBytes);
+      BinaryData sha2_digest(32);
 
-   /////////////////////////////////////////////////////////////////////////////
-   static void getHash160_NoSafetyCheck(
-                          uint8_t const * strToHash,
-                          size_t          nBytes,
-                          BinaryData &    hashOutput)
-   {
-      CryptoPP::SHA256 sha256_;
-      CryptoPP::RIPEMD160 ripemd160_;
-      BinaryData bd32(32);
-
-      sha256_.CalculateDigest(bd32.getPtr(), strToHash, nBytes);
-      ripemd160_.CalculateDigest(hashOutput.getPtr(), bd32.getPtr(), 32);
-
+      CryptoSHA2::getSha256(bdr, sha2_digest.getPtr());
+      CryptoHASH160::getHash160(sha2_digest.getRef(), hashOutput.getPtr());
    }
 
    /////////////////////////////////////////////////////////////////////////////
@@ -622,11 +592,9 @@ public:
    //  I need a non-static, non-overloaded method to be able to use this in SWIG
    BinaryData ripemd160_SWIG(BinaryData const & strToHash)
    {
-      CryptoPP::RIPEMD160 ripemd160_;
-      BinaryData bd20(20);
-
-      ripemd160_.CalculateDigest(bd20.getPtr(), strToHash.getPtr(), strToHash.getSize());
-      return bd20;
+      BinaryData bd(20);
+      CryptoHASH160::getHash160(strToHash.getRef(), bd.getPtr());
+      return bd;
    }
 
 
@@ -644,9 +612,7 @@ public:
       // and copy the result to the right size list afterwards
       size_t numTx = txhashlist.size();
       std::vector<BinaryData> merkleTree(3*numTx);
-      CryptoPP::SHA256 sha256_;
       BinaryData hashInput(64);
-      BinaryData hashOutput(32);
    
       for(uint32_t i=0; i<numTx; i++)
          merkleTree[i] = txhashlist[i];
@@ -654,6 +620,7 @@ public:
       size_t thisLevelStart = 0;
       size_t nextLevelStart = numTx;
       size_t levelSize = numTx;
+      BinaryData hashOutput(32);
       while(levelSize>1)
       {
          for(uint32_t j=0; j<(levelSize+1)/2; j++)
@@ -672,8 +639,7 @@ public:
                merkleTree[nextLevelStart-1].copyTo(half2Ptr, 32);
             }
             
-            sha256_.CalculateDigest(hashOutput.getPtr(), hashInput.getPtr(),  64);
-            sha256_.CalculateDigest(hashOutput.getPtr(), hashOutput.getPtr(), 32);
+            CryptoSHA2::getHash256(hashInput.getRef(), hashOutput.getPtr());
             merkleTree[nextLevelStart+j] = hashOutput;
          }
          levelSize = (levelSize+1)/2;
@@ -1788,81 +1754,45 @@ public:
 
    static BinaryData base58_encode(const BinaryData& payload)
    {
-      //divide by 58
-      CryptoPP::Integer value, result, zero;
-      value.Decode(payload.getPtr(), payload.getSize(),
-         CryptoPP::Integer::UNSIGNED);
-
-      CryptoPP::word fifty_eight(58);
-      CryptoPP::word remainder(0);
-
-      std::deque<char> div_output;
-
-      do
+      size_t size = payload.getSize() * 2;
+      BinaryData b58_str(size);
+      if (!btc_base58_encode(
+         b58_str.getCharPtr(), &size,
+         payload.getPtr(), payload.getSize()) || 
+         size > b58_str.getSize())
       {
-         CryptoPP::Integer::Divide(remainder, result, value, fifty_eight);
+         throw std::runtime_error("failed to encode b58 string");
+      }
 
-         if (remainder > 58)
-            throw std::runtime_error("invalid remainder in b58 encode");
-
-         div_output.push_front(base58Chars_[remainder]);
-
-         value.swap(result);
-      } while (value.Compare(CryptoPP::Integer::Zero()));
-
-      //prepend null byte markers
-      unsigned pos = 0;
-      while (payload.getPtr()[pos++] == 0)
-         div_output.push_front('1');
-
-      std::vector<char> div_vec;
-      div_vec.insert(div_vec.end(), div_output.begin(), div_output.end());
-      BinaryData b58_output((uint8_t*)&div_vec[0], div_vec.size());
-      return b58_output;
+      if(size < b58_str.getSize())
+         b58_str.resize(size);
+      return b58_str;
    }
 
    static BinaryData base58_decode(const BinaryData& b58)
    {
-      //remove leading 1s
+      //sanity checks
       if (b58.getSize() == 0)
          throw std::range_error("empty BinaryData");
 
-      unsigned zero_count = 0;
-      int offset = 0;
-      auto ptr = b58.getPtr();
-      while (offset < (int)b58.getSize())
-      {
-         if (ptr[offset] != '1')
-            break;
+      if (b58.getPtr()[b58.getSize() - 1] != 0)
+         throw std::runtime_error("b58 string has to be 0 terminated");
 
-         ++offset;
-         ++zero_count;
+      uint8_t* result = new uint8_t[b58.getSize()];
+      size_t size = b58.getSize();
+
+      if (!btc_base58_decode(result, &size, b58.getCharPtr()) ||
+         size > b58.getSize())
+      {
+         delete[] result;
+         throw std::runtime_error("failed to decode b58 string");
       }
 
-      //decode
-      CryptoPP::Integer exponent = CryptoPP::Integer::One();
-      CryptoPP::Integer five_eight(58);
-      CryptoPP::Integer value = CryptoPP::Integer::Zero();
-      for (int i = b58.getSize() - 1; i >= offset; i--)
-      {
-         auto b58Iter = base58Vals_.find(ptr[i]);
-         if (b58Iter == base58Vals_.end())
-            throw std::runtime_error("invalid char in b58 string");
+      BinaryData result_bd(size);
+      memcpy(result_bd.getPtr(), result + b58.getSize() - size, size);
 
-         CryptoPP::Integer valAtIndex(b58Iter->second);
-         value = value.Plus(valAtIndex.Times(exponent));
-
-         exponent = exponent.Times(five_eight);
-      }
-
-      auto totallen = value.MinEncodedSize();
-      BinaryData final_value;
-      for (unsigned i = 0; i < zero_count; i++)
-         final_value.append(0);
-      
-      final_value.resize(totallen + zero_count);
-      value.Encode(final_value.getPtr() + zero_count, totallen);
-      return final_value;
+      delete[] result;
+      return result_bd;
    }
 
    static BinaryData extractRSFromDERSig(BinaryDataRef bdr)
@@ -1922,7 +1852,9 @@ public:
       return output.getData();
    }
 
+#ifndef LIBBTC_ONLY
    static BinaryData rsToDerSig(BinaryDataRef bdr);
+#endif
 
    static BinaryData getPushDataHeader(const BinaryData& data)
    {
@@ -2105,10 +2037,4 @@ public:
    static int get_varint_len(const int64_t& value);
 };
    
-static inline void suppressUnusedFunctionWarning()
-{
-   (void)&CryptoPP::StringNarrow;
-}
-
-
 #endif

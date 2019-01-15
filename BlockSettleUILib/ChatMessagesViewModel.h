@@ -2,13 +2,16 @@
 #define __CHAT_MESSAGES_VIEW_MODEL_H__
 
 
+#include <memory>
 #include <QAbstractTableModel>
 #include <QMap>
 #include <QVector>
 #include <QDateTime>
 #include <tuple>
-#include <memory>
 
+namespace Chat {
+   class MessageData;
+}
 
 class ChatMessagesViewModel : public QAbstractTableModel
 {
@@ -31,14 +34,21 @@ protected:
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+   enum ChatMessageColumns
+   {
+      Time = 0,
+      User = 1, 
+      Message = 2,  
+   };
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 private:
-   std::tuple<QDateTime, QString, QString> prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId = QString());
+   typedef std::tuple<QDateTime, QString, QString> ChatMessageParts;
+   ChatMessageParts prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId = QString());
 
 public slots:
    void onSwitchToChat(const QString& chatId);
-   void onMessagesUpdate(const std::vector<std::string>& messages);
+   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
    void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
 
 private:

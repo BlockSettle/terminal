@@ -12,6 +12,7 @@
 #define NETWORKCONFIG_H_
 
 #include "BinaryData.h"
+#include "btc/chainparams.h"
 
 #define TESTNET_MAGIC_BYTES "0b110907"
 #define TESTNET_GENESIS_HASH_HEX    "43497fd7f826957108f4a30fd9cec3aeba79972084e90ead01ea330900000000"
@@ -60,6 +61,8 @@ private:
    static uint8_t scriptHashPrefix_;
 
    static NETWORK_MODE mode_;
+   static const btc_chainparams* chain_params_;
+   static std::string bech32Prefix_;
 
 public:
    static void selectNetwork(NETWORK_MODE);
@@ -73,6 +76,7 @@ public:
 
    static NETWORK_MODE getMode(void) { return mode_; }
    static bool isInitialized(void);
+   static const btc_chainparams* get_chain_params(void) { return chain_params_; }
 };
 
 #endif

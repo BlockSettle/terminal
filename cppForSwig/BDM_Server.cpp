@@ -1028,7 +1028,10 @@ void BDV_Server_Object::init()
    };
 
    auto zcstruct = createZcNotification(filterLbd);
-   scanWallets(move(zcstruct));
+   auto zcAction =
+      dynamic_cast<BDV_Notification_ZC*>(zcstruct.get());
+   if(zcAction != nullptr && zcAction->packet_.txioMap_.size() > 0)
+      scanWallets(move(zcstruct));
    
    //mark bdv object as ready
    isReadyPromise_->set_value(true);
@@ -1095,10 +1098,10 @@ void BDV_Server_Object::processNotification(
       notif->set_type(NotificationType::zc);
       auto ledgers = notif->mutable_ledgers();
 
-      for (auto& lePair : payload->leMap_)
+      for (auto& le : payload->leVec_)
       {
          auto ledger_entry = ledgers->add_values();
-         lePair.second.fillMessage(ledger_entry);
+         le.fillMessage(ledger_entry);
       }
 
       break;
@@ -1660,7 +1663,7 @@ shared_ptr<Message> Clients::registerBDV(
    }
 
    if (bdvID.size() == 0)
-      bdvID = SecureBinaryData().GenerateRandom(10).toHexStr();
+      bdvID = CryptoPRNG::generateRandom(10).toHexStr();
    auto newBDV = make_shared<BDV_Server_Object>(bdvID, bdmT_);
 
    auto notiflbd = [this](unique_ptr<BDV_Notification> notifPtr)

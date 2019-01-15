@@ -1092,7 +1092,8 @@ Encryption</string>
          </size>
         </property>
         <property name="text">
-         <string>Backup</string>
+         <string>Backup
+Private Key</string>
         </property>
         <property name="iconSize">
          <size>
@@ -1126,8 +1127,8 @@ Encryption</string>
          </size>
         </property>
         <property name="text">
-         <string>Watch-Only 
-Copy</string>
+         <string>Export
+w/o Wallet</string>
         </property>
         <property name="iconSize">
          <size>
@@ -1199,7 +1200,8 @@ Wallet</string>
          </size>
         </property>
         <property name="text">
-         <string>Delete</string>
+         <string>Delete
+Wallet</string>
         </property>
         <property name="iconSize">
          <size>

@@ -104,4 +104,5 @@ TARGET_LINK_LIBRARIES(${BS_NETWORK_LIB_NAME}
    ${PROTO_LIB}
    Qt5::Core
    Qt5::Network
+   Qt5::Sql
 )

@@ -5,21 +5,19 @@
 #include <QObject>
 #include <QTimer>
 
-#include "DataConnectionListener.h"
 #include "ChatProtocol.h"
+#include "DataConnectionListener.h"
+#include "SecureBinaryData.h"
 
 
 namespace spdlog {
    class logger;
 }
-
-
-namespace Chat
-{
+namespace Chat {
    class Request;
 }
 
-
+class ChatDB;
 class ConnectionManager;
 class ZmqSecuredDataConnection;
 class ApplicationSettings;
@@ -32,9 +30,9 @@ class ChatClient : public QObject
    Q_OBJECT
 
 public:
-   ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
-            , const std::shared_ptr<ApplicationSettings> &appSettings
-            , const std::shared_ptr<spdlog::logger>& logger);
+   ChatClient(const std::shared_ptr<ConnectionManager> &
+            , const std::shared_ptr<ApplicationSettings> &
+            , const std::shared_ptr<spdlog::logger> &);
    ~ChatClient() noexcept override;
 
    ChatClient(const ChatClient&) = delete;
@@ -57,6 +55,8 @@ public:
 
    void onSendMessage(const QString& message, const QString &receiver);
 
+   void retrieveUserMessages(const QString &userId);
+
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
@@ -69,22 +69,26 @@ signals:
    void UsersReplace(const std::vector<std::string>& users);
    void UsersAdd(const std::vector<std::string>& users);
    void UsersDel(const std::vector<std::string>& users);
-   void MessagesUpdate(const std::vector<std::string>& messages);
+   void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
 
 private slots:
    void sendHeartbeat();
 
 private:
-   std::shared_ptr<ConnectionManager>    connectionManager_;
-   std::shared_ptr<ApplicationSettings>  appSettings_;
-   std::shared_ptr<spdlog::logger>       logger_;
+   std::shared_ptr<ConnectionManager>     connectionManager_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<spdlog::logger>        logger_;
 
+   std::unique_ptr<ChatDB>                   chatDb_;
+   std::map<QString, BinaryData>             pubKeys_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
 
    QTimer            heartbeatTimer_;
 
    std::string       currentUserId_;
    std::atomic_bool  loggedIn_{ false };
+
+   SecureBinaryData  ownPrivKey_;
 };
 
 #endif   // __CHAT_CLIENT_H__

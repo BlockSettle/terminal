@@ -810,8 +810,8 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &host, const QString &port, NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const QString &pwHash, OpMode opMode) : HeadlessContainer(logger, opMode)
-   , host_(host), port_(port), netType_(netType), pwHash_(pwHash)
+   , OpMode opMode) : HeadlessContainer(logger, opMode)
+   , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
 {}
 
@@ -831,22 +831,24 @@ bool RemoteSigner::Start()
       // seems reasonable on a VM but we'll add some padding to be safe.
       QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
       QString zmqSrvPubKeyPath = logDir.path() + \
-         QString::fromStdString("/headless_conn_srv.pub");
+         QString::fromStdString("/zmq_conn_srv.pub");
       QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
       if (!zmqSrvPubKeyFile.exists()) {
          QThread::msleep(250);
       }
 
-      if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true, logger_)) {
-         logger_->error("[RemoteSigner::{}] failed to read connection public key", __func__);
+      if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true
+         , logger_)) {
+         logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
+            "key ({})", __func__, zmqSrvPubKeyPath.toStdString());
          return false;
       }
    }
 
    connection_ = connectionManager_->CreateSecuredDataConnection(true);
    if (!connection_->SetServerPublicKey(zmqSrvPubKey_)) {
-      logger_->error("[RemoteSigner::{}] Failed to set signer connection "
-         "public key", __func__);
+      logger_->error("[RemoteSigner::{}] Failed to set ZMQ server public key"
+         , __func__);
       connection_ = nullptr;
       return false;
    }
@@ -887,7 +889,8 @@ void RemoteSigner::ConnectHelper()
          emit connected();
       }
       else {
-         logger_->error("[HeadlessContainer] Failed to open connection to headless container");
+         logger_->error("[HeadlessContainer] Failed to open connection to "
+            "headless container");
          return;
       }
    }
@@ -925,7 +928,6 @@ void RemoteSigner::Authenticate()
 
    authPending_ = true;
    headless::AuthenticationRequest request;
-   request.set_password(pwHash_.toStdString());
    request.set_nettype((netType_ == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
 
    headless::RequestPacket packet;
@@ -1047,9 +1049,9 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const QString &pwHash, double asSpendLimit)
+   , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, pwHash, OpMode::Local)
+   , connectionManager, OpMode::Local)
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
@@ -1087,9 +1089,6 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    args_ << QLatin1String("--listen") << QLatin1String("127.0.0.1");
    args_ << QLatin1String("--port") << port_;
    args_ << QLatin1String("--dirwallets") << walletsCopyDir;
-   if (!pwHash_.isEmpty()) {
-      args_ << QLatin1String("--pwhash") << pwHash;
-   }
    if (asSpendLimit > 0) {
       args_ << QLatin1String("--auto_sign_spend_limit") << QString::number(asSpendLimit, 'f', 8);
    }
@@ -1142,6 +1141,34 @@ bool LocalSigner::Start()
       logger_->warn("[HeadlessContainer] Failed to open PID file {} for writing", pidFileName.toStdString());
    }
    logger_->debug("[HeadlessContainer] child process started");
+
+   // SPECIAL CASE: Unlike Windows and Linux, the Signer and Terminal have
+   // different data directories on Macs. Check the Signer for a file. There is
+   // an issue here if the Signer has moved its keys away from the standard
+   // location. We really should check the Signer's config file instead.
+#if defined (Q_OS_MAC)
+   QDir zmqFileDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+   QString zmqSrvPubKeyPath = zmqFileDir.path() + \
+      QString::fromStdString("/zmq_conn_srv.pub");
+   QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
+   if (!zmqSrvPubKeyFile.exists()) {
+      QThread::msleep(250); // Give Signer time to create files if needed.
+      QDir signZMQFileDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+      signZMQFileDir.cdUp();
+      QString signZMQSrvPubKeyPath = signZMQFileDir.path() + \
+         QString::fromStdString("/Blocksettle/zmq_conn_srv.pub");
+      if (!QFile::copy(signZMQSrvPubKeyPath, zmqSrvPubKeyPath)) {
+         logger_->error("[LocalSigner::{}] Failed to copy ZMQ public key file "
+         "{} to the terminal. Connection will not start.", __func__
+         , signZMQSrvPubKeyPath.toStdString());
+         return false;
+      }
+      else {
+         logger_->info("[LocalSigner::{}] Copied ZMQ public key file ({}) to "
+         "the terminal.", __func__, zmqSrvPubKeyPath.toStdString());
+      }
+   }
+#endif
 
    RemoteSigner::Start();
    return true;

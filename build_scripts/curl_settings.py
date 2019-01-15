@@ -9,7 +9,7 @@ from component_configurator import Configurator
 class CurlSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '7_61_1'
+        self._version = '7_63_0'
         self._package_name = 'curl-' + self._version
         self._package_url = 'https://github.com/curl/curl/archive/' + self._package_name + '.tar.gz'
 	self._package_dir_name = 'curl-' + self._package_name
@@ -35,22 +35,25 @@ class CurlSettings(Configurator):
         print('Generating curl solution')
 
         command = ['cmake',
-           '-G',
-           self._project_settings.get_cmake_generator(),
-           '-DCURL_DISABLE_FTP=ON',
-           '-DCURL_DISABLE_LDAP=ON',
-		   '-DCURL_DISABLE_LDAPS=ON',
-           '-DCURL_DISABLE_TELNET=ON',
-		   '-DCURL_DISABLE_DICT=ON',
-           '-DCURL_DISABLE_FILE=ON',
-		   '-DCURL_DISABLE_TFTP=ON',
-           '-DCURL_DISABLE_RTSP=ON',
-		   '-DCURL_DISABLE_POP3=ON',
-           '-DCURL_DISABLE_IMAP=ON',
-		   '-DCURL_DISABLE_GOPHER=ON',
-           '-DCMAKE_USE_OPENSSL=ON',
-           '-DOPENSSL_ROOT_DIR=' + os.path.join(self._project_settings.get_common_build_dir(), 'OpenSSL'),
-           '-DCMAKE_INSTALL_PREFIX=' + self.get_install_dir(),
+            '-G',
+            self._project_settings.get_cmake_generator(),
+            '-DCURL_DISABLE_FTP=ON',
+            '-DCURL_DISABLE_LDAP=ON',
+            '-DCURL_DISABLE_LDAPS=ON',
+            '-DCURL_DISABLE_TELNET=ON',
+            '-DCURL_DISABLE_DICT=ON',
+            '-DCURL_DISABLE_FILE=ON',
+            '-DCURL_DISABLE_TFTP=ON',
+            '-DCURL_DISABLE_RTSP=ON',
+            '-DCURL_DISABLE_POP3=ON',
+            '-DCURL_DISABLE_IMAP=ON',
+            '-DCURL_DISABLE_GOPHER=ON',
+            '-DCMAKE_USE_OPENSSL=ON',
+            '-DOPENSSL_ROOT_DIR=' + os.path.join(self._project_settings.get_common_build_dir(), 'OpenSSL'),
+            '-DCMAKE_INSTALL_PREFIX=' + self.get_install_dir(),
+            '-DBUILD_SHARED_LIBS=OFF',
+            '-DBUILD_CURL_EXE=OFF',
+            '-DBUILD_TESTING=OFF',
         ]
 
         result = subprocess.call(command)

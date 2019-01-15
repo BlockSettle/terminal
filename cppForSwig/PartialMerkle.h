@@ -98,7 +98,6 @@ public:
       
       //cout << "Starting createTreeNodes" << endl;
       numTx_ = nTx;
-      static CryptoPP::SHA256 sha256_;
       BinaryData hashOut(32);
       uint32_t nLevel = nTx;
       std::vector<MerkleNode*> levelLower(nLevel);
@@ -222,7 +221,6 @@ public:
    /////////////////////////////////////////////////////////////////////////////
    static BinaryData recurseCalcHash(MerkleNode* node)
    {
-      static CryptoPP::SHA256 sha256_;
       if(node->nodeHash_.getSize() > 0)
          return node->nodeHash_;
 
@@ -240,8 +238,7 @@ public:
          left.copyTo(combined.getPtr()+32, 32);
 
       BinaryData finalHash(32);
-      sha256_.CalculateDigest(finalHash.getPtr(),  combined.getPtr(), 64);
-      sha256_.CalculateDigest(finalHash.getPtr(), finalHash.getPtr(), 32);
+      CryptoSHA2::getHash256(combined.getRef(), finalHash.getPtr());
       return finalHash; 
    }
 

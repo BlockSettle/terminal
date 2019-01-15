@@ -104,7 +104,6 @@ public:
    RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
-      , const QString &pwHash = {}
       , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
@@ -130,7 +129,6 @@ protected:
    const QString          host_;
    const QString          port_;
    const NetworkType      netType_;
-   const QString          pwHash_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    SecureBinaryData       zmqSrvPubKey_;
    bool  authPending_ = false;
@@ -147,7 +145,7 @@ public:
    LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
-      , const QString &pwHash = {}, double asSpendLimit = 0);
+      , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 
    bool Start() override;

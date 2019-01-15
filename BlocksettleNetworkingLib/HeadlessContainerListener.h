@@ -34,10 +34,9 @@ public:
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<WalletsManager> &walletsMgr
       , const std::string &walletsPath
-      , NetworkType
-      , const std::string &pwHash = {}
-      , bool hasUI = false
-      , bool backupEnabled = true);
+      , NetworkType netType
+      , const bool &hasUI = false
+      , const bool &backupEnabled = true);
    ~HeadlessContainerListener() noexcept override;
 
    void SetLimits(const SignContainer::Limits &limits);
@@ -137,7 +136,6 @@ private:
    const std::string                   backupPath_;
    const NetworkType                   netType_;
    SignContainer::Limits               limits_;
-   const std::string                   pwHash_;
    const bool                          hasUI_;
    std::unordered_map<std::string, SecureBinaryData>  authTickets_;
    std::unordered_set<std::string>     connectedClients_;
@@ -154,7 +152,7 @@ private:
    std::unordered_map<int, TempPasswords> tempPasswords_;
    int reqSeqNo_ = 0;
 
-   bool backupEnabled_ = true;
+   const bool backupEnabled_ = true;
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__

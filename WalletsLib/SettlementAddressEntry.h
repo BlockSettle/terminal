@@ -111,7 +111,7 @@ namespace bs {
       const BinaryData &getPrefixedHash(void) const override;
       const BinaryData &getHash() const override;
       const BinaryData &getAddress() const override { return BtcUtils::scrAddrToSegWitAddress(getHash()); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_PW2SH>(getHash(), val); }
+      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_P2WSH>(getHash(), val); }
       size_t getInputSize(void) const override { return 41; }
 
    private:

@@ -535,6 +535,12 @@ public:
       return vec; 
    }
 
+   /////////////////////////////////////////////////////////////////////////////
+   const std::vector<uint8_t>& getVector(void) const
+   {
+      return data_;
+   }
+
 public:
    static BinaryData EmptyBinData_;
 

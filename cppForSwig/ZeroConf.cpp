@@ -112,6 +112,7 @@ bool ZeroConfContainer::purge(
             input.opRef_.getDbKey() = bw_key.getData();
 
             zcIter->second->isChainedZc_ = false;
+            zcIter->second->needsReparsed_ = true;
          }
       }
    };
@@ -672,7 +673,23 @@ void ZeroConfContainer::parseNewZC(
    {
       auto&& txHash = newZCPair.second->getTxHash().getRef();
       if (txhashmap.find(txHash) != txhashmap.end())
-         continue; //already have this ZC
+      {
+         /*
+         Already have this ZC, why is it passed for parsing again?
+         Most common reason for reparsing is a child zc which parent's
+         was mined (outpoint now resolves to a dbkey instead of 
+         the previous zckey)
+         */
+
+         if (!newZCPair.second->needsReparsed_)
+         {
+            //tx wasn't flagged as needing processed again, skip it
+            continue;
+         }
+
+         //turn of reparse flag
+         newZCPair.second->needsReparsed_ = false;
+      }
 
       {
          auto&& bulkData = ZCisMineBulkFilter(

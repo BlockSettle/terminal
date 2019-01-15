@@ -131,7 +131,7 @@ public:
    ParsedTxStatus state_ = Tx_Uninitialized;
    bool isRBF_ = false;
    bool isChainedZc_ = false;
-
+   bool needsReparsed_ = false;
 
 public:
    ParsedTx(BinaryData& key) :

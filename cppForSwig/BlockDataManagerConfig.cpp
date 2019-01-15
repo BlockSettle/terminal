@@ -78,7 +78,7 @@ const string BlockDataManagerConfig::defaultRegtestBlkFileLocation_ =
 
 ////////////////////////////////////////////////////////////////////////////////
 BlockDataManagerConfig::BlockDataManagerConfig() :
-   cookie_(SecureBinaryData().GenerateRandom(32).toHexStr())
+   cookie_(CryptoPRNG::generateRandom(32).toHexStr())
 {
    selectNetwork(NETWORK_MODE_MAINNET);
 }
@@ -115,31 +115,40 @@ void BlockDataManagerConfig::selectNetwork(NETWORK_MODE mode)
    {
    case NETWORK_MODE_MAINNET:
    {
-      btcPort_ = portToString(NODE_PORT_MAINNET);
       rpcPort_ = portToString(RPC_PORT_MAINNET);
-
+      
       if (!customListenPort_)
          listenPort_ = portToString(LISTEN_PORT_MAINNET);
+      
+      if(!customBtcPort_)
+         btcPort_ = portToString(NODE_PORT_MAINNET);
+
       break;
    }
 
    case NETWORK_MODE_TESTNET:
    {
-      btcPort_ = portToString(NODE_PORT_TESTNET);
       rpcPort_ = portToString(RPC_PORT_TESTNET);
 
       if (!customListenPort_)
          listenPort_ = portToString(LISTEN_PORT_TESTNET);
+
+      if (!customBtcPort_)
+         btcPort_ = portToString(NODE_PORT_TESTNET);
+
       break;
    }
 
    case NETWORK_MODE_REGTEST:
    {
-      btcPort_ = portToString(NODE_PORT_REGTEST);
-      rpcPort_ = portToString(RPC_PORT_TESTNET);
+      rpcPort_ = portToString(RPC_PORT_REGTEST);
 
       if (!customListenPort_)
          listenPort_ = portToString(LISTEN_PORT_REGTEST);
+
+      if (!customBtcPort_)
+         btcPort_ = portToString(NODE_PORT_REGTEST);
+
       break;
    }
 
@@ -230,6 +239,8 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
    --clear-mempool: delete all zero confirmation transactions from the DB.
 
    --satoshirpc-port: set node rpc port
+
+   --satoshi-port: set Bitcoin node port
 
    ***/
 
@@ -431,6 +442,13 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
       {
          customListenPort_ = true;
       }
+   }
+
+   iter = args.find("satoshi-port");
+   if (iter != args.end())
+   {
+      btcPort_ = stripQuotes(iter->second);
+      customBtcPort_ = true;
    }
 
    //network type
@@ -836,6 +854,11 @@ vector<BinaryData> ConfigFile::fleshOutArgs(
 
    //complete config file path
    string configFile_path = BlockDataManagerConfig::defaultDataDir_;
+   if (keyValMap.find("--testnet") != keyValMap.end())
+      configFile_path = BlockDataManagerConfig::defaultTestnetDataDir_;
+   else if (keyValMap.find("--regtest") != keyValMap.end())
+      configFile_path = BlockDataManagerConfig::defaultRegtestDataDir_;
+
    auto datadir_iter = keyValMap.find("--datadir");
    if (datadir_iter != keyValMap.end() && datadir_iter->second.size() > 0)
       configFile_path = datadir_iter->second;

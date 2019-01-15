@@ -14,7 +14,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<WalletsManager> &walletsMgr
    , const std::string &walletsPath, NetworkType netType
-   , const std::string &pwHash, bool hasUI, bool backupEnabled)
+   , const bool &hasUI, const bool &backupEnabled)
    : QObject(nullptr), ServerConnectionListener()
    , connection_(conn)
    , logger_(logger)
@@ -22,9 +22,8 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , walletsPath_(walletsPath)
    , backupPath_(walletsPath + "/../backup")
    , netType_(netType)
-   , pwHash_(pwHash)
    , hasUI_(hasUI)
-   , backupEnabled_{backupEnabled}
+   , backupEnabled_(backupEnabled)
 {
    connect(this, &HeadlessContainerListener::xbtSpent, this, &HeadlessContainerListener::onXbtSpent);
 }
@@ -142,13 +141,8 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
          AuthResponse(clientId, packet, "Wrong Bitcoin network type");
          return;
       }
-      if (!pwHash_.empty() && (pwHash_ != request.password())) {
-         logger_->error("[HeadlessContainerListener] wrong auth password");
-         AuthResponse(clientId, packet, "Wrong Signer connection password");
-         return;
-      }
 
-      const auto authTicket = SecureBinaryData().GenerateRandom(8);;
+      const auto authTicket = CryptoPRNG::generateRandom(8);
       logger_->debug("[HeadlessContainerListener] setting authTicket {} for {}", authTicket.toHexStr(), toHex(clientId));
       authTickets_[clientId] = authTicket;
       AuthResponse(clientId, packet);
