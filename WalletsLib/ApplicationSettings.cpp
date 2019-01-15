@@ -59,8 +59,10 @@ static const int DefaultSatoshiPort = 8333;
 static const int DefaultTestnetSatoshiPort = 18333;
 
 static const QString ArmoryDefaultIP = QLatin1String("127.0.0.1");
-static const int ArmoryDefaultMainPort = 9001;
-static const int ArmoryDefaultTestPort = 19001;
+static const int ArmoryDefaultLocalMainPort = 9001;
+static const int ArmoryDefaultLocalTestPort = 19001;
+static const int ArmoryDefaultRemoteMainPort = 80;
+static const int ArmoryDefaultRemoteTestPort = 81;
 
 
 ApplicationSettings::ApplicationSettings(const QString &appName
@@ -78,7 +80,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("armory.blocksettle.com")) },
-      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 81) },
+      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort")) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.44")) },
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
@@ -456,18 +458,38 @@ SocketType ApplicationSettings::GetArmorySocketType() const
    return SocketHttp;
 }
 
-int ApplicationSettings::GetDefaultArmoryPort() const
-{
-   return GetDefaultArmoryPortForNetwork(get<NetworkType>(netType));
-}
-
-int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType)
+int ApplicationSettings::GetDefaultArmoryRemotePort(NetworkType networkType)
 {
    switch (networkType) {
    case NetworkType::MainNet:
-      return ArmoryDefaultMainPort;
+      return ArmoryDefaultRemoteMainPort;
    case NetworkType::TestNet:
-      return ArmoryDefaultTestPort;
+      return ArmoryDefaultRemoteTestPort;
+   default:
+      return 0;
+   }
+}
+
+QString ApplicationSettings::GetArmoryRemotePort(bool getDefault, NetworkType networkType) const
+{
+   QString port;
+   if (!getDefault) {
+      port = get<QString>(ApplicationSettings::armoryDbPort);
+   }
+   if (port.isEmpty()) {
+      port = QString::number(GetDefaultArmoryRemotePort(
+         (networkType == NetworkType::Invalid) ? get<NetworkType>(netType) : networkType));
+   }
+   return port;
+}
+
+int ApplicationSettings::GetDefaultArmoryLocalPort(NetworkType networkType)
+{
+   switch (networkType) {
+   case NetworkType::MainNet:
+      return ArmoryDefaultLocalMainPort;
+   case NetworkType::TestNet:
+      return ArmoryDefaultLocalTestPort;
    default:
       return 0;
    }
@@ -493,10 +515,10 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    settings.runLocally = get<bool>(ApplicationSettings::runArmoryLocally);
    if (settings.runLocally) {
       settings.armoryDBIp = "127.0.0.1";
-      settings.armoryDBPort = std::to_string(GetDefaultArmoryPort());
+      settings.armoryDBPort = std::to_string(GetDefaultArmoryLocalPort(get<NetworkType>(netType)));
    } else {
       settings.armoryDBIp = get<std::string>(ApplicationSettings::armoryDbIp);
-      settings.armoryDBPort = get<std::string>(ApplicationSettings::armoryDbPort);
+      settings.armoryDBPort = GetArmoryRemotePort().toStdString();
    }
    settings.socketType = GetArmorySocketType();
 

@@ -21,6 +21,7 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &StartupDialog::onBack);
    connect(ui_->pushButtonNext, &QPushButton::clicked, this, &StartupDialog::onNext);
    connect(ui_->radioButtonArmoryBlockSettle, &QPushButton::clicked, this, &StartupDialog::updateStatus);
+   connect(ui_->radioButtonArmoryCustom, &QPushButton::clicked, this, &StartupDialog::updateStatus);
    connect(ui_->radioButtonArmoryLocal, &QPushButton::clicked, this, &StartupDialog::updateStatus);
    connect(ui_->checkBoxTestnet, &QCheckBox::clicked, this, &StartupDialog::updatePort);
 
@@ -64,7 +65,7 @@ void StartupDialog::onNext()
 
 void StartupDialog::updateStatus()
 {
-   ui_->armoryGroupBox->setVisible(ui_->radioButtonArmoryLocal->isChecked());
+   ui_->armoryGroupBox->setVisible(ui_->radioButtonArmoryCustom->isChecked());
 
    int currentPage = ui_->stackedWidget->currentIndex();
 
@@ -94,9 +95,17 @@ void StartupDialog::updateStatus()
    }
 }
 
-bool StartupDialog::isRunArmoryLocally() const
+StartupDialog::RunMode StartupDialog::runMode() const
 {
-   return ui_->radioButtonArmoryLocal->isChecked();
+   if (ui_->radioButtonArmoryBlockSettle->isChecked()) {
+      return RunMode::BlocksettleSN;
+   }
+   else if (ui_->radioButtonArmoryLocal->isChecked()) {
+      return RunMode::Local;
+   }
+   else if (ui_->radioButtonArmoryCustom->isChecked()) {
+      return RunMode::Custom;
+   }
 }
 
 QString StartupDialog::armoryDbIp() const
@@ -106,7 +115,7 @@ QString StartupDialog::armoryDbIp() const
 
 int StartupDialog::armoryDbPort() const
 {
-   return ui_->spinBoxAarmoryDBPort->value();
+   return ui_->spinBoxArmoryDBPort->value();
 }
 
 NetworkType StartupDialog::networkType() const
@@ -116,5 +125,5 @@ NetworkType StartupDialog::networkType() const
 
 void StartupDialog::updatePort()
 {
-   ui_->spinBoxAarmoryDBPort->setValue(ApplicationSettings::GetDefaultArmoryPortForNetwork(networkType()));
+   ui_->spinBoxArmoryDBPort->setValue(ApplicationSettings::GetDefaultArmoryLocalPort(networkType()));
 }

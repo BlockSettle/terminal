@@ -94,21 +94,21 @@ void NetworkSettingsPage::displaySettings(bool displayDefault)
 
 void NetworkSettingsPage::DisplayRunArmorySettings(bool runLocally, bool displayDefault)
 {
+   auto networkType = ui_->checkBoxTestnet->isChecked()
+      ? NetworkType::TestNet
+      : NetworkType::MainNet;
+
    if (runLocally) {
       ui_->armoryDBHostLineEdit->setText(QString::fromStdString("localhost"));
 
-      auto networkType = ui_->checkBoxTestnet->isChecked()
-         ? NetworkType::TestNet
-         : NetworkType::MainNet;
-
-      ui_->armoryDBPortSpinBox->setValue(appSettings_->GetDefaultArmoryPortForNetwork(networkType));
+      ui_->armoryDBPortLineEdit->setText(QString::number(appSettings_->GetDefaultArmoryLocalPort(networkType)));
       ui_->armoryDBHostLineEdit->setEnabled(false);
-      ui_->armoryDBPortSpinBox->setEnabled(false);
+      ui_->armoryDBPortLineEdit->setEnabled(false);
    } else {
       ui_->armoryDBHostLineEdit->setEnabled(true);
-      ui_->armoryDBPortSpinBox->setEnabled(true);
-      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp, displayDefault));
-      ui_->armoryDBPortSpinBox->setValue(appSettings_->get<int>(ApplicationSettings::armoryDbPort, displayDefault));
+      ui_->armoryDBPortLineEdit->setEnabled(true);
+      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp));
+      ui_->armoryDBPortLineEdit->setText(appSettings_->GetArmoryRemotePort(displayDefault, networkType));
    }
 }
 
@@ -140,7 +140,7 @@ void NetworkSettingsPage::applyChanges()
    } else {
       appSettings_->set(ApplicationSettings::runArmoryLocally, false);
       appSettings_->set(ApplicationSettings::armoryDbIp, ui_->armoryDBHostLineEdit->text());
-      appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortSpinBox->value());
+      appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortLineEdit->text());
    }
 
    appSettings_->set(ApplicationSettings::pubBridgeHost, ui_->lineEditPublicBridgeHost->text());
@@ -152,11 +152,9 @@ void NetworkSettingsPage::onRunArmoryLocallyChecked(bool checked)
    DisplayRunArmorySettings(checked, false);
 }
 
-void NetworkSettingsPage::onNetworkClicked(bool checked)
+void NetworkSettingsPage::onNetworkClicked(bool)
 {
-   if (ui_->runArmoryDBLocallyCheckBox->isChecked()) {
-      DisplayRunArmorySettings(true, false);
-   }
+   DisplayRunArmorySettings(ui_->runArmoryDBLocallyCheckBox->isChecked(), false);
 }
 
 void NetworkSettingsPage::onEnvSettingsChanged()
