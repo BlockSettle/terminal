@@ -179,6 +179,7 @@ message NewHDWallet
    bool     primary = 4;
    bytes    privateKey = 5;
    bytes    seed = 6;
+   bytes    chainCode = 7;
 }
 
 message PasswordData
