@@ -1035,7 +1035,7 @@
                         </size>
                        </property>
                        <property name="text">
-                        <string>Transaction Weight</string>
+                        <string>Transaction Size (Virtual)</string>
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>

@@ -158,8 +158,21 @@ bool TransactionData::UpdateTransactionData()
       utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId(), transactions);
    }
 
+   // The for loop is equivalent to CoinSelectionInstance::decorateUTXOs() in
+   // Armory. We need it for proper initialization of the UTXO structs when
+   // computing TX sizes and fees. We're assuming all TXs created will use
+   // SegWit. It's a safe assumption moving forward.
    for (auto& utxo : transactions) {
-      utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
+      utxo.txinRedeemSizeBytes_ = \
+         bs::wallet::getInputScrSize(wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
+      try
+      {
+         utxo.witnessDataSizeBytes_ = \
+            wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr())->getWitnessDataSize();
+         utxo.isInputSW_ = true;
+      }
+      catch (runtime_error&)
+      { }
    }
 
    uint64_t availableBalance = 0;
@@ -211,7 +224,7 @@ bool TransactionData::UpdateTransactionData()
 
          usedUTXO_ = selection.utxoVec_;
 
-         summary_.txVirtSize = selection.size_;
+         summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
 
@@ -223,7 +236,7 @@ bool TransactionData::UpdateTransactionData()
          usedUTXO_ = transactions;
 
          if (maxAmount) {
-            summary_.txVirtSize = usedUTXO_.size();
+            summary_.txVirtSize = getVirtSize(usedUTXO_);
             summary_.totalFee = availableBalance - payment.spendVal_;
             totalFee_ = summary_.totalFee;
 //            summary_.feePerByte = feePerByte_;
@@ -245,7 +258,7 @@ bool TransactionData::UpdateTransactionData()
                return false;
             }
 
-            summary_.txVirtSize = selection.size_;
+            summary_.txVirtSize = getVirtSize(selection);
             summary_.totalFee = selection.fee_;
             summary_.feePerByte = selection.fee_byte_;
 
@@ -320,6 +333,16 @@ bool TransactionData::RecipientsReady() const
    return true;
 }
 
+// A temporary private function that calculates the virtual size of an incoming
+// UtxoSelection object. This needs to be removed when a particular PR
+// (https://github.com/goatpig/BitcoinArmory/pull/538) is accepted upstream.
+// Note that this function assumes SegWit will be used. It's fine for our
+// purposes but it's a bad assumption in general.
+size_t TransactionData::getVirtSize(const UtxoSelection& inUTXOSel) {
+   size_t nonWitSize = inUTXOSel.size_ - inUTXOSel.witnessSize_;
+   return std::ceil(static_cast<float>(3*nonWitSize + inUTXOSel.size_) / 4.0f);
+}
+
 void TransactionData::SetFeePerByte(float feePerByte)
 {
    feePerByte_ = feePerByte;
@@ -388,7 +411,7 @@ std::vector<UTXO> TransactionData::inputs() const
 
 bool TransactionData::IsTransactionValid() const
 {
-   return (wallet_ != nullptr) 
+   return (wallet_ != nullptr)
       && (selectedInputs_ != nullptr)
       && summary_.usedTransactions != 0
       && (!qFuzzyIsNull(feePerByte_) || totalFee_ != 0) && RecipientsReady();

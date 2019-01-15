@@ -9,11 +9,11 @@
 #include "MetaData.h"
 #include "UtxoReservation.h"
 
-
 class CoinSelection;
 class RecipientContainer;
 class ScriptRecipient;
 class SelectedTransactionInputs;
+struct UtxoSelection;
 
 namespace bs {
    class Wallet;
@@ -134,6 +134,9 @@ private:
    void InvalidateTransactionData();
    bool UpdateTransactionData();
    bool RecipientsReady() const;
+
+   // Temporary function until some Armory changes are accepted upstream.
+   size_t getVirtSize(const UtxoSelection& inUTXOSel);
 
    std::vector<std::shared_ptr<ScriptRecipient>> GetRecipientList() const;
 
