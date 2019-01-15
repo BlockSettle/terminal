@@ -94,15 +94,25 @@ void NewWalletSeedConfirmDialog::onKeyChanged(const QString &)
       keysAreCorrect_ = (bs::hd::Node(seed).getId() == walletId_);
    }
 
-   if (inputLine1 != keyLine1) {
-      UiUtils::setWrongState(ui_->lineEditLine1, true);
-   } else {
+   if (inputLine1.size() == validator_->getNumWords() * validator_->getWordSize()) {
+      if (inputLine1 != keyLine1) {
+         UiUtils::setWrongState(ui_->lineEditLine1, true);
+      } else {
+         UiUtils::setWrongState(ui_->lineEditLine1, false);
+      }
+   }
+   else {
       UiUtils::setWrongState(ui_->lineEditLine1, false);
    }
 
-   if (inputLine2 != keyLine2) {
-      UiUtils::setWrongState(ui_->lineEditLine2, true);
-   } else {
+   if (inputLine2.size() == validator_->getNumWords() * validator_->getWordSize()) {
+      if (inputLine2 != keyLine2) {
+         UiUtils::setWrongState(ui_->lineEditLine2, true);
+      } else {
+         UiUtils::setWrongState(ui_->lineEditLine2, false);
+      }
+   }
+   else {
       UiUtils::setWrongState(ui_->lineEditLine2, false);
    }
 

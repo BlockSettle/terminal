@@ -832,7 +832,7 @@ bool RemoteSigner::Start()
       // seems reasonable on a VM but we'll add some padding to be safe.
       QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
       QString zmqSrvPubKeyPath = logDir.path() + \
-         QString::fromStdString("/headless_conn_srv.pub");
+         QString::fromStdString("/zmq_conn_srv.pub");
       QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
       if (!zmqSrvPubKeyFile.exists()) {
          QThread::msleep(250);
@@ -1142,6 +1142,34 @@ bool LocalSigner::Start()
       logger_->warn("[HeadlessContainer] Failed to open PID file {} for writing", pidFileName.toStdString());
    }
    logger_->debug("[HeadlessContainer] child process started");
+
+   // SPECIAL CASE: Unlike Windows and Linux, the Signer and Terminal have
+   // different data directories on Macs. Check the Signer for a file. There is
+   // an issue here if the Signer has moved its keys away from the standard
+   // location. We really should check the Signer's config file instead.
+#if defined (Q_OS_MAC)
+   QDir zmqFileDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+   QString zmqSrvPubKeyPath = zmqFileDir.path() + \
+      QString::fromStdString("/zmq_conn_srv.pub");
+   QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
+   if (!zmqSrvPubKeyFile.exists()) {
+      QThread::msleep(250); // Give Signer time to create files if needed.
+      QDir signZMQFileDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+      signZMQFileDir.cdUp();
+      QString signZMQSrvPubKeyPath = signZMQFileDir.path() + \
+         QString::fromStdString("/Blocksettle/zmq_conn_srv.pub");
+      if (!QFile::copy(signZMQSrvPubKeyPath, zmqSrvPubKeyPath)) {
+         logger_->error("[LocalSigner::{}] Failed to copy ZMQ public key file "
+         "{} to the terminal. Connection will not start.", __func__
+         , signZMQSrvPubKeyPath.toStdString());
+         return false;
+      }
+      else {
+         logger_->info("[LocalSigner::{}] Copied ZMQ public key file ({}) to "
+         "the terminal.", __func__, zmqSrvPubKeyPath.toStdString());
+      }
+   }
+#endif
 
    RemoteSigner::Start();
    return true;

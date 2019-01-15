@@ -8,6 +8,7 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
       setStatusMsg({});
       return QValidator::State::Intermediate;
    }
+
    bool lastPos = (pos == input.length());
    QString tmpInput = input.trimmed().toLower().remove(QChar::Space);
    QString newInput;
@@ -31,6 +32,13 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
    input = newInput;
    if (lastPos) {
       pos = newPos;
+   }
+
+   QString inputWithoutSpaces = input;
+   inputWithoutSpaces.replace(QStringLiteral(" "), QStringLiteral(""));
+   if (inputWithoutSpaces.size() < numWords_ * wordSize_){
+      setStatusMsg({});
+      return QValidator::State::Intermediate;
    }
    if (!isValidKeyFormat(input)) {
       setStatusMsg(invalidMsgTmpl_.arg(name_));
@@ -86,6 +94,16 @@ EasyEncValidator::ValidationResult EasyEncValidator::validateKey(const QString &
 QString EasyEncValidator::getStatusMsg() const
 {
    return statusMsg_;
+}
+
+size_t EasyEncValidator::getWordSize() const
+{
+   return wordSize_;
+}
+
+size_t EasyEncValidator::getNumWords() const
+{
+   return numWords_;
 }
 
 QString EasyEncValidator::getName() const
