@@ -1465,10 +1465,14 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
       }
    }; // callback
 
-   const auto &cbWrap = [this, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
+   QPointer<QObject> thisSmartPtr = this;
+   const auto &cbWrap = [this, thisSmartPtr, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
+      if (!thisSmartPtr) {
+         return;
+      }
       try {
          const auto txOutListObj = txOutList.get();
-         QMetaObject::invokeMethod(this, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
+         QMetaObject::invokeMethod(thisSmartPtr, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {

@@ -898,7 +898,7 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
             logger_->warn("[HeadlessContainerListener] leaf {} is not inited", path.toString());
          }
 
-         CreateHDWalletResponse(clientId, id, leaf ? leaf->GetWalletId() : std::string{}
+         CreateHDWalletResponse(clientId, id, leaf->GetWalletId()
          , leafNode->pubCompressedKey(), leafNode->chainCode());
       }
       else {
@@ -933,7 +933,7 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    std::shared_ptr<bs::hd::Wallet> wallet;
    try {
       auto seed = request.privatekey().empty() ? bs::wallet::Seed(request.seed(), netType)
-         : bs::wallet::Seed(netType, request.privatekey());
+         : bs::wallet::Seed(netType, request.privatekey(), request.chaincode());
       wallet = walletsMgr_->CreateWallet(request.name(), request.description()
          , seed, QString::fromStdString(walletsPath_), request.primary(), pwdData, keyRank);
    }
@@ -957,7 +957,7 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
          CreateHDWalletResponse(clientId, id, "failed to create watching-only copy");
          return false;
       }
-      CreateHDWalletResponse(clientId, id, {}, {}, {}, woWallet);
+      CreateHDWalletResponse(clientId, id, woWallet->getWalletId(), {}, {}, woWallet);
    }
    catch (const std::exception &e) {
       CreateHDWalletResponse(clientId, id, e.what());
@@ -976,7 +976,7 @@ bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, he
    }
    std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.password_size(); ++i) {
-      const auto &pwd = request.password(i);
+      const auto pwd = request.password(i);
       pwdData.push_back({BinaryData::CreateFromHex(pwd.password())
          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
