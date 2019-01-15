@@ -58,6 +58,9 @@ public:
    void setName(const QString &getName);
 
 
+   size_t getWordSize() const;
+   size_t getNumWords() const;
+
 signals:
    void statusMsgChanged(const QString& newStatusMsg) const;
 

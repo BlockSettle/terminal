@@ -134,7 +134,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>For guidance, please consult the "Getting Started Guide" document.</string>
+         <string>For guidance, please consult the &quot;Getting Started Guide&quot;.</string>
         </property>
         <property name="textFormat">
          <enum>Qt::RichText</enum>
@@ -212,7 +212,7 @@
       <item>
        <widget class="QPushButton" name="pushButtonCreate">
         <property name="text">
-         <string>Create New</string>
+         <string>Create Wallet</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>

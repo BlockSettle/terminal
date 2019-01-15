@@ -108,6 +108,11 @@ void ImportWalletTypeDialog::OnDigitalSelected()
 
 void ImportWalletTypeDialog::updateImportButton()
 {
+   QString inputLine1 = ui_->lineSeed1->text().trimmed();
+   QString inputLine2 = ui_->lineSeed2->text().trimmed();
+   inputLine1.remove(QChar::Space);
+   inputLine2.remove(QChar::Space);
+
    if (ui_->tabWidget->currentWidget() == ui_->tabFull) {
       if (ui_->stackedWidgetInputs->currentIndex() == 0) {
          ui_->pushButtonImport->setEnabled(PaperImportOk());
@@ -117,15 +122,25 @@ void ImportWalletTypeDialog::updateImportButton()
          const bool seed1valid = (validator_->validateKey(seed1) == EasyEncValidator::Valid);
          const bool seed2valid = (validator_->validateKey(seed2) == EasyEncValidator::Valid);
 
-         if (!seed1valid) {
-            UiUtils::setWrongState(ui_->lineSeed1, true);
-         } else {
+         if (inputLine1.size() == validator_->getNumWords() * validator_->getWordSize()) {
+            if (!seed1valid) {
+               UiUtils::setWrongState(ui_->lineSeed1, true);
+            } else {
+               UiUtils::setWrongState(ui_->lineSeed1, false);
+            }
+         }
+         else {
             UiUtils::setWrongState(ui_->lineSeed1, false);
          }
 
-         if (!seed2valid) {
-            UiUtils::setWrongState(ui_->lineSeed2, true);
-         } else {
+         if (inputLine2.size() == validator_->getNumWords() * validator_->getWordSize()) {
+            if (!seed2valid) {
+               UiUtils::setWrongState(ui_->lineSeed2, true);
+            } else {
+               UiUtils::setWrongState(ui_->lineSeed2, false);
+            }
+         }
+         else {
             UiUtils::setWrongState(ui_->lineSeed2, false);
          }
       }
