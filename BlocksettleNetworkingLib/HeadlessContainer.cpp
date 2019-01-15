@@ -824,30 +824,30 @@ bool RemoteSigner::Start()
    }
 
    // If the ZMQ server public key hasn't been loaded yet, do it here.
-   if (zmqSrvPubKey_.getSize() == 0) {
+   if (zmqSignerPubKey_.getSize() == 0) {
       // Read the server key file. For now, assume the location is fixed. We may
       // want to make the location dynamic later. In addition, there's a race
       // condition of sorts when starting out. If the server pub key exists,
       // proceed. If not, give the signer a little time to create the key. 50 ms
       // seems reasonable on a VM but we'll add some padding to be safe.
       QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-      QString zmqSrvPubKeyPath = logDir.path() + \
+      QString zmqSignerPubKeyPath = logDir.path() + \
          QString::fromStdString("/zmq_conn_srv.pub");
-      QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
-      if (!zmqSrvPubKeyFile.exists()) {
+      QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
+      if (!zmqSignerPubKeyFile.exists()) {
          QThread::msleep(250);
       }
 
-      if (!bs::network::readZMQKeyFile(zmqSrvPubKeyPath, zmqSrvPubKey_, true
+      if (!bs::network::readZMQKeyFile(zmqSignerPubKeyPath, zmqSignerPubKey_, true
          , logger_)) {
          logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
-            "key ({})", __func__, zmqSrvPubKeyPath.toStdString());
+            "key ({})", __func__, zmqSignerPubKeyPath.toStdString());
          return false;
       }
    }
 
    connection_ = connectionManager_->CreateSecuredDataConnection(true);
-   if (!connection_->SetServerPublicKey(zmqSrvPubKey_)) {
+   if (!connection_->SetServerPublicKey(zmqSignerPubKey_)) {
       logger_->error("[RemoteSigner::{}] Failed to set ZMQ server public key"
          , __func__);
       connection_ = nullptr;
@@ -1050,9 +1050,10 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
+   , const std::shared_ptr<ApplicationSettings>& appSettings
    , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, OpMode::Local)
+   , connectionManager, OpMode::Local), appSettings_(appSettings)
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
@@ -1105,9 +1106,9 @@ bool LocalSigner::Start()
       QFile::remove(pidFileName);
    });
 
-#ifdef Q_OS_WIN
+#if defined (Q_OS_WIN)
    const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer.exe");
-#elif defined (Q_OS_MAC)
+#elif defined (Q_OS_MACOS)
    auto bundleDir = QDir(QCoreApplication::applicationDirPath());
    bundleDir.cdUp();
    bundleDir.cdUp();
@@ -1147,18 +1148,16 @@ bool LocalSigner::Start()
    // different data directories on Macs. Check the Signer for a file. There is
    // an issue here if the Signer has moved its keys away from the standard
    // location. We really should check the Signer's config file instead.
-#if defined (Q_OS_MAC)
-   QDir zmqFileDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-   QString zmqSrvPubKeyPath = zmqFileDir.path() + \
-      QString::fromStdString("/zmq_conn_srv.pub");
-   QFile zmqSrvPubKeyFile(zmqSrvPubKeyPath);
-   if (!zmqSrvPubKeyFile.exists()) {
+#if defined (Q_OS_MACOS)
+   QString zmqSignerPubKeyPath = QString::fromStdString(appSettings_->get<std::string>(ApplicationSettings::zmqSignerPubKeyFile));
+   QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
+   if (!zmqSignerPubKeyFile.exists()) {
       QThread::msleep(250); // Give Signer time to create files if needed.
       QDir signZMQFileDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
       signZMQFileDir.cdUp();
       QString signZMQSrvPubKeyPath = signZMQFileDir.path() + \
          QString::fromStdString("/Blocksettle/zmq_conn_srv.pub");
-      if (!QFile::copy(signZMQSrvPubKeyPath, zmqSrvPubKeyPath)) {
+      if (!QFile::copy(signZMQSrvPubKeyPath, zmqSignerPubKeyPath)) {
          logger_->error("[LocalSigner::{}] Failed to copy ZMQ public key file "
          "{} to the terminal. Connection will not start.", __func__
          , signZMQSrvPubKeyPath.toStdString());
@@ -1166,7 +1165,7 @@ bool LocalSigner::Start()
       }
       else {
          logger_->info("[LocalSigner::{}] Copied ZMQ public key file ({}) to "
-         "the terminal.", __func__, zmqSrvPubKeyPath.toStdString());
+         "the terminal.", __func__, zmqSignerPubKeyPath.toStdString());
       }
    }
 #endif

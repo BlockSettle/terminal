@@ -7,6 +7,7 @@
 #include <QStringList>
 #include "MetaData.h"
 #include "SignContainer.h"
+#include "ApplicationSettings.h"
 
 #include "headless.pb.h"
 
@@ -130,7 +131,7 @@ protected:
    const QString          port_;
    const NetworkType      netType_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
-   SecureBinaryData       zmqSrvPubKey_;
+   SecureBinaryData       zmqSignerPubKey_;
    bool  authPending_ = false;
 
 private:
@@ -145,6 +146,7 @@ public:
    LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
+      , const std::shared_ptr<ApplicationSettings>& appSettings
       , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 
@@ -154,6 +156,7 @@ public:
 private:
    QStringList                args_;
    std::shared_ptr<QProcess>  headlessProcess_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
 };
 
 
