@@ -132,7 +132,7 @@ To make sure that you have properly saved your seed, please retype it here.")
                 else {
                     seedMatch = false
                 }
-                seedMatch = true  // !!! ONLY FOR TESTING!!!
+                //seedMatch = true  // !!! ONLY FOR TESTING!!!
             }
         }
 
