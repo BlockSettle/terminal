@@ -52,7 +52,7 @@ public slots:
    void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
 
 private:
-   using MessagesHistory = std::vector<std::tuple<QDateTime, QString, QString>>;
+   using MessagesHistory = std::vector<ChatMessageParts>;
    QMap<QString, MessagesHistory> messages_;
    QString   currentChatId_;
    QString   ownUserId_;
