@@ -218,6 +218,32 @@ Item {
                 }
 
                 CustomButton {
+                    text: qsTr("Export")
+                    Layout.minimumWidth: 80
+                    Layout.preferredWidth: 80
+                    Layout.maximumWidth: 80
+                    Layout.maximumHeight: 26
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        zmqExportPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
+                        zmqExportPubKeyDlg.open()
+                        zmqExportPubKeyDlg.accepted.connect(function(){
+                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.zmqPubKeyFile)
+                            JsHelper.saveTextFile(zmqExportPubKeyDlg.fileUrl, zmqPubKey)
+                        })
+                    }
+                    FileDialog {
+                        id: zmqExportPubKeyDlg
+                        visible: false
+                        title: "Select ZMQ Public Key"
+                        selectFolder: false
+                        selectExisting: false
+                        nameFilters: [ "Key files (*.pub)", "All files (*)" ]
+                        selectedNameFilter: "*.pub"
+                    }
+                }
+
+                CustomButton {
                     text: qsTr("Select")
                     Layout.minimumWidth: 80
                     Layout.preferredWidth: 80

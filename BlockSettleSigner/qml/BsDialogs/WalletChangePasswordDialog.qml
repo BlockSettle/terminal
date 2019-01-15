@@ -11,6 +11,7 @@ import com.blocksettle.QPasswordData 1.0
 import com.blocksettle.NsWallet.namespace 1.0
 
 import "../BsControls"
+import "../BsStyles"
 import "../StyledControls"
 import "../js/helper.js" as JsHelper
 
@@ -28,7 +29,7 @@ CustomDialog {
 
     property bool acceptable : {
         if (tabBar.currentIndex === 0) return acceptableOld && acceptableNew
-        if (tabBar.currentIndex === 1) return true
+        if (tabBar.currentIndex === 1) return walletInfo.encType === NsWallet.Auth
         if (tabBar.currentIndex === 2) return false
     }
 
@@ -88,14 +89,14 @@ CustomDialog {
                 }
                 CustomTabButton {
                     id: addTabButton
-                    enabled: walletInfo.encType === NsWallet.Auth
+                    //enabled: walletInfo.encType === NsWallet.Auth
                     text: "Add Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
                 }
                 CustomTabButton {
                     id: deleteTabButton
-                    enabled: walletInfo.encType === NsWallet.Auth
+                    //enabled: walletInfo.encType === NsWallet.Auth
                     text: "Remove Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
@@ -175,9 +176,7 @@ CustomDialog {
                         columnSpacing: 10
                         visible: rbPassword.checked
                         passwordLabelTxt: qsTr("New Password")
-                        passwordInputPlaceholder: qsTr("New Password")
                         confirmLabelTxt: qsTr("Confirm New")
-                        confirmInputPlaceholder: qsTr("Confirm New Password")
                         nextFocusItem: btnAccept
                         onConfirmInputEnterPressed: {
                             if (btnAccept.enabled) btnAccept.onClicked()
@@ -225,15 +224,29 @@ CustomDialog {
                 id: addTab
                 spacing: 5
                 Layout.topMargin: 15
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.fillWidth: true
+
+                CustomLabel {
+                    text: "Enable Auth eID at first"
+                    color: BSStyle.textColor
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+                    visible: walletInfo.encType !== NsWallet.Auth
+                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    horizontalAlignment: Text.AlignHCenter
+                    padding: 20
+                    topPadding: 30
+                }
 
                 CustomLabel {
                     Layout.preferredWidth: changeEncryptionDialog.width - 20
-
                     horizontalAlignment: Text.AlignHCenter
-                    font.pixelSize: 12
                     padding: 20
-                    topPadding: 30
                     wrapMode: Text.WordWrap
+                    color: walletInfo.encType === NsWallet.Auth ? BSStyle.labelsTextColor : BSStyle.labelsTextDisabledColor
+
                     text: "Add the ability to sign transactions from your other Auth eID devices.\
 \n\n\n Only one signature from one device will be required to sign requests.\
 \n\n\n First you'll have to follow the Add Device instructions in your Auth eID app.\n When completed please proceed here.\
@@ -252,11 +265,23 @@ CustomDialog {
                 Layout.rightMargin: 10
                 Layout.fillWidth: true
 
+                CustomLabel {
+                    text: "Enable Auth eID at first"
+                    color: BSStyle.textColor
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+                    visible: walletInfo.encType !== NsWallet.Auth
+                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    horizontalAlignment: Text.AlignHCenter
+                    padding: 20
+                    topPadding: 30
+                }
+
                 CustomHeader {
                     text: qsTr("Devices")
+                    textColor: walletInfo.encType === NsWallet.Auth ? BSStyle.textColor : BSStyle.labelsTextDisabledColor
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
-                    //Layout.preferredWidth: 250
                     Layout.topMargin: 5
                     Layout.leftMargin: 10
                     Layout.rightMargin: 10
@@ -377,7 +402,10 @@ CustomDialog {
                                                                                                                              , oldPwEidData
                                                                                                                              , newPwEidData)
                                                                                         var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, ok, walletInfo)
-                                                                                        mb.accepted.connect(function(){ acceptAnimated() })
+                                                                                        mb.accepted.connect(function(){
+                                                                                            //acceptAnimated()
+                                                                                            addTabButton.onClicked()
+                                                                                        })
                                                                                     }) // function(new passwordData)
 
                                                         }
@@ -405,7 +433,10 @@ CustomDialog {
                                                                                             , oldPasswordData
                                                                                             , newPwEidData)
                                                             var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, ok, walletInfo)
-                                                            mb.accepted.connect(function(){ acceptAnimated() })
+                                                            mb.accepted.connect(function(){
+                                                                //acceptAnimated()
+                                                                addTabButton.onClicked()
+                                                            })
                                                         })
                              }
                         }

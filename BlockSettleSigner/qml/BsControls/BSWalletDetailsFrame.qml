@@ -18,6 +18,8 @@ ColumnLayout {
     property int inputsWidth
     property var nextFocusItem
 
+    signal passwordEntered()
+
     CustomHeader {
         text: qsTr("Wallet Details")
         Layout.fillWidth: true
@@ -67,14 +69,15 @@ ColumnLayout {
         }
     }
 
-    //                    CustomHeader {
-    //                        text: qsTr("Current Encryption")
-    //                        Layout.fillWidth: true
-    //                        Layout.preferredHeight: 25
-    //                        Layout.topMargin: 5
-    //                        Layout.leftMargin: 10
-    //                        Layout.rightMargin: 10
-    //                    }
+    CustomHeader {
+        text: qsTr("Enter Password")
+        visible: walletInfo.encType === NsWallet.Password
+        Layout.fillWidth: true
+        Layout.preferredHeight: 25
+        Layout.topMargin: 5
+        Layout.leftMargin: 10
+        Layout.rightMargin: 10
+    }
 
     RowLayout {
         spacing: 5
@@ -85,7 +88,7 @@ ColumnLayout {
         CustomLabel {
             visible: walletInfo.encType === NsWallet.Password
             elide: Label.ElideRight
-            text: qsTr("Current password")
+            text: qsTr("Password")
             wrapMode: Text.WordWrap
             Layout.minimumWidth: 110
             Layout.preferredWidth: 110
@@ -96,12 +99,18 @@ ColumnLayout {
             id: passwordInput
             visible: walletInfo.encType === NsWallet.Password
             focus: true
-            placeholderText: qsTr("Old Password")
+            //placeholderText: qsTr("Old Password")
             Layout.fillWidth: true
             Layout.preferredWidth: inputsWidth
             KeyNavigation.tab: nextFocusItem === undefined ? null : nextFocusItem
-            Keys.onEnterPressed: { nextFocusItem.forceActiveFocus() }
-            Keys.onReturnPressed: { nextFocusItem.forceActiveFocus() }
+            Keys.onEnterPressed: {
+                if (nextFocusItem !== undefined) nextFocusItem.forceActiveFocus()
+                passwordEntered()
+            }
+            Keys.onReturnPressed: {
+                if (nextFocusItem !== undefined) nextFocusItem.forceActiveFocus()
+                passwordEntered()
+            }
         }
 
         CustomLabel {

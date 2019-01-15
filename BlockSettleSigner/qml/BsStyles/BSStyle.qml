@@ -13,6 +13,7 @@ QtObject {
     property color textPressedColor: "#3a8ab4"
 
     property color labelsTextColor: "#757E83"
+    property color labelsTextDisabledColor: "#454E53"
     property color inputsBorderColor: "#757E83"
     property color inputsFontColor: "white"
     property color inputsInvalidColor: "red"
@@ -33,10 +34,11 @@ QtObject {
     property color progressBarBgColor: "black"
 
     property color switchBgColor: "transparent"
-    //property color switchGreenColor: "#22C064"
-    property color switchGreenColor: "#247dac"
+    //property color switchCheckedColor: "#22C064"
+    property color switchCheckedColor: "#247dac"
     property color switchOrangeColor: "#f6a724"
-    property color switchRedColor: "#EC0A35"
+    //property color switchUncheckedColor: "#EC0A35"
+    property color switchUncheckedColor: "#81888f"
 
     property color dialogHeaderColor: "#0A1619"
     property color dialogTitleGreenColor: "#38C673"

@@ -30,10 +30,10 @@ Item {
                     padding: 5
                     width: parent.width
 
-                    CustomButton {
+                    CustomButtonPrimary {
                         id: btnSignOfflineTx
                         text: qsTr("Sign Offline From File")
-                        width: parent.width - 10
+                        width: 200
                         onClicked: {
                             if (!ldrOfflineFileDlg.item) {
                                 ldrOfflineFileDlg.active = true

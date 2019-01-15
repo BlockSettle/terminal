@@ -33,7 +33,7 @@ CustomTitleDialogWindow {
     property bool importAcceptable: tfName.text.length
                                     && (newPasswordWithConfirm.acceptableInput && rbPassword.checked
                                         || textInputEmail.text && rbAuth.checked)
-    property int inputLabelsWidth: 105
+    property int inputLabelsWidth: 110
     property int curPage: WalletImportDialog.Page.Select
     property bool authNoticeShown: false
 
@@ -42,6 +42,10 @@ CustomTitleDialogWindow {
     height: 470
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
+
+    onEnterPressed: {
+        if (btnAccept.enabled) btnAccept.onClicked()
+    }
 
     enum Page {
         Select = 1,
@@ -63,7 +67,7 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 id: headerText
-                text: qsTr("Import Details")
+                text: qsTr("Backup Type")
                 Layout.fillWidth: true
                 Layout.preferredHeight: 25
                 Layout.topMargin: 5
@@ -74,11 +78,6 @@ CustomTitleDialogWindow {
             ColumnLayout {
                 id: fullImportLayout
 
-                CustomLabel {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 10
-                    text: qsTr("Backup Type")
-                }
                 RowLayout {
                     spacing: 5
                     Layout.fillWidth: true
@@ -87,13 +86,33 @@ CustomTitleDialogWindow {
 
                     CustomRadioButton {
                         id: rbPaperBackup
+                        Layout.leftMargin: inputLabelsWidth
                         text: qsTr("Paper Backup")
                         checked: true
                     }
                     CustomRadioButton {
                         id: rbFileBackup
-                        text: qsTr("Digital Backup File")
+                        text: qsTr("Digital Backup")
                     }
+                }
+
+                CustomHeader {
+                    text: qsTr("Root Private Key")
+                    visible: rbPaperBackup.checked
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 25
+                    Layout.topMargin: 5
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                }
+                CustomHeader {
+                    text: qsTr("File Location")
+                    visible: rbFileBackup.checked
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 25
+                    Layout.topMargin: 5
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
                 }
 
                 BSEasyCodeInput {
@@ -102,7 +121,7 @@ CustomTitleDialogWindow {
                     rowSpacing: 0
                     columnSpacing: 0
                     Layout.margins: 5
-                    sectionHeaderTxt: qsTr("Enter Root Private Key")
+                    //sectionHeaderTxt: qsTr("Enter Root Private Key")
                     line1LabelTxt: qsTr("Root Key Line 1")
                     line2LabelTxt: qsTr("Root Key Line 2")
                     onEntryComplete: {
@@ -113,12 +132,12 @@ CustomTitleDialogWindow {
                     }
                 }
             }
-            CustomLabel {
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                text: qsTr("File Location to Restore")
-                visible: !rbPaperBackup.checked
-            }
+//            CustomLabel {
+//                Layout.fillWidth: true
+//                Layout.leftMargin: 10
+//                text: qsTr("File Location to Restore")
+//                visible: !rbPaperBackup.checked
+//            }
             RowLayout {
                 spacing: 5
                 Layout.fillWidth: true
@@ -133,6 +152,8 @@ CustomTitleDialogWindow {
                     Layout.preferredWidth: inputLabelsWidth
                     Layout.maximumWidth: inputLabelsWidth
                     text: qsTr("Digital backup")
+                    verticalAlignment: Text.AlignTop
+                    Layout.alignment: Qt.AlignTop
                 }
 
                 CustomLabel {
@@ -144,6 +165,7 @@ CustomTitleDialogWindow {
                 }
                 CustomButton {
                     text: qsTr("Select")
+                    Layout.alignment: Qt.AlignTop
                     onClicked: {
                         if (!ldrDBFileDlg.item) {
                             ldrDBFileDlg.active = true;
@@ -183,7 +205,7 @@ CustomTitleDialogWindow {
                 }
                 CustomLabel {
                     Layout.fillWidth: true
-                    text: seed ? seed.walletId : qsTr("")
+                    text: seed.walletId
                 }
             }
 
@@ -291,11 +313,8 @@ CustomTitleDialogWindow {
                 id: newPasswordWithConfirm
                 visible: rbPassword.checked
                 columnSpacing: 10
-                rowSpacing: 0
                 passwordLabelTxt: qsTr("Wallet Password")
-                passwordInputPlaceholder: qsTr("New Wallet Password")
                 confirmLabelTxt: qsTr("Confirm Password")
-                confirmInputPlaceholder: qsTr("Confirm New Wallet Password")
                 onConfirmInputEnterPressed: {
                     if (btnAccept.enabled) btnAccept.onClicked()
                 }

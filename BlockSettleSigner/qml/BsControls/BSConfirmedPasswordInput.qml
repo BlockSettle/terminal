@@ -52,8 +52,36 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitWidth: inputsWidth
             KeyNavigation.tab: confirmPasswordInput
-            Keys.onEnterPressed: { confirmPasswordInput.forceActiveFocus() }
-            Keys.onReturnPressed: { confirmPasswordInput.forceActiveFocus() }
+//            Keys.onEnterPressed: { confirmPasswordInput.forceActiveFocus() }
+//            Keys.onReturnPressed: { confirmPasswordInput.forceActiveFocus() }
+
+            Keys.onEnterPressed: {
+                if (lblValidatorText.text.length === 0) {
+                    confirmPasswordInput.forceActiveFocus()
+                }
+                else {
+                    lblValidatorText.visible = true
+                }
+            }
+            Keys.onReturnPressed: {
+                if (lblValidatorText.text.length === 0) {
+                    confirmPasswordInput.forceActiveFocus()
+                }
+                else {
+                    lblValidatorText.visible = true
+                }
+            }
+            onActiveFocusChanged: {
+                if (lblValidatorText.text.length !== 0) {
+                    lblValidatorText.visible = true
+                }
+            }
+            onTextChanged: {
+                if (lblValidatorText.text.length === 0) {
+                    lblValidatorText.visible = false
+                }
+            }
+
             validator: PasswordConfirmValidator {
                 compareTo: confirmPasswordInput.text
             }
@@ -88,8 +116,8 @@ ColumnLayout {
             validator: PasswordConfirmValidator {}
             KeyNavigation.tab: nextFocusItem === undefined ? null : nextFocusItem
             Keys.onEnterPressed: {
-                confirmPasswordInput.focus = nextFocusItem === undefined ? null : nextFocusItem
                 confirmInputEnterPressed()
+                confirmPasswordInput.focus = nextFocusItem === undefined ? null : nextFocusItem
             }
             Keys.onReturnPressed: {
                 confirmInputEnterPressed()
@@ -109,8 +137,10 @@ ColumnLayout {
 
 
         CustomLabel {
+            id: lblValidatorText
             topPadding: 1
             bottomPadding: 1
+            visible: false
             Layout.fillWidth: true
             Layout.leftMargin: labelsWidth + 5
             text: passwordInput.validator.statusMsg

@@ -16,6 +16,11 @@ CustomTitleDialogWindow {
 
     property string centralText : qsTr("Activate Auth eID signing\n Wallet ID: %1\n Wallet Name: %2").arg(walletId).arg(walletName)
     acceptable: false
+    rejectable: true
+    onEnterPressed: {
+        rejectAnimated()
+    }
+
     width: 350
 
     title: qsTr("Sign With Auth eID")
@@ -42,6 +47,7 @@ CustomTitleDialogWindow {
             CustomLabelValue{
                 id: labelText_
                 text: centralText
+                lineHeight: 1.5
                 padding: 15
                 Layout.preferredWidth: root.width
                 horizontalAlignment: Text.AlignHCenter

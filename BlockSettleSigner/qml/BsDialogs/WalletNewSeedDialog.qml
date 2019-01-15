@@ -21,10 +21,16 @@ CustomTitleDialogWindow {
     property QSeed seed: QSeed{}
 
     title: curPage == 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
-    implicitWidth: curPage == 1 ? mainWindow.width * 0.8 : 400
-    implicitHeight: curPage == 1 ? mainWindow.height * 0.98 : 265
+
+    width: curPage == 1 ? mainWindow.width * 0.8 : 400
+    height: curPage == 1 ? mainWindow.height * 0.98 : 265
+
     abortConfirmation: true
     abortBoxType: BSAbortBox.WalletCreation
+
+    onEnterPressed: {
+        if (btnContinue.enabled) btnContinue.onClicked()
+    }
 
     onSeedChanged: {
         // need to update object since bindings working only for basic types
@@ -111,7 +117,7 @@ To make sure that you have properly saved your seed, please retype it here.")
         BSEasyCodeInput {
             id: rootKeyInput
             visible: curPage == 2
-            sectionHeaderVisible: false
+            //sectionHeaderVisible: false
             line1LabelTxt: qsTr("Line 1")
             line2LabelTxt: qsTr("Line 2")
             onAcceptableInputChanged: {
@@ -169,6 +175,20 @@ To make sure that you have properly saved your seed, please retype it here.")
                 visible: curPage == 1
                 onClicked: {
                     pdf.print();
+                }
+            }
+
+            CustomButton {
+                id: btnBack
+                anchors.right: btnContinue.left
+                anchors.bottom: parent.bottom
+                text: qsTr("Back")
+                visible: curPage == 2
+                onClicked: {
+                    curPage = 1
+//                    root.height++
+//                    root.height--
+
                 }
             }
 

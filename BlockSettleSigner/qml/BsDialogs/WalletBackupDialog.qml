@@ -30,6 +30,9 @@ CustomTitleDialogWindow {
 
     title: qsTr("Backup Private Key for Wallet %1").arg(walletInfo.name)
     rejectable: true
+    onEnterPressed: {
+        if (btnAccept.enabled) btnAccept.onClicked()
+    }
 
     onWalletInfoChanged: {
         // need to update object since bindings working only for basic types
@@ -44,6 +47,9 @@ CustomTitleDialogWindow {
             id: walletDetailsFrame
             walletInfo: walletInfo
             inputsWidth: 250
+            onPasswordEntered:{
+                if (btnAccept.enabled) btnAccept.onClicked()
+            }
         }
 
         CustomHeader {
@@ -63,21 +69,21 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.preferredWidth: 110
-                text: qsTr("Type of backup file")
+                text: qsTr("Backup Type")
                 Layout.alignment: Qt.AlignTop
             }
 
-            ColumnLayout {
+            RowLayout {
                 Layout.fillWidth: true
                 CustomRadioButton {
-                    text: qsTr("Digital backup file")
+                    text: qsTr("Digital Backup")
                     checked: !isPrintable
                     onClicked: {
                         isPrintable = false
                     }
                 }
                 CustomRadioButton {
-                    text: qsTr("Paper backup (PDF file)")
+                    text: qsTr("Paper Backup")
                     checked: isPrintable
                     onClicked: {
                         isPrintable = true
@@ -149,6 +155,7 @@ CustomTitleDialogWindow {
             }
 
             CustomButtonPrimary {
+                id: btnAccept
                 enabled: acceptable
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right

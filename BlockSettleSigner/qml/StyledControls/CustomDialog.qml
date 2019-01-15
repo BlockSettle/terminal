@@ -39,6 +39,8 @@ CustomDialogWindow {
     property alias cHeaderItem: customHeaderContainer.data
     property alias cFooterItem: customFooterContainer.data
 
+    signal enterPressed()
+
     Component.onCompleted: {
         cContentItem.parent = customContentContainer
         cHeaderItem.parent = customHeaderContainer
@@ -109,6 +111,7 @@ CustomDialogWindow {
                 case Qt.Key_Enter:
                 case Qt.Key_Return:
                     if (acceptable) acceptAnimated()
+                    else enterPressed()
                     break
             }
         }
