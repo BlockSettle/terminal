@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_set>
 #include <QString>
 #include <QVariant>
 
@@ -94,6 +95,7 @@ protected:
 
    std::shared_ptr<spdlog::logger> logger_;
    std::vector<BaseSettingsParam*> params_;
+   std::unordered_set<std::string> paramsNames_;
 };
 
 #endif // __SETTINGS_PARSER_H__
