@@ -1106,7 +1106,7 @@ bool LocalSigner::Start()
       QFile::remove(pidFileName);
    });
 
-#if defined (Q_OS_WIN)
+#ifdef Q_OS_WIN
    const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer.exe");
 #elif defined (Q_OS_MACOS)
    auto bundleDir = QDir(QCoreApplication::applicationDirPath());
@@ -1118,13 +1118,15 @@ bool LocalSigner::Start()
    const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer");
 #endif
    if (!QFile::exists(signerAppPath)) {
-      logger_->error("[HeadlessContainer] Signer binary {} not found", signerAppPath.toStdString());
+      logger_->error("[HeadlessContainer] Signer binary {} not found"
+         , signerAppPath.toStdString());
       emit connectionError(tr("missing signer binary"));
       emit ready();
       return false;
    }
 
-   logger_->debug("[HeadlessContainer] starting {} {}", signerAppPath.toStdString(), args_.join(QLatin1Char(' ')).toStdString());
+   logger_->debug("[HeadlessContainer] starting {} {}"
+      , signerAppPath.toStdString(), args_.join(QLatin1Char(' ')).toStdString());
    headlessProcess_->start(signerAppPath, args_);
    if (!headlessProcess_->waitForStarted(5000)) {
       logger_->error("[HeadlessContainer] Failed to start child");
@@ -1135,21 +1137,24 @@ bool LocalSigner::Start()
 
    QFile pidFile(pidFileName);
    if (pidFile.open(QIODevice::WriteOnly)) {
-      const auto pidStr = QString::number(headlessProcess_->processId()).toStdString();
+      const auto pidStr = \
+         QString::number(headlessProcess_->processId()).toStdString();
       pidFile.write(pidStr.data(), pidStr.size());
       pidFile.close();
    }
    else {
-      logger_->warn("[HeadlessContainer] Failed to open PID file {} for writing", pidFileName.toStdString());
+      logger_->warn("[LocalSigner::{}] Failed to open PID file {} for writing"
+         , __func__, pidFileName.toStdString());
    }
-   logger_->debug("[HeadlessContainer] child process started");
+   logger_->debug("[LocalSigner::{}] child process started", __func__);
 
    // SPECIAL CASE: Unlike Windows and Linux, the Signer and Terminal have
    // different data directories on Macs. Check the Signer for a file. There is
    // an issue here if the Signer has moved its keys away from the standard
    // location. We really should check the Signer's config file instead.
-#if defined (Q_OS_MACOS)
-   QString zmqSignerPubKeyPath = QString::fromStdString(appSettings_->get<std::string>(ApplicationSettings::zmqSignerPubKeyFile));
+#ifdef Q_OS_MACOS
+   QString zmqSignerPubKeyPath = \
+      appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile);
    QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
    if (!zmqSignerPubKeyFile.exists()) {
       QThread::msleep(250); // Give Signer time to create files if needed.
@@ -1159,13 +1164,13 @@ bool LocalSigner::Start()
          QString::fromStdString("/Blocksettle/zmq_conn_srv.pub");
       if (!QFile::copy(signZMQSrvPubKeyPath, zmqSignerPubKeyPath)) {
          logger_->error("[LocalSigner::{}] Failed to copy ZMQ public key file "
-         "{} to the terminal. Connection will not start.", __func__
-         , signZMQSrvPubKeyPath.toStdString());
+            "{} to the terminal. Connection will not start.", __func__
+            , signZMQSrvPubKeyPath.toStdString());
          return false;
       }
       else {
          logger_->info("[LocalSigner::{}] Copied ZMQ public key file ({}) to "
-         "the terminal.", __func__, zmqSignerPubKeyPath.toStdString());
+            "the terminal.", __func__, zmqSignerPubKeyPath.toStdString());
       }
    }
 #endif
