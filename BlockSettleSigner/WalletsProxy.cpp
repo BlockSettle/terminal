@@ -300,14 +300,14 @@ bool WalletsProxy::createWallet(bool isPrimary
       return false;
    }
 
-   try {    //!
-       walletsMgr_->CreateWallet(walletInfo->name().toStdString()
-                                 , walletInfo->desc().toStdString()
-                                 , *seed
-                                 , settings_->getWalletsDir()
-                                 , isPrimary
-                                 , { *passwordData }
-                                 , { 1, 1 });
+   try {
+      walletsMgr_->CreateWallet(walletInfo->name().toStdString()
+                              , walletInfo->desc().toStdString()
+                              , *seed
+                              , settings_->getWalletsDir()
+                              , isPrimary
+                              , { *passwordData }
+                              , { 1, 1 });
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());

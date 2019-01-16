@@ -80,7 +80,8 @@ private:
    bool activationRequired_ = false;
 };
 
-static void checkFirstStart(ApplicationSettings *applicationSettings) {
+static void checkFirstStart(ApplicationSettings *applicationSettings)
+{
   bool wasInitialized = applicationSettings->get<bool>(ApplicationSettings::initialized);
   if (wasInitialized) {
     return;
@@ -101,17 +102,18 @@ static void checkFirstStart(ApplicationSettings *applicationSettings) {
     std::exit(EXIT_FAILURE);
   }
 
-  const bool runArmoryLocally = startupDialog.isRunArmoryLocally();
+  const bool runArmoryLocally = (startupDialog.runMode() == StartupDialog::RunMode::Local);
   applicationSettings->set(ApplicationSettings::runArmoryLocally, runArmoryLocally);
   applicationSettings->set(ApplicationSettings::netType, int(startupDialog.networkType()));
 
-  if (runArmoryLocally) {
+  if (startupDialog.runMode() == StartupDialog::RunMode::Custom) {
     applicationSettings->set(ApplicationSettings::armoryDbIp, startupDialog.armoryDbIp());
     applicationSettings->set(ApplicationSettings::armoryDbPort, startupDialog.armoryDbPort());
   }
 }
 
-static void checkStyleSheet(QApplication &app) {
+static void checkStyleSheet(QApplication &app)
+{
    QLatin1String styleSheetFileName = QLatin1String("stylesheet.css");
 
    QFileInfo info = QFileInfo(QLatin1String(styleSheetFileName));
