@@ -135,33 +135,33 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
    }
 
    const auto &registerRoutine = [this, settings] {
-      logger_->debug("[{}] started", __func__);
+      logger_->debug("[ArmoryConnection::setupConnection] started");
       while (regThreadRunning_) {
          try {
             registerBDV(settings.netType);
             if (!bdv_->getID().empty()) {
-               logger_->debug("[{}] got BDVid: {}", __func__, bdv_->getID());
+               logger_->debug("[ArmoryConnection::setupConnection] got BDVid: {}", bdv_->getID());
                setState(State::Connected);
                break;
             }
          }
          catch (const BDVAlreadyRegistered &) {
-            logger_->warn("[{}] BDV already registered", __func__);
+            logger_->warn("[ArmoryConnection::setupConnection] BDV already registered");
             break;
          }
          catch (const std::exception &e) {
-            logger_->error("[{}] registerBDV exception: {}", __func__, e.what());
+            logger_->error("[ArmoryConnection::setupConnection] registerBDV exception: {}", e.what());
             emit connectionError(QLatin1String(e.what()));
             setState(State::Error);
          }
          catch (...) {
-            logger_->error("[{}] registerBDV exception", __func__);
+            logger_->error("[ArmoryConnection::setupConnection] registerBDV exception");
             emit connectionError(QString());
          }
          std::this_thread::sleep_for(std::chrono::seconds(10));
       }
       regThreadRunning_ = false;
-      logger_->debug("[{}] completed", __func__);
+      logger_->debug("[ArmoryConnection::setupConnection] completed");
    };
 
    const auto &connectRoutine = [this, settings, registerRoutine] {
@@ -182,7 +182,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
       bool connected = false;
       do {
          cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
-         logger_->debug("[{}] connecting to Armory {}:{}", __func__
+         logger_->debug("[ArmoryConnection::setupConnection] connecting to Armory {}:{}"
                         , settings.armoryDBIp, settings.armoryDBPort);
          bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_);
          if (!bdv_) {
@@ -192,11 +192,11 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          }
          connected = bdv_->connectToRemote();
          if (!connected) {
-            logger_->warn("[{}] BDV connection failed", __func__);
+            logger_->warn("[ArmoryConnection::setupConnection] BDV connection failed");
             std::this_thread::sleep_for(std::chrono::seconds(30));
          }
       } while (!connected);
-      logger_->debug("[{}] BDV connected", __func__);
+      logger_->debug("[ArmoryConnection::setupConnection] BDV connected");
 
       regThreadRunning_ = true;
       std::thread(registerRoutine).detach();

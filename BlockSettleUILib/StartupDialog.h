@@ -21,11 +21,16 @@ public:
     LicenseAgreement,
     Settings,
   };
+  enum class RunMode {
+     BlocksettleSN,
+     Local,
+     Custom
+  };
 
   explicit StartupDialog(bool showLicense, QWidget *parent = nullptr);
   ~StartupDialog() override;
 
-  bool isRunArmoryLocally() const;
+  RunMode runMode() const;
   QString armoryDbIp() const;
   int armoryDbPort() const;
   NetworkType networkType() const;
