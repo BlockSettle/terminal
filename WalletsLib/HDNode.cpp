@@ -622,10 +622,6 @@ std::unique_ptr<hd::Node> hd::ChainedNode::createUnique(const btc_hdnode &node, 
 
 SecureBinaryData hd::ChainedNode::privChainedKey() const
 {
-/*   uint8_t privKey[BTC_ECKEY_PKEY_LENGTH];    // chain computation using libbtc - incompatible with CryptoPP
-   memcpy(privKey, node_.private_key, sizeof(privKey));
-   btc_ecc_private_key_tweak_add(privKey, chainCode_.getPtr());
-   return SecureBinaryData(privKey, sizeof(privKey));*/
    if (privateKey().isNull()) {
       return {};
    }
@@ -635,10 +631,6 @@ SecureBinaryData hd::ChainedNode::privChainedKey() const
 
 BinaryData hd::ChainedNode::pubChainedKey() const
 {
-/*   uint8_t pubKey[BTC_ECKEY_COMPRESSED_LENGTH];     // chain computation using libbtc - incompatible with CryptoPP
-   memcpy(pubKey, node_.public_key, sizeof(pubKey));
-   btc_ecc_public_key_tweak_add(pubKey, chainCode_.getPtr());
-   return BinaryData(pubKey, sizeof(pubKey));*/
    CryptoECDSA crypto;
    return crypto.CompressPoint(crypto.ComputeChainedPublicKey(crypto.UncompressPoint(pubCompressedKey()), chainCode_));
 }
