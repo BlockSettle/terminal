@@ -138,6 +138,10 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
          , query.value(4).toString(), query.value(5).toInt());
       records.push_back(msg);
    }
+   std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a
+      , const std::shared_ptr<Chat::MessageData> &b) {
+      return (a->getDateTime().toMSecsSinceEpoch() < b->getDateTime().toMSecsSinceEpoch());
+   });
    return records;
 }
 

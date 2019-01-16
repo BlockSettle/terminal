@@ -30,26 +30,23 @@ public:
    void setOwnUserId(const std::string &userId) { ownUserId_ = QString::fromStdString(userId); }
 
 protected:
+   enum class Column {
+      Time,
+      User,
+      Message,
+      last
+   };
+
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-   enum ChatMessageColumns
-   {
-      Time = 0,
-      User = 1, 
-      Message = 2,  
-   };
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-
-private:
-   
-   std::shared_ptr<Chat::MessageData> prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId = QString());
 
 public slots:
    void onSwitchToChat(const QString& chatId);
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
-   void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
+   void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
 
 private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
