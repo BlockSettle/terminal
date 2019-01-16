@@ -15,7 +15,7 @@ PlainWallet::PlainWallet(const std::string &name, const std::string &desc
    : Wallet(logger), desc_(desc)
 {
    walletName_ = name;
-   walletId_ = BtcUtils::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
+   walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
 }
 
 PlainWallet::PlainWallet(const std::string &filename
@@ -28,7 +28,7 @@ PlainWallet::PlainWallet(const std::string &filename
 PlainWallet::PlainWallet(const std::shared_ptr<spdlog::logger> &logger)
    : Wallet(logger)
 {
-   walletId_ = BtcUtils::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
+   walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
 }
 
 PlainWallet::~PlainWallet()

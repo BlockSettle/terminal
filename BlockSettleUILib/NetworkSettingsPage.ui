@@ -206,13 +206,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QSpinBox" name="armoryDBPortSpinBox">
-           <property name="maximum">
-            <number>65535</number>
-           </property>
-           <property name="value">
-            <number>16001</number>
-           </property>
+          <widget class="QLineEdit" name="armoryDBPortLineEdit">
           </widget>
          </item>
         </layout>
@@ -849,7 +843,7 @@
   <connection>
    <sender>runArmoryDBLocallyCheckBox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>armoryDBPortSpinBox</receiver>
+   <receiver>armoryDBPortLineEdit</receiver>
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -927,7 +921,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>armoryDBPortSpinBox</sender>
+   <sender>armoryDBPortLineEdit</sender>
    <signal>valueChanged(int)</signal>
    <receiver>restartNotificationFrame</receiver>
    <slot>show()</slot>

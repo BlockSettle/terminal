@@ -307,7 +307,7 @@ bs::wallet::Seed hd::Node::seed() const
 
 std::string hd::Node::getId() const
 {
-   return BtcUtils::computeID(pubCompressedKey()).toBinStr();
+   return wallet::computeID(pubCompressedKey()).toBinStr();
 }
 
 BinaryData hd::Node::pubCompressedKey() const
