@@ -310,7 +310,9 @@ bs::wallet::Seed::Seed(const std::string &seed, NetworkType netType)
    : netType_(netType)
 {
    try {
-      seed_ = BtcUtils::base58toScrAddr(seed);
+      BinaryData base58In(seed);
+      base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
+      seed_ = BtcUtils::base58toScrAddr(base58In);
    }
    catch (const std::exception &) {
       const auto result = segwit_addr::decode("seed", seed);
@@ -1465,10 +1467,14 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
       }
    }; // callback
 
-   const auto &cbWrap = [this, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
+   QPointer<QObject> thisSmartPtr = this;
+   const auto &cbWrap = [this, thisSmartPtr, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
+      if (!thisSmartPtr) {
+         return;
+      }
       try {
          const auto txOutListObj = txOutList.get();
-         QMetaObject::invokeMethod(this, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
+         QMetaObject::invokeMethod(thisSmartPtr, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {

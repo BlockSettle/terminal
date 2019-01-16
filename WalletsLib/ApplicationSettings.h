@@ -99,6 +99,7 @@ public:
       MDLicenseAccepted,
       authPrivKey,
       jwtUsername,
+      zmqSignerPubKeyFile,
       _last
    };
 
