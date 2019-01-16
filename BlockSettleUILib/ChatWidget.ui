@@ -20,6 +20,21 @@
    <string/>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2">
+   <property name="spacing">
+    <number>5</number>
+   </property>
+   <property name="leftMargin">
+    <number>5</number>
+   </property>
+   <property name="topMargin">
+    <number>5</number>
+   </property>
+   <property name="rightMargin">
+    <number>5</number>
+   </property>
+   <property name="bottomMargin">
+    <number>5</number>
+   </property>
    <item>
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="sizePolicy">
@@ -71,16 +86,16 @@
         <number>3</number>
        </property>
        <property name="leftMargin">
-        <number>5</number>
+        <number>0</number>
        </property>
        <property name="topMargin">
-        <number>5</number>
+        <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>5</number>
+        <number>0</number>
        </property>
        <property name="bottomMargin">
-        <number>5</number>
+        <number>0</number>
        </property>
        <item>
         <widget class="QFrame" name="roomsFrame">
@@ -89,27 +104,44 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="spacing">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="leftMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>5</number>
+           <number>3</number>
           </property>
           <property name="bottomMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <item>
            <widget class="QLabel" name="label">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>25</pointsize>
+             </font>
+            </property>
             <property name="text">
-             <string>Chat Rooms</string>
+             <string>CHAT ROOMS</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignCenter</set>
+             <set>Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
             <property name="headerLabel" stdset="0">
              <bool>true</bool>
@@ -157,29 +189,46 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <property name="spacing">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="leftMargin">
-           <number>5</number>
+           <number>3</number>
           </property>
           <property name="topMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>5</number>
+           <number>3</number>
           </property>
           <property name="bottomMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_2">
             <item>
              <widget class="QLabel" name="labelActiveChat">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>25</pointsize>
+               </font>
+              </property>
               <property name="text">
-               <string>Chat #</string>
+               <string>CHAT #</string>
               </property>
               <property name="alignment">
-               <set>Qt::AlignCenter</set>
+               <set>Qt::AlignLeft|Qt::AlignVCenter</set>
               </property>
               <property name="headerLabel" stdset="0">
                <bool>false</bool>
@@ -221,7 +270,7 @@
                <bool>false</bool>
               </property>
               <property name="placeholderText">
-               <string>Type message and send</string>
+               <string>TYPE MESSAGE AND SEND</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
@@ -231,7 +280,7 @@
             <item>
              <widget class="QPushButton" name="send">
               <property name="text">
-               <string>Send</string>
+               <string>SEND</string>
               </property>
               <property name="autoDefault">
                <bool>true</bool>
@@ -256,27 +305,44 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <property name="spacing">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="leftMargin">
-           <number>5</number>
+           <number>3</number>
           </property>
           <property name="topMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
-           <number>5</number>
+           <number>0</number>
           </property>
           <item>
            <widget class="QLabel" name="label_3">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>25</pointsize>
+             </font>
+            </property>
             <property name="text">
-             <string>Users</string>
+             <string>USERS</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignCenter</set>
+             <set>Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
             <property name="headerLabel" stdset="0">
              <bool>true</bool>
@@ -319,7 +385,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>You: </string>
+               <string>YOU: </string>
               </property>
              </widget>
             </item>
