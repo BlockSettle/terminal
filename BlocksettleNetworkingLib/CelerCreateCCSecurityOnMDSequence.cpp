@@ -49,6 +49,10 @@ CelerMessage CelerCreateCCSecurityOnMDSequence::sendRequest()
    tickSize->set_key("tickSize");
    tickSize->set_value("1");
 
+   auto divisor = request.add_parameter();
+   divisor->set_key("divisor");
+   divisor->set_value("1");
+
    auto tickValue = request.add_parameter();
    tickValue->set_key("tickValue");
    tickValue->set_value("0.00001");
