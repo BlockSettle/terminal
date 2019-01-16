@@ -1377,6 +1377,17 @@ size_t bs::wallet::getInputScrSize(const std::shared_ptr<AddressEntry> &addrEntr
    return 65;
 }
 
+BinaryData bs::wallet::computeID(const BinaryData &input)
+{
+   auto result = BtcUtils::computeID(input);
+   const auto outSz = result.getSize();
+   if (result.getPtr()[outSz - 1] == 0) {
+      result.resize(outSz - 1);
+   }
+   return result;
+}
+
+
 void bs::Wallet::onNewBlock()
 {
    processNewUTXOs(false);
