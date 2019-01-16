@@ -14,7 +14,7 @@
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("C:/Program Files/BitcoinArmory/ArmoryDB.exe");
-#elif defined (Q_OS_OSX)
+#elif defined (Q_OS_MACOS)
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("/opt/ArmoryDB/ArmoryDB");
@@ -54,6 +54,8 @@ static const QString groupRescan = QLatin1String("rescan");
 
 static const QString testnetSubdir = QLatin1String("testnet3");
 static const QString regtestSubdir = QLatin1String("regtest");
+
+static const QString zmqSignerKeyFileName = QLatin1String("zmq_conn_srv.pub");
 
 static const int DefaultSatoshiPort = 8333;
 static const int DefaultTestnetSatoshiPort = 18333;
@@ -124,9 +126,9 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { Filter_MD_QN,            SettingDef(QLatin1String("Filter/MD/QN")) },
       { Filter_MD_QN_cnt,        SettingDef(QLatin1String("Filter/MD/QN/counters")) },
       { ChangeLog_Base_Url,      SettingDef(QString(), QLatin1String("http://185.213.153.44/ChangeLog"))},
-      { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("http://pubb.blocksettle.com/terminal/downloads"))},
-      { ResetPassword_Url,       SettingDef(QString(), QLatin1String("http://pubb.blocksettle.com/pub-forgot-password"))},
-      { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://pubb.blbocksettle.com/pub-registration")) },
+      { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/terminal/downloads"))},
+      { ResetPassword_Url,       SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/pub-forgot-password"))},
+      { GetAccount_Url,          SettingDef(QString(), QLatin1String("https://pubb.blbocksettle.com/pub-registration")) },
       { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0x06) },
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
@@ -138,7 +140,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { TransactionFilter,                SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) },
       { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
       { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
-      { authPrivKey,             SettingDef(QLatin1String("AuthPrivKey")) }
+      { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
+      { zmqSignerPubKeyFile,              SettingDef(QString(), AppendToWritableDir(zmqSignerKeyFileName)) }
    };
 }
 
