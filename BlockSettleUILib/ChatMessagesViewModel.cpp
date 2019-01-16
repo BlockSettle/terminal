@@ -3,6 +3,7 @@
 #include "ChatProtocol.h"
 #include "NotificationCenter.h"
 
+
 ChatMessagesViewModel::ChatMessagesViewModel(QObject* parent)
    : QAbstractTableModel(parent)
 {
@@ -38,11 +39,11 @@ QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientat
 
 QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
 {
-   if (index.column() == 0) {
+   if (index.column() == ChatMessageColumns::Time) {
       if(role == Qt::TextAlignmentRole)
          return Qt::AlignLeft;
    }
-   if (index.column() == 1) {
+   if (index.column() == ChatMessageColumns::User) {
       if(role == Qt::TextAlignmentRole)
          return Qt::AlignLeft;
       if(role == Qt::TextColorRole)
@@ -54,9 +55,9 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
       }
 
       switch (index.column()) {
-         case 0:
+         case ChatMessageColumns::Time:
          {
-            auto dateTime = std::get<0>(messages_[currentChatId_][index.row()]);
+            auto dateTime = messages_[currentChatId_][index.row()]->getDateTime();
 
             if (dateTime.date() == QDate::currentDate()) {
                return dateTime.time().toString(QString::fromUtf8("hh:mm"));
@@ -66,11 +67,11 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
             }
          }
 
-         case 1:
-            return std::get<1>(messages_[currentChatId_][index.row()]);
+         case ChatMessageColumns::User:
+            return messages_[currentChatId_][index.row()]->getSenderId();
          
-         case 2:
-            return std::get<2>(messages_[currentChatId_][index.row()]);
+         case ChatMessageColumns::Message:
+            return messages_[currentChatId_][index.row()]->getMessageData();
 
          default:
             break;
@@ -97,32 +98,37 @@ void ChatMessagesViewModel::onSingleMessageUpdate(const QDateTime& date, const Q
    endInsertRows();
 }
 
-ChatMessagesViewModel::ChatMessageParts ChatMessagesViewModel::prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId)
+std::shared_ptr<Chat::MessageData> ChatMessagesViewModel::prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId)
 {
    static const auto ownSender = tr("you");
    QString sender = senderId.isEmpty() ? ownSender : senderId;
    if (sender == ownUserId_) {
       sender = ownSender;
    }
-   return { date, QStringLiteral("[") + sender + QStringLiteral("]: "), messageText};
+   
+   return std::shared_ptr<Chat::MessageData>(
+                        new Chat::MessageData(
+                                    QStringLiteral("[") + sender + QStringLiteral("]: "), 
+                                    QString::fromStdString(""), // receiver
+                                    QString::fromStdString(""), // id
+                                    date, 
+                                    messageText)
+                        );
 }
 
 void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages)
 {
    for (const auto &msg : messages) {
-      const auto dateTime = msg->getDateTime();
-      const auto receivedMessage = msg->getMessageData();
-      const auto senderId = msg->getSenderId();
-      const auto msgTuple = prependMessage(dateTime, receivedMessage, senderId);
+      std::shared_ptr<Chat::MessageData> message_parts = prependMessage(msg->getDateTime(), msg->getMessageData(), msg->getSenderId());
 
-      if ((senderId == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
+      if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
          const int beginRow = messages_[currentChatId_].size();
          beginInsertRows(QModelIndex(), beginRow, beginRow);
-         messages_[currentChatId_].push_back(msgTuple);
+         messages_[currentChatId_].push_back(message_parts);
          endInsertRows();
       }
       else {
-         messages_[senderId].push_back(msgTuple);
+         messages_[msg->getSenderId()].push_back(message_parts);
       }
       NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
    }

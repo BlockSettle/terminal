@@ -43,8 +43,8 @@ protected:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 private:
-   typedef std::tuple<QDateTime, QString, QString> ChatMessageParts;
-   ChatMessageParts prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId = QString());
+   
+   std::shared_ptr<Chat::MessageData> prependMessage(const QDateTime& date, const QString& messageText, const QString& senderId = QString());
 
 public slots:
    void onSwitchToChat(const QString& chatId);
@@ -52,7 +52,7 @@ public slots:
    void onSingleMessageUpdate(const QDateTime&, const QString& messageText);
 
 private:
-   using MessagesHistory = std::vector<ChatMessageParts>;
+   using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
    QMap<QString, MessagesHistory> messages_;
    QString   currentChatId_;
    QString   ownUserId_;
