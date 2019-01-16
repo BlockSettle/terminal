@@ -1,3 +1,11 @@
+0.12.7
+Improvements:
+   - New wallet encryption scheme (incompatible with previous one)
+   - Chat UI fixes (not final)
+   - Armory port setting now depends on network type
+Bug fixes:
+   - Various UI fixes in Signer and Terminal
+
 0.12.6
 Improvements:
    - Added SQLite DB for chat data persistency
