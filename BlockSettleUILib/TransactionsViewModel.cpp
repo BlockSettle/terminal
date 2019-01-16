@@ -152,6 +152,9 @@ void TXNode::add(TXNode *child)
 
 void TXNode::del(int index)
 {
+   if (index >= children_.size()) {
+      return;
+   }
    children_.removeAt(index);
    for (int i = index; i < children_.size(); ++i) {
       children_[i]->row_--;
@@ -453,7 +456,8 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
          return true;
       }
    }
-   if (!child->confirmations && child->txEntry.isRBF && !parent->confirmations && parent->txEntry.isRBF) {
+   if ((!child->confirmations && child->txEntry.isRBF && !parent->confirmations && parent->txEntry.isRBF)
+       && (child->txEntry.txHash != parent->txEntry.txHash) && (child->txEntry.id == parent->txEntry.id)) {
       std::set<BinaryData> childInputs, parentInputs;
       for (int i = 0; i < child->tx.getNumTxIn(); i++) {
          childInputs.insert(child->tx.getTxInCopy(i).serialize());
@@ -510,7 +514,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       if (newTxKeys->empty()) {
          std::unordered_set<std::string> deletedItems;
          if (rootNode_->hasChildren()) {
-            std::set<int> delRows;
+            std::vector<int> delRows;
             const auto &cbEachExisting = [this, newItems, &delRows](TXNode *txNode) {
                for (auto &newItem : *newItems) {
                   if (newItem.second.second->find(txNode->item()->id())
@@ -518,7 +522,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
                      continue;
                   }
                   if (isChildOf(txNode->item(), newItem.second.first)) {
-                     delRows.insert(txNode->row());
+                     delRows.push_back(txNode->row());
                      auto &&children = txNode->children();
                      newItem.second.second->add(txNode);
                      for (auto &child : children) {
@@ -698,12 +702,20 @@ void TransactionsViewModel::onNewItems(const std::unordered_map<std::string, std
    endInsertRows();
 }
 
-void TransactionsViewModel::onDelRows(const std::set<int> &rows)
-{
-   for (const auto &row : rows) {   // optimize for contiguous ranges, if needed
+void TransactionsViewModel::onDelRows(std::vector<int> rows)
+{        // optimize for contiguous ranges, if needed
+   std::sort(rows.begin(), rows.end());
+   int rowCnt = rowCount();
+   for (int i = 0; i < rows.size(); ++i) {
+      const int row = rows[i] - i;  // special hack for correcting row index after previous row deletion
+      if ((row < 0) || row >= rowCnt) {
+         continue;
+      }
+
       beginRemoveRows(QModelIndex(), row, row);
       rootNode_->del(row);
       endRemoveRows();
+      rowCnt--;
    }
 }
 
