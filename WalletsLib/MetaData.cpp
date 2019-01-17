@@ -128,7 +128,7 @@ void bs::wallet::MetaData::readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *
          auto index = brrKey.get_int32_t();
          nbMetaData_ = index + 1;
 
-         auto entryPtr = AssetEntryMeta::deserialize(index, brrVal.get_BinaryDataRef(brrVal.getSizeRemaining()));
+         auto entryPtr = AssetEntryMeta::deserialize(index, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining()));
          if (entryPtr) {
             entryPtr->doNotCommit();
             data_[entryPtr->key()] = entryPtr;
@@ -331,12 +331,12 @@ EasyCoDec::Data bs::wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const
       return {};
    }
    const size_t halfSize = privKey_.getSize() / 2;
-   auto privKeyHalf1 = privKey_.getSliceCopy(0, halfSize);
-   auto privKeyHalf2 = privKey_.getSliceCopy(halfSize, halfSize);
+   auto privKeyHalf1 = privKey_.getSliceCopy(0, (uint32_t)halfSize);
+   auto privKeyHalf2 = privKey_.getSliceCopy(halfSize, (uint32_t)halfSize);
    const auto hash1 = BtcUtils::getHash256(privKeyHalf1);
    const auto hash2 = BtcUtils::getHash256(privKeyHalf2);
-   privKeyHalf1.append(hash1.getSliceCopy(0, ckSumSize));
-   privKeyHalf2.append(hash2.getSliceCopy(0, ckSumSize));
+   privKeyHalf1.append(hash1.getSliceCopy(0, (uint32_t)ckSumSize));
+   privKeyHalf2.append(hash2.getSliceCopy(0, (uint32_t)ckSumSize));
    const auto chkSumPrivKey = privKeyHalf1 + privKeyHalf2;
    return EasyCoDec().fromHex(chkSumPrivKey.toHexStr());
 }
@@ -360,10 +360,10 @@ BinaryData bs::wallet::Seed::decodeEasyCodeLineChecksum(const string& easyCodeHa
         throw std::invalid_argument("invalid key size");
     }
 
-    const auto privKeyValue = keyHalfWithChecksum.getSliceCopy(0, keyValueSize);
-    const auto hashValue = keyHalfWithChecksum.getSliceCopy(keyValueSize, ckSumSize);
+    const auto privKeyValue = keyHalfWithChecksum.getSliceCopy(0, (uint32_t)keyValueSize);
+    const auto hashValue = keyHalfWithChecksum.getSliceCopy(keyValueSize, (uint32_t)ckSumSize);
 
-    if (BtcUtils::getHash256(privKeyValue).getSliceCopy(0, ckSumSize) != hashValue) {
+    if (BtcUtils::getHash256(privKeyValue).getSliceCopy(0, (uint32_t)ckSumSize) != hashValue) {
         throw std::runtime_error("checksum failure");
     }
 
@@ -698,7 +698,7 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
                   const auto &utxo = txOutListCopy[i];
                   sum += utxo.getValue();
                   if (sum >= val) {
-                     cutOffIdx = i;
+                     cutOffIdx = (int)i;
                      break;
                   }
                }
@@ -752,7 +752,7 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
             return (a.getValue() < b.getValue());
          });
 
-         int index = utxosObj.size() - 1;
+         int index = (int)utxosObj.size() - 1;
          while (index >= 0) {
             if (utxosObj[index].getValue() < val) {
                index++;
@@ -771,7 +771,7 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
 
          std::vector<UTXO> result;
          uint64_t sum = 0;
-         index = utxosObj.size() - 1;
+         index = (int)utxosObj.size() - 1;
          while ((index >= 0) && (sum < val)) {  //TODO: needs to be optimized to fill the val more precisely
             result.push_back(utxosObj[index]);
             sum += utxosObj[index].getValue();
@@ -1144,7 +1144,7 @@ Signer bs::Wallet::getSigner(const wallet::TXSignRequest &request, const SecureB
          try {
             signer.populateUtxo(utxo);
          }
-         catch (const std::exception &e) { }
+         catch (const std::exception &) { }
       }
    }
    else {
@@ -1228,7 +1228,7 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal
       for (auto &utxo : utxos) {
          const auto addrEntry = getAddressEntryForAddr(utxo.getRecipientScrAddr());
          if (addrEntry) {
-            utxo.txinRedeemSizeBytes_ = addrEntry->getInputSize();
+            utxo.txinRedeemSizeBytes_ = (unsigned int)addrEntry->getInputSize();
             inputAmount += utxo.getValue();
          }
       }

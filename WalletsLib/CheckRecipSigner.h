@@ -61,7 +61,7 @@ namespace bs {
    private:
       static BinaryData getRecipientScriptAddr(const std::shared_ptr<ScriptRecipient> &recip) {
          const auto &recipScr = recip->getSerializedScript();
-         const auto scr = recipScr.getSliceRef(8, recipScr.getSize() - 8);
+         const auto scr = recipScr.getSliceRef(8, (uint32_t)recipScr.getSize() - 8);
          if (scr.getSize() != (size_t)(scr[0] + 1)) {
             return{};
          }
