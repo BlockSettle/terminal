@@ -219,9 +219,6 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] get update:\n{}"
-      , response.DebugString());
-
    if (!response.has_snapshot()) {
       logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] empty snapshot");
       return true;
@@ -256,8 +253,6 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
 
    if (!fields.empty()) {
       emit MDUpdate(assetType, security, fields);
-   } else {
-      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] no fields updated");
    }
 
    return true;
