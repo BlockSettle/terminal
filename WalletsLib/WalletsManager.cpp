@@ -1046,7 +1046,7 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
    for (const auto led : armory_->getZCentries(reqId)) {
       auto wallet = GetWalletById(led.getID());
       if (wallet != nullptr) {
-         logger_->debug("[{}] ZC entry in wallet {}", __func__
+         logger_->debug("[WalletsManager::onZeroConfReceived] ZC entry in wallet {}"
                         , wallet->GetWalletName());
 
          // Get the ZC UTXOs for the wallet. We need to save a copy for UTXO
@@ -1072,7 +1072,7 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
          wallet->UpdateBalanceFromDB();
       } // if
       else {
-         logger_->debug("[{}] get ZC but wallet not found: {}", __func__
+         logger_->debug("[WalletsManager::onZeroConfReceived] get ZC but wallet not found: {}"
                         , led.getID());
       }
    } // for
