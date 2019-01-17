@@ -66,9 +66,6 @@ CelerMessage CelerCreateCCSecurityOnMDSequence::sendRequest()
    alias->set_securityidalias(securityId_);
    alias->set_securitycodealias(securityId_);
 
-   logger_->debug("[CelerCreateCCSecurityOnMDSequence::sendRequest] {}"
-      , request.DebugString());
-
    CelerMessage message;
    message.messageType = CelerAPI::CreateSecurityListingRequestType;
    message.messageData = request.SerializeAsString();

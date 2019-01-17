@@ -371,8 +371,8 @@ bool CelerMarketDataProvider::ProcessSecurityListingEvent(const std::string& dat
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation:\n{}"
-                  , responseEvent.DebugString());
+   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation for {}"
+                  , responseEvent.securityid());
 
    emit CCSecuritRegistrationResult(true, responseEvent.securityid());
 
