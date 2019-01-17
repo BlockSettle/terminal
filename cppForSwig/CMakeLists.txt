@@ -18,7 +18,6 @@ SET (SOURCES
    DBUtils.cpp
    DecryptedDataContainer.cpp
    DerivationScheme.cpp
-   EncryptionUtils.cpp
    EncryptionUtils_libbtc.cpp
    hkdf.cpp
    HttpMessage.cpp
