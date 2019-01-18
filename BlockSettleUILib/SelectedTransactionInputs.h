@@ -54,7 +54,7 @@ public:
    const std::vector<UTXO> &GetCPFPInputs() const { return cpfpInputs_; }
 
    std::vector<UTXO> GetSelectedTransactions() const;
-   std::vector<UTXO> GetAllTransactions() const { return inputs_; }
+   std::vector<UTXO> GetAllTransactions() const;
 
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    void Reload(const std::vector<UTXO> &);
