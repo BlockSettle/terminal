@@ -829,16 +829,10 @@ bool RemoteSigner::Start()
 
    // If the ZMQ server public key hasn't been loaded yet, do it here.
    if (zmqSignerPubKey_.getSize() == 0) {
-      // Read the server key file. For now, assume the location is fixed. We may
-      // want to make the location dynamic later. In addition, there's a race
-      // condition of sorts when starting out. If the server pub key exists,
-      // proceed. If not, give the signer a little time to create the key. 50 ms
-      // seems reasonable on a VM but we'll add some padding to be safe.
-      QString zmqSignerPubKeyPath = appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile);
+      // If the server pub key exists, proceed. If not, give the signer a little time to create the key.
+      // 50 ms seems reasonable on a VM but we'll add some padding to be safe.
+      const auto zmqSignerPubKeyPath = appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile);
 
-//      QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-//      QString zmqSignerPubKeyPath = logDir.path() + \
-//         QString::fromStdString("/zmq_conn_srv.pub");
       QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
       if (!zmqSignerPubKeyFile.exists()) {
          QThread::msleep(250);

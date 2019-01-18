@@ -166,8 +166,6 @@ void SignerSettingsPage::applyChanges()
    default:    break;
    }
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
-
-   appSettings_->SaveSettings();
 }
 
 void SignerSettingsPage::saveZmqPubKeyPath()
