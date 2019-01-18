@@ -1,9 +1,9 @@
 #!/bin/sh
 
-binpath="../../../terminal/build_terminal/Release/bin"
+binpath="../build_terminal/Release/bin"
 binary=$binpath/blocksettle
-scriptpath="../../TestTools"
-libprotobuf="../../../3rd/release/Protobuf/lib"
+scriptpath="../DealerScripts"
+libprotobuf="${DEV_3RD_ROOT}/release/Protobuf/lib"
 
 if [ ! -x $binary ]; then
     echo "Release terminal binary $binary doesn't exist!"
