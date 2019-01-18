@@ -21,13 +21,13 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    : logger_(logger), settings_(params)
 {
    // Get the ZMQ server public key.
-   if (!bs::network::readZMQKeyFile(params->zmqPubKeyFile(), zmqPubKey_
+   if (!bs::network::readZmqKeyFile(params->zmqPubKeyFile(), zmqPubKey_
       , true, logger)) {
       throw std::runtime_error("failed to read ZMQ server public key");
    }
 
    // Get the ZMQ server private key.
-   if (!bs::network::readZMQKeyFile(params->zmqPrvKeyFile(), zmqPrvKey_
+   if (!bs::network::readZmqKeyFile(params->zmqPrvKeyFile(), zmqPrvKey_
       , false, logger)) {
       throw std::runtime_error("failed to read ZMQ server private key");
    }

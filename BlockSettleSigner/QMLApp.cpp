@@ -174,11 +174,11 @@ void QMLAppObj::initZmqKeys()
    SecureBinaryData tempPubKey;
    SecureBinaryData tempPrvKey;
 
-   bool isZmqPubKeyOk = bs::network::readZMQKeyFile(settings_->zmqPubKeyFile()
+   bool isZmqPubKeyOk = bs::network::readZmqKeyFile(settings_->zmqPubKeyFile()
                                                     , zmqPubKey_
                                                     , true
                                                     , logger_);
-   bool isZmqPrvKeyOk = bs::network::readZMQKeyFile(settings_->zmqPrvKeyFile()
+   bool isZmqPrvKeyOk = bs::network::readZmqKeyFile(settings_->zmqPrvKeyFile()
                                                     , zmqPrvKey_
                                                     , true
                                                     , logger_);
