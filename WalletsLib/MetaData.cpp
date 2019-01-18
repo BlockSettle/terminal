@@ -231,6 +231,12 @@ static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
    // Estimate the virtual size for the inputs. Because we can't analyze the
    // exact sig size until there's an actual signature, always play it safe and
    // round up the estimated weight by assuming sigs will be at max size.
+   // (NB: This function can probably be reworked to be more like TransactionData's
+   // UpdateTransactionData() and lean on Armory instead of reinventing the
+   // wheel. However, this function isn't used as of Jan. 2019. Don't rewrite
+   // until it's used again and can actually be tested. If manually setting
+   // values is still required, https://eprint.iacr.org/2018/513.pdf (Table 3)
+   // can be consulted for quick-and-dirty values.)
    for (auto& utxo : inputs) {
       const auto scrType = BtcUtils::getTxOutScriptType(utxo.getScript());
       switch (scrType) {
@@ -247,18 +253,6 @@ static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
       // flavors, and another solution will be required. 91-92, so assume 92.
       case TXOUT_SCRIPT_P2SH:
          result += 92;
-
-         // WARNING: The following code is a very ugly hack, and should be
-         // removed ASAP!!! Armory has a bug in how it treats assets (e.g.,
-         // UTXOs). If the asset has two different P2SH types, the asset will be
-         // treated as if the asset has only one P2SH type (the last one
-         // encountered, presumably). A fix has been pushed to 0.96.5. However,
-         // due to wallets changes in 0.97, it can't be ported to 0.97 as-is.
-         // Instead, once 0.96.5 has been properly synced with 0.97, a new fix
-         // for 0.97 will be written. So, we'll cheat and add some bytes here,
-         // based on personal observation. This code needs to be removed the
-         // moment 0.97 has a proper fix.
-         result += 25;
          break;
       // We should never get here, and if we do, the values will almost
       // certainly be incorrect. Reassess later as needed.
