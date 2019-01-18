@@ -213,7 +213,7 @@ Signer bs::wallet::TXSignRequest::getSigner() const
 
 // Estimate the TX virtual size. This will not be exact, as there's no sig yet.
 // Round up the inputs to guarantee that we meet RBF's relay fee policy.
-static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
+size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
               , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
 {
    if (inputs.empty() || recipients.empty()) {
@@ -274,7 +274,7 @@ size_t bs::wallet::TXSignRequest::estimateTxVirtSize() const
    if (change.value) {
       recipCopy.push_back(change.address.getRecipient(change.value));
    }
-   return ::estimateTXVirtSize(inputs, recipCopy);
+   return bs::wallet::estimateTXVirtSize(inputs, recipCopy);
 }
 
 
@@ -296,7 +296,7 @@ size_t bs::wallet::TXMultiSignRequest::estimateTxVirtSize() const
    for (const auto &input : inputs) {
       inputsList.push_back(input.first);
    }
-   return ::estimateTXVirtSize(inputsList, recipients);
+   return bs::wallet::estimateTXVirtSize(inputsList, recipients);
 }
 
 

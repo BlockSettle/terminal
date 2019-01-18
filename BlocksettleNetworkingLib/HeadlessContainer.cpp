@@ -265,7 +265,7 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
             logger_->warn("[HeadlessContainer] invalid path[{}]: {}", i, response.wallet().groups(i).path());
             continue;
          }
-         const auto grpType = static_cast<bs::hd::CoinType>(grpPath.get(grpPath.length() - 1));
+         const auto grpType = static_cast<bs::hd::CoinType>(grpPath.get((int)grpPath.length() - 1));
          auto group = wallet->createGroup(grpType);
 
          for (int j = 0; j < response.wallet().leaves_size(); j++) {
@@ -274,7 +274,7 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
                logger_->warn("[HeadlessContainer] invalid path[{}]: {}", j, response.wallet().leaves(j).path());
                continue;
             }
-            if (leafPath.get(leafPath.length() - 2) != static_cast<bs::hd::Path::Elem>(grpType)) {
+            if (leafPath.get((int)leafPath.length() - 2) != static_cast<bs::hd::Path::Elem>(grpType)) {
                continue;
             }
             auto leaf = group->newLeaf();

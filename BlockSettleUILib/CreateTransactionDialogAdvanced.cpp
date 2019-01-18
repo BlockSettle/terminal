@@ -642,7 +642,7 @@ void CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &address, d
    auto recipientId = transactionData_->RegisterNewRecipient();
 
    transactionData_->UpdateRecipientAddress(recipientId, address);
-   transactionData_->UpdateRecipientAmount(recipientId, amount);
+   transactionData_->UpdateRecipientAmount(recipientId, amount, isMax);
 
    // add to the model
    outputsModel_->AddRecipient(recipientId, address.display(), amount);
