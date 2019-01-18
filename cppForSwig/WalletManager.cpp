@@ -224,7 +224,7 @@ function<vector<UTXO>(uint64_t)> CoinSelectionInstance
    auto fetchLbd = [walletContainer](uint64_t val)->vector<UTXO>
    {
       auto&& vecUtxo = walletContainer->getSpendableTxOutListForValue(val);
-      decorateUTXOs(walletContainer, vecUtxo);
+      decorateUTXOs(walletContainer->wallet_, vecUtxo);
 
       return vecUtxo;
    };
@@ -266,27 +266,39 @@ function<vector<UTXO>(uint64_t)> CoinSelectionInstance
 
 ////////////////////////////////////////////////////////////////////////////////
 void CoinSelectionInstance::decorateUTXOs(
-   WalletContainer* const walletContainer, vector<UTXO>& vecUtxo)
+   shared_ptr<AssetWallet> const walletPtr, vector<UTXO>& vecUtxo)
 {
-   if (walletContainer == nullptr)
-      throw runtime_error("null wallet container ptr");
+   if (walletPtr == nullptr)
+      throw runtime_error("nullptr wallet");
 
-   auto walletPtr = walletContainer->getWalletPtr();
    for (auto& utxo : vecUtxo)
    {
       auto&& scrAddr = utxo.getRecipientScrAddr();
       auto& ID = walletPtr->getAssetIDForAddr(scrAddr);
       auto addrPtr = walletPtr->getAddressEntryForID(ID.first, ID.second);
 
-      utxo.txinRedeemSizeBytes_ = addrPtr->getInputSize();
+      utxo.txinRedeemSizeBytes_ = 0;
+      utxo.witnessDataSizeBytes_ = 0;
+      utxo.isInputSW_ = false;
 
-      try
+      while (true)
       {
-         utxo.witnessDataSizeBytes_ = addrPtr->getWitnessDataSize();
-         utxo.isInputSW_ = true;
+         utxo.txinRedeemSizeBytes_ += addrPtr->getInputSize();
+
+         try
+         {
+            utxo.witnessDataSizeBytes_ += addrPtr->getWitnessDataSize();
+            utxo.isInputSW_ = true;
+         }
+         catch (runtime_error&)
+         {}
+
+         auto addrNested = dynamic_pointer_cast<AddressEntry_Nested>(addrPtr);
+         if (addrNested == nullptr)
+            break;
+
+         addrPtr = addrNested->getPredecessor();
       }
-      catch (runtime_error&)
-      { }
    }
 }
 
@@ -302,7 +314,7 @@ void CoinSelectionInstance::selectUTXOs(vector<UTXO>& vecUtxo,
    checkSpendVal(spendableVal);
 
    //decorate coin control selection
-   decorateUTXOs(walletContainer_, vecUtxo);
+   decorateUTXOs(walletContainer_->wallet_, vecUtxo);
 
    state_utxoVec_ = vecUtxo;
 
@@ -483,7 +495,7 @@ uint64_t CoinSelectionInstance::getFeeForMaxValUtxoVector(
       }
 
       //decorate coin control selection
-      decorateUTXOs(walletContainer_, utxoVec);
+      decorateUTXOs(walletContainer_->wallet_, utxoVec);
    }
 
    return cs_.getFeeForMaxVal(txoutsize, fee_byte, utxoVec);

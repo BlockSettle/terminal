@@ -166,19 +166,37 @@ bool TransactionData::UpdateTransactionData()
 
    // The for loop is equivalent to CoinSelectionInstance::decorateUTXOs() in
    // Armory. We need it for proper initialization of the UTXO structs when
-   // computing TX sizes and fees. We're assuming all TXs created will use
-   // SegWit. It's a safe assumption moving forward.
+   // computing TX sizes and fees. All inputs should use SegWit.
    for (auto& utxo : transactions) {
+      utxo.txinRedeemSizeBytes_ = 0;
+      utxo.witnessDataSizeBytes_ = 0;
+      utxo.isInputSW_ = false;
+
       auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
       if (aefa != nullptr) {
-         utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(aefa);
-         try {
-            utxo.witnessDataSizeBytes_ = aefa->getWitnessDataSize();
-            utxo.isInputSW_ = true;
-         }
-         catch (const std::runtime_error& re) { }
-      }
-   }
+         while (true) {
+            utxo.txinRedeemSizeBytes_ += aefa->getInputSize();
+
+            // P2SH AddressEntry objects use nesting to determine the exact
+            // P2SH type. The initial P2SH-W2WPKH AddressEntry object (and any
+            // non-SegWit AddressEntry objects) won't have witness data. That's
+            // fine. Catch the error and keep going.
+            try {
+               utxo.witnessDataSizeBytes_ += aefa->getWitnessDataSize();
+               utxo.isInputSW_ = true;
+            }
+            catch (const std::runtime_error& re) {}
+
+            // Check for a predecessor, which P2SH-P2PWKH will have. This is how
+            // we learn if the original P2SH AddressEntry object uses SegWit.
+            auto addrNested = std::dynamic_pointer_cast<AddressEntry_Nested>(aefa);
+            if (addrNested == nullptr) {
+               break;
+            }
+            aefa = addrNested->getPredecessor();
+         } // while
+      } // if
+   } // for
 
    uint64_t availableBalance = 0;
    for (const auto &tx : transactions) {
