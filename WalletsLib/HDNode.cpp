@@ -33,7 +33,7 @@ hd::Path::Elem hd::Path::get(int index) const
       return UINT32_MAX;
    }
    if (index < 0) {
-      index += length();
+      index += (int)length();
       if (index < 0) {
          return UINT32_MAX;
       }
@@ -518,7 +518,7 @@ static SecureBinaryData LimitData(const SecureBinaryData &key
    if (key.getSize() <= limit) {
       return key;
    }
-   return key.getSliceCopy(0, limit);
+   return key.getSliceCopy(0, (uint32_t)limit);
 }
 
 std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
@@ -737,8 +737,8 @@ bool operator < (const hd::Path &l, const hd::Path &r)
       return (l.length() < r.length());
    }
    for (size_t i = 0; i < l.length(); i++) {
-      const auto &lval = l.get(i);
-      const auto &rval = r.get(i);
+      const auto &lval = l.get((int)i);
+      const auto &rval = r.get((int)i);
       if (lval != rval) {
          return (lval < rval);
       }
