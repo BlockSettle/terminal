@@ -1,9 +1,11 @@
 #include <QFileDialog>
+#include <QStandardPaths>
 #include "SignerSettingsPage.h"
 #include "ui_SignerSettingsPage.h"
 #include "ApplicationSettings.h"
 #include "BtcUtils.h"
 #include "ZMQHelperFunctions.h"
+#include "BSMessageBox.h"
 
 
 enum RunModeIndex {
@@ -44,7 +46,7 @@ void SignerSettingsPage::onOfflineDirSel()
 void SignerSettingsPage::onZmqPubKeySel()
 {
    const auto file = QFileDialog::getOpenFileName(this, tr("Select ZMQ public key")
-      , appSettings_->GetHomeDir()
+      , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
       , QStringLiteral("*.pub"));
    if (file.isEmpty()) {
       return;
@@ -52,6 +54,10 @@ void SignerSettingsPage::onZmqPubKeySel()
 
    SecureBinaryData zmqSignerPubKey;
    if (!bs::network::readZmqKeyFile(file, zmqSignerPubKey, true)) {
+      BSMessageBox info(BSMessageBox::critical, tr("Import ZMQ key failed")
+         , tr("Failed to parse ZMQ public key from file")
+         , QStringLiteral(""), this);
+      info.exec();
       return;
    }
 
