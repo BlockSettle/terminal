@@ -59,7 +59,6 @@ public:
       signerHost,
       signerPort,
       signerRunMode,
-      signerPassword,
       signerOfflineDir,
       autoSignSpendLimit,
       launchToTray,
@@ -99,7 +98,8 @@ public:
       MDLicenseAccepted,
       authPrivKey,
       jwtUsername,
-      zmqSignerPubKeyFile,
+      zmqLocalSignerPubKeyFilePath,
+      zmqRemoteSignerPubKey,
       _last
    };
 
