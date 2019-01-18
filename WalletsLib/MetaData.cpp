@@ -1488,8 +1488,10 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
          }
       }
    };
-   // Get all the UTXOs and process them.
-   btcWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbWrap);
+   if (btcWallet_) {
+      // Get all the UTXOs and process them.
+      btcWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbWrap);
+   }
 }
 
 bool operator ==(const bs::Wallet &a, const bs::Wallet &b)

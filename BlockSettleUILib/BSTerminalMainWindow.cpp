@@ -532,7 +532,13 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityId, mdProvider_.get(), &CelerMarketDataProvider::onCCSecurityReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
-   ccFileManager_->LoadSavedCCDefinitions();
+   if (!ccFileManager_->hasLocalFile()) {
+      logMgr_->logger()->info("Request for CC definitions from Public Bridge");
+      ccFileManager_->LoadCCDefinitionsFromPub();
+   }
+   else {
+      ccFileManager_->LoadSavedCCDefinitions();
+   }
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
