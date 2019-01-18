@@ -48,6 +48,12 @@ void CCFileManager::RemoveAndDisableFileSave()
    }
 }
 
+bool CCFileManager::hasLocalFile() const
+{
+   const auto path = appSettings_->get<QString>(ApplicationSettings::ccFileName);
+   return QFile(path).exists();
+}
+
 void CCFileManager::LoadSavedCCDefinitions()
 {
    const auto &path = appSettings_->get<std::string>(ApplicationSettings::ccFileName);
