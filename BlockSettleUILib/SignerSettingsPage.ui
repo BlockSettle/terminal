@@ -264,7 +264,7 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QLineEdit" name="lineEditlRemoteZmqPubKey"/>
+            <widget class="QLineEdit" name="lineEditRemoteZmqPubKey"/>
            </item>
            <item>
             <widget class="QPushButton" name="pushButtonZmqPubKey">

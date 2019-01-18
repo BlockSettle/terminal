@@ -112,7 +112,6 @@ bool bs::network::readZmqKeyFile(const QString& zmqKeyFilePath
    , const std::shared_ptr<spdlog::logger>& logger)
 {
    const size_t targetFileSize = isPub ? CURVEZMQPUBKEYBUFFERSIZE : CURVEZMQPRVKEYBUFFERSIZE;
-   SecureBinaryData junkBuf(32);
 
    // Read the private key file and make sure it's properly formatted.
    QFile zmqFile(zmqKeyFilePath);
@@ -134,26 +133,8 @@ bool bs::network::readZmqKeyFile(const QString& zmqKeyFilePath
    }
 
    const auto readBuf = zmqFile.readAll();
-   if (zmq_z85_decode(junkBuf.getPtr(), readBuf.toStdString().c_str()) == NULL) {
-      if (logger) {
-         logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file ({}) "
-            "is not a Z85-formatted key file.", __func__
-            , zmqKeyFilePath.toStdString());
-      }
-      return false;
-   }
    zmqFile.close();
-
-   zmqKey = SecureBinaryData(readBuf.toStdString());
-   if (zmqKey.getSize() != targetFileSize) {
-      if (logger) {
-         logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file ({}) "
-            "is {} bytes, not {} bytes", __func__, zmqKey.getSize()
-            , targetFileSize);
-      }
-      return false;
-   }
-   return true;
+   return readZmqKeyString(readBuf, zmqKey, isPub, logger);
 }
 
 bool bs::network::readZmqKeyString(const QByteArray& zmqEncodedKey, SecureBinaryData &zmqKey, const bool &isPub, const std::shared_ptr<spdlog::logger> &logger)

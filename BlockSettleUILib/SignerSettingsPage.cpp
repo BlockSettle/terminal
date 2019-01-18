@@ -55,7 +55,7 @@ void SignerSettingsPage::onZmqPubKeySel()
       return;
    }
 
-   ui_->lineEditlRemoteZmqPubKey->setText(QString::fromStdString(zmqSignerPubKey.toBinStr()));
+   ui_->lineEditRemoteZmqPubKey->setText(QString::fromStdString(zmqSignerPubKey.toBinStr()));
 }
 
 void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
@@ -77,7 +77,7 @@ void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
       showPort(true);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort, displayDefault));
       showZmqPubKey(true);
-      ui_->lineEditlRemoteZmqPubKey->setText(appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey));
+      ui_->lineEditRemoteZmqPubKey->setText(appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey));
       showOfflineDir(false);
       showLimits(false);
       break;
@@ -122,7 +122,7 @@ void SignerSettingsPage::showPort(bool show)
 void SignerSettingsPage::showZmqPubKey(bool show)
 {
    ui_->labelZmqPubKey->setVisible(show);
-   ui_->lineEditlRemoteZmqPubKey->setVisible(show);
+   ui_->lineEditRemoteZmqPubKey->setVisible(show);
    ui_->pushButtonZmqPubKey->setVisible(show);
 }
 
@@ -175,7 +175,7 @@ void SignerSettingsPage::applyChanges()
 
 void SignerSettingsPage::saveZmqRemotePubKey()
 {
-   const QString &remoteSignerZmqPubKey = ui_->lineEditlRemoteZmqPubKey->text();
+   const QString &remoteSignerZmqPubKey = ui_->lineEditRemoteZmqPubKey->text();
    if (!remoteSignerZmqPubKey.isEmpty() && (remoteSignerZmqPubKey != appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey))) {
       appSettings_->set(ApplicationSettings::zmqRemoteSignerPubKey, remoteSignerZmqPubKey);
    }
