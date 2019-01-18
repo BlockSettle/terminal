@@ -809,11 +809,15 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 
 
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &host, const QString &port, NetworkType netType
-   , const std::shared_ptr<ConnectionManager>& connectionManager
-   , OpMode opMode) : HeadlessContainer(logger, opMode)
+                           , const QString &host, const QString &port
+                           , NetworkType netType
+                           , const std::shared_ptr<ConnectionManager>& connectionManager
+                           , const std::shared_ptr<ApplicationSettings>& appSettings
+                           , OpMode opMode)
+   : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
+   , appSettings_(appSettings)
 {}
 
 // Establish the remote connection to the signer.
@@ -830,9 +834,11 @@ bool RemoteSigner::Start()
       // condition of sorts when starting out. If the server pub key exists,
       // proceed. If not, give the signer a little time to create the key. 50 ms
       // seems reasonable on a VM but we'll add some padding to be safe.
-      QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-      QString zmqSignerPubKeyPath = logDir.path() + \
-         QString::fromStdString("/zmq_conn_srv.pub");
+      QString zmqSignerPubKeyPath = appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile);
+
+//      QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+//      QString zmqSignerPubKeyPath = logDir.path() + \
+//         QString::fromStdString("/zmq_conn_srv.pub");
       QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
       if (!zmqSignerPubKeyFile.exists()) {
          QThread::msleep(250);
@@ -1048,12 +1054,13 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
 
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &homeDir, NetworkType netType, const QString &port
-   , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ApplicationSettings>& appSettings
-   , double asSpendLimit)
+                         , const QString &homeDir, NetworkType netType, const QString &port
+                         , const std::shared_ptr<ConnectionManager>& connectionManager
+                         , const std::shared_ptr<ApplicationSettings> &appSettings
+                         , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, OpMode::Local), appSettings_(appSettings)
+                  , connectionManager, appSettings, OpMode::Local)
+
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
@@ -1175,8 +1182,7 @@ bool LocalSigner::Start()
    }
 #endif
 
-   RemoteSigner::Start();
-   return true;
+   return RemoteSigner::Start();
 }
 
 bool LocalSigner::Stop()

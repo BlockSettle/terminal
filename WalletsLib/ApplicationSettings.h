@@ -59,7 +59,6 @@ public:
       signerHost,
       signerPort,
       signerRunMode,
-      signerPassword,
       signerOfflineDir,
       autoSignSpendLimit,
       launchToTray,

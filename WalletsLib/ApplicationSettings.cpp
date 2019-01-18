@@ -104,7 +104,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
       { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },
       { signerRunMode,           SettingDef(QLatin1String("SignerRunMode"), 1) },
-      { signerPassword,          SettingDef(QLatin1String("SignerPasswordHash")) },
       { signerOfflineDir,        SettingDef(QLatin1String("SignerOfflineDir"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)) },
       { autoSignSpendLimit,      SettingDef(QLatin1String("AutoSignSpendLimit"), 0.0) },
       { launchToTray,            SettingDef(QLatin1String("LaunchToTray"), false) },
@@ -143,7 +142,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
       { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
-      { zmqSignerPubKeyFile,              SettingDef(QString(), AppendToWritableDir(zmqSignerKeyFileName)) }
+      { zmqSignerPubKeyFile,              SettingDef(QLatin1String("ZmqSignerPubKeyFile"), AppendToWritableDir(zmqSignerKeyFileName)) }
    };
 }
 

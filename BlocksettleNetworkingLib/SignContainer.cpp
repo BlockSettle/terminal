@@ -47,7 +47,7 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
       }
 
       return std::make_shared<RemoteSigner>(logger, host, port, netType
-         , connectionManager);
+         , connectionManager, appSettings);
 
    case SignContainer::OpMode::Offline:
       return std::make_shared<OfflineSigner>(logger
