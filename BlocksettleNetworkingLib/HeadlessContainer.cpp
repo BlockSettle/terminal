@@ -832,7 +832,7 @@ bool RemoteSigner::Start()
    if (!zmqSignerPubKey_.getSize()){
       const QString &zmqRemoteSignerPubKey = appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
 
-      if (!bs::network::readZmqString(zmqRemoteSignerPubKey.toLatin1(), zmqSignerPubKey_, true
+      if (!bs::network::readZmqKeyString(zmqRemoteSignerPubKey.toLatin1(), zmqSignerPubKey_, true
          , logger_)) {
          logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
             "key.", __func__);

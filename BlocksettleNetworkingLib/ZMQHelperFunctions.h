@@ -21,7 +21,7 @@ namespace bs
          , SecureBinaryData& zmqKey, const bool& isPub
          , const std::shared_ptr<spdlog::logger>& logger = nullptr);
 
-      bool readZmqString(const QByteArray& zmqEncodedKey
+      bool readZmqKeyString(const QByteArray& zmqEncodedKey
          , SecureBinaryData& zmqKey, const bool& isPub
          , const std::shared_ptr<spdlog::logger>& logger = nullptr);
    }

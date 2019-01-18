@@ -156,7 +156,7 @@ bool bs::network::readZmqKeyFile(const QString& zmqKeyFilePath
    return true;
 }
 
-bool bs::network::readZmqString(const QByteArray& zmqEncodedKey, SecureBinaryData &zmqKey, const bool &isPub, const std::shared_ptr<spdlog::logger> &logger)
+bool bs::network::readZmqKeyString(const QByteArray& zmqEncodedKey, SecureBinaryData &zmqKey, const bool &isPub, const std::shared_ptr<spdlog::logger> &logger)
 {
    if (zmqEncodedKey.isEmpty()) {
       return false;
@@ -176,7 +176,7 @@ bool bs::network::readZmqString(const QByteArray& zmqEncodedKey, SecureBinaryDat
    zmqKey = SecureBinaryData(zmqEncodedKey.toStdString());
    if (zmqKey.getSize() != targetFileSize) {
       if (logger) {
-         logger->error("[ZmqSecuredServerConnection::{}] ZMQ key file ({}) "
+         logger->error("[ZmqSecuredServerConnection::{}] ZMQ key string ({}) "
             "is {} bytes, not {} bytes", __func__, zmqKey.getSize()
             , targetFileSize);
       }
