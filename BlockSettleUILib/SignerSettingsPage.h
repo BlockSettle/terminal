@@ -32,7 +32,7 @@ private slots:
 
 private:
    void onModeChanged(int index, bool displayDefault);
-   void saveZmqPubKeyPath();
+   void saveZmqRemotePubKey();
    void showHost(bool);
    void showPort(bool);
    void showZmqPubKey(bool);

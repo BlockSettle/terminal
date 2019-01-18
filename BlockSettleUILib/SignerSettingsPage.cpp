@@ -3,6 +3,7 @@
 #include "ui_SignerSettingsPage.h"
 #include "ApplicationSettings.h"
 #include "BtcUtils.h"
+#include "ZMQHelperFunctions.h"
 
 
 enum RunModeIndex {
@@ -48,7 +49,13 @@ void SignerSettingsPage::onZmqPubKeySel()
    if (file.isEmpty()) {
       return;
    }
-   ui_->labelZmqPubKeyPath->setText(file);
+
+   SecureBinaryData zmqSignerPubKey;
+   if (!bs::network::readZmqKeyFile(file, zmqSignerPubKey, true)) {
+      return;
+   }
+
+   ui_->lineEditlRemoteZmqPubKey->setText(QString::fromStdString(zmqSignerPubKey.toBinStr()));
 }
 
 void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
@@ -58,8 +65,7 @@ void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
       showHost(false);
       showPort(true);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort, displayDefault));
-      showZmqPubKey(true);
-      ui_->labelZmqPubKeyPath->setText(appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile));
+      showZmqPubKey(false);
       showOfflineDir(false);
       showLimits(true);
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit, displayDefault));
@@ -71,7 +77,7 @@ void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
       showPort(true);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort, displayDefault));
       showZmqPubKey(true);
-      ui_->labelZmqPubKeyPath->setText(appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile));
+      ui_->lineEditlRemoteZmqPubKey->setText(appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey));
       showOfflineDir(false);
       showLimits(false);
       break;
@@ -116,7 +122,7 @@ void SignerSettingsPage::showPort(bool show)
 void SignerSettingsPage::showZmqPubKey(bool show)
 {
    ui_->labelZmqPubKey->setVisible(show);
-   ui_->labelZmqPubKeyPath->setVisible(show);
+   ui_->lineEditlRemoteZmqPubKey->setVisible(show);
    ui_->pushButtonZmqPubKey->setVisible(show);
 }
 
@@ -150,13 +156,12 @@ void SignerSettingsPage::applyChanges()
    case Local:
       appSettings_->set(ApplicationSettings::signerPort, ui_->spinBoxPort->value());
       appSettings_->set(ApplicationSettings::autoSignSpendLimit, ui_->spinBoxAsSpendLimit->value());
-      saveZmqPubKeyPath();
       break;
 
    case Remote:
       appSettings_->set(ApplicationSettings::signerHost, ui_->lineEditHost->text());
       appSettings_->set(ApplicationSettings::signerPort, ui_->spinBoxPort->value());
-      saveZmqPubKeyPath();
+      saveZmqRemotePubKey();
       break;
 
    case Offline:
@@ -168,10 +173,10 @@ void SignerSettingsPage::applyChanges()
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
 }
 
-void SignerSettingsPage::saveZmqPubKeyPath()
+void SignerSettingsPage::saveZmqRemotePubKey()
 {
-   const QString &zmqPubKeyPath = ui_->labelZmqPubKeyPath->text();
-   if (!zmqPubKeyPath.isEmpty() && (zmqPubKeyPath != appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile))) {
-      appSettings_->set(ApplicationSettings::zmqSignerPubKeyFile, zmqPubKeyPath);
+   const QString &remoteSignerZmqPubKey = ui_->lineEditlRemoteZmqPubKey->text();
+   if (!remoteSignerZmqPubKey.isEmpty() && (remoteSignerZmqPubKey != appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey))) {
+      appSettings_->set(ApplicationSettings::zmqRemoteSignerPubKey, remoteSignerZmqPubKey);
    }
 }

@@ -142,7 +142,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
       { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
-      { zmqSignerPubKeyFile,              SettingDef(QLatin1String("ZmqSignerPubKeyFile"), AppendToWritableDir(zmqSignerKeyFileName)) }
+      { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
+      { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) }
    };
 }
 

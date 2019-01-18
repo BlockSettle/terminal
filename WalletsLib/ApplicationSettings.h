@@ -98,7 +98,8 @@ public:
       MDLicenseAccepted,
       authPrivKey,
       jwtUsername,
-      zmqSignerPubKeyFile,
+      zmqLocalSignerPubKeyFilePath,
+      zmqRemoteSignerPubKey,
       _last
    };
 

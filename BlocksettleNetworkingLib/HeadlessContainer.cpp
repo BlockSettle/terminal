@@ -827,21 +827,15 @@ bool RemoteSigner::Start()
       return true;
    }
 
-   // If the ZMQ server public key hasn't been loaded yet, do it here.
-   if (zmqSignerPubKey_.getSize() == 0) {
-      // If the server pub key exists, proceed. If not, give the signer a little time to create the key.
-      // 50 ms seems reasonable on a VM but we'll add some padding to be safe.
-      const auto zmqSignerPubKeyPath = appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile);
+   // Load remote singer zmq pub key.
+   // If the server pub key exists, proceed (it was initialized in LocalSigner::Start()).
+   if (!zmqSignerPubKey_.getSize()){
+      const QString &zmqRemoteSignerPubKey = appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
 
-      QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
-      if (!zmqSignerPubKeyFile.exists()) {
-         QThread::msleep(250);
-      }
-
-      if (!bs::network::readZMQKeyFile(zmqSignerPubKeyPath, zmqSignerPubKey_, true
+      if (!bs::network::readZmqString(zmqRemoteSignerPubKey.toLatin1(), zmqSignerPubKey_, true
          , logger_)) {
          logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
-            "key ({})", __func__, zmqSignerPubKeyPath.toStdString());
+            "key.", __func__);
          return false;
       }
    }
@@ -1149,13 +1143,33 @@ bool LocalSigner::Start()
    }
    logger_->debug("[LocalSigner::{}] child process started", __func__);
 
+
+   // Load local ZMQ server public key.
+   if (zmqSignerPubKey_.getSize() == 0) {
+      // If the server pub key exists, proceed. If not, give the signer a little time to create the key.
+      // 50 ms seems reasonable on a VM but we'll add some padding to be safe.
+      const auto zmqLocalSignerPubKeyPath = appSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
+
+      QFile zmqLocalSignerPubKeyFile(zmqLocalSignerPubKeyPath);
+      if (!zmqLocalSignerPubKeyFile.exists()) {
+         QThread::msleep(250);
+      }
+
+      if (!bs::network::readZmqKeyFile(zmqLocalSignerPubKeyPath, zmqSignerPubKey_, true
+         , logger_)) {
+         logger_->error("[LocalSigner::{}] failed to read ZMQ server public "
+            "key ({})", __func__, zmqLocalSignerPubKeyPath.toStdString());
+      }
+   }
+
+
    // SPECIAL CASE: Unlike Windows and Linux, the Signer and Terminal have
    // different data directories on Macs. Check the Signer for a file. There is
    // an issue here if the Signer has moved its keys away from the standard
    // location. We really should check the Signer's config file instead.
 #ifdef Q_OS_MACOS
    QString zmqSignerPubKeyPath = \
-      appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile);
+      appSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
    QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
    if (!zmqSignerPubKeyFile.exists()) {
       QThread::msleep(250); // Give Signer time to create files if needed.
