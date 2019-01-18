@@ -101,9 +101,9 @@ const BinaryData &bs::SettlementAssetEntry::script() const
 
       BinaryWriter script;
       script.put_uint8_t(OP_1);
-      script.put_uint8_t(buyChainKey.getSize());
+      script.put_uint8_t((uint8_t)buyChainKey.getSize());
       script.put_BinaryData(buyChainKey);
-      script.put_uint8_t(sellChainKey.getSize());
+      script.put_uint8_t((uint8_t)sellChainKey.getSize());
       script.put_BinaryData(sellChainKey);
       script.put_uint8_t(OP_2);
       script.put_uint8_t(OP_CHECKMULTISIG);
@@ -146,7 +146,7 @@ const BinaryData &bs::SettlementAssetEntry::p2wshScript() const
       const auto hash256 = BtcUtils::getSha256(script());
       Recipient_P2WSH recipient(hash256, 0);
       const auto &script = recipient.getSerializedScript();
-      p2wshScript_ = script.getSliceCopy(9, script.getSize() - 9);
+      p2wshScript_ = script.getSliceCopy(9, (uint32_t)script.getSize() - 9);
    }
    return p2wshScript_;
 }

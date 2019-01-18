@@ -192,8 +192,8 @@ void WalletsManager::BackupWallet(const hd_wallet_type &wallet, const std::strin
    }
    auto files = dirBackup.entryList(QStringList{ QString::fromStdString(
       bs::hd::Wallet::fileNamePrefix(false) + wallet->getWalletId() + "_*.lmdb" )});
-   if (!files.empty() && (files.size() >= nbBackupFilesToKeep_)) {
-      for (size_t i = 0; i <= files.size() - nbBackupFilesToKeep_; i++) {
+   if (!files.empty() && (files.size() >= (int)nbBackupFilesToKeep_)) {
+      for (int i = 0; i <= files.size() - (int)nbBackupFilesToKeep_; i++) {
          logger_->debug("Removing old backup file {}", files[i].toStdString());
          QFile::remove(backupDir + QDir::separator() + files[i]);
       }
@@ -873,15 +873,15 @@ bool WalletsManager::GetTransactionMainAddress(const Tx &tx, const std::shared_p
    const auto &cbProcessAddresses = [this, txKey, cb](const std::set<bs::Address> &addresses) {
       switch (addresses.size()) {
       case 0:
-         updateTxDescCache(txKey, tr("no address"), addresses.size(), cb);
+         updateTxDescCache(txKey, tr("no address"), (int)addresses.size(), cb);
          break;
 
       case 1:
-         updateTxDescCache(txKey, (*addresses.begin()).display(), addresses.size(), cb);
+         updateTxDescCache(txKey, (*addresses.begin()).display(), (int)addresses.size(), cb);
          break;
 
       default:
-         updateTxDescCache(txKey, tr("%1 output addresses").arg(addresses.size()), addresses.size(), cb);
+         updateTxDescCache(txKey, tr("%1 output addresses").arg(addresses.size()), (int)addresses.size(), cb);
          break;
       }
    };

@@ -9,10 +9,10 @@ from component_configurator import Configurator
 class BotanSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '2.8.0'
+        self._version = '2.9.0'
         self._package_name = 'botan'
 
-        self._package_url = 'https://github.com/randombit/botan/archive/2.8.0.zip'
+        self._package_url = 'https://github.com/randombit/botan/archive/' + self._version + '.zip'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version

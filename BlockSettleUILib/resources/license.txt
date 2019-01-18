@@ -24,7 +24,6 @@ YOU AGREE THAT (I) THE BLOCKSETTLE TERMINAL SOFTWARE, EQUIPMENT, ANY SERVICES PR
 
 
 This license applies to all works under this directory tree EXCEPT for:
-* CryptoPP
 * GTest (GoogleTest)
 * libbtc
 * libqrencode
@@ -34,14 +33,6 @@ This license applies to all works under this directory tree EXCEPT for:
 * SPDLog
 * SQLite
 * ZeroMQ
-
-Everything in the cryptopp directory is considered public domain according
-to http://www.cryptopp.com/ and included with the source distribution
-as a convenience to the user. The leveldb library has been included,
-unmodified, in compliance with its license that can be found in the
-cppForSwig/leveldb directory. Every listed file in objc_armory is also
-subject to the MIT/X11 license, as described below and online
-(http://www.opensource.org/licenses/mit-license.php).
 
 GNU AFFERO GENERAL PUBLIC LICENSE
 Version 3, 19 November 2007

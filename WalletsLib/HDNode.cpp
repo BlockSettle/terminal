@@ -33,7 +33,7 @@ hd::Path::Elem hd::Path::get(int index) const
       return UINT32_MAX;
    }
    if (index < 0) {
-      index += length();
+      index += (int)length();
       if (index < 0) {
          return UINT32_MAX;
       }
@@ -518,7 +518,7 @@ static SecureBinaryData LimitData(const SecureBinaryData &key
    if (key.getSize() <= limit) {
       return key;
    }
-   return key.getSliceCopy(0, limit);
+   return key.getSliceCopy(0, (uint32_t)limit);
 }
 
 std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
@@ -622,10 +622,6 @@ std::unique_ptr<hd::Node> hd::ChainedNode::createUnique(const btc_hdnode &node, 
 
 SecureBinaryData hd::ChainedNode::privChainedKey() const
 {
-/*   uint8_t privKey[BTC_ECKEY_PKEY_LENGTH];    // chain computation using libbtc - incompatible with CryptoPP
-   memcpy(privKey, node_.private_key, sizeof(privKey));
-   btc_ecc_private_key_tweak_add(privKey, chainCode_.getPtr());
-   return SecureBinaryData(privKey, sizeof(privKey));*/
    if (privateKey().isNull()) {
       return {};
    }
@@ -635,10 +631,6 @@ SecureBinaryData hd::ChainedNode::privChainedKey() const
 
 BinaryData hd::ChainedNode::pubChainedKey() const
 {
-/*   uint8_t pubKey[BTC_ECKEY_COMPRESSED_LENGTH];     // chain computation using libbtc - incompatible with CryptoPP
-   memcpy(pubKey, node_.public_key, sizeof(pubKey));
-   btc_ecc_public_key_tweak_add(pubKey, chainCode_.getPtr());
-   return BinaryData(pubKey, sizeof(pubKey));*/
    CryptoECDSA crypto;
    return crypto.CompressPoint(crypto.ComputeChainedPublicKey(crypto.UncompressPoint(pubCompressedKey()), chainCode_));
 }
@@ -745,8 +737,8 @@ bool operator < (const hd::Path &l, const hd::Path &r)
       return (l.length() < r.length());
    }
    for (size_t i = 0; i < l.length(); i++) {
-      const auto &lval = l.get(i);
-      const auto &rval = r.get(i);
+      const auto &lval = l.get((int)i);
+      const auto &rval = r.get((int)i);
       if (lval != rval) {
          return (lval < rval);
       }

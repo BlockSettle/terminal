@@ -52,11 +52,11 @@ namespace bs {
          virtual bool deserialize(BinaryRefReader brr) = 0;
 
          bool hasPrivateKey(void) const override { return false; }
-         const BinaryData& getPrivateEncryptionKeyId(void) const override { return {}; }
-
+         const BinaryData& getPrivateEncryptionKeyId(void) const override { return emptyKey_; }
 
       private:
          Type  type_;
+         BinaryData  emptyKey_;
       };
 
       class AssetEntryComment : public AssetEntryMeta
