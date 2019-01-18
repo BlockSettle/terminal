@@ -22,6 +22,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    : connectionManager_(connectionManager)
    , appSettings_(appSettings)
    , logger_(logger)
+   , ownPrivKey_(appSettings_->GetAuthKeys().first)
 {
    qRegisterMetaType<std::shared_ptr<Chat::MessageData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::MessageData>>>();
@@ -158,6 +159,41 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
    emit MessagesUpdate(messages);
 }
 
+void ChatClient::OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response)
+{
+   logger_->debug("Received request to send own public key from server: {}", response.getData());
+
+   // Make sure we are the node for which a public key was expected, if not, ignore this call.
+   if ( currentUserId_ != response.getPeerId()) {
+      return;
+   }
+
+   // Send our key to the peer.
+   auto request = std::make_shared<Chat::SendOwnPublicKeyRequest>(
+      "", // clientId
+      response.getAskingNodeId(),
+      response.getPeerId(),
+      appSettings_->GetAuthKeys().second);
+   sendRequest(request);
+}
+
+void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response)
+{
+   logger_->debug("Received public key of peer from server: {}", response.getData());
+
+   // Make sure we are the node for which a public key was expected, if not, ignore this call.
+   if ( currentUserId_ != response.geReceivingNodeId()) {
+      return;
+   }
+   // Save received public key of peer.
+   pubKeys_[response.getSendingNodeId()] = response.getSendingNodePublicKey();
+
+   // Run over enqueued messages if any, and try to send them all now.
+   for (const QString& message : enqueued_messages_[response.getSendingNodeId()]) {
+      onSendMessage(message, response.getSendingNodeId());
+   }
+}
+
 void ChatClient::OnDataReceived(const std::string& data)
 {
    logger_->debug("[ChatClient::OnDataReceived] {}", data);
@@ -183,6 +219,21 @@ void ChatClient::OnError(DataConnectionError errorCode)
 
 void ChatClient::onSendMessage(const QString &message, const QString &receiver)
 {
+   const auto &itPub = pubKeys_.find(receiver);
+   if (itPub != pubKeys_.end()) {
+      // Ask for public key from peer. Enqueue the message to be sent, once we receive the 
+      // necessary public key.
+      enqueued_messages_[receiver].push_back(message);
+      
+      // Send our key to the peer.
+      auto request = std::make_shared<Chat::AskForPublicKeyRequest>(
+         "", // clientId
+         currentUserId_, 
+         receiver);
+      sendRequest(request);
+      return;
+   }
+
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
    Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
@@ -190,15 +241,12 @@ void ChatClient::onSendMessage(const QString &message, const QString &receiver)
       , QDateTime::currentDateTimeUtc(), message);
 
    auto localEncMsg = msg;
-   //TODO: encrypt with own public key
+   msg.encrypt(appSettings_->GetAuthKeys().second);
    chatDb_->add(localEncMsg);
 
-   const auto &itPub = pubKeys_.find(receiver);
-   if (itPub != pubKeys_.end()) {
-      if (!msg.encrypt(itPub->second)) {
-         logger_->error("[ChatClient::sendMessage] failed to encrypt message {}"
-            , msg.getId().toStdString());
-      }
+   if (!msg.encrypt(itPub->second)) {
+      logger_->error("[ChatClient::sendMessage] failed to encrypt message {}"
+         , msg.getId().toStdString());
    }
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());

@@ -57,6 +57,12 @@ public:
 
    void retrieveUserMessages(const QString &userId);
 
+   // Called when a peer asks for our public key.
+   void OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response);
+
+   // Called when we asked for a public key of peer, and got result.
+   void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response);
+
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
@@ -80,15 +86,18 @@ private:
    std::shared_ptr<spdlog::logger>        logger_;
 
    std::unique_ptr<ChatDB>                   chatDb_;
-   std::map<QString, BinaryData>             pubKeys_;
+   std::map<QString, autheid::PublicKey>     pubKeys_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
+
+   // Queue of messages to be sent for each receiver, once we received the public key.
+   std::map<QString, std::queue<QString>>    enqueued_messages_;
 
    QTimer            heartbeatTimer_;
 
    std::string       currentUserId_;
    std::atomic_bool  loggedIn_{ false };
 
-   SecureBinaryData  ownPrivKey_;
+   autheid::PrivateKey  ownPrivKey_;
 };
 
 #endif   // __CHAT_CLIENT_H__
