@@ -6,4 +6,4 @@
 	url = https://github.com/BlockSettle/Celer.git
 [submodule "AuthCommon"]
 	path = AuthCommon
-	url = https://github.com/scomil/AuthCommon.git
+	url = https://github.com/autheid/AuthCommon.git
