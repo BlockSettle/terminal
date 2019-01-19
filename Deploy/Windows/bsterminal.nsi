@@ -104,7 +104,7 @@ Section "install"
         SetOutPath $INSTDIR
         RmDir /r $INSTDIR
         SetOverwrite on
-        File ..\build_terminal\Release\bin\Release\libzmq-v141-mt-4_2_5.dll
+        File ..\build_terminal\Release\bin\Release\libzmq-v141-mt-4_3_1.dll
         File C:\Windows\System32\msvcp140.dll
         File C:\Windows\System32\msvcp140_1.dll
         File C:\Windows\System32\msvcp140_2.dll
@@ -156,7 +156,7 @@ Section "Uninstall"
     !insertmacro DELETE_SMGROUP_SHORTCUT "BlockSettle Signer"
     Delete /REBOOTOK $INSTDIR\blocksettle.exe
     Delete /REBOOTOK $INSTDIR\blocksettle_signer.exe
-    Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_2_1.dll
+    Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_3_1.dll
     Delete /REBOOTOK $INSTDIR\msvcp140.dll
     Delete /REBOOTOK $INSTDIR\vcruntime140.dll
     RmDir /r /REBOOTOK $INSTDIR
