@@ -240,6 +240,8 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = bs::wallet::estimateTXVirtSize(usedUTXO_, recipients);
          summary_.totalFee = availableBalance - payment.spendVal_;
          totalFee_ = summary_.totalFee;
+         summary_.feePerByte =
+            std::round((float)summary_.totalFee / (float)summary_.txVirtSize);
          summary_.hasChange = false;
          summary_.selectedBalance = UiUtils::amountToBtc(availableBalance);
       }
