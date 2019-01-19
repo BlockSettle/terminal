@@ -149,27 +149,11 @@ void TransactionData::enableTransactionUpdate()
 
 bool TransactionData::UpdateTransactionData()
 {
-   if (selectedInputs_ == nullptr) {
+   if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
       return false;
    }
 
-   std::vector<UTXO> transactions;
-   if (!selectedInputs_->UseAutoSel()) {
-      transactions = selectedInputs_->GetSelectedTransactions();
-   }
-   else {
-      transactions = selectedInputs_->GetAllTransactions();
-   }
-   if (utxoAdapter_ && reservedUTXO_.empty()) {
-      utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId(), transactions);
-   }
-
-   for (auto& utxo : transactions) {
-      // Prep the UTXOs for calculation.
-      decorateUTXOs(utxo
-         , wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
-   }
-
+   std::vector<UTXO> transactions = decorateUTXOs();
    uint64_t availableBalance = 0;
    for (const auto &tx : transactions) {
       availableBalance += tx.getValue();
@@ -298,29 +282,15 @@ bool TransactionData::UpdateTransactionData()
 }
 
 // Calculate the maximum fee for a given recipient.
-double TransactionData::CalculateMaxAmount(const bs::Address &recipient)
+double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
 {
    if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
       return -1;
    }
+
    double fee = totalFee_;
    if (fee <= 0) {
-      std::vector<UTXO> transactions;
-      if (selectedInputs_->GetSelectedTransactionsCount()) {
-         transactions = selectedInputs_->GetSelectedTransactions();
-      }
-      if (transactions.empty()) {
-         transactions = selectedInputs_->GetAllTransactions();
-      }
-      if (transactions.empty()) {
-         return 0;
-      }
-
-      // Prep the UTXOs for calculation.
-      for (auto& utxo : transactions) {
-         decorateUTXOs(utxo
-            , wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
-      }
+      std::vector<UTXO> transactions = decorateUTXOs();
 
       size_t txOutSize = 0;
       for (const auto &recip : recipients_) {
@@ -367,39 +337,61 @@ bool TransactionData::RecipientsReady() const
 // A function equivalent to CoinSelectionInstance::decorateUTXOs() in Armory. We
 // need it for proper initialization of the UTXO structs when computing TX sizes
 // and fees.
-// IN:  AddressEntry with address data. (const std::shared_ptr<AddressEntry>)
-// OUT: A UTXO to initialize. (UTXO&)
-// RET: None
-void TransactionData::decorateUTXOs(UTXO& inUTXO
-   , const std::shared_ptr<AddressEntry> inAE)
+// IN:  None
+// OUT: None
+// RET: A vector of fully initialized UTXO objects, one for each selected (and
+//      non-filtered) input.
+std::vector<UTXO> TransactionData::decorateUTXOs() const
 {
-   shared_ptr<AddressEntry> tempAE = inAE;
-   inUTXO.txinRedeemSizeBytes_ = 0;
-   inUTXO.isInputSW_ = false;
+   std::vector<UTXO> inputUTXOs;
+   if (selectedInputs_ == nullptr || wallet_ == nullptr) {
+      return inputUTXOs;
+   }
 
-   if (inAE != nullptr) {
-      while (true) {
-         inUTXO.txinRedeemSizeBytes_ += tempAE->getInputSize();
+   if (!selectedInputs_->UseAutoSel()) {
+      inputUTXOs = selectedInputs_->GetSelectedTransactions();
+   }
+   else {
+      inputUTXOs = selectedInputs_->GetAllTransactions();
+   }
 
-         // P2SH AddressEntry objects use nesting to determine the exact
-         // P2SH type. The initial P2SH-W2WPKH AddressEntry object (and any
-         // non-SegWit AddressEntry objects) won't have witness data. That's
-         // fine. Catch the error and keep going.
-         try {
-            inUTXO.witnessDataSizeBytes_ += tempAE->getWitnessDataSize();
-            inUTXO.isInputSW_ = true;
-         }
-         catch (const std::runtime_error& re) {}
+   if (utxoAdapter_ && reservedUTXO_.empty()) {
+      utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId()
+         , inputUTXOs);
+   }
 
-         // Check for a predecessor, which P2SH-P2PWKH will have. This is how
-         // we learn if the original P2SH AddressEntry object uses SegWit.
-         auto addrNested = std::dynamic_pointer_cast<AddressEntry_Nested>(tempAE);
-         if (addrNested == nullptr) {
-            break;
-         }
-         tempAE = addrNested->getPredecessor();
-      } // while
-   } // if
+   for (auto& utxo : inputUTXOs) {
+      // Prep the UTXOs for calculation.
+      auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
+      utxo.txinRedeemSizeBytes_ = 0;
+      utxo.isInputSW_ = false;
+
+      if (aefa != nullptr) {
+         while (true) {
+            utxo.txinRedeemSizeBytes_ += aefa->getInputSize();
+
+            // P2SH AddressEntry objects use nesting to determine the exact
+            // P2SH type. The initial P2SH-W2WPKH AddressEntry object (and any
+            // non-SegWit AddressEntry objects) won't have witness data. That's
+            // fine. Catch the error and keep going.
+            try {
+               utxo.witnessDataSizeBytes_ += aefa->getWitnessDataSize();
+               utxo.isInputSW_ = true;
+            }
+            catch (const std::runtime_error& re) {}
+
+            // Check for a predecessor, which P2SH-P2PWKH will have. This is how
+            // we learn if the original P2SH AddressEntry object uses SegWit.
+            auto addrNested = std::dynamic_pointer_cast<AddressEntry_Nested>(aefa);
+            if (addrNested == nullptr) {
+               break;
+            }
+            aefa = addrNested->getPredecessor();
+         } // while
+      } // if
+   } // for
+
+   return inputUTXOs;
 }
 
 // A temporary private function that calculates the virtual size of an incoming
