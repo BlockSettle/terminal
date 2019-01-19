@@ -17,7 +17,11 @@ namespace bs
       int get_monitor_event(void *monitor, int *value);
       std::string peerAddressString(int socket);
       int getCurveZMQKeyPair(std::pair<SecureBinaryData, SecureBinaryData>& keyPair);
-      bool readZMQKeyFile(const QString& zmqKeyFilePath
+      bool readZmqKeyFile(const QString& zmqKeyFilePath
+         , SecureBinaryData& zmqKey, const bool& isPub
+         , const std::shared_ptr<spdlog::logger>& logger = nullptr);
+
+      bool readZmqKeyString(const QByteArray& zmqEncodedKey
          , SecureBinaryData& zmqKey, const bool& isPub
          , const std::shared_ptr<spdlog::logger>& logger = nullptr);
    }

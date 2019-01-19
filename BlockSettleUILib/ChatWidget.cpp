@@ -19,8 +19,14 @@ ChatWidget::ChatWidget(QWidget *parent)
    ui_->stackedWidget->setCurrentIndex(0);
 
    ui_->tableViewMessages->verticalHeader()->hide();
+   ui_->tableViewMessages->verticalHeader()->setDefaultSectionSize(15);
+   ui_->tableViewMessages->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
    ui_->tableViewMessages->horizontalHeader()->hide();
+   ui_->tableViewMessages->horizontalHeader()->setDefaultSectionSize(50);
+   ui_->tableViewMessages->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->tableViewMessages->setSelectionBehavior(QAbstractItemView::SelectRows);
+
 
    ui_->treeViewUsers->header()->hide();
 
@@ -67,8 +73,7 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
    currentChat_ = usersViewModel_->resolveUser(index);
 
    ui_->text->setEnabled(!currentChat_.isEmpty());
-   ui_->labelActiveChat->setText(tr("Chat #") + currentChat_);
-
+   ui_->labelActiveChat->setText(tr("CHAT #") + currentChat_);
    messagesViewModel_->onSwitchToChat(currentChat_);
    client_->retrieveUserMessages(currentChat_);
 }
@@ -87,10 +92,10 @@ void ChatWidget::onSendButtonClicked()
    QString messageText = ui_->text->text();
 
    if (!messageText.isEmpty() && !currentChat_.isEmpty()) {
-      client_->onSendMessage(messageText, currentChat_);
+      auto msg = client_->SendOwnMessage(messageText, currentChat_);
       ui_->text->clear();
 
-      messagesViewModel_->onSingleMessageUpdate(QDateTime::currentDateTime(), messageText);
+      messagesViewModel_->onSingleMessageUpdate(msg);
    }
 }
 

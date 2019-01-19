@@ -27,14 +27,15 @@ public:
 private slots:
    void runModeChanged(int index);
    void onOfflineDirSel();
+   void onZmqPubKeySel();
    void onAsSpendLimitChanged(double);
 
 private:
    void onModeChanged(int index, bool displayDefault);
-   void savePassword();
+   void saveZmqRemotePubKey();
    void showHost(bool);
    void showPort(bool);
-   void showPassword(bool);
+   void showZmqPubKey(bool);
    void showOfflineDir(bool);
    void showLimits(bool);
 

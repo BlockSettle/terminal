@@ -373,7 +373,7 @@ uint64_t bs::SettlementWallet::GetEstimatedFeeFor(UTXO input, const bs::Address 
    const auto inputAmount = input.getValue();
    if (input.txinRedeemSizeBytes_ == UINT32_MAX) {
       const auto addrEntry = getAddressEntryForAddr(input.getRecipientScrAddr());
-      input.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(addrEntry);
+      input.txinRedeemSizeBytes_ = (unsigned int)bs::wallet::getInputScrSize(addrEntry);
    }
    CoinSelection coinSelection([&input](uint64_t) -> std::vector<UTXO> { return { input }; }
    , std::vector<AddressBookEntry>{}, inputAmount, armory_->topBlock());

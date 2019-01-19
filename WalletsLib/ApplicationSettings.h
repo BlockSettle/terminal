@@ -59,7 +59,6 @@ public:
       signerHost,
       signerPort,
       signerRunMode,
-      signerPassword,
       signerOfflineDir,
       autoSignSpendLimit,
       launchToTray,
@@ -99,6 +98,8 @@ public:
       MDLicenseAccepted,
       authPrivKey,
       jwtUsername,
+      zmqLocalSignerPubKeyFilePath,
+      zmqRemoteSignerPubKey,
       _last
    };
 
@@ -120,9 +121,10 @@ public:
 
    void SetDefaultSettings(bool toFile=false);                   // reset all settings to default
 
-   int GetDefaultArmoryPort() const;
-
-   static int GetDefaultArmoryPortForNetwork(NetworkType networkType);
+   static int GetDefaultArmoryLocalPort(NetworkType networkType);
+   static int GetDefaultArmoryRemotePort(NetworkType networkType);
+   QString GetArmoryRemotePort(bool getDefaultValue = false
+      , NetworkType networkType = NetworkType::Invalid) const;
 
    QString GetSettingsPath() const;
 

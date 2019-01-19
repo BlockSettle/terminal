@@ -148,7 +148,7 @@ private slots:
    void updatePage();
    void refresh();
    void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
-   void onDelRows(const std::set<int> &rows);
+   void onDelRows(std::vector<int> rows);
 
    void onArmoryStateChanged(ArmoryConnection::State);
    void onNewTransactions(std::vector<bs::TXEntry>);

@@ -37,7 +37,7 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
       }
 
       return std::make_shared<LocalSigner>(logger, appSettings->GetHomeDir()
-         , netType, port, connectionManager
+         , netType, port, connectionManager, appSettings
          , appSettings->get<double>(ApplicationSettings::autoSignSpendLimit));
 
    case SignContainer::OpMode::Remote:
@@ -47,7 +47,7 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
       }
 
       return std::make_shared<RemoteSigner>(logger, host, port, netType
-         , connectionManager);
+         , connectionManager, appSettings);
 
    case SignContainer::OpMode::Offline:
       return std::make_shared<OfflineSigner>(logger

@@ -221,7 +221,7 @@ void ChatClient::OnError(DataConnectionError errorCode)
    logger_->debug("[ChatClient::OnError] {}", errorCode);
 }
 
-void ChatClient::onSendMessage(const QString &message, const QString &receiver)
+std::shared_ptr<Chat::MessageData> ChatClient::SendOwnMessage(const QString &message, const QString &receiver)
 {
    const auto &itPub = pubKeys_.find(receiver);
    if (itPub != pubKeys_.end()) {
@@ -255,6 +255,7 @@ void ChatClient::onSendMessage(const QString &message, const QString &receiver)
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());
    sendRequest(request);
+   return std::make_shared<Chat::MessageData>(msg);
 }
 
 void ChatClient::retrieveUserMessages(const QString &userId)

@@ -14,7 +14,7 @@
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("C:/Program Files/BitcoinArmory/ArmoryDB.exe");
-#elif defined (Q_OS_OSX)
+#elif defined (Q_OS_MACOS)
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("/opt/ArmoryDB/ArmoryDB");
@@ -55,12 +55,16 @@ static const QString groupRescan = QLatin1String("rescan");
 static const QString testnetSubdir = QLatin1String("testnet3");
 static const QString regtestSubdir = QLatin1String("regtest");
 
+static const QString zmqSignerKeyFileName = QLatin1String("zmq_conn_srv.pub");
+
 static const int DefaultSatoshiPort = 8333;
 static const int DefaultTestnetSatoshiPort = 18333;
 
 static const QString ArmoryDefaultIP = QLatin1String("127.0.0.1");
-static const int ArmoryDefaultMainPort = 9001;
-static const int ArmoryDefaultTestPort = 19001;
+static const int ArmoryDefaultLocalMainPort = 9001;
+static const int ArmoryDefaultLocalTestPort = 19001;
+static const int ArmoryDefaultRemoteMainPort = 80;
+static const int ArmoryDefaultRemoteTestPort = 81;
 
 
 ApplicationSettings::ApplicationSettings(const QString &appName
@@ -78,7 +82,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("armory.blocksettle.com")) },
-      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), 81) },
+      { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort")) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.44")) },
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
@@ -100,7 +104,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
       { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },
       { signerRunMode,           SettingDef(QLatin1String("SignerRunMode"), 1) },
-      { signerPassword,          SettingDef(QLatin1String("SignerPasswordHash")) },
       { signerOfflineDir,        SettingDef(QLatin1String("SignerOfflineDir"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)) },
       { autoSignSpendLimit,      SettingDef(QLatin1String("AutoSignSpendLimit"), 0.0) },
       { launchToTray,            SettingDef(QLatin1String("LaunchToTray"), false) },
@@ -124,9 +127,9 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { Filter_MD_QN,            SettingDef(QLatin1String("Filter/MD/QN")) },
       { Filter_MD_QN_cnt,        SettingDef(QLatin1String("Filter/MD/QN/counters")) },
       { ChangeLog_Base_Url,      SettingDef(QString(), QLatin1String("http://185.213.153.44/ChangeLog"))},
-      { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("http://pubb.blocksettle.com/terminal/downloads"))},
-      { ResetPassword_Url,       SettingDef(QString(), QLatin1String("http://pubb.blocksettle.com/pub-forgot-password"))},
-      { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://pubb.blbocksettle.com/pub-registration")) },
+      { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/terminal/downloads"))},
+      { ResetPassword_Url,       SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/pub-forgot-password"))},
+      { GetAccount_Url,          SettingDef(QString(), QLatin1String("https://pubb.blbocksettle.com/pub-registration")) },
       { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0x06) },
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
       { XbtRfqLimit,             SettingDef(QLatin1String("XbtRfqLimit"), 5) },
@@ -138,7 +141,9 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { TransactionFilter,                SettingDef(QLatin1String("TransactionFilter"), QVariantList() << QStringList() << 0) },
       { SubscribeToMDOnStart,             SettingDef(QLatin1String("SubscribeToMDOnStart"), false) },
       { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
-      { authPrivKey,             SettingDef(QLatin1String("AuthPrivKey")) }
+      { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
+      { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
+      { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) }
    };
 }
 
@@ -456,18 +461,38 @@ SocketType ApplicationSettings::GetArmorySocketType() const
    return SocketHttp;
 }
 
-int ApplicationSettings::GetDefaultArmoryPort() const
-{
-   return GetDefaultArmoryPortForNetwork(get<NetworkType>(netType));
-}
-
-int ApplicationSettings::GetDefaultArmoryPortForNetwork(NetworkType networkType)
+int ApplicationSettings::GetDefaultArmoryRemotePort(NetworkType networkType)
 {
    switch (networkType) {
    case NetworkType::MainNet:
-      return ArmoryDefaultMainPort;
+      return ArmoryDefaultRemoteMainPort;
    case NetworkType::TestNet:
-      return ArmoryDefaultTestPort;
+      return ArmoryDefaultRemoteTestPort;
+   default:
+      return 0;
+   }
+}
+
+QString ApplicationSettings::GetArmoryRemotePort(bool getDefault, NetworkType networkType) const
+{
+   QString port;
+   if (!getDefault) {
+      port = get<QString>(ApplicationSettings::armoryDbPort);
+   }
+   if (port.isEmpty()) {
+      port = QString::number(GetDefaultArmoryRemotePort(
+         (networkType == NetworkType::Invalid) ? get<NetworkType>(netType) : networkType));
+   }
+   return port;
+}
+
+int ApplicationSettings::GetDefaultArmoryLocalPort(NetworkType networkType)
+{
+   switch (networkType) {
+   case NetworkType::MainNet:
+      return ArmoryDefaultLocalMainPort;
+   case NetworkType::TestNet:
+      return ArmoryDefaultLocalTestPort;
    default:
       return 0;
    }
@@ -493,10 +518,10 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    settings.runLocally = get<bool>(ApplicationSettings::runArmoryLocally);
    if (settings.runLocally) {
       settings.armoryDBIp = "127.0.0.1";
-      settings.armoryDBPort = std::to_string(GetDefaultArmoryPort());
+      settings.armoryDBPort = std::to_string(GetDefaultArmoryLocalPort(get<NetworkType>(netType)));
    } else {
       settings.armoryDBIp = get<std::string>(ApplicationSettings::armoryDbIp);
-      settings.armoryDBPort = get<std::string>(ApplicationSettings::armoryDbPort);
+      settings.armoryDBPort = GetArmoryRemotePort().toStdString();
    }
    settings.socketType = GetArmorySocketType();
 

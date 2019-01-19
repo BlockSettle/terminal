@@ -1,8 +1,7 @@
 #include "HDNode.h"
 #include <memory>
-#include <qglobal.h>
-#include <btc/random.h>
-#include <btc/ecc.h>
+#include <botan/serpent.h>
+#include "AssetEncryption.h"
 #include "EncryptionUtils.h"
 #include "make_unique.h"
 
@@ -34,7 +33,7 @@ hd::Path::Elem hd::Path::get(int index) const
       return UINT32_MAX;
    }
    if (index < 0) {
-      index += length();
+      index += (int)length();
       if (index < 0) {
          return UINT32_MAX;
       }
@@ -308,7 +307,7 @@ bs::wallet::Seed hd::Node::seed() const
 
 std::string hd::Node::getId() const
 {
-   return BtcUtils::computeID(pubCompressedKey()).toBinStr();
+   return wallet::computeID(pubCompressedKey()).toBinStr();
 }
 
 BinaryData hd::Node::pubCompressedKey() const
@@ -519,7 +518,7 @@ static SecureBinaryData LimitData(const SecureBinaryData &key
    if (key.getSize() <= limit) {
       return key;
    }
-   return key.getSliceCopy(0, limit);
+   return key.getSliceCopy(0, (uint32_t)limit);
 }
 
 std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
@@ -528,20 +527,47 @@ std::unique_ptr<hd::Node> hd::Node::decrypt(const SecureBinaryData &password)
       return nullptr;
    }
    auto result = createUnique(node_, netType_);
-   const auto key = PadData(LimitData(password));
-   SecureBinaryData privKey(node_.private_key, sizeof(node_.private_key));
-   CryptoAES crypto;
-   const auto decrypted = crypto.DecryptCBC(privKey, key, iv_);
-   if (decrypted.getSize() != privKey.getSize()) {
+   const auto key = getKDF()->deriveKey(PadData(LimitData(password)));
+   const SecureBinaryData privKey(node_.private_key, sizeof(node_.private_key));
+
+   Botan::Serpent decrypter;
+   decrypter.set_key(key.getDataVector());
+   std::vector<uint8_t> decrypted(privKey.getSize());
+   decrypter.decrypt(privKey.getDataVector(), decrypted);
+
+   if (decrypted.size() != privKey.getSize()) {
       throw std::runtime_error("encrypted key size mismatch");
    }
-   memcpy(result->node_.private_key, decrypted.getPtr(), decrypted.getSize());
+   memcpy(result->node_.private_key, decrypted.data()
+      , std::min<size_t>(BTC_ECKEY_PKEY_LENGTH, decrypted.size()));
 
    if (!seed_.isNull()) {
-      SecureBinaryData seed = seed_;
-      result->seed_ = crypto.DecryptCBC(seed, key, iv_);
+      const SecureBinaryData seed = seed_;
+      std::vector<uint8_t> decSeed(seed.getSize());
+      decrypter.decrypt(seed.getDataVector(), decSeed);
+      result->seed_ = { decSeed.data(), decSeed.size() };
    }
    return result;
+}
+
+std::shared_ptr<KeyDerivationFunction> hd::Node::getKDF()
+{
+   if (!iv_.isNull() && !kdf_) {
+      try {
+         kdf_ = KeyDerivationFunction::deserialize(iv_);
+         return kdf_;
+      }
+      catch (const std::exception &) {
+         iv_.clear();
+      }
+   }
+   if (!kdf_) {
+      kdf_ = std::make_shared<KeyDerivationFunction_Romix>();
+   }
+   if (iv_.isNull()) {
+      iv_ = kdf_->serialize();
+   }
+   return kdf_;
 }
 
 std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password
@@ -556,18 +582,27 @@ std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password
    result->encKeys_ = encKeys;
    result->seed_.clear();
    memset(result->node_.private_key, 0, sizeof(result->node_.private_key));
-   const auto key = PadData(LimitData(password));
-   CryptoAES crypto;
-   SecureBinaryData privKey = privateKey();
-   auto encrypted = crypto.EncryptCBC(privKey, key, result->iv_);
-   if (encrypted.getSize() != privKey.getSize()) {
+   const SecureBinaryData privKey = privateKey();
+   const auto key = getKDF()->deriveKey(PadData(LimitData(password)));
+   result->iv_ = iv_;
+
+   Botan::Serpent encrypter;
+   encrypter.set_key(key.getDataVector());
+
+   std::vector<uint8_t> encrypted(privKey.getSize());
+   encrypter.encrypt(privKey.getDataVector(), encrypted);
+
+   if (encrypted.size() != privKey.getSize()) {
       throw std::runtime_error("encrypted key size mismatch");
    }
-   memcpy(result->node_.private_key, encrypted.getPtr(), encrypted.getSize());
+   memcpy(result->node_.private_key, encrypted.data()
+      , std::min<size_t>(BTC_ECKEY_PKEY_LENGTH, encrypted.size()));
 
    if (!seed_.isNull()) {
-      SecureBinaryData seed = PadData(seed_);
-      result->seed_ = crypto.EncryptCBC(seed, key, result->iv_);
+      const SecureBinaryData seed = PadData(seed_);
+      std::vector<uint8_t> encSeed(seed.getSize());
+      encrypter.encrypt(seed.getDataVector(), encSeed);
+      result->seed_ = { encSeed.data(), encSeed.size() };
    }
    return result;
 }
@@ -587,10 +622,6 @@ std::unique_ptr<hd::Node> hd::ChainedNode::createUnique(const btc_hdnode &node, 
 
 SecureBinaryData hd::ChainedNode::privChainedKey() const
 {
-/*   uint8_t privKey[BTC_ECKEY_PKEY_LENGTH];    // chain computation using libbtc - incompatible with CryptoPP
-   memcpy(privKey, node_.private_key, sizeof(privKey));
-   btc_ecc_private_key_tweak_add(privKey, chainCode_.getPtr());
-   return SecureBinaryData(privKey, sizeof(privKey));*/
    if (privateKey().isNull()) {
       return {};
    }
@@ -600,10 +631,6 @@ SecureBinaryData hd::ChainedNode::privChainedKey() const
 
 BinaryData hd::ChainedNode::pubChainedKey() const
 {
-/*   uint8_t pubKey[BTC_ECKEY_COMPRESSED_LENGTH];     // chain computation using libbtc - incompatible with CryptoPP
-   memcpy(pubKey, node_.public_key, sizeof(pubKey));
-   btc_ecc_public_key_tweak_add(pubKey, chainCode_.getPtr());
-   return BinaryData(pubKey, sizeof(pubKey));*/
    CryptoECDSA crypto;
    return crypto.CompressPoint(crypto.ComputeChainedPublicKey(crypto.UncompressPoint(pubCompressedKey()), chainCode_));
 }
@@ -632,7 +659,12 @@ std::shared_ptr<hd::Node> hd::Nodes::decrypt(const SecureBinaryData &password) c
             continue;
          }
 
-         decryptedNode = node->decrypt(password);
+         try {
+            decryptedNode = node->decrypt(password);
+         }
+         catch (const std::exception &) {
+            continue;
+         }
       }
 
       if (decryptedNode != nullptr) {
@@ -705,8 +737,8 @@ bool operator < (const hd::Path &l, const hd::Path &r)
       return (l.length() < r.length());
    }
    for (size_t i = 0; i < l.length(); i++) {
-      const auto &lval = l.get(i);
-      const auto &rval = r.get(i);
+      const auto &lval = l.get((int)i);
+      const auto &rval = r.get((int)i);
       if (lval != rval) {
          return (lval < rval);
       }

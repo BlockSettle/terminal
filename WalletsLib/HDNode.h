@@ -14,6 +14,7 @@
 #include "MetaData.h"
 #include "WalletEncryption.h"
 
+struct KeyDerivationFunction;
 
 namespace bs {
    namespace hd {
@@ -119,6 +120,7 @@ namespace bs {
          std::vector<SecureBinaryData> encKeys_;
          std::vector<wallet::EncryptionType> encTypes_;
          const btc_chainparams * chainParams_ = nullptr;
+         std::shared_ptr<KeyDerivationFunction> kdf_;
          NetworkType       netType_;
 
       private:
@@ -127,6 +129,7 @@ namespace bs {
          void initFromSeed();
          void initFromPrivateKey(const std::string &privKey);
          void initFrom(const bs::wallet::Seed &);
+         std::shared_ptr<KeyDerivationFunction> getKDF();
       };
 
 

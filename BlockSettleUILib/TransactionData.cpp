@@ -153,14 +153,50 @@ bool TransactionData::UpdateTransactionData()
       return false;
    }
 
-   auto transactions = selectedInputs_->GetSelectedTransactions();
+   std::vector<UTXO> transactions;
+   if (!selectedInputs_->UseAutoSel()) {
+      transactions = selectedInputs_->GetSelectedTransactions();
+   }
+   else {
+      transactions = selectedInputs_->GetAllTransactions();
+   }
    if (utxoAdapter_ && reservedUTXO_.empty()) {
       utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId(), transactions);
    }
 
+   // The for loop is equivalent to CoinSelectionInstance::decorateUTXOs() in
+   // Armory. We need it for proper initialization of the UTXO structs when
+   // computing TX sizes and fees. All inputs should use SegWit.
    for (auto& utxo : transactions) {
-      utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
-   }
+      utxo.txinRedeemSizeBytes_ = 0;
+      utxo.witnessDataSizeBytes_ = 0;
+      utxo.isInputSW_ = false;
+
+      auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
+      if (aefa != nullptr) {
+         while (true) {
+            utxo.txinRedeemSizeBytes_ += aefa->getInputSize();
+
+            // P2SH AddressEntry objects use nesting to determine the exact
+            // P2SH type. The initial P2SH-W2WPKH AddressEntry object (and any
+            // non-SegWit AddressEntry objects) won't have witness data. That's
+            // fine. Catch the error and keep going.
+            try {
+               utxo.witnessDataSizeBytes_ += aefa->getWitnessDataSize();
+               utxo.isInputSW_ = true;
+            }
+            catch (const std::runtime_error& re) {}
+
+            // Check for a predecessor, which P2SH-P2PWKH will have. This is how
+            // we learn if the original P2SH AddressEntry object uses SegWit.
+            auto addrNested = std::dynamic_pointer_cast<AddressEntry_Nested>(aefa);
+            if (addrNested == nullptr) {
+               break;
+            }
+            aefa = addrNested->getPredecessor();
+         } // while
+      } // if
+   } // for
 
    uint64_t availableBalance = 0;
    for (const auto &tx : transactions) {
@@ -195,64 +231,63 @@ bool TransactionData::UpdateTransactionData()
    summary_.balanceToSpend = UiUtils::amountToBtc(payment.spendVal_);
 
    if (payment.spendVal_ <= availableBalance) {
-      if (selectedInputs_->UseAutoSel()) {
+      if (maxAmount) {
+         std::vector<std::shared_ptr<ScriptRecipient>> recipients;
+         for (const auto &recip : recipientsMap) {
+            recipients.push_back(recip.second);
+         }
+         usedUTXO_ = transactions;
+         summary_.txVirtSize = bs::wallet::estimateTXVirtSize(usedUTXO_, recipients);
+         summary_.totalFee = availableBalance - payment.spendVal_;
+         totalFee_ = summary_.totalFee;
+         summary_.feePerByte =
+            std::round((float)summary_.totalFee / (float)summary_.txVirtSize);
+         summary_.hasChange = false;
+         summary_.selectedBalance = UiUtils::amountToBtc(availableBalance);
+      }
+      else if (selectedInputs_->UseAutoSel()) {
          UtxoSelection selection;
          try {
             selection = coinSelection_->getUtxoSelectionForRecipients(payment, transactions);
-         }
-         catch (const std::runtime_error& err) {
+         } catch (const std::runtime_error& err) {
             qDebug() << "UpdateTransactionData coinSelection exception: " << err.what();
             return false;
-         }
-         catch (...) {
+         } catch (...) {
             qDebug() << "UpdateTransactionData coinSelection exception";
             return false;
          }
 
          usedUTXO_ = selection.utxoVec_;
-
-         summary_.txVirtSize = selection.size_;
+         summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
-
-         summary_.hasChange = selection.hasChange_ && !maxAmount;
-
+         summary_.hasChange = selection.hasChange_;
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
       else {
          usedUTXO_ = transactions;
 
-         if (maxAmount) {
-            summary_.txVirtSize = usedUTXO_.size();
-            summary_.totalFee = availableBalance - payment.spendVal_;
-            totalFee_ = summary_.totalFee;
-//            summary_.feePerByte = feePerByte_;
-            summary_.hasChange = false;
-            summary_.selectedBalance = UiUtils::amountToBtc(availableBalance);
+         auto usedUTXOCopy{ usedUTXO_ };
+         UtxoSelection selection{ usedUTXOCopy };
+         try {
+            selection.computeSizeAndFee(payment);
          }
-         else {
-            auto usedUTXOCopy{ usedUTXO_ };
-            UtxoSelection selection{ usedUTXOCopy };
-            try {
-               selection.computeSizeAndFee(payment);
-            }
-            catch (const std::runtime_error& err) {
-               qDebug() << "UpdateTransactionData UtxoSelection exception: " << err.what();
-               return false;
-            }
-            catch (...) {
-               qDebug() << "UpdateTransactionData UtxoSelection exception";
-               return false;
-            }
-
-            summary_.txVirtSize = selection.size_;
-            summary_.totalFee = selection.fee_;
-            summary_.feePerByte = selection.fee_byte_;
-
-            summary_.hasChange = selection.hasChange_;
-
-            summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
+         catch (const std::runtime_error& err) {
+            qDebug() << "UpdateTransactionData UtxoSelection exception: " << err.what();
+            return false;
          }
+         catch (...) {
+            qDebug() << "UpdateTransactionData UtxoSelection exception";
+            return false;
+         }
+
+         summary_.txVirtSize = getVirtSize(selection);
+         summary_.totalFee = selection.fee_;
+         summary_.feePerByte = selection.fee_byte_;
+
+         summary_.hasChange = selection.hasChange_;
+
+         summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
       summary_.usedTransactions = usedUTXO_.size();
    }
@@ -270,7 +305,10 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
    }
    double fee = totalFee_;
    if (fee <= 0) {
-      auto transactions = selectedInputs_->GetSelectedTransactions();
+      std::vector<UTXO> transactions;
+      if (selectedInputs_->GetSelectedTransactionsCount()) {
+         transactions = selectedInputs_->GetSelectedTransactions();
+      }
       if (transactions.empty()) {
          transactions = selectedInputs_->GetAllTransactions();
       }
@@ -278,7 +316,10 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
          return 0;
       }
       for (auto& utxo : transactions) {
-         utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
+         const auto addrEntry = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
+         if (addrEntry) {
+            utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(addrEntry);
+         }
       }
 
       size_t txOutSize = 0;
@@ -318,6 +359,17 @@ bool TransactionData::RecipientsReady() const
    }
 
    return true;
+}
+
+// A temporary private function that calculates the virtual size of an incoming
+// UtxoSelection object. This needs to be removed when a particular PR
+// (https://github.com/goatpig/BitcoinArmory/pull/538) is accepted upstream.
+// Note that this function assumes SegWit will be used. It's fine for our
+// purposes but it's a bad assumption in general.
+size_t TransactionData::getVirtSize(const UtxoSelection& inUTXOSel)
+{
+   size_t nonWitSize = inUTXOSel.size_ - inUTXOSel.witnessSize_;
+   return std::ceil(static_cast<float>(3*nonWitSize + inUTXOSel.size_) / 4.0f);
 }
 
 void TransactionData::SetFeePerByte(float feePerByte)
@@ -388,7 +440,7 @@ std::vector<UTXO> TransactionData::inputs() const
 
 bool TransactionData::IsTransactionValid() const
 {
-   return (wallet_ != nullptr) 
+   return (wallet_ != nullptr)
       && (selectedInputs_ != nullptr)
       && summary_.usedTransactions != 0
       && (!qFuzzyIsNull(feePerByte_) || totalFee_ != 0) && RecipientsReady();

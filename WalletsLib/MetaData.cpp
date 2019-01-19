@@ -128,7 +128,7 @@ void bs::wallet::MetaData::readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *
          auto index = brrKey.get_int32_t();
          nbMetaData_ = index + 1;
 
-         auto entryPtr = AssetEntryMeta::deserialize(index, brrVal.get_BinaryDataRef(brrVal.getSizeRemaining()));
+         auto entryPtr = AssetEntryMeta::deserialize(index, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining()));
          if (entryPtr) {
             entryPtr->doNotCommit();
             data_[entryPtr->key()] = entryPtr;
@@ -213,7 +213,7 @@ Signer bs::wallet::TXSignRequest::getSigner() const
 
 // Estimate the TX virtual size. This will not be exact, as there's no sig yet.
 // Round up the inputs to guarantee that we meet RBF's relay fee policy.
-static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
+size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
               , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
 {
    if (inputs.empty() || recipients.empty()) {
@@ -231,6 +231,12 @@ static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
    // Estimate the virtual size for the inputs. Because we can't analyze the
    // exact sig size until there's an actual signature, always play it safe and
    // round up the estimated weight by assuming sigs will be at max size.
+   // (NB: This function can probably be reworked to be more like TransactionData's
+   // UpdateTransactionData() and lean on Armory instead of reinventing the
+   // wheel. However, this function isn't used as of Jan. 2019. Don't rewrite
+   // until it's used again and can actually be tested. If manually setting
+   // values is still required, https://eprint.iacr.org/2018/513.pdf (Table 3)
+   // can be consulted for quick-and-dirty values.)
    for (auto& utxo : inputs) {
       const auto scrType = BtcUtils::getTxOutScriptType(utxo.getScript());
       switch (scrType) {
@@ -247,18 +253,6 @@ static size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
       // flavors, and another solution will be required. 91-92, so assume 92.
       case TXOUT_SCRIPT_P2SH:
          result += 92;
-
-         // WARNING: The following code is a very ugly hack, and should be
-         // removed ASAP!!! Armory has a bug in how it treats assets (e.g.,
-         // UTXOs). If the asset has two different P2SH types, the asset will be
-         // treated as if the asset has only one P2SH type (the last one
-         // encountered, presumably). A fix has been pushed to 0.96.5. However,
-         // due to wallets changes in 0.97, it can't be ported to 0.97 as-is.
-         // Instead, once 0.96.5 has been properly synced with 0.97, a new fix
-         // for 0.97 will be written. So, we'll cheat and add some bytes here,
-         // based on personal observation. This code needs to be removed the
-         // moment 0.97 has a proper fix.
-         result += 25;
          break;
       // We should never get here, and if we do, the values will almost
       // certainly be incorrect. Reassess later as needed.
@@ -280,7 +274,7 @@ size_t bs::wallet::TXSignRequest::estimateTxVirtSize() const
    if (change.value) {
       recipCopy.push_back(change.address.getRecipient(change.value));
    }
-   return ::estimateTXVirtSize(inputs, recipCopy);
+   return bs::wallet::estimateTXVirtSize(inputs, recipCopy);
 }
 
 
@@ -302,7 +296,7 @@ size_t bs::wallet::TXMultiSignRequest::estimateTxVirtSize() const
    for (const auto &input : inputs) {
       inputsList.push_back(input.first);
    }
-   return ::estimateTXVirtSize(inputsList, recipients);
+   return bs::wallet::estimateTXVirtSize(inputsList, recipients);
 }
 
 
@@ -310,7 +304,9 @@ bs::wallet::Seed::Seed(const std::string &seed, NetworkType netType)
    : netType_(netType)
 {
    try {
-      seed_ = BtcUtils::base58toScrAddr(seed);
+      BinaryData base58In(seed);
+      base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
+      seed_ = BtcUtils::base58toScrAddr(base58In);
    }
    catch (const std::exception &) {
       const auto result = segwit_addr::decode("seed", seed);
@@ -329,12 +325,12 @@ EasyCoDec::Data bs::wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const
       return {};
    }
    const size_t halfSize = privKey_.getSize() / 2;
-   auto privKeyHalf1 = privKey_.getSliceCopy(0, halfSize);
-   auto privKeyHalf2 = privKey_.getSliceCopy(halfSize, halfSize);
+   auto privKeyHalf1 = privKey_.getSliceCopy(0, (uint32_t)halfSize);
+   auto privKeyHalf2 = privKey_.getSliceCopy(halfSize, (uint32_t)halfSize);
    const auto hash1 = BtcUtils::getHash256(privKeyHalf1);
    const auto hash2 = BtcUtils::getHash256(privKeyHalf2);
-   privKeyHalf1.append(hash1.getSliceCopy(0, ckSumSize));
-   privKeyHalf2.append(hash2.getSliceCopy(0, ckSumSize));
+   privKeyHalf1.append(hash1.getSliceCopy(0, (uint32_t)ckSumSize));
+   privKeyHalf2.append(hash2.getSliceCopy(0, (uint32_t)ckSumSize));
    const auto chkSumPrivKey = privKeyHalf1 + privKeyHalf2;
    return EasyCoDec().fromHex(chkSumPrivKey.toHexStr());
 }
@@ -358,10 +354,10 @@ BinaryData bs::wallet::Seed::decodeEasyCodeLineChecksum(const string& easyCodeHa
         throw std::invalid_argument("invalid key size");
     }
 
-    const auto privKeyValue = keyHalfWithChecksum.getSliceCopy(0, keyValueSize);
-    const auto hashValue = keyHalfWithChecksum.getSliceCopy(keyValueSize, ckSumSize);
+    const auto privKeyValue = keyHalfWithChecksum.getSliceCopy(0, (uint32_t)keyValueSize);
+    const auto hashValue = keyHalfWithChecksum.getSliceCopy(keyValueSize, (uint32_t)ckSumSize);
 
-    if (BtcUtils::getHash256(privKeyValue).getSliceCopy(0, ckSumSize) != hashValue) {
+    if (BtcUtils::getHash256(privKeyValue).getSliceCopy(0, (uint32_t)ckSumSize) != hashValue) {
         throw std::runtime_error("checksum failure");
     }
 
@@ -696,7 +692,7 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
                   const auto &utxo = txOutListCopy[i];
                   sum += utxo.getValue();
                   if (sum >= val) {
-                     cutOffIdx = i;
+                     cutOffIdx = (int)i;
                      break;
                   }
                }
@@ -750,7 +746,7 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
             return (a.getValue() < b.getValue());
          });
 
-         int index = utxosObj.size() - 1;
+         int index = (int)utxosObj.size() - 1;
          while (index >= 0) {
             if (utxosObj[index].getValue() < val) {
                index++;
@@ -769,7 +765,7 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
 
          std::vector<UTXO> result;
          uint64_t sum = 0;
-         index = utxosObj.size() - 1;
+         index = (int)utxosObj.size() - 1;
          while ((index >= 0) && (sum < val)) {  //TODO: needs to be optimized to fill the val more precisely
             result.push_back(utxosObj[index]);
             sum += utxosObj[index].getValue();
@@ -1142,7 +1138,7 @@ Signer bs::Wallet::getSigner(const wallet::TXSignRequest &request, const SecureB
          try {
             signer.populateUtxo(utxo);
          }
-         catch (const std::exception &e) { }
+         catch (const std::exception &) { }
       }
    }
    else {
@@ -1226,7 +1222,7 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal
       for (auto &utxo : utxos) {
          const auto addrEntry = getAddressEntryForAddr(utxo.getRecipientScrAddr());
          if (addrEntry) {
-            utxo.txinRedeemSizeBytes_ = addrEntry->getInputSize();
+            utxo.txinRedeemSizeBytes_ = (unsigned int)addrEntry->getInputSize();
             inputAmount += utxo.getValue();
          }
       }
@@ -1375,6 +1371,17 @@ size_t bs::wallet::getInputScrSize(const std::shared_ptr<AddressEntry> &addrEntr
    return 65;
 }
 
+BinaryData bs::wallet::computeID(const BinaryData &input)
+{
+   auto result = BtcUtils::computeID(input);
+   const auto outSz = result.getSize();
+   if (result.getPtr()[outSz - 1] == 0) {
+      result.resize(outSz - 1);
+   }
+   return result;
+}
+
+
 void bs::Wallet::onNewBlock()
 {
    processNewUTXOs(false);
@@ -1465,10 +1472,14 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
       }
    }; // callback
 
-   const auto &cbWrap = [this, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
+   QPointer<QObject> thisSmartPtr = this;
+   const auto &cbWrap = [this, thisSmartPtr, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
+      if (!thisSmartPtr) {
+         return;
+      }
       try {
          const auto txOutListObj = txOutList.get();
-         QMetaObject::invokeMethod(this, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
+         QMetaObject::invokeMethod(thisSmartPtr, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {
@@ -1477,8 +1488,10 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
          }
       }
    };
-   // Get all the UTXOs and process them.
-   btcWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbWrap);
+   if (btcWallet_) {
+      // Get all the UTXOs and process them.
+      btcWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbWrap);
+   }
 }
 
 bool operator ==(const bs::Wallet &a, const bs::Wallet &b)

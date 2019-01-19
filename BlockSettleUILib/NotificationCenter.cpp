@@ -85,6 +85,9 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 
    case bs::ui::NotifyType::BlockchainTX:
       return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true, true };
+   
+   case bs::ui::NotifyType::NewChatMessage:
+      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat), true, true };
 
    default: break;
    }

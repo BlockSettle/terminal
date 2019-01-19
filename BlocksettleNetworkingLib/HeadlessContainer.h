@@ -7,6 +7,7 @@
 #include <QStringList>
 #include "MetaData.h"
 #include "SignContainer.h"
+#include "ApplicationSettings.h"
 
 #include "headless.pb.h"
 
@@ -104,6 +105,7 @@ public:
    RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
+      , const std::shared_ptr<ApplicationSettings>& appSettings
       , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
@@ -130,8 +132,9 @@ protected:
    const QString          port_;
    const NetworkType      netType_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
-   SecureBinaryData       zmqSrvPubKey_;
+   SecureBinaryData       zmqSignerPubKey_;
    bool  authPending_ = false;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
@@ -145,6 +148,7 @@ public:
    LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
+      , const std::shared_ptr<ApplicationSettings>& appSettings
       , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 

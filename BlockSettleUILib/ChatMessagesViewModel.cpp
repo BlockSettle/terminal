@@ -1,6 +1,7 @@
 #include "ChatMessagesViewModel.h"
 #include "ChatClient.h"
 #include "ChatProtocol.h"
+#include "NotificationCenter.h"
 
 
 ChatMessagesViewModel::ChatMessagesViewModel(QObject* parent)
@@ -10,7 +11,7 @@ ChatMessagesViewModel::ChatMessagesViewModel(QObject* parent)
 
 int ChatMessagesViewModel::columnCount(const QModelIndex &parent) const
 {
-   return 2;
+   return static_cast<int>(Column::last);
 }
 
 int ChatMessagesViewModel::rowCount(const QModelIndex &parent) const
@@ -20,11 +21,14 @@ int ChatMessagesViewModel::rowCount(const QModelIndex &parent) const
 
 QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-   switch (section) {
-      case 0:
+   switch (static_cast<Column>(section)) {
+      case Column::Time:
          return tr("Time");
 
-      case 1:
+      case Column::User:
+         return tr("User");
+      
+      case Column::Message:
          return tr("Message");
 
       default:
@@ -35,15 +39,23 @@ QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientat
 
 QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
 {
-   if (role == Qt::DisplayRole) {
+   const auto column = static_cast<Column>(index.column());
+   if (role == Qt::TextColorRole) {
+      switch (column) {
+      case Column::User:
+         return QColor(Qt::gray);
+      default: break;
+      }
+   }
+   else if (role == Qt::DisplayRole) {
       if (messages_[currentChatId_].empty()) {
           return QVariant();
       }
 
-      switch (index.column()) {
-         case 0:
+      switch (column) {
+         case Column::Time:
          {
-            auto dateTime = messages_[currentChatId_][index.row()].first;
+            const auto dateTime = messages_[currentChatId_][index.row()]->getDateTime().toLocalTime();
 
             if (dateTime.date() == QDate::currentDate()) {
                return dateTime.time().toString(QString::fromUtf8("hh:mm"));
@@ -53,8 +65,18 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
             }
          }
 
-         case 1:
-            return messages_[currentChatId_][index.row()].second;
+         case Column::User:
+         {
+            static const auto ownSender = tr("you");
+            QString sender = messages_[currentChatId_][index.row()]->getSenderId();
+            if (sender == ownUserId_) {
+               sender = ownSender;
+            }
+            return sender;
+         }
+
+         case Column::Message:
+            return messages_[currentChatId_][index.row()]->getMessageData();
 
          default:
             break;
@@ -71,40 +93,26 @@ void ChatMessagesViewModel::onSwitchToChat(const QString& chatId)
    endResetModel();
 }
 
-void ChatMessagesViewModel::onSingleMessageUpdate(const QDateTime& date, const QString& messageText)
+void ChatMessagesViewModel::onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &msg)
 {
    auto rowIdx = static_cast<int>(messages_[currentChatId_].size());
    beginInsertRows(QModelIndex(), rowIdx, rowIdx);
-   messages_[currentChatId_].push_back(std::make_pair(date, prependMessage(messageText)));
+   messages_[currentChatId_].push_back(msg);
    endInsertRows();
-}
-
-QString ChatMessagesViewModel::prependMessage(const QString& messageText, const QString& senderId)
-{
-   static const auto ownSender = tr("you");
-   QString sender = senderId.isEmpty() ? ownSender : senderId;
-   if (sender == ownUserId_) {
-      sender = ownSender;
-   }
-   QString displayMessage = QStringLiteral("[") + sender + QStringLiteral("]: ") + messageText;
-   return displayMessage;
 }
 
 void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages)
 {
    for (const auto &msg : messages) {
-      const auto senderId = msg->getSenderId();
-      const auto dateTime = msg->getDateTime();
-      const auto msgText = prependMessage(msg->getMessageData(), senderId);
-
-      if ((senderId == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
+      if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
          const int beginRow = messages_[currentChatId_].size();
          beginInsertRows(QModelIndex(), beginRow, beginRow);
-         messages_[currentChatId_].push_back({dateTime, msgText });
+         messages_[currentChatId_].push_back(msg);
          endInsertRows();
       }
       else {
-         messages_[senderId].push_back({ dateTime, msgText });
+         messages_[msg->getSenderId()].push_back(msg);
       }
+      NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
    }
 }

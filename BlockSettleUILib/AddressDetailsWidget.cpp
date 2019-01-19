@@ -62,6 +62,7 @@ void AddressDetailsWidget::loadTransactions()
 
    uint64_t totSpent = 0;
    uint64_t totRcvd = 0;
+   uint64_t totCount = 0;
 
    // Go through each TXEntry object and calculate all required UI data.
    for (const auto &curTXEntry : txEntryHashSet_) {
@@ -113,6 +114,7 @@ void AddressDetailsWidget::loadTransactions()
       else {
          totSpent -= curTXEntry.second.value; // Negative, so fake that out.
       }
+      totCount++;
 
       setConfirmationColor(item);
       // disabled as per Scott's request
@@ -124,6 +126,7 @@ void AddressDetailsWidget::loadTransactions()
    ui_->balance->setText(UiUtils::displayAmount(totRcvd - totSpent));
    ui_->totalReceived->setText(UiUtils::displayAmount(totRcvd));
    ui_->totalSent->setText(UiUtils::displayAmount(totSpent));
+   ui_->transactionCount->setText(QString::number(totCount));
 
    tree->resizeColumns();
 }
@@ -316,6 +319,7 @@ void AddressDetailsWidget::clear()
 
    const auto &loading = tr("Loading...");
    ui_->balance->setText(loading);
+   ui_->transactionCount->setText(loading);
    ui_->totalReceived->setText(loading);
    ui_->totalSent->setText(loading);
 }

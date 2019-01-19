@@ -222,6 +222,15 @@ std::vector<UTXO> SelectedTransactionInputs::GetSelectedTransactions() const
    return selectedTransactions;
 }
 
+std::vector<UTXO> SelectedTransactionInputs::GetAllTransactions() const
+{
+   std::vector<UTXO> allTransactions;
+   allTransactions.reserve(inputs_.size() + cpfpInputs_.size());
+   allTransactions.insert(allTransactions.end(), inputs_.begin(), inputs_.end());
+   allTransactions.insert(allTransactions.end(), cpfpInputs_.begin(), cpfpInputs_.end());
+   return allTransactions;
+}
+
 bool SelectedTransactionInputs::isSegWit(const UTXO &input) const
 {
    return wallet_->IsSegWitInput(input);
