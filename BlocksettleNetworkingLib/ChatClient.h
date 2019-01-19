@@ -8,7 +8,7 @@
 #include "ChatProtocol.h"
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
-
+#include <queue>
 
 namespace spdlog {
    class logger;

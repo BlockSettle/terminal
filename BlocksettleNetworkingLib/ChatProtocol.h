@@ -32,6 +32,7 @@ namespace Chat
    ,   RequestMessages
    ,   RequestOnlineUsers
    ,   RequestAskForPublicKey
+   ,   RequestSendOwnPublicKey
    };
 
 
@@ -44,6 +45,7 @@ namespace Chat
    ,   ResponseError
    ,   ResponseUsersList
    ,   ResponseAskForPublicKey
+   ,   ResponseSendOwnPublicKey
    };
 
 
@@ -295,7 +297,7 @@ namespace Chat
       enum class Status {
            LoginOk
          , LoginFailed
-      }
+      };
 
       LoginResponse(const std::string& userId, Status status);
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
@@ -320,10 +322,10 @@ namespace Chat
          const std::string& peerId);
 
       QJsonObject toJson() const override;
-      static std::shared_ptr<Request> fromJSON(
+      static std::shared_ptr<Response> fromJSON(
          const std::string& jsonData);
 
-      void handle(RequestHandler &) override;
+      void handle(ResponseHandler &) override;
 
       const std::string& getAskingNodeId() const;
       const std::string& getPeerId() const;
@@ -345,8 +347,7 @@ namespace Chat
          const autheid::PublicKey& sendingNodePublicKey);
 
       QJsonObject toJson() const override;
-      static std::shared_ptr<Request> fromJSON(
-         const std::string& clientId,
+      static std::shared_ptr<Response> fromJSON(
          const std::string& jsonData);
 
       void handle(ResponseHandler &) override;
@@ -428,7 +429,7 @@ namespace Chat
       virtual void OnMessages(const MessagesResponse &) = 0;
 
       // Received a call from a peer to send our public key.
-      virtual void OnAskedForOwnPublicKey(const AskForPublicKeyResponse &) = 0;
+      virtual void OnAskForPublicKey(const AskForPublicKeyResponse &) = 0;
       
       // Received public key of one of our peers.
       virtual void OnSendOwnPublicKey(const SendOwnPublicKeyResponse &) = 0;

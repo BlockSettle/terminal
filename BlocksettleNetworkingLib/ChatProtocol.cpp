@@ -69,7 +69,7 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseSuccess"          ,   ResponseType::ResponseSuccess         }
    ,   { "ResponseUsersList"        ,   ResponseType::ResponseUsersList       }
    ,   { "ResponseAskForPublicKey"  ,   ResponseType::ResponseAskForPublicKey }
-   ,   { "ResponseSendOwnPublicKey"  ,  ResponseType::ResponseSendOwnPublicKey}
+   ,   { "ResponseSendOwnPublicKey" ,   ResponseType::ResponseSendOwnPublicKey}
 };
 
 
@@ -143,7 +143,11 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
                  , data[JwtKey].toString().toStdString());
 
       case RequestType::RequestAskForPublicKey:
-         return std::make_shared<AskForPublicKeyRequest>(clientId);
+         return std::make_shared<AskForPublicKeyRequest>(
+               clientId,
+               data[SenderIdKey].toString().toStdString(),
+               data[ReceiverIdKey].toString().toStdString());
+               
       default:
          break;
    }
@@ -613,28 +617,34 @@ QJsonObject AskForPublicKeyResponse::toJson() const
 }
 
 std::shared_ptr<Response> AskForPublicKeyResponse::fromJSON(
-   const std::string& clientId,
    const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(
       QString::fromStdString(jsonData).toUtf8()).object();
    return std::make_shared<AskForPublicKeyResponse>(
-      clientId,
       data[SenderIdKey].toString().toStdString(),
       data[ReceiverIdKey].toString().toStdString());
 }
 
-void AskForPublicKeyResponse::handle(RequestHandler& handler)
+void AskForPublicKeyResponse::handle(ResponseHandler& handler)
 {
-   handler.OnAskedForOwnPublicKey(*this);
+   handler.OnAskForPublicKey(*this);
+}
+
+const std::string& AskForPublicKeyResponse::getAskingNodeId() const
+{
+   return askingNodeId_;
+}
+
+const std::string& AskForPublicKeyResponse::getPeerId() const {
+   return peerId_;
 }
 
 SendOwnPublicKeyResponse::SendOwnPublicKeyResponse(
-      const std::string& clientId,
       const std::string& receivingNodeId,
       const std::string& sendingNodeId,
       const autheid::PublicKey& sendingNodePublicKey)
-   : Response(Response::ResponseSendOwnPublicKey)
+   : Response(ResponseType::ResponseSendOwnPublicKey)
    , receivingNodeId_(receivingNodeId)
    , sendingNodeId_(sendingNodeId)
    , sendingNodePublicKey_(sendingNodePublicKey)
@@ -652,8 +662,7 @@ QJsonObject SendOwnPublicKeyResponse::toJson() const
    return data;
 }
 
-std::shared_ptr<Request> SendOwnPublicKeyResponse::fromJSON(
-   const std::string& clientId,
+std::shared_ptr<Response> SendOwnPublicKeyResponse::fromJSON(
    const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(
@@ -664,9 +673,20 @@ std::shared_ptr<Request> SendOwnPublicKeyResponse::fromJSON(
       autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
 }
 
-void SendOwnPublicKeyRequest::handle(RequestHandler& handler)
+void SendOwnPublicKeyResponse::handle(ResponseHandler& handler)
 {
    handler.OnSendOwnPublicKey(*this);
 }
 
+const std::string& SendOwnPublicKeyResponse::getReceivingNodeId() const {
+   return receivingNodeId_;
+}
+
+const std::string& SendOwnPublicKeyResponse::getSendingNodeId() const {
+   return sendingNodeId_;
+}
+
+const autheid::PublicKey& SendOwnPublicKeyResponse::getSendingNodePublicKey() const {
+   return sendingNodePublicKey_;
+}
 
