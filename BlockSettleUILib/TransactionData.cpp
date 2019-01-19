@@ -164,39 +164,11 @@ bool TransactionData::UpdateTransactionData()
       utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId(), transactions);
    }
 
-   // The for loop is equivalent to CoinSelectionInstance::decorateUTXOs() in
-   // Armory. We need it for proper initialization of the UTXO structs when
-   // computing TX sizes and fees. All inputs should use SegWit.
    for (auto& utxo : transactions) {
-      utxo.txinRedeemSizeBytes_ = 0;
-      utxo.witnessDataSizeBytes_ = 0;
-      utxo.isInputSW_ = false;
-
-      auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
-      if (aefa != nullptr) {
-         while (true) {
-            utxo.txinRedeemSizeBytes_ += aefa->getInputSize();
-
-            // P2SH AddressEntry objects use nesting to determine the exact
-            // P2SH type. The initial P2SH-W2WPKH AddressEntry object (and any
-            // non-SegWit AddressEntry objects) won't have witness data. That's
-            // fine. Catch the error and keep going.
-            try {
-               utxo.witnessDataSizeBytes_ += aefa->getWitnessDataSize();
-               utxo.isInputSW_ = true;
-            }
-            catch (const std::runtime_error& re) {}
-
-            // Check for a predecessor, which P2SH-P2PWKH will have. This is how
-            // we learn if the original P2SH AddressEntry object uses SegWit.
-            auto addrNested = std::dynamic_pointer_cast<AddressEntry_Nested>(aefa);
-            if (addrNested == nullptr) {
-               break;
-            }
-            aefa = addrNested->getPredecessor();
-         } // while
-      } // if
-   } // for
+      // Prep the UTXOs for calculation.
+      decorateUTXOs(utxo
+         , wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
+   }
 
    uint64_t availableBalance = 0;
    for (const auto &tx : transactions) {
@@ -236,8 +208,29 @@ bool TransactionData::UpdateTransactionData()
          for (const auto &recip : recipientsMap) {
             recipients.push_back(recip.second);
          }
+
+         // When creating UtxoSelection object, initialize it with a copy of the
+         // UTXO vector. Armory will "move" the data behind-the-scenes, and we
+         // still need the data.
          usedUTXO_ = transactions;
-         summary_.txVirtSize = bs::wallet::estimateTXVirtSize(usedUTXO_, recipients);
+         auto usedUTXOCopy{ usedUTXO_ };
+         UtxoSelection selection{ usedUTXOCopy };
+
+         try {
+            selection.computeSizeAndFee(payment);
+         }
+         catch (const std::runtime_error& err) {
+            qDebug() << "UpdateTransactionData (max amount) - UtxoSelection "
+               << "exception: " << err.what();
+            return false;
+         }
+         catch (...) {
+            qDebug() << "UpdateTransactionData (max amount) - UtxoSelection "
+               << "exception";
+            return false;
+         }
+
+         summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = availableBalance - payment.spendVal_;
          totalFee_ = summary_.totalFee;
          summary_.feePerByte =
@@ -248,12 +241,15 @@ bool TransactionData::UpdateTransactionData()
       else if (selectedInputs_->UseAutoSel()) {
          UtxoSelection selection;
          try {
-            selection = coinSelection_->getUtxoSelectionForRecipients(payment, transactions);
+            selection = coinSelection_->getUtxoSelectionForRecipients(payment
+               , transactions);
          } catch (const std::runtime_error& err) {
-            qDebug() << "UpdateTransactionData coinSelection exception: " << err.what();
+            qDebug() << "UpdateTransactionData (auto-selection) - "
+               << "coinSelection exception: " << err.what();
             return false;
          } catch (...) {
-            qDebug() << "UpdateTransactionData coinSelection exception";
+            qDebug() << "UpdateTransactionData (auto-selection) - "
+               << "coinSelection exception";
             return false;
          }
 
@@ -265,28 +261,31 @@ bool TransactionData::UpdateTransactionData()
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
       else {
+         // When creating UtxoSelection object, initialize it with a copy of the
+         // UTXO vector. Armory will "move" the data behind-the-scenes, and we
+         // still need the data.
          usedUTXO_ = transactions;
-
          auto usedUTXOCopy{ usedUTXO_ };
          UtxoSelection selection{ usedUTXOCopy };
+
          try {
             selection.computeSizeAndFee(payment);
          }
          catch (const std::runtime_error& err) {
-            qDebug() << "UpdateTransactionData UtxoSelection exception: " << err.what();
+            qDebug() << "UpdateTransactionData (manual selection) - "
+               << "coinSelection exception: " << err.what();
             return false;
          }
          catch (...) {
-            qDebug() << "UpdateTransactionData UtxoSelection exception";
+            qDebug() << "UpdateTransactionData (manual selection) - "
+               << "coinSelection exception";
             return false;
          }
 
          summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
-
          summary_.hasChange = selection.hasChange_;
-
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
       summary_.usedTransactions = usedUTXO_.size();
@@ -298,7 +297,8 @@ bool TransactionData::UpdateTransactionData()
    return true;
 }
 
-double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
+// Calculate the maximum fee for a given recipient.
+double TransactionData::CalculateMaxAmount(const bs::Address &recipient)
 {
    if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
       return -1;
@@ -315,11 +315,11 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
       if (transactions.empty()) {
          return 0;
       }
+
+      // Prep the UTXOs for calculation.
       for (auto& utxo : transactions) {
-         const auto addrEntry = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
-         if (addrEntry) {
-            utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(addrEntry);
-         }
+         decorateUTXOs(utxo
+            , wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr()));
       }
 
       size_t txOutSize = 0;
@@ -332,13 +332,16 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
          txOutSize += scrRecip ? scrRecip->getSize() : 31;
       }
 
-      fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_, transactions);
-      fee += 70;     // a small epsilon to make UtxoSelection happy
+      // Accept the fee returned by Armory. The fee returned may be a few
+      // satoshis higher than is strictly required by Core but that's okay.
+      // If truly required, the fee can be tweaked later.
+      fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_
+         , transactions);
    }
    fee = fee / BTCNumericTypes::BalanceDivider;
 
-   auto availableBalance = GetTransactionSummary().availableBalance - GetTransactionSummary().balanceToSpend;
-
+   auto availableBalance = GetTransactionSummary().availableBalance - \
+      GetTransactionSummary().balanceToSpend;
    if (availableBalance < fee) {
       return 0;
    } else {
@@ -359,6 +362,44 @@ bool TransactionData::RecipientsReady() const
    }
 
    return true;
+}
+
+// A function equivalent to CoinSelectionInstance::decorateUTXOs() in Armory. We
+// need it for proper initialization of the UTXO structs when computing TX sizes
+// and fees.
+// IN:  AddressEntry with address data. (const std::shared_ptr<AddressEntry>)
+// OUT: A UTXO to initialize. (UTXO&)
+// RET: None
+void TransactionData::decorateUTXOs(UTXO& inUTXO
+   , const std::shared_ptr<AddressEntry> inAE)
+{
+   shared_ptr<AddressEntry> tempAE = inAE;
+   inUTXO.txinRedeemSizeBytes_ = 0;
+   inUTXO.isInputSW_ = false;
+
+   if (inAE != nullptr) {
+      while (true) {
+         inUTXO.txinRedeemSizeBytes_ += tempAE->getInputSize();
+
+         // P2SH AddressEntry objects use nesting to determine the exact
+         // P2SH type. The initial P2SH-W2WPKH AddressEntry object (and any
+         // non-SegWit AddressEntry objects) won't have witness data. That's
+         // fine. Catch the error and keep going.
+         try {
+            inUTXO.witnessDataSizeBytes_ += tempAE->getWitnessDataSize();
+            inUTXO.isInputSW_ = true;
+         }
+         catch (const std::runtime_error& re) {}
+
+         // Check for a predecessor, which P2SH-P2PWKH will have. This is how
+         // we learn if the original P2SH AddressEntry object uses SegWit.
+         auto addrNested = std::dynamic_pointer_cast<AddressEntry_Nested>(tempAE);
+         if (addrNested == nullptr) {
+            break;
+         }
+         tempAE = addrNested->getPredecessor();
+      } // while
+   } // if
 }
 
 // A temporary private function that calculates the virtual size of an incoming

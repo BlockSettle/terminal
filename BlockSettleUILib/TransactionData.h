@@ -110,7 +110,7 @@ public:
    std::shared_ptr<SelectedTransactionInputs> GetSelectedInputs();
    TransactionSummary GetTransactionSummary() const;
 
-   double CalculateMaxAmount(const bs::Address &recipient = {}) const;
+   double CalculateMaxAmount(const bs::Address &recipient = {});
 
    void ReserveUtxosFor(double amount, const std::string &reserveId, const bs::Address &addr = {});
    void ReloadSelection(const std::vector<UTXO> &);
@@ -134,6 +134,7 @@ private:
    void InvalidateTransactionData();
    bool UpdateTransactionData();
    bool RecipientsReady() const;
+   void decorateUTXOs(UTXO& inUTXOs, const std::shared_ptr<AddressEntry> inAE);
 
    // Temporary function until some Armory changes are accepted upstream.
    size_t getVirtSize(const UtxoSelection& inUTXOSel);
