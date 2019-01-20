@@ -14,6 +14,7 @@ class RecipientContainer;
 class ScriptRecipient;
 class SelectedTransactionInputs;
 struct UtxoSelection;
+struct PaymentStruct;
 
 namespace bs {
    class Wallet;
@@ -135,6 +136,8 @@ private:
    bool UpdateTransactionData();
    bool RecipientsReady() const;
    std::vector<UTXO> decorateUTXOs() const;
+   UtxoSelection computeSizeAndFee(const std::vector<UTXO>& inUTXOs
+      , const PaymentStruct& inPS);
 
    // Temporary function until some Armory changes are accepted upstream.
    size_t getVirtSize(const UtxoSelection& inUTXOSel);

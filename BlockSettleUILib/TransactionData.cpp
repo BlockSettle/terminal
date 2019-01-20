@@ -193,27 +193,7 @@ bool TransactionData::UpdateTransactionData()
             recipients.push_back(recip.second);
          }
 
-         // When creating UtxoSelection object, initialize it with a copy of the
-         // UTXO vector. Armory will "move" the data behind-the-scenes, and we
-         // still need the data.
-         usedUTXO_ = transactions;
-         auto usedUTXOCopy{ usedUTXO_ };
-         UtxoSelection selection{ usedUTXOCopy };
-
-         try {
-            selection.computeSizeAndFee(payment);
-         }
-         catch (const std::runtime_error& err) {
-            qDebug() << "UpdateTransactionData (max amount) - UtxoSelection "
-               << "exception: " << err.what();
-            return false;
-         }
-         catch (...) {
-            qDebug() << "UpdateTransactionData (max amount) - UtxoSelection "
-               << "exception";
-            return false;
-         }
-
+         UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = availableBalance - payment.spendVal_;
          totalFee_ = summary_.totalFee;
@@ -245,27 +225,7 @@ bool TransactionData::UpdateTransactionData()
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
       else {
-         // When creating UtxoSelection object, initialize it with a copy of the
-         // UTXO vector. Armory will "move" the data behind-the-scenes, and we
-         // still need the data.
-         usedUTXO_ = transactions;
-         auto usedUTXOCopy{ usedUTXO_ };
-         UtxoSelection selection{ usedUTXOCopy };
-
-         try {
-            selection.computeSizeAndFee(payment);
-         }
-         catch (const std::runtime_error& err) {
-            qDebug() << "UpdateTransactionData (manual selection) - "
-               << "coinSelection exception: " << err.what();
-            return false;
-         }
-         catch (...) {
-            qDebug() << "UpdateTransactionData (manual selection) - "
-               << "coinSelection exception";
-            return false;
-         }
-
+         UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
@@ -392,6 +352,35 @@ std::vector<UTXO> TransactionData::decorateUTXOs() const
    } // for
 
    return inputUTXOs;
+}
+
+// Frontend for UtxoSelection::computeSizeAndFee(). Necessary due to some
+// nuances in how it's invoked.
+// IN:  UTXO vector used to initialize UtxoSelection. (std::vector<UTXO>)
+// OUT: None
+// RET: A fully initialized UtxoSelection object, with size and fee data.
+UtxoSelection TransactionData::computeSizeAndFee(const std::vector<UTXO>& inUTXOs
+   , const PaymentStruct& inPS)
+{
+   // When creating UtxoSelection object, initialize it with a copy of the
+   // UTXO vector. Armory will "move" the data behind-the-scenes, and we
+   // still need the data.
+   usedUTXO_ = inUTXOs;
+   auto usedUTXOCopy{ usedUTXO_ };
+   UtxoSelection selection{ usedUTXOCopy };
+
+   try {
+      selection.computeSizeAndFee(inPS);
+   }
+   catch (const std::runtime_error& err) {
+      qDebug() << "UpdateTransactionData - UtxoSelection exception: "
+         << err.what();
+   }
+   catch (...) {
+      qDebug() << "UpdateTransactionData - UtxoSelection exception";
+   }
+
+   return selection;
 }
 
 // A temporary private function that calculates the virtual size of an incoming
