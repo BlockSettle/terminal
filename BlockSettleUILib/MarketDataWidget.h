@@ -46,6 +46,8 @@ private slots:
    void onMDRejected(const std::string &security, const std::string &reason);
    void onEnterKeyPressed(const QModelIndex &index);
 
+   void OnMDConnectionAvailable();
+
    void OnMDConnecting();
    void OnMDConnected();
    void OnMDDisconnecting();

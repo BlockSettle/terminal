@@ -100,7 +100,7 @@ private slots:
 
    bool createWallet(bool primary, bool reportSuccess = true);
 
-   void acceptMDAgreement(const std::string &host, const std::string &port);
+   void acceptMDAgreement();
    void updateControlEnabledState();
    void onButtonUserClicked();
 
@@ -151,10 +151,10 @@ private:
       Connection  marketData;
       Connection  mdhs;
       Connection  chat;
-      bool isSet{ false };
+      bool        isSet = false;
    };
-   void GetNetworkSettingsFromPuB(const std::function<void(NetworkSettings)> &);
-   NetworkSettings   networkSettings_;
+   void GetNetworkSettingsFromPuB(const std::function<void()> &);
+   void OnNetworkSettingsLoaded();
 
    struct TxInfo {
       Tx       tx;
@@ -194,6 +194,8 @@ private slots:
    void onAuthMgrConnComplete();
    void onCCInfoMissing();
 
+   void OnMDConfigured();
+
 protected:
    void closeEvent(QCloseEvent* event) override;
    void changeEvent(QEvent* e) override;
@@ -219,7 +221,8 @@ private:
    void loginToCeler(const std::string& username, const std::string& password);
 
 private:
-   QString loginButtonText_;
+   QString           loginButtonText_;
+   NetworkSettings   networkSettings_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

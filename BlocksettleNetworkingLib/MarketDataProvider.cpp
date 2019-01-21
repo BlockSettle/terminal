@@ -6,15 +6,35 @@ MarketDataProvider::MarketDataProvider(const std::shared_ptr<spdlog::logger>& lo
    : logger_{logger}
 {}
 
-void MarketDataProvider::SubscribeToMD(const std::string &host, const std::string &port)
+void MarketDataProvider::SetConnectionSettings(const std::string &host, const std::string &port)
 {
-   emit UserWantToConnectToMD(host, port);
+   host_ = host;
+   port_ = port;
+
+   if (!host_.empty() && !port_.empty()) {
+      emit CanSubscribe();
+   } else {
+      logger_->error("[MarketDataProvider::SetConnectionSettings] settings incompleted: \'{}:{}\'"
+         , host, port);
+   }
 }
 
-void MarketDataProvider::MDLicenseAccepted(const std::string &host, const std::string &port)
+bool MarketDataProvider::SubscribeToMD()
+{
+   if (host_.empty() || port_.empty()) {
+      logger_->error("[MarketDataProvider::SubscribeToMD] missing networking settings");
+      return false;
+   }
+
+   emit UserWantToConnectToMD();
+
+   return true;
+}
+
+void MarketDataProvider::MDLicenseAccepted()
 {
    logger_->debug("[MarketDataProvider::MDLicenseAccepted] user accepted MD agreement. Start connection to {}:{}"
-      , host, port);
+      , host_, port_);
 
-   StartMDConnection(host, port);
+   StartMDConnection();
 }
