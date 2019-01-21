@@ -53,7 +53,8 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   std::shared_ptr<Chat::MessageData> SendOwnMessage(const QString& message, const QString &receiver);
+   std::shared_ptr<Chat::MessageData> sendOwnMessage(
+         const QString& message, const QString &receiver);
 
    void retrieveUserMessages(const QString &userId);
 

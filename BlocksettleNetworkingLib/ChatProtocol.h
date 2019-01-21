@@ -226,6 +226,9 @@ namespace Chat
 
       void handle(RequestHandler &) override;
 
+      const std::string& getAskingNodeId() const;
+      const std::string& getPeerId() const;
+
    private:
       std::string askingNodeId_;
       std::string peerId_;
@@ -248,6 +251,10 @@ namespace Chat
 
       void handle(RequestHandler &) override;
 
+      const std::string& getReceivingNodeId() const;
+      const std::string& getSendingNodeId() const;
+      const autheid::PublicKey& getSendingNodePublicKey() const;
+      
    private:
       std::string receivingNodeId_;
       std::string sendingNodeId_;

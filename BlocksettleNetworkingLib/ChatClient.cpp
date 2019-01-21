@@ -193,7 +193,7 @@ void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &respon
    std::queue<QString>& messages = enqueued_messages_[QString::fromStdString(
       response.getSendingNodeId())];
    while (!messages.empty()) {
-      onSendMessage(messages.front(), QString::fromStdString(response.getSendingNodeId()));
+      sendOwnMessage(messages.front(), QString::fromStdString(response.getSendingNodeId()));
       messages.pop();
    }
 }
@@ -221,8 +221,14 @@ void ChatClient::OnError(DataConnectionError errorCode)
    logger_->debug("[ChatClient::OnError] {}", errorCode);
 }
 
-std::shared_ptr<Chat::MessageData> ChatClient::SendOwnMessage(const QString &message, const QString &receiver)
+std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
+      const QString &message, const QString &receiver)
 {
+   Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc(), message);
+   auto result = std::make_shared<Chat::MessageData>(msg);
+
    const auto &itPub = pubKeys_.find(receiver);
    if (itPub != pubKeys_.end()) {
       // Ask for public key from peer. Enqueue the message to be sent, once we receive the 
@@ -235,14 +241,10 @@ std::shared_ptr<Chat::MessageData> ChatClient::SendOwnMessage(const QString &mes
          currentUserId_, 
          receiver.toStdString());
       sendRequest(request);
-      return;
+      return result;
    }
 
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
-
-   Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
-      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
-      , QDateTime::currentDateTimeUtc(), message);
 
    auto localEncMsg = msg;
    msg.encrypt(appSettings_->GetAuthKeys().second);
@@ -255,7 +257,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::SendOwnMessage(const QString &mes
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", msg.toJsonString());
    sendRequest(request);
-   return std::make_shared<Chat::MessageData>(msg);
+   return result;
 }
 
 void ChatClient::retrieveUserMessages(const QString &userId)

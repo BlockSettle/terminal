@@ -479,6 +479,15 @@ void AskForPublicKeyRequest::handle(RequestHandler& handler)
    handler.OnAskForPublicKey(*this);
 }
 
+const std::string& AskForPublicKeyRequest::getAskingNodeId() const
+{
+   return askingNodeId_;
+}
+
+const std::string& AskForPublicKeyRequest::getPeerId() const {
+   return peerId_;
+}
+
 SendOwnPublicKeyRequest::SendOwnPublicKeyRequest(
       const std::string& clientId,
       const std::string& receivingNodeId,
@@ -518,6 +527,18 @@ std::shared_ptr<Request> SendOwnPublicKeyRequest::fromJSON(
 void SendOwnPublicKeyRequest::handle(RequestHandler& handler)
 {
    handler.OnSendOwnPublicKey(*this);
+}
+
+const std::string& SendOwnPublicKeyRequest::getReceivingNodeId() const {
+   return receivingNodeId_;
+}
+
+const std::string& SendOwnPublicKeyRequest::getSendingNodeId() const {
+   return sendingNodeId_;
+}
+
+const autheid::PublicKey& SendOwnPublicKeyRequest::getSendingNodePublicKey() const {
+   return sendingNodePublicKey_;
 }
 
 OnlineUsersRequest::OnlineUsersRequest(const std::string& clientId
