@@ -251,7 +251,7 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       pushButtonCreate()->setText(tr("Broadcast"));
       signer_ = signingContainer_;
    }
-   if (transactionData_->GetWallet() != currentWallet) {
+   if ((transactionData_->GetWallet() != currentWallet) || resetInputs) {
       transactionData_->SetWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
    }
 }
