@@ -1401,8 +1401,8 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
       std::vector<std::string> utxosToUnreserve;
       std::vector<UTXO> erasedUTXOs;
       for (const auto &youngUTXO : youngUTXOs_) {
-         if (curHeight - youngUTXO.first.txHeight_ >= SAFE_NUM_CONFS &&
-            startup == false) {
+         uint32_t numConfs = curHeight - youngUTXO.first.txHeight_;
+         if (numConfs >= SAFE_NUM_CONFS && startup == false) {
             if (IsExternalAddress(bs::Address::fromUTXO(youngUTXO.first)) == false) {
                utxosToUnreserve.push_back(youngUTXO.second);
             }
@@ -1423,10 +1423,12 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
       // possible to flood the network and perform a DOS attack.
       std::map<UTXO, std::string> utxosToReserve;
       for (UTXO& inUTXO : txOutListObj) {
+         uint32_t numConfs = curHeight - inUTXO.txHeight_;
+
          if(startup == true) {
             // If we're starting up, just grab any "young" UTXOs for
             // bootstrapping purposes.
-            if (curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
+            if (numConfs < SAFE_NUM_CONFS) {
                youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
                if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
                   utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
@@ -1447,7 +1449,7 @@ void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()
                if (inUTXO.script_ == itZCUTXO->script_) {
                   // A ZC UTXO has been found!
                   itZCUTXO = zcUTXOs_.erase(itZCUTXO);
-                  if (curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
+                  if (numConfs < SAFE_NUM_CONFS) {
                      youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
                      if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
                         utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
