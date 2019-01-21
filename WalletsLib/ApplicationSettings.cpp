@@ -80,11 +80,11 @@ ApplicationSettings::ApplicationSettings(const QString &appName
    settingDefs_ = {
       { initialized,             SettingDef(QLatin1String("SettingsAccepted"), false) },
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
-      { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::TestNet) },
+      { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::MainNet) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String("armory.blocksettle.com")) },
       { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort")) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
-      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.44")) },
+      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.36")) },
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
       { pubBridgePubKey,         SettingDef(QString(), QLatin1String("AEJL[u[3-i>v#4D?v3Te!B}S0nO7cG!QOsmI*--g")) },
       { authServerHost,          SettingDef(QLatin1String("AuthServerHost"), QLatin1String("zmq.autheid.com")) },
