@@ -1,9 +1,9 @@
 [submodule "common"]
 	path = common
-	url = git@github.com:BlockSettle/common.git
+	url = https://github.com/BlockSettle/common.git
 [submodule "Celer"]
 	path = Celer
-	url = git@github.com:BlockSettle/Celer.git
+	url = https://github.com/BlockSettle/Celer.git
 [submodule "AuthCommon"]
 	path = AuthCommon
-	url = git@github.com:scomil/AuthCommon.git
+	url = https://github.com/scomil/AuthCommon.git
