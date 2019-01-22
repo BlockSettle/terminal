@@ -100,11 +100,13 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
       txHashSet.insert(outpoint.getTxHash());
       txOutIndices[outpoint.getTxHash()].insert(outpoint.getTxOutIndex());
    }
+   allowAutoSelInputs_ = false;
 
    const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
       auto selInputs = transactionData_->GetSelectedInputs();
       selInputs->SetUseAutoSel(false);
       int64_t origFee = 0;
+      unsigned int cntOutputs = 0;
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          const auto &itTxOut = txOutIndices.find(txHash);
@@ -117,65 +119,65 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
                origFee += prevOut.getValue();
             }
          }
-
-         unsigned int cntOutputs = 0;
-         for (size_t i = 0; i < tx.getNumTxOut(); i++) {
-            auto out = tx.getTxOutCopy(i);
-            const auto addr = bs::Address::fromTxOut(out);
-            if (wallet->containsAddress(addr)) {
-               if (selInputs->SetUTXOSelection(tx.getThisHash(),
-                                               out.getIndex())) {
-                  cntOutputs++;
-               }
-            }
-            origFee -= out.getValue();
-         }
-
-         if (!cntOutputs) {
-            if (logger_ != nullptr) {
-               logger_->error("[{}] No input(s) found for TX {}.", __func__
-                              , tx.getThisHash().toHexStr(true));
-            }
-            return;
-         }
-         if (origFee < 0) {
-            if (logger_ != nullptr) {
-               logger_->error("[{}] Negative TX balance ({}) for TX {}."
-                              , __func__, origFee
-                              , tx.getThisHash().toHexStr(true));
-            }
-            return;
-         }
-
-         const auto &cbFee = [this, tx, origFee](float fee) {
-            const auto txSize = tx.getTxWeight();
-            const float feePerByte = (float)origFee / txSize;
-            originalFee_ = origFee;
-            originalFeePerByte_ = feePerByte;
-
-            // CPFP has no enforced rules for fees. We use the following
-            // algorithm for determining the fee/byte. If the current 2-block
-            // fee is less than the fee used by the parent, stick to the current
-            // 2-block fee. If not, add the difference to the 2-block fee and
-            // use the result for the child fee. Simple but it should work. A
-            // little tinkering may be worthwhile later.
-            const float feeDiff = fee - originalFee_;
-            float newFPB = fee;
-            if (std::signbit(feeDiff) == false) { // Is the diff positive?
-               newFPB += feeDiff;
-            }
-
-            // SetMinimumFee() may need to be re-thought. RBF is the only
-            // scenario where we really need to enforce a minimum fee in concert
-            // with the minimum fee/byte. For now, the minimum fee will be set
-            // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
-            // a value that won't always be accurate is a bad idea.
-            SetMinimumFee(0, newFPB);
-            onTransactionUpdated();
-            populateFeeList();
-         };
-         walletsManager_->estimatedFeePerByte(2, cbFee, this);
       }
+
+      for (size_t i = 0; i < tx.getNumTxOut(); i++) {
+         auto out = tx.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(out);
+         if (wallet->containsAddress(addr)) {
+            if (selInputs->SetUTXOSelection(tx.getThisHash(),
+               out.getIndex())) {
+               cntOutputs++;
+            }
+         }
+         origFee -= out.getValue();
+      }
+
+      if (!cntOutputs) {
+         if (logger_ != nullptr) {
+            logger_->error("[{}] No input(s) found for TX {}.", __func__
+               , tx.getThisHash().toHexStr(true));
+         }
+         return;
+      }
+      if (origFee < 0) {
+         if (logger_ != nullptr) {
+            logger_->error("[{}] Negative TX balance ({}) for TX {}."
+               , __func__, origFee
+               , tx.getThisHash().toHexStr(true));
+         }
+         return;
+      }
+
+      const auto &cbFee = [this, tx, origFee, selInputs](float fee) {
+         const auto txSize = tx.getTxWeight();
+         const float feePerByte = (float)origFee / txSize;
+         originalFee_ = origFee;
+         originalFeePerByte_ = feePerByte;
+
+         // CPFP has no enforced rules for fees. We use the following
+         // algorithm for determining the fee/byte. If the current 2-block
+         // fee is less than the fee used by the parent, stick to the current
+         // 2-block fee. If not, add the difference to the 2-block fee and
+         // use the result for the child fee. Simple but it should work. A
+         // little tinkering may be worthwhile later.
+         const float feeDiff = fee - originalFee_;
+         float newFPB = fee;
+         if (std::signbit(feeDiff) == false) { // Is the diff positive?
+            newFPB += feeDiff;
+         }
+
+         // SetMinimumFee() may need to be re-thought. RBF is the only
+         // scenario where we really need to enforce a minimum fee in concert
+         // with the minimum fee/byte. For now, the minimum fee will be set
+         // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
+         // a value that won't always be accurate is a bad idea.
+         SetMinimumFee(0, newFPB);
+         onTransactionUpdated();
+         populateFeeList();
+         SetInputs(selInputs->GetSelectedTransactions());
+      };
+      walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };
 
    SetFixedWallet(wallet->GetWalletId(), [this, txHashSet, cbTXs] {
@@ -293,8 +295,8 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       const auto &newMinFee = originalFee_ + txVirtSize;
       SetMinimumFee(newMinFee, originalFeePerByte_);
       populateFeeList();
-
       onTransactionUpdated();
+      SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
 
    const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
@@ -612,7 +614,7 @@ void CreateTransactionDialogAdvanced::onXBTAmountChanged(const QString &text)
 
 void CreateTransactionDialogAdvanced::onSelectInputs()
 {
-   CoinControlDialog dlg(transactionData_->GetSelectedInputs(), this);
+   CoinControlDialog dlg(transactionData_->GetSelectedInputs(), allowAutoSelInputs_, this);
    if (dlg.exec() == QDialog::Accepted) {
       SetInputs(dlg.selectedInputs());
    }

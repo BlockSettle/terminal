@@ -4,17 +4,17 @@
 #include "SelectedTransactionInputs.h"
 
 
-CoinControlDialog::CoinControlDialog(const std::shared_ptr<SelectedTransactionInputs> &inputs, QWidget* parent)
- : QDialog(parent)
- , ui_(new Ui::CoinControlDialog())
- , selectedInputs_(inputs)
+CoinControlDialog::CoinControlDialog(const std::shared_ptr<SelectedTransactionInputs> &inputs, bool allowAutoSel, QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::CoinControlDialog())
+   , selectedInputs_(inputs)
 {
    ui_->setupUi(this);
 
    connect(ui_->buttonBox, &QDialogButtonBox::accepted, this, &CoinControlDialog::onAccepted);
    connect(ui_->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
    connect(ui_->widgetCoinControl, &CoinControlWidget::coinSelectionChanged, this, &CoinControlDialog::onSelectionChanged);
-   ui_->widgetCoinControl->initWidget(inputs);
+   ui_->widgetCoinControl->initWidget(inputs, allowAutoSel);
 }
 
 CoinControlDialog::~CoinControlDialog() = default;

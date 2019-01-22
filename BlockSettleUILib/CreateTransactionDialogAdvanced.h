@@ -132,6 +132,7 @@ private:
    bool     currentAddressValid_ = false;
    double   currentValue_ = 0;
    bool     isRBF_ = false;
+   bool     allowAutoSelInputs_ = true;
 
    UsedInputsModel         *  usedInputsModel_ = nullptr;
    TransactionOutputsModel *  outputsModel_ = nullptr;
