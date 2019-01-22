@@ -2,12 +2,12 @@ pipeline {
     agent any
 
     stages {
-/*        stage('Checkout') {
+        stage('Checkout') {
             steps {
                 deleteDir()
 
                 dir("terminal") {
-                    git branch: "ci-test",
+                    git branch: "${BRANCH}",
                         credentialsId: 'terminal_build',
                         url: 'git@github.com:BlockSettle/terminal.git'
                     
@@ -28,7 +28,7 @@ pipeline {
                 }
                 }
             }
-        }*/
+        }
 
         stage('Build app') {
             agent {
@@ -39,16 +39,16 @@ pipeline {
                 }
             }
             steps {
-                sh "pip install requests"
-                sh "python generate.py release"
-                sh "cd ./terminal.release && make -j 16"
-                sh "cd ./Deploy && ./deploy.sh"
+                sh "cd ./terminal && pip install requests"
+                sh "cd ./terminal && python generate.py release"
+                sh "cd ./terminal/terminal.release && make -j 16"
+                sh "cd ./terminal/Deploy && ./deploy.sh"
             }
         }
         
         stage('Transfer') {
             steps {
-                sh "scp ${WORKSPACE}/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/downloads/builds/Linux"
+                sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/downloads/builds/Linux"
             //    sh "ssh genoa@10.0.1.36 ln -sf /var/www/downloads/builds/Linux /var/www/downloads/latests"
             }
         }
