@@ -230,7 +230,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    auto result = std::make_shared<Chat::MessageData>(msg);
 
    const auto &itPub = pubKeys_.find(receiver);
-   if (itPub != pubKeys_.end()) {
+   if (itPub == pubKeys_.end()) {
       // Ask for public key from peer. Enqueue the message to be sent, once we receive the 
       // necessary public key.
       enqueued_messages_[receiver].push(message);

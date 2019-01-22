@@ -22,7 +22,8 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
    createTable_ = {
       {QLatin1String("user_keys"), [db = db_] {
          const QLatin1String query("CREATE TABLE IF NOT EXISTS user_keys ("\
-            "user CHAR(8) PRIMARY KEY,"\
+            "user_id CHAR(8) PRIMARY KEY,"\
+            "user_name CHAR(64),"\
             "key TEXT"\
             ");");
          if (!QSqlQuery(db).exec(query)) {
@@ -148,7 +149,7 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
 bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT user, key FROM user_keys"))) {
+   if (!query.prepare(QLatin1String("SELECT user_id, key FROM user_keys"))) {
       logger_->error("[ChatDB::loadKeys] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
@@ -167,7 +168,7 @@ bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)
 bool ChatDB::addKey(const QString& user, const autheid::PublicKey& key)
 {
    QSqlQuery qryAdd(QLatin1String(
-      "INSERT INTO user_keys(user, key) VALUES(?, ?);"), db_);
+      "INSERT INTO user_keys(user_id, key) VALUES(?, ?);"), db_);
    qryAdd.bindValue(0, user);
    qryAdd.bindValue(1, QString::fromStdString(autheid::publicKeyToString(key)));
 
