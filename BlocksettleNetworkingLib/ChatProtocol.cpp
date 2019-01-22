@@ -397,22 +397,28 @@ void MessageData::setFlag(const State state)
 
 bool MessageData::decrypt(const autheid::PrivateKey& privKey)
 {
-   state_ &= ~(int)State::Encrypted;
-   QByteArray message_bytes = messageData_.toLocal8Bit();
-   autheid::SecureBytes decryptedData = autheid::decryptData(
+   if (!(state_ & (int)State::Encrypted)) {
+      return false;
+   }
+   const auto message_bytes = QByteArray::fromBase64(messageData_.toLocal8Bit());
+   const auto decryptedData = autheid::decryptData(
       message_bytes.data(), message_bytes.size(), privKey);
-   messageData_.fromLocal8Bit((char*)decryptedData.data(), decryptedData.size());
+   messageData_ = QString::fromLocal8Bit((char*)decryptedData.data(), decryptedData.size());
+   state_ &= ~(int)State::Encrypted;
    return true;
 }
 
 bool MessageData::encrypt(const autheid::PublicKey& pubKey)
 {
-   state_ |= (int)State::Encrypted;
-   QByteArray message_bytes = messageData_.toLocal8Bit();
+   if (state_ & (int)State::Encrypted) {
+      return false;
+   }
+   const QByteArray message_bytes = messageData_.toLocal8Bit();
    // TODO(martun): consider using an intermediate AES encryption in the future.
-   std::vector<uint8_t> encryptedData = autheid::encryptData(
-      message_bytes.data(), message_bytes.size(), pubKey);
-   messageData_.fromLocal8Bit((char*)encryptedData.data(), encryptedData.size());
+   const auto encryptedData = autheid::base64Encode(autheid::encryptData(
+      message_bytes.data(), message_bytes.size(), pubKey));
+   messageData_ = QString::fromStdString(encryptedData);
+   state_ |= (int)State::Encrypted;
    return true;
 }
 

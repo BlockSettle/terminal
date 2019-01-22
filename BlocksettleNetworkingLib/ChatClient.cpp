@@ -250,7 +250,9 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
    auto localEncMsg = msg;
-   msg.encrypt(appSettings_->GetAuthKeys().second);
+   if (!localEncMsg.encrypt(appSettings_->GetAuthKeys().second)) {
+      logger_->error("[ChatClient::sendMessage] failed to encrypt by local key");
+   }
    chatDb_->add(localEncMsg);
 
    if (!msg.encrypt(itPub->second)) {
