@@ -39,10 +39,10 @@ pipeline {
                 }
             }
             steps {
-                sh "cd ./terminal && pip install requests"
-                sh "cd ./terminal && python generate.py release"
-                sh "cd ./terminal/terminal.release && make -j 16"
-                sh "cd ./terminal/Deploy && ./deploy.sh"
+                sh "pip install requests"
+                sh "python generate.py release"
+                sh "cd ./terminal.release && make -j 16"
+                sh "cd ./Deploy && ./deploy.sh"
             }
         }
         
