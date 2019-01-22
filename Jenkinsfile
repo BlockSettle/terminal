@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
+/*        stage('Checkout') {
             steps {
                 deleteDir()
 
@@ -28,7 +28,7 @@ pipeline {
                 }
                 }
             }
-        }
+        }*/
 
         stage('Build app') {
             agent {
