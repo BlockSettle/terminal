@@ -11,11 +11,109 @@
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
 
+class ChatWidgetState {
+public:
+	explicit ChatWidgetState(ChatWidget* chat) : chat_(chat) {}
+	virtual ~ChatWidgetState() = default;
+
+	virtual std::string login(const std::string& email, const std::string& jwt) = 0;
+	virtual void logout() = 0;
+	virtual void onSendButtonClicked() = 0;
+	virtual void onUserClicked(const QModelIndex& index) = 0;
+	virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end) = 0;
+	virtual void onLoginFailed() = 0;
+	virtual void onUsersDeleted(const std::vector<std::string> &) = 0;
+
+protected:
+	ChatWidget * chat_;
+};
+
+
+class ChatWidgetStateLoggedOut : public ChatWidgetState {
+public:
+	ChatWidgetStateLoggedOut(ChatWidget* parent) : ChatWidgetState(parent) {};
+	virtual std::string login(const std::string& email, const std::string& jwt) override {
+		chat_->logger_->debug("Set user name {}", email);
+		chat_->usersViewModel_->onUsersReplace({});
+		const auto userId = chat_->client_->loginToServer(email, jwt);
+		chat_->ui_->stackedWidget->setCurrentIndex(1);
+		chat_->ui_->labelUserName->setText(QString::fromStdString(userId));
+		chat_->messagesViewModel_->setOwnUserId(userId);
+
+		return userId;
+	};
+	virtual void logout() override {
+		chat_->logger_->info("Already logged out!");
+	};
+	virtual void onSendButtonClicked()  override {
+
+	};
+	virtual void onUserClicked(const QModelIndex& index)  override {};
+	virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end)  override {};
+	virtual void onLoginFailed()  override {
+		chat_->stateCurrent_.reset(new ChatWidgetStateLoggedOut(chat_));
+	};
+	virtual void onUsersDeleted(const std::vector<std::string> &) override {};
+};
+
+class ChatWidgetStateLoggedIn : public ChatWidgetState {
+public:
+	ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent) {};
+
+	virtual std::string login(const std::string& email, const std::string& jwt) override {
+		chat_->logger_->info("Already logged in! You should first logout!");
+		return std::string();
+	};
+	virtual void logout() override {
+		chat_->ui_->stackedWidget->setCurrentIndex(0);
+		chat_->client_->logout();
+		chat_->stateCurrent_.reset(new ChatWidgetStateLoggedOut(chat_));
+	};
+	virtual void onSendButtonClicked()  override {
+		QString messageText = chat_->ui_->text->text();
+
+		if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
+			auto msg = chat_->client_->SendOwnMessage(messageText, chat_->currentChat_);
+			chat_->ui_->text->clear();
+
+			chat_->messagesViewModel_->onSingleMessageUpdate(msg);
+		}
+	};
+	virtual void onUserClicked(const QModelIndex& index)  override {
+		chat_->currentChat_ = chat_->usersViewModel_->resolveUser(index);
+
+		chat_->ui_->text->setEnabled(!chat_->currentChat_.isEmpty());
+		chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
+		chat_->messagesViewModel_->onSwitchToChat(chat_->currentChat_);
+		chat_->client_->retrieveUserMessages(chat_->currentChat_);
+	};
+	virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end)  override {
+		chat_->ui_->tableViewMessages->scrollToBottom();
+	};
+	virtual void onLoginFailed()  override {
+		chat_->stateCurrent_.reset(new ChatWidgetStateLoggedOut(chat_));
+	};
+	virtual void onUsersDeleted(const std::vector<std::string> &users)  override {
+		chat_->usersViewModel_->onUsersDel(users);
+
+		if (std::find(users.cbegin(), users.cend(), chat_->currentChat_.toStdString()) != users.cend()) {
+			chat_->onUserClicked({});
+		}
+	};
+};
+
 ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChatWidget)
 {
    ui_->setupUi(this);
+
+   //Init available states
+   stateLoggedIn_.reset(new ChatWidgetStateLoggedIn(this));
+   stateLoggedOut_.reset(new ChatWidgetStateLoggedOut(this));
+
+
+   //Init UI and other stuff
    ui_->stackedWidget->setCurrentIndex(0);
 
    ui_->tableViewMessages->verticalHeader()->hide();
@@ -66,10 +164,14 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
                         , &ChatMessagesViewModel::onMessagesUpdate);
    connect(messagesViewModel_.get(), &ChatMessagesViewModel::rowsInserted,
            this, &ChatWidget::onMessagesUpdated);
+
+   stateCurrent_.reset(new ChatWidgetStateLoggedOut(this));
 }
 
 void ChatWidget::onUserClicked(const QModelIndex& index)
 {
+   return stateCurrent_->onUserClicked(index); //test
+
    currentChat_ = usersViewModel_->resolveUser(index);
 
    ui_->text->setEnabled(!currentChat_.isEmpty());
@@ -80,6 +182,8 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
 
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
+   return stateCurrent_->onUsersDeleted(users); //test
+
    usersViewModel_->onUsersDel(users);
 
    if (std::find(users.cbegin(), users.cend(), currentChat_.toStdString()) != users.cend()) {
@@ -89,6 +193,8 @@ void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 
 void ChatWidget::onSendButtonClicked()
 {
+   return stateCurrent_->onSendButtonClicked(); //test
+
    QString messageText = ui_->text->text();
 
    if (!messageText.isEmpty() && !currentChat_.isEmpty()) {
@@ -101,12 +207,17 @@ void ChatWidget::onSendButtonClicked()
 
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
+   return stateCurrent_->onMessagesUpdated(parent, start, end); //test
    ui_->tableViewMessages->scrollToBottom();
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
    try {
+	  const auto userId1 = stateCurrent_->login(email, jwt); //test
+	  stateCurrent_.reset(new ChatWidgetStateLoggedIn(this));
+	  return userId1;
+
       logger_->debug("Set user name {}", email);
       usersViewModel_->onUsersReplace({});
       const auto userId = client_->loginToServer(email, jwt);
@@ -127,13 +238,16 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 
 void ChatWidget::onLoginFailed()
 {
-   ui_->stackedWidget->setCurrentIndex(0);
+   stateCurrent_->onLoginFailed(); //test
+
+   //ui_->stackedWidget->setCurrentIndex(0);
 
    emit LoginFailed();
 }
 
 void ChatWidget::logout()
 {
+   return stateCurrent_->logout(); //test
    ui_->stackedWidget->setCurrentIndex(0);
    client_->logout();
 }

@@ -141,7 +141,7 @@
              <string>CHAT ROOMS</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignLeft|Qt::AlignVCenter</set>
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
             <property name="headerLabel" stdset="0">
              <bool>true</bool>
@@ -192,13 +192,13 @@
            <number>0</number>
           </property>
           <property name="leftMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
            <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
            <number>0</number>
@@ -228,7 +228,7 @@
                <string>CHAT #</string>
               </property>
               <property name="alignment">
-               <set>Qt::AlignLeft|Qt::AlignVCenter</set>
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
               </property>
               <property name="headerLabel" stdset="0">
                <bool>false</bool>
@@ -342,7 +342,7 @@
              <string>USERS</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignLeft|Qt::AlignVCenter</set>
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
             <property name="headerLabel" stdset="0">
              <bool>true</bool>
