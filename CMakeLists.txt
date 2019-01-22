@@ -47,7 +47,6 @@ SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATC
 
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
-STRING(REPLACE "refs/heads/" "" GIT_BRANCH ${GIT_REFSPEC})
 
 IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
   MESSAGE( FATAL_ERROR "THis is not a Git repository, but it should be.")
