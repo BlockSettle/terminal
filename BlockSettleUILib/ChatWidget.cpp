@@ -92,7 +92,7 @@ void ChatWidget::onSendButtonClicked()
    QString messageText = ui_->text->text();
 
    if (!messageText.isEmpty() && !currentChat_.isEmpty()) {
-      auto msg = client_->SendOwnMessage(messageText, currentChat_);
+      auto msg = client_->sendOwnMessage(messageText, currentChat_);
       ui_->text->clear();
 
       messagesViewModel_->onSingleMessageUpdate(msg);

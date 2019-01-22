@@ -5,6 +5,7 @@
 #include <QStringLiteral>
 #include <QDebug>
 #include "EncryptionUtils.h"
+#include "EncryptUtils.h"
 
 
 using namespace Chat;
@@ -29,50 +30,59 @@ static const QString StatusKey    = QStringLiteral("status");
 static const QString UsersKey     = QStringLiteral("users");
 static const QString DateTimeKey  = QStringLiteral("datetm");
 static const QString DataKey      = QStringLiteral("data");
+static const QString PublicKeyKey = QStringLiteral("public_key");
 static const QString CommandKey = QStringLiteral("cmd");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-       { "RequestHeartbeatPing" ,   RequestType::RequestHeartbeatPing  }
-   ,   { "RequestLogin"         ,   RequestType::RequestLogin          }
-   ,   { "RequestLogout"        ,   RequestType::RequestLogout         }
-   ,   { "RequestMessages"      ,   RequestType::RequestMessages       }
-   ,   { "RequestSendMessage"   ,   RequestType::RequestSendMessage    }
-   ,   { "RequestOnlineUsers"   ,   RequestType::RequestOnlineUsers    }
+       { "RequestHeartbeatPing"     ,   RequestType::RequestHeartbeatPing     }
+   ,   { "RequestLogin"             ,   RequestType::RequestLogin             }
+   ,   { "RequestLogout"            ,   RequestType::RequestLogout            }
+   ,   { "RequestMessages"          ,   RequestType::RequestMessages          }
+   ,   { "RequestSendMessage"       ,   RequestType::RequestSendMessage       }
+   ,   { "RequestOnlineUsers"       ,   RequestType::RequestOnlineUsers       }
+   ,   { "RequestAskForPublicKey"   ,   RequestType::RequestAskForPublicKey   }
+   ,   { "RequestSendOwnPublicKey"  ,   RequestType::RequestSendOwnPublicKey  }
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-       { RequestType::RequestHeartbeatPing  ,  "RequestHeartbeatPing" }
-   ,   { RequestType::RequestLogin          ,  "RequestLogin"         }
-   ,   { RequestType::RequestLogout         ,  "RequestLogout"        }
-   ,   { RequestType::RequestMessages       ,  "RequestMessages"      }
-   ,   { RequestType::RequestSendMessage    ,  "RequestSendMessage"   }
-   ,   { RequestType::RequestOnlineUsers    ,  "RequestOnlineUsers"   }
+       { RequestType::RequestHeartbeatPing   ,  "RequestHeartbeatPing"     }
+   ,   { RequestType::RequestLogin           ,  "RequestLogin"             }
+   ,   { RequestType::RequestLogout          ,  "RequestLogout"            }
+   ,   { RequestType::RequestMessages        ,  "RequestMessages"          }
+   ,   { RequestType::RequestSendMessage     ,  "RequestSendMessage"       }
+   ,   { RequestType::RequestOnlineUsers     ,  "RequestOnlineUsers"       }
+   ,   { RequestType::RequestAskForPublicKey ,  "RequestAskForPublicKey"   }
+   ,   { RequestType::RequestSendOwnPublicKey,  "RequestSendOwnPublicKey"  }
 };
 
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-       { "ResponseError"         ,   ResponseType::ResponseError          }
-   ,   { "ResponseHeartbeatPong" ,   ResponseType::ResponseHeartbeatPong  }
-   ,   { "ResponseLogin"         ,   ResponseType::ResponseLogin          }
-   ,   { "ResponseMessages"      ,   ResponseType::ResponseMessages       }
-   ,   { "ResponseSuccess"       ,   ResponseType::ResponseSuccess        }
-   ,   { "ResponseUsersList"     ,   ResponseType::ResponseUsersList      }
+       { "ResponseError"            ,   ResponseType::ResponseError           }
+   ,   { "ResponseHeartbeatPong"    ,   ResponseType::ResponseHeartbeatPong   }
+   ,   { "ResponseLogin"            ,   ResponseType::ResponseLogin           }
+   ,   { "ResponseMessages"         ,   ResponseType::ResponseMessages        }
+   ,   { "ResponseSuccess"          ,   ResponseType::ResponseSuccess         }
+   ,   { "ResponseUsersList"        ,   ResponseType::ResponseUsersList       }
+   ,   { "ResponseAskForPublicKey"  ,   ResponseType::ResponseAskForPublicKey }
+   ,   { "ResponseSendOwnPublicKey" ,   ResponseType::ResponseSendOwnPublicKey}
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-       { ResponseType::ResponseError         ,  "ResponseError"         }
-   ,   { ResponseType::ResponseHeartbeatPong ,  "ResponseHeartbeatPong" }
-   ,   { ResponseType::ResponseLogin         ,  "ResponseLogin"         }
-   ,   { ResponseType::ResponseMessages      ,  "ResponseMessages"      }
-   ,   { ResponseType::ResponseSuccess       ,  "ResponseSuccess"       }
-   ,   { ResponseType::ResponseUsersList     ,  "ResponseUsersList"     }
+       { ResponseType::ResponseError            ,  "ResponseError"            }
+   ,   { ResponseType::ResponseHeartbeatPong    ,  "ResponseHeartbeatPong"    }
+   ,   { ResponseType::ResponseLogin            ,  "ResponseLogin"            }
+   ,   { ResponseType::ResponseMessages         ,  "ResponseMessages"         }
+   ,   { ResponseType::ResponseSuccess          ,  "ResponseSuccess"          }
+   ,   { ResponseType::ResponseUsersList        ,  "ResponseUsersList"        }
+   ,   { ResponseType::ResponseAskForPublicKey  ,  "ResponseAskForPublicKey"  }
+   ,   { ResponseType::ResponseSendOwnPublicKey ,  "ResponseSendOwnPublicKey" }
 };
 
 
@@ -132,6 +142,12 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
                  , data[AuthIdKey].toString().toStdString()
                  , data[JwtKey].toString().toStdString());
 
+      case RequestType::RequestAskForPublicKey:
+         return std::make_shared<AskForPublicKeyRequest>(
+               clientId,
+               data[SenderIdKey].toString().toStdString(),
+               data[ReceiverIdKey].toString().toStdString());
+               
       default:
          break;
    }
@@ -374,15 +390,24 @@ void MessageData::setFlag(const State state)
    state_ |= (int)state;
 }
 
-bool MessageData::decrypt(const SecureBinaryData &privKey)
+bool MessageData::decrypt(const autheid::PrivateKey& privKey)
 {
    state_ &= ~(int)State::Encrypted;
+   QByteArray message_bytes = messageData_.toLocal8Bit();
+   autheid::SecureBytes decryptedData = autheid::decryptData(
+      message_bytes.data(), message_bytes.size(), privKey);
+   messageData_.fromLocal8Bit((char*)decryptedData.data(), decryptedData.size());
    return true;
 }
 
-bool MessageData::encrypt(const BinaryData &pubKey)
+bool MessageData::encrypt(const autheid::PublicKey& pubKey)
 {
    state_ |= (int)State::Encrypted;
+   QByteArray message_bytes = messageData_.toLocal8Bit();
+   // TODO(martun): consider using an intermediate AES encryption in the future.
+   std::vector<uint8_t> encryptedData = autheid::encryptData(
+      message_bytes.data(), message_bytes.size(), pubKey);
+   messageData_.fromLocal8Bit((char*)encryptedData.data(), encryptedData.size());
    return true;
 }
 
@@ -417,6 +442,104 @@ void SendMessageRequest::handle(RequestHandler& handler)
    handler.OnSendMessage(*this);
 }
 
+AskForPublicKeyRequest::AskForPublicKeyRequest(
+      const std::string& clientId,
+      const std::string& askingNodeId,
+      const std::string& peerId)
+   : Request(RequestType::RequestAskForPublicKey, clientId)
+   , askingNodeId_(askingNodeId)
+   , peerId_(peerId)
+{
+}
+
+QJsonObject AskForPublicKeyRequest::toJson() const
+{
+   QJsonObject data = Request::toJson();
+
+   data[SenderIdKey] = QString::fromStdString(askingNodeId_);
+   data[ReceiverIdKey] = QString::fromStdString(peerId_);
+   
+   return data;
+}
+
+std::shared_ptr<Request> AskForPublicKeyRequest::fromJSON(
+   const std::string& clientId,
+   const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(
+      QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<AskForPublicKeyRequest>(
+      clientId,
+      data[SenderIdKey].toString().toStdString(),
+      data[ReceiverIdKey].toString().toStdString());
+}
+
+void AskForPublicKeyRequest::handle(RequestHandler& handler)
+{
+   handler.OnAskForPublicKey(*this);
+}
+
+const std::string& AskForPublicKeyRequest::getAskingNodeId() const
+{
+   return askingNodeId_;
+}
+
+const std::string& AskForPublicKeyRequest::getPeerId() const {
+   return peerId_;
+}
+
+SendOwnPublicKeyRequest::SendOwnPublicKeyRequest(
+      const std::string& clientId,
+      const std::string& receivingNodeId,
+      const std::string& sendingNodeId,
+      const autheid::PublicKey& sendingNodePublicKey)
+   : Request(RequestType::RequestSendOwnPublicKey, clientId)
+   , receivingNodeId_(receivingNodeId)
+   , sendingNodeId_(sendingNodeId)
+   , sendingNodePublicKey_(sendingNodePublicKey)
+{
+}
+
+QJsonObject SendOwnPublicKeyRequest::toJson() const
+{
+   QJsonObject data = Request::toJson();
+
+   data[SenderIdKey] = QString::fromStdString(sendingNodeId_);
+   data[ReceiverIdKey] = QString::fromStdString(receivingNodeId_);
+   data[PublicKeyKey] = QString::fromStdString(
+      autheid::publicKeyToString(sendingNodePublicKey_));
+   return data;
+}
+
+std::shared_ptr<Request> SendOwnPublicKeyRequest::fromJSON(
+   const std::string& clientId,
+   const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(
+      QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<SendOwnPublicKeyRequest>(
+      clientId,
+      data[SenderIdKey].toString().toStdString(),
+      data[ReceiverIdKey].toString().toStdString(), 
+      autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+}
+
+void SendOwnPublicKeyRequest::handle(RequestHandler& handler)
+{
+   handler.OnSendOwnPublicKey(*this);
+}
+
+const std::string& SendOwnPublicKeyRequest::getReceivingNodeId() const {
+   return receivingNodeId_;
+}
+
+const std::string& SendOwnPublicKeyRequest::getSendingNodeId() const {
+   return sendingNodeId_;
+}
+
+const autheid::PublicKey& SendOwnPublicKeyRequest::getSendingNodePublicKey() const {
+   return sendingNodePublicKey_;
+}
 
 OnlineUsersRequest::OnlineUsersRequest(const std::string& clientId
                , const std::string& authId)
@@ -494,3 +617,97 @@ void LoginResponse::handle(ResponseHandler& handler)
 {
    handler.OnLoginReturned(*this);
 }
+
+AskForPublicKeyResponse::AskForPublicKeyResponse(
+      const std::string& askingNodeId,
+      const std::string& peerId)
+   : Response(ResponseType::ResponseAskForPublicKey)
+   , askingNodeId_(askingNodeId)
+   , peerId_(peerId)
+{
+}
+
+QJsonObject AskForPublicKeyResponse::toJson() const
+{
+   QJsonObject data = Response::toJson();
+
+   data[SenderIdKey] = QString::fromStdString(askingNodeId_);
+   data[ReceiverIdKey] = QString::fromStdString(peerId_);
+   
+   return data;
+}
+
+std::shared_ptr<Response> AskForPublicKeyResponse::fromJSON(
+   const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(
+      QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<AskForPublicKeyResponse>(
+      data[SenderIdKey].toString().toStdString(),
+      data[ReceiverIdKey].toString().toStdString());
+}
+
+void AskForPublicKeyResponse::handle(ResponseHandler& handler)
+{
+   handler.OnAskForPublicKey(*this);
+}
+
+const std::string& AskForPublicKeyResponse::getAskingNodeId() const
+{
+   return askingNodeId_;
+}
+
+const std::string& AskForPublicKeyResponse::getPeerId() const {
+   return peerId_;
+}
+
+SendOwnPublicKeyResponse::SendOwnPublicKeyResponse(
+      const std::string& receivingNodeId,
+      const std::string& sendingNodeId,
+      const autheid::PublicKey& sendingNodePublicKey)
+   : Response(ResponseType::ResponseSendOwnPublicKey)
+   , receivingNodeId_(receivingNodeId)
+   , sendingNodeId_(sendingNodeId)
+   , sendingNodePublicKey_(sendingNodePublicKey)
+{
+}
+
+QJsonObject SendOwnPublicKeyResponse::toJson() const
+{
+   QJsonObject data = Response::toJson();
+
+   data[SenderIdKey] = QString::fromStdString(sendingNodeId_);
+   data[ReceiverIdKey] = QString::fromStdString(receivingNodeId_);
+   data[PublicKeyKey] = QString::fromStdString(
+      autheid::publicKeyToString(sendingNodePublicKey_));
+   return data;
+}
+
+std::shared_ptr<Response> SendOwnPublicKeyResponse::fromJSON(
+   const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(
+      QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<SendOwnPublicKeyResponse>(
+      data[SenderIdKey].toString().toStdString(),
+      data[ReceiverIdKey].toString().toStdString(), 
+      autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+}
+
+void SendOwnPublicKeyResponse::handle(ResponseHandler& handler)
+{
+   handler.OnSendOwnPublicKey(*this);
+}
+
+const std::string& SendOwnPublicKeyResponse::getReceivingNodeId() const {
+   return receivingNodeId_;
+}
+
+const std::string& SendOwnPublicKeyResponse::getSendingNodeId() const {
+   return sendingNodeId_;
+}
+
+const autheid::PublicKey& SendOwnPublicKeyResponse::getSendingNodePublicKey() const {
+   return sendingNodePublicKey_;
+}
+
