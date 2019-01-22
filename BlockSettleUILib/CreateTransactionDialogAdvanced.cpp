@@ -401,7 +401,6 @@ void CreateTransactionDialogAdvanced::initUI()
 void CreateTransactionDialogAdvanced::clear()
 {
    CreateTransactionDialog::clear();
-
    outputsModel_->clear();
    usedInputsModel_->clear();
 }
@@ -561,7 +560,7 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    // desirable to change this one day. RBF TXs can change inputs but only if
    // all other inputs are RBF-enabled. Properly refactored, the user could
    // select only RBF-enabled inputs that are waiting for a conf.
-   if(!isRBF_) {
+   if (!isRBF_ && transactionData_->GetSelectedInputs()->UseAutoSel()) {
       usedInputsModel_->updateInputs(transactionData_->inputs());
    }
 
@@ -614,7 +613,9 @@ void CreateTransactionDialogAdvanced::onXBTAmountChanged(const QString &text)
 void CreateTransactionDialogAdvanced::onSelectInputs()
 {
    CoinControlDialog dlg(transactionData_->GetSelectedInputs(), this);
-   dlg.exec();
+   if (dlg.exec() == QDialog::Accepted) {
+      SetInputs(dlg.selectedInputs());
+   }
 }
 
 void CreateTransactionDialogAdvanced::onAddOutput()
@@ -664,6 +665,24 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
       && !broadcasting_
       && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
          || (selectedChangeAddress_.isValid())));
+}
+
+void CreateTransactionDialogAdvanced::SetInputs(const std::vector<UTXO> &inputs)
+{
+   usedInputsModel_->updateInputs(inputs);
+
+   const auto maxAmt = transactionData_->CalculateMaxAmount();
+   double recipSumAmt = 0;
+   for (unsigned int recip = 0; recip < transactionData_->GetRecipientsCount(); ++recip) {
+      recipSumAmt += transactionData_->GetRecipientAmount(recip);
+   }
+   logger_->debug("maxAmt={}, recipientsAmt={}", maxAmt, recipSumAmt);
+   if (!qFuzzyCompare(maxAmt, recipSumAmt)) {
+      for (unsigned int recip = 0; recip < transactionData_->GetRecipientsCount(); ++recip) {
+         const auto recipAmt = transactionData_->GetRecipientAmount(recip);
+         transactionData_->UpdateRecipientAmount(recip, recipAmt, false);
+      }
+   }
 }
 
 void CreateTransactionDialogAdvanced::AddManualFeeEntries(float feePerByte, float totalFee)
@@ -896,6 +915,7 @@ void CreateTransactionDialogAdvanced::SetFixedWalletAndInputs(const std::shared_
    SelectWallet(wallet->GetWalletId());
    ui_->comboBoxWallets->setEnabled(false);
    disableInputSelection();
+   usedInputsModel_->updateInputs(inputs);
    transactionData_->SetWalletAndInputs(wallet, inputs, armory_->topBlock());
 }
 

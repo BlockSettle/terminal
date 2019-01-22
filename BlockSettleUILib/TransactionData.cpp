@@ -248,27 +248,24 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
       return -1;
    }
 
-   double fee = totalFee_;
-   if (fee <= 0) {
-      std::vector<UTXO> transactions = decorateUTXOs();
+   std::vector<UTXO> transactions = decorateUTXOs();
 
-      size_t txOutSize = 0;
-      for (const auto &recip : recipients_) {
-         const auto &scrRecip = recip.second->GetScriptRecipient();
-         txOutSize += scrRecip ? scrRecip->getSize() : 31;
-      }
-      if (!recipient.isNull()) {
-         const auto &scrRecip = recipient.getRecipient(0.0);
-         txOutSize += scrRecip ? scrRecip->getSize() : 31;
-      }
-
-      // Accept the fee returned by Armory. The fee returned may be a few
-      // satoshis higher than is strictly required by Core but that's okay.
-      // If truly required, the fee can be tweaked later.
-      fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_
-         , transactions);
+   size_t txOutSize = 0;
+   for (const auto &recip : recipients_) {
+      const auto &scrRecip = recip.second->GetScriptRecipient();
+      txOutSize += scrRecip ? scrRecip->getSize() : 31;
    }
-   fee = fee / BTCNumericTypes::BalanceDivider;
+   if (!recipient.isNull()) {
+      const auto &scrRecip = recipient.getRecipient(0.0);
+      txOutSize += scrRecip ? scrRecip->getSize() : 31;
+   }
+
+   // Accept the fee returned by Armory. The fee returned may be a few
+   // satoshis higher than is strictly required by Core but that's okay.
+   // If truly required, the fee can be tweaked later.
+   double fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_
+      , transactions) / BTCNumericTypes::BalanceDivider;
+   //TODO: apply caching if needed, but don't use totalFee_ for this
 
    auto availableBalance = GetTransactionSummary().availableBalance - \
       GetTransactionSummary().balanceToSpend;

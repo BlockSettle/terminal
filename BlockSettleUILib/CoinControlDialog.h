@@ -19,6 +19,8 @@ public:
    CoinControlDialog(const std::shared_ptr<SelectedTransactionInputs>& inputs, QWidget* parent = nullptr);
    ~CoinControlDialog() override;
 
+   std::vector<UTXO> selectedInputs() const;
+
 private slots:
    void onAccepted();
    void onSelectionChanged(size_t nbSelected, bool autoSelection);

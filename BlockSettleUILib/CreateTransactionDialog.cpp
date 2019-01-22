@@ -288,7 +288,9 @@ void CreateTransactionDialog::onTransactionUpdated()
 void CreateTransactionDialog::onMaxPressed()
 {
    auto maxValue = transactionData_->CalculateMaxAmount(lineEditAddress()->text().toStdString());
-   lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
+   if (maxValue > 0) {
+      lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
+   }
 }
 
 void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,

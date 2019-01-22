@@ -112,6 +112,7 @@ private:
 
    void SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset = nullptr);
    void SetFixedWalletAndInputs(const std::shared_ptr<bs::Wallet> &, const std::vector<UTXO> &);
+   void SetInputs(const std::vector<UTXO> &);
    void disableOutputsEditing();
    void disableInputSelection();
    void disableFeeChanging();

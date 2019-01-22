@@ -205,11 +205,11 @@ void SelectedTransactionInputs::SetCPFPTransactionSelection(size_t i, const bool
 
 std::vector<UTXO> SelectedTransactionInputs::GetSelectedTransactions() const
 {
-   std::vector<UTXO> selectedTransactions;
    if (useAutoSel_) {
-      return inputs_;
+      return GetAllTransactions();
    }
 
+   std::vector<UTXO> selectedTransactions;
    selectedTransactions.reserve(totalSelected_);
 
    for (size_t i=0; i<selection_.size(); ++i) {
