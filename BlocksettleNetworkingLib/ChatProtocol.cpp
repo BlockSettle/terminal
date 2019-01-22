@@ -108,8 +108,7 @@ QJsonObject Message<T>::toJson() const
 std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-
-   RequestType requestType = RequestTypeFromString[data[TypeKey].toString().toStdString()];
+   const RequestType requestType = RequestTypeFromString[data[TypeKey].toString().toStdString()];
 
    switch (requestType)
    {
@@ -117,8 +116,7 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return std::make_shared<HeartbeatPingRequest>(clientId);
 
       case RequestType::RequestLogin:
-        return std::make_shared<LoginRequest>(
-                   clientId
+        return std::make_shared<LoginRequest>(clientId
                  , data[AuthIdKey].toString().toStdString()
                  , data[JwtKey].toString().toStdString());
 
@@ -126,33 +124,35 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return SendMessageRequest::fromJSON(clientId, jsonData);
 
       case RequestType::RequestOnlineUsers:
-         return std::make_shared<OnlineUsersRequest>(
-                   clientId
+         return std::make_shared<OnlineUsersRequest>(clientId
                  , data[AuthIdKey].toString().toStdString());
 
       case RequestType::RequestMessages:
-         return std::make_shared<MessagesRequest>(
-                   clientId
+         return std::make_shared<MessagesRequest>(clientId
                  , data[SenderIdKey].toString().toStdString()
                  , data[ReceiverIdKey].toString().toStdString());
 
       case RequestType::RequestLogout:
-         return std::make_shared<LogoutRequest>(
-                   clientId
+         return std::make_shared<LogoutRequest>(clientId
                  , data[AuthIdKey].toString().toStdString()
                  , data[JwtKey].toString().toStdString());
 
       case RequestType::RequestAskForPublicKey:
-         return std::make_shared<AskForPublicKeyRequest>(
-               clientId,
+         return std::make_shared<AskForPublicKeyRequest>(clientId,
                data[SenderIdKey].toString().toStdString(),
                data[ReceiverIdKey].toString().toStdString());
-               
+
+      case RequestType::RequestSendOwnPublicKey:
+         return std::make_shared<SendOwnPublicKeyRequest>(clientId
+            , data[ReceiverIdKey].toString().toStdString()
+            , data[SenderIdKey].toString().toStdString()
+            , autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+
       default:
          break;
    }
 
-   return std::shared_ptr<Request>();
+   return nullptr;
 }
 
 std::string Request::getData() const
@@ -187,8 +187,7 @@ std::string Response::getData() const
 std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-
-   ResponseType responseType = ResponseTypeFromString[data[TypeKey].toString().toStdString()];
+   const ResponseType responseType = ResponseTypeFromString[data[TypeKey].toString().toStdString()];
 
    switch (responseType)
    {
@@ -214,7 +213,7 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
          break;
    }
 
-   return {};
+   return nullptr;
 }
 
 
