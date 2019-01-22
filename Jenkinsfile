@@ -41,8 +41,8 @@ pipeline {
             steps {
                 sh "pip install requests"
                 sh "python generate.py release"
-                sh "cd ./terminal.release && make -j 16"
-                sh "cd ./Deploy && ./deploy.sh"
+          //      sh "cd ./terminal.release && make -j 16"
+          //      sh "cd ./Deploy && ./deploy.sh"
             }
         }
         
