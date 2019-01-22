@@ -2,34 +2,6 @@ pipeline {
     agent any
 
     stages {
- /*       stage('Checkout') {
-            steps {
-                deleteDir()
-
-                dir("terminal") {
-                    git branch: "${BRANCH}",
-                        credentialsId: 'terminal_build',
-                        url: 'git@github.com:BlockSettle/terminal.git'
-                    
-/*                dir("common") {
-                    git branch: "bs_dev",
-                        credentialsId: 'terminal_build',
-                        url: 'git@github.com:BlockSettle/common.git'
-                }
-                dir("AuthCommon") {
-                    git branch: "master",
-                        credentialsId: 'terminal_build',
-                        url: 'git@github.com:scomil/AuthCommon.git'
-                }
-                dir("Celer") {
-                    git branch: "master",
-                        credentialsId: 'terminal_build',
-                        url: 'git@github.com:BlockSettle/Celer.git'
-                }
-                }
-            }
-        }*/
-
         stage('Build app') {
             agent {
                 docker {
