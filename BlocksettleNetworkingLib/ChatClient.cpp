@@ -186,8 +186,9 @@ void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &respon
       return;
    }
    // Save received public key of peer.
-   pubKeys_[QString::fromStdString(response.getSendingNodeId())] = 
-      response.getSendingNodePublicKey();
+   const auto peerId = QString::fromStdString(response.getSendingNodeId());
+   pubKeys_[peerId] = response.getSendingNodePublicKey();
+   chatDb_->addKey(peerId, response.getSendingNodePublicKey());
 
    // Run over enqueued messages if any, and try to send them all now.
    std::queue<QString>& messages = enqueued_messages_[QString::fromStdString(
@@ -200,8 +201,6 @@ void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &respon
 
 void ChatClient::OnDataReceived(const std::string& data)
 {
-   logger_->debug("[ChatClient::OnDataReceived] {}", data);
-
    auto response = Chat::Response::fromJSON(data);
    if (!response) {
       logger_->error("[ChatClient::OnDataReceived] failed to parse message:\n{}", data);
