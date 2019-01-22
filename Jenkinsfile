@@ -11,7 +11,7 @@ pipeline {
                         credentialsId: 'terminal_build',
                         url: 'git@github.com:BlockSettle/terminal.git'
                     
-                dir("common") {
+/*                dir("common") {
                     git branch: "bs_dev",
                         credentialsId: 'terminal_build',
                         url: 'git@github.com:BlockSettle/common.git'
@@ -25,7 +25,7 @@ pipeline {
                     git branch: "master",
                         credentialsId: 'terminal_build',
                         url: 'git@github.com:BlockSettle/Celer.git'
-                }
+                }*/
                 }
             }
         }
