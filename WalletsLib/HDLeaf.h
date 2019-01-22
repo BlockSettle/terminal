@@ -114,8 +114,7 @@ namespace bs {
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
          bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
-                                    , QObject *obj, const bool& startup = false
-                                    , uint64_t val = UINT64_MAX) override;
+            , QObject *obj, uint64_t val = UINT64_MAX) override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -281,11 +280,9 @@ namespace bs {
          void firstInit(bool force) override;
 
          bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
-                                    , QObject *, const bool& startup = false
-                                    , uint64_t val = UINT64_MAX) override;
+            , QObject *, uint64_t val = UINT64_MAX) override;
          bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
-                                 , QObject *
-                                 , const bool& startup = false) override;
+            , QObject *) override;
          bool isBalanceAvailable() const override;
          BTCNumericTypes::balance_type GetSpendableBalance() const override;
          BTCNumericTypes::balance_type GetUnconfirmedBalance() const override;
@@ -306,13 +303,12 @@ namespace bs {
          void onStateChanged(ArmoryConnection::State);
 
       private:
-         void validationProc(const bool& initValidation);
+         void validationProc();
          void findInvalidUTXOs(const std::vector<UTXO> &
-                               , std::function<void (const std::vector<UTXO> &)>);
-         void refreshInvalidUTXOs(const bool& initValidation
-                                  , const bool& ZConly = false);
+            , std::function<void (const std::vector<UTXO> &)>);
+         void refreshInvalidUTXOs(const bool& ZConly = false);
          BTCNumericTypes::balance_type correctBalance(BTCNumericTypes::balance_type
-                                           , bool applyCorrection = true) const;
+            , bool applyCorrection = true) const;
          std::vector<UTXO> filterUTXOs(const std::vector<UTXO> &) const;
 
          std::shared_ptr<TxAddressChecker>   checker_;
