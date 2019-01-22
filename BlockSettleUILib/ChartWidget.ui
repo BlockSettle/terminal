@@ -273,7 +273,7 @@
   <customwidget>
    <class>CustomChartView</class>
    <extends>QGraphicsView</extends>
-   <header>customchartview.h</header>
+   <header>CustomChartView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
