@@ -203,6 +203,10 @@ void ChatClient::OnDataReceived(const std::string& data)
    logger_->debug("[ChatClient::OnDataReceived] {}", data);
 
    auto response = Chat::Response::fromJSON(data);
+   if (!response) {
+      logger_->error("[ChatClient::OnDataReceived] failed to parse message:\n{}", data);
+      return;
+   }
    response->handle(*this);
 }
 

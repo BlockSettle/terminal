@@ -204,11 +204,17 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       case ResponseType::ResponseLogin:
          return LoginResponse::fromJSON(jsonData);
 
+      case ResponseType::ResponseAskForPublicKey:
+         return AskForPublicKeyResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseSendOwnPublicKey:
+         return SendOwnPublicKeyResponse::fromJSON(jsonData);
+
       default:
          break;
    }
 
-   return std::shared_ptr<Response>();
+   return {};
 }
 
 
