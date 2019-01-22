@@ -385,9 +385,10 @@ std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
    QString receiverId = data[ReceiverIdKey].toString();
    QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
    QString messageData = data[MessageKey].toString();
-   QString id = QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr());
+   QString id = QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr());   //temporary solution
+   const int state = data[StatusKey].toInt();
 
-   return std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData);
+   return std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
 }
 
 void MessageData::setFlag(const State state)
