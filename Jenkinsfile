@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
+ /*       stage('Checkout') {
             steps {
                 deleteDir()
 
@@ -25,10 +25,10 @@ pipeline {
                     git branch: "master",
                         credentialsId: 'terminal_build',
                         url: 'git@github.com:BlockSettle/Celer.git'
-                }*/
+                }
                 }
             }
-        }
+        }*/
 
         stage('Build app') {
             agent {
