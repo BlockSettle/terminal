@@ -81,6 +81,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    }
 
    connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
+   connect(this, &BSTerminalMainWindow::readyToLogin, this, &BSTerminalMainWindow::onReadyToLogin);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });
    logMgr_->add(applicationSettings_->GetLogsConfig());
@@ -146,6 +147,11 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    ui->widgetTransactions->setAppSettings(applicationSettings_);
 
    UpdateMainWindowAppearence();
+}
+
+void BSTerminalMainWindow::onMDConnectionDetailsRequired()
+{
+   GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
 }
 
 void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
@@ -258,24 +264,13 @@ void BSTerminalMainWindow::OnNetworkSettingsLoaded()
 {
    mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
-
-   updateLoginActionState();
-}
-
-void BSTerminalMainWindow::OnMDConfigured()
-{
-   if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
-      mdProvider_->SubscribeToMD();
-   }
 }
 
 void BSTerminalMainWindow::postSplashscreenActions()
 {
-   action_login_->setEnabled(false);
-   ui->pushButtonUser->setEnabled(false);
-   ui->pushButtonUser->setToolTip(tr("Waiting for connection details"));
-
-   GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
+   if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
+      mdProvider_->SubscribeToMD();
+   }
 }
 
 BSTerminalMainWindow::~BSTerminalMainWindow()
@@ -493,7 +488,7 @@ void BSTerminalMainWindow::InitConnections()
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
-   connect(mdProvider_.get(), &MarketDataProvider::CanSubscribe, this, &BSTerminalMainWindow::OnMDConfigured);
+   connect(mdProvider_.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &BSTerminalMainWindow::onMDConnectionDetailsRequired);
 
    InitChatView();
 }
@@ -671,10 +666,6 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 
 void BSTerminalMainWindow::updateLoginActionState()
 {
-   if (!networkSettings_.isSet) {
-      return;
-   }
-
    if (!isUserLoggedIn()) {
       if (!isArmoryConnected()) {
          action_login_->setEnabled(false);
@@ -973,6 +964,17 @@ void BSTerminalMainWindow::onAutheIDFailed()
 }
 
 void BSTerminalMainWindow::onLogin()
+{
+   // disable login and set tooltip
+
+   GetNetworkSettingsFromPuB([this]()
+      {
+         OnNetworkSettingsLoaded();
+         emit readyToLogin();
+      });
+}
+
+void BSTerminalMainWindow::onReadyToLogin()
 {
    LoginWindow loginDialog(applicationSettings_, this);
 

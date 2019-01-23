@@ -84,7 +84,13 @@ private:
    bool isMDLicenseAccepted() const;
    void saveUserAcceptedMDLicense();
 
+signals:
+   void readyToLogin();
+
 private slots:
+   // display login dialog once network settings loaded
+   void onReadyToLogin();
+
    void InitTransactionsView();
    void ArmoryIsOffline();
    void SignerReady();
@@ -194,7 +200,7 @@ private slots:
    void onAuthMgrConnComplete();
    void onCCInfoMissing();
 
-   void OnMDConfigured();
+   void onMDConnectionDetailsRequired();
 
 protected:
    void closeEvent(QCloseEvent* event) override;

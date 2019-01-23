@@ -12,27 +12,33 @@ void MarketDataProvider::SetConnectionSettings(const std::string &host, const st
    port_ = port;
 
    if (!host_.empty() && !port_.empty()) {
-      emit CanSubscribe();
+      if (waitingForConnectionDetails_) {
+         waitingForConnectionDetails_ = false;
+         StartMDConnection();
+      } else {
+         logger_->debug("[MarketDataProvider::SetConnectionSettings] connection settings loaded {} : {}"
+            , host_, port_);
+      }
    } else {
       logger_->error("[MarketDataProvider::SetConnectionSettings] settings incompleted: \'{}:{}\'"
          , host, port);
    }
 }
 
-bool MarketDataProvider::SubscribeToMD()
+void MarketDataProvider::SubscribeToMD()
 {
-   if (host_.empty() || port_.empty()) {
-      logger_->error("[MarketDataProvider::SubscribeToMD] missing networking settings");
-      return false;
-   }
-
    emit UserWantToConnectToMD();
-
-   return true;
 }
 
 void MarketDataProvider::MDLicenseAccepted()
 {
+   if (host_.empty() || port_.empty()) {
+      logger_->debug("[MarketDataProvider::MDLicenseAccepted] need to load connection settings before connect");
+      waitingForConnectionDetails_ = true;
+      WaitingForConnectionDetails();
+      return;
+   }
+
    logger_->debug("[MarketDataProvider::MDLicenseAccepted] user accepted MD agreement. Start connection to {}:{}"
       , host_, port_);
 

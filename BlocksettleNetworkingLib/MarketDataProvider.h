@@ -28,11 +28,9 @@ public:
    MarketDataProvider(MarketDataProvider&&) = delete;
    MarketDataProvider& operator = (MarketDataProvider&&) = delete;
 
-   // MD provider now contain network settings inside
-   // once connection details updated - CanSubscribe signal emited
    void SetConnectionSettings(const std::string &host, const std::string &port);
 
-   bool SubscribeToMD();
+   void SubscribeToMD();
    virtual bool DisconnectFromMDSource() { return true; }
 
    virtual bool IsConnectionActive() const { return false; }
@@ -44,9 +42,9 @@ public slots:
    void MDLicenseAccepted();
 
 signals:
-   void CanSubscribe();
-
    void UserWantToConnectToMD();
+
+   void WaitingForConnectionDetails();
 
    void StartConnecting();
    void Connected();
@@ -61,6 +59,8 @@ signals:
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_ = nullptr;
+
+   bool waitingForConnectionDetails_ = false;
 
    std::string host_;
    std::string port_;
