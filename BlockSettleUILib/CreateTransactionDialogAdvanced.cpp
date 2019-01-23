@@ -280,17 +280,20 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       //   relay fee (IRL) * the new TX's virtual size. The fee can be adjusted
       //   in Core by the incrementalrelayfee config option. By default, the fee
       //   is 1000 sat/KB (1 sat/B), which is what we will assume is being used.
-      //   (This may need to be a terminal config option later.)
+      //   (This may need to be a terminal config option later.) So, if the virt
+      //   size is 146, and the original fee is 1 sat/b (146 satoshis), the next
+      //   fee must be at least 2 sat/b (292 satoshis), then 3 sat/b, etc. This
+      //   assumes we don't change the TX in any way. Bumping to a virt size of
+      //   300 would require the 1st RBF to be 446 satoshis, then 746, 1046, etc.
       //
       // It's impossible to calculate the minimum required fee, as the user can
       // do many different things. We'll just start by setting the minimum fee
       // to the amount required by the RBF/IRL policy, and keep the minimum
       // fee/byte where it is.
       originalFee_ = totalVal;
-      const auto &txVirtSize = std::ceil(tx.getTxWeight() / 4);
-      const float feePerByte = (float)totalVal / txVirtSize;
+      const float feePerByte = (float)totalVal / (float)tx.getTxWeight();
       originalFeePerByte_ = feePerByte;
-      const auto &newMinFee = originalFee_ + txVirtSize;
+      const auto &newMinFee = originalFee_ + tx.getTxWeight();
       SetMinimumFee(newMinFee, originalFeePerByte_);
       populateFeeList();
 
