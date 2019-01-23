@@ -37,7 +37,6 @@ private:
 	ChatWidget::State type_;
 };
 
-
 class ChatWidgetStateLoggedOut : public ChatWidgetState {
 public:
 	ChatWidgetStateLoggedOut(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedOut) {};
