@@ -26,8 +26,14 @@ public:
     TradesDB(TradesDB&&) = delete;
     TradesDB& operator=(TradesDB&&) = delete;
 
+    bool add(const QString &product
+             , const QDateTime &time
+             , const qreal &price
+             , const qreal &volume);
+
 private:
     bool createMissingTables();
+    bool populateEmptyData();
 
 private:
     std::shared_ptr<spdlog::logger>     logger_;

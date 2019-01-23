@@ -2,6 +2,9 @@
 
 #include <set>
 
+#include <QVariant>
+#include <QDateTime>
+#include <QRandomGenerator>
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlQuery>
 
@@ -58,6 +61,8 @@ TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger,
     if (!createMissingTables()) {
        throw std::runtime_error("failed to create tables in " + db_.connectionName().toStdString() + " DB");
     }
+
+    populateEmptyData();
 }
 
 bool TradesDB::createMissingTables()
@@ -78,4 +83,83 @@ bool TradesDB::createMissingTables()
        }
     }
     return result;
+}
+
+bool TradesDB::add(const QString& product
+                   , const QDateTime& time
+                   , const qreal& price
+                   , const qreal& volume)
+{
+    db_.transaction();
+    QSqlQuery query(db_);
+    query.prepare(QStringLiteral("SELECT rowid FROM products WHERE name = :name;"));
+    query.bindValue(QStringLiteral(":name"), product);
+    if (!query.exec()) {
+        logger_->warn("[TradesDB] failed to get product {}", product.toStdString());
+        db_.rollback();
+        return false;
+    }
+    int productid = -1;
+    if (query.first()) {
+        productid = query.value(QStringLiteral("rowid")).toInt();
+    } else {
+        query.prepare(QStringLiteral("INSERT INTO products(name) VALUES(:name);"));
+        query.bindValue(QStringLiteral(":name"), product);
+        if (!query.exec()) {
+            logger_->warn("[TradesDB] failed to add product {} due {}", product.toStdString(), query.lastError().text().toStdString());
+            db_.rollback();
+            return false;
+        }
+        if (!query.lastInsertId().isValid()) {
+            logger_->warn("[TradesDB] failed to add product {} due {}", product.toStdString(), query.lastError().text().toStdString());
+            db_.rollback();
+            return false;
+        }
+        productid = query.lastInsertId().toInt();
+    }
+    query.prepare(QStringLiteral(
+                      "INSERT INTO trades(productid, timestamp, price, volume) "
+                      "VALUES(:productid, :timestamp, :price, :volume);"));
+    query.bindValue(QStringLiteral(":productid"), productid);
+    query.bindValue(QStringLiteral(":timestamp"), static_cast<qreal>(time.toMSecsSinceEpoch()) / 1000);
+    query.bindValue(QStringLiteral(":price"), price);
+    query.bindValue(QStringLiteral(":volume"), volume);
+    if (!query.exec()) {
+        logger_->warn("[TradesDB] failed to add trade {}", product.toStdString());
+        db_.rollback();
+        return false;
+    }
+    db_.commit();
+    return true;
+}
+
+bool TradesDB::populateEmptyData()
+{
+    QSqlQuery query(db_);
+    if (!query.exec(QStringLiteral("SELECT * FROM trades;"))) {
+        logger_->warn("[TradesDB] failed to count trades");
+        return false;
+    }
+    if (query.first()) {
+        return false;
+    }
+    QStringList products = {
+        QStringLiteral("EUR/JPY")
+        , QStringLiteral("GBP/JPY")
+        , QStringLiteral("EUR/GBP")
+    };
+    QDateTime time = QDateTime::currentDateTime().addYears(-1);
+    QDateTime now = QDateTime::currentDateTime();
+    int i = 0;
+    while (time < now) {
+        const QString product = products.at(i++);
+        if (i >= products.count()) {
+            i = 0;
+        }
+        qreal price = QRandomGenerator::global()->generateDouble() * 1000;
+        qreal volume = QRandomGenerator::global()->generateDouble() * 1000;
+        time = time.addSecs(3600);
+        add(product, time, price, volume);
+    }
+    return true;
 }
