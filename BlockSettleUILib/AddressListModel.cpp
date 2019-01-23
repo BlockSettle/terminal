@@ -1,4 +1,5 @@
 #include "AddressListModel.h"
+#include <QColor>
 #include "WalletsManager.h"
 #include "UiUtils.h"
 
@@ -328,7 +329,7 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
       return {};
    }
 
-   const auto& row = addressRows_[index.row()];
+   const auto row = addressRows_[index.row()];
 
    switch (role) {
       case Qt::DisplayRole:
@@ -359,6 +360,13 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
          else {
             return dataForRow(row, index.column());
          }
+         break;
+
+      case Qt::TextColorRole:
+         if (!row.isExternal) {
+            return QColor(Qt::gray);
+         }
+         break;
 
       default:
          break;
