@@ -55,6 +55,7 @@ public:
       chatPrivKey,
       chatPubKey,
       chatDbFile,
+      tradesDbFile,
       celerUsername,
       signerHost,
       signerPort,

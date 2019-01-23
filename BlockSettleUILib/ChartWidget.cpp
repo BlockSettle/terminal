@@ -5,6 +5,7 @@
 #include "ArmoryConnection.h"
 #include <qrandom.h>
 #include "CustomCandlestickSet.h"
+#include "TradesClient.h"
 
 ChartWidget::ChartWidget(QWidget *parent)
    : QWidget(parent)
@@ -61,9 +62,12 @@ ChartWidget::ChartWidget(QWidget *parent)
    dataItemText_ = new QGraphicsTextItem(ui_->viewPrice->chart());
 }
 
-void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<MarketDataProvider> &mdProvider
-   , const std::shared_ptr<ArmoryConnection> &) {
+void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
+                       , const std::shared_ptr<MarketDataProvider> &mdProvider
+                       , const std::shared_ptr<ArmoryConnection> &
+                       , const std::shared_ptr<spdlog::logger>& logger) {
    mdProvider_ = mdProvider;
+   client_ = std::make_shared<TradesClient>(appSettings, logger);
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::onMDUpdated);
 

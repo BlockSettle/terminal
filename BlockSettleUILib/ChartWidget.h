@@ -8,11 +8,17 @@
 namespace Ui {
 class ChartWidget;
 }
+QT_BEGIN_NAMESPACE
+namespace spdlog {
+   class logger;
+}
+QT_END_NAMESPACE
 
 using namespace QtCharts;
 class MarketDataProvider;
 class ApplicationSettings;
 class ArmoryConnection;
+class TradesClient;
 
 class ChartWidget : public QWidget
 {
@@ -21,8 +27,10 @@ class ChartWidget : public QWidget
 public:
     explicit ChartWidget(QWidget *parent = nullptr);
     ~ChartWidget();
-    void init(const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<MarketDataProvider> &
-       , const std::shared_ptr<ArmoryConnection> &);
+    void init(const std::shared_ptr<ApplicationSettings> &
+              , const std::shared_ptr<MarketDataProvider> &
+              , const std::shared_ptr<ArmoryConnection> &
+              , const std::shared_ptr<spdlog::logger>&);
 
 protected slots:
    void onDateRangeChanged(int id);
@@ -45,6 +53,7 @@ private:
     QCandlestickSeries *priceSeries_;
     QCandlestickSeries *volumeSeries_;
     QGraphicsTextItem *dataItemText_;
+    std::shared_ptr<TradesClient> client_;
 };
 
 #endif // CHARTWIDGET_H
