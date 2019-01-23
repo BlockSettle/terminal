@@ -9,7 +9,7 @@
 
 Q_DECLARE_METATYPE(Tx);
 
-const BinaryData BinaryTXID::getRPCTXID()
+BinaryData BinaryTXID::getRPCTXID()
 {
    BinaryData retVal;
    if (txidIsRPC_ == true) {
@@ -22,7 +22,7 @@ const BinaryData BinaryTXID::getRPCTXID()
    return retVal;
 }
 
-const BinaryData BinaryTXID::getInternalTXID()
+BinaryData BinaryTXID::getInternalTXID()
 {
    BinaryData retVal;
    if (txidIsRPC_ == false) {
@@ -102,26 +102,20 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
       clear();
    }
    // get the transaction data from armory
-   const auto &cbTX = [this, &rpcTXID, firstPass](Tx tx) {
+   std::string txidStr = rpcTXID.getRPCTXID().toHexStr();
+   const auto &cbTX = [this, rpcTXID, txidStr](Tx tx) {
       if (tx.isInitialized()) {
          processTxData(tx);
       }
       else {
-         logger_->error("[TransactionDetailsWidget::populateTransactionWidget] TX not " \
-                        "initialized for hash {}.",
-                        rpcTXID.getRPCTXID().toHexStr());
-         // If failure, try swapping the endian. Treat the result as RPC.
-         if (firstPass == true) {
-            BinaryTXID intTXID(rpcTXID.getInternalTXID(), true);
-            populateTransactionWidget(intTXID, false);
-         }
+         logger_->error("[TransactionDetailsWidget::populateTransactionWidget] "
+            "- TXID {} is not initialized.", txidStr);
       }
    };
 
    // The TXID passed to Armory *must* be in internal order!
    if (!armory_->getTxByHash(rpcTXID.getInternalTXID(), cbTX)) {
-      logger_->error("[TransactionDetailsWidget::populateTransactionWidget] failed to " \
-         "get TX for hash {}.", rpcTXID.getRPCTXID().toHexStr());
+      logger_->error("[{}] - Failed to get TXID {}.", __func__, txidStr);
    }
 }
 
