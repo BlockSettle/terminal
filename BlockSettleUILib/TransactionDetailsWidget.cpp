@@ -242,11 +242,9 @@ void TransactionDetailsWidget::onNewBlock(unsigned int)
    }
 }
 
-// This function populates the inputs tree with top level and child items.
-// The exact same code applies to ui_->treeOutput.
+// Load the input and output windows.
 void TransactionDetailsWidget::loadInputs()
 {
-   // for testing purposes i populate both trees with test data
    loadTreeIn(ui_->treeInput);
    loadTreeOut(ui_->treeOutput);
 }
@@ -266,20 +264,31 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       if (prevTx.isInitialized()) {
          prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
       }
+      auto txType = prevOut.getScriptType();
       const auto outAddr = bs::Address::fromTxOut(prevOut);
       double amtBTC = prevOut.getValue() / BTCNumericTypes::BalanceDivider;
+      QString typeStr;
+      QString addrStr;
+
+      // For now, don't display any data if the TxOut is non-std. Displaying a
+      // hex version of the script is one thing that could be done. This needs
+      // to be discussed before implementing. Non-std could mean many things.
+      if (txType == TXOUT_SCRIPT_NONSTANDARD) {
+         typeStr = QString::fromStdString("Non-Std");
+      }
+      else {
+         typeStr = QString::fromStdString("Input");
+         addrStr = outAddr.display();
+      }
 
       // create a top level item using type, address, amount, wallet values
-      QTreeWidgetItem *item = createItem(tree,
-                                         tr("Input"),
-                                         outAddr.display(),
-                                         QString::number(amtBTC,
-                                                         'f',
-                                                         BTCNumericTypes::default_precision),
-                                         QString());
+      QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
+         , QString::number(amtBTC, 'f', BTCNumericTypes::default_precision)
+         , QString());
 
       // Example: Add several child items to this top level item to crate a new
-      // branch in the tree.
+      // branch in the tree. Could be useful for things like expanding a non-std
+      // input, or expanding any input, really.
 /*      item->addChild(createItem(item,
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
@@ -300,26 +309,31 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
 
    // here's the code to add data to the Input tree.
    for (size_t i = 0; i < curTx_.getNumTxOut(); i++) {
+      auto txType = curTx_.getTxOutCopy(i).getScriptType();
       const auto outAddr = bs::Address::fromTxOut(curTx_.getTxOutCopy(i));
       double amtBTC = curTx_.getTxOutCopy(i).getValue() / BTCNumericTypes::BalanceDivider;
+      QString typeStr;
+      QString addrStr;
+
+      // For now, don't display any data if the TxOut is OP_RETURN or non-std.
+      // Displaying a hex version of the script is one thing that could be done.
+      // This needs to be discussed before implementing. OP_RETURN isn't too bad
+      // (80 bytes max) but non-std could mean just about anything.
+      if (txType == TXOUT_SCRIPT_OPRETURN) {
+         typeStr = QString::fromStdString("OP_RETURN");
+      }
+      else if (txType == TXOUT_SCRIPT_NONSTANDARD) {
+         typeStr = QString::fromStdString("Non-Std");
+      }
+      else {
+         typeStr = QString::fromStdString("Output");
+         addrStr = outAddr.display();
+      }
 
       // create a top level item using type, address, amount, wallet values
-      QTreeWidgetItem *item = createItem(tree,
-                                         tr("Output"),
-                                         outAddr.display(),
-                                         QString::number(amtBTC,
-                                                         'f',
-                                                         BTCNumericTypes::default_precision),
-                                         QString());
-
-      // Example: Add several child items to this top level item to crate a new
-      // branch in the tree.
-/*      item->addChild(createItem(item,
-                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
-                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
-                                tr("-0.00850000"),
-                                tr("Settlement")));
-      item->setExpanded(true);*/
+      QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
+         , QString::number(amtBTC, 'f', BTCNumericTypes::default_precision)
+         , QString());
 
       // add the item to the tree
       tree->addTopLevelItem(item);
@@ -356,12 +370,17 @@ QTreeWidgetItem * TransactionDetailsWidget::createItem(QTreeWidgetItem *parentIt
    return item;
 }
 
+// A function that sends a signal to the explorer widget to open the address
+// details widget for a clicked address. Doesn't apply to OP_RETURN or non-std
+// addresses.
 void TransactionDetailsWidget::onAddressClicked(QTreeWidgetItem *item, int column)
 {
-   // user has clicked the address column of the item so
-   // send a signal to ExplorerWidget to open AddressDetailsWidget
    if (column == colAddressId) {
-      emit(addressClicked(item->text(colAddressId)));
+      auto typeText = item->text(colType);
+      if (typeText == QString::fromStdString("Input")
+         || typeText == QString::fromStdString("Output")) {
+         emit(addressClicked(item->text(colAddressId)));
+      }
    }
 }
 
