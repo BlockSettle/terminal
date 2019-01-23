@@ -255,17 +255,16 @@ bool ChatWidget::eventFilter(QObject * obj, QEvent * event)
 void ChatWidget::onSendButtonClicked()
 {
    return stateCurrent_->onSendButtonClicked(); //test
-
-   //QString messageText = ui_->text->text();
-   QString messageText = ui_->input_textEdit->toPlainText();
+   /*
+   QString messageText = ui_->text->text();
 
    if (!messageText.isEmpty() && !currentChat_.isEmpty()) {
       auto msg = client_->SendOwnMessage(messageText, currentChat_);
-      //ui_->text->clear();
-	  ui_->input_textEdit->clear();
+      ui_->text->clear();
 
       messagesViewModel_->onSingleMessageUpdate(msg);
    }
+   */
 }
 
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
