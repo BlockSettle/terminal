@@ -134,7 +134,7 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>25</pointsize>
+              <pointsize>8</pointsize>
              </font>
             </property>
             <property name="text">
@@ -224,7 +224,7 @@
               </property>
               <property name="font">
                <font>
-                <pointsize>25</pointsize>
+                <pointsize>8</pointsize>
                </font>
               </property>
               <property name="text">
@@ -284,18 +284,33 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QLineEdit" name="text">
-               <property name="autoFillBackground">
-                <bool>false</bool>
+              <widget class="BSChatInput" name="input_textEdit">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
                </property>
-               <property name="frame">
-                <bool>false</bool>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>60</height>
+                </size>
+               </property>
+               <property name="horizontalScrollBarPolicy">
+                <enum>Qt::ScrollBarAlwaysOff</enum>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QAbstractScrollArea::AdjustToContents</enum>
                </property>
                <property name="placeholderText">
                 <string>TYPE MESSAGE AND SEND</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -358,7 +373,7 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>25</pointsize>
+              <pointsize>8</pointsize>
              </font>
             </property>
             <property name="text">
@@ -436,6 +451,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>BSChatInput</class>
+   <extends>QTextEdit</extends>
+   <header>BSChatInput.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -85,11 +85,13 @@ public:
 		chat_->changeState(ChatWidget::LoggedOut);
 	};
 	virtual void onSendButtonClicked()  override {
-		QString messageText = chat_->ui_->text->text();
+		//QString messageText = chat_->ui_->text->text();
+		QString messageText = chat_->ui_->input_textEdit->toPlainText();
 
 		if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
 			auto msg = chat_->client_->SendOwnMessage(messageText, chat_->currentChat_);
-			chat_->ui_->text->clear();
+			//chat_->ui_->text->clear();
+			chat_->ui_->input_textEdit->clear();
 
 			chat_->messagesViewModel_->onSingleMessageUpdate(msg);
 		}
@@ -97,7 +99,8 @@ public:
 	virtual void onUserClicked(const QModelIndex& index)  override {
 		chat_->currentChat_ = chat_->usersViewModel_->resolveUser(index);
 
-		chat_->ui_->text->setEnabled(!chat_->currentChat_.isEmpty());
+		//chat_->ui_->text->setEnabled(!chat_->currentChat_.isEmpty());
+		chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
 		chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
 		chat_->messagesViewModel_->onSwitchToChat(chat_->currentChat_);
 		chat_->client_->retrieveUserMessages(chat_->currentChat_);
@@ -160,8 +163,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
 
    connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
-   connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
+   //connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
+   ui_->input_textEdit->installEventFilter(this);
+   //connect(ui_->input_textEdit, &QTextEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
 
    connect(client_.get(), &ChatClient::UsersReplace
            , usersViewModel_.get(), &ChatUsersViewModel::onUsersReplace);
@@ -185,7 +190,8 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
 
    currentChat_ = usersViewModel_->resolveUser(index);
 
-   ui_->text->setEnabled(!currentChat_.isEmpty());
+   //ui_->text->setEnabled(!currentChat_.isEmpty());
+   ui_->input_textEdit->setEnabled(!currentChat_.isEmpty());
    ui_->labelActiveChat->setText(tr("CHAT #") + currentChat_);
    messagesViewModel_->onSwitchToChat(currentChat_);
    client_->retrieveUserMessages(currentChat_);
@@ -223,15 +229,40 @@ void ChatWidget::changeState(ChatWidget::State state)
 	}
 }
 
+#include <QKeyEvent>
+
+bool ChatWidget::eventFilter(QObject * obj, QEvent * event)
+{
+	qDebug("Event %d", event->type());
+	if (event->type() == QEvent::KeyPress) {
+		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event); 
+		//qDebug("Ate key press %d", keyEvent->key());
+		switch (keyEvent->key()) {
+		case Qt::Key_Enter:
+			return true;
+		default:
+			return QObject::eventFilter(obj, event);
+		}
+		return QObject::eventFilter(obj, event);
+	}
+	else {
+		// standard event processing
+		return QObject::eventFilter(obj, event);
+	}
+	return false;
+}
+
 void ChatWidget::onSendButtonClicked()
 {
    return stateCurrent_->onSendButtonClicked(); //test
 
-   QString messageText = ui_->text->text();
+   //QString messageText = ui_->text->text();
+   QString messageText = ui_->input_textEdit->toPlainText();
 
    if (!messageText.isEmpty() && !currentChat_.isEmpty()) {
       auto msg = client_->SendOwnMessage(messageText, currentChat_);
-      ui_->text->clear();
+      //ui_->text->clear();
+	  ui_->input_textEdit->clear();
 
       messagesViewModel_->onSingleMessageUpdate(msg);
    }

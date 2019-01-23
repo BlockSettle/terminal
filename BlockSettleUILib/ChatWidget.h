@@ -71,6 +71,8 @@ private:
 private:
 	void changeState(ChatWidget::State state);
 
+	bool eventFilter(QObject * obj, QEvent * event);
+
 };
 
 #endif // __CHAT_WIDGET_H__
