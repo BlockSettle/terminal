@@ -103,7 +103,7 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
    }
    // get the transaction data from armory
    std::string txidStr = rpcTXID.getRPCTXID().toHexStr();
-   const auto &cbTX = [this, rpcTXID, txidStr](Tx tx) {
+   const auto &cbTX = [this, txidStr](Tx tx) {
       if (tx.isInitialized()) {
          processTxData(tx);
       }
@@ -217,12 +217,8 @@ void TransactionDetailsWidget::setTxGUIValues()
    ui_->tranConfirmations->setText(QString::fromStdString("# confs here")); // FIX ME!!!
    ui_->tranNumInputs->setText(QString::number(curTx_.getNumTxIn()));
    ui_->tranNumOutputs->setText(QString::number(curTx_.getNumTxOut()));
-   ui_->tranOutput->setText(QString::number(curTx_.getSumOfOutputs() / BTCNumericTypes::BalanceDivider,
-                                            'f',
-                                            BTCNumericTypes::default_precision));
-   ui_->tranFees->setText(QString::number(fees / BTCNumericTypes::BalanceDivider,
-                                          'f',
-                                          BTCNumericTypes::default_precision));
+   ui_->tranOutput->setText(UiUtils::displayAmount(curTx_.getSumOfOutputs()));
+   ui_->tranFees->setText(UiUtils::displayAmount(fees));
    ui_->tranFeePerByte->setText(QString::number(nearbyint(feePerByte)));
    ui_->tranSize->setText(QString::number(curTx_.getTxWeight()));
 
@@ -260,7 +256,7 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       }
       auto txType = prevOut.getScriptType();
       const auto outAddr = bs::Address::fromTxOut(prevOut);
-      double amtBTC = prevOut.getValue() / BTCNumericTypes::BalanceDivider;
+      double amtBTC = UiUtils::amountToBtc(prevOut.getValue());
       QString typeStr;
       QString addrStr;
 
@@ -277,8 +273,7 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
 
       // create a top level item using type, address, amount, wallet values
       QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
-         , QString::number(amtBTC, 'f', BTCNumericTypes::default_precision)
-         , QString());
+         , UiUtils::displayAmount(amtBTC), QString());
 
       // Example: Add several child items to this top level item to crate a new
       // branch in the tree. Could be useful for things like expanding a non-std
@@ -305,7 +300,7 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
    for (size_t i = 0; i < curTx_.getNumTxOut(); i++) {
       auto txType = curTx_.getTxOutCopy(i).getScriptType();
       const auto outAddr = bs::Address::fromTxOut(curTx_.getTxOutCopy(i));
-      double amtBTC = curTx_.getTxOutCopy(i).getValue() / BTCNumericTypes::BalanceDivider;
+      double amtBTC = UiUtils::amountToBtc(curTx_.getTxOutCopy(i).getValue());
       QString typeStr;
       QString addrStr;
 
@@ -326,8 +321,7 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
 
       // create a top level item using type, address, amount, wallet values
       QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
-         , QString::number(amtBTC, 'f', BTCNumericTypes::default_precision)
-         , QString());
+         , UiUtils::displayAmount(amtBTC), QString());
 
       // add the item to the tree
       tree->addTopLevelItem(item);
