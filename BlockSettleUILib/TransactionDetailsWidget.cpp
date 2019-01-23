@@ -205,15 +205,16 @@ void TransactionDetailsWidget::setTxGUIValues()
       }
    }
    uint64_t fees = totIn - curTx_.getSumOfOutputs();
-   double feePerByte = (double)fees / (double)curTx_.getSize();
+   float feePerByte = (float)fees / (float)curTx_.getTxWeight();
 
    // NB: Certain data (timestamp, height, and # of confs) can't be obtained
    // from the Tx object. For now, we're leaving placeholders until a solution
-   // can be found. In theory, the timestamp can be obtained from the timestamp.
+   // can be found. In theory, the timestamp can be obtained from the header.
    // The header data retrieved right now seems to be inaccurate, so we're not
    // using that right now.
 
-   // Populate the GUI fields.
+   // Populate the GUI fields. (NOTE: Armory's getTxWeight() call needs to be
+   // relabeled getVirtSize().)
    // Output TXID in RPC byte order by flipping TXID bytes rcv'd by Armory (internal
    // order).
 //   ui_->tranDate->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(curTxTimestamp)));
@@ -229,7 +230,7 @@ void TransactionDetailsWidget::setTxGUIValues()
                                           'f',
                                           BTCNumericTypes::default_precision));
    ui_->tranFeePerByte->setText(QString::number(nearbyint(feePerByte)));
-   ui_->tranSize->setText(QString::number(curTx_.getSize()));
+   ui_->tranSize->setText(QString::number(curTx_.getTxWeight()));
 
    loadInputs();
 }
