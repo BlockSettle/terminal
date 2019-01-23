@@ -26,6 +26,10 @@ class ChatWidget : public QWidget
    Q_OBJECT
 
 public:
+	enum State {
+		LoggedIn,
+		LoggedOut
+	};
    //friend class ChatWidgetState;
    friend class ChatWidgetStateLoggedOut;
    friend class ChatWidgetStateLoggedIn;
@@ -62,9 +66,10 @@ private:
    std::string serverPublicKey_;
    QString  currentChat_;
 private:
-	std::shared_ptr<ChatWidgetState> stateLoggedOut_;
-	std::shared_ptr<ChatWidgetState> stateLoggedIn_;
 	std::shared_ptr<ChatWidgetState> stateCurrent_;
+
+private:
+	void changeState(ChatWidget::State state);
 
 };
 
