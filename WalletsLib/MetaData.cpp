@@ -881,8 +881,10 @@ void bs::Wallet::UpdateBalances(const std::function<void(std::vector<uint64_t>)>
             QMutexLocker lock(&addrMapsMtx_);
             addrCount_ = count;
 
-            // It's time to process the UTXOs.
-            processNewUTXOs(bv);
+            // Armory's concept of spendable balances doesn't always align with
+            // ours. Adjust the balances, including accounting for internal and
+            // external address differences.
+            processNewBalances(bv);
          }
 
          if (cb) {
@@ -1369,7 +1371,7 @@ BinaryData bs::wallet::computeID(const BinaryData &input)
 //      A callback to call when everything's done. (function<void()>)
 // OUT: None
 // RET: None
-void bs::Wallet::processNewUTXOs(const std::vector<uint64_t> inBV
+void bs::Wallet::processNewBalances(const std::vector<uint64_t> inBV
    , const std::function<void()> &cbComplete)
 {
    if(logger_ != nullptr) {
@@ -1459,6 +1461,9 @@ void bs::Wallet::processNewUTXOs(const std::vector<uint64_t> inBV
       sDelta = sDelta / BTCNumericTypes::BalanceDivider;
 
       // Set the wallet balances, and emit the relevant signals.
+      auto prevTotalBalance = totalBalance_;
+      auto prevSpendableBalance = spendableBalance_;
+      auto prevUnconfirmedBalance = unconfirmedBalance_;
       totalBalance_ =
          static_cast<BTCNumericTypes::balance_type>(inBV[0]) / BTCNumericTypes::BalanceDivider;
       spendableBalance_ =
@@ -1468,7 +1473,11 @@ void bs::Wallet::processNewUTXOs(const std::vector<uint64_t> inBV
          (static_cast<BTCNumericTypes::balance_type>(inBV[2]) / BTCNumericTypes::BalanceDivider)
          - uDelta;
 
-      emit balanceChanged(GetWalletId(), inBV);
+      if ((prevTotalBalance != totalBalance_)
+         || (prevSpendableBalance != spendableBalance_)
+         || (prevUnconfirmedBalance != unconfirmedBalance_)) {
+         emit balanceChanged(GetWalletId(), inBV);
+      }
       emit balanceUpdated(GetWalletId(), inBV);
 
       if (cbComplete) {

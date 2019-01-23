@@ -353,7 +353,7 @@ namespace bs {
       bool isSegWitScript(const BinaryData &script);
       Signer getSigner(const wallet::TXSignRequest &, const SecureBinaryData &password,
                        bool keepDuplicatedRecipients = false);
-      void processNewUTXOs(const std::vector<uint64_t> inBV
+      void processNewBalances(const std::vector<uint64_t> inBV
          , const std::function<void()> &cbComplete = nullptr);
 
    protected:

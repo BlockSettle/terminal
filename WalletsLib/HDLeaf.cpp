@@ -1394,6 +1394,7 @@ void hd::CCLeaf::firstInit(bool force)
    }
    if (checker_ && !validationStarted_) {
       validationEnded_ = false;
+      validationProc();
    }
 }
 
