@@ -118,13 +118,13 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       const auto lastIndex = QString::number(path.get(-1));
       switch (path.get(-2)) {
       case 0:
-         index = tr("external/%1").arg(lastIndex);
+         index = tr("External/%1").arg(lastIndex);
          break;
       case 1:
-         index = tr("internal/%1").arg(lastIndex);
+         index = tr("Internal/%1").arg(lastIndex);
          break;
       default:
-         index = tr("???/%1").arg(lastIndex);
+         index = tr("Unknown/%1").arg(lastIndex);
       }
    }
    if (index.length() > 64) {
