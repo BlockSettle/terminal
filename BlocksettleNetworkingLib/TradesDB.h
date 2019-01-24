@@ -37,14 +37,21 @@ public:
     TradesDB(TradesDB&&) = delete;
     TradesDB& operator=(TradesDB&&) = delete;
 
-    DataPoint getDataPoint(const QString &product
-                           , const QDateTime &timeTill
-                           , qint64 durationSec);
+    DataPoint *getDataPoint(const QString &product
+                            , const QDateTime &timeTill
+                            , qint64 durationSec);
+    const std::vector<DataPoint *> getDataPoints(const QString &product
+                                                 , const QDateTime &sinceTime
+                                                 , const QDateTime &tillTime
+                                                 , qint64 stepDurationSecs
+                                                 );
 
     bool add(const QString &product
                   , const QDateTime &time
                   , const qreal &price
                   , const qreal &volume);
+
+    void init();
 
 private:
     bool createMissingTables();

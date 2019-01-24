@@ -5,12 +5,14 @@
 
 #include <QObject>
 
+#include "TradesDB.h"
+
 namespace spdlog {
    class logger;
 }
 
 class ApplicationSettings;
-class TradesDB;
+//class TradesDB;
 
 
 class TradesClient : public QObject
@@ -26,6 +28,14 @@ public:
     TradesClient& operator = (const TradesClient&) = delete;
     TradesClient(TradesClient&&) = delete;
     TradesClient& operator = (TradesClient&&) = delete;
+
+    void init();
+
+    const std::vector<TradesDB::DataPoint*> getRawPointDataArray(const QString &product
+                                                                , const QDateTime &sinceTime
+                                                                , const QDateTime &tillTime
+                                                                , qint64 stepDurationSecs
+                                                                );
 
 private:
     std::shared_ptr<ApplicationSettings>   appSettings_;

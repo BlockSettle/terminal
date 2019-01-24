@@ -68,6 +68,7 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
                        , const std::shared_ptr<spdlog::logger>& logger) {
    mdProvider_ = mdProvider;
    client_ = std::make_shared<TradesClient>(appSettings, logger);
+   client_->init();
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::onMDUpdated);
 
@@ -213,7 +214,15 @@ void ChartWidget::buildCandleChart() {
    volumeSeries_->clear();
    QDateTime dt;
    dt.setDate(QDate(2018, 10, 1));
-   addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100);
+   auto rawData = client_->getRawPointDataArray(QStringLiteral("EUR/GBP")
+                                                , dt
+                                                , QDateTime::currentDateTime()
+                                                , 24 * 60 * 60);
+   for (const auto& dp : rawData) {
+       addDataPoint(dp->open, dp->high, dp->low, dp->close, dp->timestamp, dp->volume);
+   }
+   qDeleteAll(rawData);
+   /*addDataPoint(12.0, 15.0, 11.0, 13.0, dt.toMSecsSinceEpoch(), 100);
    dt = dt.addDays(1);
    addDataPoint(12.3, 13.6, 10.5, 10.6, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
@@ -513,7 +522,7 @@ void ChartWidget::buildCandleChart() {
    dt = dt.addDays(1);
    addDataPoint(12.5, 13.2, 9.5, 11.0, dt.toMSecsSinceEpoch(), 100.0);
    dt = dt.addDays(1);
-   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);
+   addDataPoint(12.5, 12.2, 15.8, 15.7, dt.toMSecsSinceEpoch(), 100.0);*/
 
    ui_->viewPrice->chart()->addSeries(priceSeries_);
    ui_->viewVolume->chart()->addSeries(volumeSeries_);

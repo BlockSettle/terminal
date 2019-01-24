@@ -82,8 +82,6 @@ TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger,
     if (!createMissingTables()) {
        throw std::runtime_error("failed to create tables in " + db_.connectionName().toStdString() + " DB");
     }
-
-    populateEmptyData();
 }
 
 bool TradesDB::createMissingTables()
@@ -142,7 +140,7 @@ bool TradesDB::add(const QString& product
                       "INSERT INTO trades(productid, timestamp, price, volume) "
                       "VALUES(:productid, :timestamp, :price, :volume);"));
     query.bindValue(QStringLiteral(":productid"), productid);
-    query.bindValue(QStringLiteral(":timestamp"), static_cast<qreal>(time.toMSecsSinceEpoch()) / 1000);
+    query.bindValue(QStringLiteral(":timestamp"), time.toMSecsSinceEpoch());
     query.bindValue(QStringLiteral(":price"), price);
     query.bindValue(QStringLiteral(":volume"), volume);
     if (!query.exec()) {
@@ -154,7 +152,12 @@ bool TradesDB::add(const QString& product
     return true;
 }
 
-TradesDB::DataPoint TradesDB::getDataPoint(const QString &product
+void TradesDB::init()
+{
+    populateEmptyData();
+}
+
+TradesDB::DataPoint *TradesDB::getDataPoint(const QString &product
                                  , const QDateTime &timeTill
                                  , qint64 durationSec)
 {
@@ -165,44 +168,48 @@ TradesDB::DataPoint TradesDB::getDataPoint(const QString &product
     if (!query.exec() || !query.first()) {
         logger_->warn("[TradesDB] failed find product {}", product.toStdString());
         db_.rollback();
-        return DataPoint();
+        return nullptr;
     }
     qint64 productid = query.value(QStringLiteral("rowid")).toLongLong();
     QDateTime timeSince = timeTill.addSecs(-durationSec);
-    query.prepare(QStringLiteral("SELECT u.price as open,"
-                                 "    MAX(t.price) AS high,"
-                                 "    MIN(t.price) AS low,"
-                                 "    w.price AS close,"
-                                 "    SUM(t.volume) AS volume"
-                                 "FROM ("
-                                 "    SELECT *"
-                                 "    FROM trades"
+    query.prepare(QStringLiteral("SELECT u.price as open, "
+                                 "    MAX(t.price) AS high, "
+                                 "    MIN(t.price) AS low, "
+                                 "    w.price AS close, "
+                                 "    SUM(t.volume) AS volume "
+                                 "FROM ( "
+                                 "    SELECT * "
+                                 "    FROM trades "
                                  "    WHERE productid = :productid AND "
                                  "        timestamp > :timeSince AND "
                                  "        timestamp <= :timeTill) AS t JOIN ( "
-                                 "    SELECT price"
-                                 "    FROM trades"
+                                 "    SELECT price "
+                                 "    FROM trades "
                                  "    WHERE productid = :productid AND "
                                  "        timestamp > :timeSince AND "
-                                 "        timestamp <= :timeTill"
-                                 "    ORDER BY timestamp ASC"
+                                 "        timestamp <= :timeTill "
+                                 "    ORDER BY timestamp ASC "
                                  "    LIMIT 1) AS u JOIN ( "
-                                 "    SELECT price"
-                                 "    FROM trades"
+                                 "    SELECT price "
+                                 "    FROM trades "
                                  "    WHERE productid = :productid AND "
                                  "        timestamp > :timeSince AND "
-                                 "        timestamp <= :timeTill"
-                                 "    ORDER BY timestamp DESC"
-                                 "    LIMIT 1) AS w ;"));
+                                 "        timestamp <= :timeTill "
+                                 "    ORDER BY timestamp DESC "
+                                 "    LIMIT 1) AS w ; "));
     query.bindValue(QStringLiteral(":productid"), productid);
-    query.bindValue(QStringLiteral(":timeSince")
-                    , static_cast<qreal>(timeSince.toMSecsSinceEpoch()) / 1000);
-    qreal timestamp = static_cast<qreal>(timeTill.toMSecsSinceEpoch()) / 1000;
+    query.bindValue(QStringLiteral(":timeSince") , timeSince.toMSecsSinceEpoch());
+    qreal timestamp = timeTill.toMSecsSinceEpoch();
     query.bindValue(QStringLiteral(":timeTill") , timestamp);
     if (!query.exec() || !query.first()) {
-        logger_->warn("[TradesDB] failed read data: {}", query.lastError().text().toStdString());
+        logger_->warn("[TradesDB] failed read data: {} : {} using {} {} {}"
+                      , query.lastError().text().toStdString()
+                      , query.lastQuery().toStdString()
+                      , productid
+                      , timeSince.toMSecsSinceEpoch()
+                      , timestamp);
         db_.rollback();
-        return DataPoint();
+        return nullptr;
     }
     db_.commit();
     qreal open = query.value(QStringLiteral("open")).toDouble();
@@ -210,12 +217,34 @@ TradesDB::DataPoint TradesDB::getDataPoint(const QString &product
     qreal low = query.value(QStringLiteral("low")).toDouble();
     qreal close = query.value(QStringLiteral("close")).toDouble();
     qreal volume = query.value(QStringLiteral("volume")).toDouble();
-    return DataPoint { .open = open
+    return new DataPoint { .open = open
                 , .high = high
                 , .low = low
                 , .close = close
                 , .volume = volume
                 , .timestamp = timestamp };
+}
+
+const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
+        const QString &product
+        , const QDateTime &sinceTime
+        , const QDateTime &tillTime
+        , qint64 stepDurationSecs)
+{
+    std::vector<TradesDB::DataPoint *> result;
+    QDateTime end = tillTime;
+    while (end > sinceTime) {
+        logger_->info("[TradesDB] get point for {} {} {}"
+                      , product.toStdString()
+                      , end.toString(Qt::ISODate).toStdString()
+                      , stepDurationSecs);
+        auto data = getDataPoint(product, end, stepDurationSecs);
+        if (data) {
+            result.push_back(data);
+        }
+        end = end.addSecs(-stepDurationSecs);
+    }
+    return result;
 }
 
 bool TradesDB::populateEmptyData()
