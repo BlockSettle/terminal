@@ -46,14 +46,14 @@ public:
 	virtual void onStateEnter() override {
 		chat_->logger_->debug("Set user name {}", "<empty>");
 		chat_->usersViewModel_->onUsersReplace({});
-		chat_->ui_->labelUserName->setText(QString::fromStdString(""));
+		//chat_->ui_->labelUserName->setText(QString::fromStdString(""));
 	}
 
 	virtual std::string login(const std::string& email, const std::string& jwt) override {
 		chat_->logger_->debug("Set user name {}", email);
 		chat_->usersViewModel_->onUsersReplace({});
 		const auto userId = chat_->client_->loginToServer(email, jwt);
-		chat_->ui_->labelUserName->setText(QString::fromStdString(userId));
+		//chat_->ui_->labelUserName->setText(QString::fromStdString(userId));
 		chat_->messagesViewModel_->setOwnUserId(userId);
 
 		return userId;
@@ -283,7 +283,7 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
       usersViewModel_->onUsersReplace({});
       const auto userId = client_->loginToServer(email, jwt);
       ui_->stackedWidget->setCurrentIndex(1);
-      ui_->labelUserName->setText(QString::fromStdString(userId));
+      //ui_->labelUserName->setText(QString::fromStdString(userId));
       messagesViewModel_->setOwnUserId(userId);
 
       return userId;
