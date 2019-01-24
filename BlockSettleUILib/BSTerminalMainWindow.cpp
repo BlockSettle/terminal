@@ -728,7 +728,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       return false;
    }
 
-   NewWalletDialog newWalletDialog(true, this);
+   NewWalletDialog newWalletDialog(true, applicationSettings_, this);
    if (!newWalletDialog.exec()) {
       return false;
    }

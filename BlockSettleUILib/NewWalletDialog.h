@@ -2,21 +2,21 @@
 #define __NEW_WALLET_DIALOG_H__
 
 #include <QDialog>
-#include <memory>
-#include "BinaryData.h"
 
+#include <memory>
 
 namespace Ui {
    class NewWalletDialog;
 }
 
+class ApplicationSettings;
 
 class NewWalletDialog : public QDialog
 {
    Q_OBJECT
 
 public:
-   NewWalletDialog(bool noWalletsFound, QWidget *parent = nullptr);
+   NewWalletDialog(bool noWalletsFound, const std::shared_ptr<ApplicationSettings>& appSettings, QWidget *parent = nullptr);
    ~NewWalletDialog() override;
 
    bool isCreate() const { return isCreate_; }

@@ -398,7 +398,7 @@ void WalletsWidget::onWalletBalanceChanged(std::string walletId)
 
 void WalletsWidget::onNewWallet()
 {
-   NewWalletDialog newWalletDialog(false, this);
+   NewWalletDialog newWalletDialog(false, appSettings_, this);
    if (newWalletDialog.exec() != QDialog::Accepted ) {
       return;
    }
