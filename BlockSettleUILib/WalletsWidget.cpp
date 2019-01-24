@@ -398,7 +398,7 @@ void WalletsWidget::onWalletBalanceChanged(std::string walletId)
 
 void WalletsWidget::onNewWallet()
 {
-   if (signingContainer_->isReady()) {
+   if (!signingContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(false, appSettings_, this);
       if (newWalletDialog.exec() != QDialog::Accepted ) {
          return;
@@ -481,7 +481,7 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
    }
 
    // if signer is not ready - import WO only
-   ImportWalletTypeDialog importWalletDialog(!signingContainer_->isReady(), this);
+   ImportWalletTypeDialog importWalletDialog(signingContainer_->isOffline(), this);
 
    if (importWalletDialog.exec() == QDialog::Accepted) {
       if (importWalletDialog.type() == ImportWalletTypeDialog::Full) {

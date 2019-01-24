@@ -722,8 +722,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       return false;
    }
 
-   if (signContainer_->isReady()) {
-
+   if (!signContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(true, applicationSettings_, this);
       if (newWalletDialog.exec() != QDialog::Accepted) {
          return false;
