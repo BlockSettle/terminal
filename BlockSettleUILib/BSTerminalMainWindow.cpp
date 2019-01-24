@@ -728,18 +728,24 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       return false;
    }
 
-   NewWalletDialog newWalletDialog(true, applicationSettings_, this);
-   if (!newWalletDialog.exec()) {
-      return false;
-   }
+   if (signContainer_->isReady()) {
 
-   if (newWalletDialog.isCreate()) {
-      return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
-   }
-   else if (newWalletDialog.isImport()) {
+      NewWalletDialog newWalletDialog(true, applicationSettings_, this);
+      if (newWalletDialog.exec() != QDialog::Accepted) {
+         return false;
+      }
+
+      if (newWalletDialog.isCreate()) {
+         return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
+      }
+      else if (newWalletDialog.isImport()) {
+         return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
+      }
+
+      return false;
+   } else {
       return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
    }
-   return false;
 }
 
 void BSTerminalMainWindow::showInfo(const QString &title, const QString &text)
