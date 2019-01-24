@@ -85,7 +85,7 @@ public:
       Binaries_Dl_Url,
       ResetPassword_Url,
       GetAccount_Url,
-      GetGettingStartedGuide_Url,
+      GettingStartedGuide_Url,
       WalletFiltering,
       FxRfqLimit,
       XbtRfqLimit,

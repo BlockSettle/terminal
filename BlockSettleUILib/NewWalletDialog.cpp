@@ -13,7 +13,7 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<Appl
       ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING WALLETS"));
    }
 
-   const auto messageText = tr("<html><head/><body><p>For guidance, please consult the <a href=\"%1\"><span style=\" padding-left: 5px; text-decoration: none; color:#ffffff;\">\"Getting Started Guide\".</span></a></p></body></html>").arg(appSettings->get<QString>(ApplicationSettings::GetGettingStartedGuide_Url));
+   const auto messageText = tr("<html><head/><body><p>For guidance, please consult the <a href=\"%1\"><span style=\" padding-left: 5px; text-decoration: none; color:#ffffff;\">\"Getting Started Guide\".</span></a></p></body></html>").arg(appSettings->get<QString>(ApplicationSettings::GettingStartedGuide_Url));
 
    ui_->labelMessage->setText(messageText);
 
