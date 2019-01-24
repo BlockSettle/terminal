@@ -415,7 +415,6 @@ bool MessageData::encrypt(const autheid::PublicKey& pubKey)
       return false;
    }
    const QByteArray message_bytes = messageData_.toLocal8Bit();
-   // TODO(martun): consider using an intermediate AES encryption in the future.
    const auto encryptedData = autheid::base64Encode(autheid::encryptData(
       message_bytes.data(), message_bytes.size(), pubKey));
    messageData_ = QString::fromStdString(encryptedData);
