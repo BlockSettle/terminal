@@ -30,10 +30,16 @@ TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger,
             QStringLiteral("products"), [db = db_] {
                 const QString query = QStringLiteral(
                 "CREATE TABLE IF NOT EXISTS products ("
-                "rowid INTEGER PRIMARY KEY ASC,"
-                "name TEXT"
+                "   rowid INTEGER PRIMARY KEY ASC,"
+                "   name TEXT"
                 ");");
                 if (!QSqlQuery(db).exec(query)) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS products_rowid ON products (rowid);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS products_name ON products (name);"))) {
                     return false;
                 }
                 return true;
@@ -44,14 +50,29 @@ TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger,
             QStringLiteral("trades"), [db = db_] {
                 const QString query = QStringLiteral(
                 "CREATE TABLE IF NOT EXISTS trades ("
-                "rowid INTEGER PRIMARY KEY ASC,"
-                "productid INTEGER,"
-                "timestamp REAL,"
-                "price REAL,"
-                "volume REAL,"
-                "FOREIGN KEY(productid) REFERENCES products(rowid)"
+                "   rowid INTEGER PRIMARY KEY ASC,"
+                "   productid INTEGER,"
+                "   timestamp REAL,"
+                "   price REAL,"
+                "   volume REAL,"
+                "   FOREIGN KEY(productid) REFERENCES products(rowid)"
                 ");");
                 if (!QSqlQuery(db).exec(query)) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS trades_rowid ON trades (rowid);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS trades_productid ON trades (productid);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS trades_timestamp ON trades (timestamp);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS trades_price ON trades (price);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS trades_volume ON trades (volume);"))) {
                     return false;
                 }
                 return true;
@@ -86,9 +107,9 @@ bool TradesDB::createMissingTables()
 }
 
 bool TradesDB::add(const QString& product
-                   , const QDateTime& time
-                   , const qreal& price
-                   , const qreal& volume)
+                        , const QDateTime& time
+                        , const qreal& price
+                        , const qreal& volume)
 {
     db_.transaction();
     QSqlQuery query(db_);
@@ -99,9 +120,9 @@ bool TradesDB::add(const QString& product
         db_.rollback();
         return false;
     }
-    int productid = -1;
+    qint64 productid = -1;
     if (query.first()) {
-        productid = query.value(QStringLiteral("rowid")).toInt();
+        productid = query.value(QStringLiteral("rowid")).toLongLong();
     } else {
         query.prepare(QStringLiteral("INSERT INTO products(name) VALUES(:name);"));
         query.bindValue(QStringLiteral(":name"), product);
@@ -115,7 +136,7 @@ bool TradesDB::add(const QString& product
             db_.rollback();
             return false;
         }
-        productid = query.lastInsertId().toInt();
+        productid = query.lastInsertId().toLongLong();
     }
     query.prepare(QStringLiteral(
                       "INSERT INTO trades(productid, timestamp, price, volume) "
@@ -131,6 +152,70 @@ bool TradesDB::add(const QString& product
     }
     db_.commit();
     return true;
+}
+
+TradesDB::DataPoint TradesDB::getDataPoint(const QString &product
+                                 , const QDateTime &timeTill
+                                 , qint64 durationSec)
+{
+    db_.transaction();
+    QSqlQuery query(db_);
+    query.prepare(QStringLiteral("SELECT rowid FROM products WHERE name = :name;"));
+    query.bindValue(QStringLiteral(":name"), product);
+    if (!query.exec() || !query.first()) {
+        logger_->warn("[TradesDB] failed find product {}", product.toStdString());
+        db_.rollback();
+        return DataPoint();
+    }
+    qint64 productid = query.value(QStringLiteral("rowid")).toLongLong();
+    QDateTime timeSince = timeTill.addSecs(-durationSec);
+    query.prepare(QStringLiteral("SELECT u.price as open,"
+                                 "    MAX(t.price) AS high,"
+                                 "    MIN(t.price) AS low,"
+                                 "    w.price AS close,"
+                                 "    SUM(t.volume) AS volume"
+                                 "FROM ("
+                                 "    SELECT *"
+                                 "    FROM trades"
+                                 "    WHERE productid = :productid AND "
+                                 "        timestamp > :timeSince AND "
+                                 "        timestamp <= :timeTill) AS t JOIN ( "
+                                 "    SELECT price"
+                                 "    FROM trades"
+                                 "    WHERE productid = :productid AND "
+                                 "        timestamp > :timeSince AND "
+                                 "        timestamp <= :timeTill"
+                                 "    ORDER BY timestamp ASC"
+                                 "    LIMIT 1) AS u JOIN ( "
+                                 "    SELECT price"
+                                 "    FROM trades"
+                                 "    WHERE productid = :productid AND "
+                                 "        timestamp > :timeSince AND "
+                                 "        timestamp <= :timeTill"
+                                 "    ORDER BY timestamp DESC"
+                                 "    LIMIT 1) AS w ;"));
+    query.bindValue(QStringLiteral(":productid"), productid);
+    query.bindValue(QStringLiteral(":timeSince")
+                    , static_cast<qreal>(timeSince.toMSecsSinceEpoch()) / 1000);
+    qreal timestamp = static_cast<qreal>(timeTill.toMSecsSinceEpoch()) / 1000;
+    query.bindValue(QStringLiteral(":timeTill") , timestamp);
+    if (!query.exec() || !query.first()) {
+        logger_->warn("[TradesDB] failed read data: {}", query.lastError().text().toStdString());
+        db_.rollback();
+        return DataPoint();
+    }
+    db_.commit();
+    qreal open = query.value(QStringLiteral("open")).toDouble();
+    qreal high = query.value(QStringLiteral("high")).toDouble();
+    qreal low = query.value(QStringLiteral("low")).toDouble();
+    qreal close = query.value(QStringLiteral("close")).toDouble();
+    qreal volume = query.value(QStringLiteral("volume")).toDouble();
+    return DataPoint { .open = open
+                , .high = high
+                , .low = low
+                , .close = close
+                , .volume = volume
+                , .timestamp = timestamp };
 }
 
 bool TradesDB::populateEmptyData()
@@ -153,13 +238,10 @@ bool TradesDB::populateEmptyData()
     };
     QDateTime time = QDateTime::currentDateTime().addYears(-1);
     QDateTime now = QDateTime::currentDateTime();
-    int i = 0;
     int j = 0;
     while (time < now) {
-        const QString product = products.at(i++);
-        if (i >= products.count()) {
-            i = 0;
-        }
+        int i = QRandomGenerator::global()->bounded(0, products.count());
+        const QString product = products.at(i);
         qreal price = 100 + QRandomGenerator::global()->generateDouble() * 200;
         qreal volume = QRandomGenerator::global()->generateDouble() * 200;
         time = time.addMSecs(3550000 + QRandomGenerator::global()->generateDouble() * 100000);
