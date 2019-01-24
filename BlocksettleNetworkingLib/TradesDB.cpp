@@ -144,21 +144,29 @@ bool TradesDB::populateEmptyData()
         return false;
     }
     QStringList products = {
-        QStringLiteral("EUR/JPY")
+        QStringLiteral("EUR/GBP")
+        , QStringLiteral("EUR/JPY")
+        , QStringLiteral("EUR/SEK")
         , QStringLiteral("GBP/JPY")
-        , QStringLiteral("EUR/GBP")
+        , QStringLiteral("GBP/SEK")
+        , QStringLiteral("JPY/SEK")
     };
     QDateTime time = QDateTime::currentDateTime().addYears(-1);
     QDateTime now = QDateTime::currentDateTime();
     int i = 0;
+    int j = 0;
     while (time < now) {
         const QString product = products.at(i++);
         if (i >= products.count()) {
             i = 0;
         }
-        qreal price = QRandomGenerator::global()->generateDouble() * 1000;
-        qreal volume = QRandomGenerator::global()->generateDouble() * 1000;
-        time = time.addSecs(3600);
+        qreal price = 100 + QRandomGenerator::global()->generateDouble() * 200;
+        qreal volume = QRandomGenerator::global()->generateDouble() * 200;
+        time = time.addMSecs(3550000 + QRandomGenerator::global()->generateDouble() * 100000);
+        if (j != time.date().month() && time.date().day() == 1) {
+            j = time.date().month();
+            logger_->info("[TradesDB] generate since {}", time.toString(Qt::ISODate).toStdString());
+        }
         add(product, time, price, volume);
     }
     return true;
