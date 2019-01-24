@@ -5,6 +5,8 @@
 #include "ChatUsersViewModel.h"
 #include "ApplicationSettings.h"
 
+#include <QKeyEvent>
+
 #include <thread>
 #include <spdlog/spdlog.h>
 
@@ -60,7 +62,7 @@ public:
 		chat_->logger_->info("Already logged out!");
 	};
 	virtual void onSendButtonClicked()  override {
-		
+		qDebug("Send action when logged out");
 	};
 	virtual void onUserClicked(const QModelIndex& index)  override {};
 	virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end)  override {};
@@ -165,8 +167,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
    //connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
-   ui_->input_textEdit->installEventFilter(this);
-   //connect(ui_->input_textEdit, &QTextEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
+   //ui_->input_textEdit->installEventFilter(this);
+   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
    connect(client_.get(), &ChatClient::UsersReplace
            , usersViewModel_.get(), &ChatUsersViewModel::onUsersReplace);
@@ -229,27 +231,23 @@ void ChatWidget::changeState(ChatWidget::State state)
 	}
 }
 
-#include <QKeyEvent>
-
+//ChatWidget::eventFilter not used anymore, but let it be here
 bool ChatWidget::eventFilter(QObject * obj, QEvent * event)
 {
 	qDebug("Event %d", event->type());
 	if (event->type() == QEvent::KeyPress) {
 		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event); 
-		//qDebug("Ate key press %d", keyEvent->key());
+		qDebug("Ate key press %d", keyEvent->key());
 		switch (keyEvent->key()) {
 		case Qt::Key_Enter:
+		case Qt::Key_Return:
 			return true;
 		default:
 			return QObject::eventFilter(obj, event);
 		}
-		return QObject::eventFilter(obj, event);
 	}
-	else {
-		// standard event processing
-		return QObject::eventFilter(obj, event);
-	}
-	return false;
+	// standard event processing
+	return QObject::eventFilter(obj, event);
 }
 
 void ChatWidget::onSendButtonClicked()
