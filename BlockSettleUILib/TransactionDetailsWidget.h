@@ -49,8 +49,8 @@ public:
       txid_(READHEX(txidData.data())), txidIsRPC_(isTXIDRPC) {}
 
    // Make two separate functs just to make internal vs. RPC clearer to devs.
-   const BinaryData getRPCTXID();
-   const BinaryData getInternalTXID();
+   BinaryData getRPCTXID();
+   BinaryData getInternalTXID();
 
    bool getTXIDIsRPC() const { return txidIsRPC_; }
    const BinaryData& getRawTXID() const { return txid_; }
