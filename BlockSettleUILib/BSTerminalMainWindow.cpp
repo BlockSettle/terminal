@@ -934,7 +934,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
    }
 
    if (!celerConnection_->LoginToServer(host, port, username, password)) {
-      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] login failed failed");
+      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] login failed");
       showError(tr("Connection error"), tr("Login failed"));
    } else {
       auto userName = QString::fromStdString(username);
