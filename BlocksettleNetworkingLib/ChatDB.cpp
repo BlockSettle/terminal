@@ -178,4 +178,3 @@ bool ChatDB::addKey(const QString& user, const autheid::PublicKey& key)
    }
    return true;
 }
-

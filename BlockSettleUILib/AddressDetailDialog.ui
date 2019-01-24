@@ -320,7 +320,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>Index/id</string>
+                  <string>Address Type/ID</string>
                  </property>
                 </widget>
                </item>
