@@ -291,12 +291,6 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
 
 void BSTerminalMainWindow::setupToolbar()
 {
-   QIcon lockbox_icon = UiUtils::icon(0xe774);
-   QIcon offline_icon = UiUtils::icon(0xe77f);
-   QIcon create_wallet_icon = UiUtils::icon(0xe67a);
-   QIcon wallet_properties_icon = UiUtils::icon(0xe6c3);
-   QIcon import_wallet_icon = UiUtils::icon(0xe765);
-
    action_send_ = new QAction(tr("Create &Transaction"), this);
    connect(action_send_, &QAction::triggered, this, &BSTerminalMainWindow::onSend);
    action_receive_ = new QAction(tr("Generate &Address"), this);
@@ -734,18 +728,23 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       return false;
    }
 
-   NewWalletDialog newWalletDialog(true, this);
-   if (!newWalletDialog.exec()) {
-      return false;
-   }
+   if (!signContainer_->isOffline()) {
+      NewWalletDialog newWalletDialog(true, applicationSettings_, this);
+      if (newWalletDialog.exec() != QDialog::Accepted) {
+         return false;
+      }
 
-   if (newWalletDialog.isCreate()) {
-      return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
-   }
-   else if (newWalletDialog.isImport()) {
+      if (newWalletDialog.isCreate()) {
+         return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
+      }
+      else if (newWalletDialog.isImport()) {
+         return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
+      }
+
+      return false;
+   } else {
       return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
    }
-   return false;
 }
 
 void BSTerminalMainWindow::showInfo(const QString &title, const QString &text)

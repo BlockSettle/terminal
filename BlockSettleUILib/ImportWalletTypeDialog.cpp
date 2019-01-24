@@ -12,7 +12,7 @@
 #include "make_unique.h"
 
 
-ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
+ImportWalletTypeDialog::ImportWalletTypeDialog(bool woOnly, QWidget* parent)
   : QDialog(parent)
    , ui_(new Ui::ImportWalletTypeDialog())
    , easyCodec_(std::make_shared<EasyCoDec>())
@@ -42,7 +42,14 @@ ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ImportWalletTypeDialog::reject);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletTypeDialog::accept);
 
-   OnPaperSelected();
+   if (woOnly) {
+      OnDigitalSelected();
+      ui_->tabWidget->setTabEnabled(0, false);
+   } else {
+      OnPaperSelected();
+   }
+
+
    ui_->labelWoFilePath->clear();
 }
 
