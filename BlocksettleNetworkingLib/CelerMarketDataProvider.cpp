@@ -27,7 +27,7 @@ CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<Connectio
    celerClient_ = nullptr;
 }
 
-bool CelerMarketDataProvider::StartMDConnection(const std::string &host, const std::string &port)
+bool CelerMarketDataProvider::StartMDConnection()
 {
    if (celerClient_ != nullptr) {
       logger_->error("[CelerMarketDataProvider::StartMDConnection] already connected.");
@@ -45,8 +45,11 @@ bool CelerMarketDataProvider::StartMDConnection(const std::string &host, const s
 
    const std::string credentials = CryptoPRNG::generateRandom(32).toHexStr();
 
+   logger_->debug("[CelerMarketDataProvider::StartMDConnection] start connecting to {} : {}"
+      , host_, port_);
+
    // login password could be any string
-   if (!celerClient_->LoginToServer(host, port, credentials, credentials)) {
+   if (!celerClient_->LoginToServer(host_, port_, credentials, credentials)) {
       logger_->error("[CelerMarketDataProvider::StartMDConnection] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;

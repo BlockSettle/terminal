@@ -997,7 +997,7 @@ void CCPortfolioModel::reloadCCWallets()
 
 void CCPortfolioModel::updateCCBalance()
 {
-   if (root_->HaveXBTGroup()) {
+   if (root_->HaveCCGroup()) {
       auto ccGroup = root_->GetCCGroup();
 
       bool balanceUpdated = false;
