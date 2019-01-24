@@ -20,8 +20,8 @@ void BSChatInput::keyPressEvent(QKeyEvent * e)
 	//Qt::Key_Return - Main Enter key
 	//Qt::Key_Enter  = Numpad Enter key
 	if (e->key() == Qt::Key_Enter || e->key() == Qt::Key_Return) {
-		qDebug("Ctrl + Return/Enter press %d", e->key());
 		if (e->modifiers().testFlag(Qt::ControlModifier)) {
+			qDebug("Ctrl + Return/Enter press %d", e->key());
 			emit sendMessage();
 			return e->ignore();
 		}

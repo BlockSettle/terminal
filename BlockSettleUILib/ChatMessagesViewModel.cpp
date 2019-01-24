@@ -21,18 +21,30 @@ int ChatMessagesViewModel::rowCount(const QModelIndex &parent) const
 
 QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-   switch (static_cast<Column>(section)) {
-      case Column::Time:
-         return tr("Time");
+   if (orientation != Qt::Horizontal) {
+      return QVariant();
+   }
 
-      case Column::User:
-         return tr("User");
-      
-      case Column::Message:
-         return tr("Message");
 
-      default:
-         break;
+   if (role == Qt::DisplayRole) {
+	   //You should always check what role is requested
+	   //beacause if it will be for example count role
+	   //your code without checks could return 0 count
+	   //and as result display role will have no effect
+	   //and you will not see your headers
+	   switch (static_cast<Column>(section)) {
+	   case Column::Time:
+		   return tr("Time");
+
+	   case Column::User:
+		   return tr("User");
+
+	   case Column::Message:
+		   return tr("Message");
+
+	   default:
+		   break;
+	   }
    }
    return {};
 }

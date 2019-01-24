@@ -252,6 +252,12 @@
               <property name="showGrid">
                <bool>false</bool>
               </property>
+              <attribute name="horizontalHeaderVisible">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="horizontalHeaderMinimumSectionSize">
+               <number>0</number>
+              </attribute>
               <attribute name="horizontalHeaderStretchLastSection">
                <bool>true</bool>
               </attribute>
