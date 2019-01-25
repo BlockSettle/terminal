@@ -296,7 +296,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       const float feePerByte = (float)totalVal / (float)tx.getTxWeight();
       originalFeePerByte_ = feePerByte;
       const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
-      SetMinimumFee(newMinFee, (float)newMinFee / tx.getTxWeight());
+      SetMinimumFee(newMinFee, originalFeePerByte_);
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
       transactionData_->setTotalFee(newMinFee);
@@ -641,6 +641,7 @@ void CreateTransactionDialogAdvanced::onAddOutput()
 
    const double diffMax = maxValue - transactionData_->GetTotalRecipientsAmount();
    const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
+   // The code below tries to eliminate the change address if the change amount is too little.
    if ((diffMax > 0) && (diffMax < totalFee)) {
       transactionData_->setTotalFee(diffMax * BTCNumericTypes::BalanceDivider);
       UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);

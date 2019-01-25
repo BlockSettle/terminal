@@ -90,7 +90,7 @@ public:
 		QString messageText = chat_->ui_->input_textEdit->toPlainText();
 
 		if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
-			auto msg = chat_->client_->SendOwnMessage(messageText, chat_->currentChat_);
+			auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
 			chat_->ui_->input_textEdit->clear();
 
 			chat_->messagesViewModel_->onSingleMessageUpdate(msg);
