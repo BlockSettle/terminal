@@ -238,10 +238,10 @@ const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
         if (end > tillTime) {
             end = tillTime;
         }
-        logger_->info("[TradesDB] get point for {} {} {}"
+        /*logger_->info("[TradesDB] get point for {} {} {}"
                       , product.toStdString()
                       , end.toString(Qt::ISODate).toStdString()
-                      , stepDurationSecs);
+                      , stepDurationSecs);*/
         auto data = getDataPoint(product, end, stepDurationSecs);
         if (data) {
             result.push_back(data);

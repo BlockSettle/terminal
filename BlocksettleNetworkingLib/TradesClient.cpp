@@ -37,3 +37,33 @@ const std::vector<TradesDB::DataPoint *> TradesClient::getRawPointDataArray(
 {
     return tradesDb_->getDataPoints(product, sinceTime, tillTime, stepDurationSecs);
 }
+
+void TradesClient::onMDUpdated(bs::network::Asset::Type assetType
+                               , const QString &security
+                               , bs::network::MDFields fields)
+{
+    if (assetType == bs::network::Asset::Undefined) {
+        return;
+    }
+
+    QDateTime time = QDateTime::currentDateTime();
+    QString product = security;
+    qreal price = -1.0;
+    qreal volume = -1.0;
+    for (const auto& field : fields) {
+        switch (field.type) {
+        case bs::network::MDField::PriceLast:
+            price = field.value;
+            break;
+        case bs::network::MDField::DailyVolume:
+            volume = field.value;
+            break;
+        default:
+            break;
+        }
+    }
+    if (price == -1.0 || volume == -1.0 || product.isEmpty()) {
+        return;
+    }
+    tradesDb_->add(product, time, price, volume);
+}

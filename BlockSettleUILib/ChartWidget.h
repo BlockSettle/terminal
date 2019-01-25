@@ -5,10 +5,10 @@
 #include <QtCharts>
 #include "CommonTypes.h"
 
+QT_BEGIN_NAMESPACE
 namespace Ui {
 class ChartWidget;
 }
-QT_BEGIN_NAMESPACE
 namespace spdlog {
    class logger;
 }

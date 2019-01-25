@@ -17,14 +17,14 @@ class TradesDB : public QObject
     Q_OBJECT
 public:
     struct DataPoint {
-        qreal open = 0.0;
-        qreal high = 0.0;
-        qreal low = 0.0;
-        qreal close = 0.0;
-        qreal volume = 0.0;
-        qreal timestamp = 0.0;
+        qreal open = -1.0;
+        qreal high = -1.0;
+        qreal low = -1.0;
+        qreal close = -1.0;
+        qreal volume = -1.0;
+        qreal timestamp = -1.0;
         bool isValid() {
-            return timestamp != 0.0;
+            return timestamp != -1.0;
         }
     };
     TradesDB(const std::shared_ptr<spdlog::logger> &logger,

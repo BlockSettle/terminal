@@ -71,6 +71,7 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
    client_->init();
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::onMDUpdated);
+   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, client_.get(), &TradesClient::onMDUpdated);
 
    // populate charts with data
    buildCandleChart();

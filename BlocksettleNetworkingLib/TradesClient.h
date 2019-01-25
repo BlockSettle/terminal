@@ -5,6 +5,7 @@
 
 #include <QObject>
 
+#include "CommonTypes.h"
 #include "TradesDB.h"
 
 namespace spdlog {
@@ -36,6 +37,11 @@ public:
                                                                 , const QDateTime &tillTime
                                                                 , qint64 stepDurationSecs
                                                                 );
+
+public slots:
+    void onMDUpdated(bs::network::Asset::Type assetType
+                     , const QString &security
+                     , bs::network::MDFields fields);
 
 private:
     std::shared_ptr<ApplicationSettings>   appSettings_;
