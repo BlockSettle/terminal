@@ -67,6 +67,7 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
 
    connect(ui->pushButtonMDConnection, &QPushButton::clicked, this, &MarketDataWidget::ChangeMDSubscriptionState);
 
+   connect(mdProvider.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &MarketDataWidget::onLoadingNetworkSettings);
    connect(mdProvider.get(), &MarketDataProvider::StartConnecting, this, &MarketDataWidget::OnMDConnecting);
    connect(mdProvider.get(), &MarketDataProvider::Connected, this, &MarketDataWidget::OnMDConnected);
    connect(mdProvider.get(), &MarketDataProvider::Disconnecting, this, &MarketDataWidget::OnMDDisconnecting);
@@ -75,10 +76,18 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    ui->pushButtonMDConnection->setText(tr("Subscribe"));
 }
 
+void MarketDataWidget::onLoadingNetworkSettings()
+{
+   ui->pushButtonMDConnection->setText(tr("Connecting"));
+   ui->pushButtonMDConnection->setEnabled(false);
+   ui->pushButtonMDConnection->setToolTip(tr("Waiting for connection details"));
+}
+
 void MarketDataWidget::OnMDConnecting()
 {
    ui->pushButtonMDConnection->setText(tr("Connecting"));
    ui->pushButtonMDConnection->setEnabled(false);
+   ui->pushButtonMDConnection->setToolTip(QString{});
 }
 
 void MarketDataWidget::OnMDConnected()
@@ -104,8 +113,7 @@ void MarketDataWidget::ChangeMDSubscriptionState()
    if (mdProvider_->IsConnectionActive()) {
       mdProvider_->DisconnectFromMDSource();
    } else {
-      mdProvider_->SubscribeToMD(appSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-         , appSettings_->get<std::string>(ApplicationSettings::mdServerPort));
+      mdProvider_->SubscribeToMD();
    }
 }
 

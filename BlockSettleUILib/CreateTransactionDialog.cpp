@@ -114,7 +114,7 @@ void CreateTransactionDialog::updateCreateButtonText()
       signer_ = offlineSigner_;
       pushButtonCreate()->setText(tr("Export"));
    } else {
-      pushButtonCreate()->setText(tr("Broadcast"));
+      selectedWalletChanged(-1);
    }
 }
 
@@ -237,6 +237,10 @@ void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
 
 void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const std::function<void()> &cbInputsReset)
 {
+   if (!comboBoxWallets()->count()) {
+      pushButtonCreate()->setText(tr("No wallets"));
+      return;
+   }
    const auto currentWallet = walletsManager_->GetWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
    const auto rootWallet = walletsManager_->GetHDRootForLeaf(currentWallet->GetWalletId());
    if (signingContainer_->isWalletOffline(currentWallet->GetWalletId())
@@ -247,7 +251,7 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       pushButtonCreate()->setText(tr("Broadcast"));
       signer_ = signingContainer_;
    }
-   if (transactionData_->GetWallet() != currentWallet) {
+   if ((transactionData_->GetWallet() != currentWallet) || resetInputs) {
       transactionData_->SetWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
    }
 }
@@ -284,7 +288,9 @@ void CreateTransactionDialog::onTransactionUpdated()
 void CreateTransactionDialog::onMaxPressed()
 {
    auto maxValue = transactionData_->CalculateMaxAmount(lineEditAddress()->text().toStdString());
-   lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
+   if (maxValue > 0) {
+      lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
+   }
 }
 
 void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,

@@ -15,6 +15,7 @@
 #include <QDateTime>
 
 #include "SecureBinaryData.h"
+#include "EncryptUtils.h"
 
 
 namespace Chat
@@ -30,6 +31,8 @@ namespace Chat
    ,   RequestSendMessage
    ,   RequestMessages
    ,   RequestOnlineUsers
+   ,   RequestAskForPublicKey
+   ,   RequestSendOwnPublicKey
    };
 
 
@@ -41,6 +44,8 @@ namespace Chat
    ,   ResponseSuccess
    ,   ResponseError
    ,   ResponseUsersList
+   ,   ResponseAskForPublicKey
+   ,   ResponseSendOwnPublicKey
    };
 
 
@@ -177,8 +182,8 @@ namespace Chat
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
 
       void setFlag(const State);
-      bool decrypt(const SecureBinaryData &privKey);
-      bool encrypt(const BinaryData &pubKey);
+      bool decrypt(const autheid::PrivateKey& privKey);
+      bool encrypt(const autheid::PublicKey& pubKey);
 
    private:
       QString id_;
@@ -203,6 +208,57 @@ namespace Chat
 
    private:
       std::string messageData_;
+   };
+
+   // Request for asking the peer to send us their public key.
+   class AskForPublicKeyRequest : public Request
+   {
+   public:
+      AskForPublicKeyRequest(
+         const std::string& clientId,
+         const std::string& askingNodeId,
+         const std::string& peerId);
+
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Request> fromJSON(
+         const std::string& clientId,
+         const std::string& jsonData);
+
+      void handle(RequestHandler &) override;
+
+      const std::string& getAskingNodeId() const;
+      const std::string& getPeerId() const;
+
+   private:
+      std::string askingNodeId_;
+      std::string peerId_;
+   };
+
+   // Request for sending our key to the peer, who previously asked for it.
+   class SendOwnPublicKeyRequest : public Request
+   {
+   public:
+      SendOwnPublicKeyRequest(
+         const std::string& clientId,
+         const std::string& receivingNodeId,
+         const std::string& sendingNodeId,
+         const autheid::PublicKey& sendingNodePublicKey);
+
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Request> fromJSON(
+         const std::string& clientId,
+         const std::string& jsonData);
+
+      void handle(RequestHandler &) override;
+
+      const std::string& getReceivingNodeId() const;
+      const std::string& getSendingNodeId() const;
+      const autheid::PublicKey& getSendingNodePublicKey() const;
+      
+   private:
+      std::string receivingNodeId_;
+      std::string sendingNodeId_;
+      autheid::PublicKey sendingNodePublicKey_;
    };
 
    class OnlineUsersRequest : public Request
@@ -263,6 +319,56 @@ namespace Chat
       Status status_;
    };
 
+   // Response to ask a peer to send us his own public key.
+   // Strangely, this response is sent to the peer itself, not the one who sent the request.
+   class AskForPublicKeyResponse : public Response
+   {
+   public:
+      AskForPublicKeyResponse(
+         const std::string& askingNodeId,
+         const std::string& peerId);
+
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(
+         const std::string& jsonData);
+
+      void handle(ResponseHandler &) override;
+
+      const std::string& getAskingNodeId() const;
+      const std::string& getPeerId() const;
+
+   private:
+      std::string askingNodeId_;
+      std::string peerId_;
+   };
+ 
+   // Response to sending our own public key to the peer who asked for it.
+   // Strangely, Response is sent to the peer to whom the key is being sent, not the 
+   // node which made the call.
+   class SendOwnPublicKeyResponse : public Response
+   {
+   public:
+      SendOwnPublicKeyResponse(
+         const std::string& receivingNodeId,
+         const std::string& sendingNodeId,
+         const autheid::PublicKey& sendingNodePublicKey);
+
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(
+         const std::string& jsonData);
+
+      void handle(ResponseHandler &) override;
+
+      const std::string& getReceivingNodeId() const;
+      const std::string& getSendingNodeId() const;
+      const autheid::PublicKey& getSendingNodePublicKey() const;
+
+   private:
+      std::string receivingNodeId_;
+      std::string sendingNodeId_;
+      autheid::PublicKey sendingNodePublicKey_;
+   };
+  
    class ListResponse : public Response
    {
    public:
@@ -310,6 +416,13 @@ namespace Chat
       virtual void OnLogin(const LoginRequest &) = 0;
       virtual void OnLogout(const LogoutRequest &) = 0;
       virtual void OnSendMessage(const SendMessageRequest &) = 0;
+
+      // Asking peer to send us their public key.
+      virtual void OnAskForPublicKey(const AskForPublicKeyRequest &) = 0;
+
+      // Sending our public key to the peer who asked for it.
+      virtual void OnSendOwnPublicKey(const SendOwnPublicKeyRequest &) = 0;
+
       virtual void OnOnlineUsers(const OnlineUsersRequest &) = 0;
       virtual void OnRequestMessages(const MessagesRequest &) = 0;
    };
@@ -321,6 +434,13 @@ namespace Chat
       virtual void OnHeartbeatPong(const HeartbeatPongResponse &) = 0;
       virtual void OnUsersList(const UsersListResponse &) = 0;
       virtual void OnMessages(const MessagesResponse &) = 0;
+
+      // Received a call from a peer to send our public key.
+      virtual void OnAskForPublicKey(const AskForPublicKeyResponse &) = 0;
+      
+      // Received public key of one of our peers.
+      virtual void OnSendOwnPublicKey(const SendOwnPublicKeyResponse &) = 0;
+
       virtual void OnLoginReturned(const LoginResponse &) = 0;
    };
 

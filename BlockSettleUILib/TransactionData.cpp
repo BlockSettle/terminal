@@ -149,37 +149,11 @@ void TransactionData::enableTransactionUpdate()
 
 bool TransactionData::UpdateTransactionData()
 {
-   if (selectedInputs_ == nullptr) {
+   if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
       return false;
    }
 
-   std::vector<UTXO> transactions;
-   if (!selectedInputs_->UseAutoSel()) {
-      transactions = selectedInputs_->GetSelectedTransactions();
-   }
-   else {
-      transactions = selectedInputs_->GetAllTransactions();
-   }
-   if (utxoAdapter_ && reservedUTXO_.empty()) {
-      utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId(), transactions);
-   }
-
-   // The for loop is equivalent to CoinSelectionInstance::decorateUTXOs() in
-   // Armory. We need it for proper initialization of the UTXO structs when
-   // computing TX sizes and fees. We're assuming all TXs created will use
-   // SegWit. It's a safe assumption moving forward.
-   for (auto& utxo : transactions) {
-      auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
-      if (aefa != nullptr) {
-         utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(aefa);
-         try {
-            utxo.witnessDataSizeBytes_ = aefa->getWitnessDataSize();
-            utxo.isInputSW_ = true;
-         }
-         catch (const std::runtime_error& re) { }
-      }
-   }
-
+   std::vector<UTXO> transactions = decorateUTXOs();
    uint64_t availableBalance = 0;
    for (const auto &tx : transactions) {
       availableBalance += tx.getValue();
@@ -218,22 +192,28 @@ bool TransactionData::UpdateTransactionData()
          for (const auto &recip : recipientsMap) {
             recipients.push_back(recip.second);
          }
-         usedUTXO_ = transactions;
-         summary_.txVirtSize = bs::wallet::estimateTXVirtSize(usedUTXO_, recipients);
+
+         UtxoSelection selection = computeSizeAndFee(transactions, payment);
+         summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = availableBalance - payment.spendVal_;
          totalFee_ = summary_.totalFee;
+         summary_.feePerByte =
+            std::round((float)summary_.totalFee / (float)summary_.txVirtSize);
          summary_.hasChange = false;
          summary_.selectedBalance = UiUtils::amountToBtc(availableBalance);
       }
       else if (selectedInputs_->UseAutoSel()) {
          UtxoSelection selection;
          try {
-            selection = coinSelection_->getUtxoSelectionForRecipients(payment, transactions);
+            selection = coinSelection_->getUtxoSelectionForRecipients(payment
+               , transactions);
          } catch (const std::runtime_error& err) {
-            qDebug() << "UpdateTransactionData coinSelection exception: " << err.what();
+            qDebug() << "UpdateTransactionData (auto-selection) - "
+               << "coinSelection exception: " << err.what();
             return false;
          } catch (...) {
-            qDebug() << "UpdateTransactionData coinSelection exception";
+            qDebug() << "UpdateTransactionData (auto-selection) - "
+               << "coinSelection exception";
             return false;
          }
 
@@ -245,28 +225,11 @@ bool TransactionData::UpdateTransactionData()
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
       else {
-         usedUTXO_ = transactions;
-
-         auto usedUTXOCopy{ usedUTXO_ };
-         UtxoSelection selection{ usedUTXOCopy };
-         try {
-            selection.computeSizeAndFee(payment);
-         }
-         catch (const std::runtime_error& err) {
-            qDebug() << "UpdateTransactionData UtxoSelection exception: " << err.what();
-            return false;
-         }
-         catch (...) {
-            qDebug() << "UpdateTransactionData UtxoSelection exception";
-            return false;
-         }
-
+         UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
-
          summary_.hasChange = selection.hasChange_;
-
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
       }
       summary_.usedTransactions = usedUTXO_.size();
@@ -278,47 +241,34 @@ bool TransactionData::UpdateTransactionData()
    return true;
 }
 
+// Calculate the maximum fee for a given recipient.
 double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
 {
    if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
       return -1;
    }
-   double fee = totalFee_;
-   if (fee <= 0) {
-      std::vector<UTXO> transactions;
-      if (selectedInputs_->GetSelectedTransactionsCount()) {
-         transactions = selectedInputs_->GetSelectedTransactions();
-      }
-      if (transactions.empty()) {
-         transactions = selectedInputs_->GetAllTransactions();
-      }
-      if (transactions.empty()) {
-         return 0;
-      }
-      for (auto& utxo : transactions) {
-         const auto addrEntry = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
-         if (addrEntry) {
-            utxo.txinRedeemSizeBytes_ = bs::wallet::getInputScrSize(addrEntry);
-         }
-      }
 
-      size_t txOutSize = 0;
-      for (const auto &recip : recipients_) {
-         const auto &scrRecip = recip.second->GetScriptRecipient();
-         txOutSize += scrRecip ? scrRecip->getSize() : 31;
-      }
-      if (!recipient.isNull()) {
-         const auto &scrRecip = recipient.getRecipient(0.0);
-         txOutSize += scrRecip ? scrRecip->getSize() : 31;
-      }
+   std::vector<UTXO> transactions = decorateUTXOs();
 
-      fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_, transactions);
-      fee += 70;     // a small epsilon to make UtxoSelection happy
+   size_t txOutSize = 0;
+   for (const auto &recip : recipients_) {
+      const auto &scrRecip = recip.second->GetScriptRecipient();
+      txOutSize += scrRecip ? scrRecip->getSize() : 31;
    }
-   fee = fee / BTCNumericTypes::BalanceDivider;
+   if (!recipient.isNull()) {
+      const auto &scrRecip = recipient.getRecipient(0.0);
+      txOutSize += scrRecip ? scrRecip->getSize() : 31;
+   }
 
-   auto availableBalance = GetTransactionSummary().availableBalance - GetTransactionSummary().balanceToSpend;
+   // Accept the fee returned by Armory. The fee returned may be a few
+   // satoshis higher than is strictly required by Core but that's okay.
+   // If truly required, the fee can be tweaked later.
+   double fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_
+      , transactions) / BTCNumericTypes::BalanceDivider;
+   //TODO: apply caching if needed, but don't use totalFee_ for this
 
+   auto availableBalance = GetTransactionSummary().availableBalance - \
+      GetTransactionSummary().balanceToSpend;
    if (availableBalance < fee) {
       return 0;
    } else {
@@ -339,6 +289,95 @@ bool TransactionData::RecipientsReady() const
    }
 
    return true;
+}
+
+// A function equivalent to CoinSelectionInstance::decorateUTXOs() in Armory. We
+// need it for proper initialization of the UTXO structs when computing TX sizes
+// and fees.
+// IN:  None
+// OUT: None
+// RET: A vector of fully initialized UTXO objects, one for each selected (and
+//      non-filtered) input.
+std::vector<UTXO> TransactionData::decorateUTXOs() const
+{
+   std::vector<UTXO> inputUTXOs;
+   if (selectedInputs_ == nullptr || wallet_ == nullptr) {
+      return inputUTXOs;
+   }
+
+   if (!selectedInputs_->UseAutoSel()) {
+      inputUTXOs = selectedInputs_->GetSelectedTransactions();
+   }
+   else {
+      inputUTXOs = selectedInputs_->GetAllTransactions();
+   }
+
+   if (utxoAdapter_ && reservedUTXO_.empty()) {
+      utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId()
+         , inputUTXOs);
+   }
+
+   for (auto& utxo : inputUTXOs) {
+      // Prep the UTXOs for calculation.
+      auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
+      utxo.txinRedeemSizeBytes_ = 0;
+      utxo.isInputSW_ = false;
+
+      if (aefa != nullptr) {
+         while (true) {
+            utxo.txinRedeemSizeBytes_ += aefa->getInputSize();
+
+            // P2SH AddressEntry objects use nesting to determine the exact
+            // P2SH type. The initial P2SH-W2WPKH AddressEntry object (and any
+            // non-SegWit AddressEntry objects) won't have witness data. That's
+            // fine. Catch the error and keep going.
+            try {
+               utxo.witnessDataSizeBytes_ += aefa->getWitnessDataSize();
+               utxo.isInputSW_ = true;
+            }
+            catch (const std::runtime_error& re) {}
+
+            // Check for a predecessor, which P2SH-P2PWKH will have. This is how
+            // we learn if the original P2SH AddressEntry object uses SegWit.
+            auto addrNested = std::dynamic_pointer_cast<AddressEntry_Nested>(aefa);
+            if (addrNested == nullptr) {
+               break;
+            }
+            aefa = addrNested->getPredecessor();
+         } // while
+      } // if
+   } // for
+
+   return inputUTXOs;
+}
+
+// Frontend for UtxoSelection::computeSizeAndFee(). Necessary due to some
+// nuances in how it's invoked.
+// IN:  UTXO vector used to initialize UtxoSelection. (std::vector<UTXO>)
+// OUT: None
+// RET: A fully initialized UtxoSelection object, with size and fee data.
+UtxoSelection TransactionData::computeSizeAndFee(const std::vector<UTXO>& inUTXOs
+   , const PaymentStruct& inPS)
+{
+   // When creating UtxoSelection object, initialize it with a copy of the
+   // UTXO vector. Armory will "move" the data behind-the-scenes, and we
+   // still need the data.
+   usedUTXO_ = inUTXOs;
+   auto usedUTXOCopy{ usedUTXO_ };
+   UtxoSelection selection{ usedUTXOCopy };
+
+   try {
+      selection.computeSizeAndFee(inPS);
+   }
+   catch (const std::runtime_error& err) {
+      qDebug() << "UpdateTransactionData - UtxoSelection exception: "
+         << err.what();
+   }
+   catch (...) {
+      qDebug() << "UpdateTransactionData - UtxoSelection exception";
+   }
+
+   return selection;
 }
 
 // A temporary private function that calculates the virtual size of an incoming

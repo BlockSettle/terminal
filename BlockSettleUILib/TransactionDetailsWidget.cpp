@@ -9,7 +9,7 @@
 
 Q_DECLARE_METATYPE(Tx);
 
-const BinaryData BinaryTXID::getRPCTXID()
+BinaryData BinaryTXID::getRPCTXID()
 {
    BinaryData retVal;
    if (txidIsRPC_ == true) {
@@ -22,7 +22,7 @@ const BinaryData BinaryTXID::getRPCTXID()
    return retVal;
 }
 
-const BinaryData BinaryTXID::getInternalTXID()
+BinaryData BinaryTXID::getInternalTXID()
 {
    BinaryData retVal;
    if (txidIsRPC_ == false) {
@@ -102,26 +102,20 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
       clear();
    }
    // get the transaction data from armory
-   const auto &cbTX = [this, &rpcTXID, firstPass](Tx tx) {
+   std::string txidStr = rpcTXID.getRPCTXID().toHexStr();
+   const auto &cbTX = [this, txidStr](Tx tx) {
       if (tx.isInitialized()) {
          processTxData(tx);
       }
       else {
-         logger_->error("[TransactionDetailsWidget::populateTransactionWidget] TX not " \
-                        "initialized for hash {}.",
-                        rpcTXID.getRPCTXID().toHexStr());
-         // If failure, try swapping the endian. Treat the result as RPC.
-         if (firstPass == true) {
-            BinaryTXID intTXID(rpcTXID.getInternalTXID(), true);
-            populateTransactionWidget(intTXID, false);
-         }
+         logger_->error("[TransactionDetailsWidget::populateTransactionWidget] "
+            "- TXID {} is not initialized.", txidStr);
       }
    };
 
    // The TXID passed to Armory *must* be in internal order!
    if (!armory_->getTxByHash(rpcTXID.getInternalTXID(), cbTX)) {
-      logger_->error("[TransactionDetailsWidget::populateTransactionWidget] failed to " \
-         "get TX for hash {}.", rpcTXID.getRPCTXID().toHexStr());
+      logger_->error("[{}] - Failed to get TXID {}.", __func__, txidStr);
    }
 }
 
@@ -205,15 +199,16 @@ void TransactionDetailsWidget::setTxGUIValues()
       }
    }
    uint64_t fees = totIn - curTx_.getSumOfOutputs();
-   double feePerByte = (double)fees / (double)curTx_.getSize();
+   float feePerByte = (float)fees / (float)curTx_.getTxWeight();
 
    // NB: Certain data (timestamp, height, and # of confs) can't be obtained
    // from the Tx object. For now, we're leaving placeholders until a solution
-   // can be found. In theory, the timestamp can be obtained from the timestamp.
+   // can be found. In theory, the timestamp can be obtained from the header.
    // The header data retrieved right now seems to be inaccurate, so we're not
    // using that right now.
 
-   // Populate the GUI fields.
+   // Populate the GUI fields. (NOTE: Armory's getTxWeight() call needs to be
+   // relabeled getVirtSize().)
    // Output TXID in RPC byte order by flipping TXID bytes rcv'd by Armory (internal
    // order).
 //   ui_->tranDate->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(curTxTimestamp)));
@@ -222,14 +217,10 @@ void TransactionDetailsWidget::setTxGUIValues()
    ui_->tranConfirmations->setText(QString::fromStdString("# confs here")); // FIX ME!!!
    ui_->tranNumInputs->setText(QString::number(curTx_.getNumTxIn()));
    ui_->tranNumOutputs->setText(QString::number(curTx_.getNumTxOut()));
-   ui_->tranOutput->setText(QString::number(curTx_.getSumOfOutputs() / BTCNumericTypes::BalanceDivider,
-                                            'f',
-                                            BTCNumericTypes::default_precision));
-   ui_->tranFees->setText(QString::number(fees / BTCNumericTypes::BalanceDivider,
-                                          'f',
-                                          BTCNumericTypes::default_precision));
+   ui_->tranOutput->setText(UiUtils::displayAmount(curTx_.getSumOfOutputs()));
+   ui_->tranFees->setText(UiUtils::displayAmount(fees));
    ui_->tranFeePerByte->setText(QString::number(nearbyint(feePerByte)));
-   ui_->tranSize->setText(QString::number(curTx_.getSize()));
+   ui_->tranSize->setText(QString::number(curTx_.getTxWeight()));
 
    loadInputs();
 }
@@ -241,11 +232,9 @@ void TransactionDetailsWidget::onNewBlock(unsigned int)
    }
 }
 
-// This function populates the inputs tree with top level and child items.
-// The exact same code applies to ui_->treeOutput.
+// Load the input and output windows.
 void TransactionDetailsWidget::loadInputs()
 {
-   // for testing purposes i populate both trees with test data
    loadTreeIn(ui_->treeInput);
    loadTreeOut(ui_->treeOutput);
 }
@@ -265,20 +254,30 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       if (prevTx.isInitialized()) {
          prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
       }
+      auto txType = prevOut.getScriptType();
       const auto outAddr = bs::Address::fromTxOut(prevOut);
-      double amtBTC = prevOut.getValue() / BTCNumericTypes::BalanceDivider;
+      double amtBTC = UiUtils::amountToBtc(prevOut.getValue());
+      QString typeStr;
+      QString addrStr;
+
+      // For now, don't display any data if the TxOut is non-std. Displaying a
+      // hex version of the script is one thing that could be done. This needs
+      // to be discussed before implementing. Non-std could mean many things.
+      if (txType == TXOUT_SCRIPT_NONSTANDARD) {
+         typeStr = QString::fromStdString("Non-Std");
+      }
+      else {
+         typeStr = QString::fromStdString("Input");
+         addrStr = outAddr.display();
+      }
 
       // create a top level item using type, address, amount, wallet values
-      QTreeWidgetItem *item = createItem(tree,
-                                         tr("Input"),
-                                         outAddr.display(),
-                                         QString::number(amtBTC,
-                                                         'f',
-                                                         BTCNumericTypes::default_precision),
-                                         QString());
+      QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
+         , UiUtils::displayAmount(amtBTC), QString());
 
       // Example: Add several child items to this top level item to crate a new
-      // branch in the tree.
+      // branch in the tree. Could be useful for things like expanding a non-std
+      // input, or expanding any input, really.
 /*      item->addChild(createItem(item,
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
                                 tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
@@ -299,26 +298,30 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
 
    // here's the code to add data to the Input tree.
    for (size_t i = 0; i < curTx_.getNumTxOut(); i++) {
+      auto txType = curTx_.getTxOutCopy(i).getScriptType();
       const auto outAddr = bs::Address::fromTxOut(curTx_.getTxOutCopy(i));
-      double amtBTC = curTx_.getTxOutCopy(i).getValue() / BTCNumericTypes::BalanceDivider;
+      double amtBTC = UiUtils::amountToBtc(curTx_.getTxOutCopy(i).getValue());
+      QString typeStr;
+      QString addrStr;
+
+      // For now, don't display any data if the TxOut is OP_RETURN or non-std.
+      // Displaying a hex version of the script is one thing that could be done.
+      // This needs to be discussed before implementing. OP_RETURN isn't too bad
+      // (80 bytes max) but non-std could mean just about anything.
+      if (txType == TXOUT_SCRIPT_OPRETURN) {
+         typeStr = QString::fromStdString("OP_RETURN");
+      }
+      else if (txType == TXOUT_SCRIPT_NONSTANDARD) {
+         typeStr = QString::fromStdString("Non-Std");
+      }
+      else {
+         typeStr = QString::fromStdString("Output");
+         addrStr = outAddr.display();
+      }
 
       // create a top level item using type, address, amount, wallet values
-      QTreeWidgetItem *item = createItem(tree,
-                                         tr("Output"),
-                                         outAddr.display(),
-                                         QString::number(amtBTC,
-                                                         'f',
-                                                         BTCNumericTypes::default_precision),
-                                         QString());
-
-      // Example: Add several child items to this top level item to crate a new
-      // branch in the tree.
-/*      item->addChild(createItem(item,
-                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
-                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
-                                tr("-0.00850000"),
-                                tr("Settlement")));
-      item->setExpanded(true);*/
+      QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
+         , UiUtils::displayAmount(amtBTC), QString());
 
       // add the item to the tree
       tree->addTopLevelItem(item);
@@ -355,12 +358,17 @@ QTreeWidgetItem * TransactionDetailsWidget::createItem(QTreeWidgetItem *parentIt
    return item;
 }
 
+// A function that sends a signal to the explorer widget to open the address
+// details widget for a clicked address. Doesn't apply to OP_RETURN or non-std
+// addresses.
 void TransactionDetailsWidget::onAddressClicked(QTreeWidgetItem *item, int column)
 {
-   // user has clicked the address column of the item so
-   // send a signal to ExplorerWidget to open AddressDetailsWidget
    if (column == colAddressId) {
-      emit(addressClicked(item->text(colAddressId)));
+      auto typeText = item->text(colType);
+      if (typeText == QString::fromStdString("Input")
+         || typeText == QString::fromStdString("Output")) {
+         emit(addressClicked(item->text(colAddressId)));
+      }
    }
 }
 

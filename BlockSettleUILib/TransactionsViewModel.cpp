@@ -583,6 +583,9 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          updateTransactionDetails(item.second.first, cbInited);
       }
    }
+   else {
+      emit dataLoaded(0);
+   }
 
    if (!updatedItems->empty()) {
       updateBlockHeight(*updatedItems);

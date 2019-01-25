@@ -780,8 +780,7 @@ hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 }
 
 bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
-                                     , QObject *obj, const bool& startup
-                                     , uint64_t val)
+   , QObject *obj, uint64_t val)
 {
    const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
       std::vector<UTXO> result;
@@ -799,7 +798,7 @@ bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
       }
       cb(result);
    };
-   return bs::Wallet::getSpendableTxOutList(cbTxOutList, obj, startup, val);
+   return bs::Wallet::getSpendableTxOutList(cbTxOutList, obj, val);
 }
 
 std::string hd::Leaf::GetAddressIndex(const bs::Address &addr)
@@ -1190,11 +1189,11 @@ void hd::CCLeaf::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
    if (checker_ && !validationStarted_) {
       validationEnded_ = false;
-      validationProc(false);
+      validationProc();
    }
 }
 
-void hd::CCLeaf::refreshInvalidUTXOs(const bool& initValidation, const bool& ZConly)
+void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
    {
       QMutexLocker lock(&addrMapsMtx_);
@@ -1218,7 +1217,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& initValidation, const bool& ZCo
          };
          findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
       };
-      hd::Leaf::getSpendableTxOutList(cbRefresh, this, initValidation);
+      hd::Leaf::getSpendableTxOutList(cbRefresh, this);
    }
 
    const auto &cbRefreshZC = [this](std::vector<UTXO> utxos) {
@@ -1235,10 +1234,10 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& initValidation, const bool& ZCo
       };
       findInvalidUTXOs(utxos, cbUpdateZcBalance);
    };
-   hd::Leaf::getSpendableZCList(cbRefreshZC, this, initValidation);
+   hd::Leaf::getSpendableZCList(cbRefreshZC, this);
 }
 
-void hd::CCLeaf::validationProc(const bool& initValidation)
+void hd::CCLeaf::validationProc()
 {
    validationStarted_ = true;
    if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
@@ -1246,7 +1245,7 @@ void hd::CCLeaf::validationProc(const bool& initValidation)
       return;
    }
    validationEnded_ = true;
-   refreshInvalidUTXOs(initValidation);
+   refreshInvalidUTXOs();
    hd::Leaf::firstInit();
 
    if (!validationStarted_) {
@@ -1394,8 +1393,8 @@ void hd::CCLeaf::firstInit(bool force)
       validationStarted_ = false;
    }
    if (checker_ && !validationStarted_) {
-//      validationEnded_ = false;
-      validationProc(true);
+      validationEnded_ = false;
+      validationProc();
    }
 }
 
@@ -1409,7 +1408,7 @@ void hd::CCLeaf::onStateChanged(ArmoryConnection::State state)
 void hd::CCLeaf::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
    hd::Leaf::onZeroConfReceived(reqId);
-   refreshInvalidUTXOs(false, true);
+   refreshInvalidUTXOs(true);
 }
 
 std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
@@ -1424,8 +1423,7 @@ std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
 }
 
 bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
-                                       , QObject *obj, const bool& startup
-                                       , uint64_t val)
+   , QObject *obj, uint64_t val)
 {
    if (validationStarted_ && !validationEnded_) {
       return false;
@@ -1433,11 +1431,11 @@ bool hd::CCLeaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
    const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
       cb(filterUTXOs(txOutList));
    };
-   return hd::Leaf::getSpendableTxOutList(cbTxOutList, obj, startup, val);
+   return hd::Leaf::getSpendableTxOutList(cbTxOutList, obj, val);
 }
 
 bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
-                                    , QObject *obj, const bool& startup)
+   , QObject *obj)
 {
    if (validationStarted_ && !validationEnded_) {
       return false;
@@ -1445,7 +1443,7 @@ bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
    const auto &cbZCList = [this, cb](std::vector<UTXO> txOutList) {
       cb(filterUTXOs(txOutList));
    };
-   return hd::Leaf::getSpendableZCList(cbZCList, obj, startup);
+   return hd::Leaf::getSpendableZCList(cbZCList, obj);
 }
 
 bool hd::CCLeaf::isBalanceAvailable() const

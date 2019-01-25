@@ -100,11 +100,13 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
       txHashSet.insert(outpoint.getTxHash());
       txOutIndices[outpoint.getTxHash()].insert(outpoint.getTxOutIndex());
    }
+   allowAutoSelInputs_ = false;
 
    const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
       auto selInputs = transactionData_->GetSelectedInputs();
       selInputs->SetUseAutoSel(false);
       int64_t origFee = 0;
+      unsigned int cntOutputs = 0;
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          const auto &itTxOut = txOutIndices.find(txHash);
@@ -117,65 +119,65 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
                origFee += prevOut.getValue();
             }
          }
-
-         unsigned int cntOutputs = 0;
-         for (size_t i = 0; i < tx.getNumTxOut(); i++) {
-            auto out = tx.getTxOutCopy(i);
-            const auto addr = bs::Address::fromTxOut(out);
-            if (wallet->containsAddress(addr)) {
-               if (selInputs->SetUTXOSelection(tx.getThisHash(),
-                                               out.getIndex())) {
-                  cntOutputs++;
-               }
-            }
-            origFee -= out.getValue();
-         }
-
-         if (!cntOutputs) {
-            if (logger_ != nullptr) {
-               logger_->error("[{}] No input(s) found for TX {}.", __func__
-                              , tx.getThisHash().toHexStr(true));
-            }
-            return;
-         }
-         if (origFee < 0) {
-            if (logger_ != nullptr) {
-               logger_->error("[{}] Negative TX balance ({}) for TX {}."
-                              , __func__, origFee
-                              , tx.getThisHash().toHexStr(true));
-            }
-            return;
-         }
-
-         const auto &cbFee = [this, tx, origFee](float fee) {
-            const auto txSize = tx.getTxWeight();
-            const float feePerByte = (float)origFee / txSize;
-            originalFee_ = origFee;
-            originalFeePerByte_ = feePerByte;
-
-            // CPFP has no enforced rules for fees. We use the following
-            // algorithm for determining the fee/byte. If the current 2-block
-            // fee is less than the fee used by the parent, stick to the current
-            // 2-block fee. If not, add the difference to the 2-block fee and
-            // use the result for the child fee. Simple but it should work. A
-            // little tinkering may be worthwhile later.
-            const float feeDiff = fee - originalFee_;
-            float newFPB = fee;
-            if (std::signbit(feeDiff) == false) { // Is the diff positive?
-               newFPB += feeDiff;
-            }
-
-            // SetMinimumFee() may need to be re-thought. RBF is the only
-            // scenario where we really need to enforce a minimum fee in concert
-            // with the minimum fee/byte. For now, the minimum fee will be set
-            // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
-            // a value that won't always be accurate is a bad idea.
-            SetMinimumFee(0, newFPB);
-            onTransactionUpdated();
-            populateFeeList();
-         };
-         walletsManager_->estimatedFeePerByte(2, cbFee, this);
       }
+
+      for (size_t i = 0; i < tx.getNumTxOut(); i++) {
+         auto out = tx.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(out);
+         if (wallet->containsAddress(addr)) {
+            if (selInputs->SetUTXOSelection(tx.getThisHash(),
+               out.getIndex())) {
+               cntOutputs++;
+            }
+         }
+         origFee -= out.getValue();
+      }
+
+      if (!cntOutputs) {
+         if (logger_ != nullptr) {
+            logger_->error("[{}] No input(s) found for TX {}.", __func__
+               , tx.getThisHash().toHexStr(true));
+         }
+         return;
+      }
+      if (origFee < 0) {
+         if (logger_ != nullptr) {
+            logger_->error("[{}] Negative TX balance ({}) for TX {}."
+               , __func__, origFee
+               , tx.getThisHash().toHexStr(true));
+         }
+         return;
+      }
+
+      const auto &cbFee = [this, tx, origFee, selInputs](float fee) {
+         const auto txSize = tx.getTxWeight();
+         const float feePerByte = (float)origFee / txSize;
+         originalFee_ = origFee;
+         originalFeePerByte_ = feePerByte;
+
+         // CPFP has no enforced rules for fees. We use the following
+         // algorithm for determining the fee/byte. If the current 2-block
+         // fee is less than the fee used by the parent, stick to the current
+         // 2-block fee. If not, add the difference to the 2-block fee and
+         // use the result for the child fee. Simple but it should work. A
+         // little tinkering may be worthwhile later.
+         const float feeDiff = fee - originalFee_;
+         float newFPB = fee;
+         if (std::signbit(feeDiff) == false) { // Is the diff positive?
+            newFPB += feeDiff;
+         }
+
+         // SetMinimumFee() may need to be re-thought. RBF is the only
+         // scenario where we really need to enforce a minimum fee in concert
+         // with the minimum fee/byte. For now, the minimum fee will be set
+         // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
+         // a value that won't always be accurate is a bad idea.
+         SetMinimumFee(0, newFPB);
+         onTransactionUpdated();
+         populateFeeList();
+         SetInputs(selInputs->GetSelectedTransactions());
+      };
+      walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };
 
    SetFixedWallet(wallet->GetWalletId(), [this, txHashSet, cbTXs] {
@@ -280,21 +282,24 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       //   relay fee (IRL) * the new TX's virtual size. The fee can be adjusted
       //   in Core by the incrementalrelayfee config option. By default, the fee
       //   is 1000 sat/KB (1 sat/B), which is what we will assume is being used.
-      //   (This may need to be a terminal config option later.)
+      //   (This may need to be a terminal config option later.) So, if the virt
+      //   size is 146, and the original fee is 1 sat/b (146 satoshis), the next
+      //   fee must be at least 2 sat/b (292 satoshis), then 3 sat/b, etc. This
+      //   assumes we don't change the TX in any way. Bumping to a virt size of
+      //   300 would require the 1st RBF to be 446 satoshis, then 746, 1046, etc.
       //
       // It's impossible to calculate the minimum required fee, as the user can
       // do many different things. We'll just start by setting the minimum fee
       // to the amount required by the RBF/IRL policy, and keep the minimum
       // fee/byte where it is.
       originalFee_ = totalVal;
-      const auto &txVirtSize = std::ceil(tx.getTxWeight() / 4);
-      const float feePerByte = (float)totalVal / txVirtSize;
+      const float feePerByte = (float)totalVal / (float)tx.getTxWeight();
       originalFeePerByte_ = feePerByte;
-      const auto &newMinFee = originalFee_ + txVirtSize;
+      const auto &newMinFee = originalFee_ + tx.getTxWeight();
       SetMinimumFee(newMinFee, originalFeePerByte_);
       populateFeeList();
-
       onTransactionUpdated();
+      SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
 
    const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
@@ -401,7 +406,6 @@ void CreateTransactionDialogAdvanced::initUI()
 void CreateTransactionDialogAdvanced::clear()
 {
    CreateTransactionDialog::clear();
-
    outputsModel_->clear();
    usedInputsModel_->clear();
 }
@@ -561,7 +565,7 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    // desirable to change this one day. RBF TXs can change inputs but only if
    // all other inputs are RBF-enabled. Properly refactored, the user could
    // select only RBF-enabled inputs that are waiting for a conf.
-   if(!isRBF_) {
+   if (!isRBF_ && transactionData_->GetSelectedInputs()->UseAutoSel()) {
       usedInputsModel_->updateInputs(transactionData_->inputs());
    }
 
@@ -613,8 +617,10 @@ void CreateTransactionDialogAdvanced::onXBTAmountChanged(const QString &text)
 
 void CreateTransactionDialogAdvanced::onSelectInputs()
 {
-   CoinControlDialog dlg(transactionData_->GetSelectedInputs(), this);
-   dlg.exec();
+   CoinControlDialog dlg(transactionData_->GetSelectedInputs(), allowAutoSelInputs_, this);
+   if (dlg.exec() == QDialog::Accepted) {
+      SetInputs(dlg.selectedInputs());
+   }
 }
 
 void CreateTransactionDialogAdvanced::onAddOutput()
@@ -664,6 +670,24 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
       && !broadcasting_
       && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
          || (selectedChangeAddress_.isValid())));
+}
+
+void CreateTransactionDialogAdvanced::SetInputs(const std::vector<UTXO> &inputs)
+{
+   usedInputsModel_->updateInputs(inputs);
+
+   const auto maxAmt = transactionData_->CalculateMaxAmount();
+   double recipSumAmt = 0;
+   for (unsigned int recip = 0; recip < transactionData_->GetRecipientsCount(); ++recip) {
+      recipSumAmt += transactionData_->GetRecipientAmount(recip);
+   }
+   logger_->debug("maxAmt={}, recipientsAmt={}", maxAmt, recipSumAmt);
+   if (!qFuzzyCompare(maxAmt, recipSumAmt)) {
+      for (unsigned int recip = 0; recip < transactionData_->GetRecipientsCount(); ++recip) {
+         const auto recipAmt = transactionData_->GetRecipientAmount(recip);
+         transactionData_->UpdateRecipientAmount(recip, recipAmt, false);
+      }
+   }
 }
 
 void CreateTransactionDialogAdvanced::AddManualFeeEntries(float feePerByte, float totalFee)
@@ -896,6 +920,7 @@ void CreateTransactionDialogAdvanced::SetFixedWalletAndInputs(const std::shared_
    SelectWallet(wallet->GetWalletId());
    ui_->comboBoxWallets->setEnabled(false);
    disableInputSelection();
+   usedInputsModel_->updateInputs(inputs);
    transactionData_->SetWalletAndInputs(wallet, inputs, armory_->topBlock());
 }
 
