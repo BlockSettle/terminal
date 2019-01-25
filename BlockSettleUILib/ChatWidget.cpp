@@ -187,25 +187,12 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
 void ChatWidget::onUserClicked(const QModelIndex& index)
 {
-   return stateCurrent_->onUserClicked(index); //test
-
-   currentChat_ = usersViewModel_->resolveUser(index);
-
-   ui_->input_textEdit->setEnabled(!currentChat_.isEmpty());
-   ui_->labelActiveChat->setText(tr("CHAT #") + currentChat_);
-   messagesViewModel_->onSwitchToChat(currentChat_);
-   client_->retrieveUserMessages(currentChat_);
+   return stateCurrent_->onUserClicked(index);
 }
 
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
-   return stateCurrent_->onUsersDeleted(users); //test
-
-   usersViewModel_->onUsersDel(users);
-
-   if (std::find(users.cbegin(), users.cend(), currentChat_.toStdString()) != users.cend()) {
-      onUserClicked({});
-   }
+   return stateCurrent_->onUsersDeleted(users);
 }
 
 void ChatWidget::changeState(ChatWidget::State state)
@@ -250,40 +237,19 @@ bool ChatWidget::eventFilter(QObject * obj, QEvent * event)
 
 void ChatWidget::onSendButtonClicked()
 {
-   return stateCurrent_->onSendButtonClicked(); //test
-   /*
-   QString messageText = ui_->text->text();
-
-   if (!messageText.isEmpty() && !currentChat_.isEmpty()) {
-      auto msg = client_->SendOwnMessage(messageText, currentChat_);
-      ui_->text->clear();
-
-      messagesViewModel_->onSingleMessageUpdate(msg);
-   }
-   */
+   return stateCurrent_->onSendButtonClicked();
 }
 
 void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
 {
-   return stateCurrent_->onMessagesUpdated(parent, start, end); //test
-   ui_->tableViewMessages->scrollToBottom();
+   return stateCurrent_->onMessagesUpdated(parent, start, end);
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
    try {
-	  const auto userId1 = stateCurrent_->login(email, jwt); //test
+	  const auto userId = stateCurrent_->login(email, jwt);
 	  changeState(State::LoggedIn);
-	  return userId1;
-
-	  
-      logger_->debug("Set user name {}", email);
-      usersViewModel_->onUsersReplace({});
-      const auto userId = client_->loginToServer(email, jwt);
-      ui_->stackedWidget->setCurrentIndex(1);
-      //ui_->labelUserName->setText(QString::fromStdString(userId));
-      messagesViewModel_->setOwnUserId(userId);
-
       return userId;
    }
    catch (std::exception& e) {
@@ -297,16 +263,11 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 
 void ChatWidget::onLoginFailed()
 {
-   stateCurrent_->onLoginFailed(); //test
-
-   //ui_->stackedWidget->setCurrentIndex(0);
-
+   stateCurrent_->onLoginFailed();
    emit LoginFailed();
 }
 
 void ChatWidget::logout()
 {
    return stateCurrent_->logout(); //test
-   ui_->stackedWidget->setCurrentIndex(0);
-   client_->logout();
 }
