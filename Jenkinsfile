@@ -20,7 +20,8 @@ pipeline {
     //        }
             stage('Build MacOSX app') {
                 steps {
-                    sh "scp ${WORKSPACE} admin@10.1.60.206:~/Workspace"
+                    sh "ssh Admin@10.0.1.36 pwd"
+            //        sh "scp ${WORKSPACE} admin@10.1.60.206:~/Workspace"
             //        sh "cd ./terminal && pip install requests"
             //        sh "cd ./terminal && python generate.py release"
             //        sh "cd ./terminal/terminal.release && make -j 16"
@@ -29,11 +30,11 @@ pipeline {
      //       }
         }
         
-        stage('Transfer') {
-            steps {
-                sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/terminal/Linux/bsterminal_${TAG}.deb"
-                sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/Linux/bsterminal_${TAG}.deb /var/www/downloads/bsterminal.deb"
-            }
-        }
+     //   stage('Transfer') {
+     //       steps {
+     //           sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/terminal/Linux/bsterminal_${TAG}.deb"
+     //           sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/Linux/bsterminal_${TAG}.deb /var/www/downloads/bsterminal.deb"
+     //       }
+     //   }
     }
 }
