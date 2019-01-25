@@ -2,22 +2,22 @@ pipeline {
     agent any
 
     stages {
-        parallel {
-            stage('Build Linux app') {
-                agent {
-                    docker {
-                        image 'terminal:latest'
-                        reuseNode true
-                        args '-v /var/cache/3rd:/home/3rd'
-                    }
-                }
-                steps {
-                    sh "cd ./terminal && pip install requests"
-                    sh "cd ./terminal && python generate.py release"
-            //        sh "cd ./terminal/terminal.release && make -j 16"
-            //        sh "cd ./terminal/Deploy && ./deploy.sh"
-                }
-            }
+    //    parallel {
+    //        stage('Build Linux app') {
+    //            agent {
+    //                docker {
+    //                    image 'terminal:latest'
+    //                    reuseNode true
+    //                    args '-v /var/cache/3rd:/home/3rd'
+    //                }
+    //            }
+    //            steps {
+    //                sh "cd ./terminal && pip install requests"
+    //                sh "cd ./terminal && python generate.py release"
+    //        //        sh "cd ./terminal/terminal.release && make -j 16"
+    //        //        sh "cd ./terminal/Deploy && ./deploy.sh"
+    //            }
+    //        }
             stage('Build MacOSX app') {
                 steps {
                     sh "scp ${WORKSPACE} admin@10.1.60.206:~/Workspace"
@@ -26,7 +26,7 @@ pipeline {
             //        sh "cd ./terminal/terminal.release && make -j 16"
             //        sh "cd ./terminal/Deploy && ./deploy.sh"
                 }
-            }
+     //       }
         }
         
         stage('Transfer') {
