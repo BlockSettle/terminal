@@ -15,6 +15,9 @@
 
 #include <QDebug>
 
+static const size_t kMaxTxSize = 400000;
+
+
 TransactionData::TransactionData(onTransactionChanged changedCallback, bool SWOnly, bool confOnly)
    : wallet_(nullptr)
    , selectedInputs_(nullptr)
@@ -196,7 +199,7 @@ bool TransactionData::UpdateTransactionData()
       if (maxAmount) {
          const UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
-         if (summary_.txVirtSize > 1000000) {
+         if (summary_.txVirtSize > kMaxTxSize) {
             summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
@@ -230,7 +233,7 @@ bool TransactionData::UpdateTransactionData()
       else {
          UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
-         if (summary_.txVirtSize > 1000000) {
+         if (summary_.txVirtSize > kMaxTxSize) {
             summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = selection.fee_;

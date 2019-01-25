@@ -717,7 +717,7 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
    }
    if ((transactionData_->CalculateMaxAmount()
       - transactionData_->GetTotalRecipientsAmount()- currentValue_)
-      < -0.00000001) {  // 1 satoshi difference is allowed
+      < -0.00000001) {  // 1 satoshi difference is allowed due to rounding error
       UiUtils::setWrongState(ui_->lineEditAmount, true);
       return false;
    }
