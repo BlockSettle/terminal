@@ -951,7 +951,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
 void BSTerminalMainWindow::onAutheIDDone(const std::string& jwt)
 {
    auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), jwt);
-   setLoginButtonText(currentUserLogin_ + QString::fromStdString("( Chat user: " + id + " )"));
+   setLoginButtonText(currentUserLogin_ /*+ QString::fromStdString("( Chat user: " + id + " )")*/);
 }
 
 void BSTerminalMainWindow::onAutheIDFailed()
