@@ -22,7 +22,7 @@ pipeline {
                 steps {
             //        sh "ssh Admin@10.1.60.206 rm -r ~/Workspace/terminal"
    //                 sh "scp -r ${WORKSPACE}/terminal Admin@10.1.60.206:~/Workspace"
-                    sh "cd /Users/admin/Workspace/terminal/Deploy/MacOSX && ./package.sh"
+                    sh "ssh Admin@10.1.60.206  cd ~/Workspace/terminal/Deploy/MacOSX && ./package.sh"
             //        sh "cd ./terminal && python generate.py release"
             //        sh "cd ./terminal/terminal.release && make -j 16"
             //        sh "cd ./terminal/Deploy && ./deploy.sh"
