@@ -42,7 +42,7 @@ protected:
    void setChartStyle();
    void createCandleChartAxis();
    void createVolumeChartAxis();
-   void buildCandleChart();
+   void buildCandleChart(const QDateTime &sinceDate = {}, qint64 timeStepSecs = 86400);
    void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
 
 private:

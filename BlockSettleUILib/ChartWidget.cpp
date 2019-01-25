@@ -7,20 +7,44 @@
 #include "CustomCandlestickSet.h"
 #include "TradesClient.h"
 
+namespace {
+
+enum DateRangeType {
+    Unknown         = 0,
+    OneHour         = 1,
+    SixHours        = 2,
+    TwelveHours     = 3,
+    TwentyFourHours = 4,
+    OneWeek         = 5,
+    OneMonth        = 6,
+    SixMonths       = 7,
+    OneYear         = 8
+};
+
+const qint64 ONE_MINUTE_SECS            = 60;
+const qint64 ONE_FIFTEEN_MINUTES_SECS   = 15 * ONE_MINUTE_SECS;
+const qint64 ONE_THIRTY_MINUTES_SECS    = 30 * ONE_MINUTE_SECS;
+const qint64 ONE_HOUR_SECS              = 3600;
+const qint64 SIX_HOURS_SECS             = 6 * ONE_HOUR_SECS;
+const qint64 TWELVE_HOURS_SECS          = 12 * ONE_HOUR_SECS;
+const qint64 TWENTY_FOUR_HOURS_SECS     = 24 * ONE_HOUR_SECS;
+
+}
+
 ChartWidget::ChartWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChartWidget) {
    ui_->setupUi(this);
 
    // setting up date range radio button group
-   dateRange_.addButton(ui_->btn1h, 1);
-   dateRange_.addButton(ui_->btn6h, 2);
-   dateRange_.addButton(ui_->btn12h, 3);
-   dateRange_.addButton(ui_->btn24h, 4);
-   dateRange_.addButton(ui_->btn1w, 5);
-   dateRange_.addButton(ui_->btn1m, 6);
-   dateRange_.addButton(ui_->btn6m, 7);
-   dateRange_.addButton(ui_->btn1y, 8);
+   dateRange_.addButton(ui_->btn1h, DateRangeType::OneHour);
+   dateRange_.addButton(ui_->btn6h, DateRangeType::SixHours);
+   dateRange_.addButton(ui_->btn12h, DateRangeType::TwelveHours);
+   dateRange_.addButton(ui_->btn24h, DateRangeType::TwentyFourHours);
+   dateRange_.addButton(ui_->btn1w, DateRangeType::OneWeek);
+   dateRange_.addButton(ui_->btn1m, DateRangeType::OneMonth);
+   dateRange_.addButton(ui_->btn6m, DateRangeType::SixMonths);
+   dateRange_.addButton(ui_->btn1y, DateRangeType::OneYear);
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked), 
       this, &ChartWidget::onDateRangeChanged);
 
@@ -209,16 +233,24 @@ void ChartWidget::createVolumeChartAxis() {
 
 // Populates chart with data, right now it's just
 // test dummy data.
-void ChartWidget::buildCandleChart() {
+void ChartWidget::buildCandleChart(const QDateTime &sinceDate, qint64 timeStepSecs) {
    auto chart = ui_->viewPrice->chart();
    priceSeries_->clear();
    volumeSeries_->clear();
    QDateTime dt;
-   dt.setDate(QDate(2018, 10, 1));
-   auto rawData = client_->getRawPointDataArray(QStringLiteral("EUR/GBP")
+   if (sinceDate.isValid()) {
+       dt = sinceDate;
+   } else {
+       dt.setDate(QDate(2018, 10, 1));
+   }
+   auto product = ui_->cboInstruments->currentText();
+   if (product.isEmpty()) {
+       product = QStringLiteral("EUR/GBP");
+   }
+   auto rawData = client_->getRawPointDataArray(product
                                                 , dt
                                                 , QDateTime::currentDateTime()
-                                                , 24 * 60 * 60);
+                                                , timeStepSecs);
    for (const auto& dp : rawData) {
        addDataPoint(dp->open, dp->high, dp->low, dp->close, dp->timestamp, dp->volume);
    }
@@ -240,6 +272,42 @@ void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, q
 // Handles changes of date range.
 void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
+   QDateTime sinceTime;
+   qint64 step = TWENTY_FOUR_HOURS_SECS;
+   QDateTime now = QDateTime::currentDateTime();
+   switch (static_cast<DateRangeType>(id)) {
+   case DateRangeType::OneHour:
+       sinceTime = now.addSecs(-ONE_HOUR_SECS);
+       step = ONE_MINUTE_SECS;
+       break;
+   case DateRangeType::SixHours:
+       sinceTime = now.addSecs(-SIX_HOURS_SECS);
+       step = ONE_FIFTEEN_MINUTES_SECS;
+       break;
+   case DateRangeType::TwelveHours:
+       sinceTime = now.addSecs(-TWELVE_HOURS_SECS);
+       step = ONE_THIRTY_MINUTES_SECS;
+       break;
+   case DateRangeType::TwentyFourHours:
+       sinceTime = now.addSecs(-TWENTY_FOUR_HOURS_SECS);
+       step = ONE_HOUR_SECS;
+       break;
+   case DateRangeType::OneWeek:
+       sinceTime = now.addDays(-7);
+       break;
+   case DateRangeType::OneMonth:
+       sinceTime = now.addMonths(-1);
+       break;
+   case DateRangeType::SixMonths:
+       sinceTime = now.addMonths(-6);
+       break;
+   case DateRangeType::OneYear:
+       sinceTime = now.addYears(-1);
+       break;
+   default:
+       break;
+   }
+   buildCandleChart(sinceTime, step);
 }
 
 // This slot function is called when mouse cursor hovers over a candlestick.
@@ -262,4 +330,5 @@ void ChartWidget::onPriceHover(bool status, QCandlestickSet *set) {
 
 void ChartWidget::onInstrumentChanged(const QString &text) {
    ui_->viewPrice->chart()->setTitle(text);
+   buildCandleChart();
 }
