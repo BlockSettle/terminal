@@ -106,7 +106,9 @@ private:
    void validateAddOutputButton();
    Q_INVOKABLE void validateCreateButton();
 
-   void AddRecipient(const bs::Address &, double amount, bool isMax = false);
+   unsigned int AddRecipient(const bs::Address &, double amount, bool isMax = false);
+   void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
+   void FixRecipientsAmount();
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void SetMinimumFee(float totalFee, float feePerByte = 0);

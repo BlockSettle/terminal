@@ -90,7 +90,7 @@ void RFQTicketXBT::setTransactionData()
          if (!transactionData_) {
             return;
          }
-         transactionData_->SetFeePerByte(feePerByte);
+         transactionData_->setFeePerByte(feePerByte);
          setWallets();
       };
       walletsManager_->estimatedFeePerByte(2, cbFee, this);

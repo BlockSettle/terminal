@@ -233,8 +233,8 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          const auto amount = UiUtils::amountToBtc(out.getValue());
 
          // We will assume that the last wallet address found in the TX is the
-         // change address.
-         if (wallet->containsAddress(addr)) {
+         // change address (in case it's not the only output address)
+         if (transactionData_->GetRecipientsCount() && wallet->containsAddress(addr)) {
             if (!changeAddress.isEmpty()) {
                AddRecipient(changeAddress, changeAmount);
             }
@@ -295,11 +295,12 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       originalFee_ = totalVal;
       const float feePerByte = (float)totalVal / (float)tx.getTxWeight();
       originalFeePerByte_ = feePerByte;
-      const auto &newMinFee = originalFee_ + tx.getTxWeight();
-      SetMinimumFee(newMinFee, originalFeePerByte_);
+      const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
+      SetMinimumFee(newMinFee, (float)newMinFee / tx.getTxWeight());
       populateFeeList();
-      onTransactionUpdated();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
+      transactionData_->setTotalFee(newMinFee);
+      FixRecipientsAmount();
    };
 
    const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
@@ -626,32 +627,86 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 void CreateTransactionDialogAdvanced::onAddOutput()
 {
    const bs::Address address(ui_->lineEditAddress->text().trimmed());
+   const double maxValue = transactionData_->CalculateMaxAmount(address);
+   const bool maxAmount = std::abs(maxValue
+      - transactionData_->GetTotalRecipientsAmount() - currentValue_) <= 0.00000001;
 
-   auto maxValue = transactionData_->CalculateMaxAmount(address);
-   const bool maxAmount = qFuzzyCompare(maxValue, currentValue_);
+   if (maxAmount) {
+      for (const auto &recip : transactionData_->allRecipientIds()) {
+         UpdateRecipientAmount(recip, transactionData_->GetRecipientAmount(recip), true);
+      }
+   }
+   const auto recipId = AddRecipient(address, currentValue_, maxAmount);
 
-   AddRecipient(address, currentValue_, maxAmount);
+
+   const double diffMax = maxValue - transactionData_->GetTotalRecipientsAmount();
+   const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
+   if ((diffMax > 0) && (diffMax < totalFee)) {
+      transactionData_->setTotalFee(diffMax * BTCNumericTypes::BalanceDivider);
+      UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
+   }
+   else if ((diffMax < 0) && (diffMax > -0.00000001)) {
+      UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId) - 0.00000001, true);
+   }
 
    // clear edits
    ui_->lineEditAddress->clear();
    ui_->lineEditAmount->clear();
-   if (maxAmount) {
-      ui_->comboBoxFeeSuggestions->setEnabled(false);
-   }
-
    ui_->pushButtonAddOutput->setEnabled(false);
 }
 
 // Nothing is being done with isMax right now. We should use it or lose it.
-void CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &address, double amount, bool isMax)
+unsigned int CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &address, double amount, bool isMax)
 {
-   auto recipientId = transactionData_->RegisterNewRecipient();
-
+   const auto recipientId = transactionData_->RegisterNewRecipient();
    transactionData_->UpdateRecipientAddress(recipientId, address);
    transactionData_->UpdateRecipientAmount(recipientId, amount, isMax);
 
    // add to the model
    outputsModel_->AddRecipient(recipientId, address.display(), amount);
+
+   return recipientId;
+}
+
+void CreateTransactionDialogAdvanced::FixRecipientsAmount()
+{
+   if (!transactionData_->totalFee()) {
+      return;
+   }
+   double correction = 0;
+   try {
+      const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
+
+      const double balanceDiff = transactionData_->GetTransactionSummary().availableBalance - totalFee
+         - transactionData_->GetTotalRecipientsAmount();
+
+      if (transactionData_->GetTransactionSummary().hasChange) {
+         const double amtReturn = transactionData_->GetTransactionSummary().selectedBalance
+            - transactionData_->GetTransactionSummary().balanceToSpend
+            - UiUtils::amountToBtc(transactionData_->GetTransactionSummary().totalFee);
+         if (amtReturn < 0) {
+            correction = (amtReturn + 0.00000035 * transactionData_->feePerByte())  // exclude change address
+               / transactionData_->GetRecipientsCount();
+         }
+      }
+      else {
+         correction = balanceDiff / transactionData_->GetRecipientsCount();
+      }
+   } catch (const std::exception &) {}
+
+   if (!qFuzzyIsNull(correction)) {
+      logger_->debug("[{}] applying correction {} to all outputs", __func__, correction);
+      for (const auto &recip : transactionData_->allRecipientIds()) {
+         const double recipAmount = transactionData_->GetRecipientAmount(recip);
+         UpdateRecipientAmount(recip, recipAmount + correction, true);
+      }
+   }
+}
+
+void CreateTransactionDialogAdvanced::UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax)
+{
+   transactionData_->UpdateRecipientAmount(recipId, amount, isMax);
+   outputsModel_->UpdateRecipientAmount(recipId, amount);
 }
 
 bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
@@ -660,7 +715,8 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
       return false;
    }
    if ((transactionData_->CalculateMaxAmount()
-      - transactionData_->GetTotalRecipientsAmount()) < currentValue_) {
+      - transactionData_->GetTotalRecipientsAmount()- currentValue_)
+      < -0.00000001) {  // 1 satoshi difference is allowed
       UiUtils::setWrongState(ui_->lineEditAmount, true);
       return false;
    }
@@ -690,13 +746,9 @@ void CreateTransactionDialogAdvanced::SetInputs(const std::vector<UTXO> &inputs)
    usedInputsModel_->updateInputs(inputs);
 
    const auto maxAmt = transactionData_->CalculateMaxAmount();
-   double recipSumAmt = 0;
-   for (unsigned int recip = 0; recip < transactionData_->GetRecipientsCount(); ++recip) {
-      recipSumAmt += transactionData_->GetRecipientAmount(recip);
-   }
-   logger_->debug("maxAmt={}, recipientsAmt={}", maxAmt, recipSumAmt);
+   const double recipSumAmt = transactionData_->GetTotalRecipientsAmount();
    if (!qFuzzyCompare(maxAmt, recipSumAmt)) {
-      for (unsigned int recip = 0; recip < transactionData_->GetRecipientsCount(); ++recip) {
+      for (const auto &recip : transactionData_->allRecipientIds()) {
          const auto recipAmt = transactionData_->GetRecipientAmount(recip);
          transactionData_->UpdateRecipientAmount(recip, recipAmt, false);
       }
@@ -978,7 +1030,7 @@ void CreateTransactionDialogAdvanced::SetPredefinedFee(const int64_t& manualFee)
 {
    ui_->comboBoxFeeSuggestions->clear();
    ui_->comboBoxFeeSuggestions->addItem(tr("%1 satoshi").arg(manualFee), (qlonglong)manualFee);
-   transactionData_->SetTotalFee(manualFee);
+   transactionData_->setTotalFee(manualFee);
 }
 
 // Set a TX such that it can't be altered.
@@ -1023,8 +1075,9 @@ void CreateTransactionDialogAdvanced::setTxFees()
    if (itemIndex < (ui_->comboBoxFeeSuggestions->count() - 2)) {
       CreateTransactionDialog::feeSelectionChanged(itemIndex);
    } else if (itemIndex == itemCount - 2) {
-      transactionData_->SetFeePerByte(float(ui_->doubleSpinBoxFeesManualPerByte->value()));
+      transactionData_->setFeePerByte(float(ui_->doubleSpinBoxFeesManualPerByte->value()));
    } else if (itemIndex == itemCount - 1) {
-      transactionData_->SetTotalFee(ui_->spinBoxFeesManualTotal->value());
+      transactionData_->setTotalFee(ui_->spinBoxFeesManualTotal->value());
    }
+   FixRecipientsAmount();
 }

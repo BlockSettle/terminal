@@ -194,15 +194,12 @@ bool TransactionData::UpdateTransactionData()
 
    if (payment.spendVal_ <= availableBalance) {
       if (maxAmount) {
-         std::vector<std::shared_ptr<ScriptRecipient>> recipients;
-         for (const auto &recip : recipientsMap) {
-            recipients.push_back(recip.second);
-         }
-
-         UtxoSelection selection = computeSizeAndFee(transactions, payment);
+         const UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
+         if (summary_.txVirtSize > 1000000) {
+            summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
+         }
          summary_.totalFee = availableBalance - payment.spendVal_;
-         totalFee_ = summary_.totalFee;
          summary_.feePerByte =
             std::round((float)summary_.totalFee / (float)summary_.txVirtSize);
          summary_.hasChange = false;
@@ -233,6 +230,9 @@ bool TransactionData::UpdateTransactionData()
       else {
          UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
+         if (summary_.txVirtSize > 1000000) {
+            summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
+         }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
          summary_.hasChange = selection.hasChange_;
@@ -248,12 +248,12 @@ bool TransactionData::UpdateTransactionData()
 }
 
 // Calculate the maximum fee for a given recipient.
-double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
+double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool force) const
 {
    if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
       return -1;
    }
-   if (maxAmount_ > 0) {
+   if ((maxAmount_ > 0) && !force) {
       return maxAmount_;
    }
 
@@ -315,12 +315,7 @@ std::vector<UTXO> TransactionData::decorateUTXOs() const
       return inputUTXOs;
    }
 
-   if (!selectedInputs_->UseAutoSel()) {
-      inputUTXOs = selectedInputs_->GetSelectedTransactions();
-   }
-   else {
-      inputUTXOs = selectedInputs_->GetAllTransactions();
-   }
+   inputUTXOs = selectedInputs_->GetSelectedTransactions();
 
    if (utxoAdapter_ && reservedUTXO_.empty()) {
       utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId()
@@ -401,18 +396,40 @@ size_t TransactionData::getVirtSize(const UtxoSelection& inUTXOSel)
    return std::ceil(static_cast<float>(3*nonWitSize + inUTXOSel.size_) / 4.0f);
 }
 
-void TransactionData::SetFeePerByte(float feePerByte)
+void TransactionData::setFeePerByte(float feePerByte)
 {
    feePerByte_ = feePerByte;
    totalFee_ = 0;
    InvalidateTransactionData();
 }
 
-void TransactionData::SetTotalFee(uint64_t fee)
+void TransactionData::setTotalFee(uint64_t fee)
 {
    totalFee_ = fee;
    feePerByte_ = 0;
    InvalidateTransactionData();
+}
+
+float TransactionData::feePerByte() const
+{
+   if (feePerByte_ > 0) {
+      return feePerByte_;
+   }
+   if (summary_.txVirtSize) {
+      return totalFee_ / summary_.txVirtSize;
+   }
+   return 0;
+}
+
+uint64_t TransactionData::totalFee() const
+{
+   if (totalFee_) {
+      return totalFee_;
+   }
+   if (summary_.txVirtSize) {
+      return feePerByte_ * summary_.txVirtSize;
+   }
+   return 0;
 }
 
 void TransactionData::ReserveUtxosFor(double amount, const std::string &reserveId, const bs::Address &addr)
@@ -489,6 +506,16 @@ unsigned int TransactionData::RegisterNewRecipient()
    recipients_.emplace(id, newRecipient);
 
    return id;
+}
+
+std::vector<unsigned int> TransactionData::allRecipientIds() const
+{
+   std::vector<unsigned int> result;
+   result.reserve(recipients_.size());
+   for (const auto &recip : recipients_) {
+      result.push_back(recip.first);
+   }
+   return result;
 }
 
 void TransactionData::RemoveRecipient(unsigned int recipientId)

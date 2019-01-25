@@ -198,7 +198,7 @@ namespace bs {
       size_t getInputScrSize(const std::shared_ptr<AddressEntry> &);
       BinaryData computeID(const BinaryData &input);
       size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
-         , const std::vector<std::shared_ptr<ScriptRecipient>> &);
+         , const std::map<unsigned int, std::shared_ptr<ScriptRecipient>> &);
    }  // namepsace wallet
 
 

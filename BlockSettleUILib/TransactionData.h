@@ -71,9 +71,10 @@ public:
    void SetSigningWallet(const std::shared_ptr<bs::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    std::shared_ptr<bs::Wallet> GetSigningWallet() const { return signWallet_; }
-   void SetFeePerByte(float feePerByte);
-   float FeePerByte() const { return feePerByte_; }
-   void SetTotalFee(uint64_t fee);
+   void setFeePerByte(float feePerByte);
+   float feePerByte() const;
+   void setTotalFee(uint64_t fee);
+   uint64_t totalFee() const;
 
    bool IsTransactionValid() const;
    bool InputsLoadedFromArmory() const;
@@ -82,6 +83,7 @@ public:
    std::vector<unsigned int> GetRecipientIdList() const;
 
    unsigned int RegisterNewRecipient();
+   std::vector<unsigned int> allRecipientIds() const;
    bool UpdateRecipientAddress(unsigned int recipientId, const bs::Address &);
    bool UpdateRecipientAddress(unsigned int recipientId, const std::shared_ptr<AddressEntry> &);
    void ResetRecipientAddress(unsigned int recipientId);
@@ -112,7 +114,7 @@ public:
    std::shared_ptr<SelectedTransactionInputs> GetSelectedInputs();
    TransactionSummary GetTransactionSummary() const;
 
-   double CalculateMaxAmount(const bs::Address &recipient = {}) const;
+   double CalculateMaxAmount(const bs::Address &recipient = {}, bool force = false) const;
 
    void ReserveUtxosFor(double amount, const std::string &reserveId, const bs::Address &addr = {});
    void ReloadSelection(const std::vector<UTXO> &);
