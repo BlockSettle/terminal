@@ -232,8 +232,12 @@ const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
         , qint64 stepDurationSecs)
 {
     std::vector<TradesDB::DataPoint *> result;
-    QDateTime end = tillTime;
-    while (end > sinceTime) {
+    QDateTime start = sinceTime;
+    QDateTime end = start.addSecs(stepDurationSecs);
+    while (start < tillTime) {
+        if (end > tillTime) {
+            end = tillTime;
+        }
         logger_->info("[TradesDB] get point for {} {} {}"
                       , product.toStdString()
                       , end.toString(Qt::ISODate).toStdString()
@@ -242,7 +246,8 @@ const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
         if (data) {
             result.push_back(data);
         }
-        end = end.addSecs(-stepDurationSecs);
+        start = end;
+        end = start.addSecs(stepDurationSecs);
     }
     return result;
 }
