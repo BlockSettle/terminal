@@ -102,6 +102,7 @@ private:
    void setRBFinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
    void setCPFPinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
 
+   bool isCurrentAmountValid() const;
    void validateAddOutputButton();
    Q_INVOKABLE void validateCreateButton();
 

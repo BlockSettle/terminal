@@ -654,11 +654,24 @@ void CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &address, d
    outputsModel_->AddRecipient(recipientId, address.display(), amount);
 }
 
+bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
+{
+   if (qFuzzyIsNull(currentValue_)) {
+      return false;
+   }
+   if ((transactionData_->CalculateMaxAmount()
+      - transactionData_->GetTotalRecipientsAmount()) < currentValue_) {
+      UiUtils::setWrongState(ui_->lineEditAmount, true);
+      return false;
+   }
+   UiUtils::setWrongState(ui_->lineEditAmount, false);
+   return true;
+}
+
 void CreateTransactionDialogAdvanced::validateAddOutputButton()
 {
    ui_->pushButtonMax->setEnabled(currentAddressValid_);
-   ui_->pushButtonAddOutput->setEnabled(currentAddressValid_
-                                        && !qFuzzyIsNull(currentValue_));
+   ui_->pushButtonAddOutput->setEnabled(currentAddressValid_ && isCurrentAmountValid());
 }
 
 void CreateTransactionDialogAdvanced::validateCreateButton()
