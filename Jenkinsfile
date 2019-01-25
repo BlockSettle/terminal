@@ -20,11 +20,8 @@ pipeline {
     //        }
             stage('Build MacOSX app') {
                 steps {
-                    sh "ls -al ~/.ssh"
-                    sh "cat ~/.ssh/id_rsa"
-                    sh "pwd"
                     sh "ssh Admin@10.1.60.206 pwd"
-            //        sh "scp ${WORKSPACE} admin@10.1.60.206:~/Workspace"
+                    sh "scp ${WORKSPACE} Admin@10.1.60.206:~/Workspace"
             //        sh "cd ./terminal && pip install requests"
             //        sh "cd ./terminal && python generate.py release"
             //        sh "cd ./terminal/terminal.release && make -j 16"
