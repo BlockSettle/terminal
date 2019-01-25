@@ -21,7 +21,7 @@ pipeline {
             stage('Build MacOSX app') {
                 steps {
                     sh "ssh Admin@10.1.60.206 pwd"
-                    sh "scp ${WORKSPACE}/ Admin@10.1.60.206:~/Workspace/"
+                    sh "scp -r ${WORKSPACE} Admin@10.1.60.206:~/Workspace"
             //        sh "cd ./terminal && pip install requests"
             //        sh "cd ./terminal && python generate.py release"
             //        sh "cd ./terminal/terminal.release && make -j 16"
