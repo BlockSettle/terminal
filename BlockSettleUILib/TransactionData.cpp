@@ -55,8 +55,8 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
 
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
          , swTransactionsOnly_, confirmedInputs_
-         , [this]() {
-            maxAmount_ = 0;
+         , [this]()
+         {
             inputsLoaded_ = true;
             InvalidateTransactionData();
          }, cbInputsReset);
@@ -76,10 +76,7 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
       else {
          selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
             , swTransactionsOnly_, confirmedInputs_
-            , [this] {
-            maxAmount_ = 0;
-            InvalidateTransactionData();
-         }, cbInputsReset);
+            , [this] { InvalidateTransactionData(); }, cbInputsReset);
       }
       InvalidateTransactionData();
    }
@@ -95,10 +92,7 @@ bool TransactionData::SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &wall
    }
    wallet_ = wallet;
    selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_, utxos
-      , [this] {
-      maxAmount_ = 0;
-      InvalidateTransactionData();
-   });
+      , [this] {InvalidateTransactionData(); });
 
    coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
       return this->selectedInputs_->GetSelectedTransactions();
@@ -253,9 +247,6 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
    if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
       return -1;
    }
-   if (maxAmount_ > 0) {
-      return maxAmount_;
-   }
 
    std::vector<UTXO> transactions = decorateUTXOs();
 
@@ -279,11 +270,10 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
    auto availableBalance = GetTransactionSummary().availableBalance - \
       GetTransactionSummary().balanceToSpend;
    if (availableBalance < fee) {
-      maxAmount_ = 0;
+      return 0;
    } else {
-      maxAmount_ = availableBalance - fee;
+      return availableBalance - fee;
    }
-   return maxAmount_;
 }
 
 bool TransactionData::RecipientsReady() const
@@ -605,15 +595,6 @@ BTCNumericTypes::balance_type TransactionData::GetRecipientAmount(unsigned int r
       return 0;
    }
    return itRecip->second->GetAmount();
-}
-
-BTCNumericTypes::balance_type TransactionData::GetTotalRecipientsAmount() const
-{
-   BTCNumericTypes::balance_type result = 0;
-   for (const auto &recip : recipients_) {
-      result += recip.second->GetAmount();
-   }
-   return result;
 }
 
 bool TransactionData::IsMaxAmount(unsigned int recipientId) const

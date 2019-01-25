@@ -96,7 +96,6 @@ public:
 
    bs::Address GetRecipientAddress(unsigned int recipientId) const;
    BTCNumericTypes::balance_type GetRecipientAmount(unsigned int recipientId) const;
-   BTCNumericTypes::balance_type  GetTotalRecipientsAmount() const;
    bool IsMaxAmount(unsigned int recipientId) const;
 
    bs::wallet::TXSignRequest CreateUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
@@ -152,7 +151,6 @@ private:
 
    float       feePerByte_;
    uint64_t    totalFee_ = 0;
-   mutable double maxAmount_ = 0;
    // recipients
    unsigned int nextId_;
    std::unordered_map<unsigned int, std::shared_ptr<RecipientContainer>> recipients_;
