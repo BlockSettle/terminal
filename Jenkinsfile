@@ -20,7 +20,8 @@ pipeline {
     //        }
             stage('Build MacOSX app') {
                 steps {
-                    sh "ls -al ~/"
+                    sh "ls -al ~/.ssh"
+                    sh "cat ~/.ssh/id_rsa"
                     sh "pwd"
                     sh "ssh -i ~/.ssh/id_rsa Admin@10.0.1.36 pwd"
             //        sh "scp ${WORKSPACE} admin@10.1.60.206:~/Workspace"
