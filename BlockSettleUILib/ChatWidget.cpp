@@ -49,7 +49,7 @@ public:
 		//chat_->ui_->labelUserName->setText(QString::fromStdString(""));
 	}
 
-	virtual std::string login(const std::string& email, const std::string& jwt) override {
+	std::string login(const std::string& email, const std::string& jwt) override {
 		chat_->logger_->debug("Set user name {}", email);
 		chat_->usersViewModel_->onUsersReplace({});
 		const auto userId = chat_->client_->loginToServer(email, jwt);
@@ -58,62 +58,59 @@ public:
 
 		return userId;
 	};
-	virtual void logout() override {
+	void logout() override {
 		chat_->logger_->info("Already logged out!");
 	};
-	virtual void onSendButtonClicked()  override {
+	void onSendButtonClicked()  override {
 		qDebug("Send action when logged out");
 	};
-	virtual void onUserClicked(const QModelIndex& index)  override {};
-	virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end)  override {};
-	virtual void onLoginFailed()  override {
+	void onUserClicked(const QModelIndex& index)  override {};
+	void onMessagesUpdated(const QModelIndex& parent, int start, int end)  override {};
+	void onLoginFailed()  override {
 		chat_->changeState(ChatWidget::LoggedOut);
 	};
-	virtual void onUsersDeleted(const std::vector<std::string> &) override {};
+	void onUsersDeleted(const std::vector<std::string> &) override {};
 };
 
 class ChatWidgetStateLoggedIn : public ChatWidgetState {
 public:
 	ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedIn) {};
 
-	virtual void onStateEnter() override {};
+	void onStateEnter() override {};
 
-	virtual std::string login(const std::string& email, const std::string& jwt) override {
+	std::string login(const std::string& email, const std::string& jwt) override {
 		chat_->logger_->info("Already logged in! You should first logout!");
 		return std::string();
 	};
-	virtual void logout() override {	
+	void logout() override {	
 		chat_->client_->logout();
 		chat_->changeState(ChatWidget::LoggedOut);
 	};
-	virtual void onSendButtonClicked()  override {
-		//QString messageText = chat_->ui_->text->text();
+	void onSendButtonClicked()  override {
 		QString messageText = chat_->ui_->input_textEdit->toPlainText();
 
 		if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
 			auto msg = chat_->client_->SendOwnMessage(messageText, chat_->currentChat_);
-			//chat_->ui_->text->clear();
 			chat_->ui_->input_textEdit->clear();
 
 			chat_->messagesViewModel_->onSingleMessageUpdate(msg);
 		}
 	};
-	virtual void onUserClicked(const QModelIndex& index)  override {
+	void onUserClicked(const QModelIndex& index)  override {
 		chat_->currentChat_ = chat_->usersViewModel_->resolveUser(index);
 
-		//chat_->ui_->text->setEnabled(!chat_->currentChat_.isEmpty());
 		chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
 		chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
 		chat_->messagesViewModel_->onSwitchToChat(chat_->currentChat_);
 		chat_->client_->retrieveUserMessages(chat_->currentChat_);
 	};
-	virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end)  override {
+	void onMessagesUpdated(const QModelIndex& parent, int start, int end)  override {
 		chat_->ui_->tableViewMessages->scrollToBottom();
 	};
-	virtual void onLoginFailed()  override {
+	void onLoginFailed()  override {
 		chat_->changeState(ChatWidget::LoggedOut);
 	};
-	virtual void onUsersDeleted(const std::vector<std::string> &users)  override {
+	void onUsersDeleted(const std::vector<std::string> &users)  override {
 		chat_->usersViewModel_->onUsersDel(users);
 
 		if (std::find(users.cbegin(), users.cend(), chat_->currentChat_.toStdString()) != users.cend()) {
@@ -168,7 +165,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
 
    connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
-   //connect(ui_->text, &QLineEdit::returnPressed, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
    //ui_->input_textEdit->installEventFilter(this);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
@@ -195,7 +191,6 @@ void ChatWidget::onUserClicked(const QModelIndex& index)
 
    currentChat_ = usersViewModel_->resolveUser(index);
 
-   //ui_->text->setEnabled(!currentChat_.isEmpty());
    ui_->input_textEdit->setEnabled(!currentChat_.isEmpty());
    ui_->labelActiveChat->setText(tr("CHAT #") + currentChat_);
    messagesViewModel_->onSwitchToChat(currentChat_);
