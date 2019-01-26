@@ -30,7 +30,7 @@ def make_project(sourcesRoot):
    return result == 0
 
 def sign_single_app(appPath):
-   command = []
+   return True
 
    command.append('codesign')
    command.append('-s')
