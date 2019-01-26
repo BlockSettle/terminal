@@ -23,6 +23,8 @@
 
 #include <stdexcept>
 
+static const size_t kP2WPKHOutputSize = 35;
+
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager>& walletManager
@@ -685,8 +687,12 @@ void CreateTransactionDialogAdvanced::FixRecipientsAmount()
          const double amtReturn = transactionData_->GetTransactionSummary().selectedBalance
             - transactionData_->GetTransactionSummary().balanceToSpend
             - UiUtils::amountToBtc(transactionData_->GetTransactionSummary().totalFee);
-         if (amtReturn < 0) {
-            correction = (amtReturn + 0.00000035 * transactionData_->feePerByte())  // exclude change address
+         if (amtReturn < 0) { // since we're getting rid of change address in the code below,
+            // let's compensate its fee by subtracting from correction
+            // + to a negative value subtracts from absolute value
+            // Assume change address is always P2WPKH
+            correction = (amtReturn + kP2WPKHOutputSize * transactionData_->feePerByte()
+               / BTCNumericTypes::BalanceDivider)
                / transactionData_->GetRecipientsCount();
          }
       }
