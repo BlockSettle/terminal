@@ -16,6 +16,19 @@ class TradesDB : public QObject
 {
     Q_OBJECT
 public:
+    enum Interval {
+        OneYear,
+        SixMonths,
+        OneMonth,
+        OneWeek,
+        TwentyFourHours,
+        TwelveHours,
+        SixHours,
+        OneHour,
+        ThirtyMinutes,
+        FifteenMinutes,
+        OneMinute
+    };
     struct DataPoint {
         qreal open = -1.0;
         qreal high = -1.0;
@@ -27,9 +40,9 @@ public:
             return timestamp != -1.0;
         }
     };
-    TradesDB(const std::shared_ptr<spdlog::logger> &logger,
-             const QString &dbFile,
-             QObject *parent = nullptr);
+    TradesDB(const std::shared_ptr<spdlog::logger> &logger
+             , const QString &dbFile
+             , QObject *parent = nullptr);
     ~TradesDB() noexcept = default;
 
     TradesDB(const TradesDB&) = delete;
@@ -47,15 +60,16 @@ public:
                                                  );
 
     bool add(const QString &product
-                  , const QDateTime &time
-                  , const qreal &price
-                  , const qreal &volume);
+             , const QDateTime &time
+             , const qreal &price
+             , const qreal &volume);
 
     void init();
 
 private:
     bool createMissingTables();
     bool populateEmptyData();
+    const QDateTime intervalStart(const QDateTime &now, const Interval &interval) const;
 
 private:
     std::shared_ptr<spdlog::logger>     logger_;

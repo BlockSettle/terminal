@@ -10,12 +10,81 @@
 
 #include <spdlog/spdlog.h>
 
-TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger,
-                   const QString &dbFile,
-                   QObject *parent)
+namespace {
+
+static const QString ONE_YEAR = QStringLiteral("1Y");
+static const QString SIX_MONTHS = QStringLiteral("6M");
+static const QString ONE_MONTH = QStringLiteral("1M");
+static const QString ONE_WEEK = QStringLiteral("1W");
+static const QString TWENTY_FOUR_HOURS = QStringLiteral("24H");
+static const QString TWELVE_HOURS = QStringLiteral("12H");
+static const QString SIX_HOURS = QStringLiteral("6H");
+static const QString ONE_HOUR = QStringLiteral("1H");
+static const QString THIRTY_MINUTES = QStringLiteral("30m");
+static const QString FIFTEEN_MINUTES = QStringLiteral("15m");
+static const QString ONE_MINUTE = QStringLiteral("1m");
+
+static const std::map<TradesDB::Interval, QString> INTERVALS_LABELS = {
+    {
+        TradesDB::Interval::OneYear         , ONE_YEAR
+    }, {
+        TradesDB::Interval::SixMonths       , SIX_MONTHS
+    }, {
+        TradesDB::Interval::OneMonth        , ONE_MONTH
+    }, {
+        TradesDB::Interval::OneWeek         , ONE_WEEK
+    }, {
+        TradesDB::Interval::TwentyFourHours , TWENTY_FOUR_HOURS
+    }, {
+        TradesDB::Interval::TwelveHours     , TWELVE_HOURS
+    }, {
+        TradesDB::Interval::SixHours        , SIX_HOURS
+    }, {
+        TradesDB::Interval::OneHour         , ONE_HOUR
+    }, {
+        TradesDB::Interval::ThirtyMinutes   , THIRTY_MINUTES
+    }, {
+        TradesDB::Interval::FifteenMinutes  , FIFTEEN_MINUTES
+    }, {
+        TradesDB::Interval::OneMinute       , ONE_MINUTE
+    }
+};
+
+static const std::map<TradesDB::Interval, qint64> INTERVALS_VALUES = {
+    {
+        TradesDB::Interval::OneYear         , 365 * 24 * 60 * 60
+    }, {
+        TradesDB::Interval::SixMonths       , 188 * 24 * 60 * 60
+    }, {
+        TradesDB::Interval::OneMonth        , 30 * 24 * 60 * 60
+    }, {
+        TradesDB::Interval::OneWeek         , 7 * 24 * 60 * 60
+    }, {
+        TradesDB::Interval::TwentyFourHours , 24 * 60 * 60
+    }, {
+        TradesDB::Interval::TwelveHours     , 12 * 60 * 60
+    }, {
+        TradesDB::Interval::SixHours        , 5 * 60 * 60
+    }, {
+        TradesDB::Interval::OneHour         , 60 * 60
+    }, {
+        TradesDB::Interval::ThirtyMinutes   , 30 * 60
+    }, {
+        TradesDB::Interval::FifteenMinutes  , 15 * 60
+    }, {
+        TradesDB::Interval::OneMinute       , 60
+    }
+};
+
+
+}
+
+TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger
+                   , const QString &dbFile
+                   , QObject *parent)
     : QObject(parent)
     , logger_(logger)
-    , requiredTables_({QStringLiteral("products"), QStringLiteral("trades")})
+    , requiredTables_({QStringLiteral("products"), QStringLiteral("trades"), QStringLiteral("data_points")})
 {
     db_ = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QStringLiteral("trades"));
     db_.setDatabaseName(dbFile);
@@ -77,6 +146,40 @@ TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger,
                 }
                 return true;
             }
+        },
+
+        {
+            QStringLiteral("data_points"), [db = db_] {
+                const QString query = QStringLiteral(
+                "CREATE TABLE IF NOT EXISTS data_points ("
+                "   rowid INTEGER PRIMARY KEY ASC,"
+                "   productid INTEGER,"
+                "   interval_label TEXT,"
+                "   timestamp REAL,"
+                "   open REAL,"
+                "   high REAL,"
+                "   low REAL,"
+                "   close REAL,"
+                "   volume REAL,"
+                "   FOREIGN KEY(productid) REFERENCES products(rowid)"
+                ");");
+                if (!QSqlQuery(db).exec(query)) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS data_points_rowid ON data_points (rowid);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS data_points_productid ON data_points (productid);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS data_points_interval_label ON data_points (interval_label);"))) {
+                    return false;
+                }
+                if (!QSqlQuery(db).exec(QStringLiteral("CREATE INDEX IF NOT EXISTS data_points_timestamp ON data_points (timestamp);"))) {
+                    return false;
+                }
+                return true;
+            }
         }
     };
     if (!createMissingTables()) {
@@ -105,9 +208,9 @@ bool TradesDB::createMissingTables()
 }
 
 bool TradesDB::add(const QString& product
-                        , const QDateTime& time
-                        , const qreal& price
-                        , const qreal& volume)
+                   , const QDateTime& time
+                   , const qreal& price
+                   , const qreal& volume)
 {
     db_.transaction();
     QSqlQuery query(db_);
@@ -147,6 +250,82 @@ bool TradesDB::add(const QString& product
         logger_->warn("[TradesDB] failed to add trade {}", product.toStdString());
         db_.rollback();
         return false;
+    }
+    for (const auto &pair : INTERVALS_LABELS) {
+        const Interval &interval = pair.first;
+        const QString &intervalLabel = pair.second;
+        const QDateTime start = intervalStart(time, interval);
+        query.prepare(QStringLiteral("SELECT * "
+                                     "FROM data_points "
+                                     "WHERE timestamp > :start AND "
+                                     "  productid = :productid AND "
+                                     "  interval_label = :interval_label; "));
+        query.bindValue(QStringLiteral(":productid"), productid);
+        query.bindValue(QStringLiteral(":start"), start.toMSecsSinceEpoch());
+        query.bindValue(QStringLiteral(":interval_label"), intervalLabel);
+        if (!query.exec()) {
+            logger_->warn("[TradesDB] failed query {}: {}"
+                          , query.lastQuery().toStdString()
+                          , query.lastError().text().toStdString());
+            db_.rollback();
+            return false;
+        }
+        if (query.first()) {
+            qint64 rowid = query.value(QStringLiteral("rowid")).toLongLong();
+            qreal lastVolume = query.value(QStringLiteral("volume")).toReal();
+            qreal high = query.value(QStringLiteral("high")).toReal();
+            qreal low = query.value(QStringLiteral("low")).toReal();
+            query.prepare(QStringLiteral("UPDATE data_points "
+                                         "SET "
+                                         "  timestamp = :timestamp, "
+                                         "  high = :high, "
+                                         "  low = :low, "
+                                         "  close = :close, "
+                                         "  volume = :volume "
+                                         "WHERE rowid = :rowid; "));
+            query.bindValue(QStringLiteral(":timestamp"), time.toMSecsSinceEpoch());
+            query.bindValue(QStringLiteral(":rowid"), rowid);
+            query.bindValue(QStringLiteral(":high"), price > high ? price : high);
+            query.bindValue(QStringLiteral(":low"), price < low ? price : low);
+            query.bindValue(QStringLiteral(":close"), price);
+            query.bindValue(QStringLiteral(":volume"), lastVolume + volume);
+        } else {
+            query.prepare(QStringLiteral("INSERT INTO data_points ( "
+                                         "  productid, "
+                                         "  interval_label, "
+                                         "  timestamp, "
+                                         "  open, "
+                                         "  high, "
+                                         "  low, "
+                                         "  close, "
+                                         "  volume "
+                                         ") "
+                                         "VALUES ( "
+                                         "  :productid, "
+                                         "  :interval_label, "
+                                         "  :timestamp, "
+                                         "  :open, "
+                                         "  :high, "
+                                         "  :low, "
+                                         "  :close, "
+                                         "  :volume "
+                                         "); "));
+            query.bindValue(QStringLiteral(":productid"), productid);
+            query.bindValue(QStringLiteral(":interval_label"), intervalLabel);
+            query.bindValue(QStringLiteral(":timestamp"), time.toMSecsSinceEpoch());
+            query.bindValue(QStringLiteral(":open"), price);
+            query.bindValue(QStringLiteral(":high"), price);
+            query.bindValue(QStringLiteral(":low"), price);
+            query.bindValue(QStringLiteral(":close"), price);
+            query.bindValue(QStringLiteral(":volume"), volume);
+        }
+        if (!query.exec()) {
+            logger_->warn("[TradesDB] failed query {}: {}"
+                          , query.lastQuery().toStdString()
+                          , query.lastError().text().toStdString());
+            db_.rollback();
+            return false;
+        }
     }
     db_.commit();
     return true;
@@ -270,8 +449,8 @@ bool TradesDB::populateEmptyData()
         , QStringLiteral("GBP/SEK")
         , QStringLiteral("JPY/SEK")
     };
-    QDateTime time = QDateTime::currentDateTime().addYears(-1);
-    QDateTime now = QDateTime::currentDateTime();
+    QDateTime time = QDateTime::currentDateTimeUtc().addYears(-1);
+    QDateTime now = QDateTime::currentDateTimeUtc();
     int j = 0;
     while (time < now) {
         int i = QRandomGenerator::global()->bounded(0, products.count());
@@ -286,4 +465,65 @@ bool TradesDB::populateEmptyData()
         add(product, time, price, volume);
     }
     return true;
+}
+
+const QDateTime TradesDB::intervalStart(const QDateTime &now
+                                        , const Interval &interval) const
+{
+    QDateTime result;
+    switch (interval) {
+    case TradesDB::Interval::OneYear:
+        result = QDateTime(QDate(now.date().year(), 1, 1));
+        break;
+    case TradesDB::Interval::SixMonths: {
+        int month = now.date().month();
+        result = QDateTime(QDate(now.date().year(), month > 6 ? month - 6 : month, 1));
+        break;
+    }
+    case TradesDB::Interval::OneMonth:
+        result = QDateTime(QDate(now.date().year(), now.date().month(), 1));
+        break;
+    case TradesDB::Interval::OneWeek:
+        result = QDateTime(now.date().addDays(-now.date().dayOfWeek()));
+        break;
+    case TradesDB::Interval::TwentyFourHours:
+        result = QDateTime(now.date());
+        break;
+    case TradesDB::Interval::TwelveHours: {
+        int hour = now.time().hour();
+        hour = hour < 12 ? hour : hour - 12;
+        result = QDateTime(now.date(), QTime(hour, 0));
+        break;
+    }
+    case TradesDB::Interval::SixHours: {
+        int hour = now.time().hour();
+        int mod = hour % 6;
+        hour = mod == 0 ? hour : hour - mod;
+        result = QDateTime(now.date(), QTime(hour, 0));
+        break;
+    }
+    case TradesDB::Interval::OneHour:
+        result = QDateTime(now.date(), QTime(now.time().hour(), 0));
+        break;
+    case TradesDB::Interval::ThirtyMinutes: {
+        int minute = now.time().minute();
+        int mod = minute % 30;
+        minute = mod == 0 ? minute : minute - mod;
+        result = QDateTime(now.date(), QTime(now.time().hour(), minute));
+        break;
+    }
+    case TradesDB::Interval::FifteenMinutes: {
+        int minute = now.time().minute();
+        int mod = minute % 15;
+        minute = mod == 0 ? minute : minute - mod;
+        result = QDateTime(now.date(), QTime(now.time().hour(), minute));
+        break;
+    }
+    case TradesDB::Interval::OneMinute:
+        break;
+        result = QDateTime(now.date(), QTime(now.time().hour(), now.time().minute()));
+    default:
+        break;
+    }
+    return result;
 }
