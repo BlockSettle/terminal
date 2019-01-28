@@ -4,15 +4,15 @@ package Blocksettle.Communication.TradeHistory;
 
 enum TradeHistoryTradeType
 {
-   FXTradeType    = 1,
-   XBTTradeType   = 2,
-   PMTradeType    = 3
+   FXTradeType    = 0;
+   XBTTradeType   = 1;
+   PMTradeType    = 2;
 }
 
 enum TradeHistoryRequestType
 {
-   LoadLatestTradeType     = 1,
-   SubscribeToTradesType   = 2
+   LoadLatestTradeType     = 0;
+   SubscribeToTradesType   = 1;
 }
 
 message TradeHistoryRequest
