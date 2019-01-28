@@ -250,6 +250,10 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient) const
 
    std::vector<UTXO> transactions = decorateUTXOs();
 
+   if (transactions.size() == 0) {
+      return 0;
+   }
+
    size_t txOutSize = 0;
    for (const auto &recip : recipients_) {
       const auto &scrRecip = recip.second->GetScriptRecipient();
