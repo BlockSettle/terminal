@@ -431,6 +431,80 @@ const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
     return result;
 }
 
+const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
+        const QString &product
+        , TradesDB::Interval interval
+        , qint64 maxCount)
+{
+    std::vector<TradesDB::DataPoint *> result;
+//    QDateTime timeTill = QDateTime::currentDateTimeUtc();
+    db_.transaction();
+    QSqlQuery query(db_);
+    query.prepare(QStringLiteral("SELECT rowid FROM products WHERE name = :name;"));
+    query.bindValue(QStringLiteral(":name"), product);
+    if (!query.exec() || !query.first()) {
+        logger_->warn("[TradesDB] failed find product {}", product.toStdString());
+        db_.rollback();
+        return result;
+    }
+    qint64 productid = query.value(QStringLiteral("rowid")).toLongLong();
+    const QString &intervalLabel = INTERVALS_LABELS.at(interval);
+    query.prepare(QStringLiteral("SELECT * "
+                                 "FROM data_points "
+                                 "WHERE "
+                                 "  productid = :productid AND "
+                                 "  interval_label = :interval_label "
+                                 "ORDER BY timestamp DESC "
+                                 "LIMIT :max_count; "));
+    query.bindValue(QStringLiteral(":productid"), productid);
+    query.bindValue(QStringLiteral(":interval_label") , intervalLabel);
+    query.bindValue(QStringLiteral(":max_count") , maxCount);
+
+    if (!query.exec()) {
+        logger_->warn("[TradesDB] failed read data: {} : {} using {}"
+                      , query.lastError().text().toStdString()
+                      , query.lastQuery().toStdString()
+                      , productid);
+        db_.rollback();
+        return result;
+    }
+    if (!query.last()) {
+        return result;
+    }
+    while (query.previous()) {
+        qreal open = query.value(QStringLiteral("open")).toDouble();
+        qreal high = query.value(QStringLiteral("high")).toDouble();
+        qreal low = query.value(QStringLiteral("low")).toDouble();
+        qreal close = query.value(QStringLiteral("close")).toDouble();
+        qreal volume = query.value(QStringLiteral("volume")).toDouble();
+        qreal timestamp = query.value(QStringLiteral("timestamp")).toDouble();
+        QDateTime current = QDateTime::fromMSecsSinceEpoch(timestamp);
+        auto point = new DataPoint { .open = open
+                    , .high = high
+                    , .low = low
+                    , .close = close
+                    , .volume = volume
+                    , .timestamp = timestamp };
+        if (result.size() > 0) {
+            QDateTime expected = intervalStart(current, interval);
+            qint64 step = qAbs(expected.msecsTo(current));
+            QDateTime previous = QDateTime::fromMSecsSinceEpoch(result.back()->timestamp);
+            while (previous.msecsTo(expected) > step) {
+                auto emptyPoint = new DataPoint { .open = result.back()->close
+                            , .high = result.back()->close
+                            , .low = result.back()->close
+                            , .close = result.back()->close
+                            , .volume = 0
+                            , .timestamp = timestamp + step };
+                result.push_back(emptyPoint);
+                previous = QDateTime::fromMSecsSinceEpoch(result.back()->timestamp);
+            }
+        }
+        result.push_back(point);
+    }
+    return result;
+}
+
 bool TradesDB::populateEmptyData()
 {
     QSqlQuery query(db_);

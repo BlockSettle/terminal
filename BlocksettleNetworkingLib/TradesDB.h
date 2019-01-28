@@ -58,6 +58,9 @@ public:
                                                  , const QDateTime &tillTime
                                                  , qint64 stepDurationSecs
                                                  );
+    const std::vector<DataPoint *> getDataPoints(const QString &product
+                                                 , Interval interval
+                                                 , qint64 maxCount = 100);
 
     bool add(const QString &product
              , const QDateTime &time
