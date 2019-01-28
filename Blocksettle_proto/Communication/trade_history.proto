@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.TradeHistory;
+
+enum TradeHistoryTradeType
+{
+   FXTradeType    = 1,
+   XBTTradeType   = 2,
+   PMTradeType    = 3
+}
+
+enum TradeHistoryRequestType
+{
+   LoadLatestTradeType     = 1,
+   SubscribeToTradesType   = 2
+}
+
+message TradeHistoryRequest
+{
+   TradeHistoryRequestType request_type   = 1;
+   string                  request        = 2;
+}
+
+message LatestTradeRequest
+{
+   TradeHistoryTradeType trade_type = 1;
+}
+
+message SubscribeToTradesRequest
+{
+   TradeHistoryTradeType   trade_type = 1;
+   uint64                  from_timestamp = 2;
+}
+
+message TradeRecord
+{
+   double   price   = 1;
+   double   amount  = 2;
+
+   string   product = 3;
+   string   currency = 4;
+
+   bool     is_sell = 5;
+
+   uint64   timestamp = 6;
+   uint64   internal_id = 7;
+}
+
+message TradeHistoryServerUpdate
+{
+   TradeHistoryTradeType   trade_type = 1;
+   TradeRecord             trade = 2;
+}

@@ -5,12 +5,12 @@ package Blocksettle.MarketData.Historic;
 
 enum DataType
 {
-   EmptyDataType        = 0;
-   OpenPriceType	= 1;
-   ClosePriceType	= 2;
-   HighPriceType	= 3;
-   LowPriceType		= 4;
-   LastPriceType	= 5;
+   EmptyDataType  = 0;
+   OpenPriceType  = 1;
+   ClosePriceType = 2;
+   HighPriceType  = 3;
+   LowPriceType   = 4;
+   LastPriceType  = 5;
 }
 
 message DataSetRequest
