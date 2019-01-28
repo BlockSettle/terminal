@@ -38,6 +38,14 @@ const std::vector<TradesDB::DataPoint *> TradesClient::getRawPointDataArray(
     return tradesDb_->getDataPoints(product, sinceTime, tillTime, stepDurationSecs);
 }
 
+const std::vector<TradesDB::DataPoint *> TradesClient::getRawPointDataArray(
+        const QString &product
+        , TradesDB::Interval interval
+        , qint64 maxCount)
+{
+    return tradesDb_->getDataPoints(product, interval, maxCount);
+}
+
 void TradesClient::onMDUpdated(bs::network::Asset::Type assetType
                                , const QString &security
                                , bs::network::MDFields fields)

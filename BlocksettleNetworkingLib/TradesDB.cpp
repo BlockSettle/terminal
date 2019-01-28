@@ -437,6 +437,9 @@ const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
         , qint64 maxCount)
 {
     std::vector<TradesDB::DataPoint *> result;
+    if (interval == Interval::Unknown) {
+        interval = Interval::FifteenMinutes;
+    }
 //    QDateTime timeTill = QDateTime::currentDateTimeUtc();
     db_.transaction();
     QSqlQuery query(db_);

@@ -37,6 +37,10 @@ public:
                                                                 , const QDateTime &tillTime
                                                                 , qint64 stepDurationSecs
                                                                 );
+    const std::vector<TradesDB::DataPoint*> getRawPointDataArray(
+            const QString &product
+            , TradesDB::Interval interval = TradesDB::Interval::Unknown
+            , qint64 maxCount = 100);
 
 public slots:
     void onMDUpdated(bs::network::Asset::Type assetType

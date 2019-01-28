@@ -17,6 +17,7 @@ class TradesDB : public QObject
     Q_OBJECT
 public:
     enum Interval {
+        Unknown = -1,
         OneYear,
         SixMonths,
         OneMonth,
@@ -59,7 +60,7 @@ public:
                                                  , qint64 stepDurationSecs
                                                  );
     const std::vector<DataPoint *> getDataPoints(const QString &product
-                                                 , Interval interval
+                                                 , Interval interval = Interval::Unknown
                                                  , qint64 maxCount = 100);
 
     bool add(const QString &product
