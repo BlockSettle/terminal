@@ -60,12 +60,6 @@ CelerMessage CelerSubmitQuoteNotifSequence::submitQuoteNotif()
       request.set_offerpx(qn_.offerPx);
       request.set_offerspotpx(qn_.offerPx);
    }
-   if (!qFuzzyIsNull(qn_.bidSz)) {
-      request.set_bidsize(qn_.bidSz);
-   }
-   if (!qFuzzyIsNull(qn_.offerSz)) {
-      request.set_offersize(qn_.offerSz);
-   }
 
    request.set_quotevalidityinsecs(qn_.validityInS);
    request.set_accountbookon(accountName_);
@@ -83,6 +77,12 @@ CelerMessage CelerSubmitQuoteNotifSequence::submitQuoteNotif()
    }
    if (!qFuzzyIsNull(qn_.offerFwdPts)) {
       group->set_offerforwardpoints(qn_.offerFwdPts);
+   }
+   if (!qFuzzyIsNull(qn_.bidSz)) {
+      group->set_bidsize(qn_.bidSz);
+   }
+   if (!qFuzzyIsNull(qn_.offerSz)) {
+      group->set_offersize(qn_.offerSz);
    }
    group->set_currency(qn_.product);
    group->set_settlementdate(QDate::currentDate().toString(Qt::ISODate).toStdString());
