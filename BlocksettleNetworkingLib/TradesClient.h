@@ -13,7 +13,6 @@ namespace spdlog {
 }
 
 class ApplicationSettings;
-//class TradesDB;
 
 
 class TradesClient : public QObject
@@ -32,11 +31,6 @@ public:
 
     void init();
 
-    const std::vector<TradesDB::DataPoint*> getRawPointDataArray(const QString &product
-                                                                , const QDateTime &sinceTime
-                                                                , const QDateTime &tillTime
-                                                                , qint64 stepDurationSecs
-                                                                );
     const std::vector<TradesDB::DataPoint*> getRawPointDataArray(
             const QString &product
             , TradesDB::Interval interval = TradesDB::Interval::Unknown

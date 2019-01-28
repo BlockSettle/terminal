@@ -155,7 +155,7 @@ TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger
                 "   rowid INTEGER PRIMARY KEY ASC,"
                 "   productid INTEGER,"
                 "   interval_label TEXT,"
-                "   timestamp REAL,"
+                "   timestamp INTEGER,"
                 "   open REAL,"
                 "   high REAL,"
                 "   low REAL,"
@@ -259,7 +259,9 @@ bool TradesDB::add(const QString& product
                                      "FROM data_points "
                                      "WHERE timestamp > :start AND "
                                      "  productid = :productid AND "
-                                     "  interval_label = :interval_label; "));
+                                     "  interval_label = :interval_label "
+                                     "ORDER BY timestamp DESC "
+                                     "LIMIT 1; "));
         query.bindValue(QStringLiteral(":productid"), productid);
         query.bindValue(QStringLiteral(":start"), start.toMSecsSinceEpoch());
         query.bindValue(QStringLiteral(":interval_label"), intervalLabel);
@@ -480,7 +482,7 @@ const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
         qreal low = query.value(QStringLiteral("low")).toDouble();
         qreal close = query.value(QStringLiteral("close")).toDouble();
         qreal volume = query.value(QStringLiteral("volume")).toDouble();
-        qreal timestamp = query.value(QStringLiteral("timestamp")).toDouble();
+        qreal timestamp = query.value(QStringLiteral("timestamp")).toLongLong();
         QDateTime current = QDateTime::fromMSecsSinceEpoch(timestamp);
         auto point = new DataPoint { .open = open
                     , .high = high
@@ -548,57 +550,62 @@ const QDateTime TradesDB::intervalStart(const QDateTime &now
                                         , const Interval &interval) const
 {
     QDateTime result;
+    auto timeSpec = now.timeSpec();
+    auto offsetFromUtc = now.offsetFromUtc();
     switch (interval) {
     case TradesDB::Interval::OneYear:
-        result = QDateTime(QDate(now.date().year(), 1, 1));
+        result = QDateTime(QDate(now.date().year(), 1, 1), QTime(0, 0), timeSpec, offsetFromUtc);
         break;
     case TradesDB::Interval::SixMonths: {
         int month = now.date().month();
-        result = QDateTime(QDate(now.date().year(), month > 6 ? month - 6 : month, 1));
+        result = QDateTime(QDate(now.date().year(), month > 6 ? month - 6 : month, 1), QTime(0, 0), timeSpec, offsetFromUtc);
         break;
     }
     case TradesDB::Interval::OneMonth:
-        result = QDateTime(QDate(now.date().year(), now.date().month(), 1));
+        result = QDateTime(QDate(now.date().year(), now.date().month(), 1), QTime(0, 0), timeSpec, offsetFromUtc);
         break;
-    case TradesDB::Interval::OneWeek:
-        result = QDateTime(now.date().addDays(-now.date().dayOfWeek()));
+    case TradesDB::Interval::OneWeek: {
+        auto date = now.date();
+        auto start = date.addDays(1 - date.dayOfWeek());
+        result = QDateTime(start, QTime(0, 0), timeSpec, offsetFromUtc);
         break;
+    }
     case TradesDB::Interval::TwentyFourHours:
-        result = QDateTime(now.date());
+        result = QDateTime(now.date(), QTime(0, 0), timeSpec, offsetFromUtc);
         break;
     case TradesDB::Interval::TwelveHours: {
         int hour = now.time().hour();
-        hour = hour < 12 ? hour : hour - 12;
-        result = QDateTime(now.date(), QTime(hour, 0));
+        hour = hour < 12 ? hour : (hour - 12);
+        result = QDateTime(now.date(), QTime(hour, 0), timeSpec, offsetFromUtc);
         break;
     }
     case TradesDB::Interval::SixHours: {
         int hour = now.time().hour();
         int mod = hour % 6;
-        hour = mod == 0 ? hour : hour - mod;
-        result = QDateTime(now.date(), QTime(hour, 0));
+        hour = mod == 0 ? hour : (hour - mod);
+        result = QDateTime(now.date(), QTime(hour, 0), timeSpec, offsetFromUtc);
         break;
     }
     case TradesDB::Interval::OneHour:
-        result = QDateTime(now.date(), QTime(now.time().hour(), 0));
+        result = QDateTime(now.date(), QTime(now.time().hour(), 0), timeSpec, offsetFromUtc);
         break;
     case TradesDB::Interval::ThirtyMinutes: {
         int minute = now.time().minute();
         int mod = minute % 30;
-        minute = mod == 0 ? minute : minute - mod;
-        result = QDateTime(now.date(), QTime(now.time().hour(), minute));
+        minute = mod == 0 ? minute : (minute - mod);
+        result = QDateTime(now.date(), QTime(now.time().hour(), minute), timeSpec, offsetFromUtc);
         break;
     }
     case TradesDB::Interval::FifteenMinutes: {
         int minute = now.time().minute();
         int mod = minute % 15;
-        minute = mod == 0 ? minute : minute - mod;
-        result = QDateTime(now.date(), QTime(now.time().hour(), minute));
+        minute = mod == 0 ? minute : (minute - mod);
+        result = QDateTime(now.date(), QTime(now.time().hour(), minute), timeSpec, offsetFromUtc);
         break;
     }
     case TradesDB::Interval::OneMinute:
         break;
-        result = QDateTime(now.date(), QTime(now.time().hour(), now.time().minute()));
+        result = QDateTime(now.date(), QTime(now.time().hour(), now.time().minute()), timeSpec, offsetFromUtc);
     default:
         break;
     }

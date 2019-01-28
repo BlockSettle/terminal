@@ -232,7 +232,6 @@ void ChartWidget::buildCandleChart(int interval) {
 
 void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume) {
 
-   volume = QRandomGenerator::global()->generateDouble() * 2000; //randomly generating volume for testing
    priceSeries_->append(new CustomCandlestickSet(open, high, low, close, volume, timestamp, priceSeries_));
    volumeSeries_->append(new QCandlestickSet(0.0, volume, 0.0, volume, timestamp, volumeSeries_));
 
@@ -265,5 +264,5 @@ void ChartWidget::onPriceHover(bool status, QCandlestickSet *set) {
 
 void ChartWidget::onInstrumentChanged(const QString &text) {
    ui_->viewPrice->chart()->setTitle(text);
-   buildCandleChart();
+   buildCandleChart(dateRange_.checkedId());
 }
