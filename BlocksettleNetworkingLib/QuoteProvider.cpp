@@ -261,6 +261,15 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
       }
    }
    else {
+      if (response.legquotegroup_size() != 1) {
+         logger_->error("[QuoteProvider::onQuoteResponse] invalid leg number: {}\n{}"
+            , response.legquotegroup_size()
+            , response.DebugString());
+         return false;
+      }
+
+      const auto& grp = response.legquotegroup(0);
+
       if (quote.assetType == bs::network::Asset::SpotXBT) {
          quote.dealerAuthPublicKey = response.dealerauthenticationaddress();
          quote.requestorAuthPublicKey = itRFQ->second.requestorAuthPublicKey;
@@ -277,17 +286,14 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
 
       if ((quote.side == bs::network::Side::Sell) ^ (itRFQ->second.product != cp.NumCurrency())) {
          quote.price = response.offerpx();
-         quote.quantity = response.offersize();
+         quote.quantity = grp.offersize();
       }
       else {
          quote.price = response.bidpx();
-         quote.quantity = response.bidsize();
+         quote.quantity = grp.bidsize();
       }
 
-      if (response.legquotegroup_size() > 0) {
-         QuoteDownstreamEvent::LegQuoteGroup grp = response.legquotegroup(0);
-         quote.product = grp.currency();
-      }
+      quote.product = grp.currency();
 
       if (quote.quotingType == bs::network::Quote::Tradeable) {
          submittedRFQs_.erase(itRFQ);
@@ -712,13 +718,22 @@ bool QuoteProvider::onQuoteReqNotification(const std::string& data)
       return false;
    }  // For SpotFX and SpotXBT there should be only 1 group
 
-   QuoteRequestNotificationGroup respgrp = response.quoterequestnotificationgroup(0);
+   const QuoteRequestNotificationGroup& respgrp = response.quoterequestnotificationgroup(0);
+
+   if (respgrp.quoterequestnotificationleggroup_size() != 1) {
+      logger_->error("[QuoteProvider::onQuoteReqNotification] wrong leg group size: {}\n{}"
+         , respgrp.quoterequestnotificationleggroup_size()
+         , response.DebugString());
+      return false;
+   }
+
+   const auto& legGroup = respgrp.quoterequestnotificationleggroup(0);
 
    QuoteReqNotification qrn;
    qrn.quoteRequestId = response.quoterequestid();
    qrn.security = respgrp.securitycode();
    qrn.sessionToken = response.requestorsessiontoken();
-   qrn.quantity = respgrp.qty();
+   qrn.quantity = legGroup.qty();
    qrn.product = respgrp.currency();
    qrn.party = respgrp.partyid();
    qrn.reason = response.reason();
@@ -727,7 +742,7 @@ bool QuoteProvider::onQuoteReqNotification(const std::string& data)
    qrn.celerTimestamp = response.timestampinutcinmillis();
    qrn.timeSkewMs = QDateTime::fromMSecsSinceEpoch(response.timestampinutcinmillis()).msecsTo(QDateTime::currentDateTime());
 
-   qrn.side = bs::network::Side::fromCeler(respgrp.side());
+   qrn.side = bs::network::Side::fromCeler(legGroup.side());
    qrn.assetType = bs::network::Asset::fromCelerProductType(respgrp.producttype());
 
    switch (response.quotenotificationtype()) {
