@@ -194,6 +194,9 @@ bool TransactionData::UpdateTransactionData()
          const UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
+            qDebug() << "Bad virtual size value" << summary_.txVirtSize
+               << "- using estimateTXVirtSize() as a fallback";
+            //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
             summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
@@ -228,6 +231,9 @@ bool TransactionData::UpdateTransactionData()
          UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
+            qDebug() << "Bad virtual size value" << summary_.txVirtSize
+               << "- using estimateTXVirtSize() as a fallback";
+            //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
             summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = selection.fee_;
