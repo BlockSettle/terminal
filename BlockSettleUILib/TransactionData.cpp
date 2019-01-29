@@ -12,7 +12,6 @@
 
 #include <vector>
 #include <map>
-
 #include <QDebug>
 
 static const size_t kMaxTxStdWeight = 400000;
@@ -59,7 +58,6 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
          , swTransactionsOnly_, confirmedInputs_
          , [this]() {
-            maxAmount_ = 0;
             inputsLoaded_ = true;
             InvalidateTransactionData();
          }, cbInputsReset);
@@ -79,10 +77,8 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
       else {
          selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
             , swTransactionsOnly_, confirmedInputs_
-            , [this] {
-            maxAmount_ = 0;
-            InvalidateTransactionData();
-         }, cbInputsReset);
+            , [this] { InvalidateTransactionData(); }
+            , cbInputsReset);
       }
       InvalidateTransactionData();
    }
@@ -98,10 +94,7 @@ bool TransactionData::SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &wall
    }
    wallet_ = wallet;
    selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_, utxos
-      , [this] {
-      maxAmount_ = 0;
-      InvalidateTransactionData();
-   });
+      , [this] { InvalidateTransactionData(); });
 
    coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
       return this->selectedInputs_->GetSelectedTransactions();
@@ -128,6 +121,7 @@ void TransactionData::InvalidateTransactionData()
 {
    usedUTXO_.clear();
    memset((void*)&summary_, 0, sizeof(summary_));
+   maxAmount_ = 0;
 
    UpdateTransactionData();
 
@@ -190,9 +184,9 @@ bool TransactionData::UpdateTransactionData()
       return false;
    }
 
-   PaymentStruct payment = !qFuzzyIsNull(feePerByte_)
+   PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
       ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
-      : PaymentStruct(recipientsMap, totalFee_, 0, 0);
+      : PaymentStruct(recipientsMap, totalFee_, feePerByte_, 0);
    summary_.balanceToSpend = UiUtils::amountToBtc(payment.spendVal_);
 
    if (payment.spendVal_ <= availableBalance) {
@@ -260,6 +254,7 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
       return maxAmount_;
    }
 
+   maxAmount_ = 0;
    std::vector<UTXO> transactions = decorateUTXOs();
 
    if (transactions.size() == 0) {
@@ -279,15 +274,12 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
    // Accept the fee returned by Armory. The fee returned may be a few
    // satoshis higher than is strictly required by Core but that's okay.
    // If truly required, the fee can be tweaked later.
-   double fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte_
+   const double fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte()
       , transactions) / BTCNumericTypes::BalanceDivider;
-   //TODO: apply caching if needed, but don't use totalFee_ for this
 
    auto availableBalance = GetTransactionSummary().availableBalance - \
       GetTransactionSummary().balanceToSpend;
-   if (availableBalance < fee) {
-      maxAmount_ = 0;
-   } else {
+   if (availableBalance >= fee) {
       maxAmount_ = availableBalance - fee;
    }
    return maxAmount_;
@@ -410,10 +402,12 @@ void TransactionData::setFeePerByte(float feePerByte)
    InvalidateTransactionData();
 }
 
-void TransactionData::setTotalFee(uint64_t fee)
+void TransactionData::setTotalFee(uint64_t fee, bool overrideFeePerByte)
 {
    totalFee_ = fee;
-   feePerByte_ = 0;
+   if (overrideFeePerByte) {
+      feePerByte_ = 0;
+   }
    InvalidateTransactionData();
 }
 
@@ -496,7 +490,8 @@ bool TransactionData::IsTransactionValid() const
    return (wallet_ != nullptr)
       && (selectedInputs_ != nullptr)
       && summary_.usedTransactions != 0
-      && (!qFuzzyIsNull(feePerByte_) || totalFee_ != 0) && RecipientsReady();
+      && (!qFuzzyIsNull(feePerByte_) || totalFee_ != 0 || summary_.totalFee != 0)
+      && RecipientsReady();
 }
 
 size_t TransactionData::GetRecipientsCount() const

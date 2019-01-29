@@ -225,6 +225,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
 
       QString  changeAddress;
       double   changeAmount = 0;
+      std::vector<std::pair<QString, double>> ownOutputs;
 
       // set outputs
       for (size_t i = 0; i < tx.getNumTxOut(); i++) {
@@ -236,19 +237,38 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
 
          // We will assume that the last wallet address found in the TX is the
          // change address (in case it's not the only output address)
-         if (transactionData_->GetRecipientsCount() && wallet->containsAddress(addr)) {
-            if (!changeAddress.isEmpty()) {
-               AddRecipient(changeAddress, changeAmount);
-            }
-
-            changeAddress = addressString;
-            changeAmount = amount;
+         if (wallet->containsAddress(addr)) {
+            ownOutputs.push_back({addressString, amount});
          }
          else {
             AddRecipient(addressString, amount);
          }
 
          totalVal -= out.getValue();
+      }
+
+      if (ownOutputs.empty()) {
+         logger_->warn("[{}] RBF doesn't contain own outputs", __func__);
+      }
+      else if (ownOutputs.size() == 1) {
+         if (!transactionData_->GetRecipientsCount()) {
+            AddRecipient(ownOutputs[0].first, ownOutputs[0].second);
+         }
+         else {
+            changeAddress = ownOutputs[0].first;
+            changeAmount = ownOutputs[0].second;
+         }
+      }
+      else {
+         for (size_t i = 0; i < ownOutputs.size(); ++i) {
+            if (i == (ownOutputs.size() - 1)) {
+               changeAddress = ownOutputs[i].first;
+               changeAmount = ownOutputs[i].second;
+            }
+            else {
+               AddRecipient(ownOutputs[i].first, ownOutputs[i].second);
+            }
+         }
       }
 
       // Error check.
@@ -301,7 +321,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       SetMinimumFee(newMinFee, originalFeePerByte_);
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
-      transactionData_->setTotalFee(newMinFee);
+      transactionData_->setTotalFee(newMinFee, false);
       FixRecipientsAmount();
    };
 
@@ -640,16 +660,12 @@ void CreateTransactionDialogAdvanced::onAddOutput()
    }
    const auto recipId = AddRecipient(address, currentValue_, maxAmount);
 
-
    const double diffMax = maxValue - transactionData_->GetTotalRecipientsAmount();
    const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
    // The code below tries to eliminate the change address if the change amount is too little.
    if ((diffMax > 0) && (diffMax < totalFee)) {
-      transactionData_->setTotalFee(diffMax * BTCNumericTypes::BalanceDivider);
+      transactionData_->setTotalFee(diffMax * BTCNumericTypes::BalanceDivider, false);
       UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
-   }
-   else if ((diffMax < 0) && (diffMax > -0.00000001)) {
-      UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId) - 0.00000001, true);
    }
 
    // clear edits

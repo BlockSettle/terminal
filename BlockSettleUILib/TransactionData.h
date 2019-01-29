@@ -72,8 +72,8 @@ public:
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    std::shared_ptr<bs::Wallet> GetSigningWallet() const { return signWallet_; }
    void setFeePerByte(float feePerByte);
+   void setTotalFee(uint64_t fee, bool overrideFeePerByte = true);
    float feePerByte() const;
-   void setTotalFee(uint64_t fee);
    uint64_t totalFee() const;
 
    bool IsTransactionValid() const;

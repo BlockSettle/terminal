@@ -78,9 +78,6 @@ public:
 
    bool setWallets(const Wallets &);
 
-signals:
-   void updated();
-
 private slots:
    void updateData();
    void removeEmptyIntAddresses();
