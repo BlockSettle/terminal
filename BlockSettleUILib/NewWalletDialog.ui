@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>380</width>
-    <height>193</height>
+    <height>203</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -149,7 +149,7 @@
          <bool>false</bool>
         </property>
         <property name="whiteLabel" stdset="0">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="wellGroupBoxWithButtonBar" stdset="0">
          <bool>true</bool>

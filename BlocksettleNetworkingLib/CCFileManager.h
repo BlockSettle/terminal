@@ -42,6 +42,8 @@ public:
    bool SubmitAddressToPuB(const bs::Address &, uint32_t seed);
    bool wasAddressSubmitted(const bs::Address &);
 
+   bool hasLocalFile() const;
+
 signals:
    void CCSecurityDef(bs::network::CCSecurityDef);
    void CCSecurityId(const std::string& securityId);

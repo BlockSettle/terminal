@@ -15,7 +15,7 @@ BSMarketDataProvider::BSMarketDataProvider(const std::shared_ptr<ConnectionManag
 {
 }
 
-bool BSMarketDataProvider::StartMDConnection(const std::string& host, const std::string& port)
+bool BSMarketDataProvider::StartMDConnection()
 {
    if (mdConnection_ != nullptr) {
       logger_->error("[BSMarketDataProvider::StartMDConnection] already connected");
@@ -34,7 +34,7 @@ bool BSMarketDataProvider::StartMDConnection(const std::string& host, const std:
    logger_->debug("[BSMarketDataProvider::StartMDConnection] start connecting to PB updates");
 
    emit StartConnecting();
-   if (!mdConnection_->ConnectToPublisher(host, port, listener_.get())) {
+   if (!mdConnection_->ConnectToPublisher(host_, port_, listener_.get())) {
       logger_->error("[BSMarketDataProvider::StartMDConnection] failed to start connection");
       emit Disconnected();
       return false;

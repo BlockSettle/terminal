@@ -59,7 +59,6 @@ public:
       signerHost,
       signerPort,
       signerRunMode,
-      signerPassword,
       signerOfflineDir,
       autoSignSpendLimit,
       launchToTray,
@@ -86,6 +85,7 @@ public:
       Binaries_Dl_Url,
       ResetPassword_Url,
       GetAccount_Url,
+      GettingStartedGuide_Url,
       WalletFiltering,
       FxRfqLimit,
       XbtRfqLimit,
@@ -99,7 +99,8 @@ public:
       MDLicenseAccepted,
       authPrivKey,
       jwtUsername,
-      zmqSignerPubKeyFile,
+      zmqLocalSignerPubKeyFilePath,
+      zmqRemoteSignerPubKey,
       _last
    };
 

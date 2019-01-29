@@ -8,7 +8,8 @@ enum EnvConfiguration
 {
    CustomConfiguration,
    StagingConfiguration,
-   UATConfiguration
+   UATConfiguration,
+   PRODConfiguration
 };
 
 struct EnvSettings
@@ -29,6 +30,9 @@ static const EnvSettings StagingEnvSettings {
 static const EnvSettings UATEnvSettings{
    QLatin1String("185.213.153.44"), 9091 };
 
+static const EnvSettings PRODEnvSettings{
+   QLatin1String("185.213.153.36"), 9091 };
+
 NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    : QWidget{parent}
    , ui_{new Ui::NetworkSettingsPage}
@@ -38,6 +42,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    ui_->comboBoxEnv->addItem(tr("Custom"));
    ui_->comboBoxEnv->addItem(tr("Staging"));
    ui_->comboBoxEnv->addItem(tr("UAT"));
+   ui_->comboBoxEnv->addItem(tr("PROD"));
 
    ui_->comboBoxEnv->setCurrentIndex(-1);
    ui_->comboBoxEnv->setEnabled(false);
@@ -48,14 +53,8 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    connect(ui_->checkBoxTestnet, &QCheckBox::clicked
       , this, &NetworkSettingsPage::onNetworkClicked);
 
-   connect(ui_->celerHostLineEdit, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
-   connect(ui_->celerPortSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
-
    connect(ui_->lineEditPublicBridgeHost, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
    connect(ui_->spinBoxPublicBridgePort, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
-
-   connect(ui_->lineEditMDHost, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
-   connect(ui_->spinBoxMDPort, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
 
    connect(ui_->comboBoxEnv, SIGNAL(currentIndexChanged(int)), this, SLOT(onEnvSelected(int)));
 }
@@ -79,14 +78,8 @@ void NetworkSettingsPage::displaySettings(bool displayDefault)
       DisplayRunArmorySettings(false, displayDefault);
    }
 
-   ui_->celerHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::celerHost, displayDefault));
-   ui_->celerPortSpinBox->setValue(appSettings_->get<int>(ApplicationSettings::celerPort, displayDefault));
-
    ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost, displayDefault));
    ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort, displayDefault));
-
-   ui_->lineEditMDHost->setText(appSettings_->get<QString>(ApplicationSettings::mdServerHost, displayDefault));
-   ui_->spinBoxMDPort->setValue(appSettings_->get<int>(ApplicationSettings::mdServerPort, displayDefault));
 
    ui_->comboBoxEnv->setEnabled(true);
    DetectEnvironmentSettings();
@@ -125,6 +118,8 @@ void NetworkSettingsPage::DetectEnvironmentSettings()
       index = StagingConfiguration;
    } else if (currentConfiguration == UATEnvSettings) {
       index = UATConfiguration;
+   } else if (currentConfiguration == PRODEnvSettings) {
+      index = PRODConfiguration;
    }
 
    ui_->comboBoxEnv->setCurrentIndex(index);
@@ -168,8 +163,10 @@ void NetworkSettingsPage::onEnvSelected(int index)
       const EnvSettings *settings = nullptr;
       if (index == StagingConfiguration) {
          settings = &StagingEnvSettings;
-      } else {
+      } else if (index == UATConfiguration) {
          settings = &UATEnvSettings;
+      } else  {
+         settings = &PRODEnvSettings;
       }
 
       ui_->lineEditPublicBridgeHost->setText(settings->pubHost);

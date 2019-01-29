@@ -205,11 +205,11 @@ void SelectedTransactionInputs::SetCPFPTransactionSelection(size_t i, const bool
 
 std::vector<UTXO> SelectedTransactionInputs::GetSelectedTransactions() const
 {
-   std::vector<UTXO> selectedTransactions;
    if (useAutoSel_) {
-      return inputs_;
+      return GetAllTransactions();
    }
 
+   std::vector<UTXO> selectedTransactions;
    selectedTransactions.reserve(totalSelected_);
 
    for (size_t i=0; i<selection_.size(); ++i) {
@@ -220,6 +220,15 @@ std::vector<UTXO> SelectedTransactionInputs::GetSelectedTransactions() const
    }
 
    return selectedTransactions;
+}
+
+std::vector<UTXO> SelectedTransactionInputs::GetAllTransactions() const
+{
+   std::vector<UTXO> allTransactions;
+   allTransactions.reserve(inputs_.size() + cpfpInputs_.size());
+   allTransactions.insert(allTransactions.end(), inputs_.begin(), inputs_.end());
+   allTransactions.insert(allTransactions.end(), cpfpInputs_.begin(), cpfpInputs_.end());
+   return allTransactions;
 }
 
 bool SelectedTransactionInputs::isSegWit(const UTXO &input) const

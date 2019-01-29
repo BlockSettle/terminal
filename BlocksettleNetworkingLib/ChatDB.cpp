@@ -22,7 +22,8 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
    createTable_ = {
       {QLatin1String("user_keys"), [db = db_] {
          const QLatin1String query("CREATE TABLE IF NOT EXISTS user_keys ("\
-            "user CHAR(8) PRIMARY KEY,"\
+            "user_id CHAR(8) PRIMARY KEY,"\
+            "user_name CHAR(64),"\
             "key TEXT"\
             ");");
          if (!QSqlQuery(db).exec(query)) {
@@ -145,10 +146,10 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
    return records;
 }
 
-bool ChatDB::loadKeys(std::map<QString, BinaryData> &keys)
+bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT user, key FROM user_keys"))) {
+   if (!query.prepare(QLatin1String("SELECT user_id, key FROM user_keys"))) {
       logger_->error("[ChatDB::loadKeys] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
@@ -157,8 +158,23 @@ bool ChatDB::loadKeys(std::map<QString, BinaryData> &keys)
       return false;
    }
 
-   while (query.next()) {  //TODO: apply base64 decoding for public key
-      keys[query.value(0).toString()] = query.value(1).toString().toStdString();
+   while (query.next()) {
+      keys_out[query.value(0).toString()] = autheid::publicKeyFromString(
+         query.value(1).toString().toStdString());
+   }
+   return true;
+}
+
+bool ChatDB::addKey(const QString& user, const autheid::PublicKey& key)
+{
+   QSqlQuery qryAdd(QLatin1String(
+      "INSERT INTO user_keys(user_id, key) VALUES(?, ?);"), db_);
+   qryAdd.bindValue(0, user);
+   qryAdd.bindValue(1, QString::fromStdString(autheid::publicKeyToString(key)));
+
+   if (!qryAdd.exec()) {
+      logger_->error("[ChatDB::addKey] failed to insert new public key value to user_keys.");
+      return false;
    }
    return true;
 }

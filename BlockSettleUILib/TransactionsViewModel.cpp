@@ -240,7 +240,7 @@ void TransactionsViewModel::init()
       connect(armory_.get(), &ArmoryConnection::newBlock, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    }
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &WalletsManager::walletImportFinished, [this](const std::string &) { refresh(); });
+   connect(walletsManager_.get(), &WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
 }
@@ -582,6 +582,9 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       for (auto item : newItemsCopy) {
          updateTransactionDetails(item.second.first, cbInited);
       }
+   }
+   else {
+      emit dataLoaded(0);
    }
 
    if (!updatedItems->empty()) {

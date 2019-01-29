@@ -265,7 +265,7 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
             logger_->warn("[HeadlessContainer] invalid path[{}]: {}", i, response.wallet().groups(i).path());
             continue;
          }
-         const auto grpType = static_cast<bs::hd::CoinType>(grpPath.get(grpPath.length() - 1));
+         const auto grpType = static_cast<bs::hd::CoinType>(grpPath.get((int)grpPath.length() - 1));
          auto group = wallet->createGroup(grpType);
 
          for (int j = 0; j < response.wallet().leaves_size(); j++) {
@@ -274,7 +274,7 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
                logger_->warn("[HeadlessContainer] invalid path[{}]: {}", j, response.wallet().leaves(j).path());
                continue;
             }
-            if (leafPath.get(leafPath.length() - 2) != static_cast<bs::hd::Path::Elem>(grpType)) {
+            if (leafPath.get((int)leafPath.length() - 2) != static_cast<bs::hd::Path::Elem>(grpType)) {
                continue;
             }
             auto leaf = group->newLeaf();
@@ -809,11 +809,15 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 
 
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &host, const QString &port, NetworkType netType
-   , const std::shared_ptr<ConnectionManager>& connectionManager
-   , OpMode opMode) : HeadlessContainer(logger, opMode)
+                           , const QString &host, const QString &port
+                           , NetworkType netType
+                           , const std::shared_ptr<ConnectionManager>& connectionManager
+                           , const std::shared_ptr<ApplicationSettings>& appSettings
+                           , OpMode opMode)
+   : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
+   , appSettings_(appSettings)
 {}
 
 // Establish the remote connection to the signer.
@@ -823,25 +827,15 @@ bool RemoteSigner::Start()
       return true;
    }
 
-   // If the ZMQ server public key hasn't been loaded yet, do it here.
-   if (zmqSignerPubKey_.getSize() == 0) {
-      // Read the server key file. For now, assume the location is fixed. We may
-      // want to make the location dynamic later. In addition, there's a race
-      // condition of sorts when starting out. If the server pub key exists,
-      // proceed. If not, give the signer a little time to create the key. 50 ms
-      // seems reasonable on a VM but we'll add some padding to be safe.
-      QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-      QString zmqSignerPubKeyPath = logDir.path() + \
-         QString::fromStdString("/zmq_conn_srv.pub");
-      QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
-      if (!zmqSignerPubKeyFile.exists()) {
-         QThread::msleep(250);
-      }
+   // Load remote singer zmq pub key.
+   // If the server pub key exists, proceed (it was initialized in LocalSigner::Start()).
+   if (!zmqSignerPubKey_.getSize()){
+      const QString &zmqRemoteSignerPubKey = appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
 
-      if (!bs::network::readZMQKeyFile(zmqSignerPubKeyPath, zmqSignerPubKey_, true
+      if (!bs::network::readZmqKeyString(zmqRemoteSignerPubKey.toLatin1(), zmqSignerPubKey_, true
          , logger_)) {
          logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
-            "key ({})", __func__, zmqSignerPubKeyPath.toStdString());
+            "key.", __func__);
          return false;
       }
    }
@@ -1048,12 +1042,13 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
 
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &homeDir, NetworkType netType, const QString &port
-   , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ApplicationSettings>& appSettings
-   , double asSpendLimit)
+                         , const QString &homeDir, NetworkType netType, const QString &port
+                         , const std::shared_ptr<ConnectionManager>& connectionManager
+                         , const std::shared_ptr<ApplicationSettings> &appSettings
+                         , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, OpMode::Local), appSettings_(appSettings)
+                  , connectionManager, appSettings, OpMode::Local)
+
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
@@ -1148,13 +1143,33 @@ bool LocalSigner::Start()
    }
    logger_->debug("[LocalSigner::{}] child process started", __func__);
 
+
+   // Load local ZMQ server public key.
+   if (zmqSignerPubKey_.getSize() == 0) {
+      // If the server pub key exists, proceed. If not, give the signer a little time to create the key.
+      // 50 ms seems reasonable on a VM but we'll add some padding to be safe.
+      const auto zmqLocalSignerPubKeyPath = appSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
+
+      QFile zmqLocalSignerPubKeyFile(zmqLocalSignerPubKeyPath);
+      if (!zmqLocalSignerPubKeyFile.exists()) {
+         QThread::msleep(250);
+      }
+
+      if (!bs::network::readZmqKeyFile(zmqLocalSignerPubKeyPath, zmqSignerPubKey_, true
+         , logger_)) {
+         logger_->error("[LocalSigner::{}] failed to read ZMQ server public "
+            "key ({})", __func__, zmqLocalSignerPubKeyPath.toStdString());
+      }
+   }
+
+
    // SPECIAL CASE: Unlike Windows and Linux, the Signer and Terminal have
    // different data directories on Macs. Check the Signer for a file. There is
    // an issue here if the Signer has moved its keys away from the standard
    // location. We really should check the Signer's config file instead.
 #ifdef Q_OS_MACOS
    QString zmqSignerPubKeyPath = \
-      appSettings_->get<QString>(ApplicationSettings::zmqSignerPubKeyFile);
+      appSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
    QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
    if (!zmqSignerPubKeyFile.exists()) {
       QThread::msleep(250); // Give Signer time to create files if needed.
@@ -1175,8 +1190,7 @@ bool LocalSigner::Start()
    }
 #endif
 
-   RemoteSigner::Start();
-   return true;
+   return RemoteSigner::Start();
 }
 
 bool LocalSigner::Stop()
