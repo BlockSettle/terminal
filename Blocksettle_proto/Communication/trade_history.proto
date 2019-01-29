@@ -28,26 +28,23 @@ message LatestTradeRequest
 
 message SubscribeToTradesRequest
 {
-   TradeHistoryTradeType   trade_type = 1;
+   TradeHistoryTradeType   trade_type     = 1;
    uint64                  from_timestamp = 2;
 }
 
 message TradeRecord
 {
-   double   price   = 1;
-   double   amount  = 2;
-
-   string   product = 3;
-   string   currency = 4;
-
-   bool     is_sell = 5;
-
-   uint64   timestamp = 6;
-   uint64   internal_id = 7;
+   double   price       = 1;
+   double   amount      = 2;
+   string   product     = 3;
+   string   currency    = 4;
+   bool     is_sell     = 5;
+   uint64   timestamp   = 6;
+   string   trade_id    = 7;
 }
 
 message TradeHistoryServerUpdate
 {
-   TradeHistoryTradeType   trade_type = 1;
-   TradeRecord             trade = 2;
+   TradeHistoryTradeType   trade_type  = 1;
+   TradeRecord             trade       = 2;
 }
