@@ -38,8 +38,8 @@ class LibChaCha20Poly1305Settings(Configurator):
                    self._project_settings.get_cmake_generator()]
 
         if self._project_settings.on_windows():
-            command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
-            command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+            command.append('-DCMAKE_C_FLAGS_DEBUG=/MTd')
+            command.append('-DCMAKE_C_FLAGS_RELEASE=/MT')
 
         result = subprocess.call(command)
 

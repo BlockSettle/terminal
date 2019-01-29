@@ -35,6 +35,10 @@ class LibQREncode(Configurator):
                    self.get_unpacked_sources_dir(),
                    '-G',
                    self._project_settings.get_cmake_generator()]
+                   
+        if self._project_settings.on_windows():
+            command.append('-DCMAKE_C_FLAGS_DEBUG=/MTd')
+            command.append('-DCMAKE_C_FLAGS_RELEASE=/MT')
 
         result = subprocess.call(command)
 
