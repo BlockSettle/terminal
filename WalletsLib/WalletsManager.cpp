@@ -622,7 +622,7 @@ bool WalletsManager::DeleteWalletFile(const wallet_gen_type &wallet)
       authAddressWallet_ = nullptr;
       emit authWalletChanged();
    }
-   emit walletChanged();
+   emit walletDeleted();
    return true;
 }
 
@@ -635,6 +635,9 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
    }
 
    const auto &leaves = wallet->getLeaves();
+   for (const auto &leaf : leaves) {
+      leaf->UnregisterWallet();
+   }
    for (const auto &leaf : leaves) {
       EraseWallet(leaf);
    }
@@ -652,7 +655,7 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
       authAddressWallet_.reset();
       emit authWalletChanged();
    }
-   emit walletChanged();
+   emit walletDeleted();
    return result;
 }
 

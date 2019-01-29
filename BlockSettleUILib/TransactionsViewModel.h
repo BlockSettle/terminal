@@ -147,6 +147,7 @@ public:
 private slots:
    void updatePage();
    void refresh();
+   void cleanRefresh();
    void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
    void onDelRows(std::vector<int> rows);
 
