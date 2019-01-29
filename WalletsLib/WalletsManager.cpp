@@ -607,6 +607,8 @@ bool WalletsManager::DeleteWalletFile(const wallet_gen_type &wallet)
          break;
       }
    }
+
+   wallet->UnregisterWallet();
    if (!isHDLeaf) {
       if (!wallet->EraseFile()) {
          logger_->error("Failed to remove wallet file for {}", wallet->GetWalletName());
