@@ -250,7 +250,7 @@ namespace bs {
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
       virtual std::string RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
          , bool asNew = false);
-      void UnregisterWallet();
+      virtual void UnregisterWallet();
       virtual void SetArmory(const std::shared_ptr<ArmoryConnection> &);
       virtual void SetUserID(const BinaryData &) {}
       virtual bool getHistoryPage(uint32_t id) const;
