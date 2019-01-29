@@ -51,14 +51,6 @@ public:
     TradesDB(TradesDB&&) = delete;
     TradesDB& operator=(TradesDB&&) = delete;
 
-    DataPoint *getDataPoint(const QString &product
-                            , const QDateTime &timeTill
-                            , qint64 durationSec);
-    const std::vector<DataPoint *> getDataPoints(const QString &product
-                                                 , const QDateTime &sinceTime
-                                                 , const QDateTime &tillTime
-                                                 , qint64 stepDurationSecs
-                                                 );
     const std::vector<DataPoint *> getDataPoints(const QString &product
                                                  , Interval interval = Interval::Unknown
                                                  , qint64 maxCount = 100);

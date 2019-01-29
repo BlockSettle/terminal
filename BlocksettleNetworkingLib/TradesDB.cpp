@@ -50,33 +50,6 @@ static const std::map<TradesDB::Interval, QString> INTERVALS_LABELS = {
     }
 };
 
-static const std::map<TradesDB::Interval, qint64> INTERVALS_VALUES = {
-    {
-        TradesDB::Interval::OneYear         , 365 * 24 * 60 * 60
-    }, {
-        TradesDB::Interval::SixMonths       , 188 * 24 * 60 * 60
-    }, {
-        TradesDB::Interval::OneMonth        , 30 * 24 * 60 * 60
-    }, {
-        TradesDB::Interval::OneWeek         , 7 * 24 * 60 * 60
-    }, {
-        TradesDB::Interval::TwentyFourHours , 24 * 60 * 60
-    }, {
-        TradesDB::Interval::TwelveHours     , 12 * 60 * 60
-    }, {
-        TradesDB::Interval::SixHours        , 5 * 60 * 60
-    }, {
-        TradesDB::Interval::OneHour         , 60 * 60
-    }, {
-        TradesDB::Interval::ThirtyMinutes   , 30 * 60
-    }, {
-        TradesDB::Interval::FifteenMinutes  , 15 * 60
-    }, {
-        TradesDB::Interval::OneMinute       , 60
-    }
-};
-
-
 }
 
 TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger
@@ -190,12 +163,9 @@ TradesDB::TradesDB(const std::shared_ptr<spdlog::logger> &logger
 bool TradesDB::createMissingTables()
 {
     const auto &existingTables = db_.tables();
-    std::set<QString> tableSet;
-    tableSet.insert(existingTables.begin(), existingTables.end());
-
     bool result = true;
     for (const auto &reqTable : requiredTables_) {
-       if (tableSet.find(reqTable) == tableSet.end()) {
+       if (!existingTables.contains(reqTable)) {
           logger_->debug("[TradesDB] creating table {}", reqTable.toStdString());
           const bool rc = createTable_[reqTable]();
           if (!rc) {
@@ -338,101 +308,6 @@ void TradesDB::init()
     populateEmptyData();
 }
 
-TradesDB::DataPoint *TradesDB::getDataPoint(const QString &product
-                                 , const QDateTime &timeTill
-                                 , qint64 durationSec)
-{
-    db_.transaction();
-    QSqlQuery query(db_);
-    query.prepare(QStringLiteral("SELECT rowid FROM products WHERE name = :name;"));
-    query.bindValue(QStringLiteral(":name"), product);
-    if (!query.exec() || !query.first()) {
-        logger_->warn("[TradesDB] failed find product {}", product.toStdString());
-        db_.rollback();
-        return nullptr;
-    }
-    qint64 productid = query.value(QStringLiteral("rowid")).toLongLong();
-    QDateTime timeSince = timeTill.addSecs(-durationSec);
-    query.prepare(QStringLiteral("SELECT u.price as open, "
-                                 "    MAX(t.price) AS high, "
-                                 "    MIN(t.price) AS low, "
-                                 "    w.price AS close, "
-                                 "    SUM(t.volume) AS volume "
-                                 "FROM ( "
-                                 "    SELECT * "
-                                 "    FROM trades "
-                                 "    WHERE productid = :productid AND "
-                                 "        timestamp > :timeSince AND "
-                                 "        timestamp <= :timeTill) AS t JOIN ( "
-                                 "    SELECT price "
-                                 "    FROM trades "
-                                 "    WHERE productid = :productid AND "
-                                 "        timestamp > :timeSince AND "
-                                 "        timestamp <= :timeTill "
-                                 "    ORDER BY timestamp ASC "
-                                 "    LIMIT 1) AS u JOIN ( "
-                                 "    SELECT price "
-                                 "    FROM trades "
-                                 "    WHERE productid = :productid AND "
-                                 "        timestamp > :timeSince AND "
-                                 "        timestamp <= :timeTill "
-                                 "    ORDER BY timestamp DESC "
-                                 "    LIMIT 1) AS w ; "));
-    query.bindValue(QStringLiteral(":productid"), productid);
-    query.bindValue(QStringLiteral(":timeSince") , timeSince.toMSecsSinceEpoch());
-    qreal timestamp = timeTill.toMSecsSinceEpoch();
-    query.bindValue(QStringLiteral(":timeTill") , timestamp);
-    if (!query.exec() || !query.first()) {
-        logger_->warn("[TradesDB] failed read data: {} : {} using {} {} {}"
-                      , query.lastError().text().toStdString()
-                      , query.lastQuery().toStdString()
-                      , productid
-                      , timeSince.toMSecsSinceEpoch()
-                      , timestamp);
-        db_.rollback();
-        return nullptr;
-    }
-    db_.commit();
-    qreal open = query.value(QStringLiteral("open")).toDouble();
-    qreal high = query.value(QStringLiteral("high")).toDouble();
-    qreal low = query.value(QStringLiteral("low")).toDouble();
-    qreal close = query.value(QStringLiteral("close")).toDouble();
-    qreal volume = query.value(QStringLiteral("volume")).toDouble();
-    return new DataPoint { .open = open
-                , .high = high
-                , .low = low
-                , .close = close
-                , .volume = volume
-                , .timestamp = timestamp };
-}
-
-const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
-        const QString &product
-        , const QDateTime &sinceTime
-        , const QDateTime &tillTime
-        , qint64 stepDurationSecs)
-{
-    std::vector<TradesDB::DataPoint *> result;
-    QDateTime start = sinceTime;
-    QDateTime end = start.addSecs(stepDurationSecs);
-    while (start < tillTime) {
-        if (end > tillTime) {
-            end = tillTime;
-        }
-        /*logger_->info("[TradesDB] get point for {} {} {}"
-                      , product.toStdString()
-                      , end.toString(Qt::ISODate).toStdString()
-                      , stepDurationSecs);*/
-        auto data = getDataPoint(product, end, stepDurationSecs);
-        if (data) {
-            result.push_back(data);
-        }
-        start = end;
-        end = start.addSecs(stepDurationSecs);
-    }
-    return result;
-}
-
 const std::vector<TradesDB::DataPoint *> TradesDB::getDataPoints(
         const QString &product
         , TradesDB::Interval interval
@@ -549,63 +424,66 @@ bool TradesDB::populateEmptyData()
 const QDateTime TradesDB::intervalStart(const QDateTime &now
                                         , const Interval &interval) const
 {
-    QDateTime result;
-    auto timeSpec = now.timeSpec();
-    auto offsetFromUtc = now.offsetFromUtc();
+    QDateTime result = now;
     switch (interval) {
-    case TradesDB::Interval::OneYear:
-        result = QDateTime(QDate(now.date().year(), 1, 1), QTime(0, 0), timeSpec, offsetFromUtc);
-        break;
-    case TradesDB::Interval::SixMonths: {
-        int month = now.date().month();
-        result = QDateTime(QDate(now.date().year(), month > 6 ? month - 6 : month, 1), QTime(0, 0), timeSpec, offsetFromUtc);
+    case TradesDB::Interval::OneYear: {
+        result.setTime(QTime(0, 0));
+        result.setDate(QDate(now.date().year(), 1, 1));
         break;
     }
-    case TradesDB::Interval::OneMonth:
-        result = QDateTime(QDate(now.date().year(), now.date().month(), 1), QTime(0, 0), timeSpec, offsetFromUtc);
+    case TradesDB::Interval::SixMonths: {
+        int month = now.date().month();
+        int mod = month % 6;
+        result.setTime(QTime(0, 0));
+        result.setDate(QDate(now.date().year(), month - mod, 1));
         break;
+    }
+    case TradesDB::Interval::OneMonth: {
+        result.setTime(QTime(0, 0));
+        result.setDate(QDate(now.date().year(), now.date().month(), 1));
+        break;
+    }
     case TradesDB::Interval::OneWeek: {
         auto date = now.date();
         auto start = date.addDays(1 - date.dayOfWeek());
-        result = QDateTime(start, QTime(0, 0), timeSpec, offsetFromUtc);
+        result.setTime(QTime(0, 0));
+        result.setDate(start);
         break;
     }
     case TradesDB::Interval::TwentyFourHours:
-        result = QDateTime(now.date(), QTime(0, 0), timeSpec, offsetFromUtc);
+        result.setTime(QTime(0, 0));
         break;
     case TradesDB::Interval::TwelveHours: {
         int hour = now.time().hour();
-        hour = hour < 12 ? hour : (hour - 12);
-        result = QDateTime(now.date(), QTime(hour, 0), timeSpec, offsetFromUtc);
+        int mod = hour % 12;
+        result.setTime(QTime(hour - mod, 0));
         break;
     }
     case TradesDB::Interval::SixHours: {
         int hour = now.time().hour();
         int mod = hour % 6;
-        hour = mod == 0 ? hour : (hour - mod);
-        result = QDateTime(now.date(), QTime(hour, 0), timeSpec, offsetFromUtc);
+        result.setTime(QTime(hour - mod, 0));
         break;
     }
     case TradesDB::Interval::OneHour:
-        result = QDateTime(now.date(), QTime(now.time().hour(), 0), timeSpec, offsetFromUtc);
+        result.setTime(QTime(now.time().hour(), 0));
         break;
     case TradesDB::Interval::ThirtyMinutes: {
         int minute = now.time().minute();
         int mod = minute % 30;
-        minute = mod == 0 ? minute : (minute - mod);
-        result = QDateTime(now.date(), QTime(now.time().hour(), minute), timeSpec, offsetFromUtc);
+        result.setTime(QTime(now.time().hour(), minute - mod));
         break;
     }
     case TradesDB::Interval::FifteenMinutes: {
         int minute = now.time().minute();
         int mod = minute % 15;
         minute = mod == 0 ? minute : (minute - mod);
-        result = QDateTime(now.date(), QTime(now.time().hour(), minute), timeSpec, offsetFromUtc);
+        result.setTime(QTime(now.time().hour(), minute));
         break;
     }
     case TradesDB::Interval::OneMinute:
+        result.setTime(QTime(now.time().hour(), now.time().minute()));
         break;
-        result = QDateTime(now.date(), QTime(now.time().hour(), now.time().minute()), timeSpec, offsetFromUtc);
     default:
         break;
     }
