@@ -222,9 +222,6 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] get update:\n{}"
-      , response.DebugString());
-
    if (!response.has_snapshot()) {
       logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] empty snapshot");
       return true;
@@ -259,8 +256,6 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
 
    if (!fields.empty()) {
       emit MDUpdate(assetType, security, fields);
-   } else {
-      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] no fields updated");
    }
 
    return true;
@@ -379,8 +374,8 @@ bool CelerMarketDataProvider::ProcessSecurityListingEvent(const std::string& dat
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation:\n{}"
-                  , responseEvent.DebugString());
+   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation for {}"
+                  , responseEvent.securityid());
 
    emit CCSecuritRegistrationResult(true, responseEvent.securityid());
 

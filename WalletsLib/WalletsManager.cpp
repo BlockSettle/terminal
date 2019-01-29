@@ -1047,7 +1047,7 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
    for (const auto led : armory_->getZCentries(reqId)) {
       auto wallet = GetWalletById(led.getID());
       if (wallet != nullptr) {
-         logger_->debug("[{}] ZC entry in wallet {}", __func__
+         logger_->debug("[WalletsManager::onZeroConfReceived] ZC entry in wallet {}"
                         , wallet->GetWalletName());
 
          // We have an affected wallet. Update it!
@@ -1055,7 +1055,7 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
          wallet->UpdateBalances();
       } // if
       else {
-         logger_->debug("[{}] get ZC but wallet not found: {}", __func__
+         logger_->debug("[WalletsManager::onZeroConfReceived] get ZC but wallet not found: {}"
                         , led.getID());
       }
    } // for
