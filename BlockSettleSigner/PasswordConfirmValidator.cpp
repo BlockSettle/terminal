@@ -8,28 +8,37 @@ PasswordConfirmValidator::PasswordConfirmValidator(QObject* parent) :
 
 QValidator::State PasswordConfirmValidator::validate(QString &input, int &) const
 {
-   if (input.isEmpty() || compareTo_.isEmpty()) {
-      setStatusMsg({});
+   // accept only ascii chars
+   for (const QChar &c : input) {
+      if (c.unicode() <= 31 || c.unicode() >= 127) {
+         setStatusMsg(invalidCharTmpl_.arg(name_));
+         return QValidator::State::Invalid;
+      }
+   }
+
+   if (!input.isEmpty() && input.size() < 6) {
+      setStatusMsg(tooShortTmpl_.arg(name_));
       return QValidator::State::Intermediate;
    }
 
-   if (input.size() < compareTo_.size()) {
-      setStatusMsg(dontMatchMsgTmpl_.arg(name_));
-      return QValidator::State::Intermediate;
-   }
-
-   if ( input.size() == compareTo_.size()) {
+   if (input.size() == compareTo_.size() && input.size() >= 6) {
       if (input == compareTo_) {
          setStatusMsg(validTmpl_.arg(name_));
          return QValidator::State::Acceptable;
-      } else {
+      }
+      else {
          setStatusMsg(dontMatchMsgTmpl_.arg(name_));
          return  QValidator::State::Intermediate;
       }
    }
 
-   if (input.size() > compareTo_.size()) {
-      setStatusMsg(tooLongTmpl_.arg(name_));
+   if (input.size() != compareTo_.size() && !compareTo_.isEmpty()) {
+      setStatusMsg(dontMatchMsgTmpl_.arg(name_));
+      return QValidator::State::Intermediate;
+   }
+
+   if (input.size() >= 6 || compareTo_.isEmpty()) {
+      setStatusMsg({});
       return QValidator::State::Intermediate;
    }
 

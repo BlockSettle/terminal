@@ -2,47 +2,66 @@
     <qresource prefix="/">
         <file>images/bs_logo.png</file>
         <file alias="FULL_LOGO">images/full_logo.png</file>
+        <file alias="NOTIFICATION_CRITICAL">images/notification_critical.png</file>
+        <file alias="NOTIFICATION_INFO">images/notification_info.png</file>
+        <file alias="NOTIFICATION_QUESTION">images/notification_question.png</file>
+        <file alias="NOTIFICATION_SUCCESS">images/notification_success.png</file>
+        <file alias="NOTIFICATION_WARNING">images/notification_warning.png</file>
         <file alias="TEMPLATE_WALLET_BACKUP">templates/wallet_backup.html</file>
         <file>qml/main.qml</file>
         <file>qml/AutoSignPage.qml</file>
-        <file>qml/DirSelectionDialog.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
-        <file>qml/PasswordEntryDialog.qml</file>
         <file>qml/SettingsGrid.qml</file>
         <file>qml/SettingsPage.qml</file>
         <file>qml/StatusPage.qml</file>
-        <file>qml/WalletBackupDialog.qml</file>
-        <file>qml/WalletChangePasswordDialog.qml</file>
-        <file>qml/WalletCreateDialog.qml</file>
-        <file>qml/WalletDeleteDialog.qml</file>
-        <file>qml/WalletExportWoDialog.qml</file>
-        <file>qml/WalletImportDialog.qml</file>
-        <file>qml/WalletNewDialog.qml</file>
         <file>qml/WalletsPage.qml</file>
         <file>qml/WalletsView.qml</file>
-        <file>qml/CustomTextArea.qml</file>
-        <file>qml/CustomTextInput.qml</file>
-        <file>qml/CustomLabel.qml</file>
-        <file>qml/CustomHeader.qml</file>
-        <file>qml/CustomTabButton.qml</file>
-        <file>qml/CustomCheckBox.qml</file>
-        <file>qml/CustomButton.qml</file>
-        <file>qml/CustomLabelValue.qml</file>
-        <file>qml/CustomSwitch.qml</file>
-        <file>qml/CustomButtonBar.qml</file>
-        <file>qml/CustomContainer.qml</file>
-        <file>qml/CustomHeaderPanel.qml</file>
-        <file>qml/CustomDialog.qml</file>
-        <file>qml/CustomRadioButton.qml</file>
-        <file>qml/CustomButtonPrimary.qml</file>
-        <file>qml/CustomProgressBar.qml</file>
-        <file>qml/CustomComboBox.qml</file>
-        <file>qml/bscontrols/qmldir</file>
-        <file>qml/bscontrols/BSConfirmedPasswordInput.qml</file>
-        <file>qml/bscontrols/BSInputLabel.qml</file>
-        <file>qml/bscontrols/BSTextInput.qml</file>
-        <file>qml/bscontrols/BSStyle.qml</file>
-        <file>qml/bscontrols/BSEasyCodeInput.qml</file>
+        <file>qml/BsControls/qmldir</file>
+        <file>qml/BsControls/BSConfirmedPasswordInput.qml</file>
+        <file>qml/BsControls/BSEasyCodeInput.qml</file>
+        <file>qml/BsControls/BSMessageBox.qml</file>
+        <file>qml/StyledControls/CustomButton.qml</file>
+        <file>qml/StyledControls/CustomButtonBar.qml</file>
+        <file>qml/StyledControls/CustomButtonPrimary.qml</file>
+        <file>qml/StyledControls/CustomCheckBox.qml</file>
+        <file>qml/StyledControls/CustomComboBox.qml</file>
+        <file>qml/StyledControls/CustomContainer.qml</file>
+        <file>qml/StyledControls/CustomDialog.qml</file>
+        <file>qml/StyledControls/CustomHeader.qml</file>
+        <file>qml/StyledControls/CustomHeaderPanel.qml</file>
+        <file>qml/StyledControls/CustomLabel.qml</file>
+        <file>qml/StyledControls/CustomLabelValue.qml</file>
+        <file>qml/StyledControls/CustomProgressBar.qml</file>
+        <file>qml/StyledControls/CustomRadioButton.qml</file>
+        <file>qml/StyledControls/CustomSwitch.qml</file>
+        <file>qml/StyledControls/CustomTabButton.qml</file>
+        <file>qml/StyledControls/CustomTextArea.qml</file>
+        <file>qml/StyledControls/CustomTextInput.qml</file>
+        <file>qml/StyledControls/qmldir</file>
+        <file>qml/BsStyles/BSStyle.qml</file>
+        <file>qml/BsStyles/qmldir</file>
+        <file>qml/BsControls/BSPasswordInput.qml</file>
+        <file>qml/BsControls/BSEidNoticeBox.qml</file>
+        <file>qml/BsControls/BSEidProgressBox.qml</file>
+        <file>qml/BsControls/BSAbortBox.qml</file>
+        <file>qml/StyledControls/CustomDialogWindow.qml</file>
+        <file>qml/StyledControls/CustomTitleDialogWindow.qml</file>
+        <file>qml/js/helper.js</file>
+        <file>qml/js/qmldir</file>
+        <file>qml/BsDialogs/DirSelectionDialog.qml</file>
+        <file>qml/BsDialogs/qmldir</file>
+        <file>qml/BsDialogs/WalletBackupDialog.qml</file>
+        <file>qml/BsDialogs/WalletChangePasswordDialog.qml</file>
+        <file>qml/BsDialogs/WalletCreateDialog.qml</file>
+        <file>qml/BsDialogs/WalletDeleteDialog.qml</file>
+        <file>qml/BsDialogs/WalletExportWoDialog.qml</file>
+        <file>qml/BsDialogs/WalletImportDialog.qml</file>
+        <file>qml/BsDialogs/WalletNewDialog.qml</file>
+        <file>qml/BsDialogs/WalletNewSeedDialog.qml</file>
+        <file>qml/StyledControls/CustomPasswordTextInput.qml</file>
+        <file>qml/BsControls/BSWalletDetailsFrame.qml</file>
+        <file>qml/BsControls/BSResultBox.qml</file>
+        <file>qml/BsDialogs/TxSignDialog.qml</file>
     </qresource>
 </RCC>

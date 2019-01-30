@@ -3,52 +3,73 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.1
 import Qt.labs.settings 1.0
+
 import com.blocksettle.TXInfo 1.0
+import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.AutheIDClient 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
+import com.blocksettle.QSeed 1.0
+import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.NsWallet.namespace 1.0
+
+import "StyledControls"
+import "BsStyles"
+import "BsControls"
+import "BsDialogs"
+import "js/helper.js" as JsHelper
 
 
 ApplicationWindow {
-    visible: true
-    title: qsTr("BlockSettle Signer")
-    width: 640
-    height: 480
     id: mainWindow
 
+    visible: true
+    title: qsTr("BlockSettle Signer")
+    width: 800
+    height: 600
+    minimumWidth: 800
+    minimumHeight: 600
+
     background: Rectangle {
-        color: "#1c2835"
+        color: BSStyle.backgroundColor
     }
     overlay.modal: Rectangle {
-        color: "#737373"
+        color: BSStyle.backgroundModalColor
     }
     overlay.modeless: Rectangle {
-        color: "#939393"
+        color: BSStyle.backgroundModeLessColor
+    }
+
+    // attached to use from c++
+    function messageBoxCritical(title, text, details) {
+        return JsHelper.messageBoxCritical(title, text, details)
     }
 
     Settings {
-        id:         settings
-        category:   "GUI"
-        property alias x:       mainWindow.x
-        property alias y:       mainWindow.y
-        property alias width:   mainWindow.width
-        property alias height:  mainWindow.height
-        property alias tabIdx:  swipeView.currentIndex
+        id: settings
+        category: "GUI"
+        property alias x: mainWindow.x
+        property alias y: mainWindow.y
+        property alias width: mainWindow.width
+        property alias height: mainWindow.height
+        property alias tabIdx: swipeView.currentIndex
     }
 
     InfoBanner {
         id: ibSuccess
-        bgColor:    "darkgreen"
+        bgColor: "darkgreen"
     }
     InfoBanner {
         id: ibFailure
-        bgColor:    "darkred"
+        bgColor: "darkred"
     }
 
     DirSelectionDialog {
-        id:     ldrWoWalletDirDlg
-        title:  qsTr("Select watching only wallet target directory")
+        id: ldrWoWalletDirDlg
+        title: qsTr("Select watching only wallet target directory")
     }
     DirSelectionDialog {
-        id:     ldrDirDlg
-        title:  qsTr("Select directory")
+        id: ldrDirDlg
+        title: qsTr("Select directory")
     }
 
     SwipeView {
@@ -83,26 +104,26 @@ ApplicationWindow {
             }
 
         CustomTabButton {
-            id:     btnStatus
-            text:   qsTr("Dashboard")
+            id: btnStatus
+            text: qsTr("Dashboard")
 
         }
 
         CustomTabButton {
-            id:     btnSettings
-            text:   qsTr("Settings")
+            id: btnSettings
+            text: qsTr("Settings")
 
         }
 
         CustomTabButton {
-            id:     btnAutoSign
-            text:   qsTr("Auto-Sign")
+            id: btnAutoSign
+            text: qsTr("Auto-Sign")
 
         }
 
         CustomTabButton {
-            id:     btnWallets
-            text:   qsTr("Wallets")
+            id: btnWallets
+            text: qsTr("Wallets")
 
         }
     }
@@ -112,27 +133,24 @@ ApplicationWindow {
         autoSignPage.storeSettings();
     }
 
-    signal passwordEntered(string walletId, string password, bool cancelledByUser)
+    signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
 
-    function createPasswordDialog(prompt, txInfo) {
-        var dlg = Qt.createQmlObject("PasswordEntryDialog {}", mainWindow, "passwordDlg")
+    function createTxSignDialog(prompt, txInfo, walletInfo) {
+        // called from QMLAppObj::requestPassword
+
+        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = walletInfo
+
         dlg.prompt = prompt
         dlg.txInfo = txInfo
+
         dlg.accepted.connect(function() {
-            passwordEntered(txInfo.wallet.id, dlg.password, false)
+            passwordEntered(walletInfo.walletId, dlg.passwordData, false)
         })
         dlg.rejected.connect(function() {
-            passwordEntered(txInfo.wallet.id, '', dlg.cancelledByUser)
+            passwordEntered(walletInfo.walletId, dlg.passwordData, true)
         })
         mainWindow.requestActivate()
         dlg.open()
     }
-
-   function raiseWindow() {
-        mainWindow.show()
-        mainWindow.raise()
-        mainWindow.requestActivate()
-        mainWindow.flags |= Qt.WindowStaysOnTopHint
-        mainWindow.flags &= ~Qt.WindowStaysOnTopHint
-   }
 }

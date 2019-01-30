@@ -3,13 +3,13 @@
 
 
 QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params)
-   : QObject(nullptr), params_(params)
+   : QObject(nullptr), settings_(params)
 {
-   connect(params_.get(), &SignerSettings::offlineChanged, [this] { emit offlineChanged(); });
-   connect(params_.get(), &SignerSettings::listenSocketChanged, [this] { emit listenSocketChanged(); });
-   connect(params_.get(), &SignerSettings::limitManualXbtChanged, [this] { emit manualSignLimitChanged(); });
-   connect(params_.get(), &SignerSettings::limitAutoSignXbtChanged, [this] { emit autoSignLimitChanged(); });
-   connect(params_.get(), &SignerSettings::limitAutoSignTimeChanged, [this] { emit autoSignTimeLimitChanged(); });
+   connect(settings_.get(), &SignerSettings::offlineChanged, [this] { emit offlineChanged(); });
+   connect(settings_.get(), &SignerSettings::listenSocketChanged, [this] { emit listenSocketChanged(); });
+   connect(settings_.get(), &SignerSettings::limitManualXbtChanged, [this] { emit manualSignLimitChanged(); });
+   connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, [this] { emit autoSignLimitChanged(); });
+   connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, [this] { emit autoSignTimeLimitChanged(); });
 
    connect(&asTimer_, &QTimer::timeout, this, &QMLStatusUpdater::onAutoSignTick);
 }
@@ -46,7 +46,7 @@ void QMLStatusUpdater::clearConnections()
 void QMLStatusUpdater::deactivateAutoSign()
 {
    if (listener_) {
-      listener_->deactivateAutoSign({});
+      listener_->deactivateAutoSign();
    }
 }
 
@@ -54,7 +54,7 @@ void QMLStatusUpdater::activateAutoSign()
 {
    if (listener_) {
       emit autoSignActiveChanged();
-      const auto &walletId = params_->autoSignWallet().toStdString();
+      const auto &walletId = settings_->autoSignWallet().toStdString();
       listener_->addPendingAutoSignReq(walletId);
       emit autoSignRequiresPwd(walletId);
    }
@@ -82,7 +82,7 @@ void QMLStatusUpdater::onAutoSignTick()
    autoSignTimeSpent_++;
    emit autoSignTimeSpentChanged();
 
-   if ((params_->limitAutoSignTime() > 0) && (autoSignTimeSpent_ >= params_->limitAutoSignTime())) {
+   if ((settings_->limitAutoSignTime() > 0) && (autoSignTimeSpent_ >= settings_->limitAutoSignTime())) {
       deactivateAutoSign();
    }
 }

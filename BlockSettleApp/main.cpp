@@ -11,17 +11,14 @@
 
 #include <memory>
 
-#include <spdlog/spdlog.h>
-
 #include "ApplicationSettings.h"
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
 #include "EncryptionUtils.h"
 #include "StartupDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
+#include "BSMessageBox.h"
 #include "WalletsManager.h"
-
+#include "ZMQHelperFunctions.h"
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
@@ -34,6 +31,7 @@ Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #endif
 
+Q_IMPORT_PLUGIN(QSQLiteDriverPlugin)
 Q_IMPORT_PLUGIN(QICOPlugin)
 
 Q_DECLARE_METATYPE(std::string)
@@ -82,7 +80,8 @@ private:
    bool activationRequired_ = false;
 };
 
-static void checkFirstStart(ApplicationSettings *applicationSettings) {
+static void checkFirstStart(ApplicationSettings *applicationSettings)
+{
   bool wasInitialized = applicationSettings->get<bool>(ApplicationSettings::initialized);
   if (wasInitialized) {
     return;
@@ -103,17 +102,18 @@ static void checkFirstStart(ApplicationSettings *applicationSettings) {
     std::exit(EXIT_FAILURE);
   }
 
-  const bool runArmoryLocally = startupDialog.isRunArmoryLocally();
+  const bool runArmoryLocally = (startupDialog.runMode() == StartupDialog::RunMode::Local);
   applicationSettings->set(ApplicationSettings::runArmoryLocally, runArmoryLocally);
   applicationSettings->set(ApplicationSettings::netType, int(startupDialog.networkType()));
 
-  if (runArmoryLocally) {
+  if (startupDialog.runMode() == StartupDialog::RunMode::Custom) {
     applicationSettings->set(ApplicationSettings::armoryDbIp, startupDialog.armoryDbIp());
     applicationSettings->set(ApplicationSettings::armoryDbPort, startupDialog.armoryDbPort());
   }
 }
 
-static void checkStyleSheet(QApplication &app) {
+static void checkStyleSheet(QApplication &app)
+{
    QLatin1String styleSheetFileName = QLatin1String("stylesheet.css");
 
    QFileInfo info = QFileInfo(QLatin1String(styleSheetFileName));
@@ -185,9 +185,10 @@ static int GuiApp(int argc, char** argv)
    lockFile.setStaleLockTime(0);
 
    if (!lockFile.tryLock()) {
-      MessageBoxInfo box(app.tr("BlockSettle Terminal")
+      BSMessageBox box(BSMessageBox::info, app.tr("BlockSettle Terminal")
          , app.tr("BlockSettle Terminal is already running")
-         , app.tr("Another instance of BlockSettle Terminal is running. It may be running in the background, look for the BlockSettle icon in the system tray"));
+         , app.tr("Stop the other BlockSettle Terminal instance. If no other " \
+         "instance is running, delete the lockfile (%1).").arg(lockFilePath));
       return box.exec();
    }
 
@@ -205,7 +206,7 @@ static int GuiApp(int argc, char** argv)
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
    if (!settings->LoadApplicationSettings(app.arguments())) {
-      MessageBoxCritical errorMessage(app.tr("Error")
+      BSMessageBox errorMessage(BSMessageBox::critical, app.tr("Error")
          , app.tr("Failed to parse command line arguments")
          , settings->ErrorText());
       errorMessage.exec();
@@ -248,7 +249,7 @@ static int GuiApp(int argc, char** argv)
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
-      MessageBoxCritical(app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
+      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
       return 1;
    }
    return 0;

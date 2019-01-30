@@ -1,6 +1,7 @@
 #include <QFile>
 #include <QVariant>
 #include <QPixmap>
+#include <QStandardPaths>
 
 #include <spdlog/spdlog.h>
 
@@ -16,7 +17,7 @@
 
 WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<WalletsManager> &walletsMgr, const std::shared_ptr<SignerSettings> &params)
-   : logger_(logger), walletsMgr_(walletsMgr), params_(params)
+   : logger_(logger), walletsMgr_(walletsMgr), settings_(params)
 {
    connect(walletsMgr_.get(), &WalletsManager::walletsReady, this, &WalletsProxy::onWalletsChanged);
    connect(walletsMgr_.get(), &WalletsManager::walletsLoaded, this, &WalletsProxy::onWalletsChanged);
@@ -58,34 +59,117 @@ bool WalletsProxy::primaryWalletExists() const
    return walletsMgr_->HasPrimaryWallet();
 }
 
-static bs::wallet::EncryptionType mapEncType(WalletInfo::EncryptionType encType)
-{
-   switch (encType)
-   {
-   case WalletInfo::EncryptionType::Password:   return bs::wallet::EncryptionType::Password;
-   case WalletInfo::EncryptionType::Auth:       return bs::wallet::EncryptionType::Auth;
-   case WalletInfo::EncryptionType::Unencrypted:
-   default:    return bs::wallet::EncryptionType::Unencrypted;
-   }
-}
-
-bool WalletsProxy::changePassword(const QString &walletId, const QString &oldPass, const QString &newPass
-   , WalletInfo::EncryptionType encType, const QString &encKey)
+bool WalletsProxy::changePassword(const QString &walletId
+                                  , bs::wallet::QPasswordData *oldPasswordData
+                                  , bs::wallet::QPasswordData *newPasswordData)
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
       emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
       return false;
    }
-   const bs::wallet::PasswordData pwdData = { BinaryData::CreateFromHex(newPass.toStdString()), mapEncType(encType), encKey.toStdString() };
 
-   bool result = wallet->changePassword(logger_, { pwdData }, { 1, 1 }
-      , BinaryData::CreateFromHex(oldPass.toStdString()), false, false, false);
+   bool result = wallet->changePassword({ *newPasswordData }, { 1, 1 }
+      , oldPasswordData->password, false, false, false);
 
    if (!result) {
       emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
       return false;
    }
+
+   emit walletsMgr_.get()->walletChanged();
+   return true;
+}
+
+bool WalletsProxy::addEidDevice(const QString &walletId
+                                , bs::wallet::QPasswordData *oldPasswordData
+                                , bs::wallet::QPasswordData *newPasswordData)
+{
+   //   Add new device workflow:
+   //   1. decrypt wallet by ActivateWalletOldDevice
+   //   2. get new password by ActivateWalletNewDevice
+   //   3. call hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) with following args:
+   //    - newPass is vector of single new key
+   //    - key rank: get current encryptionRank() and add +1 to .second (total keys)
+   //    - oldPass is old password requested form existing device
+   //    - addNew = true
+   //    - removeOld, dryRun = false
+
+   const auto wallet = getRootForId(walletId);
+   if (!wallet) {
+      emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
+      return false;
+   }
+
+   //bs::hd::Wallet;
+   bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
+   encryptionRank.second++;
+
+   bool result = wallet->changePassword({ *newPasswordData }, encryptionRank
+      , oldPasswordData->password, true, false, false);
+
+   if (!result) {
+      emit walletError(walletId, tr("Failed to add new device"));
+      return false;
+   }
+
+   emit walletsMgr_.get()->walletChanged();
+   return true;
+}
+
+bool WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswordData *oldPasswordData, int removedIndex)
+{
+   //   Delete device workflow:
+   //   1. decrypt wallet by DeactivateWalletDevice
+   //   2. call hd::Wallet::changePassword:
+   //    - newPass is vector of existing encKeys except key of device which should be deleted
+   //    - key rank: get current encryptionRank() and add +1 to .second (total keys)
+   //    - oldPass is old password requested form existing device
+   //    - addNew, dryRun = false
+   //    - removeOld = true
+
+   const auto wallet = getRootForId(walletId);
+   if (!wallet) {
+      emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
+      return false;
+   }
+
+   if (wallet->encryptionKeys().size() == 1) {
+      emit walletError(walletId, tr("Failed to remove last device"));
+      return false;
+   }
+
+   if (wallet->encryptionRank().second == 1) {
+      emit walletError(walletId, tr("Failed to remove last device"));
+      return false;
+   }
+
+   if (removedIndex >= wallet->encryptionKeys().size() || removedIndex < 0) {
+      emit walletError(walletId, tr("Failed to remove invalid index"));
+      return false;
+   }
+
+   bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
+   encryptionRank.second--;
+
+   // remove index from encKeys
+   std::vector<bs::wallet::PasswordData> newPasswordData;
+   for (int i = 0; i < wallet->encryptionKeys().size(); ++i) {
+      if (removedIndex == i) continue;
+      bs::wallet::PasswordData pd;
+      pd.encType = bs::wallet::EncryptionType::Auth;
+      pd.encKey = wallet->encryptionKeys()[i];
+      newPasswordData.push_back(pd);
+   }
+
+   bool result = wallet->changePassword(newPasswordData, encryptionRank
+      , oldPasswordData->password, false, true, false);
+
+   if (!result) {
+      emit walletError(walletId, tr("Failed to add new device"));
+      return false;
+   }
+   emit walletsMgr_.get()->walletChanged();
    return true;
 }
 
@@ -94,21 +178,20 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
    return (QString::fromStdString(bs::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
 }
 
-bool WalletsProxy::exportWatchingOnly(const QString &walletId, QString path, const QString &password) const
+bool WalletsProxy::exportWatchingOnly(const QString &walletId, QString path, bs::wallet::QPasswordData *passwordData) const
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
       emit walletError(walletId, tr("Failed to export: wallet not found"));
       return false;
    }
-   const auto woWallet = wallet->CreateWatchingOnly(BinaryData::CreateFromHex(password.toStdString()));
+   const auto woWallet = wallet->CreateWatchingOnly(passwordData->password);
    if (!woWallet) {
       logger_->error("[WalletsProxy] failed to create watching-only wallet for id {}", walletId.toStdString());
       emit walletError(walletId, tr("Failed to create watching-only wallet for %1 (id %2)")
          .arg(QString::fromStdString(wallet->getName())).arg(walletId));
       return false;
    }
-
 #if !defined (Q_OS_WIN)
    if (!path.startsWith(QLatin1Char('/'))) {
       path = QLatin1String("/") + path;
@@ -127,15 +210,17 @@ bool WalletsProxy::exportWatchingOnly(const QString &walletId, QString path, con
    return false;
 }
 
-bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, bool isPrintable
-   , const QString &password) const
+bool WalletsProxy::backupPrivateKey(const QString &walletId
+                                    , QString fileName
+                                    , bool isPrintable
+                                    , bs::wallet::QPasswordData *passwordData) const
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
       emit walletError(walletId, tr("Failed to backup private key: wallet not found"));
       return false;
    }
-   const auto &decrypted = wallet->getRootNode(BinaryData::CreateFromHex(password.toStdString()));
+   const auto &decrypted = wallet->getRootNode(passwordData->password);
    if (!decrypted) {
       logger_->error("[WalletsProxy] failed to decrypt root node for {}", walletId.toStdString());
       emit walletError(walletId, tr("Failed to decrypt private key for wallet %1 (id %2)")
@@ -194,23 +279,35 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
    return true;
 }
 
-WalletSeed *WalletsProxy::createWalletSeed() const
+bool WalletsProxy::walletNameExists(const QString &name) const
 {
-   auto result = new WalletSeed(params_->netType(), (QObject *)this);
-   return result;
+   return walletNames().contains(name);
 }
 
-bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletSeed *seed)
+QString WalletsProxy::defaultBackupLocation() const
 {
-   if (!seed) {
-      emit walletError({}, tr("Failed to get wallet seed"));
+   return QString::fromLatin1("file://") +
+      QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+}
+
+bool WalletsProxy::createWallet(bool isPrimary
+                                , bs::wallet::QSeed *seed
+                                , bs::hd::WalletInfo *walletInfo
+                                , bs::wallet::QPasswordData *passwordData)
+{
+   if (seed->networkType() == bs::wallet::Invalid) {
+      emit walletError({}, tr("Failed to create wallet with invalid seed"));
       return false;
    }
-   try {    //!
-      const std::vector<bs::wallet::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
-         , bs::wallet::EncryptionType::Password, {} } };
-      walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
-         , seed->seed(), params_->getWalletsDir(), isPrimary, pwdData, { 1, 1 });
+
+   try {
+      walletsMgr_->CreateWallet(walletInfo->name().toStdString()
+                              , walletInfo->desc().toStdString()
+                              , *seed
+                              , settings_->getWalletsDir()
+                              , isPrimary
+                              , { *passwordData }
+                              , { 1, 1 });
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
@@ -220,34 +317,25 @@ bool WalletsProxy::createWallet(bool isPrimary, const QString &password, WalletS
    return true;
 }
 
-bool WalletsProxy::importWallet(bool isPrimary, WalletSeed *seed, const QString &password)
-{
-   try { //!
-      const std::vector<bs::wallet::PasswordData> pwdData = { { BinaryData::CreateFromHex(password.toStdString())
-         , bs::wallet::EncryptionType::Password,{} } };
-      walletsMgr_->CreateWallet(seed->walletName().toStdString(), seed->walletDesc().toStdString()
-         , seed->seed(), params_->getWalletsDir(), isPrimary, pwdData, { 1, 1 });
-   }
-   catch (const std::exception &e) {
-      logger_->error("[WalletsProxy] failed to import wallet: {}", e.what());
-      emit walletError({}, tr("Failed to import wallet: %1").arg(QLatin1String(e.what())));
-      return false;
-   }
-   return true;
-}
-
 bool WalletsProxy::deleteWallet(const QString &walletId)
 {
+   bool ok = false;
    const auto &rootWallet = walletsMgr_->GetHDWalletById(walletId.toStdString());
    if (rootWallet) {
-      return walletsMgr_->DeleteWalletFile(rootWallet);
+      ok = walletsMgr_->DeleteWalletFile(rootWallet);
    }
-   const auto wallet = walletsMgr_->GetWalletById(walletId.toStdString());
-   if (wallet) {
-      return walletsMgr_->DeleteWalletFile(wallet);
-   }
-   emit walletError(walletId, tr("Failed to find wallet with id %1").arg(walletId));
-   return false;
+   // Don't remove leaves?
+//   else {
+//      const auto wallet = walletsMgr_->GetWalletById(walletId.toStdString());
+//      if (wallet) {
+//         ok = walletsMgr_->DeleteWalletFile(wallet);
+//      }
+//   }
+
+   if (!ok) emit walletError(walletId, tr("Failed to find wallet with id %1").arg(walletId));
+
+   emit walletsMgr_.get()->walletChanged();
+   return ok;
 }
 
 QStringList WalletsProxy::walletNames() const
@@ -280,67 +368,3 @@ QString WalletsProxy::walletIdForIndex(int index) const
    return {};
 }
 
-
-void WalletSeed::setRandomKey()
-{
-   seed_.setPrivateKey(SecureBinaryData().GenerateRandom(32));
-}
-
-bool WalletSeed::parseDigitalBackupFile(const QString &filename)
-{
-   QFile file(filename);
-   if (!file.exists()) {
-      emit error(tr("Digital Backup file %1 doesn't exist").arg(filename));
-      return false;
-   }
-   if (file.open(QIODevice::ReadOnly)) {
-      QByteArray data = file.readAll();
-      const auto wdb = WalletBackupFile::Deserialize(std::string(data.data(), data.size()));
-      if (wdb.id.empty()) {
-         emit error(tr("Digital Backup file %1 corrupted").arg(filename));
-         return false;
-      }
-      else {
-         seed_ = bs::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode
-            , (seed_.networkType() == NetworkType::Invalid) ? NetworkType::TestNet : seed_.networkType());
-         walletName_ = QString::fromStdString(wdb.name);
-         walletDesc_ = QString::fromStdString(wdb.description);
-      }
-   }
-   else {
-      emit error(tr("Failed to read Digital Backup file %1").arg(filename));
-      return false;
-   }
-   emit seedChanged();
-   return true;
-}
-
-bool WalletSeed::parsePaperKey(const QString &key)
-{
-   try {
-      const auto seedLines = key.split(QLatin1String("\n"), QString::SkipEmptyParts);
-      if (seedLines.count() == 2) {
-         EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
-         seed_ = bs::wallet::Seed::fromEasyCodeChecksum(easyData, seed_.networkType());
-      }
-      else if (seedLines.count() == 4) {
-         EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
-         EasyCoDec::Data edChainCode = { seedLines[2].toStdString(), seedLines[3].toStdString() };
-         seed_ = bs::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, seed_.networkType());
-      }
-      else {
-         seed_ = { key.toStdString(), seed_.networkType() };
-      }
-   }
-   catch (const std::exception &e) {
-      emit error(tr("Failed to parse wallet key: %1").arg(QLatin1String(e.what())));
-      return false;
-   }
-   emit seedChanged();
-   return true;
-}
-
-QString WalletSeed::walletId() const
-{
-   return QString::fromStdString(bs::hd::Node(seed_).getId());
-}

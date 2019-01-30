@@ -4,6 +4,11 @@ import shutil
 import subprocess
 import sys
 
+# Set the minimum macOS target environment. Applies to prereqs and to BS code.
+# If the min target changes, update CMakeLists.txt too.
+if sys.platform == "darwin":
+   os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.12'
+
 sys.path.insert(0, 'common')
 sys.path.insert(0, os.path.join('common', 'build_scripts'))
 
@@ -12,7 +17,6 @@ from build_scripts.protobuf_settings      import ProtobufSettings
 from build_scripts.gtest_settings         import GtestSettings
 from build_scripts.jom_settings           import JomSettings
 from build_scripts.qt_settings            import QtSettings
-from build_scripts.cryptopp_settings      import CryptoppSettings
 from build_scripts.spdlog_settings        import SpdlogSettings
 from build_scripts.zeromq_settings        import ZeroMQSettings
 from build_scripts.libqrencode_settings   import LibQREncode
@@ -43,7 +47,6 @@ def generate_project(build_mode, build_server, build_test_tools):
       ProtobufSettings(project_settings),
       OpenSslSettings(project_settings),
       QtSettings(project_settings),
-      CryptoppSettings(project_settings),
       SpdlogSettings(project_settings),
       ZeroMQSettings(project_settings),
       LibQREncode(project_settings),

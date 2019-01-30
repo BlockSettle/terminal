@@ -190,7 +190,7 @@ void OfflineProcessor::removeSignReq(int reqId)
    parsedReqs_.erase(reqId);
 }
 
-void OfflineProcessor::ProcessSignTX(const bs::wallet::TXSignRequest &txReq, const QString &reqFN)
+void OfflineProcessor::ProcessSignTX(const bs::wallet::TXSignRequest &txReq, const QString &reqFileName)
 {
    const auto &wallet = walletsMgr_->GetWalletById(txReq.walletId);
    if (!wallet) {
@@ -210,14 +210,14 @@ void OfflineProcessor::ProcessSignTX(const bs::wallet::TXSignRequest &txReq, con
          }
       }
       else {
-         pendingReqs_[wallet->GetWalletId()].push_back({txReq, wallet, reqFN});
+         pendingReqs_[wallet->GetWalletId()].push_back({txReq, wallet, reqFileName});
          if (pendingReqs_[wallet->GetWalletId()].size() == 1) {
             emit requestPassword(txReq);
          }
          return;
       }
    }
-   SignTxRequest(txReq, reqFN, wallet, password);
+   SignTxRequest(txReq, reqFileName, wallet, password);
 }
 
 void OfflineProcessor::SignTxRequest(const bs::wallet::TXSignRequest &txReq, const QString &reqFN

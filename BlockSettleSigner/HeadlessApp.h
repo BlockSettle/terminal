@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <QObject>
-
+#include "EncryptionUtils.h"
 
 namespace spdlog {
    class logger;
@@ -20,7 +20,8 @@ class HeadlessAppObj : public QObject
    Q_OBJECT
 
 public:
-   HeadlessAppObj(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<SignerSettings> &);
+   HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<SignerSettings> &);
 
    void Start();
 
@@ -33,13 +34,14 @@ private:
 
    void setConsoleEcho(bool enable) const;
 
-private:
    std::shared_ptr<spdlog::logger>  logger_;
-   const std::shared_ptr<SignerSettings>        params_;
+   const std::shared_ptr<SignerSettings>        settings_;
    std::shared_ptr<WalletsManager>              walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
+   SecureBinaryData                             zmqPubKey_;
+   SecureBinaryData                             zmqPrvKey_;
 };
 
 #endif // __HEADLESS_APP_H__

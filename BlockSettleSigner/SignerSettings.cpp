@@ -8,11 +8,11 @@
 #include "SignerSettings.h"
 
 
-static const QString pubKeyName = QString::fromStdString("pubkey");
-static const QString pubKeyHelp = QObject::tr("Public key for secured connection");
+static const QString zmqPubKeyName = QString::fromStdString("zmqpubkey");
+static const QString zmqPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for ZMQ connections");
 
-static const QString privKeyName = QString::fromStdString("privkey");
-static const QString privKeyHelp = QObject::tr("Private key for secured connection");
+static const QString zmqPrvKeyName = QString::fromStdString("zmqprvkey");
+static const QString zmqPrvKeyHelp = QObject::tr("Private key file (CurveZMQ) for ZMQ connections");
 
 static const QString listenName = QString::fromStdString("listen");
 static const QString listenHelp = QObject::tr("IP address to listen on");
@@ -29,8 +29,8 @@ static const QString walletsDirHelp = QObject::tr("Directory where wallets resid
 static const QString testnetName = QString::fromStdString("testnet");
 static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
 
-static const QString pwhashName = QString::fromStdString("pwhash");
-static const QString pwhashHelp = QObject::tr("Password hash (first 8 bytes of SHA256 in hex)");
+static const QString mainnetName = QString::fromStdString("mainnet");
+static const QString mainnetHelp = QObject::tr("Set bitcoin network type to mainnet");
 
 static const QString signName = QString::fromStdString("sign");
 static const QString signHelp = QObject::tr("Sign transaction[s] from request file - auto toggles offline mode (headless mode only)");
@@ -59,13 +59,13 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
       { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_signer.log")) },
       { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
       { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
-      { ConnPubKey,        SettingDef(QStringLiteral("ConnPubKey"), QStringLiteral("t>ituO$mt-[Fl}&IE%EicU@L&LvC%8i$$nS3YFm}")) },
-      { ConnPrivKey,       SettingDef(QStringLiteral("ConnPrivKey"), QStringLiteral("bjPNYGx5q<?O:Nc2h[LDoKk&&Ydxuq-[onOF-=Nw")) },
-      { PasswordHash,      SettingDef(QStringLiteral("PasswordHash")) },
+      { ZMQPubKey,         SettingDef(QStringLiteral("ZMQPubKey"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.pub")) },
+      { ZMQPrvKey,         SettingDef(QStringLiteral("ZMQPrvKey"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.prv")) },
       { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
-      { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) }
+      { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
+      { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) }
    };
    parseArguments(args);
 }
@@ -176,8 +176,11 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    case ListenPort:
       emit listenSocketChanged();
       break;
-   case PasswordHash:
-      emit passwordChanged();
+   case ZMQPubKey:
+      emit zmqPubKeyFileChanged();
+      break;
+   case ZMQPrvKey:
+      emit zmqPrvKeyFileChanged();
       break;
    case LimitManualXBT:
       emit limitManualXbtChanged();
@@ -191,6 +194,9 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    case LimitManualPwKeep:
       emit limitManualPwKeepChanged();
       break;
+   case HideEidInfoBox:
+      emit hideEidInfoBoxChanged();
+      break;
    default: break;
    }
 }
@@ -202,12 +208,12 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addHelpOption();
    parser.addOption({ listenName, listenHelp, QObject::tr("ip/host") });
    parser.addOption({ portName, portHelp, QObject::tr("port") });
-   parser.addOption({ pubKeyName, pubKeyHelp, QObject::tr("key") });
-   parser.addOption({ privKeyName, privKeyHelp, QObject::tr("key") });
-   parser.addOption({ pwhashName, pwhashHelp, QObject::tr("hash") });
+   parser.addOption({ zmqPubKeyName, zmqPubKeyHelp, QObject::tr("key") });
+   parser.addOption({ zmqPrvKeyName, zmqPrvKeyHelp, QObject::tr("key") });
    parser.addOption({ logName, logHelp, QObject::tr("log") });
    parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
+   parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    parser.addOption({ signName, signHelp, QObject::tr("filename") });
    parser.addOption({ headlessName, headlessHelp });
@@ -222,22 +228,18 @@ void SignerSettings::parseArguments(const QStringList &args)
       set(ListenPort, parser.value(portName), false);
    }
 
-   if (parser.isSet(pubKeyName)) {
-      if (parser.value(pubKeyName).length() != 40) {
-         throw std::runtime_error("invalid pubkey size");
+   if (parser.isSet(zmqPubKeyName)) {
+      if (parser.value(zmqPubKeyName).length() != 40) {
+         throw std::runtime_error("invalid ZMQ connection pub key size");
       }
-      set(ConnPubKey, parser.value(pubKeyName), false);
+      set(ZMQPubKey, parser.value(zmqPubKeyName), false);
    }
 
-   if (parser.isSet(privKeyName)) {
-      if (parser.value(privKeyName).length() != 40) {
-         throw std::runtime_error("invalid privkey size");
+   if (parser.isSet(zmqPrvKeyName)) {
+      if (parser.value(zmqPrvKeyName).length() != 40) {
+         throw std::runtime_error("invalid ZMQ connection prv key size");
       }
-      set(ConnPrivKey, parser.value(privKeyName), false);
-   }
-
-   if (parser.isSet(pwhashName)) {
-      set(PasswordHash, parser.value(pwhashName), false);
+      set(ZMQPrvKey, parser.value(zmqPrvKeyName), false);
    }
 
    if (parser.isSet(logName)) {
@@ -248,7 +250,10 @@ void SignerSettings::parseArguments(const QStringList &args)
       set(WalletsDir, parser.value(walletsDirName), false);
    }
 
-   if (parser.isSet(testnetName)) {
+   if (parser.isSet(mainnetName)) {
+      set(TestNet, false, false);
+   }
+   else if (parser.isSet(testnetName)) {
       set(TestNet, true, false);
    }
 
@@ -267,12 +272,12 @@ void SignerSettings::parseArguments(const QStringList &args)
       set(OfflineMode, true, false);
    }
 
-   BlockDataManagerConfig config;
+   NetworkConfig config;
    if (testNet()) {
-      config.selectNetwork("Test");
+      config.selectNetwork(NETWORK_MODE_TESTNET);
    }
    else {
-      config.selectNetwork("Main");
+      config.selectNetwork(NETWORK_MODE_MAINNET);
    }
 }
 
@@ -291,13 +296,20 @@ QString SignerSettings::dirDocuments() const
    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-void SignerSettings::setPassword(const QString &password)
+void SignerSettings::setZmqPubKeyFile(const QString &file)
 {
-   if (password == get(PasswordHash).toString()) {
+   if (file == get(ZMQPubKey).toString()) {
       return;
    }
-   const auto hash = BtcUtils::getSha256(password.toStdString());
-   set(PasswordHash, QString::fromStdString(hash.getSliceCopy(0, 8).toHexStr()));
+   set(ZMQPubKey, file);
+}
+
+void SignerSettings::setZmqPrvKeyFile(const QString &file)
+{
+   if (file == get(ZMQPrvKey).toString()) {
+      return;
+   }
+   set(ZMQPrvKey, file);
 }
 
 void SignerSettings::setWalletsDir(const QString &val)

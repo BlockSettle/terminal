@@ -1,3 +1,76 @@
+0.12.7
+Improvements:
+   - New wallet encryption scheme (incompatible with previous one)
+   - Chat UI fixes (not final)
+   - Armory port setting now depends on network type
+Bug fixes:
+   - Various UI fixes in Signer and Terminal
+
+0.12.6
+Improvements:
+   - Added SQLite DB for chat data persistency
+
+0.12.5
+Improvements:
+   - Signer connection now uses random key
+Bug fixes:
+   - Fix other ZMQ connections after improvement above
+
+0.12.4
+Improvements:
+   - Allow multiple terminal connections to one signer
+   - Trivial private chat included
+Bug fixes:
+   - Improved address list updates
+   - No exception at Armory reconnect
+
+0.12.3
+Improvements:
+   - Added trivial private chat
+Bug fixes:
+   - TX list fix for missing ZCs
+   - Unconfirmed RBFs are removed from TX list on first conf
+
+0.12.2
+Improvements:
+   - Don't allow wrong network type signer-terminal connections
+
+0.12.1
+Bug fixes:
+   - Various TX list fixes
+
+0.12.0
+Bug fixes:
+   - auth address confirm tx
+Improvements
+   - OTP removed from the system
+
+0.11.3
+Bug Fixes:
+   - fixed support for mainnet and testnet wallets
+   - few crashes fixed
+   - UI fixes for import/create wallet
+Improvements:
+   - search by comment and address
+   - loading connections settings from PuB
+   - updated MD
+   - enter password warnings
+   - TX filtering
+   - In/Out detection
+   - CPFP improved
+
+0.11.2
+Bug Fixes:
+   - Fixed wallet import
+   - Fixes for Auth Address Verification
+   - minor UI fixes
+Improvements:
+
+0.11.1
+Bug Fixes:
+   - Fixed Settlement wallet persistency
+Improvements:
+
 Release: 0.11.0
 Bug Fixes:
    - Fixed SpotXBT and SpotCC settlement
