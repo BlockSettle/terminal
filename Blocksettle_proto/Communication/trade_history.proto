@@ -37,8 +37,6 @@ message SubscribeToTradesRequest
 {
    TradeHistoryTradeType   trade_type     = 1;
    uint64                  from_timestamp = 2;
-   // if 0 or not set - load till end
-   uint64                  to_timestamp   = 3;
 }
 
 message TradeHistoryResponse
@@ -70,7 +68,7 @@ message PMTradeRecord
 message LatestTradeResponse
 {
    TradeHistoryTradeType   trade_type  = 1;
-   bytes          trade       = 2;
+   bytes                   trade       = 2;
 }
 
 message TradeHistorySnapshot
