@@ -25,7 +25,7 @@ enum TradeHistoryResponseType
 message TradeHistoryRequest
 {
    TradeHistoryRequestType request_type   = 1;
-   string                  request        = 2;
+   bytes                   request        = 2;
 }
 
 message LatestTradeRequest
@@ -44,7 +44,7 @@ message SubscribeToTradesRequest
 message TradeHistoryResponse
 {
    TradeHistoryResponseType   response_type   = 1;
-   string                     response        = 2;
+   bytes                      response        = 2;
 }
 
 message TradeRecord
@@ -72,11 +72,11 @@ message TradeHistorySnapshot
    uint64                  snaphot_id     = 1;
    uint64                  snaphot_count  = 2;
    TradeHistoryTradeType   trade_type     = 3;
-   repeated string         trade          = 4;
+   repeated bytes          trade          = 4;
 }
 
 message TradeHistoryServerUpdate
 {
    TradeHistoryTradeType   trade_type  = 1;
-   string                  trade       = 2;
+   bytes                   trade       = 2;
 }
