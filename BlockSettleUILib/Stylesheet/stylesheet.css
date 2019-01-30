@@ -1410,38 +1410,3 @@ ToggleSwitch::handle:horizontal[enabled=false] {
  ToggleSwitch::handle:horizontal[toggleOn=true][enabled=true] {
     background: #247dac;
     border: 1px solid #247dac; }
-
-QLineEdit#chatSearchLineEdit {
-    background-color: #1c2835;
-    alternate-background-color: #18202b;
-    color: #e7e8e9;
-    background-image: url(":resources/search.png");
-    background-repeat: no-repeat;
-    background-position: left;
-    font-family: 'Open Sans', arial, sans-serif;
-    font-size: 11px;
-    padding: 2 2 2 20;
-    text-indent: 20;
-    border: 1px solid #81888f;
-    border-radius: 10px;
-    height: 18px;
-    max-height: 18px; 
-    selection-background-color: #3a8ab4;
-    selection-color: #e7e8e9; }
-  
-QLineEdit#chatSearchLineEdit:focus {
-    border: 1px solid #247dac; }
-QLineEdit#chatSearchLineEdit:disabled {
-    color: #586266; }
-
-QFrame#roomsFrame {
-    background-color: #1c2835; }
-    
-QSpacerItem#chatUsersVerticalSpacer {
-    background-color: #1c2835;
-    min-height: 30px;
-    max-height: 30px;
-    height: 30px;
-    margin-right: 5px;
-    margin-top: 4px;
-    margin-bottom: 4px; }
