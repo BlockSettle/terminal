@@ -57,16 +57,26 @@ message TradeRecord
    string   trade_id    = 6;
 }
 
+message PMTradeRecord
+{
+   double   price       = 1;
+   uint64   amount      = 2;
+   string   product     = 3;
+   bool     is_sell     = 4;
+   uint64   timestamp   = 5;
+   string   trade_id    = 6;
+}
+
 message TradeHistorySnapshot
 {
    uint64                  snaphot_id     = 1;
    uint64                  snaphot_count  = 2;
    TradeHistoryTradeType   trade_type     = 3;
-   repeated TradeRecord    trade          = 4;
+   repeated string         trade          = 4;
 }
 
 message TradeHistoryServerUpdate
 {
    TradeHistoryTradeType   trade_type  = 1;
-   TradeRecord             trade       = 2;
+   string                  trade       = 2;
 }
