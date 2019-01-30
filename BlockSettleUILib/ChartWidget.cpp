@@ -153,14 +153,14 @@ void ChartWidget::createCandleChartAxis() {
    dateAxisx->setMinorGridLineVisible(false);
    dateAxisx->setLabelsColor(QColor(Qt::white));
    chart->addAxis(dateAxisx, Qt::AlignBottom);
-   chart->series().at(0)->attachAxis(dateAxisx);
+   chart->series().first()->attachAxis(dateAxisx);
    dateAxisx->setTickCount(10);
    dateAxisx->setLabelsVisible(false);
    // add space offset to the x axis
    // this code will eventually have to be moved to data range handler function
    // and will need to be called when date range is modified
-   dateAxisx->setMax(dateAxisx->max().addDays(1));
-   dateAxisx->setMin(dateAxisx->min().addDays(-1));
+   /*dateAxisx->setMax(dateAxisx->max().addDays(1));
+   dateAxisx->setMin(dateAxisx->min().addDays(-1));*/
 
    // y axis
    QValueAxis *axisY = new QValueAxis;
@@ -170,7 +170,7 @@ void ChartWidget::createCandleChartAxis() {
    chart->addAxis(axisY, Qt::AlignRight);
    axisY->setLabelFormat(tr("%06.1f"));
    qDebug() << "chart localize" << chart->localizeNumbers();
-   chart->series().at(0)->attachAxis(axisY);
+   chart->series().first()->attachAxis(axisY);
    // add space offset to the y axis
    auto tmpAxis = qobject_cast<QValueAxis *>(chart->axes(Qt::Vertical).at(0));
    tmpAxis->setMax(tmpAxis->max() * 1.05);
@@ -188,14 +188,14 @@ void ChartWidget::createVolumeChartAxis() {
    dateAxisx->setMinorGridLineVisible(false);
    dateAxisx->setLabelsColor(QColor(Qt::white));
    chart->addAxis(dateAxisx, Qt::AlignBottom);
-   chart->series().at(0)->attachAxis(dateAxisx);
+   chart->series().first()->attachAxis(dateAxisx);
    dateAxisx->setTickCount(10);
    dateAxisx->setLabelsVisible(true);
    // add space offset to the x axis
    // this code will eventually have to be moved to data range handler function
    // and will need to be called when date range is modified
-   dateAxisx->setMax(dateAxisx->max().addDays(1));
-   dateAxisx->setMin(dateAxisx->min().addDays(-1));
+   /*dateAxisx->setMax(dateAxisx->max().addDays(1));
+   dateAxisx->setMin(dateAxisx->min().addDays(-1));*/
 
    QValueAxis *axisY = new QValueAxis;
    axisY->setLabelFormat(tr("%06.1f"));
@@ -204,7 +204,7 @@ void ChartWidget::createVolumeChartAxis() {
    axisY->setMinorGridLineVisible(false);
    axisY->setTickCount(2);
    chart->addAxis(axisY, Qt::AlignRight);
-   chart->series().at(0)->attachAxis(axisY);
+   chart->series().first()->attachAxis(axisY);
    axisY->applyNiceNumbers();
 }
 
@@ -228,13 +228,19 @@ void ChartWidget::buildCandleChart(int interval) {
    ui_->viewPrice->chart()->addSeries(priceSeries_);
    ui_->viewVolume->chart()->addSeries(volumeSeries_);
 
+   auto candlestickAxisY = qobject_cast<QValueAxis*>(ui_->viewPrice->chart()->axisY());
+   if (candlestickAxisY) {
+       candlestickAxisY->applyNiceNumbers();
+   }
+   auto volumeAxisY = qobject_cast<QValueAxis*>(ui_->viewVolume->chart()->axisY());
+   if (volumeAxisY) {
+       volumeAxisY->applyNiceNumbers();
+   }
 }
 
 void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume) {
-
    priceSeries_->append(new CustomCandlestickSet(open, high, low, close, volume, timestamp, priceSeries_));
    volumeSeries_->append(new QCandlestickSet(0.0, volume, 0.0, volume, timestamp, volumeSeries_));
-
 }
 
 // Handles changes of date range.
@@ -242,6 +248,55 @@ void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
    auto interval = static_cast<TradesDB::Interval>(id);
    buildCandleChart(interval);
+
+   /*auto candlestickAxisX = qobject_cast<QDateTimeAxis*>(ui_->viewPrice->chart()->axisX(priceSeries_));
+   if (candlestickAxisX) {
+       switch (static_cast<TradesDB::Interval>(dateRange_.checkedId())) {
+       case TradesDB::Interval::OneYear:
+       case TradesDB::Interval::SixMonths:
+           candlestickAxisX->setTickCount(5);
+           break;
+       case TradesDB::Interval::OneMonth:
+       case TradesDB::Interval::OneWeek:
+           candlestickAxisX->setTickCount(10);
+           break;
+       case TradesDB::Interval::TwentyFourHours:
+       case TradesDB::Interval::TwelveHours:
+           candlestickAxisX->setTickCount(20);
+           break;
+       case TradesDB::Interval::SixHours:
+       case TradesDB::Interval::OneHour:
+           candlestickAxisX->setTickCount(40);
+           break;
+       default:
+           candlestickAxisX->setTickCount(10);
+           break;
+       }
+   }
+   auto volumeAxisX = qobject_cast<QDateTimeAxis*>(ui_->viewVolume->chart()->axisX(volumeSeries_));
+   if (volumeAxisX) {
+       switch (static_cast<TradesDB::Interval>(dateRange_.checkedId())) {
+       case TradesDB::Interval::OneYear:
+       case TradesDB::Interval::SixMonths:
+           volumeAxisX->setTickCount(5);
+           break;
+       case TradesDB::Interval::OneMonth:
+       case TradesDB::Interval::OneWeek:
+           volumeAxisX->setTickCount(10);
+           break;
+       case TradesDB::Interval::TwentyFourHours:
+       case TradesDB::Interval::TwelveHours:
+           volumeAxisX->setTickCount(20);
+           break;
+       case TradesDB::Interval::SixHours:
+       case TradesDB::Interval::OneHour:
+           volumeAxisX->setTickCount(40);
+           break;
+       default:
+           volumeAxisX->setTickCount(10);
+           break;
+       }
+   }*/
 }
 
 // This slot function is called when mouse cursor hovers over a candlestick.
