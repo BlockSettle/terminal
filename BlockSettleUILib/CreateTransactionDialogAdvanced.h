@@ -102,10 +102,13 @@ private:
    void setRBFinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
    void setCPFPinputs(const Tx &, const std::shared_ptr<bs::Wallet> &);
 
+   bool isCurrentAmountValid() const;
    void validateAddOutputButton();
    Q_INVOKABLE void validateCreateButton();
 
-   void AddRecipient(const bs::Address &, double amount, bool isMax = false);
+   unsigned int AddRecipient(const bs::Address &, double amount, bool isMax = false);
+   void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
+   void FixRecipientsAmount();
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void SetMinimumFee(float totalFee, float feePerByte = 0);

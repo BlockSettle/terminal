@@ -119,6 +119,7 @@ public:
 
 signals:
    void walletChanged();
+   void walletDeleted();
    void walletsReady();
    void walletsLoaded();
    void walletBalanceUpdated(std::string walletId);

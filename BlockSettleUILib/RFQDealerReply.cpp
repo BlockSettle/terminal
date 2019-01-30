@@ -315,7 +315,7 @@ void RFQDealerReply::reset()
             , true, true);
          if (walletsManager_ != nullptr) {
             const auto &cbFee = [this](float feePerByte) {
-               transactionData_->SetFeePerByte(feePerByte);
+               transactionData_->setFeePerByte(feePerByte);
             };
             walletsManager_->estimatedFeePerByte(2, cbFee, this);
          }
@@ -1164,7 +1164,7 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
       };
 
       const auto &cbFee = [this, qrn, price, transData, cbSubmit, txUpdated](float feePerByte) {
-         transData->SetFeePerByte(feePerByte);
+         transData->setFeePerByte(feePerByte);
          transData->SetCallback(txUpdated);
          // should force update
          transData->enableTransactionUpdate();
