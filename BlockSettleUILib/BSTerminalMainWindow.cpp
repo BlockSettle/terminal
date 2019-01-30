@@ -81,6 +81,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    }
 
    connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
+   connect(this, &BSTerminalMainWindow::readyToLogin, this, &BSTerminalMainWindow::onReadyToLogin);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });
    logMgr_->add(applicationSettings_->GetLogsConfig());
@@ -148,10 +149,15 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UpdateMainWindowAppearence();
 }
 
-void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(NetworkSettings)> &cb)
+void BSTerminalMainWindow::onMDConnectionDetailsRequired()
+{
+   GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
+}
+
+void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
 {
    if (networkSettings_.isSet) {
-      cb(networkSettings_);
+      cb();
       return;
    }
 
@@ -223,10 +229,10 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(Ne
          networkSettings_.mdhs = { response.mdhs().host(), response.mdhs().port() };
          networkSettings_.isSet = true;
       }
-      else {
-         showError(title, tr("Missing MDHS connection settings"));
-//         return false;
-      }
+      // else {
+         // showError(title, tr("Missing MDHS connection settings"));
+         // return false;
+      // }
 
       if (response.has_chat()) {
          networkSettings_.chat = { response.chat().host(), response.chat().port() };
@@ -238,7 +244,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(Ne
       }
 
       populateAppSettings(networkSettings_);
-      cb(networkSettings_);
+      cb();
       return true;
    });
    cmdPuBSettings_->SetErrorCallback([this, title](const std::string& message) {
@@ -254,17 +260,16 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void(Ne
    }
 }
 
+void BSTerminalMainWindow::OnNetworkSettingsLoaded()
+{
+   mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
+}
+
 void BSTerminalMainWindow::postSplashscreenActions()
 {
    if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
-      GetNetworkSettingsFromPuB([this](NetworkSettings networkSettings) {
-         if (!networkSettings.marketData.host.empty()) {
-            mdProvider_->SubscribeToMD(networkSettings.marketData.host, std::to_string(networkSettings.marketData.port));
-         }
-         else {
-            showError(tr("Market Data Connection"), tr("MD connection settings not found in reply from BlockSettle server"));
-         }
-      });
+      mdProvider_->SubscribeToMD();
    }
 }
 
@@ -286,12 +291,6 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
 
 void BSTerminalMainWindow::setupToolbar()
 {
-   QIcon lockbox_icon = UiUtils::icon(0xe774);
-   QIcon offline_icon = UiUtils::icon(0xe77f);
-   QIcon create_wallet_icon = UiUtils::icon(0xe67a);
-   QIcon wallet_properties_icon = UiUtils::icon(0xe6c3);
-   QIcon import_wallet_icon = UiUtils::icon(0xe765);
-
    action_send_ = new QAction(tr("Create &Transaction"), this);
    connect(action_send_, &QAction::triggered, this, &BSTerminalMainWindow::onSend);
    action_receive_ = new QAction(tr("Generate &Address"), this);
@@ -483,11 +482,12 @@ void BSTerminalMainWindow::InitConnections()
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
+   connect(mdProvider_.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &BSTerminalMainWindow::onMDConnectionDetailsRequired);
 
    InitChatView();
 }
 
-void BSTerminalMainWindow::acceptMDAgreement(const std::string &host, const std::string &port)
+void BSTerminalMainWindow::acceptMDAgreement()
 {
    if (!isMDLicenseAccepted()) {
       MDAgreementDialog dlg{this};
@@ -498,7 +498,7 @@ void BSTerminalMainWindow::acceptMDAgreement(const std::string &host, const std:
       saveUserAcceptedMDLicense();
    }
 
-   mdProvider_->MDLicenseAccepted(host, port);
+   mdProvider_->MDLicenseAccepted();
 }
 
 void BSTerminalMainWindow::updateControlEnabledState()
@@ -728,18 +728,23 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       return false;
    }
 
-   NewWalletDialog newWalletDialog(true, this);
-   if (!newWalletDialog.exec()) {
-      return false;
-   }
+   if (!signContainer_->isOffline()) {
+      NewWalletDialog newWalletDialog(true, applicationSettings_, this);
+      if (newWalletDialog.exec() != QDialog::Accepted) {
+         return false;
+      }
 
-   if (newWalletDialog.isCreate()) {
-      return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
-   }
-   else if (newWalletDialog.isImport()) {
+      if (newWalletDialog.isCreate()) {
+         return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
+      }
+      else if (newWalletDialog.isImport()) {
+         return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
+      }
+
+      return false;
+   } else {
       return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
    }
-   return false;
 }
 
 void BSTerminalMainWindow::showInfo(const QString &title, const QString &text)
@@ -921,8 +926,15 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
    const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
 
+   if (host.empty() || port.empty()) {
+      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] missing network settings for App server");
+      showError(tr("Connection error"), tr("Missing network settings for Blocksettle Server"));
+      return;
+   }
+
    if (!celerConnection_->LoginToServer(host, port, username, password)) {
-      logMgr_->logger("ui")->error("[BSTerminalMainWindow::onLogin] LoginToServer failed");
+      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] login failed");
+      showError(tr("Connection error"), tr("Login failed"));
    } else {
       auto userName = QString::fromStdString(username);
       currentUserLogin_ = userName;
@@ -939,7 +951,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
 void BSTerminalMainWindow::onAutheIDDone(const std::string& jwt)
 {
    auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), jwt);
-   setLoginButtonText(currentUserLogin_ + QString::fromStdString("( Chat user: " + id + " )"));
+   setLoginButtonText(currentUserLogin_ /*+ QString::fromStdString("( Chat user: " + id + " )")*/);
 }
 
 void BSTerminalMainWindow::onAutheIDFailed()
@@ -952,8 +964,17 @@ void BSTerminalMainWindow::onAutheIDFailed()
 
 void BSTerminalMainWindow::onLogin()
 {
-   GetNetworkSettingsFromPuB([this](NetworkSettings) {});
+   // disable login and set tooltip
 
+   GetNetworkSettingsFromPuB([this]()
+      {
+         OnNetworkSettingsLoaded();
+         emit readyToLogin();
+      });
+}
+
+void BSTerminalMainWindow::onReadyToLogin()
+{
    LoginWindow loginDialog(applicationSettings_, this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
@@ -1007,8 +1028,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    setLoginButtonText(currentUserLogin_);
 
    if (!mdProvider_->IsConnectionActive()) {
-      mdProvider_->SubscribeToMD(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-         , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
+      mdProvider_->SubscribeToMD();
    }
 }
 

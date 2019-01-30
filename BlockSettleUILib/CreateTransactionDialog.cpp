@@ -232,7 +232,7 @@ void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int
 
 void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
 {
-   transactionData_->SetFeePerByte(comboBoxFeeSuggestions()->itemData(currentIndex).toFloat());
+   transactionData_->setFeePerByte(comboBoxFeeSuggestions()->itemData(currentIndex).toFloat());
 }
 
 void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const std::function<void()> &cbInputsReset)
@@ -265,7 +265,7 @@ void CreateTransactionDialog::onTransactionUpdated()
    labelTxInputs()->setText(summary.isAutoSelected ? tr("Auto (%1)").arg(QString::number(summary.usedTransactions))
       : QString::number(summary.usedTransactions));
    labelEstimatedFee()->setText(UiUtils::displayAmount(summary.totalFee));
-   labelTotalAmount()->setText(UiUtils::displayAmount(UiUtils::amountToBtc(summary.balanceToSpend) + UiUtils::amountToBtc(summary.totalFee)));
+   labelTotalAmount()->setText(UiUtils::displayAmount(summary.balanceToSpend + UiUtils::amountToBtc(summary.totalFee)));
    if (labelTxSize()) {
       labelTxSize()->setText(QString::number(summary.txVirtSize));
    }
@@ -276,7 +276,7 @@ void CreateTransactionDialog::onTransactionUpdated()
 
    if (changeLabel() != nullptr) {
       if (summary.hasChange) {
-         changeLabel()->setText(UiUtils::displayAmount(summary.selectedBalance - UiUtils::amountToBtc(summary.balanceToSpend) - UiUtils::amountToBtc(summary.totalFee)));
+         changeLabel()->setText(UiUtils::displayAmount(summary.selectedBalance - summary.balanceToSpend - UiUtils::amountToBtc(summary.totalFee)));
       } else {
          changeLabel()->setText(UiUtils::displayAmount(0.0));
       }
@@ -287,8 +287,11 @@ void CreateTransactionDialog::onTransactionUpdated()
 
 void CreateTransactionDialog::onMaxPressed()
 {
-   auto maxValue = transactionData_->CalculateMaxAmount(lineEditAddress()->text().toStdString());
-   lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
+   auto maxValue = transactionData_->CalculateMaxAmount(lineEditAddress()->text().toStdString())
+      - transactionData_->GetTotalRecipientsAmount();
+   if (maxValue > 0) {
+      lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
+   }
 }
 
 void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,

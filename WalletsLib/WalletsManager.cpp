@@ -622,7 +622,7 @@ bool WalletsManager::DeleteWalletFile(const wallet_gen_type &wallet)
       authAddressWallet_ = nullptr;
       emit authWalletChanged();
    }
-   emit walletChanged();
+   emit walletDeleted();
    return true;
 }
 
@@ -635,6 +635,9 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
    }
 
    const auto &leaves = wallet->getLeaves();
+   for (const auto &leaf : leaves) {
+      leaf->UnregisterWallet();
+   }
    for (const auto &leaf : leaves) {
       EraseWallet(leaf);
    }
@@ -652,7 +655,7 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
       authAddressWallet_.reset();
       emit authWalletChanged();
    }
-   emit walletChanged();
+   emit walletDeleted();
    return result;
 }
 
@@ -1038,7 +1041,8 @@ void WalletsManager::onCCInfoLoaded()
 //   they have been confirmed.
 // - If a TX has multiple instances of the same address, each instance will get
 //   its own UTXO object while sharing the same UTXO hash.
-// - There's no immediate way to determine if the UTXO entry is for change.
+// - It is possible, in conjunction with a wallet, to determine if the UTXO is
+//   attached to an internal or external address.
 void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
 {
    std::vector<bs::TXEntry> ourZCentries;
@@ -1046,33 +1050,15 @@ void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
    for (const auto led : armory_->getZCentries(reqId)) {
       auto wallet = GetWalletById(led.getID());
       if (wallet != nullptr) {
-         logger_->debug("[{}] ZC entry in wallet {}", __func__
+         logger_->debug("[WalletsManager::onZeroConfReceived] ZC entry in wallet {}"
                         , wallet->GetWalletName());
-
-         // Get the ZC UTXOs for the wallet. We need to save a copy for UTXO
-         // filtering and balance correction purposes.
-         const auto &cbZCList = [this, wallet](ReturnMessage<std::vector<UTXO>> utxos)-> void {
-            try {
-               auto inUTXOs = utxos.get();
-               for(auto& utxo: inUTXOs) {
-                  wallet->addZCUTXOForFilter(utxo);
-               }
-            }
-            catch (const std::exception &e) {
-               if (logger_ != nullptr) {
-                  logger_->error("[WalletsManager::onZeroConfReceived] Return data error " \
-                     "- {}", e.what());
-               }
-            }
-         };
-         wallet->getSpendableZCList(cbZCList, this);
 
          // We have an affected wallet. Update it!
          ourZCentries.push_back(bs::convertTXEntry(led));
-         wallet->UpdateBalanceFromDB();
+         wallet->UpdateBalances();
       } // if
       else {
-         logger_->debug("[{}] get ZC but wallet not found: {}", __func__
+         logger_->debug("[WalletsManager::onZeroConfReceived] get ZC but wallet not found: {}"
                         , led.getID());
       }
    } // for

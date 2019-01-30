@@ -23,7 +23,7 @@ public:
       WatchingOnly
    };
 
-   ImportWalletTypeDialog(QWidget* parent = nullptr );
+   ImportWalletTypeDialog(bool woOnly, QWidget* parent = nullptr );
    ~ImportWalletTypeDialog() override;
 
    EasyCoDec::Data GetSeedData() const;

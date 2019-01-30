@@ -52,12 +52,10 @@ CelerMessage CelerSubmitRFQSequence::submitRFQ()
    group->set_securitycode(rfq_.security);
    group->set_securityid(rfq_.security);
 
-   group->set_side(bs::network::Side::toCeler(rfq_.side));
+   leg->set_side(bs::network::Side::toCeler(rfq_.side));
 
-   group->set_qty(rfq_.quantity);
    leg->set_qty(rfq_.quantity);
 
-   group->set_settlementdate(QDate::currentDate().toString(Qt::ISODate).toStdString());
    leg->set_settlementdate(QDate::currentDate().toString(Qt::ISODate).toStdString());
 
    if (rfq_.assetType == bs::network::Asset::PrivateMarket) {

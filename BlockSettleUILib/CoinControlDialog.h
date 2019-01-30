@@ -16,8 +16,10 @@ class CoinControlDialog : public QDialog
 Q_OBJECT
 
 public:
-   CoinControlDialog(const std::shared_ptr<SelectedTransactionInputs>& inputs, QWidget* parent = nullptr);
+   CoinControlDialog(const std::shared_ptr<SelectedTransactionInputs>& inputs, bool allowAutoSel = true, QWidget* parent = nullptr);
    ~CoinControlDialog() override;
+
+   std::vector<UTXO> selectedInputs() const;
 
 private slots:
    void onAccepted();

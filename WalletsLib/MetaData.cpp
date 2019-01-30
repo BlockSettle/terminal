@@ -214,7 +214,7 @@ Signer bs::wallet::TXSignRequest::getSigner() const
 // Estimate the TX virtual size. This will not be exact, as there's no sig yet.
 // Round up the inputs to guarantee that we meet RBF's relay fee policy.
 size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
-              , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
+              , const std::map<unsigned int, std::shared_ptr<ScriptRecipient>> &recipients)
 {
    if (inputs.empty() || recipients.empty()) {
       return 0;
@@ -225,7 +225,7 @@ size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
 
    // Get the output virtual sizes from Armory. Assume these will be accurate.
    for (const auto &recip : recipients) {
-      result += recip->getSize();
+      result += recip.second->getSize();
    }
 
    // Estimate the virtual size for the inputs. Because we can't analyze the
@@ -262,7 +262,7 @@ size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
          break;
       }
    }
-   return result;
+   return result * 1.4; // rough approximation to Armory's calculations
 }
 
 size_t bs::wallet::TXSignRequest::estimateTxVirtSize() const
@@ -270,9 +270,12 @@ size_t bs::wallet::TXSignRequest::estimateTxVirtSize() const
    if (!isValid()) {
       return 0;
    }
-   auto recipCopy = recipients;
+   std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipCopy;
+   for (unsigned int i = 0; i < recipients.size(); ++i) {
+      recipCopy[i] = recipients[i];
+   }
    if (change.value) {
-      recipCopy.push_back(change.address.getRecipient(change.value));
+      recipCopy[recipients.size()] = change.address.getRecipient(change.value);
    }
    return bs::wallet::estimateTXVirtSize(inputs, recipCopy);
 }
@@ -296,7 +299,11 @@ size_t bs::wallet::TXMultiSignRequest::estimateTxVirtSize() const
    for (const auto &input : inputs) {
       inputsList.push_back(input.first);
    }
-   return bs::wallet::estimateTXVirtSize(inputsList, recipients);
+   std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipCopy;
+   for (unsigned int i = 0; i < recipients.size(); ++i) {
+      recipCopy[i] = recipients[i];
+   }
+   return bs::wallet::estimateTXVirtSize(inputsList, recipCopy);
 }
 
 
@@ -661,8 +668,7 @@ bool bs::Wallet::GetActiveAddressCount(const std::function<void(size_t)> &cb) co
 }
 
 bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
-                                       , QObject *obj, const bool& startup
-                                       , uint64_t val)
+                                       , QObject *obj, uint64_t val)
 {
    if (!isBalanceAvailable()) {
       return false;
@@ -673,7 +679,7 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
       return true;
    }
 
-   const auto &cbTxOutList = [this, val, startup]
+   const auto &cbTxOutList = [this, val]
                              (ReturnMessage<std::vector<UTXO>> txOutList) {
       try {
          // Before invoking the callbacks, process the UTXOs for the purposes of
@@ -712,12 +718,7 @@ bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
             });
          };
 
-         if (startup == false) {
-            processNewUTXOs(startup, cbProcess);
-         }
-         else {
-            cbProcess();
-         }
+         cbProcess();
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {
@@ -791,7 +792,7 @@ bool bs::Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UT
 }
 
 bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
-                                    , QObject *obj, const bool& startup)
+                                    , QObject *obj)
 {
    if (!isBalanceAvailable()) {
       return false;
@@ -801,8 +802,7 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
    if (zcListCallbacks_.size() > 1) {
       return true;
    }
-   const auto &cbZCList = [this, startup]
-                               (ReturnMessage<std::vector<UTXO>> utxos)-> void {
+   const auto &cbZCList = [this](ReturnMessage<std::vector<UTXO>> utxos)-> void {
       try {
          auto inUTXOs = utxos.get();
          // Before invoking the callbacks, process the UTXOs for the purposes of
@@ -820,12 +820,8 @@ bool bs::Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
                zcListCallbacks_.clear();
             });
          };
-         if (startup == false) {
-            processNewUTXOs(startup, cbProcess);
-         }
-         else {
-            cbProcess();
-         }
+
+         cbProcess();
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {
@@ -863,7 +859,9 @@ bool bs::Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) cons
    return true;
 }
 
-void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64_t>)> &cb)
+// Public frontend for updating a wallet's balances. Required in part because
+// Armory doesn't declare TXs safe until 6 confs have occurred.
+void bs::Wallet::UpdateBalances(const std::function<void(std::vector<uint64_t>)> &cb)
 {
    if (!isBalanceAvailable()) {
       return;
@@ -891,23 +889,18 @@ void bs::Wallet::UpdateBalanceFromDB(const std::function<void(std::vector<uint64
             addrCount_ = count;
 
             // Armory's concept of spendable balances doesn't always align with
-            // ours. However, the total and unconfirmed balances are accurate,
-            // at least for external addresses. Adjust the balances, including
-            // accounting for internal addresses.
-            totalBalance_ = totalBalance;
-            unconfirmedBalance_ = unconfirmedBalance;
-            spendableBalance_ = totalBalance - unconfirmedBalance;
-
-            emit balanceChanged(GetWalletId(), bv);
+            // ours. Adjust the balances, including accounting for internal and
+            // external address differences.
+            processNewBalances(bv);
          }
-         emit balanceUpdated(GetWalletId(), bv);
+
          if (cb) {
             cb(bv);
          }
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {
-            logger_->error("[bs::Wallet::UpdateBalanceFromDB] Return data error " \
+            logger_->error("[bs::Wallet::UpdateBalances] Return data error " \
                "- {}", e.what());
          }
       }
@@ -1028,7 +1021,6 @@ std::string bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &
    }
 
    if (armory_) {
-      connect(armory_.get(), &ArmoryConnection::newBlock, this, &bs::Wallet::onNewBlock, Qt::QueuedConnection);
       const auto &addrSet = getAddrHashSet();
       std::vector<BinaryData> addrVec;
       addrVec.insert(addrVec.end(), addrSet.begin(), addrSet.end());
@@ -1117,8 +1109,7 @@ bs::wallet::TXSignRequest bs::Wallet::CreateTXRequest(const std::vector<UTXO> &i
 
 void bs::Wallet::firstInit(bool force)
 {
-   UpdateBalanceFromDB();
-   processNewUTXOs(true);
+   UpdateBalances();
 }
 
 Signer bs::Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinaryData &password,
@@ -1381,92 +1372,121 @@ BinaryData bs::wallet::computeID(const BinaryData &input)
    return result;
 }
 
-
-void bs::Wallet::onNewBlock()
-{
-   processNewUTXOs(false);
-}
-
-void bs::Wallet::processNewUTXOs(const bool& startup, const std::function<void()> &cbComplete)
+// Private function that is used to process UTXOs after Armory has been
+// consulted to update the wallet balances.
+// IN:  A vector with balance data. (vector<uint64_t>)
+//      A callback to call when everything's done. (function<void()>)
+// OUT: None
+// RET: None
+void bs::Wallet::processNewBalances(const std::vector<uint64_t> inBV
+   , const std::function<void()> &cbComplete)
 {
    if(logger_ != nullptr) {
-      logger_->debug("[bs::Wallet::onNewBlock] New Block");
+      logger_->debug("[{}}] Process new UTXOs", __func__);
    }
    auto curHeight = armory_->topBlock();
+   std::map<std::string, UTXO>::const_iterator itUTXOs;
 
-   const auto &cbTxOutList = [this, startup, cbComplete, curHeight]
-                             (std::vector<UTXO> txOutListObj) {
-      // See if there are any UTXOs that are now safe to remove from the
-      // "young" list. If so, stop filtering them.
-      std::vector<std::string> utxosToUnreserve;
-      std::vector<UTXO> erasedUTXOs;
-      for (const auto &youngUTXO : youngUTXOs_) {
-         if (curHeight - youngUTXO.first.txHeight_ >= SAFE_NUM_CONFS &&
-            startup == false) {
-            if (IsExternalAddress(bs::Address::fromUTXO(youngUTXO.first)) == false) {
-               utxosToUnreserve.push_back(youngUTXO.second);
-            }
-            erasedUTXOs.push_back(youngUTXO.first);
-         }
+   for (itUTXOs = youngIntUTXOs_.cbegin(); itUTXOs != youngIntUTXOs_.cend();) {
+      uint32_t numConfs = itUTXOs->second.getNumConfirm(curHeight);
+      if (numConfs >= SAFE_NUM_CONFS) {
+         itUTXOs = youngIntUTXOs_.erase(itUTXOs);
       }
-      for (const auto &erasedUTXO : erasedUTXOs) {
-         youngUTXOs_.erase(erasedUTXO);
+      else {
+         ++itUTXOs;
       }
-      for (auto curUTXOResID : utxosToUnreserve) {
-         utxoAdapter_->unreserve(curUTXOResID);
-      }
+   }
 
-      // Determine if any ZC UTXOs were confirmed. If so, process them. Right
-      // now, if RBF is used to replace a UTXO, the UTXO will sit in the
-      // unconfirmed map until the terminal is rebooted. Fixing this case
-      // eventually should be considered. While highly unlikely, it is
-      // possible to flood the network and perform a DOS attack.
-      std::map<UTXO, std::string> utxosToReserve;
+   // External addresses, once mature enough, need to be unreserved and made
+   // available for spending.
+   for (itUTXOs = youngExtUTXOs_.cbegin(); itUTXOs != youngExtUTXOs_.cend();) {
+      uint32_t numConfs = itUTXOs->second.getNumConfirm(curHeight);
+      if (numConfs >= SAFE_NUM_CONFS) {
+         utxoAdapter_->unreserve(itUTXOs->first);
+         itUTXOs = youngExtUTXOs_.erase(itUTXOs);
+      }
+      else {
+         ++itUTXOs;
+      }
+   }
+
+   // Process the incoming UTXOs.
+   const auto &cbTxOutList = [this, cbComplete, curHeight, inBV]
+      (std::vector<UTXO> txOutListObj) {
+      // We can't make assumptions regarding # of confs. We could hit a 0-conf,
+      // or we could see a missed TX once it shows up in a block, or we could
+      // see everything new on startup. So, we have to be mindful of that.
+      std::vector<UTXO> utxosToReserve;
+      std::map<std::string, UTXO>::const_iterator youngUTXOs;
+
       for (UTXO& inUTXO : txOutListObj) {
-         if(startup == true) {
-            // If we're starting up, just grab any "young" UTXOs for
-            // bootstrapping purposes.
-            if (curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
-               youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
-               if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
-                  utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
+         uint32_t numConfs = inUTXO.getNumConfirm(curHeight);
+
+         // We only care if < 6 confs. External addresses will have the UTXO
+         // reserved so that they won't be spendable. (We don't add on 0-conf
+         // because they could be subject to RBF or CPFP.)
+         if (numConfs < SAFE_NUM_CONFS) {
+            if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
+               youngUTXOs = youngExtUTXOs_.find(inUTXO.script_.toHexStr());
+               if (youngUTXOs == youngExtUTXOs_.end()) {
+                  youngExtUTXOs_[inUTXO.script_.toHexStr()] = inUTXO;
+                  utxosToReserve.push_back(inUTXO);
                }
-               else {
-                  // Make sure this is called *after* UpdateBalanceFromDB.
-                  const auto adjustAmt =
-                     static_cast<BTCNumericTypes::balance_type>(inUTXO.value_) /
-                     BTCNumericTypes::BalanceDivider;
-                  spendableBalance_ += adjustAmt;
-                  unconfirmedBalance_ -= adjustAmt;
+            }
+            else {
+               youngUTXOs = youngIntUTXOs_.find(inUTXO.script_.toHexStr());
+               if (youngUTXOs == youngIntUTXOs_.end()) {
+                  youngIntUTXOs_[inUTXO.script_.toHexStr()] = inUTXO;
                }
             }
          }
-         else {
-            // If not starting up, check if a ZC UTXO has been confirmed.
-            for (auto itZCUTXO = zcUTXOs_.begin(); itZCUTXO != zcUTXOs_.end(); ) {
-               if (inUTXO.script_ == itZCUTXO->script_) {
-                  // A ZC UTXO has been found!
-                  itZCUTXO = zcUTXOs_.erase(itZCUTXO);
-                  if (curHeight - inUTXO.txHeight_ < SAFE_NUM_CONFS) {
-                     youngUTXOs_.insert(std::make_pair(inUTXO, inUTXO.script_.toHexStr()));
-                     if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
-                        utxosToReserve[inUTXO] = inUTXO.script_.toHexStr();
-                     }
-                     else {
-                        const auto adjustAmt =
-                           static_cast<BTCNumericTypes::balance_type>(inUTXO.value_) /
-                           BTCNumericTypes::BalanceDivider;
-                        spendableBalance_ += adjustAmt;
-                        unconfirmedBalance_ -= adjustAmt;
-                     }
-                  }
-               }
-               else {
-                  ++itZCUTXO;
-               }
-            } // for
-         } // else
-      } // for
+      }
+
+      // Once done going through the UTXOs, make the UTXO reservations.
+      for (UTXO u : utxosToReserve) {
+         utxoAdapter_->reserve(GetWalletId(), u.script_.toHexStr(), utxosToReserve);
+      }
+
+      // Set the unconfirmed balance delta, which leans on internal addresses.
+      BTCNumericTypes::balance_type uDelta = 0;
+      for (youngUTXOs = youngIntUTXOs_.cbegin();
+         youngUTXOs != youngIntUTXOs_.cend(); ++youngUTXOs) {
+         if (youngUTXOs->second.getNumConfirm(curHeight) > 0) {
+            uDelta += static_cast<BTCNumericTypes::balance_type>(youngUTXOs->second.value_);
+         }
+      }
+      uDelta = uDelta / BTCNumericTypes::BalanceDivider;
+
+      // Set the spendable balance delta, which leans on external addresses.
+      BTCNumericTypes::balance_type sDelta = 0;
+      for (youngUTXOs = youngExtUTXOs_.cbegin();
+         youngUTXOs != youngExtUTXOs_.cend(); ++youngUTXOs) {
+         if (youngUTXOs->second.getNumConfirm(curHeight) > 0) {
+            sDelta += static_cast<BTCNumericTypes::balance_type>(youngUTXOs->second.value_);
+         }
+      }
+      sDelta = sDelta / BTCNumericTypes::BalanceDivider;
+
+      // Set the wallet balances, and emit the relevant signals.
+      auto prevTotalBalance = totalBalance_;
+      auto prevSpendableBalance = spendableBalance_;
+      auto prevUnconfirmedBalance = unconfirmedBalance_;
+      totalBalance_ =
+         static_cast<BTCNumericTypes::balance_type>(inBV[0]) / BTCNumericTypes::BalanceDivider;
+      spendableBalance_ =
+         (static_cast<BTCNumericTypes::balance_type>(inBV[1]) / BTCNumericTypes::BalanceDivider)
+         - sDelta;
+      unconfirmedBalance_ =
+         (static_cast<BTCNumericTypes::balance_type>(inBV[2]) / BTCNumericTypes::BalanceDivider)
+         - uDelta;
+
+      if ((prevTotalBalance != totalBalance_)
+         || (prevSpendableBalance != spendableBalance_)
+         || (prevUnconfirmedBalance != unconfirmedBalance_)) {
+         emit balanceChanged(GetWalletId(), inBV);
+      }
+      emit balanceUpdated(GetWalletId(), inBV);
+
       if (cbComplete) {
          cbComplete();
       }

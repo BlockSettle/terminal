@@ -249,6 +249,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
           this, &TransactionsWidget::onEnterKeyInTrxPressed);
 
    ui->labelResultCount->hide();
+   ui->progressBar->hide();
 }
 
 TransactionsWidget::~TransactionsWidget() = default;
@@ -314,6 +315,7 @@ void TransactionsWidget::onDataLoaded(int count)
 
 void TransactionsWidget::onProgressInited(int start, int end)
 {
+   ui->progressBar->show();
    ui->progressBar->setMinimum(start);
    ui->progressBar->setMaximum(end);
 }

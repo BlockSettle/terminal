@@ -98,6 +98,22 @@ std::string hd::Path::toString(bool alwaysAbsolute) const
    return result;
 }
 
+static bool isValidPathElem(const std::string &elem)
+{
+   if (elem.empty()) {
+      return false;
+   }
+   if (elem == "m") {
+      return true;
+   }
+   for (const auto &c : elem) {
+      if ((c != '\'') && ((c > '9') || (c < '0'))) {
+         return false;
+      }
+   }
+   return true;
+}
+
 hd::Path hd::Path::fromString(const std::string &s)
 {
    std::string str = s;
@@ -115,7 +131,7 @@ hd::Path hd::Path::fromString(const std::string &s)
 
    Path result;
    for (const auto &elem : stringVec) {
-      if (elem.empty() || (elem == "m")) {
+      if ((elem == "m") || !isValidPathElem(elem)) {
          continue;
       }
       const auto pe = static_cast<Elem>(std::stoul(elem));

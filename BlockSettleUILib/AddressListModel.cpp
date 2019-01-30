@@ -1,4 +1,5 @@
 #include "AddressListModel.h"
+#include <QColor>
 #include "WalletsManager.h"
 #include "UiUtils.h"
 
@@ -161,9 +162,10 @@ void AddressListModel::updateWalletData()
                  ++j) {
                addressRows_[j].transactionCount = (*addrTxNs)[j];
             }
-            emit dataChanged(index(0, ColumnTxCount)
-                             , index(addressRows_.size()-1, ColumnTxCount));
-            emit updated();
+            QMetaObject::invokeMethod(this, [this] {
+               emit dataChanged(index(0, ColumnTxCount)
+                  , index(addressRows_.size() - 1, ColumnTxCount));
+            });
          }
       };
 
@@ -188,9 +190,10 @@ void AddressListModel::updateWalletData()
                  ++j) {
                addressRows_[j].balance = (*addrBalances)[j];
             }
-            emit dataChanged(index(0, ColumnBalance)
-                             , index(addressRows_.size() - 1, ColumnBalance));
-            emit updated();
+            QMetaObject::invokeMethod(this, [this] {
+               emit dataChanged(index(0, ColumnBalance)
+                  , index(addressRows_.size() - 1, ColumnBalance));
+            });
          }
       };
 
@@ -328,7 +331,7 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
       return {};
    }
 
-   const auto& row = addressRows_[index.row()];
+   const auto row = addressRows_[index.row()];
 
    switch (role) {
       case Qt::DisplayRole:
@@ -359,6 +362,13 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
          else {
             return dataForRow(row, index.column());
          }
+         break;
+
+      case Qt::TextColorRole:
+         if (!row.isExternal) {
+            return QColor(Qt::gray);
+         }
+         break;
 
       default:
          break;

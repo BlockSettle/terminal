@@ -27,7 +27,7 @@ CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<Connectio
    celerClient_ = nullptr;
 }
 
-bool CelerMarketDataProvider::StartMDConnection(const std::string &host, const std::string &port)
+bool CelerMarketDataProvider::StartMDConnection()
 {
    if (celerClient_ != nullptr) {
       logger_->error("[CelerMarketDataProvider::StartMDConnection] already connected.");
@@ -45,8 +45,11 @@ bool CelerMarketDataProvider::StartMDConnection(const std::string &host, const s
 
    const std::string credentials = CryptoPRNG::generateRandom(32).toHexStr();
 
+   logger_->debug("[CelerMarketDataProvider::StartMDConnection] start connecting to {} : {}"
+      , host_, port_);
+
    // login password could be any string
-   if (!celerClient_->LoginToServer(host, port, credentials, credentials)) {
+   if (!celerClient_->LoginToServer(host_, port_, credentials, credentials)) {
       logger_->error("[CelerMarketDataProvider::StartMDConnection] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;
@@ -219,9 +222,6 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] get update:\n{}"
-      , response.DebugString());
-
    if (!response.has_snapshot()) {
       logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] empty snapshot");
       return true;
@@ -256,8 +256,6 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
 
    if (!fields.empty()) {
       emit MDUpdate(assetType, security, fields);
-   } else {
-      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] no fields updated");
    }
 
    return true;
@@ -376,8 +374,8 @@ bool CelerMarketDataProvider::ProcessSecurityListingEvent(const std::string& dat
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation:\n{}"
-                  , responseEvent.DebugString());
+   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation for {}"
+                  , responseEvent.securityid());
 
    emit CCSecuritRegistrationResult(true, responseEvent.securityid());
 

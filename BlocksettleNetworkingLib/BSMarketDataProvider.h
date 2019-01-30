@@ -38,7 +38,7 @@ public:
    bool IsConnectionActive() const override;
 
 protected:
-   bool StartMDConnection(const std::string& host, const std::string& port) override;
+   bool StartMDConnection() override;
 
 private:
    void onDataFromMD(const std::string& data);

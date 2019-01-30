@@ -186,7 +186,8 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
                         , settings.armoryDBIp, settings.armoryDBPort);
          bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_);
          if (!bdv_) {
-            logger_->error("[{}] failed to create BDV", __func__);
+            logger_->error("[setupConnection (connectRoutine)] failed to "
+               "create BDV");
             std::this_thread::sleep_for(std::chrono::seconds(10));
             continue;
          }
@@ -329,7 +330,8 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
          }
       }
       catch(std::exception& e) {
-         logger_->error("[{}] Return data error - {}", __func__, e.what());
+         logger_->error("[getWalletsHistory (cbWrap)] Return data error - {}"
+            , e.what());
       }
    };
 
@@ -365,9 +367,9 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] Return data error - {} - Wallet {} - Address {}"
-                        , __func__, e.what(), walletId
-                        , addr.display().toStdString());
+         logger_->error("[getLedgerDelegateForAddress (cbWrap)] Return data "
+            "error - {} - Wallet {} - Address {}", e.what(), walletId
+               , addr.display().toStdString());
       }
    };
    bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbWrap);
@@ -393,7 +395,8 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(const std::sh
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] Return data error - {}", __func__, e.what());
+         logger_->error("[getWalletsLedgerDelegate (cbWrap)] Return data error "
+            "- {}", e.what());
       }
    };
    bdv_->getLedgerDelegateForWallets(cbWrap);
@@ -459,8 +462,8 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, std::function<void(Tx
          callGetTxCallbacks(hash, retTx);
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] Return data error - {} - hash {}", __func__
-                        , e.what(), hash.toHexStr());
+         logger_->error("[getTxByHash (cbUpdateCache)] Return data error - {} "
+            "- hash {}", e.what(), hash.toHexStr());
          callGetTxCallbacks(hash, {});
       }
    };
@@ -505,7 +508,7 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
          txCache_.put(tx.getThisHash(), tx);
       }
       else {
-         logger_->error("[{}] received uninitialized TX", __func__);
+         logger_->error("[getTXsByHash (cbUpdateTx)] received uninitialized TX");
       }
       cbAppendTx(tx);
    };
@@ -524,8 +527,8 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, std::fun
                callGetTxCallbacks(hash, retTx);
             }
             catch (const std::exception &e) {
-               logger_->error("[{}] Return data error - {} - Hash {}", __func__
-                              , e.what(), hash.toHexStr(true));
+               logger_->error("[getTXsByHash (cbUpdateTx)] Return data error - "
+                  "{} - Hash {}", e.what(), hash.toHexStr(true));
                callGetTxCallbacks(hash, {});
             }
          });
@@ -557,8 +560,8 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash,
       }
       catch(std::exception& e) {
          // Switch endian on print to RPC byte order
-         logger_->error("[{}] Return data error - {} - hash {}", __func__
-                        , e.what(), inHash.toHexStr(true));
+         logger_->error("[getRawHeaderForTxHash (cbWrap)] Return data error - "
+            "{} - hash {}", e.what(), inHash.toHexStr(true));
       }
    };
    bdv_->getRawHeaderForTxHash(inHash, cbWrap);
@@ -588,8 +591,8 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned& inHeight,
          }
       }
       catch(std::exception& e) {
-         logger_->error("[{}] Return data error - {} - height {}", __func__
-                        , e.what(), inHeight);
+         logger_->error("[getHeaderByHeight (cbWrap)] Return data error - {} - "
+            "height {}", e.what(), inHeight);
       }
    };
    bdv_->getHeaderByHeight(inHeight, cbWrap);
@@ -612,8 +615,8 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks
          cb(feeStruct.val_);
       }
       else {
-         logger_->warn("[{}] error '{}' for nbBlocks={}", __func__
-                       , feeStruct.error_, nbBlocks);
+         logger_->warn("[estimateFee (cbProcess)] error '{}' for nbBlocks={}"
+            , feeStruct.error_, nbBlocks);
          cb(0);
       }
    };
@@ -629,8 +632,8 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] Return data error - {} - {} blocks", __func__
-                        , e.what(), nbBlocks);
+         logger_->error("[estimateFee (cbWrap)] Return data error - {} - {} "
+            "blocks", e.what(), nbBlocks);
       }
    };
    bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbWrap);
@@ -657,8 +660,8 @@ bool ArmoryConnection::getFeeSchedule(std::function<void(std::map<unsigned int, 
             feeFloatMap.emplace(it.first, std::move(it.second.val_));
          }
          else {
-            logger_->warn("[{}] error '{}' - {} blocks - {} sat/byte", __func__
-                          , it.first, it.second.val_, it.second.error_);
+            logger_->warn("[getFeeSchedule (cbProcess)] error '{}' - {} blocks "
+               "- {} sat/byte", it.first, it.second.val_, it.second.error_);
             feeFloatMap.insert(std::pair<unsigned int, float>(it.first, 0.0f));
          }
       }
@@ -678,7 +681,8 @@ bool ArmoryConnection::getFeeSchedule(std::function<void(std::map<unsigned int, 
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] Return data error - {}", __func__, e.what());
+         logger_->error("[getFeeSchedule (cbProcess)] Return data error - {}"
+            , e.what());
       }
    };
    bdv_->getFeeSchedule(FEE_STRAT_CONSERVATIVE, cbWrap);

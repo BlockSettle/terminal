@@ -45,7 +45,7 @@ public:
       , const std::string& serverExchangeId);
 
 protected:
-   bool StartMDConnection(const std::string &host, const std::string &port) override;
+   bool StartMDConnection() override;
 
 public slots:
    void onCCSecurityReceived(const std::string& securityId);

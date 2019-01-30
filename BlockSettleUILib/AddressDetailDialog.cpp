@@ -11,6 +11,7 @@
 #include <QAction>
 
 #include "ArmoryConnection.h"
+#include "HDNode.h"
 #include "MetaData.h"
 #include "TransactionsViewModel.h"
 #include "UiUtils.h"
@@ -107,7 +108,25 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    const auto addressString = address.display();
    ui_->labelAddress->setText(addressString);
 
-   auto index = QString::fromStdString(wallet_->GetAddressIndex(address));
+   const auto addrIndex = wallet_->GetAddressIndex(address);
+   const auto path = bs::hd::Path::fromString(addrIndex);
+   QString index;
+   if (path.length() != 2) {
+      index = QString::fromStdString(addrIndex);
+   }
+   else {
+      const auto lastIndex = QString::number(path.get(-1));
+      switch (path.get(-2)) {
+      case 0:
+         index = tr("External/%1").arg(lastIndex);
+         break;
+      case 1:
+         index = tr("Internal/%1").arg(lastIndex);
+         break;
+      default:
+         index = tr("Unknown/%1").arg(lastIndex);
+      }
+   }
    if (index.length() > 64) {
       index = index.left(64);
    }

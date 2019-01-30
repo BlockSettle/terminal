@@ -6,15 +6,41 @@ MarketDataProvider::MarketDataProvider(const std::shared_ptr<spdlog::logger>& lo
    : logger_{logger}
 {}
 
-void MarketDataProvider::SubscribeToMD(const std::string &host, const std::string &port)
+void MarketDataProvider::SetConnectionSettings(const std::string &host, const std::string &port)
 {
-   emit UserWantToConnectToMD(host, port);
+   host_ = host;
+   port_ = port;
+
+   if (!host_.empty() && !port_.empty()) {
+      if (waitingForConnectionDetails_) {
+         waitingForConnectionDetails_ = false;
+         StartMDConnection();
+      } else {
+         logger_->debug("[MarketDataProvider::SetConnectionSettings] connection settings loaded {} : {}"
+            , host_, port_);
+      }
+   } else {
+      logger_->error("[MarketDataProvider::SetConnectionSettings] settings incompleted: \'{}:{}\'"
+         , host, port);
+   }
 }
 
-void MarketDataProvider::MDLicenseAccepted(const std::string &host, const std::string &port)
+void MarketDataProvider::SubscribeToMD()
 {
-   logger_->debug("[MarketDataProvider::MDLicenseAccepted] user accepted MD agreement. Start connection to {}:{}"
-      , host, port);
+   emit UserWantToConnectToMD();
+}
 
-   StartMDConnection(host, port);
+void MarketDataProvider::MDLicenseAccepted()
+{
+   if (host_.empty() || port_.empty()) {
+      logger_->debug("[MarketDataProvider::MDLicenseAccepted] need to load connection settings before connect");
+      waitingForConnectionDetails_ = true;
+      WaitingForConnectionDetails();
+      return;
+   }
+
+   logger_->debug("[MarketDataProvider::MDLicenseAccepted] user accepted MD agreement. Start connection to {}:{}"
+      , host_, port_);
+
+   StartMDConnection();
 }
