@@ -60,10 +60,6 @@ class ZeroMQSettings(Configurator):
         command.append('-G')
         command.append(self._project_settings.get_cmake_generator())
 
-        if self._project_settings.on_windows():
-            command.append('-DCMAKE_C_FLAGS_DEBUG=/MTd')
-            command.append('-DCMAKE_C_FLAGS_RELEASE=/MT')
-
         result = subprocess.call(command)
         return result == 0
 

@@ -45,10 +45,6 @@ class WebsocketsSettings(Configurator):
         env_vars = os.environ.copy()
         env_vars['OPENSSL_ROOT_DIR'] = self._ssl_settings.get_install_dir()
         env_vars['OPENSSL_INCLUDE_DIR'] = os.path.join(self._ssl_settings.get_install_dir(), 'include')
-        
-        if self._project_settings.on_windows():
-            command.append('-DCMAKE_C_FLAGS_DEBUG=/MTd')
-            command.append('-DCMAKE_C_FLAGS_RELEASE=/MT')
 
         result = subprocess.call(command, env=env_vars)
         return result == 0
