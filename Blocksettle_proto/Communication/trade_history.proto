@@ -67,6 +67,12 @@ message PMTradeRecord
    string   trade_id    = 6;
 }
 
+message LatestTradeResponse
+{
+   TradeHistoryTradeType   trade_type  = 1;
+   bytes          trade       = 2;
+}
+
 message TradeHistorySnapshot
 {
    uint64                  snaphot_id     = 1;
