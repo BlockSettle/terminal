@@ -9,16 +9,25 @@
 #ifndef _SSH_PARSER_H
 #define _SSH_PARSER_H
 
+#include <atomic>
+#include <condition_variable>
+
 #include "lmdb_wrapper.h"
 #include "Blockchain.h"
 #include "ScrAddrFilter.h"
 
+#ifndef UNIT_TESTS
+#define SSH_BOUNDS_BATCH_SIZE 100000
+#else
+#define SSH_BOUNDS_BATCH_SIZE 2
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 struct SshBatch
 {
-   unique_ptr<promise<bool>> waitOnWriter_ = nullptr;
+   std::unique_ptr<std::promise<bool>> waitOnWriter_ = nullptr;
    const unsigned shardId_;
-   map<BinaryData, BinaryWriter> serializedSsh_;
+   std::map<BinaryData, BinaryWriter> serializedSsh_;
 
    SshBatch(unsigned shardId) :
       shardId_(shardId)
@@ -26,59 +35,89 @@ struct SshBatch
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+struct SshBounds
+{
+   std::pair<BinaryData, BinaryData> bounds_;
+   std::map<BinaryData, BinaryWriter> serializedSsh_;
+   std::chrono::duration<double> time_;
+   uint64_t count_ = 0;
+
+   std::unique_ptr<std::promise<bool>> completed_;
+   std::shared_future<bool> fut_;
+
+   SshBounds(void)
+   {
+      completed_ = make_unique<std::promise<bool>>();
+      fut_ = completed_->get_future();
+   }
+
+   void serializeResult(std::map<BinaryDataRef, StoredScriptHistory>&);
+};
+
+struct SshMapping
+{
+   std::map<uint8_t, std::shared_ptr<SshMapping>> map_;
+   uint64_t count_ = 0;
+
+   std::shared_ptr<SshMapping> getMappingForKey(uint8_t);
+   void prettyPrint(std::stringstream&, unsigned);
+   void merge(SshMapping&);
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
 class ShardedSshParser
 {
 private:
    LMDBBlockDatabase* db_;
-   atomic<unsigned> counter_;
-   const unsigned scanFrom_;
-   const unsigned scanTo_;
+   std::atomic<unsigned> counter_;
+   const unsigned firstHeight_;
+   unsigned firstShard_;
    const unsigned threadCount_;
    bool init_;
+   bool undo_ = false;
 
-   mutex mu_;
+   std::vector<std::unique_ptr<SshBounds>> boundsVector_;
 
-   BlockingQueue<unique_ptr<SshBatch>> checkpointQueue_;
-   BlockingQueue<unique_ptr<SshBatch>> serializedSshQueue_;
-   BlockingQueue<pair<BinaryData, BinaryData>>  sshBoundsQueue_;
+   std::atomic<unsigned> commitedBoundsCounter_;
+   std::atomic<unsigned> fetchBoundsCounter_;
+   std::condition_variable writeThreadCV_;
+   std::mutex cvMutex_;
 
-   map<unsigned, atomic<unsigned>> shardSemaphores_;
+   std::atomic<unsigned> mapCount_;
+   std::vector<SshMapping> mappingResults_;
 
 private:
-   void compileCheckpoints(void);
-   void tallySshThread(void);
-   void parseShardsThread(const vector<pair<BinaryData, BinaryData>>&);
    void putSSH(void);
-   void putCheckpoint(unsigned boundsCount);
+   SshBounds* getNext();
    
-   void undoCheckpoint(unsigned shardId);
-   void resetCheckpoint(unsigned shardId);
-
 private:
-   vector<pair<BinaryData, BinaryData>> getBounds(
-      bool withPrefix, uint8_t prefix);
+   void setupBounds();
+   SshMapping mapSubSshDB();
+   void mapSubSshDBThread(unsigned);
+   void parseSshThread(void);
 
 public:
    ShardedSshParser(
       LMDBBlockDatabase* db,
-      unsigned scanFrom, unsigned scanTo,
+      unsigned firstHeight, 
       unsigned threadCount, bool init)
       : db_(db),
-      scanFrom_(scanFrom), scanTo_(scanTo),
+      firstHeight_(firstHeight),
       threadCount_(threadCount), init_(init)
    {
-      counter_.store(0, memory_order_relaxed);
+      counter_.store(0, std::memory_order_relaxed);
    }
 
    void updateSsh(void);
-   void undoShards(const set<unsigned>&);
+   void undo(void);
 };
 
-typedef pair<set<BinaryData>, map<BinaryData, StoredScriptHistory>> subSshParserResult;
+typedef std::pair<std::set<BinaryData>, std::map<BinaryData, StoredScriptHistory>> subSshParserResult;
 subSshParserResult parseSubSsh(
-   unique_ptr<LDBIter>, int32_t scanFrom, bool,
-   function<uint8_t(unsigned)>,
-   shared_ptr<map<BinaryDataRef, shared_ptr<AddrAndHash>>>,
+   std::unique_ptr<LDBIter>, int32_t scanFrom, bool,
+   std::function<uint8_t(unsigned)>,
+   std::shared_ptr<std::map<BinaryDataRef, std::shared_ptr<AddrAndHash>>>,
    BinaryData upperBound);
 
 #endif

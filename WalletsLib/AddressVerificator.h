@@ -73,7 +73,7 @@ private:
    void commandQueueThreadFunction();
 
    void AddCommandToQueue(ExecutionCommand&& command);
-   void AddCommandToWaitingUpdateQueue(ExecutionCommand&& command);
+   void AddCommandToWaitingUpdateQueue(const std::string &key, ExecutionCommand&& command);
 
    ExecutionCommand CreateAddressValidationCommand(const std::shared_ptr<AuthAddress>& address);
    ExecutionCommand CreateAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state);
@@ -108,7 +108,7 @@ private:
 
    //bsAddressList_ - list received from public bridge
    std::set<BinaryData>       bsAddressList_;
-   std::map<BinaryData, Tx>   bsTXs_;
+   std::vector<Tx>            bsTXs_;
 
    // addresses that were added to a wallet
    // user auth address list
@@ -118,7 +118,7 @@ private:
    std::set<BinaryData>             pendingRegAddresses_;
    mutable std::atomic_flag         pendingRegAddressFlag_ = ATOMIC_FLAG_INIT;
 
-   std::queue<ExecutionCommand>     waitingForUpdateQueue_;
+   std::unordered_map<std::string, ExecutionCommand>  waitingForUpdateQueue_;
    std::atomic_flag                 waitingForUpdateQueueFlag_ = ATOMIC_FLAG_INIT;
 
    // command queue

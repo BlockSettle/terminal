@@ -153,8 +153,13 @@ void hd::Group::serializeLeaves(BinaryWriter &bw) const
    }
 }
 
-std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key, BinaryDataRef value, Nodes rootNodes
-   , const std::string &name, const std::string &desc, bool extOnlyAddresses)
+std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key
+                                                  , BinaryDataRef value
+                                                  , Nodes rootNodes
+                                                  , const std::string &name
+                                                  , const std::string &desc
+                                                  , const std::shared_ptr<spdlog::logger> &logger
+                                                  , bool extOnlyAddresses)
 {
    BinaryRefReader brrKey(key);
    auto prefix = brrKey.get_uint8_t();
@@ -167,7 +172,8 @@ std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key, BinaryDataR
 
    switch (grpType) {
    case CoinType::BlockSettle_Auth:
-      group = std::make_shared<hd::AuthGroup>(rootNodes, emptyPath, name, desc, extOnlyAddresses);
+      group = std::make_shared<hd::AuthGroup>(rootNodes, emptyPath, name, desc
+                                              , logger, extOnlyAddresses);
       break;
 
    case CoinType::Bitcoin_main:
@@ -176,7 +182,8 @@ std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key, BinaryDataR
       break;
 
    case CoinType::BlockSettle_CC:
-      group = std::make_shared<hd::CCGroup>(rootNodes, emptyPath, name, desc, extOnlyAddresses);
+      group = std::make_shared<hd::CCGroup>(rootNodes, emptyPath, name, desc,
+                                            logger, extOnlyAddresses);
       break;
 
    default:
@@ -326,15 +333,18 @@ void hd::Group::updateRootNodes(Nodes rootNodes, const std::shared_ptr<hd::Node>
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(Nodes rootNodes, const Path &path, const std::string &name
-   , const std::string &desc, bool extOnlyAddresses)
-   : Group(rootNodes, path, name, nameForType(CoinType::BlockSettle_Auth), desc, extOnlyAddresses)
+   , const std::string &desc, const std::shared_ptr<spdlog::logger>& logger
+   , bool extOnlyAddresses)
+   : Group(rootNodes, path, name, nameForType(CoinType::BlockSettle_Auth), desc,
+           extOnlyAddresses), logger_(logger)
 {
    scanPortion_ = 5;
 }
 
 std::shared_ptr<hd::Group> hd::AuthGroup::CreateWO() const
 {
-   auto woGroup = std::make_shared<hd::AuthGroup>(Nodes(), path_, name_, desc_, extOnlyAddresses_);
+   auto woGroup = std::make_shared<hd::AuthGroup>(Nodes(), path_, name_, desc_
+                                                  , logger_, extOnlyAddresses_);
    woGroup->setUserID(userId_);
    return woGroup;
 }
@@ -359,18 +369,21 @@ void hd::AuthGroup::setUserID(const BinaryData &userId)
 {
    userId_ = userId;
 
-   if (tempLeaves_.empty() && !leaves_.empty()) {
+   if (userId.isNull() && tempLeaves_.empty() && !leaves_.empty()) {
       for (auto &leaf : leaves_) {
          leaf.second->SetUserID(userId);
       }
+      tempLeaves_ = leaves_;
+      for (const auto &leaf : tempLeaves_) {
+         deleteLeaf(leaf.first);
+      }
    }
-   else {
+   else if (!tempLeaves_.empty() && leaves_.empty()) {
       auto leaves = std::move(tempLeaves_);
+      tempLeaves_.clear();
       for (const auto &tempLeaf : leaves) {
          tempLeaf.second->SetUserID(userId);
-         if (addLeaf(tempLeaf.second)) {
-            emit leafAdded(QString::fromStdString(tempLeaf.second->GetWalletId()));
-         }
+         addLeaf(tempLeaf.second, true);
       }
    }
 }
@@ -421,10 +434,12 @@ void hd::AuthGroup::serializeLeaves(BinaryWriter &bw) const
 
 std::shared_ptr<hd::Group> hd::CCGroup::CreateWO() const
 {
-   return std::make_shared<hd::CCGroup>(Nodes(), path_, name_, desc_, extOnlyAddresses_);
+   return std::make_shared<hd::CCGroup>(Nodes(), path_, name_, desc_, logger_,
+                                        extOnlyAddresses_);
 }
 
 std::shared_ptr<hd::Leaf> hd::CCGroup::newLeaf() const
 {
-   return std::make_shared<hd::CCLeaf>(walletName_ + "/" + name_, desc_, extOnlyAddresses_);
+   return std::make_shared<hd::CCLeaf>(walletName_ + "/" + name_, desc_,
+                                       logger_, extOnlyAddresses_);
 }

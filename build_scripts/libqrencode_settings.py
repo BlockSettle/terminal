@@ -9,7 +9,7 @@ from component_configurator import Configurator
 class LibQREncode(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = 'a50e2db8b0d223383eccf752061c8ae55497961c'
+        self._version = '13b159f9d9509b0c9f5ca0df7a144638337ddb15'
         self._package_name = 'libqrencode'
 
         self._package_url = 'https://github.com/fukuchi/libqrencode/archive/' + self._version + '.zip'

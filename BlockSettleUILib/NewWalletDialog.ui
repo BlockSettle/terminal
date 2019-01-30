@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>380</width>
-    <height>193</height>
+    <height>203</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -134,7 +134,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>For guidance, please consult the "Getting Started Guide" document.</string>
+         <string>For guidance, please consult the &quot;Getting Started Guide&quot;.</string>
         </property>
         <property name="textFormat">
          <enum>Qt::RichText</enum>
@@ -149,7 +149,7 @@
          <bool>false</bool>
         </property>
         <property name="whiteLabel" stdset="0">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="wellGroupBoxWithButtonBar" stdset="0">
          <bool>true</bool>
@@ -212,7 +212,7 @@
       <item>
        <widget class="QPushButton" name="pushButtonCreate">
         <property name="text">
-         <string>Create New</string>
+         <string>Create Wallet</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>

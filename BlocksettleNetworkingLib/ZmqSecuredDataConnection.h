@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include "ZmqDataConnection.h"
+#include "EncryptionUtils.h"
 
 class ZmqSecuredDataConnection : public ZmqDataConnection
 {
@@ -16,7 +17,7 @@ public:
    ZmqSecuredDataConnection(ZmqSecuredDataConnection&&) = delete;
    ZmqSecuredDataConnection& operator = (ZmqSecuredDataConnection&&) = delete;
 
-   bool SetServerPublicKey(const std::string& key);
+   bool SetServerPublicKey(const BinaryData& key);
 
    bool send(const std::string& data) override;
 
@@ -28,9 +29,9 @@ protected:
    bool ConfigureDataSocket(const ZmqContext::sock_ptr& socket) override;
 
 private:
-   std::string publicKey_;
-   std::string privateKey_;
-   std::string serverPublicKey_;
+   SecureBinaryData publicKey_;
+   SecureBinaryData privateKey_;
+   BinaryData serverPublicKey_;
    std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
 };
 

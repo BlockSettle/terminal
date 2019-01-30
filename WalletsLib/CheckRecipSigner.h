@@ -48,7 +48,7 @@ namespace bs {
       uint64_t estimateFee(float feePerByte) const;
       uint64_t spendValue() const;
       std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }
-      std::vector<shared_ptr<ScriptRecipient>> recipients() const { return recipients_; }
+      std::vector<std::shared_ptr<ScriptRecipient>> recipients() const { return recipients_; }
 
       bool GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger, std::function<void(std::vector<bs::Address>)>);
 
@@ -61,7 +61,7 @@ namespace bs {
    private:
       static BinaryData getRecipientScriptAddr(const std::shared_ptr<ScriptRecipient> &recip) {
          const auto &recipScr = recip->getSerializedScript();
-         const auto scr = recipScr.getSliceRef(8, recipScr.getSize() - 8);
+         const auto scr = recipScr.getSliceRef(8, (uint32_t)recipScr.getSize() - 8);
          if (scr.getSize() != (size_t)(scr[0] + 1)) {
             return{};
          }

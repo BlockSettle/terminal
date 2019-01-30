@@ -100,6 +100,28 @@
            <property name="spacing">
             <number>5</number>
            </property>
+           <item row="0" column="1">
+            <widget class="CustomLabel" name="labelHash">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>???</string>
+             </property>
+             <property name="textInteractionFlags">
+              <set>Qt::LinksAccessibleByMouse</set>
+             </property>
+             <property name="whiteLabel" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="copyToClipboard" stdset="0">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
            <item row="0" column="0">
             <widget class="QLabel" name="label">
              <property name="minimumSize">
@@ -115,26 +137,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Hash (big-endian)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="labelHash">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>???</string>
-             </property>
-             <property name="textInteractionFlags">
-              <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
+              <string>Hash (RPC byte order)</string>
              </property>
             </widget>
            </item>
@@ -157,6 +160,13 @@
              </property>
             </widget>
            </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_12">
+             <property name="text">
+              <string>Height</string>
+             </property>
+            </widget>
+           </item>
            <item row="1" column="1">
             <widget class="QLabel" name="labelTime">
              <property name="sizePolicy">
@@ -176,42 +186,16 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_12">
-             <property name="text">
-              <string>Height</string>
-             </property>
-            </widget>
-           </item>
            <item row="2" column="1">
             <widget class="QLabel" name="labelHeight">
              <property name="text">
-              <string>???</string>
+              <string>Unconfirmed Transaction</string>
              </property>
              <property name="textInteractionFlags">
               <set>Qt::NoTextInteraction</set>
              </property>
              <property name="whiteLabel" stdset="0">
               <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_4">
-             <property name="minimumSize">
-              <size>
-               <width>140</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>140</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Amount</string>
              </property>
             </widget>
            </item>
@@ -253,27 +237,8 @@
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="labelDirection">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>???</string>
-             </property>
-             <property name="textInteractionFlags">
-              <set>Qt::NoTextInteraction</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_2">
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_4">
              <property name="minimumSize">
               <size>
                <width>140</width>
@@ -287,7 +252,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Size (bytes)</string>
+              <string>Amount</string>
              </property>
             </widget>
            </item>
@@ -349,22 +314,22 @@
              </property>
             </widget>
            </item>
-           <item row="7" column="1">
-            <widget class="QLabel" name="labelFee">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="minimumSize">
+              <size>
+               <width>140</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>140</width>
+               <height>16777215</height>
+              </size>
              </property>
              <property name="text">
-              <string>???</string>
-             </property>
-             <property name="textInteractionFlags">
-              <set>Qt::NoTextInteraction</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
+              <string>Size (Virtual)</string>
              </property>
             </widget>
            </item>
@@ -425,8 +390,8 @@
              </property>
             </widget>
            </item>
-           <item row="9" column="1">
-            <widget class="QLabel" name="labelWalletName">
+           <item row="7" column="1">
+            <widget class="QLabel" name="labelFee">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -444,27 +409,8 @@
              </property>
             </widget>
            </item>
-           <item row="10" column="0">
-            <widget class="QLabel" name="label_9">
-             <property name="minimumSize">
-              <size>
-               <width>140</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>140</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Address</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="1">
-            <widget class="QLabel" name="labelAddress">
+           <item row="9" column="1">
+            <widget class="QLabel" name="labelWalletName">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -475,7 +421,7 @@
               <string>???</string>
              </property>
              <property name="textInteractionFlags">
-              <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+              <set>Qt::NoTextInteraction</set>
              </property>
              <property name="whiteLabel" stdset="0">
               <bool>true</bool>
@@ -501,6 +447,47 @@
              </property>
             </widget>
            </item>
+           <item row="10" column="0">
+            <widget class="QLabel" name="label_9">
+             <property name="minimumSize">
+              <size>
+               <width>140</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>140</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Address</string>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="1">
+            <widget class="CustomLabel" name="labelAddress">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>???</string>
+             </property>
+             <property name="textInteractionFlags">
+              <set>Qt::LinksAccessibleByMouse</set>
+             </property>
+             <property name="whiteLabel" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="copyToClipboard" stdset="0">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
            <item row="11" column="1">
             <widget class="QLabel" name="labelComment">
              <property name="sizePolicy">
@@ -522,6 +509,36 @@
               <bool>true</bool>
              </property>
             </widget>
+           </item>
+           <item row="4" column="1">
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <widget class="QLabel" name="labelDirection">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>???</string>
+               </property>
+               <property name="textInteractionFlags">
+                <set>Qt::NoTextInteraction</set>
+               </property>
+               <property name="whiteLabel" stdset="0">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="labelFlag">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </item>
@@ -553,7 +570,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QTreeWidget" name="treeAddresses">
+             <widget class="CustomTreeWidget" name="treeAddresses">
               <property name="alternatingRowColors">
                <bool>true</bool>
               </property>
@@ -624,6 +641,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomLabel</class>
+   <extends>QLabel</extends>
+   <header>CustomLabel.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomTreeWidget</class>
+   <extends>QTreeWidget</extends>
+   <header>CustomTreeWidget.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

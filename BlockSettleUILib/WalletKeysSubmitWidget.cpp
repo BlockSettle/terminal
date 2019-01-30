@@ -23,7 +23,7 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysSubmitWidget::init(MobileClientRequest requestType
+void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
    , const std::string &walletId
    , bs::wallet::KeyRank keyRank
    , const std::vector<bs::wallet::EncryptionType> &encTypes
@@ -54,7 +54,7 @@ void WalletKeysSubmitWidget::init(MobileClientRequest requestType
          break;
       }
    }
-   if ((flags_ & HidePubKeyFingerprint) || !hasAuth) {
+   if ((flags_ & HidePubKeyFingerprint) || !hasAuth || true) {
       ui_->labelPubKeyFP->hide();
    }
    else {
@@ -151,7 +151,9 @@ void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinar
    if (flags_ & HideProgressBar) {
       widget->setHideProgressBar(true);
    }
-
+   if (flags_ & HidePasswordWarning) {
+      widget->setHidePasswordWarning(true);
+   }
    ui_->groupBox->layout()->addWidget(widget);
 
    widgets_.push_back(widget);
@@ -231,7 +233,7 @@ void WalletKeysSubmitWidget::cancel()
    }
 }
 
-string WalletKeysSubmitWidget::encKey(int index) const
+std::string WalletKeysSubmitWidget::encKey(int index) const
 {
    if (index < 0 || index >= pwdData_.size()) {
       return {};

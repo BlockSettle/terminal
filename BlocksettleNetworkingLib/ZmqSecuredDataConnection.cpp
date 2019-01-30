@@ -2,72 +2,93 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+#include "ZMQHelperFunctions.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
 
-ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog::logger>& logger, bool monitored)
+ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog::logger>& logger
+                                                   , bool monitored)
  : ZmqDataConnection(logger, monitored)
-{}
-
-bool ZmqSecuredDataConnection::SetServerPublicKey(const std::string& key)
 {
-   if (key.size() != 40) {
-      logger_->error("[ZmqSecuredDataConnection::SetServerPublicKey] invalid length of server public key: {}"
-         , key.size());
+   std::pair<SecureBinaryData, SecureBinaryData> inKeyPair;
+   int result = bs::network::getCurveZMQKeyPair(inKeyPair);
+   if (result == -1) {
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] failed to generate key "
+            "pair: {}", __func__, zmq_strerror(zmq_errno()));
+      }
+      return;
+   }
+
+   publicKey_ = inKeyPair.first;
+   privateKey_ = inKeyPair.second;
+}
+
+bool ZmqSecuredDataConnection::SetServerPublicKey(const BinaryData& key)
+{
+   if (key.getSize() != CURVEZMQPUBKEYBUFFERSIZE) {
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] invalid length of "
+            "server public key ({} bytes).", __func__, key.getSize());
+      }
       return false;
    }
 
-   char pubKey[41];
-   char prKey[41];
-
-   int result = zmq_curve_keypair(pubKey, prKey);
-   if (result != 0) {
-      logger_->error("[ZmqSecuredDataConnection::SetServerPublicKey] failed to generate key pair: {}"
-          , zmq_strerror(zmq_errno()));
-      return false;
-   }
-
-   publicKey_ = std::string(pubKey, 41);
-   privateKey_ = std::string(prKey, 41);
    serverPublicKey_ = key;
-
    return true;
 }
 
 bool ZmqSecuredDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr& s)
 {
-   if (serverPublicKey_.empty()) {
-      logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] server public key is not set");
+   if (serverPublicKey_.getSize() == 0) {
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] server public key is "
+            "not set", __func__);
+      }
       return false;
    }
 
-   int result = zmq_setsockopt (s.get(), ZMQ_CURVE_SERVERKEY, serverPublicKey_.c_str(), 41);
+   int result = zmq_setsockopt(s.get(), ZMQ_CURVE_SERVERKEY
+                               , serverPublicKey_.toCharPtr()
+                               , serverPublicKey_.getSize());
    if (result != 0) {
-      logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] failed to set server public key: {}"
-         , zmq_strerror(zmq_errno()));
+      logger_->error("[ZmqSecuredDataConnection::{}] failed to set server "
+         "public key: {}", __func__, zmq_strerror(zmq_errno()));
       return false;
    }
 
-   result = zmq_setsockopt (s.get(), ZMQ_CURVE_PUBLICKEY, publicKey_.c_str(), 41);
+   result = zmq_setsockopt(s.get(), ZMQ_CURVE_PUBLICKEY
+                           , publicKey_.toCharPtr()
+                           , publicKey_.getSize());
    if (result != 0) {
-      logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] failed to set client public key: {}"
-         , zmq_strerror(zmq_errno()));
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] failed to set client "
+            "public key: {}", __func__, zmq_strerror(zmq_errno()));
+      }
       return false;
    }
 
-   result = zmq_setsockopt (s.get(), ZMQ_CURVE_SECRETKEY, privateKey_.c_str(), 41);
+   result = zmq_setsockopt(s.get(), ZMQ_CURVE_SECRETKEY
+                           , privateKey_.toCharPtr()
+                           , privateKey_.getSize());
    if (result != 0) {
-      logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] failed to set client private key: {}"
-         , zmq_strerror(zmq_errno()));
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] failed to set client "
+            "private key: {}", __func__ , zmq_strerror(zmq_errno()));
+      }
       return false;
    }
 
    int lingerPeriod = 0;
-   result = zmq_setsockopt (s.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod));
+   result = zmq_setsockopt(s.get(), ZMQ_LINGER, &lingerPeriod
+                           , sizeof(lingerPeriod));
    if (result != 0) {
-      logger_->error("[ZmqSecuredDataConnection::ConfigureDataSocket] {} failed to set linger interval: {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] {} failed to set "
+            "linger interval: {}", __func__ , connectionName_
+            , zmq_strerror(zmq_errno()));
+      }
       return false;
    }
 
@@ -85,8 +106,11 @@ bool ZmqSecuredDataConnection::recvData()
 
    int result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
    if (result == -1) {
-      logger_->error("[ZmqSecuredDataConnection::recvData] {} failed to recv data frame from stream: {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] {} failed to recv data "
+            "frame from stream: {}" , __func__, connectionName_
+            , zmq_strerror(zmq_errno()));
+      }
       return false;
    }
 
@@ -102,9 +126,11 @@ bool ZmqSecuredDataConnection::send(const std::string& data)
       FastLock locker(lockSocket_);
       result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
    }
-   if (result != data.size()) {
-      logger_->error("[ZmqSecuredDataConnection::send] {} failed to send data: {}"
-         , connectionName_, zmq_strerror(zmq_errno()));
+   if (result != (int)data.size()) {
+      if (logger_) {
+         logger_->error("[ZmqSecuredDataConnection::{}] {} failed to send "
+            "data: {}", __func__, connectionName_, zmq_strerror(zmq_errno()));
+      }
       return false;
    }
 

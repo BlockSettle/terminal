@@ -8,6 +8,8 @@
 
 #include "CoinSelection.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
 // CoinSelection                                                              //
@@ -799,7 +801,7 @@ vector<UTXO> CoinSubSelection::selectManyUtxo_DoubleSpendVal(
       ++count;
       int64_t newtally = tally + utxo.getValue();
 
-      if (newtally < minTarget)
+      if (newtally < (int64_t)minTarget)
       {
          tally = newtally;
          continue;
@@ -814,7 +816,7 @@ vector<UTXO> CoinSubSelection::selectManyUtxo_DoubleSpendVal(
       tally = newtally;
    }
 
-   if (tally > minTarget)
+   if (tally > (int64_t)minTarget)
       retVec.insert(retVec.end(), utxoVec.begin(), utxoVec.begin() + count);
    return retVec;
 }

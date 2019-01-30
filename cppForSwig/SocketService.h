@@ -19,8 +19,8 @@ struct SocketStruct
    SOCKET sockfd_ = SOCK_MAX;
    bool singleUse_ = false;
 
-   function<void(void)> serviceRead_;
-   function<void(void)> serviceClose_;
+   std::function<void(void)> serviceRead_;
+   std::function<void(void)> serviceClose_;
 };
 
 #ifdef _WIN32
@@ -28,8 +28,8 @@ struct SocketService
 {
 private:
    WSAEVENT event_;
-   thread thr_;
-   atomic<bool> run_;
+   std::thread thr_;
+   std::atomic<bool> run_;
 
    Queue<SocketStruct> socketQueue_;
 
@@ -40,7 +40,7 @@ public:
    SocketService(void)
    {
       event_ = nullptr;
-      run_.store(true, memory_order_relaxed);
+      run_.store(true, std::memory_order_relaxed);
    }
 
    void addSocket(SocketStruct&);
@@ -53,8 +53,8 @@ struct SocketService
 {
 private:
    SOCKET pipes_[2];
-   thread thr_;
-   atomic<bool> run_;
+   std::thread thr_;
+   std::atomic<bool> run_;
 
    Queue<SocketStruct> socketQueue_;
 

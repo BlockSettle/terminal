@@ -20,10 +20,16 @@ namespace bs {
          using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
          Wallet(const std::string &name, const std::string &desc
-            , const bs::wallet::Seed &, bool extOnlyAddresses = false);
-         Wallet(const std::string &filename, bool extOnlyAddresses = false);
-         Wallet(const std::string &walletId, NetworkType netType, bool extOnlyAddresses
-            , const std::string &name, const std::string &desc);
+                , const bs::wallet::Seed &
+                , const std::shared_ptr<spdlog::logger> &logger = nullptr
+                , bool extOnlyAddresses = false);
+         Wallet(const std::string &filename
+                , const std::shared_ptr<spdlog::logger> &logger = nullptr
+                , bool extOnlyAddresses = false);
+         Wallet(const std::string &walletId, NetworkType netType
+                , bool extOnlyAddresses , const std::string &name
+                , const std::shared_ptr<spdlog::logger> &logger = nullptr
+                , const std::string &desc = {});
          ~Wallet() override;
 
          Wallet(const Wallet&) = delete;
@@ -61,8 +67,7 @@ namespace bs {
          // removeOld: remove missed keys comparing encKey field without asking for all old keys
          // (newPass password fields should be empty). Used with multiple Auth eID devices.
          // dryRun: check that old password valid. No password change happens.
-         bool changePassword(const std::shared_ptr<spdlog::logger> &logger
-            , const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank
+         bool changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank
             , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun);
 
          void RegisterWallet(const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
@@ -79,6 +84,7 @@ namespace bs {
          void leafAdded(QString id);
          void leafDeleted(QString id);
          void scanComplete(const std::string &walletId);
+         void metaDataChanged();
 
       private slots:
          void onGroupChanged();
@@ -99,8 +105,8 @@ namespace bs {
          mutable std::map<std::string, std::shared_ptr<bs::Wallet>>  leaves_;
          mutable QMutex    mtxGroups_;
          BinaryData        userId_;
+         std::shared_ptr<spdlog::logger>     logger_;
 
-      protected:
          void initNew(const bs::wallet::Seed &);
          void loadFromFile(const std::string &filename);
          std::string getFileName(const std::string &dir) const;
@@ -122,7 +128,10 @@ namespace bs {
       class DummyWallet : public bs::hd::Wallet    // Just a container for old-style wallets
       {
       public:
-         DummyWallet(NetworkType netType) : hd::Wallet(tr("Armory Wallets").toStdString(), "", wallet::Seed(netType)) {}
+         DummyWallet(NetworkType netType
+                     , const std::shared_ptr<spdlog::logger> &logger)
+         : hd::Wallet(tr("Armory Wallets").toStdString(), ""
+                      , wallet::Seed(netType), logger) {}
 
          size_t getNumLeaves() const override { return leaves_.size(); }
          void add(const std::shared_ptr<bs::Wallet> wallet) { leaves_[wallet->GetWalletId()] = wallet; }

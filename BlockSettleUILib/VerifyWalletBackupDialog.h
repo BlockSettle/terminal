@@ -6,6 +6,10 @@
 #include "BtcDefinitions.h"
 
 
+namespace spdlog
+{
+   class logger;
+}
 namespace Ui {
    class VerifyWalletBackupDialog;
 }
@@ -23,7 +27,9 @@ class VerifyWalletBackupDialog : public QDialog
    Q_OBJECT
 
 public:
-   VerifyWalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &, QWidget *parent = nullptr);
+   VerifyWalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &
+                            , const std::shared_ptr<spdlog::logger> &logger
+                            , QWidget *parent = nullptr);
    ~VerifyWalletBackupDialog() override;
 
 private slots:
@@ -35,6 +41,7 @@ private:
    const NetworkType    netType_;
    std::shared_ptr<EasyCoDec> easyCodec_;
    std::unique_ptr<EasyEncValidator> validator_;
+   std::shared_ptr<spdlog::logger>     logger_;
 };
 
 #endif // __VERIFY_WALLET_BACKUP_DIALOG_H__

@@ -1,7 +1,7 @@
 #include "AddressListModel.h"
+#include <QColor>
 #include "WalletsManager.h"
 #include "UiUtils.h"
-
 
 bool AddressListModel::AddressRow::isMultiLineComment() const
 {
@@ -33,9 +33,10 @@ AddressListModel::AddressListModel(std::shared_ptr<WalletsManager> walletsManage
    , addrType_(addrType)
    , processing_(false)
 {
-   connect(walletsManager.get(), &WalletsManager::walletsReady, this, &AddressListModel::updateData);
-//   connect(walletsManager.get(), &WalletsManager::walletChanged, this, &AddressListModel::updateData);
-   connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &AddressListModel::updateData);
+   connect(walletsManager.get(), &WalletsManager::walletsReady, this
+           , &AddressListModel::updateData);
+   connect(walletsManager.get(), &WalletsManager::blockchainEvent, this
+           , &AddressListModel::updateData);
 }
 
 bool AddressListModel::setWallets(const Wallets &wallets)
@@ -46,7 +47,9 @@ bool AddressListModel::setWallets(const Wallets &wallets)
 
    wallets_ = wallets;
    for (const auto &wallet : wallets_) {
-      connect(wallet.get(), &bs::Wallet::addressAdded, this, &AddressListModel::updateData, static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
+      connect(wallet.get(), &bs::Wallet::addressAdded, this
+              , &AddressListModel::updateData
+              , static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
    }
 
    updateData();
@@ -82,7 +85,8 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 void AddressListModel::updateData()
 {
    bool expected = false;
-   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
+   bool desired = true;
+   if (!std::atomic_compare_exchange_strong(&processing_, &expected, desired)) {
       return;
    }
    beginResetModel();
@@ -135,36 +139,76 @@ void AddressListModel::updateWalletData()
 {
    auto nbTxNs = std::make_shared<int>(addressRows_.size());
    auto nbBalances = std::make_shared<int>(addressRows_.size());
+
+   auto addrTxNs = std::make_shared<std::vector<uint32_t>>();
+   addrTxNs->resize(addressRows_.size());
+   auto addrBalances = std::make_shared<std::vector<uint64_t>>();
+   addrBalances->resize(addressRows_.size());
+
    for (size_t i = 0; i < addressRows_.size(); ++i) {
-      auto &addrRow = addressRows_[i];
-      const auto &cbTxN = [this, &addrRow, i, nbTxNs](uint32_t txn) {
+      // Callback for address's # of TXs.
+      const auto &cbTxN = [this, addrTxNs, i, nbTxNs](uint32_t txn) {
          --(*nbTxNs);
          if (i >= addressRows_.size()) {
             return;
          }
-         addrRow.transactionCount = txn;
+         (*addrTxNs)[i] = txn;
+
+         // On the final address, set the TX count for all addresses and emit
+         // any required signals.
          if (*nbTxNs <= 0) {
-            emit dataChanged(index(0, ColumnTxCount), index(addressRows_.size()-1, ColumnTxCount));
-            emit updated();
+            for (size_t j = 0;
+                 j < std::min(addressRows_.size(), addrTxNs->size());
+                 ++j) {
+               addressRows_[j].transactionCount = (*addrTxNs)[j];
+            }
+            QMetaObject::invokeMethod(this, [this] {
+               emit dataChanged(index(0, ColumnTxCount)
+                  , index(addressRows_.size() - 1, ColumnTxCount));
+            });
          }
       };
 
-      const auto &cbBalance = [this, &addrRow, i, nbBalances](std::vector<uint64_t> balances) {
+      // Callback for address's balance.
+      const auto &cbBalance = [this, addrBalances, i, nbBalances](std::vector<uint64_t> balances) {
          --(*nbBalances);
          if (i >= addressRows_.size()) {
             return;
          }
-         addrRow.balance = balances[0];
+         if (balances.size() == 3) {
+            (*addrBalances)[i] = balances[0];
+         }
+         else {
+            (*addrBalances)[i] = 0;
+         }
+
+         // On the final address, set the balance for all addresses and emit
+         // any required signals.
          if (*nbBalances <= 0) {
-            emit dataChanged(index(0, ColumnBalance), index(addressRows_.size() - 1, ColumnBalance));
-            emit updated();
+            for (size_t j = 0;
+                 j < std::min(addressRows_.size(), addrBalances->size());
+                 ++j) {
+               addressRows_[j].balance = (*addrBalances)[j];
+            }
+            QMetaObject::invokeMethod(this, [this] {
+               emit dataChanged(index(0, ColumnBalance)
+                  , index(addressRows_.size() - 1, ColumnBalance));
+            });
          }
       };
-      if (!addrRow.wallet->getAddrTxN(addrRow.address, cbTxN)) {
-         return;
-      }
-      if (!addrRow.wallet->getAddrBalance(addrRow.address, cbBalance)) {
-         return;
+
+      // Get an address's balance & # of TXs from Armory via the wallet.
+      const auto &wallet = addressRows_[i].wallet;
+      const auto &address = addressRows_[i].address;
+      if (wallet) {
+         if (!wallet->getAddrTxN(address, cbTxN)) {
+            cbTxN(0);
+            continue;
+         }
+         if (!wallet->getAddrBalance(address, cbBalance)) {
+            cbBalance({});
+            continue;
+         }
       }
    }
 }
@@ -172,7 +216,8 @@ void AddressListModel::updateWalletData()
 void AddressListModel::removeEmptyIntAddresses()
 {
    bool expected = false;
-   if (!std::atomic_compare_exchange_strong(&processing_, &expected, true)) {
+   bool desired = true;
+   if (!std::atomic_compare_exchange_strong(&processing_, &expected, desired)) {
       return;
    }
 
@@ -286,7 +331,7 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
       return {};
    }
 
-   const auto& row = addressRows_[index.row()];
+   const auto row = addressRows_[index.row()];
 
    switch (role) {
       case Qt::DisplayRole:
@@ -317,6 +362,13 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
          else {
             return dataForRow(row, index.column());
          }
+         break;
+
+      case Qt::TextColorRole:
+         if (!row.isExternal) {
+            return QColor(Qt::gray);
+         }
+         break;
 
       default:
          break;

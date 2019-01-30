@@ -9,7 +9,7 @@
 /******************************************************************************
 * SASS IMPORTS                                              		      *
 ***************************************************************************** */
-default-font, QTableVIew,
+default-font, QTableView,
 QTreeView, QHeaderView::section, *[tableFooter="true"] QLabel {
   font-family: 'Open Sans', sans-serif; }
 
@@ -147,10 +147,12 @@ QWidget {
     /* leave space at the top for the title */
     padding-top: 10px;
     background-color: transparent; }
+    QWidget QGroupBox[h1="true"] { /* leave space at the top for the title when using h1 */
+       margin-top: 20px; }
     QWidget QGroupBox[wellGroupBox="true"] {
       border: 1px solid rgba(255, 255, 255, 0.15);
       padding: 10px; }
-      QWidget QGroupBox[wellGroupBox="true"] QTableVIew,
+      QWidget QGroupBox[wellGroupBox="true"] QTableView,
       QWidget QGroupBox[wellGroupBox="true"] QTreeView {
         border: 1px solid transparent; }
     QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] {
@@ -162,7 +164,7 @@ QWidget {
         border-width: 1px 0px; }
         QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] *[buttonBar="true"] QPushButton, QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] *[buttonBar="true"] QToolButton, QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] *[buttonBar="true"] *[buttonImportant="true"], QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] *[buttonBar="true"] *[buttonSuccess="true"], QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] *[buttonBar="true"] *[buttonWarning="true"] {
           padding: 5px 7px; }
-      QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] QTableVIew,
+      QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] QTableView,
       QWidget QGroupBox[wellGroupBoxWithButtonBar="true"] QTreeView {
         border: 1px solid transparent; }
   QWidget QGroupBox::title {
@@ -332,7 +334,7 @@ QMenu::item:first {
   *[transparentHeader="true"] QHeaderView::section {
     border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
 
-QTableVIew,
+QTableView,
 QTreeView {
   font-size: 11px;
   background-color: #1c2835;
@@ -341,11 +343,11 @@ QTreeView {
   selection-background-color: #3a8ab4;
   selection-color: #e7e8e9;
   border: 1px solid #3f4c50; }
-  QTableVIew::item:selected,
+  QTableView::item:selected,
   QTreeView::item:selected {
     background-color: #3a8ab4;
     color: #e7e8e9; }
-  QTableVIew QPushButton, QTableVIew QToolButton, QTableVIew *[buttonImportant="true"], QTableVIew *[buttonSuccess="true"], QTableVIew *[buttonWarning="true"],
+  QTableView QPushButton, QTableView QToolButton, QTableView *[buttonImportant="true"], QTableView *[buttonSuccess="true"], QTableView *[buttonWarning="true"],
   QTreeView QPushButton,
   QTreeView QToolButton,
   QTreeView *[buttonImportant="true"],
@@ -1125,7 +1127,8 @@ QSpinBox::down-arrow {
   width: 10px;
   height: auto; }
 
-QDoubleSpinBox::down-button {
+QDoubleSpinBox::down-button
+QSpinBox::down-button {
   border-top: 1px solid #81888f; }
 
 QDoubleSpinBox:disabled,
@@ -1390,7 +1393,7 @@ ToggleSwitch::groove:horizontal {
     height: 16px; }
     
 ToggleSwitch::groove:horizontal[enabled=false] {
-    border: 1px solid #81888f; }
+    border: 1px solid #535b63; }
 
 ToggleSwitch::handle:horizontal {
     background: #81888f;
@@ -1398,7 +1401,12 @@ ToggleSwitch::handle:horizontal {
     width: 16px;
     margin: -1px -1px -1px -1px;
     border-radius: 8px; }
-    
+  
+ToggleSwitch::handle:horizontal[enabled=false] {
+    background: #535b63;
+    border: 1px solid #535b63;       
+}
+ 
  ToggleSwitch::handle:horizontal[toggleOn=true][enabled=true] {
     background: #247dac;
     border: 1px solid #247dac; }

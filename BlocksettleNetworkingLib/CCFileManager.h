@@ -2,7 +2,6 @@
 #define __CC_FILE_MANAGER_H__
 
 #include "CCPubConnection.h"
-#include "OTPManager.h"
 
 #include <memory>
 #include <vector>
@@ -17,16 +16,16 @@ namespace Blocksettle {
 }
 
 class ApplicationSettings;
+class AuthSignManager;
 class CelerClient;
-class OTPManager;
 
 class CCFileManager : public CCPubConnection
 {
 Q_OBJECT
 public:
    CCFileManager(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<OTPManager>&
-      , const std::shared_ptr<ConnectionManager>&);
+      , const std::shared_ptr<AuthSignManager> &
+      , const std::shared_ptr<ConnectionManager> &);
    ~CCFileManager() noexcept override = default;
 
    CCFileManager(const CCFileManager&) = delete;
@@ -40,13 +39,10 @@ public:
    void LoadSavedCCDefinitions();
    void ConnectToCelerClient(const std::shared_ptr<CelerClient> &);
 
-   bool SubmitAddressToPuB(const bs::Address &, uint32_t seed, OTPManager::cbPassword);
+   bool SubmitAddressToPuB(const bs::Address &, uint32_t seed);
    bool wasAddressSubmitted(const bs::Address &);
-   bool needsOTPpassword() const;
 
-   bs::wallet::EncryptionType GetOtpEncType() const { return otpManager_->GetEncType(); }
-   QString GetOtpEncKey() const { return otpManager_->GetEncKey(); }
-   QString GetOtpId() const { return otpManager_->GetShortId(); }
+   bool hasLocalFile() const;
 
 signals:
    void CCSecurityDef(bs::network::CCSecurityDef);
@@ -54,6 +50,8 @@ signals:
    void CCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
 
    void CCAddressSubmitted(const QString);
+   void CCInitialSubmitted(const QString);
+   void CCSubmitFailed(const QString address, const QString &err);
    void Loaded();
    void LoadingFailed();
 
@@ -78,7 +76,7 @@ protected:
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<CelerClient>           celerClient_;
-   std::shared_ptr<OTPManager>            otpManager_;
+   std::shared_ptr<AuthSignManager>       authSignManager_;
 
    CCSecurities   ccSecurities_;
 

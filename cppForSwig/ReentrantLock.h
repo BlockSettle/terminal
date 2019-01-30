@@ -72,7 +72,7 @@ public:
          throw AlreadyLocked();
 
       lock_ =
-         std::make_unique<std::unique_lock<std::mutex>>(lockablePtr_->mu_, std::defer_lock);
+         make_unique<std::unique_lock<std::mutex>>(lockablePtr_->mu_, std::defer_lock);
 
       lock_->lock();
       lockablePtr_->mutexTID_ = std::this_thread::get_id();
@@ -83,7 +83,7 @@ public:
    SingleLock(SingleLock&& lock) :
       lockablePtr_(lock.lockablePtr_)
    {
-      lock_ = std::move(lock.lock_);
+      lock_ = move(lock.lock_);
    }
 
    ~SingleLock(void)
@@ -124,7 +124,7 @@ public:
       if (lockablePtr_->mutexTID_ != std::this_thread::get_id())
       {
          lock_ =
-            std::make_unique<std::unique_lock<std::mutex>>(lockablePtr_->mu_, std::defer_lock);
+            make_unique<std::unique_lock<std::mutex>>(lockablePtr_->mu_, std::defer_lock);
 
          lock_->lock();
          lockablePtr_->mutexTID_ = std::this_thread::get_id();
@@ -135,7 +135,7 @@ public:
    ReentrantLock(ReentrantLock&& lock) :
       lockablePtr_(lock.lockablePtr_)
    {
-      lock_ = std::move(lock.lock_);
+      lock_ = move(lock.lock_);
    }
 
 

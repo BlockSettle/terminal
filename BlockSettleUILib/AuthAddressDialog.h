@@ -11,7 +11,6 @@
 class AssetManager;
 class AuthAddressViewModel;
 class QItemSelection;
-class OTPManager;
 
 namespace Ui {
     class AuthAddressDialog;
@@ -29,7 +28,7 @@ Q_OBJECT
 public:
    AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
-      , const std::shared_ptr<AssetManager> &, const std::shared_ptr<OTPManager> &
+      , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &, QWidget* parent = nullptr);
    ~AuthAddressDialog() override;
 
@@ -56,12 +55,8 @@ private slots:
    void onAuthMgrInfo(const QString &text);
 
    void onAuthAddressConfirmationRequired(float validationAmount);
-   void onAuthAddrSubmitError(const QString &address, const QString &error);
-   void onAuthAddrSubmitSuccess(const QString &address);
 
    void ConfirmAuthAddressSubmission();
-
-   void onOtpSignFailed();
 
    void onAuthVerifyTxSent();
 
@@ -80,7 +75,6 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
-   std::shared_ptr<OTPManager>            otpManager_;
    std::shared_ptr<ApplicationSettings>   settings_;
    AuthAddressViewModel                *  model_;
    bs::Address                            defaultAddr_;

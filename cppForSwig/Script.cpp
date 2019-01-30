@@ -9,7 +9,8 @@
 #include "Script.h"
 #include "Transactions.h"
 #include "Signer.h"
-#include "cryptopp/oids.h"
+
+using namespace std;
 
 //dtors
 StackValue::~StackValue()
@@ -717,6 +718,32 @@ SIGHASH_TYPE StackInterpreter_BCH::getSigHashSingleByte(uint8_t sighashbyte) con
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void StackInterpreter::op_min(void)
+{
+   auto&& b = pop_back();
+   auto&& a = pop_back();
+
+   auto aI = rawBinaryToInt(a);
+   auto bI = rawBinaryToInt(b);
+
+   auto cI = min(aI, bI);
+   stack_.push_back(move(intToRawBinary(cI)));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void StackInterpreter::op_max(void)
+{
+   auto&& b = pop_back();
+   auto&& a = pop_back();
+
+   auto aI = rawBinaryToInt(a);
+   auto bI = rawBinaryToInt(b);
+
+   auto cI = max(aI, bI);
+   stack_.push_back(move(intToRawBinary(cI)));
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void StackInterpreter::op_checksig()
 {
    //pop sig and pubkey from the stack
@@ -747,23 +774,17 @@ void StackInterpreter::op_checksig()
       sigHashDataObject_->getDataForSigHash(hashType, *txStubPtr_,
       outputScriptRef_, inputIndex_);
 
-   //prepare pubkey
-   BTC_ECPOINT ptPub;
-   CryptoPP::ECP ecp = CryptoECDSA::Get_secp256k1_ECP();
-   ecp.DecodePoint(ptPub, (byte*)pubkey.getPtr(), pubkey.getSize());
-
-   BTC_PUBKEY cppPubKey;
-   cppPubKey.Initialize(CryptoPP::ASN1::secp256k1(), ptPub);
-
-   //check point validity
-   /*BTC_PRNG prng;
-   if (!cppPubKey.Validate(prng, 3))
-   throw ScriptException("invalid pubkey");*/
+   if(!CryptoECDSA().VerifyPublicKeyValid(pubkey))
+      throw runtime_error("invalid pubkey");
 
    //check signature
+   bool result;
+#ifndef LIBBTC_ONLY
    auto&& rs = BtcUtils::extractRSFromDERSig(sig);
-
-   bool result = CryptoECDSA().VerifyData(sighashdata, rs, cppPubKey);
+   result = CryptoECDSA().VerifyData(sighashdata, rs, pubkey);
+#else
+   result = CryptoECDSA().VerifyData(sighashdata, sig, pubkey);
+#endif
    stack_.push_back(move(intToRawBinary(result)));
 
    if (result)
@@ -784,24 +805,14 @@ void StackInterpreter::op_checkmultisig()
       throw ScriptException("invalid n");
 
    //pop pubkeys
-   map<unsigned, pair<BTC_PUBKEY, BinaryData>> pubkeys;
+   map<unsigned, BinaryData> pubkeys;
    for (unsigned i = 0; i < nI; i++)
    {
       auto&& pubkey = pop_back();
-
-      CryptoPP::ECP ecp = CryptoECDSA::Get_secp256k1_ECP();
-      BTC_ECPOINT ptPub;
-      ecp.DecodePoint(ptPub, (byte*)pubkey.getPtr(), pubkey.getSize());
-
-      BTC_PUBKEY cppPubKey;
-      cppPubKey.Initialize(CryptoPP::ASN1::secp256k1(), ptPub);
-
-      BTC_PRNG prng;
-      if (cppPubKey.Validate(prng, 3))
+      if(CryptoECDSA().VerifyPublicKeyValid(pubkey))
       {
          txInEvalState_.pubKeyState_.insert(make_pair(pubkey, false));
-         auto&& pubkeypair = make_pair(move(cppPubKey), pubkey);
-         pubkeys.insert(move(make_pair(i, move(pubkeypair))));
+         pubkeys.insert(move(make_pair(i, pubkey)));        
       }
    }
 
@@ -868,7 +879,6 @@ void StackInterpreter::op_checkmultisig()
 
       //prepare sig
       auto&& rs = BtcUtils::extractRSFromDERSig(sigD.sig_);
-      BinaryWriter sigW;
 
       //pop pubkeys from deque to verify against sig
       while (pubkeys.size() > 0)
@@ -883,10 +893,13 @@ void StackInterpreter::op_checkmultisig()
          auto&& msg_hash = BtcUtils::getHash256(hashdata);
          LOGWARN << "   message: " << hashdata.toHexStr();
 #endif
-            
-         if (CryptoECDSA().VerifyData(hashdata, rs, pubkey.first))
+#ifndef LIBBTC_ONLY   
+         if (CryptoECDSA().VerifyData(hashdata, rs, pubkey))
+#else
+         if(CryptoECDSA().VerifyData(hashdata, sigD.sig_, pubkey))
+#endif
          {
-            txInEvalState_.pubKeyState_[pubkey.second] = true;
+            txInEvalState_.pubKeyState_[pubkey] = true;
             validSigCount++;
             break;
          }        

@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <QObject>
 #include <QMutex>
-#include <QThreadPool>
+#include <QPointer>
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
@@ -52,11 +52,11 @@ namespace bs {
          virtual bool deserialize(BinaryRefReader brr) = 0;
 
          bool hasPrivateKey(void) const override { return false; }
-         const BinaryData& getPrivateEncryptionKeyId(void) const override { return {}; }
-
+         const BinaryData& getPrivateEncryptionKeyId(void) const override { return emptyKey_; }
 
       private:
          Type  type_;
+         BinaryData  emptyKey_;
       };
 
       class AssetEntryComment : public AssetEntryMeta
@@ -135,7 +135,7 @@ namespace bs {
          bool isValid() const noexcept;
          BinaryData serializeState() const { return getSigner().serializeState(); }
          BinaryData txId() const { return getSigner().getTxId(); }
-         size_t estimateTxSize() const;
+         size_t estimateTxVirtSize() const;
 
       private:
          Signer   getSigner() const;
@@ -150,7 +150,7 @@ namespace bs {
          BinaryData  prevState;
 
          bool isValid() const noexcept;
-         size_t estimateTxSize() const;
+         size_t estimateTxVirtSize() const;
          void addInput(const UTXO &utxo, const std::shared_ptr<bs::Wallet> &wallet) { inputs[utxo] = wallet; }
       };
 
@@ -196,6 +196,9 @@ namespace bs {
       };
 
       size_t getInputScrSize(const std::shared_ptr<AddressEntry> &);
+      BinaryData computeID(const BinaryData &input);
+      size_t estimateTXVirtSize(const std::vector<UTXO> &inputs
+         , const std::map<unsigned int, std::shared_ptr<ScriptRecipient>> &);
    }  // namepsace wallet
 
 
@@ -212,14 +215,21 @@ namespace bs {
 
    public:
       Wallet();
+      Wallet(const std::shared_ptr<spdlog::logger> &logger);
       ~Wallet() override;
 
-      virtual std::string GetWalletId() const = 0;
+      virtual std::string GetWalletId() const { return "defaultWalletID"; }
       virtual std::string GetWalletName() const { return walletName_; }
       virtual std::string GetShortName() const { return GetWalletName(); }
       virtual std::string GetWalletDescription() const = 0;
       virtual void SetDescription(const std::string &) = 0;
       virtual wallet::Type GetType() const { return wallet::Type::Bitcoin; }
+
+      virtual void setData(const std::string &) {}
+      virtual void setData(uint64_t) {}
+      virtual void setLogger(const std::shared_ptr<spdlog::logger> &logger) {
+         logger_ = logger;
+      }
 
       bool operator ==(const Wallet &w) const { return (w.GetWalletId() == GetWalletId()); }
       bool operator !=(const Wallet &w) const { return (w.GetWalletId() != GetWalletId()); }
@@ -230,14 +240,17 @@ namespace bs {
       virtual bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const;
       virtual bool getAddrTxN(const bs::Address &addr) const;
       virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
+      virtual std::shared_ptr<spdlog::logger> getLogger() const { return logger_; }
       virtual BinaryData getRootId() const = 0;
-      virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX);
-      virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr);
+      virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
+         , QObject *obj, uint64_t val = UINT64_MAX);
+      virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
+         , QObject *obj);
       virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
       virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
       virtual std::string RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
          , bool asNew = false);
-      void UnregisterWallet();
+      virtual void UnregisterWallet();
       virtual void SetArmory(const std::shared_ptr<ArmoryConnection> &);
       virtual void SetUserID(const BinaryData &) {}
       virtual bool getHistoryPage(uint32_t id) const;
@@ -248,9 +261,11 @@ namespace bs {
       virtual BTCNumericTypes::balance_type GetSpendableBalance() const;
       virtual BTCNumericTypes::balance_type GetUnconfirmedBalance() const;
       virtual BTCNumericTypes::balance_type GetTotalBalance() const;
-      virtual void firstInit();
+      virtual void firstInit(bool force = false);
 
-      virtual void AddUnconfirmedBalance(BTCNumericTypes::balance_type delta);
+      virtual void AddUnconfirmedBalance(const BTCNumericTypes::balance_type& delta
+         , const BTCNumericTypes::balance_type& inFees
+         , const BTCNumericTypes::balance_type& inChgAmt);
       virtual bool isInitialized() const { return inited_; }
       virtual bool isWatchingOnly() const { return false; }
       virtual std::vector<wallet::EncryptionType> encryptionTypes() const { return {}; }
@@ -270,6 +285,7 @@ namespace bs {
       virtual size_t GetExtAddressCount() const { return usedAddresses_.size(); }
       virtual size_t GetIntAddressCount() const { return usedAddresses_.size(); }
       virtual size_t GetWalletAddressCount() const { return addrCount_; }
+      virtual bool GetActiveAddressCount(const std::function<void(size_t)> &) const;
       virtual bs::Address GetNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
       virtual bs::Address GetNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
       virtual bs::Address GetNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return GetNewExtAddress(aet); }
@@ -278,7 +294,9 @@ namespace bs {
       virtual void addAddresses(const std::vector<bs::Address> &);
       virtual std::string GetAddressIndex(const bs::Address &) = 0;
       virtual bool AddressIndexExists(const std::string &index) const = 0;
-      virtual bs::Address CreateAddressWithIndex(const std::string &index, AddressEntryType aet = AddressEntryType_Default, bool signal = true) = 0;
+      virtual bs::Address CreateAddressWithIndex(const std::string &index
+         , AddressEntryType aet = AddressEntryType_Default
+         , bool signal = true) = 0;
 
       virtual BTCNumericTypes::balance_type GetTxBalance(int64_t val) const { return val / BTCNumericTypes::BalanceDivider; }
       virtual QString displayTxValue(int64_t val) const;
@@ -290,16 +308,21 @@ namespace bs {
 
       virtual wallet::TXSignRequest CreateTXRequest(const std::vector<UTXO> &
          , const std::vector<std::shared_ptr<ScriptRecipient>> &
-         , const uint64_t fee = 0, bool isRBF = false, bs::Address changeAddress = {});
-      virtual BinaryData SignTXRequest(const wallet::TXSignRequest &,
-                                       const SecureBinaryData &password = {},
-                                       bool keepDuplicatedRecipients = false);
-      virtual BinaryData SignPartialTXRequest(const wallet::TXSignRequest &, const SecureBinaryData &password = {});
+         , const uint64_t fee = 0, bool isRBF = false
+         , bs::Address changeAddress = {}, const uint64_t& origFee = 0);
+      virtual BinaryData SignTXRequest(const wallet::TXSignRequest &
+         , const SecureBinaryData &password = {}
+         , bool keepDuplicatedRecipients = false);
+      virtual BinaryData SignPartialTXRequest(const wallet::TXSignRequest &
+         , const SecureBinaryData &password = {});
 
-      virtual wallet::TXSignRequest CreatePartialTXRequest(uint64_t spendVal, const std::vector<UTXO> &inputs = {}, bs::Address changeAddress = {}
-         , float feePerByte = 0, const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}, const BinaryData prevPart = {});
+      virtual wallet::TXSignRequest CreatePartialTXRequest(uint64_t spendVal
+         , const std::vector<UTXO> &inputs = {}, bs::Address changeAddress = {}
+         , float feePerByte = 0
+         , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}
+         , const BinaryData prevPart = {});
 
-      virtual void UpdateBalanceFromDB(const std::function<void(std::vector<uint64_t>)> &cb = nullptr);
+      virtual void UpdateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr);
 
       virtual bool IsSegWitInput(const UTXO& input);
       virtual SecureBinaryData GetPublicKeyFor(const bs::Address &) = 0;
@@ -330,6 +353,8 @@ namespace bs {
       bool isSegWitScript(const BinaryData &script);
       Signer getSigner(const wallet::TXSignRequest &, const SecureBinaryData &password,
                        bool keepDuplicatedRecipients = false);
+      void processNewBalances(const std::vector<uint64_t> inBV
+         , const std::function<void()> &cbComplete = nullptr);
 
    protected:
       std::string       walletName_;
@@ -340,6 +365,7 @@ namespace bs {
       std::string    walletRegId_;
       std::shared_ptr<ArmoryConnection>      armory_;
       std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
+      std::shared_ptr<spdlog::logger>   logger_; // May need to be set manually.
       mutable std::vector<bs::Address>       usedAddresses_;
       mutable std::set<BinaryData>           addrPrefixedHashes_, addressHashes_;
       mutable QMutex    addrMapsMtx_;
@@ -349,8 +375,8 @@ namespace bs {
       mutable std::map<BinaryData, uint32_t>                addressTxNMap_;
       mutable std::atomic_bool   updateAddrBalance_;
       mutable std::atomic_bool   updateAddrTxN_;
-      mutable std::map<bs::Address, std::function<void(std::vector<uint64_t>)>>  cbBal_;
-      mutable std::map<bs::Address, std::function<void(uint32_t)>>               cbTxN_;
+      mutable std::map<bs::Address, std::vector<std::function<void(std::vector<uint64_t>)>>> cbBal_;
+      mutable std::map<bs::Address, std::vector<std::function<void(uint32_t)>>>              cbTxN_;
 
    private:
       class UtxoFilterAdapter : public bs::UtxoReservation::Adapter
@@ -362,16 +388,14 @@ namespace bs {
          const std::string walletId_;
       };
       std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
+      std::map<std::string, UTXO> youngIntUTXOs_; // 1-5 confs (int addresses)
+      std::map<std::string, UTXO> youngExtUTXOs_; // 1-5 confs (ext addresses)
 
-      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
-      std::map<QObject *, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
+      std::map<QPointer<QObject>, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
+      std::map<QPointer<QObject>, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
 
       mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
       std::atomic_bool  heartbeatRunning_ = { false };
-
-   private slots:
-      void onZCListObjDestroyed();
-      void onSpendableObjDestroyed();
    };
 
 

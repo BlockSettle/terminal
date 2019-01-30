@@ -7,13 +7,14 @@ enum RequestType
    SubmitAuthAddressForVerificationType = 1;
    GetBSFundingAddressListType          = 2;
    ErrorMessageResponseType             = 3;
-   GenerateOTPRequestType               = 4;
    GetCCGenesisAddressesType            = 5;
    SubmitCCAddrInitialDistribType       = 6;
    GenerateCCSeedRequestType            = 7;
    RevokeAuthAddressRequestType         = 8;
    ConfirmAuthAddressSubmitType         = 9;
-   FundCCGenAddrRequestType		       = 10;
+   CancelAuthAddressSubmitType          = 10;
+   FundCCGenAddrRequestType		       = 11;
+   GetNetworkSettingsType               = 12;
 }
 
 enum AddressNetworkType
@@ -41,9 +42,7 @@ message RequestPacket
    required RequestType requestType = 1;
    required bytes       requestData = 2;
    optional bytes       dataSignature = 3;
-   optional bytes       otpId = 4;
-   optional int64       keyIndex = 5;
-   optional bytes	unsignedMixIn = 6;
+   optional bytes	unsignedMixIn = 4;
 }
 
 message ResponsePacket
@@ -85,7 +84,7 @@ message SubmitAuthAddressForVerificationResponse
    optional bytes                publicKey = 5;
    optional string               errorMessage = 6;
    optional bool                 requestConfirmation = 7;
-   optional float 		 validationAmount = 8;
+   optional float 		         validationAmount = 8;
 }
 
 message ErrorMessageResponse
@@ -105,13 +104,6 @@ message ClientAddress
    optional string mainPhone = 8;
    optional string company = 9;
    optional string countryCode = 10;
-}
-
-message GenerateOTPRequest
-{
-   required string userName = 1;
-   required string userId = 2;
-   optional ClientAddress address = 3;
 }
 
 message GetCCGenesisAddressesRequest
@@ -179,9 +171,23 @@ message ConfirmAuthSubmitRequest
    required AddressNetworkType networkType = 3;
    required AddressScriptType  scriptType = 4;
    required bytes  publicKey = 5;
+   required string userId = 6;
 }
 
 message ConfirmAuthSubmitResponse
+{
+   required string address = 1;
+   optional string errorMsg = 2;
+}
+
+message CancelAuthAddressSubmitRequest
+{
+   required string userName = 1;
+   required string address  = 2;
+   required string userId   = 3;
+}
+
+message CancelAuthAddressSubmitResponse
 {
    required string address = 1;
    optional string errorMsg = 2;
@@ -193,4 +199,19 @@ message FundCCGenAddrRequest
    required uint32   amount = 2;
    required uint32   lot_size = 3;
    optional string   reference = 4;
+}
+
+
+message GetNetworkSettingsResponse
+{
+   message ConnectionData
+   {
+      required string host = 1;
+      required uint32 port = 2;
+   }
+
+   optional ConnectionData celer = 1;
+   optional ConnectionData marketData = 2;
+   optional ConnectionData mdhs = 3;
+   optional ConnectionData chat = 4;
 }

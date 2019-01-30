@@ -9,18 +9,18 @@
 #include "EncryptionUtils.h"
 #include "FastLock.h"
 
+#include <math.h>
+
 #include <spdlog/spdlog.h>
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
+#include "com/celertech/marketdata/api/marketstatistic/DownstreamMarketStatisticProto.pb.h"
 #include "com/celertech/staticdata/api/security/DownstreamSecurityProto.pb.h"
 
 CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::string& host, const std::string& port
       , const std::shared_ptr<spdlog::logger>& logger
       , bool filterUsdProducts)
  : MarketDataProvider(logger)
- , mdHost_{host}
- , mdPort_{port}
  , connectionManager_{connectionManager}
  , filterUsdProducts_{filterUsdProducts}
 {
@@ -43,10 +43,13 @@ bool CelerMarketDataProvider::StartMDConnection()
 
    ConnectToCelerClient();
 
-   const std::string credentials = SecureBinaryData().GenerateRandom(32).toHexStr();
+   const std::string credentials = CryptoPRNG::generateRandom(32).toHexStr();
+
+   logger_->debug("[CelerMarketDataProvider::StartMDConnection] start connecting to {} : {}"
+      , host_, port_);
 
    // login password could be any string
-   if (!celerClient_->LoginToServer(mdHost_, mdPort_, credentials, credentials)) {
+   if (!celerClient_->LoginToServer(host_, port_, credentials, credentials)) {
       logger_->error("[CelerMarketDataProvider::StartMDConnection] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;
@@ -64,6 +67,8 @@ bool CelerMarketDataProvider::DisconnectFromMDSource()
 
    emit Disconnecting();
    celerClient_->CloseConnection();
+
+   return true;
 }
 
 bool CelerMarketDataProvider::IsConnectionActive() const
@@ -78,6 +83,9 @@ void CelerMarketDataProvider::ConnectToCelerClient()
    });
    celerClient_->RegisterHandler(CelerAPI::MarketDataRequestRejectDownstreamEventType, [this](const std::string& data) {
       return this->onReqRejected(data);
+   });
+   celerClient_->RegisterHandler(CelerAPI::MarketStatisticSnapshotDownstreamEventType, [this](const std::string& data) {
+      return this->onMDStatisticsUpdate(data);
    });
 
    connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &CelerMarketDataProvider::OnConnectedToCeler);
@@ -205,24 +213,49 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
    return true;
 }
 
-bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
-   , const std::string& serverExchangeId)
+bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
 {
-   if (!IsConnectedToCeler()) {
-      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] can't register CC product while disconnected");
+   com::celertech::marketdata::api::marketstatistic::MarketStatisticSnapshotDownstreamEvent response;
+
+   if (!response.ParseFromString(data)) {
+      logger_->error("[CelerMarketDataProvider::onMDStatisticsUpdate] Failed to parse MarketDataFullSnapshotDownstreamEvent");
       return false;
    }
 
-   auto command = std::make_shared<CelerCreateCCSecurityOnMDSequence>(securityId
-      , serverExchangeId, logger_);
+   if (!response.has_snapshot()) {
+      logger_->debug("[CelerMarketDataProvider::onMDStatisticsUpdate] empty snapshot");
+      return true;
+   }
 
-   logger_->debug("[CelerMarketDataProvider::RegisterCCOnCeler] registering CC on celer MD: {}"
-      , securityId);
+   auto security = QString::fromStdString(response.securitycode());
+   if (security.isEmpty()) {
+      security = QString::fromStdString(response.securityid());
+   }
 
-   if (!celerClient_->ExecuteSequence(command)) {
-      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] failed to send command to MD server for {}"
-         , securityId);
-      return false;
+   const auto assetType = bs::network::Asset::fromCelerProductType(response.producttype());
+
+   bs::network::MDFields fields;
+
+   const auto& snapshot = response.snapshot();
+
+   if (snapshot.has_lastpx()) {
+      const auto value = snapshot.lastpx();
+      if (!std::isnan(value) && !qFuzzyIsNull(value)) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::PriceLast
+               , value, QString()});
+      }
+   }
+
+   if (snapshot.has_dailyvolume()) {
+      const auto value = snapshot.dailyvolume();
+      if (!std::isnan(value) && !qFuzzyIsNull(value)) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::DailyVolume
+               , value, QString()});
+      }
+   }
+
+   if (!fields.empty()) {
+      emit MDUpdate(assetType, security, fields);
    }
 
    return true;
@@ -247,6 +280,29 @@ bool CelerMarketDataProvider::onReqRejected(const std::string& data)
    }
 
    emit MDReqRejected(response.securityid(), response.text());
+
+   return true;
+}
+
+bool CelerMarketDataProvider::RegisterCCOnCeler(const std::string& securityId
+   , const std::string& serverExchangeId)
+{
+   if (!IsConnectedToCeler()) {
+      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] can't register CC product while disconnected");
+      return false;
+   }
+
+   auto command = std::make_shared<CelerCreateCCSecurityOnMDSequence>(securityId
+      , serverExchangeId, logger_);
+
+   logger_->debug("[CelerMarketDataProvider::RegisterCCOnCeler] registering CC on celer MD: {}"
+      , securityId);
+
+   if (!celerClient_->ExecuteSequence(command)) {
+      logger_->error("[CelerMarketDataProvider::RegisterCCOnCeler] failed to send command to MD server for {}"
+         , securityId);
+      return false;
+   }
 
    return true;
 }
@@ -318,8 +374,8 @@ bool CelerMarketDataProvider::ProcessSecurityListingEvent(const std::string& dat
       return false;
    }
 
-   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation:\n{}"
-                  , responseEvent.DebugString());
+   logger_->debug("[CelerMarketDataProvider::ProcessSecurityListingEvent] get confirmation for {}"
+                  , responseEvent.securityid());
 
    emit CCSecuritRegistrationResult(true, responseEvent.securityid());
 

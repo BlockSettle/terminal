@@ -31,7 +31,6 @@ typedef uint32_t TxFilterType;
 
 ////////////////////////////////////////////////////////////////////////////////
 class LMDBBlockDatabase; 
-class TxRef;
 class Tx;
 class TxIn;
 class TxOut;
@@ -42,18 +41,18 @@ template<typename T> class TxFilter
    template <typename U> friend class TxFilterPool;
 
 private:
-   vector<T> filterVector_;
-   const uint8_t* filterPtr_ = nullptr;
-   
+   bool isValid_ = false;
    uint32_t blockKey_ = UINT32_MAX;
    size_t len_ = SIZE_MAX;
-   bool isValid_ = false;
+
+   std::vector<T> filterVector_;
+   const uint8_t* filterPtr_ = nullptr;
 
 private:
    void update(const BinaryData& hash)
    {
       if (hash.getSize() != 32)
-         throw range_error("unexpected hash length");
+         throw std::range_error("unexpected hash length");
 
       auto hashHead = (T*)hash.getPtr();
 
@@ -73,16 +72,16 @@ private:
    bool checkPtrLen(const uint8_t* ptr)
    {
       if (ptr == nullptr)
-         throw runtime_error("invalid txfilter ptr");
+         throw std::runtime_error("invalid txfilter ptr");
 
       auto size = (uint32_t*)(ptr);
       if (*size < 12)
-         throw runtime_error("invalid txfilter ptr");
+         throw std::runtime_error("invalid txfilter ptr");
 
       auto len = (uint32_t*)(ptr + 8);
       auto total = *len * sizeof(T) + 12;
       if (total != *size)
-         throw runtime_error("invalid txfilter ptr");
+         throw std::runtime_error("invalid txfilter ptr");
 
       return true;
    }
@@ -94,7 +93,7 @@ private:
       len_ = *(uint32_t*)(ptr + 8);
 
       if (*size != len_ * sizeof(T) + 12)
-         throw runtime_error("deser error");
+         throw std::runtime_error("deser error");
       
       filterVector_.resize(len_);
       memcpy(&filterVector_[0], ptr + 12, len_ * sizeof(T));
@@ -124,15 +123,17 @@ public:
    }
 
    TxFilter(const TxFilter<T>& obj) :
+      isValid_(obj.isValid_),
       blockKey_(obj.blockKey_), len_(obj.len_),
-      isValid_(obj.isValid_), filterPtr_(obj.filterPtr_)
+      filterPtr_(obj.filterPtr_)
    {
       filterVector_ = obj.filterVector_;
    }
 
    TxFilter(TxFilter<T>&& mv) :
+      isValid_(mv.isValid_),
       blockKey_(mv.blockKey_), len_(mv.len_),
-      isValid_(mv.isValid_), filterPtr_(mv.filterPtr_)
+      filterPtr_(mv.filterPtr_)
    {
       filterVector_ = move(mv.filterVector_);
    }
@@ -151,10 +152,10 @@ public:
 
    bool isValid(void) const { return isValid_; }
 
-   void update(const vector<BinaryData>& hashVec)
+   void update(const std::vector<BinaryData>& hashVec)
    {
       if (!isValid())
-         throw runtime_error("txfilter needs initialized first");
+         throw std::runtime_error("txfilter needs initialized first");
 
       for (auto& hash : hashVec)
       {
@@ -162,15 +163,15 @@ public:
       }
    }   
    
-   set<uint32_t> compare(const BinaryData& hash) const
+   std::set<uint32_t> compare(const BinaryData& hash) const
    {
       auto key = (T*)hash.getPtr();
       return compare(*key);
    }
 
-   set<uint32_t> compare(const T& key) const
+   std::set<uint32_t> compare(const T& key) const
    {
-      set<uint32_t> resultSet;
+      std::set<uint32_t> resultSet;
       if (filterVector_.size() != 0)
       {
          for (unsigned i = 0; i < filterVector_.size(); i++)
@@ -187,7 +188,7 @@ public:
                resultSet.insert(i);
       }
       else
-         throw runtime_error("invalid filter");
+         throw std::runtime_error("invalid filter");
 
       return resultSet;
    }
@@ -197,7 +198,7 @@ public:
    void serialize(BinaryWriter& bw) const
    {
       if (blockKey_ == UINT32_MAX)
-         throw runtime_error("invalid block key");
+         throw std::runtime_error("invalid block key");
 
       uint32_t size = 12 + filterVector_.size() * sizeof(T);
       bw.put_uint32_t(size);
@@ -266,7 +267,7 @@ public:
    BinaryDataRef  getDiffBitsRef(void) const   { return BinaryDataRef(getPtr()+72,4 ); }
    uint32_t       getNumTx(void) const         { return numTx_; }
 
-   const string&  getFileName(void) const { return blkFile_; }
+   const std::string&  getFileName(void) const { return blkFile_; }
    uint64_t       getOffset(void) const { return blkFileOffset_; }
    uint32_t       getBlockFileNum(void) const { return blkFileNum_; }
    /////////////////////////////////////////////////////////////////////////////
@@ -284,22 +285,18 @@ public:
    void            setNumTx(uint32_t ntx) { numTx_ = ntx; }
 
    /////////////////////////////////////////////////////////////////////////////
-   void           setBlockFile(string filename)     {blkFile_       = filename;}
+   void           setBlockFile(std::string filename)     {blkFile_       = filename;}
    void           setBlockFileNum(uint32_t fnum)    {blkFileNum_    = fnum;}
    void           setBlockFileOffset(uint64_t offs) {blkFileOffset_ = offs;}
 
    /////////////////////////////////////////////////////////////////////////////
-   void          pprint(ostream & os=cout, int nIndent=0, bool pBigendian=true) const;
-   void          pprintAlot(ostream & os=cout);
+   void          pprint(std::ostream & os= std::cout, int nIndent=0, bool pBigendian=true) const;
+   void          pprintAlot(std::ostream & os= std::cout);
 
    /////////////////////////////////////////////////////////////////////////////
    const BinaryData& serialize(void) const   { return dataCopy_; }
 
    bool hasFilePos(void) const { return blkFileNum_ != UINT32_MAX; }
-
-   /////////////////////////////////////////////////////////////////////////////
-   // Just in case we ever want to calculate a difficulty-1 header via CPU...
-   int64_t findNonce(const char* inDiffStr);
 
    /////////////////////////////////////////////////////////////////////////////
    void unserialize(uint8_t const * ptr, uint32_t size);
@@ -343,14 +340,60 @@ private:
    BinaryData     nextHash_;
    double         difficultySum_ = 0.0;
 
-   string         blkFile_;
+   std::string         blkFile_;
    uint32_t       blkFileNum_ = UINT32_MAX;
    uint64_t       blkFileOffset_ = SIZE_MAX;
 
    unsigned int uniqueID_ = UINT32_MAX;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+class TxRef
+{
+   friend class BlockDataManager;
+   friend class Tx;
 
+public:
+   /////////////////////////////////////////////////////////////////////////////
+   TxRef() { }
+   TxRef(BinaryDataRef bdr) { setRef(bdr); }
+
+   /////////////////////////////////////////////////////////////////////////////
+   void setRef(BinaryDataRef bdr);
+
+   /////////////////////////////////////////////////////////////////////////////
+   bool           isInitialized(void)  const { return dbKey6B_.getSize() > 0; }
+   bool           isNull(void) const { return !isInitialized(); }
+
+   /////////////////////////////////////////////////////////////////////////////
+   const BinaryData& getDBKey(void) const { return dbKey6B_; }
+   BinaryDataRef  getDBKeyRef(void) { return dbKey6B_.getRef(); }
+   void           setDBKey(BinaryData    const & bd) { dbKey6B_.copyFrom(bd); }
+   void           setDBKey(BinaryDataRef const & bd) { dbKey6B_.copyFrom(bd); }
+
+
+   /////////////////////////////////////////////////////////////////////////////
+   BinaryData     getDBKeyOfChild(uint16_t i) const
+   {
+      return dbKey6B_ + WRITE_UINT16_BE(i);
+   }
+
+   uint16_t           getBlockTxIndex(void) const;
+   uint32_t           getBlockHeight(void) const;
+   uint8_t            getDuplicateID(void) const;
+
+   /////////////////////////////////////////////////////////////////////////////
+   void               pprint(std::ostream & os = std::cout, int nIndent = 0) const;
+
+   /////////////////////////////////////////////////////////////////////////////
+   bool operator==(BinaryData const & dbkey) const { return dbKey6B_ == dbkey; }
+   bool operator==(TxRef const & txr) const { return dbKey6B_ == txr.dbKey6B_; }
+
+   bool operator>=(const BinaryData& dbkey) const { return dbKey6B_ >= dbkey; }
+
+protected:
+   BinaryData           dbKey6B_;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 class DBTxRef : public TxRef
@@ -402,16 +445,11 @@ class UnspentTxOut
 {
 public:
    UnspentTxOut(void);
-   UnspentTxOut(LMDBBlockDatabase *db, TxOut & txout, uint32_t blknum) 
-      { init(db, txout, blknum);}
-
-
    UnspentTxOut(BinaryData const & hash, uint32_t outIndex, uint32_t height, 
                 uint64_t val, BinaryData const & script) :
       txHash_(hash), txOutIndex_(outIndex), txHeight_(height),
-      value_(val), script_(script) {}
-
-   void init(LMDBBlockDatabase *db, TxOut & txout, uint32_t blknum, bool isMultiRef=false);
+      value_(val), script_(script) 
+   {}
 
    BinaryData   getTxHash(void) const      { return txHash_;     }
    uint32_t     getTxtIndex(void) const    { return txIndex_; }
@@ -445,7 +483,7 @@ public:
    static bool CompareTech1(UnspentTxOut const & uto1, UnspentTxOut const & uto2);
    static bool CompareTech2(UnspentTxOut const & uto1, UnspentTxOut const & uto2);
    static bool CompareTech3(UnspentTxOut const & uto1, UnspentTxOut const & uto2);
-   static void sortTxOutVect(vector<UnspentTxOut> & utovect, int sortType=1);
+   static void sortTxOutVect(std::vector<UnspentTxOut> & utovect, int sortType=1);
 
 
 public:

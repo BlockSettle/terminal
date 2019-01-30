@@ -21,13 +21,13 @@ class AddressDetailsWidget : public QWidget
 
 public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
-   ~AddressDetailsWidget();
+   ~AddressDetailsWidget() override;
 
    void init(const std::shared_ptr<ArmoryConnection> &armory,
              const std::shared_ptr<spdlog::logger> &inLogger);
-   void setAddrVal(const bs::Address& inAddrVal);
-   void loadWallet();
+   void setQueryAddr(const bs::Address& inAddrVal);
    void loadTransactions();
+   void clear();
 
    enum AddressTreeColumns {
       colDate = 0,
@@ -44,17 +44,17 @@ public:
 signals:
    void transactionClicked(QString txId);
 
-protected slots:
-   void onTxClicked(QTreeWidgetItem *item, int column);
-
 private slots:
+   void onTxClicked(QTreeWidgetItem *item, int column);
    void OnRefresh(std::vector<BinaryData> ids);
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
    void setOutputColor(QTreeWidgetItem *item);
-   void getTxData(AsyncClient::LedgerDelegate inDelegate);
+   void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
+   void refresh(const std::shared_ptr<bs::PlainWallet> &);
 
+private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
    // hashes for keys. One has transactions (Armory), and TXEntry objects (BS).
    // This is due to the manner in which we retrieve data from Armory. Pages are
@@ -63,19 +63,21 @@ private:
    // is that the pages are what have data related to # of confs and other
    // block-related data. The Tx objects from Armory don't have block-related
    // data that we need. So, we need two maps, at least for now.
+   //
+   // In addition, note that the TX hashes returned by Armory are in "internal"
+   // byte order, whereas the displayed values need to be in "RPC" byte order.
+   // (Look at the BinaryTXID class comments for more info on this phenomenon.)
+   // The only time we care about this is when displaying data to the user; the
+   // data is consistent otherwise, which makes Armory happy. Don't worry about
+   // about BinaryTXID. A simple endian flip in printed strings is all we need.
 
-   Ui::AddressDetailsWidget *ui_; // The main widget object.
-   bs::Address addrVal_; // The address passed in by the user.
-   std::string dummyWalletID_; // The wallet ID.
-   bs::PlainWallet dummyWallet_; // Wallet that will hold the address.
+   std::unique_ptr<Ui::AddressDetailsWidget> ui_; // The main widget object.
+   std::unordered_map<std::string, std::shared_ptr<bs::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
-   std::map<BinaryData, Tx> prevTxMap_; // A wallet's previous Tx hash / Tx map (fee calc).
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
-   std::set<BinaryData> txHashSet_; // Hashes for a given address.
-   std::set<BinaryData> prevTxHashSet_; // Prev Tx hashes for an addr (fee calc).
 
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<spdlog::logger>     logger_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

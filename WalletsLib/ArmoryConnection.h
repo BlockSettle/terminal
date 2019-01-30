@@ -22,6 +22,7 @@
 class ArmoryConnection;
 class QProcess;
 
+// The class is used as a callback that processes asynchronous Armory events.
 class ArmoryCallback : public RemoteCallback
 {
 public:
@@ -42,6 +43,9 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
 };
 
+// The abstracted connection between BS and Armory. When BS code needs to
+// communicate with Armory, this class is what the code should use. Only one
+// connection should exist at any given time.
 class ArmoryConnection : public QObject
 {
    friend class ArmoryCallback;
@@ -59,7 +63,6 @@ public:
 
    using ReqIdType = unsigned int;
 
-public:
    ArmoryConnection(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN
       , bool cbInMainThread = false);
    ~ArmoryConnection() noexcept;
@@ -79,11 +82,11 @@ public:
    bool getWalletsHistory(const std::vector<std::string> &walletIDs
       , std::function<void (std::vector<ClientClasses::LedgerEntry>)>);
 
+   // If context is not null and cbInMainThread is true then the callback will be called
+   // on main thread only if context is still alive.
    bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &
-      , std::function<void(AsyncClient::LedgerDelegate)>);
-   bool getLedgerDelegatesForAddresses(const std::string &walletId, const std::vector<bs::Address>
-      , std::function<void(std::map<bs::Address, AsyncClient::LedgerDelegate>)>);
-   bool getWalletsLedgerDelegate(std::function<void(AsyncClient::LedgerDelegate)>);
+      , std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>, QObject *context = nullptr);
+   bool getWalletsLedgerDelegate(std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>);
 
    bool getTxByHash(const BinaryData &hash, std::function<void(Tx)>);
    bool getTXsByHash(const std::set<BinaryData> &hashes, std::function<void(std::vector<Tx>)>);
@@ -93,12 +96,15 @@ public:
                           std::function<void(BinaryData)> callback);
 
    bool estimateFee(unsigned int nbBlocks, std::function<void(float)>);
+   bool getFeeSchedule(std::function<void(map<unsigned int, float>)> cb);
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
    bool isTransactionVerified(uint32_t blockNum) const;
    bool isTransactionConfirmed(const ClientClasses::LedgerEntry &) const;
    unsigned int getConfirmationsNumber(const ClientClasses::LedgerEntry &item) const;
    unsigned int getConfirmationsNumber(uint32_t blockNum) const;
+
+   bool isOnline() const { return isOnline_; }
 
 signals:
    void stateChanged(ArmoryConnection::State) const;
@@ -125,14 +131,13 @@ private:
    bool addGetTxCallback(const BinaryData &hash, const std::function<void(Tx)> &);  // returns true if hash exists
    void callGetTxCallbacks(const BinaryData &hash, const Tx &);
 
-private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<State>   state_ = { State::Unknown };
    std::atomic_uint     topBlock_ = { 0 };
-   const bool     cbInMainThread_;
    TxCacheFile    txCache_;
+   const bool     cbInMainThread_;
    std::shared_ptr<BlockHeader> getTxBlockHeader_;
 
    std::atomic_bool  regThreadRunning_;
@@ -149,6 +154,7 @@ private:
    };
    std::unordered_map<ReqIdType, ZCData>  zcData_;
    mutable std::atomic_flag      zcLock_ = ATOMIC_FLAG_INIT;
+   std::thread                   zcThread_;
    std::condition_variable       zcMaintCV_;
    mutable std::mutex            zcMaintMutex_;
 

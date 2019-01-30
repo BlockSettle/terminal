@@ -8,5 +8,5 @@
 
 #include "log.h"
 
-atomic<Log*> Log::theOneLog_ = { nullptr };
-mutex Log::mu_;
+std::atomic<Log*> Log::theOneLog_ = { nullptr };
+std::mutex Log::mu_;

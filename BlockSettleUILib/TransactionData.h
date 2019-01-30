@@ -9,11 +9,12 @@
 #include "MetaData.h"
 #include "UtxoReservation.h"
 
-
 class CoinSelection;
 class RecipientContainer;
 class ScriptRecipient;
 class SelectedTransactionInputs;
+struct UtxoSelection;
+struct PaymentStruct;
 
 namespace bs {
    class Wallet;
@@ -28,6 +29,9 @@ public:
       // usedTransactions - count of utxo that will be used in transaction
       size_t   usedTransactions;
 
+      // outputsCount - number of recipients ( without change )
+      size_t   outputsCount;
+
       // availableBalance - total available balance. in case of manual selection - same as selectedBalance
       double   availableBalance;
 
@@ -35,9 +39,9 @@ public:
       double   selectedBalance;
 
       // balanceToSpent - total amount received by recipients
-      double   balanceToSpent;
+      double   balanceToSpend;
 
-      size_t   transactionSize;
+      size_t   txVirtSize;
       uint64_t totalFee;
       double   feePerByte;
 
@@ -58,22 +62,28 @@ public:
    TransactionData(TransactionData&&) = delete;
    TransactionData& operator = (TransactionData&&) = delete;
 
+   // should be used only if you could not set CB in ctor
+   void SetCallback(onTransactionChanged changedCallback);
+
    bool SetWallet(const std::shared_ptr<bs::Wallet> &, uint32_t topBlock
       , bool resetInputs = false, const std::function<void()> &cbInputsReset = nullptr);
    bool SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &, const std::vector<UTXO> &, uint32_t topBlock);
    void SetSigningWallet(const std::shared_ptr<bs::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::Wallet> GetWallet() const { return wallet_; }
    std::shared_ptr<bs::Wallet> GetSigningWallet() const { return signWallet_; }
-   bool SetFeePerByte(float feePerByte);
-   float FeePerByte() const { return feePerByte_; }
-   void SetTotalFee(uint64_t fee);
+   void setFeePerByte(float feePerByte);
+   void setTotalFee(uint64_t fee, bool overrideFeePerByte = true);
+   float feePerByte() const;
+   uint64_t totalFee() const;
 
    bool IsTransactionValid() const;
+   bool InputsLoadedFromArmory() const;
 
    size_t GetRecipientsCount() const;
    std::vector<unsigned int> GetRecipientIdList() const;
 
    unsigned int RegisterNewRecipient();
+   std::vector<unsigned int> allRecipientIds() const;
    bool UpdateRecipientAddress(unsigned int recipientId, const bs::Address &);
    bool UpdateRecipientAddress(unsigned int recipientId, const std::shared_ptr<AddressEntry> &);
    void ResetRecipientAddress(unsigned int recipientId);
@@ -81,17 +91,22 @@ public:
    bool UpdateRecipient(unsigned int recipientId, double amount, const bs::Address &);
    void RemoveRecipient(unsigned int recipientId);
 
+   void ClearAllRecipients();
+
    void SetFallbackRecvAddress(const bs::Address &addr) { fallbackRecvAddress_ = addr; }
    bs::Address GetFallbackRecvAddress();
 
    bs::Address GetRecipientAddress(unsigned int recipientId) const;
    BTCNumericTypes::balance_type GetRecipientAmount(unsigned int recipientId) const;
+   BTCNumericTypes::balance_type  GetTotalRecipientsAmount() const;
    bool IsMaxAmount(unsigned int recipientId) const;
 
    bs::wallet::TXSignRequest CreateUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
    bs::wallet::TXSignRequest GetSignTXRequest() const;
 
-   bs::wallet::TXSignRequest CreateTXRequest(bool isRBF = false, const bs::Address &changeAddr = {}) const;
+   bs::wallet::TXSignRequest CreateTXRequest(bool isRBF = false
+                                             , const bs::Address &changeAddr = {}
+                                             , const uint64_t& origFee = 0) const;
    bs::wallet::TXSignRequest CreatePartialTXRequest(uint64_t spendVal, float feePerByte
       , const std::vector<std::shared_ptr<ScriptRecipient>> &, const BinaryData &prevData
       , const std::vector<UTXO> &inputs = {});
@@ -99,7 +114,7 @@ public:
    std::shared_ptr<SelectedTransactionInputs> GetSelectedInputs();
    TransactionSummary GetTransactionSummary() const;
 
-   double CalculateMaxAmount(const bs::Address &recipient = {}) const;
+   double CalculateMaxAmount(const bs::Address &recipient = {}, bool force = false) const;
 
    void ReserveUtxosFor(double amount, const std::string &reserveId, const bs::Address &addr = {});
    void ReloadSelection(const std::vector<UTXO> &);
@@ -123,6 +138,12 @@ private:
    void InvalidateTransactionData();
    bool UpdateTransactionData();
    bool RecipientsReady() const;
+   std::vector<UTXO> decorateUTXOs() const;
+   UtxoSelection computeSizeAndFee(const std::vector<UTXO>& inUTXOs
+      , const PaymentStruct& inPS);
+
+   // Temporary function until some Armory changes are accepted upstream.
+   size_t getVirtSize(const UtxoSelection& inUTXOSel);
 
    std::vector<std::shared_ptr<ScriptRecipient>> GetRecipientList() const;
 
@@ -133,6 +154,7 @@ private:
 
    float       feePerByte_;
    uint64_t    totalFee_ = 0;
+   mutable double maxAmount_ = 0;
    // recipients
    unsigned int nextId_;
    std::unordered_map<unsigned int, std::shared_ptr<RecipientContainer>> recipients_;
@@ -157,6 +179,8 @@ private:
 
    bool transactionUpdateEnabled_ = true;
    bool transactionUpdateRequired_ = false;
+
+   bool inputsLoaded_ = false;
 };
 
 #endif // __TRANSACTION_DATA_H__

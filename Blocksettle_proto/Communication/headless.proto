@@ -53,7 +53,7 @@ enum NetworkType
 
 message AuthenticationRequest
 {
-   string   password = 1;  // probably not needed here
+   NetworkType  netType = 1;
 }
 
 message AuthenticationReply
@@ -63,6 +63,7 @@ message AuthenticationReply
       string   error = 2;
    }
    bool     hasUI = 3;
+   NetworkType  netType = 4;
 }
 
 
@@ -178,6 +179,7 @@ message NewHDWallet
    bool     primary = 4;
    bytes    privateKey = 5;
    bytes    seed = 6;
+   bytes    chainCode = 7;
 }
 
 message PasswordData
@@ -282,6 +284,7 @@ message GetHDWalletInfoResponse
    uint32	rankM = 3;
    uint32	rankN = 4;
    string       error = 5;
+   string       rootWalletId = 6;
 }
 
 

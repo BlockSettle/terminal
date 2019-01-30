@@ -6,13 +6,13 @@
 #include <QStandardPaths>
 
 #include "EasyEncValidator.h"
-#include "MessageBoxCritical.h"
+#include "BSMessageBox.h"
 #include "MetaData.h"
 #include "UiUtils.h"
 #include "make_unique.h"
 
 
-ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
+ImportWalletTypeDialog::ImportWalletTypeDialog(bool woOnly, QWidget* parent)
   : QDialog(parent)
    , ui_(new Ui::ImportWalletTypeDialog())
    , easyCodec_(std::make_shared<EasyCoDec>())
@@ -42,7 +42,14 @@ ImportWalletTypeDialog::ImportWalletTypeDialog(QWidget* parent)
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ImportWalletTypeDialog::reject);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletTypeDialog::accept);
 
-   OnPaperSelected();
+   if (woOnly) {
+      OnDigitalSelected();
+      ui_->tabWidget->setTabEnabled(0, false);
+   } else {
+      OnPaperSelected();
+   }
+
+
    ui_->labelWoFilePath->clear();
 }
 
@@ -108,6 +115,11 @@ void ImportWalletTypeDialog::OnDigitalSelected()
 
 void ImportWalletTypeDialog::updateImportButton()
 {
+   QString inputLine1 = ui_->lineSeed1->text().trimmed();
+   QString inputLine2 = ui_->lineSeed2->text().trimmed();
+   inputLine1.remove(QChar::Space);
+   inputLine2.remove(QChar::Space);
+
    if (ui_->tabWidget->currentWidget() == ui_->tabFull) {
       if (ui_->stackedWidgetInputs->currentIndex() == 0) {
          ui_->pushButtonImport->setEnabled(PaperImportOk());
@@ -117,15 +129,25 @@ void ImportWalletTypeDialog::updateImportButton()
          const bool seed1valid = (validator_->validateKey(seed1) == EasyEncValidator::Valid);
          const bool seed2valid = (validator_->validateKey(seed2) == EasyEncValidator::Valid);
 
-         if (!seed1valid) {
-            UiUtils::setWrongState(ui_->lineSeed1, true);
-         } else {
+         if (inputLine1.size() == validator_->getNumWords() * validator_->getWordSize()) {
+            if (!seed1valid) {
+               UiUtils::setWrongState(ui_->lineSeed1, true);
+            } else {
+               UiUtils::setWrongState(ui_->lineSeed1, false);
+            }
+         }
+         else {
             UiUtils::setWrongState(ui_->lineSeed1, false);
          }
 
-         if (!seed2valid) {
-            UiUtils::setWrongState(ui_->lineSeed2, true);
-         } else {
+         if (inputLine2.size() == validator_->getNumWords() * validator_->getWordSize()) {
+            if (!seed2valid) {
+               UiUtils::setWrongState(ui_->lineSeed2, true);
+            } else {
+               UiUtils::setWrongState(ui_->lineSeed2, false);
+            }
+         }
+         else {
             UiUtils::setWrongState(ui_->lineSeed2, false);
          }
       }
@@ -181,12 +203,12 @@ void ImportWalletTypeDialog::OnSelectFilePressed()
          QByteArray data = file.readAll();
          walletData_ = WalletBackupFile::Deserialize(std::string(data.data(), data.size()));
          if (walletData_.id.empty()) {
-            MessageBoxCritical(tr("Backup file corrupted"), tr("Could not load wallet from file"), this).exec();
+            BSMessageBox(BSMessageBox::critical, tr("Backup file corrupted"), tr("Could not load wallet from file"), this).exec();
          } else {
             ui_->labelFileName->setText(fileToOpen);
          }
       } else {
-         MessageBoxCritical(tr("Failed to read backup file"), tr("Could not read %1").arg(fileToOpen), this).exec();
+         BSMessageBox(BSMessageBox::critical, tr("Failed to read backup file"), tr("Could not read %1").arg(fileToOpen), this).exec();
       }
 
       updateImportButton();
@@ -209,7 +231,7 @@ void ImportWalletTypeDialog::OnSelectWoFilePressed()
          woFileExists_ = true;
       }
       else {
-         MessageBoxCritical(tr("Failed to read backup file"), tr("Could not read %1").arg(woFileName_), this).exec();
+         BSMessageBox(BSMessageBox::critical, tr("Failed to read backup file"), tr("Could not read %1").arg(woFileName_), this).exec();
       }
 
       updateImportButton();

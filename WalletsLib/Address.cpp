@@ -46,7 +46,9 @@ bs::Address::Address(const std::string& data, Format format, AddressEntryType ae
       }
       else {
          try {
-            parsedData = BtcUtils::base58toScrAddr(data);
+            BinaryData base58In(data);
+            base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
+            parsedData = BtcUtils::base58toScrAddr(base58In);
             format = Format::Base58;
          }
          catch (const std::exception &) {
@@ -71,7 +73,9 @@ bs::Address::Address(const std::string& data, Format format, AddressEntryType ae
       switch (format) {
       case Format::Base58:
          try {
-            copyFrom(BtcUtils::base58toScrAddr(data));
+            BinaryData base58In(data);
+            base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
+            copyFrom(BtcUtils::base58toScrAddr(base58In));
          }
          catch (const std::runtime_error &) {}
          break;
@@ -133,7 +137,7 @@ bs::Address bs::Address::fromHash(const BinaryData &hash, AddressEntryType aet)
 {
    if ((aet == AddressEntryType_P2SH) && (hash.getSize() == 20)) {
       BinaryData binAddr;
-      binAddr.append(BlockDataManagerConfig::getScriptHashPrefix());
+      binAddr.append(NetworkConfig::getScriptHashPrefix());
       binAddr.append(hash);
       return bs::Address(binAddr, aet);
    }
@@ -219,10 +223,10 @@ AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
 {
    if (addr.getSize() == 21) {
       const auto prefix = addr[0];
-      if (prefix == BlockDataManagerConfig::getPubkeyHashPrefix()) {
+      if (prefix == NetworkConfig::getPubkeyHashPrefix()) {
          return AddressEntryType_P2PKH;
       }
-      else if (prefix == BlockDataManagerConfig::getScriptHashPrefix()) {
+      else if (prefix == NetworkConfig::getScriptHashPrefix()) {
          return AddressEntryType_P2SH;
       }
       else if (prefix == SCRIPT_PREFIX_P2WSH) {
@@ -300,10 +304,10 @@ BinaryData bs::Address::prefixed() const
 {
    if ((getSize() == 20) || (getSize() == 32)) {   // Missing the prefix, we have to add it
       if (prefixed_.isNull()) {
-         auto prefix = BlockDataManagerConfig::getPubkeyHashPrefix();
+         auto prefix = NetworkConfig::getPubkeyHashPrefix();
          switch (aet_) {
          case AddressEntryType_P2SH:
-            prefix = BlockDataManagerConfig::getScriptHashPrefix();
+            prefix = NetworkConfig::getScriptHashPrefix();
             break;
          case AddressEntryType_Multisig:
             prefix = SCRIPT_PREFIX_MULTISIG;
@@ -369,7 +373,7 @@ bool bs::Address::operator==(const bs::Address &addr) const
    return (id() == addr.id());
 }
 
-shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
+std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
 {
    try {
       switch (getType()) {
@@ -377,7 +381,7 @@ shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
          return std::make_shared<Recipient_P2PKH>(unprefixed(), value);
 
       case AddressEntryType_P2WSH:
-         return std::make_shared<Recipient_PW2SH>(unprefixed(), value);
+         return std::make_shared<Recipient_P2WSH>(unprefixed(), value);
 
       case AddressEntryType_P2SH:
          return std::make_shared<Recipient_P2SH>(unprefixed(), value);
@@ -413,7 +417,7 @@ BinaryData bs::Address::getWitnessScript() const
    return witnessScr_;
 }
 
-shared_ptr<ScriptRecipient> bs::Address::getRecipient(double amount) const
+std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(double amount) const
 {
    return getRecipient((uint64_t)(amount * BTCNumericTypes::BalanceDivider));
 }

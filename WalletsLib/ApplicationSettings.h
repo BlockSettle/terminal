@@ -34,8 +34,6 @@ public:
 
    enum Setting {
       initialized,
-      ignoreAllZC,
-      satoshiPort,
       runArmoryLocally,
       netType,
       armoryDbIp,
@@ -51,11 +49,16 @@ public:
       celerPort,
       mdServerHost,
       mdServerPort,
+      chatServerHost,
+      chatServerPort,
+      chatServerPubKey,
+      chatPrivKey,
+      chatPubKey,
+      chatDbFile,
       celerUsername,
       signerHost,
       signerPort,
       signerRunMode,
-      signerPassword,
       signerOfflineDir,
       autoSignSpendLimit,
       launchToTray,
@@ -66,7 +69,6 @@ public:
       bsPublicKey,
       logDefault,
       logMessages,
-      otpFileName,
       ccFileName,
       txCacheFileName,
       nbBackupFilesKeep,
@@ -83,6 +85,7 @@ public:
       Binaries_Dl_Url,
       ResetPassword_Url,
       GetAccount_Url,
+      GettingStartedGuide_Url,
       WalletFiltering,
       FxRfqLimit,
       XbtRfqLimit,
@@ -95,6 +98,9 @@ public:
       SubscribeToMDOnStart,
       MDLicenseAccepted,
       authPrivKey,
+      jwtUsername,
+      zmqLocalSignerPubKeyFilePath,
+      zmqRemoteSignerPubKey,
       _last
    };
 
@@ -116,15 +122,14 @@ public:
 
    void SetDefaultSettings(bool toFile=false);                   // reset all settings to default
 
-   int GetDefaultArmoryPort() const;
-
-   static int GetDefaultArmoryPortForNetwork(NetworkType networkType);
+   static int GetDefaultArmoryLocalPort(NetworkType networkType);
+   static int GetDefaultArmoryRemotePort(NetworkType networkType);
+   QString GetArmoryRemotePort(bool getDefaultValue = false
+      , NetworkType networkType = NetworkType::Invalid) const;
 
    QString GetSettingsPath() const;
 
    QString  GetHomeDir() const;
-   QString  GetBitcoinsDir() const;
-   int GetSatoshiPort() const;
    QString  GetBackupDir() const;
 
    ArmorySettings GetArmorySettings() const;

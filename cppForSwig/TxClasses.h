@@ -25,23 +25,23 @@
 class RecipientReuseException
 {
 private:
-   vector<string> addrVec_;
+   std::vector<std::string> addrVec_;
    uint64_t total_;
    uint64_t value_;
 
 public:
    RecipientReuseException(
-      const vector<BinaryData>& scrAddrVec, uint64_t total, uint64_t val) :
+      const std::vector<BinaryData>& scrAddrVec, uint64_t total, uint64_t val) :
       total_(total), value_(val)
    {
       for (auto& scrAddr : scrAddrVec)
       {
          auto&& addr58 = BtcUtils::scrAddrToBase58(scrAddr);
-         addrVec_.push_back(string(addr58.getCharPtr(), addr58.getSize()));
+         addrVec_.push_back(std::string(addr58.getCharPtr(), addr58.getSize()));
       }
    }
 
-   const vector<string>& getAddresses(void) const { return addrVec_; }
+   const std::vector<std::string>& getAddresses(void) const { return addrVec_; }
    uint64_t total(void) const { return total_; }
    uint64_t value(void) const { return value_; }
 };
@@ -91,71 +91,14 @@ protected:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class TxRef
-{
-   friend class BlockDataManager;
-   friend class Tx;
-
-public:
-   /////////////////////////////////////////////////////////////////////////////
-   TxRef() { }
-   TxRef(BinaryDataRef bdr) { setRef(bdr); }
-
-   /////////////////////////////////////////////////////////////////////////////
-   void setRef(BinaryDataRef bdr);
-
-   /////////////////////////////////////////////////////////////////////////////
-   bool           isInitialized(void)  const { return dbKey6B_.getSize()>0; }
-   bool           isNull(void) const { return !isInitialized(); }
-
-   /////////////////////////////////////////////////////////////////////////////
-   BinaryData     getDBKey(void) const   { return dbKey6B_; }
-   BinaryDataRef  getDBKeyRef(void)      { return dbKey6B_.getRef(); }
-   void           setDBKey(BinaryData    const & bd) { dbKey6B_.copyFrom(bd); }
-   void           setDBKey(BinaryDataRef const & bd) { dbKey6B_.copyFrom(bd); }
-
-
-   /////////////////////////////////////////////////////////////////////////////
-   BinaryData     getDBKeyOfChild(uint16_t i) const
-   {
-      return dbKey6B_ + WRITE_UINT16_BE(i);
-   }
-
-   uint16_t           getBlockTxIndex(void) const;
-   uint32_t           getBlockHeight(void) const;
-   uint8_t            getDuplicateID(void) const;
-
-   /////////////////////////////////////////////////////////////////////////////
-   void               pprint(ostream & os = cout, int nIndent = 0) const;
-
-   /////////////////////////////////////////////////////////////////////////////
-   bool operator==(BinaryData const & dbkey) const { return dbKey6B_ == dbkey; }
-   bool operator==(TxRef const & txr) const  { return dbKey6B_ == txr.dbKey6B_; }
-
-   bool operator>=(const BinaryData& dbkey) const { return dbKey6B_ >= dbkey; }
-protected:
-   //FileDataPtr        blkFilePtr_;
-   //BlockHeader*       headerPtr_;
-
-   // Both filePtr and headerPtr can be replaced by a single dbKey
-   // It is 6 bytes:  [ HeaderHgt(3) || DupID(1) || TxIndex(2) ]
-   // It tells us exactly how to get this Tx from DB, and by the way
-   // the DB is structured, the first four bytes also tells us how 
-   // to get the associated header.  
-   BinaryData           dbKey6B_;
-
-   // TxRefs are associated with a particular interface (at this time, there
-   // will only be one interface).
-};
-
-////////////////////////////////////////////////////////////////////////////////
 class TxIn
 {
    friend class BlockDataManager;
 
 public:
-   TxIn(void) : dataCopy_(0), parentHash_(0), parentHeight_(UINT32_MAX),
-      scriptType_(TXIN_SCRIPT_NONSTANDARD), scriptOffset_(0) {}
+   TxIn(void) : 
+      dataCopy_(0), scriptType_(TXIN_SCRIPT_NONSTANDARD), scriptOffset_(0) 
+   {}
 
    uint8_t const *  getPtr(void) const { assert(isInitialized()); return dataCopy_.getPtr(); }
    size_t           getSize(void) const { assert(isInitialized()); return dataCopy_.getSize(); }
@@ -181,17 +124,8 @@ public:
    bool             isScriptSpendP2SH() const  { return scriptType_ == TXIN_SCRIPT_SPENDP2SH; }
    bool             isScriptNonStd() const    { return scriptType_ == TXIN_SCRIPT_NONSTANDARD; }
 
-   TxRef            getParentTxRef() const { return parentTx_; }
    uint32_t         getIndex(void) const { return index_; }
-
-   //void setParentTx(TxRef txref, int32_t idx=-1) {parentTx_=txref; index_=idx;}
-
    uint32_t         getSequence() const  { return READ_UINT32_LE(getPtr() + getSize() - 4); }
-   uint32_t         getParentHeight() const;
-
-   void             setParentHash(BinaryData const & txhash) { parentHash_ = txhash; }
-   const BinaryData& getParentHash(void) const { return parentHash_; }
-   void             setParentHeight(uint32_t blkheight) { parentHeight_ = blkheight; }
 
    /////////////////////////////////////////////////////////////////////////////
    const BinaryData&  serialize(void) const { return dataCopy_; }
@@ -200,23 +134,19 @@ public:
    void unserialize_checked(uint8_t const * ptr,
       uint32_t        size,
       uint32_t        nbytes = 0,
-      TxRef           parent = TxRef(),
       uint32_t        idx = UINT32_MAX);
 
    void unserialize(BinaryData const & str,
       uint32_t       nbytes = 0,
-      TxRef          parent = TxRef(),
-      uint32_t       idx = UINT32_MAX);
+      uint32_t        idx = UINT32_MAX);
 
    void unserialize(BinaryDataRef  str,
       uint32_t       nbytes = 0,
-      TxRef          parent = TxRef(),
-      uint32_t       idx = UINT32_MAX);
+      uint32_t        idx = UINT32_MAX);
 
    void unserialize(BinaryRefReader & brr,
       uint32_t       nbytes = 0,
-      TxRef          parent = TxRef(),
-      uint32_t       idx = UINT32_MAX);
+      uint32_t        idx = UINT32_MAX);
 
    void unserialize_swigsafe_(BinaryData const & rawIn) { unserialize(rawIn); }
 
@@ -227,21 +157,16 @@ public:
    bool       getSenderScrAddrIfAvail(BinaryData & addrTarget) const;
    BinaryData getSenderScrAddrIfAvail(void) const;
 
-   void pprint(ostream & os = cout, int nIndent = 0, bool pBigendian = true) const;
+   void pprint(std::ostream & os = std::cout, int nIndent = 0, bool pBigendian = true) const;
 
 
 private:
    BinaryData       dataCopy_;
-   BinaryData       parentHash_;
-   uint32_t         parentHeight_;
 
    // Derived properties - we expect these to be set after construct/copy
    uint32_t         index_;
    TXIN_SCRIPT_TYPE scriptType_;
    uint32_t         scriptOffset_;
-   TxRef            parentTx_;
-
-
 };
 
 
@@ -251,39 +176,22 @@ class TxOut
    friend class BlockDataManager;
    friend class ZeroConfContainer;
 
-private:
-   void setParentTxRef(const BinaryData& key)
-   {
-      parentTx_.setDBKey(key);
-   }
-
 public:
 
    /////////////////////////////////////////////////////////////////////////////
-   TxOut(void) : dataCopy_(0), parentHash_(0) {}
-   /*
-   TxOut(uint8_t const * ptr,
-   uint32_t        nBytes=0,
-   TxRef           parent=TxRef(),
-   uint32_t        idx=UINT32_MAX) { unserialize(ptr, nBytes, parent, idx); } */
+   TxOut(void) : dataCopy_(0)
+   {}
 
    uint8_t const * getPtr(void) const { return dataCopy_.getPtr(); }
    uint32_t        getSize(void) const { return (uint32_t)dataCopy_.getSize(); }
    uint64_t        getValue(void) const { return READ_UINT64_LE(dataCopy_.getPtr()); }
    bool            isStandard(void) const { return scriptType_ != TXOUT_SCRIPT_NONSTANDARD; }
    bool            isInitialized(void) const { return dataCopy_.getSize() > 0; }
-   TxRef           getParentTxRef() const { return parentTx_; }
-   uint32_t        getParentIndex() const;
    uint32_t        getIndex(void) { return index_; }
-
-   //void setParentTx(TxRef txref, uint32_t idx=-1) { parentTx_=txref; index_=idx;}
-
 
    /////////////////////////////////////////////////////////////////////////////
    BinaryData const & getScrAddressStr(void) const { return uniqueScrAddr_; }
    BinaryDataRef      getScrAddressRef(void) const { return uniqueScrAddr_.getRef(); }
-   //BinaryData const & getRecipientAddr(void) const    { return recipientBinAddr20_; }
-   //BinaryDataRef      getRecipientAddrRef(void) const { return recipientBinAddr20_.getRef(); }
 
    /////////////////////////////////////////////////////////////////////////////
    BinaryData         getScript(void);
@@ -304,49 +212,35 @@ public:
    BinaryData         serialize(void) { return BinaryData(dataCopy_); }
    BinaryDataRef      serializeRef(void) { return dataCopy_; }
 
-   uint32_t           getParentHeight() const;
-
-   void               setParentHash(BinaryData const & txhash) { parentHash_ = txhash; }
-   const BinaryData& getParentHash(void) const { return parentHash_; }
-   void               setParentHeight(uint32_t blkheight) { parentHeight_ = blkheight; }
-
    /////////////////////////////////////////////////////////////////////////////
    void unserialize_checked(uint8_t const *   ptr,
       uint32_t          size,
       uint32_t          nbytes = 0,
-      TxRef             parent = TxRef(),
       uint32_t          idx = UINT32_MAX);
 
    void unserialize(BinaryData const & str,
       uint32_t           nbytes = 0,
-      TxRef              parent = TxRef(),
-      uint32_t           idx = UINT32_MAX);
+      uint32_t        idx = UINT32_MAX);
 
    void unserialize(BinaryDataRef const & str,
       uint32_t          nbytes = 0,
-      TxRef             parent = TxRef(),
-      uint32_t          idx = UINT32_MAX);
+      uint32_t        idx = UINT32_MAX);
    void unserialize(BinaryRefReader & brr,
       uint32_t          nbytes = 0,
-      TxRef             parent = TxRef(),
-      uint32_t          idx = UINT32_MAX);
+      uint32_t        idx = UINT32_MAX);
 
    void unserialize_swigsafe_(BinaryData const & rawOut) { unserialize(rawOut); }
 
-   void  pprint(ostream & os = cout, int nIndent = 0, bool pBigendian = true);
+   void  pprint(std::ostream & os = std::cout, int nIndent = 0, bool pBigendian = true);
 
 private:
    BinaryData        dataCopy_;
-   BinaryData        parentHash_;
-   uint32_t          parentHeight_;
 
    // Derived properties - we expect these to be set after construct/copy
-   //BinaryData        recipientBinAddr20_;
    BinaryData        uniqueScrAddr_;
    TXOUT_SCRIPT_TYPE scriptType_;
    uint32_t          scriptOffset_;
    uint32_t          index_;
-   TxRef             parentTx_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -382,11 +276,6 @@ public:
    static Tx          createFromStr(BinaryData const & bd) { return Tx(bd); }
 
    /////////////////////////////////////////////////////////////////////////////
-   bool               hasTxRef(void) const { return txRefObj_.isInitialized(); }
-   TxRef              getTxRef(void) const { return txRefObj_; }
-   void               setTxRef(TxRef ref) { txRefObj_ = ref; }
-
-   /////////////////////////////////////////////////////////////////////////////
    BinaryData         serialize(void) const    { return dataCopy_; }
    BinaryData         serializeNoWitness(void) const;
 
@@ -411,15 +300,6 @@ public:
    TxIn     getTxInCopy(int i) const;
    TxOut    getTxOutCopy(int i) const;
 
-
-   /////////////////////////////////////////////////////////////////////////////
-   // All these methods return UINTX_MAX if txRefObj.isNull()
-   // BinaryData getBlockHash(void)      { return txRefObj_.getBlockHash();      }
-   // uint32_t   getBlockTimestamp(void) { return txRefObj_.getBlockTimestamp(); }
-   uint32_t   getBlockHeight(void) const { return txRefObj_.getBlockHeight(); }
-   uint8_t    getDuplicateID(void) const { return txRefObj_.getDuplicateID(); }
-   uint16_t   getBlockTxIndex(void) const { return txRefObj_.getBlockTxIndex(); }
-
    bool isRBF(void) const;
    void setRBF(bool isTrue)
    {
@@ -433,8 +313,8 @@ public:
    }
 
    /////////////////////////////////////////////////////////////////////////////
-   void pprint(ostream & os = cout, int nIndent = 0, bool pBigendian = true);
-   void pprintAlot(ostream & os = cout);
+   void pprint(std::ostream & os = std::cout, int nIndent = 0, bool pBigendian = true);
+   void pprintAlot(std::ostream & os = std::cout);
 
    bool operator==(const Tx& rhs) const
    {
@@ -462,15 +342,11 @@ private:
    mutable BinaryData    thisHash_;
 
    // Will always create TxIns and TxOuts on-the-fly; only store the offsets
-   vector<size_t> offsetsTxIn_;
-   vector<size_t> offsetsTxOut_;
-   vector<size_t> offsetsWitness_;
+   std::vector<size_t> offsetsTxIn_;
+   std::vector<size_t> offsetsTxOut_;
+   std::vector<size_t> offsetsWitness_;
 
-   // To be calculated later
-   //BlockHeader*  headerPtr_;
-   TxRef         txRefObj_;
-
-   uint32_t      txTime_;
+   uint32_t      txTime_ = 0;
 
    bool isRBF_ = false;
    bool isChainedZc_ = false;
@@ -495,8 +371,9 @@ struct UTXO
 
    UTXO(uint64_t value, uint32_t txHeight, uint32_t txIndex, 
       uint32_t txOutIndex, BinaryData txHash, BinaryData script) :
-      txHash_(move(txHash)), txHeight_(txHeight), txIndex_(txIndex), 
-      txOutIndex_(txOutIndex), value_(value), script_(move(script))
+      txHash_(std::move(txHash)), txOutIndex_(txOutIndex), 
+      txHeight_(txHeight), txIndex_(txIndex),
+      value_(value), script_(std::move(script))
    {}
 
    UTXO(void) {}
@@ -508,7 +385,7 @@ struct UTXO
 
    uint64_t getValue(void) const { return value_; }
    const BinaryData& getTxHash(void) const { return txHash_; }
-   string getTxHashStr(void) const { return txHash_.toHexStr(); }
+   std::string getTxHashStr(void) const { return txHash_.toHexStr(); }
    const BinaryData& getScript(void) const { return script_; }
    uint32_t getTxIndex(void) const { return txIndex_; }
    uint32_t getTxOutIndex(void) const { return txOutIndex_; }
@@ -572,7 +449,7 @@ public:
    const BinaryData& getScrAddr(void) { return scrAddr_; }
 
    /////
-   const vector<BinaryData>& getTxHashList(void) const
+   const std::vector<BinaryData>& getTxHashList(void) const
    {
       return txHashList_;
    }
@@ -588,7 +465,7 @@ public:
 
 private:
    BinaryData scrAddr_;
-   vector<BinaryData> txHashList_;
+   std::vector<BinaryData> txHashList_;
 };
 
 #endif

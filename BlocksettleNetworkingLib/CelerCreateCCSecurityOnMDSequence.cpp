@@ -43,11 +43,15 @@ CelerMessage CelerCreateCCSecurityOnMDSequence::sendRequest()
 
    auto description = request.add_parameter();
    description->set_key("description");
-   description->set_value("Definition created via PB");
+   description->set_value("Definition created via MD");
 
    auto tickSize = request.add_parameter();
    tickSize->set_key("tickSize");
    tickSize->set_value("1");
+
+   auto divisor = request.add_parameter();
+   divisor->set_key("divisor");
+   divisor->set_value("1");
 
    auto tickValue = request.add_parameter();
    tickValue->set_key("tickValue");
@@ -61,9 +65,6 @@ CelerMessage CelerCreateCCSecurityOnMDSequence::sendRequest()
    alias->set_securityidsource("EXCHANGE");
    alias->set_securityidalias(securityId_);
    alias->set_securitycodealias(securityId_);
-
-   logger_->debug("[CelerCreateCCSecurityOnMDSequence::sendRequest] {}"
-      , request.DebugString());
 
    CelerMessage message;
    message.messageType = CelerAPI::CreateSecurityListingRequestType;

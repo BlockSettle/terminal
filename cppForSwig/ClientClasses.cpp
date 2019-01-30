@@ -455,7 +455,7 @@ unsigned ClientClasses::ProgressData::numericProgress() const
 vector<string> ClientClasses::ProgressData::wltIDs() const
 {
    vector<string> vec;
-   for (unsigned i = 0; i < ptr_->id_size(); i++)
+   for (int i = 0; i < ptr_->id_size(); i++)
       vec.push_back(ptr_->id(i));
 
    return vec;

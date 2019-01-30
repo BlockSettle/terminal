@@ -10,7 +10,6 @@ enum CLIRequestType
    CheckAuthAddressMessageType = 4;
    ReloadWalletMessageType = 5;
    SendCCTokenMessageType = 6;
-   OTPUpdateMessageType = 7;
    AuthVerificationTransactionType = 8;
    AuthRevokeTransactionType = 9;
    CCDistributionTransactionType = 10;
@@ -19,6 +18,7 @@ enum CLIRequestType
    FundCCGATransactionType = 13;
    GetRequestsStatType = 14;
    GetPendingSettlementsInfo = 15;
+   CreateCelerUserType = 16;
 }
 
 enum ArmoryConnectionState
@@ -58,19 +58,19 @@ message PBStatusResponse
 {
    required bool ConnectedToCeler = 1;
    required bool ConnectedToGenoa = 2;
-   required bool AdminAPIStarted = 3;
-   required bool CelerMerchantConnected = 4;
-   required bool CelerPiggyBankConnected = 5;
-   required bool CelerStaticDataConnected = 6;
+   required bool CelerMerchantConnected = 3;
+   required bool CelerPiggyBankConnected = 4;
+   required bool CelerStaticDataConnected = 5;
 
-   required string PBVersion = 7;
+   required string PBVersion = 6;
 
-   optional string GenoaVersion = 8;
-   optional string BlocksettleVersion = 9;
-   optional string UnifyVersion = 10;
-   optional string LandfallVersion = 11;
+   optional string GenoaVersion = 7;
+   optional string BlocksettleVersion = 8;
+   optional string UnifyVersion = 9;
+   optional string LandfallVersion = 10;
 
    required ArmoryConnectionState armoryConnectionState = 12;
+   required string uptime = 13;
 }
 
 message ErrorMessage
@@ -116,13 +116,6 @@ message SendCCTokenRequest
    required string request_id = 5;
 }
 
-message OTPUpdateRequest
-{
-   required string user_id = 1;
-   required string otp_id = 2;
-   required string request_id = 3;
-}
-
 message AuthVerificationTransactionResponse
 {
    required bool transaction_broadcasted = 1;
@@ -158,7 +151,6 @@ message GetRequestsStatResopnse
 {
    required uint32 submit_auth_count = 1;
    required uint32 revoke_auth_count = 2;
-   required uint32 generate_otp_count = 3;
    required uint32 generate_cc_seed_count = 4;
    required uint32 cc_initial_distribution_count = 5;
    required uint32 fund_cc_gen_address_count = 6;
@@ -176,5 +168,16 @@ message GetPendingSettlementsResponse
 
    repeated ProductStatistics cc_trades = 2;
    repeated ProductStatistics xbt_trades = 3;
+}
 
+message CreateCelerUserRequest
+{
+   required string user_email = 1;
+}
+
+message CreateCelerUserResponse
+{
+   required bool     create_user_result = 1;
+   required string   user_email = 2;
+   optional string   error_message = 3;
 }

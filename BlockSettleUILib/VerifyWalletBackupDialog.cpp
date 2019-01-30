@@ -8,12 +8,14 @@
 
 
 VerifyWalletBackupDialog::VerifyWalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
-   , QWidget *parent)
+                                 , const std::shared_ptr<spdlog::logger> &logger
+                                                   , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::VerifyWalletBackupDialog)
    , wallet_(wallet)
-   , easyCodec_(std::make_shared<EasyCoDec>())
+   , logger_(logger)
    , netType_(wallet->getXBTGroupType() == bs::hd::CoinType::Bitcoin_test ? NetworkType::TestNet : NetworkType::MainNet)
+   , easyCodec_(std::make_shared<EasyCoDec>())
 {
    ui_->setupUi(this);
 
@@ -42,7 +44,8 @@ void VerifyWalletBackupDialog::onPrivKeyChanged()
    easyData.part2 = ui_->lineEditPrivKey2->text().toStdString();
    try {
       const auto seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, netType_);
-      bs::hd::Wallet newWallet(wallet_->getName(), wallet_->getDesc(), seed);
+      bs::hd::Wallet newWallet(wallet_->getName(), wallet_->getDesc(), seed
+                               , logger_);
       if (newWallet.getWalletId() == wallet_->getWalletId()) {
          ui_->labelResult->setStyleSheet(QLatin1String("QLabel {color : green;}"));
          ui_->labelResult->setText(tr("Valid"));

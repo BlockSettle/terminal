@@ -14,6 +14,7 @@ public:
    ~TransactionOutputsModel() noexcept override = default;
 
    void AddRecipient(unsigned int recipientId, const QString& address, double amount);
+   void UpdateRecipientAmount(unsigned int recipientId, double amount);
 
    unsigned int   GetOutputId(int row);
    int            GetRowById(unsigned int id);

@@ -13,13 +13,12 @@
 #include <algorithm>
 #include <thread>
 
-#include "cryptopp/integer.h"
 #include "BinaryData.h"
 #include "BtcUtils.h"
 #include "BlockObj.h"
 #include "lmdb_wrapper.h"
 
-
+using namespace std;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -91,91 +90,6 @@ void BlockHeader::pprintAlot(ostream & os)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Due to SWIG complications, passing in a value by reference really isn't
-// feasible. Therefore, we'll use int64 and pass back -1 if we don't find a
-// nonce.
-int64_t BlockHeader::findNonce(const char* inDiffStr)
-{
-   const BinaryData playHeader(serialize());
-   const CryptoPP::Integer minBDiff("FFFF0000000000000000000000000000000000000000000000000000h");
-   const CryptoPP::Integer inDiff(inDiffStr);
-
-   if(inDiff > minBDiff) {
-      cout << "Difficulty " << inDiffStr << " is too high for Bitcoin (bdiff)." << endl;
-   }
-   else {
-      volatile bool stopNow=false;
-
-      std::mutex lockSolution;
-      bool hasSolution=false;
-
-      const auto computer = [&] (uint32_t startAt, uint32_t stopAt)->int64_t
-      {
-         BinaryData hashResult(32);
-         for(uint32_t nonce=startAt; nonce<stopAt; nonce++)
-         {
-            *(uint32_t*)(playHeader.getPtr()+76) = nonce;
-            BtcUtils::getHash256_NoSafetyCheck(playHeader.getPtr(), HEADER_SIZE,
-                                               hashResult);
-            const CryptoPP::Integer hashRes((hashResult.swapEndian()).getPtr(),
-                                            hashResult.getSize());
-
-            if(hashRes < inDiff)
-            {
-               unique_lock<mutex> l(lockSolution);
-               cout << "NONCE FOUND! " << nonce << endl;
-               unserialize(playHeader);
-               cout << "Raw Header: " << serialize().toHexStr() << endl;
-               pprint();
-               cout << "Hash:       " << hashResult.toHexStr() << endl;
-               hasSolution=true;
-               stopNow=true;
-               return nonce;
-            }
-
-            if (stopNow)
-            {
-               break;
-            }
-
-            if(startAt==0 && nonce % 10000000 == 0)
-            {
-               cout << ".";
-               cout.flush();
-            }
-         }
-
-         //needs a return val for windows to build
-         return -1;
-      };
-
-      const unsigned numThreads = thread::hardware_concurrency();
-      vector<thread> threads;
-      threads.reserve(numThreads);
-
-      for (unsigned i=0; i < numThreads; i++)
-      {
-         threads.emplace_back(
-            computer,
-            (uint32_t)(-1)/numThreads*i,
-            (uint32_t)(-1)/numThreads*(i+1)
-         );
-      }
-      for (unsigned i=0; i < numThreads; i++)
-         threads[i].join();
-
-      if (!hasSolution) {
-         cout << "No nonce found!" << endl;
-      }
-      // We have to change the coinbase script, recompute merkle root, and then
-      // can cycle through all the nonces again.
-   }
-
-   // If we've landed here for one reason or another, we've failed. Return 0.
-   return -1;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //
 // DBOutPoint Methods
@@ -201,14 +115,73 @@ BinaryDataRef DBOutPoint::getDBkey() const
    return BinaryDataRef();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+//
+// TxRef methods
+//
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+uint32_t TxRef::getBlockHeight(void) const
+{
+   if (dbKey6B_.getSize() == 6 &&
+      !dbKey6B_.startsWith(DBUtils::ZeroConfHeader_))
+      return DBUtils::hgtxToHeight(dbKey6B_.getSliceCopy(0, 4));
+   else
+      return UINT32_MAX;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+uint8_t TxRef::getDuplicateID(void) const
+{
+   if (dbKey6B_.getSize() == 6)
+      return DBUtils::hgtxToDupID(dbKey6B_.getSliceCopy(0, 4));
+   else
+      return UINT8_MAX;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+uint16_t TxRef::getBlockTxIndex(void) const
+{
+   if (dbKey6B_.getSize() == 6)
+   {
+      if (!dbKey6B_.startsWith(DBUtils::ZeroConfHeader_))
+         return READ_UINT16_BE(dbKey6B_.getPtr() + 4);
+      else
+         return READ_UINT32_BE(dbKey6B_.getPtr() + 2);
+   }
+   else
+      return UINT16_MAX;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+void TxRef::pprint(ostream & os, int nIndent) const
+{
+   os << "TxRef Information:" << endl;
+   //os << "   Hash:      " << getThisHash().toHexStr() << endl;
+   os << "   Height:    " << getBlockHeight() << endl;
+   os << "   BlkIndex:  " << getBlockTxIndex() << endl;
+   //os << "   FileIdx:   " << blkFilePtr_.getFileIndex() << endl;
+   //os << "   FileStart: " << blkFilePtr_.getStartByte() << endl;
+   //os << "   NumBytes:  " << blkFilePtr_.getNumBytes() << endl;
+   os << "   ----- " << endl;
+   os << "   Read from disk, full tx-info: " << endl;
+   //getTxCopy().pprint(os, nIndent+1); 
+}
+
+/////////////////////////////////////////////////////////////////////////////
+void TxRef::setRef(BinaryDataRef bdr)
+{
+   dbKey6B_ = bdr.copy();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 //
 // DBTxRef Methods
 //
-////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////
-
+/////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 BinaryData DBTxRef::serialize(void) const 
 { 
@@ -296,21 +269,6 @@ UnspentTxOut::UnspentTxOut(void) :
    isMultisigRef_(false)
 {
    // Nothing to do here
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void UnspentTxOut::init(LMDBBlockDatabase *db, TxOut & txout, uint32_t blkNum, 
-   bool isMulti)
-{
-   TxRef txRef = txout.getParentTxRef();
-   DBTxRef parentTxRef(txRef, db);
-   txHash_     = parentTxRef.getThisHash();
-   txOutIndex_ = txout.getIndex();
-   txIndex_    = txRef.getBlockTxIndex();
-   txHeight_   = txout.getParentHeight();
-   value_      = txout.getValue();
-   script_     = txout.getScript();
-   isMultisigRef_ = isMulti;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

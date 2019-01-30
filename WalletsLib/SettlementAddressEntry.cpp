@@ -101,9 +101,9 @@ const BinaryData &bs::SettlementAssetEntry::script() const
 
       BinaryWriter script;
       script.put_uint8_t(OP_1);
-      script.put_uint8_t(buyChainKey.getSize());
+      script.put_uint8_t((uint8_t)buyChainKey.getSize());
       script.put_BinaryData(buyChainKey);
-      script.put_uint8_t(sellChainKey.getSize());
+      script.put_uint8_t((uint8_t)sellChainKey.getSize());
       script.put_BinaryData(sellChainKey);
       script.put_uint8_t(OP_2);
       script.put_uint8_t(OP_CHECKMULTISIG);
@@ -134,7 +134,7 @@ const BinaryData &bs::SettlementAssetEntry::sellChainedPubKey() const
 const BinaryData &bs::SettlementAssetEntry::prefixedHash() const
 {
    if (hash_.isNull()) {
-      hash_.append(BlockDataManagerConfig::getScriptHashPrefix());
+      hash_.append(NetworkConfig::getScriptHashPrefix());
       hash_.append(hash());
    }
    return hash_;
@@ -144,9 +144,9 @@ const BinaryData &bs::SettlementAssetEntry::p2wshScript() const
 {
    if (p2wshScript_.isNull()) {
       const auto hash256 = BtcUtils::getSha256(script());
-      Recipient_PW2SH recipient(hash256, 0);
+      Recipient_P2WSH recipient(hash256, 0);
       const auto &script = recipient.getSerializedScript();
-      p2wshScript_ = script.getSliceCopy(9, script.getSize() - 9);
+      p2wshScript_ = script.getSliceCopy(9, (uint32_t)script.getSize() - 9);
    }
    return p2wshScript_;
 }
@@ -162,7 +162,7 @@ const BinaryData &bs::SettlementAssetEntry::p2wsHash() const
 const BinaryData &bs::SettlementAssetEntry::prefixedP2SHash() const
 {
    if (prefixedP2SHash_.isNull()) {
-      prefixedP2SHash_.append(BlockDataManagerConfig::getScriptHashPrefix());
+      prefixedP2SHash_.append(NetworkConfig::getScriptHashPrefix());
       prefixedP2SHash_.append(p2wsHash());
    }
    return prefixedP2SHash_;

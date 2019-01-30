@@ -109,11 +109,15 @@ public:
    QModelIndex parent(const QModelIndex &child) const override;
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
 
+signals:
+   void updateAddresses();
+
 private slots:
    void onWalletChanged();
    void onNewWalletAdded(const std::string &walletId);
    void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
       , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
+   void onHDWalletError(unsigned int id, std::string err);
    void onMissingWallets(const std::vector<std::string> &);
    void onSignerAuthenticated();
 
@@ -158,8 +162,10 @@ class QmlWalletsViewModel : public WalletsViewModel
 {
    Q_OBJECT
 public:
-   QmlWalletsViewModel(const std::shared_ptr<WalletsManager>& walletsMgr, QObject *parent = nullptr)
-      : WalletsViewModel(walletsMgr, "", nullptr, parent) {}
+   QmlWalletsViewModel(const std::shared_ptr<WalletsManager>& walletsMgr
+                       , QObject *parent = nullptr
+                       , bool showOnlyRegular = false)
+      : WalletsViewModel(walletsMgr, "", nullptr, parent, showOnlyRegular) {}
    ~QmlWalletsViewModel() override = default;
 
    enum Roles {

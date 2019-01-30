@@ -12,6 +12,8 @@
 #include <string.h>
 #include "BitcoinP2p.h"
 
+using namespace std;
+
 bool PEER_USES_WITNESS;
 
 template <typename T> uint32_t put_integer_be(uint8_t* ptr, const T& integer)
@@ -313,6 +315,10 @@ shared_ptr<Payload::DeserializedPayloads> Payload::deserialize(
                case Payload_reject:
                   payloadVec.push_back(move(make_unique<Payload_Reject>(
                      payloadptr, *length)));
+
+               default:
+                  payloadVec.push_back(move(make_unique<Payload_Unknown>(
+                     payloadptr, *length)));
                }
             }
             else
@@ -573,7 +579,7 @@ void Payload_Version::setVersionHeaderIPv4(uint32_t version, uint64_t services,
    vheader_.addr_recv_.setIPv4(services, recvaddr);
    vheader_.addr_from_.setIPv4(services, fromaddr);
 
-   auto&& randombytes = SecureBinaryData().GenerateRandom(8);
+   auto&& randombytes = CryptoPRNG::generateRandom(8);
    vheader_.nonce_ = *(uint64_t*)randombytes.getPtr();
 }
 
@@ -927,7 +933,7 @@ void BitcoinP2P::connectLoop(void)
          version.setVersionHeaderIPv4(70012, services, timestamp,
             node_addr_, clientsocketaddr);
 
-         version.userAgent_ = "Armory:0.96.4";
+         version.userAgent_ = "Armory:0.96.5";
          version.startHeight_ = -1;
 
          sendMessage(move(version));
@@ -1060,8 +1066,19 @@ void BitcoinP2P::checkServices(unique_ptr<Payload> payload)
 {
    Payload_Version* pver = (Payload_Version*)payload.get();
 
-   auto&& mainnetMW = READHEX(MAINNET_MAGIC_BYTES);
-   auto mwInt = (uint32_t*)mainnetMW.getPtr();
+   auto& this_mw = NetworkConfig::getMagicBytes();
+   auto mwInt = (uint32_t*)this_mw.getPtr();
+
+   if(*mwInt != magic_word_)
+   {
+      BinaryDataRef bdr_mw;
+      bdr_mw.setRef((uint8_t*)&magic_word_, 4);
+
+      LOGERR << "Node magic word does not match expected magic word:";
+      LOGERR << "   expected: " << this_mw.toHexStr();
+      LOGERR << "   got: " << bdr_mw.toHexStr();
+      throw BitcoinP2P_Exception("magic word mismatch");
+   }
 
    //Hardcode disabling SW for mainnet until BIP9 rule detection is implemented
    if(pver->vheader_.services_ & NODE_WITNESS)
@@ -1405,8 +1422,12 @@ void BitcoinP2P::updateNodeStatus(bool connected)
 ////////////////////////////////////////////////////////////////////////////////
 void  BitcoinP2PSocket::respond(vector<uint8_t>& packet)
 {
-   readDataStack_->push_back(move(packet));
+   if (packet.size() >= 0)
+      readDataStack_->push_back(move(packet));
+   else
+      readDataStack_->terminate();
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 void BitcoinP2PSocket::pushPayload(

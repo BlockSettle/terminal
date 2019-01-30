@@ -21,9 +21,16 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const std::shared_ptr<SignContainer> &signContainer, const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<WalletsManager> &walletsMgr, const bs::network::RFQ &rfq
    , const bs::network::Quote &quote, const std::shared_ptr<TransactionData> &txData)
-   : bs::SettlementContainer(armory), logger_(logger), authAddrMgr_(authAddrMgr), assetMgr_(assetMgr)
-   , signContainer_(signContainer), armory_(armory), walletsMgr_(walletsMgr)
-   , rfq_(rfq), quote_(quote), transactionData_(txData)
+   : bs::SettlementContainer(armory)
+   , logger_(logger)
+   , authAddrMgr_(authAddrMgr)
+   , assetMgr_(assetMgr)
+   , walletsMgr_(walletsMgr)
+   , signContainer_(signContainer)
+   , armory_(armory)
+   , transactionData_(txData)
+   , rfq_(rfq)
+   , quote_(quote)
    , clientSells_(!rfq.isXbtBuy())
 {
    qRegisterMetaType<AddressVerificationState>();
@@ -202,31 +209,41 @@ void ReqXBTSettlementContainer::activate()
    const auto list = authAddrMgr_->GetVerifiedAddressList();
    const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
    userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
+   if (!userKeyOk_) {
+      logger_->warn("[ReqXBTSettlementContainer::activate] userAddr {} not found in verified addrs list[{}]"
+         , userAddress.display<std::string>(), list.size());
+      return;
+   }
 
    if (clientSells_) {
       if (!transactionData_->IsTransactionValid()) {
          userKeyOk_ = false;
+         logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
          emit error(tr("Transaction data is invalid - sending of pay-in is prohibited"));
          return;
       }
    }
 
-   monitor_ = walletsMgr_->GetSettlementWallet()->createMonitorCb(settlAddr_, logger_);
-   if (monitor_ == nullptr) {
-      logger_->error("[ReqXBTSettlementContainer::populateXBTDetails] failed to create Settlement monitor");
-      return;
-   }
-   monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
+   fee_ = transactionData_->GetTransactionSummary().totalFee;
+
+   auto createMonitorCB = [this](const std::shared_ptr<bs::SettlementMonitorCb>& monitor)
+   {
+      monitor_ = monitor;
+
+      monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
       , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
       , [this](bs::PayoutSigner::Type) {});
+   };
 
-   fee_ = transactionData_->GetTransactionSummary().totalFee;
+   walletsMgr_->GetSettlementWallet()->createMonitorCb(settlAddr_, logger_, createMonitorCB);
 }
 
 void ReqXBTSettlementContainer::deactivate()
 {
    stopTimer();
-   monitor_->stop();
+   if (monitor_) {
+      monitor_->stop();
+   }
 }
 
 void ReqXBTSettlementContainer::zcReceived(unsigned int)

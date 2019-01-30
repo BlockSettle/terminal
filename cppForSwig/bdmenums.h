@@ -24,6 +24,7 @@
 
 #define RPC_PORT_MAINNET 8332
 #define RPC_PORT_TESTNET 18332
+#define RPC_PORT_REGTEST 18443
 
 enum BDMPhase
 {
@@ -58,8 +59,8 @@ enum ARMORY_DB_TYPE
 
 enum SOCKET_SERVICE
 {
-   SERVICE_FCGI,
-   SERVICE_WEBSOCKET
+   SERVICE_WEBSOCKET,
+   SERVICE_UNITTEST
 };
 
 enum BDM_INIT_MODE
@@ -73,7 +74,6 @@ enum BDM_INIT_MODE
 enum SocketType
 {
    SocketHttp,
-   SocketFcgi,
    SocketWS,
    SocketBitcoinP2P,
    SocketSimple

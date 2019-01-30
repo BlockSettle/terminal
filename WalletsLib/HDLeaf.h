@@ -11,6 +11,9 @@
 #include "HDNode.h"
 #include "MetaData.h"
 
+namespace spdlog {
+   class logger;
+}
 
 namespace bs {
    class TxAddressChecker;
@@ -35,7 +38,7 @@ namespace bs {
             }
          };
 
-         using PooledAddress = std::pair<BlockchainScanner::AddrPoolKey, bs::Address>;
+         using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
          using cb_completed = std::function<void()>;
          using cb_save_to_wallet = std::function<void(const std::vector<PooledAddress> &)>;
          using cb_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
@@ -55,6 +58,7 @@ namespace bs {
       private:
          struct Portion {
             std::vector<PooledAddress>  addresses;
+            std::map<bs::Address, AddrPoolKey>  poolKeyByAddr;
             Path::Elem        start;
             Path::Elem        end;
             std::atomic_bool  registered;
@@ -64,6 +68,7 @@ namespace bs {
 
          std::shared_ptr<Node>   node_;
          std::shared_ptr<ArmoryConnection>   armoryConn_;
+         std::shared_ptr<AsyncClient::BtcWallet>   rescanWallet_;
          std::string             walletId_;
          std::string             rescanWalletId_;
          std::string             rescanRegId_;
@@ -73,7 +78,6 @@ namespace bs {
          cb_write_last           cbWriteLast_ = nullptr;
          Portion                 currentPortion_;
          std::atomic_int         processing_;
-         std::atomic_bool        stopped_;
 
       private:
          bs::Address newAddress(const Path &path, AddressEntryType aet);
@@ -96,10 +100,8 @@ namespace bs {
          ~Leaf() override;
          virtual void init(const std::shared_ptr<Node> &node, const hd::Path &, Nodes rootNodes);
          virtual bool copyTo(std::shared_ptr<hd::Leaf> &) const;
-         virtual void setData(const std::string &) {}
-         virtual void setData(uint64_t) {}
 
-         void firstInit() override;
+         void firstInit(bool force = false) override;
          std::string GetWalletId() const override;
          std::string GetWalletDescription() const override;
          void SetDescription(const std::string &desc) override { desc_ = desc; }
@@ -111,7 +113,8 @@ namespace bs {
          std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
-         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *obj = nullptr, uint64_t val = UINT64_MAX) override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
+            , QObject *obj, uint64_t val = UINT64_MAX) override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -146,6 +149,7 @@ namespace bs {
          void setDB(const std::shared_ptr<LMDBEnv> &env, LMDB *db);
 
          void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
+         void UnregisterWallet() override;
 
          std::shared_ptr<LMDBEnv> getDBEnv() override { return dbEnv_; }
          LMDB *getDB() override { return db_; }
@@ -185,13 +189,14 @@ namespace bs {
          const Path::Elem  addrTypeInternal = 1u;
          const AddressEntryType defaultAET_ = AddressEntryType_P2WPKH;
 
+         mutable std::string     walletId_;
          bs::wallet::Type        type_;
          std::shared_ptr<Node>   node_;
          Nodes                   rootNodes_;
          hd::Path                path_;
-         bool        isExtOnly_ = false;
          std::string name_, desc_;
          std::string suffix_;
+         bool        isExtOnly_ = false;
 
          Path::Elem  lastIntIdx_ = 0;
          Path::Elem  lastExtIdx_ = 0;
@@ -221,15 +226,17 @@ namespace bs {
       private:
          bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
          std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
-            , AddressEntryType ae_type = AddressEntryType_Default);
+                         , AddressEntryType ae_type = AddressEntryType_Default);
          Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
          Path::Elem getAddressIndex(const bs::Address &addr) const;
          void onScanComplete();
          void onSaveToWallet(const std::vector<PooledAddress> &);
-         void topUpAddressPool(size_t intAddresses = 0, size_t extAddresses = 0);
+         void topUpAddressPool(size_t intAddresses = 0
+                               , size_t extAddresses = 0);
          Path::Elem getLastAddrPoolIndex(Path::Elem) const;
 
-         static void serializeAddr(BinaryWriter &bw, Path::Elem index, AddressEntryType, const Path &);
+         static void serializeAddr(BinaryWriter &bw, Path::Elem index
+                                   , AddressEntryType, const Path &);
          bool deserialize(const BinaryData &ser, Nodes rootNodes);
       };
 
@@ -262,23 +269,28 @@ namespace bs {
          Q_OBJECT
 
       public:
-         CCLeaf(const std::string &name, const std::string &desc, bool extOnlyAddresses = false);
+         CCLeaf(const std::string &name, const std::string &desc,
+                const std::shared_ptr<spdlog::logger> &logger,
+                bool extOnlyAddresses = false);
          ~CCLeaf() override;
 
          wallet::Type GetType() const override { return wallet::Type::ColorCoin; }
 
          void setData(const std::string &) override;
          void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
-         void firstInit() override;
+         void firstInit(bool force) override;
 
-         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>, QObject *, uint64_t val = UINT64_MAX) override;
-         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>, QObject *) override;
+         bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
+            , QObject *, uint64_t val = UINT64_MAX) override;
+         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
+            , QObject *) override;
          bool isBalanceAvailable() const override;
          BTCNumericTypes::balance_type GetSpendableBalance() const override;
          BTCNumericTypes::balance_type GetUnconfirmedBalance() const override;
          BTCNumericTypes::balance_type GetTotalBalance() const override;
          bool getAddrBalance(const bs::Address &) const override;
-         bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
+         bool getAddrBalance(const bs::Address &addr
+                   , std::function<void(std::vector<uint64_t>)>) const override;
 
          BTCNumericTypes::balance_type GetTxBalance(int64_t) const override;
          QString displayTxValue(int64_t val) const override;
@@ -293,14 +305,15 @@ namespace bs {
 
       private:
          void validationProc();
-         void findInvalidUTXOs(const std::vector<UTXO> &, std::function<void (const std::vector<UTXO> &)>);
-         void refreshInvalidUTXOs(bool ZConly = false);
+         void findInvalidUTXOs(const std::vector<UTXO> &
+            , std::function<void (const std::vector<UTXO> &)>);
+         void refreshInvalidUTXOs(const bool& ZConly = false);
          BTCNumericTypes::balance_type correctBalance(BTCNumericTypes::balance_type
             , bool applyCorrection = true) const;
          std::vector<UTXO> filterUTXOs(const std::vector<UTXO> &) const;
 
-      private:
          std::shared_ptr<TxAddressChecker>   checker_;
+         std::shared_ptr<spdlog::logger>     logger_;
          uint64_t       lotSizeInSatoshis_ = 0;
          volatile bool  validationStarted_, validationEnded_;
          double         balanceCorrection_ = 0;

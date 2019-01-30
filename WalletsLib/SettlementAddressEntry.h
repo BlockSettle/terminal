@@ -82,7 +82,7 @@ namespace bs {
       size_t getInputSize(void) const override { return getAddress().getSize() + 2 + 73 * 1/*m*/ + 40; }
 
       const BinaryData& getID(void) const override { return ae_->getID(); }
-      int getIndex() const { return ae_->getIndex(); }
+      int getIndex() const { return ae_->id(); }
 
    protected:
       std::shared_ptr<SettlementAssetEntry>  ae_;
@@ -111,7 +111,7 @@ namespace bs {
       const BinaryData &getPrefixedHash(void) const override;
       const BinaryData &getHash() const override;
       const BinaryData &getAddress() const override { return BtcUtils::scrAddrToSegWitAddress(getHash()); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_PW2SH>(getHash(), val); }
+      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_P2WSH>(getHash(), val); }
       size_t getInputSize(void) const override { return 41; }
 
    private:

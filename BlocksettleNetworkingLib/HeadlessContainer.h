@@ -7,6 +7,7 @@
 #include <QStringList>
 #include "MetaData.h"
 #include "SignContainer.h"
+#include "ApplicationSettings.h"
 
 #include "headless.pb.h"
 
@@ -89,7 +90,6 @@ protected:
    void ProcessChangePasswordResponse(unsigned int id, const std::string &data);
    void ProcessSetLimitsResponse(unsigned int id, const std::string &data);
 
-protected:
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
    std::set<RequestId>                 signRequests_;
@@ -103,8 +103,9 @@ class RemoteSigner : public HeadlessContainer
    Q_OBJECT
 public:
    RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
-      , const QString &port
-      , const std::shared_ptr<ConnectionManager>& connectionManager, const QString &pwHash = {}
+      , const QString &port, NetworkType netType
+      , const std::shared_ptr<ConnectionManager>& connectionManager
+      , const std::shared_ptr<ApplicationSettings>& appSettings
       , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
@@ -119,7 +120,7 @@ protected slots:
    void onAuthenticated();
    void onConnected();
    void onDisconnected();
-   void onConnError();
+   void onConnError(const QString &err);
    void onPacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
@@ -127,12 +128,13 @@ private:
    void Authenticate();
 
 protected:
-   const QString        host_;
-   const QString        port_;
-   const QString        pwHash_;
-   const std::string    connPubKey_;
+   const QString          host_;
+   const QString          port_;
+   const NetworkType      netType_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
+   SecureBinaryData       zmqSignerPubKey_;
    bool  authPending_ = false;
+   std::shared_ptr<ApplicationSettings> appSettings_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
@@ -143,10 +145,11 @@ class LocalSigner : public RemoteSigner
 {
    Q_OBJECT
 public:
-   LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir, NetworkType
-      , const QString &port
+   LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir
+      , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
-      , const QString &pwHash = {}, double asSpendLimit = 0);
+      , const std::shared_ptr<ApplicationSettings>& appSettings
+      , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 
    bool Start() override;

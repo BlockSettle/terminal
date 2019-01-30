@@ -89,9 +89,7 @@
 #define LOGTIMEBUFLEN 30
 #define MAX_LOG_FILE_SIZE (500*1024)
 
-using namespace std;
-
-inline string NowTime();
+inline std::string NowTime();
 
 typedef enum 
 {
@@ -112,7 +110,7 @@ class LogStream
 {
 public:
    virtual LogStream& operator<<(const char * str) = 0;
-   virtual LogStream& operator<<(string const & str) = 0;
+   virtual LogStream& operator<<(std::string const & str) = 0;
    virtual LogStream& operator<<(int i) = 0;
    virtual LogStream& operator<<(unsigned int i) = 0;
    virtual LogStream& operator<<(unsigned long long int i) = 0;
@@ -132,25 +130,25 @@ public:
 
    void enableStdOut(bool newbool) { noStdout_ = !newbool; }
 
-   void setLogFile(string logfile, unsigned long long maxSz=MAX_LOG_FILE_SIZE)
+   void setLogFile(std::string logfile, unsigned long long maxSz=MAX_LOG_FILE_SIZE)
    { 
       fname_ = logfile;
       truncateFile(fname_, maxSz);
-      fout_.open(OS_TranslatePath(fname_.c_str()), ios::app); 
-      fout_ << "\n\nLog file opened at " << NowTime() << ": " << fname_.c_str() << endl;
+      fout_.open(OS_TranslatePath(fname_.c_str()), std::ios::app); 
+      fout_ << "\n\nLog file opened at " << NowTime() << ": " << fname_.c_str() << std::endl;
    }
 
    
-   void truncateFile(string logfile, unsigned long long int maxSizeInBytes)
+   void truncateFile(std::string logfile, unsigned long long int maxSizeInBytes)
    {
-      ifstream is(OS_TranslatePath(logfile.c_str()), ios::in|ios::binary);
+      std::ifstream is(OS_TranslatePath(logfile.c_str()), std::ios::in|std::ios::binary);
 
       // If file does not exist, nothing to do
       if(!is.is_open())
          return;
    
       // Check the filesize
-      is.seekg(0, ios::end);
+      is.seekg(0, std::ios::end);
       unsigned long long int fsize = (size_t)is.tellg();
       is.close();
 
@@ -171,8 +169,8 @@ public:
          is.close();
          
          // Create temporary file and dump the bytes there
-         string tempfile = logfile + string("temp");
-         ofstream os(OS_TranslatePath(tempfile.c_str()), ios::out|ios::binary);
+         std::string tempfile = logfile + std::string("temp");
+         std::ofstream os(OS_TranslatePath(tempfile.c_str()), std::ios::out| std::ios::binary);
          os.write(lastBytes, bytesToCopy);
          os.close();
          delete[] lastBytes;
@@ -188,24 +186,24 @@ public:
       }
    }
 
-   LogStream& operator<<(const char * str)   { if(!noStdout_) cout << str;  if(fout_.is_open()) fout_ << str; return *this; }
-   LogStream& operator<<(string const & str) { if(!noStdout_) cout << str.c_str(); if(fout_.is_open()) fout_ << str.c_str(); return *this; }
-   LogStream& operator<<(int i)              { if(!noStdout_) cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
-   LogStream& operator<<(unsigned int i)     { if(!noStdout_) cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
-   LogStream& operator<<(unsigned long long int i) { if(!noStdout_) cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
-   LogStream& operator<<(float f)            { if(!noStdout_) cout << f;    if(fout_.is_open()) fout_ << f; return *this; }
-   LogStream& operator<<(double d)           { if(!noStdout_) cout << d;    if(fout_.is_open()) fout_ << d; return *this; }
+   LogStream& operator<<(const char * str)   { if(!noStdout_) std::cout << str;  if(fout_.is_open()) fout_ << str; return *this; }
+   LogStream& operator<<(std::string const & str) { if(!noStdout_) std::cout << str.c_str(); if(fout_.is_open()) fout_ << str.c_str(); return *this; }
+   LogStream& operator<<(int i)              { if(!noStdout_) std::cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
+   LogStream& operator<<(unsigned int i)     { if(!noStdout_) std::cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
+   LogStream& operator<<(unsigned long long int i) { if(!noStdout_) std::cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
+   LogStream& operator<<(float f)            { if(!noStdout_) std::cout << f;    if(fout_.is_open()) fout_ << f; return *this; }
+   LogStream& operator<<(double d)           { if(!noStdout_) std::cout << d;    if(fout_.is_open()) fout_ << d; return *this; }
 #if !defined(_MSC_VER) && !defined(__MINGW32__) && defined(__LP64__)
-   LogStream& operator<<(size_t i)           { if(!noStdout_) cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
+   LogStream& operator<<(size_t i)           { if(!noStdout_) std::cout << i;    if(fout_.is_open()) fout_ << i; return *this; }
 #endif
 
-   void FlushStreams(void) {cout.flush(); fout_.flush();}
+   void FlushStreams(void) {std::cout.flush(); fout_.flush();}
 
    void newline(void) { *this << "\n"; }
    void close(void) { fout_.close(); }
 
-   ofstream fout_;
-   string   fname_;
+   std::ofstream fout_;
+   std::string   fname_;
    bool     noStdout_;
 };
 
@@ -214,7 +212,7 @@ class NullStream : public LogStream
 {
 public:
    LogStream& operator<<(const char * str)   { return *this; }
-   LogStream& operator<<(string const & str) { return *this; }
+   LogStream& operator<<(std::string const & str) { return *this; }
    LogStream& operator<<(int i)              { return *this; }
    LogStream& operator<<(unsigned int i)     { return *this; }
    LogStream& operator<<(unsigned long long int i)     { return *this; }
@@ -238,12 +236,12 @@ public:
       while (true)
       {
          //lock free check and return if instance is valid
-         auto logPtr = theOneLog_.load(memory_order_acquire);
+         auto logPtr = theOneLog_.load(std::memory_order_acquire);
          if (logPtr != nullptr)
             return *logPtr;
 
          //lock and instantiate
-         unique_lock<mutex> lock(mu_, defer_lock);
+         std::unique_lock<std::mutex> lock(mu_, std::defer_lock);
          if (!lock.try_lock())
             continue;
     
@@ -253,11 +251,11 @@ public:
          // Open the filestream if available
          if (filename != nullptr)
          {
-            newLogPtr->ds_.setLogFile(string(filename));
+            newLogPtr->ds_.setLogFile(std::string(filename));
             newLogPtr->isInitialized_ = true;
          }
 
-         theOneLog_.store(newLogPtr, memory_order_release);
+         theOneLog_.store(newLogPtr, std::memory_order_release);
          lock.unlock();
 
          return *newLogPtr;
@@ -277,7 +275,7 @@ public:
          return ds_;
    }
 
-   static void SetLogFile(string logfile) { GetInstance(logfile.c_str()); }
+   static void SetLogFile(std::string logfile) { GetInstance(logfile.c_str()); }
    static void CloseLogFile(void)
    { 
       GetInstance().ds_.FlushStreams();
@@ -291,14 +289,14 @@ public:
    static void SetLogLevel(LogLevel level) { GetInstance().logLevel_ = (int)level; }
    static void SuppressStdout(bool b=true) { GetInstance().ds_.enableStdOut(!b);}
 
-   static string ToString(LogLevel level)
+   static std::string ToString(LogLevel level)
    {
 	   static const char* const buffer[] = {"DISABLED", "ERROR ", "WARN  ", "INFO  ", "DEBUG ", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
       return buffer[level];
    }
 
     static bool isOpen(void) {return GetInstance().ds_.fout_.is_open();}
-    static string filename(void) {return GetInstance().ds_.fname_;}
+    static std::string filename(void) {return GetInstance().ds_.fname_;}
     static void FlushStreams(void) {GetInstance().ds_.FlushStreams();}
 
     static void CleanUp(void) { delete &GetInstance(); }
@@ -314,8 +312,8 @@ private:
     Log& operator =(const Log&);
     
 private:
-    static atomic<Log*> theOneLog_;
-    static mutex mu_;
+    static std::atomic<Log*> theOneLog_;
+    static std::mutex mu_;
 
 };
 
@@ -323,14 +321,14 @@ private:
 class StreamBuffer : public LogStream
 {
 private:
-   stringstream ss_;
+   std::stringstream ss_;
 
 public:
    StreamBuffer(void)
    {}
 
    LogStream& operator<<(const char * str) { ss_ << str; return *this; }
-   LogStream& operator<<(string const & str) { ss_ << str.c_str(); return *this; }
+   LogStream& operator<<(std::string const & str) { ss_ << str.c_str(); return *this; }
    LogStream& operator<<(int i) { ss_ << i; return *this; }
    LogStream& operator<<(unsigned int i) { ss_ << i; return *this; }
    LogStream& operator<<(unsigned long long int i) { ss_ << i; return *this; }
@@ -340,7 +338,7 @@ public:
    LogStream& operator<<(size_t i) { ss_ << i; return *this; }
 #endif
 
-   string str(void) { return ss_.str(); }
+   std::string str(void) { return ss_.str(); }
 };
 
 
@@ -378,18 +376,18 @@ private:
    LogLevel logLevel_;
 };
 
-inline string NowTime()
+inline std::string NowTime()
 {
     // Getting current time in ms is way trickier than it should be.
-    chrono::system_clock::time_point curTime = chrono::system_clock::now();
-    chrono::system_clock::duration timeDur = curTime.time_since_epoch();
-    timeDur -= chrono::duration_cast<chrono::seconds>(timeDur);
-    unsigned int ms = static_cast<unsigned>(timeDur / chrono::milliseconds(1));
+   std::chrono::system_clock::time_point curTime = std::chrono::system_clock::now();
+    std::chrono::system_clock::duration timeDur = curTime.time_since_epoch();
+    timeDur -= std::chrono::duration_cast<std::chrono::seconds>(timeDur);
+    unsigned int ms = static_cast<unsigned>(timeDur / std::chrono::milliseconds(1));
 
     // Print time.
-    time_t curTimeTT = chrono::system_clock::to_time_t(curTime);
+    time_t curTimeTT = std::chrono::system_clock::to_time_t(curTime);
     tm* tStruct = localtime(&curTimeTT);
-    string timeStr = "%04i-%02i-%02i - %02i:%02i:%02i.%03i";
+    std::string timeStr = "%04i-%02i-%02i - %02i:%02i:%02i.%03i";
     char result[LOGTIMEBUFLEN] = {0};
     snprintf(result, sizeof(result), timeStr.c_str(), tStruct->tm_year + 1900, \
                                                       tStruct->tm_mon + 1, \

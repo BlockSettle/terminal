@@ -31,12 +31,19 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
       ui_->labelDirection->setText(tr(bs::Transaction::toString(item->direction)));
       ui_->labelAddress->setText(item->mainAddress);
 
-      if (item->txEntry.blockNum != std::numeric_limits<uint32_t>::max()) {
+      if (item->confirmations > 0) {
          ui_->labelHeight->setText(QString::number(item->txEntry.blockNum));
+      }
+      else {
+         if (item->txEntry.isRBF) {
+            ui_->labelFlag->setText(tr("RBF eligible"));
+         } else if (item->isCPFP) {
+            ui_->labelFlag->setText(tr("CPFP eligible"));
+         }
       }
 
       if (item->tx.isInitialized()) {
-         ui_->labelSize->setText(QString::number(item->tx.serializeNoWitness().getSize()));
+         ui_->labelSize->setText(QString::number(item->tx.getTxWeight()));
 
          std::set<BinaryData> txHashSet;
          std::map<BinaryData, std::set<uint32_t>> txOutIndices;
@@ -88,7 +95,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
                   if (prevTx.isInitialized() && wallet) {
                      TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
                      value += prevOut.getValue();
-                     addAddress(wallet, prevOut, false, isTxOutgoing);
+                     addAddress(wallet, prevOut, false, isTxOutgoing,
+                                prevTx.getThisHash());
                   }
                   else {
                      QStringList items;
@@ -103,14 +111,15 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
                for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
                   TxOut out = item->tx.getTxOutCopy(i);
                   value -= out.getValue();
-                  addAddress(wallet, out, true, isTxOutgoing);
+                  addAddress(wallet, out, true, isTxOutgoing,
+                             item->tx.getThisHash());
                }
                ui_->labelComment->setText(QString::fromStdString(wallet->GetTransactionComment(item->tx.getThisHash())));
             }
 
             if (initialized) {
                ui_->labelFee->setText(UiUtils::displayAmount(value));
-               ui_->labelSb->setText(QString::number(value / item->tx.serializeNoWitness().getSize()));
+               ui_->labelSb->setText(QString::number(value / item->tx.getTxWeight()));
             }
 
             ui_->treeAddresses->expandItem(itemSender);
@@ -123,7 +132,12 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
             }
             adjustSize();
          };
-         armory->getTXsByHash(txHashSet, cbTXs);
+         if (txHashSet.empty()) {
+            cbTXs({});
+         }
+         else {
+            armory->getTXsByHash(txHashSet, cbTXs);
+         }
       }
 
       ui_->labelConfirmations->setText(QString::number(item->confirmations));
@@ -136,6 +150,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
 
    ui_->labelWalletName->setText(item.walletName.isEmpty() ? tr("Unknown") : item.walletName);
 
+   /* disabled the context menu for copy to clipboard functionality, it can be removed later
    ui_->treeAddresses->setContextMenuPolicy(Qt::CustomContextMenu);
    connect(ui_->treeAddresses, &QTreeView::customContextMenuRequested, [=](const QPoint& p) {
       const auto address = ui_->treeAddresses->itemAt(p)->data(0, Qt::UserRole).toString();
@@ -148,7 +163,9 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
          });
          menu->popup(ui_->treeAddresses->mapToGlobal(p));
       }
-   });
+   });*/
+   // allow address column to be copied to clipboard with right click
+   ui_->treeAddresses->copyToClipboardColumns_.append(2);
 
    setMinimumHeight(minHeightAtRendering);
    resize(minimumSize());
@@ -172,7 +189,11 @@ QSize TransactionDetailDialog::minimumSizeHint() const
    return minimumSize();
 }
 
-void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wallet, const TxOut& out, bool isOutput, bool isTxOutgoing)
+void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wallet,
+                                         const TxOut& out,
+                                         bool isOutput,
+                                         bool isTxOutgoing,
+                                         const BinaryData& txHash)
 {
    const auto addr = bs::Address::fromTxOut(out);
    const auto &addressWallet = walletsManager_->GetWalletByAddress(addr.id());
@@ -223,9 +244,11 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wall
    auto parent = isOutput ? itemReceiver : itemSender;
    auto item = new QTreeWidgetItem(items);
    item->setData(0, Qt::UserRole, displayedAddress);
-   const auto txHash = QString::fromStdString(out.getParentHash().toHexStr(true));
-   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(out) << QString::number(out.getValue()) << txHash);
-   txItem->setData(0, Qt::UserRole, txHash);
+   const auto txHashStr = QString::fromStdString(txHash.toHexStr(true));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(out)
+                                     << QString::number(out.getValue())
+                                     << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
    item->addChild(txItem);
    parent->addChild(item);
 }

@@ -49,11 +49,25 @@ enum ChainStatus
 };
 
 ////
-class RpcError : public runtime_error
+class RpcError : public std::runtime_error
 {
 public:
-   RpcError(void) : runtime_error("")
+   RpcError(void) : std::runtime_error("")
    {}
+};
+
+class ConfMismatch
+{
+   const unsigned expected_;
+   const unsigned actual_;
+
+public:
+   ConfMismatch(unsigned expected, unsigned actual) :
+      expected_(expected), actual_(actual)
+   {}
+
+   unsigned expected(void) const { return expected_; }
+   unsigned actual(void) const { return actual_; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +76,7 @@ struct FeeEstimateResult
    bool smartFee_ = false;
    float feeByte_ = 0;
 
-   string error_;
+   std::string error_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,7 +86,7 @@ class NodeChainState
    friend class NodeRPC;
 
 private:
-   list<tuple<unsigned, uint64_t, uint64_t> > heightTimeVec_;
+   std::list<std::tuple<unsigned, uint64_t, uint64_t> > heightTimeVec_;
    ChainStatus state_ = ChainStatus_Unknown;
    float blockSpeed_ = 0.0f;
    uint64_t eta_ = 0;
@@ -82,7 +96,7 @@ private:
    unsigned prev_pct_int_ = 0;
 
 private:
-   bool processState(shared_ptr<JSON_object> const getblockchaininfo_obj);
+   bool processState(std::shared_ptr<JSON_object> const getblockchaininfo_obj);
 
 public:
    void appendHeightAndTime(unsigned, uint64_t);
@@ -111,23 +125,23 @@ class NodeRPC : protected Lockable
 {
 private:
    const BlockDataManagerConfig& bdmConfig_;
-   string basicAuthString64_;
+   std::string basicAuthString64_;
 
    ::NodeChainState nodeChainState_;
-   function<void(void)> nodeStatusLambda_;
+   std::function<void(void)> nodeStatusLambda_;
 
    RpcStatus previousState_ = RpcStatus_Disabled;
-   condition_variable pollCondVar_;
+   std::condition_variable pollCondVar_;
 
-   typedef map<string, map<unsigned, FeeEstimateResult>> EstimateCache;
-   shared_ptr<EstimateCache> currentEstimateCache_ = nullptr;
+   typedef std::map<std::string, std::map<unsigned, FeeEstimateResult>> EstimateCache;
+   std::shared_ptr<EstimateCache> currentEstimateCache_ = nullptr;
 
-   vector<thread> thrVec_;
-   atomic<bool> run_ = { true };
+   std::vector<std::thread> thrVec_;
+   std::atomic<bool> run_ = { true };
 
 private:
-   string getAuthString(void);
-   string getDatadir(void);
+   std::string getAuthString(void);
+   std::string getDatadir(void);
 
    void initAfterLock(void) {}
    void cleanUpBeforeUnlock(void) {}
@@ -137,13 +151,13 @@ private:
          nodeStatusLambda_();
    }
 
-   string queryRPC(JSON_object&);
-   string queryRPC(HttpSocket&, JSON_object&);
+   std::string queryRPC(JSON_object&);
+   std::string queryRPC(HttpSocket&, JSON_object&);
    void pollThread(void);
    
    float queryFeeByte(HttpSocket&, unsigned);
    FeeEstimateResult queryFeeByteSmart(HttpSocket&,
-      unsigned confTarget, string& strategy);
+      unsigned& confTarget, std::string& strategy);
    void aggregateFeeEstimates(void);
    void resetAuthString(void);
 
@@ -157,13 +171,14 @@ public:
 
    bool updateChainStatus(void);
    const ::NodeChainState& getChainStatus(void) const;   
-   void waitOnChainSync(function<void(void)>);
-   string broadcastTx(const BinaryDataRef&);
+   void waitOnChainSync(std::function<void(void)>);
+   std::string broadcastTx(const BinaryDataRef&);
 
-   void registerNodeStatusLambda(function<void(void)> lbd) { nodeStatusLambda_ = lbd; }
+   void registerNodeStatusLambda(std::function<void(void)> lbd) { nodeStatusLambda_ = lbd; }
 
    virtual bool canPool(void) const { return true; }
-   FeeEstimateResult getFeeByte(unsigned confTarget, string& strategy);
+   FeeEstimateResult getFeeByte(unsigned confTarget, const std::string& strategy);
+   std::map<unsigned, FeeEstimateResult> getFeeSchedule(const std::string& strategy);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

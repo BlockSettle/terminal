@@ -276,12 +276,14 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<WalletsManager> &wallet
    rootNode_ = std::make_shared<WalletNode>(this, WalletNode::Type::Root);
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &WalletsManager::walletDeleted, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 
    if (signContainer_) {
       connect(signContainer_.get(), &SignContainer::HDWalletInfo, this, &WalletsViewModel::onHDWalletInfo);
+      connect(signContainer_.get(), &SignContainer::Error, this, &WalletsViewModel::onHDWalletError);
       connect(signContainer_.get(), &SignContainer::MissingWallets, this, &WalletsViewModel::onMissingWallets);
       connect(signContainer_.get(), &SignContainer::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
       connect(signContainer_.get(), &SignContainer::ready, this, &WalletsViewModel::onWalletChanged);
@@ -470,6 +472,23 @@ void WalletsViewModel::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::E
    }
 }
 
+void WalletsViewModel::onHDWalletError(unsigned int id, std::string)
+{
+   if (hdInfoReqIds_.empty() || (hdInfoReqIds_.find(id) == hdInfoReqIds_.end())) {
+      return;
+   }
+   const auto walletId = hdInfoReqIds_[id];
+   hdInfoReqIds_.erase(id);
+   const auto state = WalletNode::State::Offline;
+   signerStates_[walletId] = state;
+   for (int i = 0; i < rootNode_->nbChildren(); i++) {
+      auto hdNode = rootNode_->child(i);
+      if (hdNode->id() == walletId) {
+         hdNode->setState(state);
+      }
+   }
+}
+
 void WalletsViewModel::onMissingWallets(const std::vector<std::string> &ids)
 {
    for (const auto &id : ids) {
@@ -582,6 +601,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          treeView->scrollTo(selection[0]);
       }
    }
+   emit updateAddresses();
 }
 
 void WalletsViewModel::onWalletChanged()

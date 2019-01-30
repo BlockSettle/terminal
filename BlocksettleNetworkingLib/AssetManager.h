@@ -1,13 +1,15 @@
 #ifndef __ASSET__MANAGER_H__
 #define __ASSET__MANAGER_H__
 
-#include <memory>
-#include <unordered_map>
-#include <QObject>
-#include <QMutex>
 #include "CommonTypes.h"
 #include "MetaData.h"
 
+#include <memory>
+#include <unordered_map>
+
+#include <QDateTime>
+#include <QMutex>
+#include <QObject>
 
 namespace spdlog
 {
@@ -52,12 +54,15 @@ public:
    std::string GetAssignedAccount() const { return assignedAccount_; }
 
 signals:
-   void priceChanged(const std::string& currency);
-   void balanceChanged(const std::string& currency);
+   void ccPriceChanged(const std::string& currency);
+   void xbtPriceChanged(const std::string& currency);
+
    void fxBalanceLoaded();
+   void fxBalanceCleared();
+
+   void balanceChanged(const std::string& currency);
 
    void totalChanged();
-   void securitiesReceived();
    void securitiesChanged();
 
  public slots:
@@ -76,6 +81,9 @@ protected:
    bool onAccountBalanceUpdatedEvent(const std::string& data);
    bool securityDef(const std::string &security, bs::network::SecurityDef &) const;
 
+private:
+  void sendUpdatesOnXBTPrice(const std::string& ccy);
+
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<WalletsManager>        walletsManager_;
@@ -92,7 +100,7 @@ protected:
 
    std::string assignedAccount_;
 
-   double xbtUsdPrice;
+   std::unordered_map<std::string, QDateTime>  xbtPriceUpdateTimes_;
 };
 
 #endif // __ASSET__MANAGER_H__

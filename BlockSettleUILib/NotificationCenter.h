@@ -32,6 +32,7 @@ namespace bs {
          AuthAddress,
          BroadcastError,
          NewVersion,
+         NewChatMessage,
       };
 
       using NotifyMessage = QList<QVariant>;

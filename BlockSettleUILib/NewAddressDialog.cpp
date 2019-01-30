@@ -21,18 +21,17 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::Wallet>& wallet
 
    QString displayAddress = address_.display();
    ui_->lineEditNewAddress->setText(displayAddress);
-   ui_->labelQRCode->setPixmap(UiUtils::getQRCode(displayAddress));
+   const QString addrURI = QLatin1String("bitcoin:") + displayAddress;
+   ui_->labelQRCode->setPixmap(UiUtils::getQRCode(addrURI, 128));
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
    connect(ui_->pushButtonCopyToClipboard, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
 
-   connect(this, &QDialog::accepted, [this] {
-      const auto comment = ui_->textEditDescription->toPlainText();
-      if (!comment.isEmpty()) {
-         wallet_->SetAddressComment(address_, comment.toStdString());
-      }
-   });
+   const auto closeButton = ui_->buttonBox->button(QDialogButtonBox::StandardButton::Close);
+   if (closeButton) {
+      connect(closeButton, &QPushButton::clicked, this, &NewAddressDialog::onClose);
+   }
 }
 
 NewAddressDialog::~NewAddressDialog() = default;
@@ -40,6 +39,14 @@ NewAddressDialog::~NewAddressDialog() = default;
 void NewAddressDialog::copyToClipboard()
 {
    QApplication::clipboard()->setText(address_.display());
+}
+
+void NewAddressDialog::onClose()
+{
+   const auto comment = ui_->textEditDescription->toPlainText();
+   if (!comment.isEmpty()) {
+      wallet_->SetAddressComment(address_, comment.toStdString());
+   }
 }
 
 void NewAddressDialog::showEvent(QShowEvent* event)

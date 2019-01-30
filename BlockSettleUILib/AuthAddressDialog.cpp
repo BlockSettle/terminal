@@ -3,28 +3,24 @@
 
 #include <spdlog/spdlog.h>
 #include <QItemSelection>
+
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
+#include "AuthAddressConfirmDialog.h"
 #include "AuthAddressManager.h"
 #include "AuthAddressViewModel.h"
-#include "EnterOTPPasswordDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
-#include "MessageBoxQuestion.h"
-#include "MessageBoxWarning.h"
+#include "BSMessageBox.h"
 #include "UiUtils.h"
-
 
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<OTPManager> &otpMgr
+   , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AuthAddressDialog())
    , logger_(logger)
    , authAddressManager_(authAddressManager)
    , assetManager_(assetMgr)
-   , otpManager_(otpMgr)
    , settings_(settings)
 {
    ui_->setupUi(this);
@@ -42,11 +38,8 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::AddrStateChanged, this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitError, this, &AuthAddressDialog::onAuthAddrSubmitError, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, &AuthAddressDialog::onAuthAddrSubmitSuccess, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthVerifyTxSent, this, &AuthAddressDialog::onAuthVerifyTxSent, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::OtpSignFailed, this, &AuthAddressDialog::onOtpSignFailed, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
    connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
@@ -115,35 +108,13 @@ void AuthAddressDialog::onAuthMgrInfo(const QString &text)
 
 void AuthAddressDialog::showError(const QString &text, const QString &details)
 {
-   MessageBoxCritical errorMessage(text, details, this);
+   BSMessageBox errorMessage(BSMessageBox::critical, tr("Error"), text, details, this);
    errorMessage.exec();
 }
 
 void AuthAddressDialog::showInfo(const QString &title, const QString &text)
 {
-   MessageBoxInfo(title, text).exec();
-}
-
-void AuthAddressDialog::onAuthAddrSubmitError(const QString &, const QString &)
-{
-   MessageBoxWarning(tr("Submission Aborted")
-      , tr("The process of submitting an Authentication Address has been aborted. "
-           "Any reserved balance will have been returned.")).exec();
-   close();
-}
-
-void AuthAddressDialog::onAuthAddrSubmitSuccess(const QString &)
-{
-   MessageBoxInfo(tr("Successful Submission")
-      , tr("Your Authentication Address has now been submitted.")
-      , tr("Please allow BlockSettle 24h to fund your Authentication Address.")).exec();
-   close();
-}
-
-void AuthAddressDialog::onOtpSignFailed()
-{
-   showError(tr("Failed to sign request."), tr("OTP password is incorrect."));
-   ConfirmAuthAddressSubmission();
+   BSMessageBox(BSMessageBox::info, title, text).exec();
 }
 
 void AuthAddressDialog::setAddressToVerify(const QString &addr)
@@ -174,7 +145,7 @@ void AuthAddressDialog::onAddressListUpdated()
 
 void AuthAddressDialog::onAuthVerifyTxSent()
 {
-   MessageBoxInfo(tr("Authentication Address")
+   BSMessageBox(BSMessageBox::info, tr("Authentication Address")
       , tr("Verification Transaction successfully sent.")
       , tr("Once the validation transaction is mined six (6) blocks deep, your Authentication Address will be"
          " accepted as valid by the network and you can enter orders in the Spot XBT product group.")).exec();
@@ -184,12 +155,13 @@ void AuthAddressDialog::onAuthVerifyTxSent()
 void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
 {
    if (state == QLatin1String("Verified")) {
-      MessageBoxInfo(tr("Authentication Address")
+      BSMessageBox(BSMessageBox::info, tr("Authentication Address")
          , tr("Authentication Address verified.")
          , tr("Your Authentication Address is confirmed and you may now place orders in the Spot XBT product group.")
          ).exec();
    } else if (state == QLatin1String("Revoked")) {
-      MessageBoxWarning(tr("Authentication Address revoked")
+      BSMessageBox(BSMessageBox::warning, tr("Authentication Address")
+         , tr("Authentication Address revoked.")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();
    }
 }
@@ -217,7 +189,7 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
          case AddressVerificationState::NotSubmitted:
             ui_->pushButtonVerify->setEnabled(false);
             ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(authAddressManager_->HaveOTP() && lastSubmittedAddress_.isNull());
+            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
             ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::VerificationFailed:
@@ -282,7 +254,7 @@ void AuthAddressDialog::revokeSelectedAddress()
       return;
    }
 
-   MessageBoxQuestion revokeQ(tr("Auth Address Revoke")
+   BSMessageBox revokeQ(BSMessageBox::question, tr("Auth Address Revoke")
       , tr("Revoking Authentication Address")
       , tr("Revoking Authentication Address will lead to using your own XBT funds to pay transfer commission. Are you sure you wish to revoke?")
       , this);
@@ -295,13 +267,12 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 {
    const auto eurBalance = assetManager_->getBalance("EUR");
    if (validationAmount > eurBalance) {
-      MessageBoxWarning warnFunds(tr("INSUFFICIENT EUR BALANCE")
+      BSMessageBox warnFunds(BSMessageBox::warning, tr("Insufficient EUR Balance")
          , tr("Please fund your EUR account prior to submitting an Authentication Address")
          , tr("Required amount (EUR): %1<br/>Deposits and withdrawals are administered through the "
             "<a href=\"https://blocksettle.com\">Client Portal</a>")
          .arg(UiUtils::displayCurrencyAmount(validationAmount)), this);
       warnFunds.setWindowTitle(tr("Insufficient Funds"));
-      warnFunds.setButtonText(tr("Ok"));
       warnFunds.exec();
 
       authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
@@ -310,18 +281,18 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       return;
    }
 
-   MessageBoxQuestion *qry = nullptr;
-   const auto &qryTitle = tr("Submit Authentication Address");
-   const auto &qryText = tr("NEW AUTHENTICATION ADDRESS");
+   BSMessageBox *qry = nullptr;
+   const auto &qryTitle = tr("Authentication Address");
+   const auto &qryText = tr("New Authentication Address");
    if (validationAmount > 0) {
-      qry = new MessageBoxQuestion(qryTitle, qryText
+      qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address? Setting up a new Authentication Address"
             " costs %1 %2.").arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
          , tr("BlockSettle will not deduct an amount higher than the Fee Schedule maximum regardless of the"
             " stated cost. Please confirm BlockSettle can debit the Authentication Address fee from your account."), this);
    }
    else {
-      qry = new MessageBoxQuestion(qryTitle, qryText
+      qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address?")
          , tr("It appears that you're submitting the same Authentication Address again. The confirmation is"
             " formal and won't result in any withdrawals from your account."), this);
@@ -338,20 +309,11 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 
 void AuthAddressDialog::ConfirmAuthAddressSubmission()
 {
-   SecureBinaryData otpPassword = {};
+   AuthAddressConfirmDialog confirmDlg{lastSubmittedAddress_, authAddressManager_, this};
 
-   if (authAddressManager_->needsOTPpassword()) {
-      EnterOTPPasswordDialog passwordDialog(logger_, otpManager_
-         , tr("Authentication Address Submission"), settings_, this);
-      if (passwordDialog.exec() != QDialog::Accepted) {
-         authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
-         lastSubmittedAddress_ = bs::Address{};
-         return;
-      }
-      otpPassword = SecureBinaryData(passwordDialog.GetPassword());
-   }
+   confirmDlg.exec();
 
-   authAddressManager_->ConfirmSubmitForVerification(lastSubmittedAddress_, otpPassword);
+   lastSubmittedAddress_ = bs::Address{};
 }
 
 void AuthAddressDialog::submitSelectedAddress()

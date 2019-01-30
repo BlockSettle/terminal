@@ -8,11 +8,12 @@
 
 #include <cassert>
 #include <fstream>
-#ifdef WIN32
+#if defined(WIN32) || defined(_MSC_VER)
 #include <Ws2tcpip.h>
 #else
 #include <arpa/inet.h>
 #endif
+ 
 #include "hkdf.h"
 #include "btc/ecc.h"
 #include "btc/hash.h"
@@ -29,8 +30,8 @@ secp256k1_context* secp256k1_ecdh_ctx = nullptr;
 
 // Miscellaneous global variables.
 std::string bipDataDir_ = "";
-unordered_set<std::string> authPeers_; // Compressed ECDSA key
-unordered_map<std::string, std::string> knownPeers_; // IP:Port/Com. key
+std::unordered_set<std::string> authPeers_; // Compressed ECDSA key
+std::unordered_map<std::string, std::string> knownPeers_; // IP:Port/Com. key
 btc_pubkey pubIDKey_;
 uint32_t ipType_ = 0;
 
@@ -399,7 +400,7 @@ const int BIP151Session::decPayload(const uint8_t* cipherData,
 {
    int retVal = -1;
    uint32_t decryptedLen = 0;
-   assert(cipherSize <= plainSize);
+   assert(cipherSize <= (plainSize + POLY1305MACLEN));
 
    chacha20poly1305_get_length(&sessionCTX_,
                                &decryptedLen,
@@ -1014,7 +1015,7 @@ const int BIP151Connection::processAuthpropose(const uint8_t* inMsg,
 // RET: -1 if failure, 0 if success, 1 if AUTHPROPOSE validation was a failure.
 const int BIP151Connection::getAuthchallengeData(uint8_t* authchallengeBuf,
                                                  const size_t& authchallengeBufSize,
-                                                 const string& targetIPPort,
+                                                 const std::string& targetIPPort,
                                                  const bool& requesterSent,
                                                  const bool& goodPropose)
 {
@@ -1256,12 +1257,12 @@ const size_t BIP151Message::messageSizeHint()
 //      dataDir - The directory that stores the relevant key material.
 // OUT: None
 // RET: N/A
-void startupBIP150CTX(const uint32_t& ipVer, const string& dataDir)
+void startupBIP150CTX(const uint32_t& ipVer, const std::string& dataDir)
 {
    ::bipDataDir_ = dataDir;
-   string idPubFilename;
-   string kuFilename;
-   string auFilename;
+   std::string idPubFilename;
+   std::string kuFilename;
+   std::string auFilename;
    ::ipType_ = ipVer;
    switch(::ipType_)
    {
@@ -1313,24 +1314,30 @@ void startupBIP150CTX(const uint32_t& ipVer, const string& dataDir)
       // --- Make sure the key is a compressed public key.
       // If an add fails, just keep going.
       std::array<uint8_t, 16> binaryIP; // Dummy buffer - Ignore
-      string rawIP = ipPort.substr(0, ipPort.rfind(':'));
+      std::string rawIP = ipPort.substr(0, ipPort.rfind(':'));
 #ifdef WIN32
       if(ipVer == 4 && InetPton(AF_INET,
+                                rawIP.c_str(),
+                                binaryIP.data()) == 0)
+#else
+      if(ipVer == 4 && inet_pton(AF_INET,
                                  rawIP.c_str(),
                                  binaryIP.data()) == 0)
-#else
-      if (ipVer == 4 && inet_pton(AF_INET,
-         rawIP.c_str(),
-         binaryIP.data()) == 0)
 #endif
       {
 /*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
             << "to the known users DB. Armory will skip the entry.";*/
          continue;
       }
-      else if(ipVer == 6 && inet_pton(AF_INET6,
+#ifdef WIN32
+      else if(ipVer == 6 && InetPton(AF_INET6,
                                      rawIP.c_str(),
                                      binaryIP.data()) == 0)
+#else
+      else if(ipVer == 6 && inet_pton(AF_INET6,
+                                      rawIP.c_str(),
+                                      binaryIP.data()) == 0)
+#endif
       {
 /*         LOGERR << "BIP 150 - Attempted to add invalid key IP address " << ipPort
             << "to the known users DB. Armory will skip the entry.";*/
@@ -1460,7 +1467,7 @@ BIP150StateMachine::BIP150StateMachine(BIP151Session* incomingSes,
                                        BIP151Session* outgoingSes) :
      curState_(BIP150State::INACTIVE), inSes_(incomingSes), outSes_(outgoingSes)
 {
-   string prvIDFilename;
+   std::string prvIDFilename;
    switch(::ipType_)
    {
    case 4: // IPv4
@@ -1479,7 +1486,7 @@ BIP150StateMachine::BIP150StateMachine(BIP151Session* incomingSes,
 
    // id-key file format:
    // private-key-value
-   string absID = ::bipDataDir_ + prvIDFilename;
+   std::string absID = ::bipDataDir_ + prvIDFilename;
    std::ifstream idFile(absID);
    std::string inKey;
    std::getline(idFile, inKey);
@@ -1521,7 +1528,7 @@ BIP150StateMachine::BIP150StateMachine(BIP151Session* incomingSes,
 //      a failure.
 const int BIP150StateMachine::getAuthchallengeData(uint8_t* buf,
                                                    const size_t& bufSize,
-                                                   const string& targetIPPort,
+                                                   const std::string& targetIPPort,
                                                    const bool& requesterSent,
                                                    const bool& goodPropose)
 {
@@ -1904,7 +1911,7 @@ const int BIP150StateMachine::processAuthpropose(const BinaryData& inData)
    // Iterate through the authorized-users DB and attempt to replicate the
    // incoming hash.
    std::array<uint8_t, BIP151PRVKEYSIZE> proposeHash;
-   string validKey;
+   std::string validKey;
    for(const auto& checkKey: ::authPeers_)
    {
       BinaryData checkKeyBin = READHEX(checkKey);

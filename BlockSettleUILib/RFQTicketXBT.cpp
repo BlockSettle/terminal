@@ -15,8 +15,7 @@
 #include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
 #include "HDWallet.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxQuestion.h"
+#include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -91,7 +90,7 @@ void RFQTicketXBT::setTransactionData()
          if (!transactionData_) {
             return;
          }
-         transactionData_->SetFeePerByte(feePerByte);
+         transactionData_->setFeePerByte(feePerByte);
          setWallets();
       };
       walletsManager_->estimatedFeePerByte(2, cbFee, this);
@@ -679,7 +678,7 @@ void RFQTicketXBT::submitButtonClicked()
 
    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    // just in case if 2 customers submit RFQ in exactly same ms
-   rfq.requestId = "blocksettle:" + SecureBinaryData().GenerateRandom(8).toHexStr() +  std::to_string(timestamp.count());
+   rfq.requestId = "blocksettle:" + CryptoPRNG::generateRandom(8).toHexStr() +  std::to_string(timestamp.count());
 
   switch (currentGroupType_) {
    case ProductGroupType::GroupNotSelected:
@@ -721,7 +720,7 @@ void RFQTicketXBT::submitButtonClicked()
             rfq.coinTxInput = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, rfq.requestId);
          } catch (const std::exception &e) {
-            MessageBoxCritical dlg(tr("RFQ NOT SENT"), QString::fromLatin1(e.what()));
+            BSMessageBox dlg(BSMessageBox::critical, tr("RFQ not sent"), QString::fromLatin1(e.what()));
             dlg.setWindowTitle(tr("RFQ Failure"));
             dlg.exec();
             return;
@@ -776,7 +775,7 @@ double RFQTicketXBT::estimatedFee() const
 
    const auto balance = transactionData_->GetTransactionSummary().availableBalance;
    const auto maxVal = transactionData_->CalculateMaxAmount(
-      bs::Address(SecureBinaryData().GenerateRandom(20), AddressEntryType_P2WPKH));
+      bs::Address(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH));
    if (maxVal <= 0) {
       return 0;
    }
@@ -1011,7 +1010,7 @@ void RFQTicketXBT::productSelectionChanged()
                   ui_->pushButtonCreateWallet->setEnabled(true);
                   ui_->pushButtonCreateWallet->setText(tr("Create %1 wallet").arg(product));
                } else {
-                  MessageBoxCritical errorMessage(tr("Signer not connected")
+                  BSMessageBox errorMessage(BSMessageBox::critical, tr("Signer not connected")
                      , tr("Could not create CC subwallet.")
                      , this);
                   errorMessage.exec();

@@ -6,7 +6,7 @@
 
 namespace Ui {
     class SelectWalletDialog;
-};
+}
 namespace bs {
    class Wallet;
 }

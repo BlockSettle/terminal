@@ -27,7 +27,7 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
    flags_ = flags;
 }
 
-void WalletKeysCreateWidget::init(MobileClientRequest requestType
+void WalletKeysCreateWidget::init(AutheIDClient::RequestType requestType
    , const std::string &walletId, const QString& username
    , const std::shared_ptr<ApplicationSettings>& appSettings)
 {
@@ -69,7 +69,7 @@ void WalletKeysCreateWidget::addKey(bool password)
       widget->setPasswordLabelAsNew();
    }
 
-   if (flags_ & HidePubKeyFingerprint) {
+   if (flags_ & HidePubKeyFingerprint || true) {
       ui_->labelPubKeyFP->hide();
    }
    else {

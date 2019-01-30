@@ -31,8 +31,6 @@
 #include "ScrAddrObj.h"
 #include "bdmenums.h"
 
-#include "cryptopp/cryptlib.h"
-#include "cryptopp/sha.h"
 #include "UniversalTimer.h"
 
 #include <functional>
@@ -61,8 +59,6 @@
 #define NUM_BLKS_BATCH_THRESH 30
 
 #define NUM_BLKS_IS_DIRTY 2016
-
-using namespace std;
 
 class BlockDataManager;
 class LSM;
@@ -107,13 +103,13 @@ struct ProgressData
    double progress_;
    unsigned time_;
    unsigned numericProgress_;
-   vector<string> wltIDs_;
+   std::vector<std::string> wltIDs_;
 
    ProgressData(void)
    {}
 
    ProgressData(BDMPhase phase, double prog,
-      unsigned time, unsigned numProg, vector<string> wltIDs) :
+      unsigned time, unsigned numProg, std::vector<std::string> wltIDs) :
       phase_(phase), progress_(prog), time_(time),
       numericProgress_(numProg), wltIDs_(wltIDs)
    {}
@@ -126,7 +122,7 @@ private:
    BlockDataManagerConfig config_;
    
    class BitcoinQtBlockFiles;
-   shared_ptr<BitcoinQtBlockFiles> readBlockHeaders_;
+   std::shared_ptr<BitcoinQtBlockFiles> readBlockHeaders_;
    
    // This is our permanent link to the two databases used
    LMDBBlockDatabase* iface_ = nullptr;
@@ -136,35 +132,35 @@ private:
    // Reorganization details
 
    class BDM_ScrAddrFilter;
-   shared_ptr<BDM_ScrAddrFilter> scrAddrData_;
-   shared_ptr<Blockchain> blockchain_;
+   std::shared_ptr<BDM_ScrAddrFilter> scrAddrData_;
+   std::shared_ptr<Blockchain> blockchain_;
 
    BDM_state BDMstate_ = BDM_offline;
 
-   shared_ptr<BlockFiles> blockFiles_;
-   shared_ptr<DatabaseBuilder> dbBuilder_;
+   std::shared_ptr<BlockFiles> blockFiles_;
+   std::shared_ptr<DatabaseBuilder> dbBuilder_;
 
-   exception_ptr exceptPtr_ = nullptr;
+   std::exception_ptr exceptPtr_ = nullptr;
 
    unsigned checkTransactionCount_ = 0;
    
-   mutable shared_ptr<mutex> nodeStatusPollMutex_;
+   mutable std::shared_ptr<std::mutex> nodeStatusPollMutex_;
 
 public:
-   typedef function<void(BDMPhase, double,unsigned, unsigned)> ProgressCallback;   
-   shared_ptr<BitcoinP2P> networkNode_;
-   shared_future<bool> isReadyFuture_;
-   mutable shared_ptr<NodeRPC> nodeRPC_;
+   typedef std::function<void(BDMPhase, double,unsigned, unsigned)> ProgressCallback;
+   std::shared_ptr<BitcoinP2P> networkNode_;
+   std::shared_future<bool> isReadyFuture_;
+   mutable std::shared_ptr<NodeRPC> nodeRPC_;
 
-   TimedQueue<unique_ptr<BDV_Notification>> notificationStack_;
-   shared_ptr<ZeroConfContainer>   zeroConfCont_;
+   TimedQueue<std::unique_ptr<BDV_Notification>> notificationStack_;
+   std::shared_ptr<ZeroConfContainer>   zeroConfCont_;
 
 public:
    BlockDataManager(const BlockDataManagerConfig &config);
    ~BlockDataManager();
 
-   shared_ptr<Blockchain> blockchain() { return blockchain_; }
-   shared_ptr<Blockchain> blockchain() const { return blockchain_; }
+   std::shared_ptr<Blockchain> blockchain() { return blockchain_; }
+   std::shared_ptr<Blockchain> blockchain() const { return blockchain_; }
    
    const BlockDataManagerConfig &config() const { return config_; }
    
@@ -172,12 +168,6 @@ public:
    
    /////////////////////////////////////////////////////////////////////////////
    // Get the parameters of the network as they've been set
-   const BinaryData& getGenesisHash(void) const  
-   { return config_.genesisBlockHash_; }
-   const BinaryData& getGenesisTxHash(void) const 
-   { return config_.genesisTxHash_; }
-   const BinaryData& getMagicBytes(void) const   
-   { return config_.magicBytes_; }
 
    void openDatabase(void);
    
@@ -194,7 +184,7 @@ public:
    };
    
    bool hasException(void) const { return exceptPtr_ != nullptr; }
-   exception_ptr getException(void) const { return exceptPtr_; }
+   std::exception_ptr getException(void) const { return exceptPtr_; }
 
 private:
    void loadDiskState(const ProgressCallback &progress, bool forceRescanSSH = false);
@@ -215,7 +205,7 @@ public:
    uint8_t getValidDupIDForHeight(uint32_t blockHgt) const
    { return iface_->getValidDupIDForHeight(blockHgt); }
 
-   shared_ptr<ScrAddrFilter> getScrAddrFilter(void) const;
+   std::shared_ptr<ScrAddrFilter> getScrAddrFilter(void) const;
 
 
    StoredHeader getMainBlockFromDB(uint32_t hgt) const;
@@ -224,7 +214,7 @@ public:
    void enableZeroConf(bool cleanMempool = false);
    void disableZeroConf(void);
    bool isZcEnabled(void) const;
-   shared_ptr<ZeroConfContainer> zeroConfCont(void) const
+   std::shared_ptr<ZeroConfContainer> zeroConfCont(void) const
    {
       return zeroConfCont_;
    }
@@ -240,7 +230,7 @@ public:
    
    unsigned getCheckedTxCount(void) const { return checkTransactionCount_; }
    NodeStatusStruct getNodeStatus(void) const;
-   void registerZcCallbacks(unique_ptr<ZeroConfCallbacks> ptr)
+   void registerZcCallbacks(std::unique_ptr<ZeroConfCallbacks> ptr)
    {
       zeroConfCont_->setZeroConfCallbacks(move(ptr));
    }
@@ -255,7 +245,7 @@ class BlockDataManagerThread
       int mode = 0;
       volatile bool run = false;
       bool failure = false;
-      thread tID;
+      std::thread tID;
 
       ~BlockDataManagerThreadImpl()
       {

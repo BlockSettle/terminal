@@ -5,8 +5,6 @@
 
 #include <QDialog>
 
-#include "EasyCoDec.h"
-
 namespace Ui {
    class NewWalletSeedDialog;
 }
@@ -33,18 +31,10 @@ protected:
 
 private slots:
    void reject() override;
-
    void onSaveClicked();
    void onPrintClicked();
-   void onContinueClicked();
-   void onBackClicked();
 
 private:
-   void setCurrentPage(Pages page);
-   void updateState();
-   void validateKeys();
-   void onKeyChanged(const QString &);
-
    std::unique_ptr<Ui::NewWalletSeedDialog> ui_;
    std::unique_ptr<WalletBackupPdfWriter> pdfWriter_;
    Pages currentPage_;
@@ -53,10 +43,6 @@ private:
    const QString walletId_;
    const QString keyLine1_;
    const QString keyLine2_;
-   std::shared_ptr<EasyCoDec> easyCodec_;
-   std::unique_ptr<EasyEncValidator> validator_;
 };
-
-bool abortWalletCreationQuestionDialog(QWidget* parent);
 
 #endif // __NEWWALLETSEEDDIALOG_H__

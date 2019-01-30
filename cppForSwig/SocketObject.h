@@ -30,8 +30,8 @@
 #include "BinaryData.h"
 
 #include <google/protobuf/message.h>
-
-typedef function<bool(vector<uint8_t>, exception_ptr)>  ReadCallback;
+   
+typedef std::function<bool(std::vector<uint8_t>, std::exception_ptr)>  ReadCallback;
 
 ///////////////////////////////////////////////////////////////////////////////
 struct CallbackReturn
@@ -43,11 +43,11 @@ struct CallbackReturn
 struct CallbackReturn_CloseBitcoinP2PSocket : public CallbackReturn
 {
 private:
-   shared_ptr<BlockingQueue<vector<uint8_t>>> dataStack_;
+   std::shared_ptr<BlockingQueue<std::vector<uint8_t>>> dataStack_;
 
 public:
    CallbackReturn_CloseBitcoinP2PSocket(
-      shared_ptr<BlockingQueue<vector<uint8_t>>> datastack) :
+      std::shared_ptr<BlockingQueue<std::vector<uint8_t>>> datastack) :
       dataStack_(datastack)
    {}
 
@@ -59,7 +59,7 @@ public:
 struct Socket_ReadPayload
 {
    uint16_t id_ = UINT16_MAX;
-   unique_ptr<CallbackReturn> callbackReturn_ = nullptr;
+   std::unique_ptr<CallbackReturn> callbackReturn_ = nullptr;
 
    Socket_ReadPayload(void)
    {}
@@ -73,55 +73,55 @@ struct Socket_ReadPayload
 struct Socket_WritePayload
 {
    virtual ~Socket_WritePayload(void) = 0;
-   virtual void serialize(vector<uint8_t>&) = 0;
-   virtual string serializeToText(void) = 0;
+   virtual void serialize(std::vector<uint8_t>&) = 0;
+   virtual std::string serializeToText(void) = 0;
 };
 
 ////
 struct WritePayload_Protobuf : public Socket_WritePayload
 {
-   unique_ptr<::google::protobuf::Message> message_;
+   std::unique_ptr<::google::protobuf::Message> message_;
 
-   void serialize(vector<uint8_t>&);
-   string serializeToText(void);
+   void serialize(std::vector<uint8_t>&);
+   std::string serializeToText(void);
 };
 
 ////
 struct WritePayload_Raw : public Socket_WritePayload
 {
-   vector<uint8_t> data_;
+   std::vector<uint8_t> data_;
 
-   void serialize(vector<uint8_t>&);
-   string serializeToText(void) {
+   void serialize(std::vector<uint8_t>&);
+   std::string serializeToText(void) {
       throw SocketError("raw payload cannot serilaize to str"); }
 };
 
 ////
 struct WritePayload_String : public Socket_WritePayload
 {
-   string data_;
+   std::string data_;
 
-   void serialize(vector<uint8_t>&) {
+   void serialize(std::vector<uint8_t>&) {
       throw SocketError("string payload cannot serilaize to raw binary");
    }
    
-   string serializeToText(void) {
-      return move(data_);
+   std::string serializeToText(void) {
+      return std::move(data_);
    }
 };
 
 ////
 struct WritePayload_StringPassthrough : public Socket_WritePayload
 {
-   string data_;
+   std::string data_;
 
-   void serialize(vector<uint8_t>& payload) {
+   void serialize(std::vector<uint8_t>& payload) {
       payload.reserve(data_.size() +1);
       payload.insert(payload.end(), data_.begin(), data_.end());
       data_.push_back(0);
    }
 
-   string serializeToText(void) {
+   std::string serializeToText(void) {
       return move(data_);
    }
 };
@@ -143,7 +143,6 @@ struct AcceptStruct
 ///////////////////////////////////////////////////////////////////////////////
 class SocketPrototype
 {
-   friend class FCGI_Server;
    friend class ListenServer;
 
 private: 
@@ -152,15 +151,15 @@ private:
 protected:
 
 public:
-   typedef function<bool(const vector<uint8_t>&)>  SequentialReadCallback;
-   typedef function<void(AcceptStruct)> AcceptCallback;
+   typedef std::function<bool(const std::vector<uint8_t>&)>  SequentialReadCallback;
+   typedef std::function<void(AcceptStruct)> AcceptCallback;
 
 protected:
    const size_t maxread_ = 4*1024*1024;
    
    struct sockaddr serv_addr_;
-   const string addr_;
-   const string port_;
+   const std::string addr_;
+   const std::string port_;
 
    bool verbose_ = true;
 
@@ -176,7 +175,7 @@ protected:
    {}
    
 public:
-   SocketPrototype(const string& addr, const string& port, bool init = true);
+   SocketPrototype(const std::string& addr, const std::string& port, bool init = true);
    virtual ~SocketPrototype(void) = 0;
 
    virtual bool testConnection(void);
@@ -185,13 +184,13 @@ public:
    
    static void closeSocket(SOCKET&);
    virtual void pushPayload(
-      unique_ptr<Socket_WritePayload>,
-      shared_ptr<Socket_ReadPayload>) = 0;
+      std::unique_ptr<Socket_WritePayload>,
+      std::shared_ptr<Socket_ReadPayload>) = 0;
    virtual bool connectToRemote(void) = 0;
 
    virtual SocketType type(void) const = 0;
-   const string& getAddrStr(void) const { return addr_; }
-   const string& getPortStr(void) const { return port_; }
+   const std::string& getAddrStr(void) const { return addr_; }
+   const std::string& getPortStr(void) const { return port_; }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -201,10 +200,10 @@ protected:
    SOCKET sockfd_ = SOCK_MAX;
 
 private:
-   int writeToSocket(vector<uint8_t>&);
+   int writeToSocket(std::vector<uint8_t>&);
 
 public:
-   SimpleSocket(const string& addr, const string& port) :
+   SimpleSocket(const std::string& addr, const std::string& port) :
       SocketPrototype(addr, port)
    {}
    
@@ -220,16 +219,16 @@ public:
    SocketType type(void) const { return SocketSimple; }
 
    void pushPayload(
-      unique_ptr<Socket_WritePayload>,
-      shared_ptr<Socket_ReadPayload>);
-   vector<uint8_t> readFromSocket(void);
+      std::unique_ptr<Socket_WritePayload>,
+      std::shared_ptr<Socket_ReadPayload>);
+   std::vector<uint8_t> readFromSocket(void);
    void shutdown(void);
    void listen(AcceptCallback);
    bool connectToRemote(void);
    SOCKET getSockFD(void) const { return sockfd_; }
 
    //
-   static bool checkSocket(const string& ip, const string& port);
+   static bool checkSocket(const std::string& ip, const std::string& port);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -239,12 +238,12 @@ class PersistentSocket : public SocketPrototype
 
 private:
    SOCKET sockfd_ = SOCK_MAX;
-   vector<thread> threads_;
+   std::vector<std::thread> threads_;
    
-   vector<uint8_t> writeLeftOver_;
+   std::vector<uint8_t> writeLeftOver_;
    size_t writeOffset_ = 0;
 
-   atomic<bool> run_;
+   std::atomic<bool> run_;
 
 #ifdef _WIN32
    WSAEVENT events_[2];
@@ -252,8 +251,8 @@ private:
    SOCKET pipes_[2];
 #endif
 
-   BlockingQueue<vector<uint8_t>> readQueue_;
-   Queue<vector<uint8_t>> writeQueue_;
+   BlockingQueue<std::vector<uint8_t>> readQueue_;
+   Queue<std::vector<uint8_t>> writeQueue_;
 
 private:
    void signalService(uint8_t);
@@ -268,12 +267,12 @@ private:
    void init(void);
 
 protected:
-   virtual bool processPacket(vector<uint8_t>&, vector<uint8_t>&);
-   virtual void respond(vector<uint8_t>&) = 0;
-   void queuePayloadForWrite(vector<uint8_t>&);
+   virtual bool processPacket(std::vector<uint8_t>&, std::vector<uint8_t>&);
+   virtual void respond(std::vector<uint8_t>&) = 0;
+   void queuePayloadForWrite(std::vector<uint8_t>&);
 
 public:
-   PersistentSocket(const string& addr, const string& port) :
+   PersistentSocket(const std::string& addr, const std::string& port) :
       SocketPrototype(addr, port)
    {
       init();
@@ -312,17 +311,17 @@ private:
       SocketStruct(void)
       {}
 
-      shared_ptr<SimpleSocket> sock_;
-      thread thr_;
+      std::shared_ptr<SimpleSocket> sock_;
+      std::thread thr_;
    };
 
 private:
-   unique_ptr<SimpleSocket> listenSocket_;
-   map<SOCKET, unique_ptr<SocketStruct>> acceptMap_;
+   std::unique_ptr<SimpleSocket> listenSocket_;
+   std::map<SOCKET, std::unique_ptr<SocketStruct>> acceptMap_;
    Queue<SOCKET> cleanUpStack_;
 
-   thread listenThread_;
-   mutex mu_;
+   std::thread listenThread_;
+   std::mutex mu_;
 
 private:
    void listenThread(ReadCallback);
@@ -330,7 +329,7 @@ private:
    ListenServer(const ListenServer&) = delete;
 
 public:
-   ListenServer(const string& addr, const string& port);
+   ListenServer(const std::string& addr, const std::string& port);
    ~ListenServer(void)
    {
       stop();

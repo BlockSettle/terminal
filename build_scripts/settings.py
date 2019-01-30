@@ -103,4 +103,9 @@ class Settings:
     def get_vs_version_number(self):
         p = subprocess.Popen(['msbuild', '/version'], stdout=subprocess.PIPE)
         out, err = p.communicate()
-        return out.splitlines()[-1].split('.')[0]
+
+        version = out.splitlines()[-1]
+        if type(version) is type(b''):
+            version = version.decode('utf-8')
+
+        return version.split('.')[0]

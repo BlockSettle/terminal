@@ -8,46 +8,30 @@ enum EnvConfiguration
 {
    CustomConfiguration,
    StagingConfiguration,
-   UATConfiguration
+   UATConfiguration,
+   PRODConfiguration
 };
 
 struct EnvSettings
 {
-   QString  celerHost;
-   int      celerPort;
-
    QString  pubHost;
    int      pubPort;
-
-   QString  mdHost;
-   int      mdPort;
 };
 
 bool operator == (const EnvSettings& l, const EnvSettings& r)
 {
-   return l.celerHost == r.celerHost
-         && l.celerPort == r.celerPort
-         && l.pubHost == r.pubHost
-         && l.pubPort == r.pubPort
-         && l.mdHost == r.mdHost
-         && l.mdPort == r.mdPort;
+   return l.pubHost == r.pubHost
+      && l.pubPort == r.pubPort;
 }
 
-static const EnvSettings StagingEnvSettings{
-   QLatin1String("104.155.117.179"),
-   16001,
-   QLatin1String("185.213.153.45"),
-   9091,
-   QLatin1String("185.213.153.44"),
-   16001};
+static const EnvSettings StagingEnvSettings {
+   QLatin1String("185.213.153.45"), 9091 };
 
 static const EnvSettings UATEnvSettings{
-   QLatin1String("185.213.153.43"),
-   16001,
-   QLatin1String("185.213.153.44"),
-   9091,
-   QLatin1String("185.213.153.46"),
-   16005};
+   QLatin1String("185.213.153.44"), 9091 };
+
+static const EnvSettings PRODEnvSettings{
+   QLatin1String("185.213.153.36"), 9091 };
 
 NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    : QWidget{parent}
@@ -58,6 +42,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    ui_->comboBoxEnv->addItem(tr("Custom"));
    ui_->comboBoxEnv->addItem(tr("Staging"));
    ui_->comboBoxEnv->addItem(tr("UAT"));
+   ui_->comboBoxEnv->addItem(tr("PROD"));
 
    ui_->comboBoxEnv->setCurrentIndex(-1);
    ui_->comboBoxEnv->setEnabled(false);
@@ -68,14 +53,8 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    connect(ui_->checkBoxTestnet, &QCheckBox::clicked
       , this, &NetworkSettingsPage::onNetworkClicked);
 
-   connect(ui_->celerHostLineEdit, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
-   connect(ui_->celerPortSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
-
    connect(ui_->lineEditPublicBridgeHost, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
    connect(ui_->spinBoxPublicBridgePort, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
-
-   connect(ui_->lineEditMDHost, &QLineEdit::textEdited, this, &NetworkSettingsPage::onEnvSettingsChanged);
-   connect(ui_->spinBoxMDPort, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
 
    connect(ui_->comboBoxEnv, SIGNAL(currentIndexChanged(int)), this, SLOT(onEnvSelected(int)));
 }
@@ -99,14 +78,8 @@ void NetworkSettingsPage::displaySettings(bool displayDefault)
       DisplayRunArmorySettings(false, displayDefault);
    }
 
-   ui_->celerHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::celerHost, displayDefault));
-   ui_->celerPortSpinBox->setValue(appSettings_->get<int>(ApplicationSettings::celerPort, displayDefault));
-
    ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost, displayDefault));
    ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort, displayDefault));
-
-   ui_->lineEditMDHost->setText(appSettings_->get<QString>(ApplicationSettings::mdServerHost, displayDefault));
-   ui_->spinBoxMDPort->setValue(appSettings_->get<int>(ApplicationSettings::mdServerPort, displayDefault));
 
    ui_->comboBoxEnv->setEnabled(true);
    DetectEnvironmentSettings();
@@ -114,21 +87,21 @@ void NetworkSettingsPage::displaySettings(bool displayDefault)
 
 void NetworkSettingsPage::DisplayRunArmorySettings(bool runLocally, bool displayDefault)
 {
+   auto networkType = ui_->checkBoxTestnet->isChecked()
+      ? NetworkType::TestNet
+      : NetworkType::MainNet;
+
    if (runLocally) {
       ui_->armoryDBHostLineEdit->setText(QString::fromStdString("localhost"));
 
-      auto networkType = ui_->checkBoxTestnet->isChecked()
-         ? NetworkType::TestNet
-         : NetworkType::MainNet;
-
-      ui_->armoryDBPortSpinBox->setValue(appSettings_->GetDefaultArmoryPortForNetwork(networkType));
+      ui_->armoryDBPortLineEdit->setText(QString::number(appSettings_->GetDefaultArmoryLocalPort(networkType)));
       ui_->armoryDBHostLineEdit->setEnabled(false);
-      ui_->armoryDBPortSpinBox->setEnabled(false);
+      ui_->armoryDBPortLineEdit->setEnabled(false);
    } else {
       ui_->armoryDBHostLineEdit->setEnabled(true);
-      ui_->armoryDBPortSpinBox->setEnabled(true);
-      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp, displayDefault));
-      ui_->armoryDBPortSpinBox->setValue(appSettings_->get<int>(ApplicationSettings::armoryDbPort, displayDefault));
+      ui_->armoryDBPortLineEdit->setEnabled(true);
+      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp));
+      ui_->armoryDBPortLineEdit->setText(appSettings_->GetArmoryRemotePort(displayDefault, networkType));
    }
 }
 
@@ -137,18 +110,16 @@ void NetworkSettingsPage::DetectEnvironmentSettings()
    int index = CustomConfiguration;
 
    EnvSettings currentConfiguration{
-      ui_->celerHostLineEdit->text(),
-      ui_->celerPortSpinBox->value(),
       ui_->lineEditPublicBridgeHost->text(),
-      ui_->spinBoxPublicBridgePort->value(),
-      ui_->lineEditMDHost->text(),
-      ui_->spinBoxMDPort->value()
+      ui_->spinBoxPublicBridgePort->value()
    };
 
    if (currentConfiguration == StagingEnvSettings) {
       index = StagingConfiguration;
    } else if (currentConfiguration == UATEnvSettings) {
       index = UATConfiguration;
+   } else if (currentConfiguration == PRODEnvSettings) {
+      index = PRODConfiguration;
    }
 
    ui_->comboBoxEnv->setCurrentIndex(index);
@@ -164,16 +135,11 @@ void NetworkSettingsPage::applyChanges()
    } else {
       appSettings_->set(ApplicationSettings::runArmoryLocally, false);
       appSettings_->set(ApplicationSettings::armoryDbIp, ui_->armoryDBHostLineEdit->text());
-      appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortSpinBox->value());
+      appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortLineEdit->text());
    }
-   appSettings_->set(ApplicationSettings::celerHost, ui_->celerHostLineEdit->text());
-   appSettings_->set(ApplicationSettings::celerPort, ui_->celerPortSpinBox->value());
 
    appSettings_->set(ApplicationSettings::pubBridgeHost, ui_->lineEditPublicBridgeHost->text());
    appSettings_->set(ApplicationSettings::pubBridgePort, ui_->spinBoxPublicBridgePort->value());
-
-   appSettings_->set(ApplicationSettings::mdServerHost, ui_->lineEditMDHost->text());
-   appSettings_->set(ApplicationSettings::mdServerPort, ui_->spinBoxMDPort->value());
 }
 
 void NetworkSettingsPage::onRunArmoryLocallyChecked(bool checked)
@@ -181,11 +147,9 @@ void NetworkSettingsPage::onRunArmoryLocallyChecked(bool checked)
    DisplayRunArmorySettings(checked, false);
 }
 
-void NetworkSettingsPage::onNetworkClicked(bool checked)
+void NetworkSettingsPage::onNetworkClicked(bool)
 {
-   if (ui_->runArmoryDBLocallyCheckBox->isChecked()) {
-      DisplayRunArmorySettings(true, false);
-   }
+   DisplayRunArmorySettings(ui_->runArmoryDBLocallyCheckBox->isChecked(), false);
 }
 
 void NetworkSettingsPage::onEnvSettingsChanged()
@@ -199,16 +163,13 @@ void NetworkSettingsPage::onEnvSelected(int index)
       const EnvSettings *settings = nullptr;
       if (index == StagingConfiguration) {
          settings = &StagingEnvSettings;
-      } else {
+      } else if (index == UATConfiguration) {
          settings = &UATEnvSettings;
+      } else  {
+         settings = &PRODEnvSettings;
       }
 
-      ui_->celerHostLineEdit->setText(settings->celerHost);
-      ui_->celerPortSpinBox->setValue(settings->celerPort);
       ui_->lineEditPublicBridgeHost->setText(settings->pubHost);
       ui_->spinBoxPublicBridgePort->setValue(settings->pubPort);
-
-      ui_->lineEditMDHost->setText(settings->mdHost);
-      ui_->spinBoxMDPort->setValue(settings->mdPort);
    }
 }

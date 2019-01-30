@@ -122,7 +122,7 @@ void CoinControlWidget::rowClicked(const QModelIndex &index)
    }
 }
 
-void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)
+void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs, bool allowAutoSel)
 {
    assert(selectedInputs != nullptr);
 
@@ -135,6 +135,11 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
    ccHeader->setSectionsClickable(true);
    ui_->treeViewUTXO->setSortingEnabled(true);
    ui_->treeViewUTXO->setHeader(ccHeader);
+
+   if (!allowAutoSel) {
+      ui_->checkBoxUseAllSelected->setChecked(false);
+   }
+   ui_->checkBoxUseAllSelected->setEnabled(allowAutoSel);
 
    connect(ccHeader, &CCHeader::stateChanged, coinControlModel_, &CoinControlModel::selectAll);
    connect(this, &CoinControlWidget::coinSelectionChanged, ccHeader, &CCHeader::onSelectionChanged);

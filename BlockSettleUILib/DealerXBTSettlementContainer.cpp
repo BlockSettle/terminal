@@ -73,11 +73,6 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       settlIdStr_ = settlAddr_->getAsset()->settlementId().toHexStr();
    }
 
-   settlMonitor_ = settlWallet_->createMonitorCb(settlAddr_, logger);
-   if (settlMonitor_ == nullptr) {
-      throw std::runtime_error("failed to create Settlement monitor");
-   }
-
    addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory_, settlIdStr_
       , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
@@ -129,7 +124,7 @@ bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
       const auto &cbSettlInput = [this, receivingAddress, password](UTXO input) {
          try {
             const auto txReq = settlWallet_->CreatePayoutTXRequest(input
-               , receivingAddress, transactionData_->FeePerByte());
+               , receivingAddress, transactionData_->feePerByte());
             const auto authAddr = bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH);
             payoutSignId_ = signingContainer_->SignPayoutTXRequest(txReq, authAddr, settlAddr_
                , autoSign_, password);
@@ -169,9 +164,16 @@ void DealerXBTSettlementContainer::activate()
    addrVerificator_->RegisterBSAuthAddresses();
    addrVerificator_->RegisterAddresses();
 
-   settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
-   , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
-   , [this](bs::PayoutSigner::Type) {});
+   auto createMonitorCB = [this](const std::shared_ptr<bs::SettlementMonitorCb>& monitor)
+   {
+      settlMonitor_ = monitor;
+
+      settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
+         , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
+         , [this](bs::PayoutSigner::Type) {});
+   };
+
+   settlWallet_->createMonitorCb(settlAddr_, logger_, createMonitorCB);
 }
 
 void DealerXBTSettlementContainer::deactivate()
@@ -220,7 +222,7 @@ void DealerXBTSettlementContainer::onPayInDetected(int confirmationsNumber, cons
 
          const auto &cbInput = [this](UTXO input) {
             fee_ = settlWallet_->GetEstimatedFeeFor(input, transactionData_->GetFallbackRecvAddress()
-               , transactionData_->FeePerByte());
+               , transactionData_->feePerByte());
          };
          settlWallet_->GetInputFor(settlAddr_, cbInput);
       };
