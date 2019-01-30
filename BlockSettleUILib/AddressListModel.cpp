@@ -162,9 +162,10 @@ void AddressListModel::updateWalletData()
                  ++j) {
                addressRows_[j].transactionCount = (*addrTxNs)[j];
             }
-            emit dataChanged(index(0, ColumnTxCount)
-                             , index(addressRows_.size()-1, ColumnTxCount));
-            emit updated();
+            QMetaObject::invokeMethod(this, [this] {
+               emit dataChanged(index(0, ColumnTxCount)
+                  , index(addressRows_.size() - 1, ColumnTxCount));
+            });
          }
       };
 
@@ -189,9 +190,10 @@ void AddressListModel::updateWalletData()
                  ++j) {
                addressRows_[j].balance = (*addrBalances)[j];
             }
-            emit dataChanged(index(0, ColumnBalance)
-                             , index(addressRows_.size() - 1, ColumnBalance));
-            emit updated();
+            QMetaObject::invokeMethod(this, [this] {
+               emit dataChanged(index(0, ColumnBalance)
+                  , index(addressRows_.size() - 1, ColumnBalance));
+            });
          }
       };
 

@@ -48,6 +48,19 @@ void TransactionOutputsModel::AddRecipient(unsigned int recipientId, const QStri
    endInsertRows();
 }
 
+void TransactionOutputsModel::UpdateRecipientAmount(unsigned int recipientId, double amount)
+{
+   int row = -1;
+   for (int i = 0; i < outputs_.size(); ++i) {
+      if (outputs_[i].recipientId == recipientId) {
+         row = i;
+         outputs_[i].amount = amount;
+         break;
+      }
+   }
+   emit dataChanged(index(row, ColumnAmount), index(row, ColumnAmount), { Qt::DisplayRole });
+}
+
 void TransactionOutputsModel::RemoveRecipient(int row)
 {
    beginRemoveRows(QModelIndex{}, row, row);

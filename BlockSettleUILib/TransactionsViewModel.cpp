@@ -240,6 +240,7 @@ void TransactionsViewModel::init()
       connect(armory_.get(), &ArmoryConnection::newBlock, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    }
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &WalletsManager::walletDeleted, this, &TransactionsViewModel::cleanRefresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
@@ -365,6 +366,12 @@ QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientat
 
 void TransactionsViewModel::refresh()
 {
+   updatePage();
+}
+
+void TransactionsViewModel::cleanRefresh()
+{
+   clear();
    updatePage();
 }
 

@@ -214,7 +214,7 @@ Signer bs::wallet::TXSignRequest::getSigner() const
 // Estimate the TX virtual size. This will not be exact, as there's no sig yet.
 // Round up the inputs to guarantee that we meet RBF's relay fee policy.
 size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
-              , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
+              , const std::map<unsigned int, std::shared_ptr<ScriptRecipient>> &recipients)
 {
    if (inputs.empty() || recipients.empty()) {
       return 0;
@@ -225,7 +225,7 @@ size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
 
    // Get the output virtual sizes from Armory. Assume these will be accurate.
    for (const auto &recip : recipients) {
-      result += recip->getSize();
+      result += recip.second->getSize();
    }
 
    // Estimate the virtual size for the inputs. Because we can't analyze the
@@ -262,7 +262,7 @@ size_t bs::wallet::estimateTXVirtSize(const std::vector<UTXO> &inputs
          break;
       }
    }
-   return result;
+   return result * 1.4; // rough approximation to Armory's calculations
 }
 
 size_t bs::wallet::TXSignRequest::estimateTxVirtSize() const
@@ -270,9 +270,12 @@ size_t bs::wallet::TXSignRequest::estimateTxVirtSize() const
    if (!isValid()) {
       return 0;
    }
-   auto recipCopy = recipients;
+   std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipCopy;
+   for (unsigned int i = 0; i < recipients.size(); ++i) {
+      recipCopy[i] = recipients[i];
+   }
    if (change.value) {
-      recipCopy.push_back(change.address.getRecipient(change.value));
+      recipCopy[recipients.size()] = change.address.getRecipient(change.value);
    }
    return bs::wallet::estimateTXVirtSize(inputs, recipCopy);
 }
@@ -296,7 +299,11 @@ size_t bs::wallet::TXMultiSignRequest::estimateTxVirtSize() const
    for (const auto &input : inputs) {
       inputsList.push_back(input.first);
    }
-   return bs::wallet::estimateTXVirtSize(inputsList, recipients);
+   std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipCopy;
+   for (unsigned int i = 0; i < recipients.size(); ++i) {
+      recipCopy[i] = recipients[i];
+   }
+   return bs::wallet::estimateTXVirtSize(inputsList, recipCopy);
 }
 
 

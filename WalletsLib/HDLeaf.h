@@ -149,6 +149,7 @@ namespace bs {
          void setDB(const std::shared_ptr<LMDBEnv> &env, LMDB *db);
 
          void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
+         void UnregisterWallet() override;
 
          std::shared_ptr<LMDBEnv> getDBEnv() override { return dbEnv_; }
          LMDB *getDB() override { return db_; }
