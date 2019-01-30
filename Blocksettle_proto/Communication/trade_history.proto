@@ -11,8 +11,15 @@ enum TradeHistoryTradeType
 
 enum TradeHistoryRequestType
 {
-   LoadLatestTradeType     = 0;
-   SubscribeToTradesType   = 1;
+   LoadLatestTradeRequestType     = 0;
+   SubscribeToTradesRequestType   = 1;
+}
+
+enum TradeHistoryResponseType
+{
+   LatestTradeResponseType       = 0;
+   TradeHistorySnapshotType      = 1;
+   TradeHistoryUpdateType        = 2;
 }
 
 message TradeHistoryRequest
@@ -30,6 +37,14 @@ message SubscribeToTradesRequest
 {
    TradeHistoryTradeType   trade_type     = 1;
    uint64                  from_timestamp = 2;
+   // if 0 or not set - load till end
+   uint64                  to_timestamp   = 3;
+}
+
+message TradeHistoryResponse
+{
+   TradeHistoryResponseType   response_type   = 1;
+   string                     response        = 2;
 }
 
 message TradeRecord
@@ -37,10 +52,17 @@ message TradeRecord
    double   price       = 1;
    double   amount      = 2;
    string   product     = 3;
-   string   currency    = 4;
-   bool     is_sell     = 5;
-   uint64   timestamp   = 6;
-   string   trade_id    = 7;
+   bool     is_sell     = 4;
+   uint64   timestamp   = 5;
+   string   trade_id    = 6;
+}
+
+message TradeHistorySnapshot
+{
+   uint64                  snaphot_id     = 1;
+   uint64                  snaphot_count  = 2;
+   TradeHistoryTradeType   trade_type     = 3;
+   repeated TradeRecord    trade          = 4;
 }
 
 message TradeHistoryServerUpdate
