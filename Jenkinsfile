@@ -29,7 +29,7 @@ pipeline {
                 }*/
                 stage('Build Windows app') {
                     steps {
-                        sh 'ssh admin@172.17.0.1 -p2222 "rmdir /s C:/Users/Admin/Workspace/terminal"'
+                        sh 'ssh admin@172.17.0.1 -p2222 "rmdir /s Workspace\\terminal"'
             //            sh 'ssh admin@172.17.0.1 -p2222 "C:\\Users\\Admin\\Workspace\\build.bat"'
             //            sh 'scp -P 2222 admin@172.17.0.1:C:/Users/Admin/Workspace/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
                     }
