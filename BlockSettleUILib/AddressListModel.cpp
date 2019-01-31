@@ -365,9 +365,9 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
          break;
 
       case Qt::TextColorRole:
-         if (!row.isExternal) {
+/*         if (!row.isExternal) {
             return QColor(Qt::gray);
-         }
+         }*/   // don't remove completely in case someone decides to revert back
          break;
 
       default:
