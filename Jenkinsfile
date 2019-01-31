@@ -29,8 +29,8 @@ pipeline {
                 }*/
                 stage('Build Windows app') {
                     steps {
-                        sh 'ssh admin@172.17.0.1 -p2222 "C:\\Users\\Admin\\Workspace\\build.bat"'
-                     //   sh 'ssh admin@172.17.0.1 -p2222 "set PYTHONIOENCODING=UTF-8 ; set PATH=%PATH%;C:\Python27 ; set PATH=%PATH%;C:\Python27\Scripts"
+            //            sh 'ssh admin@172.17.0.1 -p2222 "C:\\Users\\Admin\\Workspace\\build.bat"'
+                        sh "scp -P 2222 admin@172.17.0.1:C\\Users\\Admin\\Workspace\\terminal\\Deploy\\bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg"
                     }
                 }
             }
