@@ -270,8 +270,8 @@ void ChatWidget::onSearchUserReturnPressed()
     }
 
     popup_->setText(ui_->chatSearchLineEdit->text());
-    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), ui_->chatSearchLineEdit->height()*1.5);
-    popup_->move(ui_->chatSearchLineEdit->mapToGlobal(ui_->chatSearchLineEdit->rect().bottomLeft()));
+    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), ui_->chatSearchLineEdit->height()*1.2);
+    popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
     popup_->show();
 }
 
@@ -306,3 +306,4 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
 
     return QWidget::eventFilter(obj, event);
 }
+

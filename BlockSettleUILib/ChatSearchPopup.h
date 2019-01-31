@@ -18,6 +18,7 @@ public:
     ~ChatSearchPopup();
 
     void setText(const QString &text);
+    void setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY);
 
 signals:
     void addUserToContacts(const QString &userID);

@@ -1437,6 +1437,16 @@ QLineEdit#chatSearchLineEdit:disabled {
 QFrame#roomsFrame {
     background-color: #1c2835; }
     
+QFrame#chatSearchPopupFrame {
+    background-color: #1c2835; }
+    
+QLabel#chatSearchPopupLabel {
+    background-color: #1c2835;
+    font-family: 'Open Sans', arial, sans-serif;
+    font-size: 11px;
+    padding: 2 2 2 20;
+    border: 1px solid #81888f; }
+    
 QSpacerItem#chatUsersVerticalSpacer {
     background-color: #1c2835;
     min-height: 30px;

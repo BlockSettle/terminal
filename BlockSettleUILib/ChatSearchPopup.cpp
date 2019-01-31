@@ -12,13 +12,13 @@ ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
 {
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     ui->setupUi(this);
-    ui->label->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(ui->label, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
+    ui->chatSearchPopupLabel->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
     _searchPopupMenu = new QMenu(this);
     QAction *addUserToContactsAction = _searchPopupMenu->addAction(QObject::tr("Add to contacts"));
     addUserToContactsAction->setStatusTip(QObject::tr("Click to add user to contact list"));
     connect(addUserToContactsAction, &QAction::triggered,
-            [=](bool) { qDebug()<<"triggered"; emit addUserToContacts(ui->label->text()); }
+            [=](bool) { qDebug()<<"triggered"; emit addUserToContacts(ui->chatSearchPopupLabel->text()); }
     );
 }
 
@@ -30,10 +30,18 @@ ChatSearchPopup::~ChatSearchPopup()
 
 void ChatSearchPopup::setText(const QString &text)
 {
-    ui->label->setText(text);
+    ui->chatSearchPopupLabel->setText(text);
 }
 
 void ChatSearchPopup::showMenu(const QPoint &pos)
 {
     _searchPopupMenu->exec(mapToGlobal(pos));
+}
+
+void ChatSearchPopup::setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY)
+{
+    QPoint newPos = widget->mapToGlobal(widget->rect().bottomLeft());
+    newPos.setX(newPos.x() + moveX);
+    newPos.setY(newPos.y() + moveY);
+    this->move(newPos);
 }
