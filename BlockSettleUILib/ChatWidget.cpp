@@ -6,8 +6,9 @@
 #include "ApplicationSettings.h"
 #include "ChatSearchPopup.h"
 
-#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QApplication>
+#include <QObject>
 #include <QtDebug>
 
 #include <thread>
@@ -177,9 +178,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(messagesViewModel_.get(), &ChatMessagesViewModel::rowsInserted,
            this, &ChatWidget::onMessagesUpdated);
 
-   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::editingFinished, this, &ChatWidget::onSearchUserEditingFinished);
-   qApp->installEventFilter(this);
-
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
 
@@ -253,7 +252,7 @@ void ChatWidget::logout()
    return stateCurrent_->logout(); //test
 }
 
-void ChatWidget::onSearchUserEditingFinished()
+void ChatWidget::onSearchUserReturnPressed()
 {
     if(!popup_)
     {
@@ -267,9 +266,9 @@ void ChatWidget::onSearchUserEditingFinished()
                 popup_ = nullptr;
             }
         );
+        qApp->installEventFilter(this);
     }
 
-    popup_->setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     popup_->setText(ui_->chatSearchLineEdit->text());
     popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), ui_->chatSearchLineEdit->height()*1.5);
     popup_->move(ui_->chatSearchLineEdit->mapToGlobal(ui_->chatSearchLineEdit->rect().bottomLeft()));
@@ -278,7 +277,7 @@ void ChatWidget::onSearchUserEditingFinished()
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
 {
-    if(obj == ui_->chatSearchLineEdit->window())
+    if(obj == this->window())
     {
         if(event->type() == QEvent::Move)
         {
@@ -287,11 +286,18 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
                 popup_->move(ui_->chatSearchLineEdit->mapToGlobal(ui_->chatSearchLineEdit->rect().bottomLeft()));
             }
         }
+    }
 
-        if(event->type() == QEvent::MouseButtonRelease)
+    if(event->type() == QEvent::MouseButtonRelease)
+    {
+        QMouseEvent *mouseEvent = dynamic_cast<QMouseEvent*>(event);
+        QPoint pos = mouseEvent->pos();
+
+        if(popup_)
         {
-            if(popup_)
+            if(!popup_->rect().contains(pos))
             {
+                qApp->removeEventFilter(this);
                 popup_->deleteLater();
                 popup_ = nullptr;
             }

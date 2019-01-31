@@ -10,6 +10,7 @@ ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ChatSearchPopup)
 {
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     ui->setupUi(this);
     ui->label->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->label, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);

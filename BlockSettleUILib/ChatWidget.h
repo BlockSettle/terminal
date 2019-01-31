@@ -51,7 +51,7 @@ private slots:
    void onMessagesUpdated(const QModelIndex& parent, int start, int end);
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
-   void onSearchUserEditingFinished();
+   void onSearchUserReturnPressed();
 
 signals:
    void LoginFailed();
