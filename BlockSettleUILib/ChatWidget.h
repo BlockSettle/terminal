@@ -20,6 +20,7 @@ class ConnectionManager;
 class ApplicationSettings;
 
 class ChatWidgetState;
+class ChatSearchPopup;
 
 class ChatWidget : public QWidget
 {
@@ -50,6 +51,7 @@ private slots:
    void onMessagesUpdated(const QModelIndex& parent, int start, int end);
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
+   void onSearchUserEditingFinished();
 
 signals:
    void LoginFailed();
@@ -65,13 +67,15 @@ private:
 
    std::string serverPublicKey_;
    QString  currentChat_;
+   ChatSearchPopup *popup_;
+
 private:
 	std::shared_ptr<ChatWidgetState> stateCurrent_;
 
 private:
 	void changeState(ChatWidget::State state);
 
-	bool eventFilter(QObject * obj, QEvent * event);
+    bool eventFilter(QObject * obj, QEvent * event) override;
 
 };
 

@@ -15,17 +15,17 @@ QString ChatUsersViewModel::resolveUser(const QModelIndex &index) const
    return QString::fromStdString(users_[index.row()]);
 }
 
-int ChatUsersViewModel::columnCount(const QModelIndex &parent) const
+int ChatUsersViewModel::columnCount(const QModelIndex &/*parent*/) const
 {
    return 1;
 }
 
-int ChatUsersViewModel::rowCount(const QModelIndex &parent) const
+int ChatUsersViewModel::rowCount(const QModelIndex &/*parent*/) const
 {
    return users_.size();
 }
 
-QVariant ChatUsersViewModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant ChatUsersViewModel::headerData(int /*section*/, Qt::Orientation /*orientation*/, int /*role*/) const
 {
    return QVariant();
 }
