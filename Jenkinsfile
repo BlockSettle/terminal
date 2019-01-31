@@ -29,7 +29,7 @@ pipeline {
                 }*/
                 stage('Build Windows app') {
                     steps {
-                        sh 'ssh admin@172.17.0.1 -p2222 '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && "set PYTHONIOENCODING=UTF-8"''
+                        sh 'ssh admin@172.17.0.1 -p2222 "C:\\Users\\Admin\\Workspace\\build.bat'
                      //   sh 'ssh admin@172.17.0.1 -p2222 "set PYTHONIOENCODING=UTF-8 ; set PATH=%PATH%;C:\Python27 ; set PATH=%PATH%;C:\Python27\Scripts"
                     }
                 }
