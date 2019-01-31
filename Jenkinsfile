@@ -29,7 +29,7 @@ pipeline {
                 }*/
                 stage('Build Windows app') {
                     steps {
-                        sh 'ssh admin@localhost -p2222 "dir"'
+                        sh 'ssh admin@172.17.0.1 -p2222 "dir"'
                     }
                 }
             }
