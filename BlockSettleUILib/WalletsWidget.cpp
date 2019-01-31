@@ -320,7 +320,13 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
 {
    const auto index = addressSortFilterModel_->mapToSource(ui->treeViewAddresses->indexAt(p));
    const auto addressIndex = addressModel_->index(index.row(), static_cast<int>(AddressListModel::ColumnAddress));
-   curAddress_ = bs::Address(addressModel_->data(addressIndex).toString());
+   try {
+      curAddress_ = bs::Address(addressModel_->data(addressIndex, AddressListModel::Role::AddressRole).toString());
+   }
+   catch (const std::exception &) {
+      curAddress_.clear();
+      return;
+   }
    curWallet_ = walletsManager_->GetWalletByAddress(curAddress_);
 
    if (!curWallet_) {
