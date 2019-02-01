@@ -414,7 +414,7 @@ void WalletsWidget::onNewWallet()
    }
 }
 
-bool WalletsWidget::CreateNewWallet(bool primary, bool report)
+bool WalletsWidget::CreateNewWallet(bool report)
 {
    NetworkType netType = appSettings_->get<NetworkType>(ApplicationSettings::netType);
 
@@ -440,7 +440,7 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
    }
    std::shared_ptr<bs::hd::Wallet> newWallet;
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-      , appSettings_->GetHomeDir(), walletSeed, walletId, primary, username_, appSettings_, this);
+      , appSettings_->GetHomeDir(), walletSeed, walletId, username_, appSettings_, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
          newWallet = walletsManager_->GetHDWalletById(walletId);
@@ -465,9 +465,9 @@ bool WalletsWidget::CreateNewWallet(bool primary, bool report)
    }
 }
 
-bool WalletsWidget::ImportNewWallet(bool primary, bool report)
+bool WalletsWidget::ImportNewWallet(bool report)
 {
-   if (primary && assetManager_->privateShares(true).empty()) {
+   if (!walletsManager_->HasPrimaryWallet() && assetManager_->privateShares(true).empty()) {
       BSMessageBox q(BSMessageBox::question, tr("Private Market Import"), tr("Private Market data is missing")
          , tr("You do not have Private Market data available in the BlockSettle Terminal. You must first log "
             "into your Celer account from the main menu. A successful login will cause the proper data to be "
@@ -489,7 +489,7 @@ bool WalletsWidget::ImportNewWallet(bool primary, bool report)
             , assetManager_, authMgr_, armory_, importWalletDialog.GetSeedData()
             , importWalletDialog.GetChainCodeData(), appSettings_
             , username_, importWalletDialog.GetName(), importWalletDialog.GetDescription()
-            , primary, this);
+            , this);
 
          if (createImportedWallet.exec() == QDialog::Accepted) {
             const auto &importer = createImportedWallet.getWalletImporter();

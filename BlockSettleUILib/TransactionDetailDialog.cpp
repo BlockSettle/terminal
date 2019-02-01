@@ -18,7 +18,8 @@
 #include <limits>
 
 
-TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, const std::shared_ptr<WalletsManager>& walletsManager
+TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item
+   , const std::shared_ptr<WalletsManager>& walletsManager
    , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
  : QDialog(parent)
  , ui_(new Ui::TransactionDetailDialog())
@@ -119,7 +120,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item, cons
 
             if (initialized) {
                ui_->labelFee->setText(UiUtils::displayAmount(value));
-               ui_->labelSb->setText(QString::number(value / item->tx.getTxWeight()));
+               ui_->labelSb->setText(
+                  QString::number((float)value / (float)item->tx.getTxWeight()));
             }
 
             ui_->treeAddresses->expandItem(itemSender);
@@ -189,6 +191,14 @@ QSize TransactionDetailDialog::minimumSizeHint() const
    return minimumSize();
 }
 
+// Add an address to the dialog.
+// IN:  The wallet to check the address against. (const std::shared_ptr<bs::Wallet>)
+//      The TxOut to check the address against. (const TxOut&)
+//      Indicator for whether the TxOut is sourced against output. (bool)
+//      Indicator for whether the Tx type is outgoing. (bool)
+//      The TX hash. (const BinaryData&)
+// OUT: None
+// RET: None
 void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wallet,
                                          const TxOut& out,
                                          bool isOutput,
@@ -208,7 +218,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wall
             valueStr += QLatin1Char('-');
          }
          else if (!isSettlement) {
-            addressType = tr("Return");
+            addressType = tr("Change");
             isOutput = false;
          }
       }
@@ -219,7 +229,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wall
             valueStr += QLatin1Char('-');
          }
          else {
-            addressType = tr("Return");
+            addressType = tr("Change");
          }
          isOutput = false;
       }

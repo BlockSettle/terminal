@@ -31,7 +31,7 @@ public:
       , const std::shared_ptr<ApplicationSettings> &
       , const QString& username
       , const std::string &walletName = {}, const std::string &walletDesc = {}
-      , bool createPrimary = false, QWidget *parent = nullptr);
+      , QWidget *parent = nullptr);
    ~ImportWalletDialog() override;
 
    QString getNewWalletName() const { return walletName_; }
