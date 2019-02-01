@@ -108,7 +108,8 @@ private:
 
    unsigned int AddRecipient(const bs::Address &, double amount, bool isMax = false);
    void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
-   void FixRecipientsAmount();
+   bool FixRecipientsAmount();
+   void onOutputRemoved();
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void SetMinimumFee(float totalFee, float feePerByte = 0);
@@ -118,7 +119,7 @@ private:
    void SetInputs(const std::vector<UTXO> &);
    void disableOutputsEditing();
    void disableInputSelection();
-   void disableFeeChanging();
+   void enableFeeChanging(bool flag = true);
    void SetFixedChangeAddress(const QString& changeAddress);
    void SetPredefinedFee(const int64_t& manualFee);
    void setUnchangeableTx();

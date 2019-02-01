@@ -238,8 +238,13 @@ bool TransactionData::UpdateTransactionData()
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
-         summary_.hasChange = selection.hasChange_;
+         summary_.hasChange = true;   // only maxAmount shouldn't have change   // selection.hasChange_;
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
+
+         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
+            summary_.totalFee = totalFee();
+            summary_.feePerByte = feePerByte();
+         }
       }
       summary_.usedTransactions = usedUTXO_.size();
    }
@@ -267,20 +272,31 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
       return 0;
    }
 
-   size_t txOutSize = 0;
+   std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
    for (const auto &recip : recipients_) {
-      const auto &scrRecip = recip.second->GetScriptRecipient();
-      txOutSize += scrRecip ? scrRecip->getSize() : 31;
+      const auto recipPtr = recip.second->GetScriptRecipient();
+      if (!recipPtr) {
+         continue;
+      }
+      recipientsMap[recip.first] = recipPtr;
    }
    if (!recipient.isNull()) {
-      const auto &scrRecip = recipient.getRecipient(0.0);
-      txOutSize += scrRecip ? scrRecip->getSize() : 31;
+      const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
+      if (recipPtr) {
+         recipientsMap[recipients_.size()] = recipPtr;
+      }
    }
+   if (recipientsMap.empty()) {
+      return 0;
+   }
+   const PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
+      ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
+      : PaymentStruct(recipientsMap, totalFee_, feePerByte_, 0);
 
    // Accept the fee returned by Armory. The fee returned may be a few
    // satoshis higher than is strictly required by Core but that's okay.
    // If truly required, the fee can be tweaked later.
-   const double fee = coinSelection_->getFeeForMaxVal(txOutSize, feePerByte()
+   const double fee = coinSelection_->getFeeForMaxVal(payment.size_, feePerByte()
       , transactions) / BTCNumericTypes::BalanceDivider;
 
    auto availableBalance = GetTransactionSummary().availableBalance - \
