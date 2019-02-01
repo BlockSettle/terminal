@@ -82,19 +82,26 @@ void ArmoryEventsPublisher::onNewBlock(unsigned int height) const
    }
 }
 
-void ArmoryEventsPublisher::onZeroConfReceived(unsigned int id) const
+void ArmoryEventsPublisher::onZeroConfReceived(const std::vector<bs::TXEntry> entries) const
 {
    Blocksettle::ArmoryEvents::ZCEvent  eventData;
-
-   eventData.set_zc_id(id);
+   for (const auto &entry : entries) {
+      auto zcEntry = eventData.add_zc_entries();
+      zcEntry->set_tx_hash(entry.txHash.toBinStr());
+      zcEntry->set_wallet_id(entry.id);
+      zcEntry->set_value(entry.value);
+      zcEntry->set_block_num(entry.blockNum);
+      zcEntry->set_time(entry.txTime);
+      zcEntry->set_rbf(entry.isRBF);
+      zcEntry->set_chained_zc(entry.isChainedZC);
+   }
 
    Blocksettle::ArmoryEvents::EventHeader    header;
 
    header.set_event_type(Blocksettle::ArmoryEvents::ZCEventType);
    header.set_event_data(eventData.SerializeAsString());
 
-   logger_->debug("[ArmoryEventsPublisher::onZeroConfReceived] publishing event id {}"
-      , id);
+   logger_->debug("[ArmoryEventsPublisher::onZeroConfReceived] publishing ZC event");
 
    if (!publisher_->PublishData(header.SerializeAsString())) {
       logger_->error("[ArmoryEventsPublisher::onZeroConfReceived] failed to publish event");

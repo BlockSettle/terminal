@@ -90,7 +90,7 @@ private slots:
    void onPayoutZCDetected(int confNum, bs::PayoutSigner::Type);
 
 protected:
-   void zcReceived(unsigned int) override;
+   void zcReceived(const std::vector<bs::TXEntry>) override;
 
 private:
    unsigned int createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr

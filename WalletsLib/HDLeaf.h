@@ -168,7 +168,7 @@ namespace bs {
          void scanComplete(const std::string &walletId);
 
       protected slots:
-         virtual void onZeroConfReceived(ArmoryConnection::ReqIdType);
+         virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
          virtual void onRefresh(std::vector<BinaryData> ids);
 
       protected:
@@ -300,7 +300,7 @@ namespace bs {
          void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
       private slots:
-         void onZeroConfReceived(ArmoryConnection::ReqIdType) override;
+         void onZeroConfReceived(const std::vector<bs::TXEntry>) override;
          void onStateChanged(ArmoryConnection::State);
 
       private:

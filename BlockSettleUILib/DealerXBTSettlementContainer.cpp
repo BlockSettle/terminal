@@ -185,7 +185,7 @@ void DealerXBTSettlementContainer::deactivate()
    }
 }
 
-void DealerXBTSettlementContainer::zcReceived(unsigned int)
+void DealerXBTSettlementContainer::zcReceived(const std::vector<bs::TXEntry>)
 {
    if (settlMonitor_) {
       settlMonitor_->checkNewEntries();
