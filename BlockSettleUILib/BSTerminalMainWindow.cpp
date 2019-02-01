@@ -101,6 +101,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitSigningContainer();
 
    LoadWallets(splashScreen);
+
+   splashScreen.SetProgress(100);
+   splashScreen.close();
+
    QApplication::processEvents();
 
    InitAuthManager();
@@ -120,7 +124,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    connectSigner();
    connectArmory();
-   splashScreen.SetProgress(100);
 
    InitPortfolioView();
 
@@ -460,6 +463,10 @@ void BSTerminalMainWindow::SignerReady()
          , dialogManager, signContainer_, armory_);
       ui->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
          , applicationSettings_, dialogManager, signContainer_, armory_);
+
+      if (walletsManager_->GetWalletsCount() == 0) {
+         createWallet(!walletsManager_->HasPrimaryWallet());
+      }
       widgetsInited_ = true;
    }
    else {
@@ -603,10 +610,6 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 
       InitTransactionsView();
       transactionsModel_->loadAllWallets();
-
-      if (walletsManager_->GetWalletsCount() == 0) {
-         createWallet(!walletsManager_->HasPrimaryWallet());
-      }
    }
    updateControlEnabledState();
    updateLoginActionState();
