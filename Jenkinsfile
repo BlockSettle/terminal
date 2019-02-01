@@ -29,7 +29,7 @@ pipeline {
                 }*/
                 stage('Build Windows app') {
                     steps {
-                        sh 'ssh admin@172.17.0.1 -p2222 "del /s /f /q Workspace\\terminal"'
+                        sh 'ssh admin@172.17.0.1 -p2222 "rd /s /q Workspace\\terminal"'
                         sh 'ssh admin@172.17.0.1 -p2222 "cd Workspace && git clone --single-branch --branch ${TAG} git@github.com:BlockSettle/terminal.git && cd terminal && git submodule init && git submodule update"'
                   //      sh "scp -P 2222 -r ${WORKSPACE}/terminal admin@172.17.0.1:C:/Users/Admin/Workspace"
                         sh 'ssh admin@172.17.0.1 -p2222 "C:\\Users\\Admin\\Workspace\\build.bat"'
