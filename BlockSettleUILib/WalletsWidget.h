@@ -46,8 +46,8 @@ public:
    std::vector<WalletsManager::wallet_gen_type> GetSelectedWallets() const;
    std::vector<WalletsManager::wallet_gen_type> GetFirstWallets() const;
 
-   bool CreateNewWallet(bool primary, bool report = true);
-   bool ImportNewWallet(bool primary, bool report = true);
+   bool CreateNewWallet(bool report = true);
+   bool ImportNewWallet(bool report = true);
 
    void shortcutActivated(ShortcutType s) override;
 
