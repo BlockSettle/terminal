@@ -212,11 +212,10 @@ void TransactionDetailsWidget::setTxGUIValues()
    // Output TXID in RPC byte order by flipping TXID bytes rcv'd by Armory (internal
    // order).
 //   ui_->tranDate->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(curTxTimestamp)));
-   ui_->tranDate->setText(QString::fromStdString("Timestamp here"));        // FIX ME!!!
-   ui_->tranHeight->setText(QString::fromStdString("Height here"));         // FIX ME!!!
-   ui_->tranConfirmations->setText(QString::fromStdString("# confs here")); // FIX ME!!!
+
    ui_->tranNumInputs->setText(QString::number(curTx_.getNumTxIn()));
    ui_->tranNumOutputs->setText(QString::number(curTx_.getNumTxOut()));
+   ui_->tranInput->setText(UiUtils::displayAmount(totIn));
    ui_->tranOutput->setText(UiUtils::displayAmount(curTx_.getSumOfOutputs()));
    ui_->tranFees->setText(UiUtils::displayAmount(fees));
    ui_->tranFeePerByte->setText(QString::number(nearbyint(feePerByte)));
@@ -379,11 +378,9 @@ void TransactionDetailsWidget::clear()
    curTx_ = Tx();
 
    ui_->tranID->clear();
-   ui_->tranDate->setText(tr("Loading..."));
-   ui_->tranHeight->clear();
-   ui_->tranConfirmations->clear();
    ui_->tranNumInputs->clear();
    ui_->tranNumOutputs->clear();
+   ui_->tranInput->clear();
    ui_->tranOutput->clear();
    ui_->tranFees->clear();
    ui_->tranFeePerByte->clear();
