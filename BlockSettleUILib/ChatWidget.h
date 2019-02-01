@@ -27,10 +27,10 @@ class ChatWidget : public QWidget
    Q_OBJECT
 
 public:
-	enum State {
-		LoggedIn,
-		LoggedOut
-	};
+   enum State {
+      LoggedIn,
+      LoggedOut
+   };
    //friend class ChatWidgetState;
    friend class ChatWidgetStateLoggedOut;
    friend class ChatWidgetStateLoggedIn;
@@ -60,7 +60,7 @@ private:
    QScopedPointer<Ui::ChatWidget> ui_;
    QScopedPointer<ChatUsersViewModel> usersViewModel_;
    QScopedPointer<ChatMessagesViewModel> messagesViewModel_;
-   
+
 
    std::shared_ptr<ChatClient>      client_;
    std::shared_ptr<spdlog::logger>  logger_;
@@ -70,10 +70,10 @@ private:
    ChatSearchPopup *popup_;
 
 private:
-	std::shared_ptr<ChatWidgetState> stateCurrent_;
+   std::shared_ptr<ChatWidgetState> stateCurrent_;
 
 private:
-	void changeState(ChatWidget::State state);
+   void changeState(ChatWidget::State state);
 
     bool eventFilter(QObject * obj, QEvent * event) override;
 

@@ -23,53 +23,53 @@ public:
     virtual void onStateExit() {} //Do something special on state about to gone, by default nothing
 
 public:
-	
-	explicit ChatWidgetState(ChatWidget* chat, ChatWidget::State type) : chat_(chat), type_(type) {}
-	virtual ~ChatWidgetState() = default;
 
-	virtual std::string login(const std::string& email, const std::string& jwt) = 0;
-	virtual void logout() = 0;
-	virtual void onSendButtonClicked() = 0;
-	virtual void onUserClicked(const QModelIndex& index) = 0;
-	virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end) = 0;
-	virtual void onLoginFailed() = 0;
-	virtual void onUsersDeleted(const std::vector<std::string> &) = 0;
+   explicit ChatWidgetState(ChatWidget* chat, ChatWidget::State type) : chat_(chat), type_(type) {}
+   virtual ~ChatWidgetState() = default;
+
+   virtual std::string login(const std::string& email, const std::string& jwt) = 0;
+   virtual void logout() = 0;
+   virtual void onSendButtonClicked() = 0;
+   virtual void onUserClicked(const QModelIndex& index) = 0;
+   virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end) = 0;
+   virtual void onLoginFailed() = 0;
+   virtual void onUsersDeleted(const std::vector<std::string> &) = 0;
 
     ChatWidget::State type() { return type_; }
 
 protected:
-	ChatWidget * chat_;
+   ChatWidget * chat_;
 private:
-	ChatWidget::State type_;
+   ChatWidget::State type_;
 };
 
 class ChatWidgetStateLoggedOut : public ChatWidgetState {
 public:
     ChatWidgetStateLoggedOut(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedOut) {}
 
-	virtual void onStateEnter() override {
-		chat_->logger_->debug("Set user name {}", "<empty>");
-		chat_->usersViewModel_->onUsersReplace({});
-	}
+   virtual void onStateEnter() override {
+      chat_->logger_->debug("Set user name {}", "<empty>");
+      chat_->usersViewModel_->onUsersReplace({});
+   }
 
-	std::string login(const std::string& email, const std::string& jwt) override {
-		chat_->logger_->debug("Set user name {}", email);
-		chat_->usersViewModel_->onUsersReplace({});
-		const auto userId = chat_->client_->loginToServer(email, jwt);
-		chat_->messagesViewModel_->setOwnUserId(userId);
+   std::string login(const std::string& email, const std::string& jwt) override {
+      chat_->logger_->debug("Set user name {}", email);
+      chat_->usersViewModel_->onUsersReplace({});
+      const auto userId = chat_->client_->loginToServer(email, jwt);
+      chat_->messagesViewModel_->setOwnUserId(userId);
 
-		return userId;
+      return userId;
     }
-	void logout() override {
-		chat_->logger_->info("Already logged out!");
+   void logout() override {
+      chat_->logger_->info("Already logged out!");
     }
-	void onSendButtonClicked()  override {
-		qDebug("Send action when logged out");
+   void onSendButtonClicked()  override {
+      qDebug("Send action when logged out");
     }
     void onUserClicked(const QModelIndex& /*index*/)  override {}
     void onMessagesUpdated(const QModelIndex& /*parent*/, int /*start*/, int /*end*/)  override {}
-	void onLoginFailed()  override {
-		chat_->changeState(ChatWidget::LoggedOut);
+   void onLoginFailed()  override {
+      chat_->changeState(ChatWidget::LoggedOut);
     }
     void onUsersDeleted(const std::vector<std::string> &) override {}
 };
@@ -81,43 +81,43 @@ public:
     void onStateEnter() override {}
 
     std::string login(const std::string& /*email*/, const std::string& /*jwt*/) override {
-		chat_->logger_->info("Already logged in! You should first logout!");
-		return std::string();
+      chat_->logger_->info("Already logged in! You should first logout!");
+      return std::string();
     }
-	void logout() override {	
-		chat_->client_->logout();
-		chat_->changeState(ChatWidget::LoggedOut);
+   void logout() override {
+      chat_->client_->logout();
+      chat_->changeState(ChatWidget::LoggedOut);
     }
-	void onSendButtonClicked()  override {
-		QString messageText = chat_->ui_->input_textEdit->toPlainText();
+   void onSendButtonClicked()  override {
+      QString messageText = chat_->ui_->input_textEdit->toPlainText();
 
-		if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
-			auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
-			chat_->ui_->input_textEdit->clear();
+      if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
+         auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
+         chat_->ui_->input_textEdit->clear();
 
-			chat_->messagesViewModel_->onSingleMessageUpdate(msg);
-		}
+         chat_->messagesViewModel_->onSingleMessageUpdate(msg);
+      }
     }
-	void onUserClicked(const QModelIndex& index)  override {
-		chat_->currentChat_ = chat_->usersViewModel_->resolveUser(index);
+   void onUserClicked(const QModelIndex& index)  override {
+      chat_->currentChat_ = chat_->usersViewModel_->resolveUser(index);
 
-		chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
-		chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
-		chat_->messagesViewModel_->onSwitchToChat(chat_->currentChat_);
-		chat_->client_->retrieveUserMessages(chat_->currentChat_);
+      chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
+      chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
+      chat_->messagesViewModel_->onSwitchToChat(chat_->currentChat_);
+      chat_->client_->retrieveUserMessages(chat_->currentChat_);
     }
     void onMessagesUpdated(const QModelIndex& /*parent*/, int /*start*/, int /*end*/)  override {
-		chat_->ui_->tableViewMessages->scrollToBottom();
+      chat_->ui_->tableViewMessages->scrollToBottom();
     }
-	void onLoginFailed()  override {
-		chat_->changeState(ChatWidget::LoggedOut);
+   void onLoginFailed()  override {
+      chat_->changeState(ChatWidget::LoggedOut);
     }
-	void onUsersDeleted(const std::vector<std::string> &users)  override {
-		chat_->usersViewModel_->onUsersDel(users);
+   void onUsersDeleted(const std::vector<std::string> &users)  override {
+      chat_->usersViewModel_->onUsersDel(users);
 
-		if (std::find(users.cbegin(), users.cend(), chat_->currentChat_.toStdString()) != users.cend()) {
-			chat_->onUserClicked({});
-		}
+      if (std::find(users.cbegin(), users.cend(), chat_->currentChat_.toStdString()) != users.cend()) {
+         chat_->onUserClicked({});
+      }
     }
 };
 
@@ -196,23 +196,23 @@ void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 
 void ChatWidget::changeState(ChatWidget::State state)
 {
-	if (!stateCurrent_) { //In case if we use change state in first time
-		stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
-		stateCurrent_->onStateEnter();
-	} else if (stateCurrent_->type() != state) {
-		stateCurrent_->onStateExit();
+   if (!stateCurrent_) { //In case if we use change state in first time
+      stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
+      stateCurrent_->onStateEnter();
+   } else if (stateCurrent_->type() != state) {
+      stateCurrent_->onStateExit();
 
-		switch (state) {
-		case State::LoggedIn:
-			stateCurrent_ = std::make_shared<ChatWidgetStateLoggedIn>(this);
-			break;
-		case State::LoggedOut:
-			stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
-			break;
-		}
+      switch (state) {
+      case State::LoggedIn:
+         stateCurrent_ = std::make_shared<ChatWidgetStateLoggedIn>(this);
+         break;
+      case State::LoggedOut:
+         stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
+         break;
+      }
 
-		stateCurrent_->onStateEnter();
-	}
+      stateCurrent_->onStateEnter();
+   }
 }
 
 void ChatWidget::onSendButtonClicked()
@@ -228,8 +228,8 @@ void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
    try {
-	  const auto userId = stateCurrent_->login(email, jwt);
-	  changeState(State::LoggedIn);
+     const auto userId = stateCurrent_->login(email, jwt);
+     changeState(State::LoggedIn);
       return userId;
    }
    catch (std::exception& e) {
@@ -254,60 +254,54 @@ void ChatWidget::logout()
 
 void ChatWidget::onSearchUserReturnPressed()
 {
-    if(!popup_)
-    {
-        popup_ = new ChatSearchPopup(this);
-        connect(popup_, &ChatSearchPopup::addUserToContacts,
-            [=](const QString &userId)
-            {
-                // TODO: find user and add to contact list
-                qDebug() << "menu clicked:" << userId;
-                popup_->deleteLater();
-                popup_ = nullptr;
-            }
-        );
-        qApp->installEventFilter(this);
-    }
+   if (!popup_)
+   {
+      popup_ = new ChatSearchPopup(this);
+      connect(popup_, &ChatSearchPopup::addUserToContacts,
+         [this](const QString &)
+         {
+            // TODO: find user and add to contact list
+            popup_->deleteLater();
+            popup_ = nullptr;
+         }
+      );
+      qApp->installEventFilter(this);
+   }
 
-    QString userToAdd = ui_->chatSearchLineEdit->text();
-    if(!usersViewModel_.get()->isUserInModel(userToAdd.toStdString()))
-        return;
+   QString userToAdd = ui_->chatSearchLineEdit->text();
+   if (!usersViewModel_.get()->isUserInModel(userToAdd.toStdString()))
+       return;
 
-    popup_->setText(userToAdd);
-    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
-    popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
-    popup_->show();
+   popup_->setText(userToAdd);
+   popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
+   popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
+   popup_->show();
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
 {
-    if(obj == this->window())
-    {
-        if(event->type() == QEvent::Move)
-        {
-            if(popup_)
-            {
-                popup_->move(ui_->chatSearchLineEdit->mapToGlobal(ui_->chatSearchLineEdit->rect().bottomLeft()));
-            }
-        }
-    }
+   if (!popup_)
+      return QWidget::eventFilter(obj, event);
 
-    if(event->type() == QEvent::MouseButtonRelease)
-    {
-        QMouseEvent *mouseEvent = dynamic_cast<QMouseEvent*>(event);
-        QPoint pos = mouseEvent->pos();
+   if (obj == this->window()
+       && event->type() == QEvent::Move)
+   {
+      popup_->move(ui_->chatSearchLineEdit->mapToGlobal(ui_->chatSearchLineEdit->rect().bottomLeft()));
+   }
 
-        if(popup_)
-        {
-            if(!popup_->rect().contains(pos))
-            {
-                qApp->removeEventFilter(this);
-                popup_->deleteLater();
-                popup_ = nullptr;
-            }
-        }
-    }
+   if (event->type() == QEvent::MouseButtonRelease)
+   {
+      QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+      QPoint pos = mouseEvent->pos();
 
-    return QWidget::eventFilter(obj, event);
+      if (!popup_->rect().contains(pos))
+      {
+         qApp->removeEventFilter(this);
+         popup_->deleteLater();
+         popup_ = nullptr;
+      }
+   }
+
+   return QWidget::eventFilter(obj, event);
 }
 

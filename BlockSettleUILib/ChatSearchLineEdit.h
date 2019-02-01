@@ -4,12 +4,12 @@
 
 
 class ChatSearchLineEdit :
-	public QLineEdit
+   public QLineEdit
 {
-	Q_OBJECT
+   Q_OBJECT
 public:
-	ChatSearchLineEdit(QWidget *parent = nullptr);
-	virtual ~ChatSearchLineEdit();
+   ChatSearchLineEdit(QWidget *parent = nullptr);
+   virtual ~ChatSearchLineEdit();
 };
 
 #endif //CHAT_SEARCH_LINE_EDIT_H

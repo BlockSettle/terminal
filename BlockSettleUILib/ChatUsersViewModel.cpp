@@ -73,21 +73,21 @@ void ChatUsersViewModel::onUsersDel(const std::vector<std::string> &users)
    }
 }
 
-bool ChatUsersViewModel::isUserInModel(const std::string &userId)
+bool ChatUsersViewModel::isUserInModel(const std::string &userId) const
 {
-    auto iter = std::find_if(std::begin(users_), std::end(users_), [&userId](const std::string &in)
-    {
-        if(userId.size() != in.size())
-            return false;
+   auto iter = std::find_if(std::begin(users_), std::end(users_), [&userId](const std::string &in)
+   {
+      if (userId.size() != in.size())
+         return false;
 
-        std::string to_compare;
-        to_compare.resize(userId.size());
-        std::transform(std::begin(userId), std::end(userId), std::begin(to_compare), ::tolower);
-        return (0 == to_compare.compare(in));
-    });
+      std::string userIdToCompare;
+      userIdToCompare.resize(userId.size());
+      std::transform(std::begin(userId), std::end(userId), std::begin(userIdToCompare), ::tolower);
+      return (0 == userIdToCompare.compare(in));
+   });
 
-    if(iter == std::end(users_))
-        return false;
+   if (iter == std::end(users_))
+      return false;
 
-    return true;
+   return true;
 }

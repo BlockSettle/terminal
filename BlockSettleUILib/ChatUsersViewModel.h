@@ -25,7 +25,7 @@ public:
 
    QString resolveUser(const QModelIndex &) const;
 
-   bool isUserInModel(const std::string &userId);
+   bool isUserInModel(const std::string &userId) const;
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
