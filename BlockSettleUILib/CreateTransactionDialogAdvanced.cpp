@@ -1104,3 +1104,14 @@ void CreateTransactionDialogAdvanced::setTxFees()
    }
    FixRecipientsAmount();
 }
+
+
+QLabel* CreateTransactionDialogAdvanced::labelTXAmount() const
+{
+   return ui_->labelTransactionAmount;
+}
+
+QLabel* CreateTransactionDialogAdvanced::labelTxOutputs() const
+{
+   return ui_->labelTXOutputs;
+}

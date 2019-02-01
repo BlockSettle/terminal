@@ -62,6 +62,9 @@ protected:
    QPushButton *pushButtonCreate() const override;
    QPushButton *pushButtonCancel() const override;
 
+   QLabel* labelTXAmount() const override;
+   QLabel* labelTxOutputs() const override;
+
    virtual QLabel *feePerByteLabel() const override;
    virtual QLabel *changeLabel() const override;
 
