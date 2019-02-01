@@ -136,9 +136,9 @@ void SignerSettingsPage::showPort(bool show)
 
 void SignerSettingsPage::showZmqPubKey(bool show)
 {
-   ui_->widgetZmqKeyLeft->setVisible(show);
-   ui_->widgetZmqKeyRight->setVisible(show);
-   ui_->widgetZmqKeyBottom->setVisible(show);
+   ui_->widgetZmqLabel->setVisible(show);
+   ui_->widgetZmqComboBox->setVisible(show);
+   ui_->widgetZmqContent->setVisible(show);
 }
 
 void SignerSettingsPage::showOfflineDir(bool show)
