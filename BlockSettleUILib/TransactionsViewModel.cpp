@@ -662,7 +662,7 @@ void TransactionsViewModel::loadLedgerEntries()
                (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                try {
                  auto le = entries.get();
-                 rawData_[pageId] = bs::convertTXEntries(le);
+                 rawData_[pageId] = bs::TXEntry::fromLedgerEntries(le);
                  emit updateProgress((int)pageId);
                }
                catch (exception& e) {

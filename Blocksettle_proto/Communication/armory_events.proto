@@ -21,5 +21,14 @@ message NewBlockEvent
 
 message ZCEvent
 {
-   uint32      zc_id = 1;
+   message TXEntry {
+      bytes   tx_hash = 1;
+      string  wallet_id = 2;
+      int64   value = 3;
+      uint32  block_num = 4;
+      uint32  time = 5;
+      bool    rbf = 6;
+      bool    chained_ZC = 7;
+   }
+   repeated TXEntry zc_entries = 1;
 };

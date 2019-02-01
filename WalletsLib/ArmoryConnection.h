@@ -5,9 +5,11 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include <QProcess>
 #include <QMutex>
@@ -43,6 +45,21 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
 };
 
+namespace bs {
+   struct TXEntry {
+      BinaryData  txHash;
+      std::string id;
+      int64_t     value;
+      uint32_t    blockNum;
+      uint32_t    txTime;
+      bool        isRBF;
+      bool        isChainedZC;
+
+      static TXEntry fromLedgerEntry(const ClientClasses::LedgerEntry &);
+      static std::vector<TXEntry> fromLedgerEntries(std::vector<ClientClasses::LedgerEntry>);
+   };
+}
+
 // The abstracted connection between BS and Armory. When BS code needs to
 // communicate with Armory, this class is what the code should use. Only one
 // connection should exist at any given time.
@@ -61,14 +78,11 @@ public:
       Ready
    };
 
-   using ReqIdType = unsigned int;
-
    ArmoryConnection(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN
       , bool cbInMainThread = false);
    ~ArmoryConnection() noexcept;
 
    State state() const { return state_; }
-   std::vector<ClientClasses::LedgerEntry> getZCentries(ReqIdType) const;
 
    void setupConnection(const ArmorySettings &);
    bool goOnline();
@@ -112,7 +126,7 @@ signals:
    void prepareConnection(NetworkType, std::string host, std::string port) const;
    void progress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress) const;
    void newBlock(unsigned int height) const;
-   void zeroConfReceived(unsigned int) const;
+   void zeroConfReceived(const std::vector<bs::TXEntry>) const;
    void refresh(std::vector<BinaryData> ids) const;
    void nodeStatus(NodeStatus, bool segWitEnabled, RpcStatus) const;
    void txBroadcastError(QString txHash, QString error) const;
@@ -121,9 +135,9 @@ signals:
 private:
    void registerBDV(NetworkType);
    void setState(State);
-   ReqIdType setZC(const std::vector<ClientClasses::LedgerEntry> &);
    void setTopBlock(unsigned int topBlock) { topBlock_ = topBlock; }
    void onRefresh(std::vector<BinaryData>);
+   void onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &);
 
    void stopServiceThreads();
    bool startLocalArmoryProcess(const ArmorySettings &settings);
@@ -143,20 +157,8 @@ private:
    std::atomic_bool  regThreadRunning_;
    std::atomic_bool  connThreadRunning_;
    std::atomic_bool  maintThreadRunning_;
-   std::atomic<ReqIdType>  reqIdSeq_;
 
    std::shared_ptr<QProcess>  armoryProcess_;
-
-   const std::chrono::duration<double> zcPersistenceTimeout_;
-   struct ZCData {
-      std::chrono::system_clock::time_point     received;
-      std::vector<ClientClasses::LedgerEntry>   entries;
-   };
-   std::unordered_map<ReqIdType, ZCData>  zcData_;
-   mutable std::atomic_flag      zcLock_ = ATOMIC_FLAG_INIT;
-   std::thread                   zcThread_;
-   std::condition_variable       zcMaintCV_;
-   mutable std::mutex            zcMaintMutex_;
 
    std::atomic_bool              isOnline_;
    std::unordered_map<std::string, std::function<void()>>   preOnlineRegIds_;

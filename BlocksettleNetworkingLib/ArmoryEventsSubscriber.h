@@ -9,13 +9,15 @@
 
 #include <spdlog/logger.h>
 
+#include "ArmoryConnection.h"
+
 class ConnectionManager;
 
 class ArmoryEventsSubscriber : public SubscriberConnectionListener
 {
 public:
    using onNewBlockCB = std::function<void (unsigned int32_t)>;
-   using onZCEventCB = std::function<void (unsigned int32_t)>;
+   using onZCEventCB = std::function<void (const std::vector<bs::TXEntry>)>;
 
 public:
    ArmoryEventsSubscriber(const std::string& name

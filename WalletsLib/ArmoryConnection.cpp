@@ -22,6 +22,8 @@ Q_DECLARE_METATYPE(ArmoryConnection::State)
 Q_DECLARE_METATYPE(BDMPhase)
 Q_DECLARE_METATYPE(NetworkType)
 Q_DECLARE_METATYPE(NodeStatus)
+Q_DECLARE_METATYPE(bs::TXEntry)
+Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
 
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    , const std::string &txCacheFN, bool cbInMainThread)
@@ -32,53 +34,19 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    , regThreadRunning_(false)
    , connThreadRunning_(false)
    , maintThreadRunning_(true)
-   , reqIdSeq_(1)
-   , zcPersistenceTimeout_(30)
 {
    qRegisterMetaType<ArmoryConnection::State>();
    qRegisterMetaType<BDMPhase>();
    qRegisterMetaType<NetworkType>();
    qRegisterMetaType<NodeStatus>();
-
-   const auto &cbZCMaintenance = [this] {
-      while (maintThreadRunning_) {
-         std::unique_lock<std::mutex> cvLock(zcMaintMutex_);
-         if (zcMaintCV_.wait_for(cvLock, std::chrono::seconds(10))
-            != std::cv_status::timeout) {
-            if (!maintThreadRunning_) {
-               break;
-            }
-         }
-
-         std::vector<ReqIdType> zcToDelete;
-         const auto curTime = std::chrono::system_clock::now();
-
-         FastLock lock(zcLock_);
-         for (const auto &zc : zcData_) {
-            const std::chrono::duration<double> timeDiff = curTime - zc.second.received;
-            if (timeDiff > zcPersistenceTimeout_) {
-               zcToDelete.push_back(zc.first);
-            }
-         }
-         if (!zcToDelete.empty()) {
-            logger_->debug("[ArmoryConnection] erasing {} ZC entries"
-                           , zcToDelete.size());
-            for (const auto &reqId : zcToDelete) {
-               zcData_.erase(reqId);
-            }
-         }
-      }
-      logger_->debug("[ArmoryConnection] stopped");
-   };
-   zcThread_ = std::thread(cbZCMaintenance);
+   qRegisterMetaType<bs::TXEntry>();
+   qRegisterMetaType<std::vector<bs::TXEntry>>();
 }
 
 ArmoryConnection::~ArmoryConnection() noexcept
 {
    maintThreadRunning_ = false;
-   zcMaintCV_.notify_one();
    stopServiceThreads();
-   zcThread_.join();
 }
 
 void ArmoryConnection::stopServiceThreads()
@@ -263,24 +231,6 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
 
    bdv_->broadcastZC(rawTx);
    return true;
-}
-
-ArmoryConnection::ReqIdType ArmoryConnection::setZC(const std::vector<ClientClasses::LedgerEntry> &entries)
-{
-   const auto reqId = reqIdSeq_++;
-   FastLock lock(zcLock_);
-   zcData_[reqId] = ZCData{ std::chrono::system_clock::now(), std::move(entries) };
-   return reqId;
-}
-
-std::vector<ClientClasses::LedgerEntry> ArmoryConnection::getZCentries(ArmoryConnection::ReqIdType reqId) const
-{
-   FastLock lock(zcLock_);
-   const auto &it = zcData_.find(reqId);
-   if (it != zcData_.end()) {
-      return it->second.entries;
-   }
-   return {};
 }
 
 std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
@@ -746,6 +696,17 @@ void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
    }
 }
 
+void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
+{
+   const auto txEntries = bs::TXEntry::fromLedgerEntries(entries);
+   if (cbInMainThread_) {
+      QMetaObject::invokeMethod(this, [this, txEntries] {emit zeroConfReceived(txEntries); });
+   }
+   else {
+      emit zeroConfReceived(txEntries);
+   }
+}
+
 
 void ArmoryCallback::progress(BDMPhase phase, const vector<string> &walletIdVec, float progress,
    unsigned secondsRem, unsigned progressNumeric)
@@ -775,8 +736,7 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 
    case BDMAction_ZC: {
       logger_->debug("[{}] BDMAction_ZC", __func__);
-      const auto reqId = connection_->setZC(*reinterpret_cast<std::vector<ClientClasses::LedgerEntry>*>(ptr));
-      emit connection_->zeroConfReceived(reqId);
+      connection_->onZCsReceived(*reinterpret_cast<std::vector<ClientClasses::LedgerEntry>*>(ptr));
       break;
    }
 
@@ -819,4 +779,20 @@ void ArmoryCallback::disconnected()
    logger_->debug("[{}]", __func__);
    connection_->regThreadRunning_ = false;
    connection_->setState(ArmoryConnection::State::Offline);
+}
+
+
+bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry)
+{
+   return { entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
+         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC() };
+}
+
+std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(std::vector<ClientClasses::LedgerEntry> entries)
+{
+   std::vector<bs::TXEntry> result;
+   for (const auto &entry : entries) {
+      result.push_back(fromLedgerEntry(entry));
+   }
+   return result;
 }
