@@ -12,7 +12,6 @@
 #include "EncryptUtils.h"
 #include "LogManager.h"
 
-
 class ApplicationSettings : public QObject
 {
    Q_OBJECT
@@ -176,5 +175,16 @@ private:
    autheid::PrivateKey  authPrivKey_;
    autheid::PublicKey   authPubKey_;
 };
+
+template<> QString ApplicationSettings::get<QString>(Setting s, bool getDefaultValue) const;
+template<> std::string ApplicationSettings::get<std::string>(Setting set, bool getDefaultValue) const;
+template<> bool ApplicationSettings::get<bool>(Setting set, bool getDefaultValue) const;
+template<> int ApplicationSettings::get<int>(Setting set, bool getDefaultValue) const;
+template<> unsigned int ApplicationSettings::get<unsigned int>(Setting set, bool getDefaultValue) const;
+template<> double ApplicationSettings::get<double>(Setting set, bool getDefaultValue) const;
+template<> QRect ApplicationSettings::get<QRect>(Setting set, bool getDefaultValue) const;
+template<> QStringList ApplicationSettings::get<QStringList>(Setting set, bool getDefaultValue) const;
+template<> QVariantMap ApplicationSettings::get<QVariantMap> (Setting set, bool getDefaultValue) const;
+template<> NetworkType ApplicationSettings::get<NetworkType>(Setting set, bool getDefaultValue) const;
 
 #endif // __APPLICATION_SETTINGS_H__
