@@ -72,3 +72,22 @@ void ChatUsersViewModel::onUsersDel(const std::vector<std::string> &users)
       }
    }
 }
+
+bool ChatUsersViewModel::isUserInModel(const std::string &userId)
+{
+    auto iter = std::find_if(std::begin(users_), std::end(users_), [&userId](const std::string &in)
+    {
+        if(userId.size() != in.size())
+            return false;
+
+        std::string to_compare;
+        to_compare.resize(userId.size());
+        std::transform(std::begin(userId), std::end(userId), std::begin(to_compare), ::tolower);
+        return (0 == to_compare.compare(in));
+    });
+
+    if(iter == std::end(users_))
+        return false;
+
+    return true;
+}

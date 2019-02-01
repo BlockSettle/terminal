@@ -269,8 +269,12 @@ void ChatWidget::onSearchUserReturnPressed()
         qApp->installEventFilter(this);
     }
 
-    popup_->setText(ui_->chatSearchLineEdit->text());
-    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), ui_->chatSearchLineEdit->height()*1.2);
+    QString userToAdd = ui_->chatSearchLineEdit->text();
+    if(!usersViewModel_.get()->isUserInModel(userToAdd.toStdString()))
+        return;
+
+    popup_->setText(userToAdd);
+    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
     popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
     popup_->show();
 }
