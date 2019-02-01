@@ -21,7 +21,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const QString& username
       , const std::string &walletName, const std::string &walletDesc
-      , bool createPrimary, QWidget *parent)
+      , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::ImportWalletDialog)
    , walletsMgr_(walletsManager)
@@ -40,7 +40,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
 
-   if (createPrimary && !walletsManager->HasPrimaryWallet()) {
+   if (!walletsManager->HasPrimaryWallet()) {
       setWindowTitle(tr("Import Primary Wallet"));
       ui_->checkBoxPrimaryWallet->setChecked(true);
       ui_->lineEditWalletName->setText(tr("Primary wallet"));

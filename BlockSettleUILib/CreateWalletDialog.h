@@ -34,7 +34,6 @@ public:
       , const QString &walletsPath
       , const bs::wallet::Seed& walletSeed
       , const std::string& walletId
-      , bool createPrimary
       , const QString& username
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget *parent = nullptr);

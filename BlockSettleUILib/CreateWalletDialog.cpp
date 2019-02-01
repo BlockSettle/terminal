@@ -19,7 +19,6 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , const QString &walletsPath
    , const bs::wallet::Seed& walletSeed
    , const std::string& walletId
-   , bool createPrimary
    , const QString& username
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget *parent)
@@ -38,7 +37,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
    ui_->checkBoxPrimaryWallet->setChecked(!walletsManager->HasPrimaryWallet());
 
-   if (createPrimary && !walletsManager->HasPrimaryWallet()) {
+   if (!walletsManager->HasPrimaryWallet()) {
       setWindowTitle(tr("Create Primary Wallet"));
       ui_->checkBoxPrimaryWallet->setChecked(true);
 

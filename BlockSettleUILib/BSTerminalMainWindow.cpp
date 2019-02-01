@@ -735,15 +735,15 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       }
 
       if (newWalletDialog.isCreate()) {
-         return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
+         return ui->widgetWallets->CreateNewWallet(reportSuccess);
       }
       else if (newWalletDialog.isImport()) {
-         return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
+         return ui->widgetWallets->ImportNewWallet(reportSuccess);
       }
 
       return false;
    } else {
-      return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
+      return ui->widgetWallets->ImportNewWallet(reportSuccess);
    }
 }
 
