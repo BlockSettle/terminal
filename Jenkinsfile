@@ -22,7 +22,7 @@ pipeline {
                 stage('Build MacOSX app') {
                     steps {
                         sh 'ssh Admin@10.1.60.206 "rm -rf ~/Workspace/terminal"'
-                        sh 'ssh Admin@10.1.60.206 "cd ~/Workspace ; git clone --single-branch --branch ${TAG} git@github.com:BlockSettle/terminal.git"'
+                        sh 'ssh Admin@10.1.60.206 "cd ~/Workspace ; git clone --single-branch --branch ${TAG} git@github.com:BlockSettle/terminal.git ; git submodule init ; git submodule update"'
                   ///      sh "scp -r ${WORKSPACE}/terminal Admin@10.1.60.206:~/Workspace"
                   //      sh 'rsync -av --exclude terminal.release/ Admin@10.1.60.206:~/Workspace'
                         sh 'ssh Admin@10.1.60.206 "export PATH=/usr/local/opt/qt/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; ccache -s ; cd /Users/admin/Workspace/terminal/Deploy/MacOSX ; ./package.sh"'
