@@ -98,8 +98,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
 
-   InitSigningContainer();
-
    LoadWallets(splashScreen);
 
    splashScreen.SetProgress(100);
@@ -107,6 +105,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    QApplication::processEvents();
 
+   InitSigningContainer();
    InitAuthManager();
    InitAssets();
 
