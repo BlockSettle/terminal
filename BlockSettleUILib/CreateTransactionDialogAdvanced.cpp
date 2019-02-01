@@ -652,7 +652,7 @@ void CreateTransactionDialogAdvanced::onAddOutput()
 
    AddRecipient(address, currentValue_, maxAmount);
 
-   maxAmount |= FixRecipientsAmount(maxValue);
+   maxAmount |= FixRecipientsAmount();
 
    // clear edits
    ui_->lineEditAddress->clear();
@@ -676,7 +676,8 @@ unsigned int CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &ad
    return recipientId;
 }
 
-bool CreateTransactionDialogAdvanced::FixRecipientsAmount(double maxValue)
+// Attempts to remove the change if it's small enough and adds its amount to fees
+bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
 {
    if (!transactionData_->totalFee()) {
       return false;
@@ -687,8 +688,10 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount(double maxValue)
    // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
    if ((diffMax > 0) && (diffMax < totalFee / 2)) {
       BSMessageBox question(BSMessageBox::question, tr("Change fee")
-         , tr("Your projected change amount %1 is too small as compared to the projected fee").arg(UiUtils::displayAmount(diffMax))
-         , tr("Would you like to remove it in favor of fee to increase the probability of confirmation?")
+         , tr("Your projected change amount %1 is too small as compared to the projected fee."
+            " Attempting to keep the change will prevent the transaction from being propagated through"
+            " the Bitcoin network.").arg(UiUtils::displayAmount(diffMax))
+         , tr("Would you like to remove the change output and put its amount towards the fees?")
          , this);
       if (question.exec() == QDialog::Accepted) {
          transactionData_->setTotalFee((diffMax + totalFee) * BTCNumericTypes::BalanceDivider, false);
@@ -1081,7 +1084,7 @@ void CreateTransactionDialogAdvanced::setTxFees()
       transactionData_->setTotalFee(ui_->spinBoxFeesManualTotal->value());
    }
 
-   if (FixRecipientsAmount(transactionData_->CalculateMaxAmount())) {
+   if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
       ui_->spinBoxFeesManualTotal->setValue(transactionData_->totalFee());
    }

@@ -108,7 +108,7 @@ private:
 
    unsigned int AddRecipient(const bs::Address &, double amount, bool isMax = false);
    void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
-   bool FixRecipientsAmount(double maxValue);
+   bool FixRecipientsAmount();
    void onOutputRemoved();
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
