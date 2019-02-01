@@ -236,11 +236,8 @@ static int GuiApp(int argc, char** argv)
       QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
 #endif
 
-      if (settings->get<bool>(ApplicationSettings::launchToTray)) {
-         splashScreen.close();
-      } else {
+      if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
          mainWindow.show();
-         splashScreen.finish(&mainWindow);
       }
 
       mainWindow.postSplashscreenActions();
