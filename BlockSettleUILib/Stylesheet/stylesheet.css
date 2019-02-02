@@ -862,14 +862,12 @@ QPushButton#signWithEidButton {
   font-family: "Open Sans";
   font-weight: 700;
   min-width: 52;
-  min-height: 52;}
+  min-height: 52; }
 
 QPushButton#signWithEidButton:hover {
-  background-color: #3080aa;
-}
+  background-color: #3080aa; }
 QPushButton#signWithEidButton:pressed {
-  background-color: #4090ba;
-}
+  background-color: #4090ba; }
 
 QPushButton[left_button=true], QToolButton[left_button=true], [left_button=true][buttonImportant="true"], [left_button=true][buttonSuccess="true"], [left_button=true][buttonWarning="true"] {
   border-width: 1px 0px 1px 1px;
