@@ -982,11 +982,11 @@ void BSTerminalMainWindow::onReadyToLogin()
       {
          loginWithAutheID(loginDialog.getUsername().toStdString());
       }
-      else
-      {
-         loginToCeler(loginDialog.getUsername().toStdString()
-                      , loginDialog.getPassword().toStdString());
-      }
+//      else
+//      {
+//         loginToCeler(loginDialog.getUsername().toStdString()
+//                      , loginDialog.getPassword().toStdString());
+//      }
    }
 }
 

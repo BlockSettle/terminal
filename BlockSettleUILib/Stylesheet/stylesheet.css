@@ -775,7 +775,7 @@ QPushButton:flat, QToolButton:flat, [buttonImportant="true"]:flat, [buttonSucces
     background-color: #5097bd; }
   QPushButton:flat:pressed, QToolButton:flat:pressed, [buttonImportant="true"]:flat:pressed, [buttonSuccess="true"]:flat:pressed, [buttonWarning="true"]:flat:pressed {
     background-color: #247dac; }
-  QPushButton:flat:disabled, QToolButton:flat:disabled, [buttonImportant="true"]:flat:disabled, [buttonSuccess="true"]:flat:disabled, [buttonWarning="true"]:flat:disabled {
+  QPushButton:flat:disabled, QToolButton:flat:disabled, [buttonImportant="true"]:flat:disabled, [buttonSuccess="true"]:flat:disabled, [buttonWarning="true"]:flat:disabled, QPushButton#signWithEidButton:disabled {
     border: none;
     color: rgba(255, 255, 255, 0.5);
     background-color: rgba(255, 255, 255, 0.1); }
@@ -848,6 +848,28 @@ QToolButton[right_button=true],
   [right_button=true][buttonWarning="true"]:disabled {
     background-color: #0b1619;
     color: #3f4c50; }
+
+QWidget#signDialogMainPage {
+  background-color: #0a1a2a; }
+
+QPushButton#signWithEidButton {
+  background-color: #20709a;
+  text-transform: none;
+  border: 1px solid #20709a;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #ffffff;
+  font-family: "Open Sans";
+  font-weight: 700;
+  min-width: 52;
+  min-height: 52;}
+
+QPushButton#signWithEidButton:hover {
+  background-color: #3080aa;
+}
+QPushButton#signWithEidButton:pressed {
+  background-color: #4090ba;
+}
 
 QPushButton[left_button=true], QToolButton[left_button=true], [left_button=true][buttonImportant="true"], [left_button=true][buttonSuccess="true"], [left_button=true][buttonWarning="true"] {
   border-width: 1px 0px 1px 1px;
@@ -1364,12 +1386,6 @@ QLabel#loginCompanyLabel {
   text-transform: uppercase;
   font-size: 14px;
   height: auto; }
-
-QLabel#loginVersionLabel {
-  height: auto;
-  color: #17262b;
-  font-style: italic;
-  font-size: 11px; }
 
 *[loginInput="true"] {
   border-width: 0 0 1px 0;
