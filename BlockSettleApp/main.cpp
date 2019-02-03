@@ -17,7 +17,6 @@
 #include "EncryptionUtils.h"
 #include "StartupDialog.h"
 #include "BSMessageBox.h"
-#include "WalletsManager.h"
 #include "ZMQHelperFunctions.h"
 
 #if defined (Q_OS_WIN)
@@ -38,8 +37,6 @@ Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(BinaryData)
 Q_DECLARE_METATYPE(SecureBinaryData)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
-Q_DECLARE_METATYPE(bs::TXEntry)
-Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
 Q_DECLARE_METATYPE(UTXO)
 Q_DECLARE_METATYPE(std::vector<UTXO>)
 Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
@@ -197,8 +194,6 @@ static int GuiApp(int argc, char** argv)
    qRegisterMetaType<BinaryData>();
    qRegisterMetaType<SecureBinaryData>();
    qRegisterMetaType<std::vector<BinaryData>>();
-   qRegisterMetaType<bs::TXEntry>();
-   qRegisterMetaType<std::vector<bs::TXEntry>>();
    qRegisterMetaType<UTXO>();
    qRegisterMetaType<std::vector<UTXO>>();
    qRegisterMetaType<AsyncClient::LedgerDelegate>();
