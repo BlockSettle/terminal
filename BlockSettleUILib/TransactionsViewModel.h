@@ -206,7 +206,6 @@ private:
    std::shared_ptr<WalletsManager>     walletsManager_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::Wallet>         defaultWallet_;
-   std::vector<bs::TXEntry>            pendingNewItems_;
    std::atomic_bool  signalOnEndLoading_{ false };
    const bool        allWallets_;
    std::atomic_bool  stopped_;

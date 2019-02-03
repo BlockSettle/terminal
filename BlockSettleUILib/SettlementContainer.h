@@ -5,6 +5,7 @@
 #include <string>
 #include <QObject>
 #include <QTimer>
+#include "ArmoryConnection.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 
@@ -55,7 +56,7 @@ namespace bs {
       void startTimer(const unsigned int durationSeconds);
       void stopTimer();
 
-      virtual void zcReceived(unsigned int) {}
+      virtual void zcReceived(const std::vector<bs::TXEntry>) {}
 
    protected:
       std::shared_ptr<ArmoryConnection>   armory_;

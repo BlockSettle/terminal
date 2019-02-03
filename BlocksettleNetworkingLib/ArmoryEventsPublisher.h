@@ -38,7 +38,7 @@ private:
 
 private slots:
    void onNewBlock(unsigned int height) const;
-   void onZeroConfReceived(unsigned int id) const;
+   void onZeroConfReceived(const std::vector<bs::TXEntry>) const;
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

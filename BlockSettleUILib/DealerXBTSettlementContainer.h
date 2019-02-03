@@ -67,7 +67,7 @@ private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
 
 protected:
-   void zcReceived(unsigned int) override;
+   void zcReceived(const std::vector<bs::TXEntry>) override;
 
 private:
    void onCptyVerified();
