@@ -184,7 +184,7 @@ private slots:
    void openAccountInfoDialog();
    void openCCTokenDialog();
    void showZcNotification(const TxInfo &);
-   void onZCreceived(ArmoryConnection::ReqIdType);
+   void onZCreceived(const std::vector<bs::TXEntry>);
    void onArmoryStateChanged(ArmoryConnection::State);
 
    void onAutheIDDone(const std::string& email);

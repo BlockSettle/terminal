@@ -316,7 +316,7 @@ bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
 void bs::SettlementMonitorQtSignals::start()
 {
    connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this
-      , &bs::SettlementMonitorQtSignals::onBlockchainEvent, Qt::QueuedConnection);
+      , &bs::SettlementMonitorQtSignals::onZCEvent, Qt::QueuedConnection);
    connect(armory_.get(), &ArmoryConnection::newBlock, this
       , &bs::SettlementMonitorQtSignals::onBlockchainEvent, Qt::QueuedConnection);
 
@@ -326,12 +326,17 @@ void bs::SettlementMonitorQtSignals::start()
 void bs::SettlementMonitorQtSignals::stop()
 {
    disconnect(armory_.get(), &ArmoryConnection::zeroConfReceived, this
-      , &bs::SettlementMonitorQtSignals::onBlockchainEvent);
+      , &bs::SettlementMonitorQtSignals::onZCEvent);
    disconnect(armory_.get(), &ArmoryConnection::newBlock, this
       , &bs::SettlementMonitorQtSignals::onBlockchainEvent);
 }
 
 void bs::SettlementMonitorQtSignals::onBlockchainEvent(unsigned int)
+{
+   checkNewEntries();
+}
+
+void bs::SettlementMonitorQtSignals::onZCEvent(const std::vector<bs::TXEntry>)
 {
    checkNewEntries();
 }
