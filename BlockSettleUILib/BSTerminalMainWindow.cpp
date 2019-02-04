@@ -389,13 +389,6 @@ void BSTerminalMainWindow::LoadWallets(BSTerminalSplashScreen& splashScreen)
    walletsManager_->LoadWallets(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
       , applicationSettings_->GetHomeDir(), progressDelegate);
 
-   if (signContainer_ && (signContainer_->opMode() != SignContainer::OpMode::Offline)) {
-      addrSyncer_ = std::make_shared<HeadlessAddressSyncer>(signContainer_, walletsManager_);
-      connect(signContainer_.get(), &SignContainer::UserIdSet, [this] {
-         addrSyncer_->SyncWallet(walletsManager_->GetAuthWallet());
-      });
-   }
-
    logMgr_->logger()->debug("End of wallets loading");
 }
 
@@ -458,6 +451,13 @@ bool BSTerminalMainWindow::InitSigningContainer()
    }
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady);
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError);
+
+   if (signContainer_->opMode() != SignContainer::OpMode::Offline) {
+      addrSyncer_ = std::make_shared<HeadlessAddressSyncer>(signContainer_, walletsManager_);
+      connect(signContainer_.get(), &SignContainer::UserIdSet, [this] {
+         addrSyncer_->SyncWallet(walletsManager_->GetAuthWallet());
+      });
+   }
    return true;
 }
 
