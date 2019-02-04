@@ -1,5 +1,5 @@
-#ifndef __CHAT_WIDGET_H__
-#define __CHAT_WIDGET_H__
+#ifndef CHAT_WIDGET_H
+#define CHAT_WIDGET_H
 
 #include <QWidget>
 #include <QStringListModel>
@@ -7,6 +7,7 @@
 
 #include "ChatUsersViewModel.h"
 #include "ChatMessagesViewModel.h"
+#include "ChatUserListLogic.h"
 
 
 namespace Ui {
@@ -47,11 +48,12 @@ public:
 
 private slots:
    void onSendButtonClicked();
-   void onUserClicked(const QModelIndex& index);
+   void onUserClicked(const QString& index);
    void onMessagesUpdated(const QModelIndex& parent, int start, int end);
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
    void onSearchUserReturnPressed();
+   void onChatUserRemoved(const TChatUserDataPtr &);
 
 signals:
    void LoginFailed();
@@ -71,12 +73,13 @@ private:
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
+   TChatUserListLogicPtr _chatUserListLogicPtr;
 
 private:
    void changeState(ChatWidget::State state);
 
-    bool eventFilter(QObject * obj, QEvent * event) override;
+   bool eventFilter(QObject * obj, QEvent * event) override;
 
 };
 
-#endif // __CHAT_WIDGET_H__
+#endif // CHAT_WIDGET_H

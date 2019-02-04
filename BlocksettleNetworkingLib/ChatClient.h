@@ -1,11 +1,12 @@
-#ifndef __CHAT_CLIENT_H__
-#define __CHAT_CLIENT_H__
+#ifndef CHAT_CLIENT_H
+#define CHAT_CLIENT_H
 
 
 #include <QObject>
 #include <QTimer>
 
 #include "ChatProtocol.h"
+#include "ChatDB.h"
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
 #include <queue>
@@ -17,7 +18,6 @@ namespace Chat {
    class Request;
 }
 
-class ChatDB;
 class ConnectionManager;
 class ZmqSecuredDataConnection;
 class ApplicationSettings;
@@ -64,6 +64,8 @@ public:
    // Called when we asked for a public key of peer, and got result.
    void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
 
+   bool getContacts(TContactUserDataList &contactList);
+
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
@@ -101,4 +103,4 @@ private:
    autheid::PrivateKey  ownPrivKey_;
 };
 
-#endif   // __CHAT_CLIENT_H__
+#endif   // CHAT_CLIENT_H

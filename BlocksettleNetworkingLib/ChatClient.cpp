@@ -234,14 +234,14 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
    const auto &itPub = pubKeys_.find(receiver);
    if (itPub == pubKeys_.end()) {
-      // Ask for public key from peer. Enqueue the message to be sent, once we receive the 
+      // Ask for public key from peer. Enqueue the message to be sent, once we receive the
       // necessary public key.
       enqueued_messages_[receiver].push(message);
-      
+
       // Send our key to the peer.
       auto request = std::make_shared<Chat::AskForPublicKeyRequest>(
          "", // clientId
-         currentUserId_, 
+         currentUserId_,
          receiver.toStdString());
       sendRequest(request);
       return result;
@@ -279,4 +279,10 @@ void ChatClient::retrieveUserMessages(const QString &userId)
       }
       emit MessagesUpdate(messages);
    }
+}
+
+bool ChatClient::getContacts(TContactUserDataList &contactList)
+{
+   //return chatDb_->getContacts(contactList);
+   return false;
 }
