@@ -251,7 +251,7 @@ void PublisherConnection::ReadReceivedData()
 
 void PublisherConnection::stopServer()
 {
-   if (listenThread_.joinable()) {
+   if (!listenThread_.joinable()) {
       logger_->error("[PublisherConnection::stopServer] not running");
       return;
    }

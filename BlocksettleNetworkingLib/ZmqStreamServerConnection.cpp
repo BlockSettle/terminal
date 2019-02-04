@@ -51,22 +51,31 @@ bool ZmqStreamServerConnection::ReadFromDataSocket()
 
 void ZmqStreamServerConnection::onZeroFrame(const std::string& clientId)
 {
-   FastLock locker(connectionsLockFlag_);
+   bool clientConnected = false;
+   {
+      FastLock locker(connectionsLockFlag_);
 
-   auto connectionIt = activeConnections_.find(clientId);
-   if (connectionIt == activeConnections_.end()) {
-      SPDLOG_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] have new client connection on {}", connectionName_);
+      auto connectionIt = activeConnections_.find(clientId);
+      if (connectionIt == activeConnections_.end()) {
+         SPDLOG_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] have new client connection on {}", connectionName_);
 
-      auto newConnection = CreateActiveConnection();
-      newConnection->InitConnection(clientId, this);
+         auto newConnection = CreateActiveConnection();
+         newConnection->InitConnection(clientId, this);
 
-      activeConnections_.emplace(clientId, newConnection);
+         activeConnections_.emplace(clientId, newConnection);
 
+         clientConnected = true;
+      } else {
+         SPDLOG_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] client disconnected on {}", connectionName_);
+         activeConnections_.erase(connectionIt);
+
+         clientConnected = false;
+      }
+   }
+
+   if (clientConnected) {
       notifyListenerOnNewConnection(clientId);
    } else {
-      SPDLOG_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] client disconnected on {}", connectionName_);
-      activeConnections_.erase(connectionIt);
-
       notifyListenerOnDisconnectedClient(clientId);
    }
 }

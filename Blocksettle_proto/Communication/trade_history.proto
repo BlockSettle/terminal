@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.TradeHistory;
+
+enum TradeHistoryTradeType
+{
+   FXTradeType    = 0;
+   XBTTradeType   = 1;
+   PMTradeType    = 2;
+}
+
+enum TradeHistoryRequestType
+{
+   LoadLatestTradeRequestType     = 0;
+   SubscribeToTradesRequestType   = 1;
+}
+
+enum TradeHistoryResponseType
+{
+   LatestTradeResponseType       = 0;
+   TradeHistorySnapshotType      = 1;
+   TradeHistoryUpdateType        = 2;
+}
+
+message TradeHistoryRequest
+{
+   TradeHistoryRequestType request_type   = 1;
+   bytes                   request        = 2;
+}
+
+message LatestTradeRequest
+{
+   TradeHistoryTradeType trade_type = 1;
+}
+
+message SubscribeToTradesRequest
+{
+   TradeHistoryTradeType   trade_type     = 1;
+   uint64                  from_timestamp = 2;
+}
+
+message TradeHistoryResponse
+{
+   TradeHistoryResponseType   response_type   = 1;
+   bytes                      response        = 2;
+}
+
+message TradeRecord
+{
+   double   price       = 1;
+   double   amount      = 2;
+   string   product     = 3;
+   bool     is_sell     = 4;
+   uint64   timestamp   = 5;
+   string   trade_id    = 6;
+}
+
+message PMTradeRecord
+{
+   double   price       = 1;
+   uint64   amount      = 2;
+   string   product     = 3;
+   bool     is_sell     = 4;
+   uint64   timestamp   = 5;
+   string   trade_id    = 6;
+}
+
+message LatestTradeResponse
+{
+   TradeHistoryTradeType   trade_type  = 1;
+   bytes                   trade       = 2;
+}
+
+message TradeHistorySnapshot
+{
+   uint64                  snaphot_id     = 1;
+   uint64                  snaphot_count  = 2;
+   TradeHistoryTradeType   trade_type     = 3;
+   repeated bytes          trade          = 4;
+}
+
+message TradeHistoryServerUpdate
+{
+   TradeHistoryTradeType   trade_type  = 1;
+   bytes                   trade       = 2;
+}
