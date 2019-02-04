@@ -14,6 +14,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(bool offline READ offline WRITE setOffline NOTIFY offlineChanged)
    Q_PROPERTY(bool testNet READ testNet WRITE setTestNet NOTIFY testNetChanged)
    Q_PROPERTY(QString walletsDir READ getWalletsDir WRITE setWalletsDir NOTIFY walletsDirChanged)
+   Q_PROPERTY(QString exportWalletsDir READ getExportWalletsDir WRITE setExportWalletsDir NOTIFY exportWalletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
    Q_PROPERTY(QString zmqPubKeyFile READ zmqPubKeyFile WRITE setZmqPubKeyFile NOTIFY zmqPubKeyFileChanged)
@@ -40,6 +41,7 @@ public:
       OfflineMode,
       TestNet,
       WalletsDir,
+      ExportWalletsDir,
       AutoSignWallet,
       LogFileName,
       ListenAddress,
@@ -61,6 +63,7 @@ public:
    bool testNet() const { return get(TestNet).toBool(); }
    NetworkType netType() const { return (testNet() ? NetworkType::TestNet : NetworkType::MainNet); }
    QString getWalletsDir() const;
+   QString getExportWalletsDir() const;
    QString autoSignWallet() const { return get(AutoSignWallet).toString(); }
    bool offline() const { return get(OfflineMode).toBool(); }
    double limitManualXbt() const { return get(LimitManualXBT).toULongLong() / BTCNumericTypes::BalanceDivider; }
@@ -80,6 +83,7 @@ public:
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
    void setWalletsDir(const QString &);
+   void setExportWalletsDir(const QString &);
    void setAutoSignWallet(const QString &val) { set(AutoSignWallet, val); }
    void setListenAddress(const QString &val) { set(ListenAddress, val); }
    void setPort(const QString &val) { set(ListenPort, val); }
@@ -100,6 +104,7 @@ signals:
    void offlineChanged();
    void testNetChanged();
    void walletsDirChanged();
+   void exportWalletsDirChanged();
    void listenSocketChanged();
    void limitManualXbtChanged();
    void limitAutoSignXbtChanged();

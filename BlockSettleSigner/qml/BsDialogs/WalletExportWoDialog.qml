@@ -34,7 +34,7 @@ CustomTitleDialogWindow {
     }
 
     Component.onCompleted: {
-        exportDir = decodeURIComponent(signerSettings.walletsDir)
+        exportDir = decodeURIComponent(signerSettings.exportWalletsDir)
     }
 
     onWalletInfoChanged: {

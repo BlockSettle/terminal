@@ -100,6 +100,27 @@ QString SignerSettings::getWalletsDir() const
    return QDir::cleanPath(result);
 }
 
+QString SignerSettings::getExportWalletsDir() const
+{
+   QString result = get(ExportWalletsDir).toString();
+   if (!result.isEmpty()) {
+      return result;
+   }
+
+   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+   const auto commonRoot = dir + QDir::separator() + QLatin1String("..") + QDir::separator()
+      + QLatin1String("..") + QDir::separator() + appDirName;
+
+   if (testNet()) {
+      result = commonRoot + QDir::separator() + testnetSubdir;
+   }
+   else {
+      result = commonRoot;
+   }
+
+   return QDir::cleanPath(result);
+}
+
 QVariant SignerSettings::get(Setting set) const
 {
    auto itSD = settingDefs_.find(set);
@@ -319,6 +340,16 @@ void SignerSettings::setWalletsDir(const QString &val)
 #else
    const auto dir = val.startsWith(QLatin1Char('/')) ? val : QLatin1String("/") + val;
    set(WalletsDir, dir);
+#endif
+}
+
+void SignerSettings::setExportWalletsDir(const QString &val)
+{
+#if defined (Q_OS_WIN)
+   set(ExportWalletsDir, val);
+#else
+   const auto dir = val.startsWith(QLatin1Char('/')) ? val : QLatin1String("/") + val;
+   set(ExportWalletsDir, dir);
 #endif
 }
 
