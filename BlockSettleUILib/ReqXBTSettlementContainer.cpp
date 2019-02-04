@@ -246,7 +246,7 @@ void ReqXBTSettlementContainer::deactivate()
    }
 }
 
-void ReqXBTSettlementContainer::zcReceived(unsigned int)
+void ReqXBTSettlementContainer::zcReceived(const std::vector<bs::TXEntry>)
 {
    if (monitor_) {
       monitor_->checkNewEntries();

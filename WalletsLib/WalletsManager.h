@@ -23,18 +23,6 @@ namespace bs {
       class Wallet;
       class DummyWallet;
    }
-
-   struct TXEntry {
-      BinaryData  txHash;
-      std::string id;
-      int64_t     value;
-      uint32_t    blockNum;
-      uint32_t    txTime;
-      bool        isRBF;
-      bool        isChainedZC;
-   };
-   TXEntry convertTXEntry(const ClientClasses::LedgerEntry &);
-   std::vector<TXEntry> convertTXEntries(std::vector<ClientClasses::LedgerEntry>);
 }
 class ApplicationSettings;
 
@@ -139,7 +127,7 @@ public slots:
    void onCCInfoLoaded();
 
 private slots:
-   void onZeroConfReceived(unsigned int);
+   void onZeroConfReceived(const std::vector<bs::TXEntry>);
    void onBroadcastZCError(const QString &txHash, const QString &errMsg);
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);

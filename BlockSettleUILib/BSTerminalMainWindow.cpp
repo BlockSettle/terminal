@@ -735,15 +735,15 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       }
 
       if (newWalletDialog.isCreate()) {
-         return ui->widgetWallets->CreateNewWallet(primary, reportSuccess);
+         return ui->widgetWallets->CreateNewWallet(reportSuccess);
       }
       else if (newWalletDialog.isImport()) {
-         return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
+         return ui->widgetWallets->ImportNewWallet(reportSuccess);
       }
 
       return false;
    } else {
-      return ui->widgetWallets->ImportNewWallet(primary, reportSuccess);
+      return ui->widgetWallets->ImportNewWallet(reportSuccess);
    }
 }
 
@@ -1133,14 +1133,13 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
    }
 }
 
-void BSTerminalMainWindow::onZCreceived(ArmoryConnection::ReqIdType reqId)
+void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
 {
-   const auto &entries = armory_->getZCentries(reqId);
    if (entries.empty()) {
       return;
    }
-   for (const auto& led : entries) {
-      const auto &cbTx = [this, id = led.getID(), txTime = led.getTxTime(), value = led.getValue()](Tx tx) {
+   for (const auto &entry : entries) {
+      const auto &cbTx = [this, id = entry.id, txTime = entry.txTime, value = entry.value](Tx tx) {
          const auto &wallet = walletsManager_->GetWalletById(id);
          if (!wallet) {
             return;
@@ -1163,7 +1162,7 @@ void BSTerminalMainWindow::onZCreceived(ArmoryConnection::ReqIdType reqId)
          walletsManager_->GetTransactionDirection(tx, wallet, cbDir);
          walletsManager_->GetTransactionMainAddress(tx, wallet, (value > 0), cbMainAddr);
       };
-      armory_->getTxByHash(led.getTxHash(), cbTx);
+      armory_->getTxByHash(entry.txHash, cbTx);
    }
 }
 

@@ -3,6 +3,7 @@
 
 #include "Address.h"
 #include "ArmoryConnection.h"
+#include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "OfflineSigner.h"
 #include "SelectAddressDialog.h"
@@ -225,49 +226,33 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
 
       QString  changeAddress;
       double   changeAmount = 0;
-      std::vector<std::pair<QString, double>> ownOutputs;
+      std::vector<std::pair<bs::Address, double>> ownOutputs;
 
       // set outputs
       for (size_t i = 0; i < tx.getNumTxOut(); i++) {
          TxOut out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
-
-         const auto addressString = addr.display();
          const auto amount = UiUtils::amountToBtc(out.getValue());
 
-         // We will assume that the last wallet address found in the TX is the
-         // change address (in case it's not the only output address)
          if (wallet->containsAddress(addr)) {
-            ownOutputs.push_back({addressString, amount});
+            ownOutputs.push_back({addr, amount});
          }
-         else {
-            AddRecipient(addressString, amount);
-         }
-
          totalVal -= out.getValue();
       }
 
-      if (ownOutputs.empty()) {
-         logger_->warn("[{}] RBF doesn't contain own outputs", __func__);
-      }
-      else if (ownOutputs.size() == 1) {
-         if (!transactionData_->GetRecipientsCount()) {
-            AddRecipient(ownOutputs[0].first, ownOutputs[0].second);
-         }
-         else {
-            changeAddress = ownOutputs[0].first;
-            changeAmount = ownOutputs[0].second;
-         }
-      }
-      else {
-         for (size_t i = 0; i < ownOutputs.size(); ++i) {
-            if (i == (ownOutputs.size() - 1)) {
-               changeAddress = ownOutputs[i].first;
-               changeAmount = ownOutputs[i].second;
+      // Assume change address is the last internal address in the
+      // list of outputs belonging to the wallet
+      for (const auto &output : ownOutputs) {
+         const auto path = bs::hd::Path::fromString(wallet->GetAddressIndex(output.first));
+         if (path.length() == 2) {
+            if (path.get(-2) == 1) {   // internal HD address
+               changeAddress = output.first.display();
+               changeAmount = output.second;
             }
-            else {
-               AddRecipient(ownOutputs[i].first, ownOutputs[i].second);
-            }
+         }
+         else  {   // not an HD wallet/address
+            changeAddress = output.first.display();
+            changeAmount = output.second;
          }
       }
 
@@ -321,8 +306,6 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       SetMinimumFee(newMinFee, originalFeePerByte_);
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
-      transactionData_->setTotalFee(newMinFee, false);
-      FixRecipientsAmount();
    };
 
    const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
@@ -382,6 +365,10 @@ void CreateTransactionDialogAdvanced::initUI()
                RemoveOutputByRow(outputsModel_->GetRowById(outputId));
             });
       }
+   });
+   connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last)
+   {
+      onOutputRemoved();
    });
 
    currentAddressValid_ = false;
@@ -561,6 +548,16 @@ void CreateTransactionDialogAdvanced::onRemoveOutput()
 {
    int row = removeOutputAction_->data().toInt();
    RemoveOutputByRow(row);
+   onOutputRemoved();
+}
+
+void CreateTransactionDialogAdvanced::onOutputRemoved()
+{
+   if (!transactionData_->GetRecipientsCount()) {
+      transactionData_->setTotalFee(0, false);
+      setTxFees();
+   }
+   enableFeeChanging();
 }
 
 void CreateTransactionDialogAdvanced::RemoveOutputByRow(int row)
@@ -650,28 +647,20 @@ void CreateTransactionDialogAdvanced::onAddOutput()
 {
    const bs::Address address(ui_->lineEditAddress->text().trimmed());
    const double maxValue = transactionData_->CalculateMaxAmount(address);
-   const bool maxAmount = std::abs(maxValue
+   bool maxAmount = std::abs(maxValue
       - transactionData_->GetTotalRecipientsAmount() - currentValue_) <= 0.00000001;
 
-   if (maxAmount) {
-      for (const auto &recip : transactionData_->allRecipientIds()) {
-         UpdateRecipientAmount(recip, transactionData_->GetRecipientAmount(recip), true);
-      }
-   }
-   const auto recipId = AddRecipient(address, currentValue_, maxAmount);
+   AddRecipient(address, currentValue_, maxAmount);
 
-   const double diffMax = maxValue - transactionData_->GetTotalRecipientsAmount();
-   const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
-   // The code below tries to eliminate the change address if the change amount is too little.
-   if ((diffMax > 0) && (diffMax < totalFee)) {
-      transactionData_->setTotalFee(diffMax * BTCNumericTypes::BalanceDivider, false);
-      UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
-   }
+   maxAmount |= FixRecipientsAmount();
 
    // clear edits
    ui_->lineEditAddress->clear();
    ui_->lineEditAmount->clear();
    ui_->pushButtonAddOutput->setEnabled(false);
+   if (maxAmount) {
+      enableFeeChanging(false);
+   }
 }
 
 // Nothing is being done with isMax right now. We should use it or lose it.
@@ -687,43 +676,32 @@ unsigned int CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &ad
    return recipientId;
 }
 
-void CreateTransactionDialogAdvanced::FixRecipientsAmount()
+// Attempts to remove the change if it's small enough and adds its amount to fees
+bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
 {
    if (!transactionData_->totalFee()) {
-      return;
+      return false;
    }
-   double correction = 0;
-   try {
-      const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
-
-      const double balanceDiff = transactionData_->GetTransactionSummary().availableBalance - totalFee
-         - transactionData_->GetTotalRecipientsAmount();
-
-      if (transactionData_->GetTransactionSummary().hasChange) {
-         const double amtReturn = transactionData_->GetTransactionSummary().selectedBalance
-            - transactionData_->GetTransactionSummary().balanceToSpend
-            - UiUtils::amountToBtc(transactionData_->GetTransactionSummary().totalFee);
-         if (amtReturn < 0) { // since we're getting rid of change address in the code below,
-            // let's compensate its fee by subtracting from correction
-            // + to a negative value subtracts from absolute value
-            // Assume change address is always P2WPKH
-            correction = (amtReturn + kP2WPKHOutputSize * transactionData_->feePerByte()
-               / BTCNumericTypes::BalanceDivider)
-               / transactionData_->GetRecipientsCount();
+   const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
+   const double diffMax = transactionData_->GetTransactionSummary().availableBalance
+      - transactionData_->GetTotalRecipientsAmount() - totalFee;
+   // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
+   if ((diffMax > 0) && (diffMax < totalFee / 2)) {
+      BSMessageBox question(BSMessageBox::question, tr("Change fee")
+         , tr("Your projected change amount %1 is too small as compared to the projected fee."
+            " Attempting to keep the change will prevent the transaction from being propagated through"
+            " the Bitcoin network.").arg(UiUtils::displayAmount(diffMax))
+         , tr("Would you like to remove the change output and put its amount towards the fees?")
+         , this);
+      if (question.exec() == QDialog::Accepted) {
+         transactionData_->setTotalFee((diffMax + totalFee) * BTCNumericTypes::BalanceDivider, false);
+         for (const auto &recipId : transactionData_->allRecipientIds()) {
+            UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
          }
-      }
-      else {
-         correction = balanceDiff / transactionData_->GetRecipientsCount();
-      }
-   } catch (const std::exception &) {}
-
-   if (!qFuzzyIsNull(correction)) {
-      logger_->debug("[{}] applying correction {} to all outputs", __func__, correction);
-      for (const auto &recip : transactionData_->allRecipientIds()) {
-         const double recipAmount = transactionData_->GetRecipientAmount(recip);
-         UpdateRecipientAmount(recip, recipAmount + correction, true);
+         return true;
       }
    }
+   return false;
 }
 
 void CreateTransactionDialogAdvanced::UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax)
@@ -960,7 +938,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
 
    disableOutputsEditing();
    disableInputSelection();
-   disableFeeChanging();
+   enableFeeChanging(false);
+   feeChangeDisabled_ = true;
    updateCreateButtonText();
    disableChangeAddressSelecting();
 }
@@ -1028,12 +1007,14 @@ void CreateTransactionDialogAdvanced::disableInputSelection()
    ui_->pushButtonSelectInputs->setEnabled(false);
 }
 
-void CreateTransactionDialogAdvanced::disableFeeChanging()
+void CreateTransactionDialogAdvanced::enableFeeChanging(bool enable)
 {
-   feeChangeDisabled_ = true;
-   ui_->comboBoxFeeSuggestions->setEnabled(false);
-   ui_->doubleSpinBoxFeesManualPerByte->setEnabled(false);
-   ui_->spinBoxFeesManualTotal->setEnabled(false);
+   if (enable && feeChangeDisabled_) {
+      return;
+   }
+   ui_->comboBoxFeeSuggestions->setEnabled(enable);
+   ui_->doubleSpinBoxFeesManualPerByte->setEnabled(enable);
+   ui_->spinBoxFeesManualTotal->setEnabled(enable);
 }
 
 void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& changeAddress)
@@ -1092,8 +1073,8 @@ void CreateTransactionDialogAdvanced::updateManualFeeControls()
 
 void CreateTransactionDialogAdvanced::setTxFees()
 {
-   int itemIndex = ui_->comboBoxFeeSuggestions->currentIndex();
-   int itemCount = ui_->comboBoxFeeSuggestions->count();
+   const int itemIndex = ui_->comboBoxFeeSuggestions->currentIndex();
+   const int itemCount = ui_->comboBoxFeeSuggestions->count();
 
    if (itemIndex < (ui_->comboBoxFeeSuggestions->count() - 2)) {
       CreateTransactionDialog::feeSelectionChanged(itemIndex);
@@ -1102,5 +1083,9 @@ void CreateTransactionDialogAdvanced::setTxFees()
    } else if (itemIndex == itemCount - 1) {
       transactionData_->setTotalFee(ui_->spinBoxFeesManualTotal->value());
    }
-   FixRecipientsAmount();
+
+   if (FixRecipientsAmount()) {
+      ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
+      ui_->spinBoxFeesManualTotal->setValue(transactionData_->totalFee());
+   }
 }

@@ -59,10 +59,10 @@ public:
    void retrieveUserMessages(const QString &userId);
 
    // Called when a peer asks for our public key.
-   void OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response);
+   void OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response) override;
 
    // Called when we asked for a public key of peer, and got result.
-   void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response);
+   void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);

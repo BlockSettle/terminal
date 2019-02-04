@@ -230,7 +230,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
             const auto &itTX = txMap_.find(searchHash);
             if (itTX == txMap_.end()) {
                txHashSet.insert(searchHash);
-               txEntryHashSet_[searchHash] = bs::convertTXEntry(entry);
+               txEntryHashSet_[searchHash] = bs::TXEntry::fromLedgerEntry(entry);
             }
          }
       }

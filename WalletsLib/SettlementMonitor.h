@@ -118,6 +118,7 @@ public:
 
 protected slots:
    void onBlockchainEvent(unsigned int);
+   void onZCEvent(const std::vector<bs::TXEntry>);
 
 signals:
    void payInDetected(int confirmationsNumber, const BinaryData &txHash);

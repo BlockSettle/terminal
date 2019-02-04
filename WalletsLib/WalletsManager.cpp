@@ -607,6 +607,8 @@ bool WalletsManager::DeleteWalletFile(const wallet_gen_type &wallet)
          break;
       }
    }
+
+   wallet->UnregisterWallet();
    if (!isHDLeaf) {
       if (!wallet->EraseFile()) {
          logger_->error("Failed to remove wallet file for {}", wallet->GetWalletName());
@@ -1043,23 +1045,23 @@ void WalletsManager::onCCInfoLoaded()
 //   its own UTXO object while sharing the same UTXO hash.
 // - It is possible, in conjunction with a wallet, to determine if the UTXO is
 //   attached to an internal or external address.
-void WalletsManager::onZeroConfReceived(ArmoryConnection::ReqIdType reqId)
+void WalletsManager::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
 {
    std::vector<bs::TXEntry> ourZCentries;
 
-   for (const auto led : armory_->getZCentries(reqId)) {
-      auto wallet = GetWalletById(led.getID());
+   for (const auto &entry : entries) {
+      auto wallet = GetWalletById(entry.id);
       if (wallet != nullptr) {
          logger_->debug("[WalletsManager::onZeroConfReceived] ZC entry in wallet {}"
                         , wallet->GetWalletName());
 
          // We have an affected wallet. Update it!
-         ourZCentries.push_back(bs::convertTXEntry(led));
+         ourZCentries.push_back(entry);
          wallet->UpdateBalances();
       } // if
       else {
          logger_->debug("[WalletsManager::onZeroConfReceived] get ZC but wallet not found: {}"
-                        , led.getID());
+                        , entry.id);
       }
    } // for
 
@@ -1214,20 +1216,4 @@ void WalletsManager::ResumeRescan()
          logger_->warn("Rescan for {} is already in progress", rootWallet.second->getName());
       }
    }
-}
-
-
-bs::TXEntry bs::convertTXEntry(const ClientClasses::LedgerEntry &entry)
-{
-   return { entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
-         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC() };
-}
-
-std::vector<bs::TXEntry> bs::convertTXEntries(std::vector<ClientClasses::LedgerEntry> entries)
-{
-   std::vector<bs::TXEntry> result;
-   for (const auto &entry : entries) {
-      result.push_back(bs::convertTXEntry(entry));
-   }
-   return result;
 }

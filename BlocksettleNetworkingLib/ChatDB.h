@@ -40,6 +40,10 @@ public:
 
    bool loadKeys(std::map<QString, autheid::PublicKey>& peer_public_keys_out);
 
+   bool isContactExist(const QString &user_name);
+   bool addContact(const QString &user_name);
+   bool removeContact(const QString &user_name);
+
 private:
    bool createMissingTables();
 

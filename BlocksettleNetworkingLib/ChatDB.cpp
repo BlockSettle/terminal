@@ -32,6 +32,20 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
          return true;
       }},
 
+      {QLatin1String("contacts"), [db = db_] {
+         const QLatin1String query("CREATE TABLE IF NOT EXISTS contacts ("\
+            "user_name CHAR(64) PRIMARY KEY);");
+           if (!QSqlQuery(db).exec(query)) {
+               return false;
+           }
+           const QLatin1String qryIndexContact("CREATE INDEX IF NOT EXISTS contact_by_user "\
+              "ON contacts(user_name)");
+           if (!QSqlQuery(db).exec(qryIndexContact)) {
+              return false;
+           }
+           return true;
+       }},
+
       {QLatin1String("room_keys"), [db = db_] {
          const QLatin1String query("CREATE TABLE IF NOT EXISTS room_keys ("\
             "room CHAR(32) PRIMARY KEY,"\
@@ -176,5 +190,62 @@ bool ChatDB::addKey(const QString& user, const autheid::PublicKey& key)
       logger_->error("[ChatDB::addKey] failed to insert new public key value to user_keys.");
       return false;
    }
+   return true;
+}
+
+bool ChatDB::isContactExist(const QString &user_name)
+{
+   QSqlQuery query(db_);
+   if (!query.prepare(QLatin1String("SELECT user_name FROM contacts " \
+      "WHERE user_name=:user_name"))) {
+      logger_->error("[ChatDB::isContactExist] failed to prepare query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+   query.bindValue(QString::fromStdString(":user_name"), user_name.toLower());
+   if (!query.exec()) {
+      logger_->error("[ChatDB::isContactExist] failed to exec query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+
+   if (query.next()) {
+      return true;
+   }
+
+   return false;
+}
+
+bool ChatDB::addContact(const QString &user_name)
+{
+   if (isContactExist(user_name)) {
+      return false;
+   }
+
+   QSqlQuery qryAdd(QLatin1String(
+      "INSERT INTO contacts(user_name) VALUES(?);"), db_);
+   qryAdd.bindValue(0, user_name);
+
+   if (!qryAdd.exec()) {
+      logger_->error("[ChatDB::addContact] failed to insert new public key value to user_keys.");
+      return false;
+   }
+
+   return true;
+}
+
+bool ChatDB::removeContact(const QString &user_name)
+{
+   if (!isContactExist(user_name)) {
+      return false;
+   }
+
+   QSqlQuery qryAdd(QLatin1String(
+      "DELETE FROM contacts WHERE user_name=:user_name;"), db_);
+   qryAdd.bindValue(0, user_name);
+
+   if (!qryAdd.exec()) {
+      logger_->error("[ChatDB::removeContact] failed to insert new public key value to user_keys.");
+      return false;
+   }
+
    return true;
 }

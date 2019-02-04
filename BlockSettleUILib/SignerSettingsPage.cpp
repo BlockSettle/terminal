@@ -20,10 +20,18 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    , ui_{new Ui::SignerSettingsPage{}}
 {
    ui_->setupUi(this);
+   ui_->lineEditRemoteZmqPubKey->setVisible(false);
+
    connect(ui_->comboBoxRunMode, SIGNAL(activated(int)), this, SLOT(runModeChanged(int)));
    connect(ui_->pushButtonOfflineDir, &QPushButton::clicked, this, &SignerSettingsPage::onOfflineDirSel);
    connect(ui_->pushButtonZmqPubKey, &QPushButton::clicked, this, &SignerSettingsPage::onZmqPubKeySel);
    connect(ui_->spinBoxAsSpendLimit, SIGNAL(valueChanged(double)), this, SLOT(onAsSpendLimitChanged(double)));
+
+   connect(ui_->comboBoxZmqImportType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index){
+      ui_->lineEditRemoteZmqPubKey->setVisible(index != 0);
+      ui_->pushButtonZmqPubKey->setVisible(index == 0);
+      ui_->lineEditZmqKeyPath->setVisible(index == 0);
+   });
 }
 
 SignerSettingsPage::~SignerSettingsPage() = default;
@@ -62,6 +70,7 @@ void SignerSettingsPage::onZmqPubKeySel()
    }
 
    ui_->lineEditRemoteZmqPubKey->setText(QString::fromStdString(zmqSignerPubKey.toBinStr()));
+   ui_->lineEditZmqKeyPath->setText(file);
 }
 
 void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
@@ -127,9 +136,9 @@ void SignerSettingsPage::showPort(bool show)
 
 void SignerSettingsPage::showZmqPubKey(bool show)
 {
-   ui_->labelZmqPubKey->setVisible(show);
-   ui_->lineEditRemoteZmqPubKey->setVisible(show);
-   ui_->pushButtonZmqPubKey->setVisible(show);
+   ui_->widgetZmqLabel->setVisible(show);
+   ui_->widgetZmqComboBox->setVisible(show);
+   ui_->widgetZmqContent->setVisible(show);
 }
 
 void SignerSettingsPage::showOfflineDir(bool show)
