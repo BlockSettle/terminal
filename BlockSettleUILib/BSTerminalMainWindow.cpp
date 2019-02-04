@@ -80,7 +80,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       setGeometry(geom);
    }
 
-   connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
+   connect(ui->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
    connect(this, &BSTerminalMainWindow::readyToLogin, this, &BSTerminalMainWindow::onReadyToLogin);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });
@@ -133,10 +133,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
          aboutDlg_->show();
       };
    };
-   connect(ui->action_About_BlockSettle, &QAction::triggered, aboutDlgCb(0));
-   connect(ui->actionAbout_the_Terminal, &QAction::triggered, aboutDlgCb(1));
-   connect(ui->action_Contact_BlockSettle, &QAction::triggered, aboutDlgCb(2));
-   connect(ui->action_Version, &QAction::triggered, aboutDlgCb(3));
+   connect(ui->actionAboutBlockSettle, &QAction::triggered, aboutDlgCb(0));
+   connect(ui->actionAboutTerminal, &QAction::triggered, aboutDlgCb(1));
+   connect(ui->actionContactBlockSettle, &QAction::triggered, aboutDlgCb(2));
+   connect(ui->actionVersion, &QAction::triggered, aboutDlgCb(3));
 
    // Enable/disable send action when first wallet created/last wallet removed
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &BSTerminalMainWindow::updateControlEnabledState);
@@ -325,7 +325,7 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addAction(ui->actionSettings);
 
    trayMenu->addSeparator();
-   trayMenu->addAction(ui->action_Quit);
+   trayMenu->addAction(ui->actionQuit);
    sysTrayIcon_->setContextMenu(trayMenu);
 
    updateControlEnabledState();
@@ -855,11 +855,11 @@ void BSTerminalMainWindow::setupMenu()
    ui->menuFile->insertSeparator(action_login_);
    ui->menuFile->insertSeparator(ui->actionSettings);
 
-   connect(ui->action_Create_New_Wallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(false); });
-   connect(ui->actionAuthentication_Addresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
+   connect(ui->actionCreateNewWallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(); });
+   connect(ui->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
-   connect(ui->actionAccount_Information, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
-   connect(ui->actionEnter_Color_Coin_token, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
+   connect(ui->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
+   connect(ui->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
 
    onUserLoggedOut();
 
@@ -1008,14 +1008,14 @@ void BSTerminalMainWindow::onLogout()
 
 void BSTerminalMainWindow::onUserLoggedIn()
 {
-   ui->actionAccount_Information->setEnabled(true);
-   ui->actionAuthentication_Addresses->setEnabled(true);
-   ui->action_One_time_Password->setEnabled(true);
-   ui->actionEnter_Color_Coin_token->setEnabled(true);
+   ui->actionAccountInformation->setEnabled(true);
+   ui->actionAuthenticationAddresses->setEnabled(true);
+   ui->actionOneTimePassword->setEnabled(true);
+   ui->actionEnterColorCoinToken->setEnabled(true);
 
    ui->actionDeposits->setEnabled(true);
-   ui->actionWithdrawal_Request->setEnabled(true);
-   ui->actionLink_Additional_Bank_Account->setEnabled(true);
+   ui->actionWithdrawalRequest->setEnabled(true);
+   ui->actionLinkAdditionalBankAccount->setEnabled(true);
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
    ccFileManager_->ConnectToCelerClient(celerConnection_);
@@ -1035,14 +1035,14 @@ void BSTerminalMainWindow::onUserLoggedIn()
 
 void BSTerminalMainWindow::onUserLoggedOut()
 {
-   ui->actionAccount_Information->setEnabled(false);
-   ui->actionAuthentication_Addresses->setEnabled(false);
-   ui->actionEnter_Color_Coin_token->setEnabled(false);
-   ui->action_One_time_Password->setEnabled(false);
+   ui->actionAccountInformation->setEnabled(false);
+   ui->actionAuthenticationAddresses->setEnabled(false);
+   ui->actionEnterColorCoinToken->setEnabled(false);
+   ui->actionOneTimePassword->setEnabled(false);
 
    ui->actionDeposits->setEnabled(false);
-   ui->actionWithdrawal_Request->setEnabled(false);
-   ui->actionLink_Additional_Bank_Account->setEnabled(false);
+   ui->actionWithdrawalRequest->setEnabled(false);
+   ui->actionLinkAdditionalBankAccount->setEnabled(false);
 
    if (signContainer_) {
       signContainer_->SetUserId(BinaryData{});
