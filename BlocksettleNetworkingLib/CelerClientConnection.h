@@ -55,12 +55,16 @@ protected:
       while (!pendingData_.empty()) {
          if (pendingDataSize_ == 0) {
             const char *sizeBuffer = pendingData_.c_str();
-//            assert(pendingData_.size() >= 4);   //! No need to crash - just wait for the next packet
-	    if (pendingData_.size() < 4)  break;
+
             int offset = 0;
             int sizeBytesCount = 0;
 
             while (true) {
+               if (offset >= pendingData_.size()) {
+                  _S::logger_->error("[CelerClientConnection] not all size bytes received");
+                  return;
+               }
+
                if (sizeBuffer[offset] & 0x80) {
                   if (offset == 3) {
                      // we do not expect more than 4 bytes for size

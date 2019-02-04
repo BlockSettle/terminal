@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>850</width>
-    <height>435</height>
+    <height>505</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,7 +34,7 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>200</height>
+       <height>0</height>
       </size>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -500,6 +500,12 @@
       </item>
       <item>
        <widget class="QGroupBox" name="groupBoxIncoming">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>120</height>
+         </size>
+        </property>
         <property name="title">
          <string>Incoming Transactions</string>
         </property>
@@ -521,6 +527,12 @@
          </property>
          <item>
           <widget class="QTreeView" name="inputAddressesWidget">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
            <property name="alternatingRowColors">
             <bool>true</bool>
            </property>
@@ -540,6 +552,12 @@
       </item>
       <item>
        <widget class="QGroupBox" name="groupBoxOutgoing">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>120</height>
+         </size>
+        </property>
         <property name="title">
          <string>Outgoing Transactions</string>
         </property>
@@ -561,6 +579,12 @@
          </property>
          <item>
           <widget class="QTreeView" name="outputAddressesWidget">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
            <property name="alternatingRowColors">
             <bool>true</bool>
            </property>

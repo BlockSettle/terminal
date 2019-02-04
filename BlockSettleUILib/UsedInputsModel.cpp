@@ -35,9 +35,6 @@ QVariant UsedInputsModel::data(const QModelIndex & index, int role) const
 {
    switch (role) {
    case Qt::TextAlignmentRole:
-      if (index.column() == ColumnBalance) {
-         return Qt::AlignRight;
-      }
       return Qt::AlignLeft;
    case Qt::DisplayRole:
       return getRowData(index.column(), inputs_[index.row()]);

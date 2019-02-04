@@ -80,7 +80,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       setGeometry(geom);
    }
 
-   connect(ui->action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
+   connect(ui->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
    connect(this, &BSTerminalMainWindow::readyToLogin, this, &BSTerminalMainWindow::onReadyToLogin);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });
@@ -98,11 +98,14 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
 
-   InitSigningContainer();
-
    LoadWallets(splashScreen);
+
+   splashScreen.SetProgress(100);
+   splashScreen.close();
+
    QApplication::processEvents();
 
+   InitSigningContainer();
    InitAuthManager();
    InitAssets();
 
@@ -120,7 +123,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    connectSigner();
    connectArmory();
-   splashScreen.SetProgress(100);
 
    InitPortfolioView();
 
@@ -133,10 +135,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
          aboutDlg_->show();
       };
    };
-   connect(ui->action_About_BlockSettle, &QAction::triggered, aboutDlgCb(0));
-   connect(ui->actionAbout_the_Terminal, &QAction::triggered, aboutDlgCb(1));
-   connect(ui->action_Contact_BlockSettle, &QAction::triggered, aboutDlgCb(2));
-   connect(ui->action_Version, &QAction::triggered, aboutDlgCb(3));
+   connect(ui->actionAboutBlockSettle, &QAction::triggered, aboutDlgCb(0));
+   connect(ui->actionAboutTerminal, &QAction::triggered, aboutDlgCb(1));
+   connect(ui->actionContactBlockSettle, &QAction::triggered, aboutDlgCb(2));
+   connect(ui->actionVersion, &QAction::triggered, aboutDlgCb(3));
 
    // Enable/disable send action when first wallet created/last wallet removed
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &BSTerminalMainWindow::updateControlEnabledState);
@@ -325,7 +327,7 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addAction(ui->actionSettings);
 
    trayMenu->addSeparator();
-   trayMenu->addAction(ui->action_Quit);
+   trayMenu->addAction(ui->actionQuit);
    sysTrayIcon_->setContextMenu(trayMenu);
 
    updateControlEnabledState();
@@ -387,13 +389,6 @@ void BSTerminalMainWindow::LoadWallets(BSTerminalSplashScreen& splashScreen)
    walletsManager_->LoadWallets(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
       , applicationSettings_->GetHomeDir(), progressDelegate);
 
-   if (signContainer_ && (signContainer_->opMode() != SignContainer::OpMode::Offline)) {
-      addrSyncer_ = std::make_shared<HeadlessAddressSyncer>(signContainer_, walletsManager_);
-      connect(signContainer_.get(), &SignContainer::UserIdSet, [this] {
-         addrSyncer_->SyncWallet(walletsManager_->GetAuthWallet());
-      });
-   }
-
    logMgr_->logger()->debug("End of wallets loading");
 }
 
@@ -419,6 +414,24 @@ bool BSTerminalMainWindow::InitSigningContainer()
    const auto &signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
    auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
+
+   QString pubKeyPath;
+
+   if (runMode == SignContainer::OpMode::Remote) {
+      pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
+
+      if (pubKeyPath.isEmpty()) {
+         BSMessageBox(BSMessageBox::messageBoxType::warning
+            , tr("Signer Remote Connection")
+            , tr("Public key is not imported for signer.")
+            , tr("Please import public key for remote signer on Signer settings page to connect.")
+            , this).exec();
+         return false;
+      }
+   } else if (runMode == SignContainer::OpMode::Local) {
+      pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
+   }
+
    if ((runMode == SignContainer::OpMode::Local)
       && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
       if (BSMessageBox(BSMessageBox::messageBoxType::question, tr("Signer Local Connection")
@@ -430,7 +443,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
    }
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_
+   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, pubKeyPath
       , runMode, signerHost, connectionManager_);
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
@@ -438,6 +451,13 @@ bool BSTerminalMainWindow::InitSigningContainer()
    }
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady);
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError);
+
+   if (signContainer_->opMode() != SignContainer::OpMode::Offline) {
+      addrSyncer_ = std::make_shared<HeadlessAddressSyncer>(signContainer_, walletsManager_);
+      connect(signContainer_.get(), &SignContainer::UserIdSet, [this] {
+         addrSyncer_->SyncWallet(walletsManager_->GetAuthWallet());
+      });
+   }
    return true;
 }
 
@@ -460,6 +480,10 @@ void BSTerminalMainWindow::SignerReady()
          , dialogManager, signContainer_, armory_);
       ui->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
          , applicationSettings_, dialogManager, signContainer_, armory_);
+
+      if (walletsManager_->GetWalletsCount() == 0) {
+         createWallet(!walletsManager_->HasPrimaryWallet());
+      }
       widgetsInited_ = true;
    }
    else {
@@ -603,10 +627,6 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 
       InitTransactionsView();
       transactionsModel_->loadAllWallets();
-
-      if (walletsManager_->GetWalletsCount() == 0) {
-         createWallet(!walletsManager_->HasPrimaryWallet());
-      }
    }
    updateControlEnabledState();
    updateLoginActionState();
@@ -855,11 +875,11 @@ void BSTerminalMainWindow::setupMenu()
    ui->menuFile->insertSeparator(action_login_);
    ui->menuFile->insertSeparator(ui->actionSettings);
 
-   connect(ui->action_Create_New_Wallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(false); });
-   connect(ui->actionAuthentication_Addresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
+   connect(ui->actionCreateNewWallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(); });
+   connect(ui->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
-   connect(ui->actionAccount_Information, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
-   connect(ui->actionEnter_Color_Coin_token, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
+   connect(ui->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
+   connect(ui->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
 
    onUserLoggedOut();
 
@@ -984,8 +1004,9 @@ void BSTerminalMainWindow::onReadyToLogin()
       }
       else
       {
-         loginToCeler(loginDialog.getUsername().toStdString()
-                      , loginDialog.getPassword().toStdString());
+         // password login depricated
+         // loginToCeler(loginDialog.getUsername().toStdString()
+         //              , loginDialog.getPassword().toStdString());
       }
    }
 }
@@ -1007,14 +1028,14 @@ void BSTerminalMainWindow::onLogout()
 
 void BSTerminalMainWindow::onUserLoggedIn()
 {
-   ui->actionAccount_Information->setEnabled(true);
-   ui->actionAuthentication_Addresses->setEnabled(true);
-   ui->action_One_time_Password->setEnabled(true);
-   ui->actionEnter_Color_Coin_token->setEnabled(true);
+   ui->actionAccountInformation->setEnabled(true);
+   ui->actionAuthenticationAddresses->setEnabled(true);
+   ui->actionOneTimePassword->setEnabled(true);
+   ui->actionEnterColorCoinToken->setEnabled(true);
 
    ui->actionDeposits->setEnabled(true);
-   ui->actionWithdrawal_Request->setEnabled(true);
-   ui->actionLink_Additional_Bank_Account->setEnabled(true);
+   ui->actionWithdrawalRequest->setEnabled(true);
+   ui->actionLinkAdditionalBankAccount->setEnabled(true);
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
    ccFileManager_->ConnectToCelerClient(celerConnection_);
@@ -1034,14 +1055,14 @@ void BSTerminalMainWindow::onUserLoggedIn()
 
 void BSTerminalMainWindow::onUserLoggedOut()
 {
-   ui->actionAccount_Information->setEnabled(false);
-   ui->actionAuthentication_Addresses->setEnabled(false);
-   ui->actionEnter_Color_Coin_token->setEnabled(false);
-   ui->action_One_time_Password->setEnabled(false);
+   ui->actionAccountInformation->setEnabled(false);
+   ui->actionAuthenticationAddresses->setEnabled(false);
+   ui->actionEnterColorCoinToken->setEnabled(false);
+   ui->actionOneTimePassword->setEnabled(false);
 
    ui->actionDeposits->setEnabled(false);
-   ui->actionWithdrawal_Request->setEnabled(false);
-   ui->actionLink_Additional_Bank_Account->setEnabled(false);
+   ui->actionWithdrawalRequest->setEnabled(false);
+   ui->actionLinkAdditionalBankAccount->setEnabled(false);
 
    if (signContainer_) {
       signContainer_->SetUserId(BinaryData{});

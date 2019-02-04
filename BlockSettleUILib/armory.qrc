@@ -174,7 +174,6 @@
         <file>resources/notification_warning@2x.png</file>
         <file>resources/logo_print-160px-300ppi.png</file>
         <file>resources/logo_print-250px-300ppi.png</file>
-        <file>resources/OTP_template.html</file>
         <file alias="ICON_BS_16_TESTNET">resources/clearing-connection-test-net.png</file>
         <file alias="ICON_BS_24_TESTNET">resources/clearing-connection-test-net@1.5x.png</file>
         <file alias="ICON_BS_32_TESTNET">resources/clearing-connection-test-net@2x.png</file>
@@ -200,5 +199,7 @@
         <file>resources/md_license.html</file>
         <file>resources/cancel.png</file>
         <file>resources/cancel@2x.png</file>
+        <file>resources/finger.png</file>
+        <file>resources/finger@2x.png</file>
     </qresource>
 </RCC>

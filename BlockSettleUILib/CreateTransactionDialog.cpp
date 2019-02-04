@@ -264,8 +264,10 @@ void CreateTransactionDialog::onTransactionUpdated()
    labelAmount()->setText(UiUtils::displayAmount(summary.selectedBalance));
    labelTxInputs()->setText(summary.isAutoSelected ? tr("Auto (%1)").arg(QString::number(summary.usedTransactions))
       : QString::number(summary.usedTransactions));
+   labelTxOutputs()->setText(QString::number(summary.outputsCount));
    labelEstimatedFee()->setText(UiUtils::displayAmount(summary.totalFee));
    labelTotalAmount()->setText(UiUtils::displayAmount(summary.balanceToSpend + UiUtils::amountToBtc(summary.totalFee)));
+   labelTXAmount()->setText(UiUtils::displayAmount(summary.balanceToSpend));
    if (labelTxSize()) {
       labelTxSize()->setText(QString::number(summary.txVirtSize));
    }
