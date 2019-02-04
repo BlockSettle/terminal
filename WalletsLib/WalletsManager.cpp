@@ -625,6 +625,7 @@ bool WalletsManager::DeleteWalletFile(const wallet_gen_type &wallet)
       emit authWalletChanged();
    }
    emit walletDeleted();
+   emit walletBalanceUpdated(wallet->GetWalletId());
    return true;
 }
 
@@ -658,6 +659,7 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
       emit authWalletChanged();
    }
    emit walletDeleted();
+   emit walletBalanceUpdated(wallet->getWalletId());
    return result;
 }
 
