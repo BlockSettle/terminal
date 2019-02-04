@@ -984,8 +984,9 @@ void BSTerminalMainWindow::onReadyToLogin()
       }
       else
       {
-         loginToCeler(loginDialog.getUsername().toStdString()
-                      , loginDialog.getPassword().toStdString());
+         // password login depricated
+         // loginToCeler(loginDialog.getUsername().toStdString()
+         //              , loginDialog.getPassword().toStdString());
       }
    }
 }

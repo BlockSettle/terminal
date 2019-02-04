@@ -19,12 +19,9 @@ public:
    ~LoginWindow() override;
 
    QString getUsername() const;
-   QString getPassword() const;
-
    bool isAutheID() const { return autheID_; }
 
 private slots:
-   void onLoginPressed();
    void onTextChanged();
    void onAuthPressed();
 
