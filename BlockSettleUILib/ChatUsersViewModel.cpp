@@ -15,17 +15,17 @@ QString ChatUsersViewModel::resolveUser(const QModelIndex &index) const
    return QString::fromStdString(users_[index.row()]);
 }
 
-int ChatUsersViewModel::columnCount(const QModelIndex &parent) const
+int ChatUsersViewModel::columnCount(const QModelIndex &/*parent*/) const
 {
    return 1;
 }
 
-int ChatUsersViewModel::rowCount(const QModelIndex &parent) const
+int ChatUsersViewModel::rowCount(const QModelIndex &/*parent*/) const
 {
    return users_.size();
 }
 
-QVariant ChatUsersViewModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant ChatUsersViewModel::headerData(int /*section*/, Qt::Orientation /*orientation*/, int /*role*/) const
 {
    return QVariant();
 }
@@ -71,4 +71,23 @@ void ChatUsersViewModel::onUsersDel(const std::vector<std::string> &users)
          }
       }
    }
+}
+
+bool ChatUsersViewModel::isUserInModel(const std::string &userId) const
+{
+   auto iter = std::find_if(std::begin(users_), std::end(users_), [&userId](const std::string &in)
+   {
+      if (userId.size() != in.size())
+         return false;
+
+      std::string userIdToCompare;
+      userIdToCompare.resize(userId.size());
+      std::transform(std::begin(userId), std::end(userId), std::begin(userIdToCompare), ::tolower);
+      return (0 == userIdToCompare.compare(in));
+   });
+
+   if (iter == std::end(users_))
+      return false;
+
+   return true;
 }

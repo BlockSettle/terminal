@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>940</width>
-    <height>633</height>
+    <width>1006</width>
+    <height>666</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -119,7 +119,7 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="label_3">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -138,7 +138,7 @@
              </font>
             </property>
             <property name="text">
-             <string>CHAT ROOMS</string>
+             <string>USERS</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -152,29 +152,82 @@
            </widget>
           </item>
           <item>
-           <widget class="QTreeView" name="treeView_ChatRooms">
+           <widget class="ChatSearchLineEdit" name="chatSearchLineEdit">
+            <property name="locale">
+             <locale language="English" country="UnitedStates"/>
+            </property>
+            <property name="placeholderText">
+             <string>Search...</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="chatUsersVerticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Preferred</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QTreeView" name="treeViewUsers">
+            <property name="editTriggers">
+             <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+            </property>
             <property name="indentation">
-             <number>5</number>
+             <number>10</number>
+            </property>
+            <property name="rootIsDecorated">
+             <bool>false</bool>
             </property>
             <property name="uniformRowHeights">
              <bool>true</bool>
             </property>
-            <property name="sortingEnabled">
-             <bool>true</bool>
-            </property>
-            <property name="animated">
-             <bool>true</bool>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-            <property name="headerHidden">
+            <property name="itemsExpandable">
              <bool>false</bool>
             </property>
-            <attribute name="headerVisible">
+            <property name="expandsOnDoubleClick">
              <bool>true</bool>
-            </attribute>
+            </property>
            </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <item>
+             <widget class="QLabel" name="label_5">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>YOU: </string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelUserName">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>OwnUserName</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </widget>
@@ -367,7 +420,7 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="label">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -386,7 +439,7 @@
              </font>
             </property>
             <property name="text">
-             <string>USERS</string>
+             <string>CHAT ROOMS</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -400,25 +453,28 @@
            </widget>
           </item>
           <item>
-           <widget class="QTreeView" name="treeViewUsers">
-            <property name="editTriggers">
-             <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
-            </property>
+           <widget class="QTreeView" name="treeView_ChatRooms">
             <property name="indentation">
-             <number>10</number>
-            </property>
-            <property name="rootIsDecorated">
-             <bool>false</bool>
+             <number>5</number>
             </property>
             <property name="uniformRowHeights">
              <bool>true</bool>
             </property>
-            <property name="itemsExpandable">
-             <bool>false</bool>
-            </property>
-            <property name="expandsOnDoubleClick">
+            <property name="sortingEnabled">
              <bool>true</bool>
             </property>
+            <property name="animated">
+             <bool>true</bool>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="headerHidden">
+             <bool>false</bool>
+            </property>
+            <attribute name="headerVisible">
+             <bool>true</bool>
+            </attribute>
            </widget>
           </item>
          </layout>
@@ -432,9 +488,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>BSChatInput</class>
-   <extends>QTextEdit</extends>
-   <header>BSChatInput.h</header>
+   <class>ChatSearchLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header location="global">chatsearchlineedit.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

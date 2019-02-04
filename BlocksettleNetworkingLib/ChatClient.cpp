@@ -38,7 +38,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    heartbeatTimer_.start();
 }
 
-ChatClient::~ChatClient()
+ChatClient::~ChatClient() noexcept
 {
    if (loggedIn_) {
       logout();
