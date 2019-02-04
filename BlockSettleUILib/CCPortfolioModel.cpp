@@ -587,6 +587,7 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& wallet
    connect(walletsManager.get(), &WalletsManager::walletsReady, this, &CCPortfolioModel::reloadXBTWalletsList);
    connect(walletsManager.get(), &WalletsManager::walletsLoaded, this, &CCPortfolioModel::reloadXBTWalletsList);
    connect(walletsManager.get(), &WalletsManager::walletChanged, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager.get(), &WalletsManager::walletDeleted, this, &CCPortfolioModel::reloadXBTWalletsList);
    connect(walletsManager.get(), &WalletsManager::walletImportFinished, this, &CCPortfolioModel::reloadXBTWalletsList);
    connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &CCPortfolioModel::updateXBTBalance);
 }
