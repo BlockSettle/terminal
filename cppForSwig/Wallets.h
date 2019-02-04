@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2016, goatpig                                               //
+//  Copyright (C) 2016-2019, goatpig                                          //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -180,6 +180,7 @@ protected:
    std::map<BinaryData, std::shared_ptr<AddressEntry>> addresses_;
    std::shared_ptr<DecryptedDataContainer> decryptedData_;
    std::set<std::shared_ptr<AddressAccount>> accounts_;
+   std::set<std::shared_ptr<MetaDataAccount>> metaDataAccounts_;
    BinaryData mainAccount_;
 
    ////
@@ -212,6 +213,14 @@ protected:
    void putData(const BinaryData& key, const BinaryData& data);
    void putData(BinaryWriter& key, BinaryWriter& data);
 
+   //address type methods
+   void updateAddressSet(std::shared_ptr<AddressEntry>);
+   void writeAddressType(std::shared_ptr<AddressEntry>);
+   AddressEntryType getAddrTypeForAccount(const BinaryData& ID);
+   std::shared_ptr<AddressAccount> getAccountForID(const BinaryData& ID) const;
+
+   void loadMetaAccounts(void);
+
    //virtual
    virtual void putHeaderData(
       const BinaryData& parentID,
@@ -222,6 +231,7 @@ protected:
       AddressEntryType);
 
    virtual void updateHashMap(void);
+   virtual void readFromFile(void) = 0;
 
    //static
    static BinaryDataRef getDataRefForKey(const BinaryData& key, LMDB* db);
@@ -235,10 +245,6 @@ protected:
    static void putData(LMDB* db, const BinaryData& key, const BinaryData& data);
    static void initWalletMetaDB(std::shared_ptr<LMDBEnv>, const std::string&);
 
-   void updateAddressSet(std::shared_ptr<AddressEntry>);
-   void writeAddressType(std::shared_ptr<AddressEntry>);
-   AddressEntryType getAddrTypeForAccount(const BinaryData& ID);
-   std::shared_ptr<AddressAccount> getAccountForID(const BinaryData& ID) const;
 
 public:
    //tors
@@ -275,6 +281,9 @@ public:
       decryptedData_->setPassphrasePromptLambda(lambda);
    }
 
+   void addMetaAccount(MetaAccountType);
+   std::shared_ptr<MetaDataAccount> getMetaAccount(MetaAccountType);
+
    //virtual
    virtual std::set<BinaryData> getAddrHashSet();
    virtual const SecureBinaryData& getDecryptedValue(
@@ -294,10 +303,8 @@ protected:
    std::shared_ptr<AssetEntry_Single> root_;
 
 protected:
-   //locals
-   void readFromFile(void);
-
    //virtual
+   void readFromFile(void);
    void putHeaderData(const BinaryData& parentID,
       const BinaryData& walletID);
 
@@ -379,10 +386,9 @@ private:
    std::atomic<unsigned> chainLength_;
 
 protected:
-   //local
-   void readFromFile(void);
 
    //virtual
+   void readFromFile(void);
    const SecureBinaryData& getDecryptedValue(
       std::shared_ptr<Asset_PrivateKey>);
 

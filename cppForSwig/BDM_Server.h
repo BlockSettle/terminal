@@ -39,28 +39,27 @@ class BDV_Server_Object;
 
 namespace DBTestUtils
 {
-   tuple<shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned> waitOnSignal(
-      Clients*, const string&, ::Codec_BDVCommand::NotificationType);
+   std::tuple<std::shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned> waitOnSignal(
+      Clients*, const std::string&, ::Codec_BDVCommand::NotificationType);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 struct BDV_Payload
 {
-   shared_ptr<BDV_packet> packet_;
-   shared_ptr<BDV_Server_Object> bdvPtr_;
+   std::shared_ptr<BDV_packet> packet_;
+   std::shared_ptr<BDV_Server_Object> bdvPtr_;
    uint32_t messageID_;
-   size_t packetID_;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 struct BDV_PartialMessage
 {
-   vector<shared_ptr<BDV_Payload>> payloads_;
+   std::vector<std::shared_ptr<BDV_Payload>> payloads_;
    WebSocketMessagePartial partialMessage_;
 
-   bool parsePacket(shared_ptr<BDV_Payload>);
+   bool parsePacket(std::shared_ptr<BDV_Payload>);
    bool isReady(void) const { return partialMessage_.isReady(); }
-   bool getMessage(shared_ptr<::google::protobuf::Message>);
+   bool getMessage(std::shared_ptr<::google::protobuf::Message>);
    void reset(void);
    size_t topId(void) const;
 };
@@ -72,7 +71,7 @@ public:
 
    virtual ~Callback() = 0;
 
-   virtual void callback(shared_ptr<::Codec_BDVCommand::BDVCallback>) = 0;
+   virtual void callback(std::shared_ptr<::Codec_BDVCommand::BDVCallback>) = 0;
    virtual bool isValid(void) = 0;
    virtual void shutdown(void) = 0;
 };
@@ -88,7 +87,7 @@ public:
       bdvID_(bdvid)
    {}
 
-   void callback(shared_ptr<::Codec_BDVCommand::BDVCallback>);
+   void callback(std::shared_ptr<::Codec_BDVCommand::BDVCallback>);
    bool isValid(void) { return true; }
    void shutdown(void) {}
 };
@@ -97,14 +96,14 @@ public:
 class UnitTest_Callback : public Callback
 {
 private:
-   BlockingQueue<shared_ptr<::Codec_BDVCommand::BDVCallback>> notifQueue_;
+   BlockingQueue<std::shared_ptr<::Codec_BDVCommand::BDVCallback>> notifQueue_;
 
 public:
-   void callback(shared_ptr<::Codec_BDVCommand::BDVCallback>);
+   void callback(std::shared_ptr<::Codec_BDVCommand::BDVCallback>);
    bool isValid(void) { return true; }
    void shutdown(void) {}
 
-   shared_ptr<::Codec_BDVCommand::BDVCallback> getNotification(void);
+   std::shared_ptr<::Codec_BDVCommand::BDVCallback> getNotification(void);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -140,9 +139,7 @@ private:
    std::atomic<unsigned> packetProcess_threadLock_;
    std::atomic<unsigned> notificationProcess_threadLock_;
 
-   std::map<size_t, std::shared_ptr<BDV_Payload>> packetMap_;
    BDV_PartialMessage currentMessage_;
-   std::atomic<size_t> nextPacketId_ = {0};
    std::shared_ptr<BDV_Payload> packetToReinject_ = nullptr;
 
 private:
@@ -162,6 +159,8 @@ private:
       std::unique_ptr<BDV_Notification_ZC> zcPtr);
    void resetCurrentMessage(void);
 
+   unsigned lastValidMessageId_ = 0;
+
 public:
    BDV_Server_Object(const std::string& id, BlockDataManagerThread *bdmT);
 
@@ -176,8 +175,6 @@ public:
    void haltThreads(void);
    bool processPayload(std::shared_ptr<BDV_Payload>&,
       std::shared_ptr<::google::protobuf::Message>&);
-
-   size_t getNextPacketId(void) { return nextPacketId_.fetch_add(1, std::memory_order_relaxed); }
 };
 
 class Clients;
@@ -193,7 +190,7 @@ public:
       clientsPtr_(clientsPtr)
    {}
 
-   set<string> hasScrAddr(const BinaryDataRef&) const;
+   std::set<std::string> hasScrAddr(const BinaryDataRef&) const;
    void pushZcNotification(ZeroConfContainer::NotificationPacket& packet);
    void errorCallback(
       const std::string& bdvId, std::string& errorStr, const std::string& txHash);
@@ -205,7 +202,7 @@ class Clients
    friend class ZeroConfCallbacks_BDV;
 
 private:
-   TransactionalMap<std::string, shared_ptr<BDV_Server_Object>> BDVs_;
+   TransactionalMap<std::string, std::shared_ptr<BDV_Server_Object>> BDVs_;
    mutable BlockingQueue<bool> gcCommands_;
    BlockDataManagerThread* bdmT_ = nullptr;
 
@@ -219,7 +216,7 @@ private:
    BlockingQueue<std::shared_ptr<BDV_Notification_Packet>> innerBDVNotifStack_;
    BlockingQueue<std::shared_ptr<BDV_Payload>> packetQueue_;
 
-   mutex shutdownMutex_;
+   std::mutex shutdownMutex_;
 
 private:
    void notificationThread(void) const;
@@ -247,7 +244,7 @@ public:
    void processShutdownCommand(
       std::shared_ptr<::Codec_BDVCommand::StaticCommand>);
    std::shared_ptr<::google::protobuf::Message> registerBDV(
-      std::shared_ptr<::Codec_BDVCommand::StaticCommand>, string bdvID);
+      std::shared_ptr<::Codec_BDVCommand::StaticCommand>, std::string bdvID);
    void unregisterBDV(const std::string& bdvId);
    void shutdown(void);
    void exitRequestLoop(void);

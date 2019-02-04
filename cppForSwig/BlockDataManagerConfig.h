@@ -52,7 +52,8 @@ public:
    static const std::string defaultRegtestDataDir_;
    static const std::string defaultRegtestBlkFileLocation_;
 
-   std::string dataDir_;
+   static std::string dataDir_;
+
    std::string blkFileLocation_;
    std::string dbDir_;
    std::string logFilePath_;
@@ -107,6 +108,7 @@ public:
    static std::string hasLocalDB(const std::string& datadir, const std::string& port);
    static std::string getPortFromCookie(const std::string& datadir);
    static std::string getCookie(const std::string& datadir);
+   static std::string getDataDir(void) { return dataDir_; }
 
    static void setDbType(ARMORY_DB_TYPE dbType)
    {

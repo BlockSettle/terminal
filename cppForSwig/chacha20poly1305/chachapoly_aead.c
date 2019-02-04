@@ -139,7 +139,7 @@ out:
 int chacha20poly1305_get_length(struct chachapolyaead_ctx *ctx,
                                 uint32_t *len_out, uint32_t seqnr,
                                 const uint8_t *ciphertext, uint32_t len) {
-  uint8_t buf[4], seqbuf[8];
+  uint8_t buf[4];
 
   if (len < 4)
     return -1;
@@ -147,6 +147,6 @@ int chacha20poly1305_get_length(struct chachapolyaead_ctx *ctx,
   seqnr64 = htole64(seqnr64);
   chacha_ivsetup(&ctx->header_ctx, (uint8_t *)&seqnr64, NULL);
   chacha_encrypt_bytes(&ctx->header_ctx, ciphertext, buf, 4);
-  *len_out = le32toh(buf[0]);
+  *len_out = le32toh(*((uint32_t*)buf));
   return 0;
 }

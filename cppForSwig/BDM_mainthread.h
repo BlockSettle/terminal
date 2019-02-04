@@ -33,7 +33,7 @@ public:
    virtual void run(BDMAction action, void* ptr, int block=0)=0;
    virtual void progress(
       BDMPhase phase,
-      const vector<string> &walletIdVec,
+      const std::vector<std::string> &walletIdVec,
       float progress, unsigned secondsRem,
       unsigned progressNumeric
    )=0;
@@ -50,7 +50,7 @@ public:
 class BlockDataManager_LevelDB;
 class BlockDataViewer;
 
-inline void StartCppLogging(string fname, int lvl) { STARTLOGGING(fname, (LogLevel)lvl); }
+inline void StartCppLogging(std::string fname, int lvl) { STARTLOGGING(fname, (LogLevel)lvl); }
 inline void ChangeCppLogLevel(int lvl) { SETLOGLEVEL((LogLevel)lvl); }
 inline void DisableCppLogging() { SETLOGLEVEL(LogLvlDisabled); }
 inline void EnableCppLogStdOut() { LOGENABLESTDOUT(); }

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2017, goatpig                                               //
+//  Copyright (C) 2017-2019, goatpig                                          //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -189,12 +189,6 @@ shared_ptr<AssetAccount> AssetAccount::loadFromDisk(
    bwAssetKey.put_BinaryDataRef(key.getSliceRef(1, key.getSize() - 1));
    
    //asset key
-   BinaryWriter bwRootkey;
-   bwRootkey.put_BinaryData(bwAssetKey.getData());
-   bwRootkey.put_uint32_t(ROOT_ASSETENTRY_ID); //root entry int id
-   CharacterArrayRef carRootKey(
-      bwRootkey.getSize(), bwRootkey.getData().getCharPtr());
-
    shared_ptr<AssetEntry> rootEntry = nullptr;
    map<unsigned, shared_ptr<AssetEntry>> assetMap;
    
@@ -1329,4 +1323,312 @@ BinaryData AccountType_BIP32_SegWit::getOuterAccountID(void) const
 BinaryData AccountType_BIP32_SegWit::getInnerAccountID(void) const
 {
    return WRITE_UINT32_BE(BIP32_SEGWIT_INNER_ACCOUNT_DERIVATIONID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// MetaDataAccount
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+void MetaDataAccount::make_new(MetaAccountType type)
+{
+   type_ = type;
+
+   switch (type_)
+   {
+   case MetaAccount_Comments:
+   {
+      ID_ = WRITE_UINT32_BE(META_ACCOUNT_COMMENTS);
+      break;
+   }
+
+   case MetaAccount_AuthPeers:
+   {
+      ID_ = WRITE_UINT32_BE(META_ACCOUNT_AUTHPEER);
+      break;
+   }
+
+   default:
+      throw AccountException("unexpected meta account type");
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MetaDataAccount::commit()
+{
+   ReentrantLock lock(this);
+
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+
+   BinaryWriter bwKey;
+   bwKey.put_uint8_t(META_ACCOUNT_PREFIX);
+   bwKey.put_BinaryData(ID_);
+
+   BinaryWriter bwData;
+   bwData.put_var_int(4);
+   bwData.put_uint32_t((uint32_t)type_);
+
+   //commit assets
+   for (auto& asset : assets_)
+      writeAssetToDisk(asset.second);
+
+   //commit serialized account data
+   CharacterArrayRef carKey(bwKey.getSize(), bwKey.getData().getCharPtr());
+   CharacterArrayRef carData(bwData.getSize(), bwData.getData().getCharPtr());
+   db_->insert(carKey, carData);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool MetaDataAccount::writeAssetToDisk(shared_ptr<MetaData> assetPtr)
+{
+   if (!assetPtr->needsCommit())
+      return true;
+   
+   assetPtr->needsCommit_ = false;
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+
+   auto&& key = assetPtr->getDbKey();
+   auto&& data = assetPtr->serialize();
+
+   CharacterArrayRef carKey(key.getSize(), key.getCharPtr());
+
+   if (data.getSize() != 0)
+   {
+      CharacterArrayRef carData(data.getSize(), data.getCharPtr());
+      db_->insert(carKey, carData);
+      return true;
+   }
+   else
+   {
+      db_->erase(carKey);
+      return false;
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MetaDataAccount::updateOnDisk(void)
+{
+   ReentrantLock lock(this);
+
+   bool needsCommit = false;
+   for (auto& asset : assets_)
+      needsCommit |= asset.second->needsCommit();
+
+   if (!needsCommit)
+      return;
+
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+   auto iter = assets_.begin();
+   while (iter != assets_.end())
+   {
+      if (writeAssetToDisk(iter->second))
+      {
+         ++iter;
+         continue;
+      }
+
+      assets_.erase(iter++);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MetaDataAccount::reset()
+{
+   type_ = MetaAccount_Unset;
+   ID_.clear();
+   assets_.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MetaDataAccount::readFromDisk(const BinaryData& key)
+{
+   //sanity checks
+   if (dbEnv_ == nullptr || db_ == nullptr)
+      throw AccountException("invalid db pointers");
+
+   if (key.getSize() != 5)
+      throw AccountException("invalid key size");
+
+   if (key.getPtr()[0] != META_ACCOUNT_PREFIX)
+      throw AccountException("unexpected prefix for AssetAccount key");
+
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadOnly);
+   CharacterArrayRef carKey(key.getSize(), key.getCharPtr());
+
+   auto carData = db_->get_NoCopy(carKey);
+   BinaryRefReader brr((const uint8_t*)carData.data, carData.len);
+
+   //wipe object prior to loading from disk
+   reset();
+
+   //set ID
+   ID_ = key.getSliceCopy(1, 4);
+
+   //getType
+   brr.get_var_int();
+   type_ = (MetaAccountType)brr.get_uint32_t();
+
+   uint8_t prefix;
+   switch (type_)
+   {
+   case MetaAccount_Comments:
+   {
+      prefix = METADATA_COMMENTS_PREFIX;
+      break;
+   }
+
+   case MetaAccount_AuthPeers:
+   {
+      prefix = METADATA_AUTHPEER_PREFIX;
+      break;
+   }
+
+   default:
+      throw AccountException("unexpected meta account type");
+   }
+
+   //get assets
+   BinaryWriter bwAssetKey;
+   bwAssetKey.put_uint8_t(prefix);
+   bwAssetKey.put_BinaryData(ID_);
+   auto& assetDbKey = bwAssetKey.getData();
+   CharacterArrayRef carIter(assetDbKey.getSize(), assetDbKey.getCharPtr());
+
+   auto dbIter = db_->begin();
+   dbIter.seek(carIter, LMDB::Iterator::Seek_GE);
+
+   while (dbIter.isValid())
+   {
+      BinaryDataRef key_bdr(
+         (const uint8_t*)dbIter.key().mv_data, dbIter.key().mv_size);
+      BinaryDataRef value_bdr(
+         (const uint8_t*)dbIter.value().mv_data, dbIter.value().mv_size);
+
+      //check key isnt prefix
+      if (key_bdr == assetDbKey)
+         continue;
+
+      //check key starts with prefix
+      if (!key_bdr.startsWith(assetDbKey))
+         break;
+
+      //deser asset
+      try
+      {
+         auto assetPtr = MetaData::deserialize(key_bdr, value_bdr);
+         assets_.insert(make_pair(
+            assetPtr->index_, assetPtr));
+      }
+      catch (exception&)
+      {}
+
+      ++dbIter;
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<MetaData> MetaDataAccount::getMetaDataByIndex(unsigned id) const
+{
+   auto iter = assets_.find(id);
+   if (iter == assets_.end())
+      throw AccountException("invalid asset index");
+
+   return iter->second;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MetaDataAccount::eraseMetaDataByIndex(unsigned id)
+{
+   auto iter = assets_.find(id);
+   if (iter == assets_.end())
+      return;
+
+   iter->second->clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// AuthPeerAssetConversion
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+map<string, const SecureBinaryData*> AuthPeerAssetConversion::getAssetMap(
+   const MetaDataAccount* account)
+{
+   if (account == nullptr || account->type_ != MetaAccount_AuthPeers)
+      throw AccountException("invalid metadata account ptr");
+   ReentrantLock lock(account);
+
+   map<string, const SecureBinaryData*> result;
+
+   for (auto& asset : account->assets_)
+   {
+      auto assetPeer = dynamic_pointer_cast<PeerPublicData>(asset.second);
+      if (assetPeer == nullptr)
+         throw AccountException("invalid asset type");
+
+      auto& names = assetPeer->getNames();
+      auto& pubKey = assetPeer->getPublicKey();
+
+      for (auto& name : names)
+         result.emplace(make_pair(name, &pubKey));
+   }
+
+   return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+map<SecureBinaryData, set<unsigned>> 
+   AuthPeerAssetConversion::getKeyIndexMap(const MetaDataAccount* account)
+{
+   if (account == nullptr || account->type_ != MetaAccount_AuthPeers)
+      throw AccountException("invalid metadata account ptr");
+   ReentrantLock lock(account);
+
+   map<SecureBinaryData, set<unsigned>> result;
+
+   for (auto& asset : account->assets_)
+   {
+      auto assetPeer = dynamic_pointer_cast<PeerPublicData>(asset.second);
+      if (assetPeer == nullptr)
+         throw AccountException("invalid asset type");
+
+      auto& pubKey = assetPeer->getPublicKey();
+
+      auto iter = result.find(pubKey);
+      if (iter == result.end())
+      {
+         auto insertIter = result.insert(make_pair(
+            pubKey, set<unsigned>()));
+         iter = insertIter.first;
+      }
+
+      iter->second.insert(asset.first);
+   }
+
+   return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+int AuthPeerAssetConversion::addAsset(
+   MetaDataAccount* account, const SecureBinaryData& pubkey,
+   const std::initializer_list<std::string>& names)
+{
+   ReentrantLock lock(account);
+
+   if (account == nullptr || account->type_ != MetaAccount_AuthPeers)
+      throw AccountException("invalid metadata account ptr");
+
+   auto& accountID = account->ID_;
+   unsigned index = account->assets_.size();
+
+   auto metaObject = make_shared<PeerPublicData>(accountID, index);
+   metaObject->setPublicKey(pubkey);
+   for (auto& name : names)
+      metaObject->addName(name);
+
+   metaObject->flagForCommit();
+   account->assets_.emplace(make_pair(index, metaObject));
+   account->updateOnDisk();
+
+   return index;
 }

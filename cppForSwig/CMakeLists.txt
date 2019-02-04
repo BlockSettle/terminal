@@ -8,6 +8,7 @@ SET (SOURCES
    Assets.cpp
    AssetEncryption.cpp
    AsyncClient.cpp
+   AuthorizedPeers.cpp
    BinaryData.cpp
    BIP150_151.cpp
    BIP32_Node.cpp

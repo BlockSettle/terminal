@@ -13,6 +13,7 @@
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/text_format.h"
 
+using namespace std;
 using namespace AsyncClient;
 using namespace ::Codec_BDVCommand;
 
@@ -797,6 +798,16 @@ void AsyncClient::Blockchain::getHeaderByHeight(unsigned height,
    read_payload->callbackReturn_ =
       make_unique<CallbackReturn_BlockHeader>(height, callback);
    sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+pair<unsigned, unsigned> AsyncClient::BlockDataViewer::getRekeyCount() const
+{
+   auto wsSocket = dynamic_pointer_cast<WebSocketClient>(sock_);
+   if (wsSocket == nullptr)
+      return make_pair(0, 0);
+
+   return wsSocket->getRekeyCount();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

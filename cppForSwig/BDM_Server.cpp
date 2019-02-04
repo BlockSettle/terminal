@@ -8,6 +8,7 @@
 
 #include "BDM_Server.h"
 
+using namespace std;
 using namespace ::google::protobuf;
 using namespace ::Codec_BDVCommand;
 
@@ -1296,42 +1297,20 @@ bool BDV_Server_Object::processPayload(shared_ptr<BDV_Payload>& packet,
       return false;
 
    shared_ptr<BDV_Payload> currentPacket = packet;
-   do //loop over packetMap to feed unparsed messages back in
-   {  
-      auto parsed = currentMessage_.parsePacket(currentPacket);
-      if (!parsed)
-      {
-         //packet did not extend current message, save for later
-         packetMap_.insert(make_pair(packet->packetID_, currentPacket));
-         return true;
-      }
+   auto parsed = currentMessage_.parsePacket(currentPacket);
+   if (!parsed)
+   {
+      packetToReinject_ = packet;
+      return true;
+   }
 
-      if (currentMessage_.isReady())
-      {
-         //message is complete, time to process it
-         break;
-      }
+   if (!currentMessage_.isReady())
+      return true;
 
-      if (packetMap_.size() == 0)
-      {
-         //out of packets to feed the current message, return
-         return true;
-      }
-
-      //look for the next consecutive id following current message's 
-      //top id
-      auto nextId = currentMessage_.topId() + 1;
-      auto iter = packetMap_.find(nextId);
-      if (iter == packetMap_.end())
-      {
-         //no such packet, return
-         return true;
-      }
-
-      //have the next packet, iterate over it
-      currentPacket = iter->second;
-      packetMap_.erase(iter);
-   } while (1);
+   auto msgId = currentMessage_.partialMessage_.getId();
+   if(msgId != lastValidMessageId_ + 1)
+      LOGWARN << "skipped msg id!";
+   lastValidMessageId_ = msgId;
 
    packet->messageID_ = currentMessage_.partialMessage_.getId();
    auto message = make_shared<BDVCommand>();
@@ -1373,19 +1352,7 @@ bool BDV_Server_Object::processPayload(shared_ptr<BDV_Payload>& packet,
 ///////////////////////////////////////////////////////////////////////////////
 void BDV_Server_Object::resetCurrentMessage()
 {
-   //remove packet ids current message is using from packetMap
-   auto& messagePacketMap = currentMessage_.partialMessage_.getPacketMap();
-
-   for (auto& packetPair : messagePacketMap)
-      packetMap_.erase(packetPair.first);
-
    currentMessage_.reset();
-   if (packetMap_.size() != 0)
-   {
-      auto iter = packetMap_.begin();
-      packetToReinject_ = iter->second;
-      packetMap_.erase(iter);
-   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1701,6 +1668,12 @@ void Clients::unregisterBDV(const string& bdvId)
       BDVs_.erase(bdvId);
    }
 
+   if (bdvPtr == nullptr)
+   {
+      LOGERR << "empty bdv ptr before unregistration";
+      return;
+   }
+
    bdvPtr->haltThreads();
 
    //we are done
@@ -1976,7 +1949,7 @@ void ZeroConfCallbacks_BDV::errorCallback(
 bool BDV_PartialMessage::parsePacket(shared_ptr<BDV_Payload> packet)
 {
    auto&& bdr = packet->packet_->data_.getRef();
-   auto result = partialMessage_.parsePacket(packet->packetID_, bdr);
+   auto result = partialMessage_.parsePacket(bdr);
    if (!result)
       return false;
 

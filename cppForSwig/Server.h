@@ -24,7 +24,12 @@
 #include "EncryptionUtils.h"
 #include "BlockDataManagerConfig.h"
 #include "SocketService.h"
+#include "AuthorizedPeers.h"
 
+#include "BIP150_151.h"
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+
+#define SERVER_AUTH_PEER_FILENAME "server.peers"
 
 class Clients;
 class BlockDataManagerThread;
@@ -65,19 +70,44 @@ struct BDV_packet
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-struct WriteStack
+struct PendingMessage
+{
+   const uint64_t id_;
+   const uint32_t msgid_;
+   std::shared_ptr <::google::protobuf::Message> message_;
+
+   PendingMessage(uint64_t id, uint32_t msgid, 
+      std::shared_ptr<::google::protobuf::Message> msg) :
+      id_(id), msgid_(msgid), message_(msg)
+   {}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct ClientConnectionState
 {
    struct lws *wsiPtr_ = nullptr;
-   shared_ptr<Queue<WebSocketMessage>> stack_;
-   WebSocketMessage currentMsg_;
-   shared_ptr<atomic<int>> count_;
+   std::shared_ptr<Queue<SerializedMessage>> serializedStack_;
+   SerializedMessage currentMsg_;
+   std::shared_ptr<std::atomic<int>> count_;
+   std::shared_ptr<BIP151Connection> bip151Connection_;
+   std::shared_ptr<std::atomic<unsigned>> lock_;
+   std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
+   std::shared_ptr<std::atomic<int>> closeFlag_;
 
-   WriteStack(struct lws *wsi) :
+   ClientConnectionState(struct lws *wsi, AuthPeersLambdas& lbds) :
       wsiPtr_(wsi)
    {
-      stack_ = make_shared<Queue<WebSocketMessage>>();
-      count_ = make_shared<atomic<int>>();
-      count_->store(0, memory_order_relaxed);
+      bip151Connection_ = std::make_shared<BIP151Connection>(lbds);
+
+      lock_ = std::make_shared<std::atomic<unsigned>>();
+      lock_->store(0);
+      serializedStack_ = std::make_shared<Queue<SerializedMessage>>();
+      
+      count_ = std::make_shared<std::atomic<int>>();
+      count_->store(0, std::memory_order_relaxed);
+
+      closeFlag_ = std::make_shared<std::atomic<int>>();
+      closeFlag_->store(0, std::memory_order_relaxed);
    }
 };
 
@@ -85,18 +115,22 @@ struct WriteStack
 class WebSocketServer
 {
 private:
-   vector<thread> threads_;
-   BlockingQueue<shared_ptr<BDV_packet>> packetQueue_;
-   TransactionalMap<uint64_t, WriteStack> writeMap_;
+   std::vector<std::thread> threads_;
+   BlockingQueue<std::shared_ptr<BDV_packet>> packetQueue_;
+   TransactionalMap<uint64_t, ClientConnectionState> clientStateMap_;
 
-   static atomic<WebSocketServer*> instance_;
-   static mutex mu_;
-   static promise<bool> shutdownPromise_;
-   static shared_future<bool> shutdownFuture_;
+   static std::atomic<WebSocketServer*> instance_;
+   static std::mutex mu_;
+   static std::promise<bool> shutdownPromise_;
+   static std::shared_future<bool> shutdownFuture_;
+   static BinaryData encInitPacket_;
    
-   unique_ptr<Clients> clients_;
-   atomic<unsigned> run_;
-   promise<bool> isReadyProm_;
+   std::unique_ptr<Clients> clients_;
+   std::atomic<unsigned> run_;
+   std::promise<bool> isReadyProm_;
+
+   BlockingQueue<std::unique_ptr<PendingMessage>> msgQueue_;
+   std::shared_ptr<AuthorizedPeers> authorizedPeers_;
 
 private:
    void webSocketService(int port);
@@ -104,6 +138,11 @@ private:
    void setIsReady(void);
    
    static WebSocketServer* getInstance(void);
+   void processAEADHandshake(uint64_t, BinaryData, bool);
+   void prepareWriteThread(void);
+
+   AuthPeersLambdas getAuthPeerLambda(void) const;
+   void closeClientConnection(uint64_t);
 
 public:
    WebSocketServer(void);
@@ -117,9 +156,10 @@ public:
    static void waitOnShutdown(void);
 
    static void write(const uint64_t&, const uint32_t&, 
-      shared_ptr<::google::protobuf::Message>);
+      std::shared_ptr<::google::protobuf::Message>);
    
-   shared_ptr<map<uint64_t, WriteStack>> getWriteMap(void);
+   std::shared_ptr<std::map<uint64_t, ClientConnectionState>> 
+      getConnectionStateMap(void) const;
    void addId(const uint64_t&, struct lws* ptr);
    void eraseId(const uint64_t&);
 };

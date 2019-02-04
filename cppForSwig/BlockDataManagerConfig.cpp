@@ -76,6 +76,8 @@ const string BlockDataManagerConfig::defaultRegtestBlkFileLocation_ =
    "~/.bitcoin/regtest/blocks";
 #endif
 
+string BlockDataManagerConfig::dataDir_ = "";
+
 ////////////////////////////////////////////////////////////////////////////////
 BlockDataManagerConfig::BlockDataManagerConfig() :
    cookie_(CryptoPRNG::generateRandom(32).toHexStr())
@@ -304,7 +306,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
 
       expandPath(dataDir_);
 
-      //get datadir
+      //get config file
       auto configPath = dataDir_;
       appendPath(configPath, "armorydb.conf");
 

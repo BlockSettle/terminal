@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2017, goatpig                                               //
+//  Copyright (C) 2017-2019, goatpig                                          //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -22,8 +22,8 @@
 #include "DerivationScheme.h"
 
 #define ARMORY_LEGACY_ACCOUNTID        0xF6E10000
-#define IMPORTS_ACCOUNTID              0
-#define ARMORY_LEGACY_ASSET_ACCOUNTID  1
+#define IMPORTS_ACCOUNTID              0x00000000
+#define ARMORY_LEGACY_ASSET_ACCOUNTID  0x00000001
 
 #define BIP32_LEGACY_OUTER_ACCOUNT_DERIVATIONID 0x00000000
 #define BIP32_LEGACY_INNER_ACCOUNT_DERIVATIONID 0x00000001
@@ -35,6 +35,10 @@
 #define ASSET_ACCOUNT_PREFIX     0xE1
 #define ASSET_COUNT_PREFIX       0xE2
 #define ASSET_TOP_INDEX_PREFIX   0xE3
+
+#define META_ACCOUNT_COMMENTS    0x000000C0
+#define META_ACCOUNT_AUTHPEER    0x000000C1
+#define META_ACCOUNT_PREFIX      0xF1
 
 class AccountException : public std::runtime_error
 {
@@ -67,10 +71,23 @@ enum AccountTypeEnum
    native P2WPKH, nested P2WPKH
    */
    AccountTypeEnum_BIP32_SegWit,
+
+   /*
+   BIP32 derivation scheme, derPath is used as is.
+   inner account is outer account.
+   no address type is assumed, this has to be provided at creation
+   */
    AccountTypeEnum_BIP32_Custom,
    
    AccountTypeEnum_BIP44,
    AccountTypeEnum_Custom
+};
+
+enum MetaAccountType
+{
+   MetaAccount_Unset = 0,
+   MetaAccount_Comments,
+   MetaAccount_AuthPeers
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -520,6 +537,84 @@ public:
    //Lockable virtuals
    void initAfterLock(void) {}
    void cleanUpBeforeUnlock(void) {}
+};
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+class MetaDataAccount : public Lockable
+{
+   friend struct AuthPeerAssetConversion;
+
+private:
+   MetaAccountType type_ = MetaAccount_Unset;
+   BinaryData ID_;
+   std::shared_ptr<LMDBEnv> dbEnv_ = nullptr;
+   LMDB* db_ = nullptr;
+
+   std::map<unsigned, std::shared_ptr<MetaData>> assets_;
+
+public:
+   //to search sets
+   bool operator<(const MetaDataAccount& rhs)
+   {
+      return type_ < rhs.type_;
+   }
+
+   struct find_by_id
+   {
+      const MetaAccountType type_;
+
+      find_by_id(const MetaAccountType& type) :
+         type_(type)
+      {}
+
+      bool operator()(const MetaDataAccount& account)
+      {
+         return type_ == account.type_;
+      }
+
+      bool operator()(const std::shared_ptr<MetaDataAccount>& account)
+      {
+         return type_ == account->type_;
+      }
+   };
+
+private:
+   bool writeAssetToDisk(std::shared_ptr<MetaData>);
+
+public:
+   MetaDataAccount(std::shared_ptr<LMDBEnv> dbEnv, LMDB* db) :
+      dbEnv_(dbEnv), db_(db)
+   {}
+   
+   //Lockable virtuals
+   void initAfterLock(void) {}
+   void cleanUpBeforeUnlock(void) {}
+
+   //storage methods
+   void readFromDisk(const BinaryData& key);
+   void commit(void);
+   void updateOnDisk(void);
+
+   //setup methods
+   void reset(void);
+   void make_new(MetaAccountType);
+
+   //
+   std::shared_ptr<MetaData> getMetaDataByIndex(unsigned) const;
+   void eraseMetaDataByIndex(unsigned);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct AuthPeerAssetConversion
+{
+   static std::map<std::string, const SecureBinaryData*> getAssetMap(
+      const MetaDataAccount*);
+   static std::map<SecureBinaryData, std::set<unsigned>> getKeyIndexMap(
+      const MetaDataAccount*);
+
+   static int addAsset(MetaDataAccount*, const SecureBinaryData&,
+      const std::initializer_list<std::string>&);
 };
 
 #endif
