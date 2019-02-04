@@ -421,6 +421,24 @@ bool BSTerminalMainWindow::InitSigningContainer()
    const auto &signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
    auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
+
+   QString pubKeyPath;
+
+   if (runMode == SignContainer::OpMode::Remote) {
+      pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
+
+      if (pubKeyPath.isEmpty()) {
+         BSMessageBox(BSMessageBox::messageBoxType::warning
+            , tr("Signer Remote Connection")
+            , tr("Public key is not imported for signer.")
+            , tr("Please import public key for remote signer on Signer settings page to connect.")
+            , this).exec();
+         return false;
+      }
+   } else if (runMode == SignContainer::OpMode::Local) {
+      pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
+   }
+
    if ((runMode == SignContainer::OpMode::Local)
       && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
       if (BSMessageBox(BSMessageBox::messageBoxType::question, tr("Signer Local Connection")
@@ -432,7 +450,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
    }
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_
+   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, pubKeyPath
       , runMode, signerHost, connectionManager_);
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
