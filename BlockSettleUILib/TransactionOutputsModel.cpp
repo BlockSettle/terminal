@@ -31,9 +31,6 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
 {
    switch (role) {
    case Qt::TextAlignmentRole:
-      if (index.column() == ColumnAmount) {
-         return Qt::AlignRight;
-      }
       return Qt::AlignLeft;
    case Qt::DisplayRole:
       return getRowData(index.column(), outputs_[index.row()]);

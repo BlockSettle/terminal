@@ -241,3 +241,13 @@ void CreateTransactionDialogSimple::onImportPressed()
 
    showAdvanced();
 }
+
+QLabel* CreateTransactionDialogSimple::labelTXAmount() const
+{
+   return ui_->labelTransactionAmount;
+}
+
+QLabel* CreateTransactionDialogSimple::labelTxOutputs() const
+{
+   return ui_->labelTXOutputs;
+}

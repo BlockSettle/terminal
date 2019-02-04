@@ -1089,3 +1089,14 @@ void CreateTransactionDialogAdvanced::setTxFees()
       ui_->spinBoxFeesManualTotal->setValue(transactionData_->totalFee());
    }
 }
+
+
+QLabel* CreateTransactionDialogAdvanced::labelTXAmount() const
+{
+   return ui_->labelTransactionAmount;
+}
+
+QLabel* CreateTransactionDialogAdvanced::labelTxOutputs() const
+{
+   return ui_->labelTXOutputs;
+}

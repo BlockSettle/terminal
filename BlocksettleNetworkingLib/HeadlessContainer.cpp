@@ -813,11 +813,13 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
                            , NetworkType netType
                            , const std::shared_ptr<ConnectionManager>& connectionManager
                            , const std::shared_ptr<ApplicationSettings>& appSettings
+                           , const QString& pubKeyPath
                            , OpMode opMode)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
-   , appSettings_(appSettings)
+   , appSettings_{appSettings}
+   , pubKeyPath_{pubKeyPath}
 {}
 
 // Establish the remote connection to the signer.
@@ -830,9 +832,7 @@ bool RemoteSigner::Start()
    // Load remote singer zmq pub key.
    // If the server pub key exists, proceed (it was initialized in LocalSigner::Start()).
    if (!zmqSignerPubKey_.getSize()){
-      const QString &zmqRemoteSignerPubKey = appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
-
-      if (!bs::network::readZmqKeyString(zmqRemoteSignerPubKey.toLatin1(), zmqSignerPubKey_, true
+      if (!bs::network::readZmqKeyString(pubKeyPath_.toLatin1(), zmqSignerPubKey_, true
          , logger_)) {
          logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
             "key.", __func__);
@@ -1045,9 +1045,10 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
                          , const QString &homeDir, NetworkType netType, const QString &port
                          , const std::shared_ptr<ConnectionManager>& connectionManager
                          , const std::shared_ptr<ApplicationSettings> &appSettings
+                         , const QString& pubKeyPath
                          , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-                  , connectionManager, appSettings, OpMode::Local)
+                  , connectionManager, appSettings, pubKeyPath, OpMode::Local)
 
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");
