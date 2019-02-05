@@ -19,7 +19,7 @@ public:
    {
       Unknown = 0,
       Friend = 1,
-      FriendRequest = 2
+      IncomingFriendRequest = 2
    } UserState;
 
    ChatUserData(QObject *parent = nullptr);

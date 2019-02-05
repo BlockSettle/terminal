@@ -19,8 +19,11 @@ public:
    void resetModel();
 
    bool isChatUserExist(const QString &userId) const;
+   bool isChatUserInContacts(const QString &userId) const;
 
-   TChatUserDataListPtr getChatUserList() const;
+   TChatUserDataListPtr chatUserDataList() const;
+
+   TChatUserDataPtr getUserByUserId(const QString &userId) const;
 
 signals:
    void chatUserDataListChanged(const TChatUserDataListPtr &chatUserDataList);
@@ -33,8 +36,6 @@ signals:
 public slots:
 
 private:
-   TChatUserDataListPtr::const_iterator getUserByUserId(const QString &userId) const;
-
    TChatUserDataListPtr _chatUserDataListPtr;
 };
 

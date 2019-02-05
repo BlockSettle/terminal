@@ -23,15 +23,16 @@ public:
            const std::shared_ptr<spdlog::logger>& logger);
 
    void readUsersFromDB();
-   void addChatUsers(const TUserIdList &userIdList);
-   void removeChatUsers(const TUserIdList &userIdList);
-   void replaceChatUsers(const TUserIdList &userIdList);
 
    TChatUserModelPtr chatUserModelPtr() const;
 
 signals:
 
 public slots:
+   void onAddChatUsers(const TUserIdList &userIdList);
+   void onRemoveChatUsers(const TUserIdList &userIdList);
+   void onReplaceChatUsers(const TUserIdList &userIdList);
+   void onIcomingFriendRequest(const TUserIdList &userIdList);
 
 private:
    TChatUserModelPtr _chatUserModelPtr;

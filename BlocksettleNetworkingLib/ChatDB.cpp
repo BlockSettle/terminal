@@ -9,7 +9,11 @@
 
 ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbFile)
    : logger_(logger)
-   , requiredTables_({QLatin1String("user_keys"), QLatin1String("room_keys"), QLatin1String("messages")})
+   , requiredTables_({
+      QLatin1String("user_keys"),
+      QLatin1String("room_keys"),
+      QLatin1String("messages"),
+      QLatin1String("contacts")})
 {
    db_ = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"), QLatin1String("chat"));
    db_.setDatabaseName(dbFile);
@@ -36,7 +40,7 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
          const QLatin1String query("CREATE TABLE IF NOT EXISTS contacts ("\
             "user_id CHAR(8) PRIMARY KEY,"\
             "user_name CHAR(64),"\
-            "friend_request BOOLEAN);");
+            "incoming_friend_request BOOLEAN);");
            if (!QSqlQuery(db).exec(query)) {
                return false;
            }
@@ -203,8 +207,7 @@ bool ChatDB::addKey(const QString& user, const autheid::PublicKey& key)
 bool ChatDB::isContactExist(const QString &userId)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT user_id FROM contacts " \
-      "WHERE user_id=:user_id"))) {
+   if (!query.prepare(QLatin1String("SELECT user_id FROM contacts WHERE user_id=:user_id;"))) {
       logger_->error("[ChatDB::isContactExist] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
@@ -228,13 +231,13 @@ bool ChatDB::addContact(const ContactUserData &contact)
    }
 
    QSqlQuery query(QLatin1String(
-      "INSERT INTO contacts(user_id, user_name, friend_request) VALUES(?, ?, ?);"), db_);
+      "INSERT INTO contacts(user_id, user_name, incoming_friend_request) VALUES(?, ?, ?);"), db_);
    query.bindValue(0, contact.userId());
    query.bindValue(1, contact.userName());
-   query.bindValue(2, contact.friendRequestState() ? 1 : 0);
+   query.bindValue(2, contact.incomingFriendRequest() ? 1 : 0);
 
    if (!query.exec()) {
-      logger_->error("[ChatDB::addContact] failed to insert new public key value to user_keys.");
+      logger_->error("[ChatDB::addContact] failed to insert new contact.");
       return false;
    }
 
@@ -252,7 +255,7 @@ bool ChatDB::removeContact(const ContactUserData &contact)
    query.bindValue(0, contact.userId());
 
    if (!query.exec()) {
-      logger_->error("[ChatDB::removeContact] failed to insert new public key value to user_keys.");
+      logger_->error("[ChatDB::removeContact] failed to delete contact.");
       return false;
    }
 
@@ -262,7 +265,7 @@ bool ChatDB::removeContact(const ContactUserData &contact)
 bool ChatDB::getContacts(TContactUserDataList &contactList)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT user_id, user_name, friend_request FROM contacts"))) {
+   if (!query.prepare(QLatin1String("SELECT user_id, user_name, friend_request FROM contacts;"))) {
       logger_->error("[ChatDB::getContacts] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
@@ -275,7 +278,7 @@ bool ChatDB::getContacts(TContactUserDataList &contactList)
       ContactUserData contact;
       contact.setUserId(query.value(0).toString());
       contact.setUserName(query.value(1).toString());
-      contact.setFriendRequestState(query.value(2).toBool());
+      contact.setIncomingFriendRequest(query.value(2).toBool());
       contactList.emplace_back(contact);
    }
    return true;
@@ -284,15 +287,15 @@ bool ChatDB::getContacts(TContactUserDataList &contactList)
 bool ChatDB::updateContact(const ContactUserData &contact)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=:user_name, friend_request=:friend_request WHERE user_id=:user_id"))) {
+   if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=:user_name, incoming_friend_request=:incoming_friend_request WHERE user_id=:user_id;"))) {
       logger_->error("[ChatDB::getContacts] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
    query.bindValue(QString::fromStdString(":user_id"), contact.userId());
    query.bindValue(QString::fromStdString(":user_name"), contact.userName());
-   query.bindValue(QString::fromStdString("friend_request"), contact.friendRequestState() ? 1 : 0);
+   query.bindValue(QString::fromStdString(":incoming_friend_request"), contact.incomingFriendRequest() ? 1 : 0);
    if (!query.exec()) {
-      logger_->error("[ChatDB::getContacts] failed to exec query: {}", query.lastError().text().toStdString());
+      logger_->error("[ChatDB::updateContact] failed to exec query: {}", query.lastError().text().toStdString());
       return false;
    }
 

@@ -54,6 +54,7 @@ private slots:
    void onUsersDeleted(const std::vector<std::string> &);
    void onSearchUserReturnPressed();
    void onChatUserRemoved(const TChatUserDataPtr &);
+   void onAddUserToContacts(const QString &userId);
 
 signals:
    void LoginFailed();

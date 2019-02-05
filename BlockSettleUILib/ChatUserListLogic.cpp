@@ -21,19 +21,15 @@ ChatUserListLogic::ChatUserListLogic(QObject *parent) : QObject(parent)
    _chatUserModelPtr = std::make_shared<ChatUserModel>(this);
 }
 
-void ChatUserListLogic::addChatUsers(const TUserIdList &userIdList)
+void ChatUserListLogic::onAddChatUsers(const TUserIdList &userIdList)
 {
    std::for_each(std::begin(userIdList), std::end(userIdList), [this](const std::string &userId)
    {
-      TChatUserDataListPtr chatUserDataListPtr = _chatUserModelPtr->getChatUserList();
       QString newUserId = QString::fromStdString(userId);
-      auto chatUserDataPtrIt = std::find_if(std::begin(chatUserDataListPtr), std::end(chatUserDataListPtr), [newUserId](const TChatUserDataPtr &chatUserDataPtr)->bool
-      {
-         return (0 == chatUserDataPtr->userId().compare(newUserId));
-      });
 
+      TChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(newUserId);
       // If not found, set online status and add new user
-      if (chatUserDataPtrIt == std::end(chatUserDataListPtr))
+      if (!chatUserDataPtr)
       {
          TChatUserDataPtr newChatUserData = std::make_shared<ChatUserData>();
          newChatUserData->setUserStatus(ChatUserData::Online);
@@ -44,40 +40,50 @@ void ChatUserListLogic::addChatUsers(const TUserIdList &userIdList)
       else
       // If found then set status to online
       {
-         _chatUserModelPtr->setUserStatus(chatUserDataPtrIt->get()->userId(), ChatUserData::Online);
+         _chatUserModelPtr->setUserStatus(chatUserDataPtr->userId(), ChatUserData::Online);
       }
    });
 }
 
-void ChatUserListLogic::removeChatUsers(const TUserIdList &userIdList)
+void ChatUserListLogic::onRemoveChatUsers(const TUserIdList &userIdList)
 {
    std::for_each(std::begin(userIdList), std::end(userIdList), [this](const std::string &userId)
    {
-      TChatUserDataListPtr chatUserDataListPtr = _chatUserModelPtr->getChatUserList();
       QString newUserId = QString::fromStdString(userId);
-      auto chatUserDataPtrIt = std::find_if(std::begin(chatUserDataListPtr), std::end(chatUserDataListPtr), [newUserId](const TChatUserDataPtr &chatUserDataPtr)->bool
-      {
-         return (0 == chatUserDataPtr->userName().compare(newUserId));
-      });
+      TChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(newUserId);
 
-      if (chatUserDataPtrIt != std::end(chatUserDataListPtr))
+      if (!chatUserDataPtr)
       {
-         if (chatUserDataPtrIt->get()->userState() == ChatUserData::Unknown)
+         if (chatUserDataPtr->userState() == ChatUserData::Unknown)
          {
-            _chatUserModelPtr->removeByUserId(chatUserDataPtrIt->get()->userId());
+            _chatUserModelPtr->removeByUserId(chatUserDataPtr->userId());
          }
          else
          {
-            _chatUserModelPtr->setUserStatus(chatUserDataPtrIt->get()->userId(), ChatUserData::Offline);
+            _chatUserModelPtr->setUserStatus(chatUserDataPtr->userId(), ChatUserData::Offline);
          }
       }
    });
 }
 
-void ChatUserListLogic::replaceChatUsers(const TUserIdList &userIdList)
+void ChatUserListLogic::onReplaceChatUsers(const TUserIdList &userIdList)
 {
-   removeChatUsers(userIdList);
-   addChatUsers(userIdList);
+   onRemoveChatUsers(userIdList);
+   onAddChatUsers(userIdList);
+}
+
+void ChatUserListLogic::onIcomingFriendRequest(const TUserIdList &userIdList)
+{
+   std::for_each(std::begin(userIdList), std::end(userIdList), [this](const std::string &userId)
+   {
+      QString searchUserId = QString::fromStdString(userId);
+      TChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(searchUserId);
+
+      if (!chatUserDataPtr)
+      {
+         _chatUserModelPtr->setUserState(searchUserId, ChatUserData::IncomingFriendRequest);
+      }
+   });
 }
 
 TChatUserModelPtr ChatUserListLogic::chatUserModelPtr() const
@@ -87,7 +93,6 @@ TChatUserModelPtr ChatUserListLogic::chatUserModelPtr() const
 
 void ChatUserListLogic::readUsersFromDB()
 {
-   TChatUserDataListPtr chatUserDataListPtr = _chatUserModelPtr->getChatUserList();
    TContactUserDataList contactUserDataList;
 
    if(!_client->getContacts(contactUserDataList))
@@ -99,9 +104,9 @@ void ChatUserListLogic::readUsersFromDB()
    std::for_each(std::begin(contactUserDataList), std::end(contactUserDataList), [=](const ContactUserData &contactUserData)
    {
       TChatUserDataPtr newChatUserData = std::make_shared<ChatUserData>();
-      if(contactUserData.friendRequestState())
+      if(contactUserData.incomingFriendRequest())
       {
-         newChatUserData->setUserState(ChatUserData::FriendRequest);
+         newChatUserData->setUserState(ChatUserData::IncomingFriendRequest);
       }
       else
       {

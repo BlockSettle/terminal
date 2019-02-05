@@ -23,13 +23,13 @@ public:
    QString userId() const { return _userId; }
    void setUserId(const QString &userId) { _userId = userId; }
 
-   bool friendRequestState() const { return _friendRequestState; }
-   void setFriendRequestState(bool friendRequestState) { _friendRequestState = friendRequestState; }
+   bool incomingFriendRequest() const { return _incomingFriendRequest; }
+   void setIncomingFriendRequest(bool incomingFriendRequest) { _incomingFriendRequest = incomingFriendRequest; }
 
 private:
    QString _userName;
    QString _userId;
-   bool _friendRequestState;
+   bool _incomingFriendRequest;
 };
 
 typedef std::vector<ContactUserData> TContactUserDataList;

@@ -283,6 +283,30 @@ void ChatClient::retrieveUserMessages(const QString &userId)
 
 bool ChatClient::getContacts(TContactUserDataList &contactList)
 {
-   //return chatDb_->getContacts(contactList);
-   return false;
+   return chatDb_->getContacts(contactList);
+}
+
+bool ChatClient::addOrUpdateContact(const QString &userId, const QString &userName, const bool &isIncomingFriendRequest)
+{
+   ContactUserData contact;
+   QString newUserName = userName;
+   if (newUserName.isEmpty())
+   {
+      newUserName = userId;
+   }
+   contact.setUserId(userId);
+   contact.setUserName(newUserName);
+   contact.setIncomingFriendRequest(isIncomingFriendRequest);
+
+   if (chatDb_->isContactExist(userId))
+   {
+      return chatDb_->updateContact(contact);
+   }
+
+   return chatDb_->addContact(contact);
+}
+
+void ChatClient::sendFriendRequest(const QString &friendUserId)
+{
+   // TODO
 }

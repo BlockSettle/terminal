@@ -167,11 +167,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
    connect(client_.get(), &ChatClient::UsersReplace,
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::replaceChatUsers);
+           _chatUserListLogicPtr.get(), &ChatUserListLogic::onReplaceChatUsers);
    connect(client_.get(), &ChatClient::UsersAdd,
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::addChatUsers);
+           _chatUserListLogicPtr.get(), &ChatUserListLogic::onAddChatUsers);
    connect(client_.get(), &ChatClient::UsersDel,
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::removeChatUsers);
+           _chatUserListLogicPtr.get(), &ChatUserListLogic::onRemoveChatUsers);
+   connect(client_.get(), &ChatClient::IncomingFriendRequest,
+           _chatUserListLogicPtr.get(), &ChatUserListLogic::onIcomingFriendRequest);
    connect(_chatUserListLogicPtr.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserRemoved,
            this, &ChatWidget::onChatUserRemoved);
 
@@ -221,6 +223,9 @@ void ChatWidget::changeState(ChatWidget::State state)
             stateCurrent_ = std::make_shared<ChatWidgetStateLoggedIn>(this);
 
             _chatUserListLogicPtr->readUsersFromDB();
+
+//            std::vector<std::string> testUsers = {"alpha", "bravo", "echo"};
+//            _chatUserListLogicPtr->onAddChatUsers(testUsers);
          }
          break;
       case State::LoggedOut:
@@ -277,13 +282,7 @@ void ChatWidget::onSearchUserReturnPressed()
    {
       popup_ = new ChatSearchPopup(this);
       connect(popup_, &ChatSearchPopup::addUserToContacts,
-         [this](const QString &)
-         {
-            // TODO: find user and add to contact list
-            popup_->deleteLater();
-            popup_ = nullptr;
-         }
-      );
+              this, &ChatWidget::onAddUserToContacts);
       qApp->installEventFilter(this);
    }
 
@@ -324,3 +323,22 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
    return QWidget::eventFilter(obj, event);
 }
 
+void ChatWidget::onAddUserToContacts(const QString &userId)
+{
+   // check if user isn't already in contacts
+   TChatUserModelPtr chatUserModelPtr = _chatUserListLogicPtr->chatUserModelPtr();
+   if (!chatUserModelPtr->isChatUserInContacts(userId))
+   {
+      // add user to contacts as friend
+      chatUserModelPtr->setUserState(userId, ChatUserData::Friend);
+      TChatUserDataPtr chatUserDataPtr = chatUserModelPtr->getUserByUserId(userId);
+      // save user in DB
+      client_->addOrUpdateContact(chatUserDataPtr->userId(), chatUserDataPtr->userName());
+      // and send friend request to ChatClient
+      client_->sendFriendRequest(chatUserDataPtr->userId());
+   }
+
+   popup_->deleteLater();
+   popup_ = nullptr;
+   qApp->removeEventFilter(this);
+}

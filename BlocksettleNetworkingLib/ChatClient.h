@@ -65,6 +65,10 @@ public:
    void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
 
    bool getContacts(TContactUserDataList &contactList);
+   bool addOrUpdateContact(const QString &userId,
+                           const QString &userName = QStringLiteral(""),
+                           const bool &isIncomingFriendRequest = false);
+   void sendFriendRequest(const QString &friendUserId);
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
@@ -78,6 +82,7 @@ signals:
    void UsersReplace(const std::vector<std::string>& users);
    void UsersAdd(const std::vector<std::string>& users);
    void UsersDel(const std::vector<std::string>& users);
+   void IncomingFriendRequest(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
 
 private slots:
