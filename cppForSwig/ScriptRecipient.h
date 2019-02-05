@@ -327,6 +327,9 @@ public:
 
    void serialize(void)
    {
+      if (binScript_.getSize() >= 0xfd)
+         throw ScriptRecipientException("invalid segwit script size");
+         
       if (script_.getSize() != 0)
          return;
 
@@ -343,10 +346,10 @@ public:
    size_t getSize(void) const
    {
       size_t varint_len = 1;
-      if (binScript_.getSize() >= 0xfd)
+      if (binScript_.getSize() + 2 >= 0xfd)
          varint_len = 3; //larger scripts would make the tx invalid
 
-      return 9 + binScript_.getSize();
+      return 10 + binScript_.getSize() + varint_len;
    }
 };
 

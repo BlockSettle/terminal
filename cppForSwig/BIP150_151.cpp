@@ -865,11 +865,12 @@ const int BIP151Connection::decryptPacket(const uint8_t* cipherData,
 {
    int retVal = -1;
 
-   if(inSes_.decPayload(cipherData, cipherSize, plainData, plainSize) != 0)
+   int result = inSes_.decPayload(cipherData, cipherSize, plainData, plainSize);
+   if (result != 0)
    {
       LOGERR << "BIP 151 - Session ID " << inSes_.getSessionIDHex()
          << " decryption failed (seq num " << inSes_.getSeqNum() - 1 << ").";
-      return retVal;
+      return result;
    }
 
    retVal = 0;
