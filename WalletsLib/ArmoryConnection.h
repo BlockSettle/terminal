@@ -34,7 +34,7 @@ public:
 
    void run(BDMAction action, void* ptr, int block = 0) override;
    void progress(BDMPhase phase,
-      const vector<string> &walletIdVec,
+      const std::vector<std::string> &walletIdVec,
       float progress, unsigned secondsRem,
       unsigned progressNumeric) override;
 
@@ -110,7 +110,7 @@ public:
                           std::function<void(BinaryData)> callback);
 
    bool estimateFee(unsigned int nbBlocks, std::function<void(float)>);
-   bool getFeeSchedule(std::function<void(map<unsigned int, float>)> cb);
+   bool getFeeSchedule(std::function<void(std::map<unsigned int, float>)> cb);
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
    bool isTransactionVerified(uint32_t blockNum) const;

@@ -76,21 +76,21 @@ namespace bs {
 
       class MetaData
       {
-         std::map<BinaryData, shared_ptr<AssetEntryMeta>>   data_;
+         std::map<BinaryData, std::shared_ptr<AssetEntryMeta>>   data_;
 
       protected:
          unsigned int      nbMetaData_;
 
          MetaData() : nbMetaData_(0) {}
 
-         shared_ptr<AssetEntryMeta> get(const BinaryData &key) const {
+         std::shared_ptr<AssetEntryMeta> get(const BinaryData &key) const {
             const auto itData = data_.find(key);
             if (itData != data_.end()) {
                return itData->second;
             }
             return nullptr;
          }
-         void set(const shared_ptr<AssetEntryMeta> &value);
+         void set(const std::shared_ptr<AssetEntryMeta> &value);
          void write(const std::shared_ptr<LMDBEnv> env, LMDB *db);
          void readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db);
       };

@@ -708,7 +708,8 @@ void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntr
 }
 
 
-void ArmoryCallback::progress(BDMPhase phase, const vector<string> &walletIdVec, float progress,
+void ArmoryCallback::progress(BDMPhase phase,
+   const std::vector<std::string> &walletIdVec, float progress,
    unsigned secondsRem, unsigned progressNumeric)
 {
    logger_->debug("[{}] {}, {} wallets, {} ({}), {} seconds remain", __func__

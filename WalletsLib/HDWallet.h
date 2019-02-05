@@ -99,7 +99,7 @@ namespace bs {
          bool           extOnlyAddresses_;
          std::string    dbFilename_;
          LMDB  *        db_ = nullptr;
-         shared_ptr<LMDBEnv>     dbEnv_ = nullptr;
+         std::shared_ptr<LMDBEnv>     dbEnv_ = nullptr;
          Nodes    rootNodes_;
          std::map<Path::Elem, std::shared_ptr<Group>>                groups_;
          mutable std::map<std::string, std::shared_ptr<bs::Wallet>>  leaves_;

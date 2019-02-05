@@ -4,7 +4,7 @@
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const shared_ptr<bs::SettlementAddressEntry> &addr
+   , const std::shared_ptr<bs::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
  : rtWallet_(rtWallet)
  , addressEntry_(addr)
@@ -231,7 +231,7 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
       auto txdata = tx.serialize();
       auto bctx = BCTX::parse(txdata);
 
-      map<BinaryData, map<unsigned, UTXO>> utxoMap;
+      std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
 
       utxoMap[utxo.getTxHash()][inputId] = utxo;
 
@@ -303,7 +303,7 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
 
 bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const shared_ptr<bs::SettlementAddressEntry> &addr
+   , const std::shared_ptr<bs::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
  : SettlementMonitor(rtWallet, armory, addr, logger)
 {}
@@ -359,7 +359,7 @@ void bs::SettlementMonitorQtSignals::onPayOutConfirmed(PayoutSigner::Type signed
 
 bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const shared_ptr<bs::SettlementAddressEntry> &addr
+   , const std::shared_ptr<bs::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
  : SettlementMonitor(rtWallet, armory, addr, logger)
 {}

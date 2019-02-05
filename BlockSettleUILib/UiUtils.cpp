@@ -28,7 +28,7 @@
 // this symbol should be used as group separator, not ' ' ( space )
 static const QChar defaultGroupSeparatorChar = QLatin1Char(0xa0);
 
-template <typename T> bool contains(const vector<T>& v, const T& value)
+template <typename T> bool contains(const std::vector<T>& v, const T& value)
 {
    return std::find(v.begin(), v.end(), value) != v.end();
 }

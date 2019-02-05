@@ -1,8 +1,8 @@
 #include "SettlementAddressEntry.h"
 
-std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementAssetEntry::getAddressEntry(const shared_ptr<SettlementAssetEntry> &assetPtr)
+std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementAssetEntry::getAddressEntry(const std::shared_ptr<SettlementAssetEntry> &assetPtr)
 {
-   std::shared_ptr<SettlementAssetEntry> sae = dynamic_pointer_cast<SettlementAssetEntry>(assetPtr);
+   std::shared_ptr<SettlementAssetEntry> sae = std::dynamic_pointer_cast<SettlementAssetEntry>(assetPtr);
    if (sae == nullptr) {
       throw AssetException("Asset entry is not SettlementAssetEntry");
    }

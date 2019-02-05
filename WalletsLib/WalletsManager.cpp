@@ -804,7 +804,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
          }
          if (txOuts.size() == 1) {
             const auto addr = txOuts[0].getScrAddressStr();
-            const auto settlAE = dynamic_pointer_cast<bs::SettlementAddressEntry>(GetSettlementWallet()->getAddressEntryForAddr(addr));
+            const auto settlAE = std::dynamic_pointer_cast<bs::SettlementAddressEntry>(GetSettlementWallet()->getAddressEntryForAddr(addr));
             if (settlAE) {
                const auto &cbPayout = [this, cb, txKey, inAddrs](bs::PayoutSigner::Type poType) {
                   if (poType == bs::PayoutSigner::SignedBySeller) {
@@ -1016,7 +1016,7 @@ void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned l
       }
       if (wallet.second->GetShortName() == cc) {
          wallet.second->SetDescription(ccDesc.toStdString());
-         const auto ccWallet = dynamic_pointer_cast<bs::hd::Leaf>(wallet.second);
+         const auto ccWallet = std::dynamic_pointer_cast<bs::hd::Leaf>(wallet.second);
          if (ccWallet) {
             ccWallet->setData(genesisAddr.toStdString());
             ccWallet->setData(nbSatoshis);
