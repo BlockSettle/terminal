@@ -1,5 +1,5 @@
-#include "chatsearchpopup.h"
-#include "ui_chatsearchpopup.h"
+#include "ChatSearchPopup.h"
+#include "ui_ChatSearchPopup.h"
 
 #include <QLabel>
 #include <QMenu>

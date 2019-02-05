@@ -490,7 +490,12 @@
   <customwidget>
    <class>ChatSearchLineEdit</class>
    <extends>QLineEdit</extends>
-   <header location="global">chatsearchlineedit.h</header>
+   <header location="global">ChatSearchLineEdit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BSChatInput</class>
+   <extends>QTextEdit</extends>
+   <header location="global">BSChatInput.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
