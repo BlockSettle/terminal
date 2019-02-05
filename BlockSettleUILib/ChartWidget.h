@@ -42,6 +42,7 @@ protected:
    void setChartStyle();
    void createCandleChartAxis();
    void createVolumeChartAxis();
+   void setupTimeAxis(QDateTimeAxis* axis, bool labelsVisible, int interval = -1);
    void buildCandleChart(int interval = -1);
    void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
 
