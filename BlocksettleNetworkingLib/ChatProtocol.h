@@ -411,7 +411,7 @@ namespace Chat
    class PendingMessagesResponse : public Response
    {
    public: 
-      PendingMessagesResponse(const QString& message_id, QString& id = QString());
+      PendingMessagesResponse(const QString& message_id, const QString& id = QString());
       QString getMessageId();
       QString getId() const;
       void setId(QString& id);

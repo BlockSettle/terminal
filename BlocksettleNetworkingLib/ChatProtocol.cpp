@@ -728,7 +728,7 @@ const autheid::PublicKey& SendOwnPublicKeyResponse::getSendingNodePublicKey() co
    return sendingNodePublicKey_;
 }
 
-Chat::PendingMessagesResponse::PendingMessagesResponse(const QString & message_id, QString &id)
+Chat::PendingMessagesResponse::PendingMessagesResponse(const QString & message_id, const QString &id)
    : Response(ResponseType::ResponsePendingMessage),   id_(id), message_id_(message_id)
 {
 
