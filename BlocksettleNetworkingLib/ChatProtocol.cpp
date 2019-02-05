@@ -758,7 +758,8 @@ QJsonObject Chat::PendingMessagesResponse::toJson() const
 std::shared_ptr<Response> Chat::PendingMessagesResponse::fromJSON(const std::string & jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-   return std::make_shared<PendingMessagesResponse>(data[MessageIdKey].toString());
+   QString messageId = data[MessageIdKey].toString();
+   return std::make_shared<PendingMessagesResponse>(messageId);
 }
 
 void Chat::PendingMessagesResponse::handle(ResponseHandler &)
