@@ -406,15 +406,51 @@ void WebSocketServer::commandThread()
          continue;
       }
 
+      if (leftOverData_.getSize() != 0)
+      {
+         leftOverData_.append(packetPtr->data_);
+         packetPtr->data_ = move(leftOverData_);
+         leftOverData_.clear();
+      }
+
       auto& bip151Connection = iter->second.bip151Connection_;
       if (bip151Connection->connectionComplete())
       {
          //decrypt packet
          size_t plainTextSize = packetPtr->data_.getSize() - POLY1305MACLEN;
-         if (bip151Connection->decryptPacket(
+         auto result = bip151Connection->decryptPacket(
             packetPtr->data_.getPtr(), packetPtr->data_.getSize(),
-            (uint8_t*)packetPtr->data_.getPtr(), packetPtr->data_.getSize()) != 0)
+            (uint8_t*)packetPtr->data_.getPtr(), packetPtr->data_.getSize());
+
+         if (result != 0)
          {
+            if (result <= WEBSOCKET_MESSAGE_PACKET_SIZE && result > -1)
+            {
+               /*
+               lws receives packet in the order the counterpart sent them, but
+               it may break down a packet into several payloads, dependent on the
+               write buffer fillrate.
+
+               The AEAD layer requires full packets to verify the attached MAC, 
+               meaning we cannot distinguish between packets with invalid encryption
+               and partially transmitted packets with valid encryption until we have
+               as many bytes as the advertized chacha20 size available to us.
+
+               At same time we can reject packets that advertize a size superior to
+               our expected maximum packet size (WEBSOCKET_MESSAGE_PACKET_SIZE), 
+               which is often the case when deciphering the length of an invalidly
+               encrypted packet.
+
+               Since lws does not spill packets onto one another, there is no risk
+               that the data we receive carries the head of another packet at its tail.
+               Reconstruction is therefor a simple case of appending the incoming data
+               to the previous left over until we have enough data to decrypt for the 
+               advertized packet size.
+               */
+               leftOverData_ = move(packetPtr->data_);
+               continue;
+            }
+
             //failed to decrypt, kill connection
             closeClientConnection(packetPtr->bdvID_);
             continue;

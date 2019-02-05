@@ -132,6 +132,8 @@ private:
    BlockingQueue<std::unique_ptr<PendingMessage>> msgQueue_;
    std::shared_ptr<AuthorizedPeers> authorizedPeers_;
 
+   BinaryData leftOverData_;
+
 private:
    void webSocketService(int port);
    void commandThread(void);

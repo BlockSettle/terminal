@@ -404,7 +404,8 @@ const int BIP151Session::encPayload(uint8_t* cipherData,
 //                  bytes smaller than the cipher. This is due to the results
 //                  not including the 16 byte Poly1305 tag.
 // OUT: plainData - The decrypted ciphertext data but no Poly1305 tag.
-// RET: -1 if failure, 0 if success
+// RET: -1 if failure, 0 if success. If the decrypted length is bigger than
+// than the potential max clear text size, return the decrypted length instead
 const int BIP151Session::decPayload(const uint8_t* cipherData,
                                     const size_t cipherSize,
                                     uint8_t* plainData,
@@ -422,7 +423,7 @@ const int BIP151Session::decPayload(const uint8_t* cipherData,
                                cipherSize);
    //sanity check
    if (decryptedLen + POLY1305MACLEN > cipherSize)
-      return retVal;
+      return decryptedLen;
 
    if(chacha20poly1305_crypt(&sessionCTX_,
                              seqNum_,
@@ -855,7 +856,8 @@ const int BIP151Connection::assemblePacket(const uint8_t* plainData,
 //      plainSize - Decrypted buffer size.
 // OUT: plainData - The decrypted packet. Must be no more than 16 bytes smaller
 //                  than the cyphertext buffer.
-// RET: -1 if failure, 0 if success.
+// RET: -1 if failure, 0 if success. If the decrypted length is bigger than
+// than the potential max clear text size, return the decrypted length instead
 const int BIP151Connection::decryptPacket(const uint8_t* cipherData,
                                           const size_t& cipherSize,
                                           uint8_t* plainData,

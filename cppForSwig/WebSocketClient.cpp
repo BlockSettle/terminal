@@ -401,12 +401,33 @@ void WebSocketClient::readService()
          break;
       }
 
+      if (leftOverData_.getSize() != 0)
+      {
+         leftOverData_.append(payload);
+         payload = move(leftOverData_);
+         leftOverData_.clear();
+      }
+
       if (bip151Connection_->connectionComplete())
       {
          //decrypt packet
-         bip151Connection_->decryptPacket(
+         auto result = bip151Connection_->decryptPacket(
             payload.getPtr(), payload.getSize(),
             payload.getPtr(), payload.getSize());
+
+         if (result != 0)
+         {
+            //see WebSocketServer::commandThread for the explainantion
+            if (result <= WEBSOCKET_MESSAGE_PACKET_SIZE && result > -1)
+            {
+               leftOverData_ = move(payload);
+               continue;
+            }
+
+            shutdown();
+            return;
+         }
+
          payload.resize(payload.getSize() - POLY1305MACLEN);
       }
 

@@ -47,8 +47,8 @@ private:
    uint64_t spendableBalance_;
 
 private:
-   static void decorateUTXOs(shared_ptr<AssetWallet> const, vector<UTXO>&);
-   static function<vector<UTXO>(uint64_t)> getFetchLambdaFromWalletContainer(
+   static void decorateUTXOs(std::shared_ptr<AssetWallet> const, std::vector<UTXO>&);
+   static std::function<std::vector<UTXO>(uint64_t)> getFetchLambdaFromWalletContainer(
       WalletContainer* const walletContainer);
 
    static std::function<std::vector<UTXO>(uint64_t)> getFetchLambdaFromLockbox(

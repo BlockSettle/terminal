@@ -125,6 +125,7 @@ private:
    unsigned innerRekeyCount_ = 0;
 
    std::shared_ptr<AuthorizedPeers> authPeers_;
+   BinaryData leftOverData_;
 
 public:
    std::atomic<int> count_;
