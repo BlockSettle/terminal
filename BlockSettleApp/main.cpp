@@ -143,6 +143,7 @@ static int GuiApp(int argc, char** argv)
 
    app.setQuitOnLastWindowClosed(false);
    app.setAttribute(Qt::AA_DontShowIconsInMenus);
+   app.setAttribute(Qt::AA_EnableHighDpiScaling);
 
    QFileInfo localStyleSheetFile(QLatin1String("stylesheet.css"));
 
