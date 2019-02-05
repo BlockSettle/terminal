@@ -212,8 +212,8 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       case ResponseType::ResponseSendOwnPublicKey:
          return SendOwnPublicKeyResponse::fromJSON(jsonData);
       
-	  case ResponseType::ResponsePendingMessage:
-		  return PendingMessagesResponse::fromJSON(jsonData);
+     case ResponseType::ResponsePendingMessage:
+        return PendingMessagesResponse::fromJSON(jsonData);
 
       default:
          break;
@@ -729,39 +729,39 @@ const autheid::PublicKey& SendOwnPublicKeyResponse::getSendingNodePublicKey() co
 }
 
 Chat::PendingMessagesResponse::PendingMessagesResponse(const QString & message_id, QString &id)
-	: Response(ResponseType::ResponsePendingMessage),	id_(id), message_id_(message_id)
+   : Response(ResponseType::ResponsePendingMessage),   id_(id), message_id_(message_id)
 {
 
 }
 
 QString Chat::PendingMessagesResponse::getMessageId()
 {
-	return message_id_; 
+   return message_id_; 
 }
 
 QString Chat::PendingMessagesResponse::getId() const
 {
-	return id_;
+   return id_;
 }
 void Chat::PendingMessagesResponse::setId(QString& id)
 {
-	id_ = id;
+   id_ = id;
 }
 
 QJsonObject Chat::PendingMessagesResponse::toJson() const
 {
-	QJsonObject data = Response::toJson();
-	data[MessageIdKey] = message_id_;
-	return data;
+   QJsonObject data = Response::toJson();
+   data[MessageIdKey] = message_id_;
+   return data;
 }
 
 std::shared_ptr<Response> Chat::PendingMessagesResponse::fromJSON(const std::string & jsonData)
 {
-	QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-	return std::make_shared<PendingMessagesResponse>(data[MessageIdKey].toString());
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<PendingMessagesResponse>(data[MessageIdKey].toString());
 }
 
 void Chat::PendingMessagesResponse::handle(ResponseHandler &)
 {
-	return;
+   return;
 }
