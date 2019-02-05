@@ -32,6 +32,7 @@ static const QString DateTimeKey  = QStringLiteral("datetm");
 static const QString DataKey      = QStringLiteral("data");
 static const QString PublicKeyKey = QStringLiteral("public_key");
 static const QString CommandKey = QStringLiteral("cmd");
+static const QString MessageIdKey = QStringLiteral("message_id");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
@@ -70,6 +71,7 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseUsersList"        ,   ResponseType::ResponseUsersList       }
    ,   { "ResponseAskForPublicKey"  ,   ResponseType::ResponseAskForPublicKey }
    ,   { "ResponseSendOwnPublicKey" ,   ResponseType::ResponseSendOwnPublicKey}
+   ,   { "ResponsePendingMessage"   ,   ResponseType::ResponsePendingMessage  }
 };
 
 
@@ -83,6 +85,7 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseUsersList        ,  "ResponseUsersList"        }
    ,   { ResponseType::ResponseAskForPublicKey  ,  "ResponseAskForPublicKey"  }
    ,   { ResponseType::ResponseSendOwnPublicKey ,  "ResponseSendOwnPublicKey" }
+   ,   { ResponseType::ResponsePendingMessage   ,  "ResponsePendingMessage"   }
 };
 
 
@@ -208,6 +211,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseSendOwnPublicKey:
          return SendOwnPublicKeyResponse::fromJSON(jsonData);
+      
+     case ResponseType::ResponsePendingMessage:
+        return PendingMessagesResponse::fromJSON(jsonData);
 
       default:
          break;
@@ -722,3 +728,41 @@ const autheid::PublicKey& SendOwnPublicKeyResponse::getSendingNodePublicKey() co
    return sendingNodePublicKey_;
 }
 
+Chat::PendingMessagesResponse::PendingMessagesResponse(const QString & message_id, const QString &id)
+   : Response(ResponseType::ResponsePendingMessage),   id_(id), message_id_(message_id)
+{
+
+}
+
+QString Chat::PendingMessagesResponse::getMessageId()
+{
+   return message_id_; 
+}
+
+QString Chat::PendingMessagesResponse::getId() const
+{
+   return id_;
+}
+void Chat::PendingMessagesResponse::setId(QString& id)
+{
+   id_ = id;
+}
+
+QJsonObject Chat::PendingMessagesResponse::toJson() const
+{
+   QJsonObject data = Response::toJson();
+   data[MessageIdKey] = message_id_;
+   return data;
+}
+
+std::shared_ptr<Response> Chat::PendingMessagesResponse::fromJSON(const std::string & jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QString messageId = data[MessageIdKey].toString();
+   return std::make_shared<PendingMessagesResponse>(messageId);
+}
+
+void Chat::PendingMessagesResponse::handle(ResponseHandler &)
+{
+   return;
+}

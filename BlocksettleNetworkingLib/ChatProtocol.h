@@ -46,6 +46,7 @@ namespace Chat
    ,   ResponseUsersList
    ,   ResponseAskForPublicKey
    ,   ResponseSendOwnPublicKey
+   ,   ResponsePendingMessage
    };
 
 
@@ -105,8 +106,8 @@ namespace Chat
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       virtual void handle(ResponseHandler &) = 0;
+     ResponseType getType() { return messageType_; }
    };
-
 
    class HeartbeatPingRequest : public Request
    {
@@ -405,6 +406,21 @@ namespace Chat
       MessagesResponse(std::vector<std::string> dataList);
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       void handle(ResponseHandler &) override;
+   };
+
+   class PendingMessagesResponse : public Response
+   {
+   public: 
+      PendingMessagesResponse(const QString& message_id, const QString& id = QString());
+      QString getMessageId();
+      QString getId() const;
+      void setId(QString& id);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      void handle(ResponseHandler &);
+   protected:
+      QString id_;
+      QString message_id_;
    };
 
 
