@@ -29,6 +29,16 @@ if(APPLE)
 	set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "macOS architecture to build; 64-bit is expected" FORCE)
 endif(APPLE)
 
+# Enforce Windows 7 minimum target and MSVS 2017 compiler minimum.
+IF(WIN32)
+	SET(_WIN32_WINNT 0x0601 CACHE INTERNAL "Setting _WIN32_WINNT to 0x0601 for Windows 7 minimum APIs.")
+	SET(WINVER 0x0601 CACHE INTERNAL "Setting WINVER to 0x0601 for Windows 7 minimum APIs.")
+
+	IF(MSVC_VERSION LESS 1910)
+		MESSAGE(FATAL_ERROR "MSVC 141 or higher is required to build the BlockSettle Terminal.")
+	ENDIF()
+ENDIF()
+
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
 SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
