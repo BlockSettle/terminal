@@ -46,9 +46,10 @@ namespace DBTestUtils
 ///////////////////////////////////////////////////////////////////////////////
 struct BDV_Payload
 {
-   std::shared_ptr<BDV_packet> packet_;
+   BinaryData packetData_;
    std::shared_ptr<BDV_Server_Object> bdvPtr_;
    uint32_t messageID_;
+   uint64_t bdvID_;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

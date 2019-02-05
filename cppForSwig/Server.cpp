@@ -28,7 +28,7 @@ BinaryData WebSocketServer::encInitPacket_ = READHEX("010000000B");
 ///////////////////////////////////////////////////////////////////////////////
 WebSocketServer::WebSocketServer()
 {
-   clients_ = make_unique<Clients>();
+   clients_ = make_shared<Clients>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -83,8 +83,10 @@ int WebSocketServer::callback(
 
       auto instance = WebSocketServer::getInstance();
       instance->addId(session_data->id_, wsi);
-      instance->processAEADHandshake(
-         session_data->id_, encInitPacket_, true);
+
+      auto packetPtr = make_shared<BDV_packet>(session_data->id_);
+      packetPtr->data_ = encInitPacket_;
+      instance->packetQueue_.push_back(move(packetPtr));
 
       break;
    }
@@ -101,7 +103,7 @@ int WebSocketServer::callback(
 
    case LWS_CALLBACK_RECEIVE:
    {
-      auto packetPtr = make_shared<BDV_packet>(session_data->id_, wsi);
+      auto packetPtr = make_shared<BDV_packet>(session_data->id_);
       packetPtr->data_.resize(len);
       memcpy(packetPtr->data_.getPtr(), (uint8_t*)in, len);
 
@@ -117,22 +119,22 @@ int WebSocketServer::callback(
       auto iter = stateMap->find(session_data->id_);
       if (iter == stateMap->end())
       {
-         //no connection state object, kill this connection
+         //no client object, kill this connection
          return -1;
       }
 
-      if (iter->second.closeFlag_->load(memory_order_relaxed) == -1)
+      if (iter->second.run_->load(memory_order_relaxed) == -1)
       {
          //connection flagged for closing
          return -1;
       }
 
       auto& stateObj = iter->second;
-      if (stateObj.currentMsg_.isDone())
+      if (stateObj.currentWriteMsg_.isDone())
       {
          try
          {
-            stateObj.currentMsg_ =
+            stateObj.currentWriteMsg_ =
                move(stateObj.serializedStack_->pop_front());
          }
          catch (IsEmpty&)
@@ -144,7 +146,7 @@ int WebSocketServer::callback(
          }
       }
       
-      auto& ws_msg = stateObj.currentMsg_;
+      auto& ws_msg = stateObj.currentWriteMsg_;
 
       auto& packet = ws_msg.getNextPacket();
       auto body = (uint8_t*)packet.getPtr() + LWS_PRE;
@@ -160,7 +162,7 @@ int WebSocketServer::callback(
             " bytes, sent " << m << " bytes";
       }
 
-      if (stateObj.currentMsg_.isDone())
+      if (stateObj.currentWriteMsg_.isDone())
          stateObj.count_->fetch_sub(1, memory_order_relaxed);
       /***
       In case several threads are trying to write to the same socket, it's
@@ -211,14 +213,25 @@ void WebSocketServer::start(BlockDataManagerThread* bdmT, bool async)
 
    instance->threads_.push_back(thread(commandThr));
 
-   //start write threads
+   //read & write threads
    auto writeProcessThread = [instance](void)->void
    {
       instance->prepareWriteThread();
    };
 
-   for(unsigned i=0; i<3; i++)
+   auto readProcessThread = [instance](void)->void
+   {
+      instance->clientInterruptThread();
+   };
+
+   unsigned parserThreads = thread::hardware_concurrency() / 4;
+   if (parserThreads == 0)
+      parserThreads = 1;
+   for (unsigned i = 0; i < parserThreads; i++)
+   {
       instance->threads_.push_back(thread(writeProcessThread));
+      instance->threads_.push_back(thread(readProcessThread));
+   }
 
    auto port = stoi(bdmT->bdm()->config().listenPort_);
    if (port == 0)
@@ -258,6 +271,7 @@ void WebSocketServer::shutdown()
       return;
 
    instance->msgQueue_.terminate();
+   instance->clientConnectionInterruptQueue_.terminate();
    instance->clients_->shutdown();
    instance->run_.store(0, memory_order_relaxed);
    instance->packetQueue_.terminate();
@@ -390,13 +404,6 @@ void WebSocketServer::commandThread()
          continue;
       }
 
-      //check wsi is valid
-      if (packetPtr->wsiPtr_ == nullptr)
-      {
-         LOGWARN << "null wsi";
-         continue;
-      }
-
       //get connection state object
       auto stateMap = getConnectionStateMap();
       auto iter = stateMap->find(packetPtr->bdvID_);
@@ -406,125 +413,44 @@ void WebSocketServer::commandThread()
          continue;
       }
 
-      if (leftOverData_.getSize() != 0)
-      {
-         leftOverData_.append(packetPtr->data_);
-         packetPtr->data_ = move(leftOverData_);
-         leftOverData_.clear();
-      }
-
-      auto& bip151Connection = iter->second.bip151Connection_;
-      if (bip151Connection->connectionComplete())
-      {
-         //decrypt packet
-         size_t plainTextSize = packetPtr->data_.getSize() - POLY1305MACLEN;
-         auto result = bip151Connection->decryptPacket(
-            packetPtr->data_.getPtr(), packetPtr->data_.getSize(),
-            (uint8_t*)packetPtr->data_.getPtr(), packetPtr->data_.getSize());
-
-         if (result != 0)
-         {
-            if (result <= WEBSOCKET_MESSAGE_PACKET_SIZE && result > -1)
-            {
-               /*
-               lws receives packet in the order the counterpart sent them, but
-               it may break down a packet into several payloads, dependent on the
-               write buffer fillrate.
-
-               The AEAD layer requires full packets to verify the attached MAC, 
-               meaning we cannot distinguish between packets with invalid encryption
-               and partially transmitted packets with valid encryption until we have
-               as many bytes as the advertized chacha20 size available to us.
-
-               At same time we can reject packets that advertize a size superior to
-               our expected maximum packet size (WEBSOCKET_MESSAGE_PACKET_SIZE), 
-               which is often the case when deciphering the length of an invalidly
-               encrypted packet.
-
-               Since lws does not spill packets onto one another, there is no risk
-               that the data we receive carries the head of another packet at its tail.
-               Reconstruction is therefor a simple case of appending the incoming data
-               to the previous left over until we have enough data to decrypt for the 
-               advertized packet size.
-               */
-               leftOverData_ = move(packetPtr->data_);
-               continue;
-            }
-
-            //failed to decrypt, kill connection
-            closeClientConnection(packetPtr->bdvID_);
-            continue;
-         }
-
-         packetPtr->data_.resize(plainTextSize);
-      }
-
-      uint8_t msgType = 
-         WebSocketMessagePartial::getPacketType(packetPtr->data_.getRef());
-
-      if (msgType > WS_MSGTYPE_AEAD_THESHOLD)
-      {
-         processAEADHandshake(packetPtr->bdvID_, move(packetPtr->data_), false);
-         continue;
-      }
-
-      if (bip151Connection->getBIP150State() != BIP150State::SUCCESS)
-      {
-         //can't get this far without fully setup AEAD
-         closeClientConnection(packetPtr->bdvID_);
-         continue;
-      }
-
-      BinaryDataRef bdr((uint8_t*)&packetPtr->bdvID_, 8);
-      auto&& hexID = bdr.toHexStr();
-      auto bdvPtr = clients_->get(hexID);
-
-      if (bdvPtr != nullptr)
-      {
-         //create payload
-         auto bdv_payload = make_shared<BDV_Payload>();
-         bdv_payload->bdvPtr_ = bdvPtr;
-         bdv_payload->packet_ = packetPtr;
-  
-         //queue for clients thread pool to process
-         clients_->queuePayload(bdv_payload);
-      }
-      else
-      {
-         //unregistered command
-         WebSocketMessagePartial msgObj;
-         msgObj.parsePacket(packetPtr->data_);
-         if (msgObj.getType() != WS_MSGTYPE_SINGLEPACKET)
-         {
-            //invalid msg type, kill connection
-            continue;
-         }
-
-         auto&& messageRef = msgObj.getSingleBinaryMessage();
-            
-         if (messageRef.getSize() == 0)
-         {
-            //invalid msg, kill connection
-            continue;
-         }
-
-         //process command 
-         auto message = make_shared<::Codec_BDVCommand::StaticCommand>();
-         if (!message->ParseFromArray(messageRef.getPtr(), messageRef.getSize()))
-         {
-            //invalid msg, kill connection
-            continue;
-         }
-
-         auto&& reply = clients_->processUnregisteredCommand(
-            packetPtr->bdvID_, message);
-
-         //reply
-         write(packetPtr->bdvID_, msgObj.getId(), reply);
-      }
+      iter->second.readQueue_->push_back(move(packetPtr->data_));
+      clientConnectionInterruptQueue_.push_back(move(packetPtr->bdvID_));
    }
 
    DatabaseContainer_Sharded::clearThreadShardTx(this_thread::get_id());
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WebSocketServer::clientInterruptThread()
+{
+   while (true)
+   {
+      uint64_t clientId;
+      try
+      {
+         clientId = clientConnectionInterruptQueue_.pop_front();
+      }
+      catch(StopBlockingLoop&)
+      {
+         break;
+      }
+
+      auto clientMap = clientStateMap_.get();
+      auto iter = clientMap->find(clientId);
+      if (iter == clientMap->end())
+         continue;
+
+      auto& ccs = iter->second;
+      unsigned zero = 0;
+      if (!ccs.readLock_->compare_exchange_weak(zero, 1))
+      {
+         clientConnectionInterruptQueue_.push_back(move(clientId));
+         continue;
+      }
+
+      ccs.processReadQueue(clients_);
+      ccs.readLock_->store(0);
+   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -565,7 +491,7 @@ void WebSocketServer::prepareWriteThread()
 
       //grab state object lock
       unsigned zero = 0;
-      if(!statePtr->lock_->compare_exchange_weak(zero, 1))
+      if(!statePtr->writeLock_->compare_exchange_weak(zero, 1))
       { 
          msgQueue_.push_back(move(msg));
          continue;
@@ -641,7 +567,7 @@ void WebSocketServer::prepareWriteThread()
       statePtr->count_->fetch_add(1, memory_order_relaxed);
 
       //reset lock
-      statePtr->lock_->store(0);
+      statePtr->writeLock_->store(0);
 
       //call write callback
       lws_callback_on_writable(statePtr->wsiPtr_);
@@ -660,7 +586,7 @@ void WebSocketServer::waitOnShutdown()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-shared_ptr<map<uint64_t, ClientConnectionState>> 
+shared_ptr<map<uint64_t, ClientConnection>> 
    WebSocketServer::getConnectionStateMap() const
 {
    return clientStateMap_.get();
@@ -670,7 +596,7 @@ shared_ptr<map<uint64_t, ClientConnectionState>>
 void WebSocketServer::addId(const uint64_t& id, struct lws* ptr)
 {
    auto&& lbds = getAuthPeerLambda();
-   auto&& write_pair = make_pair(id, ClientConnectionState(ptr, lbds));
+   auto&& write_pair = make_pair(id, ClientConnection(ptr, id, lbds));
    clientStateMap_.insert(move(write_pair));
 }
 
@@ -678,249 +604,6 @@ void WebSocketServer::addId(const uint64_t& id, struct lws* ptr)
 void WebSocketServer::eraseId(const uint64_t& id)
 {
    clientStateMap_.erase(id);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void WebSocketServer::processAEADHandshake(
-   uint64_t id, BinaryData msg, bool async)
-{
-   auto writeToClient = [](
-      ClientConnectionState& ccs, uint8_t type, 
-      const vector<uint8_t>& msg, bool encrypt)->void
-   {
-      BIP151Connection* connPtr = nullptr;
-      if (encrypt)
-         connPtr = ccs.bip151Connection_.get();
-      SerializedMessage aeadMsg;
-      aeadMsg.construct(msg, connPtr, type);
-      ccs.serializedStack_->push_back(move(aeadMsg));
-      ccs.count_->fetch_add(1, memory_order_relaxed);
-
-      //call write callback
-      lws_callback_on_writable(ccs.wsiPtr_);
-   };
-
-   auto processHandshake = [id, &writeToClient](
-      const BinaryData& msgdata, ClientConnectionState& clientState)->bool
-   {
-      mutex mu;
-      WebSocketMessagePartial wsMsg;
-      
-      if (!wsMsg.parsePacket(msgdata.getRef()) || !wsMsg.isReady())
-      {
-         //invalid packet
-         return false;
-      }
-
-      auto dataBdr = wsMsg.getSingleBinaryMessage();
-      switch (wsMsg.getType())
-      {
-      case WS_MSGTYPE_AEAD_SETUP:
-      {
-         unique_lock<mutex> lock(mu);
-         //init bip151 handshake
-         vector<uint8_t> encinitData(ENCINITMSGSIZE);
-         if (clientState.bip151Connection_->getEncinitData(
-               &encinitData[0], ENCINITMSGSIZE,
-               BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0)
-         {
-            //failed to init handshake, kill connection
-            return false;
-         }
-
-         writeToClient(clientState, WS_MSGTYPE_AEAD_ENCINIT, encinitData, false);
-         break;
-      }
-
-      case WS_MSGTYPE_AEAD_ENCACK:
-      {
-         //process client encack
-         if (clientState.bip151Connection_->processEncack(
-            dataBdr.getPtr(), dataBdr.getSize(), true) != 0)
-         {
-            //failed to init handshake, kill connection
-            return false;
-         }
-
-         break;
-      }
-
-      case WS_MSGTYPE_AEAD_REKEY:
-      {
-         if (clientState.bip151Connection_->getBIP150State() !=
-            BIP150State::SUCCESS)
-         {
-            //can't rekey before auth, kill connection
-            return false;
-         }
-
-         //process rekey
-         if (clientState.bip151Connection_->processEncack(
-            dataBdr.getPtr(), dataBdr.getSize(), false) != 0)
-         {
-            //failed to init handshake, kill connection
-            LOGWARN << "failed to process rekey";
-            return false;
-         }
-
-         break;
-      }
-
-      case WS_MSGTYPE_AEAD_ENCINIT:
-      {
-         unique_lock<mutex> lock(mu);
-         //process client encinit
-         if (clientState.bip151Connection_->processEncinit(
-            dataBdr.getPtr(), dataBdr.getSize(), false) != 0)
-         {
-            //failed to init handshake, kill connection
-            return false;
-         }
-
-         //return encack
-         vector<uint8_t> encackData(BIP151PUBKEYSIZE);
-         if (clientState.bip151Connection_->getEncackData(
-            &encackData[0], BIP151PUBKEYSIZE) != 0)
-         {
-            //failed to init handshake, kill connection
-            return false;
-         }
-
-         writeToClient(
-            clientState, WS_MSGTYPE_AEAD_ENCACK, encackData, false);
-
-         break;
-      }
-
-      case WS_MSGTYPE_AUTH_CHALLENGE:
-      {
-         bool goodChallenge = true;
-         auto challengeResult =
-            clientState.bip151Connection_->processAuthchallenge(
-               dataBdr.getPtr(),
-               dataBdr.getSize(),
-               true); //true: step #1 of 6
-
-         if(challengeResult == -1)
-         {
-            //auth fail, kill connection
-            return false;
-         }
-         else if (challengeResult == 1)
-         {
-            goodChallenge = false;
-         }
-
-         BinaryData authreplyBuf(BIP151PRVKEYSIZE * 2);
-         if (clientState.bip151Connection_->getAuthreplyData(
-            authreplyBuf.getPtr(),
-            authreplyBuf.getSize(),
-            true, //true: step #2 of 6
-            goodChallenge) == -1)
-         {
-            //auth setup failure, kill connection
-            return false;
-         }
-
-         writeToClient(
-            clientState, WS_MSGTYPE_AUTH_REPLY,
-            authreplyBuf.getDataVector(), true);
-
-         break;
-      }
-
-      case WS_MSGTYPE_AUTH_PROPOSE:
-      {
-         bool goodPropose = true;
-         auto proposeResult = clientState.bip151Connection_->processAuthpropose(
-            dataBdr.getPtr(),
-            dataBdr.getSize());
-
-         if(proposeResult == -1)
-         {
-            //auth setup failure, kill connection
-            return false;
-         }
-         else if (proposeResult == 1)
-         {
-            goodPropose = false;
-         }
-         else
-         {
-            //keep track of the propose check state
-            clientState.bip151Connection_->setGoodPropose();
-         }
-
-         BinaryData authchallengeBuf(BIP151PRVKEYSIZE);
-         if(clientState.bip151Connection_->getAuthchallengeData(
-            authchallengeBuf.getPtr(),
-            authchallengeBuf.getSize(),
-            "", //empty string, use chosen key from processing auth propose
-            false, //false: step #4 of 6
-            goodPropose) == -1)
-         { 
-            //auth setup failure, kill connection
-            return false;
-         }
-
-         writeToClient(
-            clientState, WS_MSGTYPE_AUTH_CHALLENGE,
-            authchallengeBuf.getDataVector(), true);
-
-         break;
-      }
-
-      case WS_MSGTYPE_AUTH_REPLY:
-      {
-         if (clientState.bip151Connection_->processAuthreply(
-            dataBdr.getPtr(),
-            dataBdr.getSize(),
-            false,
-            clientState.bip151Connection_->getProposeFlag()) != 0)
-         {
-            //invalid auth setup, kill connection
-            return false;
-         }
-
-         //rekey after succesful BIP150 handshake
-         clientState.bip151Connection_->bip150HandshakeRekey();
-         clientState.outKeyTimePoint_ = chrono::system_clock::now();
-
-         break;
-      }
-         
-      default:
-         //unexpected msg id, kill connection
-         return false;
-      }
-
-      return true;
-   };
-
-   auto processAEAD = [this, id, &processHandshake](BinaryData msgdata)->void
-   {
-      auto clientStateMap = getConnectionStateMap();
-      auto iter = clientStateMap->find(id);
-      if (iter == clientStateMap->end())
-      {
-         //invalid client id, return
-         return;
-      }
-
-      if (!processHandshake(msgdata, iter->second))
-         closeClientConnection(id);
-   };
-
-   if (async)
-   {
-      thread thr(processAEAD, move(msg));
-      if (thr.joinable())
-         thr.detach();
-
-      return;
-   }
-
-   processAEAD(move(msg));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -958,5 +641,368 @@ void WebSocketServer::closeClientConnection(uint64_t id)
       return;
    }
 
-   iter->second.closeFlag_->store(-1, memory_order_relaxed);
+   iter->second.closeConnection();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// ClientConnection
+//
+///////////////////////////////////////////////////////////////////////////////
+void ClientConnection::processReadQueue(shared_ptr<Clients> clients)
+{
+   while (run_->load(memory_order_relaxed) != -1)
+   {
+      BinaryData packetData;
+      try
+      {
+         packetData = move(readQueue_->pop_front());
+      }
+      catch (IsEmpty&)
+      {
+         //end loop condition
+         return;
+      }
+
+      if (packetData.getSize() == 0)
+      {
+         LOGWARN << "empty command packet";
+         continue;
+      }
+
+      if (readLeftOverData_.getSize() != 0)
+      {
+         readLeftOverData_.append(packetData);
+         packetData = move(readLeftOverData_);
+         readLeftOverData_.clear();
+      }
+
+      if (bip151Connection_->connectionComplete())
+      {
+         //decrypt packet
+         size_t plainTextSize = packetData.getSize() - POLY1305MACLEN;
+         auto result = bip151Connection_->decryptPacket(
+            packetData.getPtr(), packetData.getSize(),
+            (uint8_t*)packetData.getPtr(), packetData.getSize());
+
+         if (result != 0)
+         {
+            if (result <= WEBSOCKET_MESSAGE_PACKET_SIZE && result > -1)
+            {
+               /*
+               lws receives packet in the order the counterpart sent them, but
+               it may break down a packet into several payloads, dependent on the
+               write buffer fillrate.
+
+               The AEAD layer requires full packets to verify the attached MAC,
+               meaning we cannot distinguish between packets with invalid encryption
+               and partially transmitted packets with valid encryption until we have
+               as many bytes as the advertized chacha20 size available to us.
+
+               At same time we can reject packets that advertize a size superior to
+               our expected maximum packet size (WEBSOCKET_MESSAGE_PACKET_SIZE),
+               which is often the case when deciphering the length of an invalidly
+               encrypted packet.
+
+               Since lws does not spill packets onto one another, there is no risk
+               that the data we receive carries the head of another packet at its tail.
+               Reconstruction is therefor a simple case of appending the incoming data
+               to the previous left over until we have enough data to decrypt for the
+               advertized packet size.
+               */
+               readLeftOverData_ = move(packetData);
+               continue;
+            }
+
+            //failed to decrypt, kill connection
+            closeConnection();
+            continue;
+         }
+
+         packetData.resize(plainTextSize);
+      }
+
+      uint8_t msgType =
+         WebSocketMessagePartial::getPacketType(packetData.getRef());
+
+      if (msgType > WS_MSGTYPE_AEAD_THESHOLD)
+      {
+         processAEADHandshake(move(packetData));
+         continue;
+      }
+
+      if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)
+      {
+         //can't get this far without fully setup AEAD
+         closeConnection();
+         continue;
+      }
+
+      BinaryDataRef bdr((uint8_t*)&id_, 8);
+      auto&& hexID = bdr.toHexStr();
+      auto bdvPtr = clients->get(hexID);
+
+      if (bdvPtr != nullptr)
+      {
+         //create payload
+         auto bdv_payload = make_shared<BDV_Payload>();
+         bdv_payload->bdvPtr_ = bdvPtr;
+         bdv_payload->packetData_ = move(packetData);
+         bdv_payload->bdvID_ = id_;
+
+         //queue for clients thread pool to process
+         clients->queuePayload(bdv_payload);
+      }
+      else
+      {
+         //unregistered command
+         WebSocketMessagePartial msgObj;
+         msgObj.parsePacket(packetData);
+         if (msgObj.getType() != WS_MSGTYPE_SINGLEPACKET)
+         {
+            //invalid msg type, kill connection
+            continue;
+         }
+
+         auto&& messageRef = msgObj.getSingleBinaryMessage();
+
+         if (messageRef.getSize() == 0)
+         {
+            //invalid msg, kill connection
+            continue;
+         }
+
+         //process command 
+         auto message = make_shared<::Codec_BDVCommand::StaticCommand>();
+         if (!message->ParseFromArray(messageRef.getPtr(), messageRef.getSize()))
+         {
+            //invalid msg, kill connection
+            continue;
+         }
+
+         auto&& reply = clients->processUnregisteredCommand(
+            id_, message);
+
+         //reply
+         WebSocketServer::write(id_, msgObj.getId(), reply);
+      }
+   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void ClientConnection::processAEADHandshake(BinaryData msg)
+{
+   auto writeToClient = [this](uint8_t type,
+      const vector<uint8_t>& msg, bool encrypt)->void
+   {
+      BIP151Connection* connPtr = nullptr;
+      if (encrypt)
+         connPtr = bip151Connection_.get();
+      SerializedMessage aeadMsg;
+      aeadMsg.construct(msg, connPtr, type);
+      serializedStack_->push_back(move(aeadMsg));
+      count_->fetch_add(1, memory_order_relaxed);
+
+      //call write callback
+      lws_callback_on_writable(wsiPtr_);
+   };
+
+   auto processHandshake = [this, &writeToClient](const BinaryData& msgdata)->bool
+   {
+      WebSocketMessagePartial wsMsg;
+
+      if (!wsMsg.parsePacket(msgdata.getRef()) || !wsMsg.isReady())
+      {
+         //invalid packet
+         return false;
+      }
+
+      auto dataBdr = wsMsg.getSingleBinaryMessage();
+      switch (wsMsg.getType())
+      {
+      case WS_MSGTYPE_AEAD_SETUP:
+      {
+         //init bip151 handshake
+         vector<uint8_t> encinitData(ENCINITMSGSIZE);
+         if (bip151Connection_->getEncinitData(
+            &encinitData[0], ENCINITMSGSIZE,
+            BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0)
+         {
+            //failed to init handshake, kill connection
+            return false;
+         }
+
+         writeToClient(WS_MSGTYPE_AEAD_ENCINIT, encinitData, false);
+         break;
+      }
+
+      case WS_MSGTYPE_AEAD_ENCACK:
+      {
+         //process client encack
+         if (bip151Connection_->processEncack(
+            dataBdr.getPtr(), dataBdr.getSize(), true) != 0)
+         {
+            //failed to init handshake, kill connection
+            return false;
+         }
+
+         break;
+      }
+
+      case WS_MSGTYPE_AEAD_REKEY:
+      {
+         if (bip151Connection_->getBIP150State() !=
+            BIP150State::SUCCESS)
+         {
+            //can't rekey before auth, kill connection
+            return false;
+         }
+
+         //process rekey
+         if (bip151Connection_->processEncack(
+            dataBdr.getPtr(), dataBdr.getSize(), false) != 0)
+         {
+            //failed to init handshake, kill connection
+            LOGWARN << "failed to process rekey";
+            return false;
+         }
+
+         break;
+      }
+
+      case WS_MSGTYPE_AEAD_ENCINIT:
+      {
+         //process client encinit
+         if (bip151Connection_->processEncinit(
+            dataBdr.getPtr(), dataBdr.getSize(), false) != 0)
+         {
+            //failed to init handshake, kill connection
+            return false;
+         }
+
+         //return encack
+         vector<uint8_t> encackData(BIP151PUBKEYSIZE);
+         if (bip151Connection_->getEncackData(
+            &encackData[0], BIP151PUBKEYSIZE) != 0)
+         {
+            //failed to init handshake, kill connection
+            return false;
+         }
+
+         writeToClient(WS_MSGTYPE_AEAD_ENCACK, encackData, false);
+
+         break;
+      }
+
+      case WS_MSGTYPE_AUTH_CHALLENGE:
+      {
+         bool goodChallenge = true;
+         auto challengeResult =
+            bip151Connection_->processAuthchallenge(
+               dataBdr.getPtr(),
+               dataBdr.getSize(),
+               true); //true: step #1 of 6
+
+         if (challengeResult == -1)
+         {
+            //auth fail, kill connection
+            return false;
+         }
+         else if (challengeResult == 1)
+         {
+            goodChallenge = false;
+         }
+
+         BinaryData authreplyBuf(BIP151PRVKEYSIZE * 2);
+         if (bip151Connection_->getAuthreplyData(
+            authreplyBuf.getPtr(),
+            authreplyBuf.getSize(),
+            true, //true: step #2 of 6
+            goodChallenge) == -1)
+         {
+            //auth setup failure, kill connection
+            return false;
+         }
+
+         writeToClient(WS_MSGTYPE_AUTH_REPLY,
+            authreplyBuf.getDataVector(), true);
+
+         break;
+      }
+
+      case WS_MSGTYPE_AUTH_PROPOSE:
+      {
+         bool goodPropose = true;
+         auto proposeResult = bip151Connection_->processAuthpropose(
+            dataBdr.getPtr(),
+            dataBdr.getSize());
+
+         if (proposeResult == -1)
+         {
+            //auth setup failure, kill connection
+            return false;
+         }
+         else if (proposeResult == 1)
+         {
+            goodPropose = false;
+         }
+         else
+         {
+            //keep track of the propose check state
+            bip151Connection_->setGoodPropose();
+         }
+
+         BinaryData authchallengeBuf(BIP151PRVKEYSIZE);
+         if (bip151Connection_->getAuthchallengeData(
+            authchallengeBuf.getPtr(),
+            authchallengeBuf.getSize(),
+            "", //empty string, use chosen key from processing auth propose
+            false, //false: step #4 of 6
+            goodPropose) == -1)
+         {
+            //auth setup failure, kill connection
+            return false;
+         }
+
+         writeToClient(WS_MSGTYPE_AUTH_CHALLENGE,
+            authchallengeBuf.getDataVector(), true);
+
+         break;
+      }
+
+      case WS_MSGTYPE_AUTH_REPLY:
+      {
+         if (bip151Connection_->processAuthreply(
+            dataBdr.getPtr(),
+            dataBdr.getSize(),
+            false,
+            bip151Connection_->getProposeFlag()) != 0)
+         {
+            //invalid auth setup, kill connection
+            return false;
+         }
+
+         //rekey after succesful BIP150 handshake
+         bip151Connection_->bip150HandshakeRekey();
+         outKeyTimePoint_ = chrono::system_clock::now();
+
+         break;
+      }
+
+      default:
+         //unexpected msg id, kill connection
+         return false;
+      }
+
+      return true;
+   };
+
+   if (!processHandshake(msg))
+      closeConnection();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void ClientConnection::closeConnection()
+{
+   run_->store(-1, memory_order_relaxed);
 }

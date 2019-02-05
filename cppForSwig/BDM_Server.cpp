@@ -1785,7 +1785,7 @@ void Clients::messageParserThread(void)
       //write return value if any
       if (result != nullptr)
          WebSocketServer::write(
-            payloadPtr->packet_->bdvID_, payloadPtr->messageID_, result);
+            payloadPtr->bdvID_, payloadPtr->messageID_, result);
    }
 }
 
@@ -1806,7 +1806,7 @@ shared_ptr<Message> Clients::processCommand(shared_ptr<BDV_Payload>
          return nullptr;
 
       result = processUnregisteredCommand(
-         payloadPtr->packet_->bdvID_, staticCommand);
+         payloadPtr->bdvID_, staticCommand);
    }
 
    return result;
@@ -1948,7 +1948,7 @@ void ZeroConfCallbacks_BDV::errorCallback(
 ///////////////////////////////////////////////////////////////////////////////
 bool BDV_PartialMessage::parsePacket(shared_ptr<BDV_Payload> packet)
 {
-   auto&& bdr = packet->packet_->data_.getRef();
+   auto&& bdr = packet->packetData_.getRef();
    auto result = partialMessage_.parsePacket(bdr);
    if (!result)
       return false;

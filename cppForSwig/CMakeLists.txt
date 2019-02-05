@@ -64,6 +64,7 @@ SET (HEADERS
    Assets.h
    AssetEncryption.h
    AsyncClient.h
+   AuthorizedPeers.h
    BDVCodec.h
    BinaryData.h
    BIP150_151.h
