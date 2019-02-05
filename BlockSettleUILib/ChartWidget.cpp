@@ -14,14 +14,14 @@ ChartWidget::ChartWidget(QWidget *parent)
    ui_->setupUi(this);
 
    // setting up date range radio button group
-   dateRange_.addButton(ui_->btn1h, TradesDB::Interval::OneHour);
-   dateRange_.addButton(ui_->btn6h, TradesDB::Interval::SixHours);
-   dateRange_.addButton(ui_->btn12h, TradesDB::Interval::TwelveHours);
-   dateRange_.addButton(ui_->btn24h, TradesDB::Interval::TwentyFourHours);
-   dateRange_.addButton(ui_->btn1w, TradesDB::Interval::OneWeek);
-   dateRange_.addButton(ui_->btn1m, TradesDB::Interval::OneMonth);
-   dateRange_.addButton(ui_->btn6m, TradesDB::Interval::SixMonths);
-   dateRange_.addButton(ui_->btn1y, TradesDB::Interval::OneYear);
+   dateRange_.addButton(ui_->btn1h, DataPointsLocal::Interval::OneHour);
+   dateRange_.addButton(ui_->btn6h, DataPointsLocal::Interval::SixHours);
+   dateRange_.addButton(ui_->btn12h, DataPointsLocal::Interval::TwelveHours);
+   dateRange_.addButton(ui_->btn24h, DataPointsLocal::Interval::TwentyFourHours);
+   dateRange_.addButton(ui_->btn1w, DataPointsLocal::Interval::OneWeek);
+   dateRange_.addButton(ui_->btn1m, DataPointsLocal::Interval::OneMonth);
+   dateRange_.addButton(ui_->btn6m, DataPointsLocal::Interval::SixMonths);
+   dateRange_.addButton(ui_->btn1y, DataPointsLocal::Interval::OneYear);
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked), 
       this, &ChartWidget::onDateRangeChanged);
 
@@ -219,7 +219,7 @@ void ChartWidget::buildCandleChart(int interval) {
        product = QStringLiteral("EUR/GBP");
    }
    auto rawData = client_->getRawPointDataArray(product
-                                                , static_cast<TradesDB::Interval>(interval));
+                                                , static_cast<DataPointsLocal::Interval>(interval));
    for (const auto& dp : rawData) {
        addDataPoint(dp->open, dp->high, dp->low, dp->close, dp->timestamp, dp->volume);
    }
@@ -246,7 +246,7 @@ void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, q
 // Handles changes of date range.
 void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
-   auto interval = static_cast<TradesDB::Interval>(id);
+   auto interval = static_cast<DataPointsLocal::Interval>(id);
    buildCandleChart(interval);
 
    /*auto candlestickAxisX = qobject_cast<QDateTimeAxis*>(ui_->viewPrice->chart()->axisX(priceSeries_));

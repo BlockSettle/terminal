@@ -6,7 +6,8 @@
 #include <QObject>
 
 #include "CommonTypes.h"
-#include "TradesDB.h"
+//#include "TradesDB.h"
+#include "DataPointsLocal.h"
 
 namespace spdlog {
    class logger;
@@ -31,9 +32,9 @@ public:
 
     void init();
 
-    const std::vector<TradesDB::DataPoint*> getRawPointDataArray(
+    const std::vector<DataPointsLocal::DataPoint*> getRawPointDataArray(
             const QString &product
-            , TradesDB::Interval interval = TradesDB::Interval::Unknown
+            , DataPointsLocal::Interval interval = DataPointsLocal::Interval::Unknown
             , qint64 maxCount = 100);
 
 public slots:
@@ -45,7 +46,7 @@ private:
     std::shared_ptr<ApplicationSettings>   appSettings_;
     std::shared_ptr<spdlog::logger>        logger_;
 
-    std::unique_ptr<TradesDB>              tradesDb_;
+    std::unique_ptr<DataPointsLocal>       tradesDb_;
 };
 
 #endif // CHARTSCLIENT_H
