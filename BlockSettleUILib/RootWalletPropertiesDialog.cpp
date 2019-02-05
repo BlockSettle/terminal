@@ -107,7 +107,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
       }
       connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RootWalletPropertiesDialog::onHDLeafCreated);
-      infoReqId_ = signingContainer_->GetInfo(wallet_);
+      infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
    }
 
    ui_->treeViewWallets->expandAll();
@@ -186,7 +186,7 @@ void RootWalletPropertiesDialog::onChangePassword()
 
    if (result == QDialog::Accepted) {
       // Update wallet encryption type
-      infoReqId_ = signingContainer_->GetInfo(wallet_);
+      infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
    }
 }
 

@@ -36,9 +36,9 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    const auto &signingWallet = transactionData_->GetSigningWallet();
    if (signingWallet) {
       const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(signingWallet->GetWalletId());
-      infoReqId_ = signingContainer_->GetInfo(rootWallet);
       walletName_ = rootWallet->getName();
       walletId_ = rootWallet->getWalletId();
+      infoReqId_ = signingContainer_->GetInfo(walletId_);
    }
    else {
       throw std::runtime_error("missing signing wallet");

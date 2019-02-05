@@ -43,7 +43,7 @@ WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wa
       connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &WalletBackupDialog::onHDWalletInfo);
       connect(signingContainer_.get(), &SignContainer::Error, this, &WalletBackupDialog::onContainerError);
 
-      infoReqId_ = signingContainer_->GetInfo(wallet_);
+      infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
    }
 
    outputFile_ = outputDir_ + "/backup_wallet_" + wallet->getName() + "_" + wallet->getWalletId();

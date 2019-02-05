@@ -266,6 +266,7 @@ void TransactionsWidget::init(const std::shared_ptr<WalletsManager> &walletsMgr
    logger_ = logger;
 
    connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
+   connect(walletsManager_.get(), &WalletsManager::walletDeleted, this, &TransactionsWidget::walletsChanged);
 }
 
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)

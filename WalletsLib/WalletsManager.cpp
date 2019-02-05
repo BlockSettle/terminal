@@ -638,12 +638,14 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
    }
 
    const auto &leaves = wallet->getLeaves();
+   const bool prevState = blockSignals(true);
    for (const auto &leaf : leaves) {
       leaf->UnregisterWallet();
    }
    for (const auto &leaf : leaves) {
       EraseWallet(leaf);
    }
+   blockSignals(prevState);
 
    const auto itId = std::find(hdWalletsId_.begin(), hdWalletsId_.end(), wallet->getWalletId());
    if (itId != hdWalletsId_.end()) {
