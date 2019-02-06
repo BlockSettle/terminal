@@ -11,6 +11,11 @@ CustomChartView::CustomChartView(QWidget *parent)
    this->setMouseTracking(true);
 }
 
+void CustomChartView::setZoomFactor(const qreal &zoomFactor) {
+   zoomFactor_ = zoomFactor;
+   applyZoom(chart()->plotArea().center());
+}
+
 void CustomChartView::mousePressEvent(QMouseEvent *ev) {
    if (ev->button() == Qt::LeftButton) {
       if (bDragEnabled_) {
@@ -57,6 +62,7 @@ void CustomChartView::mouseMoveEvent(QMouseEvent *ev) {
 void CustomChartView::wheelEvent(QWheelEvent *ev) {
    if (bZoomEnabled_)
       performZoom(ev);
+   qDebug() << "Zoom enabled:" << bZoomEnabled_ << "Zoom factor:" << zoomFactor_;
    QChartView::wheelEvent(ev);
 }
 
@@ -73,7 +79,7 @@ void CustomChartView::performZoom(QWheelEvent *ev) {
    if (zoomFactor_ > minZoom_)
       zoomFactor_ = minZoom_;
 
-   QRectF rect = chart()->plotArea();
+   /*QRectF rect = chart()->plotArea();
    QPointF c = chart()->plotArea().center();
    // reset the zoom rect
    chart()->zoomReset();
@@ -89,6 +95,33 @@ void CustomChartView::performZoom(QWheelEvent *ev) {
    // and zoom it based on the zoomFactor
    chart()->zoomIn(rect);
    emit chartZoomed(ev);
+
+   // try to reposition the chart after zooming
+   auto deltaX = chart()->plotArea().center().x() - cursorX;
+   chart()->scroll(deltaX, 0);
+   qDebug() << deltaX << rect;*/
+   applyZoom(ev->posF());
+   emit chartZoomed(ev);
+}
+
+void CustomChartView::applyZoom(const QPointF &cursor)
+{
+   QRectF rect = chart()->plotArea();
+   QPointF c = chart()->plotArea().center();
+   // reset the zoom rect
+   chart()->zoomReset();
+   emit chartZoomReset();
+   // use the mouse x position so that the zoom
+   // is focused on where the mouse cursor is
+   auto cursorX = cursor.x();
+   c.setX(cursorX);
+   //qDebug() << "mouseX" << cursorX << rect;
+   rect.setWidth(zoomFactor_ * rect.width());
+   rect.moveCenter(c);
+
+   // and zoom it based on the zoomFactor
+   chart()->zoomIn(rect);
+//   emit chartZoomed(ev);
 
    // try to reposition the chart after zooming
    auto deltaX = chart()->plotArea().center().x() - cursorX;

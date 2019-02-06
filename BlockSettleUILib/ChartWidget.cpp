@@ -27,15 +27,15 @@ ChartWidget::ChartWidget(QWidget *parent)
 
    // these signals are used to sync volume chart with price chart
    // when scrolling and zooming
-   connect(ui_->viewPrice, &CustomChartView::chartZoomed,
-      ui_->viewVolume, &CustomChartView::onChartZoomed);
+   /*connect(ui_->viewPrice, &CustomChartView::chartZoomed,
+      ui_->viewVolume, &CustomChartView::onChartZoomed);*/
    connect(ui_->viewPrice, &CustomChartView::chartScrolled,
       ui_->viewVolume, &CustomChartView::onChartScrolled);
    connect(ui_->viewPrice, &CustomChartView::chartZoomReset,
       ui_->viewVolume, &CustomChartView::onChartZoomReset);
    // drag and zoom is enabled only for the price chart
    ui_->viewPrice->enableDrag(true);
-   ui_->viewPrice->enableZoom(true);
+//   ui_->viewPrice->enableZoom(true);
 
    connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
       this, &ChartWidget::onInstrumentChanged);
@@ -53,12 +53,18 @@ ChartWidget::ChartWidget(QWidget *parent)
    QPen pen(QRgb(0xffffff));
    pen.setWidth(1);
    priceSeries_->setPen(pen);
-   priceSeries_->setBodyOutlineVisible(false);
+   priceSeries_->setBodyOutlineVisible(/*false*/true);
+   priceSeries_->setBodyWidth(1.0);
+   priceSeries_->setMaximumColumnWidth(10);
+   priceSeries_->setMinimumColumnWidth(10);
    connect(priceSeries_, &QCandlestickSeries::hovered, this, &ChartWidget::onPriceHover);
 
    volumeSeries_ = new QCandlestickSeries(this);
    volumeSeries_->setIncreasingColor(QColor(32, 159, 223));
    volumeSeries_->setBodyOutlineVisible(false);
+   volumeSeries_->setBodyWidth(1.0);
+   volumeSeries_->setMaximumColumnWidth(10);
+   volumeSeries_->setMinimumColumnWidth(10);
 
    dataItemText_ = new QGraphicsTextItem(ui_->viewPrice->chart());
 }
@@ -231,24 +237,75 @@ void ChartWidget::buildCandleChart(int interval) {
    }
    auto rawData = client_->getRawPointDataArray(product
                                                 , static_cast<DataPointsLocal::Interval>(interval));
+   qreal maxPrice = 0.0;
+   qreal minPrice = -1.0;
+   qreal maxVolume = 0.0;
    for (const auto& dp : rawData) {
-       addDataPoint(dp->open, dp->high, dp->low, dp->close, dp->timestamp, dp->volume);
+      maxPrice = qMax(maxPrice, dp->high);
+      minPrice = minPrice == -1.0 ? dp->low : qMin(minPrice, dp->low);
+      maxVolume = qMax(maxVolume, dp->volume);
+      addDataPoint(dp->open, dp->high, dp->low, dp->close, dp->timestamp, dp->volume);
+      qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
+             , QDateTime::fromMSecsSinceEpoch(dp->timestamp).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
+             , dp->open
+             , dp->high
+             , dp->low
+             , dp->close
+             , dp->volume);
    }
    qDeleteAll(rawData);
+   auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
+   minPrice -= margin;
+   maxPrice += margin;
 
+   qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
    auto candlestickAxisY = qobject_cast<QValueAxis*>(ui_->viewPrice->chart()->axisY());
    if (candlestickAxisY) {
-       candlestickAxisY->applyNiceNumbers();
+      candlestickAxisY->setRange(minPrice, maxPrice);
+//      candlestickAxisY->applyNiceNumbers();
    }
    auto volumeAxisY = qobject_cast<QValueAxis*>(ui_->viewVolume->chart()->axisY());
    if (volumeAxisY) {
-       volumeAxisY->applyNiceNumbers();
+      volumeAxisY->setMax(maxVolume);
+//      volumeAxisY->applyNiceNumbers();
    }
+
+   qreal zoomFactor = getZoomFactor(interval);
+   qDebug("Update zoom factor: %f", zoomFactor);
+   ui_->viewPrice->setZoomFactor(zoomFactor);
+   ui_->viewVolume->setZoomFactor(zoomFactor);
 }
 
 void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume) {
    priceSeries_->append(new CustomCandlestickSet(open, high, low, close, volume, timestamp, priceSeries_));
    volumeSeries_->append(new QCandlestickSet(0.0, volume, 0.0, volume, timestamp, volumeSeries_));
+}
+
+qreal ChartWidget::getZoomFactor(int interval)
+{
+   if (interval == -1) {
+      return 1.0;
+   }
+   switch (static_cast<DataPointsLocal::Interval>(interval)) {
+   case DataPointsLocal::OneYear:
+      return 24.0 * 365; //0.0001;
+   case DataPointsLocal::SixMonths:
+      return 24.0 * 30 * 6; //0.0002;
+   case DataPointsLocal::OneMonth:
+      return 24.0 * 30; //0.0015;
+   case DataPointsLocal::OneWeek:
+      return 24.0 * 7.0; //0.006;
+   case DataPointsLocal::TwentyFourHours:
+      return 24.0; //0.042;
+   case DataPointsLocal::TwelveHours:
+      return 12.0; //0.083;
+   case DataPointsLocal::SixHours:
+      return 6.0; //0.16;
+   case DataPointsLocal::OneHour:
+      return 1.0;
+   default:
+      return 1.0;
+   }
 }
 
 // Handles changes of date range.

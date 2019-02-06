@@ -10,9 +10,10 @@ class CustomChartView : public QChartView
    Q_OBJECT
 
 public:
-    CustomChartView(QWidget *parent = nullptr);
-    void enableZoom(bool bEnable) { bZoomEnabled_ = bEnable; }
-    void enableDrag(bool bEnable) { bDragEnabled_ = bEnable;  }
+   CustomChartView(QWidget *parent = nullptr);
+   void enableZoom(bool bEnable) { bZoomEnabled_ = bEnable; }
+   void enableDrag(bool bEnable) { bDragEnabled_ = bEnable;  }
+   void setZoomFactor(const qreal &zoomFactor);
 
 protected:
    void mousePressEvent(QMouseEvent *);
@@ -32,6 +33,9 @@ public slots:
 
 private:
    void performZoom(QWheelEvent *ev);
+   void applyZoom(const QPointF &cursor);
+
+private:
    QPointF lastMousePos_;
    qreal zoomFactor_ = 1.0;
    qreal minZoom_ = 1.25;
