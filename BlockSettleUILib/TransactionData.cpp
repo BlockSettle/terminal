@@ -268,6 +268,9 @@ bool TransactionData::UpdateTransactionData()
 double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool force) const
 {
    if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
+      if (logger_) {
+         logger_->error("[TransactionData::CalculateMaxAmount] selInputs or wallet are missing");
+      }
       return -1;
    }
    if ((maxAmount_ > 0) && !force) {
@@ -278,13 +281,16 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
    std::vector<UTXO> transactions = decorateUTXOs();
 
    if (transactions.size() == 0) {
+      if (logger_) {
+         logger_->debug("[TransactionData::CalculateMaxAmount] empty input list");
+      }
       return 0;
    }
 
    std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
    for (const auto &recip : recipients_) {
       const auto recipPtr = recip.second->GetScriptRecipient();
-      if (!recipPtr) {
+      if (!recipPtr || !recipPtr->getValue()) {
          continue;
       }
       recipientsMap[recip.first] = recipPtr;
@@ -296,6 +302,9 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
       }
    }
    if (recipientsMap.empty()) {
+      if (logger_) {
+         logger_->debug("[TransactionData::CalculateMaxAmount] empty recipients list");
+      }
       return 0;
    }
    const PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
