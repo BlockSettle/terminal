@@ -12,20 +12,22 @@
 
 #include <vector>
 #include <map>
-#include <QDebug>
+#include <spdlog/spdlog.h>
 
 static const size_t kMaxTxStdWeight = 400000;
 
 
-TransactionData::TransactionData(onTransactionChanged changedCallback, bool SWOnly, bool confOnly)
-   : wallet_(nullptr)
+TransactionData::TransactionData(const onTransactionChanged &changedCallback
+   , const std::shared_ptr<spdlog::logger> &logger , bool SWOnly, bool confOnly)
+   : changedCallback_(changedCallback)
+   , logger_(logger)
+   , wallet_(nullptr)
    , selectedInputs_(nullptr)
    , feePerByte_(0)
    , nextId_(0)
    , coinSelection_(nullptr)
    , swTransactionsOnly_(SWOnly)
    , confirmedInputs_(confOnly)
-   , changedCallback_(changedCallback)
 {}
 
 TransactionData::~TransactionData()
@@ -194,8 +196,10 @@ bool TransactionData::UpdateTransactionData()
          const UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
-            qDebug() << "Bad virtual size value" << summary_.txVirtSize
-               << "- using estimateTXVirtSize() as a fallback";
+            if (logger_) {
+               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
+                  , summary_.txVirtSize);
+            }
             //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
             summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
@@ -210,13 +214,16 @@ bool TransactionData::UpdateTransactionData()
          try {
             selection = coinSelection_->getUtxoSelectionForRecipients(payment
                , transactions);
-         } catch (const std::runtime_error& err) {
-            qDebug() << "UpdateTransactionData (auto-selection) - "
-               << "coinSelection exception: " << err.what();
+         } catch (const std::runtime_error &err) {
+            if (logger_) {
+               logger_->error("UpdateTransactionData (auto-selection) - coinSelection exception: {}"
+                  , err.what());
+            }
             return false;
          } catch (...) {
-            qDebug() << "UpdateTransactionData (auto-selection) - "
-               << "coinSelection exception";
+            if (logger_) {
+               logger_->error("UpdateTransactionData (auto-selection) - coinSelection exception");
+            }
             return false;
          }
 
@@ -231,8 +238,10 @@ bool TransactionData::UpdateTransactionData()
          UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
-            qDebug() << "Bad virtual size value" << summary_.txVirtSize
-               << "- using estimateTXVirtSize() as a fallback";
+            if (logger_) {
+               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
+                  , summary_.txVirtSize);
+            }
             //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
             summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
@@ -395,12 +404,16 @@ UtxoSelection TransactionData::computeSizeAndFee(const std::vector<UTXO>& inUTXO
    try {
       selection.computeSizeAndFee(inPS);
    }
-   catch (const std::runtime_error& err) {
-      qDebug() << "UpdateTransactionData - UtxoSelection exception: "
-         << err.what();
+   catch (const std::runtime_error &err) {
+      if (logger_) {
+         logger_->error("UpdateTransactionData - UtxoSelection exception: {}"
+            , err.what());
+      }
    }
    catch (...) {
-      qDebug() << "UpdateTransactionData - UtxoSelection exception";
+      if (logger_) {
+         logger_->error("UpdateTransactionData - UtxoSelection exception");
+      }
    }
 
    return selection;

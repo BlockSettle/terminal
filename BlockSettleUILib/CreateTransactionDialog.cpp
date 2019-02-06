@@ -70,7 +70,7 @@ void CreateTransactionDialog::init()
       QMetaObject::invokeMethod(this, [this] {
          onTransactionUpdated();
       });
-   });
+   }, logger_);
 
    xbtValidator_ = new XbtAmountValidator(this);
    lineEditAmount()->setValidator(xbtValidator_);

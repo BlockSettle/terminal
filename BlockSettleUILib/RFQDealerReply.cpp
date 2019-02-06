@@ -312,7 +312,7 @@ void RFQDealerReply::reset()
       transactionData_ = nullptr;
       if (currentQRN_.assetType != bs::network::Asset::SpotFX) {
          transactionData_ = std::make_shared<TransactionData>([this]() { onTransactionDataChanged(); }
-            , true, true);
+            , logger_, true, true);
          if (walletsManager_ != nullptr) {
             const auto &cbFee = [this](float feePerByte) {
                transactionData_->setFeePerByte(feePerByte);
@@ -1124,7 +1124,7 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          wallet = walletsManager_->GetDefaultWallet();
       }
 
-      transData = std::make_shared<TransactionData>(TransactionData::onTransactionChanged{}, true, true);
+      transData = std::make_shared<TransactionData>(TransactionData::onTransactionChanged{}, logger_, true, true);
 
       transData->disableTransactionUpdate();
       transData->SetWallet(wallet, armory_->topBlock());
