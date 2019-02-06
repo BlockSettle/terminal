@@ -131,6 +131,7 @@ const std::vector<DataPointsLocal::DataPoint *> DataPointsLocal::getDataPoints(c
     if (!query.last()) {
         return result;
     }
+    query.next();
     while (query.previous()) {
         qreal open = query.value(QStringLiteral("open")).toDouble();
         qreal high = query.value(QStringLiteral("high")).toDouble();
@@ -138,28 +139,38 @@ const std::vector<DataPointsLocal::DataPoint *> DataPointsLocal::getDataPoints(c
         qreal close = query.value(QStringLiteral("close")).toDouble();
         qreal volume = query.value(QStringLiteral("volume")).toDouble();
         qint64 timestamp = query.value(QStringLiteral("timestamp")).toLongLong();
-        auto point = new DataPoint { .open = open
-                    , .high = high
-                    , .low = low
-                    , .close = close
-                    , .volume = volume
-                    , .timestamp = timestamp };
+        auto point = createDataPoint(open, high, low, close, volume, timestamp);
         if (result.size() > 0) {
             auto expected = intervalStart(timestamp, interval);
-            qint64 step = qAbs(timestamp - expected);
+            auto step = intervalEnd(timestamp, interval) - expected;
             auto previous = result.back()->timestamp;
-            while (expected - previous > step) {
-                auto emptyPoint = new DataPoint { .open = result.back()->close
-                            , .high = result.back()->close
-                            , .low = result.back()->close
-                            , .close = result.back()->close
-                            , .volume = 0
-                            , .timestamp = timestamp + step };
-                result.push_back(emptyPoint);
-                previous = result.back()->timestamp;
+            while (expected > previous + step) {
+               auto emptyPoint = createDataPoint(result.back()->close
+                                                 , result.back()->close
+                                                 , result.back()->close
+                                                 , result.back()->close
+                                                 , 0
+                                                 , previous + step);
+               result.push_back(emptyPoint);
+               previous = result.back()->timestamp;
             }
         }
         result.push_back(point);
+    }
+    if (result.size() > 0) {
+       auto now = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+       auto step = intervalEnd(now, interval) - intervalStart(now, interval);
+       auto next = now + step;
+       while (now > next) {
+          auto emptyPoint = createDataPoint(result.back()->close
+                                            , result.back()->close
+                                            , result.back()->close
+                                            , result.back()->close
+                                            , 0
+                                            , next);
+          result.push_back(emptyPoint);
+          next += step;
+       }
     }
     return result;
 }
@@ -286,4 +297,19 @@ const uint64_t DataPointsLocal::intervalEnd(const uint64_t &timestamp
         break;
     }
     return result.toMSecsSinceEpoch();
+}
+
+DataPointsLocal::DataPoint *DataPointsLocal::createDataPoint(double open
+                                                             , double high
+                                                             , double low
+                                                             , double close
+                                                             , double volume
+                                                             , const uint64_t &timestamp) const
+{
+   return new DataPoint { .open = open
+            , .high = high
+            , .low = low
+            , .close = close
+            , .volume = volume
+            , .timestamp = static_cast<qreal>(timestamp) };
 }

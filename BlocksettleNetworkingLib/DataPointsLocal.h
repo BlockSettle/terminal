@@ -1,10 +1,10 @@
 #ifndef DATAPOINTSLOCAL_H
 #define DATAPOINTSLOCAL_H
 
+#include <spdlog/spdlog.h>
+
 #include <QObject>
 #include <QtSql/QSqlDatabase>
-
-#include <spdlog/spdlog.h>
 
 class DataPointsLocal : public QObject
 {
@@ -53,6 +53,12 @@ private:
    static const std::string getTable(const std::string &product, Interval interval);
    const uint64_t intervalStart(const uint64_t &timestamp, const Interval &interval) const;
    const uint64_t intervalEnd(const uint64_t &timestamp, const Interval &interval) const;
+   DataPoint *createDataPoint(double open
+                              , double high
+                              , double low
+                              , double close
+                              , double volume
+                              , const uint64_t &timestamp) const;
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
