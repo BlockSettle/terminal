@@ -100,7 +100,7 @@ void NetworkSettingsPage::DisplayRunArmorySettings(bool runLocally, bool display
    } else {
       ui_->armoryDBHostLineEdit->setEnabled(true);
       ui_->armoryDBPortLineEdit->setEnabled(true);
-      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp));
+      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp, displayDefault));
       ui_->armoryDBPortLineEdit->setText(appSettings_->GetArmoryRemotePort(displayDefault, networkType));
    }
 }

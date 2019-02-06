@@ -211,6 +211,12 @@ bool bs::Address::isValid() const
    return true;
 }
 
+void bs::Address::clear()
+{
+   BinaryData::clear();
+   aet_ = AddressEntryType_Default;
+}
+
 bool bs::Address::isProperHash() const
 {
    if (isNull() || ((getSize() != 20) && (getSize() != 21) && (getSize() != 32) && (getSize() != 33))) {
