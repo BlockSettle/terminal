@@ -2,9 +2,9 @@
 
 #include "ChatUserListLogic.h"
 
-#include <../disable_warnings.h>
+#include <../CommonLib/disable_warnings.h>
 #include <spdlog/spdlog.h>
-#include <../enable_warnings.h>
+#include <../CommonLib/enable_warnings.h>
 
 #include "ApplicationSettings.h"
 #include "../BlocksettleNetworkingLib/ChatClient.h"
@@ -32,7 +32,7 @@ void ChatUserListLogic::onAddChatUsers(const TUserIdList &userIdList)
       if (!chatUserDataPtr)
       {
          TChatUserDataPtr newChatUserData = std::make_shared<ChatUserData>();
-         newChatUserData->setUserStatus(ChatUserData::Online);
+         newChatUserData->setUserConnectionStatus(ChatUserData::Online);
          newChatUserData->setUserId(newUserId);
          newChatUserData->setUserName(newUserId);
          _chatUserModelPtr->addUser(newChatUserData);
@@ -52,7 +52,7 @@ void ChatUserListLogic::onRemoveChatUsers(const TUserIdList &userIdList)
       QString newUserId = QString::fromStdString(userId);
       TChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(newUserId);
 
-      if (!chatUserDataPtr)
+      if (chatUserDataPtr)
       {
          if (chatUserDataPtr->userState() == ChatUserData::Unknown)
          {
@@ -79,7 +79,7 @@ void ChatUserListLogic::onIcomingFriendRequest(const TUserIdList &userIdList)
       QString searchUserId = QString::fromStdString(userId);
       TChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(searchUserId);
 
-      if (!chatUserDataPtr)
+      if (chatUserDataPtr)
       {
          _chatUserModelPtr->setUserState(searchUserId, ChatUserData::IncomingFriendRequest);
       }

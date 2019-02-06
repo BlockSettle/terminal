@@ -231,6 +231,8 @@ void ChatWidget::changeState(ChatWidget::State state)
       case State::LoggedOut:
          {
             stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
+            _chatUserListLogicPtr->chatUserModelPtr()->resetModel();
+            _chatUserListLogicPtr->readUsersFromDB();
          }
          break;
       }
@@ -327,7 +329,8 @@ void ChatWidget::onAddUserToContacts(const QString &userId)
 {
    // check if user isn't already in contacts
    TChatUserModelPtr chatUserModelPtr = _chatUserListLogicPtr->chatUserModelPtr();
-   if (!chatUserModelPtr->isChatUserInContacts(userId))
+
+   if (chatUserModelPtr && !chatUserModelPtr->isChatUserInContacts(userId))
    {
       // add user to contacts as friend
       chatUserModelPtr->setUserState(userId, ChatUserData::Friend);

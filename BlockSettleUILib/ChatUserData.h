@@ -28,7 +28,7 @@ public:
    void setUserName(const QString &userName);
 
    ChatUserData::UserConnectionStatus userConnectionStatus() const;
-   void setUserStatus(const ChatUserData::UserConnectionStatus &userConnectionStatus);
+   void setUserConnectionStatus(const ChatUserData::UserConnectionStatus &userConnectionStatus);
 
    ChatUserData::UserState userState() const;
    void setUserState(const ChatUserData::UserState &userState);
@@ -39,6 +39,9 @@ public:
    QString userId() const;
    void setUserId(const QString &userId);
 
+   bool haveNewMessage() const;
+   void setHaveNewMessage(bool haveNewMessage);
+
 signals:
    void userNameChanged();
    void userStatusChanged();
@@ -47,14 +50,15 @@ signals:
    void userIdChanged();
 
 private:
-   ChatUserData::UserConnectionStatus _userStatus;
+   ChatUserData::UserConnectionStatus _userConnectionStatus;
    QString _userName;
    QString _userEmail;
    QString _userId;
    ChatUserData::UserState _userState;
+   bool _haveNewMessage;
 };
 
 typedef std::shared_ptr<ChatUserData> TChatUserDataPtr;
-typedef std::vector<TChatUserDataPtr> TChatUserDataListPtr;
+typedef QList<TChatUserDataPtr> TChatUserDataListPtr;
 
 #endif // CHATUSER_H

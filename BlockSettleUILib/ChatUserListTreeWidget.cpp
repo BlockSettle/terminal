@@ -80,11 +80,11 @@ void ChatUserListTreeWidget::onChatUserDataListChanged(const TChatUserDataListPt
    {
       if (userDataPtr->userState() == ChatUserData::Unknown)
       {
-         nonFriendList.emplace_back(userDataPtr);
+         nonFriendList.push_back(userDataPtr);
       }
       else
       {
-         friendList.emplace_back(userDataPtr);
+         friendList.push_back(userDataPtr);
       }
    });
 

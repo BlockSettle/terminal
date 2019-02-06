@@ -265,7 +265,7 @@ bool ChatDB::removeContact(const ContactUserData &contact)
 bool ChatDB::getContacts(TContactUserDataList &contactList)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT user_id, user_name, friend_request FROM contacts;"))) {
+   if (!query.prepare(QLatin1String("SELECT user_id, user_name, incoming_friend_request FROM contacts;"))) {
       logger_->error("[ChatDB::getContacts] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }

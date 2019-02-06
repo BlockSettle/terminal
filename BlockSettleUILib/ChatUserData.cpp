@@ -2,7 +2,7 @@
 
 ChatUserData::ChatUserData(QObject *parent)  : QObject(parent)
 {
-   setUserStatus(ChatUserData::Offline);
+   setUserConnectionStatus(ChatUserData::Offline);
    setUserState(ChatUserData::Unknown);
 }
 
@@ -19,12 +19,12 @@ void ChatUserData::setUserName(const QString &userName)
 
 ChatUserData::UserConnectionStatus ChatUserData::userConnectionStatus() const
 {
-   return _userStatus;
+   return _userConnectionStatus;
 }
 
-void ChatUserData::setUserStatus(const ChatUserData::UserConnectionStatus &userStatus)
+void ChatUserData::setUserConnectionStatus(const ChatUserData::UserConnectionStatus &userStatus)
 {
-   _userStatus = userStatus;
+   _userConnectionStatus = userStatus;
    emit userStatusChanged();
 }
 
@@ -59,4 +59,14 @@ void ChatUserData::setUserId(const QString &userId)
 {
     _userId = userId;
     emit userIdChanged();
+}
+
+bool ChatUserData::haveNewMessage() const
+{
+   return _haveNewMessage;
+}
+
+void ChatUserData::setHaveNewMessage(bool haveNewMessage)
+{
+   _haveNewMessage = haveNewMessage;
 }

@@ -2,6 +2,19 @@
 #define CHATUSERCATEGORYLISTVIEW_H
 
 #include <QListView>
+#include <QStyledItemDelegate>
+
+class ChatUserCategoryListViewDelegate : public QStyledItemDelegate
+{
+   Q_OBJECT
+
+public:
+   ChatUserCategoryListViewDelegate(QObject *parent = nullptr);
+
+   void paint(QPainter *painter,
+              const QStyleOptionViewItem &option,
+              const QModelIndex &index) const override;
+};
 
 class ChatUserCategoryListView : public QListView
 {

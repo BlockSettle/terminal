@@ -32,9 +32,27 @@ QVariant ChatUsersViewModel::headerData(int /*section*/, Qt::Orientation /*orien
 
 QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 {
-   if (role == Qt::DisplayRole) {
-      return resolveUser(index);
+   if (index.row() >= _users.size())
+      return QVariant();
+
+   switch (role)
+   {
+      case Qt::DisplayRole:
+         return resolveUser(index);
+
+      case UserConnectionStatusRole:
+         return _users[index.row()]->userConnectionStatus();
+
+      case UserStateRole:
+         return _users[index.row()]->userState();
+
+      case UserNameRole:
+         return _users[index.row()]->userName();
+
+      case HaveNewMessageRole:
+         return _users[index.row()]->haveNewMessage();
    }
+
    return QVariant();
 }
 
@@ -44,7 +62,7 @@ void ChatUsersViewModel::onUserDataListChanged(const TChatUserDataListPtr &chatU
    _users.clear();
    _users.reserve(chatUserDataListPtr.size());
    for (const auto &userDataPtr : chatUserDataListPtr) {
-      _users.emplace_back(std::move(userDataPtr));
+      _users.push_back(std::move(userDataPtr));
    }
    endResetModel();
 }

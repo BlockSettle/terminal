@@ -61,7 +61,7 @@ void ChatUserModel::setUserStatus(const QString &userId, const ChatUserData::Use
       return;
    }
 
-   chatUserDataPtr->setUserStatus(userStatus);
+   chatUserDataPtr->setUserConnectionStatus(userStatus);
 
    emit chatUserStatusChanged(chatUserDataPtr);
    emit chatUserDataListChanged(_chatUserDataListPtr);

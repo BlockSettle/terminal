@@ -9,12 +9,20 @@
 
 #include "ChatUserData.h"
 
-
 class ChatUsersViewModel : public QAbstractTableModel
 {
    Q_OBJECT
 
 public:
+
+   enum Role
+   {
+      UserConnectionStatusRole = Qt::UserRole,
+      UserStateRole,
+      UserNameRole,
+      HaveNewMessageRole
+   };
+
    ChatUsersViewModel(QObject* parent = nullptr);
    ~ChatUsersViewModel() noexcept override = default;
 
