@@ -82,7 +82,7 @@ void RFQTicketXBT::setTransactionData()
 {
    if (!transactionData_) {
       transactionData_ = std::make_shared<TransactionData>([this]() { emit update(); }
-         , true, true);
+         , nullptr, true, true);
    }
 
    if (walletsManager_ != nullptr) {
