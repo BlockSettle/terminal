@@ -21,14 +21,14 @@ WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::shared_ptr<App
 
 WalletPasswordVerifyDialog::~WalletPasswordVerifyDialog() = default;
 
-void WalletPasswordVerifyDialog::init(const std::string& walletId
-   , const std::vector<bs::wallet::PasswordData>& keys
-   , bs::wallet::KeyRank keyRank)
+void WalletPasswordVerifyDialog::init(const bs::hd::WalletInfo& walletInfo
+                                         , const std::vector<bs::wallet::PasswordData>& keys
+                                         , const std::shared_ptr<spdlog::logger> &logger)
 {
-   walletId_ = walletId;
+   walletInfo_ = walletInfo;
    keys_ = keys;
-   keyRank_ = keyRank;
-      
+   logger_ = logger;
+
    const bs::wallet::PasswordData &key = keys.at(0);
 
    if (key.encType == bs::wallet::EncryptionType::Auth) {
@@ -71,7 +71,8 @@ void WalletPasswordVerifyDialog::onContinueClicked()
    
    if (key.encType == bs::wallet::EncryptionType::Auth) {
       EnterWalletPassword dialog(AutheIDClient::VerifyWalletKey, this);
-      dialog.init(walletId_, keyRank_, keys_, appSettings_, tr("Confirm Auth eID Signing"), tr("Auth eID"));
+      dialog.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog
+                  , tr("Confirm Auth eID Signing"), logger_, tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
          return;

@@ -4,7 +4,6 @@
 #include <QSpinBox>
 #include "ApplicationSettings.h"
 #include "MobileUtils.h"
-#include "WalletKeyWidget.h"
 
 
 WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
@@ -14,6 +13,10 @@ WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
    ui_->setupUi(this);
    ui_->pushButtonDelKey->setEnabled(false);
    ui_->labelRankN->clear();
+
+   // currently we dont using m of n
+   ui_->groupBox->hide();
+   layout()->removeWidget(ui_->groupBox);
 
    connect(ui_->pushButtonAddKey, &QPushButton::clicked, this, &WalletKeysCreateWidget::onAddClicked);
    connect(ui_->pushButtonDelKey, &QPushButton::clicked, this, &WalletKeysCreateWidget::onDelClicked);
@@ -28,10 +31,16 @@ void WalletKeysCreateWidget::setFlags(Flags flags)
 }
 
 void WalletKeysCreateWidget::init(AutheIDClient::RequestType requestType
-   , const std::string &walletId, const QString& username
-   , const std::shared_ptr<ApplicationSettings>& appSettings)
+                                     , const bs::hd::WalletInfo &walletInfo
+                                     , WalletKeyWidget::UseType useType
+                                     , const std::shared_ptr<ApplicationSettings>& appSettings
+                                     , const std::shared_ptr<spdlog::logger> &logger)
 {
    requestType_ = requestType;
+   walletInfo_ = walletInfo;
+   appSettings_ = appSettings;
+   logger_ = logger;
+   useType_ = useType;
 
    widgets_.clear();
    pwdData_.clear();
@@ -40,34 +49,21 @@ void WalletKeysCreateWidget::init(AutheIDClient::RequestType requestType
       ui_->groupBox->setTitle(QString());
    }
 
-   walletId_ = walletId;
-   username_ = username;
-   appSettings_ = appSettings;
    
-   addPasswordKey();
+   addKey();
 
    if (flags_ & HideWidgetContol) {
       ui_->widgetControl->hide();
    }
-
-   for (auto& widget : widgets_) {
-      widget->init(appSettings, username);
-   }
 }
 
-void WalletKeysCreateWidget::addKey(bool password)
+void WalletKeysCreateWidget::addKey()
 {
-   assert(!walletId_.empty());
+   assert(!walletInfo_.rootId().isEmpty());
    const auto &authKeys = appSettings_->GetAuthKeys();
-   auto widget = new WalletKeyWidget(requestType_, walletId_, widgets_.size(), password
-      , authKeys, this);
-   widget->init(appSettings_, username_);
-   if (flags_ & HideAuthConnectButton) {
-      widget->setHideAuthConnect(true);
-   }
-   if (flags_ & SetPasswordLabelAsNew) {
-      widget->setPasswordLabelAsNew();
-   }
+   auto widget = new WalletKeyWidget(requestType_, walletInfo_, widgets_.size(), appSettings_, logger_, this);
+   widget->setUseType(useType_);
+
 
    if (flags_ & HidePubKeyFingerprint || true) {
       ui_->labelPubKeyFP->hide();
@@ -77,14 +73,21 @@ void WalletKeysCreateWidget::addKey(bool password)
       ui_->labelPubKeyFP->setText(QString::fromStdString(pubKeyFP));
    }
 
-   connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysCreateWidget::onKeyTypeChanged);
-   connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysCreateWidget::onKeyChanged);
-   connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysCreateWidget::onEncKeyChanged);
+   connect(widget, &WalletKeyWidget::passwordDataChanged, this, &WalletKeysCreateWidget::onPasswordDataChanged);
    connect(widget, &WalletKeyWidget::failed, this, &WalletKeysCreateWidget::failed);
-   ui_->groupBox->layout()->addWidget(widget);
+
+   // propagate focus to next widget
+   connect(widget, &WalletKeyWidget::returnPressed, this, [this](int keyIndex){
+      if (widgets_.size() > keyIndex + 1)
+         widgets_.at(keyIndex + 1)->setFocus();
+      else
+         emit returnPressed();
+   });
+
+   layout()->addWidget(widget);
    ui_->pushButtonDelKey->setEnabled(true);
    widgets_.emplace_back(widget);
-   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth, {} });
+   pwdData_.push_back(bs::wallet::PasswordData());
    ui_->spinBoxRankM->setMaximum(pwdData_.size());
    ui_->spinBoxRankM->setMinimum(1);
    updateKeyRank(0);
@@ -93,7 +96,7 @@ void WalletKeysCreateWidget::addKey(bool password)
 
 void WalletKeysCreateWidget::onAddClicked()
 {
-   addPasswordKey();
+   addKey();
 }
 
 void WalletKeysCreateWidget::onDelClicked()
@@ -114,32 +117,9 @@ void WalletKeysCreateWidget::onDelClicked()
    }
 }
 
-void WalletKeysCreateWidget::onKeyChanged(int index, SecureBinaryData key)
+void WalletKeysCreateWidget::onPasswordDataChanged(int index, bs::wallet::PasswordData passwordData)
 {
-   if ((index < 0) || (index >= pwdData_.size())) {
-      return;
-   }
-   pwdData_[index].password = key;
-   emit keyChanged();
-}
-
-void WalletKeysCreateWidget::onKeyTypeChanged(int index, bool password)
-{
-   if ((index < 0) || (index >= pwdData_.size())) {
-      return;
-   }
-   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth;
-   pwdData_[index].password.clear();
-   emit keyChanged();
-   emit keyTypeChanged(password);
-}
-
-void WalletKeysCreateWidget::onEncKeyChanged(int index, SecureBinaryData encKey)
-{
-   if ((index < 0) || (index >= pwdData_.size())) {
-      return;
-   }
-   pwdData_[index].encKey = encKey;
+   pwdData_[index] = passwordData;
    emit keyChanged();
 }
 
@@ -177,6 +157,14 @@ bool WalletKeysCreateWidget::isValid() const
       }
    }
    return true;
+}
+
+void WalletKeysCreateWidget::setFocus()
+{
+   if (widgets_.empty()) {
+      return;
+   }
+   widgets_.front()->setFocus();
 }
 
 void WalletKeysCreateWidget::cancel()

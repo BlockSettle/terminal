@@ -84,7 +84,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap resource="armory.qrc">:/resources/wallet_import.png</pixmap>
+       <pixmap resource="../armory.qrc">:/resources/wallet_import.png</pixmap>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -450,7 +450,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="armory.qrc">:/resources/new-link@1.5x.png</pixmap>
+                       <pixmap resource="../armory.qrc">:/resources/new-link@1.5x.png</pixmap>
                       </property>
                       <property name="scaledContents">
                        <bool>true</bool>
@@ -560,7 +560,7 @@
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap resource="armory.qrc">:/resources/new-link@1.5x.png</pixmap>
+                   <pixmap resource="../armory.qrc">:/resources/new-link@1.5x.png</pixmap>
                   </property>
                   <property name="scaledContents">
                    <bool>true</bool>
@@ -694,7 +694,8 @@
   </layout>
  </widget>
  <resources>
-  <include location="armory.qrc"/>
+  <include location="../armory.qrc"/>
+  <include location="../armory.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -6,9 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>380</width>
+    <width>400</width>
     <height>388</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>400</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>400</width>
+    <height>16777215</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Wallet Backup</string>
@@ -81,7 +93,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap resource="armory.qrc">:/resources/wallet_backup.png</pixmap>
+       <pixmap resource="../armory.qrc">:/resources/wallet_backup.png</pixmap>
       </property>
      </widget>
     </widget>
@@ -113,7 +125,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox_2">
         <property name="title">
-         <string>Backup Type</string>
+         <string>BACKUP TYPE</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_5">
          <property name="spacing">
@@ -231,13 +243,37 @@
        </widget>
       </item>
       <item>
-       <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>23</height>
-         </size>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>ENTER PASSWORD</string>
         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>23</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item>
@@ -255,7 +291,7 @@
          </size>
         </property>
         <property name="title">
-         <string>Output File</string>
+         <string>OUTPUT FILE</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
          <property name="spacing">
@@ -333,7 +369,7 @@
                   <string/>
                  </property>
                  <property name="pixmap">
-                  <pixmap resource="armory.qrc">:/resources/new-link@1.5x.png</pixmap>
+                  <pixmap resource="../armory.qrc">:/resources/new-link@1.5x.png</pixmap>
                  </property>
                  <property name="scaledContents">
                   <bool>true</bool>
@@ -479,7 +515,8 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="armory.qrc"/>
+  <include location="../armory.qrc"/>
+  <include location="../armory.qrc"/>
  </resources>
  <connections/>
  <buttongroups>

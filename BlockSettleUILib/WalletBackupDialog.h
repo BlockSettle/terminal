@@ -5,6 +5,7 @@
 #include <memory>
 #include "EncryptionUtils.h"
 #include "MetaData.h"
+#include "QWalletInfo.h"
 
 
 namespace Ui {
@@ -28,6 +29,7 @@ public:
    WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    ~WalletBackupDialog() override;
 
@@ -35,18 +37,16 @@ public:
    QString filePath() const;
 
 private slots:
-   void accept() override;
    void reject() override;
-   void TextFileClicked();
-   void PDFFileClicked();
+   void textFileClicked();
+   void pdfFileClicked();
+   void onBackupClicked();
    void onSelectFile();
    void onRootKeyReceived(unsigned int id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
-   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
-      , bs::wallet::KeyRank);
+   void onWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo);
    void onContainerError(unsigned int id, std::string errMsg);
    void showError(const QString &title, const QString &text);
-   void updateState();
 
 private:
    std::unique_ptr<Ui::WalletBackupDialog> ui_;
@@ -58,6 +58,14 @@ private:
    std::string    outputDir_;
    QString        selectedFile_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<spdlog::logger> logger_;
+   bs::hd::WalletInfo walletInfo_;
 };
+
+bool WalletBackupAndNewVerify(const std::shared_ptr<bs::hd::Wallet> &
+   , const std::shared_ptr<SignContainer> &
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
+   , QWidget *parent);
 
 #endif // __WALLET_BACKUP_DIALOG_H__

@@ -12,42 +12,45 @@
 #include "SignContainer.h"
 #include "WalletBackupFile.h"
 #include "UiUtils.h"
-
+#include "WalletWarningDialog.h"
+#include "VerifyWalletBackupDialog.h"
+#include "WalletKeysSubmitWidget.h"
+#include "EnterWalletPassword.h"
 
 WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletBackupDialog)
    , wallet_(wallet)
    , signingContainer_(container)
    , outputDir_(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).toStdString())
+   , logger_(logger)
    , appSettings_(appSettings)
 {
    ui_->setupUi(this);
 
-   ui_->pushButtonBackup->setEnabled(false);
+   //ui_->pushButtonBackup->setEnabled(false);
    ui_->labelFileName->clear();
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &WalletBackupDialog::reject);
-   connect(ui_->pushButtonBackup, &QPushButton::clicked, this, &WalletBackupDialog::accept);
+   connect(ui_->pushButtonBackup, &QPushButton::clicked, this, &WalletBackupDialog::onBackupClicked);
    connect(ui_->pushButtonSelectFile, &QPushButton::clicked, this, &WalletBackupDialog::onSelectFile);
-   connect(ui_->radioButtonTextFile, &QRadioButton::clicked, this, &WalletBackupDialog::TextFileClicked);
-   connect(ui_->radioButtonPDF, &QRadioButton::clicked, this, &WalletBackupDialog::PDFFileClicked);
-
-   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &WalletBackupDialog::updateState);
+   connect(ui_->radioButtonTextFile, &QRadioButton::clicked, this, &WalletBackupDialog::textFileClicked);
+   connect(ui_->radioButtonPDF, &QRadioButton::clicked, this, &WalletBackupDialog::pdfFileClicked);
 
    if (signingContainer_ && !signingContainer_->isOffline()) {
       connect(signingContainer_.get(), &SignContainer::DecryptedRootKey, this, &WalletBackupDialog::onRootKeyReceived);
-      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &WalletBackupDialog::onHDWalletInfo);
+      connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &WalletBackupDialog::onWalletInfo);
       connect(signingContainer_.get(), &SignContainer::Error, this, &WalletBackupDialog::onContainerError);
 
       infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
    }
 
    outputFile_ = outputDir_ + "/backup_wallet_" + wallet->getName() + "_" + wallet->getWalletId();
-   TextFileClicked();
+   textFileClicked();
 }
 
 WalletBackupDialog::~WalletBackupDialog() = default;
@@ -124,18 +127,17 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    QDialog::accept();
 }
 
-void WalletBackupDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
-   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
+void WalletBackupDialog::onWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
+   walletInfo_ = walletInfo;
 
-   ui_->widgetSubmitKeys->init(AutheIDClient::BackupWallet, wallet_->getWalletId()
-      , keyRank, encTypes, encKeys, appSettings_);
+   ui_->widgetSubmitKeys->init(AutheIDClient::BackupWallet, walletInfo
+      , WalletKeyWidget::UseType::RequestAuthForDialog, appSettings_, logger_, tr("Backup keys"));
    ui_->widgetSubmitKeys->setFocus();
-   updateState();
 
    QApplication::processEvents();
    adjustSize();
@@ -159,12 +161,7 @@ void WalletBackupDialog::onContainerError(unsigned int id, std::string errMsg)
    }
 }
 
-void WalletBackupDialog::updateState()
-{
-   ui_->pushButtonBackup->setEnabled(ui_->widgetSubmitKeys->isValid());
-}
-
-void WalletBackupDialog::TextFileClicked()
+void WalletBackupDialog::textFileClicked()
 {
    if (!ui_->radioButtonTextFile->isChecked()) {
       ui_->labelTypeDesc->clear();
@@ -177,7 +174,7 @@ void WalletBackupDialog::TextFileClicked()
    }
 }
 
-void WalletBackupDialog::PDFFileClicked()
+void WalletBackupDialog::pdfFileClicked()
 {
    if (!ui_->radioButtonPDF->isChecked()) {
       ui_->labelTypeDesc->clear();
@@ -187,6 +184,24 @@ void WalletBackupDialog::PDFFileClicked()
       if (selectedFile_.isEmpty()) {
          ui_->labelFileName->setText(QString::fromStdString(outputFile_ + ".pdf"));
       }
+   }
+}
+
+void WalletBackupDialog::onBackupClicked()
+{
+   if (walletInfo_.isEidAuthOnly()) {
+      // Request eid auth to decrypt wallet
+      EnterWalletPassword enterWalletOldPassword(AutheIDClient::BackupWallet, this);
+      enterWalletOldPassword.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog, tr("Backup Wallet"), logger_);
+      int result = enterWalletOldPassword.exec();
+      if (result != QDialog::Accepted) {
+         return;
+      }
+
+      privKeyReqId_ = signingContainer_->GetDecryptedRootKey(wallet_, enterWalletOldPassword.resultingKey());
+   }
+   else {
+      privKeyReqId_ = signingContainer_->GetDecryptedRootKey(wallet_, ui_->widgetSubmitKeys->key());
    }
 }
 
@@ -204,11 +219,6 @@ void WalletBackupDialog::onSelectFile()
    }
 }
 
-void WalletBackupDialog::accept()
-{
-   privKeyReqId_ = signingContainer_->GetDecryptedRootKey(wallet_, ui_->widgetSubmitKeys->key());
-}
-
 void WalletBackupDialog::reject()
 {
    BSMessageBox confCancel(BSMessageBox::question, tr("Warning"), tr("Abort Backup Process?")
@@ -221,4 +231,29 @@ void WalletBackupDialog::reject()
       ui_->widgetSubmitKeys->cancel();
       QDialog::reject();
    }
+}
+
+
+bool WalletBackupAndNewVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger> &logger
+   , QWidget *parent)
+{
+   if (!wallet) {
+      return false;
+   }
+   WalletBackupDialog walletBackupDialog(wallet, container, appSettings, logger, parent);
+   if (walletBackupDialog.exec() == QDialog::Accepted) {
+      BSMessageBox(BSMessageBox::success, QObject::tr("Backup"), QObject::tr("%1 Backup successfully created")
+         .arg(walletBackupDialog.isDigitalBackup() ? QObject::tr("Digital") : QObject::tr("Paper"))
+            , walletBackupDialog.filePath(), parent).exec();
+      if (!walletBackupDialog.isDigitalBackup()) {
+         VerifyWalletBackupDialog(wallet, logger, parent).exec();
+      }
+      WalletWarningDialog(parent).exec();
+      return true;
+   }
+
+   return false;
 }

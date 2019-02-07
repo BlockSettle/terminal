@@ -1,9 +1,10 @@
-#ifndef __WALLETPASSWORDVERIFYDIALOG_H__
-#define __WALLETPASSWORDVERIFYDIALOG_H__
+#ifndef __WALLET_PASSWORD_VERIFY_DIALOG_H__
+#define __WALLET_PASSWORD_VERIFY_DIALOG_H__
 
 #include <memory>
 #include <QDialog>
 #include "WalletEncryption.h"
+#include "QWalletInfo.h"
 
 namespace Ui {
    class WalletPasswordVerifyDialog;
@@ -21,8 +22,9 @@ public:
 
    // By default the dialog will show only Auth usage info page.
    // If init called then password/Auth check will be used too.
-   void init(const std::string& walletId, const std::vector<bs::wallet::PasswordData>& keys
-      , bs::wallet::KeyRank keyRank);
+   void init(const bs::hd::WalletInfo &walletInfo
+             , const std::vector<bs::wallet::PasswordData> &keys
+             , const std::shared_ptr<spdlog::logger> &logger);
 
 private slots:
    void onContinueClicked();
@@ -32,11 +34,11 @@ private:
    void initAuth(const QString& authId);
 
    std::unique_ptr<Ui::WalletPasswordVerifyDialog> ui_;
-   std::string walletId_;
    std::vector<bs::wallet::PasswordData> keys_;
-   bs::wallet::KeyRank keyRank_;
+   bs::hd::WalletInfo walletInfo_;
    bool runPasswordCheck_ = false;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<spdlog::logger> logger_;
 };
 
-#endif // __WALLETPASSWORDVERIFYDIALOG_H__
+#endif // __WALLET_PASSWORD_VERIFY_DIALOG_H__

@@ -4,6 +4,8 @@
 #include <QWidget>
 #include "WalletEncryption.h"
 #include "AutheIDClient.h"
+#include "QWalletInfo.h"
+#include "WalletKeyWidget.h"
 
 namespace Ui {
     class WalletKeysSubmitWidget;
@@ -35,41 +37,42 @@ public:
    ~WalletKeysSubmitWidget() override;
 
    void setFlags(Flags flags);
+
    void init(AutheIDClient::RequestType requestType
-      , const std::string &walletId
-      , bs::wallet::KeyRank
-      , const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys
-      , const std::shared_ptr<ApplicationSettings> &appSettings
-      , const QString &prompt = QString());
+             , const bs::hd::WalletInfo &walletInfo
+             , WalletKeyWidget::UseType useType
+             , const std::shared_ptr<ApplicationSettings> &appSettings
+             , const std::shared_ptr<spdlog::logger> &logger
+             , const QString &prompt = QString());
+
    void cancel();
 
    bool isValid() const;
-   std::string encKey(int index) const;
    SecureBinaryData key() const;
    bool isKeyFinal() const;
 
-   void setFocus();
    void suspend() { suspended_ = true; }
    void resume();
+
+   bs::wallet::PasswordData passwordData(int keyIndex) const { return pwdData_.at(keyIndex); }
+   std::vector<bs::wallet::PasswordData> passwordData() const { return pwdData_; }
 
 signals:
    void keyChanged();
    void keyCountChanged();
    void failed();
+   void returnPressed();
 
-private slots:
-   void onKeyChanged(int index, SecureBinaryData);
-   void onKeyTypeChanged(int index, bool password);
-   void onEncKeyChanged(int index, SecureBinaryData);
+public slots:
+   void setFocus();
+   void onPasswordDataChanged(int index, bs::wallet::PasswordData passwordData);
 
 private:
-   void addKey(bool password, const std::vector<SecureBinaryData> &encKeys
-      , int encKeyIndex = 0, bool isFixed = false, const QString &prompt = QString());
+   void addKey(int encKeyIndex, const QString &prompt = QString());
+
 
 private:
    std::unique_ptr<Ui::WalletKeysSubmitWidget> ui_;
-   std::string walletId_;
    std::vector<WalletKeyWidget *> widgets_;
    std::vector<bs::wallet::PasswordData> pwdData_;
    std::atomic_bool suspended_;
@@ -77,6 +80,9 @@ private:
    std::shared_ptr<ApplicationSettings> appSettings_;
    AutheIDClient::RequestType requestType_{};
    bool isKeyFinal_{false};
+   bs::hd::WalletInfo walletInfo_;
+   std::shared_ptr<spdlog::logger> logger_;
+   WalletKeyWidget::UseType useType_;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysSubmitWidget::Flags)

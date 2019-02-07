@@ -89,8 +89,8 @@ void WalletDeleteDialog::deleteHDWallet()
    if (ui_->checkBoxBackup->isChecked()) {
       if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_
                                  , logger_, this)) {
-         BSMessageBox(BSMessageBox::critical, tr("No backup")
-            , tr("No backup was created for this wallet - deletion cancelled"), this).exec();
+//         BSMessageBox(BSMessageBox::critical, tr("No backup")
+//            , tr("No backup was created for this wallet - deletion cancelled"), this).exec();
          reject();
          return;
       }

@@ -227,15 +227,7 @@ void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
       logger_->error("[HeadlessContainer] Failed to parse PasswordRequest");
       return;
    }
-   std::vector<bs::wallet::EncryptionType> encTypes;
-   for (int i = 0; i < request.enctypes_size(); ++i) {
-      encTypes.push_back(static_cast<bs::wallet::EncryptionType>(request.enctypes(i)));
-   }
-   std::vector<SecureBinaryData> encKeys;
-   for (int i = 0; i < request.enckeys_size(); ++i) {
-      encKeys.push_back(request.enckeys(i));
-   }
-   emit PasswordRequested(request.walletid(), request.prompt(), encTypes, encKeys, { request.rankm(), 0 });
+   emit PasswordRequested(bs::hd::WalletInfo(request), request.prompt());
 }
 
 void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std::string &data)
@@ -317,16 +309,7 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
       return;
    }
    if (response.error().empty()) {
-      std::vector<bs::wallet::EncryptionType> encTypes;
-      for (int i = 0; i < response.enctypes_size(); ++i) {
-         encTypes.push_back(static_cast<bs::wallet::EncryptionType>(response.enctypes(i)));
-      }
-      std::vector<SecureBinaryData> encKeys;
-      for (int i = 0; i < response.enckeys_size(); ++i) {
-         encKeys.push_back(response.enckeys(i));
-      }
-      bs::wallet::KeyRank keyRank = { response.rankm(), response.rankn() };
-      emit HDWalletInfo(id, encTypes, encKeys, keyRank);
+      emit QWalletInfo(id, bs::hd::WalletInfo(response));
    }
    else {
       missingWallets_.insert(response.rootwalletid());

@@ -5,7 +5,9 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include "ApplicationSettings.h"
 #include "MobileUtils.h"
-#include "WalletKeyWidget.h"
+
+using namespace bs::wallet;
+using namespace bs::hd;
 
 
 WalletKeysSubmitWidget::WalletKeysSubmitWidget(QWidget* parent)
@@ -14,6 +16,10 @@ WalletKeysSubmitWidget::WalletKeysSubmitWidget(QWidget* parent)
    , suspended_(false)
 {
    ui_->setupUi(this);
+
+   // currently we dont using m of n
+   ui_->groupBox->hide();
+   layout()->removeWidget(ui_->groupBox);
 }
 
 WalletKeysSubmitWidget::~WalletKeysSubmitWidget() = default;
@@ -24,15 +30,17 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
 }
 
 void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
-   , const std::string &walletId
-   , bs::wallet::KeyRank keyRank
-   , const std::vector<bs::wallet::EncryptionType> &encTypes
-   , const std::vector<SecureBinaryData> &encKeys
-   , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const QString &prompt)
+                                     , const bs::hd::WalletInfo &walletInfo
+                                     , WalletKeyWidget::UseType useType
+                                     , const std::shared_ptr<ApplicationSettings> &appSettings
+                                     , const std::shared_ptr<spdlog::logger> &logger
+                                     , const QString &prompt)
 {
    requestType_ = requestType;
+   walletInfo_ = walletInfo;
+   logger_ = logger;
    appSettings_ = appSettings;
+   useType_ = useType;
 
    qDeleteAll(widgets_.cbegin(), widgets_.cend());
    widgets_.clear();
@@ -42,14 +50,13 @@ void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
       ui_->groupBox->setTitle(QString());
    }
 
-   walletId_ = walletId;
-   if (encTypes.empty()) {
+   if (walletInfo.encTypes().empty()) {
       return;
    }
 
    bool hasAuth = false;
-   for (const auto &encType : encTypes) {
-      if (encType == bs::wallet::EncryptionType::Auth) {
+   for (const auto &encType : walletInfo.encTypes()) {
+      if (encType == EncryptionType::Auth) {
          hasAuth = true;
          break;
       }
@@ -69,101 +76,75 @@ void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
       });
    }
 
-   bool isAuthOnly = true;
-   for (auto encType : encTypes) {
-      if (encType != bs::wallet::EncryptionType::Auth) {
-         isAuthOnly = false;
-      }
-   }
 
    int encKeyIndex = 0;
-   if (isAuthOnly) {
-      addKey(false, encKeys, 0, true, prompt);
-   } else if (encTypes.size() == keyRank.first) {
-      for (const auto &encType : encTypes) {
-         const bool isPassword = (encType == bs::wallet::EncryptionType::Password);
-         addKey(isPassword, encKeys, isPassword ? 0 : encKeyIndex++, true, prompt);
+   if (walletInfo.isEidAuthOnly()) {
+      addKey(0, prompt);
+   }
+   else if (walletInfo.encTypes().size() == walletInfo.keyRank().first) {
+      for (const auto &encType : walletInfo.encTypes()) {
+         const bool isPassword = (encType == EncryptionType::Password);
+         addKey(isPassword ? 0 : encKeyIndex++, prompt);
       }
-   } else {
-      if ((encTypes.size() > 1) && (keyRank.first == 1)) {
-         addKey(true, encKeys, 0, false, prompt);
+   }
+   else {
+      if ((walletInfo.encTypes().size() > 1) && (walletInfo.keyRank().first == 1)) {
+         addKey(0, prompt);
       }
       else {
-         if ((encTypes.size() == 1) && (encTypes[0] == bs::wallet::EncryptionType::Auth) && (encKeys.size() == keyRank.first)) {
-            for (unsigned int i = 0; i < keyRank.first; ++i) {
-               addKey(false, encKeys, encKeyIndex++, true, prompt);
+         if ((walletInfo.encTypes().size() == 1) && (walletInfo.encTypes()[0] == EncryptionType::Auth)
+             && (walletInfo.encKeys().size() == walletInfo.keyRank().first)) {
+            for (unsigned int i = 0; i < walletInfo.keyRank().first; ++i) {
+               addKey(encKeyIndex++, prompt);
             }
          }
-         else if ((encTypes.size() == 1) && (encTypes[0] == bs::wallet::EncryptionType::Password)) {
-            for (unsigned int i = 0; i < keyRank.first; ++i) {
-               addKey(true, encKeys, 0, true, prompt);
+         else if ((walletInfo.encTypes().size() == 1) && (walletInfo.encTypes()[0] == EncryptionType::Password)) {
+            for (unsigned int i = 0; i < walletInfo.keyRank().first; ++i) {
+               addKey(0, prompt);
             }
          }
          else {
-            for (unsigned int i = 0; i < keyRank.first; ++i) {
-               const bool isPassword = !(encKeyIndex < encKeys.size());
-               addKey(isPassword, encKeys, isPassword ? 0 : encKeyIndex++, false, prompt);
+            for (unsigned int i = 0; i < walletInfo.keyRank().first; ++i) {
+               const bool isPassword = !(encKeyIndex < walletInfo.encKeys().size());
+               addKey(isPassword ? 0 : encKeyIndex++, prompt);
             }
          }
       }
    }
 }
 
-void WalletKeysSubmitWidget::addKey(bool password, const std::vector<SecureBinaryData> &encKeys
-   , int encKeyIndex, bool isFixed, const QString &prompt)
+
+void WalletKeysSubmitWidget::addKey(int encKeyIndex, const QString &prompt)
 {
-   assert(!walletId_.empty());
+   assert(!walletInfo_.rootId().isEmpty());
    if (!widgets_.empty()) {
       const auto separator = new QFrame(this);
       separator->setFrameShape(QFrame::HLine);
-      ui_->groupBox->layout()->addWidget(separator);
+      layout()->addWidget(separator);
    }
 
-   const auto &authKeys = appSettings_->GetAuthKeys();
-   auto widget = new WalletKeyWidget(requestType_, walletId_, pwdData_.size(), password, authKeys, this);
-   widget->init(appSettings_, QString());
-   connect(widget, &WalletKeyWidget::keyTypeChanged, this, &WalletKeysSubmitWidget::onKeyTypeChanged);
-   connect(widget, &WalletKeyWidget::keyChanged, this, &WalletKeysSubmitWidget::onKeyChanged);
-   connect(widget, &WalletKeyWidget::encKeyChanged, this, &WalletKeysSubmitWidget::onEncKeyChanged);
-   connect(widget, &WalletKeyWidget::failed, this, &WalletKeysSubmitWidget::failed);
-
-   if (flags_ & HideAuthConnectButton) {
-      widget->setHideAuthConnect(true);
-   }
-   if (flags_ & HideAuthCombobox) {
-      widget->setHideAuthCombobox(true);
-   }
-   if (flags_ & AuthProgressBarFixed) {
-      widget->setProgressBarFixed(true);
-   }
-   if (flags_ & AuthIdVisible) {
-      widget->setShowAuthId(true);
-   }
-   if (flags_ & SetPasswordLabelAsOld) {
-      widget->setPasswordLabelAsOld();
-   }
-   if (flags_ & HideAuthEmailLabel) {
-      widget->setHideAuthEmailLabel(true);
-   }
-   if (flags_ & HideAuthControlsOnSignClicked) {
-      widget->setHideAuthControlsOnSignClicked(true);
-   }
-   if (flags_ & HideProgressBar) {
-      widget->setHideProgressBar(true);
-   }
-   if (flags_ & HidePasswordWarning) {
-      widget->setHidePasswordWarning(true);
-   }
-   ui_->groupBox->layout()->addWidget(widget);
+   auto widget = new WalletKeyWidget(requestType_, walletInfo_, encKeyIndex, appSettings_, logger_, this);
+   widget->setUseType(useType_);
 
    widgets_.push_back(widget);
-   pwdData_.push_back({ {}, password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth, {} });
+   pwdData_.push_back(PasswordData());
+
+
+   connect(widget, &WalletKeyWidget::passwordDataChanged, this, &WalletKeysSubmitWidget::onPasswordDataChanged);
+   connect(widget, &WalletKeyWidget::failed, this, &WalletKeysSubmitWidget::failed);
+
+   // propagate focus to next widget
+   connect(widget, &WalletKeyWidget::returnPressed, this, [this](int keyIndex){
+      if (widgets_.size() > keyIndex + 1)
+         widgets_.at(keyIndex + 1)->setFocus();
+      else
+         emit returnPressed();
+   });
+
+
+   layout()->addWidget(widget);
+
    emit keyCountChanged();
-   widget->setEncryptionKeys(encKeys, encKeyIndex);
-   widget->setFixedType(isFixed);
-   if (isFixed && !suspended_) {
-      widget->start();
-   }
 }
 
 void WalletKeysSubmitWidget::setFocus()
@@ -174,34 +155,12 @@ void WalletKeysSubmitWidget::setFocus()
    widgets_.front()->setFocus();
 }
 
-void WalletKeysSubmitWidget::onKeyChanged(int index, SecureBinaryData key)
+void WalletKeysSubmitWidget::onPasswordDataChanged(int index, PasswordData passwordData)
 {
-   if ((index < 0) || (index >= pwdData_.size())) {
-      return;
-   }
-   pwdData_[index].password = key;
-   isKeyFinal_ = (pwdData_[index].encType == bs::wallet::EncryptionType::Auth);
+   pwdData_[index] = passwordData;
    emit keyChanged();
 }
 
-void WalletKeysSubmitWidget::onKeyTypeChanged(int index, bool password)
-{
-   if ((index < 0) || (index >= pwdData_.size())) {
-      return;
-   }
-   pwdData_[index].encType = password ? bs::wallet::EncryptionType::Password : bs::wallet::EncryptionType::Auth;
-   pwdData_[index].password.clear();
-   emit keyChanged();
-}
-
-void WalletKeysSubmitWidget::onEncKeyChanged(int index, SecureBinaryData encKey)
-{
-   if ((index < 0) || (index >= pwdData_.size())) {
-      return;
-   }
-   pwdData_[index].encKey = encKey;
-   emit keyChanged();
-}
 
 bool WalletKeysSubmitWidget::isValid() const
 {
@@ -233,14 +192,6 @@ void WalletKeysSubmitWidget::cancel()
    }
 }
 
-std::string WalletKeysSubmitWidget::encKey(int index) const
-{
-   if (index < 0 || index >= pwdData_.size()) {
-      return {};
-   }
-   return pwdData_[index].encKey.toBinStr();
-}
-
 SecureBinaryData WalletKeysSubmitWidget::key() const
 {
    SecureBinaryData result;
@@ -262,3 +213,6 @@ void WalletKeysSubmitWidget::resume()
       widget->start();
    }
 }
+
+
+

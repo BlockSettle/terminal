@@ -1,14 +1,15 @@
-#ifndef __CHANGE_WALLET_PASSWORD_DIALOG_H__
-#define __CHANGE_WALLET_PASSWORD_DIALOG_H__
+#ifndef __MANAGE_ENCRYPTION_DIALOG_H__
+#define __MANAGE_ENCRYPTION_DIALOG_H__
 
 #include <memory>
 #include <QDialog>
 #include "EncryptionUtils.h"
 #include "MetaData.h"
 #include "AutheIDClient.h"
+#include "QWalletInfo.h"
 
 namespace Ui {
-    class ChangeWalletPasswordDialog;
+    class ManageEncryptionDialog;
 }
 namespace bs {
    namespace hd {
@@ -20,7 +21,7 @@ class WalletKeyWidget;
 class ApplicationSettings;
 class SignContainer;
 
-class ChangeWalletPasswordDialog : public QDialog
+class ManageEncryptionDialog : public QDialog
 {
 Q_OBJECT
 
@@ -36,26 +37,17 @@ public:
       AddDeviceWaitNew,
    };
 
-   ChangeWalletPasswordDialog(const std::shared_ptr<spdlog::logger> &logger
+   ManageEncryptionDialog(const std::shared_ptr<spdlog::logger> &logger
       , std::shared_ptr<SignContainer> signingContainer
-      , const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::EncryptionType> &
-      , const std::vector<SecureBinaryData> &encKeys
-      , bs::wallet::KeyRank
-      , const QString &username
+      , const std::shared_ptr<bs::hd::Wallet> &wallet
+      , const bs::hd::WalletInfo &walletInfo
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget* parent = nullptr);
-   ~ChangeWalletPasswordDialog() override;
+   ~ManageEncryptionDialog() override;
 
 private slots:
    void onContinueClicked();
    void onTabChanged(int index);
-
-   void onOldDeviceKeyChanged(int, SecureBinaryData);
-   void onOldDeviceFailed();
-
-   void onNewDeviceEncKeyChanged(int index, SecureBinaryData encKey);
-   void onNewDeviceKeyChanged(int index, SecureBinaryData password);
-   void onNewDeviceFailed();
 
    void onPasswordChanged(const std::string &walletId, bool ok);
 
@@ -71,25 +63,23 @@ private:
    void resetKeys();
    void deleteDevice(const std::string &deviceId);
 
-   std::unique_ptr<Ui::ChangeWalletPasswordDialog> ui_;
+   std::unique_ptr<Ui::ManageEncryptionDialog> ui_;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<SignContainer> signingContainer_;
    std::shared_ptr<bs::hd::Wallet>  wallet_;
-   const bs::wallet::KeyRank oldKeyRank_;
    bs::wallet::KeyRank newKeyRank_;
    std::vector<bs::wallet::PasswordData> oldPasswordData_;
    std::vector<bs::wallet::PasswordData> newPasswordData_;
-   // Init variables in resetKeys method so they always valid when we restart process
+
    bool addNew_;
    bool removeOld_;
    SecureBinaryData oldKey_;
    State state_ = State::Idle;
-   WalletKeyWidget *deviceKeyOld_ = nullptr;
-   WalletKeyWidget *deviceKeyNew_ = nullptr;
    bool deviceKeyOldValid_;
    bool deviceKeyNewValid_;
    bool isLatestChangeAddDevice_;
    std::shared_ptr<ApplicationSettings> appSettings_;
+   bs::hd::WalletInfo walletInfo_;
 };
 
-#endif // __CHANGE_WALLET_PASSWORD_DIALOG_H__
+#endif // __MANAGE_ENCRYPTION_DIALOG_H__

@@ -981,7 +981,7 @@
   <customwidget>
    <class>WalletKeysSubmitWidget</class>
    <extends>QWidget</extends>
-   <header>WalletKeysSubmitWidget.h</header>
+   <header>ManageEncryption/WalletKeysSubmitWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

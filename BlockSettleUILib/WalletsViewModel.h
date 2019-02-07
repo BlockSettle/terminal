@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <vector>
 #include "MetaData.h"
+#include "QWalletInfo.h"
 
 
 class WalletsManager;
@@ -115,8 +116,7 @@ signals:
 private slots:
    void onWalletChanged();
    void onNewWalletAdded(const std::string &walletId);
-   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
+   void onWalletInfo(unsigned int id, bs::hd::WalletInfo);
    void onHDWalletError(unsigned int id, std::string err);
    void onMissingWallets(const std::vector<std::string> &);
    void onSignerAuthenticated();

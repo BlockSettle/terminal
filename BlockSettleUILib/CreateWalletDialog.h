@@ -8,7 +8,7 @@
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
 #include "MetaData.h"
-
+#include "QWalletInfo.h"
 
 namespace Ui {
    class CreateWalletDialog;
@@ -36,6 +36,7 @@ public:
       , const std::string& walletId
       , const QString& username
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    ~CreateWalletDialog() override;
 
@@ -44,7 +45,7 @@ public:
 
 private slots:
    void updateAcceptButtonState();
-   void CreateWallet();
+   void createWallet();
    void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
    void onKeyTypeChanged(bool password);
@@ -59,25 +60,14 @@ private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<spdlog::logger> logger_;
    const QString     walletsPath_;
    const bs::wallet::Seed walletSeed_;
-   const std::string walletId_;
+   bs::hd::WalletInfo walletInfo_;
    unsigned int      createReqId_ = 0;
    bool              walletCreated_ = false;
-   SecureBinaryData  walletPassword_;
    bool              createdAsPrimary_ = false;
    bool              authNoticeWasShown_ = false;
 };
-
-// Common function for CreateWalletDialog and ImportWalletDialog.
-// Checks validity and returns updated keys in keys output argument if succeeds.
-// Shows error messages if needed.
-bool checkNewWalletValidity(WalletsManager* walletsManager
-   , const QString& walletName
-   , const std::string& walletId
-   , WalletKeysCreateWidget* widgetCreateKeys
-   , std::vector<bs::wallet::PasswordData>* keys
-   , const std::shared_ptr<ApplicationSettings> &appSettings
-   , QWidget* parent);
 
 #endif // __CREATE_WALLET_DIALOG_H__

@@ -12,6 +12,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "MetaData.h"
+#include "QWalletInfo.h"
 
 namespace Ui {
     class RFQDealerReply;
@@ -111,8 +112,7 @@ namespace bs {
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
          void onAutoSignActivated();
-         void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
-            , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank);
+         void onWalletInfo(unsigned int reqId, bs::hd::WalletInfo walletInfo);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;

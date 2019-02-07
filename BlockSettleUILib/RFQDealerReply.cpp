@@ -14,7 +14,7 @@
 #include "CoinControlDialog.h"
 #include "CoinControlWidget.h"
 #include "CurrencyPair.h"
-#include "EnterWalletPassword.h"
+#include "ManageEncryption/EnterWalletPassword.h"
 #include "FastLock.h"
 #include "HDWallet.h"
 #include "BSMessageBox.h"
@@ -26,7 +26,7 @@
 #include "UiUtils.h"
 #include "UtxoReserveAdapters.h"
 #include "WalletsManager.h"
-#include "WalletKeysSubmitWidget.h"
+#include "ManageEncryption/WalletKeysSubmitWidget.h"
 #include "UserScriptRunner.h"
 
 using namespace bs::ui;
@@ -132,7 +132,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::disconnected, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged);
-      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &RFQDealerReply::onHDWalletInfo);
+      connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &RFQDealerReply::onWalletInfo);
    }
 
    UtxoReservation::addAdapter(utxoAdapter_);
@@ -215,26 +215,23 @@ void RFQDealerReply::onAutoSignActivated()
    }
 }
 
-void RFQDealerReply::onHDWalletInfo(unsigned int id
-   , std::vector<bs::wallet::EncryptionType> encTypes, std::vector<SecureBinaryData> encKeys
-   , bs::wallet::KeyRank keyRank)
+void RFQDealerReply::onWalletInfo(unsigned int reqId, bs::hd::WalletInfo walletInfo)
 {
-   if (autoSignWalletInfoReqId_ != id) {
+   if (autoSignWalletInfoReqId_ != reqId) {
       return;
    }
 
    EnterWalletPassword passwordDialog(AutheIDClient::SettlementTransaction, this);
-   passwordDialog.init(autoSignWalletId_, keyRank
-      , encTypes, encKeys, appSettings_
-      , tr("Activate Auto-Sign"));
-   passwordDialog.setWindowTitle(tr("Activate Auto-Sign"));
+   walletInfo.setRootId(autoSignWalletId_);
+   passwordDialog.init(walletInfo, appSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog
+                       , tr("Activate Auto-Sign"), logger_, tr("Activate Auto-Sign"));
    if (passwordDialog.exec() != QDialog::Accepted) {
       disableAutoSign();
       return;
    }
 
    ui_->checkBoxAutoSign->setChecked(true);
-   auto password = passwordDialog.getPassword();
+   auto password = passwordDialog.resultingKey();
    emit autoSignActivated(password, QString::fromStdString(autoSignWalletId_), true);
    updateAutoSignState();
 }

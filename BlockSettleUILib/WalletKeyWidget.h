@@ -6,6 +6,7 @@
 #include "EncryptUtils.h"
 #include "EncryptionUtils.h"
 #include "AutheIDClient.h"
+#include "QWalletInfo.h"
 
 namespace Ui {
     class WalletKeyWidget;
@@ -18,36 +19,43 @@ class WalletKeyWidget : public QWidget
 {
    Q_OBJECT
 public:
-   WalletKeyWidget(AutheIDClient::RequestType requestType, const std::string &walletId
-      , int index, bool password
-      , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
-      , QWidget* parent = nullptr);
-   ~WalletKeyWidget() override;
+   WalletKeyWidget(AutheIDClient::RequestType requestType
+                      , const bs::hd::WalletInfo &walletInfo
+                      , int keyIndex
+                      , const std::shared_ptr<ApplicationSettings>& appSettings
+                      , const std::shared_ptr<spdlog::logger> &logger
+                      , QWidget* parent = nullptr);
 
-   void init(const std::shared_ptr<ApplicationSettings>& appSettings, const QString& username);
+   enum class UseType {
+      RequestAuthInParent,       // requests password or eid (depends of walletInfo) in parent widget
+      RequestAuthAsDialog,       // requests password or eid (depends of walletInfo) in popup dialog
+      ChangeAuthInParent,        // change password or eid (depends of user select) in parent widget
+      ChangeToPasswordAsDialog,  // requests password to change as dialog (currently not used)
+      ChangeToEidAsDialog,       // requests eid to change as dialog
+
+      RequestAuthForDialog,      // just show only eid email to request auth in dialog (used in manage encryption only for eid)
+      ChangeAuthForDialog        // requests password to change or email for eid (depends of user select) in parent widget
+                                 // ChangeToEidAsDialog should be opened if eid selected
+   };
+   Q_ENUM(UseType)
+
+   ~WalletKeyWidget() override = default;
+
    void cancel();
    void start();
 
-   void setEncryptionKeys(const std::vector<SecureBinaryData> &encKeys, int index = 0);
-   void setFixedType(bool on = true);
    void setFocus();
 
-   void setHideAuthConnect(bool value);
-   void setHideAuthCombobox(bool value);
-   void setProgressBarFixed(bool value);
-   void setShowAuthId(bool value);
-   void setShowAuthIdLabel(bool value);
-   void setPasswordLabelAsNew();
-   void setPasswordLabelAsOld();
-   void setHideAuthEmailLabel(bool value);
-   void setHidePasswordWarning(bool value);
-   void setHideAuthControlsOnSignClicked(bool value);
-   void setHideProgressBar(bool value);
+   // initially WalletKeyWidget designed to embed it to another widgets, not for using as popup dialog
+   // ChangeAuthAsDialog and RequestAuthAsDialog flags enables possibility to show popup dialog for authorization
+   void setUseType(UseType useType);
 
 signals:
-   void keyChanged(int index, SecureBinaryData);
-   void encKeyChanged(int index, SecureBinaryData);
-   void keyTypeChanged(int index, bool password);
+   void returnPressed(int keyIndex);
+
+   // emitted when password entered or eid auth recieved
+   void passwordDataChanged(int keyIndex, const bs::wallet::PasswordData &passwordData);
+
    // Signals that Auth was denied or timed out
    void failed();
 
@@ -66,27 +74,22 @@ private:
    QPropertyAnimation* startAuthAnimation(bool success);
 
 private:
+   std::shared_ptr<ApplicationSettings> appSettings_;
+
    std::unique_ptr<Ui::WalletKeyWidget> ui_;
-   std::string walletId_;
-   int         index_;
-   bool        password_;
+   int         keyIndex_;
    bool        authRunning_ = false;
-   bool        encryptionKeysSet_ = false;
 
    QTimer      timer_;
    float       timeLeft_;
-   AutheIDClient *autheIDClient_{};
 
-   bool        hideAuthConnect_ = false;
-   bool        hideAuthCombobox_ = false;
-   bool        progressBarFixed_ = false;
-   bool        showAuthId_ = false;
-   bool        hideAuthEmailLabel_ = false;
-   bool        hideAuthControlsOnSignClicked_ = false;
-   bool        hideProgressBar_ = false;
-   bool        hidePasswordWarning_ = false;
+   AutheIDClient *autheIDClient_{};
    AutheIDClient::RequestType requestType_{};
-   std::vector<std::string> knownDeviceIds_;
+   std::vector<std::string> knownDeviceIds_; // contains only device id for key with index keyIndex
+
+   bs::hd::WalletInfo walletInfo_;
+   bs::wallet::PasswordData passwordData_;
+   std::shared_ptr<spdlog::logger> logger_;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

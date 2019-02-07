@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "MetaData.h"
+#include "QWalletInfo.h"
 
 namespace spdlog {
    class logger;
@@ -49,8 +50,7 @@ protected slots:
    void onTimerStarted(int msDuration);
    void onTimerStopped();
 
-   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
+   void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo& walletInfo);
 
 protected:
    void reject() override;
@@ -91,11 +91,9 @@ private:
    unsigned int   infoReqId_ = 0;
    bool           walletInfoReceived_ = false;
    bool           accepting_ = false;
-   std::vector<bs::wallet::EncryptionType>   encTypes_;
-   std::vector<SecureBinaryData>             encKeys_;
-   bs::wallet::KeyRank                       keyRank_;
    QString        authPrompt_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   bs::hd::WalletInfo walletInfo_;
 };
 
 #endif // __BASE_DEALER_SETTLEMENT_DIALOG_H__

@@ -4,6 +4,8 @@
 #include <QWidget>
 #include "WalletEncryption.h"
 #include "AutheIDClient.h"
+#include "QWalletInfo.h"
+#include "WalletKeyWidget.h"
 
 namespace Ui {
     class WalletKeysCreateWidget;
@@ -30,36 +32,39 @@ public:
 
    void setFlags(Flags flags);
    void init(AutheIDClient::RequestType requestType
-      , const std::string &walletId, const QString& username
-      , const std::shared_ptr<ApplicationSettings>& appSettings);
-   void addPasswordKey() { addKey(true); }
-   void addAuthKey() { addKey(false); }
+             , const bs::hd::WalletInfo &walletInfo
+             , WalletKeyWidget::UseType useType
+             , const std::shared_ptr<ApplicationSettings>& appSettings
+             , const std::shared_ptr<spdlog::logger> &logger);
+
    void cancel();
 
    bool isValid() const;
-   std::vector<bs::wallet::PasswordData> keys() const { return pwdData_; }
+   bs::wallet::PasswordData passwordData(int keyIndex) const { return pwdData_.at(keyIndex); }
+   std::vector<bs::wallet::PasswordData> passwordData() const { return pwdData_; }
    bs::wallet::KeyRank keyRank() const { return keyRank_; }
+
+public slots:
+   void setFocus();
 
 signals:
    void keyChanged();
    void keyCountChanged();
    void failed();
    void keyTypeChanged(bool password);
+   void returnPressed();
 
 private slots:
    void onAddClicked();
    void onDelClicked();
-   void onKeyChanged(int index, SecureBinaryData);
-   void onKeyTypeChanged(int index, bool password);
-   void onEncKeyChanged(int index, SecureBinaryData);
+   void onPasswordDataChanged(int index, bs::wallet::PasswordData passwordData);
    void updateKeyRank(int);
 
 private:
-   void addKey(bool password);
+   void addKey();
 
 private:
    std::unique_ptr<Ui::WalletKeysCreateWidget> ui_;
-   std::string walletId_;
    std::vector<std::unique_ptr<WalletKeyWidget>> widgets_;
    std::vector<bs::wallet::PasswordData> pwdData_;
    bs::wallet::KeyRank keyRank_ = { 0, 0 };
@@ -67,6 +72,10 @@ private:
    std::shared_ptr<ApplicationSettings> appSettings_;
    QString username_;
    AutheIDClient::RequestType requestType_{};
+   bs::hd::WalletInfo walletInfo_;
+   std::shared_ptr<spdlog::logger> logger_;
+   WalletKeyWidget::UseType useType_;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysCreateWidget::Flags)

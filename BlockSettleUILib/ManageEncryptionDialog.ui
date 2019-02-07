@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ChangeWalletPasswordDialog</class>
- <widget class="QDialog" name="ChangeWalletPasswordDialog">
+ <class>ManageEncryptionDialog</class>
+ <widget class="QDialog" name="ManageEncryptionDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>397</width>
-    <height>414</height>
+    <width>400</width>
+    <height>330</height>
    </rect>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>450</width>
+    <height>16777215</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Manage Wallet Encryption</string>
@@ -34,8 +40,16 @@
    </property>
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="styleSheet">
+      <string notr="true">QTabBar::tab {
+	min-width: 110px;
+}</string>
+     </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
+     </property>
+     <property name="usesScrollButtons">
+      <bool>false</bool>
      </property>
      <widget class="QWidget" name="tabSimple">
       <attribute name="title">
@@ -43,83 +57,221 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <property name="spacing">
-        <number>7</number>
+        <number>20</number>
        </property>
        <property name="leftMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>15</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
        </property>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetMaximumSize</enum>
-         </property>
-         <property name="leftMargin">
-          <number>18</number>
-         </property>
-         <property name="topMargin">
-          <number>7</number>
-         </property>
-         <property name="rightMargin">
-          <number>18</number>
-         </property>
-         <property name="bottomMargin">
-          <number>7</number>
-         </property>
-         <item>
-          <widget class="QLabel" name="label_12">
-           <property name="minimumSize">
-            <size>
-             <width>120</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Wallet ID</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="labelWalletId">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>--</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
+        <widget class="QGroupBox" name="groupBox">
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>20</height>
+           <height>0</height>
           </size>
          </property>
+         <property name="title">
+          <string>WALLET DETAILS</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_3">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetMaximumSize</enum>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="label_13">
+              <property name="minimumSize">
+               <size>
+                <width>120</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Wallet name</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelWalletName">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>--</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetMaximumSize</enum>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="label_12">
+              <property name="minimumSize">
+               <size>
+                <width>120</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Wallet ID</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelWalletId">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>--</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
-        <widget class="WalletKeysCreateWidget" name="widgetCreateKeys" native="true">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>20</height>
-          </size>
+        <widget class="QGroupBox" name="groupBoxCurrentEncryption">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="title">
+          <string>ENTER PASSWORD</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_6">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxNewEncryption">
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="title">
+          <string>NEW ENCRYPTION</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="WalletKeysCreateWidget" name="widgetCreateKeys" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
@@ -130,7 +282,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>0</width>
-           <height>0</height>
+           <height>1000</height>
           </size>
          </property>
         </spacer>
@@ -345,11 +497,14 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonOk">
+        <property name="focusPolicy">
+         <enum>Qt::TabFocus</enum>
+        </property>
         <property name="text">
          <string>Continue</string>
         </property>
         <property name="default">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -360,15 +515,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>WalletKeysCreateWidget</class>
-   <extends>QWidget</extends>
-   <header>WalletKeysCreateWidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>WalletKeysSubmitWidget</class>
    <extends>QWidget</extends>
    <header>WalletKeysSubmitWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>WalletKeysCreateWidget</class>
+   <extends>QWidget</extends>
+   <header>WalletKeysCreateWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

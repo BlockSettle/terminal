@@ -11,7 +11,8 @@
 #include "Address.h"
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
-#include "ChangeWalletPasswordDialog.h"
+#include "ManageEncryption/ManageEncryptionDialog.h"
+#include "WalletBackupDialog.h"
 #include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
@@ -20,6 +21,7 @@
 #include "WalletsManager.h"
 #include "WalletsViewModel.h"
 #include "WalletsWidget.h"
+#include "ManageEncryption/ManageEncryptionDialog.h"
 
 #include <QSortFilterProxyModel>
 
@@ -87,25 +89,23 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    connect(ui_->deleteButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onDeleteWallet);
    connect(ui_->backupButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onBackupWallet);
    connect(ui_->exportButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onCreateWoWallet);
-   connect(ui_->changePassphraseButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onChangePassword);
+   connect(ui_->manageEncryptionButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onChangePassword);
    connect(ui_->rescanButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onRescanBlockchain);
 
    updateWalletDetails(wallet_);
 
    ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
-   ui_->changePassphraseButton->setEnabled(false);
+   ui_->manageEncryptionButton->setEnabled(false);
    if (!wallet_->isWatchingOnly()) {
-      walletEncTypes_ = wallet_->encryptionTypes();
-      walletEncKeys_ = wallet_->encryptionKeys();
-      walletEncRank_ = wallet_->encryptionRank();
+      walletInfo_ = bs::hd::WalletInfo(wallet_);
    }
 
    if (signingContainer_) {
       if (signingContainer_->isOffline() || signingContainer_->isWalletOffline(wallet->getWalletId())) {
          ui_->backupButton->setEnabled(false);
-         ui_->changePassphraseButton->setEnabled(false);
+         ui_->manageEncryptionButton->setEnabled(false);
       }
-      connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
+      connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RootWalletPropertiesDialog::onHDLeafCreated);
       infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
    }
@@ -126,7 +126,7 @@ void RootWalletPropertiesDialog::onDeleteWallet()
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, logger_
+   WalletBackupAndNewVerify(wallet_, signingContainer_, appSettings_, logger_
                          , this);
 }
 
@@ -179,10 +179,11 @@ void RootWalletPropertiesDialog::copyWoWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   ChangeWalletPasswordDialog changePasswordDialog(logger_, signingContainer_, wallet_
-      , walletEncTypes_, walletEncKeys_, walletEncRank_, QString(), appSettings_, this);
+   ManageEncryptionDialog manageEncryptionDialog(logger_, signingContainer_, wallet_
+                                                 , walletInfo_, appSettings_, this);
 
-   int result = changePasswordDialog.exec();
+   int result = manageEncryptionDialog.exec();
+
 
    if (result == QDialog::Accepted) {
       // Update wallet encryption type
@@ -204,26 +205,29 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
    };
 }
 
-void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
-   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
+void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo)
 {
    if (!infoReqId_ || (id != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
-   walletEncTypes_ = encTypes;
-   walletEncKeys_ = encKeys;
-   walletEncRank_ = keyRank;
-   ui_->changePassphraseButton->setEnabled(true);
 
-   if (keyRank.first == 1 && keyRank.second == 1) {
-      if (!encTypes.empty()) {
-         ui_->labelEncRank->setText(encTypeToString(encTypes.front()));
+   // walletInfo arrived from sign container signal
+   walletInfo_ = walletInfo;
+
+   // but wallet name is from bs::hd::Wallet
+   walletInfo_.setName(QString::fromStdString(wallet_->getName()));
+
+   ui_->manageEncryptionButton->setEnabled(true);
+
+   if (walletInfo.keyRank().first == 1 && walletInfo.keyRank().second == 1) {
+      if (!walletInfo.encTypes().empty()) {
+         ui_->labelEncRank->setText(encTypeToString(walletInfo.encTypes().front()));
       } else {
          ui_->labelEncRank->setText(tr("Unknown"));
       }
    } else {
-      ui_->labelEncRank->setText(tr("Auth eID %1 of %2").arg(keyRank.first).arg(keyRank.second));
+      ui_->labelEncRank->setText(tr("Auth eID %1 of %2").arg(walletInfo.keyRank().first).arg(walletInfo.keyRank().second));
    }
 }
 

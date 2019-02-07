@@ -5,11 +5,13 @@
 #include "CreateWalletDialog.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
-#include "WalletDeleteDialog.h"
 #include "WalletImporter.h"
 #include "WalletPasswordVerifyDialog.h"
+#include "WalletKeysCreateWidget.h"
+#include "EnterWalletPassword.h"
 #include "WalletsManager.h"
 #include "UiUtils.h"
+#include "QWalletInfo.h"
 
 #include <spdlog/spdlog.h>
 
@@ -26,21 +28,20 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::ImportWalletDialog)
-   , walletsMgr_(walletsManager)
-   , signContainer_(container)
+   , walletsManager_(walletsManager)
    , appSettings_(appSettings)
    , logger_(logger)
    , armory_(armory)
    , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
       , appSettings->get<NetworkType>(ApplicationSettings::netType)))
 {
-   walletId_ = bs::hd::Node(walletSeed_).getId();
+   walletInfo_.setRootId(QString::fromStdString(bs::hd::Node(walletSeed_).getId()));
 
    ui_->setupUi(this);
 
    ui_->lineEditDescription->setValidator(new UiUtils::WalletDescriptionValidator(this));
    
-   ui_->labelWalletId->setText(QString::fromStdString(walletId_));
+   ui_->labelWalletId->setText(walletInfo_.rootId());
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
 
@@ -71,8 +72,8 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);
    connect(walletImporter_.get(), &WalletImporter::error, this, &ImportWalletDialog::onError);
 
-   connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &ImportWalletDialog::onImportAccepted);
-   connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::onImportAccepted);
+   connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &ImportWalletDialog::importWallet);
+   connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::importWallet);
 
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyTypeChanged,
       this, &ImportWalletDialog::onKeyTypeChanged);
@@ -83,36 +84,15 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
 
-   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol 
-      | WalletKeysCreateWidget::HideAuthConnectButton);
-   ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet, walletId_, username, appSettings);
+//   ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol
+//      | WalletKeysCreateWidget::HideAuthConnectButton);
+   //ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet, walletId_, username, appSettings);
+
+   ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet
+      , walletInfo_, WalletKeyWidget::UseType::ChangeAuthForDialog, appSettings, logger);
 
    adjustSize();
    setMinimumSize(size());
-
-   if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId_)) {
-      const auto hdWallet = walletsMgr_->GetHDWalletById(walletId_);
-      if (hdWallet == nullptr) {
-         existingChecked_ = true;
-      }
-      else {
-         BSMessageBox delWoWallet(BSMessageBox::question, tr("WO wallet exists")
-            , tr("Watching-only wallet with the same id already exists in the terminal"
-               " - do you want to delete it first?"), this);
-         if (delWoWallet.exec() == QDialog::Accepted) {
-            WalletDeleteDialog delDlg(hdWallet, walletsMgr_, signContainer_, appSettings_, logger, this, true);
-            if (delDlg.exec() == QDialog::Accepted) {
-               existingChecked_ = true;
-            }
-         }
-      }
-   }
-   else {
-      connect(signContainer_.get(), &SignContainer::HDWalletInfo, this, &ImportWalletDialog::onHDWalletInfo);
-      connect(signContainer_.get(), &SignContainer::Error, this, &ImportWalletDialog::onSignerError);
-      reqWalletInfoId_ = signContainer_->GetInfo(walletId_);
-   }
-   updateAcceptButtonState();
 }
 
 ImportWalletDialog::~ImportWalletDialog() = default;
@@ -123,56 +103,10 @@ void ImportWalletDialog::onError(const QString &errMsg)
    reject();
 }
 
-void ImportWalletDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-   , std::vector<SecureBinaryData> &, bs::wallet::KeyRank)
-{
-   if (id != reqWalletInfoId_) {
-      return;
-   }
-   reqWalletInfoId_ = 0;
-
-   QMetaObject::invokeMethod(this, [this] { promptForSignWalletDelete(); });
-}
-
-void ImportWalletDialog::promptForSignWalletDelete()
-{
-   BSMessageBox delWallet(BSMessageBox::question, tr("Signing wallet exists")
-      , tr("Signing wallet with the same id already exists in the terminal"
-         " - do you want to delete it first?"), this);
-   if (delWallet.exec() == QDialog::Accepted) {
-      const auto hdWallet = walletsMgr_->GetHDWalletById(walletId_);
-      if (hdWallet == nullptr) {
-         BSMessageBox noWoWallet(BSMessageBox::question, tr("Missing WO wallet")
-            , tr("Watching-only wallet with id %1 is not loaded in the terminal, but still exists in Signer."
-               " Do you want to delete it anyway?").arg(QString::fromStdString(walletId_)), this);
-         if (noWoWallet.exec() == QDialog::Accepted) {
-            signContainer_->DeleteHDRoot(walletId_);
-            existingChecked_ = true;
-         }
-      } else {
-         WalletDeleteDialog delDlg(hdWallet, walletsMgr_, signContainer_, appSettings_, logger_, this, true, true);
-         if (delDlg.exec() == QDialog::Accepted) {
-            existingChecked_ = true;
-         }
-      }
-      updateAcceptButtonState();
-   }
-}
-
-void ImportWalletDialog::onSignerError(unsigned int id, std::string error)
-{
-   if (id != reqWalletInfoId_) {
-      return;
-   }
-   reqWalletInfoId_ = 0;
-   existingChecked_ = true;
-   updateAcceptButtonState();
-}
-
 void ImportWalletDialog::updateAcceptButtonState()
 {
-   ui_->pushButtonImport->setEnabled(ui_->widgetCreateKeys->isValid()
-      && existingChecked_ && !ui_->lineEditWalletName->text().isEmpty());
+   ui_->pushButtonImport->setEnabled(ui_->widgetCreateKeys->isValid() &&
+      !ui_->lineEditWalletName->text().isEmpty());
 }
 
 void ImportWalletDialog::onKeyTypeChanged(bool password)
@@ -189,10 +123,10 @@ void ImportWalletDialog::onKeyTypeChanged(bool password)
 void ImportWalletDialog::onWalletCreated(const std::string &walletId)
 {
    if (armory_->state() == ArmoryConnection::State::Ready) {
-      emit walletsMgr_->walletImportStarted(walletId);
+      emit walletsManager_->walletImportStarted(walletId);
    }
    else {
-      const auto &rootWallet = walletsMgr_->GetHDWalletById(walletId);
+      const auto &rootWallet = walletsManager_->GetHDWalletById(walletId);
       if (rootWallet) {
          for (const auto &leaf : rootWallet->getLeaves()) {
             appSettings_->SetWalletScanIndex(leaf->GetWalletId(), 0);
@@ -202,32 +136,70 @@ void ImportWalletDialog::onWalletCreated(const std::string &walletId)
    accept();
 }
 
-void ImportWalletDialog::onImportAccepted()
+void ImportWalletDialog::importWallet()
 {
-   walletName_ = ui_->lineEditWalletName->text();
-   const QString &walletDescription = ui_->lineEditDescription->text();
-   std::vector<bs::wallet::PasswordData> keys;
+   // currently {1,1} key created on wallet creation
+   walletInfo_.setName(ui_->lineEditWalletName->text());
+   walletInfo_.setDesc(ui_->lineEditDescription->text());
+   walletInfo_.setPasswordData(ui_->widgetCreateKeys->passwordData());
+   walletInfo_.setKeyRank({1,1});
 
-   bool result = checkNewWalletValidity(walletsMgr_.get(), walletName_, walletId_
-      , ui_->widgetCreateKeys, &keys, appSettings_, this);
-   if (!result) {
+
+   // check wallet name
+   if (walletsManager_->WalletNameExists(walletInfo_.name().toStdString())) {
+      BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid wallet name")
+         , QObject::tr("Wallet with this name already exists"), this);
+      messageBox.exec();
       return;
    }
+
+   std::vector<bs::wallet::PasswordData> pwData = ui_->widgetCreateKeys->passwordData();
+
+   // request eid auth if it's selected
+   if (ui_->widgetCreateKeys->passwordData()[0].encType == bs::wallet::EncryptionType::Auth) {
+      if (ui_->widgetCreateKeys->passwordData()[0].encKey.isNull()) {
+         BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid Auth eID")
+            , QObject::tr("Please check Auth eID Email"), this);
+         messageBox.exec();
+         return;
+      }
+
+      EnterWalletPassword dialog(AutheIDClient::ActivateWallet, this);
+
+      dialog.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::ChangeToEidAsDialog
+         , QObject::tr("Activate Auth eID Signing"), logger_, QObject::tr("Auth eID"));
+      int result = dialog.exec();
+      if (!result) {
+         return;
+      }
+
+      walletInfo_.setPasswordData(dialog.passwordData());
+      pwData = dialog.passwordData();
+   }
+   else if (!ui_->widgetCreateKeys->isValid()) {
+      BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid password")
+         , QObject::tr("Please check the password"), this);
+      messageBox.exec();
+   }
+
 
    try {
       importedAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
 
       ui_->pushButtonImport->setEnabled(false);
 
-      walletImporter_->Import(walletName_.toStdString(), walletDescription.toStdString(), walletSeed_
-         , importedAsPrimary_, keys, ui_->widgetCreateKeys->keyRank());
+      std::vector<bs::wallet::PasswordData> vectorPwData;
+      vectorPwData.assign(pwData.cbegin(), pwData.cend());
+
+      walletImporter_->Import(walletInfo_.name().toStdString(), walletInfo_.desc().toStdString(), walletSeed_
+         , importedAsPrimary_, vectorPwData, ui_->widgetCreateKeys->keyRank());
    }
    catch (...) {
       onError(tr("Invalid backup data"));
    }
 }
 
-bool abortWalletImportQuestionDialog(QWidget* parent)
+bool abortWalletImportQuestionNewDialog(QWidget* parent)
 {
    BSMessageBox messageBox(BSMessageBox::question, QObject::tr("Warning"), QObject::tr("Do you want to abort Wallet Import?")
       , QObject::tr("The Wallet will not be imported if you don't complete the procedure.\n\n"
@@ -241,7 +213,7 @@ bool abortWalletImportQuestionDialog(QWidget* parent)
 
 void ImportWalletDialog::reject()
 {
-   bool result = abortWalletImportQuestionDialog(this);
+   bool result = abortWalletImportQuestionNewDialog(this);
    if (!result) {
       return;
    }

@@ -81,7 +81,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap resource="armory.qrc">:/resources/wallet_import.png</pixmap>
+       <pixmap resource="../armory.qrc">:/resources/wallet_import.png</pixmap>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -90,35 +90,26 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="verticalWidget" native="true">
+    <widget class="QWidget" name="widget_2" native="true">
      <property name="minimumSize">
       <size>
        <width>0</width>
        <height>0</height>
       </size>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <property name="spacing">
-       <number>0</number>
-      </property>
-      <property name="leftMargin">
-       <number>7</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>7</number>
-      </property>
-      <property name="bottomMargin">
-       <number>10</number>
-      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="title">
-         <string>Wallet Details</string>
+         <string>WALLET DETAILS</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
          <item row="3" column="1">
           <widget class="QCheckBox" name="checkBoxPrimaryWallet">
            <property name="enabled">
@@ -147,7 +138,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Name</string>
+            <string>Wallet name</string>
            </property>
           </widget>
          </item>
@@ -196,31 +187,46 @@
         </layout>
        </widget>
       </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>ENCRYPTION</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="WalletKeysCreateWidget" name="widgetCreateKeys" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>23</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>359</width>
+          <height>33</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
      </layout>
     </widget>
-   </item>
-   <item>
-    <widget class="WalletKeysCreateWidget" name="widgetCreateKeys" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>100</width>
-       <height>23</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item>
     <widget class="QWidget" name="widget" native="true">
@@ -295,7 +301,8 @@
   <tabstop>pushButtonImport</tabstop>
  </tabstops>
  <resources>
-  <include location="armory.qrc"/>
+  <include location="../armory.qrc"/>
+  <include location="../armory.qrc"/>
  </resources>
  <connections>
   <connection>

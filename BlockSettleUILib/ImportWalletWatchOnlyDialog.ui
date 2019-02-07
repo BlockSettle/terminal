@@ -81,7 +81,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap resource="armory.qrc">:/resources/wallet_import.png</pixmap>
+       <pixmap resource="../armory.qrc">:/resources/wallet_import.png</pixmap>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -455,7 +455,8 @@
   </layout>
  </widget>
  <resources>
-  <include location="armory.qrc"/>
+  <include location="../armory.qrc"/>
+  <include location="../armory.qrc"/>
  </resources>
  <connections/>
 </ui>

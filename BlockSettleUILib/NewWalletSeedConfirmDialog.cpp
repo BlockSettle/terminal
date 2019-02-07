@@ -122,4 +122,5 @@ void NewWalletSeedConfirmDialog::onKeyChanged(const QString &)
 void NewWalletSeedConfirmDialog::updateState()
 {
    ui_->btnContinue->setEnabled(keysAreCorrect_);
+   ui_->btnContinue->setEnabled(true);
 }
