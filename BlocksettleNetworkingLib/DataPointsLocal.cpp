@@ -140,24 +140,16 @@ const std::vector<DataPointsLocal::DataPoint *> DataPointsLocal::getDataPoints(c
         qreal volume = query.value(QStringLiteral("volume")).toDouble();
         qint64 timestamp = query.value(QStringLiteral("timestamp")).toLongLong();
         auto point = createDataPoint(open, high, low, close, volume, timestamp);
-        if (result.size() > 0) {
-            auto expected = intervalStart(timestamp, interval);
-            auto step = intervalEnd(timestamp, interval) - expected;
-            auto previous = result.back()->timestamp;
-            while (expected > previous + step) {
-               auto emptyPoint = createDataPoint(result.back()->close
-                                                 , result.back()->close
-                                                 , result.back()->close
-                                                 , result.back()->close
-                                                 , 0
-                                                 , previous + step);
-               result.push_back(emptyPoint);
-               previous = result.back()->timestamp;
-            }
-        }
         result.push_back(point);
     }
     if (result.size() > 0) {
+       auto lastPoint = result.back();
+       qint64 lastTimestamp = lastPoint->timestamp;
+       qint64 expectedLastTimestamp = intervalEnd(lastTimestamp, interval);
+       if (lastTimestamp < expectedLastTimestamp) {
+          lastPoint->timestamp = expectedLastTimestamp;
+       }
+
        auto now = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
        auto step = intervalEnd(now, interval) - intervalStart(now, interval);
        auto next = now + step;
