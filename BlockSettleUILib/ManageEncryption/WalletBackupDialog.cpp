@@ -234,7 +234,7 @@ void WalletBackupDialog::reject()
 }
 
 
-bool WalletBackupAndNewVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
+bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<spdlog::logger> &logger

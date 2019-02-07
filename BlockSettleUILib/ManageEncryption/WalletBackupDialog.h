@@ -62,7 +62,7 @@ private:
    bs::hd::WalletInfo walletInfo_;
 };
 
-bool WalletBackupAndNewVerify(const std::shared_ptr<bs::hd::Wallet> &
+bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &
    , const std::shared_ptr<SignContainer> &
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<spdlog::logger> &logger

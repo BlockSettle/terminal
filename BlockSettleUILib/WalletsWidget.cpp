@@ -490,12 +490,6 @@ bool WalletsWidget::ImportNewWallet(bool report)
 
    if (importWalletDialog.exec() == QDialog::Accepted) {
       if (importWalletDialog.type() == ImportWalletTypeDialog::Full) {
-//         ImportWalletDialog createImportedWallet(walletsManager_, signingContainer_
-//            , assetManager_, authMgr_, armory_, importWalletDialog.GetSeedData()
-//            , importWalletDialog.GetChainCodeData(), appSettings_
-//            , username_, importWalletDialog.GetName(), importWalletDialog.GetDescription()
-//            , this);
-
          ImportWalletDialog createImportedWallet(walletsManager_
                                                     , signingContainer_
                                                     , assetManager_
@@ -732,29 +726,4 @@ void WalletsWidget::onDeleteWallet()
    }
    WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_
                       , logger_, this).exec();
-}
-
-
-bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
-   , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<spdlog::logger> &logger
-   , QWidget *parent)
-{
-   if (!wallet) {
-      return false;
-   }
-   WalletBackupDialog walletBackupDialog(wallet, container, appSettings, logger, parent);
-   if (walletBackupDialog.exec() == QDialog::Accepted) {
-      BSMessageBox(BSMessageBox::success, QObject::tr("Backup"), QObject::tr("%1 Backup successfully created")
-         .arg(walletBackupDialog.isDigitalBackup() ? QObject::tr("Digital") : QObject::tr("Paper"))
-            , walletBackupDialog.filePath(), parent).exec();
-      if (!walletBackupDialog.isDigitalBackup()) {
-         VerifyWalletBackupDialog(wallet, logger, parent).exec();
-      }
-      WalletWarningDialog(parent).exec();
-      return true;
-   }
-
-   return false;
 }

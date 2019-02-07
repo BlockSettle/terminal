@@ -126,7 +126,7 @@ void RootWalletPropertiesDialog::onDeleteWallet()
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   WalletBackupAndNewVerify(wallet_, signingContainer_, appSettings_, logger_
+   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, logger_
                          , this);
 }
 

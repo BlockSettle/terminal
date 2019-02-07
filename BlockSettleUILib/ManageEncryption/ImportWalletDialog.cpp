@@ -35,7 +35,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
       , appSettings->get<NetworkType>(ApplicationSettings::netType)))
 {
-   walletInfo_.setRootId(QString::fromStdString(bs::hd::Node(walletSeed_).getId()));
+   walletInfo_.setRootId(bs::hd::Node(walletSeed_).getId());
 
    ui_->setupUi(this);
 
@@ -199,7 +199,7 @@ void ImportWalletDialog::importWallet()
    }
 }
 
-bool abortWalletImportQuestionNewDialog(QWidget* parent)
+bool abortWalletImportQuestionDialog(QWidget* parent)
 {
    BSMessageBox messageBox(BSMessageBox::question, QObject::tr("Warning"), QObject::tr("Do you want to abort Wallet Import?")
       , QObject::tr("The Wallet will not be imported if you don't complete the procedure.\n\n"
@@ -213,7 +213,7 @@ bool abortWalletImportQuestionNewDialog(QWidget* parent)
 
 void ImportWalletDialog::reject()
 {
-   bool result = abortWalletImportQuestionNewDialog(this);
+   bool result = abortWalletImportQuestionDialog(this);
    if (!result) {
       return;
    }

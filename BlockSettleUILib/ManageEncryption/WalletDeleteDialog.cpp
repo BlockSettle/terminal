@@ -10,6 +10,7 @@
 #include "BSMessageBox.h"
 #include "WalletsWidget.h"
 #include "SignContainer.h"
+#include "WalletBackupDialog.h"
 
 
 WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &wallet

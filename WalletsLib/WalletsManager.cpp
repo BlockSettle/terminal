@@ -643,9 +643,6 @@ bool WalletsManager::DeleteWalletFile(const hd_wallet_type &wallet)
       leaf->UnregisterWallet();
    }
    for (const auto &leaf : leaves) {
-      leaf->UnregisterWallet();
-   }
-   for (const auto &leaf : leaves) {
       EraseWallet(leaf);
    }
    blockSignals(prevState);

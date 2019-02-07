@@ -34,7 +34,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , logger_(logger)
 {
    ui_->setupUi(this);
-   walletInfo_.setRootId(QString::fromStdString(walletId));
+   walletInfo_.setRootId(walletId);
 
    ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
    ui_->checkBoxPrimaryWallet->setChecked(!walletsManager->HasPrimaryWallet());
