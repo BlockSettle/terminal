@@ -174,7 +174,7 @@ void ReqXBTSettlementContainer::activate()
       }
    }
 
-   infoReqId_ = signContainer_->GetInfo(walletId_);
+   infoReqId_ = signContainer_->GetInfo(walletInfo_.rootId().toStdString());
 
    addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, quote_.settlementId
       , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
