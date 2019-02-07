@@ -633,9 +633,33 @@ void CreateTransactionDialogAdvanced::onXBTAmountChanged(const QString &text)
 
 void CreateTransactionDialogAdvanced::onSelectInputs()
 {
+   const double prevBalance = transactionData_->GetTransactionSummary().availableBalance;
+   const double spendBalance = transactionData_->GetTotalRecipientsAmount();
+   const double totalFee = transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider;
+   logger_->debug("prevBalance: {}, spendBalance: {}, totalFee: {}, diff={}"
+      , prevBalance, spendBalance, totalFee, prevBalance - spendBalance - totalFee);
    CoinControlDialog dlg(transactionData_->GetSelectedInputs(), allowAutoSelInputs_, this);
    if (dlg.exec() == QDialog::Accepted) {
       SetInputs(dlg.selectedInputs());
+   }
+
+   const double curBalance = transactionData_->GetTransactionSummary().availableBalance;
+   if (curBalance < (spendBalance + totalFee)) {
+      BSMessageBox lowInputs(BSMessageBox::question, tr("Not enough inputs balance")
+         , tr("Currently your inputs don't allow to spend the balance added to output[s]. Delete [some of] them?"));
+      if (lowInputs.exec() == QDialog::Accepted) {
+         while (outputsModel_->rowCount({})) {
+            RemoveOutputByRow(0);
+            if (curBalance >= (transactionData_->GetTotalRecipientsAmount()
+               + transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider)) {
+               break;
+            }
+         }
+         onOutputRemoved();
+      }
+   }
+   else if (curBalance > prevBalance) {
+      enableFeeChanging();
    }
 }
 
