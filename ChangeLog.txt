@@ -1,3 +1,11 @@
+0.12.8
+Bug fixes:
+   - RBF and CPFP fixes
+   - Create Transaction dialog fixes
+   - TX list fixes
+   - Signer key UI fixes
+   - Chat UI fixes
+
 0.12.7
 Improvements:
    - New wallet encryption scheme (incompatible with previous one)

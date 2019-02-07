@@ -3,11 +3,20 @@
 binpath="../build_terminal/Release/bin"
 binary=$binpath/blocksettle
 scriptpath="../DealerScripts"
+
 libprotobuf="${DEV_3RD_ROOT}/release/Protobuf/lib"
+if [ "${DEV_3RD_ROOT}X" = "X" ]; then
+   libprotobuf="../../3rd/release/Protobuf/lib"
+fi
 
 if [ ! -x $binary ]; then
     echo "Release terminal binary $binary doesn't exist!"
     exit
+fi
+
+if [ ! -d $libprotobuf ]; then
+   echo "Protobuf library dir is missing at $libprotobuf!"
+   exit
 fi
 
 mkdir -p Ubuntu/usr/bin
