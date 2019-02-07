@@ -606,11 +606,9 @@ std::set<BinaryData> hd::Leaf::getAddrHashSet()
 
 void hd::Leaf::UnregisterWallet()
 {
-   Wallet::UnregisterWallet();
    addrPrefixedHashes_.clear();
    addressPool_.clear();
-   RegisterWallet();
-   btcWallet_.reset();
+   Wallet::UnregisterWallet();
 }
 
 bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)

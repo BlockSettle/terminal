@@ -507,7 +507,8 @@ void WalletsViewModel::onSignerAuthenticated()
       if (!hdWallet) {
          continue;
       }
-      hdInfoReqIds_[signContainer_->GetInfo(hdWallet)] = hdWallet->getWalletId();
+      const auto walletId = hdWallet->getWalletId();
+      hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
    }
 }
 
@@ -516,10 +517,7 @@ void WalletsViewModel::onNewWalletAdded(const std::string &walletId)
    if (!signContainer_) {
       return;
    }
-   const auto &hdWallet = walletsManager_->GetHDWalletById(walletId);
-   if (hdWallet) {
-      hdInfoReqIds_[signContainer_->GetInfo(hdWallet)] = walletId;
-   }
+   hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
 }
 
 void WalletsViewModel::LoadWallets(bool keepSelection)

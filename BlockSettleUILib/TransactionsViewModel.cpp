@@ -650,6 +650,10 @@ void TransactionsViewModel::loadLedgerEntries()
          auto inPageCnt = pageCnt.get();
          emit initProgress(0, inPageCnt * 2);
          for (uint64_t pageId = 0; pageId < inPageCnt; ++pageId) {
+            if (stopped_) {
+               logger_->debug("[TransactionsViewModel::loadLedgerEntries] stopped");
+               break;
+            }
             const auto &cbLedger = [this, pageId, inPageCnt]
                (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                try {

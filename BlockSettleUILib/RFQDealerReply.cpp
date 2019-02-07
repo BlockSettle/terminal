@@ -844,7 +844,7 @@ void RFQDealerReply::tryEnableAutoSign()
       return;
    }
 
-   autoSignWalletInfoReqId_ = signingContainer_->GetInfo(wallet);
+   autoSignWalletInfoReqId_ = signingContainer_->GetInfo(walletId);
    autoSignWalletId_ = walletId;
 }
 

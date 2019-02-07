@@ -33,7 +33,8 @@ public:
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<spdlog::logger> &logger
-      , QWidget *parent = nullptr);
+      , QWidget *parent = nullptr
+      , bool fixedCheckBoxes = false, bool delRemote = false);
    WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
@@ -48,6 +49,7 @@ private slots:
 
 private:
    void init();
+   void initFixed();
    void deleteHDWallet();
    void deleteWallet();
 
@@ -58,6 +60,8 @@ private:
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<spdlog::logger>     logger_;
+   const bool fixedCheckBoxes_;
+   const bool delRemoteWallet_;
 };
 
 #endif // __WALLET_DELETE_DIALOG_H__

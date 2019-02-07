@@ -487,7 +487,7 @@ bool WalletsWidget::ImportNewWallet(bool report)
       if (importWalletDialog.type() == ImportWalletTypeDialog::Full) {
          ImportWalletDialog createImportedWallet(walletsManager_, signingContainer_
             , assetManager_, authMgr_, armory_, importWalletDialog.GetSeedData()
-            , importWalletDialog.GetChainCodeData(), appSettings_
+            , importWalletDialog.GetChainCodeData(), appSettings_, logger_
             , username_, importWalletDialog.GetName(), importWalletDialog.GetDescription()
             , this);
 

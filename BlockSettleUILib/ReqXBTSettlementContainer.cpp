@@ -168,11 +168,11 @@ void ReqXBTSettlementContainer::activate()
             transactionData_->GetWallet()->GetWalletId())->getName())));
 
       if (!sellFromPrimary_) {
-         infoReqIdAuth_ = signContainer_->GetInfo(rootAuthWallet);
+         infoReqIdAuth_ = signContainer_->GetInfo(rootAuthWallet->getWalletId());
       }
    }
 
-   infoReqId_ = signContainer_->GetInfo(walletsMgr_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId()));
+   infoReqId_ = signContainer_->GetInfo(walletId_);
 
    addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, quote_.settlementId
       , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)

@@ -66,10 +66,10 @@ public:
    RequestId CreateHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::wallet::Seed &seed
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
-   RequestId DeleteHD(const std::shared_ptr<bs::hd::Wallet> &) override;
-   RequestId DeleteHD(const std::shared_ptr<bs::Wallet> &) override;
+   RequestId DeleteHDRoot(const std::string &rootWalletId) override;
+   RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
    RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) override;
-   RequestId GetInfo(const std::shared_ptr<bs::hd::Wallet> &) override;
+   RequestId GetInfo(const std::string &rootWalletId) override;
    void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) override;
    RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass

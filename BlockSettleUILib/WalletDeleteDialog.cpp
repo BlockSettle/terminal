@@ -17,7 +17,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &wa
    , const std::shared_ptr<SignContainer> &container
    , std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<spdlog::logger> &logger
-   , QWidget *parent)
+   , QWidget *parent, bool fixedCheckBoxes, bool delRemote)
    : QDialog(parent)
    , ui_(new Ui::WalletDeleteDialog)
    , hdWallet_(wallet)
@@ -25,6 +25,8 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &wa
    , signingContainer_(container)
    , appSettings_(appSettings)
    , logger_(logger)
+   , fixedCheckBoxes_(fixedCheckBoxes)
+   , delRemoteWallet_(delRemote)
 {
    init();
 
@@ -50,6 +52,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &wallet
    , signingContainer_(container)
    , appSettings_(appSettings)
    , logger_(logger)
+   , fixedCheckBoxes_(false), delRemoteWallet_(false)
 {
    init();
 
@@ -67,6 +70,12 @@ WalletDeleteDialog::~WalletDeleteDialog() = default;
 void WalletDeleteDialog::init()
 {
    ui_->setupUi(this);
+
+   ui_->checkBoxDeleteSigner->setChecked(delRemoteWallet_);
+
+   if (fixedCheckBoxes_) {
+      ui_->checkBoxDeleteSigner->setEnabled(false);
+   }
 
    ui_->pushButtonOk->setEnabled(false);
 
@@ -87,7 +96,7 @@ void WalletDeleteDialog::deleteHDWallet()
       }
    }
    if (ui_->checkBoxDeleteSigner->isChecked()) {
-      signingContainer_->DeleteHD(hdWallet_);
+      signingContainer_->DeleteHDRoot(hdWallet_->getWalletId());
    }
    if (walletsManager_->DeleteWalletFile(hdWallet_)) {
       BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
@@ -107,7 +116,7 @@ void WalletDeleteDialog::deleteHDWallet()
 void WalletDeleteDialog::deleteWallet()
 {
    if (ui_->checkBoxDeleteSigner->isChecked()) {
-      signingContainer_->DeleteHD(wallet_);
+      signingContainer_->DeleteHDLeaf(wallet_->GetWalletId());
    }
    if (walletsManager_->DeleteWalletFile(wallet_)) {
       BSMessageBox(BSMessageBox::success, tr("Wallet deleted")

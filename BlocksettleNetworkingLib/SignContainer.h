@@ -88,10 +88,10 @@ public:
    virtual RequestId CreateHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::wallet::Seed &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) = 0;
-   virtual RequestId DeleteHD(const std::shared_ptr<bs::hd::Wallet> &) = 0;
-   virtual RequestId DeleteHD(const std::shared_ptr<bs::Wallet> &) = 0;
+   virtual RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
+   virtual RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
    virtual RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) = 0;
-   virtual RequestId GetInfo(const std::shared_ptr<bs::hd::Wallet> &) = 0;
+   virtual RequestId GetInfo(const std::string &rootWalletId) = 0;
    virtual void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) = 0;
    virtual RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
