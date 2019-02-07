@@ -107,10 +107,10 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       if (reorgNotif->zcPurgePacket_ != nullptr)
       {
          scanData.saStruct_.invalidatedZcKeys_ =
-            reorgNotif->zcPurgePacket_->invalidatedZcKeys_;
+            &reorgNotif->zcPurgePacket_->invalidatedZcKeys_;
 
          scanData.saStruct_.minedTxioKeys_ =
-            reorgNotif->zcPurgePacket_->minedTxioKeys_;
+            &reorgNotif->zcPurgePacket_->minedTxioKeys_;
       }
 
       //carry zc state
@@ -135,7 +135,7 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
       if (zcAction->packet_.purgePacket_ != nullptr)
       {
          scanData.saStruct_.invalidatedZcKeys_ =
-            zcAction->packet_.purgePacket_->invalidatedZcKeys_;
+            &zcAction->packet_.purgePacket_->invalidatedZcKeys_;
       }
 
       leVecPtr = &zcAction->leVec_;

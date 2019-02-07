@@ -138,7 +138,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       in: 
          walletid
          flag: set to true if the wallet is new
-         hash: registration id. The callback notifying the registation 
+         hash: registration id. The callback notifying the registration 
                completion will carry this id. If the registration
                id is empty, no callback will be triggered on completion.
          bindata[]: addresses
@@ -264,9 +264,11 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       /*
       in:
          walletid
-         height
-      out: full, spendable and unconfirmed balance + transaction count
-         wrapped in Codec_CommonTypes::ManyUnsigned
+         height: conf target
+         hash: event id. The callback notifying the change in conf target
+               completion will carry this id. If the event id is empty, no 
+               callback will be triggered on completion.
+      out: N/A
       */
       if (!command->has_walletid() || !command->has_height() || !command->has_hash())
          throw runtime_error("invalid command for setWalletConfTarget");
@@ -1094,16 +1096,31 @@ void BDV_Server_Object::processNotification(
    scanWallets(notifPtr);
 
    auto callbackPtr = make_shared<BDVCallback>();
-   auto notif = callbackPtr->add_notification();
 
    switch (action)
    {
    case BDV_NewBlock:
    {
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::newblock);
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_NewBlock>(notifPtr);
       notif->set_height(payload->reorgState_.newTop_->getBlockHeight());
+
+      if (payload->zcPurgePacket_ != nullptr && 
+          payload->zcPurgePacket_->invalidatedZcKeys_.size() != 0)
+      {
+         auto notif = callbackPtr->add_notification();
+         notif->set_type(NotificationType::invalidated_zc);
+
+
+         auto ids = notif->mutable_ids();
+         for (auto& id : payload->zcPurgePacket_->invalidatedZcKeys_)
+         {
+            auto idPtr = ids->add_value();
+            idPtr->set_data(id.second.getPtr(), id.second.getSize());
+         }
+      }
 
       break;
    }
@@ -1115,6 +1132,7 @@ void BDV_Server_Object::processNotification(
 
       auto& bdId = payload->refreshID_;
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::refresh);
       auto refresh = notif->mutable_refresh();
       refresh->set_refreshtype(payload->refresh_);
@@ -1128,13 +1146,32 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_ZC>(notifPtr);
 
-      notif->set_type(NotificationType::zc);
-      auto ledgers = notif->mutable_ledgers();
-
-      for (auto& le : payload->leVec_)
+      if (payload->leVec_.size() > 0)
       {
-         auto ledger_entry = ledgers->add_values();
-         le.fillMessage(ledger_entry);
+         auto notif = callbackPtr->add_notification();
+         notif->set_type(NotificationType::zc);
+         auto ledgers = notif->mutable_ledgers();
+
+         for (auto& le : payload->leVec_)
+         {
+            auto ledger_entry = ledgers->add_values();
+            le.fillMessage(ledger_entry);
+         }
+      }
+
+      if (payload->packet_.purgePacket_ != nullptr &&
+         payload->packet_.purgePacket_->invalidatedZcKeys_.size() != 0)
+      {
+         auto notif = callbackPtr->add_notification();
+         notif->set_type(NotificationType::invalidated_zc);
+
+
+         auto ids = notif->mutable_ids();
+         for (auto& id : payload->packet_.purgePacket_->invalidatedZcKeys_)
+         {
+            auto idPtr = ids->add_value();
+            idPtr->set_data(id.second.getPtr(), id.second.getSize());
+         }
       }
 
       break;
@@ -1145,6 +1182,7 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_Progress>(notifPtr);
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::progress);
       auto pd = notif->mutable_progress();
 
@@ -1163,6 +1201,7 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_NodeStatus>(notifPtr);
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::nodestatus);
       auto status = notif->mutable_nodestatus();
 
@@ -1188,6 +1227,7 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_Error>(notifPtr);
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::error);
       auto error = notif->mutable_error();
 
@@ -1202,7 +1242,8 @@ void BDV_Server_Object::processNotification(
       return;
    }
 
-   cb_->callback(callbackPtr);
+   if(callbackPtr->notification_size() > 0)
+      cb_->callback(callbackPtr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

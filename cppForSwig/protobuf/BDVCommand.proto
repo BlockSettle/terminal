@@ -93,6 +93,7 @@ enum NotificationType
 	newblock = 3;
 	zc = 4;
 	error = 5;
+	invalidated_zc = 6;
 
 	progress = 20;
 	nodestatus = 21;

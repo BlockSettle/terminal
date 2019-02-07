@@ -479,7 +479,8 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
    }
   
    if (scanInfo.saStruct_.zcMap_.size() != 0 ||
-      scanInfo.saStruct_.invalidatedZcKeys_.size() != 0)
+      (scanInfo.saStruct_.invalidatedZcKeys_ != nullptr && 
+       scanInfo.saStruct_.invalidatedZcKeys_->size() != 0))
    {
       //top block didnt change, only have to check for new ZC
       if (bdvPtr_->isZcEnabled())
@@ -798,5 +799,6 @@ void BtcWallet::setConfTarget(unsigned confTarget, const string& hash)
    if(confTarget != confTarget_)
       confTarget_ = confTarget;
 
-   bdvPtr_->flagRefresh(BDV_refreshSkipRescan, hash, nullptr);
+   if(hash.size() != 0)
+      bdvPtr_->flagRefresh(BDV_refreshSkipRescan, hash, nullptr);
 }

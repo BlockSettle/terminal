@@ -101,21 +101,22 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
    //look for invalidated keys, delete from validZcKeys_ as we go
    bool purge = false;
 
-   if (scanInfo.invalidatedZcKeys_.size() != 0)
+   if (scanInfo.invalidatedZcKeys_ != nullptr && 
+       scanInfo.invalidatedZcKeys_->size() != 0)
    {
       auto keyIter = validZCKeys_.begin();
       while (keyIter != validZCKeys_.end())
       {
-         auto zcIter = scanInfo.invalidatedZcKeys_.find(
+         auto zcIter = scanInfo.invalidatedZcKeys_->find(
             keyIter->first.getSliceRef(0, 6));
-         if (zcIter != scanInfo.invalidatedZcKeys_.end())
+         if (zcIter != scanInfo.invalidatedZcKeys_->end())
          {
             purge = true;
 
             for (auto& txiokey : keyIter->second)
             {
                auto&& insertIter = invalidatedZCMap.insert(make_pair(
-                  txiokey, zcIter->getRef()));
+                  txiokey, zcIter->first.getRef()));
 
                if (insertIter.second == false)
                {
@@ -138,8 +139,17 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
    //purge if necessary
    if (purge)
    {
-      if (purgeZC(invalidatedZCMap, scanInfo.minedTxioKeys_))
-         updateID_ = updateID;
+      if (scanInfo.minedTxioKeys_ != nullptr)
+      {
+         if (purgeZC(invalidatedZCMap, *scanInfo.minedTxioKeys_))
+            updateID_ = updateID;
+      }
+      else
+      {
+         map<BinaryData, BinaryData> dummyMap;
+         if (purgeZC(invalidatedZCMap, dummyMap))
+            updateID_ = updateID;
+      }
    }
 
    auto haveIter = scanInfo.zcMap_.find(scrAddr_);

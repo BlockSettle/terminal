@@ -41,8 +41,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 struct ScanAddressStruct
 {
-   std::set<BinaryData> invalidatedZcKeys_;
-   std::map<BinaryData, BinaryData> minedTxioKeys_;
+   std::map<BinaryData, BinaryData>* invalidatedZcKeys_ = nullptr;
+   std::map<BinaryData, BinaryData>* minedTxioKeys_ = nullptr;
    std::shared_ptr< ZeroConfSharedStateSnapshot> zcState_;
 
    std::map<BinaryData, std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>>>> zcMap_;

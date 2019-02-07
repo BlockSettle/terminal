@@ -492,7 +492,7 @@ void ZeroConfContainer::parseNewZC(void)
       }
 
       bool notify = true;
-      vector<BinaryData> previouslyValidKeys;
+      map<BinaryData, BinaryData> previouslyValidKeys;
       map<BinaryData, BinaryData> minedKeys;
       auto ss = ZeroConfSharedStateSnapshot::copy(snapshot_);
 
@@ -502,7 +502,10 @@ void ZeroConfContainer::parseNewZC(void)
       {
          //build set of currently valid keys
          for (auto& txpair : ss->txMap_)
-            previouslyValidKeys.push_back(txpair.first);
+         {
+            previouslyValidKeys.emplace(
+               make_pair(txpair.first, txpair.second->getTxHash()));
+         }
 
          //purge mined zc
          auto result = purge(zcAction.reorgState_, ss, minedKeys);
@@ -546,9 +549,9 @@ void ZeroConfContainer::parseNewZC(void)
          auto purgePacket = make_shared<ZcPurgePacket>();
          purgePacket->minedTxioKeys_ = move(minedKeys);
 
-         for (auto wasValid : previouslyValidKeys)
+         for (auto& wasValid : previouslyValidKeys)
          {
-            auto keyIter = snapshot_->txMap_.find(wasValid);
+            auto keyIter = snapshot_->txMap_.find(wasValid.first);
             if (keyIter != snapshot_->txMap_.end())
                continue;
 
@@ -829,13 +832,6 @@ void ZeroConfContainer::parseNewZC(
       updateBatch_.push_back(move(batch));
    }
 
-   //swap in new state
-   atomic_store_explicit(&snapshot_, ss, memory_order_release);
-
-   //notify bdvs
-   if (!hasChanges)
-      return;
-
    //find BDVs affected by invalidated keys
    if (invalidatedTx.size() > 0)
    {
@@ -864,12 +860,21 @@ void ZeroConfContainer::parseNewZC(
             for (auto& bdvid : bdvid_set)
             {
                auto& bdv = flaggedBDVs[bdvid];
-               bdv.second.invalidatedKeys_.insert(tx_pair.first);
+               bdv.second.invalidatedKeys_.insert(
+                  make_pair(tx_pair.first, tx_pair.second->getTxHash()));
                bdv.first = true;
+               hasChanges = true;
             }
          }
       }
    }
+
+   //swap in new state
+   atomic_store_explicit(&snapshot_, ss, memory_order_release);
+
+   //notify bdvs
+   if (!hasChanges)
+      return;
 
    if (!notify)
       return;

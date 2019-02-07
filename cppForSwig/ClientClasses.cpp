@@ -239,6 +239,27 @@ bool RemoteCallback::processNotifications(
          break;
       }
 
+      case NotificationType::invalidated_zc:
+      {
+
+         if (!notif.has_ids())
+            break;
+
+         auto& ids = notif.ids();
+         set<BinaryData> idSet;
+
+         for (int y = 0; y < ids.value_size(); y++)
+         {
+            auto& id_str = ids.value(y).data();
+            BinaryData id_bd((uint8_t*)id_str.c_str(), id_str.size());
+            idSet.emplace(id_bd);
+         }
+
+         run(BDMAction::BDMAction_InvalidatedZC, &idSet, 0);
+
+         break;
+      }
+
       case NotificationType::refresh:
       {
          if (!notif.has_refresh())
