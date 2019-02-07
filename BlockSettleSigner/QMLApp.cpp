@@ -23,6 +23,8 @@
 #include "PdfBackupQmlPrinter.h"
 #include "QmlFactory.h"
 #include "QWalletInfo.h"
+#include "QSeed.h"
+#include "QPasswordData.h"
 #include "ZMQHelperFunctions.h"
 
 #ifdef BS_USE_DBUS
@@ -217,7 +219,7 @@ void QMLAppObj::registerQtTypes()
 {
    qRegisterMetaType<bs::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
-   qRegisterMetaType<bs::wallet::QEncryptionType>("QEncryptionType");
+   qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
 
    qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
@@ -241,14 +243,6 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-
-//   qmlRegisterUncreatableMetaObject(
-//     bs::staticMetaObject, // static meta object
-//     "com.blocksettle.NsBs.namespace",                // import statement (can be any string)
-//     1, 0,                          // major and minor version of the import
-//     "NsBs",                 // name in QML (does not have to match C++ name)
-//     QStringLiteral("Error: com.blocksettle.NsBs: only enums")            // error in case someone tries to create a MyNamespace object
-//   );
 
    qmlRegisterUncreatableMetaObject(
      bs::wallet::staticMetaObject, // static meta object
