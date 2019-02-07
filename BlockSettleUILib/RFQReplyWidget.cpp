@@ -48,7 +48,10 @@ void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &wa
       ui_->pageRFQReply->setWalletsManager(walletsManager_);
 
       if (signingContainer_) {
-         signingContainer_->GetInfo(walletsManager_->GetPrimaryWallet()->getWalletId());
+         auto primaryWallet = walletsManager_->GetPrimaryWallet();
+         if (primaryWallet != nullptr) {
+            signingContainer_->GetInfo(primaryWallet->getWalletId());
+         }
       }
    }
 }
