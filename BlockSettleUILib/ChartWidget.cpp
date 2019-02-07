@@ -6,6 +6,10 @@
 #include <qrandom.h>
 #include "CustomCandlestickSet.h"
 #include "TradesClient.h"
+#include "DataPointsLocal.h"
+//#include "OHCLModel.h"
+
+const qreal BASE_FACTOR = 1.0;
 
 
 ChartWidget::ChartWidget(QWidget *parent)
@@ -22,6 +26,7 @@ ChartWidget::ChartWidget(QWidget *parent)
    dateRange_.addButton(ui_->btn1m, DataPointsLocal::Interval::OneMonth);
    dateRange_.addButton(ui_->btn6m, DataPointsLocal::Interval::SixMonths);
    dateRange_.addButton(ui_->btn1y, DataPointsLocal::Interval::OneYear);
+   ui_->btn1h->click();
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked), 
       this, &ChartWidget::onDateRangeChanged);
 
@@ -150,11 +155,12 @@ void ChartWidget::setChartStyle() {
 
 // Creates x and y axis for the candle stick chart.
 void ChartWidget::createCandleChartAxis() {
-   auto dateAxisx = new QDateTimeAxis(this);
    auto chart = ui_->viewPrice->chart();
+
+   auto dateAxisx = new QDateTimeAxis(this);
    chart->addAxis(dateAxisx, Qt::AlignBottom);
-   chart->series().first()->attachAxis(dateAxisx);
-   setupTimeAxis(dateAxisx, false, DataPointsLocal::Interval::OneHour);
+   priceSeries_->attachAxis(dateAxisx);
+   setupTimeAxis(dateAxisx, false, dateRange_.checkedId());
 
    // y axis
    QValueAxis *axisY = new QValueAxis;
@@ -164,7 +170,7 @@ void ChartWidget::createCandleChartAxis() {
    chart->addAxis(axisY, Qt::AlignRight);
    axisY->setLabelFormat(tr("%06.1f"));
    qDebug() << "chart localize" << chart->localizeNumbers();
-   chart->series().first()->attachAxis(axisY);
+   priceSeries_->attachAxis(axisY);
    // add space offset to the y axis
    auto tmpAxis = qobject_cast<QValueAxis *>(chart->axes(Qt::Vertical).at(0));
    tmpAxis->setMax(tmpAxis->max() * 1.05);
@@ -174,11 +180,12 @@ void ChartWidget::createCandleChartAxis() {
 
 // Creates x and y axis for the volume stick chart.
 void ChartWidget::createVolumeChartAxis() {
-   auto dateAxisx = new QDateTimeAxis(this);
    auto chart = ui_->viewVolume->chart();
+
+   auto dateAxisx = new QDateTimeAxis(this);
    chart->addAxis(dateAxisx, Qt::AlignBottom);
-   chart->series().first()->attachAxis(dateAxisx);
-   setupTimeAxis(dateAxisx, true, DataPointsLocal::Interval::OneHour);
+   volumeSeries_->attachAxis(dateAxisx);
+   setupTimeAxis(dateAxisx, true, dateRange_.checkedId());
 
    QValueAxis *axisY = new QValueAxis;
    axisY->setLabelFormat(tr("%06.1f"));
@@ -187,7 +194,7 @@ void ChartWidget::createVolumeChartAxis() {
    axisY->setMinorGridLineVisible(false);
    axisY->setTickCount(2);
    chart->addAxis(axisY, Qt::AlignRight);
-   chart->series().first()->attachAxis(axisY);
+   volumeSeries_->attachAxis(axisY);
    axisY->applyNiceNumbers();
 }
 
@@ -231,6 +238,7 @@ void ChartWidget::setupTimeAxis(QDateTimeAxis *axis, bool labelsVisible, int int
 void ChartWidget::buildCandleChart(int interval) {
    priceSeries_->clear();
    volumeSeries_->clear();
+
    auto product = ui_->cboInstruments->currentText();
    if (product.isEmpty()) {
        product = QStringLiteral("EUR/GBP");
@@ -254,15 +262,18 @@ void ChartWidget::buildCandleChart(int interval) {
              , dp->volume);
    }
    qDeleteAll(rawData);
+
    auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
    minPrice -= margin;
    maxPrice += margin;
 
    qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
-   auto candlestickAxisY = qobject_cast<QValueAxis*>(ui_->viewPrice->chart()->axisY());
-   if (candlestickAxisY) {
-      candlestickAxisY->setRange(minPrice, maxPrice);
-//      candlestickAxisY->applyNiceNumbers();
+   auto priceAxisY = qobject_cast<QValueAxis*>(ui_->viewPrice->chart()->axisY());
+   if (priceAxisY) {
+//      priceAxisY->setRange(minPrice, maxPrice);
+      priceAxisY->setMin(minPrice);
+      priceAxisY->setMax(maxPrice);
+//      priceAxisY->applyNiceNumbers();
    }
    auto volumeAxisY = qobject_cast<QValueAxis*>(ui_->viewVolume->chart()->axisY());
    if (volumeAxisY) {
@@ -288,23 +299,23 @@ qreal ChartWidget::getZoomFactor(int interval)
    }
    switch (static_cast<DataPointsLocal::Interval>(interval)) {
    case DataPointsLocal::OneYear:
-      return 24.0 * 365; //0.0001;
+      return BASE_FACTOR * 8760;
    case DataPointsLocal::SixMonths:
-      return 24.0 * 30 * 6; //0.0002;
+      return BASE_FACTOR * 4320;
    case DataPointsLocal::OneMonth:
-      return 24.0 * 30; //0.0015;
+      return BASE_FACTOR * 720;
    case DataPointsLocal::OneWeek:
-      return 24.0 * 7.0; //0.006;
+      return BASE_FACTOR * 168;
    case DataPointsLocal::TwentyFourHours:
-      return 24.0; //0.042;
+      return BASE_FACTOR * 24;
    case DataPointsLocal::TwelveHours:
-      return 12.0; //0.083;
+      return BASE_FACTOR * 12;
    case DataPointsLocal::SixHours:
-      return 6.0; //0.16;
+      return BASE_FACTOR * 6;
    case DataPointsLocal::OneHour:
-      return 1.0;
+      return BASE_FACTOR;
    default:
-      return 1.0;
+      return BASE_FACTOR;
    }
 }
 
@@ -312,6 +323,17 @@ qreal ChartWidget::getZoomFactor(int interval)
 void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
    auto interval = static_cast<DataPointsLocal::Interval>(id);
+
+   /*auto priceChart = ui_->viewPrice->chart();
+   priceChart->removeSeries(priceSeries_);
+   priceChart->addSeries(priceSeries_);
+   ui_->addAxis(priceChart->axisY(), Qt::AlignRight);
+
+   auto volumeChart = ui_->viewVolume->chart();
+   volumeChart->removeSeries(volumeSeries_);
+   volumeChart->addSeries(volumeSeries_);
+   volumeChart->addAxis(volumeChart->axisY(), Qt::AlignRight);*/
+
    buildCandleChart(interval);
    auto priceAxis = qobject_cast<QDateTimeAxis *>(ui_->viewPrice->chart()->axisX());
    setupTimeAxis(priceAxis, false, dateRange_.checkedId());
@@ -339,5 +361,15 @@ void ChartWidget::onPriceHover(bool status, QCandlestickSet *set) {
 
 void ChartWidget::onInstrumentChanged(const QString &text) {
    ui_->viewPrice->chart()->setTitle(text);
+
+   /*ui_->viewPrice->chart()->removeSeries(priceSeries_);
+   ui_->viewVolume->chart()->removeSeries(volumeSeries_);
+   ui_->viewPrice->chart()->addSeries(priceSeries_);
+   ui_->viewVolume->chart()->addSeries(volumeSeries_);*/
+
    buildCandleChart(dateRange_.checkedId());
+   auto priceAxis = qobject_cast<QDateTimeAxis *>(ui_->viewPrice->chart()->axisX());
+   setupTimeAxis(priceAxis, false, dateRange_.checkedId());
+   auto volumeAxis = qobject_cast<QDateTimeAxis *>(ui_->viewVolume->chart()->axisX());
+   setupTimeAxis(volumeAxis, true, dateRange_.checkedId());
 }
